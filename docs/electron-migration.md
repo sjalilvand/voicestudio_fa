@@ -23,3 +23,8 @@ Electron checks required Python imports before reusing an existing runtime. An
 incomplete environment opens setup instead of repeatedly crashing; installation
 still requires your explicit action. Automatic selection skips broken legacy
 runtimes and uses the Electron runtime location, leaving Tauri data intact.
+
+An explicitly selected runtime is not silently replaced during startup. If that
+location contains an incomplete environment Electron does not own, choosing
+setup creates a separate runtime in Electron’s default location instead of
+modifying or taking ownership of the existing environment.

@@ -2,7 +2,9 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { EventEmitter } from 'node:events';
 const mocks = vi.hoisted(() => ({
-  dependencies: vi.fn(async () => true),
+  runtimeConfig: null as { root: string; owned: boolean } | null,
+  existingProject: false,
+  dependencies: vi.fn(async (_project?: string) => true),
   ready: vi.fn(async () => false),
   compatible: vi.fn(async () => false),
   interrupted: vi.fn(async () => false),
@@ -14,6 +16,27 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock('electron', () => ({ app: { isPackaged: true, getPath: () => '/private/voicestudio' } }));
 vi.mock('node:child_process', () => ({ spawn: mocks.spawn, spawnSync: vi.fn() }));
+vi.mock('node:fs', async (importOriginal) => {
+  const original = await importOriginal<typeof import('node:fs')>();
+  return {
+    ...original,
+    readFileSync: (...args: Parameters<typeof original.readFileSync>) =>
+      String(args[0]).endsWith('runtime-location.json') && mocks.runtimeConfig
+        ? JSON.stringify(mocks.runtimeConfig)
+        : original.readFileSync(...args),
+    writeFileSync: (...args: Parameters<typeof original.writeFileSync>) => {
+      if (String(args[0]).endsWith('runtime-location.json')) {
+        mocks.runtimeConfig = JSON.parse(String(args[1]));
+        return;
+      }
+      return original.writeFileSync(...args);
+    },
+    mkdirSync: (...args: Parameters<typeof original.mkdirSync>) =>
+      String(args[0]).includes('private') ? undefined : original.mkdirSync(...args),
+    existsSync: (path: Parameters<typeof original.existsSync>[0]) =>
+      mocks.existingProject && String(path).includes('selected') ? true : original.existsSync(path),
+  };
+});
 vi.mock('node:fs/promises', () => ({ rm: mocks.rm }));
 vi.mock('./runtime-project', () => ({
   runtimeDependenciesReady: mocks.dependencies,
@@ -36,6 +59,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
   vi.clearAllMocks();
+  mocks.runtimeConfig = null;
+  mocks.existingProject = false;
   mocks.dependencies.mockResolvedValue(true);
   mocks.ready.mockResolvedValue(false);
   mocks.compatible.mockResolvedValue(false);
@@ -392,3 +417,34 @@ it.each(['ready', 'compatible'] as const)(
     await supervisor.shutdown();
   },
 );
+
+it('keeps a selected broken environment selected until explicit setup, then preserves unowned files', async () => {
+  const { resolve, join } = await import('node:path');
+  const selected = resolve('/selected/VoiceStudio');
+  mocks.runtimeConfig = { root: selected, owned: false };
+  mocks.existingProject = true;
+  mocks.ready.mockResolvedValue(true);
+  mocks.dependencies.mockImplementation(async (project?: string) => !project?.includes('selected'));
+  mocks.install.mockRejectedValue(new Error('offline'));
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => {
+      throw new Error('no backend');
+    }),
+  );
+  vi.stubEnv('OMNIVOICE_BACKEND_CMD', '');
+  vi.stubEnv('VOICESTUDIO_SKIP_BACKEND', '');
+  const supervisor = new BackendSupervisor();
+  await supervisor.start();
+  expect(supervisor.status.stage).toBe('setup_required');
+  expect(
+    mocks.dependencies.mock.calls.every(([project]) => String(project).includes('selected')),
+  ).toBe(true);
+  expect(mocks.install).not.toHaveBeenCalled();
+  await supervisor.setupRuntime();
+  expect(mocks.install.mock.calls[0][1]).toBe(join('/private/voicestudio', 'runtime', 'project'));
+  expect(mocks.runtimeConfig?.root).not.toBe(selected);
+  expect(mocks.rm).not.toHaveBeenCalled();
+  expect(mocks.stage).not.toHaveBeenCalled();
+  await supervisor.shutdown();
+});

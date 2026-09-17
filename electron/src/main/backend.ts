@@ -520,7 +520,7 @@ export class BackendSupervisor extends EventEmitter<{
       this.stage !== 'setup_required'
     )
       return;
-    const project =
+    let project =
       this.runtimeProject ?? join(storedRuntimeRoot() ?? defaultRuntimeRoot(), 'project');
     this.runtimeProject = project;
     const controller = new AbortController();
@@ -543,8 +543,27 @@ export class BackendSupervisor extends EventEmitter<{
         await this.start();
         return;
       }
-      const runtimeRoot = dirname(project);
+      let runtimeRoot = dirname(project);
       const configured = storedRuntimeLocation();
+      if (
+        configured &&
+        !configured.owned &&
+        samePath(configured.root, runtimeRoot) &&
+        !samePath(runtimeRoot, defaultRuntimeRoot()) &&
+        existsSync(project)
+      ) {
+        // An explicit setup action may create a new runtime, but must never
+        // take ownership of (or repair in place) another installation's files.
+        runtimeRoot = defaultRuntimeRoot();
+        project = join(runtimeRoot, 'project');
+        this.runtimeProject = project;
+        writeRuntimeLocation(runtimeRoot, true);
+        this.pushLog(
+          'out',
+          'Creating a separate Electron runtime; existing environment preserved.',
+        );
+        this.emitStatus();
+      }
       if (
         configured &&
         samePath(configured.root, runtimeRoot) &&
@@ -801,12 +820,10 @@ export class BackendSupervisor extends EventEmitter<{
     const own = join(defaultRuntimeRoot(), 'project');
     const configuredRoot = storedRuntimeRoot();
     const configured = configuredRoot ? join(configuredRoot, 'project') : null;
-    const candidates = [
-      this.runtimeProject,
-      configured,
-      own,
-      ...legacyTauriRuntimeProjects(),
-    ].filter((candidate): candidate is string => Boolean(candidate));
+    // Explicit selection is authoritative, including when it needs setup.
+    const candidates = (
+      configured ? [configured] : [this.runtimeProject, own, ...legacyTauriRuntimeProjects()]
+    ).filter((candidate): candidate is string => Boolean(candidate));
     for (const project of new Set(candidates.map((candidate) => resolve(candidate)))) {
       if (
         ((await runtimeReady(bundle, project)) || (await runtimeCompatible(bundle, project))) &&
