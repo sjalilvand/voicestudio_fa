@@ -294,7 +294,7 @@ def _ctranslate2_execstack_ok() -> tuple[bool, str]:
     library's stack ``RWE``. Kernels that refuse the request fail the dlopen
     with "cannot enable executable stack", killing whisperx, faster-whisper
     *and* Argos translation (#692). :mod:`core.execstack` clears that one bit
-    in place, so call this BEFORE importing either engine; it is memoized and
+    in place, so call this BEFORE importing either engine; it cheaply rechecks the library and
     only writes when the library would otherwise refuse to load.
     """
     try:
@@ -1514,7 +1514,7 @@ class PyTorchWhisperBackend(ASRBackend):
         try:
             torch.cuda.empty_cache()
         except Exception:
-            pass
+            pass  # Some builds have no CUDA cache to release.
 
     def transcribe(self, audio_path: str, *, word_timestamps: bool = True) -> dict:
         import soundfile as sf

@@ -790,7 +790,7 @@ async def dub_translate(req: TranslateRequest):
                     f"switch the Engine dropdown to another provider."
                 )
                 return JSONResponse(status_code=400, content={"error": friendly})
-           # The package imports without its native dep; the *translator*
+            # The package imports without its native dep; the *translator*
             # needs CTranslate2, whose library is rejected outright by kernels
             # that refuse an executable stack (#692). Repair it (a one-bit ELF
             # patch), and if that is impossible say so in one actionable 400
@@ -798,10 +798,9 @@ async def dub_translate(req: TranslateRequest):
             try:
                 from core.execstack import ensure_ctranslate2_loadable
 
-                ct2_ok, ct2_detail = ensure_ctranslate2_loadable()
+                ensure_ctranslate2_loadable()
             except Exception as e:  # noqa: BLE001 — repair must not block translation
                 logger.debug("exec-stack repair unavailable (%s) — continuing", e)
-                ct2_ok, ct2_detail = True, "repair probe unavailable"
             try:
                 import argostranslate.translate  # noqa: F401
             except Exception as e:  # noqa: BLE001 — OSError here, not ImportError
