@@ -1840,36 +1840,40 @@ class MLXAudioBackend(TTSBackend):
                 # model is actually active.
                 kwargs["lang_code"] = language[:2].lower()
 
-        pieces = []
+        def collect(results):
+            groups = []
+            rate = None
+            pending = []
+
+            def flush():
+                if not pending:
+                    return
+                audio = np.concatenate(pending, axis=-1)
+                if rate != self.sample_rate:
+                    import torchaudio
+                    audio = torchaudio.functional.resample(
+                        torch.from_numpy(audio), rate, self.sample_rate,
+                    ).numpy()
+                groups.append(audio)
+                pending.clear()
+
+            for result in results:
+                audio = getattr(result, "audio", result)
+                if hasattr(audio, "numpy"):
+                    audio = audio.numpy()
+                sr = getattr(result, "sample_rate", self.sample_rate)
+                if sr != rate:
+                    flush()
+                    rate = sr
+                pending.append(np.asarray(audio, dtype=np.float32))
+            flush()
+            return groups
+
         try:
-            for result in self._model.generate(**kwargs):
-                audio = getattr(result, "audio", result)
-                if hasattr(audio, "numpy"):
-                    audio = audio.numpy()
-                audio = np.asarray(audio, dtype=np.float32)
-                sr = getattr(result, "sample_rate", self.sample_rate)
-                if sr != self.sample_rate:
-                    import torchaudio
-                    audio = torchaudio.functional.resample(
-                        torch.from_numpy(audio), sr, self.sample_rate,
-                    ).numpy()
-                pieces.append(audio)
+            pieces = collect(self._model.generate(**kwargs))
         except TypeError:
-            # Some engines don't accept lang_code / ref_audio. Retry with
-            # only the universal kwargs.
-            pieces = []
-            for result in self._model.generate(text=text, speed=speed):
-                audio = getattr(result, "audio", result)
-                if hasattr(audio, "numpy"):
-                    audio = audio.numpy()
-                audio = np.asarray(audio, dtype=np.float32)
-                sr = getattr(result, "sample_rate", self.sample_rate)
-                if sr != self.sample_rate:
-                    import torchaudio
-                    audio = torchaudio.functional.resample(
-                        torch.from_numpy(audio), sr, self.sample_rate,
-                    ).numpy()
-                pieces.append(audio)
+            # Retry engines that accept only the universal arguments.
+            pieces = collect(self._model.generate(text=text, speed=speed))
 
         if not pieces:
             raise RuntimeError(f"mlx-audio ({self._model_id}) produced no audio")
