@@ -12,7 +12,6 @@ just a front door onto the existing pipeline.
 
 from __future__ import annotations
 
-import codecs
 import io
 import logging
 import posixpath
@@ -21,7 +20,7 @@ import zipfile
 from html.parser import HTMLParser
 from xml.etree import ElementTree as ET
 
-from services.text_upload import decode_text_upload
+from services.text_upload import bom_encoding, decode_text_upload
 
 # A line that *starts* with a chapter keyword and is short enough to be a title
 # (not a sentence that happens to begin with "Chapter"). Anchored, no ambiguous
@@ -46,27 +45,17 @@ _META_CHARSET_RE = re.compile(
     re.IGNORECASE,
 )
 _DECLARATION_SCAN_BYTES = 1024
-# A byte-order mark outranks any declaration (XML 1.0 §F). `decode_text_upload`
-# already reads the three it can carry and strips it.
-_BOMS = (codecs.BOM_UTF8, codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)
 
 logger = logging.getLogger("omnivoice.longform_import")
 
 
 def _declared_encoding(raw: bytes) -> str | None:
-    """The encoding an EPUB document names for itself, if Python knows it."""
+    """The encoding an EPUB document names for itself, as written."""
     head = raw[:_DECLARATION_SCAN_BYTES]
     for pattern in (_XML_DECL_ENCODING_RE, _META_CHARSET_RE):
         match = pattern.search(head)
-        if not match:
-            continue
-        name = match.group(1).decode("ascii", "ignore")
-        try:
-            codecs.lookup(name)
-        except LookupError:
-            logger.warning("EPUB entry declares an unknown encoding; guessing instead")
-            continue
-        return name
+        if match:
+            return match.group(1).decode("ascii", "ignore")
     return None
 
 
@@ -82,13 +71,22 @@ def _decode_epub_entry(raw: bytes) -> str:
     tait ferm". ``decode_text_upload`` is the same BOM → UTF-8 →
     Windows-1252 ladder the ``.txt``/``.md`` import branch already uses.
     """
-    if raw.startswith(_BOMS):
-        return decode_text_upload(raw)
-    declared = _declared_encoding(raw)
-    if declared:
-        # errors="replace": a mis-declared document still imports, the way an
-        # undeclared one does. Nothing here may fail a whole book.
-        return raw.decode(declared, errors="replace")
+    # A byte-order mark outranks any declaration (XML 1.0 §F), and
+    # decode_text_upload owns the one BOM table both front doors read.
+    if not bom_encoding(raw):
+        declared = _declared_encoding(raw)
+        if declared:
+            try:
+                # errors="replace": a mis-declared document still imports, the
+                # way an undeclared one does. Nothing here may fail a book.
+                return raw.decode(declared, errors="replace")
+            except LookupError:
+                # An encoding Python doesn't have, or a bytes-to-bytes codec
+                # such as "hex_codec" — those resolve but refuse to produce
+                # text. Guess the way an undeclared document is guessed.
+                logger.warning(
+                    "EPUB entry declares an encoding that cannot decode text; guessing instead"
+                )
     return decode_text_upload(raw)
 
 

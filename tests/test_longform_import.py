@@ -247,9 +247,21 @@ def test_epub_undeclared_utf8_still_reads():
     assert _ACCENTED in script
 
 
-def test_epub_unknown_declared_encoding_falls_back_instead_of_failing():
+def test_epub_reads_a_utf32_document_by_its_bom():
+    """The UTF-32 LE mark starts with the UTF-16 LE one, so a BOM table that
+    checks UTF-16 first strips two bytes and reads the chapter as NUL-
+    interleaved UTF-16."""
+    document = b"\xff\xfe\x00\x00" + _chapter_html("Un", _ACCENTED).encode("utf-32-le")
+    script = epub_to_chapter_script(_make_epub_raw([document]))
+    assert _ACCENTED in script
+
+
+@pytest.mark.parametrize("declared", ["x-not-a-real-charset", "hex_codec"])
+def test_epub_undecodable_declared_encoding_falls_back_instead_of_failing(declared):
+    """An encoding Python doesn't have, and a bytes-to-bytes codec that
+    resolves but refuses to produce text, both guess rather than fail a book."""
     document = (
-        '<?xml version="1.0" encoding="x-not-a-real-charset"?>'
+        f'<?xml version="1.0" encoding="{declared}"?>'
         + _chapter_html("Un", "Plain ASCII body.")
     ).encode("utf-8")
     script = epub_to_chapter_script(_make_epub_raw([document]))
