@@ -244,7 +244,6 @@ panels instead so neither editor becomes unusably small.
   ([#692](https://github.com/debpalash/VoiceStudio/issues/692)).
 
 
-Dubbing transcription emits keepalives during quiet diarization, reference-refinement, and cleanup steps. Disconnecting stops queued model work; native calls already running retain their model until they finish, then cleanup restores TTS.
 
 
 
