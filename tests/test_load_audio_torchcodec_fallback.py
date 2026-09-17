@@ -23,7 +23,6 @@ import pytest
 import soundfile as sf
 import torch
 
-from omnivoice.utils.audio import load_audio
 
 
 def _write_sine_wav(path, *, seconds: float = 0.5, sample_rate: int = 24000):
@@ -43,6 +42,7 @@ def _torchcodec_missing(*_a, **_kw):
 
 def test_load_audio_falls_back_when_torchcodec_missing(tmp_path, monkeypatch):
     """Without the ImportError catch this raises instead of returning audio."""
+    from omnivoice.utils.audio import load_audio
     import torchaudio
 
     ref = tmp_path / "ref.wav"
@@ -60,6 +60,7 @@ def test_load_audio_falls_back_when_torchcodec_missing(tmp_path, monkeypatch):
 
 def test_load_audio_fallback_resamples_to_target(tmp_path, monkeypatch):
     """The fallback path must still honour the requested sampling rate."""
+    from omnivoice.utils.audio import load_audio
     import torchaudio
 
     ref = tmp_path / "ref_16k.wav"
@@ -90,6 +91,7 @@ def test_load_audio_fallback_amplitude_matches_bit_depth(
     without TorchCodec it is the only path, which is what makes it a bug
     worth fixing here.
     """
+    from omnivoice.utils.audio import load_audio
     import torchaudio
 
     sample_rate = 24000
@@ -106,3 +108,14 @@ def test_load_audio_fallback_amplitude_matches_bit_depth(
         f"{subtype} decoded at the wrong scale: peak "
         f"{waveform.abs().max().item():.6f}, expected ~{peak}"
     )
+
+
+@pytest.mark.parametrize("subtype", ["PCM_U8", "PCM_16", "PCM_24", "PCM_32"])
+def test_audiosegment_conversion_preserves_amplitude(tmp_path, subtype):
+    from pydub import AudioSegment
+    from omnivoice.utils.audio import audiosegment_to_tensor
+    path = tmp_path / "stereo.wav"
+    samples = np.tile([0.5, -0.25], (100, 1))
+    sf.write(path, samples, 24000, subtype=subtype)
+    converted = audiosegment_to_tensor(AudioSegment.from_file(path)).numpy()
+    np.testing.assert_allclose(converted, samples.T, atol=0.01)

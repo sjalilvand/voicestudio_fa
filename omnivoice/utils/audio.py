@@ -65,18 +65,7 @@ def load_audio(audio_path: str, sampling_rate: int):
         # libraries are absent. The ``backend="soundfile"`` argument above
         # does NOT avoid that — 2.9 accepts and ignores it.
         aseg = AudioSegment.from_file(audio_path)
-        # Scale by the decoded sample width instead of a hardcoded 16-bit
-        # divisor. pydub reports 8-bit as sample_width 1 and widens 24-bit to
-        # a full-range int32 (sample_width 4), so /32768 makes 24- and 32-bit
-        # references 32768x too loud and 8-bit ones 256x too quiet.
-        audio_data = (
-            np.array(aseg.get_array_of_samples()).astype(np.float32)
-            / aseg.max_possible_amplitude
-        )
-        if aseg.channels == 1:
-            waveform = torch.from_numpy(audio_data).unsqueeze(0)
-        else:
-            waveform = torch.from_numpy(audio_data.reshape(-1, aseg.channels).T)
+        waveform = audiosegment_to_tensor(aseg)
         prompt_sampling_rate = aseg.frame_rate
 
     if prompt_sampling_rate != sampling_rate:
@@ -255,7 +244,7 @@ def audiosegment_to_tensor(aseg):
     audio_data = np.array(aseg.get_array_of_samples())
 
     # Convert to float32 and normalize to [-1, 1] range
-    audio_data = audio_data.astype(np.float32) / 32768.0
+    audio_data = audio_data.astype(np.float32) / aseg.max_possible_amplitude
 
     # Handle channels
     if aseg.channels == 1:
