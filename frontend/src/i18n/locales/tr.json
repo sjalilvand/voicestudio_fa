@@ -2219,6 +2219,7 @@
     "session_expired": "Bu dub oturumunun süresi doldu veya temizlendi. Yeni bir video başlatmak için videonuzu yeniden yükleyin."
   },
   "tts_errors": {
+    "profile_language_rejected": "Otomatik, bu motorun desteklemediği ses profili dilini ({{language}}) kullanır. Profil dilini değiştirin, desteklenen bir dil seçin veya motoru değiştirin.",
     "enter_text": "Lütfen metni girin",
     "upload_or_select": "Bir ses yükleyin veya bir ses profili seçin",
     "trim_hint": "Ses {{duration}}s — en iyi klonlama için ≤{{max}}s'ye kırpın",

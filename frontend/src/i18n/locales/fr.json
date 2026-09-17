@@ -2219,6 +2219,7 @@
     "session_expired": "Cette session de doublage a expiré ou a été nettoyée : téléchargez à nouveau votre vidéo pour en démarrer une nouvelle."
   },
   "tts_errors": {
+    "profile_language_rejected": "Auto utilise la langue du profil vocal ({{language}}), non prise en charge par ce moteur. Modifiez la langue du profil, choisissez une langue compatible ou changez de moteur.",
     "enter_text": "Veuillez saisir du texte",
     "upload_or_select": "Téléchargez un audio ou sélectionnez un profil vocal",
     "trim_hint": "L'audio est de {{duration}}s — coupez à ≤{{max}}s pour un meilleur clonage",

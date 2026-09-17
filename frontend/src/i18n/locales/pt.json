@@ -2219,6 +2219,7 @@
     "session_expired": "Esta sessão de dublagem expirou ou foi limpa. Reenvie seu vídeo para iniciar uma nova."
   },
   "tts_errors": {
+    "profile_language_rejected": "Automático usa o idioma do perfil de voz ({{language}}), não suportado por este motor. Altere o idioma do perfil, escolha um idioma compatível ou mude de motor.",
     "enter_text": "Por favor insira o texto",
     "upload_or_select": "Carregue um áudio ou selecione um perfil de voz",
     "trim_hint": "O áudio é {{duration}}s – ajuste para ≤{{max}}s para melhor clonagem",

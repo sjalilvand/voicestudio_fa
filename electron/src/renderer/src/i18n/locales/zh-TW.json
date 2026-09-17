@@ -2522,6 +2522,7 @@
     "recorder_unsupported": "此系統無法編碼麥克風音訊。"
   },
   "tts_errors": {
+    "profile_language_rejected": "自動模式使用聲音設定檔的語言（{{language}}），但此引擎不支援該語言。請修改設定檔語言、選擇支援的語言或更換引擎。",
     "generation_in_progress": "已有產生工作正在執行，請等待完成後再啟動新工作。",
     "error_prefix": "錯誤：{{message}}",
     "ignored_duplicate": "忽略（類別已設定）：{{items}}",

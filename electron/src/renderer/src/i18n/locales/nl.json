@@ -2522,6 +2522,7 @@
     "channels_stereo": "Stereo"
   },
   "tts_errors": {
+    "profile_language_rejected": "Automatisch gebruikt de taal van het stemprofiel ({{language}}), die deze engine niet ondersteunt. Wijzig de profieltaal, kies een ondersteunde taal of wissel van engine.",
     "generation_in_progress": "Er wordt al audio gegenereerd — wacht tot dit klaar is voordat je opnieuw begint.",
     "error_prefix": "Fout: {{message}}",
     "ignored_duplicate": "Genegeerd (categorie al ingesteld): {{items}}",

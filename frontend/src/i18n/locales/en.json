@@ -2890,6 +2890,7 @@
     "upgrading_preview": "Upgrading {{count}} preview-quality segment(s) to full quality…"
   },
   "tts_errors": {
+    "profile_language_rejected": "Auto uses the voice profile’s language ({{language}}), which this engine does not support. Change the profile language, choose a supported language, or switch engines.",
     "enter_text": "Please enter text",
     "upload_or_select": "Upload an audio or select a voice profile",
     "trim_hint": "Audio is {{duration}}s — trim to ≤{{max}}s for best cloning",

@@ -2522,6 +2522,7 @@
     "channels_stereo": "Stereo"
   },
   "tts_errors": {
+    "profile_language_rejected": "Auto använder röstprofilens språk ({{language}}), som denna motor inte stöder. Ändra profilens språk, välj ett språk som stöds eller byt motor.",
     "generation_in_progress": "En generering pågår redan – vänta tills den är klar innan du startar en ny.",
     "error_prefix": "Fel: {{message}}",
     "ignored_duplicate": "Ignorerad (kategori redan inställd): {{items}}",

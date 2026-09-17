@@ -1,3 +1,4 @@
+import i18n from 'i18next';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Streaming TTS preview (feat: streaming-tts-preview): the NDJSON client must
@@ -378,6 +379,32 @@ describe('streamGenerateSpeech', () => {
     );
     const plain = await streamGenerateSpeech(new FormData(), {}).catch((e) => e);
     expect(plain.retryable).toBe(false);
+  });
+
+  it('localizes a terminal profile language refusal without retrying', async () => {
+    const translate = vi.spyOn(i18n, 't').mockReturnValue('Localized profile guidance');
+    try {
+      apiFetch.mockResolvedValue(
+        ndjsonResponse([
+          {
+            type: 'error',
+            code: 'profile_language_rejected',
+            language: 'Persian',
+            detail: 'English fallback',
+            retryable: false,
+            terminal: true,
+          },
+        ]),
+      );
+      const error = await streamGenerateSpeech(new FormData(), {}).catch((e) => e);
+      expect(error.message).toBe('Localized profile guidance');
+      expect(shouldFallbackToClassic(error)).toBe(false);
+      expect(translate).toHaveBeenCalledWith('tts_errors.profile_language_rejected', {
+        language: 'Persian',
+      });
+    } finally {
+      translate.mockRestore();
+    }
   });
 
   it('marks actionable clone-reference errors terminal to prevent a classic retry', async () => {

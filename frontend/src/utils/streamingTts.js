@@ -1,3 +1,5 @@
+import i18n from 'i18next';
+import { languageRejectionMessage } from './languageRejection.ts';
 /**
  * streamingTts.js — streaming TTS preview (feat: streaming-tts-preview).
  *
@@ -399,12 +401,13 @@ async function _streamGenerateSpeech(
       } else if (ev.type === 'done') {
         meta = ev;
       } else if (ev.type === 'error') {
-        const detail = ev.detail || 'TTS stream reported an error';
-        const terminal = [
-          '[clone_ref_unusable]',
-          '[clone_ref_too_long]',
-          '[clone_ref_no_speech]',
-        ].some((marker) => detail.includes(marker));
+        const detail =
+          languageRejectionMessage(ev, i18n.t) || ev.detail || 'TTS stream reported an error';
+        const terminal =
+          ev.terminal === true ||
+          ['[clone_ref_unusable]', '[clone_ref_too_long]', '[clone_ref_no_speech]'].some((marker) =>
+            detail.includes(marker),
+          );
         throw new StreamingPreviewError(detail, {
           retryable: ev.retryable === true,
           retryAfter: ev.retry_after ?? null,
