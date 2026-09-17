@@ -2241,6 +2241,7 @@
     "tailscale_qr_alt": "Tailscale URL 的二维码"
   },
   "convert": {
+    "cloning_required": "请选择已就绪且支持声音克隆的语音合成模型。",
     "source_kicker": "源音频",
     "drop_audio": "拖入要转换的音频 — 或点击。WAV、MP3、M4A…",
     "target_voice": "目标声音",
