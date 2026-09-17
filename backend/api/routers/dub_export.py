@@ -291,7 +291,10 @@ async def stream_task(task_id: str, after_seq: int = 0):
         finally:
             await task_manager.remove_listener(task_id, q)
 
-    return StreamingResponse(_reader(), media_type="text/event-stream")
+    return StreamingResponse(
+        _reader(), media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.get("/jobs")

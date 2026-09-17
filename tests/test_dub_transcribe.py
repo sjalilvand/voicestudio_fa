@@ -1024,3 +1024,69 @@ def test_stream_unload_is_single_shot_during_disconnect():
         normal.result(timeout=5)
         disconnected.result(timeout=5)
     assert calls == ["unload"]
+
+
+def test_disconnect_during_diarization_waits_before_unload_and_restore(tmp_path, monkeypatch):
+    import asyncio
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+    from api.routers import dub_core as dc
+    from services import asr_backend
+
+    started, release, cleanup_started, restored = [threading.Event() for _ in range(4)]
+    events, guarded = [], []
+    original_cleanup = dc._ASRWorkLifetime.cleanup
+    def cleanup(lifetime, fn):
+        guarded.append(lifetime._lock.locked())
+        cleanup_started.set()
+        return original_cleanup(lifetime, fn)
+    monkeypatch.setattr(dc._ASRWorkLifetime, "cleanup", cleanup)
+    def diarize(**kwargs):
+        started.set()
+        assert release.wait(5)
+        events.append("diarization finished")
+        return None, None
+    class Backend:
+        id = "fake"
+        def ensure_loaded(self): pass
+        def transcribe(self, *a, **kw):
+            return {"chunks": [{"text": "hi", "timestamp": (0., .5)}], "segments": [], "language": "en"}
+        def unload(self): events.append("unloaded")
+    async def model():
+        result = MagicMock()
+        result._asr_pipe = MagicMock()
+        return result
+    def restore():
+        events.append("restored")
+        restored.set()
+    monkeypatch.setattr(dc, "get_model", model)
+    monkeypatch.setattr(asr_backend, "get_active_asr_backend", lambda *a, **kw: Backend())
+    monkeypatch.setattr(dc, "get_diarization_pipeline", diarize)
+    monkeypatch.setattr(dc, "offload_tts_for_asr", lambda: None)
+    monkeypatch.setattr(dc, "restore_tts_after_asr", restore)
+    monkeypatch.setattr(dc, "POST_ASR_PING_S", .01)
+    audio = tmp_path / "diar.wav"
+    _make_wav(audio, seconds=1.)
+    job_id = "diar_disconnect"
+    dc._dub_jobs[job_id] = {"audio_path": str(audio), "vocals_path": None, "scene_cuts": []}
+    async def scenario():
+        response = await dc.dub_transcribe_stream(job_id)
+        try:
+            async for _ in response.body_iterator:
+                if started.is_set():
+                    break
+            await response.body_iterator.aclose()
+            assert await asyncio.to_thread(cleanup_started.wait, 5)
+            assert guarded == [True]
+            assert not restored.is_set()
+        finally:
+            release.set()
+            await response.body_iterator.aclose()
+            assert await asyncio.to_thread(restored.wait, 5)
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            monkeypatch.setattr(dc, "_gpu_pool", pool)
+            asyncio.run(asyncio.wait_for(scenario(), timeout=10))
+    finally:
+        dc._dub_jobs.pop(job_id, None)
+    assert events == ["diarization finished", "unloaded", "restored"]
