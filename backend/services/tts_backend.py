@@ -1634,6 +1634,32 @@ _KOKORO_ISO_BY_FULL_NAME = {
 }
 
 
+def _kokoro_supported_labels(aliases: dict, lang_codes: dict) -> list[str]:
+    """Human labels for every language Kokoro accepts, read from its own tables.
+
+    Derived from the installed package, never from
+    ``_KOKORO_ISO_BY_FULL_NAME``: that map exists to translate full names
+    *into* Kokoro's codes, and reusing it to describe what Kokoro supports
+    understates the model. British English is reachable as ``en-gb`` and has no
+    entry there, so the old message omitted it — and any language a later
+    mlx-audio adds would be omitted the same way, telling the user to switch
+    engines when they need not.
+    """
+    labels: dict[str, str] = {}
+    # Prefer the full name a caller can actually pass.
+    for name, iso in _KOKORO_ISO_BY_FULL_NAME.items():
+        code = aliases.get(iso, iso)
+        if code in lang_codes:
+            labels.setdefault(code, name.title())
+    # Then whatever the installed table supports that no full name reaches. Its
+    # own description is a display name for some codes ("British English") and
+    # an ISO tag for others ("pt-br"); either names the language better than
+    # dropping it.
+    for code, described in lang_codes.items():
+        labels.setdefault(code, str(described))
+    return sorted(labels.values())
+
+
 def resolve_kokoro_lang_code(language: str) -> str:
     """Map a full language name / ISO code to Kokoro's single-letter
     `lang_code`, against the AUTHORITATIVE table read from the installed
@@ -1651,7 +1677,7 @@ def resolve_kokoro_lang_code(language: str) -> str:
     iso = _KOKORO_ISO_BY_FULL_NAME.get(key, key)
     code = ALIASES.get(iso, iso)
     if code not in LANG_CODES:
-        supported = ", ".join(sorted(name.title() for name in _KOKORO_ISO_BY_FULL_NAME))
+        supported = ", ".join(_kokoro_supported_labels(ALIASES, LANG_CODES))
         raise ValueError(
             f"mlx-audio's Kokoro model (mlx-community/Kokoro-82M-bf16) doesn't "
             f"support language={language!r}. Kokoro supports: {supported}. "
