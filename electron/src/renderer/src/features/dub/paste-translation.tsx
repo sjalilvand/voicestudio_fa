@@ -1,3 +1,4 @@
+import { readTextFile } from '../../../../../../frontend/src/utils/readTextFile';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangleIcon, ClipboardPasteIcon, FileTextIcon, XIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -73,8 +74,7 @@ export function PasteTranslation({ segments, disabled, onApply, onClose }: Paste
   const readFile = (file?: File) => {
     if (!file) return;
     setReadFailed(false);
-    void file
-      .text()
+    void readTextFile(file)
       .then(setText)
       .catch(() => setReadFailed(true));
   };

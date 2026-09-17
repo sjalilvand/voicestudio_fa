@@ -340,6 +340,7 @@
     "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
+    "device_family_gpu": "GPU",
     "device_load_failed": "Nie udało się wczytać ustawienia urządzenia",
     "perf_save_failed": "Nie udało się zapisać ustawienia",
     "generate_budget_title": "Budżet czasu obliczeń",
@@ -360,7 +361,10 @@
     "theme_auto": "Automatyczny systemowy",
     "theme_light": "Jasny",
     "reduce_motion": "Ogranicz ruch",
-    "reduce_motion_desc": "Zatrzymuje animacje tła i przejścia. Ustawienie systemowe działa samo z siebie; to je uzupełnia."
+    "reduce_motion_desc": "Zatrzymuje animacje tła i przejścia. Ustawienie systemowe działa samo z siebie; to je uzupełnia.",
+    "perf_torch_compile": "Wyłącz torch.compile",
+    "perf_torch_compile_note": "Używa bezpośredniego wykonywania, aby uniknąć błędów pamięci Triton.",
+    "perf_torch_compile_hint": "Używa bezpośredniego wykonywania, aby uniknąć błędów pamięci Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -860,7 +864,9 @@
     "familyDesc_asr": "Zamienia dźwięk na tekst do transkrypcji, dubbingu, napisów i dyktowania.",
     "familyDesc_llm": "Opcjonalny pomocnik tekstowy do tłumaczeń i przeredagowywania. „Wył.” pomija te kroki.",
     "mpsLongText": "{{engine}} działa tutaj na Apple Silicon (MPS), a ten tekst jest długi — generowanie może przekroczyć limit czasu. Krótszy tekst lub podzielenie go na kilka części będzie znacznie szybsze.",
-    "inMemory": "W pamięci"
+    "inMemory": "W pamięci",
+    "localInstallRequired": "Zainstaluj ten silnik na komputerze zaplecza przez localhost lub zgodnie z instrukcją konfiguracji. Instalacja zdalna jest wyłączona.",
+    "argosRuntimeUnavailable": "Środowisko Argos jest niedostępne. Zainstaluj ponownie backend lub wybierz NLLB."
   },
   "capture": {
     "desc": "Globalne skróty klawiszowe działają tylko w aplikacji komputerowej. Interfejs WWW korzysta ze skrótu <1>Ctrl+Shift+Spacja</1> znajdującego się na stronie, gdy okno jest aktywne.",
@@ -1552,6 +1558,7 @@
     "h_ago": "{{count}}h temu"
   },
   "setup": {
+    "ready_desc": "Możesz już utworzyć swój pierwszy głos. Dyktowanie skonfigurujesz teraz lub później w Ustawieniach.",
     "welcome": "Witamy",
     "system_check": "Kontrola systemu",
     "install_models": "Zainstaluj modele",
@@ -1606,7 +1613,7 @@
     "choose_method": "Wybierz sposób dawania",
     "choose_method_amount": "Kontynuuj za pomocą ${{amount}}",
     "goal": {
-      "title": "Fundusz Claude'a Maxa",
+      "title": "Wesprzyj rozwój VoiceStudio",
       "of": "z",
       "per_month": "/ miesiąc",
       "aria": "{{raised}} z {{goal}} celu miesięcznego",
@@ -1615,7 +1622,7 @@
       "social_proof": "Dołącz do {{count}} zwolenników finansujących lokalną sztuczną inteligencję"
     },
     "postcard": {
-      "title": "Fundusz Claude'a Maxa",
+      "title": "Wesprzyj rozwój VoiceStudio",
       "lead_default": "Cieszę się, że to zadziałało! Usługa VoiceStudio jest bezpłatna i w pełni lokalna. Jeśli oszczędzi to Twój czas, niewielka miesięczna wpłata sfinansuje stojącego za nim Claude'a Maxa.",
       "lead_first_clone": "Twój pierwszy klon głosu jest gotowy — świetnie! VoiceStudio działa całkowicie na Twoim komputerze, a dzięki Twojemu wsparciu tak będzie.",
       "lead_tenth_dub": "Dziesięć dubów — wyraźnie to robisz. Niewielki miesięczny wkład finansuje Claude Max, który udostępnia te funkcje.",
@@ -1797,7 +1804,8 @@
     "backend_shutting_down": "VoiceStudio się zamyka. Otwórz aplikację ponownie i spróbuj jeszcze raz.",
     "crash_broken_env": "Zakończył się podczas ładowania własnych zależności Pythona, więc nie chodzi o pamięć ani o kartę graficzną — środowisko jest niekompletne albo zostało zaktualizowane w połowie. Użyj „Wyczyść i ponów” w Ustawienia → Logi → Backend: odbudowuje je od zera i naprawia w miejscu, nie ruszając twoich głosów ani projektów. Jeśli nadal się nie udaje, szczegóły awarii wskazują pakiet, którego nie dało się zaimportować.",
     "crash_vram_default": "Na mniejszych GPU zwykłą przyczyną jest brak pamięci VRAM podczas ładowania modelu ASR obok już załadowanego modelu TTS: najpierw zwolnij model TTS albo wybierz mniejszy model ASR w Katalogu modeli → Modele.",
-    "stream_cut_backend_alive": "Strumień urwał się przedwcześnie, ale backend nadal działa — a więc nie uległ awarii. W konfiguracji serwerowej lub kontenerowej zwykle oznacza to, że odwrotne proxy albo load balancer buforuje połączenie lub przerywa je po limicie czasu: wyłącz buforowanie odpowiedzi dla tej trasy (nginx: proxy_buffering off; X-Accel-Buffering: no) i zwiększ jego limit czasu odczytu. Uruchomienie aplikacji desktopowej bezpośrednio albo na localhost bez proxy pozwoli to potwierdzić."
+    "stream_cut_backend_alive": "Strumień urwał się przedwcześnie, ale backend nadal działa — a więc nie uległ awarii. W konfiguracji serwerowej lub kontenerowej zwykle oznacza to, że odwrotne proxy albo load balancer buforuje połączenie lub przerywa je po limicie czasu: wyłącz buforowanie odpowiedzi dla tej trasy (nginx: proxy_buffering off; X-Accel-Buffering: no) i zwiększ jego limit czasu odczytu. Uruchomienie aplikacji desktopowej bezpośrednio albo na localhost bez proxy pozwoli to potwierdzić.",
+    "stream_cut_backend_alive_local": "Strumień zakończył się przedwcześnie, ale backend nadal działa — więc się nie zawiesił. Aplikacja utraciła połączenie z backendem w trakcie zadania; zdarza się to, gdy długi krok przez kilka minut nic nie wysyła, a backend zwykle i tak kończy zadanie. Odczekaj kilka minut i otwórz zadanie ponownie z historii albo sprawdź w logu backendu (Ustawienia → Logi → Zaplecze), co wtedy robił."
   },
   "keyboard": {
     "title": "Skróty klawiaturowe",
@@ -2831,5 +2839,55 @@
   "player": {
     "pause": "Wstrzymaj",
     "play": "Odtwórz"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "Brak mowy lub nie można jej odczytać. Przed eksportem wygeneruj ponownie dany segment.",
+    "timingOverflow": "Mowa przekracza przydzielony czas. Skróć tłumaczenie albo wybierz ścisły przedział czasu lub wydłużenie filmu.",
+    "backgroundUnavailable": "Nie udało się zachować oryginalnego dźwięku. Sprawdź oddzielenie tła i czasy dialogów, a następnie spróbuj ponownie lub wybierz eksport samej mowy."
+  },
+  "dubStyle": {
+    "label": "Instrukcje stylu tłumaczenia",
+    "help": "Opisz ton, odbiorców i sposób adaptacji, np. zachowanie żartów i naturalne tłumaczenie idiomów. Zapisywane w projekcie i stosowane przy tłumaczeniu oraz dopasowaniu czasu. Pozostaw puste dla stylu domyślnego."
+  },
+  "dubActivity": {
+    "output": "Tłumaczenia",
+    "waiting": "Nie otrzymano jeszcze żadnych wyników.",
+    "progress": "Zweryfikowano {{done}} / {{total}} segmentów",
+    "cancelled": "Anulowano",
+    "fitting": "Dostosowywanie czasu"
+  },
+  "sponsorSlot": {
+    "book": "Zarezerwuj miejsce",
+    "preview": "Podgląd sponsora",
+    "message": "Twoja marka, strona i wiadomość",
+    "email_app": "Otwórz pocztę",
+    "copy_email": "Kopiuj e-mail",
+    "preview_detail": "Tutaj mogą pojawić się Twoje logo, link i opis."
+  },
+  "supportPlans": {
+    "remove": "Usuń pasek sponsorów",
+    "title": "Darmowa a Pro",
+    "free": "Darmowa",
+    "pro": "Pro",
+    "sponsor_bar": "Pasek sponsorów",
+    "visible": "Widoczny",
+    "hideable": "Można ukryć",
+    "unavailable": "Aktywacja Pro nie została jeszcze skonfigurowana.",
+    "telemetry": "Telemetria",
+    "opt_in": "Opcjonalna, za zgodą",
+    "disabled": "Wyłączona",
+    "badge": "Odznaka Pro",
+    "advanced": "Zaawansowane narzędzia",
+    "standard": "Standardowe",
+    "included": "W zestawie"
+  },
+  "integrationCatalog": {
+    "title": "Integracje",
+    "featured": "Wyróżnione",
+    "description": "Odkryj integracje i wyróżnionych partnerów."
+  },
+  "directoryExamples": {
+    "example": "Przykład katalogowy",
+    "notice": "Wyłącznie przykłady katalogowe — nie sponsorzy ani połączone integracje."
   }
 }

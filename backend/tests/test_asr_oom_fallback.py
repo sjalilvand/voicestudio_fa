@@ -41,6 +41,8 @@ def test_cuda_oom_falls_back_to_cpu(monkeypatch):
         return object()  # CPU load succeeds
 
     monkeypatch.setattr(whisperx, "load_model", fake_load_model)
+    # Exercise load-time OOM, independent of actual free VRAM on this host.
+    monkeypatch.setattr(WhisperXBackend, "_free_vram_gb", staticmethod(lambda: 10.0))
 
     be = WhisperXBackend()
     # Force the CUDA starting point regardless of the CI host's hardware.

@@ -58,14 +58,14 @@ def load_audio(audio_path: str, sampling_rate: int):
         waveform, prompt_sampling_rate = torchaudio.load(
             audio_path, backend="soundfile"
         )
-    except (RuntimeError, OSError):
-        # Fallback via pydub+ffmpeg for formats torchaudio can't handle
+    except (ImportError, RuntimeError, OSError):
+        # Fallback via pydub+ffmpeg for formats torchaudio can't handle.
+        # ImportError belongs here too: torchaudio >= 2.9 routes load()
+        # through TorchCodec and raises ImportError when its FFmpeg shared
+        # libraries are absent. The ``backend="soundfile"`` argument above
+        # does NOT avoid that — 2.9 accepts and ignores it.
         aseg = AudioSegment.from_file(audio_path)
-        audio_data = np.array(aseg.get_array_of_samples()).astype(np.float32) / 32768.0
-        if aseg.channels == 1:
-            waveform = torch.from_numpy(audio_data).unsqueeze(0)
-        else:
-            waveform = torch.from_numpy(audio_data.reshape(-1, aseg.channels).T)
+        waveform = audiosegment_to_tensor(aseg)
         prompt_sampling_rate = aseg.frame_rate
 
     if prompt_sampling_rate != sampling_rate:
@@ -244,7 +244,7 @@ def audiosegment_to_tensor(aseg):
     audio_data = np.array(aseg.get_array_of_samples())
 
     # Convert to float32 and normalize to [-1, 1] range
-    audio_data = audio_data.astype(np.float32) / 32768.0
+    audio_data = audio_data.astype(np.float32) / aseg.max_possible_amplitude
 
     # Handle channels
     if aseg.channels == 1:

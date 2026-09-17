@@ -1044,7 +1044,7 @@
     "perf_title": "Prestazioni",
     "generate_timeout_cpu_note": "Usato quando la generazione viene eseguita sulla CPU. Una volta salvato qui, questo valore governa sempre la generazione su CPU, indipendentemente dal budget accelerato sopra.",
     "device_family_rocm": "AMD GPU (ROCm)",
-    "perf_torch_compile": "Disabilita torch.compile (Windows)",
+    "perf_torch_compile": "Disabilita torch.compile",
     "generate_timeout_shadowed_note": "Una variabile d'ambiente esterna a VoiceStudio (shell, file .env o container) sta attualmente impostando questo valore — il valore salvato qui viene ignorato finché quella variabile non viene rimossa.",
     "device_family_cpu": "CPU",
     "device_family_gpu": "GPU",
@@ -1909,6 +1909,7 @@
     "test_text": "Ciao, questo è un test di questa voce."
   },
   "nav": {
+    "voice": "Voce",
     "clone_short": "Clona",
     "workspaces": "Aree di lavoro",
     "stories": "Storie",
@@ -1966,7 +1967,7 @@
     "dictation_replay": "Riproduci",
     "dictation_transcribing": "Trascrizione…",
     "dubbing_title": "Guarda il doppiaggio in azione",
-    "dubbing_sync": "Riproduzione sincronizzata",
+    "dubbing_sync": "Sincronizza posizione",
     "dubbing_picker": "Prova un'altra lingua:",
     "dubbing_cta": "Eseguilo sul tuo video →",
     "dubbing_loading": "Caricamento demo del doppiaggio…",
@@ -1982,6 +1983,7 @@
     "dictation_lede_hotkey_only": "Tieni premuta la scorciatoia qui sopra ovunque sul desktop, parla e rilascia — il testo arriva nell'app attiva. Premila ora per verificarla."
   },
   "setup": {
+    "ready_desc": "Puoi creare la tua prima voce. Configura la dettatura ora o più tardi nelle Impostazioni.",
     "system_preflight": "Verifica preliminare del sistema",
     "system_check_desc": "Analizza RAM, disco, GPU, ffmpeg e rete. I bloccanti vengono contrassegnati in anticipo in modo da saperlo prima del download.",
     "probing": "Sistema di sondaggio...",
@@ -2074,7 +2076,7 @@
     "choose_method": "Scegli come donare",
     "choose_method_amount": "Continua con ${{amount}}",
     "goal": {
-      "title": "Fondo Claude Max",
+      "title": "Sostieni lo sviluppo di VoiceStudio",
       "of": "di",
       "per_month": "/mese",
       "aria": "{{raised}} di {{goal}} obiettivo mensile",
@@ -2083,7 +2085,7 @@
       "social_proof": "Unisciti ai sostenitori di {{count}} che finanziano l'intelligenza artificiale locale"
     },
     "postcard": {
-      "title": "Fondo Claude Max",
+      "title": "Sostieni lo sviluppo di VoiceStudio",
       "lead_default": "Sono contento che abbia funzionato! VoiceStudio è gratuito e completamente locale. Se ti fa risparmiare tempo, un piccolo chip-in mensile finanzia il Claude Max che sta dietro di esso.",
       "lead_first_clone": "Il tuo primo clone vocale è pronto: fantastico! VoiceStudio funziona interamente sul tuo computer e il tuo supporto lo mantiene così.",
       "lead_tenth_dub": "Dieci doppiaggi: lo stai chiaramente mettendo in pratica. Un piccolo chip-in mensile finanzia il Claude Max che fornisce queste funzionalità.",
@@ -2484,7 +2486,9 @@
     "none_ready_title": "La sintesi vocale non è pronta",
     "none_ready_body": "VoiceStudio può configurare automaticamente l’opzione compatibile migliore per questo dispositivo.",
     "active": "Motore: {{name}}",
-    "none": "Nessun motore attivo"
+    "none": "Nessun motore attivo",
+    "localInstallRequired": "Installa questo motore sul computer del backend tramite localhost o la guida alla configurazione. L’installazione remota è disabilitata.",
+    "argosRuntimeUnavailable": "Il runtime di Argos non è disponibile. Reinstalla il backend o seleziona NLLB."
   },
   "performanceProfile": {
     "requiresEngine": "Installa e seleziona {{engine}} per regolare velocità e qualità.",
@@ -2571,5 +2575,74 @@
     "captured": "Acquisite {{count}} righe di log problematiche",
     "contextNotice": "L’agente selezionato riceve questa segnalazione, la schermata corrente, i log recenti dell’app e del backend e la diagnostica di sistema.",
     "complete": "Completato"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "Il parlato manca o non è leggibile. Rigenera il segmento interessato prima di esportare.",
+    "timingOverflow": "Il parlato supera il tempo disponibile. Accorcia la traduzione oppure scegli uno slot rigoroso o estendi il video.",
+    "backgroundUnavailable": "Impossibile preservare il suono originale. Controlla la separazione del sottofondo e i tempi del dialogo, poi riprova, oppure esporta esplicitamente solo la voce."
+  },
+  "dubStyle": {
+    "label": "Istruzioni sullo stile di traduzione",
+    "help": "Descrivi tono, pubblico e adattamento, ad esempio mantenere le battute e adattare gli idiomi in modo naturale. Salvate nel progetto e usate per traduzione e riscritture temporali. Lascia vuoto per lo stile predefinito."
+  },
+  "dubActivity": {
+    "output": "Traduzioni",
+    "waiting": "Nessun risultato ricevuto finora.",
+    "progress": "{{done}} / {{total}} segmenti convalidati",
+    "cancelled": "Annullato",
+    "fitting": "Regolazione dei tempi"
+  },
+  "sponsorSlot": {
+    "partner_heading": "Diventa partner di VoiceStudio",
+    "partner_subtitle": "Presenta il tuo prodotto a chi crea con la voce.",
+    "app_placement": "Visibilità nell’app",
+    "integration_page": "Pagina integrazione",
+    "readme_exposure": "Visibilità nel README",
+    "visibility": "Visibilità",
+    "integration": "Integrazione del prodotto",
+    "installs": "Installazioni dirette",
+    "distribution": "Distribuzione per sviluppatori",
+    "partner": "Partner verificato",
+    "privacy": "Privacy",
+    "title": "In evidenza su VoiceStudio",
+    "description": "Aumenta la visibilità del tuo brand sponsorizzando uno spazio in evidenza a pagamento.",
+    "form": "Modulo Google",
+    "email": "Email",
+    "book": "Prenota il tuo spazio",
+    "preview": "Anteprima sponsor",
+    "footer_brand": "Il tuo brand",
+    "footer_book": "Aggiungi ora",
+    "email_template": "Ciao team VoiceStudio,\n\nVorrei collaborare con VoiceStudio e valutare una presenza in evidenza per il mio brand.\n\nBrand / prodotto:\nSito web:\nIntegrazione o campagna:\nPubblico / tempistiche:\n\nPotete condividere pacchetti, prezzi, opzioni di visibilità e requisiti tecnici? Ho capito che una partnership in evidenza può includere una pagina docs, un logo nel README GitHub, uno spazio nel footer dell’app e una presenza nella directory Integrations.\n\nGrazie,\n[Nome]\n[Ruolo / azienda]\n[Contatto]",
+    "message": "Il tuo marchio, sito e messaggio",
+    "email_app": "Apri l’app email",
+    "copy_email": "Copia email",
+    "preview_detail": "Qui potrebbero apparire il tuo logo, link e presentazione."
+  },
+  "supportPlans": {
+    "remove": "Rimuovi barra sponsor",
+    "title": "Gratis o Pro",
+    "free": "Gratis",
+    "pro": "Pro",
+    "get_pro": "Ottieni Pro",
+    "sponsor_bar": "Barra sponsor",
+    "visible": "Visibile",
+    "hideable": "Può essere nascosta",
+    "unavailable": "L’attivazione di Pro non è ancora configurata.",
+    "telemetry": "Telemetria",
+    "opt_in": "Facoltativa, con consenso",
+    "disabled": "Disattivata",
+    "badge": "Badge Pro",
+    "advanced": "Strumenti avanzati",
+    "standard": "Standard",
+    "included": "Inclusi"
+  },
+  "integrationCatalog": {
+    "title": "Integrazioni",
+    "featured": "In evidenza",
+    "description": "Scopri integrazioni e partner in evidenza."
+  },
+  "directoryExamples": {
+    "example": "Esempio di catalogo",
+    "notice": "Solo esempi di catalogo: non sponsor né integrazioni collegate."
   }
 }

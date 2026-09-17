@@ -60,6 +60,7 @@ export function normalizeEntry(entry) {
     docs_url: entry.docs_url || null,
     // The backend's sidecar provisioner can install this engine in-app.
     one_click_install: entry.one_click_install === true,
+    local_install_required: entry.local_install_required === true,
     // Routing (#21) — may be absent on a legacy/older backend payload.
     effective_device: entry.effective_device || null,
     routing_status: entry.routing_status || null,

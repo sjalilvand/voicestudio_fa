@@ -18,6 +18,7 @@ export function EngineInstall({ id }: { id: string }) {
     queryFn: () =>
       apiJson<{
         installed: boolean;
+        install_allowed?: boolean;
         job: null | {
           state: string;
           steps: { name?: string; state: string }[];
@@ -36,8 +37,15 @@ export function EngineInstall({ id }: { id: string }) {
       <Button
         size="sm"
         variant="outline"
-        disabled={running || status.data?.installed}
+        disabled={
+          running ||
+          status.isPending ||
+          status.isError ||
+          status.data?.installed ||
+          status.data?.install_allowed === false
+        }
         onClick={async () => {
+          if (status.data?.install_allowed === false) return;
           setStarting(true);
           setFailed(null);
           setDismissedFailure(false);
@@ -54,6 +62,11 @@ export function EngineInstall({ id }: { id: string }) {
         <DownloadIcon />
         {t(running ? 'modelMaintenance.installing' : 'modelMaintenance.install')}
       </Button>
+      {status.data?.install_allowed === false && (
+        <p className="max-w-sm text-xs text-muted-foreground">
+          {t('engines.localInstallRequired')}
+        </p>
+      )}
       {!dismissedFailure && (failed || status.isError || status.data?.job?.state === 'failed') && (
         <SettingsActionError
           className="max-w-sm text-left"

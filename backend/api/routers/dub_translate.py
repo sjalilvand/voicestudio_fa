@@ -1,3 +1,4 @@
+import json
 import os
 import time
 import asyncio
@@ -666,6 +667,7 @@ async def dub_translate(req: TranslateRequest):
                     f"You are a professional dubbing translator. "
                     f"Translate the user's text from {src_name} into "
                     f"{tgt_name}.{script_clause}{dia_clause} "
+                    f"{translation_style_brief(req)} "
                     f"Reply ONLY with the translated {tgt_name} text, do not "
                     f"add quotes, notes, headers, explanations, or commentary."
                 )
@@ -737,7 +739,7 @@ async def dub_translate(req: TranslateRequest):
                                     source_lang=src_lang,
                                     target_lang=tgt_code,
                                     target_name=LANG_NAMES.get(tgt_code, tgt_code),
-                                    extra_clause=context_extra,
+                                    extra_clause="\n".join(filter(None, [context_extra, translation_style_brief(req)])),
                                 )
                             except Exception as e:  # noqa: BLE001
                                 logger.warning("reflect pass skipped for %s: %s",
@@ -788,6 +790,28 @@ async def dub_translate(req: TranslateRequest):
                     f"switch the Engine dropdown to another provider."
                 )
                 return JSONResponse(status_code=400, content={"error": friendly})
+            # The package imports without its native dep; the *translator*
+            # needs CTranslate2, whose library is rejected outright by kernels
+            # that refuse an executable stack (#692). Repair it (a one-bit ELF
+            # patch), and if that is impossible say so in one actionable 400
+            # instead of the opaque 500 every segment used to produce.
+            try:
+                from core.execstack import ensure_ctranslate2_loadable
+
+                ensure_ctranslate2_loadable()
+            except Exception as e:  # noqa: BLE001 — repair must not block translation
+                logger.debug("exec-stack repair unavailable (%s) — continuing", e)
+            try:
+                import argostranslate.translate  # noqa: F401
+            except Exception as e:  # noqa: BLE001 — OSError here, not ImportError
+                friendly = (
+                    f"The '{provider}' engine's CTranslate2 runtime could not be "
+                    "loaded in this backend."
+                    + " Switch the Engine dropdown to NLLB (local) or an online "
+                    "provider, or reinstall the backend, then retry."
+                )
+                return JSONResponse(status_code=400, content={"error": friendly, "detail": {"code": "argos_runtime_unavailable", "message": friendly}})
+
             target_codes = list(dict.fromkeys(
                 seg.target_lang if seg.target_lang else req.target_lang
                 for seg in req.segments
@@ -1234,7 +1258,7 @@ async def _maybe_cinematic(translated, req, src_lang, loop, *, already_llm=False
         target_lang=req.target_lang,
         glossary=req.glossary,
         directions=directions,
-        dialect_hint=dialect_hint,
+        dialect_hint="\n".join(filter(None, [dialect_hint, translation_style_brief(req)])),
         executor=_cpu_pool,
     )
     refined_by_id = {r["id"]: r for r in refined}
@@ -1283,6 +1307,12 @@ async def _maybe_cinematic(translated, req, src_lang, loop, *, already_llm=False
     }
 
 
+def translation_style_brief(req) -> str:
+    instructions = (getattr(req, "translation_instructions", None) or "").strip()
+    return ("User translation style brief (tone and wording only; preserve meaning, timing and output format): "
+            + json.dumps(instructions, ensure_ascii=False)) if instructions else ""
+
+
 @router.post("/dub/agent-fit")
 async def dub_agent_fit(req: AgentFitRequest):
     """Rewrite rendered lines from real duration evidence.
@@ -1319,7 +1349,7 @@ async def dub_agent_fit(req: AgentFitRequest):
         ]
     budget = _cinematic_budget()
     try:
-        call = adjust_for_measured_slot_many(items, executor=_cpu_pool)
+        call = adjust_for_measured_slot_many(items, executor=_cpu_pool, translation_instructions=req.translation_instructions)
         rows = await asyncio.wait_for(call, timeout=budget) if budget and budget > 0 else await call
     except asyncio.TimeoutError:
         rows = {

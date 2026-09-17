@@ -61,6 +61,7 @@ export function DiarisationSettings() {
       apiJson<{
         installed: boolean;
         supported: boolean;
+        install_allowed?: boolean;
         job: { state: string; progress: number; error?: string | null };
       }>('/engines/audiocpp/runtime/install/status'),
     refetchInterval: (state) => (state.state.data?.job.state === 'running' ? 1_500 : 10_000),
@@ -75,6 +76,7 @@ export function DiarisationSettings() {
   }, [client, runtime.data?.installed]);
   const runtimeRunning = busy || runtime.data?.job.state === 'running';
   const installRuntime = async () => {
+    if (runtime.data?.install_allowed === false) return;
     setBusy(true);
     setFailed(null);
     try {
@@ -152,7 +154,12 @@ export function DiarisationSettings() {
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={runtimeRunning}
+                  disabled={runtimeRunning || runtime.data?.install_allowed === false}
+                  title={
+                    runtime.data?.install_allowed === false
+                      ? t('engines.localInstallRequired')
+                      : undefined
+                  }
                   onClick={() => void installRuntime()}
                 >
                   <DownloadIcon />
@@ -162,6 +169,13 @@ export function DiarisationSettings() {
                       )}%`
                     : t('modelMaintenance.install')}
                 </Button>
+              )}
+            {option.id === 'audiocpp-sortformer' &&
+              !option.runtime_installed &&
+              runtime.data?.install_allowed === false && (
+                <p className="max-w-sm text-xs text-muted-foreground">
+                  {t('engines.localInstallRequired')}
+                </p>
               )}
             {option.installed && (
               <Button
@@ -380,11 +394,13 @@ export function ModelSettings({
           name: engine.display_name,
           available: engine.available,
           detail:
-            engine.id === selected
-              ? engineState.active_model
-              : !engine.available
-                ? engine.install_hint || engine.reason || engine.hint || undefined
-                : undefined,
+            engine.local_install_required && !engine.available
+              ? t('engines.localInstallRequired')
+              : engine.id === selected
+                ? engineState.active_model
+                : !engine.available
+                  ? engine.install_hint || engine.reason || engine.hint || undefined
+                  : undefined,
           models: engine.curated_models,
           installable: engine.one_click_install,
           setupSnippet: !engine.available ? engine.setup_snippet || undefined : undefined,

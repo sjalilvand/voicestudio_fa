@@ -111,6 +111,7 @@ def test_router_timeout_alias_preserves_native_device_metadata(
     from api.routers.generation import _generate_timeout_s
 
     captured = {}
+    engine = object()
 
     def fake_timeout(text, **kwargs):
         captured.update(kwargs)
@@ -120,12 +121,14 @@ def test_router_timeout_alias_preserves_native_device_metadata(
 
     assert _generate_timeout_s(
         "test",
+        engine=engine,
         execution_device="vulkan",
         min_vram_gb=6.0,
         hardware_family="cuda",
         vram_gb=4.0,
     ) == 600.0
     assert captured == {
+        "engine": engine,
         "execution_device": "vulkan",
         "min_vram_gb": 6.0,
         "hardware_family": "cuda",

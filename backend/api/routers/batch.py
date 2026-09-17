@@ -1030,11 +1030,14 @@ async def retry_batch_job(job_id: str):
     if not translation_engines.is_ready(provider):
         raise HTTPException(409, "Configure the selected translation provider before retrying")
     if provider == "argos" and job.get("source_lang"):
-        status = await asyncio.to_thread(
-            translation_engines.argos_pack_status,
-            job["source_lang"],
-            job["langs"],
-        )
+        try:
+            status = await asyncio.to_thread(
+                translation_engines.argos_pack_status,
+                job["source_lang"],
+                job["langs"],
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
         if any(not pair["installed"] for pair in status["pairs"]):
             raise HTTPException(409, "Install the required Argos language packs before retrying")
 

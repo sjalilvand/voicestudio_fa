@@ -699,10 +699,10 @@
     "history_retention_save_failed": "保存失败",
     "history_retention_invalid": "请输入 0 或更大的数",
     "perf_title": "性能",
-    "perf_torch_compile": "禁用 torch.compile（Windows）",
+    "perf_torch_compile": "禁用 torch.compile",
     "perf_torch_compile_na": "仅限 Windows——本平台无需",
-    "perf_torch_compile_note": "回退到 eager 模式——修复小于 16 GB 显存 GPU 上的 Triton 内存溢出。",
-    "perf_torch_compile_hint": "<issueLink>#65</issueLink> 的变通方案——Windows 用户在显存小于 16 GB 的 GPU 上加载模型时，可能遇到 Triton / <code>torch.compile</code> 内存溢出。启用后会为引擎子进程设置 <code>TORCH_COMPILE_DISABLE=1</code>，回退到 eager 模式。macOS 与 Linux 不受影响。",
+    "perf_torch_compile_note": "使用即时执行以避免 Triton 内存错误。",
+    "perf_torch_compile_hint": "使用即时执行以避免 Triton 内存错误。 <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>",
     "perf_load_failed": "加载性能设置失败",
     "workers_title": "远程工作机",
     "workers_desc": "把单个任务发送到你其他机器的 GPU 上，结果会回到这里。在你添加并批准一台工作机之前，不会发送任何内容。",
@@ -822,6 +822,7 @@
     "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
+    "device_family_gpu": "GPU",
     "device_load_failed": "无法加载设备设置",
     "perf_save_failed": "无法保存设置",
     "generate_budget_title": "计算时长预算",
@@ -1092,7 +1093,9 @@
     "installStep_fetch_weights": "正在下载模型权重",
     "installStep_persist": "正在保存配置",
     "installAria": "安装 {{engine}}",
-    "mpsLongText": "{{engine}} 在本机上使用 Apple Silicon（MPS）运行，而这段文本较长——生成可能超出时间预算。缩短文本，或分成几次生成会快得多。"
+    "mpsLongText": "{{engine}} 在本机上使用 Apple Silicon（MPS）运行，而这段文本较长——生成可能超出时间预算。缩短文本，或分成几次生成会快得多。",
+    "localInstallRequired": "请在后端计算机上通过 localhost 或安装指南安装此引擎。远程安装已禁用。",
+    "argosRuntimeUnavailable": "Argos 运行时不可用。请重新安装后端或选择 NLLB。"
   },
   "capture": {
     "desc": "全局热键仅在桌面应用中有效。网页界面使用页面内快捷键 <1>Ctrl+Shift+Space</1>（窗口聚焦时可用）。",
@@ -1807,6 +1810,7 @@
     "h_ago": "{{count}} 小时前"
   },
   "setup": {
+    "ready_desc": "现在可以创建你的第一个声音了。你可以立即设置语音输入，也可以稍后在设置中完成。",
     "welcome": "欢迎",
     "system_check": "系统检查",
     "install_models": "安装模型",
@@ -1873,7 +1877,7 @@
     "choose_method": "选择捐赠方式",
     "choose_method_amount": "继续 ${{amount}}",
     "goal": {
-      "title": "Claude Max 基金",
+      "title": "支持 VoiceStudio 开发",
       "of": "已筹 / 目标",
       "per_month": "/月",
       "aria": "每月目标 {{goal}}，已筹 {{raised}}",
@@ -1882,7 +1886,7 @@
       "social_proof": "加入 {{count}} 位支持本地 AI 的支持者"
     },
     "postcard": {
-      "title": "Claude Max 基金",
+      "title": "支持 VoiceStudio 开发",
       "lead_default": "很高兴它对你有用！VoiceStudio 免费且完全本地运行。如果它能节省你的时间，每月一小笔赞助就能支撑其背后的 Claude Max。",
       "lead_first_clone": "你的第一次声音克隆已完成——太好了！VoiceStudio 完全在你的电脑上运行，你的支持让它保持如此。",
       "lead_tenth_dub": "十次配音——你显然正在让它发挥作用。每月一小笔赞助为这些功能背后的 Claude Max 提供资金。",
@@ -2117,7 +2121,8 @@
     "backend_shutting_down": "VoiceStudio 正在关闭。请重新打开应用后再试。",
     "crash_broken_env": "它在加载自身的 Python 依赖时退出，因此与内存或显卡无关——运行环境不完整，或更新到一半就停下了。请在 设置 → 日志 → 后端 中使用“清理并重试”，它会从头重建环境并就地修复，不会动你的声音或项目。如果之后仍然失败，崩溃详情会指出无法导入的具体软件包。",
     "crash_vram_default": "在较小的 GPU 上，常见原因是在 TTS 模型仍占用显存时加载 ASR 模型，导致显存（VRAM）不足：请先卸载 TTS 模型，或在 模型库 → 模型 中选择更小的 ASR 模型。",
-    "stream_cut_backend_alive": "音频流提前结束，但后端仍在运行——因此它并没有崩溃。在服务器或容器化部署中，这通常是反向代理或负载均衡器在缓冲连接或使其超时：请为此路由禁用响应缓冲（nginx: proxy_buffering off; X-Accel-Buffering: no）并调高读取超时。直接运行桌面应用，或在没有代理的 localhost 上运行，即可确认。"
+    "stream_cut_backend_alive": "音频流提前结束，但后端仍在运行——因此它并没有崩溃。在服务器或容器化部署中，这通常是反向代理或负载均衡器在缓冲连接或使其超时：请为此路由禁用响应缓冲（nginx: proxy_buffering off; X-Accel-Buffering: no）并调高读取超时。直接运行桌面应用，或在没有代理的 localhost 上运行，即可确认。",
+    "stream_cut_backend_alive_local": "串流提前结束，但后端仍在运行——因此并未崩溃。应用在任务进行中与后端断开了连接；当某个耗时步骤连续数分钟没有输出时就可能发生，而后端通常仍会把任务做完。请等几分钟后从历史记录中重新打开该任务，或查看后端日志（设置 → 日志 → 后端）了解它当时在做什么。"
   },
   "keyboard": {
     "title": "键盘快捷键",
@@ -3312,5 +3317,55 @@
     "transcript": "识别到的内容",
     "result_kicker": "转换后的音频",
     "need_source_and_voice": "请先添加源音频并选择目标声音。"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "语音缺失或无法读取。请在导出前重新生成受影响的片段。",
+    "timingOverflow": "语音超出分配的时长。请缩短译文，或选择严格时间段或拉伸视频。",
+    "backgroundUnavailable": "无法保留原始声音。请检查背景音分离和对白时间后重试，或明确选择仅导出语音。"
+  },
+  "dubStyle": {
+    "label": "翻译风格提示词",
+    "help": "描述语气、受众和改编方式，例如保留笑点、自然转换习语。随项目保存，用于翻译和时长调整。留空使用默认风格。"
+  },
+  "dubActivity": {
+    "output": "翻译结果",
+    "waiting": "尚未收到输出。",
+    "progress": "已验证 {{done}} / {{total}} 个片段",
+    "cancelled": "已取消",
+    "fitting": "正在调整时间"
+  },
+  "sponsorSlot": {
+    "book": "预订展示位",
+    "preview": "赞助商展示预览",
+    "message": "您的品牌、网站和留言",
+    "email_app": "打开邮件应用",
+    "copy_email": "复制邮箱",
+    "preview_detail": "这里可以展示您的标志、链接和介绍。"
+  },
+  "supportPlans": {
+    "remove": "移除赞助商栏",
+    "title": "免费版与 Pro 对比",
+    "free": "免费版",
+    "pro": "Pro",
+    "sponsor_bar": "赞助商栏",
+    "visible": "显示",
+    "hideable": "可隐藏",
+    "unavailable": "尚未配置 Pro 激活。",
+    "telemetry": "遥测",
+    "opt_in": "可选，需主动同意",
+    "disabled": "已禁用",
+    "badge": "Pro 徽章",
+    "advanced": "高级工具",
+    "standard": "标准",
+    "included": "包含"
+  },
+  "integrationCatalog": {
+    "title": "集成",
+    "featured": "精选",
+    "description": "探索集成与精选合作伙伴。"
+  },
+  "directoryExamples": {
+    "example": "目录示例",
+    "notice": "仅为目录示例，并非赞助商或已连接的集成。"
   }
 }

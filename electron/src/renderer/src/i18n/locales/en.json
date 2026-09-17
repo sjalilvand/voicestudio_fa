@@ -53,7 +53,7 @@
   },
   "app": {
     "name": "VoiceStudio",
-    "tagline": "Local voice cloning. Nothing leaves your machine.",
+    "tagline": "Open source voice cloning and workflow engine. Build local.",
     "coming_soon": "Coming soon",
     "version": "v{{version}}",
     "switch_to_light": "Switch to light theme",
@@ -64,6 +64,7 @@
     "toast_flush_failed": "Flush failed: {{message}}"
   },
   "nav": {
+    "voice": "Voice",
     "clone_short": "Clone",
     "clone": "Voice cloning",
     "design": "Voice design",
@@ -113,7 +114,9 @@
     "recheck": "Re-check",
     "rechecking": "Re-checking…",
     "failed": "failed",
-    "latencyMs": "{{ms}} ms"
+    "latencyMs": "{{ms}} ms",
+    "localInstallRequired": "Install this engine on the backend computer using localhost or its setup guide. Remote installation is disabled.",
+    "argosRuntimeUnavailable": "Argos runtime unavailable. Reinstall the backend or select NLLB."
   },
   "clone": {
     "title": "Voice cloning",
@@ -1217,7 +1220,7 @@
     "perf_title": "Performance",
     "generate_timeout_cpu_note": "Used when generation runs on the CPU. Once saved here, this always governs CPU-family generation — independent of the accelerated budget above.",
     "device_family_rocm": "AMD GPU (ROCm)",
-    "perf_torch_compile": "Disable torch.compile (Windows)",
+    "perf_torch_compile": "Disable torch.compile",
     "generate_timeout_shadowed_note": "An environment variable outside VoiceStudio (shell, .env file, or container) is currently setting this — your saved value here is ignored until that variable is removed.",
     "device_family_cpu": "CPU",
     "device_family_gpu": "GPU",
@@ -2013,7 +2016,7 @@
     "dictation_replay": "Replay",
     "dictation_transcribing": "Transcribing…",
     "dubbing_title": "See dubbing in action",
-    "dubbing_sync": "Synced playback",
+    "dubbing_sync": "Sync playheads",
     "dubbing_picker": "Try another language:",
     "dubbing_cta": "Run this on your own video →",
     "dubbing_loading": "Loading dubbing demo…",
@@ -2029,6 +2032,7 @@
     "dictation_lede_hotkey_only": "Hold the shortcut above anywhere on your desktop, speak, release — the text lands in whatever app has focus. Press it now to verify it works."
   },
   "setup": {
+    "ready_desc": "You’re ready to create your first voice. You can set up dictation now or later in Settings.",
     "system_preflight": "System preflight",
     "system_check_desc": "Probe RAM, disk, GPU, and network. Blockers are flagged upfront so you know before downloading.",
     "probing": "Probing system…",
@@ -2121,7 +2125,7 @@
     "choose_method": "Choose how to give",
     "choose_method_amount": "Continue with ${{amount}}",
     "goal": {
-      "title": "Fund Claude Max",
+      "title": "Support VoiceStudio development",
       "of": "of",
       "per_month": "/ month",
       "aria": "{{raised}} of {{goal}} monthly goal",
@@ -2130,7 +2134,7 @@
       "social_proof": "Join {{count}} supporters funding local AI"
     },
     "postcard": {
-      "title": "Fund Claude Max",
+      "title": "Support VoiceStudio development",
       "lead_default": "Glad that worked! VoiceStudio is free and fully local. If it saves you time, a small monthly chip-in funds the Claude Max behind it.",
       "lead_first_clone": "Your first voice clone is done — nice! VoiceStudio runs entirely on your machine, and your support keeps it that way.",
       "lead_tenth_dub": "Ten dubs in — you're clearly putting it to work. A small monthly chip-in funds the Claude Max that ships these features.",
@@ -2569,5 +2573,74 @@
     "captured": "Captured {{count}} problem log lines",
     "contextNotice": "The selected agent receives this report, the current screen, recent app and backend logs, and system diagnostics.",
     "complete": "Complete"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "Speech is missing or unreadable. Regenerate the affected segment before exporting.",
+    "timingOverflow": "Speech exceeds its time slot. Shorten the translation or choose Strict Slot or Stretch Video.",
+    "backgroundUnavailable": "Original sound could not be preserved. Check background separation and dialogue timing, then retry, or explicitly export speech only."
+  },
+  "dubStyle": {
+    "label": "Translation style prompt",
+    "help": "Describe tone, audience and adaptation style—for example: conversational Bengali, preserve jokes, adapt idioms naturally. Saved with this project; used for translation and timing rewrites. Leave blank for the default style."
+  },
+  "dubActivity": {
+    "output": "Translations",
+    "waiting": "No output received yet.",
+    "progress": "{{done}} / {{total}} segments validated",
+    "cancelled": "Cancelled",
+    "fitting": "Adjusting timing"
+  },
+  "sponsorSlot": {
+    "partner_heading": "Partner with VoiceStudio",
+    "partner_subtitle": "Put your product in front of people building with voice.",
+    "app_placement": "In-app placement",
+    "integration_page": "Integration page",
+    "readme_exposure": "README exposure",
+    "visibility": "Visibility",
+    "integration": "Product integration",
+    "installs": "Direct installs",
+    "distribution": "Developer distribution",
+    "partner": "Verified partner",
+    "privacy": "Privacy",
+    "title": "Partner with VoiceStudio and Get Featured",
+    "description": "Drive visibility to your brand by sponsoring a paid featured slot.",
+    "form": "Google Form",
+    "email": "Email",
+    "book": "Book your slot",
+    "preview": "Get featured",
+    "footer_brand": "Your brand",
+    "footer_book": "Add now",
+    "email_template": "Hi VoiceStudio team,\n\nI'd like to partner with VoiceStudio and explore a featured placement for my brand.\n\nBrand / product:\nWebsite:\nIntegration or campaign:\nAudience / timing:\n\nCould you share available packages, pricing, placement options, and technical requirements? I understand a featured partnership can include a docs page, GitHub README logo, app footer slot, and Integrations directory placement.\n\nThanks,\n[Name]\n[Role / company]\n[Contact]",
+    "message": "Your brand, website & message",
+    "email_app": "Open email app",
+    "copy_email": "Copy email",
+    "preview_detail": "Book a slot for your sponsored brand or product integration. We’ll include a docs page, GitHub README logo, app footer slot, and Integrations."
+  },
+  "supportPlans": {
+    "remove": "Remove sponsor bar",
+    "title": "Free vs Pro",
+    "free": "Free",
+    "pro": "Pro",
+    "get_pro": "Get Pro",
+    "sponsor_bar": "Sponsor bar",
+    "visible": "Visible",
+    "hideable": "Can be hidden",
+    "unavailable": "Pro activation is not configured yet.",
+    "telemetry": "Telemetry",
+    "opt_in": "Optional, opt-in",
+    "disabled": "Disabled",
+    "badge": "Pro badge",
+    "advanced": "Advanced tools",
+    "standard": "Standard",
+    "included": "Included"
+  },
+  "integrationCatalog": {
+    "title": "Integrations",
+    "featured": "Featured",
+    "description": "Discover integrations and featured partners."
+  },
+  "directoryExamples": {
+    "example": "Directory example",
+    "notice": "Directory examples only — not sponsors or connected integrations."
   }
 }

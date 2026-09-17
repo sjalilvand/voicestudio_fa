@@ -340,6 +340,7 @@
     "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
+    "device_family_gpu": "GPU",
     "device_load_failed": "Impossible de charger le réglage du périphérique",
     "perf_save_failed": "Impossible d'enregistrer le réglage",
     "generate_budget_title": "Budget de temps de calcul",
@@ -360,7 +361,10 @@
     "theme_auto": "Auto (Système)",
     "theme_light": "Clair",
     "reduce_motion": "Réduire les animations",
-    "reduce_motion_desc": "Arrête les animations d’arrière-plan et les transitions. Le réglage système reste actif de son côté ; ceci s’y ajoute."
+    "reduce_motion_desc": "Arrête les animations d’arrière-plan et les transitions. Le réglage système reste actif de son côté ; ceci s’y ajoute.",
+    "perf_torch_compile": "Désactiver torch.compile",
+    "perf_torch_compile_note": "Utilise l’exécution directe pour éviter les erreurs de mémoire de Triton.",
+    "perf_torch_compile_hint": "Utilise l’exécution directe pour éviter les erreurs de mémoire de Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -860,7 +864,9 @@
     "familyDesc_asr": "Transforme l’audio en texte pour la transcription, le doublage, les sous-titres et la dictée.",
     "familyDesc_llm": "Assistant textuel facultatif pour la traduction et la réécriture. « Désactivé » ignore ces étapes.",
     "mpsLongText": "{{engine}} fonctionne ici sur Apple Silicon (MPS) et ce texte est long — la génération risque de dépasser le budget de temps. Un texte plus court, ou découpé en plusieurs prises, sera bien plus rapide.",
-    "inMemory": "En mémoire"
+    "inMemory": "En mémoire",
+    "localInstallRequired": "Installez ce moteur sur l’ordinateur du serveur via localhost ou son guide de configuration. L’installation à distance est désactivée.",
+    "argosRuntimeUnavailable": "Le moteur Argos est indisponible. Réinstallez le backend ou sélectionnez NLLB."
   },
   "capture": {
     "desc": "Les raccourcis clavier globaux ne fonctionnent que dans l'application de bureau. L'interface utilisateur Web utilise un raccourci <1>Ctrl+Shift+Espace</1> sur la page lorsque la fenêtre a le focus.",
@@ -1552,6 +1558,7 @@
     "h_ago": "Il y a {{count}}h"
   },
   "setup": {
+    "ready_desc": "Vous pouvez créer votre première voix. Configurez la dictée maintenant ou plus tard dans les paramètres.",
     "welcome": "Bienvenue",
     "system_check": "Vérification du système",
     "install_models": "Installer des modèles",
@@ -1606,7 +1613,7 @@
     "choose_method": "Choisissez comment donner",
     "choose_method_amount": "Continuez avec ${{amount}}",
     "goal": {
-      "title": "Fonds Claude Max",
+      "title": "Soutenez le développement de VoiceStudio",
       "of": "de",
       "per_month": "/mois",
       "aria": "{{raised}} sur {{goal}} objectif mensuel",
@@ -1615,7 +1622,7 @@
       "social_proof": "Rejoignez les sympathisants de {{count}} qui financent l'IA locale"
     },
     "postcard": {
-      "title": "Fonds Claude Max",
+      "title": "Soutenez le développement de VoiceStudio",
       "lead_default": "Content que ça ait fonctionné ! VoiceStudio est gratuit et entièrement local. Si cela vous fait gagner du temps, une petite contribution mensuelle finance le Claude Max derrière.",
       "lead_first_clone": "Votre premier clone de voix est terminé – super ! VoiceStudio fonctionne entièrement sur votre ordinateur et votre assistance le maintient ainsi.",
       "lead_tenth_dub": "Dix doublages – vous le mettez clairement à profit. Une petite contribution mensuelle finance le Claude Max qui fournit ces fonctionnalités.",
@@ -1797,7 +1804,8 @@
     "backend_shutting_down": "VoiceStudio est en cours de fermeture. Rouvrez l’application et réessayez.",
     "crash_broken_env": "Il est mort en chargeant ses propres dépendances Python : ce n'est donc ni la mémoire ni votre GPU, mais un environnement incomplet ou à moitié mis à jour. Utilisez « Nettoyer et réessayer » dans Paramètres → Journaux → Backend, qui le reconstruit de zéro et le répare sur place, sans toucher à vos voix ni à vos projets. Si l'échec persiste, les détails du plantage nomment le paquet qui refusait de s'importer.",
     "crash_vram_default": "Sur les GPU plus modestes, la cause habituelle est un manque de VRAM lors du chargement du modèle ASR en plus du modèle TTS : déchargez d'abord le modèle TTS, ou choisissez un modèle ASR plus petit dans Catalogue de modèles → Modèles.",
-    "stream_cut_backend_alive": "Le flux s'est terminé prématurément, mais le backend tourne toujours — il n'a donc pas planté. Dans une installation servie ou conteneurisée, c'est généralement un reverse proxy ou un répartiteur de charge qui met la connexion en tampon ou la coupe par timeout : désactivez la mise en tampon des réponses pour cette route (nginx: proxy_buffering off; X-Accel-Buffering: no) et augmentez son délai de lecture. Lancer l'application de bureau directement, ou sur localhost sans proxy, permettra de le confirmer."
+    "stream_cut_backend_alive": "Le flux s'est terminé prématurément, mais le backend tourne toujours — il n'a donc pas planté. Dans une installation servie ou conteneurisée, c'est généralement un reverse proxy ou un répartiteur de charge qui met la connexion en tampon ou la coupe par timeout : désactivez la mise en tampon des réponses pour cette route (nginx: proxy_buffering off; X-Accel-Buffering: no) et augmentez son délai de lecture. Lancer l'application de bureau directement, ou sur localhost sans proxy, permettra de le confirmer.",
+    "stream_cut_backend_alive_local": "Le flux s'est terminé prématurément, mais le backend fonctionne toujours — il n'a donc pas planté. L'application a perdu sa connexion au backend en cours de tâche ; cela arrive quand une étape longue reste silencieuse plusieurs minutes, et le backend termine généralement la tâche malgré tout. Patientez quelques minutes puis rouvrez la tâche depuis l'historique, ou consultez le journal du backend (Paramètres → Journaux → Back-end) pour voir ce qu'il faisait."
   },
   "keyboard": {
     "title": "Raccourcis clavier",
@@ -2831,5 +2839,55 @@
   "player": {
     "pause": "Mettre en pause",
     "play": "Lire"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "La parole est absente ou illisible. Régénérez le segment concerné avant l’exportation.",
+    "timingOverflow": "La parole dépasse son créneau. Raccourcissez la traduction ou choisissez un créneau strict ou l’étirement vidéo.",
+    "backgroundUnavailable": "Le son original n’a pas pu être préservé. Vérifiez la séparation du fond et les temps du dialogue, puis réessayez, ou exportez explicitement la voix seule."
+  },
+  "dubStyle": {
+    "label": "Consignes de style de traduction",
+    "help": "Décrivez le ton, le public et l’adaptation, par exemple préserver les blagues et adapter naturellement les expressions. Enregistré dans le projet et utilisé pour la traduction et les ajustements de durée. Laissez vide pour le style par défaut."
+  },
+  "dubActivity": {
+    "output": "Traductions",
+    "waiting": "Aucune sortie reçue pour le moment.",
+    "progress": "{{done}} / {{total}} segments validés",
+    "cancelled": "Annulé",
+    "fitting": "Ajustement du minutage"
+  },
+  "sponsorSlot": {
+    "book": "Réservez votre emplacement",
+    "preview": "Aperçu du sponsor",
+    "message": "Votre marque, site web et message",
+    "email_app": "Ouvrir la messagerie",
+    "copy_email": "Copier l’adresse e-mail",
+    "preview_detail": "Votre logo, lien et présentation pourraient apparaître ici."
+  },
+  "supportPlans": {
+    "remove": "Retirer la barre des sponsors",
+    "title": "Gratuit ou Pro",
+    "free": "Gratuit",
+    "pro": "Pro",
+    "sponsor_bar": "Barre des sponsors",
+    "visible": "Visible",
+    "hideable": "Peut être masquée",
+    "unavailable": "L’activation de Pro n’est pas encore configurée.",
+    "telemetry": "Télémétrie",
+    "opt_in": "Facultative, sur consentement",
+    "disabled": "Désactivée",
+    "badge": "Badge Pro",
+    "advanced": "Outils avancés",
+    "standard": "Standard",
+    "included": "Inclus"
+  },
+  "integrationCatalog": {
+    "title": "Intégrations",
+    "featured": "À la une",
+    "description": "Découvrez les intégrations et les partenaires à la une."
+  },
+  "directoryExamples": {
+    "example": "Exemple du répertoire",
+    "notice": "Exemples uniquement : ni sponsors ni intégrations connectées."
   }
 }

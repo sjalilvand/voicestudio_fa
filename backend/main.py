@@ -9,6 +9,13 @@ _backend_dir = os.path.dirname(os.path.abspath(__file__))
 if _backend_dir not in sys.path:
     sys.path.insert(0, _backend_dir)
 
+# #2135: arm fatal-signal tracebacks before anything heavy is imported, so a
+# native crash inside torch/CUDA leaves a named frame in backend_err.log
+# instead of a silently vanished process. See core/crash_diagnostics.py.
+from core.crash_diagnostics import enable_fault_handler  # noqa: E402
+
+enable_fault_handler()
+
 # PyInstaller re-executes this entry module when the frozen backend binary is
 # launched. Nested operation supervisors therefore dispatch here, before math,
 # logging, FastAPI, torch, or any application initialization. Source launches
@@ -629,11 +636,16 @@ def _phase_a_build_inner() -> None:
     # failure in that phase takes the whole backend down — the desktop app sits
     # on "starting backend" forever and /health stays 503.
     #
-    # That is not a hypothetical version: RTX 50-series (Blackwell, sm_120)
-    # users have no choice but to move off the pinned torch 2.8.0, which has no
-    # sm_120 kernels, and the torch 2.9.x they land on brings torchaudio 2.9
-    # with it. So the one group forced to upgrade hit a hard startup crash for
-    # a line that does nothing (#1931).
+    # That is not a hypothetical version: #1931 came from an sm_120 (Blackwell)
+    # user whose torch import crashed on Windows and who fixed it by moving to
+    # torch 2.9.1, which brings torchaudio 2.9 with it. Someone already working
+    # around one problem then hit a hard startup crash on a line that does
+    # nothing (#1931).
+    #
+    # The pin is not missing sm_120 kernels: torch 2.8.0 from the cu128 index
+    # lists sm_120 in get_arch_list(). CU128_ARCHS in
+    # tests/test_cuda_arch_compat.py records the same list, captured verbatim
+    # from a real cu128 build in #1285.
     if hasattr(torchaudio, "set_audio_backend"):
         torchaudio.set_audio_backend("soundfile")
     from utils import hf_progress

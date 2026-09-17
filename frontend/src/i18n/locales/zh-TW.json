@@ -340,6 +340,7 @@
     "device_family_npu": "NPU",
     "device_family_mps": "Apple GPU (MPS)",
     "device_family_cpu": "CPU",
+    "device_family_gpu": "GPU",
     "device_load_failed": "無法載入裝置設定",
     "perf_save_failed": "無法儲存設定",
     "generate_budget_title": "運算時間預算",
@@ -360,7 +361,10 @@
     "theme_auto": "系統自動",
     "theme_light": "淺色",
     "reduce_motion": "減少動態效果",
-    "reduce_motion_desc": "停止背景動畫與轉場效果。系統設定本身仍然生效，此項在其基礎上疊加。"
+    "reduce_motion_desc": "停止背景動畫與轉場效果。系統設定本身仍然生效，此項在其基礎上疊加。",
+    "perf_torch_compile": "停用 torch.compile",
+    "perf_torch_compile_note": "使用即時執行以避免 Triton 記憶體錯誤。",
+    "perf_torch_compile_hint": "使用即時執行以避免 Triton 記憶體錯誤。 <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -860,7 +864,9 @@
     "familyDesc_asr": "將音訊轉換為文字，用於轉錄、配音、字幕和聽寫。",
     "familyDesc_llm": "用於翻譯和改寫的選用文字助理。「關閉」會略過這些步驟。",
     "mpsLongText": "{{engine}} 在此機器上使用 Apple Silicon（MPS）執行，而這段文字較長 — 生成可能超出時間預算。縮短文字或分成幾次生成會快得多。",
-    "inMemory": "已載入記憶體"
+    "inMemory": "已載入記憶體",
+    "localInstallRequired": "請在後端電腦上透過 localhost 或安裝指南安裝此引擎。遠端安裝已停用。",
+    "argosRuntimeUnavailable": "Argos 執行環境無法使用。請重新安裝後端或選擇 NLLB。"
   },
   "capture": {
     "desc": "全域熱鍵僅適用於桌面應用程式。當視窗具有焦點時，Web UI 使用頁內 <1>Ctrl+Shift+Space</1> 快速鍵。",
@@ -1552,6 +1558,7 @@
     "h_ago": "{{count}} 小時前"
   },
   "setup": {
+    "ready_desc": "現在可以建立你的第一個聲音了。你可以立即設定語音輸入，也可以稍後在設定中完成。",
     "welcome": "歡迎",
     "system_check": "系統檢查",
     "install_models": "安裝型號",
@@ -1606,7 +1613,7 @@
     "choose_method": "選擇如何給予",
     "choose_method_amount": "繼續 ${{amount}}",
     "goal": {
-      "title": "克勞德馬克斯基金",
+      "title": "支持 VoiceStudio 開發",
       "of": "的",
       "per_month": "/月",
       "aria": "{{raised}} 每月目標 {{goal}}",
@@ -1615,7 +1622,7 @@
       "social_proof": "加入資助本地人工智慧的 {{count}} 支持者"
     },
     "postcard": {
-      "title": "克勞德馬克斯基金",
+      "title": "支持 VoiceStudio 開發",
       "lead_default": "很高興這有效！ VoiceStudio 是免費的並且完全本地化。如果可以節省您的時間，每月只需投入一小筆資金即可資助其背後的 Claude Max。",
       "lead_first_clone": "你的第一個聲音克隆已經完成——太好了！ VoiceStudio 完全在您的電腦上運行，並且您的支援使其保持這種狀態。",
       "lead_tenth_dub": "十次配音——你顯然正在讓它發揮作用。每月一小筆資金為 Claude Max 提供這些功能的資金。",
@@ -1797,7 +1804,8 @@
     "backend_shutting_down": "VoiceStudio 正在關閉。請重新開啟應用程式後再試。",
     "crash_broken_env": "它在載入自身的 Python 相依套件時結束，因此與記憶體或顯示卡無關——執行環境不完整，或更新到一半就停住了。請在 設定 → 系統日誌 → 後端 中使用「清理並重試」，它會從頭重建環境並就地修復，不會動到你的聲音或專案。若之後仍然失敗，當機詳情會指出無法匯入的確切套件。",
     "crash_vram_default": "在較小的 GPU 上，常見原因是在 TTS 模型仍載入時再載入 ASR 模型，導致顯示記憶體（VRAM）不足：請先卸載 TTS 模型，或在 模型庫 → 模型 中選擇較小的 ASR 模型。",
-    "stream_cut_backend_alive": "串流提前結束，但後端仍在執行——因此它並沒有當機。在伺服器或容器化部署中，這通常是反向代理或負載平衡器在緩衝連線或使其逾時：請為此路由停用回應緩衝（nginx: proxy_buffering off; X-Accel-Buffering: no）並調高讀取逾時。直接執行桌面應用程式，或在沒有代理的 localhost 上執行，即可確認。"
+    "stream_cut_backend_alive": "串流提前結束，但後端仍在執行——因此它並沒有當機。在伺服器或容器化部署中，這通常是反向代理或負載平衡器在緩衝連線或使其逾時：請為此路由停用回應緩衝（nginx: proxy_buffering off; X-Accel-Buffering: no）並調高讀取逾時。直接執行桌面應用程式，或在沒有代理的 localhost 上執行，即可確認。",
+    "stream_cut_backend_alive_local": "串流提前結束，但後端仍在執行——因此並未當機。應用程式在任務進行中與後端斷線；當某個耗時步驟連續數分鐘沒有輸出時就可能發生，而後端通常仍會把任務完成。請等幾分鐘後從歷史記錄重新開啟該任務，或查看後端日誌（設定 → 系統日誌 → 後端）了解它當時在做什麼。"
   },
   "keyboard": {
     "title": "鍵盤快速鍵",
@@ -2831,5 +2839,55 @@
   "player": {
     "pause": "暫停",
     "play": "播放"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "語音缺失或無法讀取。請在匯出前重新產生受影響的片段。",
+    "timingOverflow": "語音超出分配的時長。請縮短譯文，或選擇嚴格時間區段或延展影片。",
+    "backgroundUnavailable": "無法保留原始聲音。請檢查背景音分離和對白時間後重試，或明確選擇僅匯出語音。"
+  },
+  "dubStyle": {
+    "label": "翻譯風格提示詞",
+    "help": "描述語氣、受眾和改編方式，例如保留笑點、自然轉換慣用語。隨專案儲存，用於翻譯和時長調整。留空使用預設風格。"
+  },
+  "dubActivity": {
+    "output": "翻譯結果",
+    "waiting": "尚未收到輸出。",
+    "progress": "已驗證 {{done}} / {{total}} 個片段",
+    "cancelled": "已取消",
+    "fitting": "正在調整時間"
+  },
+  "sponsorSlot": {
+    "book": "預訂展示位",
+    "preview": "贊助商展示預覽",
+    "message": "您的品牌、網站和留言",
+    "email_app": "開啟郵件應用程式",
+    "copy_email": "複製信箱",
+    "preview_detail": "這裡可以展示您的標誌、連結和介紹。"
+  },
+  "supportPlans": {
+    "remove": "移除贊助商列",
+    "title": "免費版與 Pro 比較",
+    "free": "免費版",
+    "pro": "Pro",
+    "sponsor_bar": "贊助商列",
+    "visible": "顯示",
+    "hideable": "可隱藏",
+    "unavailable": "尚未設定 Pro 啟用。",
+    "telemetry": "遙測",
+    "opt_in": "可選，需主動同意",
+    "disabled": "已停用",
+    "badge": "Pro 徽章",
+    "advanced": "進階工具",
+    "standard": "標準",
+    "included": "包含"
+  },
+  "integrationCatalog": {
+    "title": "整合",
+    "featured": "精選",
+    "description": "探索整合與精選合作夥伴。"
+  },
+  "directoryExamples": {
+    "example": "目錄範例",
+    "notice": "僅為目錄範例，並非贊助商或已連接的整合。"
   }
 }

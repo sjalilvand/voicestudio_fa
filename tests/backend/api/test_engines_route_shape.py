@@ -200,7 +200,7 @@ def test_audiocpp_runtime_installer_routes_are_desktop_scoped(
     )
     client = _client(fresh_app)
 
-    assert client.get("/engines/audiocpp/runtime/install/status").json() == payload
+    assert client.get("/engines/audiocpp/runtime/install/status").json() == {**payload, "install_allowed": True}
     response = client.post("/engines/audiocpp/runtime/install")
     assert response.status_code == 200
     assert response.json()["status"] == "started"

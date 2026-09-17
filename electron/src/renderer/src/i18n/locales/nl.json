@@ -1042,7 +1042,7 @@
     "perf_title": "Prestaties",
     "generate_timeout_cpu_note": "Gebruikt wanneer de generatie op de CPU draait. Eenmaal hier opgeslagen, bepaalt deze waarde altijd de CPU-generatie — onafhankelijk van het versnelde budget hierboven.",
     "device_family_rocm": "AMD GPU (ROCm)",
-    "perf_torch_compile": "torch.compile uitschakelen (Windows)",
+    "perf_torch_compile": "torch.compile uitschakelen",
     "generate_timeout_shadowed_note": "Een omgevingsvariabele buiten VoiceStudio (shell, .env-bestand of container) stelt deze waarde momenteel in — de hier opgeslagen waarde wordt genegeerd totdat die variabele wordt verwijderd.",
     "device_family_cpu": "CPU",
     "device_family_gpu": "GPU",
@@ -1907,6 +1907,7 @@
     "test_text": "Hallo – dit is een test van deze stem."
   },
   "nav": {
+    "voice": "Stem",
     "clone_short": "Klonen",
     "workspaces": "Werkruimtes",
     "stories": "Verhalen",
@@ -1964,7 +1965,7 @@
     "dictation_replay": "Opnieuw afspelen",
     "dictation_transcribing": "Transcriberen…",
     "dubbing_title": "Zie nasynchronisatie in actie",
-    "dubbing_sync": "Gesynchroniseerd afspelen",
+    "dubbing_sync": "Afspeelpositie synchroniseren",
     "dubbing_picker": "Probeer een andere taal:",
     "dubbing_cta": "Voer dit uit op uw eigen video →",
     "dubbing_loading": "Dubdemo laden…",
@@ -1980,6 +1981,7 @@
     "dictation_lede_hotkey_only": "Houd de sneltoets hierboven overal op je bureaublad ingedrukt, spreek, laat los — de tekst belandt in de app met focus. Druk nu om te verifiëren."
   },
   "setup": {
+    "ready_desc": "Je kunt je eerste stem maken. Stel dicteren nu in of later via Instellingen.",
     "system_preflight": "Systeem preflight",
     "system_check_desc": "Onderzoek RAM, schijf, GPU, ffmpeg en netwerk. Blokkers worden vooraf gemarkeerd, zodat u het weet voordat u gaat downloaden.",
     "probing": "Sondeersysteem…",
@@ -2072,7 +2074,7 @@
     "choose_method": "Kies hoe u wilt geven",
     "choose_method_amount": "Ga verder met ${{amount}}",
     "goal": {
-      "title": "Fonds Claude Max",
+      "title": "Steun de ontwikkeling van VoiceStudio",
       "of": "van",
       "per_month": "/ maand",
       "aria": "{{raised}} van {{goal}} maanddoel",
@@ -2081,7 +2083,7 @@
       "social_proof": "Sluit u aan bij {{count}} supporters die lokale AI financieren"
     },
     "postcard": {
-      "title": "Fonds Claude Max",
+      "title": "Steun de ontwikkeling van VoiceStudio",
       "lead_default": "Fijn dat dat werkte! VoiceStudio is gratis en volledig lokaal. Als het u tijd bespaart, financiert een kleine maandelijkse chip-in de Claude Max erachter.",
       "lead_first_clone": "Je eerste stemkloon is klaar - leuk! VoiceStudio draait volledig op uw machine, en uw ondersteuning zorgt ervoor dat dit zo blijft.",
       "lead_tenth_dub": "Tien dubs erin - je zet het duidelijk aan het werk. Een kleine maandelijkse chip-in financiert de Claude Max die deze functies levert.",
@@ -2482,7 +2484,9 @@
     "none_ready_title": "Spraaksynthese is niet gereed",
     "none_ready_body": "VoiceStudio kan automatisch de beste compatibele optie voor dit apparaat instellen.",
     "active": "Engine: {{name}}",
-    "none": "Geen engine actief"
+    "none": "Geen engine actief",
+    "localInstallRequired": "Installeer deze engine op de backendcomputer via localhost of de installatiehandleiding. Installatie op afstand is uitgeschakeld.",
+    "argosRuntimeUnavailable": "De Argos-runtime is niet beschikbaar. Installeer de backend opnieuw of kies NLLB."
   },
   "performanceProfile": {
     "requiresEngine": "Installeer en selecteer {{engine}} om snelheid en kwaliteit af te stellen.",
@@ -2569,5 +2573,74 @@
     "captured": "{{count}} problematische logregels vastgelegd",
     "contextNotice": "De geselecteerde agent ontvangt dit rapport, het huidige scherm, recente app- en backendlogboeken en systeemdiagnostiek.",
     "complete": "Voltooid"
+  },
+  "dubIntegrity": {
+    "missingSpeech": "Spraak ontbreekt of is onleesbaar. Genereer het betreffende segment opnieuw voordat je exporteert.",
+    "timingOverflow": "De spraak overschrijdt het tijdvak. Verkort de vertaling of kies een strikt tijdvak of het uitrekken van de video.",
+    "backgroundUnavailable": "Het oorspronkelijke geluid kon niet behouden blijven. Controleer de achtergrondscheiding en dialoogtijden en probeer opnieuw, of kies expliciet voor alleen spraak exporteren."
+  },
+  "dubStyle": {
+    "label": "Instructies voor vertaalstijl",
+    "help": "Beschrijf toon, doelgroep en aanpassing, zoals grappen behouden en uitdrukkingen natuurlijk vertalen. Opgeslagen in dit project voor vertaling en herschrijven op tijdsduur. Laat leeg voor de standaardstijl."
+  },
+  "dubActivity": {
+    "output": "Vertalingen",
+    "waiting": "Nog geen uitvoer ontvangen.",
+    "progress": "{{done}} / {{total}} segmenten gevalideerd",
+    "cancelled": "Geannuleerd",
+    "fitting": "Timing aanpassen"
+  },
+  "sponsorSlot": {
+    "partner_heading": "Word partner van VoiceStudio",
+    "partner_subtitle": "Bereik mensen die met spraak bouwen.",
+    "app_placement": "Plaatsing in de app",
+    "integration_page": "Integratiepagina",
+    "readme_exposure": "Vermelding in README",
+    "visibility": "Zichtbaarheid",
+    "integration": "Productintegratie",
+    "installs": "Directe installaties",
+    "distribution": "Distributie voor ontwikkelaars",
+    "partner": "Geverifieerde partner",
+    "privacy": "Privacy",
+    "title": "Uitgelicht worden op VoiceStudio",
+    "description": "Vergroot de zichtbaarheid van uw merk met een betaalde uitgelichte plek.",
+    "form": "Google-formulier",
+    "email": "E-mail",
+    "book": "Reserveer je plek",
+    "preview": "Sponsorvoorbeeld",
+    "footer_brand": "Jouw merk",
+    "footer_book": "Nu toevoegen",
+    "email_template": "Hallo VoiceStudio-team,\n\nIk wil graag met VoiceStudio samenwerken en een uitgelichte plek voor mijn merk verkennen.\n\nMerk / product:\nWebsite:\nIntegratie of campagne:\nDoelgroep / timing:\n\nKunnen jullie beschikbare pakketten, prijzen, plaatsingsopties en technische vereisten delen? Ik begrijp dat een uitgelicht partnerschap een documentatiepagina, GitHub README-logo, app-footerplek en vermelding in de Integrations-directory kan bevatten.\n\nBedankt,\n[Naam]\n[Rol / bedrijf]\n[Contact]",
+    "message": "Je merk, website en bericht",
+    "email_app": "E-mailapp openen",
+    "copy_email": "E-mailadres kopiëren",
+    "preview_detail": "Hier kunnen je logo, link en introductie staan."
+  },
+  "supportPlans": {
+    "remove": "Sponsorbalk verwijderen",
+    "title": "Gratis versus Pro",
+    "free": "Gratis",
+    "pro": "Pro",
+    "get_pro": "Pro nemen",
+    "sponsor_bar": "Sponsorbalk",
+    "visible": "Zichtbaar",
+    "hideable": "Kan worden verborgen",
+    "unavailable": "Pro-activering is nog niet ingesteld.",
+    "telemetry": "Telemetrie",
+    "opt_in": "Optioneel, met toestemming",
+    "disabled": "Uitgeschakeld",
+    "badge": "Pro-badge",
+    "advanced": "Geavanceerde tools",
+    "standard": "Standaard",
+    "included": "Inbegrepen"
+  },
+  "integrationCatalog": {
+    "title": "Integraties",
+    "featured": "Uitgelicht",
+    "description": "Ontdek integraties en uitgelichte partners."
+  },
+  "directoryExamples": {
+    "example": "Directoryvoorbeeld",
+    "notice": "Alleen directoryvoorbeelden — geen sponsors of verbonden integraties."
   }
 }

@@ -234,3 +234,33 @@ panels instead so neither editor becomes unusably small.
   from-source checkout.
 - **Installed it but still "needs install"** — restart the backend so Python
   picks up the newly-installed module.
+- **"The 'argos' engine's CTranslate2 runtime could not be loaded…"** — Argos
+  translates on CTranslate2, and on Linux kernels that refuse an executable
+  stack the CTranslate2 library shipped with Python 3.11 installs (4.4.0) is
+  rejected outright. VoiceStudio repairs that library in place on first use; if
+  it cannot (read-only install), the message names the fix — reinstall the
+  backend on Python 3.12+, or run `patchelf --clear-execstack` on the library
+  once — and NLLB stays available in the meantime
+  ([#692](https://github.com/debpalash/VoiceStudio/issues/692)).
+
+
+
+
+
+SRT and WebVTT exports round each cue timestamp once to the nearest millisecond, including carry into the next second or minute. The OpenAI-compatible transcription exports use the same formatter.
+
+
+Paste translation accepts WebVTT files with hourless timestamps. Only timing records at line starts activate timestamp matching; timestamp-like text inside a sentence remains dialogue.
+
+Subtitle import preserves numeric dialogue such as years and countdowns, including files mixing numbered and unnumbered cues. Cue numbers are removed only at identified cue boundaries.
+
+
+Argos accepts Chinese/Simplified Chinese names, Mandarin aliases, and language tags such as `zh-CN`. Traditional Chinese requests (`zh-TW`, `zh-Hant`, and the display name) are rejected explicitly; select NLLB for Traditional Chinese rather than silently receiving a different script.
+
+Mixed or malformed SRT files can make a bare number indistinguishable from spoken dialogue. The importer removes numbering only when cue boundaries and sequential numbering support it; ambiguous nonsequential numbers are retained as text to avoid silent data loss. Standard indexed SRT and WebVTT exports avoid this ambiguity.
+
+If the Argos native runtime cannot load, both desktop and browser clients show localized recovery guidance: reinstall the backend or select NLLB. The API returns the stable `argos_runtime_unavailable` error code without exposing native library paths.
+
+WebVTT import separates metadata blocks from cue identifiers using the [WebVTT block-parsing rules](https://www.w3.org/TR/webvtt1/#file-parsing): a timing line immediately after an identifier makes a cue, even when that identifier is NOTE, STYLE, or REGION. Later timing examples inside metadata are ignored, and empty cues never borrow the next cue’s identifier as dialogue.
+
+Dubbing transcription emits keepalives during quiet diarization, reference-refinement, and cleanup steps. Disconnecting stops queued model work; native calls already running retain their model until they finish, then cleanup restores TTS. Task streams also request that proxies disable buffering so keepalives reach the client promptly.
