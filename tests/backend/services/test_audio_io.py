@@ -440,3 +440,21 @@ def test_safe_save_flac_buffer_fallback_names_the_format(monkeypatch):
     decoded, sr = sf.read(buf)
     assert sr == 24000
     assert len(decoded) == 24000
+
+
+@pytest.mark.parametrize("message, fallback", [
+    ("Could not load libtorchcodec. Missing FFmpeg shared libraries", True),
+    ("unrelated encoder failure", False),
+])
+def test_save_native_loader_failure_only_uses_fallback(tmp_path, monkeypatch, message, fallback):
+    import torchaudio
+    def fail(*args, **kwargs):
+        raise RuntimeError(message)
+    monkeypatch.setattr(torchaudio, "save", fail)
+    target = tmp_path / "codec.wav"
+    if fallback:
+        _safe_torchaudio_save(str(target), _sine_tensor(), 24000)
+        assert sf.info(target).frames == 24000
+    else:
+        with pytest.raises(RuntimeError, match="unrelated encoder failure"):
+            _safe_torchaudio_save(str(target), _sine_tensor(), 24000)

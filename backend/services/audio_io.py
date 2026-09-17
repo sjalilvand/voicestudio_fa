@@ -204,7 +204,9 @@ def _safe_torchaudio_save(
                     fmt, e,
                 )
                 torchaudio.save(path_or_buf, tensor, sample_rate, format=fmt)
-    except ImportError as e:
+    except (ImportError, RuntimeError) as e:
+        if isinstance(e, RuntimeError) and "could not load libtorchcodec" not in str(e).lower():
+            raise  # Unrelated encoder failures must remain visible.
         # torchaudio >= 2.9 routes save() through TorchCodec, which needs
         # FFmpeg *shared libraries* on the system. Where those are absent the
         # write raises ImportError and every generation fails. #1931 guarded
@@ -221,7 +223,7 @@ def _safe_torchaudio_save(
                 path_or_buf.seek(0)
                 path_or_buf.truncate(0)
             except (OSError, io.UnsupportedOperation):
-                pass
+                pass  # Non-seekable streams cannot be rewound; preserve fallback behavior.
         _subtype = {
             "wav": "FLOAT" if bits_per_sample == 32 else "PCM_16",
             "flac": "PCM_16",
