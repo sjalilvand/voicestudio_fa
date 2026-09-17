@@ -86,7 +86,7 @@ def parse_srt(content: str) -> SrtParseResult:
         # example timestamp inside a NOTE/STYLE/REGION cannot become speech.
         blocks = []
         for block in re.split(r"\n[^\S\n]*\n", text):
-            lines = block.strip("\n").split("\n")
+            lines = block.strip().split("\n")
             first = lines[0].strip()
             # WebVTT's block parser gives a timing line in position two
             # precedence over the identifier (including STYLE/REGION/NOTE).
