@@ -1677,6 +1677,11 @@ def resolve_kokoro_lang_code(language: str) -> str:
     iso = _KOKORO_ISO_BY_FULL_NAME.get(key, key)
     code = ALIASES.get(iso, iso)
     if code not in LANG_CODES:
+        # Labels from newer installed tables must remain selectable even when
+        # they have no entry in our compatibility map of full names.
+        code = next((candidate for candidate, label in LANG_CODES.items()
+                     if str(label).strip().lower() == key), code)
+    if code not in LANG_CODES:
         supported = ", ".join(_kokoro_supported_labels(ALIASES, LANG_CODES))
         raise ValueError(
             f"mlx-audio's Kokoro model (mlx-community/Kokoro-82M-bf16) doesn't "

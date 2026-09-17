@@ -81,3 +81,5 @@ preserve filter context at chunk boundaries; rate changes start a new group.
 
 Kokoro language errors list every language in the installed model’s table.
 “British English” and `en-gb` both select its British English voice pipeline.
+Display names from newer installed Kokoro tables are accepted too, so a language
+advertised by the error message can be selected without updating a hardcoded map.

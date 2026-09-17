@@ -433,6 +433,15 @@ def test_kokoro_resolves_british_english_label(monkeypatch):
     assert tts_backend.resolve_kokoro_lang_code("British English") == "b"
 
 
+def test_kokoro_advertised_labels_round_trip_through_installed_table(monkeypatch):
+    pipeline = types.ModuleType("mlx_audio.tts.models.kokoro.pipeline")
+    pipeline.ALIASES = {"en": "a", "en-gb": "b", "xx": "x"}
+    pipeline.LANG_CODES = {"a": "American English", "b": "British English", "x": "Newly Added Language"}
+    monkeypatch.setitem(sys.modules, "mlx_audio.tts.models.kokoro.pipeline", pipeline)
+    labels = tts_backend._kokoro_supported_labels(pipeline.ALIASES, pipeline.LANG_CODES)
+    assert {tts_backend.resolve_kokoro_lang_code(label) for label in labels} == {"a", "b", "x"}
+
+
 def test_kokoro_supported_labels_name_a_code_only_an_alias_reaches():
     """A code reached only through an alias is still named.
 
