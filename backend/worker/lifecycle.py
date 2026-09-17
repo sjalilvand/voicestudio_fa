@@ -91,7 +91,17 @@ _TASK_TRANSITIONS: dict[TaskState, frozenset[TaskState]] = {
         }
     ),
     TaskState.MODEL_LOADING: frozenset(
-        {TaskState.RUNNING, TaskState.QUEUED, TaskState.CANCELLED, TaskState.TIMEOUT, TaskState.FAILED}
+        {
+            TaskState.RUNNING,
+            # A worker reports ``started`` before loading. If the executor's
+            # final phase report is model loading, a completed render can move
+            # directly into bulk result delivery without another started frame.
+            TaskState.RESULT_UPLOADING,
+            TaskState.QUEUED,
+            TaskState.CANCELLED,
+            TaskState.TIMEOUT,
+            TaskState.FAILED,
+        }
     ),
     TaskState.RUNNING: frozenset(
         {
@@ -406,12 +416,15 @@ class Task:
             raise LifecycleError("stale session epoch")
         if attempt.state.terminal:
             raise LifecycleError(f"attempt {attempt_id} already terminal ({attempt.state.value})")
-        if new is not attempt.state:
-            attempt.phase_started_at = resolve(now)
-        attempt.state = new
         implied = _ATTEMPT_TO_TASK.get(new)
         if implied is not None:
             self._set_state(implied, now=now)
+        # Mutate the attempt only after the task transition succeeds. Otherwise
+        # one rejected transition leaves the pair contradictory (for example
+        # task=model_loading with attempt=uploading) and every retry is refused.
+        if new is not attempt.state:
+            attempt.phase_started_at = resolve(now)
+        attempt.state = new
         return attempt
 
     def accept(self, attempt_id: str, **kw) -> Attempt:

@@ -170,6 +170,8 @@ class _FakeDubModel:
 
     def __init__(self, delay_s: float = 0.0):
         self.calls: list[str] = []
+        self.batch_calls: list[list[str]] = []
+        self.use_native_batch = False
         self.delay_s = delay_s
 
     def generate(self, text=None, **kwargs):
@@ -180,7 +182,11 @@ class _FakeDubModel:
         return [torch.full((1, int(dur * SR)), 0.25)]
 
 
-class _FakeDubBackend:
+class _FakeDubBackend(_tts_mod().TTSBackend):
+    id = "fake-perf-dub"
+    display_name = "Fake Perf Dub Engine"
+    supports_cloning = True
+    gpu_compat = ("cpu",)
     applies_own_mastering = False
 
     def __init__(self, model):
@@ -190,8 +196,25 @@ class _FakeDubBackend:
     def sample_rate(self):
         return self._model.sampling_rate
 
+    @property
+    def supported_languages(self):
+        return ["multi"]
+
+    @classmethod
+    def is_available(cls):
+        return True, "ready"
+
     def generate(self, *a, **kw):
         return self._model.generate(*a, **kw)[0]
+
+
+class _FakeNativeDubBackend(_FakeDubBackend):
+    def generate_batch(self, texts, **kwargs):
+        self._model.batch_calls.append(list(texts))
+        return [
+            torch.full((1, int(float(text.split(":", 1)[0]) * SR)), 0.25)
+            for text in texts
+        ]
 
 
 @pytest.fixture
@@ -209,7 +232,8 @@ def dub_harness(monkeypatch, tmp_path):
     model = _FakeDubModel()
 
     async def _fake_resolve_generation_backend(**kwargs):
-        return _FakeDubBackend(model)
+        backend_type = _FakeNativeDubBackend if model.use_native_batch else _FakeDubBackend
+        return backend_type(model)
 
     job = {"duration": 4.0, "dubbed_tracks": {}, "speaker_clones": {}}
     job_dir = tmp_path / "jobP"
@@ -350,6 +374,23 @@ def test_dub_remix_budget_zero_decode_zero_rewrite(dub_harness, monkeypatch):
         f"budget: re-mix writes zero per-segment WAVs (no mix_<id> scratch "
         f"copies) — got {len(save_calls)}: {save_calls}"
     )
+
+
+@pytest.mark.usefixtures("torch_dtype_isolation")
+def test_interactive_dub_uses_native_batches(dub_harness, monkeypatch):
+    """Four fresh rows at width two cost two native forwards and no serial ones."""
+    run, model, _job, _job_dir = dub_harness
+    model.use_native_batch = True
+    monkeypatch.setenv("OMNIVOICE_DUB_BATCH_WIDTH", "2")
+    segments = [
+        {"start": i * 1.0, "end": i * 1.0 + 0.8, "text": "0.5:line"}
+        for i in range(4)
+    ]
+
+    _assert_done(run(_dub_body(segments)))
+
+    assert len(model.batch_calls) == 2
+    assert model.calls == []
 
 
 # ── Batch dub — native batches amortize, never duplicate ─────────────────────

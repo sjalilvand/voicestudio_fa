@@ -63,14 +63,14 @@ def test_ready_linux_host_has_no_problem() -> None:
     assert _probe("linux", "ID=fedora", xdo=True, audio_sink=True)["problem"] is None
 
 
-def test_every_source_launcher_runs_the_preflight() -> None:
+def test_legacy_tauri_launchers_run_the_webkit_preflight() -> None:
     for relative_path in ("scripts/desktop-dev.mjs", "scripts/desktop-prod.mjs"):
         launcher = (_ROOT / relative_path).read_text()
         assert 'from "./desktop-runtime-preflight.mjs"' in launcher
         assert "if (!desktopRuntimeReady()) process.exit(1);" in launcher
 
     package = json.loads((_ROOT / "package.json").read_text())
-    predesktop = package["scripts"]["predesktop"]
+    predesktop = package["scripts"]["pretauri"]
     assert "desktop-runtime-preflight.mjs" in predesktop
     assert predesktop.index("desktop-runtime-preflight.mjs") < predesktop.index("clear-dev-ports.mjs")
 

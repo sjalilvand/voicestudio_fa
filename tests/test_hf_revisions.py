@@ -33,7 +33,13 @@ def test_nllb_components_use_the_reviewed_revision():
 
     repo_id = "facebook/nllb-200-distilled-600M"
     assert calls == [
-        (repo_id, {"revision": hf_revisions.revision_for(repo_id)})
+        (
+            repo_id,
+            {
+                "revision": hf_revisions.revision_for(repo_id),
+                "local_files_only": True,
+            },
+        )
     ]
 
 

@@ -42,8 +42,8 @@ producer for it — so ``decide(op=...)`` answers for the surface the user is
 looking at rather than for the machine, and the badge cannot read
 "gpu2 ● ready" on a tab whose work is 100% local.
 
-Speech synthesis, chapter-at-a-time audiobook rendering, and coarse
-``dub_segments`` synthesis have remote producers. Dub assembly, ASR,
+Speech synthesis, chapter-at-a-time audiobook and Stories rendering, and
+coarse ``dub_segments`` synthesis have remote producers. Dub assembly, ASR,
 diarization, translation and RVC remain local. Dictation is
 intentionally local regardless of the selected target because its latency is
 the feature.
@@ -63,24 +63,38 @@ LOCAL = "local"
 # Operations with a remote producer today. Ports land one at a time, and this
 # set is what keeps the picker honest about which ones have arrived.
 #
-# `dub` is the surface the user picks; `dub_segments` is the coarse worker op
-# it dispatches (dub_generate.py). Both belong here because the GPU work does
+# `dub` / `batch` are the surfaces the user picks; `dub_segments` and
+# `batch_segments` are their coarse worker ops. Both pairs belong here because the GPU work does
 # leave this machine — listing only the worker op would make the Dub tab read
 # "Local" while a remote card renders it.
 #
 # Dictation is deliberately absent and should stay that way: it runs ASR per
 # utterance inside a live WebSocket loop, where a round trip per utterance
 # would spend the one thing that route exists for.
-REMOTE_OPERATIONS = frozenset({"audiobook", "dub", "dub_segments", "tts"})
+REMOTE_OPERATIONS = frozenset(
+    {
+        "audiobook",
+        "batch",
+        "batch_segments",
+        "clone",
+        "dub",
+        "dub_segments",
+        "longform",
+        "tts",
+    }
+)
 
 # Only for the sentence the user reads; an unknown op falls back to its id
 # rather than inventing a name for it.
 _OP_LABELS = {
     "tts": "speech synthesis",
     "clone": "voice cloning",
+    "batch": "batch dubbing",
+    "batch_segments": "batch dubbing",
     "dub": "dubbing",
     "dub_segments": "dubbing",
     "audiobook": "audiobook rendering",
+    "longform": "story rendering",
     "dictation": "dictation",
     "asr": "transcription",
 }
@@ -103,6 +117,13 @@ class Target:
     latency_ms: float = 0.0
     active_tasks: int = 0
     max_tasks: int = 0
+    cpu_percent: Optional[float] = None
+    free_memory_bytes: Optional[int] = None
+    system_memory_bytes: int = 0
+    cpu_count: int = 0
+    gpu_name: str = ""
+    gpu_memory_bytes: int = 0
+    gpu_utilization_percent: Optional[float] = None
 
     @property
     def is_local(self) -> bool:
@@ -121,6 +142,13 @@ class Target:
             "latency_ms": round(self.latency_ms, 1),
             "active_tasks": self.active_tasks,
             "max_tasks": self.max_tasks,
+            "cpu_percent": self.cpu_percent,
+            "free_memory_bytes": self.free_memory_bytes,
+            "system_memory_bytes": self.system_memory_bytes,
+            "cpu_count": self.cpu_count,
+            "gpu_name": self.gpu_name,
+            "gpu_memory_bytes": self.gpu_memory_bytes,
+            "gpu_utilization_percent": self.gpu_utilization_percent,
         }
 
 
@@ -178,6 +206,8 @@ def list_targets(control_plane=None) -> list[Target]:
     pool = getattr(control_plane, "pool", None) if control_plane.running else None
     for record in enrolled:
         live = pool.get(record.id) if pool is not None else None
+        host = record.host or {}
+        gpu = (host.get("gpus") or [{}])[0]
         connected = live is not None and not live.stale()
         available, detail = _availability(record, live, pool)
         targets.append(
@@ -193,6 +223,13 @@ def list_targets(control_plane=None) -> list[Target]:
                 latency_ms=live.latency_ms if live else 0.0,
                 active_tasks=live.capacity.active_tasks if live else 0,
                 max_tasks=live.capacity.max_concurrent_tasks if live else 0,
+                cpu_percent=live.capacity.cpu_percent if live else None,
+                free_memory_bytes=live.capacity.free_memory_bytes if live else None,
+                system_memory_bytes=int(host.get("system_memory_bytes") or 0),
+                cpu_count=int(host.get("cpu_count") or 0),
+                gpu_name=str(gpu.get("model") or ""),
+                gpu_memory_bytes=int(gpu.get("memory_bytes") or 0),
+                gpu_utilization_percent=live.capacity.gpu_utilization_percent if live else None,
             )
         )
     return targets

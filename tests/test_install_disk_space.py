@@ -135,6 +135,7 @@ def test_install_preflight_download_and_repair_marker_share_revision(models_mod,
     expected = hf_revisions.revision_for(repo_id)
     calls = []
     remembered = []
+    reconciled = []
 
     def fake_snapshot(**kwargs):
         calls.append(kwargs)
@@ -149,6 +150,12 @@ def test_install_preflight_download_and_repair_marker_share_revision(models_mod,
     monkeypatch.setattr(download, "_segmented_enabled", lambda: False)
     monkeypatch.setattr(download, "_validate_snapshot_has_weights", lambda *_a: None)
     monkeypatch.setattr(hf_revisions, "remember_revision", lambda *args: remembered.append(args))
+    from services import performance_profiles
+    monkeypatch.setattr(
+        performance_profiles,
+        "reconcile_active_profile",
+        lambda: reconciled.append(True) or {},
+    )
 
     async def run_install():
         await download.install_model(download.InstallModelRequest(repo_id=repo_id))
@@ -162,6 +169,7 @@ def test_install_preflight_download_and_repair_marker_share_revision(models_mod,
     assert calls[0]["dry_run"] is True
     assert "dry_run" not in calls[1]
     assert remembered and remembered[0][0:2] == (repo_id, expected)
+    assert reconciled == [True]
 
 
 def test_install_honors_catalog_allow_patterns(models_mod, monkeypatch, tmp_path):

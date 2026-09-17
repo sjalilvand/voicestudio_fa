@@ -39,6 +39,8 @@ def _locked_pedalboard_versions() -> list[Version]:
 
 def test_specifier_keeps_known_good_and_excludes_sigill_wheels():
     pedalboard = _pedalboard_requirement()
+    assert pedalboard.specifier.contains("0.9.14")
+    assert not pedalboard.specifier.contains("0.9.13")
     assert pedalboard.specifier.contains(_KNOWN_GOOD)
     assert not pedalboard.specifier.contains(_FIRST_BAD)
     assert not pedalboard.specifier.contains("0.9.24")

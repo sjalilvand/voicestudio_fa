@@ -129,3 +129,54 @@ def test_fit_llm_call_pins_low_temperature(monkeypatch):
     monkeypatch.setattr(_sr, "get_active_llm_backend", lambda: fake)
     _sr.adjust_for_slot("A" * 16, slot_seconds=1.0, target_lang="en", strict=True)
     assert fake.last_temperature == 0.2
+
+
+def test_measured_agent_uses_real_render_duration_once(monkeypatch):
+    """The agent pass consumes real TTS evidence and makes one rewrite; the
+    caller must render again before another correction is allowed."""
+    from services import speech_rate as _sr
+
+    class _MeasuredAgent:
+        def __init__(self):
+            self.calls = []
+
+        def chat(self, **kwargs):
+            self.calls.append(kwargs)
+            return "This line is too long."
+
+    fake = _MeasuredAgent()
+    monkeypatch.setattr(_sr, "get_active_llm_backend", lambda: fake)
+    result = _sr.adjust_for_measured_slot(
+        "This sentence is much too long for its slot.",
+        slot_seconds=2.0,
+        measured_seconds=3.2,
+        target_lang="en",
+        source_text="This sentence is much too long for its slot.",
+        translation_instructions="Use warm conversational language.",
+        context_before="The speaker opens the topic.",
+        context_after="The next speaker replies.",
+    )
+
+    assert result["changed"] is True
+    assert result["measured_ratio"] == pytest.approx(1.6)
+    assert len(fake.calls) == 1
+    assert "Use warm conversational language." in fake.calls[0]["system"]
+    assert "Exact target duration: 2.00s" in fake.calls[0]["user"]
+    assert "Measured duration of this line: 3.20s" in fake.calls[0]["user"]
+    assert "Previous source line (context only)" in fake.calls[0]["user"]
+    assert "Next source line (context only)" in fake.calls[0]["user"]
+    assert fake.calls[0]["temperature"] == 0.15
+
+
+def test_measured_agent_keeps_already_fitting_line_without_llm(monkeypatch):
+    from services import speech_rate as _sr
+
+    fake = _FakeChatter("should not be used")
+    monkeypatch.setattr(_sr, "get_active_llm_backend", lambda: fake)
+    result = _sr.adjust_for_measured_slot(
+        "Already timed.", slot_seconds=2.0, measured_seconds=2.02, target_lang="en"
+    )
+
+    assert result["changed"] is False
+    assert result["error"] == "already-fits"
+    assert fake.calls == 0

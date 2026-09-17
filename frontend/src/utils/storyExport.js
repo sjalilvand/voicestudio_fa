@@ -9,7 +9,7 @@
  * plain {sampleRate, numberOfChannels, length, getChannelData} shapes so they
  * are testable without a real AudioContext.
  */
-import { parseStoryText } from './storyTokens';
+import { parseChapterBody } from './longformParser';
 
 /** Mono buffer of `seconds` of silence at `sampleRate`. */
 export function silenceBuffer(seconds, sampleRate) {
@@ -89,7 +89,7 @@ export function formatTimecode(sec) {
 /** Group spoken lines (skip chapter headings) by character, preserving order. */
 export function tracksByCharacter(tracks) {
   const groups = [];
-  const idx = {};
+  const idx = Object.create(null);
   for (const tk of tracks || []) {
     if (isChapterLine(tk.text)) continue;
     const key = tk.character || 'narrator';
@@ -117,7 +117,7 @@ export function buildCueSheet(chapters) {
  * @param onProgress      (done, total) => void
  * @returns { blob: Blob, chapters: [{time,title}], durationSec: number }
  */
-async function exportStoryAudio(tracks, resolveOpts, fetchChunkBlob, onProgress) {
+export async function exportStoryAudio(tracks, resolveOpts, fetchChunkBlob, onProgress) {
   const Ctx = window.AudioContext || window.webkitAudioContext;
   const ctx = new Ctx();
   const sr = ctx.sampleRate;
@@ -129,8 +129,19 @@ async function exportStoryAudio(tracks, resolveOpts, fetchChunkBlob, onProgress)
         continue;
       }
       const opts = resolveOpts(tk) || {};
-      for (const seg of parseStoryText(tk.text || '', opts.profileId)) {
-        plan.push(seg.type === 'chunk' ? { ...seg, speed: opts.speed } : seg);
+      for (const span of parseChapterBody(tk.text || '', {
+        defaultVoice: opts.profileId,
+        defaultSpeed: opts.speed,
+      })) {
+        if (span.text)
+          plan.push({
+            type: 'chunk',
+            text: span.text,
+            profileId: span.voice_id,
+            speed: span.speed,
+          });
+        if (span.pause_ms_after > 0)
+          plan.push({ type: 'pause', seconds: span.pause_ms_after / 1000 });
       }
     }
     const chunkCount = plan.filter((s) => s.type === 'chunk').length;

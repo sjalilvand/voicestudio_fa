@@ -62,6 +62,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import threading
+import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
 
@@ -75,6 +77,87 @@ logger = logging.getLogger("omnivoice.gateway")
 # no unregister (scheduler.py), so one subscription per job would leak for the
 # life of the process.
 _POLL_SECONDS = 0.5
+
+# Remote model installs run as worker prewarms rather than scheduler tasks. Keep
+# their progress on the control plane so Models can reconnect without pretending
+# the download stopped as soon as POST /models/install returned.
+_REMOTE_DOWNLOAD_RETENTION_SECONDS = 60.0
+_remote_download_lock = threading.Lock()
+_remote_downloads: dict[tuple[str, str], dict[str, Any]] = {}
+
+
+def begin_remote_download(target: str, repo_id: str) -> None:
+    with _remote_download_lock:
+        _remote_downloads[(target, repo_id)] = {
+            "repo_id": repo_id,
+            "target": target,
+            "state": "downloading",
+            "phase": "starting",
+            "updated_at": time.monotonic(),
+        }
+
+
+def record_remote_download_progress(target: str, event: dict) -> None:
+    """Persist authenticated worker progress for reconnectable model rows."""
+    repo_id = str(event.get("repo_id") or "").strip()
+    if not repo_id:
+        return
+    phase = str(event.get("phase") or "progress")
+    state = (
+        "done"
+        if phase == "install_done"
+        else "failed"
+        if phase == "install_error"
+        else "install_cancelled"
+        if phase in {"cancelled", "install_cancelled"}
+        else "cancelling"
+        if phase == "cancelling"
+        else "downloading"
+    )
+    normalized = {
+        "repo_id": repo_id,
+        "target": target,
+        "state": state,
+        "phase": phase,
+        "updated_at": time.monotonic(),
+    }
+    for source, destination in (
+        ("bytes_done", "bytes_done"),
+        ("downloaded", "bytes_done"),
+        ("total_bytes", "total_bytes"),
+        ("total", "total_bytes"),
+        ("rate", "rate"),
+        ("eta_seconds", "eta_seconds"),
+        ("files_done", "files_done"),
+        ("files_total", "files_total"),
+        ("error", "error"),
+        ("docs_topic", "docs_topic"),
+        ("failed_at", "failed_at"),
+        ("retry_after_seconds", "retry_after_seconds"),
+    ):
+        value = event.get(source)
+        if value is not None:
+            normalized[destination] = value
+    with _remote_download_lock:
+        previous = _remote_downloads.get((target, repo_id), {})
+        _remote_downloads[(target, repo_id)] = {**previous, **normalized}
+
+
+def remote_download_jobs() -> list[dict[str, Any]]:
+    now = time.monotonic()
+    with _remote_download_lock:
+        expired = [
+            key
+            for key, job in _remote_downloads.items()
+            if job.get("state") in {"done", "failed", "cancelled", "install_cancelled"}
+            and now - float(job.get("updated_at") or 0) >= _REMOTE_DOWNLOAD_RETENTION_SECONDS
+        ]
+        for key in expired:
+            _remote_downloads.pop(key, None)
+        return [
+            {key: value for key, value in job.items() if key != "updated_at"}
+            for job in _remote_downloads.values()
+        ]
 
 # Consecutive remote failures a multi-unit job tolerates before it stops trying
 # the remote worker. One is a blip (a dropped stream, a worker restart); two in
@@ -352,7 +435,7 @@ async def prewarm(
     """
     decision = decision or decide(op, control_plane=control_plane)
     if decision.remote:
-        await preflight(engine, decision, control_plane=control_plane)
+        await preflight(engine, decision, operation=op, control_plane=control_plane)
         plane = _plane(control_plane)
         if engine and plane is not None and getattr(plane, "servicer", None) is not None:
             await plane.servicer.prewarm(decision.worker_id, engine=engine)
@@ -495,12 +578,22 @@ async def _run_remote(
     if scheduler is None:
         raise _NotDispatched("the control plane has no scheduler")
 
-    await preflight(call.engine, decision, call.model_id, control_plane=plane)
+    await preflight(
+        call.engine,
+        decision,
+        call.model_id,
+        operation=call.operation,
+        control_plane=plane,
+    )
 
     params = dict(call.params or {})
     deadline = call.deadline_seconds
     if deadline is None:
-        deadline = _default_deadline(call.operation, params.get("text"))
+        deadline = _default_deadline(
+            call.operation,
+            params.get("text"),
+            input_seconds=float(params.get("input_seconds") or 0.0),
+        )
 
     try:
         submit = getattr(scheduler, "submit_async", None)
@@ -547,6 +640,7 @@ async def preflight(
     decision: Decision,
     model_id: str = "",
     *,
+    operation: str = "tts",
     control_plane=None,
 ) -> None:
     """Refuse a positively absent remote model before scheduler admission.
@@ -558,7 +652,12 @@ async def preflight(
     """
     if not engine:
         return
-    target = await status(engine, decision=decision, control_plane=control_plane)
+    target = await status(
+        engine,
+        decision=decision,
+        op=operation,
+        control_plane=control_plane,
+    )
     for cap in target["models"]:
         if model_id and cap.get("model_id") not in (model_id, "", None):
             continue
@@ -819,7 +918,7 @@ async def status(
             "remote": False,
             "label": decision.label,
             "reason": decision.reason,
-            "models": _filtered(_local_capabilities(), engine),
+            "models": _filtered(_local_capabilities(), engine, op),
         }
 
     plane = _plane(control_plane)
@@ -834,14 +933,27 @@ async def status(
             "remote": False,
             "label": decision.label,
             "reason": "the chosen worker is not connected",
-            "models": _filtered(_local_capabilities(), engine),
+            "models": _filtered(_local_capabilities(), engine, op),
         }
+    models = []
+    capacity = getattr(worker, "capacity", None)
+    for advertised in worker.record.capabilities or []:
+        model = dict(advertised)
+        if capacity is not None:
+            engine_id = str(model.get("engine") or "")
+            model_id = str(model.get("model_id") or "")
+            if engine_id and model_id:
+                # Heartbeats are authoritative for residency. Capability
+                # discovery is refreshed less often and can otherwise leave
+                # Engine Ready green after a worker unloads a model.
+                model["resident"] = capacity.is_resident(engine_id, model_id)
+        models.append(model)
     return {
         "target": decision.worker_id,
         "remote": True,
         "label": decision.label,
         "reason": decision.reason,
-        "models": _filtered(list(worker.record.capabilities or []), engine),
+        "models": _filtered(models, engine, op),
     }
 
 
@@ -851,13 +963,37 @@ def _local_capabilities() -> list[dict]:
     return capabilities.discover(include_unavailable=True)
 
 
-def _filtered(models: list[dict], engine: Optional[str]) -> list[dict]:
-    if not engine:
-        return models
-    return [m for m in models if m.get("engine") == engine]
+def _filtered(models: list[dict], engine: Optional[str], operation: str = "tts") -> list[dict]:
+    worker_operation = {
+        "batch": "batch_segments",
+        "dub": "dub_segments",
+        "longform": "audiobook",
+    }.get(operation, operation)
+    return [
+        model
+        for model in models
+        if (not engine or model.get("engine") == engine)
+        and (
+            not model.get("operations")
+            or worker_operation in model.get("operations", ())
+        )
+    ]
 
 
 # ── Download: weights, onto the machine that needs them ────────────────────
+
+
+def _remote_model_capability(plane, worker_id: str, repo_id: str) -> Optional[dict]:
+    pool = getattr(plane, "pool", None)
+    worker = pool.get(worker_id) if pool is not None else None
+    return next(
+        (
+            capability
+            for capability in (worker.record.capabilities if worker is not None else [])
+            if repo_id in (capability.get("repo_ids") or [])
+        ),
+        None,
+    )
 
 
 async def download(
@@ -869,23 +1005,17 @@ async def download(
 ) -> dict:
     """Fetch a catalog model onto the target machine.
 
-    Remote downloads are not implemented yet, and this refuses rather than
-    falling back: downloading onto *this* machine when the user asked for the
-    weights on the 4090 leaves the remote box exactly as unprepared, having
-    reported success.
+    Remote downloads are sent to the selected worker and never fall back to
+    this machine: fetching weights onto the wrong host would report success
+    while leaving the selected GPU exactly as unprepared.
     """
     decision = decision or decide(op, control_plane=control_plane)
     if decision.remote:
         plane = _plane(control_plane)
         if plane is None or getattr(plane, "servicer", None) is None:
             raise RemoteUnsupported(f"{decision.label} is not connected.")
-        live = plane.pool.get(decision.worker_id) if plane.pool is not None else None
-        capability = next(
-            (
-                cap for cap in (live.record.capabilities if live is not None else [])
-                if repo_id in (cap.get("repo_ids") or [])
-            ),
-            None,
+        capability = _remote_model_capability(
+            plane, decision.worker_id, repo_id
         )
         if capability is None:
             raise GatewayError(f"Unknown model for {decision.label}: {repo_id!r}.")
@@ -898,13 +1028,29 @@ async def download(
                 f"{repo_id!r} must be installed directly on {decision.label}; "
                 "remote sidecar installation is disabled."
             )
-        sent = await plane.servicer.prewarm(
-            decision.worker_id,
-            engine=str(capability.get("engine") or ""),
-            model_id=str(capability.get("model_id") or ""),
-            download_if_missing=True,
-        )
+        begin_remote_download(decision.worker_id, repo_id)
+        try:
+            sent = await plane.servicer.prewarm(
+                decision.worker_id,
+                engine=str(capability.get("engine") or ""),
+                model_id=str(capability.get("model_id") or ""),
+                download_if_missing=True,
+            )
+        except Exception as exc:
+            record_remote_download_progress(
+                decision.worker_id,
+                {"repo_id": repo_id, "phase": "install_error", "error": str(exc)},
+            )
+            raise
         if not sent:
+            record_remote_download_progress(
+                decision.worker_id,
+                {
+                    "repo_id": repo_id,
+                    "phase": "install_error",
+                    "error": f"{decision.label} is not connected.",
+                },
+            )
             raise RemoteUnsupported(f"{decision.label} is not connected.")
         return {"status": "started", "repo_id": repo_id, "target": decision.worker_id}
 
@@ -919,6 +1065,33 @@ async def download(
         # path by another name, and paths are what the protocol forbids.
         raise GatewayError(f"Unknown model: {repo_id!r}.")
     return await install_model(InstallModelRequest(repo_id=repo_id, target="local"))
+
+
+async def cancel_download(
+    repo_id: str,
+    *,
+    target: str,
+    control_plane=None,
+) -> dict:
+    """Cancel an explicit model install on its authenticated remote worker."""
+    plane = _plane(control_plane)
+    servicer = getattr(plane, "servicer", None) if plane is not None else None
+    if servicer is None:
+        raise RemoteUnsupported(f"{target} is not connected.")
+    capability = _remote_model_capability(plane, target, repo_id)
+    if capability is None:
+        raise GatewayError(f"Unknown model for {target}: {repo_id!r}.")
+    model_id = str(capability.get("model_id") or "")
+    if not model_id:
+        raise GatewayError(f"{repo_id!r} has no worker model identifier.")
+    sent = await servicer.cancel_model_install(target, model_id=model_id)
+    if not sent:
+        raise RemoteUnsupported(f"{target} is not connected.")
+    record_remote_download_progress(
+        target,
+        {"repo_id": repo_id, "phase": "cancelling"},
+    )
+    return {"cancelling": repo_id, "target": target}
 
 
 # ── Plumbing ───────────────────────────────────────────────────────────────
@@ -936,7 +1109,12 @@ def _plane(control_plane=None):
         return None
 
 
-def _default_deadline(operation: str, text: Optional[str]) -> float:
+def _default_deadline(
+    operation: str,
+    text: Optional[str],
+    *,
+    input_seconds: float = 0.0,
+) -> float:
     """Worst-case wall time for one attempt, from the shared deadline policy.
 
     Same budget the assignment itself carries, so the awaiting side cannot give
@@ -944,7 +1122,13 @@ def _default_deadline(operation: str, text: Optional[str]) -> float:
     """
     from worker import deadlines  # noqa: PLC0415
 
-    return float(deadlines.for_task(operation, text=text).total_seconds)
+    return float(
+        deadlines.for_task(
+            operation,
+            text=text,
+            input_seconds=max(0.0, float(input_seconds)),
+        ).total_seconds
+    )
 
 
 def _model_load_timeout() -> float:
