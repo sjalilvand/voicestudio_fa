@@ -45,6 +45,17 @@ _META_CHARSET_RE = re.compile(
     re.IGNORECASE,
 )
 _DECLARATION_SCAN_BYTES = 1024
+# XML 1.0 Appendix F: with no byte-order mark, a well-formed document opens with
+# "<", and its byte pattern names the width and order. UTF-16 without a mark is
+# out of spec, but real EPUBs carry it, and the declaration itself is unreadable
+# in those documents — the ASCII patterns above never match NUL-interleaved
+# bytes. Widest first: "<\0\0\0" also starts "<\0".
+_NO_BOM_WIDE_PREFIXES = (
+    (b"<\x00\x00\x00", "utf-32-le"),
+    (b"\x00\x00\x00<", "utf-32-be"),
+    (b"<\x00", "utf-16-le"),
+    (b"\x00<", "utf-16-be"),
+)
 
 logger = logging.getLogger("omnivoice.longform_import")
 
@@ -74,6 +85,9 @@ def _decode_epub_entry(raw: bytes) -> str:
     # A byte-order mark outranks any declaration (XML 1.0 §F), and
     # decode_text_upload owns the one BOM table both front doors read.
     if not bom_encoding(raw):
+        for prefix, wide in _NO_BOM_WIDE_PREFIXES:
+            if raw.startswith(prefix):
+                return raw.decode(wide, errors="replace")
         declared = _declared_encoding(raw)
         if declared:
             try:

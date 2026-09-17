@@ -256,6 +256,19 @@ def test_epub_reads_a_utf32_document_by_its_bom():
     assert _ACCENTED in script
 
 
+@pytest.mark.parametrize(
+    "wide", ["utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be"]
+)
+def test_epub_reads_a_wide_document_with_no_bom(wide):
+    """UTF-16 without a mark is out of spec, but real EPUBs carry it — and the
+    declaration is unreadable there, since the ASCII patterns never match
+    NUL-interleaved bytes. XML 1.0 §F reads the opening "<" instead."""
+    document = _chapter_html("Un", _ACCENTED).encode(wide)
+    assert not document.startswith(b"\xff\xfe") and not document.startswith(b"\xfe\xff")
+    script = epub_to_chapter_script(_make_epub_raw([document]))
+    assert _ACCENTED in script
+
+
 @pytest.mark.parametrize("declared", ["x-not-a-real-charset", "hex_codec"])
 def test_epub_undecodable_declared_encoding_falls_back_instead_of_failing(declared):
     """An encoding Python doesn't have, and a bytes-to-bytes codec that
