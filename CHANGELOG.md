@@ -11,20 +11,14 @@ the frozen-backend fallback mirror it for their toolchains.
 **Highlights**
 
 - Electron packaging can recover without changing a release tag
-- WhisperX, faster-whisper and Argos now load on Linux kernels that reject CTranslate2's executable stack, by clearing the flag in place (#692)
-
-### Fixed
-
-- Argos stopped advertising itself as ready on hosts where its CTranslate2 runtime cannot load; dub translation reports one actionable error instead of a 500 per segment (#692)
-- PyTorch Whisper survives a CUDA out-of-memory mid-transcription by stepping the batch down and finishing on CPU rather than dropping the chunk (#2165)
-
-### Fixed
-
-- Repair CTranslate2 loading safely across ASR and translation, and retain the loaded Whisper model during CPU fallback (#2165) — thanks @guruthechosen!
 
 ### CI
 
 - Handle missing Electron signing credentials and retry packaging fixes without moving release tags (#2157)
+
+### Fixed
+
+- Repair CTranslate2 loading safely across ASR and translation, and retain the loaded Whisper model during CPU fallback (#2165) — thanks @guruthechosen!
 
 ## [0.5.3] — 2026-09-17
 
