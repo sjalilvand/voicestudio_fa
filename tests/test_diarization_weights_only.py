@@ -48,6 +48,12 @@ def test_loads_pyannote_after_registering_safe_globals(reset_diar, monkeypatch):
     fake_mod.Pipeline = types.SimpleNamespace(from_pretrained=_from_pretrained)
     monkeypatch.setitem(sys.modules, "pyannote.audio", fake_mod)
 
+    from contextlib import contextmanager
+    @contextmanager
+    def local_config():
+        yield "local-config.yaml"
+    monkeypatch.setattr("services.diarization_local.local_pipeline_config", local_config)
+
     # CPU device → no .to() call on the fake pipe.
     monkeypatch.setattr(mm, "get_best_device", lambda: "cpu")
 

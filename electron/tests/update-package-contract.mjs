@@ -1,0 +1,110 @@
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { basename, dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const electronRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const require = createRequire(import.meta.url);
+
+function option(name, fallback) {
+  const index = process.argv.indexOf(`--${name}`);
+  return index >= 0 ? process.argv[index + 1] : fallback;
+}
+
+function yamlValue(value) {
+  const trimmed = value.trim();
+  if (
+    trimmed.length >= 2 &&
+    ((trimmed.startsWith("'") && trimmed.endsWith("'")) ||
+      (trimmed.startsWith('"') && trimmed.endsWith('"')))
+  )
+    return trimmed.slice(1, -1);
+  return trimmed;
+}
+
+function capture(source, pattern, label) {
+  const value = source.match(pattern)?.[1];
+  assert(value, `Update metadata declares ${label}`);
+  return yamlValue(value);
+}
+
+async function sha512(path) {
+  const hash = createHash('sha512');
+  for await (const chunk of createReadStream(path)) hash.update(chunk);
+  return hash.digest('base64');
+}
+
+const platform = option('platform', process.platform);
+const arch = option('arch', process.arch);
+const channel = option(
+  'channel',
+  process.env.VOICESTUDIO_UPDATE_CHANNEL || `electron-stable-${platform}-${arch}`,
+);
+const releaseDir = resolve(electronRoot, option('release', 'release'));
+
+assert(['win32', 'darwin', 'linux'].includes(platform), `Supported platform: ${platform}`);
+assert(['x64', 'arm64'].includes(arch), `Supported architecture: ${arch}`);
+
+const priorTestArch = process.env.TEST_UPDATER_ARCH;
+process.env.TEST_UPDATER_ARCH = arch;
+const { Provider } = require('electron-updater/out/providers/Provider.js');
+const runtimeProvider = new Provider({ platform });
+const metadataFilename = `${runtimeProvider.getCustomChannelName(channel)}.yml`;
+if (priorTestArch === undefined) delete process.env.TEST_UPDATER_ARCH;
+else process.env.TEST_UPDATER_ARCH = priorTestArch;
+const metadataPath = resolve(releaseDir, metadataFilename);
+assert(existsSync(metadataPath), `Update metadata exists: ${basename(metadataPath)}`);
+
+const metadata = readFileSync(metadataPath, 'utf8');
+const expectedVersion = JSON.parse(
+  readFileSync(resolve(electronRoot, '../frontend/package.json'), 'utf8'),
+).version;
+const version = capture(metadata, /^version:\s*(.+)$/m, 'version');
+const fileUrl = capture(metadata, /^\s+- url:\s*(.+)$/m, 'files[0].url');
+const fileSha = capture(metadata, /^\s{4}sha512:\s*(.+)$/m, 'files[0].sha512');
+const declaredSize = Number(capture(metadata, /^\s{4}size:\s*(.+)$/m, 'files[0].size'));
+const legacyPath = capture(metadata, /^path:\s*(.+)$/m, 'path');
+const legacySha = capture(metadata, /^sha512:\s*(.+)$/m, 'sha512');
+const releaseDate = capture(metadata, /^releaseDate:\s*(.+)$/m, 'releaseDate');
+
+assert.equal(version, expectedVersion, 'Update version follows frontend/package.json');
+assert.equal(fileUrl, basename(fileUrl), 'Update artifact URL stays release-relative');
+assert.equal(legacyPath, fileUrl, 'Legacy path agrees with files[0].url');
+assert.equal(legacySha, fileSha, 'Legacy SHA-512 agrees with files[0].sha512');
+assert(Number.isSafeInteger(declaredSize) && declaredSize > 0, 'Update size is a positive integer');
+assert(!Number.isNaN(Date.parse(releaseDate)), 'Update releaseDate is an ISO timestamp');
+
+const artifactPath = resolve(releaseDir, fileUrl);
+assert.equal(
+  dirname(artifactPath),
+  releaseDir,
+  'Update artifact cannot escape the release directory',
+);
+assert(existsSync(artifactPath), `Update artifact exists: ${fileUrl}`);
+assert.equal(
+  statSync(artifactPath).size,
+  declaredSize,
+  'Update metadata size matches artifact bytes',
+);
+assert.equal(await sha512(artifactPath), fileSha, 'Update metadata SHA-512 matches artifact bytes');
+
+const osToken = platform === 'win32' ? 'win' : platform === 'darwin' ? 'mac' : 'linux';
+assert(
+  fileUrl.startsWith(`VoiceStudio-Electron-${expectedVersion}-${osToken}-${arch}.`),
+  'Update artifact preserves the branded version/platform/architecture name',
+);
+
+if (platform === 'win32') {
+  assert(fileUrl.endsWith('.exe'), 'Windows update artifact is the NSIS installer');
+  assert(existsSync(`${artifactPath}.blockmap`), 'Windows differential update blockmap exists');
+} else if (platform === 'darwin') {
+  assert(fileUrl.endsWith('.zip'), 'macOS update artifact is the updater ZIP');
+} else {
+  assert(fileUrl.endsWith('.AppImage'), 'Linux update artifact is the AppImage');
+}
+
+console.log(
+  `PASS: ${basename(metadataPath)} -> ${fileUrl} (${declaredSize} bytes, SHA-512 verified)`,
+);

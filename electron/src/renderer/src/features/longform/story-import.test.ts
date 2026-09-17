@@ -1,0 +1,29 @@
+import { expect, it } from 'vitest';
+import { importToText } from '../../../../../../frontend/src/utils/importStory';
+import { splitIntoChunks } from '../../../../../../frontend/src/utils/splitStoryText';
+it('removes SRT metadata and retains spoken lines', () => {
+  expect(
+    importToText(
+      'captions.SRT',
+      '1\n00:00:01,000 --> 00:00:02,000\nFirst cue\n\n2\n00:00:02,000 --> 00:00:03,000\nSecond cue',
+    ),
+  ).toBe('First cue\nSecond cue');
+});
+it('splits locally with bounded chunks and stable text order', () => {
+  const text = 'This is the first sentence of the story. This is the second sentence of the story.';
+  const chunks = splitIntoChunks(text, 40);
+  expect(chunks.every((chunk) => chunk.length <= 40)).toBe(true);
+  expect(chunks.join(' ')).toBe(text);
+  expect(splitIntoChunks('', 500)).toEqual([]);
+});
+
+it('decodes a UTF-16 manuscript before extracting subtitle speech', async () => {
+  const { readTextFile } = await import('../../../../../../frontend/src/utils/readTextFile');
+  const text = '1\n00:00:01,000 --> 00:00:02,000\nCafé — hello';
+  const bytes = new Uint8Array(2 + text.length * 2);
+  bytes.set([0xff, 0xfe]);
+  const view = new DataView(bytes.buffer);
+  for (let i = 0; i < text.length; i++) view.setUint16(2 + i * 2, text.charCodeAt(i), true);
+  const file = { arrayBuffer: async () => bytes.buffer };
+  expect(importToText('captions.srt', await readTextFile(file))).toBe('Café — hello');
+});

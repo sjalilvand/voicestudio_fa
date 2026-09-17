@@ -1,5 +1,22 @@
 # VoiceStudio — Install on Linux
 
+## Electron desktop (current)
+
+From the repository root, install Bun and uv, then run:
+
+```sh
+bun install
+bun run dev
+```
+
+Use `bun run desktop-prod` to build and launch Electron, or `bun run dist`
+to create local installers without publishing. The app manages its backend.
+See [Electron setup](../../electron/README.md) and [migration notes](../electron-migration.md).
+
+## Legacy Tauri installation and troubleshooting
+
+The instructions below apply to the sunset Tauri app and existing Tauri installers.
+
 This page is self-contained: follow it top to bottom and you'll end up with a
 working VoiceStudio install on a Debian / Ubuntu / Fedora / Arch host.
 
@@ -28,7 +45,7 @@ Everything above, plus the toolchain:
   `sudo dnf install python3.11` on Fedora, or already installed on Arch.
 - **Bun** — `curl -fsSL https://bun.sh/install | bash`.
 - **Rust / Cargo** — `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh` or via your package manager (e.g., `sudo apt install rustc cargo`).
-  If you use rustup, reopen the shell or source `"$HOME/.cargo/env"` before running `bun run desktop-prod`.
+  If you use rustup, reopen the shell or source `"$HOME/.cargo/env"` before running `bun run tauri:desktop-prod`.
 - **GTK/WebKit deps** for the Tauri shell:
 
   ```bash
@@ -66,10 +83,10 @@ git clone https://github.com/debpalash/VoiceStudio.git
 cd VoiceStudio
 bun install
 source "$HOME/.cargo/env"  # only needed in a shell opened before rustup finished
-bun desktop               # development build with hot reload
+bun tauri               # development build with hot reload
 ```
 
-Use `bun run desktop-prod` instead when you need to build and launch the
+Use `bun run tauri:desktop-prod` instead when you need to build and launch the
 production bundle. Both commands create the Python environment via `uv`, sync
 dependencies, and start the backend automatically; do not start the backend in
 a second terminal.
@@ -87,7 +104,7 @@ pkg-config --exists \
   && echo "Tauri system libraries are ready"
 ```
 
-`bun desktop` also checks the native `libxdo` linker input and GStreamer's
+`bun tauri` also checks the native `libxdo` linker input and GStreamer's
 `autoaudiosink` before starting. The latter is required even if you do not plan
 to record: WebKitGTK 2.52 aborts its renderer when a page creates an audio
 element without that plugin, which otherwise turns a running app blank. The
@@ -256,7 +273,7 @@ If you are on v0.4.0 or older, either update or build from source:
 git clone https://github.com/debpalash/VoiceStudio.git
 cd VoiceStudio
 bun install
-bun run desktop-prod
+bun run tauri:desktop-prod
 ```
 
 Tracking issues: [#62](https://github.com/debpalash/VoiceStudio/issues/62),
@@ -389,9 +406,9 @@ reinstall and left the CPU-only CUDA build in place).
 **2. Environment variable (existing installs / headless / source).** Set
 `OMNIVOICE_TORCH_VARIANT=rocm` before launching — the next bootstrap performs
 the same ROCm reinstall. Source installs honour it too:
-`OMNIVOICE_TORCH_VARIANT=rocm bun run desktop` swaps torch right after
+`OMNIVOICE_TORCH_VARIANT=rocm bun run tauri` swaps torch right after
 `uv sync` and launches the backend without re-syncing, so the wheel is not
-reverted on the next start (#1665). Without the variable, `bun run desktop`
+reverted on the next start (#1665). Without the variable, `bun run tauri`
 restores the lockfile's CUDA build — a hand-swapped ROCm wheel does not
 survive it. `OMNIVOICE_TORCH_INDEX=<url>` overrides the wheel
 index when you need a different ROCm version — e.g. AMD publishes newer

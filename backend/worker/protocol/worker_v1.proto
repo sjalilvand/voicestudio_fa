@@ -228,11 +228,9 @@ message Heartbeat {
   uint32 active_tasks = 2;
   uint32 available_slots = 3;
   repeated string resident_models = 4;
-  uint64 free_memory_bytes = 5;
-  double cpu_percent = 6;
-  // GPU utilisation is deliberately absent: unobtainable on Apple without
-  // sudo powermetrics and absent on CUDA without a new NVML dependency.
-  // Slots + queue depth are the load signals (goal_v2.md A11).
+  optional uint64 free_memory_bytes = 5;
+  optional double cpu_percent = 6;
+  optional double gpu_utilization_percent = 7;
 }
 
 message TaskAccepted { TaskRef ref = 1; Envelope envelope = 2; }
@@ -423,6 +421,14 @@ message PrewarmRequest {
   bool download_if_missing = 4;
 }
 
+// Cancel the explicit catalogue install attached to a pre-warm. The opaque
+// model id is resolved against the worker's advertised capabilities; repository
+// paths and arbitrary install targets never cross this boundary.
+message ModelInstallCancelRequest {
+  Envelope envelope = 1;
+  string model_id = 2;
+}
+
 message Ping { Envelope envelope = 1; uint64 nonce = 2; }
 
 // Fleet operations: stop taking work, finish what you have, then reconnect.
@@ -452,6 +458,7 @@ message ServerMessage {
     // never in a frame: a credential in the stream would be copied into every
     // protocol trace and every debug log that dumps one.
     RegisterResponse registered = 9;
+    ModelInstallCancelRequest model_install_cancel = 10;
   }
 }
 

@@ -747,6 +747,9 @@ class SubprocessBackend(TTSBackend):
             with self._lock:
                 self._validate_generate_authorization()
                 self._spawn()
+                # getattr keeps lightweight protocol-loop test doubles valid;
+                # real instances always initialise _proc in __init__.
+                proc = getattr(self, "_proc", None)
                 msg = {"op": "synthesize", "text": text}
                 # Filter kwargs to JSON-safe primitives. Tensor / Path / etc.
                 # don't survive json.dumps and are silently dropped — the
@@ -754,8 +757,15 @@ class SubprocessBackend(TTSBackend):
                 for k, v in kw.items():
                     if _is_jsonable(v):
                         msg[k] = v
-                self._send(msg)
-                reply = self._recv_with_timeout(self.recv_timeout_s)
+                try:
+                    self._send(msg)
+                    reply = self._recv_with_timeout(self.recv_timeout_s)
+                except (RuntimeError, OSError):
+                    # A broken or malformed protocol stream cannot be reused.
+                    # Reap it before releasing the request lock so an immediate
+                    # retry cannot race poll() and write to the same dead pipe.
+                    self._reap_unusable_process(proc)
+                    raise
                 # A cold sidecar may emit non-terminal {"op": "progress"} frames
                 # (during a model load, etc.) before the terminal audio frame.
                 # Each recv re-arms the watchdog, so a long-but-active load
@@ -779,12 +789,27 @@ class SubprocessBackend(TTSBackend):
                             report_model_load_activity()
                     except Exception:
                         pass  # the heartbeat is best-effort; never fail a synth over it
-                    reply = self._recv_with_timeout(self.recv_timeout_s)
-            if not reply:
-                raise RuntimeError(f"{self.id} sidecar closed pipe mid-generate")
+                    try:
+                        reply = self._recv_with_timeout(self.recv_timeout_s)
+                    except (RuntimeError, OSError):
+                        self._reap_unusable_process(proc)
+                        raise
+                if not reply:
+                    self._reap_unusable_process(proc)
+                    raise RuntimeError(f"{self.id} sidecar closed pipe mid-generate")
             if reply.get("op") == "error":
+                stage = str(reply.get("stage") or "unknown")
+                message = str(reply.get("message") or "unknown sidecar error")
+                traceback_text = str(reply.get("traceback") or "").strip()
+                logger.error(
+                    "[%s] sidecar %s error: %s%s",
+                    self.id,
+                    stage,
+                    message,
+                    f"\n{traceback_text[:20_000]}" if traceback_text else "",
+                )
                 raise RuntimeError(
-                    f"{self.id} sidecar error: {reply.get('message')!r}"
+                    f"{self.id} sidecar {stage} error: {message}"
                 )
             if reply.get("op") != "audio":
                 raise RuntimeError(
@@ -908,6 +933,29 @@ class SubprocessBackend(TTSBackend):
                 self._timeout_quarantine = [
                     item for item in self._timeout_quarantine if item is not proc
                 ]
+
+    def _reap_unusable_process(self, proc: Optional[subprocess.Popen]) -> None:
+        """Synchronously retire a sidecar whose protocol pipe is unusable."""
+        if proc is None:
+            return
+        try:
+            proc.wait(timeout=0.25)
+        except Exception:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+            try:
+                proc.wait(timeout=2)
+            except Exception:
+                with self._timeout_quarantine_lock:
+                    if not any(item is proc for item in self._timeout_quarantine):
+                        self._timeout_quarantine.append(proc)
+                return
+        with self._timeout_quarantine_lock:
+            self._timeout_quarantine = [
+                item for item in self._timeout_quarantine if item is not proc
+            ]
 
     def _retry_timeout_cleanup(self) -> bool:
         """Retry bounded cleanup, retaining every owner that could still be live."""

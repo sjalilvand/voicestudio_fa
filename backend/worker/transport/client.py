@@ -43,6 +43,8 @@ import platform
 import random
 import socket
 import sys
+import threading
+from concurrent.futures import Future
 from dataclasses import dataclass, field
 from typing import Awaitable, Callable, Optional, Protocol
 
@@ -72,6 +74,33 @@ _FALLBACK_MODEL_LOAD_SECONDS = 1800.0
 # does not fit in one frame cannot be delivered on the control stream at all —
 # see _oversized_result_error for why that has to be a failure and not a retry.
 MAX_MESSAGE_BYTES = 8 * 1024 * 1024
+
+
+def _heartbeat_resources() -> tuple[Optional[float], Optional[int], Optional[float]]:
+    """Sample cheap host telemetry without making a heartbeat depend on CUDA."""
+    cpu_percent = free_memory_bytes = gpu_utilization_percent = None
+    try:
+        import psutil
+
+        cpu_percent = float(psutil.cpu_percent(interval=None))
+    except Exception:
+        logger.debug("Could not sample worker CPU usage", exc_info=True)
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            free_memory_bytes = int(torch.cuda.mem_get_info()[0])
+    except Exception:
+        logger.debug("Could not sample worker free VRAM", exc_info=True)
+    try:
+        import pynvml
+
+        pynvml.nvmlInit()
+        handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+        gpu_utilization_percent = float(pynvml.nvmlDeviceGetUtilizationRates(handle).gpu)
+    except Exception:
+        logger.debug("Could not sample worker GPU usage", exc_info=True)
+    return cpu_percent, free_memory_bytes, gpu_utilization_percent
 
 # Room left for result_json, the ref, and protobuf framing when a payload does
 # ride inline. The inline decision is made on the payload alone, so without a
@@ -274,12 +303,19 @@ def describe_host() -> dict:
         from core.version import APP_VERSION  # noqa: PLC0415
     except Exception:
         APP_VERSION = ""
+    try:
+        import psutil  # noqa: PLC0415
+
+        system_memory_bytes = int(psutil.virtual_memory().total)
+    except Exception:
+        system_memory_bytes = 0
     return {
         "hostname": socket.gethostname(),
         "os": {"darwin": "darwin", "win32": "windows"}.get(sys.platform, "linux"),
         "arch": platform.machine(),
         "worker_version": APP_VERSION,
         "cpu_count": os.cpu_count() or 0,
+        "system_memory_bytes": system_memory_bytes,
     }
 
 
@@ -332,6 +368,13 @@ class WorkerClient:
         self._running: dict[str, asyncio.Task] = {}
         self._keepalives: dict[str, asyncio.Task] = {}
         self._maintenance: set[asyncio.Task] = set()
+        self._telemetry: tuple[Optional[float], Optional[int], Optional[float]] = (None, None, None)
+        # A driver query can hang indefinitely. Keep that one query owned
+        # rather than cancelling its awaiter and starting a fresh thread at
+        # every heartbeat.
+        self._telemetry_task: Optional[asyncio.Future] = None
+        self._prewarms: dict[str, asyncio.Task] = {}
+        self._prewarm_cancellations: dict[str, asyncio.Task] = {}
         self._epoch = 0
         self._session_token = ""
         # Negotiated by ConfigUpdate; None means "use the executor's own
@@ -435,6 +478,8 @@ class WorkerClient:
                 *draining, return_exceptions=True
             )
         self._maintenance.clear()
+        self._prewarms.clear()
+        self._prewarm_cancellations.clear()
         for key, task in running:
             if self._running.get(key) is task:
                 self._running.pop(key, None)
@@ -672,10 +717,59 @@ class WorkerClient:
     async def _heartbeat_loop(self, interval: float) -> None:
         while True:
             await asyncio.sleep(interval)
+            await self._refresh_telemetry()
             await self._send(self.heartbeat_message())
+
+    async def _refresh_telemetry(self) -> None:
+        """Publish completed samples and retain one non-blocking probe.
+
+        CUDA/NVML calls may wedge in a driver.  A timed ``to_thread`` await
+        only cancels the awaiter, leaving that thread alive; retaining this
+        task prevents later heartbeats from accumulating more blocked probes.
+        """
+        if not self._accepting_assignments or self._stop.is_set():
+            return
+        task = self._telemetry_task
+        if task is not None and task.done():
+            try:
+                sampled = task.result()
+            except Exception:
+                logger.debug("Could not sample worker telemetry", exc_info=True)
+            else:
+                # A partial failed sample must not erase an independent last
+                # good value.  Presence on the heartbeat remains honest until
+                # that individual metric can next be measured.
+                self._telemetry = tuple(
+                    current if value is None else value
+                    for current, value in zip(self._telemetry, sampled)
+                )
+            self._telemetry_task = None
+
+        if self._telemetry_task is None:
+            # Read-only driver probes cannot be interrupted. Keep one across
+            # reconnects, outside assignment drain and the shared executor
+            # (whose shutdown would otherwise wait forever for a wedged driver).
+            result = Future()
+            self._telemetry_task = asyncio.wrap_future(result)
+
+            def sample() -> None:
+                try:
+                    result.set_result(_heartbeat_resources())
+                except Exception:
+                    logger.debug("Could not sample worker telemetry", exc_info=True)
+                    result.set_result((None, None, None))
+
+            threading.Thread(
+                target=sample, name="worker-telemetry-probe", daemon=True,
+            ).start()
 
     def heartbeat_message(self) -> pb.WorkerMessage:
         """Build the worker's current liveness/capacity frame."""
+        cpu_percent, free_memory_bytes, gpu_utilization_percent = self._telemetry
+        telemetry = {}
+        if cpu_percent is not None: telemetry["cpu_percent"] = cpu_percent
+        if free_memory_bytes is not None: telemetry["free_memory_bytes"] = free_memory_bytes
+        if gpu_utilization_percent is not None: telemetry["gpu_utilization_percent"] = gpu_utilization_percent
         return pb.WorkerMessage(
             heartbeat=pb.Heartbeat(
                 active_tasks=len(self._running),
@@ -683,6 +777,7 @@ class WorkerClient:
                     0, self.config.max_concurrent_tasks - len(self._running)
                 ),
                 resident_models=self._resident_models(),
+                **telemetry,
             )
         )
 
@@ -801,15 +896,104 @@ class WorkerClient:
         elif kind == "prewarm":
             if not self._accepting_assignments:
                 return
+            model_id = message.prewarm.model_id
+            existing = self._prewarms.get(model_id)
+            if model_id and existing is not None and not existing.done():
+                return
             task = asyncio.create_task(
                 self._on_prewarm(message.prewarm), name="worker-prewarm"
             )
             self._maintenance.add(task)
+            if model_id:
+                self._prewarms[model_id] = task
             task.add_done_callback(self._maintenance_finished)
+        elif kind == "model_install_cancel":
+            await self._cancel_model_install(message.model_install_cancel)
 
     def _maintenance_finished(self, task: asyncio.Task) -> None:
         self._maintenance.discard(task)
+        for tasks in (self._prewarms, self._prewarm_cancellations):
+            for model_id, current in tuple(tasks.items()):
+                if current is task:
+                    tasks.pop(model_id, None)
         self._maybe_finish_drain()
+
+    async def _cancel_model_install(
+        self, request: pb.ModelInstallCancelRequest
+    ) -> None:
+        """Cancel one explicit catalogue install without blocking control I/O."""
+        model_id = request.model_id.strip()
+        capability = next(
+            (
+                cap
+                for cap in (self.config.capabilities or [])
+                if cap.get("model_id") == model_id
+            ),
+            None,
+        )
+        repo_ids = list((capability or {}).get("repo_ids") or [])
+        if len(repo_ids) != 1:
+            logger.warning("Ignoring model cancellation for unknown model %s", model_id)
+            return
+        repo_id = repo_ids[0]
+        task = self._prewarms.get(model_id)
+        if task is None or task.done():
+            await self._send_model_install_terminal(
+                repo_id,
+                "install_done"
+                if bool((capability or {}).get("downloaded"))
+                else "install_cancelled",
+            )
+            return
+        existing = self._prewarm_cancellations.get(model_id)
+        if existing is not None and not existing.done():
+            return
+        task.cancel()
+        confirmation = asyncio.create_task(
+            self._confirm_model_install_cancel(task, repo_id),
+            name="worker-model-install-cancel",
+        )
+        self._maintenance.add(confirmation)
+        self._prewarm_cancellations[model_id] = confirmation
+        confirmation.add_done_callback(self._maintenance_finished)
+
+    async def _confirm_model_install_cancel(
+        self, task: asyncio.Task, repo_id: str
+    ) -> None:
+        await asyncio.gather(task, return_exceptions=True)
+        capability = next(
+            (
+                cap
+                for cap in (self.config.capabilities or [])
+                if repo_id in (cap.get("repo_ids") or [])
+            ),
+            None,
+        )
+        await self._send_model_install_terminal(
+            repo_id,
+            "install_done"
+            if bool((capability or {}).get("downloaded"))
+            else "install_cancelled",
+        )
+
+    async def _send_model_install_terminal(self, repo_id: str, phase: str) -> None:
+        event = {
+            "repo_id": repo_id,
+            "filename": repo_id,
+            "downloaded": 0,
+            "total": 0,
+            "pct": 0.0,
+            "phase": phase,
+        }
+        await self._send(
+            pb.WorkerMessage(
+                download_progress=pb.DownloadProgress(
+                    event_json=json.dumps(
+                        event, separators=(",", ":"), ensure_ascii=False
+                    )
+                )
+            )
+        )
 
     def _maybe_finish_drain(self) -> None:
         if (
@@ -906,6 +1090,21 @@ class WorkerClient:
 
     async def _on_assignment(self, assignment: pb.TaskAssignment) -> None:
         key = self._key(assignment.ref)
+        # Assignment delivery is at-least-once. A reconnect or a control-stream
+        # retry may repeat the exact same attempt while it is still running or
+        # waiting for its result acknowledgement. Treating that repeat as a
+        # capacity rejection terminalizes the original attempt underneath its
+        # result upload; starting it again spends the GPU twice. Reaffirm the
+        # live claim, or redeliver the result we already hold.
+        if key in self._running:
+            await self._send(
+                pb.WorkerMessage(accepted=pb.TaskAccepted(ref=assignment.ref))
+            )
+            return
+        pending = self._pending.get(key)
+        if pending is not None:
+            await self._send(_result_message(pending), bulk=True)
+            return
         if not self._accepting_assignments or self._stop.is_set():
             await self._send(
                 pb.WorkerMessage(
@@ -1164,7 +1363,8 @@ class WorkerClient:
                 break
             resumed = int(ack.bytes_received)
             if ack.error.code and ack.error.code != "OFFSET_MISMATCH":
-                raise RuntimeError(ack.error.message or "the control plane refused the upload")
+                detail = ack.error.message or "the control plane refused the upload"
+                raise RuntimeError(f"{ack.error.code}: {detail}")
             if resumed < 0 or resumed > len(payload) or resumed == offset:
                 raise RuntimeError(ack.error.message or "the control plane could not resume the upload")
             offset = resumed

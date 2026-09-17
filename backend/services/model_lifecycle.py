@@ -48,6 +48,27 @@ def _asr_device() -> str:
     return "cpu"
 
 
+def _backend_device(backend: object) -> str:
+    """Report the device this backend can actually use.
+
+    The host's best device is not evidence that a CPU-only runtime uses it.
+    Prefer load-time facts, then constrain the fallback by the backend's
+    declared compatibility contract.
+    """
+    for attr in ("_device", "device", "execution_device"):
+        value = getattr(backend, attr, None)
+        if value is not None and not callable(value):
+            text = str(value).strip()
+            if text:
+                return text
+    compat = tuple(getattr(type(backend), "gpu_compat", ("cpu",)))
+    preferred = get_best_device()
+    family = preferred.split(":", 1)[0]
+    if family in compat:
+        return preferred
+    return "cpu" if "cpu" in compat else (compat[0] if compat else "unknown")
+
+
 def _active_tts_id() -> Optional[str]:
     """Configured TTS engine id, or None if it can't be resolved. Attribution
     is advisory — a prefs/import hiccup must never break /model/loaded."""
@@ -169,6 +190,40 @@ def list_loaded() -> dict:
         logger.warning("Loaded-model inventory unavailable for in-process engines")
         degraded_sources.append("engines")
 
+    # The local generation path keeps its selected backend in a separate
+    # active-instance slot. Non-OmniVoice models held there must be visible as
+    # well; otherwise Model Settings can report an empty runtime while an
+    # alternate TTS model still occupies memory.
+    try:
+        import services.tts_backend as tb
+        from services.subprocess_backend import SubprocessBackend
+
+        inst = getattr(tb, "_active_instance", None)
+        eid = getattr(tb, "_active_instance_id", None)
+        if (
+            inst is not None
+            and eid
+            and eid != "omnivoice"
+            and not isinstance(inst, SubprocessBackend)
+            and any(
+                getattr(inst, attr, None) is not None
+                for attr in getattr(inst, "_MODEL_ATTRS", ("_model", "_tts"))
+            )
+        ):
+            identity = getattr(inst, "model_identity", None)
+            models.append({
+                "id": f"active-engine:{eid}",
+                "name": getattr(inst, "display_name", None) or f"{eid} (engine)",
+                "checkpoint": identity() if callable(identity) else eid,
+                "device": _backend_device(inst),
+                "vram_mb": 0,
+                "unloadable": True,
+                **_tts_attribution(eid, active_tts),
+            })
+    except Exception:
+        logger.warning("Loaded-model inventory unavailable for active TTS engine")
+        degraded_sources.append("active-engine")
+
     # 6. The warm capture/dictation ASR singleton — resident until idle-released
     #    (#1101 class). Held separately from the co-loaded WhisperX ASR above.
     try:
@@ -176,11 +231,12 @@ def list_loaded() -> dict:
 
         cap = getattr(ab, "_capture_backend", None)
         if cap is not None:
+            model_label = getattr(getattr(cap, "spec", None), "label", None)
             models.append({
                 "id": "capture-asr",
-                "name": f"{type(cap).__name__} (dictation)",
+                "name": f"{model_label or getattr(cap, 'display_name', type(cap).__name__)} (dictation)",
                 "checkpoint": getattr(ab, "_capture_backend_key", None) or type(cap).__name__,
-                "device": get_best_device(),
+                "device": _backend_device(cap),
                 "vram_mb": 0,
                 "unloadable": True,
                 "note": "released after the idle timeout",
@@ -188,6 +244,25 @@ def list_loaded() -> dict:
     except Exception:
         logger.warning("Loaded-model inventory unavailable for dictation")
         degraded_sources.append("dictation")
+
+    # 7. Offline translation can remain resident when the user opts out of the
+    # default post-job release. Keep it visible and manually unloadable.
+    try:
+        from api.routers import dub_translate as dt
+
+        if getattr(dt, "_nllb_model", None) is not None:
+            models.append({
+                "id": "translation:nllb",
+                "name": "NLLB-200 Translation",
+                "checkpoint": dt._NLLB_REPO_ID,
+                "device": str(getattr(dt, "_nllb_device", None) or "cpu"),
+                "vram_mb": 0,
+                "unloadable": True,
+                "note": "released after translation by default",
+            })
+    except Exception:
+        logger.warning("Loaded-model inventory unavailable for translation")
+        degraded_sources.append("translation")
 
     # System memory snapshot — free/total RAM (and VRAM on a dedicated GPU) plus
     # a low-memory advisory, so the panel can show pressure instead of leaving
@@ -247,6 +322,14 @@ async def unload(model_id: str) -> dict:
             return {"unloaded": model_id, "success": True}
         return {"unloaded": model_id, "success": False, "reason": "in use by dictation"}
 
+    if model_id == "translation:nllb":
+        from api.routers import dub_translate as dt
+
+        if getattr(dt, "_nllb_model", None) is None:
+            return {"unloaded": model_id, "success": False, "reason": "not loaded"}
+        dt._unload_nllb()
+        return {"unloaded": model_id, "success": True}
+
     # In-process engines (#1247). `list_loaded_models` has advertised these as
     # `engine:<id>` with `"unloadable": True` since they were made visible in
     # the panel — but this dispatcher never grew a branch for them, so pressing
@@ -270,14 +353,34 @@ async def unload(model_id: str) -> dict:
             return {"unloaded": model_id, "success": True}
         return {"unloaded": model_id, "success": False, "reason": "not loaded"}
 
+    if model_id.startswith("active-engine:"):
+        engine_id = model_id.split(":", 1)[1]
+        import services.tts_backend as tb
+
+        if (
+            getattr(tb, "_active_instance", None) is None
+            or getattr(tb, "_active_instance_id", None) != engine_id
+        ):
+            return {"unloaded": model_id, "success": False, "reason": "not loaded"}
+        tb.reset_active_backend()
+        return {"unloaded": model_id, "success": True}
+
     raise ValueError(f"Unknown model id: {model_id}")
 
 
 async def unload_all() -> dict:
-    """Release every releasable model — in-process TTS + diarization + all
-    sidecars. Convenience for app shutdown / a global flush."""
+    """Release shared/alternate TTS, diarisation, sidecars, dictation and translation."""
     results = {}
-    for mid in ("tts", "diarization", "sidecars"):
+    model_ids = ["tts", "diarization", "sidecars", "capture-asr", "translation:nllb"]
+    try:
+        model_ids.extend(
+            entry["id"]
+            for entry in list_loaded()["models"]
+            if entry["id"].startswith(("engine:", "active-engine:"))
+        )
+    except Exception:
+        logger.warning("Could not enumerate optional engines during global unload")
+    for mid in dict.fromkeys(model_ids):
         try:
             results[mid] = await unload(mid)
         except Exception as exc:  # noqa: BLE001
