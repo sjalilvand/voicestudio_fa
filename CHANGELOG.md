@@ -20,6 +20,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Avoid pedalboard wheels that crash on unsupported CPU instructions (#2080) — thanks @D3nii!
 
+- Include cuDNN 8 compatibility libraries for CTranslate2 in CUDA containers (#2072) — thanks @basil-k-aji-dev!
+
 ## [0.5.3] — 2026-09-17
 
 **Highlights**
