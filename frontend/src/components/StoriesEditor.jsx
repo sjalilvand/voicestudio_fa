@@ -84,6 +84,10 @@ const SPEED_RANGE = 'w-[120px]';
 const TRACK_BTN =
   'w-[26px] h-[26px] flex items-center justify-center bg-transparent text-fg-subtle cursor-pointer rounded-md [transition:color_0.15s,background_0.15s,opacity_0.15s] p-0 hover:bg-white/[0.06] focus-visible:[box-shadow:var(--focus-ring)]';
 
+function releasePreview(track) {
+  if (track.audioUrl) URL.revokeObjectURL(track.audioUrl);
+}
+
 // Trigger a browser download for a Blob.
 function download(blob, filename) {
   const url = URL.createObjectURL(blob);
@@ -444,7 +448,10 @@ export default function StoriesEditor({ profiles = [] }) {
     } catch {
       // Storage unavailable: the ref alone covers this mounted session.
     }
-    setTracks([]);
+    setTracks((prev) => {
+      prev.forEach(releasePreview);
+      return [];
+    });
     toast.success(t('stories.cleared'));
   }, [tracks.length, setTracks, t]);
 
@@ -496,7 +503,7 @@ export default function StoriesEditor({ profiles = [] }) {
     (id) =>
       setTracks((prev) =>
         prev.filter((tk) => {
-          if (tk.id === id && tk.audioUrl) URL.revokeObjectURL(tk.audioUrl); // free the preview blob
+          if (tk.id === id) releasePreview(tk);
           return tk.id !== id;
         }),
       ),
@@ -537,9 +544,11 @@ export default function StoriesEditor({ profiles = [] }) {
           if (stale()) return;
           const url = URL.createObjectURL(blob);
           setTracks((prev) =>
-            prev.map((tk) =>
-              tk.id === track.id ? { ...tk, audioUrl: url, generating: false } : tk,
-            ),
+            prev.map((tk) => {
+              if (tk.id !== track.id) return tk;
+              releasePreview(tk);
+              return { ...tk, audioUrl: url, generating: false };
+            }),
           );
           // Shared playback path (labelled with the line text): registers with
           // the single-playback manager + global mini-player, and — unlike the
@@ -570,9 +579,11 @@ export default function StoriesEditor({ profiles = [] }) {
         let cursor = 0;
         const finish = () => {
           setTracks((prev) =>
-            prev.map((tk) =>
-              tk.id === track.id ? { ...tk, generating: false, audioUrl: null } : tk,
-            ),
+            prev.map((tk) => {
+              if (tk.id !== track.id) return tk;
+              releasePreview(tk);
+              return { ...tk, generating: false, audioUrl: null };
+            }),
           );
         };
         const step = () => {

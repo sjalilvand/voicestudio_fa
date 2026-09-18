@@ -33,3 +33,7 @@ The optional Stories Stems section renders one WAV per character with the shared
 EPUB chapters honor byte-order marks and XML/HTML encoding declarations, including
 legacy Latin and CJK encodings. Unsupported or invalid declarations use the shared
 text-import fallback so one bad declaration does not abort the book.
+
+### Clear a script
+
+Stories and Audiobook offer **Clear script** with confirmation. Stories removes all lines, chapter markers and pending import text while retaining the cast; Audiobook clears its manuscript. The web Stories editor also stops playback, ignores late preview results and releases preview audio when clearing or replacing lines. Clearing an imported script does not recreate the demo story.

@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, fireEvent, screen, waitFor } from '@testing-library/react';
+import { render, fireEvent, screen, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '../i18n';
 
@@ -48,6 +48,8 @@ describe('StoriesEditor clear script', () => {
   beforeEach(() => {
     window.localStorage.clear();
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:new-preview');
     askConfirm.mockReset();
     generateSpeech.mockReset();
     playBlobAudio.mockClear();
@@ -61,6 +63,7 @@ describe('StoriesEditor clear script', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     useAppStore.setState(useAppStore.getInitialState(), true);
     window.localStorage.clear();
   });
@@ -122,4 +125,33 @@ describe('StoriesEditor clear script', () => {
     expect(playBlobAudio).not.toHaveBeenCalled();
     expect(useAppStore.getState().storyTracks).toEqual([]);
   });
+  it('releases every current preview URL after confirmation', async () => {
+    let confirm;
+    askConfirm.mockReturnValue(new Promise((resolve) => { confirm = resolve; }));
+    useAppStore.setState({ storyTracks: TRACKS.map((track) => ({
+      ...track, audioUrl: `blob:${track.id}`,
+    })) });
+    renderEditor();
+    fireEvent.click(screen.getByRole('button', { name: /clear script/i }));
+    // A preview can finish while the confirmation is open; clear the live state.
+    act(() => useAppStore.setState((state) => ({ storyTracks: state.storyTracks.map((track) =>
+      track.id === 't2' ? { ...track, audioUrl: 'blob:latest' } : track,
+    ) })));
+    confirm(true);
+    await waitFor(() => expect(useAppStore.getState().storyTracks).toEqual([]));
+    expect(URL.revokeObjectURL.mock.calls.map(([url]) => url).sort()).toEqual(
+      ['blob:t1', 'blob:latest', 'blob:t3'].sort(),
+    );
+  });
+
+  it('releases the previous preview when replacing it', async () => {
+    useAppStore.setState({ storyTracks: [{ ...TRACKS[1], audioUrl: 'blob:previous' }] });
+    generateSpeech.mockResolvedValue({ blob: async () => new Blob(['audio']) });
+    renderEditor();
+    fireEvent.click(screen.getByRole('button', { name: /preview this line/i }));
+    await waitFor(() => expect(playBlobAudio).toHaveBeenCalledTimes(1));
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:previous');
+    expect(useAppStore.getState().storyTracks[0].audioUrl).toBe('blob:new-preview');
+  });
+
 });
