@@ -204,6 +204,12 @@ _CUE_MARKUP_RE = re.compile(
     r"</?(?:[biu]|c|v|lang|ruby|rt|font)(?=[\s.>])[^<>\n]*>|<(?:\d+:)?\d{2}:\d{2}\.\d{3}>",
     re.IGNORECASE,
 )
+# An `&` that does not already start a character reference.
+_BARE_AMPERSAND_RE = re.compile(r"&(?!#\d+;|#[xX][0-9a-fA-F]+;|[A-Za-z][A-Za-z0-9]*;)")
+
+
+def _escape_cue_span(span: str) -> str:
+    return _BARE_AMPERSAND_RE.sub("&amp;", span).replace("<", "&lt;").replace("-->", "--&gt;")
 
 
 def escape_webvtt_text(text: str) -> str:
@@ -211,14 +217,14 @@ def escape_webvtt_text(text: str) -> str:
 
     Any other `<` opens a tag, so a player drops the rest of the cue ("I <3
     you" shows as "I "), and a line containing `-->` ends the cue, emptying
-    it. A bare `&` already displays as itself. SubRip has no escaping, so SRT
-    text is written as-is.
+    it. A bare `&` becomes `&amp;`; an existing reference is not escaped
+    twice. SubRip has no escaping, so SRT text is written as-is.
     """
     parts = []
     last = 0
     for markup in _CUE_MARKUP_RE.finditer(text):
-        parts.append(text[last:markup.start()].replace("<", "&lt;").replace("-->", "--&gt;"))
+        parts.append(_escape_cue_span(text[last:markup.start()]))
         parts.append(markup.group(0))
         last = markup.end()
-    parts.append(text[last:].replace("<", "&lt;").replace("-->", "--&gt;"))
+    parts.append(_escape_cue_span(text[last:]))
     return "".join(parts)

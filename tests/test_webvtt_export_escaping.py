@@ -22,7 +22,7 @@ from fastapi import UploadFile
 os.environ.setdefault("OMNIVOICE_MODEL", "test")
 
 _TEXT = "I <3 you & a < b --> c"
-_ESCAPED = "I &lt;3 you & a &lt; b --&gt; c"
+_ESCAPED = "I &lt;3 you &amp; a &lt; b --&gt; c"
 _MARKUP = '<i>Hi</i> <c.yellow>there</c> <v Roger>you</v> <font color="red">x</font> <00:00:01.500>y'
 
 
@@ -83,7 +83,7 @@ def test_dub_vtt_download_escapes_text_and_keeps_markup(dub_job):
 
     dual = _client().get(f"/dub/vtt/{dub_job}", params={"dual": "true"})
     assert dual.status_code == 200
-    assert _cues(dual.text)[0] == f"{_ESCAPED}\n<i>Tom & Jerry &lt;3</i>"
+    assert _cues(dual.text)[0] == f"{_ESCAPED}\n<i>Tom &amp; Jerry &lt;3</i>"
 
 
 def test_imported_webvtt_exports_what_it_showed():
