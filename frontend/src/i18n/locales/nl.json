@@ -431,7 +431,7 @@
     "addChapter": "Hoofdstuk toevoegen",
     "clearScript": "Script wissen",
     "clearScriptHint": "Alle regels en hoofdstukken uit het script verwijderen (de cast blijft)",
-    "clearConfirm": "Alle {{count}} regels uit het script verwijderen? Dit kan niet ongedaan worden gemaakt.",
+    "clearConfirm": "Alle {{count}} scriptitems en nog niet verwerkte geïmporteerde tekst wissen? Dit kan niet ongedaan worden gemaakt.",
     "cleared": "Script gewist",
     "chapterN": "Hoofdstuk {{n}}",
     "stems": "Stengels",

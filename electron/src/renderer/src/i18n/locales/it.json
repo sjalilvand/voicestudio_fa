@@ -1452,7 +1452,7 @@
     "addChapter": "Aggiungi capitolo",
     "clearScript": "Svuota copione",
     "clearScriptHint": "Rimuovi tutte le righe e i capitoli dal copione (il cast resta)",
-    "clearConfirm": "Rimuovere tutte le {{count}} righe dal copione? L'operazione non può essere annullata.",
+    "clearConfirm": "Cancellare tutte le {{count}} voci del copione e il testo importato in sospeso? Questa azione non può essere annullata.",
     "clearConfirmScript": "Rimuovere l'intero manoscritto? L'operazione non può essere annullata.",
     "chapterN": "Capitolo {{n}}",
     "stems": "Tracce per personaggio",

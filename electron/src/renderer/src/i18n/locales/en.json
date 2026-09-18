@@ -1543,7 +1543,7 @@
     "addChapter": "Add Chapter",
     "clearScript": "Clear script",
     "clearScriptHint": "Remove every line and chapter from the script (the cast stays)",
-    "clearConfirm": "Remove all {{count}} lines from the script? This cannot be undone.",
+    "clearConfirm": "Clear all {{count}} script entries and any pending imported text? This cannot be undone.",
     "clearConfirmScript": "Remove the whole manuscript? This cannot be undone.",
     "chapterN": "Chapter {{n}}",
     "stems": "Stems",

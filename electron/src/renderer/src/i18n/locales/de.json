@@ -1450,7 +1450,7 @@
     "addChapter": "Kapitel hinzufügen",
     "clearScript": "Skript leeren",
     "clearScriptHint": "Alle Zeilen und Kapitel aus dem Skript entfernen (die Besetzung bleibt)",
-    "clearConfirm": "Alle {{count}} Zeilen aus dem Skript entfernen? Das kann nicht rückgängig gemacht werden.",
+    "clearConfirm": "Alle {{count}} Skripteinträge und noch nicht übernommene importierte Texte löschen? Dies kann nicht rückgängig gemacht werden.",
     "clearConfirmScript": "Das gesamte Manuskript entfernen? Das kann nicht rückgängig gemacht werden.",
     "chapterN": "Kapitel {{n}}",
     "stems": "Figurenspuren",

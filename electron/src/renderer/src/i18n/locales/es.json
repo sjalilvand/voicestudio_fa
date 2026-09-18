@@ -1452,7 +1452,7 @@
     "addChapter": "Agregar capítulo",
     "clearScript": "Vaciar guion",
     "clearScriptHint": "Quitar todas las líneas y capítulos del guion (el reparto se conserva)",
-    "clearConfirm": "¿Quitar las {{count}} líneas del guion? Esto no se puede deshacer.",
+    "clearConfirm": "¿Borrar las {{count}} entradas del guion y cualquier texto importado pendiente? Esta acción no se puede deshacer.",
     "clearConfirmScript": "¿Quitar todo el manuscrito? Esto no se puede deshacer.",
     "chapterN": "Capítulo {{n}}",
     "stems": "Pistas por personaje",

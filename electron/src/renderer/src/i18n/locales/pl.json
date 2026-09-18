@@ -1454,7 +1454,7 @@
     "addChapter": "Dodaj rozdział",
     "clearScript": "Wyczyść scenariusz",
     "clearScriptHint": "Usuń wszystkie linie i rozdziały ze scenariusza (obsada zostaje)",
-    "clearConfirm": "Usunąć wszystkie linie scenariusza ({{count}})? Tej operacji nie można cofnąć.",
+    "clearConfirm": "Wyczyścić wszystkie {{count}} wpisów scenariusza i oczekujący zaimportowany tekst? Tej operacji nie można cofnąć.",
     "clearConfirmScript": "Usunąć cały manuskrypt? Tej operacji nie można cofnąć.",
     "chapterN": "Rozdział {{n}}",
     "stems": "Ścieżki postaci",

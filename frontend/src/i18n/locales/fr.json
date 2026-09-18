@@ -431,7 +431,7 @@
     "addChapter": "Ajouter un chapitre",
     "clearScript": "Vider le script",
     "clearScriptHint": "Supprimer toutes les lignes et tous les chapitres du script (la distribution est conservée)",
-    "clearConfirm": "Supprimer les {{count}} lignes du script ? Cette action est irréversible.",
+    "clearConfirm": "Effacer les {{count}} entrées du script et tout texte importé en attente ? Cette action est irréversible.",
     "cleared": "Script vidé",
     "chapterN": "Chapitre {{n}}",
     "stems": "Tiges",

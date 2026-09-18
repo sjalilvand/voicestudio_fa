@@ -431,7 +431,7 @@
     "addChapter": "新增章節",
     "clearScript": "清空劇本",
     "clearScriptHint": "移除劇本中的所有台詞和章節（角色表保留）",
-    "clearConfirm": "要移除劇本中的全部 {{count}} 行嗎？此操作無法復原。",
+    "clearConfirm": "清除全部 {{count}} 個腳本項目及待處理的匯入文字？此操作無法復原。",
     "cleared": "劇本已清空",
     "chapterN": "第{{n}}章",
     "stems": "莖",
