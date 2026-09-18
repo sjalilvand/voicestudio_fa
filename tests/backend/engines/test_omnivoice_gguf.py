@@ -41,7 +41,11 @@ def test_quant_map_valid():
     quant_map_path = _PKG_DIR / "quant_map.json"
     assert quant_map_path.is_file(), quant_map_path
 
-    with quant_map_path.open() as f:
+    # utf-8 named for the same reason the backend names it: a bare open()
+    # decodes in the locale code page, which cannot read this file's em dashes
+    # on a Chinese, Japanese or Korean Windows
+    # (tests/test_repo_data_locale_decoding.py).
+    with quant_map_path.open(encoding="utf-8") as f:
         data = json.load(f)
 
     meta = data.get("_meta")
@@ -458,7 +462,9 @@ def test_no_shell_true_in_engine_code():
     from engines.omnivoice_gguf.backend import _PKG_DIR
 
     for path in _PKG_DIR.rglob("*.py"):
-        source = path.read_text()
+        # Python source is UTF-8, and it is re-encoded as UTF-8 on the next
+        # line — reading it in the locale code page never made sense.
+        source = path.read_text(encoding="utf-8")
         toks = tokenize.tokenize(io.BytesIO(source.encode("utf-8")).readline)
         prev_name: str | None = None
         prev_op: str | None = None
