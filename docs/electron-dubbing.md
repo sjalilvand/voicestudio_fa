@@ -294,3 +294,7 @@ to their own word timestamps only when those prove that the speech is disjoint.
 Existing translations/renders do not become correct merely by editing source text:
 changed lines must be translated and regenerated. Preserve the prior project when
 repairing an older transcript.
+
+Video watermark exports and visual-context keyframes resolve FFmpeg through the
+app’s shared media-tool resolver, including its bundled binary. They do not
+require a separate system FFmpeg installation.
