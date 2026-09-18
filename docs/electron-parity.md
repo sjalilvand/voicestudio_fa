@@ -65,3 +65,7 @@ path-bound WebSocket URL and reconnect without exposing credentials.
 running hash router and real backend. It fails on an error boundary, missing heading, uncaught
 exception, console error or warning, failed load or HTTP error response. The 2026-09-13 live run passed every
 route with no failures.
+
+## Navigation order
+
+In the expanded sidebar, workspace navigation sits immediately below the header and above the voice library. The status bar and Settings entry remain at the bottom; voice-library scrolling does not move the navigation.
