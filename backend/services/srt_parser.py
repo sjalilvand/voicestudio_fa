@@ -196,3 +196,13 @@ def format_cue_timestamp(seconds: float, ms_separator: str) -> str:
     m, rem = divmod(rem, 60_000)
     s, ms = divmod(rem, 1000)
     return f"{h:02d}:{m:02d}:{s:02d}{ms_separator}{ms:03d}"
+
+
+def escape_webvtt_text(text: str) -> str:
+    """Escape plain text for a WebVTT cue payload.
+
+    A raw `<` opens a tag, so a player drops the rest of the cue ("I <3 you"
+    renders as "I "), and `-->` would read as a timing line. SubRip has no
+    escaping, so SRT text is written as-is.
+    """
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
