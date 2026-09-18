@@ -287,3 +287,51 @@ def test_adapter_generate_requires_ref_audio(monkeypatch):
     backend = Confucius4Backend()
     with pytest.raises(RuntimeError, match="prompt_wav"):
         backend.generate("anything")
+
+
+def test_relative_clone_and_config_remain_stable_after_chdir(monkeypatch, tmp_path):
+    """Resolve caller-relative settings before the sidecar changes directories."""
+    import sys
+    sc = _load_sidecar()
+    clone = tmp_path / "engine"
+    clone.mkdir()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("OMNIVOICE_CONFUCIUS4_TTS_DIR", "engine")
+    monkeypatch.setenv("OMNIVOICE_CONFUCIUS4_CONFIG", "custom.yaml")
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    sc._chdir_to_clone_if_available()
+    sc._ensure_clone_on_sys_path()
+    assert Path(sys.path[0]) == clone
+    assert Path(sc._config_path()) == tmp_path / "custom.yaml"
+    sc._chdir_to_clone_if_available()
+    assert Path.cwd() == clone
+    monkeypatch.delenv("OMNIVOICE_CONFUCIUS4_CONFIG")
+    assert Path(sc._config_path()) == clone / "config" / "inference_config.yaml"
+
+
+@pytest.mark.parametrize("name", ["HF_HOME", "HF_HUB_CACHE", "HUGGINGFACE_HUB_CACHE", "TRANSFORMERS_CACHE", "XDG_CACHE_HOME"])
+def test_relative_cache_setting_keeps_existing_weights(monkeypatch, tmp_path, name):
+    """Changing cwd must not silently select a different model cache."""
+    sc = _load_sidecar()
+    clone = tmp_path / "engine"
+    clone.mkdir()
+    cache = tmp_path / "existing-cache"
+    cache.mkdir()
+    (cache / "weight.bin").write_bytes(b"existing model")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("OMNIVOICE_CONFUCIUS4_TTS_DIR", str(clone))
+    monkeypatch.setenv(name, "existing-cache")
+    sc._chdir_to_clone_if_available()
+    assert Path(os.environ[name]).resolve() == cache
+    assert (Path(os.environ[name]) / "weight.bin").read_bytes() == b"existing model"
+
+
+def test_adapter_absolutizes_reference_before_sidecar_chdir(monkeypatch, tmp_path):
+    """The parent owns the meaning of a caller-relative reference path."""
+    from engines.confucius4 import Confucius4Backend
+    from services.subprocess_backend import SubprocessBackend
+    calls = []
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(SubprocessBackend, "generate", lambda self, text, **kw: calls.append(kw))
+    Confucius4Backend().generate("hello", ref_audio="speaker.wav", language="en")
+    assert calls[0]["ref_audio"] == str(tmp_path / "speaker.wav")

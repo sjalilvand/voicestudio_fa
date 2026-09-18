@@ -110,14 +110,24 @@ def _chdir_to_clone_if_available() -> None:
     the clone root (``./checkpoints``, ``./checkpoints/wav2vec2bert_stats.pt``).
     Without chdir, those paths resolve against whatever directory the parent
     was started from — producing ``FileNotFoundError`` on the model file and,
-    worse, writing a stray ``checkpoints/hf_cache/`` directory into the
-    caller's working tree (#2099). Anchoring cwd once at start-up keeps the
+    potentially selecting a different cache when a relative HF cache override
+    is configured (#2099). Anchoring cwd once at start-up keeps the
     rest of the sidecar's relative-path behaviour identical to upstream.
     """
     clone = os.environ.get("OMNIVOICE_CONFUCIUS4_TTS_DIR", "").strip()
     if not clone:
         return
     clone_path = os.path.abspath(clone)
+    # These values were relative to the parent launch directory. Canonicalize
+    # before chdir so imports, explicit config, cache reuse, and retries agree.
+    os.environ["OMNIVOICE_CONFUCIUS4_TTS_DIR"] = clone_path
+    for name in (
+        "OMNIVOICE_CONFUCIUS4_CONFIG", "HF_HOME", "HF_HUB_CACHE",
+        "HUGGINGFACE_HUB_CACHE", "TRANSFORMERS_CACHE", "XDG_CACHE_HOME",
+    ):
+        value = os.environ.get(name)
+        if value and not os.path.isabs(value):
+            os.environ[name] = os.path.abspath(value)
     if os.path.isdir(clone_path):
         try:
             os.chdir(clone_path)

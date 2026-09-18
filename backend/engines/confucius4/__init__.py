@@ -147,7 +147,7 @@ class Confucius4Backend(SubprocessBackend):
                 "(prompt_wav). Pass ref_audio= with a path to a speaker "
                 "reference clip."
             )
-        forwarded["ref_audio"] = ref_audio
+        forwarded["ref_audio"] = os.path.abspath(os.fspath(ref_audio))
         language = kw.get("language")
         if language:
             forwarded["language"] = str(language)
