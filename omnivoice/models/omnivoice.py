@@ -769,9 +769,10 @@ class OmniVoice(PreTrainedModel):
         Args:
             ref_audio: File path (str) or ``(waveform, sample_rate)`` tuple.
                 waveform should be a 1-D or 2-D torch.Tensor (channels x samples).
-            ref_text: Transcript of the reference audio. If ``None``, the
-                ASR model will be used to auto-transcribe (must call
-                :meth:`load_asr_model` first).
+            ref_text: Transcript of the reference audio. If ``None``, use the
+                loaded ASR pipeline or an installed Whisper snapshot without
+                downloading. If neither is available, provide a transcript or
+                explicitly load an ASR model with :meth:`load_asr_model`.
             preprocess_prompt: If ``True`` (default), apply silence removal and
                 trimming to the reference audio, add punctuation in the end
                 of reference text (if not already)
