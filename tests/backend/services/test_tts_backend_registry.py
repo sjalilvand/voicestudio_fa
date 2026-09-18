@@ -382,7 +382,7 @@ def test_available_hint_extraction_rules():
     f = tts_backend._available_hint
     assert f("ready — upgrade recommended") == "upgrade recommended"
     assert f("ready") is None
-    assert f("ready (server reachable)") is None       # parenthetical ≠ advice
+    assert f("ready (api_v2 server reachable)") is None  # parenthetical ≠ advice
     assert f("ready — ") is None                       # empty advice
     assert f("loaded — from cache") is None            # convention needs "ready"
     assert f(None) is None
