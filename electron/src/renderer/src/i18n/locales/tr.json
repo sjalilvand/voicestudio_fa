@@ -2534,7 +2534,10 @@
     "ignored_unsupported": "Desteklenmeyen talimat göz ardı edildi: {{items}}",
     "too_long": "Klip {{duration}}'dir. Motor, transkript olmadan en fazla {{max}}'yi kabul eder.",
     "model_not_downloaded": "Model henüz indirilmedi. Yüklemek için ana uygulamanın Ayarlar → Motorlar'ı açın.",
-    "backend_unreachable": "Yerel motora ulaşılamıyor."
+    "backend_unreachable": "Yerel motora ulaşılamıyor.",
+    "gpu_arch_unsupported": "Bu PyTorch derlemesi GPU’nuzu desteklemiyor. Ayarlar → Performans ve Cihaz bölümünden CPU’yu seçin veya uyumlu bir PyTorch derlemesi yükleyin.",
+    "windows_app_control_blocked": "Windows uygulama denetimi gerekli bir dosyayı engelledi. Yöneticinizden güvenilir VoiceStudio çalışma ortamına izin vermesini isteyin, ardından uygulamayı yeniden başlatın.",
+    "audio_io_failed": "Ses okunamadı veya kaydedilemedi. Dosya biçimini, boş disk alanını ve dosya izinlerini kontrol edin. Ayarlar → Depolama bölümündeki klasörü inceleyin."
   },
   "network": {
     "copied": "Kopyalandı",

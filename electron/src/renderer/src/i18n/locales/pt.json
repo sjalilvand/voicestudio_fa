@@ -2536,7 +2536,10 @@
     "ignored_unsupported": "Instrução não suportada ignorada: {{items}}",
     "model_not_downloaded": "O modelo ainda não foi baixado. Abra Configurações → Motores do aplicativo principal para instalá-lo.",
     "backend_unreachable": "O mecanismo local não está acessível.",
-    "too_long": "O clipe tem {{duration}}s. O mecanismo aceita no máximo {{max}}s sem transcrição."
+    "too_long": "O clipe tem {{duration}}s. O mecanismo aceita no máximo {{max}}s sem transcrição.",
+    "gpu_arch_unsupported": "Esta versão do PyTorch não é compatível com a sua GPU. Escolha CPU em Configurações → Desempenho e dispositivo ou instale uma versão compatível do PyTorch.",
+    "windows_app_control_blocked": "O controle de aplicativos do Windows bloqueou um arquivo necessário. Peça ao administrador para permitir o ambiente de execução confiável do VoiceStudio e reinicie o aplicativo.",
+    "audio_io_failed": "Não foi possível ler ou salvar o áudio. Verifique o formato do arquivo, o espaço livre e as permissões. Confira a pasta em Configurações → Armazenamento."
   },
   "network": {
     "copied": "Copiado",

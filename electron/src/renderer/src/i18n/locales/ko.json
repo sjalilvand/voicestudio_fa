@@ -2534,7 +2534,10 @@
     "ignored_unsupported": "지원되지 않는 지침을 무시했습니다: {{items}}",
     "too_long": "클립은 {{duration}}s입니다. 엔진은 스크립트 없이 최대 {{max}}를 허용합니다.",
     "model_not_downloaded": "모델이 아직 다운로드되지 않았습니다. 메인 앱의 설정 → 엔진을 열어 설치하세요.",
-    "backend_unreachable": "로컬 엔진에 연결할 수 없습니다."
+    "backend_unreachable": "로컬 엔진에 연결할 수 없습니다.",
+    "gpu_arch_unsupported": "이 PyTorch 빌드는 사용 중인 GPU를 지원하지 않습니다. 설정 → 성능 및 장치에서 CPU를 선택하거나 호환되는 PyTorch 빌드를 설치하세요.",
+    "windows_app_control_blocked": "Windows 애플리케이션 제어가 필요한 파일을 차단했습니다. 관리자에게 신뢰할 수 있는 VoiceStudio 런타임을 허용하도록 요청한 뒤 앱을 다시 시작하세요.",
+    "audio_io_failed": "오디오를 읽거나 저장할 수 없습니다. 파일 형식, 디스크 여유 공간 및 파일 권한을 확인하세요. 설정 → 저장소에서 폴더를 확인하세요."
   },
   "network": {
     "copied": "복사됨",

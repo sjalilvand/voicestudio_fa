@@ -6,7 +6,16 @@ import { resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
+import { verifyLinuxLibraries } from '../native-linux-libraries.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+if (process.platform === 'linux') {
+  const librariesTest = spawnSync(
+    process.execPath,
+    ['--test', resolve(root, 'tests/native-linux-libraries.test.mjs')],
+    { encoding: 'utf8' },
+  );
+  assert.equal(librariesTest.status, 0, librariesTest.stdout + librariesTest.stderr);
+}
 const require = createRequire(import.meta.url);
 const artifactRequested = process.argv.includes('--artifact');
 const artifactArch = process.env.VOICESTUDIO_RUST_TARGET?.startsWith('aarch64')
@@ -93,6 +102,9 @@ for (const icon of ['brand/icon.png', 'brand/icon.ico', 'brand/32x32.png']) {
 }
 assert.equal(typeof config.afterPack, 'function', 'Native helper must be built before signing');
 if (artifactRequested) {
+  if (process.platform === 'linux') {
+    await verifyLinuxLibraries(resolve(artifactResources, 'native/voicestudio-desktop-bridge'));
+  }
   assert(existsSync(artifactExecutable), 'Packaged VoiceStudio executable');
   assert(
     existsSync(
