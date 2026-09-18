@@ -1558,3 +1558,47 @@ def test_a_failed_dependency_install_names_the_windows_path_limit(monkeypatch, p
     with pytest.raises(si._StepError) as err:
         si._step_install_deps(spec, si._new_job(spec.engine_id))
     assert ("LongPathsEnabled" in err.value.remediation) == (platform == "win32")
+
+
+@pytest.mark.parametrize('backends', [[], ['soundfile']])
+def test_moss_audio_probe_survives_optimization(backends):
+    """Missing audio support must fail even when Python assertions are disabled."""
+    import types
+    spec = si.get_spec('moss-tts-nano')
+    runtime = types.ModuleType('moss_tts_nano_runtime')
+    audio = types.ModuleType('torchaudio')
+    audio.list_audio_backends = lambda: backends
+    from unittest.mock import patch
+    with patch.dict(sys.modules, moss_tts_nano_runtime=runtime, torchaudio=audio):
+        probe = compile(spec.probe_code, '<probe>', 'exec', optimize=2)
+        if backends:
+            exec(probe, {})
+        else:
+            with pytest.raises(RuntimeError, match='I/O backend'):
+                exec(probe, {})
+
+
+def test_moss_existing_install_offers_dependency_repair(monkeypatch):
+    """Old completion markers cannot hide missing audio dependencies."""
+    spec = si.get_spec('moss-tts-nano')
+    checkout = si.managed_checkout(spec)
+    checkout.mkdir(parents=True)
+    monkeypatch.setattr(si, '_source_present', lambda *_: True)
+    py = si._venv_python(checkout / '.venv')
+    py.parent.mkdir(parents=True)
+    py.write_text('existing interpreter')
+    weights = checkout / 'cached-model.bin'
+    weights.write_bytes(b'existing weights')
+    marker = checkout / si._INSTALL_COMPLETE_MARKER
+    marker.write_text(spec.probe_module + '\n')
+    assert not si.get_status(spec.engine_id)['installed']
+    jobs = []
+    monkeypatch.setattr(si.threading, 'Thread', lambda **kw: SimpleNamespace(start=lambda: jobs.append(kw)))
+    monkeypatch.setattr(si, 'host_support', lambda _: (True, ''))
+    assert si.start_install(spec.engine_id)['status'] == 'started'
+    assert len(jobs) == 1
+    monkeypatch.setattr(si.subprocess, 'run', lambda *a, **k: SimpleNamespace(returncode=0))
+    si._step_verify(spec, si._new_job(spec.engine_id))
+    assert si._healthy(spec)
+    assert weights.read_bytes() == b'existing weights'
+    assert py.read_text() == 'existing interpreter'
