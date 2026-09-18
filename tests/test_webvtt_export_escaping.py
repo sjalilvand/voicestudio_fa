@@ -59,6 +59,33 @@ def test_dub_vtt_download_escapes_cue_text(dub_job):
     assert _cue_text(dual.text) == [_ESCAPED, "<i>Tom &amp; Jerry &lt;3</i>"]
 
 
+def test_imported_webvtt_round_trips_without_double_escaping():
+    from fastapi.testclient import TestClient
+    from main import app
+    from services.dub_pipeline import _dub_jobs
+    from services.srt_parser import parse_srt
+
+    cues = ["Q&amp;A with Tom &amp; Jerry", "I &lt;3 you &gt;&gt; ok"]
+    imported = "WEBVTT\n\n" + "".join(
+        f"00:00:0{2 * i + 1}.000 --> 00:00:0{2 * i + 2}.000\n{cue}\n\n" for i, cue in enumerate(cues)
+    )
+    job_id = str(uuid.uuid4())[:8]
+    _dub_jobs[job_id] = {
+        "video_path": "/nonexistent/original.mp4",
+        "duration": 10.0,
+        "filename": "clip.mp4",
+        "segments": parse_srt(imported).segments,
+    }
+    try:
+        client = TestClient(app, client=("127.0.0.1", 50000))
+        exported = client.get(f"/dub/vtt/{job_id}")
+    finally:
+        _dub_jobs.pop(job_id, None)
+
+    assert exported.status_code == 200
+    assert [line for line in exported.text.splitlines() if line in cues] == cues
+
+
 def test_dub_srt_download_keeps_text_as_written(dub_job):
     from fastapi.testclient import TestClient
     from main import app
