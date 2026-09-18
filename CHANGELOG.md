@@ -14,7 +14,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Changed
 
-- The main sidebar (navigation, voice library, status) stays in place on Settings instead of being swapped for a separate panel; the Settings sections now sit in a column beside it (#2209)
+- The main sidebar (navigation, voice library, status) stays in place on Settings instead of being swapped for a separate panel; the Settings sections now sit in a column beside it (#2209) — thanks @jaketame!
 
 ### Fixed
 
