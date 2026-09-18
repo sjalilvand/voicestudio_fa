@@ -45,16 +45,12 @@ _META_CHARSET_RE = re.compile(
     re.IGNORECASE,
 )
 _DECLARATION_SCAN_BYTES = 1024
-# XML 1.0 Appendix F: with no byte-order mark, a well-formed document opens with
-# "<", and its byte pattern names the width and order. UTF-16 without a mark is
-# out of spec, but real EPUBs carry it, and the declaration itself is unreadable
-# in those documents — the ASCII patterns above never match NUL-interleaved
-# bytes. Widest first: "<\0\0\0" also starts "<\0".
-_NO_BOM_WIDE_PREFIXES = (
-    (b"<\x00\x00\x00", "utf-32-le"),
-    (b"\x00\x00\x00<", "utf-32-be"),
-    (b"<\x00", "utf-16-le"),
-    (b"\x00<", "utf-16-be"),
+# Recognize markup or XML whitespace in BOM-less wide documents. Widest
+# first: a UTF-32 LE prefix also starts with its UTF-16 LE counterpart.
+_NO_BOM_WIDE_PREFIXES = tuple(
+    (char.encode(encoding), encoding)
+    for encoding in ("utf-32-le", "utf-32-be", "utf-16-le", "utf-16-be")
+    for char in "< \t\r\n"
 )
 
 logger = logging.getLogger("omnivoice.longform_import")

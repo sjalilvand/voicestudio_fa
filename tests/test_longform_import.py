@@ -275,10 +275,10 @@ def test_epub_undecodable_declared_encoding_falls_back_instead_of_failing(declar
     resolves but refuses to produce text, both guess rather than fail a book."""
     document = (
         f'<?xml version="1.0" encoding="{declared}"?>'
-        + _chapter_html("Un", "Plain ASCII body.")
-    ).encode("utf-8")
+        + _chapter_html("Un", "A pause — preserved.")
+    ).encode("windows-1252")
     script = epub_to_chapter_script(_make_epub_raw([document]))
-    assert "Plain ASCII body." in script
+    assert "A pause — preserved." in script
 
 
 # ── PDF ──────────────────────────────────────────────────────────────────
@@ -343,3 +343,12 @@ def test_import_endpoint_returns_chapter_count():
         assert res["text"].strip()
     # The two-chapter inputs parse to exactly two chapters.
     assert asyncio.run(audiobook_import(_upload("book.pdf", pdf)))["chapters"] == 2
+
+
+@pytest.mark.parametrize("wide", ["utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be"])
+@pytest.mark.parametrize("whitespace", [" ", "\t\r\n "])
+def test_epub_wide_document_with_leading_whitespace(wide, whitespace):
+    document = (whitespace + _chapter_html("Un", _ACCENTED)).encode(wide)
+    script = epub_to_chapter_script(_make_epub_raw([document]))
+    assert _ACCENTED in script
+    assert "\x00" not in script
