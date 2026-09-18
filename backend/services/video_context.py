@@ -45,9 +45,15 @@ def _extract_keyframes(
     Returns list of (timestamp, frame_path) tuples.
     """
     import subprocess
-    import shutil
 
-    if not shutil.which("ffmpeg"):
+    from services.ffmpeg_utils import find_ffmpeg
+
+    # Resolve ffmpeg the way every other call site does. `shutil.which("ffmpeg")`
+    # only finds a system install: the binary imageio-ffmpeg ships — the app's
+    # default source — is named `ffmpeg-<platform>-v<version>`, so this skipped
+    # frame extraction on hosts where the app's own ffmpeg was resolvable.
+    ffmpeg = find_ffmpeg()
+    if not ffmpeg:
         logger.warning("ffmpeg not found, skipping frame extraction")
         return []
 
@@ -63,7 +69,7 @@ def _extract_keyframes(
         try:
             subprocess.run(
                 [
-                    "ffmpeg", "-ss", str(ts), "-i", video_path,
+                    ffmpeg, "-ss", str(ts), "-i", video_path,
                     "-frames:v", "1", "-q:v", "3",
                     "-y", out_path,
                 ],
