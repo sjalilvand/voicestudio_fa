@@ -309,6 +309,52 @@ it('localizes streamed profile language refusals and prevents classic fallback',
   }
 });
 
+it('carries the backend error class off a stream error frame (#1800)', async () => {
+  // Every unclassified engine failure renders one fixed floor message, so the
+  // class name is the only thing separating one auto-filed report from another.
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            type: 'error',
+            code: 'generation_failed',
+            detail: 'Generation failed. Check the selected engine and try again.',
+            retryable: true,
+            error_class: 'RuntimeError',
+          }) + '\n',
+          { headers: { 'content-type': 'application/x-ndjson' } },
+        ),
+    ),
+  );
+  const error = await generateCloneStreaming(BASE_INPUT).catch((e) => e);
+  expect(error.errorClass).toBe('RuntimeError');
+});
+
+it.each([undefined, null, 42, { name: 'RuntimeError' }])(
+  'ignores missing or non-string backend class %j',
+  async (errorClass) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              type: 'error',
+              detail: 'plain failure',
+              retryable: false,
+              error_class: errorClass,
+            }) + '\n',
+            { headers: { 'content-type': 'application/x-ndjson' } },
+          ),
+      ),
+    );
+    const error = await generateCloneStreaming(BASE_INPUT).catch((e) => e);
+    expect(error.errorClass).toBeNull();
+  },
+);
+
 it.each([
   ['GPU_ARCH_UNSUPPORTED', 'gpu_arch_unsupported'],
   ['WINDOWS_APP_CONTROL_BLOCKED', 'windows_app_control_blocked'],

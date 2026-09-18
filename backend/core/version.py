@@ -32,7 +32,15 @@ def _fallback_version() -> str:
     for parent in Path(__file__).resolve().parents:
         pyproject = parent / "pyproject.toml"
         if pyproject.is_file():
-            match = re.search(r'(?m)^version\s*=\s*"([^"]+)"', pyproject.read_text())
+            # TOML is UTF-8 by definition. A bare read_text() decodes in the
+            # locale code page instead, and pyproject.toml's em dashes are
+            # undecodable in cp932/cp936/cp949/cp950 — so on a Chinese,
+            # Japanese or Korean Windows this raised UnicodeDecodeError while
+            # `core.version` was still importing, and the backend never started.
+            match = re.search(
+                r'(?m)^version\s*=\s*"([^"]+)"',
+                pyproject.read_text(encoding="utf-8"),
+            )
             if match:
                 return match.group(1)
     return _FALLBACK_VERSION
