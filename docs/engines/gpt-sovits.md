@@ -24,6 +24,11 @@ HTTP.
    python api_v2.py -a 127.0.0.1 -p 9880 -c GPT_SoVITS/configs/tts_infer.yaml
    ```
 
+   VoiceStudio speaks the **api_v2** protocol (`POST /tts`); the older
+   `api.py` (v1) server is detected and reported as the wrong protocol.
+   To use fine-tuned weights, point the `custom` section of
+   `tts_infer.yaml` at your `GPT_weights*/…ckpt` and `SoVITS_weights*/…pth`.
+
 2. Select the engine via **Model Catalogue** (TTS tab → **Use**) or
    `OMNIVOICE_TTS_BACKEND=gpt-sovits`.
 
@@ -35,6 +40,9 @@ VoiceStudio marks the engine available only when the server responds
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `OMNIVOICE_GPTSOVITS_URL` | `http://127.0.0.1:9880` | API server URL |
+| `OMNIVOICE_GPTSOVITS_REF_AUDIO` | (unset) | Default reference clip (3–10 s, path readable by the server) used when a request carries no voice profile |
+| `OMNIVOICE_GPTSOVITS_REF_TEXT` | (unset) | Verbatim transcript of that clip |
+| `OMNIVOICE_GPTSOVITS_REF_LANG` | text language | Language of the clip (`zh`/`en`/`ja`/`yue`/`ko`) |
 | `OMNIVOICE_TRUSTED_NETWORKS` | (unset) | Required to allow a non-loopback server |
 
 **Remote servers:** by default VoiceStudio only talks to loopback addresses
@@ -52,9 +60,18 @@ system trusts.
 ## Behaviour notes
 
 - Output is 32 kHz mono (server output is resampled if needed).
+- Requests are sent unsplit (`text_split_method: cut0`); VoiceStudio chunks long
+  text itself. Server-side punctuation splitting (`cut5`) produces short
+  fragments that the GPT stage sometimes ends early, dropping clauses.
+- api_v2 needs a reference clip for **every** request (it has no built-in
+  default voice). A voice profile supplies one; plain TTS without a profile
+  uses `OMNIVOICE_GPTSOVITS_REF_AUDIO` / `_REF_TEXT`, and fails with a
+  message naming those variables when neither is set.
 - Cloning passes your reference clip path and optional transcript to the
   server; the reference path must be readable **by the server process**, so
-  remote servers need the clip on their own filesystem.
+  remote servers need the clip on their own filesystem. A clip that ends in
+  silence, or a transcript that does not match it, makes the server emit a
+  fraction of a second of near-silence.
 - Speed control is forwarded as the server's `speed_factor`.
 - The GPU is whatever the GPT-SoVITS server itself uses (CUDA preferred);
   VoiceStudio's side is just an HTTP client.
@@ -69,7 +86,8 @@ system trusts.
 ## Troubleshooting
 
 - "GPT-SoVITS server not reachable": start the server with the command
-  above, or fix `OMNIVOICE_GPTSOVITS_URL`.
+  above, or fix `OMNIVOICE_GPTSOVITS_URL`. Any HTTP answer from `/tts`
+  (200, 400, 405) counts as reachable; a 404 means an `api.py` (v1) server.
 - "endpoint is outside loopback or OMNIVOICE_TRUSTED_NETWORKS": see
   Configuration above.
 - Other issues: [install/troubleshooting.md](../install/troubleshooting.md).

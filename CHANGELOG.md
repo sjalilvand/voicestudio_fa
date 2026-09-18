@@ -66,7 +66,7 @@ Already using Electron? Install over your existing app and keep your data. If pr
 - Normalize Argos language aliases without silently changing Traditional Chinese to Simplified (#2143, #2152) — thanks @gyanu2507 and @rollroyces!
 - Clarify Blackwell import-crash diagnostics without blaming missing kernels (#2084) — thanks @Moep90!
 - Distinguish architecture preflight rejection from independent compile-stack failures (#2085) — thanks @Moep90!
-- Talk to GPT-SoVITS's api_v2 protocol: probe the /tts route, POST JSON with the v2 field names, and report a wrong-protocol server as such instead of "not reachable" (#2102) — thanks @martinezpl!
+- GPT-SoVITS talks api_v2: any `/tts` answer counts as reachable, an `api.py` v1 server is reported as the wrong protocol, requests go unsplit (server-side splitting dropped clauses), and plain TTS clones a default clip from `OMNIVOICE_GPTSOVITS_REF_AUDIO`/`_REF_TEXT` instead of failing with a bare 400 (#2102, #2180) — thanks @rollroyces and @martinezpl!
 - Require the pinned Apple Silicon GGUF build to pass and document runtime preflight conditions (#2115) — thanks @LMGXENON and @martinezpl!
 - Correct the Windows Rustup installation command in tooling and documentation (#2066) — thanks @Rukhaam!
 - Show local setup guidance when remote native engine installation is unavailable (#2166)

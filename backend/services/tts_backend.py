@@ -2123,40 +2123,29 @@ class GPTSoVITSBackend(TTSBackend):
     @classmethod
     def is_available(cls) -> tuple[bool, str]:
         # GPT-SoVITS runs as an external API server — check if it's reachable.
-        # api_v2 exposes POST /tts; api.py (v1) did not. Probing /tts with GET
-        # lets the server's own FastAPI stack answer — a healthy api_v2
-        # responds with 200/400/405 (the route exists, just for a different
-        # verb or with different inputs), while api.py answers 404 because
-        # the path is unmapped. The two are now distinguishable instead of
-        # both reading as "server not reachable".
-        from services.outbound_http import open_trusted_endpoint
+        # api_v2 exposes POST /tts; api.py (v1) does not. A parameterless GET
+        # of /tts makes the server's own FastAPI stack answer: api_v2 replies
+        # 400 (missing fields) or 405 (wrong verb), api.py replies 404 because
+        # the path is unmapped. Only the status matters, so this goes through
+        # the status-only probe — routing an "expected" 4xx through
+        # open_trusted_endpoint would raise and read as "not reachable".
+        from services.outbound_http import probe_trusted_endpoint
         url = os.environ.get("OMNIVOICE_GPTSOVITS_URL", "http://127.0.0.1:9880")
+        start_hint = (
+            "Start it with: python api_v2.py -a 127.0.0.1 -p 9880 "
+            "-c GPT_SoVITS/configs/tts_infer.yaml"
+        )
         try:
-            with open_trusted_endpoint(url, method="GET", path="tts", timeout=2):
-                pass
-            return True, "ready (api_v2 server reachable)"
-        except OSError as exc:
-            # open_trusted_endpoint wraps HTTP failures as OSError with the
-            # status code in the message; routing mismatches carry a 404.
-            if "HTTP 404" in str(exc):
-                return False, (
-                    f"GPT-SoVITS server at {url} is reachable but does not "
-                    "expose api_v2's /tts route. Start it with: "
-                    "python api_v2.py -a 127.0.0.1 -p 9880 -c "
-                    "GPT_SoVITS/configs/tts_infer.yaml"
-                )
-            return False, (
-                f"GPT-SoVITS server not reachable at {url}. "
-                "Start it with: python api_v2.py -a 127.0.0.1 -p 9880 "
-                "-c GPT_SoVITS/configs/tts_infer.yaml"
-            )
+            status = probe_trusted_endpoint(url, timeout=2, path="tts")
         except Exception:
             # Connection refused / DNS failure / unsafe endpoint / etc.
+            return False, f"GPT-SoVITS server not reachable at {url}. {start_hint}"
+        if status == 404:
             return False, (
-                f"GPT-SoVITS server not reachable at {url}. "
-                "Start it with: python api_v2.py -a 127.0.0.1 -p 9880 "
-                "-c GPT_SoVITS/configs/tts_infer.yaml"
+                f"GPT-SoVITS server at {url} is reachable but does not "
+                f"expose api_v2's /tts route. {start_hint}"
             )
+        return True, "ready (api_v2 server reachable)"
 
     @property
     def sample_rate(self) -> int:
@@ -2188,14 +2177,34 @@ class GPTSoVITSBackend(TTSBackend):
         body: dict[str, object] = {
             "text": text,
             "text_lang": text_lang,
-            "text_split_method": "cut5",
+            # cut0 = no server-side re-splitting. VoiceStudio already chunks
+            # long text (split_text_into_chunks); letting api_v2 also split at
+            # every punctuation mark (cut5) yields short fragments on which the
+            # GPT stage emits EOS early and drops whole clauses.
+            "text_split_method": "cut0",
             "media_type": "wav",
             "streaming_mode": False,
         }
-        if ref_audio:
-            body["ref_audio_path"] = ref_audio
-            body["prompt_text"] = ref_text or ""
-            body["prompt_lang"] = text_lang
+        # api_v2 has no server-side default reference (api.py's -dr/-dt/-dl
+        # flags are v1 only) and answers 400 without one, so a plain TTS
+        # request — no voice profile — needs the clip from the environment.
+        prompt_lang = text_lang
+        if not ref_audio:
+            ref_audio = os.environ.get("OMNIVOICE_GPTSOVITS_REF_AUDIO") or None
+            ref_text = os.environ.get("OMNIVOICE_GPTSOVITS_REF_TEXT", "") if ref_audio else ""
+            prompt_lang = lang_map.get(
+                os.environ.get("OMNIVOICE_GPTSOVITS_REF_LANG", "").lower(), text_lang
+            )
+        if not ref_audio:
+            raise RuntimeError(
+                "GPT-SoVITS (api_v2) needs a reference clip for every request: "
+                "pick a voice profile, or set OMNIVOICE_GPTSOVITS_REF_AUDIO (path "
+                "readable by the server) and OMNIVOICE_GPTSOVITS_REF_TEXT (its "
+                "transcript) as the default voice."
+            )
+        body["ref_audio_path"] = ref_audio
+        body["prompt_text"] = ref_text or ""
+        body["prompt_lang"] = prompt_lang
 
         speed = kw.get("speed", 1.0)
         if speed != 1.0:

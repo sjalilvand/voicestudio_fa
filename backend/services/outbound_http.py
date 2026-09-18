@@ -104,6 +104,50 @@ class _PinnedHTTPSConnection(http.client.HTTPSConnection):
         self.sock = self._context.wrap_socket(sock, server_hostname=self.host)
 
 
+def _request(base_url, *, method, query, timeout, path, body, content_type):
+    """Send one request on a pinned connection; the caller owns both objects."""
+    endpoint = resolve_trusted_endpoint(base_url)
+    conn_cls = _PinnedHTTPSConnection if endpoint.scheme == "https" else _PinnedHTTPConnection
+    conn = conn_cls(endpoint, timeout)
+    target = _endpoint_path(path)
+    if query:
+        target += f"?{query}"
+    if body is not None and content_type is None:
+        raise UnsafeEndpoint("body supplied without Content-Type")
+    headers: dict[str, str] = {}
+    if content_type is not None:
+        # body may be None here; we still send Content-Length 0 so the server
+        # sees a well-formed request with the announced content type.
+        headers["Content-Type"] = content_type
+        headers["Content-Length"] = str(len(body) if body is not None else 0)
+    # Let http.client format the authority from the validated host and port.
+    # Supplying the hostname ourselves drops non-default ports and IPv6
+    # brackets, which can make Host-aware inference servers misroute requests.
+    conn.request(method, target, body=body, headers=headers)
+    return conn, conn.getresponse()
+
+
+def probe_trusted_endpoint(base_url: str, *, timeout: float, path: str = "") -> int:
+    """Return the HTTP status a bare ``GET`` of ``path`` gets from the validated origin.
+
+    A reachability probe only needs an answer. Inference servers routinely
+    answer a parameterless GET with 400 or 405 (route exists, wrong verb or
+    inputs) and an unknown route with 404, so unlike
+    :func:`open_trusted_endpoint` no status is treated as an error here; the
+    caller reads meaning into the number. Raises ``OSError`` (or
+    ``UnsafeEndpoint``) only when nothing answered or the origin is not
+    trusted.
+    """
+    conn, response = _request(
+        base_url, method="GET", query="", timeout=timeout, path=path, body=None, content_type=None
+    )
+    try:
+        return response.status
+    finally:
+        response.close()
+        conn.close()
+
+
 def open_trusted_endpoint(
     base_url: str,
     *,
@@ -127,25 +171,9 @@ def open_trusted_endpoint(
     interpret the body, so it never grows new escape hatches around
     serialization. Leave both ``None`` for a body-less request.
     """
-    endpoint = resolve_trusted_endpoint(base_url)
-    conn_cls = _PinnedHTTPSConnection if endpoint.scheme == "https" else _PinnedHTTPConnection
-    conn = conn_cls(endpoint, timeout)
-    target = _endpoint_path(path)
-    if query:
-        target += f"?{query}"
-    if body is not None and content_type is None:
-        raise UnsafeEndpoint("body supplied without Content-Type")
-    headers: dict[str, str] = {}
-    if content_type is not None:
-        # body may be None here; we still send Content-Length 0 so the server
-        # sees a well-formed request with the announced content type.
-        headers["Content-Type"] = content_type
-        headers["Content-Length"] = str(len(body) if body is not None else 0)
-    # Let http.client format the authority from the validated host and port.
-    # Supplying the hostname ourselves drops non-default ports and IPv6
-    # brackets, which can make Host-aware inference servers misroute requests.
-    conn.request(method, target, body=body, headers=headers)
-    response = conn.getresponse()
+    conn, response = _request(
+        base_url, method=method, query=query, timeout=timeout, path=path, body=body, content_type=content_type
+    )
     # Redirects are never followed: a configured inference origin must answer
     # directly, so a Location header cannot escape the validated connection.
     if 300 <= response.status < 400:
