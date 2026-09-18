@@ -22,11 +22,12 @@ engine cannot clone.
 """
 import pytest
 
-from services.tts_backend import (
-    KittenTTSBackend,
-    MLXAudioBackend,
-    cloning_capable_engine_ids,
-)
+
+def _tts_backend():
+    """Resolve the live module after other suites replace backend modules."""
+    from services import tts_backend
+
+    return tts_backend
 
 
 def _detail(*args):
@@ -41,10 +42,10 @@ def _mlx(monkeypatch, model_key):
     """An mlx-audio instance pinned to `model_key`, no weights loaded."""
     monkeypatch.setenv("OMNIVOICE_MLX_AUDIO_MODEL", model_key)
     monkeypatch.setattr(
-        MLXAudioBackend, "_ensure_loaded",
+        _tts_backend().MLXAudioBackend, "_ensure_loaded",
         lambda self: pytest.fail("the capability check must not load weights"),
     )
-    return MLXAudioBackend()
+    return _tts_backend().MLXAudioBackend()
 
 
 # ── the reported failure ────────────────────────────────────────────────────
@@ -59,7 +60,7 @@ def test_the_message_names_the_model_to_switch_to_not_just_other_engines(monkeyp
     assert "CSM (voice cloning)" in detail
     assert "Model Catalogue" in detail
     # Names the model actually in the way, so "which model?" needs no guessing.
-    assert MLXAudioBackend.CURATED_MODELS["kokoro"] in detail
+    assert _tts_backend().MLXAudioBackend.CURATED_MODELS["kokoro"] in detail
     # And no longer asserts something untrue about the engine.
     assert "doesn't support voice cloning" not in detail
 
@@ -70,7 +71,7 @@ def test_the_engine_list_survives_as_the_fallback(monkeypatch):
     detail = _detail(
         "mlx-audio", _mlx(monkeypatch, "kokoro"), "dubbing"
     )
-    for engine_id in cloning_capable_engine_ids():
+    for engine_id in _tts_backend().cloning_capable_engine_ids():
         assert engine_id in detail
 
 
@@ -88,7 +89,8 @@ def test_the_purpose_is_still_named(monkeypatch):
 def test_a_fixed_non_cloning_engine_keeps_the_original_message():
     """KittenTTS declares a plain `supports_cloning = False` — there is no
     model to switch to, so the engine-switch message is the right one."""
-    backend = KittenTTSBackend.__new__(KittenTTSBackend)
+    cls = _tts_backend().KittenTTSBackend
+    backend = cls.__new__(cls)
     detail = _detail("kittentts", backend, "dubbing")
 
     assert "doesn't support voice cloning" in detail
@@ -100,8 +102,8 @@ def test_a_fixed_non_cloning_engine_keeps_the_original_message():
 def test_model_dependent_engines_stay_out_of_the_capable_list():
     """Listing mlx-audio unconditionally would recommend it to a user running
     Kokoro, which is how this class of wrong advice starts."""
-    assert "mlx-audio" not in cloning_capable_engine_ids()
-    assert "omnivoice" in cloning_capable_engine_ids()
+    assert "mlx-audio" not in _tts_backend().cloning_capable_engine_ids()
+    assert "omnivoice" in _tts_backend().cloning_capable_engine_ids()
 
 
 # ── the invariant that keeps this fixed ─────────────────────────────────────
@@ -111,10 +113,10 @@ def test_cloning_model_keys_match_supports_cloning(monkeypatch):
     """The declared keys and the property must agree, or the message starts
     recommending a model that cannot clone — the same bug pointed the other
     way. Proven against every curated model, not just the declared one."""
-    declared = set(MLXAudioBackend.cloning_model_keys)
+    declared = set(_tts_backend().MLXAudioBackend.cloning_model_keys)
     assert declared, "mlx-audio clones with at least one curated model"
 
-    for key in MLXAudioBackend.CURATED_MODELS:
+    for key in _tts_backend().MLXAudioBackend.CURATED_MODELS:
         backend = _mlx(monkeypatch, key)
         assert backend.supports_cloning is (key in declared), (
             f"{key}: supports_cloning={backend.supports_cloning} but "
@@ -123,7 +125,8 @@ def test_cloning_model_keys_match_supports_cloning(monkeypatch):
 
 
 def test_every_declared_key_is_a_real_curated_model():
-    unknown = set(MLXAudioBackend.cloning_model_keys) - set(MLXAudioBackend.CURATED_MODELS)
+    cls = _tts_backend().MLXAudioBackend
+    unknown = set(cls.cloning_model_keys) - set(cls.CURATED_MODELS)
     assert not unknown, f"cloning_model_keys names models that do not exist: {unknown}"
 
 
@@ -132,9 +135,9 @@ def test_every_declared_key_has_a_picker_label():
     user looking for an option that is not spelled that way."""
     from services.tts_backend import _MLX_AUDIO_MODEL_LABELS
 
-    for key in MLXAudioBackend.cloning_model_keys:
+    for key in _tts_backend().MLXAudioBackend.cloning_model_keys:
         assert _MLX_AUDIO_MODEL_LABELS.get(key), f"{key} has no picker label"
-    assert MLXAudioBackend.cloning_model_labels() == ("CSM (voice cloning)",)
+    assert _tts_backend().MLXAudioBackend.cloning_model_labels() == ("CSM (voice cloning)",)
 
 
 def test_a_fixed_flag_engine_declares_no_cloning_models():

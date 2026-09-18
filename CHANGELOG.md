@@ -10,13 +10,13 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
-- Dubbing, batch and voice conversion on mlx-audio point at the one model switch that enables cloning, instead of asking you to change engine (#2202)
+- Dubbing, batch and voice conversion on mlx-audio point at the one model switch that enables cloning, instead of asking you to change engine (#2204) — thanks @shivsin25!
 - Bug reports filed from the desktop app name the backend error class again, so two unrelated failures stop looking identical (#2197)
 - Clearer recovery guidance for known GPU, Windows policy, and audio-file failures (#2195)
 
 ### Fixed
 
-- Cloning-capable engines whose support depends on the selected model — mlx-audio — no longer report that the engine can't clone at all. The error names the model in the way and the one to pick ("CSM (voice cloning)"), and still lists the other engines as a fallback (#2202, #2201)
+- Cloning errors name the active mlx-audio model and recommend CSM while retaining alternative engines as a fallback (#2204, #2201) — thanks @shivsin25!
 - EPUB imports preserve accents and wide-character documents using their declared encoding or byte-order mark (#2191) — thanks @kevin9327!
 - Video watermark exports and dubbing keyframes use the bundled FFmpeg without requiring a system install (#2192) — thanks @kevin9327!
 - Restore the backend error class in auto-filed bug reports — the Electron app files through the shared report builder, which never carried it, so every report of an otherwise-generic failure was indistinguishable from the next (#2197) — thanks @shivsin25!
