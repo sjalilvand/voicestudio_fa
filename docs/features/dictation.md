@@ -57,6 +57,11 @@ attempting a lossy restore.
 
 ## Platform behavior
 
+On macOS, native keyboard creation, layout lookup, paste and live typing run on
+the main thread in both desktop shells. Session and clipboard work stays on its
+existing worker path, and paste keeps the active keyboard layout's Command-V
+mapping rather than assuming a physical QWERTY key.
+
 | Platform | Automatic insertion |
 | --- | --- |
 | macOS | Reactivates the captured application and sends Command-V. Without Accessibility permission, the result stays copied. |

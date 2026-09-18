@@ -2519,6 +2519,7 @@ dependencies = [
  "arboard",
  "cap-std",
  "dirs-next",
+ "dispatch2",
  "enigo",
  "getrandom 0.3.4",
  "global-hotkey",

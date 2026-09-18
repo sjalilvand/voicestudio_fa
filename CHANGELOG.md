@@ -10,6 +10,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
+- Dubbing, batch and voice conversion on mlx-audio point at the one model switch that enables cloning, instead of asking you to change engine (#2204) — thanks @shivsin25!
 - Bug reports filed from the desktop app name the backend error class again, so two unrelated failures stop looking identical (#2197)
 - Clearer recovery guidance for known GPU, Windows policy, and audio-file failures (#2195)
 
@@ -21,11 +22,16 @@ the frozen-backend fallback mirror it for their toolchains.
 ### Added
 
 - Settings → Appearance → Keep sidebar expanded: stops the sidebar shrinking to a rail when Projects, Transcribe, Tools or another workspace opens its own panel on a narrower window (#2211) — thanks @jaketame!
+- Stories and Audiobook: a Clear script button empties the whole script — every line and chapter, imported or typed — in one confirmed step instead of one trash icon at a time; the cast is kept (#2203) — thanks @jaketame!
 
 ### Fixed
 
 - EPUB import narrates the book, not its print furniture: page numbers no longer glue onto words or appear as lone lines, cover/title/dedication/copyright/contents pages are skipped, and chapters are titled from the book's table of contents (#2208) — thanks @jaketame!
 - Stories: a long script no longer paints over the generation progress panel and the Generate/Stop footer while an audiobook renders (#2213) — thanks @jaketame!
+- Keep macOS dictation keyboard operations on the main thread to prevent paste-delivery crashes (#2123)
+- Prevent reference voice cloning from silently downloading a second speech recognizer (#2116)
+- Load installed IndexTTS checkpoints when the upstream config names missing training-cluster paths, without rewriting user files (#2097) — thanks @martinezpl!
+- Cloning errors name the active mlx-audio model and recommend CSM while retaining alternative engines as a fallback (#2204, #2201) — thanks @shivsin25!
 - EPUB imports preserve accents and wide-character documents using their declared encoding or byte-order mark (#2191) — thanks @kevin9327!
 - Video watermark exports and dubbing keyframes use the bundled FFmpeg without requiring a system install (#2192) — thanks @kevin9327!
 - Restore the backend error class in auto-filed bug reports — the Electron app files through the shared report builder, which never carried it, so every report of an otherwise-generic failure was indistinguishable from the next (#2197) — thanks @shivsin25!
