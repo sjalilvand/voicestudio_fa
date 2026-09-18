@@ -14,7 +14,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Changed
 
-- The main navigation sits directly under the sidebar header, above the voice library, so it no longer moves with the library's height (#2210)
+- The main navigation sits directly under the sidebar header, above the voice library, so it no longer moves with the library's height (#2210) — thanks @jaketame!
 
 ### Fixed
 
