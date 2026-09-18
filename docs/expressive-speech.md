@@ -104,6 +104,16 @@ IndexTTS2 emotion (see below), and **Vary repeated lines** — a cache opt-out
 that gives every identical line its own take instead of replaying one recording
 (off by default, so books stay byte-reproducible unless you ask for variety).
 
+It also owns the **joins**. Every engine pads each rendered line with its own
+lead-in and tail silence (GPT-SoVITS ≈ 70 ms / 300 ms, others similar); joined
+raw, a book reads as a string of separate takes. By default the renderer trims
+that padding (**Trim engine silence**, −40 dBFS with 40 ms kept at each edge)
+and inserts deliberate silence instead: **Gap between lines** (250 ms) between
+consecutive lines that carry no `[pause]` of their own — an explicit `[pause]`
+replaces the gap rather than adding to it — and **Gap between paragraphs**
+(600 ms) at a blank line inside one line of script. Set both to 0 and turn
+trimming off to get the pre-existing hard joins (and their cache keys) back.
+
 **Longform-only tags.** Audiobook and Stories additionally parse SSML-lite —
 `[slow]…[/slow]`, `[fast]…[/fast]`, `[emphasis]…[/emphasis]`, `[spell]` —
 plus `[voice:NAME]` for multi-voice scripts

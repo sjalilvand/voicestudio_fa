@@ -104,6 +104,13 @@ class ExpressiveMixin(BaseModel):
     # GPU-pool worker with an absurd step count or otherwise feed the sampler
     # nonsense. Ranges are generous supersets of the Voice-page controls; unset
     # (None) still means "use the longform default", unchanged. (#1208)
+    # Seamless joins: trim each render's own lead-in/tail, then add deliberate
+    # silence between lines (unless a [pause] says otherwise) and at blank
+    # lines inside a line. Bounded so a request cannot pad a book with hours
+    # of silence. Send 0 / false for the pre-existing hard joins.
+    line_gap_ms: int = Field(default=250, ge=0, le=5000)
+    paragraph_gap_ms: int = Field(default=600, ge=0, le=10000)
+    trim_edges: bool = True
     num_step: int | None = Field(default=None, ge=1, le=512)
     guidance_scale: float | None = Field(default=None, ge=0.0, le=20.0)
     position_temperature: float | None = Field(default=None, ge=0.0, le=100.0)
@@ -129,6 +136,9 @@ def _expressive_opts(req: "ExpressiveMixin") -> ExpressiveOptions:
         emo_text=(req.emo_text or None),
         emo_alpha=req.emo_alpha,
         vary_repeats=bool(req.vary_repeats),
+        line_gap_ms=int(req.line_gap_ms),
+        paragraph_gap_ms=int(req.paragraph_gap_ms),
+        trim_edges=bool(req.trim_edges),
     )
 
 
@@ -679,7 +689,7 @@ def _render_chapter_cached(chapter, synth, sr, engine_id, resolve, cache_dir, le
                              voice_sig=voice_sigs, extra_sig=seg_extra_sig,
                              vary_repeats=opts.vary_repeats)
     audio, dur = synthesize_chapter(spans, synth, sr, lexicon=lexicon,
-                                    segment_cache=seg_cache)
+                                    segment_cache=seg_cache, **opts.join_kwargs())
     # Invisible provenance mark on the assembled chapter (#1169), tensor stage,
     # before the WAV lands in the cache — this single site covers every
     # longform front door (/audiobook, /longform/render [Stories],

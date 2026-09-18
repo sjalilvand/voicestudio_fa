@@ -15,6 +15,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Audiobook and Stories renders no longer sound broken between lines: each line's engine padding is trimmed and a deliberate, adjustable gap goes between lines and paragraphs instead (#2216) — thanks @jaketame!
 - EPUB imports preserve accents and wide-character documents using their declared encoding or byte-order mark (#2191) — thanks @kevin9327!
 - Video watermark exports and dubbing keyframes use the bundled FFmpeg without requiring a system install (#2192) — thanks @kevin9327!
 - Restore the backend error class in auto-filed bug reports — the Electron app files through the shared report builder, which never carried it, so every report of an otherwise-generic failure was indistinguishable from the next (#2197) — thanks @shivsin25!
