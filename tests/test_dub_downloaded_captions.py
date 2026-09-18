@@ -64,20 +64,37 @@ def test_rolling_automatic_captions_seed_each_line_once(tmp_path, monkeypatch):
     assert all(a["end"] <= b["start"] for a, b in zip(segments, segments[1:]))
 
 
-def test_touching_cues_that_do_not_repeat_keep_their_text(tmp_path, monkeypatch):
+def test_touching_cues_keep_a_word_that_recurs_across_the_boundary(tmp_path, monkeypatch):
     manual = "\n".join([
         "WEBVTT",
         "",
         "00:00:01.000 --> 00:00:03.500",
-        "Where are you going this late at night?",
+        "I told you we should go",
         "",
         "00:00:03.500 --> 00:00:06.000",
-        "Home, before the last train leaves the station.",
+        "go home before the last train leaves.",
         "",
     ])
     _, job = _seed_from(manual, tmp_path, monkeypatch)
 
     assert job["full_transcript"] == (
-        "Where are you going this late at night? "
-        "Home, before the last train leaves the station."
+        "I told you we should go go home before the last train leaves."
+    )
+
+
+def test_overlapping_cue_still_drops_the_words_it_repeats(tmp_path, monkeypatch):
+    manual = "\n".join([
+        "WEBVTT",
+        "",
+        "00:00:01.000 --> 00:00:03.500",
+        "I told you we should go",
+        "",
+        "00:00:03.000 --> 00:00:06.000",
+        "should go home before the last train leaves.",
+        "",
+    ])
+    _, job = _seed_from(manual, tmp_path, monkeypatch)
+
+    assert job["full_transcript"] == (
+        "I told you we should go home before the last train leaves."
     )
