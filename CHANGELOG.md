@@ -21,6 +21,10 @@ the frozen-backend fallback mirror it for their toolchains.
 - A streaming generation that fails on an unsupported GPU, a Windows app-control block, or an audio-file error now says so and what to do, instead of only "Generation failed. Check the selected engine and try again." (#2195, #2177) — thanks @shivsin25!
 - A failure that cannot succeed on a retry — an unsupported GPU build, a blocked file — is reported as final, so the app stops re-rendering the whole passage to reach the same error (#2195, #2177) — thanks @shivsin25!
 
+### CI
+
+- Make the native ASR timeout regression reliable on slow runners and wait for its worker cleanup (#2202)
+
 ## [0.5.4] — 2026-09-17
 
 **More reliable setup, generation, and dubbing.** This patch detects incomplete desktop runtimes before startup, repairs them without overwriting an existing Tauri installation, and makes engine failures easier to recover from. It also fixes gated model downloads, subtitle imports, and saved-voice language errors.
