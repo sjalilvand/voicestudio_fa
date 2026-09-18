@@ -2233,7 +2233,10 @@
     "instruct_category_conflict": "Dua opsi desain suara yang bertentangan dipilih dalam kategori yang sama (mis. dua gender). Hapus salah satu sebelum membuat ulang.",
     "ref_audio_unusable": "Tidak ada suara yang terdengar di audio referensi — klipnya senyap atau hampir senyap, jadi tidak ada suara untuk dikloning. Rekam ulang lebih dekat ke mikrofon (pastikan perangkat input yang benar dipilih dan meterannya bergerak), atau pilih klip lain.",
     "ref_audio_too_long": "Referensi maksimal 20 detik dengan transkrip atau 75 detik tanpa transkrip. Potong menjadi bagian ucapan jelas sepanjang 3–10 detik; jika menyertakan teks, potong transkrip ke bagian yang sama.",
-    "ref_audio_no_speech": "Deteksi otomatis tidak menemukan kata yang diucapkan dalam referensi. Potong menjadi bagian ucapan jelas sepanjang 3–10 detik atau sertakan transkrip yang cocok."
+    "ref_audio_no_speech": "Deteksi otomatis tidak menemukan kata yang diucapkan dalam referensi. Potong menjadi bagian ucapan jelas sepanjang 3–10 detik atau sertakan transkrip yang cocok.",
+    "gpu_arch_unsupported": "Versi PyTorch ini tidak mendukung GPU Anda. Pilih CPU di Pengaturan → Performa & Perangkat, atau instal versi PyTorch yang kompatibel.",
+    "windows_app_control_blocked": "Kontrol aplikasi Windows memblokir file yang diperlukan. Minta administrator mengizinkan runtime VoiceStudio yang tepercaya, lalu mulai ulang aplikasi.",
+    "audio_io_failed": "Audio tidak dapat dibaca atau disimpan. Periksa format file, ruang disk yang tersedia, dan izin file. Periksa folder di Pengaturan → Penyimpanan."
   },
   "sharing": {
     "title": "Berbagi & Akses Jarak Jauh",

@@ -103,14 +103,17 @@ try {
         stdio: ['pipe', 'pipe', 'pipe'],
       });
       let output = '';
+      let errors = '';
       const timer = setTimeout(() => {
         child.kill();
-        reject(new Error('Packaged helper timeout'));
+        reject(new Error('Packaged helper timeout: ' + errors));
       }, 5000);
       child.stdout.on('data', (chunk) => {
         output += chunk.toString();
       });
-      child.stderr.resume();
+      child.stderr.on('data', (chunk) => {
+        errors = (errors + chunk.toString()).slice(-8192);
+      });
       child.once('error', (error) => {
         clearTimeout(timer);
         reject(error);
@@ -118,7 +121,7 @@ try {
       child.once('close', (code) => {
         clearTimeout(timer);
         try {
-          if (code !== 0) throw new Error('Packaged helper failed: ' + code);
+          if (code !== 0) throw new Error('Packaged helper failed: ' + code + ': ' + errors);
           resolve(JSON.parse(output));
         } catch (error) {
           reject(error);

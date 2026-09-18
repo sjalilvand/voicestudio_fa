@@ -16,6 +16,10 @@ import { openExternal } from '../api/external';
 const BASE = 'https://github.com/debpalash/VoiceStudio/blob/main';
 
 export const ERROR_DOCS: Record<string, string> = {
+  GPU_ARCH_UNSUPPORTED: `${BASE}/docs/install/troubleshooting.md#generation-failure-diagnosis`,
+  WINDOWS_APP_CONTROL_BLOCKED: `${BASE}/docs/install/troubleshooting.md#generation-failure-diagnosis`,
+  AUDIO_IO_FAILED: `${BASE}/docs/install/troubleshooting.md#generation-failure-diagnosis`,
+
   DIARIZATION_LOAD_FAILED: `${BASE}/docs/features/diarization.md#troubleshooting`,
   DIARIZATION_MODEL_MISSING: `${BASE}/docs/features/diarization.md#local-installation-and-repair`,
   GATEKEEPER_QUARANTINE: `${BASE}/docs/install/macos.md#gatekeeper-quarantine`,
@@ -38,6 +42,10 @@ export const TRANSLATION_ENGINES_DOCS = `${BASE}/docs/dubbing/translation-engine
 // Adding a class is a contract change; update the Python map at the
 // same time (`backend/core/error_docs_map.py`).
 export const ERROR_CLASS_KEYS = [
+  'GPU_ARCH_UNSUPPORTED',
+  'WINDOWS_APP_CONTROL_BLOCKED',
+  'AUDIO_IO_FAILED',
+
   'DIARIZATION_LOAD_FAILED',
   'DIARIZATION_MODEL_MISSING',
   'GATEKEEPER_QUARANTINE',

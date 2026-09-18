@@ -2233,7 +2233,10 @@
     "instruct_category_conflict": "Đã chọn hai tùy chọn thiết kế giọng nói xung đột trong cùng một danh mục (ví dụ: hai giới tính). Hãy xóa một trong hai trước khi tạo lại.",
     "ref_audio_unusable": "Không nghe thấy giọng nói trong âm thanh tham chiếu — đoạn clip im lặng hoặc gần như im lặng nên không có giọng để nhân bản. Hãy thu âm lại gần micro hơn (kiểm tra đã chọn đúng thiết bị đầu vào và mức âm có dao động) hoặc chọn một clip khác.",
     "ref_audio_too_long": "Âm thanh tham chiếu dài tối đa 20 giây khi có bản chép lời hoặc 75 giây khi không có. Hãy cắt thành đoạn lời nói rõ dài 3–10 giây; nếu cung cấp văn bản, hãy cắt bản chép lời theo đúng đoạn đó.",
-    "ref_audio_no_speech": "Tính năng phát hiện tự động không tìm thấy lời nói trong âm thanh tham chiếu. Hãy cắt thành đoạn lời nói rõ dài 3–10 giây hoặc cung cấp bản chép lời khớp."
+    "ref_audio_no_speech": "Tính năng phát hiện tự động không tìm thấy lời nói trong âm thanh tham chiếu. Hãy cắt thành đoạn lời nói rõ dài 3–10 giây hoặc cung cấp bản chép lời khớp.",
+    "gpu_arch_unsupported": "Bản dựng PyTorch này không hỗ trợ GPU của bạn. Chọn CPU trong Cài đặt → Hiệu năng và thiết bị hoặc cài đặt bản dựng PyTorch tương thích.",
+    "windows_app_control_blocked": "Tính năng kiểm soát ứng dụng của Windows đã chặn một tệp cần thiết. Nhờ quản trị viên cho phép môi trường chạy VoiceStudio đáng tin cậy, rồi khởi động lại ứng dụng.",
+    "audio_io_failed": "Không thể đọc hoặc lưu âm thanh. Kiểm tra định dạng tệp, dung lượng đĩa trống và quyền truy cập tệp. Kiểm tra thư mục trong Cài đặt → Lưu trữ."
   },
   "sharing": {
     "title": "Chia sẻ & Truy cập từ xa",

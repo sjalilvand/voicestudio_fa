@@ -20,6 +20,10 @@ from core import links
 _BASE = links.PROJECT_REPO_BLOB_MAIN
 
 ERROR_DOCS: dict[str, str] = {
+    "GPU_ARCH_UNSUPPORTED": f"{_BASE}/docs/install/troubleshooting.md#generation-failure-diagnosis",
+    "WINDOWS_APP_CONTROL_BLOCKED": f"{_BASE}/docs/install/troubleshooting.md#generation-failure-diagnosis",
+    "AUDIO_IO_FAILED": f"{_BASE}/docs/install/troubleshooting.md#generation-failure-diagnosis",
+
     "DIARIZATION_LOAD_FAILED": f"{_BASE}/docs/features/diarization.md#troubleshooting",
     "DIARIZATION_MODEL_MISSING": f"{_BASE}/docs/features/diarization.md#local-installation-and-repair",
     "GATEKEEPER_QUARANTINE":       f"{_BASE}/docs/install/macos.md#gatekeeper-quarantine",

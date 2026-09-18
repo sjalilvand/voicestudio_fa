@@ -1,3 +1,4 @@
+import { generationFailureMessage } from '../../../../../../frontend/src/utils/generationFailureMessage.ts';
 import { languageRejectionMessage } from '../../../../../../frontend/src/utils/languageRejection.ts';
 /**
  * Same-origin API client. The renderer never talks to 127.0.0.1:<port>
@@ -45,7 +46,7 @@ export function describeError(err: unknown): string {
 }
 
 function detailToString(detail: unknown): string {
-  const localized = languageRejectionMessage(detail, tr);
+  const localized = languageRejectionMessage(detail, tr) || generationFailureMessage(detail, tr);
   if (localized) return localized;
   if (
     detail &&
@@ -96,7 +97,9 @@ export async function errorFromResponse(res: Response): Promise<ApiError> {
       // Plain-text body.
     }
   }
-  const detail = payload && 'detail' in payload ? detailToString(payload.detail) : text.trim();
+  const detail =
+    generationFailureMessage(payload, tr) ||
+    (payload && 'detail' in payload ? detailToString(payload.detail) : text.trim());
   const statusLine = `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ''}`;
   return new ApiError(res.status, detail || statusLine, payload);
 }
