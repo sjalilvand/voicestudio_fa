@@ -14,7 +14,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Added
 
-- Stories: a Clear script button removes every imported line and chapter in one confirmed step, instead of one trash icon at a time (#2203)
+- Stories and Audiobook: a Clear script button empties the whole script — every line and chapter, imported or typed — in one confirmed step instead of one trash icon at a time; the cast is kept (#2203)
 
 ### Fixed
 

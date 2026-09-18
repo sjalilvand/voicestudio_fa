@@ -59,6 +59,7 @@ import { importToText } from '../utils/importStory';
 import { readTextFile } from '../utils/readTextFile';
 import { generateSpeech, audioUrl } from '../api/generate';
 import { playBlobAudio } from '../utils/media';
+import { stopActivePlayback } from '../utils/playback';
 import { downloadMedia } from '../utils/mediaDownload';
 import { encodeAudio } from '../api/stories';
 import { longformRender } from '../api/audiobook';
@@ -210,6 +211,9 @@ export default function StoriesEditor({ profiles = [] }) {
   }, []);
 
   const [activeTrack, setActiveTrack] = useState(null);
+  // Bumped by clearScript so a preview that was still generating when the
+  // script went away never plays or writes audio back for a deleted line.
+  const previewGenRef = useRef(0);
   const [activeTab, setActiveTab] = useState('script');
   const [splitOpen, setSplitOpen] = useState(false);
   const [splitText, setSplitText] = useState('');
@@ -428,6 +432,10 @@ export default function StoriesEditor({ profiles = [] }) {
       t('stories.clearScript'),
     );
     if (!ok) return;
+    // Invalidate previews still generating for lines that are about to go,
+    // and stop whatever is playing (#2203 review).
+    previewGenRef.current += 1;
+    stopActivePlayback();
     // An empty script is exactly what the first-run bootstrap below treats as
     // "pristine", so mark the sample as shown or it would reseed the demo.
     sampleBootstrapRef.current = true;
@@ -515,6 +523,8 @@ export default function StoriesEditor({ profiles = [] }) {
     async (track) => {
       const raw = (track.text || '').trim();
       if (!raw) return;
+      const gen = previewGenRef.current;
+      const stale = () => previewGenRef.current !== gen;
       const pid = effectiveProfile(track, cast);
       const spd = effectiveSpeed(track, globalSpeed);
       setTracks((prev) =>
@@ -524,6 +534,7 @@ export default function StoriesEditor({ profiles = [] }) {
       if (!hasStoryMarkers(raw)) {
         try {
           const blob = await fetchChunkBlob(raw, pid, spd);
+          if (stale()) return;
           const url = URL.createObjectURL(blob);
           setTracks((prev) =>
             prev.map((tk) =>
@@ -555,6 +566,7 @@ export default function StoriesEditor({ profiles = [] }) {
             seg.type === 'chunk' ? await fetchChunkBlob(seg.text, seg.profileId, spd) : null,
           );
         }
+        if (stale()) return;
         let cursor = 0;
         const finish = () => {
           setTracks((prev) =>
@@ -564,6 +576,7 @@ export default function StoriesEditor({ profiles = [] }) {
           );
         };
         const step = () => {
+          if (stale()) return;
           while (cursor < parsed.length) {
             const seg = parsed[cursor];
             const blob = chunkBlobs[cursor];

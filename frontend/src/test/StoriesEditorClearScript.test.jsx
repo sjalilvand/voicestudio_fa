@@ -8,8 +8,18 @@ import '../i18n';
 // step. Before it existed an imported story could only be undone one trash
 // icon at a time, and the cast must survive the clear.
 
-vi.mock('../api/generate', () => ({ generateSpeech: vi.fn(), audioUrl: (path) => path }));
-vi.mock('../utils/media', () => ({ playBlobAudio: vi.fn(() => Promise.resolve()), isTauri: false }));
+const generateSpeech = vi.fn();
+const playBlobAudio = vi.fn(() => Promise.resolve());
+const stopActivePlayback = vi.fn();
+vi.mock('../api/generate', () => ({
+  generateSpeech: (...args) => generateSpeech(...args),
+  audioUrl: (path) => path,
+}));
+vi.mock('../utils/media', () => ({
+  playBlobAudio: (...args) => playBlobAudio(...args),
+  isTauri: false,
+}));
+vi.mock('../utils/playback', () => ({ stopActivePlayback: () => stopActivePlayback() }));
 vi.mock('../api/hooks', () => ({ useArchetypes: vi.fn(() => ({ data: undefined })) }));
 vi.mock('../api/archetypes', () => ({ useArchetypeAsProfile: vi.fn() }));
 const askConfirm = vi.fn();
@@ -39,7 +49,15 @@ describe('StoriesEditor clear script', () => {
     window.localStorage.clear();
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
     askConfirm.mockReset();
-    useAppStore.setState({ cast: CAST, storyTracks: TRACKS, storyProjects: [], currentProjectId: null });
+    generateSpeech.mockReset();
+    playBlobAudio.mockClear();
+    stopActivePlayback.mockClear();
+    useAppStore.setState({
+      cast: CAST,
+      storyTracks: TRACKS,
+      storyProjects: [],
+      currentProjectId: null,
+    });
   });
 
   afterEach(() => {
@@ -79,5 +97,29 @@ describe('StoriesEditor clear script', () => {
     renderEditor();
     expect(screen.getByRole('button', { name: /clear script/i })).toBeDisabled();
     expect(askConfirm).not.toHaveBeenCalled();
+  });
+
+  it('drops a preview that was still generating when the script was cleared', async () => {
+    // Greptile on #2203: the line is gone by the time its audio arrives, so
+    // nothing may play or be written back, and current playback stops.
+    let resolveSpeech;
+    generateSpeech.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSpeech = resolve;
+      }),
+    );
+    askConfirm.mockResolvedValue(true);
+    renderEditor();
+    fireEvent.click(screen.getAllByRole('button', { name: /preview this line/i })[0]);
+    await waitFor(() => expect(generateSpeech).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getByRole('button', { name: /clear script/i }));
+    await waitFor(() => expect(useAppStore.getState().storyTracks).toEqual([]));
+    expect(stopActivePlayback).toHaveBeenCalledTimes(1);
+
+    resolveSpeech({ blob: async () => new Blob([new Uint8Array(4)], { type: 'audio/wav' }) });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(playBlobAudio).not.toHaveBeenCalled();
+    expect(useAppStore.getState().storyTracks).toEqual([]);
   });
 });
