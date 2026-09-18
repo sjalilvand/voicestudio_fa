@@ -269,7 +269,7 @@ def test_epub_reads_a_wide_document_with_no_bom(wide):
     assert _ACCENTED in script
 
 
-@pytest.mark.parametrize("declared", ["x-not-a-real-charset", "hex_codec"])
+@pytest.mark.parametrize("declared", ["x-not-a-real-charset", "hex_codec", "idna"])
 def test_epub_undecodable_declared_encoding_falls_back_instead_of_failing(declared):
     """An encoding Python doesn't have, and a bytes-to-bytes codec that
     resolves but refuses to produce text, both guess rather than fail a book."""

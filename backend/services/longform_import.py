@@ -94,7 +94,7 @@ def _decode_epub_entry(raw: bytes) -> str:
                 # errors="replace": a mis-declared document still imports, the
                 # way an undeclared one does. Nothing here may fail a book.
                 return raw.decode(declared, errors="replace")
-            except LookupError:
+            except (LookupError, UnicodeError):
                 # An encoding Python doesn't have, or a bytes-to-bytes codec
                 # such as "hex_codec" — those resolve but refuse to produce
                 # text. Guess the way an undeclared document is guessed.
