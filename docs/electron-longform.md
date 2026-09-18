@@ -33,3 +33,7 @@ The optional Stories Stems section renders one WAV per character with the shared
 EPUB chapters honor byte-order marks and XML/HTML encoding declarations, including
 legacy Latin and CJK encodings. Unsupported or invalid declarations use the shared
 text-import fallback so one bad declaration does not abort the book.
+
+### Long-script layout
+
+The Stories editor grows with the manuscript inside the page scroll container. Long scripts push generation progress and Generate/Stop controls below their content, so lines do not paint over those controls during rendering.
