@@ -298,6 +298,9 @@ def _resolve_snapshot_dir(checkpoint) -> str:
         return snapshot_download(checkpoint)
 
 
+_DEFAULT_ASR_MODEL = "openai/whisper-large-v3-turbo"
+
+
 class OmniVoice(PreTrainedModel):
     _supports_flex_attn = True
     _supports_flash_attn_2 = True
@@ -363,7 +366,7 @@ class OmniVoice(PreTrainedModel):
     def from_pretrained(cls, pretrained_model_name_or_path, *args, **kwargs):
         train_mode = kwargs.pop("train", False)
         load_asr = kwargs.pop("load_asr", False)
-        asr_model_name = kwargs.pop("asr_model_name", "openai/whisper-large-v3-turbo")
+        asr_model_name = kwargs.pop("asr_model_name", _DEFAULT_ASR_MODEL)
 
         # Suppress noisy INFO logs from transformers/huggingface_hub during
         # loading. Scoped to those two logger trees — NOT logging.disable(),
@@ -445,7 +448,7 @@ class OmniVoice(PreTrainedModel):
     # ASR support (optional, for auto-transcription)
     # -------------------------------------------------------------------
 
-    def load_asr_model(self, model_name: str = "openai/whisper-large-v3-turbo"):
+    def load_asr_model(self, model_name: str = _DEFAULT_ASR_MODEL):
         """Load a Whisper ASR model for reference audio transcription.
 
         Args:
@@ -464,6 +467,23 @@ class OmniVoice(PreTrainedModel):
             device_map=self.device,
         )
         logger.info("ASR model loaded on %s.", self.device)
+
+    def _load_cached_reference_asr(self):
+        """Implicit cloning fallback may reuse local weights, never download them."""
+        from huggingface_hub import snapshot_download
+        from huggingface_hub.errors import LocalEntryNotFoundError
+
+        try:
+            snapshot = snapshot_download(_DEFAULT_ASR_MODEL, local_files_only=True)
+        except LocalEntryNotFoundError as exc:
+            raise ValueError(
+                "Automatic reference transcription needs an installed speech-to-text "
+                "model. Provide a matching reference transcript, or install and select "
+                "a speech-to-text model in Model Catalogue, then try again."
+            ) from exc
+        # Pass a directory rather than the repo ID so transformers cannot make
+        # metadata requests or download missing assets from a partial snapshot.
+        self.load_asr_model(model_name=snapshot)
 
     @torch.inference_mode()
     def transcribe(
@@ -749,9 +769,10 @@ class OmniVoice(PreTrainedModel):
         Args:
             ref_audio: File path (str) or ``(waveform, sample_rate)`` tuple.
                 waveform should be a 1-D or 2-D torch.Tensor (channels x samples).
-            ref_text: Transcript of the reference audio. If ``None``, the
-                ASR model will be used to auto-transcribe (must call
-                :meth:`load_asr_model` first).
+            ref_text: Transcript of the reference audio. If ``None``, use the
+                loaded ASR pipeline or an installed Whisper snapshot without
+                downloading. If neither is available, provide a transcript or
+                explicitly load an ASR model with :meth:`load_asr_model`.
             preprocess_prompt: If ``True`` (default), apply silence removal and
                 trimming to the reference audio, add punctuation in the end
                 of reference text (if not already)
@@ -822,8 +843,8 @@ class OmniVoice(PreTrainedModel):
                 return float(power.double().sum())
 
             if self._asr_pipe is None:
-                logger.info("ASR model not loaded yet, loading on-the-fly ...")
-                self.load_asr_model()
+                logger.info("Loading cached ASR for reference transcription ...")
+                self._load_cached_reference_asr()
             candidates = list(ref_wav.split(max_samples, dim=-1))
 
             def speech_score(text):
@@ -875,8 +896,8 @@ class OmniVoice(PreTrainedModel):
         # Auto-transcribe if ref_text not provided
         if ref_text is None:
             if self._asr_pipe is None:
-                logger.info("ASR model not loaded yet, loading on-the-fly ...")
-                self.load_asr_model()
+                logger.info("Loading cached ASR for reference transcription ...")
+                self._load_cached_reference_asr()
             ref_text = self.transcribe((ref_wav, self.sampling_rate))
             logger.debug("Auto-transcribed ref_text: %s", ref_text)
 

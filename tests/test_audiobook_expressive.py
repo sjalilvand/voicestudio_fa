@@ -506,3 +506,15 @@ def test_render_request_gap_fields_are_bounded_and_reach_options():
     off = _expressive_opts(LongformRenderRequest(
         line_gap_ms=0, paragraph_gap_ms=0, trim_edges=False))
     assert off.cache_signature() == ""  # explicit "old joins" = today's cache key
+
+
+def test_chapter_cache_key_moves_with_a_span_join_and_is_legacy_without_one():
+    from services.longform_render import chapter_cache_key
+
+    kw = dict(sample_rate=24000, engine_id="e")
+    plain4 = chapter_cache_key([("v", "a", 0, None), ("v", "b", 0, None)], **kw)
+    plain3 = chapter_cache_key([("v", "a", 0), ("v", "b", 0)], **kw)
+    assert plain3 == plain4                      # pre-existing keys untouched
+    cont = chapter_cache_key([("v", "a", 0, None, "continue"), ("v", "b", 0, None)], **kw)
+    para = chapter_cache_key([("v", "a", 0, None, "paragraph"), ("v", "b", 0, None)], **kw)
+    assert len({plain4, cont, para}) == 3        # each join → its own audio → its own key

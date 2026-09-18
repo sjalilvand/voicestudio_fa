@@ -276,6 +276,18 @@ class TTSBackend(ABC):
     #: of silently falling back to OmniVoice or mis-cloning per segment.
     supports_cloning: bool = True
 
+    #: Curated model keys that DO accept a reference clip, for an adapter
+    #: whose ``supports_cloning`` is model-dependent (a property rather than
+    #: a plain bool). Empty when cloning is a fixed fact about the engine.
+    #: Lets the cloning gate name the one-setting fix — pick this model —
+    #: instead of telling the user their engine can't clone at all (#2201).
+    cloning_model_keys: tuple[str, ...] = ()
+
+    @classmethod
+    def cloning_model_labels(cls) -> tuple[str, ...]:
+        """:attr:`cloning_model_keys` as the model picker labels them."""
+        return cls.cloning_model_keys
+
     #: GPU/accelerator targets the engine can run on. Surfaced via the
     #: Engine Compatibility Matrix (Plan 02-04 / ENGINE-06) so users can
     #: tell at a glance which engines will use their hardware. Defaults to
@@ -1790,7 +1802,23 @@ class MLXAudioBackend(TTSBackend):
         curated set, only CSM (`mlx-community/csm-1b-8bit`) is confirmed to
         accept a reference prompt — default False for every other model,
         curated or user-supplied, until positively confirmed."""
-        return self._model_id == self.CURATED_MODELS.get("csm")
+        return self._model_id in {
+            self.CURATED_MODELS.get(key) for key in self.cloning_model_keys
+        }
+
+    #: The curated picks that take a reference prompt. Kept beside
+    #: ``supports_cloning`` above so the two cannot drift — the property reads
+    #: this list, and ``test_cloning_model_keys_match_supports_cloning``
+    #: instantiates the engine on each key to prove the claim.
+    cloning_model_keys = ("csm",)
+
+    @classmethod
+    def cloning_model_labels(cls) -> tuple[str, ...]:
+        # The picker calls it "CSM (voice cloning)"; quote it verbatim so the
+        # error names what the user is actually looking at.
+        return tuple(
+            _MLX_AUDIO_MODEL_LABELS.get(key, key) for key in cls.cloning_model_keys
+        )
 
     def _ensure_loaded(self):
         if self._model is not None:
@@ -2877,6 +2905,48 @@ def get_backend_class(backend_id: str) -> type[TTSBackend]:
     return _effective_backend_class(backend_id, _REGISTRY[backend_id])
 
 
+def cloning_unavailable_detail(engine_id: str, backend, cloning_purpose: str) -> str:
+    """Why the active engine can't clone, and the smallest change that fixes it.
+
+    ``supports_cloning`` is an engine-level flag for every backend except the
+    adapters that multiplex models, where it is a property computed from the
+    *model* currently selected. For those, "this engine doesn't support voice
+    cloning" is simply untrue — the engine clones fine, just not with the pick
+    it is running. #2201 told an mlx-audio user to abandon the engine for one
+    of thirteen others while their own model picker was offering
+    "CSM (voice cloning)" one setting away.
+
+    So: name the model in the way, name the model that works, and keep the
+    engine list as the fallback it should always have been.
+    """
+    cls = type(backend)
+    declared = getattr(cls, "supports_cloning", True)
+    labels = tuple(cls.cloning_model_labels()) if hasattr(cls, "cloning_model_labels") else ()
+    alternatives = ", ".join(cloning_capable_engine_ids())
+    # A plain bool is a fact about the engine; a property is a fact about the
+    # model, and only the second case has a model to switch to.
+    if not isinstance(declared, bool) and labels:
+        current = ""
+        try:
+            current = backend.model_identity() or ""
+        except Exception:  # noqa: BLE001 — naming the model is best-effort
+            current = ""
+        running = f" ({current})" if current else ""
+        return (
+            f"The '{engine_id}' engine can clone voices, but not with the model "
+            f"it is running{running}, so {cloning_purpose} can't preserve speaker "
+            f"voices. Set this engine's model to {' or '.join(labels)} in Model "
+            f"Catalogue — nothing else has to change — or switch engine to one "
+            f"of: {alternatives}."
+        )
+    return (
+        f"The active TTS engine '{engine_id}' doesn't support voice cloning, "
+        f"so {cloning_purpose} can't preserve speaker voices. Switch to one "
+        f"of: {alternatives} in "
+        "Model Catalogue, or use OmniVoice for this job."
+    )
+
+
 def cloning_capable_engine_ids() -> list[str]:
     """Engine ids that support reference-audio voice cloning — used to build
     an actionable error when the active engine can't (dub/batch gating).
@@ -3271,12 +3341,7 @@ async def resolve_generation_backend(
     backend = get_active_tts_backend(model=_model)
 
     if require_cloning and not getattr(backend, "supports_cloning", True):
-        raise ValueError(
-            f"The active TTS engine '{engine_id}' doesn't support voice cloning, "
-            f"so {cloning_purpose} can't preserve speaker voices. Switch to one "
-            f"of: {', '.join(cloning_capable_engine_ids())} in "
-            "Model Catalogue, or use OmniVoice for this job."
-        )
+        raise ValueError(cloning_unavailable_detail(engine_id, backend, cloning_purpose))
 
     return backend
 

@@ -6,6 +6,7 @@ import {
   FingerprintIcon,
   ImportIcon,
   LanguagesIcon,
+  Trash2Icon,
 } from 'lucide-react';
 import { AudioLinesIcon } from 'lucide-react';
 import { SecondarySidebar } from '@/components/workspace-sidebar';
@@ -13,6 +14,8 @@ import { WorkspaceHeader } from '@/components/app-shell/workspace-header';
 import { PipelineFailure } from '@/components/pipeline-failure';
 import { importToText } from '../../../../../../frontend/src/utils/importStory';
 import { StoryCast, StoryEditor } from './story-editor';
+import { clearedScriptPatch, scriptSize } from './story-clear';
+import { ConfirmDialog } from '../clone/confirm-dialog';
 import { AudiobookMarkupToolbar } from './audiobook-markup-toolbar';
 import { storyVoicesReady } from './story-inputs';
 import { ProjectSettings } from './project-settings';
@@ -78,8 +81,10 @@ export function LongformPage({ mode }: { mode: Mode }) {
   const [localError, setLocalError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [warningsDismissed, setWarningsDismissed] = useState(false);
+  const [clearOpen, setClearOpen] = useState(false);
   const audiobookInput = useRef<HTMLTextAreaElement>(null);
   const locked = !!session.active || importing;
+  const scriptLines = scriptSize(mode, draft);
   const query = useQuery({
     queryKey: ['longform-recovery'],
     queryFn: ({ signal }) => apiJson<{ jobs: Recovery[] }>('/audiobook/jobs', { signal }),
@@ -330,6 +335,28 @@ export function LongformPage({ mode }: { mode: Mode }) {
                   }}
                 />
               </label>
+              <Button
+                variant="ghost"
+                size="sm"
+                title={t('stories.clearScriptHint')}
+                disabled={locked || scriptLines === 0}
+                onClick={() => setClearOpen(true)}
+              >
+                <Trash2Icon />
+                {t('stories.clearScript')}
+              </Button>
+              <ConfirmDialog
+                open={clearOpen}
+                onOpenChange={setClearOpen}
+                title={t('stories.clearScript')}
+                description={
+                  mode === 'audiobook'
+                    ? t('stories.clearConfirmScript')
+                    : t('stories.clearConfirm', { count: scriptLines })
+                }
+                confirmLabel={t('stories.clearScript')}
+                onConfirm={() => set(clearedScriptPatch(mode))}
+              />
               {mode === 'audiobook' && !draft.script.trim() && (
                 <Button
                   variant="ghost"

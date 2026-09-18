@@ -14,6 +14,10 @@ use arboard::{Clipboard, ImageData};
 use enigo::{Direction, Enigo, Key, Keyboard, Settings as EnigoSettings};
 use serde::Serialize;
 
+#[path = "keyboard_dispatch.rs"]
+mod keyboard_dispatch;
+use keyboard_dispatch::on_keyboard_thread;
+
 const TARGET_SETTLE_DELAY: Duration = Duration::from_millis(60);
 const CLIPBOARD_CONSUME_DELAY: Duration = Duration::from_millis(300);
 const START_EVENT_DEDUPE_WINDOW: Duration = Duration::from_millis(150);
@@ -750,6 +754,10 @@ fn untargeted_wayland_insert_enabled() -> bool {
 }
 
 fn synthesize_paste() -> Result<(), String> {
+    on_keyboard_thread(synthesize_paste_on_keyboard_thread)
+}
+
+fn synthesize_paste_on_keyboard_thread() -> Result<(), String> {
     let mut enigo = Enigo::new(&EnigoSettings::default())
         .map_err(|error| kind_err("paste", format!("keyboard init failed: {error}")))?;
     #[cfg(target_os = "macos")]
@@ -769,6 +777,10 @@ fn synthesize_paste() -> Result<(), String> {
 }
 
 fn synthesize_text(text: &str, backspaces: u32) -> Result<(), String> {
+    on_keyboard_thread(|| synthesize_text_on_keyboard_thread(text, backspaces))
+}
+
+fn synthesize_text_on_keyboard_thread(text: &str, backspaces: u32) -> Result<(), String> {
     let mut enigo = Enigo::new(&EnigoSettings::default())
         .map_err(|error| kind_err("paste", format!("keyboard init failed: {error}")))?;
     for _ in 0..backspaces {
