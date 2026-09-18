@@ -10,10 +10,12 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
+- Dubbing, batch and voice conversion on mlx-audio point at the one model switch that enables cloning, instead of asking you to change engine (#2202)
 - Clearer recovery guidance for known GPU, Windows policy, and audio-file failures (#2195)
 
 ### Fixed
 
+- Cloning-capable engines whose support depends on the selected model — mlx-audio — no longer report that the engine can't clone at all. The error names the model in the way and the one to pick ("CSM (voice cloning)"), and still lists the other engines as a fallback (#2202, #2201)
 - A streaming generation that fails on an unsupported GPU, a Windows app-control block, or an audio-file error now says so and what to do, instead of only "Generation failed. Check the selected engine and try again." (#2195, #2177) — thanks @shivsin25!
 - A failure that cannot succeed on a retry — an unsupported GPU build, a blocked file — is reported as final, so the app stops re-rendering the whole passage to reach the same error (#2195, #2177) — thanks @shivsin25!
 
