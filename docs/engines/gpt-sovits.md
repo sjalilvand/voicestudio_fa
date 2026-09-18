@@ -25,7 +25,7 @@ HTTP.
    ```
 
    VoiceStudio speaks the **api_v2** protocol (`POST /tts`); the older
-   `api.py` (v1) server is detected and reported as the wrong protocol.
+   `api.py` (v1) server does not expose that route and is incompatible.
    To use fine-tuned weights, point the `custom` section of
    `tts_infer.yaml` at your `GPT_weights*/…ckpt` and `SoVITS_weights*/…pth`.
 
@@ -88,9 +88,11 @@ system trusts.
 - "GPT-SoVITS server not reachable": start the server with the command
   above, or fix `OMNIVOICE_GPTSOVITS_URL`. The probe is a validator-only
   `GET /tts?text=&text_lang=en&prompt_lang=en`; api_v2's own answers to it
-  (400, and 200/405 on other builds) count as reachable; a 404 means an `api.py` (v1)
-  server; any other status (a proxy, login page, redirect or crash) is
-  reported with its code and treated as unavailable.
+  (400, and 200/405 on other builds) count as reachable. A 404 means the
+  endpoint does not expose `/tts`: check for an `api.py` (v1) server or a
+  proxy/route mismatch. Other HTTP errors report their status and mark the
+  engine unavailable. Redirects are rejected without following them and
+  appear as unreachable; configure the server's direct origin.
 - "endpoint is outside loopback or OMNIVOICE_TRUSTED_NETWORKS": see
   Configuration above.
 - Other issues: [install/troubleshooting.md](../install/troubleshooting.md).
