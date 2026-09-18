@@ -68,6 +68,12 @@ def invalidate() -> None:
     _resolved_python = None
 
 
+def _clone_dir() -> str | None:
+    """Use the same launch-relative path semantics as the child sidecar."""
+    raw = os.environ.get(_CLONE_DIR_ENV, "").strip()
+    return os.path.abspath(os.path.expanduser(raw)) if raw else None
+
+
 def is_confucius4_installed() -> bool:
     """Cheap file-existence check for a usable venv (no subprocess spawn)."""
     return any(cand.is_file() for cand in _probe_paths())
@@ -81,7 +87,7 @@ def resolve_confucius4_venv() -> Path:
     if _resolved_python is not None:
         return _resolved_python
 
-    clone_dir = os.environ.get(_CLONE_DIR_ENV)
+    clone_dir = _clone_dir()
 
     # A candidate whose probe ran out of time (#1414): preferred over
     # bootstrapping or declaring the engine missing, but only after every
@@ -144,7 +150,7 @@ def _venv_python_path(venv_dir: Path) -> Path:
 
 def _probe_paths() -> list[Path]:
     out: list[Path] = []
-    clone_dir = os.environ.get(_CLONE_DIR_ENV)
+    clone_dir = _clone_dir()
     if clone_dir:
         out.append(_venv_python_path(Path(clone_dir) / ".venv"))
     out.append(_venv_python_path(_ENGINES_VENV_DIR))
@@ -154,7 +160,7 @@ def _probe_paths() -> list[Path]:
 def _import_probe_code() -> str:
     """Probe snippet mirroring the sidecar's import semantics: upstream is not
     pip-installable, so ``confuciustts`` resolves via the clone on sys.path."""
-    clone = os.environ.get(_CLONE_DIR_ENV, "")
+    clone = _clone_dir()
     if clone:
         return f"import sys; sys.path.insert(0, {clone!r}); import {_IMPORT_PROBE}"
     return f"import {_IMPORT_PROBE}"

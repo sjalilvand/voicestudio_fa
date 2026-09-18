@@ -611,7 +611,8 @@ def test_reset_pool_on_wedge_is_a_noop_without_reset():
         pool.shutdown(wait=False)
 
 
-def test_wedged_chunk_does_not_overlap_a_native_retry(tmp_path, monkeypatch):
+@pytest.mark.parametrize("startup_delay", [0, 0.3])
+def test_wedged_chunk_does_not_overlap_a_native_retry(tmp_path, monkeypatch, startup_delay):
     """#1669: a timed-out native transcribe keeps executing in its thread.
 
     Resetting the pool and immediately retrying entered the same
@@ -626,23 +627,39 @@ def test_wedged_chunk_does_not_overlap_a_native_retry(tmp_path, monkeypatch):
     from api.routers import dub_core as dc
     from services import asr_backend
 
+    native_entered = threading.Event()
+
     class _RecordingPool(Executor):
         """Executor with a #851-style reset(): swap the inner pool, count calls."""
 
         def __init__(self):
             self.resets = 0
             self._inner = ThreadPoolExecutor(max_workers=1)
+            self._pools = [self._inner]
+            self.wait_for_native = False
 
         def submit(self, fn, /, *args, **kwargs):
-            return self._inner.submit(fn, *args, **kwargs)
+            def delayed():
+                import time
+                if self.wait_for_native:
+                    time.sleep(startup_delay)
+                return fn(*args, **kwargs)
+            future = self._inner.submit(delayed)
+            if self.wait_for_native:
+                # Start the guard's timeout only after the native call is
+                # genuinely running. Scheduler delay is not the wedge under test.
+                assert native_entered.wait(10), "mock ASR never started"
+            return future
 
         def reset(self):
             self.resets += 1
             old, self._inner = self._inner, ThreadPoolExecutor(max_workers=1)
+            self._pools.append(self._inner)
             old.shutdown(wait=False, cancel_futures=True)
 
         def shutdown(self, wait=True, *, cancel_futures=False):
-            self._inner.shutdown(wait=False, cancel_futures=True)
+            for inner in self._pools:
+                inner.shutdown(wait=wait, cancel_futures=cancel_futures)
 
     release_wedge = threading.Event()
 
@@ -655,6 +672,7 @@ def test_wedged_chunk_does_not_overlap_a_native_retry(tmp_path, monkeypatch):
 
         def transcribe(self, path, *, word_timestamps=True):
             type(self).calls += 1
+            native_entered.set()
             release_wedge.wait(timeout=30)  # wedge far past the tiny chunk timeout
             return {"chunks": [], "segments": [], "language": "en"}
 
@@ -675,6 +693,16 @@ def test_wedged_chunk_does_not_overlap_a_native_retry(tmp_path, monkeypatch):
         return fake_model
 
     pool = _RecordingPool()
+    real_guard = dc.run_transcribe_guarded
+    guard_calls = 0
+
+    async def guard_running_call(executor, fn, **kwargs):
+        nonlocal guard_calls
+        guard_calls += 1
+        pool.wait_for_native = True
+        return await real_guard(executor, fn, **kwargs)
+
+    monkeypatch.setattr(dc, "run_transcribe_guarded", guard_running_call)
     monkeypatch.setattr(dc, "get_model", _ok_model)
     monkeypatch.setattr(dc, "_gpu_pool", pool)
     monkeypatch.setattr(dc, "TRANSCRIBE_CHUNK_TIMEOUT_S", 0.2)
@@ -703,6 +731,7 @@ def test_wedged_chunk_does_not_overlap_a_native_retry(tmp_path, monkeypatch):
         pool.shutdown()
         dc._dub_jobs.pop(job_id, None)
 
+    assert guard_calls == 1, "a timed-out native call must not be retried"
     assert pool.resets == 0, "an in-process native call cannot be killed by swapping pools"
     assert _WedgedASR.calls == 1, "the timed-out native call must not overlap a retry"
     # The user-facing chunk error is the guard's actionable message …
