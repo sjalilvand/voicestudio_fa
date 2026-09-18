@@ -2133,7 +2133,9 @@ class GPTSoVITSBackend(TTSBackend):
         url = os.environ.get("OMNIVOICE_GPTSOVITS_URL", "http://127.0.0.1:9880")
         try:
             with open_trusted_endpoint(
-                url, method="GET", path="tts", timeout=2, allowed_statuses={400, 405}
+                url, method="GET", path="tts", timeout=2, allowed_statuses={400, 405},
+                # api_v2 lowercases these before validating missing inputs.
+                query="text=&text_lang=en&prompt_lang=en",
             ):
                 pass
             return True, "ready (api_v2 server reachable)"

@@ -217,7 +217,7 @@ def test_gptsovits_availability_uses_valid_configured_endpoint(
     # Probe targets the api_v2 /tts route — a healthy server returns 200/400/405,
     # the routing-mismatch branch is exercised separately below.
     assert calls == [
-        ("http://127.0.0.1:9880", {"method": "GET", "timeout": 2, "path": "tts", "allowed_statuses": {400, 405}})
+        ("http://127.0.0.1:9880", {"method": "GET", "timeout": 2, "path": "tts", "allowed_statuses": {400, 405}, "query": "text=&text_lang=en&prompt_lang=en"})
     ]
 
 
@@ -477,3 +477,25 @@ def test_probe_reports_reachable_http_failures(outbound_http, monkeypatch, statu
     assert f'HTTP {status}' in message
     assert 'http://127.0.0.1:9880' in message
     assert 'not reachable' not in message
+
+
+def test_probe_supplies_languages_without_synthesizing(outbound_http, monkeypatch):
+    """api_v2 lowercases language parameters before validating a missing reference."""
+    from urllib.parse import parse_qs, urlsplit
+    from services.tts_backend import GPTSoVITSBackend
+    monkeypatch.setenv('OMNIVOICE_GPTSOVITS_URL', 'http://127.0.0.1:9880')
+    monkeypatch.setattr(socket, 'getaddrinfo', lambda *_a, **_k: _answer('127.0.0.1'))
+    class ApiV2Connection(_Connection):
+        def request(self, method, target, **kwargs):
+            query = parse_qs(urlsplit(target).query, keep_blank_values=True)
+            try:
+                for key in ('text_lang', 'prompt_lang'):
+                    query.get(key, [None])[0].lower()
+            except AttributeError:
+                self.response = _Response(500)
+                return
+            assert not query.get('ref_audio_path')
+            assert query['text'] == ['']
+            self.response = _Response(400)
+    monkeypatch.setattr(outbound_http, '_PinnedHTTPConnection', ApiV2Connection)
+    assert GPTSoVITSBackend.is_available()[0]

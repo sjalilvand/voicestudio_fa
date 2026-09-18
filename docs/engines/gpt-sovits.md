@@ -85,3 +85,6 @@ See also: [benchmarks.md](../benchmarks.md),
 
 Authentication and server HTTP failures report the returned status separately from
 connection failures; inspect the server logs and access configuration.
+
+The readiness probe supplies language fields with empty text and no reference,
+so upstream validation returns without synthesis or its missing-language crash.
