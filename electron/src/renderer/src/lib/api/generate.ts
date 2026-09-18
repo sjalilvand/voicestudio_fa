@@ -231,18 +231,13 @@ export class StreamingPreviewError extends Error {
   readonly errorClass: string | null;
   constructor(
     message: string,
-    options: { retryable?: boolean; terminal?: boolean; errorClass?: string | null } = {},
-  readonly errorClass?: string;
-  constructor(
-    message: string,
     options: { retryable?: boolean; terminal?: boolean; errorClass?: unknown } = {},
   ) {
     super(message);
     this.name = 'StreamingPreviewError';
     this.retryable = options.retryable === true;
     this.terminal = options.terminal === true;
-    this.errorClass = options.errorClass || null;
-    this.errorClass = typeof options.errorClass === 'string' ? options.errorClass : undefined;
+    this.errorClass = typeof options.errorClass === 'string' ? options.errorClass : null;
   }
 }
 
@@ -280,7 +275,6 @@ interface StreamEvent {
   error_class?: unknown;
   terminal?: boolean;
   retryable?: boolean;
-  error_class?: string;
   percent?: number;
 }
 
@@ -338,7 +332,6 @@ export async function generateCloneStreaming(
         throw new StreamingPreviewError(message, {
           retryable: event.retryable,
           terminal,
-          errorClass: event.error_class ?? null,
           errorClass: event.error_class,
         });
       }

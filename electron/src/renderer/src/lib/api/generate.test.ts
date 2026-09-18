@@ -332,19 +332,29 @@ it('carries the backend error class off a stream error frame (#1800)', async () 
   expect(error.errorClass).toBe('RuntimeError');
 });
 
-it('leaves the class null when the frame carries none', async () => {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(
-      async () =>
-        new Response(
-          JSON.stringify({ type: 'error', detail: 'plain failure', retryable: false }) + '\n',
-          { headers: { 'content-type': 'application/x-ndjson' } },
-        ),
-    ),
-  );
-  const error = await generateCloneStreaming(BASE_INPUT).catch((e) => e);
-  expect(error.errorClass).toBeNull();
+it.each([undefined, null, 42, { name: 'RuntimeError' }])(
+  'ignores missing or non-string backend class %j',
+  async (errorClass) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              type: 'error',
+              detail: 'plain failure',
+              retryable: false,
+              error_class: errorClass,
+            }) + '\n',
+            { headers: { 'content-type': 'application/x-ndjson' } },
+          ),
+      ),
+    );
+    const error = await generateCloneStreaming(BASE_INPUT).catch((e) => e);
+    expect(error.errorClass).toBeNull();
+  },
+);
+
 it.each([
   ['GPU_ARCH_UNSUPPORTED', 'gpu_arch_unsupported'],
   ['WINDOWS_APP_CONTROL_BLOCKED', 'windows_app_control_blocked'],
