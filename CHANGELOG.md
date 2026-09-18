@@ -12,6 +12,10 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Clearer recovery guidance for known GPU, Windows policy, and audio-file failures (#2195)
 
+### Changed
+
+- The main sidebar (navigation, voice library, status) stays in place on Settings instead of being swapped for a separate panel; the Settings sections now sit in a column beside it (#2209)
+
 ### Fixed
 
 - Source installs on Chinese, Japanese and Korean Windows read bundled data as UTF-8, preventing startup and generation failures (#2190) — thanks @kevin9327!

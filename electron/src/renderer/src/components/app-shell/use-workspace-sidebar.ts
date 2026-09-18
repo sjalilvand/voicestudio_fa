@@ -13,6 +13,7 @@ const SECONDARY_ROUTES = new Set([
   '/dub',
   '/design',
   '/transcriptions',
+  '/settings',
 ]);
 // A local-controls pane needs enough room for the actual workspace. At the
 // default desktop window, preserve navigation as a rail and restore the full
