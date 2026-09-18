@@ -304,7 +304,10 @@
     "ignored_duplicate": "Ignored (category already set): {{items}}",
     "ignored_conflict": "Ignored {{items}} — a Chinese dialect and an English accent can't be combined.",
     "model_not_downloaded": "The model is not downloaded yet. Open the main app's Settings → Engines to install it.",
-    "backend_unreachable": "The local engine is not reachable."
+    "backend_unreachable": "The local engine is not reachable.",
+    "gpu_arch_unsupported": "This PyTorch build does not support your GPU. Choose CPU in Settings → Performance & Device, or install a compatible PyTorch build.",
+    "windows_app_control_blocked": "Windows application control blocked a required file. Ask your administrator to allow the trusted VoiceStudio runtime, then restart the app.",
+    "audio_io_failed": "Audio could not be read or saved. Check the file format, free disk space, and file permissions. Review the folder in Settings → Storage."
   },
   "tts": {
     "generationComplete": "Speech generation complete",
