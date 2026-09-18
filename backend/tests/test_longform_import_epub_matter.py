@@ -242,3 +242,25 @@ def test_unreadable_member_is_reported_as_a_value_error(monkeypatch):
     monkeypatch.setattr(li.zipfile.ZipFile, "read", real_read)
     assert "# Chapter One: A New Arrival" in li.epub_to_chapter_script(epub)
 
+
+def test_oversized_container_or_opf_is_refused_before_decompression():
+    """The size guard applies to container.xml and the OPF too, not only the spine."""
+    docs = {"ch1.xhtml": _doc("<h1>A New Arrival</h1><p>One.</p>", section_type="bodymatter chapter")}
+    epub = _epub(docs)
+    # A limit smaller than the (tiny) container.xml: nothing may be decompressed.
+    with pytest.raises(ValueError, match="container.xml.*size limit"):
+        li.epub_to_chapter_script(epub, max_entry_bytes=64)
+    # A limit that admits container.xml but not the OPF.
+    with pytest.raises(ValueError, match="package.opf.*size limit"):
+        li.epub_to_chapter_script(epub, max_entry_bytes=len(_CONTAINER) + 16)
+    # A missing OPF is reported the same way (not a KeyError).
+    import io as _io
+    import zipfile as _zip
+
+    buf = _io.BytesIO()
+    with _zip.ZipFile(buf, "w") as z:
+        z.writestr("mimetype", "application/epub+zip")
+        z.writestr("META-INF/container.xml", _CONTAINER)
+    with pytest.raises(ValueError, match="package.opf.*missing"):
+        li.epub_to_chapter_script(buf.getvalue())
+

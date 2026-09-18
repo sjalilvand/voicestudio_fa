@@ -3,8 +3,9 @@ parser understands.
 
 Both helpers are pure (bytes/str in, script-str out) so they're unit-tested
 without a server. EPUB parsing is **stdlib only** (zipfile + ElementTree +
-html.parser) — no new dependency, no network, consistent with the local-first
-guarantee. The output is the same ``# Heading`` + body grammar
+html.parser, plus the shared ``services.text_upload`` decoder) — no new
+dependency, no network, consistent with the local-first guarantee. The output
+is the same ``# Heading`` + body grammar
 :func:`services.audiobook.parse_audiobook_script` already consumes, so import is
 just a front door onto the existing pipeline.
 """
@@ -20,6 +21,8 @@ import zipfile
 from html.parser import HTMLParser
 from xml.etree import ElementTree as ET
 
+from services.text_upload import bom_encoding, decode_text_upload
+
 # A line that *starts* with a chapter keyword and is short enough to be a title
 # (not a sentence that happens to begin with "Chapter"). Anchored, no ambiguous
 # quantifiers → ReDoS-safe and applied per-line (short input) anyway.
@@ -31,8 +34,71 @@ _CHAPTER_TITLE_MAX = 60
 # *uncompressed* bytes read from the archive.
 _EPUB_MAX_ENTRY_BYTES = 25 * 1024 * 1024
 _EPUB_MAX_TOTAL_BYTES = 300 * 1024 * 1024
+# An EPUB document declares its own encoding: XML in the declaration, the XHTML
+# serialisation additionally in a `<meta charset>`. Both sit in the prologue, so
+# only the head of the document is scanned — the patterns never run over a whole
+# book, and neither has overlapping quantifiers (ReDoS-safe).
+_XML_DECL_ENCODING_RE = re.compile(
+    rb"""<\?xml[^>]{0,200}?encoding\s*=\s*["']([A-Za-z0-9_.:+-]{1,40})["']"""
+)
+_META_CHARSET_RE = re.compile(
+    rb"""<meta[^>]{0,400}?charset\s*=\s*["']?\s*([A-Za-z0-9_.:+-]{1,40})""",
+    re.IGNORECASE,
+)
+_DECLARATION_SCAN_BYTES = 1024
+# Recognize markup or XML whitespace in BOM-less wide documents. Widest
+# first: a UTF-32 LE prefix also starts with its UTF-16 LE counterpart.
+_NO_BOM_WIDE_PREFIXES = tuple(
+    (char.encode(encoding), encoding)
+    for encoding in ("utf-32-le", "utf-32-be", "utf-16-le", "utf-16-be")
+    for char in "< \t\r\n"
+)
 
 logger = logging.getLogger("omnivoice.longform_import")
+
+
+def _declared_encoding(raw: bytes) -> str | None:
+    """The encoding an EPUB document names for itself, as written."""
+    head = raw[:_DECLARATION_SCAN_BYTES]
+    for pattern in (_XML_DECL_ENCODING_RE, _META_CHARSET_RE):
+        match = pattern.search(head)
+        if match:
+            return match.group(1).decode("ascii", "ignore")
+    return None
+
+
+def _decode_epub_entry(raw: bytes) -> str:
+    """Decode one EPUB document by the encoding it actually carries.
+
+    UTF-8 is only the *default* for an XML document — a BOM or an
+    ``encoding=``/``charset=`` declaration overrides it, and EPUB 2 books
+    (and Calibre conversions of older HTML) routinely declare ISO-8859-1 or a
+    CJK code page. Decoding those as UTF-8 with ``errors="ignore"`` silently
+    *deleted* every byte their accents, dashes and curly quotes are spelled
+    with, so "Le café était fermé" imported — and was narrated — as "Le caf
+    tait ferm". ``decode_text_upload`` is the same BOM → UTF-8 →
+    Windows-1252 ladder the ``.txt``/``.md`` import branch already uses.
+    """
+    # A byte-order mark outranks any declaration (XML 1.0 §F), and
+    # decode_text_upload owns the one BOM table both front doors read.
+    if not bom_encoding(raw):
+        for prefix, wide in _NO_BOM_WIDE_PREFIXES:
+            if raw.startswith(prefix):
+                return raw.decode(wide, errors="replace")
+        declared = _declared_encoding(raw)
+        if declared:
+            try:
+                # errors="replace": a mis-declared document still imports, the
+                # way an undeclared one does. Nothing here may fail a book.
+                return raw.decode(declared, errors="replace")
+            except (LookupError, UnicodeError):
+                # An encoding Python doesn't have, or a bytes-to-bytes codec
+                # such as "hex_codec" — those resolve but refuse to produce
+                # text. Guess the way an undeclared document is guessed.
+                logger.warning(
+                    "EPUB entry declares an encoding that cannot decode text; guessing instead"
+                )
+    return decode_text_upload(raw)
 
 
 def chapterize_plaintext(text: str) -> str:
@@ -181,10 +247,8 @@ def _html_extract(xhtml: str) -> tuple[set[str], str, str]:
 _OPF_NS = {"opf": "http://www.idpf.org/2007/opf", "c": "urn:oasis:names:tc:opendocument:xmlns:container"}
 
 
-def _opf_path(zf: zipfile.ZipFile) -> str:
-    container = _read_member(zf, "META-INF/container.xml")
-    if container is None:
-        raise ValueError("not an EPUB: META-INF/container.xml is missing")
+def _opf_path(zf: zipfile.ZipFile, budget: _ReadBudget) -> str:
+    container = _read_member(zf, "META-INF/container.xml", budget, required=True)
     # The EPUB is a local file the user chose to import (not a remote/untrusted
     # surface); stdlib ElementTree doesn't expand external entities by default.
     root = ET.fromstring(container)  # nosec B314
@@ -223,14 +287,7 @@ def _is_ancillary(types: set[str], title: str) -> bool:
 
 
 def _toc_titles(
-    zf: zipfile.ZipFile,
-    base: str,
-    nav_hrefs: list[str],
-    names: set[str],
-    *,
-    max_entry_bytes: int,
-    budget: list[int],
-    max_total_bytes: int,
+    zf: zipfile.ZipFile, base: str, nav_hrefs: list[str], names: set[str], budget: _ReadBudget
 ) -> dict[str, str]:
     """Map each spine document (full zip path) to its table-of-contents label.
 
@@ -240,10 +297,7 @@ def _toc_titles(
     (``navPoint/content@src``); the first label for a document wins.
 
     Navigation documents come from the user's file like every other member,
-    so they draw on the same zip-bomb guards as the spine: an entry above
-    ``max_entry_bytes`` is skipped, and what is read counts against the
-    shared uncompressed-byte ``budget`` (a one-item list the caller keeps
-    tallying) up to ``max_total_bytes``.
+    so they are read through the same zip-bomb ``budget`` as the spine.
     """
     nav_titles: dict[str, str] = {}  # EPUB 3 nav — authoritative
     ncx_titles: dict[str, str] = {}  # EPUB 2 NCX — fallback
@@ -251,17 +305,10 @@ def _toc_titles(
         full = posixpath.normpath(posixpath.join(base, href)) if base else href
         if full not in names:
             continue
-        try:
-            info = zf.getinfo(full)
-        except KeyError:
-            continue
-        if info.file_size > max_entry_bytes or budget[0] + info.file_size > max_total_bytes:
-            continue
-        raw = _read_member(zf, full)
+        raw = _read_member(zf, full, budget)
         if raw is None:
             continue
-        budget[0] += len(raw)
-        doc = raw.decode("utf-8", "ignore")
+        doc = _decode_epub_entry(raw)
         nav_dir = posixpath.dirname(full)
         if href.lower().endswith(".ncx"):
             target, pairs = ncx_titles, [
@@ -287,8 +334,30 @@ def _toc_titles(
     return {k: v for k, v in titles.items() if v}
 
 
-def _read_member(zf: zipfile.ZipFile, name: str) -> bytes | None:
-    """Read one EPUB member; ``None`` when it is missing.
+class _ReadBudget:
+    """Zip-bomb guard shared by every EPUB member read.
+
+    ``max_entry_bytes`` bounds one member's *uncompressed* size, ``max_total_bytes``
+    the running total across all members read (``used``). Both are applied
+    before decompression, from the central directory's ``file_size``.
+    """
+
+    def __init__(self, max_entry_bytes: int, max_total_bytes: int) -> None:
+        self.max_entry_bytes = max_entry_bytes
+        self.max_total_bytes = max_total_bytes
+        self.used = 0
+
+    def allows(self, info: zipfile.ZipInfo) -> bool:
+        return info.file_size <= self.max_entry_bytes and self.used + info.file_size <= self.max_total_bytes
+
+
+def _read_member(zf: zipfile.ZipFile, name: str, budget: _ReadBudget, *, required: bool = False) -> bytes | None:
+    """Read one EPUB member within ``budget``; ``None`` when missing or over the limits.
+
+    ``required`` members (container.xml, the OPF) raise instead of returning
+    ``None`` when they are missing or oversized — without them there is no
+    book to import, and a crafted upload must not be able to make the route
+    decompress an unbounded member before the limits apply.
 
     A truncated, CRC-broken or encrypted member surfaces from ``zipfile`` as
     ``BadZipFile`` / ``RuntimeError`` (and ``NotImplementedError`` for an
@@ -296,11 +365,26 @@ def _read_member(zf: zipfile.ZipFile, name: str) -> bytes | None:
     the ``ValueError`` the import route already maps to a 400 with the reason.
     """
     try:
-        return zf.read(name)
+        info = zf.getinfo(name)
     except KeyError:
+        if required:
+            raise ValueError(f"not a valid EPUB: {name!r} is missing")
         return None
+    if required:
+        # container.xml and the OPF are a few KB in any real book: the
+        # per-entry ceiling protects against a crafted upload, and they do
+        # not draw on the content budget that bounds the chapters.
+        if info.file_size > budget.max_entry_bytes:
+            raise ValueError(f"EPUB member {name!r} exceeds the import size limit")
+    elif not budget.allows(info):
+        return None
+    try:
+        raw = zf.read(name)
     except (zipfile.BadZipFile, RuntimeError, NotImplementedError, EOFError) as e:
         raise ValueError(f"EPUB member {name!r} is unreadable: {e}") from e
+    if not required:
+        budget.used += len(raw)
+    return raw
 
 
 def _plain(markup: str) -> str:
@@ -326,10 +410,9 @@ def epub_to_chapter_script(
     except zipfile.BadZipFile as e:
         raise ValueError(f"not a valid EPUB (zip) file: {e}") from e
 
-    opf_path = _opf_path(zf)
-    opf_raw = _read_member(zf, opf_path)
-    if opf_raw is None:
-        raise ValueError(f"EPUB rootfile {opf_path!r} is missing")
+    budget = _ReadBudget(max_entry_bytes, max_total_bytes)
+    opf_path = _opf_path(zf, budget)
+    opf_raw = _read_member(zf, opf_path, budget, required=True)
     try:
         opf = ET.fromstring(opf_raw)  # nosec B314 — local user EPUB; see _opf_path
     except ET.ParseError as e:
@@ -347,11 +430,7 @@ def epub_to_chapter_script(
                 nav_hrefs.append(href)
 
     names = set(zf.namelist())
-    budget = [0]  # cumulative uncompressed bytes read — zip-bomb guard, shared with the TOC read
-    toc = _toc_titles(
-        zf, base, nav_hrefs, names, max_entry_bytes=max_entry_bytes, budget=budget, max_total_bytes=max_total_bytes
-    )
-    total = budget[0]
+    toc = _toc_titles(zf, base, nav_hrefs, names, budget)
 
     blocks: list[str] = []
     for ref in opf.findall(".//opf:spine/opf:itemref", _OPF_NS):
@@ -363,22 +442,14 @@ def epub_to_chapter_script(
         full = posixpath.normpath(posixpath.join(base, href)) if base else href
         if full not in names:
             continue
-        # Bound decompression: skip an absurdly large entry, and stop once the
-        # cumulative uncompressed size crosses the ceiling (defends against a
-        # zip bomb / a maliciously huge chapter exhausting memory).
-        try:
-            info = zf.getinfo(full)
-        except KeyError:
-            continue
-        if info.file_size > max_entry_bytes:
-            continue
-        if total + info.file_size > max_total_bytes:
+        # Bound decompression through the shared budget (an oversized entry is
+        # skipped; once the cumulative total is spent nothing more is read).
+        if budget.used >= budget.max_total_bytes:
             break
-        raw = _read_member(zf, full)
+        raw = _read_member(zf, full, budget)
         if raw is None:
             continue
-        total += len(raw)
-        types, title, body = _html_extract(raw.decode("utf-8", "ignore"))
+        types, title, body = _html_extract(_decode_epub_entry(raw))
         if not body.strip():
             continue  # nav docs, empty pages
         title = toc.get(full) or title
