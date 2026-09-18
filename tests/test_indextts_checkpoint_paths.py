@@ -110,3 +110,20 @@ def test_temporary_config_is_removed_when_constructor_fails(sidecar, monkeypatch
     assert config.read_bytes() == original
     assert not seen[0].exists()
     assert sidecar._model is None
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX permits literal Windows-path filenames")
+def test_foreign_path_cwd_literal_does_not_hide_fallback(sidecar, monkeypatch, tmp_path):
+    foreign = r"Z:\cluster\missing.pth"
+    config = write_config(tmp_path, gpt_checkpoint=foreign)
+    (config.parent / "gpt.pth").write_bytes(b"weights")
+    cwd = tmp_path / "cwd"
+    cwd.mkdir()
+    (cwd / foreign).write_bytes(b"unrelated cwd file")
+    monkeypatch.chdir(cwd)
+    def constructor(*, cfg_path, model_dir, **kwargs):
+        cfg = OmegaConf.load(cfg_path)
+        assert (Path(model_dir) / cfg.gpt_checkpoint).read_bytes() == b"weights"
+        return object()
+    install_fake(monkeypatch, tmp_path, constructor)
+    sidecar._load_model(io.BytesIO())

@@ -252,7 +252,7 @@ def _local_checkpoint_config(cfg_path: str, model_dir: str):
         if (
             isinstance(value, str)
             and (os.path.isabs(value) or ntpath.isabs(value))
-            and not os.path.isfile(value)
+            and not os.path.isfile(os.path.join(model_dir, value))
             and os.path.isfile(os.path.join(model_dir, filename))
         ):
             config[key] = filename
