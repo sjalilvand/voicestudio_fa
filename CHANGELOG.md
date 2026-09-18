@@ -14,6 +14,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Prevent reference voice cloning from silently downloading a second speech recognizer (#2116)
+
 - GPT-SoVITS can use an explicitly configured default voice and avoids server-side re-splitting that can drop clauses (#2200) — thanks @jaketame!
 
 - Connect GPT-SoVITS to its api_v2 endpoint, accept healthy probe responses, and require a reference clip before generation (#2180, #2102) — thanks @rollroyces, @martinezpl and @jaketame!

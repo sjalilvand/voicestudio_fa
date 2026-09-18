@@ -50,14 +50,17 @@ The env var overrides the persisted UI choice.
   (dubbing, dictation) — the model is never double-loaded.
 - On CUDA and ROCm the model runs fp16 with `torch.compile`; PyTorch exposes
   ROCm/HIP devices through its `cuda` API, while VoiceStudio's engine matrix
-  reports the hardware as ROCm. A speech recognizer is co-loaded for the
-  cloning path.
+  reports the hardware as ROCm. An installed speech recognizer can supply
+  missing reference transcripts for cloning.
 - Output is 24 kHz mono; the shared mastering chain (highpass + compressor)
   is tuned for this rate and applied automatically.
 - Cloning takes a short reference clip (`ref_audio`); 3–10 seconds is the
   sweet spot. A transcript of the clip improves conditioning — if the profile
-  has none, VoiceStudio transcribes the clip automatically on first use and
-  saves the result to the profile. A clip with a supplied transcript is limited
+  has none, VoiceStudio uses an already-installed speech recognizer on first
+  use and saves the result to the profile. The model-level Whisper fallback
+  also requires cached weights; it never downloads another ASR during cloning.
+  If no recognizer is installed, supply a matching reference transcript or
+  explicitly install and select a speech-to-text model in Model Catalogue. A clip with a supplied transcript is limited
   to 20 seconds so the two stay aligned; trim both to the same passage. Without
   a transcript, VoiceStudio can search up to 75 seconds in five contiguous,
   bounded transcription passes and selects the passage with detected speech.
