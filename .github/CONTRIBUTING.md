@@ -272,6 +272,11 @@ bad:  WIP
 
 ## Testing
 
+Native-call timeout tests should synchronize with confirmed worker entry before
+starting their short test deadline, and join released workers during cleanup.
+Cover delayed startup separately so runner scheduling does not masquerade as a
+native-call timeout or leak work into later tests.
+
 ```bash
 # Run all backend tests
 uv run pytest backend/ -x -q
