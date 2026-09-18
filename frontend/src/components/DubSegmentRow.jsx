@@ -197,8 +197,10 @@ function DubSegmentRow({
   };
 
   const commitTime = (edge) => (e) => {
-    const v = parseTime(e.target.value);
     const current = seg[edge];
+    // The field shows tenths; an untouched field must not snap the edge to them.
+    if (e.target.value === formatTime(current)) return;
+    const v = parseTime(e.target.value);
     const inRange =
       edge === 'start'
         ? v >= 0 && v <= seg.end - MIN_SEG_DUR + TIME_EPSILON
