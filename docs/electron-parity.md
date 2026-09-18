@@ -65,3 +65,7 @@ path-bound WebSocket URL and reconnect without exposing credentials.
 running hash router and real backend. It fails on an error boundary, missing heading, uncaught
 exception, console error or warning, failed load or HTTP error response. The 2026-09-13 live run passed every
 route with no failures.
+
+## Settings navigation
+
+The main workspace sidebar stays visible on Settings routes, including while the backend is starting or unavailable. Settings keeps its own section list beside it, with a Settings heading instead of a duplicate brand header. Narrow windows use the same compact-rail behavior as other secondary-pane workspaces.
