@@ -169,3 +169,37 @@ it('uses a structured error message without losing recovery metadata', async () 
   expect(error.message).toBe(detail.message);
   expect(error.payload?.detail).toEqual(detail);
 });
+
+it('localizes structured profile language failures', async () => {
+  const translate = vi.spyOn(i18next, 't').mockReturnValue('Localized profile guidance');
+  try {
+    const detail = {
+      code: 'profile_language_rejected',
+      language: 'Persian',
+      message: 'English fallback',
+    };
+    const error = await errorFromResponse(
+      new Response(JSON.stringify({ detail }), { status: 400 }),
+    );
+    expect(error.detail).toBe('Localized profile guidance');
+    expect(translate).toHaveBeenCalledWith('tts_errors.profile_language_rejected', {
+      language: 'Persian',
+    });
+  } finally {
+    translate.mockRestore();
+  }
+});
+
+it.each([false, true])('localizes HTTP failure topics (nested: %s)', async (nested) => {
+  const translate = vi.spyOn(i18next, 't').mockReturnValue('Localized recovery');
+  try {
+    const failure = { docs_topic: 'GPU_ARCH_UNSUPPORTED', detail: 'English fallback' };
+    const payload = nested ? { detail: failure } : failure;
+    const error = await errorFromResponse(new Response(JSON.stringify(payload), { status: 500 }));
+    expect(error.message).toBe('Localized recovery');
+    expect(error.payload).toEqual(payload);
+    expect(translate).toHaveBeenCalledWith('tts_errors.gpu_arch_unsupported');
+  } finally {
+    translate.mockRestore();
+  }
+});

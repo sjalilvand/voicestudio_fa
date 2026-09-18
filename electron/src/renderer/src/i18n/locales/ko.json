@@ -2237,6 +2237,7 @@
     "tailscale_qr_alt": "Tailscale URL의 QR 코드"
   },
   "convert": {
+    "cloning_required": "음성 복제를 지원하는 사용 가능한 음성 합성 모델을 선택하세요.",
     "source_kicker": "소스 클립",
     "drop_audio": "변환할 클립을 끌어다 놓거나 클릭하세요. WAV, MP3, M4A…",
     "target_voice": "대상 목소리",
@@ -2521,6 +2522,7 @@
     "recorder_unsupported": "이 시스템에서는 마이크 오디오를 인코딩할 수 없습니다."
   },
   "tts_errors": {
+    "profile_language_rejected": "자동은 이 엔진이 지원하지 않는 음성 프로필의 언어({{language}})를 사용합니다. 프로필 언어를 변경하거나 지원되는 언어 또는 다른 엔진을 선택하세요.",
     "generation_in_progress": "이미 생성 작업이 실행 중입니다. 완료된 후 새 작업을 시작하세요.",
     "error_prefix": "오류: {{message}}",
     "ignored_duplicate": "무시됨(카테고리가 이미 설정됨): {{items}}",
@@ -2532,7 +2534,10 @@
     "ignored_unsupported": "지원되지 않는 지침을 무시했습니다: {{items}}",
     "too_long": "클립은 {{duration}}s입니다. 엔진은 스크립트 없이 최대 {{max}}를 허용합니다.",
     "model_not_downloaded": "모델이 아직 다운로드되지 않았습니다. 메인 앱의 설정 → 엔진을 열어 설치하세요.",
-    "backend_unreachable": "로컬 엔진에 연결할 수 없습니다."
+    "backend_unreachable": "로컬 엔진에 연결할 수 없습니다.",
+    "gpu_arch_unsupported": "이 PyTorch 빌드는 사용 중인 GPU를 지원하지 않습니다. 설정 → 성능 및 장치에서 CPU를 선택하거나 호환되는 PyTorch 빌드를 설치하세요.",
+    "windows_app_control_blocked": "Windows 애플리케이션 제어가 필요한 파일을 차단했습니다. 관리자에게 신뢰할 수 있는 VoiceStudio 런타임을 허용하도록 요청한 뒤 앱을 다시 시작하세요.",
+    "audio_io_failed": "오디오를 읽거나 저장할 수 없습니다. 파일 형식, 디스크 여유 공간 및 파일 권한을 확인하세요. 설정 → 저장소에서 폴더를 확인하세요."
   },
   "network": {
     "copied": "복사됨",

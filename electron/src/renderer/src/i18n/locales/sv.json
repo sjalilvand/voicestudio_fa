@@ -2237,6 +2237,7 @@
     "tailscale_qr_alt": "QR-kod för Tailscale URL"
   },
   "convert": {
+    "cloning_required": "Välj en användningsklar talsyntesmodell som stöder röstkloning.",
     "source_kicker": "Källklipp",
     "drop_audio": "Släpp klippet som ska konverteras — eller klicka. WAV, MP3, M4A…",
     "target_voice": "Målröst",
@@ -2521,6 +2522,7 @@
     "channels_stereo": "Stereo"
   },
   "tts_errors": {
+    "profile_language_rejected": "Auto använder röstprofilens språk ({{language}}), som denna motor inte stöder. Ändra profilens språk, välj ett språk som stöds eller byt motor.",
     "generation_in_progress": "En generering pågår redan – vänta tills den är klar innan du startar en ny.",
     "error_prefix": "Fel: {{message}}",
     "ignored_duplicate": "Ignorerad (kategori redan inställd): {{items}}",
@@ -2532,7 +2534,10 @@
     "ignored_unsupported": "Ignorerad instruktion som inte stöds: {{items}}",
     "too_long": "Klippet är {{duration}}s. Motorn accepterar högst {{max}} utan transkription.",
     "model_not_downloaded": "Modellen är inte nedladdad ännu. Öppna huvudappens Inställningar → Motorer för att installera den.",
-    "backend_unreachable": "Den lokala motorn är inte tillgänglig."
+    "backend_unreachable": "Den lokala motorn är inte tillgänglig.",
+    "gpu_arch_unsupported": "Den här PyTorch-versionen stöder inte din GPU. Välj CPU under Inställningar → Prestanda och enhet eller installera en kompatibel PyTorch-version.",
+    "windows_app_control_blocked": "Windows programkontroll blockerade en nödvändig fil. Be administratören tillåta den betrodda VoiceStudio-körmiljön och starta sedan om appen.",
+    "audio_io_failed": "Ljudet kunde inte läsas eller sparas. Kontrollera filformat, ledigt diskutrymme och filbehörigheter. Kontrollera mappen under Inställningar → Lagring."
   },
   "network": {
     "copied": "Kopierade",

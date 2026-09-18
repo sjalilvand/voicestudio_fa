@@ -42,6 +42,9 @@ describe('errorDocsMap', () => {
     expect(Object.keys(ERROR_DOCS).sort()).toEqual([...ERROR_CLASS_KEYS].sort());
     expect(Object.keys(ERROR_DOCS).sort()).toEqual(
       [
+        'GPU_ARCH_UNSUPPORTED',
+        'WINDOWS_APP_CONTROL_BLOCKED',
+        'AUDIO_IO_FAILED',
         'DIARIZATION_MODEL_MISSING',
         'DIARIZATION_LOAD_FAILED',
         'APPIMAGE_WEBKIT_WHITESCREEN',
