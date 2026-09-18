@@ -419,6 +419,27 @@ export default function StoriesEditor({ profiles = [] }) {
     setTracks((prev) => [...prev, makeTrack('narrator', `# ${t('stories.chapterN', { n })}`)]);
   }, [tracks, setTracks, t]);
 
+  // Clear every line and chapter at once (an import can add hundreds; the
+  // per-line trash icon was the only way to undo one). Cast is kept.
+  const clearScript = useCallback(async () => {
+    if (!tracks.length) return;
+    const ok = await askConfirm(
+      t('stories.clearConfirm', { count: tracks.length }),
+      t('stories.clearScript'),
+    );
+    if (!ok) return;
+    // An empty script is exactly what the first-run bootstrap below treats as
+    // "pristine", so mark the sample as shown or it would reseed the demo.
+    sampleBootstrapRef.current = true;
+    try {
+      localStorage.setItem(DEFAULT_SAMPLE_KEY, '1');
+    } catch {
+      // Storage unavailable: the ref alone covers this mounted session.
+    }
+    setTracks([]);
+    toast.success(t('stories.cleared'));
+  }, [tracks.length, setTracks, t]);
+
   // ── Paste & auto-split ───────────────────────────────────────────────────
   const applySplit = useCallback(() => {
     const chunks = splitIntoChunks(splitText, splitMax);
@@ -793,6 +814,16 @@ export default function StoriesEditor({ profiles = [] }) {
               <Button size="sm" variant="ghost" onClick={addChapter}>
                 <Bookmark size={13} aria-hidden="true" />
                 {t('stories.addChapter')}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={clearScript}
+                disabled={!tracks.length}
+                title={t('stories.clearScriptHint')}
+              >
+                <Trash2 size={13} aria-hidden="true" />
+                {t('stories.clearScript')}
               </Button>
             </div>
           )}

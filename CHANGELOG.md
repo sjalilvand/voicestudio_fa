@@ -12,6 +12,10 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Clearer recovery guidance for known GPU, Windows policy, and audio-file failures (#2195)
 
+### Added
+
+- Stories: a Clear script button removes every imported line and chapter in one confirmed step, instead of one trash icon at a time (#2203)
+
 ### Fixed
 
 - A streaming generation that fails on an unsupported GPU, a Windows app-control block, or an audio-file error now says so and what to do, instead of only "Generation failed. Check the selected engine and try again." (#2195, #2177) — thanks @shivsin25!
