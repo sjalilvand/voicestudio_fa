@@ -329,9 +329,10 @@ def test_relative_cache_setting_keeps_existing_weights(monkeypatch, tmp_path, na
 def test_adapter_absolutizes_reference_before_sidecar_chdir(monkeypatch, tmp_path):
     """The parent owns the meaning of a caller-relative reference path."""
     from engines.confucius4 import Confucius4Backend
-    from services.subprocess_backend import SubprocessBackend
+    # Other suites reload services modules; patch this adapter's actual base.
+    base = Confucius4Backend.__bases__[0]
     calls = []
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(SubprocessBackend, "generate", lambda self, text, **kw: calls.append(kw))
+    monkeypatch.setattr(base, "generate", lambda self, text, **kw: calls.append(kw))
     Confucius4Backend().generate("hello", ref_audio="speaker.wav", language="en")
     assert calls[0]["ref_audio"] == str(tmp_path / "speaker.wav")
