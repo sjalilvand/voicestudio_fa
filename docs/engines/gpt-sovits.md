@@ -82,3 +82,6 @@ system trusts.
 
 See also: [benchmarks.md](../benchmarks.md),
 [expressive-speech.md](../expressive-speech.md).
+
+Authentication and server HTTP failures report the returned status separately from
+connection failures; inspect the server logs and access configuration.

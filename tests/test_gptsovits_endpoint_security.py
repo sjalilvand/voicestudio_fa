@@ -233,7 +233,7 @@ def test_gptsovits_routing_mismatch_message_distinguishes_old_protocol(
     from services.tts_backend import GPTSoVITSBackend
 
     def raise_404(*_args, **_kwargs):
-        raise OSError("endpoint returned HTTP 404")
+        raise outbound_http.EndpointHTTPError(404)
 
     monkeypatch.setenv("OMNIVOICE_GPTSOVITS_URL", "http://127.0.0.1:9880")
     monkeypatch.setattr(outbound_http, "open_trusted_endpoint", raise_404)
@@ -459,3 +459,21 @@ def test_transport_rejects_body_without_content_type(outbound_http, monkeypatch)
     with pytest.raises(outbound_http.UnsafeEndpoint, match="Content-Type"):
         outbound_http.open_trusted_endpoint("http://127.0.0.1:9880", method="POST", path="tts", timeout=2, body=b"{}")
     assert _Connection.instances[-1].request_args is None
+
+
+@pytest.mark.parametrize('status', [401, 403, 500])
+def test_probe_reports_reachable_http_failures(outbound_http, monkeypatch, status):
+    from services.tts_backend import GPTSoVITSBackend
+    monkeypatch.setenv('OMNIVOICE_GPTSOVITS_URL', 'http://127.0.0.1:9880')
+    monkeypatch.setattr(socket, 'getaddrinfo', lambda *_a, **_k: _answer('127.0.0.1'))
+    monkeypatch.setattr(outbound_http, '_PinnedHTTPConnection', _Connection)
+    original_init = _Connection.__init__
+    def init(self, endpoint, timeout):
+        original_init(self, endpoint, timeout)
+        self.response = _Response(status)
+    monkeypatch.setattr(_Connection, '__init__', init)
+    ok, message = GPTSoVITSBackend.is_available()
+    assert not ok
+    assert f'HTTP {status}' in message
+    assert 'http://127.0.0.1:9880' in message
+    assert 'not reachable' not in message

@@ -2129,7 +2129,7 @@ class GPTSoVITSBackend(TTSBackend):
         # verb or with different inputs), while api.py answers 404 because
         # the path is unmapped. The two are now distinguishable instead of
         # both reading as "server not reachable".
-        from services.outbound_http import open_trusted_endpoint
+        from services.outbound_http import EndpointHTTPError, open_trusted_endpoint
         url = os.environ.get("OMNIVOICE_GPTSOVITS_URL", "http://127.0.0.1:9880")
         try:
             with open_trusted_endpoint(
@@ -2137,10 +2137,8 @@ class GPTSoVITSBackend(TTSBackend):
             ):
                 pass
             return True, "ready (api_v2 server reachable)"
-        except OSError as exc:
-            # open_trusted_endpoint wraps HTTP failures as OSError with the
-            # status code in the message; routing mismatches carry a 404.
-            if "HTTP 404" in str(exc):
+        except EndpointHTTPError as exc:
+            if exc.status == 404:
                 return False, (
                     f"GPT-SoVITS server at {url} is reachable but does not "
                     "expose api_v2's /tts route. Start it with: "
@@ -2148,9 +2146,8 @@ class GPTSoVITSBackend(TTSBackend):
                     "GPT_SoVITS/configs/tts_infer.yaml"
                 )
             return False, (
-                f"GPT-SoVITS server not reachable at {url}. "
-                "Start it with: python api_v2.py -a 127.0.0.1 -p 9880 "
-                "-c GPT_SoVITS/configs/tts_infer.yaml"
+                f"GPT-SoVITS server at {url} returned HTTP {exc.status}. "
+                "Check the server logs and access configuration."
             )
         except Exception:
             # Connection refused / DNS failure / unsafe endpoint / etc.

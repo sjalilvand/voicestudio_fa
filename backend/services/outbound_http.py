@@ -15,6 +15,14 @@ class UnsafeEndpoint(ValueError):
     """The configured endpoint is outside VoiceStudio's trusted networks."""
 
 
+class EndpointHTTPError(OSError):
+    """A trusted server answered with an unexpected HTTP status."""
+
+    def __init__(self, status: int):
+        self.status = status
+        super().__init__(f"endpoint returned HTTP {status}")
+
+
 @dataclass(frozen=True)
 class ResolvedEndpoint:
     scheme: str
@@ -160,5 +168,5 @@ def open_trusted_endpoint(
     if response.status >= 400 and response.status not in allowed_statuses:
         response.close()
         conn.close()
-        raise OSError(f"endpoint returned HTTP {response.status}")
+        raise EndpointHTTPError(response.status)
     return response
