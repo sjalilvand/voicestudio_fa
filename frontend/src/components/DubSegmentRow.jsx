@@ -188,9 +188,13 @@ function DubSegmentRow({
   // its edge produce identical results — including the speed recompute that
   // keeps the dubbed audio inside a resized slot. The numeric start field used
   // to write `start` raw and skip that compensation, so the two UIs disagreed.
+  // The fields show tenths, so leaving one untouched must not commit that
+  // rounding; only a field typed into since it was focused commits.
+  const editedTimeRef = useRef({});
   const timeKeyDown = (edge) => (e) => {
     if (e.key === 'Enter') e.target.blur();
     if (e.key === 'Escape') {
+      editedTimeRef.current[edge] = false;
       e.target.value = formatTime(seg[edge]);
       e.target.blur();
     }
@@ -198,8 +202,8 @@ function DubSegmentRow({
 
   const commitTime = (edge) => (e) => {
     const current = seg[edge];
-    // The field shows tenths; an untouched field must not snap the edge to them.
-    if (e.target.value === formatTime(current)) return;
+    if (!editedTimeRef.current[edge]) return;
+    editedTimeRef.current[edge] = false;
     const v = parseTime(e.target.value);
     const inRange =
       edge === 'start'
@@ -382,6 +386,12 @@ function DubSegmentRow({
                 edge === 'start' ? 'segment.time_edit_title' : 'segment.time_edit_end_title',
               )}
               onClick={(e) => e.stopPropagation()}
+              onFocus={() => {
+                editedTimeRef.current[edge] = false;
+              }}
+              onChange={() => {
+                editedTimeRef.current[edge] = true;
+              }}
               onKeyDown={timeKeyDown(edge)}
               onBlur={commitTime(edge)}
             />

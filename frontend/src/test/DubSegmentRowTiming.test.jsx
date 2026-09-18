@@ -235,6 +235,19 @@ describe('DubSegmentRow timing fields', () => {
 
     expect(props.onMoveResize).not.toHaveBeenCalled();
   });
+
+  it('commits the shown time when it is typed on purpose', () => {
+    const props = makeProps({ seg: { id: 's1', start: 1.23, end: 3.27, text: 'x' } });
+    render(<DubSegmentRow {...props} />);
+    const end = timeFields()[1];
+
+    fireEvent.focus(end);
+    fireEvent.change(end, { target: { value: '' } });
+    fireEvent.change(end, { target: { value: '0:03.3' } });
+    fireEvent.blur(end);
+
+    expect(props.onMoveResize).toHaveBeenCalledWith('s1', { start: 1.23, end: 3.3 });
+  });
 });
 
 describe('DubSegmentRow merge shortcuts', () => {
