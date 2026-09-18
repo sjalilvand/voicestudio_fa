@@ -24,6 +24,9 @@ it('sizes the script so the button disables on an empty draft', () => {
     { id: '2', character: 'narrator', text: 'Zoe stepped closer.', profileId: null },
   ] as Draft['lines'];
   expect(scriptSize('stories', draft)).toBe(2);
+  draft.importText = 'Imported but not yet split';
+  expect(scriptSize('stories', draft)).toBe(3);
+  draft.importText = '';
   draft.script = '  \n';
   expect(scriptSize('audiobook', draft)).toBe(0);
   draft.script = 'Once upon a time.';
