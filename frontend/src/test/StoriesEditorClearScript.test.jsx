@@ -180,6 +180,10 @@ describe('StoriesEditor clear script', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: /paste.*split/i }));
     expect(screen.getByRole('textbox', { name: /paste/i })).toHaveValue('');
+    expect(askConfirm).toHaveBeenCalledWith(
+      'Remove all 1 lines from the script? This cannot be undone.',
+      'Clear script',
+    );
     expect(useAppStore.getState().cast).toEqual(CAST);
   });
 });
