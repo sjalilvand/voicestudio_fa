@@ -1,3 +1,4 @@
+import { generationFailureMessage } from './generationFailureMessage.ts';
 import i18n from 'i18next';
 import { languageRejectionMessage } from './languageRejection.ts';
 /**
@@ -402,7 +403,10 @@ async function _streamGenerateSpeech(
         meta = ev;
       } else if (ev.type === 'error') {
         const detail =
-          languageRejectionMessage(ev, i18n.t) || ev.detail || 'TTS stream reported an error';
+          languageRejectionMessage(ev, i18n.t) ||
+          generationFailureMessage(ev, i18n.t) ||
+          ev.detail ||
+          'TTS stream reported an error';
         const terminal =
           ev.terminal === true ||
           ['[clone_ref_unusable]', '[clone_ref_too_long]', '[clone_ref_no_speech]'].some((marker) =>

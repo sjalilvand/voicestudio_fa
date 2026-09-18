@@ -345,4 +345,38 @@ it('leaves the class null when the frame carries none', async () => {
   );
   const error = await generateCloneStreaming(BASE_INPUT).catch((e) => e);
   expect(error.errorClass).toBeNull();
+it.each([
+  ['GPU_ARCH_UNSUPPORTED', 'gpu_arch_unsupported'],
+  ['WINDOWS_APP_CONTROL_BLOCKED', 'windows_app_control_blocked'],
+  ['AUDIO_IO_FAILED', 'audio_io_failed'],
+])('localizes %s without changing stream retry behavior', async (topic, key) => {
+  const translate = vi.spyOn(i18n, 't').mockReturnValue('Localized recovery');
+  const terminal = topic !== 'AUDIO_IO_FAILED';
+  try {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              type: 'error',
+              docs_topic: topic,
+              detail: 'English fallback',
+              error_class: 'RuntimeError',
+              retryable: !terminal,
+              terminal,
+            }) + '\n',
+            { headers: { 'content-type': 'application/x-ndjson' } },
+          ),
+      ),
+    );
+    const error = await generateCloneStreaming(BASE_INPUT).catch((e) => e);
+    expect(error.message).toBe('Localized recovery');
+    expect(error.errorClass).toBe('RuntimeError');
+    expect(translate).toHaveBeenCalledWith(`tts_errors.${key}`);
+    expect(error.terminal).toBe(terminal);
+    expect(shouldFallbackToClassic(error)).toBe(false);
+  } finally {
+    translate.mockRestore();
+  }
 });
