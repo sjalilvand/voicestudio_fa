@@ -2114,11 +2114,12 @@ class GPTSoVITSBackend(TTSBackend):
 
     id = "gpt-sovits"
     display_name = "GPT-SoVITS (5 langs, zero-shot, RTF 0.014, MIT)"
-    # What api_v2's own FastAPI stack answers to a parameterless GET /tts:
-    # 200 (some builds render a default), 400 (its own "missing text" check),
-    # 405 (GET not mapped, POST is) or 422 (FastAPI validation). Anything
+    # What api_v2's own FastAPI stack answers to the probe GET /tts: 400
+    # (its own "ref_audio_path is required" check), 422 (FastAPI validation
+    # on other builds), 405 (a build that maps POST only) or 200. Anything
     # else came from something in front of, or instead of, the server.
     _API_V2_PROBE_STATUSES = frozenset({200, 400, 405, 422})
+    _PROBE_QUERY = "text=&text_lang=en&prompt_lang=en"
     # Server-side; whichever device GPT-SoVITS itself uses (CUDA preferred).
     gpu_compat = ("cuda", "cpu")
 
@@ -2128,12 +2129,15 @@ class GPTSoVITSBackend(TTSBackend):
     @classmethod
     def is_available(cls) -> tuple[bool, str]:
         # GPT-SoVITS runs as an external API server — check if it's reachable.
-        # api_v2 exposes POST /tts; api.py (v1) does not. A parameterless GET
-        # of /tts makes the server's own FastAPI stack answer: api_v2 replies
-        # 400 (missing fields) or 405 (wrong verb), api.py replies 404 because
-        # the path is unmapped. Only the status matters, so this goes through
-        # the status-only probe — routing an "expected" 4xx through
-        # open_trusted_endpoint would raise and read as "not reachable".
+        # api_v2 exposes GET/POST /tts; api.py (v1) does not. The probe sends
+        # the smallest query that reaches api_v2's own validator (its GET
+        # handler lower-cases text_lang/prompt_lang *before* validating, so a
+        # bare GET crashes with 500): with those set and no ref_audio_path it
+        # answers 400 "ref_audio_path is required" without doing any work,
+        # while api.py answers 404 because the path is unmapped. Only the
+        # status matters, so this goes through the status-only probe —
+        # routing an expected 4xx through open_trusted_endpoint would raise
+        # and read as "not reachable".
         from services.outbound_http import probe_trusted_endpoint
         url = os.environ.get("OMNIVOICE_GPTSOVITS_URL", "http://127.0.0.1:9880")
         start_hint = (
@@ -2141,7 +2145,7 @@ class GPTSoVITSBackend(TTSBackend):
             "-c GPT_SoVITS/configs/tts_infer.yaml"
         )
         try:
-            status = probe_trusted_endpoint(url, timeout=2, path="tts")
+            status = probe_trusted_endpoint(url, timeout=2, path="tts", query=cls._PROBE_QUERY)
         except Exception:
             # Connection refused / DNS failure / unsafe endpoint / etc.
             return False, f"GPT-SoVITS server not reachable at {url}. {start_hint}"

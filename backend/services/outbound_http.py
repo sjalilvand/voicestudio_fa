@@ -127,8 +127,8 @@ def _request(base_url, *, method, query, timeout, path, body, content_type):
     return conn, conn.getresponse()
 
 
-def probe_trusted_endpoint(base_url: str, *, timeout: float, path: str = "") -> int:
-    """Return the HTTP status a bare ``GET`` of ``path`` gets from the validated origin.
+def probe_trusted_endpoint(base_url: str, *, timeout: float, path: str = "", query: str = "") -> int:
+    """Return the HTTP status a ``GET`` of ``path`` (plus ``query``) gets from the validated origin.
 
     A reachability probe only needs an answer. Inference servers routinely
     answer a parameterless GET with 400 or 405 (route exists, wrong verb or
@@ -139,7 +139,7 @@ def probe_trusted_endpoint(base_url: str, *, timeout: float, path: str = "") -> 
     trusted.
     """
     conn, response = _request(
-        base_url, method="GET", query="", timeout=timeout, path=path, body=None, content_type=None
+        base_url, method="GET", query=query, timeout=timeout, path=path, body=None, content_type=None
     )
     try:
         return response.status

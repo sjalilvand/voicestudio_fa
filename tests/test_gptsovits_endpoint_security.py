@@ -200,7 +200,9 @@ def test_gptsovits_availability_uses_valid_configured_endpoint(
     )
 
     assert GPTSoVITSBackend.is_available() == (True, "ready (api_v2 server reachable)")
-    assert calls == [("http://127.0.0.1:9880", {"timeout": 2, "path": "tts"})]
+    assert calls == [
+        ("http://127.0.0.1:9880", {"timeout": 2, "path": "tts", "query": "text=&text_lang=en&prompt_lang=en"})
+    ]
 
 
 @pytest.mark.parametrize("status", [302, 401, 403, 500, 502])
@@ -224,7 +226,7 @@ def test_gptsovits_availability_rejects_non_api_v2_answers(outbound_http, monkey
 def test_gptsovits_availability_accepts_route_present_statuses(
     outbound_http, monkeypatch, status
 ):
-    """A parameterless GET /tts on a healthy api_v2 answers 400 or 405.
+    """The probe GET /tts on a healthy api_v2 answers 400 (or 405/422 on other builds).
 
     Both mean the route exists; treating them as failures reported a
     running server as unavailable (#2180 review).
@@ -248,9 +250,12 @@ def test_probe_returns_any_status_and_closes(outbound_http, monkeypatch, status)
         self.response = _Response(status)
 
     monkeypatch.setattr(_Connection, "__init__", status_init)
-    assert outbound_http.probe_trusted_endpoint("http://127.0.0.1:9880", timeout=2, path="tts") == status
+    assert (
+        outbound_http.probe_trusted_endpoint("http://127.0.0.1:9880", timeout=2, path="tts", query="text=&text_lang=en")
+        == status
+    )
     connection = _Connection.instances[0]
-    assert connection.request_args[0][:2] == ("GET", "/tts")
+    assert connection.request_args[0][:2] == ("GET", "/tts?text=&text_lang=en")
     assert connection.closed is True and connection.response.closed is True
 
 
