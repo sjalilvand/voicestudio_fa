@@ -1598,7 +1598,18 @@ def test_moss_existing_install_offers_dependency_repair(monkeypatch):
     assert si.start_install(spec.engine_id)['status'] == 'started'
     assert len(jobs) == 1
     monkeypatch.setattr(si.subprocess, 'run', lambda *a, **k: SimpleNamespace(returncode=0))
-    si._step_verify(spec, si._new_job(spec.engine_id))
+    # Execute the repair transaction, including its real source/venv/deps/
+    # verification/weights steps. Only external operations are stubbed.
+    monkeypatch.setattr(si, '_step_preflight', lambda *_: None)
+    monkeypatch.setattr(si, '_locate_uv', lambda: '/fake/uv')
+    monkeypatch.setattr(si, '_persist', lambda *_: None)
+    commands = []
+    monkeypatch.setattr(si, '_run_logged', _fake_run_logged(commands))
+    job = _run(spec)
+    assert job['state'] == 'succeeded', job
+    assert len(commands) == 1
+    assert commands[0][1:3] == ['pip', 'install']
+    assert 'soundfile' in commands[0]
     assert si._healthy(spec)
     assert weights.read_bytes() == b'existing weights'
     assert py.read_text() == 'existing interpreter'
