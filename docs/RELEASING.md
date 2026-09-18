@@ -119,6 +119,13 @@ bug to fix immediately, not backlog.
 Rolling Docker previews always build from `main`. Desktop preview publication
 is paused during the Electron transition; never publish a side-branch preview.
 
+Linux Electron packages carry the native helper's non-glibc shared libraries in
+`resources/native/lib`. The helper resolves these privately, without changing the
+backend's library path. Packaging checks reject missing or host-resolved libraries;
+a relocation test removes the build-time libraries before launching the fixture.
+Validate the downloaded CI AppImage on a clean target too: build dependencies on
+the CI runner can otherwise conceal missing runtime libraries.
+
 ## 6. Expect-to-fail-first-time on Windows and Linux
 
 mac-ARM is tested locally. The other three platforms will likely hit PyInstaller issues on their first CI run because neither dependency set nor platform quirks have been exercised. Common failures to expect:
