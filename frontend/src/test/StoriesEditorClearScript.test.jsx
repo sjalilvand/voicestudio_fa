@@ -154,4 +154,20 @@ describe('StoriesEditor clear script', () => {
     expect(useAppStore.getState().storyTracks[0].audioUrl).toBe('blob:new-preview');
   });
 
+  it('clears pending paste text even before any lines have been added', async () => {
+    window.localStorage.setItem('ov_stories_default_sample_v2', '1');
+    useAppStore.setState({ storyTracks: [] });
+    askConfirm.mockResolvedValue(true);
+    renderEditor();
+    fireEvent.click(screen.getByRole('button', { name: /paste.*split/i }));
+    const input = screen.getByRole('textbox', { name: /paste/i });
+    fireEvent.change(input, { target: { value: 'Unsplit manuscript' } });
+    expect(screen.getByRole('button', { name: /clear script/i })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: /clear script/i }));
+    await waitFor(() => expect(screen.getByRole('button', { name: /clear script/i })).toBeDisabled());
+    fireEvent.click(screen.getByRole('button', { name: /paste.*split/i }));
+    expect(screen.getByRole('textbox', { name: /paste/i })).toHaveValue('');
+    expect(useAppStore.getState().cast).toEqual(CAST);
+  });
+
 });

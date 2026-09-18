@@ -430,9 +430,10 @@ export default function StoriesEditor({ profiles = [] }) {
   // Clear every line and chapter at once (an import can add hundreds; the
   // per-line trash icon was the only way to undo one). Cast is kept.
   const clearScript = useCallback(async () => {
-    if (!tracks.length) return;
+    const count = tracks.length + (splitText.trim() ? 1 : 0);
+    if (!count) return;
     const ok = await askConfirm(
-      t('stories.clearConfirm', { count: tracks.length }),
+      t('stories.clearConfirm', { count }),
       t('stories.clearScript'),
     );
     if (!ok) return;
@@ -452,8 +453,10 @@ export default function StoriesEditor({ profiles = [] }) {
       prev.forEach(releasePreview);
       return [];
     });
+    setSplitText('');
+    setSplitOpen(false);
     toast.success(t('stories.cleared'));
-  }, [tracks.length, setTracks, t]);
+  }, [tracks.length, splitText, setTracks, t]);
 
   // ── Paste & auto-split ───────────────────────────────────────────────────
   const applySplit = useCallback(() => {
@@ -843,7 +846,7 @@ export default function StoriesEditor({ profiles = [] }) {
                 size="sm"
                 variant="ghost"
                 onClick={clearScript}
-                disabled={!tracks.length}
+                disabled={!tracks.length && !splitText.trim()}
                 title={t('stories.clearScriptHint')}
               >
                 <Trash2 size={13} aria-hidden="true" />
