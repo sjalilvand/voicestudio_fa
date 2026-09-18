@@ -2534,7 +2534,10 @@
     "ignored_unsupported": "Genegeerde niet-ondersteunde instructie: {{items}}",
     "too_long": "De clip is {{duration}}s. De engine accepteert maximaal {{max}}'s zonder transcript.",
     "model_not_downloaded": "Het model is nog niet gedownload. Open Instellingen → Engines van de hoofdapp om deze te installeren.",
-    "backend_unreachable": "De lokale motor is niet bereikbaar."
+    "backend_unreachable": "De lokale motor is niet bereikbaar.",
+    "gpu_arch_unsupported": "Deze PyTorch-versie ondersteunt je GPU niet. Kies CPU bij Instellingen → Prestaties en apparaat of installeer een compatibele PyTorch-versie.",
+    "windows_app_control_blocked": "Windows-toepassingsbeheer heeft een vereist bestand geblokkeerd. Vraag je beheerder de vertrouwde VoiceStudio-runtime toe te staan en start de app opnieuw.",
+    "audio_io_failed": "De audio kon niet worden gelezen of opgeslagen. Controleer het bestandsformaat, de vrije schijfruimte en de bestandsrechten. Controleer de map bij Instellingen → Opslag."
   },
   "network": {
     "copied": "Gekopieerd",

@@ -19,6 +19,20 @@ describe('apiFetch transport-retry', () => {
     expect(err.message).toContain('Localized recovery guidance');
     expect(err.detail).toEqual(detail);
   });
+  it.each([false, true])('localizes HTTP failure topics (nested: %s)', async (nested) => {
+    const translate = vi.spyOn(i18n, 't').mockReturnValue('Localized recovery');
+    const failure = { docs_topic: 'GPU_ARCH_UNSUPPORTED', detail: 'English fallback' };
+    const payload = nested ? { detail: failure } : failure;
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify(payload), { status: 500 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const error = await apiFetch('/generate').catch((e) => e);
+    expect(error.message).toContain('Localized recovery');
+    expect(error.detail).toEqual(payload.detail);
+    expect(translate).toHaveBeenCalledWith('tts_errors.gpu_arch_unsupported');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();

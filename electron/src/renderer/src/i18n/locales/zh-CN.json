@@ -2538,7 +2538,10 @@
     "ignored_unsupported": "忽略不支持的指令：{{items}}",
     "too_long": "该剪辑是 {{duration}}s。引擎最多接受没有成绩单的 {{max}}。",
     "model_not_downloaded": "该模型尚未下载。打开主应用程序的“设置”→“引擎”进行安装。",
-    "backend_unreachable": "本地引擎无法访问。"
+    "backend_unreachable": "本地引擎无法访问。",
+    "gpu_arch_unsupported": "此 PyTorch 构建不支持您的 GPU。请在设置 → 性能与设备中选择 CPU，或安装兼容的 PyTorch 构建。",
+    "windows_app_control_blocked": "Windows 应用程序控制阻止了所需文件。请联系管理员允许受信任的 VoiceStudio 运行环境，然后重启应用。",
+    "audio_io_failed": "无法读取或保存音频。请检查文件格式、磁盘剩余空间和文件访问权限，并在设置 → 存储中检查文件夹。"
   },
   "network": {
     "copied": "已复制",
