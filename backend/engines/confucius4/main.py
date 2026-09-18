@@ -103,6 +103,40 @@ def _ensure_clone_on_sys_path() -> None:
         sys.path.insert(0, clone)
 
 
+def _chdir_to_clone_if_available() -> None:
+    """Switch the sidecar's cwd to the Confucius4 clone if one is configured.
+
+    Upstream's ``config/inference_config.yaml`` ships with paths relative to
+    the clone root (``./checkpoints``, ``./checkpoints/wav2vec2bert_stats.pt``).
+    Without chdir, those paths resolve against whatever directory the parent
+    was started from — producing ``FileNotFoundError`` on the model file and,
+    potentially selecting a different cache when a relative HF cache override
+    is configured (#2099). Anchoring cwd once at start-up keeps the
+    rest of the sidecar's relative-path behaviour identical to upstream.
+    """
+    clone = os.environ.get("OMNIVOICE_CONFUCIUS4_TTS_DIR", "").strip()
+    if not clone:
+        return
+    clone_path = os.path.abspath(os.path.expanduser(clone))
+    # These values were relative to the parent launch directory. Canonicalize
+    # before chdir so imports, explicit config, cache reuse, and retries agree.
+    os.environ["OMNIVOICE_CONFUCIUS4_TTS_DIR"] = clone_path
+    for name in (
+        "OMNIVOICE_CONFUCIUS4_CONFIG", "HF_HOME", "HF_HUB_CACHE",
+        "HUGGINGFACE_HUB_CACHE", "TRANSFORMERS_CACHE", "XDG_CACHE_HOME",
+    ):
+        value = os.environ.get(name)
+        if value and not os.path.isabs(value):
+            os.environ[name] = os.path.abspath(os.path.expanduser(value))
+    if os.path.isdir(clone_path):
+        try:
+            os.chdir(clone_path)
+        except OSError:
+            # Permission / read-only filesystem — non-fatal; upstream's paths
+            # will then fail loudly and the user will see a clear error.
+            pass
+
+
 def _load_model(stdout):
     """Cold-construct using an available torch accelerator, with CPU fallback."""
     global _model
@@ -111,6 +145,7 @@ def _load_model(stdout):
 
     _send(stdout, {"op": "progress", "stage": "loading_model", "percent": 0})
 
+    _chdir_to_clone_if_available()
     _ensure_clone_on_sys_path()
     import torch
     from confuciustts.cli.inference import ConfuciusTTS  # type: ignore[import-not-found]
@@ -166,12 +201,18 @@ def _handle_synthesize(msg: dict, stdout) -> None:
     if not text or not isinstance(text, str):
         raise ValueError("synthesize: missing or non-string 'text'")
 
+    ref_audio = msg.get("ref_audio")
+    if not isinstance(ref_audio, str) or not ref_audio.strip():
+        raise ValueError(
+            "Confucius4-TTS requires a reference audio for voice cloning "
+            "(prompt_wav). Pass ref_audio= with a path to a speaker reference clip."
+        )
     model = _load_model(stdout)
 
-    gen_kwargs: dict = {"text": text, "lang": _normalize_language(msg.get("language"))}
-    ref_audio = msg.get("ref_audio")
-    if ref_audio:
-        gen_kwargs["prompt_wav"] = ref_audio
+    gen_kwargs: dict = {
+        "text": text, "lang": _normalize_language(msg.get("language")),
+        "prompt_wav": ref_audio,
+    }
 
     audio = model.generate(**gen_kwargs)
     sample_rate = int(getattr(model, "sample_rate", CONFUCIUS_SAMPLE_RATE))
