@@ -431,7 +431,7 @@
     "addChapter": "Lägg till kapitel",
     "clearScript": "Rensa manus",
     "clearScriptHint": "Ta bort alla rader och kapitel från manuset (rollistan behålls)",
-    "clearConfirm": "Ta bort alla {{count}} rader från manuset? Det går inte att ångra.",
+    "clearConfirm": "Rensa alla {{count}} manusposter och eventuell väntande importerad text? Detta kan inte ångras.",
     "cleared": "Manuset rensat",
     "chapterN": "Kapitel {{n}}",
     "stems": "Stammar",

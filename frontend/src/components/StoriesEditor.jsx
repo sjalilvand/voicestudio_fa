@@ -218,6 +218,7 @@ export default function StoriesEditor({ profiles = [] }) {
   // Bumped by clearScript so a preview that was still generating when the
   // script went away never plays or writes audio back for a deleted line.
   const previewGenRef = useRef(0);
+  const playingPreviewRef = useRef(null);
   const [activeTab, setActiveTab] = useState('script');
   const [splitOpen, setSplitOpen] = useState(false);
   const [splitText, setSplitText] = useState('');
@@ -500,13 +501,18 @@ export default function StoriesEditor({ profiles = [] }) {
 
   const addTrack = useCallback(() => setTracks((prev) => [...prev, makeTrack()]), [setTracks]);
   const removeTrack = useCallback(
-    (id) =>
+    (id) => {
+      if (playingPreviewRef.current?.id === id) {
+        stopActivePlayback();
+        playingPreviewRef.current = null;
+      }
       setTracks((prev) =>
         prev.filter((tk) => {
           if (tk.id === id) releasePreview(tk);
           return tk.id !== id;
         }),
-      ),
+      );
+    },
     [setTracks],
   );
   const updateTrack = useCallback(
@@ -531,7 +537,13 @@ export default function StoriesEditor({ profiles = [] }) {
       const raw = (track.text || '').trim();
       if (!raw) return;
       const gen = previewGenRef.current;
-      const stale = () => previewGenRef.current !== gen;
+      const stale = () =>
+        previewGenRef.current !== gen ||
+        !useAppStore.getState().storyTracks.some((tk) => tk.id === track.id);
+      const playback = { id: track.id };
+      const releasePlayback = () => {
+        if (playingPreviewRef.current === playback) playingPreviewRef.current = null;
+      };
       const pid = effectiveProfile(track, cast);
       const spd = effectiveSpeed(track, globalSpeed);
       setTracks((prev) =>
@@ -554,7 +566,8 @@ export default function StoriesEditor({ profiles = [] }) {
           // the single-playback manager + global mini-player, and — unlike the
           // old bare `new Audio(blobUrl)` — actually plays under Tauri's
           // WebKit, where blob: URLs are dead in media elements.
-          playBlobAudio(blob, { label: raw }).catch(() => {});
+          playingPreviewRef.current = playback;
+          playBlobAudio(blob, { label: raw, onDone: releasePlayback }).catch(releasePlayback);
         } catch (err) {
           console.warn('Stories preview failed:', err);
           if (err?.code === 'tts_generation_busy') {
@@ -601,10 +614,17 @@ export default function StoriesEditor({ profiles = [] }) {
               // the global manager (mini-player shows the line), a natural
               // end (or a broken chunk) advances the chain, and stopping from
               // the player/another claim cancels the rest of the chain.
+              playingPreviewRef.current = playback;
               playBlobAudio(blob, {
                 label: raw,
-                onDone: (reason) => (reason === 'stopped' ? finish() : step()),
-              }).catch(() => step());
+                onDone: (reason) => {
+                  releasePlayback();
+                  return reason === 'stopped' ? finish() : step();
+                },
+              }).catch(() => {
+                releasePlayback();
+                step();
+              });
               return;
             }
           }

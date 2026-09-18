@@ -1452,7 +1452,7 @@
     "addChapter": "Adicionar capítulo",
     "clearScript": "Limpar roteiro",
     "clearScriptHint": "Remover todas as linhas e capítulos do roteiro (o elenco permanece)",
-    "clearConfirm": "Remover todas as {{count}} linhas do roteiro? Isso não pode ser desfeito.",
+    "clearConfirm": "Limpar todas as {{count}} entradas do roteiro e qualquer texto importado pendente? Esta ação não pode ser desfeita.",
     "clearConfirmScript": "Remover todo o manuscrito? Isso não pode ser desfeito.",
     "chapterN": "Capítulo {{n}}",
     "stems": "Faixas por personagem",

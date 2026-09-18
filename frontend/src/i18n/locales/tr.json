@@ -431,7 +431,7 @@
     "addChapter": "Bölüm Ekle",
     "clearScript": "Senaryoyu temizle",
     "clearScriptHint": "Senaryodaki tüm satırları ve bölümleri kaldır (kadro kalır)",
-    "clearConfirm": "Senaryodaki {{count}} satırın tümü kaldırılsın mı? Bu geri alınamaz.",
+    "clearConfirm": "{{count}} senaryo girdisinin tamamı ve bekleyen içe aktarılmış metin silinsin mi? Bu işlem geri alınamaz.",
     "cleared": "Senaryo temizlendi",
     "chapterN": "Bölüm {{n}}",
     "stems": "Kaynaklanıyor",

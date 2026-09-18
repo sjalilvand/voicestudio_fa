@@ -1450,7 +1450,7 @@
     "addChapter": "Tambahkan Bab",
     "clearScript": "Kosongkan naskah",
     "clearScriptHint": "Hapus semua baris dan bab dari naskah (pemeran tetap ada)",
-    "clearConfirm": "Hapus semua {{count}} baris dari naskah? Ini tidak dapat dibatalkan.",
+    "clearConfirm": "Hapus semua {{count}} entri naskah dan teks impor yang tertunda? Tindakan ini tidak dapat dibatalkan.",
     "clearConfirmScript": "Hapus seluruh manuskrip? Ini tidak dapat dibatalkan.",
     "chapterN": "Bab {{n}}",
     "stems": "Trek per karakter",

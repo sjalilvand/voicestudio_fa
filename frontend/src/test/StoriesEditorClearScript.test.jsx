@@ -77,7 +77,7 @@ describe('StoriesEditor clear script', () => {
 
     await waitFor(() => expect(useAppStore.getState().storyTracks).toEqual([]));
     expect(askConfirm).toHaveBeenCalledTimes(1);
-    expect(askConfirm.mock.calls[0][0]).toMatch(/3 lines/);
+    expect(askConfirm.mock.calls[0][0]).toMatch(/3 script entries/);
     expect(useAppStore.getState().cast).toEqual(CAST);
     await new Promise((r) => setTimeout(r, 50));
     expect(useAppStore.getState().storyTracks).toEqual([]);
@@ -125,6 +125,39 @@ describe('StoriesEditor clear script', () => {
     expect(playBlobAudio).not.toHaveBeenCalled();
     expect(useAppStore.getState().storyTracks).toEqual([]);
   });
+  it.each(['A spoken line.', 'First [pause 0.1s] second.'])(
+    'drops a removed line preview: %s',
+    async (text) => {
+      let resolveSpeech;
+      generateSpeech.mockReturnValue(
+        new Promise((resolve) => {
+          resolveSpeech = resolve;
+        }),
+      );
+      useAppStore.setState({ storyTracks: [{ ...TRACKS[1], text }] });
+      renderEditor();
+      fireEvent.click(screen.getByRole('button', { name: /preview this line/i }));
+      await waitFor(() => expect(generateSpeech).toHaveBeenCalledTimes(1));
+      fireEvent.click(screen.getByRole('button', { name: /remove line/i }));
+      resolveSpeech({ blob: async () => new Blob(['audio']) });
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+      expect(playBlobAudio).not.toHaveBeenCalled();
+      expect(URL.createObjectURL).not.toHaveBeenCalled();
+    },
+  );
+
+  it('stops playback when its line is removed', async () => {
+    generateSpeech.mockResolvedValue({ blob: async () => new Blob(['audio']) });
+    useAppStore.setState({ storyTracks: [TRACKS[1]] });
+    renderEditor();
+    fireEvent.click(screen.getByRole('button', { name: /preview this line/i }));
+    await waitFor(() => expect(playBlobAudio).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: /remove line/i }));
+    expect(stopActivePlayback).toHaveBeenCalledTimes(1);
+  });
+
   it('releases every current preview URL after confirmation', async () => {
     let confirm;
     askConfirm.mockReturnValue(
@@ -181,7 +214,7 @@ describe('StoriesEditor clear script', () => {
     fireEvent.click(screen.getByRole('button', { name: /paste.*split/i }));
     expect(screen.getByRole('textbox', { name: /paste/i })).toHaveValue('');
     expect(askConfirm).toHaveBeenCalledWith(
-      'Remove all 1 lines from the script? This cannot be undone.',
+      'Clear all 1 script entries and any pending imported text? This cannot be undone.',
       'Clear script',
     );
     expect(useAppStore.getState().cast).toEqual(CAST);
