@@ -107,20 +107,22 @@ export function WorkspaceSidebar() {
               mac ? 'min-h-[72px] items-end pb-1' : 'h-12 items-center',
             )}
           >
-            {!mac ? <img src={brandIcon} alt={t('app.name')} className="size-6 shrink-0" /> : (
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={t('clone.toggle_sidebar')}
-              aria-expanded={false}
-              onClick={() => {
-                setExpandedContext(compactContext);
-                setLibraryOpen(true);
-              }}
-              className="shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <PanelLeftOpenIcon className="size-5" aria-hidden="true" />
-            </Button>
+            {!mac ? (
+              <img src={brandIcon} alt={t('app.name')} className="size-6 shrink-0" />
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t('clone.toggle_sidebar')}
+                aria-expanded={false}
+                onClick={() => {
+                  setExpandedContext(compactContext);
+                  setLibraryOpen(true);
+                }}
+                className="shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <PanelLeftOpenIcon className="size-5" aria-hidden="true" />
+              </Button>
             )}
           </div>
           <WorkspaceNavigation compact />
@@ -152,7 +154,7 @@ export function WorkspaceSidebar() {
           ref={sidebarResize.host}
           style={{ width: sidebarResize.width }}
           aria-label={t('clone.saved_profiles')}
-          className="brand-sidebar relative isolate grid h-full min-h-0 min-w-0 shrink-0 grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden border-r border-border/50 bg-sidebar"
+          className="brand-sidebar relative isolate grid h-full min-h-0 min-w-0 shrink-0 grid-cols-[minmax(0,1fr)] grid-rows-[auto_auto_minmax(0,1fr)_auto] overflow-hidden border-r border-border/50 bg-sidebar"
         >
           <img
             src={brandArtwork}
@@ -191,9 +193,13 @@ export function WorkspaceSidebar() {
             aria-label={t('clone.saved_profiles')}
             className="absolute inset-y-0 right-0 z-20 w-2 cursor-col-resize touch-none outline-none hover:bg-primary/15 focus-visible:bg-primary/30"
           />
+          {/* Navigation first, like the compact rail: it stays at a fixed
+              position under the header instead of riding the library's height. */}
+          <div className="min-w-0 shrink-0 border-b border-border/50">
+            <WorkspaceNavigation />
+          </div>
           <VoicesSidebar key={libraryTab} initialTab={libraryTab} />
           <div className="flex min-w-0 shrink-0 flex-col border-t border-border/50">
-            <WorkspaceNavigation />
             <StatusBar
               footerLeading={
                 mac ? (
