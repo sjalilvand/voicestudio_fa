@@ -69,3 +69,7 @@ route with no failures.
 ## Settings navigation
 
 The main workspace sidebar stays visible on Settings routes, including while the backend is starting or unavailable. Settings keeps its own section list beside it, with a Settings heading instead of a duplicate brand header. Narrow windows use the same compact-rail behavior as other secondary-pane workspaces.
+
+## Navigation order
+
+In the expanded sidebar, workspace navigation sits immediately below the header and above the voice library. The status bar and Settings entry remain at the bottom; voice-library scrolling does not move the navigation.
