@@ -201,12 +201,18 @@ def _handle_synthesize(msg: dict, stdout) -> None:
     if not text or not isinstance(text, str):
         raise ValueError("synthesize: missing or non-string 'text'")
 
+    ref_audio = msg.get("ref_audio")
+    if not isinstance(ref_audio, str) or not ref_audio.strip():
+        raise ValueError(
+            "Confucius4-TTS requires a reference audio for voice cloning "
+            "(prompt_wav). Pass ref_audio= with a path to a speaker reference clip."
+        )
     model = _load_model(stdout)
 
-    gen_kwargs: dict = {"text": text, "lang": _normalize_language(msg.get("language"))}
-    ref_audio = msg.get("ref_audio")
-    if ref_audio:
-        gen_kwargs["prompt_wav"] = ref_audio
+    gen_kwargs: dict = {
+        "text": text, "lang": _normalize_language(msg.get("language")),
+        "prompt_wav": ref_audio,
+    }
 
     audio = model.generate(**gen_kwargs)
     sample_rate = int(getattr(model, "sample_rate", CONFUCIUS_SAMPLE_RATE))

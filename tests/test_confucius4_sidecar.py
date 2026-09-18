@@ -348,3 +348,13 @@ def test_home_relative_cache_survives_chdir(monkeypatch, tmp_path):
     expected = os.path.expanduser('~/xdg')
     sc._chdir_to_clone_if_available()
     assert os.environ['XDG_CACHE_HOME'] == expected
+
+
+@pytest.mark.parametrize("ref_audio", [None, "", 42])
+def test_synthesize_rejects_invalid_reference_before_loading(sc, monkeypatch, ref_audio):
+    from unittest.mock import Mock
+    load = Mock()
+    monkeypatch.setattr(sc, "_load_model", load)
+    with pytest.raises(ValueError, match="reference audio"):
+        sc._handle_synthesize({"text": "hello", "ref_audio": ref_audio}, io.BytesIO())
+    load.assert_not_called()
