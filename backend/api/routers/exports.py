@@ -65,14 +65,22 @@ def export_file(req: ExportRequest):
         # Video exports: overlay VoiceStudio logo if visible watermark is enabled
         if src.lower().endswith(".mp4"):
             from services.watermark import is_visible_video_enabled, get_ffmpeg_overlay_args
+            from services.ffmpeg_utils import find_ffmpeg
             logo_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "docs", "logo.png")
             logo_path = os.path.realpath(logo_path)
             if is_visible_video_enabled() and os.path.exists(logo_path):
                 overlay_args = get_ffmpeg_overlay_args(logo_path)
-                if overlay_args:
+                # Resolve ffmpeg the way every other call site does. The bare
+                # name only works when a system ffmpeg is on PATH: the binary
+                # imageio-ffmpeg ships — the app's default source — is named
+                # `ffmpeg-<platform>-v<version>`, so spawning "ffmpeg" raised
+                # FileNotFoundError and the watermark the user asked for was
+                # silently dropped from the exported video.
+                ffmpeg = find_ffmpeg()
+                if overlay_args and ffmpeg:
                     try:
                         subprocess.run(
-                            ["ffmpeg", "-y", "-i", src, "-i", logo_path]
+                            [ffmpeg, "-y", "-i", src, "-i", logo_path]
                             + overlay_args
                             + ["-codec:a", "copy", dest],
                             check=True,

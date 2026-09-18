@@ -231,3 +231,144 @@ def test_load_model_falls_back_when_accelerator_probe_raises(sc, monkeypatch, le
     sc._load_model(io.BytesIO())
     constructor.assert_called_once_with(config_path="fixture.yaml", device="cpu")
     assert probe.call_count == 1
+
+
+# ── CWD anchoring (#2099) ────────────────────────────────────────────────
+
+
+def test_chdir_anchors_cwd_to_clone_dir(sc, monkeypatch, tmp_path):
+    """Upstream's inference_config.yaml uses './checkpoints/...' relative
+    paths; without chdir they resolve against the parent process and the
+    sidecar crashes with FileNotFoundError on the weights (#2099).
+    """
+    monkeypatch.setenv("OMNIVOICE_CONFUCIUS4_TTS_DIR", str(tmp_path))
+    original = os.getcwd()
+    try:
+        sc._chdir_to_clone_if_available()
+        assert os.path.realpath(os.getcwd()) == os.path.realpath(str(tmp_path))
+    finally:
+        os.chdir(original)
+
+
+def test_chdir_noop_without_clone_dir(sc, monkeypatch):
+    """When the user has not configured a clone, cwd must be left alone."""
+    monkeypatch.delenv("OMNIVOICE_CONFUCIUS4_TTS_DIR", raising=False)
+    original = os.getcwd()
+    sc._chdir_to_clone_if_available()
+    assert os.getcwd() == original
+
+
+def test_chdir_noop_when_clone_dir_missing(sc, monkeypatch, tmp_path):
+    """A bogus clone path must not raise — the model load will fail loudly
+    on its own with a clearer error than 'cwd does not exist'."""
+    monkeypatch.setenv("OMNIVOICE_CONFUCIUS4_TTS_DIR", str(tmp_path / "does-not-exist"))
+    original = os.getcwd()
+    sc._chdir_to_clone_if_available()
+    assert os.getcwd() == original
+
+
+# ── Adapter: ref_audio is required (#2099) ────────────────────────────────
+
+
+def test_adapter_generate_requires_ref_audio(monkeypatch):
+    """The pinned Confucius4 upstream ``generate`` requires ``prompt_wav``;
+    surface that constraint at the adapter boundary so the UI sees a clear
+    message instead of a stack traceback that mentions ``prompt_wav``
+    without saying why.
+    """
+    import os as _os, sys as _sys
+    backend_root = _os.path.join(
+        _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), "backend"
+    )
+    if backend_root not in _sys.path:
+        _sys.path.insert(0, backend_root)
+    from engines.confucius4 import Confucius4Backend
+
+    backend = Confucius4Backend()
+    with pytest.raises(RuntimeError, match="prompt_wav"):
+        backend.generate("anything")
+
+
+def test_relative_clone_and_config_remain_stable_after_chdir(monkeypatch, tmp_path):
+    """Resolve caller-relative settings before the sidecar changes directories."""
+    import sys
+    sc = _load_sidecar()
+    clone = tmp_path / "engine"
+    clone.mkdir()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("OMNIVOICE_CONFUCIUS4_TTS_DIR", "engine")
+    monkeypatch.setenv("OMNIVOICE_CONFUCIUS4_CONFIG", "custom.yaml")
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    sc._chdir_to_clone_if_available()
+    sc._ensure_clone_on_sys_path()
+    assert Path(sys.path[0]) == clone
+    assert Path(sc._config_path()) == tmp_path / "custom.yaml"
+    sc._chdir_to_clone_if_available()
+    assert Path.cwd() == clone
+    monkeypatch.delenv("OMNIVOICE_CONFUCIUS4_CONFIG")
+    assert Path(sc._config_path()) == clone / "config" / "inference_config.yaml"
+
+
+@pytest.mark.parametrize("name", ["HF_HOME", "HF_HUB_CACHE", "HUGGINGFACE_HUB_CACHE", "TRANSFORMERS_CACHE", "XDG_CACHE_HOME"])
+def test_relative_cache_setting_keeps_existing_weights(monkeypatch, tmp_path, name):
+    """Changing cwd must not silently select a different model cache."""
+    sc = _load_sidecar()
+    clone = tmp_path / "engine"
+    clone.mkdir()
+    cache = tmp_path / "existing-cache"
+    cache.mkdir()
+    (cache / "weight.bin").write_bytes(b"existing model")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("OMNIVOICE_CONFUCIUS4_TTS_DIR", str(clone))
+    monkeypatch.setenv(name, "existing-cache")
+    sc._chdir_to_clone_if_available()
+    assert Path(os.environ[name]).resolve() == cache
+    assert (Path(os.environ[name]) / "weight.bin").read_bytes() == b"existing model"
+
+
+def test_adapter_absolutizes_reference_before_sidecar_chdir(monkeypatch, tmp_path):
+    """The parent owns the meaning of a caller-relative reference path."""
+    from engines.confucius4 import Confucius4Backend
+    # Other suites reload services modules; patch this adapter's actual base.
+    base = Confucius4Backend.__bases__[0]
+    calls = []
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(base, "generate", lambda self, text, **kw: calls.append(kw))
+    Confucius4Backend().generate("hello", ref_audio="speaker.wav", language="en")
+    assert calls[0]["ref_audio"] == str(tmp_path / "speaker.wav")
+
+
+def test_home_relative_cache_survives_chdir(monkeypatch, tmp_path):
+    sc = _load_sidecar()
+    clone = tmp_path / 'engine'
+    clone.mkdir()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv('OMNIVOICE_CONFUCIUS4_TTS_DIR', str(clone))
+    monkeypatch.setenv('XDG_CACHE_HOME', '~/xdg')
+    expected = os.path.expanduser('~/xdg')
+    sc._chdir_to_clone_if_available()
+    assert os.environ['XDG_CACHE_HOME'] == expected
+
+
+@pytest.mark.parametrize("ref_audio", [None, "", 42])
+def test_synthesize_rejects_invalid_reference_before_loading(sc, monkeypatch, ref_audio):
+    from unittest.mock import Mock
+    load = Mock()
+    monkeypatch.setattr(sc, "_load_model", load)
+    with pytest.raises(ValueError, match="reference audio"):
+        sc._handle_synthesize({"text": "hello", "ref_audio": ref_audio}, io.BytesIO())
+    load.assert_not_called()
+
+
+def test_home_relative_clone_is_expanded_before_chdir(monkeypatch, tmp_path):
+    sc = _load_sidecar()
+    clone = tmp_path / "home" / "Confucius4-TTS"
+    clone.mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(clone.parent))
+    monkeypatch.setenv("USERPROFILE", str(clone.parent))
+    monkeypatch.setenv("OMNIVOICE_CONFUCIUS4_TTS_DIR", "~/Confucius4-TTS")
+    monkeypatch.chdir(tmp_path)
+    sc._chdir_to_clone_if_available()
+    assert Path.cwd() == clone
+    assert Path(sc._config_path()) == clone / "config" / "inference_config.yaml"
+    assert os.environ["OMNIVOICE_CONFUCIUS4_TTS_DIR"] == str(clone)

@@ -10,18 +10,31 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
+- Bug reports filed from the desktop app name the backend error class again, so two unrelated failures stop looking identical (#2197)
 - Clearer recovery guidance for known GPU, Windows policy, and audio-file failures (#2195)
 
 ### Fixed
 
 - Prevent reference voice cloning from silently downloading a second speech recognizer (#2116)
 
+- EPUB imports preserve accents and wide-character documents using their declared encoding or byte-order mark (#2191) — thanks @kevin9327!
+- Video watermark exports and dubbing keyframes use the bundled FFmpeg without requiring a system install (#2192) — thanks @kevin9327!
+- Restore the backend error class in auto-filed bug reports — the Electron app files through the shared report builder, which never carried it, so every report of an otherwise-generic failure was indistinguishable from the next (#2197) — thanks @shivsin25!
+- A streaming generation failure carries its backend error class to the report instead of dropping it at the stream boundary (#2197) — thanks @shivsin25!
+- Release cached Ascend NPU memory and recognize its dedicated VRAM when switching engines (#2194) — thanks @li-lizhe!
+- Source installs on Chinese, Japanese and Korean Windows read bundled data as UTF-8, preventing startup and generation failures (#2190) — thanks @kevin9327!
+- MOSS-TTS-Nano installs its audio backend and offers dependency repair for older managed installs without deleting cached models (#2182, #2100) — thanks @rollroyces and @martinezpl!
+- Resolve Confucius4 model assets from its clone while preserving relative configuration, cache, and reference paths, and reject missing reference clips (#2181, #2099) — thanks @rollroyces and @martinezpl!
 - GPT-SoVITS can use an explicitly configured default voice and avoids server-side re-splitting that can drop clauses (#2200) — thanks @jaketame!
 
 - Connect GPT-SoVITS to its api_v2 endpoint, accept healthy probe responses, and require a reference clip before generation (#2180, #2102) — thanks @rollroyces, @martinezpl and @jaketame!
 
 - A streaming generation that fails on an unsupported GPU, a Windows app-control block, or an audio-file error now says so and what to do, instead of only "Generation failed. Check the selected engine and try again." (#2195, #2177) — thanks @shivsin25!
 - A failure that cannot succeed on a retry — an unsupported GPU build, a blocked file — is reported as final, so the app stops re-rendering the whole passage to reach the same error (#2195, #2177) — thanks @shivsin25!
+
+### CI
+
+- Make the native ASR timeout regression reliable on slow runners and wait for its worker cleanup (#2202)
 
 ## [0.5.4] — 2026-09-17
 
