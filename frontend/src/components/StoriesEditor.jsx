@@ -432,10 +432,7 @@ export default function StoriesEditor({ profiles = [] }) {
   const clearScript = useCallback(async () => {
     const count = tracks.length + (splitText.trim() ? 1 : 0);
     if (!count) return;
-    const ok = await askConfirm(
-      t('stories.clearConfirm', { count }),
-      t('stories.clearScript'),
-    );
+    const ok = await askConfirm(t('stories.clearConfirm', { count }), t('stories.clearScript'));
     if (!ok) return;
     // Invalidate previews still generating for lines that are about to go,
     // and stop whatever is playing (#2203 review).

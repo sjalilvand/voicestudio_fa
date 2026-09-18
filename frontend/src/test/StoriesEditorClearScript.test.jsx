@@ -127,16 +127,27 @@ describe('StoriesEditor clear script', () => {
   });
   it('releases every current preview URL after confirmation', async () => {
     let confirm;
-    askConfirm.mockReturnValue(new Promise((resolve) => { confirm = resolve; }));
-    useAppStore.setState({ storyTracks: TRACKS.map((track) => ({
-      ...track, audioUrl: `blob:${track.id}`,
-    })) });
+    askConfirm.mockReturnValue(
+      new Promise((resolve) => {
+        confirm = resolve;
+      }),
+    );
+    useAppStore.setState({
+      storyTracks: TRACKS.map((track) => ({
+        ...track,
+        audioUrl: `blob:${track.id}`,
+      })),
+    });
     renderEditor();
     fireEvent.click(screen.getByRole('button', { name: /clear script/i }));
     // A preview can finish while the confirmation is open; clear the live state.
-    act(() => useAppStore.setState((state) => ({ storyTracks: state.storyTracks.map((track) =>
-      track.id === 't2' ? { ...track, audioUrl: 'blob:latest' } : track,
-    ) })));
+    act(() =>
+      useAppStore.setState((state) => ({
+        storyTracks: state.storyTracks.map((track) =>
+          track.id === 't2' ? { ...track, audioUrl: 'blob:latest' } : track,
+        ),
+      })),
+    );
     confirm(true);
     await waitFor(() => expect(useAppStore.getState().storyTracks).toEqual([]));
     expect(URL.revokeObjectURL.mock.calls.map(([url]) => url).sort()).toEqual(
@@ -164,10 +175,11 @@ describe('StoriesEditor clear script', () => {
     fireEvent.change(input, { target: { value: 'Unsplit manuscript' } });
     expect(screen.getByRole('button', { name: /clear script/i })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: /clear script/i }));
-    await waitFor(() => expect(screen.getByRole('button', { name: /clear script/i })).toBeDisabled());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /clear script/i })).toBeDisabled(),
+    );
     fireEvent.click(screen.getByRole('button', { name: /paste.*split/i }));
     expect(screen.getByRole('textbox', { name: /paste/i })).toHaveValue('');
     expect(useAppStore.getState().cast).toEqual(CAST);
   });
-
 });
