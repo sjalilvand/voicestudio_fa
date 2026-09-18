@@ -412,7 +412,10 @@ def _prepare_downloaded_caption_segments(cues: list[dict], duration: float) -> l
             if raw_start >= duration:
                 continue
             end = min(end, duration)
-        if prepared and raw_start < previous_end:
+        # Rolling tracks (YouTube's automatic captions) restate the previous
+        # line in a cue that starts exactly where that line ended, so a cue
+        # touching its predecessor is checked for the repeat as well.
+        if prepared and raw_start <= previous_end:
             text = remove_repeated_prefix(prepared[-1]["text"], text)
             if not text:
                 prepared[-1]["end"] = round(max(previous_end, end), 3)
