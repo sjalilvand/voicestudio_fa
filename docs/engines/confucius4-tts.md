@@ -71,6 +71,12 @@ Then point VoiceStudio at the clone and restart:
 Select **Confucius4-TTS** in Model Catalogue (TTS tab → **Use**). The first synthesis triggers
 the weight downloads above, then generates.
 
+The sidecar resolves bundled model assets from the clone directory. Relative
+clone/config overrides and Hugging Face cache settings keep their original
+launch-directory meaning; existing caches are reused without migration.
+Reference clips are resolved by the parent before the sidecar changes directory.
+A reference clip is required for generation; its transcript is optional.
+
 ### Optional overrides
 
 - `OMNIVOICE_CONFUCIUS4_CONFIG` — path to `inference_config.yaml` if it isn't at

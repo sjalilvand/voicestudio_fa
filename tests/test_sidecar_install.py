@@ -1078,6 +1078,13 @@ def test_uninstalling_one_engine_leaves_every_other_engine_intact(monkeypatch):
         ("dots-tts", ["--python", "3.11"],
          ["-e", "{c}", "-c", "{c}/constraints/recommended.txt"],
          "OMNIVOICE_DOTS_TTS_DIR"),
+        # moss-tts-nano installs soundfile alongside the editable install so
+        # torchaudio 2.7's I/O backend is present inside this engine's own
+        # venv — upstream's pyproject pins torchaudio but no backend
+        # (#2100). Without soundfile the engine's first load() crashes with
+        # "Couldn't find appropriate backend to handle uri …".
+        ("moss-tts-nano", ["--python", "3.11"],
+         ["-e", "{c}", "soundfile"], "OMNIVOICE_MOSS_TTS_NANO_DIR"),
     ],
 )
 def test_new_specs_install_recipe(monkeypatch, engine_id, venv_args, install_args, env_var):
@@ -1095,6 +1102,25 @@ def test_new_specs_install_recipe(monkeypatch, engine_id, venv_args, install_arg
     assert venv_cmd[3:] == venv_args
     pip = next(a for a in argvs if a[1:3] == ["pip", "install"])
     assert pip[5:] == [arg.replace("{c}", checkout) for arg in install_args]
+
+
+def test_moss_tts_nano_probe_asserts_an_audio_backend_is_present(monkeypatch):
+    """The moss-tts-nano verify step asserts torchaudio.list_audio_backends()
+    is non-empty — catches a reinstall whose audio read path would crash at
+    first generation (#2100). The probe must compile and reference the
+    assertion so a future refactor cannot silently drop it.
+    """
+    spec = si.get_spec("moss-tts-nano")
+    assert spec.probe_code, (
+        "moss-tts-nano's verify probe must check torchaudio has a backend"
+    )
+    assert "list_audio_backends" in spec.probe_code
+    # The assertion message is allowed to mention a concrete dependency
+    # (soundfile / torchcodec) — that's user-facing guidance, not a probe
+    # requirement. The probe itself must only check the outcome.
+    assert "torchaudio.list_audio_backends()" in spec.probe_code
+    # Compile-check, since probe_code runs through python -c on Windows.
+    compile(spec.probe_code, "<probe>", "exec")
 
 
 @pytest.mark.parametrize("family", ["cuda", "cpu", "rocm", "mps"])
@@ -1532,3 +1558,58 @@ def test_a_failed_dependency_install_names_the_windows_path_limit(monkeypatch, p
     with pytest.raises(si._StepError) as err:
         si._step_install_deps(spec, si._new_job(spec.engine_id))
     assert ("LongPathsEnabled" in err.value.remediation) == (platform == "win32")
+
+
+@pytest.mark.parametrize('backends', [[], ['soundfile']])
+def test_moss_audio_probe_survives_optimization(backends):
+    """Missing audio support must fail even when Python assertions are disabled."""
+    import types
+    spec = si.get_spec('moss-tts-nano')
+    runtime = types.ModuleType('moss_tts_nano_runtime')
+    audio = types.ModuleType('torchaudio')
+    audio.list_audio_backends = lambda: backends
+    from unittest.mock import patch
+    with patch.dict(sys.modules, moss_tts_nano_runtime=runtime, torchaudio=audio):
+        probe = compile(spec.probe_code, '<probe>', 'exec', optimize=2)
+        if backends:
+            exec(probe, {})
+        else:
+            with pytest.raises(RuntimeError, match='I/O backend'):
+                exec(probe, {})
+
+
+def test_moss_existing_install_offers_dependency_repair(monkeypatch):
+    """Old completion markers cannot hide missing audio dependencies."""
+    spec = si.get_spec('moss-tts-nano')
+    checkout = si.managed_checkout(spec)
+    checkout.mkdir(parents=True)
+    monkeypatch.setattr(si, '_source_present', lambda *_: True)
+    py = si._venv_python(checkout / '.venv')
+    py.parent.mkdir(parents=True)
+    py.write_text('existing interpreter')
+    weights = checkout / 'cached-model.bin'
+    weights.write_bytes(b'existing weights')
+    marker = checkout / si._INSTALL_COMPLETE_MARKER
+    marker.write_text(spec.probe_module + '\n')
+    assert not si.get_status(spec.engine_id)['installed']
+    jobs = []
+    monkeypatch.setattr(si.threading, 'Thread', lambda **kw: SimpleNamespace(start=lambda: jobs.append(kw)))
+    monkeypatch.setattr(si, 'host_support', lambda _: (True, ''))
+    assert si.start_install(spec.engine_id)['status'] == 'started'
+    assert len(jobs) == 1
+    monkeypatch.setattr(si.subprocess, 'run', lambda *a, **k: SimpleNamespace(returncode=0))
+    # Execute the repair transaction, including its real source/venv/deps/
+    # verification/weights steps. Only external operations are stubbed.
+    monkeypatch.setattr(si, '_step_preflight', lambda *_: None)
+    monkeypatch.setattr(si, '_locate_uv', lambda: '/fake/uv')
+    monkeypatch.setattr(si, '_persist', lambda *_: None)
+    commands = []
+    monkeypatch.setattr(si, '_run_logged', _fake_run_logged(commands))
+    job = _run(spec)
+    assert job['state'] == 'succeeded', job
+    assert len(commands) == 1
+    assert commands[0][1:3] == ['pip', 'install']
+    assert 'soundfile' in commands[0]
+    assert si._healthy(spec)
+    assert weights.read_bytes() == b'existing weights'
+    assert py.read_text() == 'existing interpreter'
