@@ -25,6 +25,10 @@ _ENCODINGS = {
     "utf-8-bom": lambda s: s.encode("utf-8-sig"),
     "utf-16-le-bom": lambda s: s.encode("utf-16"),  # Notepad "Unicode"
     "utf-16-be-bom": lambda s: b"\xfe\xff" + s.encode("utf-16-be"),
+    # The UTF-32 LE mark starts with the UTF-16 LE one, so a BOM table that
+    # checks UTF-16 first strips two bytes and reads NUL-interleaved UTF-16.
+    "utf-32-le-bom": lambda s: b"\xff\xfe\x00\x00" + s.encode("utf-32-le"),
+    "utf-32-be-bom": lambda s: b"\x00\x00\xfe\xff" + s.encode("utf-32-be"),
     "windows-1252": lambda s: s.encode("cp1252"),
 }
 

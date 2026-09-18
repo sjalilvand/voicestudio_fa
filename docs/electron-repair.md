@@ -111,3 +111,7 @@ Code and OpenCode; Pi was not installed on the verification host. The harness se
 package and backend port per platform. A packaged Ubuntu 26.04 run also proves that a Windows
 OpenCode npm shim injected into WSL's PATH is rejected instead of being exposed as a usable Linux
 agent; acceptance with a native Linux CLI remains required.
+
+Bug reports include the scrubbed backend exception class when available, from
+streaming error frames or parsed API error responses. This distinguishes otherwise
+identical generic engine failures; absent or non-text class values are omitted.
