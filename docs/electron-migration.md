@@ -18,3 +18,21 @@ permissions. No automatic installer-to-installer migration is provided.
 
 The final Tauri updater feeds retain signed Tauri payloads at immutable URLs.
 A Tauri updater must never receive an Electron installer.
+
+Electron checks required Python imports before reusing an existing runtime. An
+incomplete environment opens setup instead of repeatedly crashing; installation
+still requires your explicit action. Automatic selection skips broken legacy
+runtimes and uses the Electron runtime location, leaving Tauri data intact.
+
+An explicitly selected runtime is not silently replaced during startup. If that
+location contains an incomplete environment Electron does not own, choosing
+setup creates a separate runtime in Electron’s default location instead of
+modifying or taking ownership of the existing environment.
+
+A new custom runtime destination remains selectable. Setup creates and owns it
+only when that directory does not already exist; existing unowned roots stay
+untouched even if their `project` subdirectory is missing.
+
+Dependency checks ignore inherited `PYTHONPATH` and `PYTHONHOME`, matching backend
+startup. If repair switches away from an unowned environment and a healthy
+Electron runtime already exists, it is reused without reinstalling dependencies.

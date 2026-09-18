@@ -11,6 +11,7 @@ import { PipelineFailure } from '@/components/pipeline-failure';
 import { AgentFixButton } from '@/components/agent-fix-button';
 import { ProfileAvatar } from '@/components/profile-avatar';
 import { WaveformPlayer } from '@/components/waveform-player';
+import { useEngines } from '@/hooks/use-engines';
 import { useProfiles } from '@/hooks/use-profiles';
 import { useRecording } from '@/hooks/use-recording';
 import { ApiError, apiPath, describeError } from '@/lib/api/client';
@@ -21,6 +22,8 @@ import { beginAppActivity } from '@/lib/app-activity';
 export function ConvertVoice() {
   const { t } = useTranslation();
   const profiles = useProfiles();
+  const engines = useEngines();
+  const canClone = engines.activeTtsReady && engines.activeTts?.supports_cloning === true;
   const client = useQueryClient();
   const { file, voice, search, match, result } = useConversion();
   const setFile = (value: File | null) => setConversion('file', value);
@@ -64,7 +67,7 @@ export function ConvertVoice() {
   }, [file]);
   useEffect(() => () => request.current?.abort(), []);
   const voices = (profiles.data ?? []).filter((p) => p.kind === 'clone' && p.ref_audio_path);
-  const valid = file && voices.some((p) => p.id === voice) && !recordingBusy;
+  const valid = canClone && file && voices.some((p) => p.id === voice) && !recordingBusy;
   const run = async () => {
     if (!valid || request.current) return;
     const controller = new AbortController();
@@ -210,6 +213,32 @@ export function ConvertVoice() {
         </label>
         <p className="text-xs text-muted-foreground">{t('convert.match_duration_hint')}</p>
       </div>
+      {engines.isError && !engines.data && !busy && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
+        >
+          <span>{describeError(engines.error)}</span>
+          <Button variant="outline" size="sm" onClick={engines.retry}>
+            {t('common.retry')}
+          </Button>
+        </div>
+      )}
+      {!canClone && !(engines.isError && !engines.data) && !busy && (
+        <div
+          role="status"
+          className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
+        >
+          <span>{t('convert.cloning_required')}</span>
+          <Link
+            to="/settings/models/$family"
+            params={{ family: 'tts' }}
+            className="font-medium text-primary hover:underline"
+          >
+            {t('modelSettings.models')}
+          </Link>
+        </div>
+      )}
       {error && (
         <PipelineFailure
           fallback={error}

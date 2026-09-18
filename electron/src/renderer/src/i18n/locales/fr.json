@@ -2239,6 +2239,7 @@
     "tailscale_qr_alt": "Code QR pour l'URL Tailscale"
   },
   "convert": {
+    "cloning_required": "Choisissez un modèle de synthèse vocale prêt à utiliser qui prend en charge le clonage vocal.",
     "source_kicker": "Clip source",
     "drop_audio": "Déposez le clip à convertir — ou cliquez. WAV, MP3, M4A…",
     "target_voice": "Voix cible",
@@ -2523,6 +2524,7 @@
     "microphone_number": "Microphone {{number}}"
   },
   "tts_errors": {
+    "profile_language_rejected": "Auto utilise la langue du profil vocal ({{language}}), non prise en charge par ce moteur. Modifiez la langue du profil, choisissez une langue compatible ou changez de moteur.",
     "generation_in_progress": "Une génération est déjà en cours — attendez sa fin avant d’en lancer une autre.",
     "error_prefix": "Erreur : {{message}}",
     "ignored_duplicate": "Ignoré (catégorie déjà définie) : {{items}}",
@@ -2534,7 +2536,10 @@
     "ignored_unsupported": "Instruction non prise en charge ignorée : {{items}}",
     "too_long": "Le clip est {{duration}}s. Le moteur accepte au maximum les {{max}} sans transcription.",
     "model_not_downloaded": "Le modèle n'est pas encore téléchargé. Ouvrez les Paramètres → Moteurs de l'application principale pour l'installer.",
-    "backend_unreachable": "Le moteur local n'est pas accessible."
+    "backend_unreachable": "Le moteur local n'est pas accessible.",
+    "gpu_arch_unsupported": "Cette version de PyTorch ne prend pas en charge votre GPU. Choisissez CPU dans Paramètres → Performances et appareil, ou installez une version compatible de PyTorch.",
+    "windows_app_control_blocked": "Le contrôle des applications de Windows a bloqué un fichier nécessaire. Demandez à votre administrateur d’autoriser l’environnement d’exécution fiable de VoiceStudio, puis redémarrez l’application.",
+    "audio_io_failed": "Impossible de lire ou d’enregistrer l’audio. Vérifiez le format du fichier, l’espace disque disponible et les autorisations. Vérifiez le dossier dans Paramètres → Stockage."
   },
   "network": {
     "copied": "Copié",

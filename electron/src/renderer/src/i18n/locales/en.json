@@ -292,6 +292,7 @@
     "recorder_unsupported": "This system cannot encode microphone audio."
   },
   "tts_errors": {
+    "profile_language_rejected": "Auto uses the voice profile’s language ({{language}}), which this engine does not support. Change the profile language, choose a supported language, or switch engines.",
     "enter_text": "Enter some text first.",
     "upload_or_select": "Upload a reference clip or pick a saved voice.",
     "trim_hint": "The clip is {{duration}}s — trim to ≤{{max}}s for best cloning.",
@@ -303,7 +304,10 @@
     "ignored_duplicate": "Ignored (category already set): {{items}}",
     "ignored_conflict": "Ignored {{items}} — a Chinese dialect and an English accent can't be combined.",
     "model_not_downloaded": "The model is not downloaded yet. Open the main app's Settings → Engines to install it.",
-    "backend_unreachable": "The local engine is not reachable."
+    "backend_unreachable": "The local engine is not reachable.",
+    "gpu_arch_unsupported": "This PyTorch build does not support your GPU. Choose CPU in Settings → Performance & Device, or install a compatible PyTorch build.",
+    "windows_app_control_blocked": "Windows application control blocked a required file. Ask your administrator to allow the trusted VoiceStudio runtime, then restart the app.",
+    "audio_io_failed": "Audio could not be read or saved. Check the file format, free disk space, and file permissions. Review the folder in Settings → Storage."
   },
   "tts": {
     "generationComplete": "Speech generation complete",
@@ -2288,6 +2292,7 @@
     "tailscale_qr_alt": "QR code for the Tailscale URL"
   },
   "convert": {
+    "cloning_required": "Choose a ready text-to-speech model that supports voice cloning.",
     "source_kicker": "Source clip",
     "drop_audio": "Drop the clip to convert — or click. WAV, MP3, M4A…",
     "target_voice": "Target voice",

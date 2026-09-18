@@ -2219,6 +2219,7 @@
     "session_expired": "Diese Dub-Sitzung ist abgelaufen oder wurde bereinigt. Laden Sie Ihr Video erneut hoch, um eine neue zu starten."
   },
   "tts_errors": {
+    "profile_language_rejected": "Automatisch verwendet die Sprache des Stimmprofils ({{language}}), die diese Engine nicht unterstützt. Ändere die Profilsprache, wähle eine unterstützte Sprache oder wechsle die Engine.",
     "enter_text": "Bitte geben Sie Text ein",
     "upload_or_select": "Laden Sie ein Audio hoch oder wählen Sie ein Sprachprofil aus",
     "trim_hint": "Audio ist {{duration}}s – für bestes Klonen auf ≤{{max}}s kürzen",
@@ -2232,7 +2233,10 @@
     "instruct_category_conflict": "Es wurden zwei widersprüchliche Optionen in derselben Kategorie ausgewählt (z. B. zwei Geschlechter). Entfernen Sie eine davon, bevor Sie erneut generieren.",
     "ref_audio_unusable": "Im Referenz-Audio war keine Sprache zu hören — der Clip ist still oder fast still, es gibt also keine Stimme zum Klonen. Nimm näher am Mikrofon neu auf (prüfe, ob das richtige Eingabegerät gewählt ist und der Pegel ausschlägt) oder wähle einen anderen Clip.",
     "ref_audio_too_long": "Eine Referenz darf mit Transkript höchstens 20 Sekunden, ohne Transkript höchstens 75 Sekunden lang sein. Kürze sie auf eine klare Sprachpassage von 3–10 Sekunden; bei mitgeliefertem Text muss das Transkript denselben Abschnitt abdecken.",
-    "ref_audio_no_speech": "Die automatische Spracherkennung hat keine gesprochenen Wörter gefunden. Kürze die Referenz auf eine klare Sprachpassage von 3–10 Sekunden oder gib ein passendes Transkript an."
+    "ref_audio_no_speech": "Die automatische Spracherkennung hat keine gesprochenen Wörter gefunden. Kürze die Referenz auf eine klare Sprachpassage von 3–10 Sekunden oder gib ein passendes Transkript an.",
+    "gpu_arch_unsupported": "Diese PyTorch-Version unterstützt deine GPU nicht. Wähle CPU unter Einstellungen → Leistung & Gerät oder installiere eine kompatible PyTorch-Version.",
+    "windows_app_control_blocked": "Die Windows-Anwendungssteuerung hat eine benötigte Datei blockiert. Bitte deinen Administrator, die vertrauenswürdige VoiceStudio-Laufzeit zuzulassen, und starte die App neu.",
+    "audio_io_failed": "Die Audiodatei konnte nicht gelesen oder gespeichert werden. Prüfe Dateiformat, freien Speicherplatz und Dateiberechtigungen. Überprüfe den Ordner unter Einstellungen → Speicher."
   },
   "sharing": {
     "title": "Teilen und Fernzugriff",
@@ -2824,6 +2828,7 @@
     "none_selected": "Keine Stimme ausgewählt — beschreiben Sie eine, legen Sie Audio ab oder wählen Sie unten eine aus."
   },
   "convert": {
+    "cloning_required": "Wähle ein einsatzbereites Sprachsynthesemodell, das Stimmenklonen unterstützt.",
     "source_kicker": "Quellclip",
     "drop_audio": "Clip zum Konvertieren hier ablegen — oder klicken. WAV, MP3, M4A…",
     "target_voice": "Zielstimme",

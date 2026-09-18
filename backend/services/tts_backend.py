@@ -1624,6 +1624,7 @@ class KittenTTSBackend(TTSBackend):
 # resolved unchanged by `resolve_kokoro_lang_code()` below.
 _KOKORO_ISO_BY_FULL_NAME = {
     "english": "en",
+    "british english": "en-gb",
     "spanish": "es",
     "french": "fr",
     "hindi": "hi",
@@ -1632,6 +1633,31 @@ _KOKORO_ISO_BY_FULL_NAME = {
     "japanese": "ja",
     "chinese": "zh",
 }
+
+
+def _kokoro_supported_labels(aliases: dict, lang_codes: dict) -> list[str]:
+    """Human labels for every language Kokoro accepts, read from its own tables.
+
+    Derived from the installed package, never from
+    ``_KOKORO_ISO_BY_FULL_NAME``: that map exists to translate full names
+    *into* Kokoro's codes, and reusing it to describe what Kokoro supports
+    understates the model when a newly supported code has no full-name alias.
+    Read every installed code so new languages remain visible without changing
+    the input-name map.
+    """
+    labels: dict[str, str] = {}
+    # Prefer the full name a caller can actually pass.
+    for name, iso in _KOKORO_ISO_BY_FULL_NAME.items():
+        code = aliases.get(iso, iso)
+        if code in lang_codes:
+            labels.setdefault(code, name.title())
+    # Then whatever the installed table supports that no full name reaches. Its
+    # own description is a display name for some codes ("British English") and
+    # an ISO tag for others ("pt-br"); either names the language better than
+    # dropping it.
+    for code, described in lang_codes.items():
+        labels.setdefault(code, str(described))
+    return sorted(labels.values())
 
 
 def resolve_kokoro_lang_code(language: str) -> str:
@@ -1651,7 +1677,12 @@ def resolve_kokoro_lang_code(language: str) -> str:
     iso = _KOKORO_ISO_BY_FULL_NAME.get(key, key)
     code = ALIASES.get(iso, iso)
     if code not in LANG_CODES:
-        supported = ", ".join(sorted(name.title() for name in _KOKORO_ISO_BY_FULL_NAME))
+        # Labels from newer installed tables must remain selectable even when
+        # they have no entry in our compatibility map of full names.
+        code = next((candidate for candidate, label in LANG_CODES.items()
+                     if str(label).strip().lower() == key), code)
+    if code not in LANG_CODES:
+        supported = ", ".join(_kokoro_supported_labels(ALIASES, LANG_CODES))
         raise ValueError(
             f"mlx-audio's Kokoro model (mlx-community/Kokoro-82M-bf16) doesn't "
             f"support language={language!r}. Kokoro supports: {supported}. "
