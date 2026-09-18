@@ -14,6 +14,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Connect GPT-SoVITS to its api_v2 endpoint, accept healthy probe responses, and require a reference clip before generation (#2180, #2102) — thanks @rollroyces and @martinezpl!
+
 - A streaming generation that fails on an unsupported GPU, a Windows app-control block, or an audio-file error now says so and what to do, instead of only "Generation failed. Check the selected engine and try again." (#2195, #2177) — thanks @shivsin25!
 - A failure that cannot succeed on a retry — an unsupported GPU build, a blocked file — is reported as final, so the app stops re-rendering the whole passage to reach the same error (#2195, #2177) — thanks @shivsin25!
 
@@ -66,7 +68,6 @@ Already using Electron? Install over your existing app and keep your data. If pr
 - Normalize Argos language aliases without silently changing Traditional Chinese to Simplified (#2143, #2152) — thanks @gyanu2507 and @rollroyces!
 - Clarify Blackwell import-crash diagnostics without blaming missing kernels (#2084) — thanks @Moep90!
 - Distinguish architecture preflight rejection from independent compile-stack failures (#2085) — thanks @Moep90!
-- Talk to GPT-SoVITS's api_v2 protocol: probe the /tts route, POST JSON with the v2 field names, and report a wrong-protocol server as such instead of "not reachable" (#2102) — thanks @martinezpl!
 - Require the pinned Apple Silicon GGUF build to pass and document runtime preflight conditions (#2115) — thanks @LMGXENON and @martinezpl!
 - Correct the Windows Rustup installation command in tooling and documentation (#2066) — thanks @Rukhaam!
 - Show local setup guidance when remote native engine installation is unavailable (#2166)

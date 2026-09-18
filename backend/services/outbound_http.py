@@ -4,6 +4,7 @@ from __future__ import annotations
 import http.client
 import re
 import socket
+from collections.abc import Collection
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
@@ -113,6 +114,7 @@ def open_trusted_endpoint(
     path: str = "",
     body: bytes | None = None,
     content_type: str | None = None,
+    allowed_statuses: Collection[int] = frozenset(),
 ) -> http.client.HTTPResponse:
     """Open one request without redirects, pinned to the validated DNS answer.
 
@@ -126,6 +128,9 @@ def open_trusted_endpoint(
     ``Content-Type`` header (e.g. ``application/json``); the helper does not
     interpret the body, so it never grows new escape hatches around
     serialization. Leave both ``None`` for a body-less request.
+
+    ``allowed_statuses`` permits explicit HTTP error statuses for route probes.
+    It never permits redirects; generation callers keep the strict default.
     """
     endpoint = resolve_trusted_endpoint(base_url)
     conn_cls = _PinnedHTTPSConnection if endpoint.scheme == "https" else _PinnedHTTPConnection
@@ -152,7 +157,7 @@ def open_trusted_endpoint(
         response.close()
         conn.close()
         raise UnsafeEndpoint("endpoint redirects are not allowed")
-    if response.status >= 400:
+    if response.status >= 400 and response.status not in allowed_statuses:
         response.close()
         conn.close()
         raise OSError(f"endpoint returned HTTP {response.status}")

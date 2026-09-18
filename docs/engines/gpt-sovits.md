@@ -28,7 +28,9 @@ HTTP.
    `OMNIVOICE_TTS_BACKEND=gpt-sovits`.
 
 VoiceStudio marks the engine available only when the server responds
-(2-second reachability probe).
+on its api_v2 `/tts` route (2-second reachability probe). HTTP 400 or 405
+from this input-free probe means the route is present; HTTP 404 indicates
+a missing route or an incompatible server configuration. Redirects are rejected.
 
 ## Configuration
 
@@ -52,9 +54,13 @@ system trusts.
 ## Behaviour notes
 
 - Output is 32 kHz mono (server output is resampled if needed).
+- A reference clip is required; text-only synthesis is not supported by this
+  adapter. A missing clip is rejected before contacting the server.
 - Cloning passes your reference clip path and optional transcript to the
   server; the reference path must be readable **by the server process**, so
   remote servers need the clip on their own filesystem.
+- Generation uses JSON `POST /tts` with api_v2 field names; the legacy
+  `api.py` protocol is not supported.
 - Speed control is forwarded as the server's `speed_factor`.
 - The GPU is whatever the GPT-SoVITS server itself uses (CUDA preferred);
   VoiceStudio's side is just an HTTP client.

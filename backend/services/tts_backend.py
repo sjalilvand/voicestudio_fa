@@ -195,8 +195,8 @@ def _float_env(name: str, default: float) -> float:
 
 
 class TTSInputError(ValueError):
-    """The caller-supplied text can't be synthesized by the selected engine
-    (empty / nothing speakable after cleanup). Subclasses ValueError so the
+    """The caller input cannot be synthesized by the selected engine
+    (empty text, nothing speakable after cleanup, or missing reference audio). Subclasses ValueError so the
     native /generate route's existing ValueError→400 mapping applies;
     /v1/audio/speech maps it to 400 explicitly (#1173 class — these used to
     surface as opaque 500s like "need at least one array to concatenate")."""
@@ -2132,7 +2132,9 @@ class GPTSoVITSBackend(TTSBackend):
         from services.outbound_http import open_trusted_endpoint
         url = os.environ.get("OMNIVOICE_GPTSOVITS_URL", "http://127.0.0.1:9880")
         try:
-            with open_trusted_endpoint(url, method="GET", path="tts", timeout=2):
+            with open_trusted_endpoint(
+                url, method="GET", path="tts", timeout=2, allowed_statuses={400, 405}
+            ):
                 pass
             return True, "ready (api_v2 server reachable)"
         except OSError as exc:
@@ -2171,6 +2173,8 @@ class GPTSoVITSBackend(TTSBackend):
         from services.outbound_http import open_trusted_endpoint
 
         ref_audio = kw.get("ref_audio")
+        if not ref_audio:
+            raise TTSInputError("GPT-SoVITS requires reference audio for voice cloning.")
         ref_text = kw.get("ref_text", "")
         language = kw.get("language", "en")
 
