@@ -8,6 +8,15 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ## [Unreleased]
 
+**Highlights**
+
+- Bug reports filed from the desktop app name the backend error class again, so two unrelated failures stop looking identical (#2197)
+
+### Fixed
+
+- Restore the backend error class in auto-filed bug reports — the Electron app files through the shared report builder, which never carried it, so every report of an otherwise-generic failure was indistinguishable from the next (#2197, #1800)
+- A streaming generation failure carries its backend error class to the report instead of dropping it at the stream boundary (#2197, #1800)
+
 ## [0.5.4] — 2026-09-17
 
 **More reliable setup, generation, and dubbing.** This patch detects incomplete desktop runtimes before startup, repairs them without overwriting an existing Tauri installation, and makes engine failures easier to recover from. It also fixes gated model downloads, subtitle imports, and saved-voice language errors.

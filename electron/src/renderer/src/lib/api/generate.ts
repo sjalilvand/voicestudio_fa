@@ -221,11 +221,22 @@ export interface GenerateOptions {
 export class StreamingPreviewError extends Error {
   readonly retryable: boolean;
   readonly terminal: boolean;
-  constructor(message: string, options: { retryable?: boolean; terminal?: boolean } = {}) {
+  /**
+   * The backend exception TYPE behind an otherwise generic failure. Every
+   * unclassified engine failure renders one fixed floor message, so without
+   * this an auto-filed report cannot be told apart from any other (#1800).
+   * Never the exception message — only its class name.
+   */
+  readonly errorClass: string | null;
+  constructor(
+    message: string,
+    options: { retryable?: boolean; terminal?: boolean; errorClass?: string | null } = {},
+  ) {
     super(message);
     this.name = 'StreamingPreviewError';
     this.retryable = options.retryable === true;
     this.terminal = options.terminal === true;
+    this.errorClass = options.errorClass || null;
   }
 }
 
@@ -261,6 +272,7 @@ interface StreamEvent {
   language?: string;
   terminal?: boolean;
   retryable?: boolean;
+  error_class?: string;
   percent?: number;
 }
 
@@ -314,7 +326,11 @@ export async function generateCloneStreaming(
           ['[clone_ref_unusable]', '[clone_ref_too_long]', '[clone_ref_no_speech]'].some((marker) =>
             message.includes(marker),
           );
-        throw new StreamingPreviewError(message, { retryable: event.retryable, terminal });
+        throw new StreamingPreviewError(message, {
+          retryable: event.retryable,
+          terminal,
+          errorClass: event.error_class ?? null,
+        });
       }
     };
     for (;;) {

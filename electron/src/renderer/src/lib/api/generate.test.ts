@@ -308,3 +308,41 @@ it('localizes streamed profile language refusals and prevents classic fallback',
     translate.mockRestore();
   }
 });
+
+it('carries the backend error class off a stream error frame (#1800)', async () => {
+  // Every unclassified engine failure renders one fixed floor message, so the
+  // class name is the only thing separating one auto-filed report from another.
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            type: 'error',
+            code: 'generation_failed',
+            detail: 'Generation failed. Check the selected engine and try again.',
+            retryable: true,
+            error_class: 'RuntimeError',
+          }) + '\n',
+          { headers: { 'content-type': 'application/x-ndjson' } },
+        ),
+    ),
+  );
+  const error = await generateCloneStreaming(BASE_INPUT).catch((e) => e);
+  expect(error.errorClass).toBe('RuntimeError');
+});
+
+it('leaves the class null when the frame carries none', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({ type: 'error', detail: 'plain failure', retryable: false }) + '\n',
+          { headers: { 'content-type': 'application/x-ndjson' } },
+        ),
+    ),
+  );
+  const error = await generateCloneStreaming(BASE_INPUT).catch((e) => e);
+  expect(error.errorClass).toBeNull();
+});
