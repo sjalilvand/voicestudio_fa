@@ -48,7 +48,11 @@ HF repo id. The env var overrides the persisted UI choice.
 - **Cloning works only with the `csm` model** — it is the only curated model
   confirmed to accept a reference clip. Other models silently ignore
   reference audio, so the engine reports cloning support only when CSM is
-  selected (dub/batch jobs gate on this).
+  selected (dub/batch jobs gate on this). Starting a dub, batch or voice
+  conversion on any other model is refused with an error that names the model
+  in the way and tells you to pick **CSM (voice cloning)** in Model Catalogue —
+  switching engine is offered as a fallback, not the only route
+  ([#2201](https://github.com/debpalash/VoiceStudio/issues/2201)).
 - Voice design (text description → voice) is available through the
   Qwen3-TTS VoiceDesign model.
 - Language support is per-model (Kokoro ~8 languages, others vary). An
