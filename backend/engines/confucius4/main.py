@@ -127,7 +127,7 @@ def _chdir_to_clone_if_available() -> None:
     ):
         value = os.environ.get(name)
         if value and not os.path.isabs(value):
-            os.environ[name] = os.path.abspath(value)
+            os.environ[name] = os.path.abspath(os.path.expanduser(value))
     if os.path.isdir(clone_path):
         try:
             os.chdir(clone_path)

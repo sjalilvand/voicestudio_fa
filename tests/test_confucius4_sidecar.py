@@ -336,3 +336,15 @@ def test_adapter_absolutizes_reference_before_sidecar_chdir(monkeypatch, tmp_pat
     monkeypatch.setattr(base, "generate", lambda self, text, **kw: calls.append(kw))
     Confucius4Backend().generate("hello", ref_audio="speaker.wav", language="en")
     assert calls[0]["ref_audio"] == str(tmp_path / "speaker.wav")
+
+
+def test_home_relative_cache_survives_chdir(monkeypatch, tmp_path):
+    sc = _load_sidecar()
+    clone = tmp_path / 'engine'
+    clone.mkdir()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv('OMNIVOICE_CONFUCIUS4_TTS_DIR', str(clone))
+    monkeypatch.setenv('XDG_CACHE_HOME', '~/xdg')
+    expected = os.path.expanduser('~/xdg')
+    sc._chdir_to_clone_if_available()
+    assert os.environ['XDG_CACHE_HOME'] == expected
