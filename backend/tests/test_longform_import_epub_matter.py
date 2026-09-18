@@ -206,3 +206,39 @@ def test_bare_numbers_are_prose_unless_the_book_is_paginated():
     assert "IV" in lines and "civil" in lines
     assert "iv" not in lines and "1984" not in lines and "7" not in lines
 
+
+def test_only_the_toc_nav_names_sections_and_it_beats_the_ncx():
+    """A landmarks nav links the same chapter first under "Start of Content";
+    an NCX listed before the nav in the manifest carries an older label. The
+    ``epub:type="toc"`` nav wins both."""
+    nav = (
+        '<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><body>'
+        '<nav epub:type="landmarks"><ol><li><a epub:type="bodymatter" href="ch1.xhtml">Start of Content</a></li></ol></nav>'
+        '<nav epub:type="toc"><ol><li><a href="ch1.xhtml">Chapter One: A New Arrival</a></li></ol></nav>'
+        "</body></html>"
+    )
+    ncx = (
+        '<?xml version="1.0"?><ncx xmlns="http://www.daisy.org/z3986/2005/ncx/"><navMap>'
+        '<navPoint><navLabel><text>Old NCX label</text></navLabel><content src="ch1.xhtml"/></navPoint></navMap></ncx>'
+    )
+    docs = {"ch1.xhtml": _doc("<h1>A New Arrival</h1><p>One.</p>", section_type="bodymatter chapter")}
+    script = li.epub_to_chapter_script(_epub(docs, nav=nav, ncx=ncx))
+    assert script.startswith("# Chapter One: A New Arrival\n")
+
+
+def test_unreadable_member_is_reported_as_a_value_error(monkeypatch):
+    """A CRC-broken or encrypted member must not leak a raw zipfile error."""
+    epub = _publisher_epub()
+    real_read = li.zipfile.ZipFile.read
+
+    def broken_read(self, name, *args, **kwargs):
+        if name.endswith("ch1.xhtml"):
+            raise li.zipfile.BadZipFile("Bad CRC-32 for file 'OPS/ch1.xhtml'")
+        return real_read(self, name, *args, **kwargs)
+
+    monkeypatch.setattr(li.zipfile.ZipFile, "read", broken_read)
+    with pytest.raises(ValueError, match="unreadable"):
+        li.epub_to_chapter_script(epub)
+    monkeypatch.setattr(li.zipfile.ZipFile, "read", real_read)
+    assert "# Chapter One: A New Arrival" in li.epub_to_chapter_script(epub)
+

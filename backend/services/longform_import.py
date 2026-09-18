@@ -182,7 +182,9 @@ _OPF_NS = {"opf": "http://www.idpf.org/2007/opf", "c": "urn:oasis:names:tc:opend
 
 
 def _opf_path(zf: zipfile.ZipFile) -> str:
-    container = zf.read("META-INF/container.xml")
+    container = _read_member(zf, "META-INF/container.xml")
+    if container is None:
+        raise ValueError("not an EPUB: META-INF/container.xml is missing")
     # The EPUB is a local file the user chose to import (not a remote/untrusted
     # surface); stdlib ElementTree doesn't expand external entities by default.
     root = ET.fromstring(container)  # nosec B314
@@ -243,7 +245,8 @@ def _toc_titles(
     shared uncompressed-byte ``budget`` (a one-item list the caller keeps
     tallying) up to ``max_total_bytes``.
     """
-    titles: dict[str, str] = {}
+    nav_titles: dict[str, str] = {}  # EPUB 3 nav — authoritative
+    ncx_titles: dict[str, str] = {}  # EPUB 2 NCX — fallback
     for href in nav_hrefs:
         full = posixpath.normpath(posixpath.join(base, href)) if base else href
         if full not in names:
@@ -254,25 +257,50 @@ def _toc_titles(
             continue
         if info.file_size > max_entry_bytes or budget[0] + info.file_size > max_total_bytes:
             continue
-        try:
-            raw = zf.read(full)
-        except KeyError:
+        raw = _read_member(zf, full)
+        if raw is None:
             continue
         budget[0] += len(raw)
         doc = raw.decode("utf-8", "ignore")
         nav_dir = posixpath.dirname(full)
         if href.lower().endswith(".ncx"):
-            pairs = [
+            target, pairs = ncx_titles, [
                 (src, label)
                 for label, src in re.findall(
                     r"<text>(.*?)</text>\s*</navLabel>\s*<content[^>]*\bsrc\s*=\s*[\"']([^\"'#]+)", doc, re.S
                 )
             ]
         else:
-            pairs = re.findall(r"<a\b[^>]*\bhref\s*=\s*[\"']([^\"'#]+)(?:#[^\"']*)?[\"'][^>]*>(.*?)</a>", doc, re.S)
+            # Only the table of contents names sections; a landmarks or
+            # page-list nav in the same document links the same files under
+            # labels such as "Start of Content". Documents without a typed
+            # toc nav are read whole (older exports).
+            scope = "".join(
+                re.findall(r"<nav\b[^>]*\bepub:type\s*=\s*[\"'][^\"']*\btoc\b[^\"']*[\"'][^>]*>(.*?)</nav>", doc, re.S)
+            ) or doc
+            target, pairs = nav_titles, re.findall(
+                r"<a\b[^>]*\bhref\s*=\s*[\"']([^\"'#]+)(?:#[^\"']*)?[\"'][^>]*>(.*?)</a>", scope, re.S
+            )
         for src, label in pairs:
-            titles.setdefault(posixpath.normpath(posixpath.join(nav_dir, src)), _plain(label))
+            target.setdefault(posixpath.normpath(posixpath.join(nav_dir, src)), _plain(label))
+    titles = {**ncx_titles, **nav_titles}
     return {k: v for k, v in titles.items() if v}
+
+
+def _read_member(zf: zipfile.ZipFile, name: str) -> bytes | None:
+    """Read one EPUB member; ``None`` when it is missing.
+
+    A truncated, CRC-broken or encrypted member surfaces from ``zipfile`` as
+    ``BadZipFile`` / ``RuntimeError`` (and ``NotImplementedError`` for an
+    unsupported compression) — all "this EPUB is unreadable", so they become
+    the ``ValueError`` the import route already maps to a 400 with the reason.
+    """
+    try:
+        return zf.read(name)
+    except KeyError:
+        return None
+    except (zipfile.BadZipFile, RuntimeError, NotImplementedError, EOFError) as e:
+        raise ValueError(f"EPUB member {name!r} is unreadable: {e}") from e
 
 
 def _plain(markup: str) -> str:
@@ -299,7 +327,13 @@ def epub_to_chapter_script(
         raise ValueError(f"not a valid EPUB (zip) file: {e}") from e
 
     opf_path = _opf_path(zf)
-    opf = ET.fromstring(zf.read(opf_path))  # nosec B314 — local user EPUB; see _opf_path
+    opf_raw = _read_member(zf, opf_path)
+    if opf_raw is None:
+        raise ValueError(f"EPUB rootfile {opf_path!r} is missing")
+    try:
+        opf = ET.fromstring(opf_raw)  # nosec B314 — local user EPUB; see _opf_path
+    except ET.ParseError as e:
+        raise ValueError(f"EPUB package document is not well-formed XML: {e}") from e
     base = posixpath.dirname(opf_path)
 
     manifest: dict[str, str] = {}
@@ -340,9 +374,8 @@ def epub_to_chapter_script(
             continue
         if total + info.file_size > max_total_bytes:
             break
-        try:
-            raw = zf.read(full)
-        except KeyError:
+        raw = _read_member(zf, full)
+        if raw is None:
             continue
         total += len(raw)
         types, title, body = _html_extract(raw.decode("utf-8", "ignore"))
