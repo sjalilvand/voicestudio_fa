@@ -3296,7 +3296,7 @@ def _clear_cublas_workspaces(torch) -> None:
 
 
 def free_vram():
-    """Release cached GPU memory on any accelerator (CUDA, MPS, XPU)."""
+    """Release cached GPU memory on any accelerator (CUDA, MPS, XPU, NPU)."""
     torch = _lazy_torch()
     import gc
     gc.collect()
@@ -3307,6 +3307,8 @@ def free_vram():
         torch.mps.empty_cache()
     elif hasattr(torch, "xpu") and torch.xpu.is_available():
         torch.xpu.empty_cache()
+    elif hasattr(torch, "npu") and torch.npu.is_available():
+        torch.npu.empty_cache()
 
 
 def unload_shared_model() -> bool:
@@ -3348,6 +3350,8 @@ def _has_dedicated_vram():
     if torch.cuda.is_available():
         return True
     if hasattr(torch, "xpu") and torch.xpu.is_available():
+        return True
+    if hasattr(torch, "npu") and torch.npu.is_available():
         return True
     return False
 
