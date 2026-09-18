@@ -117,7 +117,7 @@ def _chdir_to_clone_if_available() -> None:
     clone = os.environ.get("OMNIVOICE_CONFUCIUS4_TTS_DIR", "").strip()
     if not clone:
         return
-    clone_path = os.path.abspath(clone)
+    clone_path = os.path.abspath(os.path.expanduser(clone))
     # These values were relative to the parent launch directory. Canonicalize
     # before chdir so imports, explicit config, cache reuse, and retries agree.
     os.environ["OMNIVOICE_CONFUCIUS4_TTS_DIR"] = clone_path

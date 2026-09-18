@@ -358,3 +358,17 @@ def test_synthesize_rejects_invalid_reference_before_loading(sc, monkeypatch, re
     with pytest.raises(ValueError, match="reference audio"):
         sc._handle_synthesize({"text": "hello", "ref_audio": ref_audio}, io.BytesIO())
     load.assert_not_called()
+
+
+def test_home_relative_clone_is_expanded_before_chdir(monkeypatch, tmp_path):
+    sc = _load_sidecar()
+    clone = tmp_path / "home" / "Confucius4-TTS"
+    clone.mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(clone.parent))
+    monkeypatch.setenv("USERPROFILE", str(clone.parent))
+    monkeypatch.setenv("OMNIVOICE_CONFUCIUS4_TTS_DIR", "~/Confucius4-TTS")
+    monkeypatch.chdir(tmp_path)
+    sc._chdir_to_clone_if_available()
+    assert Path.cwd() == clone
+    assert Path(sc._config_path()) == clone / "config" / "inference_config.yaml"
+    assert os.environ["OMNIVOICE_CONFUCIUS4_TTS_DIR"] == str(clone)
