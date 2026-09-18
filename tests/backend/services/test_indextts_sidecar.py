@@ -597,7 +597,7 @@ def test_sidecar_loader_prefers_25_and_uses_reviewed_weight_layout(monkeypatch, 
     assert captured["use_qwen_emo"] is True
 
 
-def test_sidecar_loader_keeps_user_managed_v2_compatibility(monkeypatch):
+def test_sidecar_loader_keeps_user_managed_v2_compatibility(monkeypatch, tmp_path):
     from engines.indextts import main as sidecar
 
     captured = {}
@@ -613,7 +613,10 @@ def test_sidecar_loader_keeps_user_managed_v2_compatibility(monkeypatch):
     monkeypatch.setitem(sys.modules, "indextts", package)
     monkeypatch.delitem(sys.modules, "indextts.infer_v2_5", raising=False)
     monkeypatch.setitem(sys.modules, "indextts.infer_v2", legacy_module)
-    monkeypatch.setenv("OMNIVOICE_INDEXTTS_DIR", "/models/index-tts-v2")
+    checkpoint_dir = tmp_path / "checkpoints"
+    checkpoint_dir.mkdir()
+    (checkpoint_dir / "config.yaml").write_text("model: {}\n", encoding="utf-8")
+    monkeypatch.setenv("OMNIVOICE_INDEXTTS_DIR", str(tmp_path))
     monkeypatch.setattr(sidecar, "_model", None)
     monkeypatch.setattr(sidecar, "_model_version", None)
 

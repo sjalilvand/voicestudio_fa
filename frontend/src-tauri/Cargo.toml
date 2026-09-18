@@ -75,6 +75,7 @@ dirs-next = "2"
 arboard = { version = "3", features = ["wayland-data-control"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
+dispatch2 = { version = "0.3", default-features = false, features = ["std"] }
 # Capture the frontmost application at shortcut-down and reactivate that exact
 # process before transcript delivery.
 objc2 = "0.6"
@@ -116,3 +117,8 @@ tempfile = "3"
 # MockRuntime app for the backend-lifecycle fault-injection harness
 # (tests/backend_lifecycle.rs) — feature-unifies onto the main dep.
 tauri = { version = "2.11.0", features = ["test"] }
+
+[[test]]
+name = "keyboard_dispatch"
+path = "tests/keyboard_dispatch.rs"
+harness = false

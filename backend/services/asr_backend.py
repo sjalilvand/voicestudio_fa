@@ -3173,7 +3173,7 @@ def transcribe_reference(audio_path: str) -> str | None:
     working. Route the reference transcript through the registry instead, so
     the model-attached pipeline is only reached when it is genuinely the last
     resort. Returns ``None`` on any failure — callers pass ``ref_text=None``
-    through and the model's built-in fallback still gets its chance.
+    through and the model's installed-only fallback still gets its chance.
 
     Results are cached by audio content (#1032) — see the cache notes above.
     """
