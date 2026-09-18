@@ -3,6 +3,27 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
+
+def test_release_preserves_authored_announcement_and_contributors(monkeypatch, tmp_path):
+    """Publishing must not bury the release's introduction under boilerplate."""
+    import json
+    monkeypatch.syspath_prepend(str(ROOT / "scripts"))
+    spec = importlib.util.spec_from_file_location("release_notes_test", ROOT / "scripts/prepare_electron_release.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    monkeypatch.setattr(module, "verify_release", lambda *args, **kwargs: None)
+    monkeypatch.chdir(tmp_path)
+    Path("frontend").mkdir()
+    Path("frontend/package.json").write_text(json.dumps({"version": "1.2.3"}))
+    notes = "**A new desktop**\n\n![UI](https://example.com/ui.png)\n\n### Contributors\n\n- @contributor — thanks!\n"
+    Path("CHANGELOG.md").write_text("## [Unreleased]\n\n- Later\n\n## [1.2.3] — 2026-09-17\n\n" + notes + "\n## [1.2.2] — 2026-09-10\n\n- Older\n")
+    assets = tmp_path / "assets"
+    assets.mkdir()
+    for suffix in ("mac-arm64.dmg", "mac-x64.dmg", "linux-x64.deb"):
+        (assets / f"VoiceStudio-Electron-1.2.3-{suffix}").write_bytes(b"fixture")
+    module.prepare(assets, "v1.2.3")
+    assert (assets / "RELEASE_NOTES.md").read_text() == notes
+
 @pytest.fixture
 def validate_sunset(monkeypatch):
     monkeypatch.syspath_prepend(str(ROOT / "scripts"))

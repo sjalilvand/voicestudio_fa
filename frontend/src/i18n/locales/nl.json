@@ -2219,6 +2219,7 @@
     "session_expired": "Deze kopieersessie is verlopen of opgeschoond. Upload je video opnieuw om een nieuwe te starten."
   },
   "tts_errors": {
+    "profile_language_rejected": "Automatisch gebruikt de taal van het stemprofiel ({{language}}), die deze engine niet ondersteunt. Wijzig de profieltaal, kies een ondersteunde taal of wissel van engine.",
     "enter_text": "Voer tekst in",
     "upload_or_select": "Upload een audio of selecteer een stemprofiel",
     "trim_hint": "Audio is {{duration}}s — trim tot ≤{{max}}s voor de beste kloonfunctie",
@@ -2232,7 +2233,10 @@
     "instruct_category_conflict": "Er zijn twee tegenstrijdige spraakontwerpopties in dezelfde categorie geselecteerd (bijv. twee geslachten). Wis er een voordat u opnieuw genereert.",
     "ref_audio_unusable": "Er is geen spraak gehoord in de referentie-audio — de clip is stil of bijna stil, dus er is geen stem om te klonen. Neem opnieuw op dichter bij de microfoon (controleer of het juiste invoerapparaat is geselecteerd en het niveau beweegt) of kies een andere clip.",
     "ref_audio_too_long": "Een referentie mag maximaal 20 seconden duren met transcript, of 75 seconden zonder transcript. Knip deze tot een duidelijke gesproken passage van 3–10 seconden; knip een meegeleverd transcript tot dezelfde passage.",
-    "ref_audio_no_speech": "De automatische spraakdetectie vond geen gesproken woorden in de referentie. Knip deze tot een duidelijke gesproken passage van 3–10 seconden of geef een passend transcript op."
+    "ref_audio_no_speech": "De automatische spraakdetectie vond geen gesproken woorden in de referentie. Knip deze tot een duidelijke gesproken passage van 3–10 seconden of geef een passend transcript op.",
+    "gpu_arch_unsupported": "Deze PyTorch-versie ondersteunt je GPU niet. Kies CPU bij Instellingen → Prestaties en apparaat of installeer een compatibele PyTorch-versie.",
+    "windows_app_control_blocked": "Windows-toepassingsbeheer heeft een vereist bestand geblokkeerd. Vraag je beheerder de vertrouwde VoiceStudio-runtime toe te staan en start de app opnieuw.",
+    "audio_io_failed": "De audio kon niet worden gelezen of opgeslagen. Controleer het bestandsformaat, de vrije schijfruimte en de bestandsrechten. Controleer de map bij Instellingen → Opslag."
   },
   "sharing": {
     "title": "Delen en externe toegang",
@@ -2824,6 +2828,7 @@
     "none_selected": "Geen stem geselecteerd — beschrijf er een, zet audio neer of kies hieronder."
   },
   "convert": {
+    "cloning_required": "Kies een gebruiksklaar tekst-naar-spraakmodel dat stemmen klonen ondersteunt.",
     "source_kicker": "Bronclip",
     "drop_audio": "Sleep de te converteren clip hierheen — of klik. WAV, MP3, M4A…",
     "target_voice": "Doelstem",

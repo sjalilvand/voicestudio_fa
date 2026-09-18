@@ -2219,6 +2219,7 @@
     "session_expired": "此配音會話已過期或已清理 - 重新上傳您的影片以開始新的影片。"
   },
   "tts_errors": {
+    "profile_language_rejected": "自動模式使用聲音設定檔的語言（{{language}}），但此引擎不支援該語言。請修改設定檔語言、選擇支援的語言或更換引擎。",
     "enter_text": "請輸入文字",
     "upload_or_select": "上傳音訊或選擇語音設定文件",
     "trim_hint": "音訊為 {{duration}}s — 修剪至 ≤{{max}}s 以獲得最佳克隆效果",
@@ -2232,7 +2233,10 @@
     "instruct_category_conflict": "同一類別中選擇了兩個互相衝突的語音設計選項（例如兩種性別）。請先清除其中一項，再重新產生。",
     "ref_audio_unusable": "參考音訊中聽不到任何語音——片段為靜音或幾乎靜音，因此沒有可複製的聲音。請靠近麥克風重新錄製（檢查是否選擇了正確的輸入裝置、音量電平是否有跳動），或改用其他片段。",
     "ref_audio_too_long": "參考音訊在提供文字稿時最長20秒，未提供時最長75秒。請裁剪為含清晰語音的3–10秒片段；若提供文字稿，請將其裁剪到同一片段。",
-    "ref_audio_no_speech": "自動語音偵測未在參考音訊中找到口語。請裁剪為含清晰語音的3–10秒片段，或提供相符的文字稿。"
+    "ref_audio_no_speech": "自動語音偵測未在參考音訊中找到口語。請裁剪為含清晰語音的3–10秒片段，或提供相符的文字稿。",
+    "gpu_arch_unsupported": "此 PyTorch 組建不支援您的 GPU。請在設定 → 效能與裝置中選擇 CPU，或安裝相容的 PyTorch 組建。",
+    "windows_app_control_blocked": "Windows 應用程式控制封鎖了必要檔案。請聯絡管理員允許受信任的 VoiceStudio 執行環境，然後重新啟動應用程式。",
+    "audio_io_failed": "無法讀取或儲存音訊。請檢查檔案格式、磁碟可用空間和檔案存取權限，並在設定 → 儲存空間中檢查資料夾。"
   },
   "sharing": {
     "title": "共享和遠端存取",
@@ -2824,6 +2828,7 @@
     "none_selected": "尚未選擇聲音——描述一個、放入音訊，或從下方挑選。"
   },
   "convert": {
+    "cloning_required": "請選擇已就緒且支援聲音複製的語音合成模型。",
     "source_kicker": "來源音訊",
     "drop_audio": "拖入要轉換的音訊 — 或點擊。WAV、MP3、M4A…",
     "target_voice": "目標聲音",

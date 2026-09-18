@@ -2219,6 +2219,7 @@
     "session_expired": "Bu dub oturumunun süresi doldu veya temizlendi. Yeni bir video başlatmak için videonuzu yeniden yükleyin."
   },
   "tts_errors": {
+    "profile_language_rejected": "Otomatik, bu motorun desteklemediği ses profili dilini ({{language}}) kullanır. Profil dilini değiştirin, desteklenen bir dil seçin veya motoru değiştirin.",
     "enter_text": "Lütfen metni girin",
     "upload_or_select": "Bir ses yükleyin veya bir ses profili seçin",
     "trim_hint": "Ses {{duration}}s — en iyi klonlama için ≤{{max}}s'ye kırpın",
@@ -2232,7 +2233,10 @@
     "instruct_category_conflict": "Aynı kategoride birbiriyle çelişen iki ses tasarımı seçeneği seçildi (ör. iki cinsiyet). Yeniden oluşturmadan önce birini temizleyin.",
     "ref_audio_unusable": "Referans seste konuşma duyulamadı — klip sessiz ya da neredeyse sessiz, bu yüzden klonlanacak bir ses yok. Mikrofona daha yakın şekilde yeniden kayıt yapın (doğru giriş aygıtının seçili olduğundan ve seviyenin hareket ettiğinden emin olun) veya başka bir klip seçin.",
     "ref_audio_too_long": "Bir referans, transkriptle en fazla 20 saniye; transkriptsiz en fazla 75 saniye olabilir. Sesi 3–10 saniyelik net bir konuşma bölümüne kırpın; metin sağlıyorsanız transkripti de aynı bölüme kırpın.",
-    "ref_audio_no_speech": "Otomatik konuşma algılama referansta söylenmiş kelime bulamadı. Sesi 3–10 saniyelik net bir konuşma bölümüne kırpın veya eşleşen bir transkript sağlayın."
+    "ref_audio_no_speech": "Otomatik konuşma algılama referansta söylenmiş kelime bulamadı. Sesi 3–10 saniyelik net bir konuşma bölümüne kırpın veya eşleşen bir transkript sağlayın.",
+    "gpu_arch_unsupported": "Bu PyTorch derlemesi GPU’nuzu desteklemiyor. Ayarlar → Performans ve Cihaz bölümünden CPU’yu seçin veya uyumlu bir PyTorch derlemesi yükleyin.",
+    "windows_app_control_blocked": "Windows uygulama denetimi gerekli bir dosyayı engelledi. Yöneticinizden güvenilir VoiceStudio çalışma ortamına izin vermesini isteyin, ardından uygulamayı yeniden başlatın.",
+    "audio_io_failed": "Ses okunamadı veya kaydedilemedi. Dosya biçimini, boş disk alanını ve dosya izinlerini kontrol edin. Ayarlar → Depolama bölümündeki klasörü inceleyin."
   },
   "sharing": {
     "title": "Paylaşım ve Uzaktan Erişim",
@@ -2824,6 +2828,7 @@
     "none_selected": "Ses seçilmedi — birini tarif edin, ses dosyası bırakın veya aşağıdan seçin."
   },
   "convert": {
+    "cloning_required": "Ses klonlamayı destekleyen, kullanıma hazır bir metinden konuşmaya modeli seçin.",
     "source_kicker": "Kaynak klip",
     "drop_audio": "Dönüştürülecek klibi bırakın — veya tıklayın. WAV, MP3, M4A…",
     "target_voice": "Hedef ses",

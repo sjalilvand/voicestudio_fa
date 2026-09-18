@@ -43,6 +43,10 @@ def test_all_keys_match_taxonomy():
     """
     from core import error_docs_map
     expected = {
+        "GPU_ARCH_UNSUPPORTED",
+        "WINDOWS_APP_CONTROL_BLOCKED",
+        "AUDIO_IO_FAILED",
+
         "DIARIZATION_MODEL_MISSING",
         "DIARIZATION_LOAD_FAILED",
         "GATEKEEPER_QUARANTINE",
