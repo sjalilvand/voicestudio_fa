@@ -2534,7 +2534,10 @@
     "ignored_unsupported": "Ignorerad instruktion som inte stöds: {{items}}",
     "too_long": "Klippet är {{duration}}s. Motorn accepterar högst {{max}} utan transkription.",
     "model_not_downloaded": "Modellen är inte nedladdad ännu. Öppna huvudappens Inställningar → Motorer för att installera den.",
-    "backend_unreachable": "Den lokala motorn är inte tillgänglig."
+    "backend_unreachable": "Den lokala motorn är inte tillgänglig.",
+    "gpu_arch_unsupported": "Den här PyTorch-versionen stöder inte din GPU. Välj CPU under Inställningar → Prestanda och enhet eller installera en kompatibel PyTorch-version.",
+    "windows_app_control_blocked": "Windows programkontroll blockerade en nödvändig fil. Be administratören tillåta den betrodda VoiceStudio-körmiljön och starta sedan om appen.",
+    "audio_io_failed": "Ljudet kunde inte läsas eller sparas. Kontrollera filformat, ledigt diskutrymme och filbehörigheter. Kontrollera mappen under Inställningar → Lagring."
   },
   "network": {
     "copied": "Kopierade",

@@ -381,6 +381,35 @@ describe('streamGenerateSpeech', () => {
     expect(plain.retryable).toBe(false);
   });
 
+  it.each([
+    ['GPU_ARCH_UNSUPPORTED', 'gpu_arch_unsupported'],
+    ['WINDOWS_APP_CONTROL_BLOCKED', 'windows_app_control_blocked'],
+    ['AUDIO_IO_FAILED', 'audio_io_failed'],
+  ])('localizes %s while retaining retry metadata', async (topic, key) => {
+    const translate = vi.spyOn(i18n, 't').mockReturnValue('Localized recovery');
+    const terminal = topic !== 'AUDIO_IO_FAILED';
+    try {
+      apiFetch.mockResolvedValue(
+        ndjsonResponse([
+          {
+            type: 'error',
+            docs_topic: topic,
+            detail: 'English fallback',
+            terminal,
+            retryable: !terminal,
+          },
+        ]),
+      );
+      const error = await streamGenerateSpeech(new FormData(), {}).catch((e) => e);
+      expect(error.message).toBe('Localized recovery');
+      expect(translate).toHaveBeenCalledWith(`tts_errors.${key}`);
+      expect(error.terminal).toBe(terminal);
+      expect(shouldFallbackToClassic(error)).toBe(false);
+    } finally {
+      translate.mockRestore();
+    }
+  });
+
   it('localizes a terminal profile language refusal without retrying', async () => {
     const translate = vi.spyOn(i18n, 't').mockReturnValue('Localized profile guidance');
     try {

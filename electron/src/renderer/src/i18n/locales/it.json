@@ -2536,7 +2536,10 @@
     "ignored_unsupported": "Istruzione non supportata ignorata: {{items}}",
     "too_long": "La clip è {{duration}}s. Il motore accetta al massimo {{max}} senza trascrizione.",
     "model_not_downloaded": "Il modello non è stato ancora scaricato. Apri Impostazioni → Motori dell'app principale per installarla.",
-    "backend_unreachable": "Il motore locale non è raggiungibile."
+    "backend_unreachable": "Il motore locale non è raggiungibile.",
+    "gpu_arch_unsupported": "Questa versione di PyTorch non supporta la tua GPU. Scegli CPU in Impostazioni → Prestazioni e dispositivo oppure installa una versione compatibile di PyTorch.",
+    "windows_app_control_blocked": "Il controllo delle applicazioni di Windows ha bloccato un file necessario. Chiedi all’amministratore di autorizzare il runtime attendibile di VoiceStudio, quindi riavvia l’app.",
+    "audio_io_failed": "Impossibile leggere o salvare l’audio. Controlla il formato del file, lo spazio libero e le autorizzazioni. Verifica la cartella in Impostazioni → Archiviazione."
   },
   "network": {
     "copied": "Copiato",

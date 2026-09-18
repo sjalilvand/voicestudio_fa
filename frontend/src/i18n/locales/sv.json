@@ -2233,7 +2233,10 @@
     "instruct_category_conflict": "Två motstridiga röstdesignalternativ valdes i samma kategori (t.ex. två kön). Rensa ett av dem innan du genererar igen.",
     "ref_audio_unusable": "Inget tal kunde höras i referensljudet — klippet är tyst eller nästan tyst, så det finns ingen röst att klona. Spela in igen närmare mikrofonen (kontrollera att rätt ingångsenhet är vald och att nivån rör sig) eller välj ett annat klipp.",
     "ref_audio_too_long": "En referens får vara högst 20 sekunder med transkription eller 75 sekunder utan. Klipp den till ett tydligt talavsnitt på 3–10 sekunder; om du anger text ska transkriptionen klippas till samma avsnitt.",
-    "ref_audio_no_speech": "Den automatiska taldetekteringen hittade inga talade ord. Klipp referensen till ett tydligt talavsnitt på 3–10 sekunder eller ange en matchande transkription."
+    "ref_audio_no_speech": "Den automatiska taldetekteringen hittade inga talade ord. Klipp referensen till ett tydligt talavsnitt på 3–10 sekunder eller ange en matchande transkription.",
+    "gpu_arch_unsupported": "Den här PyTorch-versionen stöder inte din GPU. Välj CPU under Inställningar → Prestanda och enhet eller installera en kompatibel PyTorch-version.",
+    "windows_app_control_blocked": "Windows programkontroll blockerade en nödvändig fil. Be administratören tillåta den betrodda VoiceStudio-körmiljön och starta sedan om appen.",
+    "audio_io_failed": "Ljudet kunde inte läsas eller sparas. Kontrollera filformat, ledigt diskutrymme och filbehörigheter. Kontrollera mappen under Inställningar → Lagring."
   },
   "sharing": {
     "title": "Delning och fjärråtkomst",

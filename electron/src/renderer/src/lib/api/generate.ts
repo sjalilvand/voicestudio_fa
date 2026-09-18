@@ -1,3 +1,4 @@
+import { generationFailureMessage } from '../../../../../../frontend/src/utils/generationFailureMessage.ts';
 import i18next from 'i18next';
 import { languageRejectionMessage } from '../../../../../../frontend/src/utils/languageRejection.ts';
 import { ApiError, apiFetch, isAbortError } from './client';
@@ -231,12 +232,17 @@ export class StreamingPreviewError extends Error {
   constructor(
     message: string,
     options: { retryable?: boolean; terminal?: boolean; errorClass?: string | null } = {},
+  readonly errorClass?: string;
+  constructor(
+    message: string,
+    options: { retryable?: boolean; terminal?: boolean; errorClass?: unknown } = {},
   ) {
     super(message);
     this.name = 'StreamingPreviewError';
     this.retryable = options.retryable === true;
     this.terminal = options.terminal === true;
     this.errorClass = options.errorClass || null;
+    this.errorClass = typeof options.errorClass === 'string' ? options.errorClass : undefined;
   }
 }
 
@@ -270,6 +276,8 @@ interface StreamEvent {
   detail?: string;
   code?: string;
   language?: string;
+  docs_topic?: string;
+  error_class?: unknown;
   terminal?: boolean;
   retryable?: boolean;
   error_class?: string;
@@ -319,6 +327,7 @@ export async function generateCloneStreaming(
       } else if (event.type === 'error') {
         const message =
           languageRejectionMessage(event, i18next.t) ||
+          generationFailureMessage(event, i18next.t) ||
           event.detail ||
           'TTS stream reported an error';
         const terminal =
@@ -330,6 +339,7 @@ export async function generateCloneStreaming(
           retryable: event.retryable,
           terminal,
           errorClass: event.error_class ?? null,
+          errorClass: event.error_class,
         });
       }
     };

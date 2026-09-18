@@ -58,3 +58,29 @@ it.each([
     translate.mockRestore();
   }
 });
+
+it.each([
+  ['GPU_ARCH_UNSUPPORTED', 'tts_errors.gpu_arch_unsupported'],
+  ['WINDOWS_APP_CONTROL_BLOCKED', 'tts_errors.windows_app_control_blocked'],
+  ['AUDIO_IO_FAILED', 'tts_errors.audio_io_failed'],
+])('localizes %s pipeline recovery without duplicating the API fallback', (topic, key) => {
+  const translate = vi.spyOn(i18next, 't').mockReturnValue('Localized recovery instructions');
+  try {
+    const failure = publicFailureFromEvent(
+      {
+        docs_topic: topic,
+        reason: 'API fallback',
+        hint: 'English guidance',
+        error_class: 'RuntimeError',
+      },
+      'Fallback',
+    );
+    expect(failure.reason).toBe('Localized recovery instructions');
+    expect(failure.hint).toBeUndefined();
+    expect(failure.errorClass).toBe('RuntimeError');
+    expect(failure.docsTopic).toBe(topic);
+    expect(translate).toHaveBeenCalledWith(key);
+  } finally {
+    translate.mockRestore();
+  }
+});
