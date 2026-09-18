@@ -86,8 +86,10 @@ system trusts.
 ## Troubleshooting
 
 - "GPT-SoVITS server not reachable": start the server with the command
-  above, or fix `OMNIVOICE_GPTSOVITS_URL`. Any HTTP answer from `/tts`
-  (200, 400, 405) counts as reachable; a 404 means an `api.py` (v1) server.
+  above, or fix `OMNIVOICE_GPTSOVITS_URL`. api_v2's own answers to `/tts`
+  (200, 400, 405, 422) count as reachable; a 404 means an `api.py` (v1)
+  server; any other status (a proxy, login page, redirect or crash) is
+  reported with its code and treated as unavailable.
 - "endpoint is outside loopback or OMNIVOICE_TRUSTED_NETWORKS": see
   Configuration above.
 - Other issues: [install/troubleshooting.md](../install/troubleshooting.md).

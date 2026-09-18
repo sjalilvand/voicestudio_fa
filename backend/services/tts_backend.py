@@ -2114,6 +2114,11 @@ class GPTSoVITSBackend(TTSBackend):
 
     id = "gpt-sovits"
     display_name = "GPT-SoVITS (5 langs, zero-shot, RTF 0.014, MIT)"
+    # What api_v2's own FastAPI stack answers to a parameterless GET /tts:
+    # 200 (some builds render a default), 400 (its own "missing text" check),
+    # 405 (GET not mapped, POST is) or 422 (FastAPI validation). Anything
+    # else came from something in front of, or instead of, the server.
+    _API_V2_PROBE_STATUSES = frozenset({200, 400, 405, 422})
     # Server-side; whichever device GPT-SoVITS itself uses (CUDA preferred).
     gpu_compat = ("cuda", "cpu")
 
@@ -2144,6 +2149,15 @@ class GPTSoVITSBackend(TTSBackend):
             return False, (
                 f"GPT-SoVITS server at {url} is reachable but does not "
                 f"expose api_v2's /tts route. {start_hint}"
+            )
+        if status not in cls._API_V2_PROBE_STATUSES:
+            # A proxy, auth wall, redirect or failing server answered: the
+            # generate path would reject the same response, so do not
+            # advertise an engine whose requests cannot succeed.
+            return False, (
+                f"GPT-SoVITS server at {url} answered HTTP {status} on /tts, "
+                f"not an api_v2 response. Check the URL points straight at the "
+                f"server. {start_hint}"
             )
         return True, "ready (api_v2 server reachable)"
 

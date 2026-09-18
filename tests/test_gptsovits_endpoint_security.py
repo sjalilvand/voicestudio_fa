@@ -203,7 +203,24 @@ def test_gptsovits_availability_uses_valid_configured_endpoint(
     assert calls == [("http://127.0.0.1:9880", {"timeout": 2, "path": "tts"})]
 
 
-@pytest.mark.parametrize("status", [400, 405])
+@pytest.mark.parametrize("status", [302, 401, 403, 500, 502])
+def test_gptsovits_availability_rejects_non_api_v2_answers(outbound_http, monkeypatch, status):
+    """A proxy, auth wall, redirect or failing server is not a usable engine.
+
+    The generate path rejects those same responses, so readiness must not
+    advertise an engine whose requests cannot succeed (#2200 review).
+    """
+    from services.tts_backend import GPTSoVITSBackend
+
+    monkeypatch.setenv("OMNIVOICE_GPTSOVITS_URL", "http://127.0.0.1:9880")
+    monkeypatch.setattr(outbound_http, "probe_trusted_endpoint", lambda url, **kwargs: status)
+    ok, message = GPTSoVITSBackend.is_available()
+    assert ok is False
+    assert f"HTTP {status}" in message and "api_v2.py" in message
+    assert "not reachable" not in message and "does not expose" not in message
+
+
+@pytest.mark.parametrize("status", [400, 405, 422])
 def test_gptsovits_availability_accepts_route_present_statuses(
     outbound_http, monkeypatch, status
 ):
