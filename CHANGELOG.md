@@ -14,6 +14,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- EPUB import narrates the book, not its print furniture: page numbers no longer glue onto words or appear as lone lines, cover/title/dedication/copyright/contents pages are skipped, and chapters are titled from the book's table of contents (#2208)
 - MOSS-TTS-Nano installs its audio backend and offers dependency repair for older managed installs without deleting cached models (#2182, #2100) — thanks @rollroyces and @martinezpl!
 - Resolve Confucius4 model assets from its clone while preserving relative configuration, cache, and reference paths, and reject missing reference clips (#2181, #2099) — thanks @rollroyces and @martinezpl!
 - GPT-SoVITS can use an explicitly configured default voice and avoids server-side re-splitting that can drop clauses (#2200) — thanks @jaketame!
