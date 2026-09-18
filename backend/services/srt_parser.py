@@ -198,11 +198,27 @@ def format_cue_timestamp(seconds: float, ms_separator: str) -> str:
     return f"{h:02d}:{m:02d}:{s:02d}{ms_separator}{ms:03d}"
 
 
-def escape_webvtt_text(text: str) -> str:
-    """Escape plain text for a WebVTT cue payload.
+# Cue markup a segment may carry: WebVTT's tags (`<i>`, `<c.yellow>`,
+# `<v Roger>`), SubRip's `<font>` (players skip it) and timestamp tags.
+_CUE_MARKUP_RE = re.compile(
+    r"</?(?:[biu]|c|v|lang|ruby|rt|font)(?=[\s.>])[^<>\n]*>|<(?:\d+:)?\d{2}:\d{2}\.\d{3}>",
+    re.IGNORECASE,
+)
 
-    A raw `<` opens a tag, so a player drops the rest of the cue ("I <3 you"
-    renders as "I "), and `-->` would read as a timing line. SubRip has no
-    escaping, so SRT text is written as-is.
+
+def escape_webvtt_text(text: str) -> str:
+    """Make cue text safe for a WebVTT file without touching its markup.
+
+    Any other `<` opens a tag, so a player drops the rest of the cue ("I <3
+    you" shows as "I "), and a line containing `-->` ends the cue, emptying
+    it. A bare `&` already displays as itself. SubRip has no escaping, so SRT
+    text is written as-is.
     """
-    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    parts = []
+    last = 0
+    for markup in _CUE_MARKUP_RE.finditer(text):
+        parts.append(text[last:markup.start()].replace("<", "&lt;").replace("-->", "--&gt;"))
+        parts.append(markup.group(0))
+        last = markup.end()
+    parts.append(text[last:].replace("<", "&lt;").replace("-->", "--&gt;"))
+    return "".join(parts)
