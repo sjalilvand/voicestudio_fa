@@ -56,20 +56,22 @@ export function WorkspaceSidebar() {
               mac ? 'min-h-[72px] items-end pb-1' : 'h-12 items-center',
             )}
           >
-            {!mac ? (
-              <img src={brandIcon} alt={t('app.name')} className="size-6 shrink-0" />
-            ) : (
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t('clone.toggle_sidebar')}
-                aria-expanded={false}
-                onClick={() => setOpen(true)}
-                className="shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
+            {/* The rail can always reopen itself, on every platform: the
+                brand icon alone gave Windows/Linux no local control. */}
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t('clone.toggle_sidebar')}
+              aria-expanded={false}
+              onClick={() => setOpen(true)}
+              className="shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {mac ? (
                 <PanelLeftOpenIcon className="size-5" aria-hidden="true" />
-              </Button>
-            )}
+              ) : (
+                <img src={brandIcon} alt="" className="size-6 shrink-0" />
+              )}
+            </Button>
           </div>
           <WorkspaceNavigation compact />
           {!mac && <StatusBar compact />}
