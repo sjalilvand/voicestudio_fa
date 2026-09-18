@@ -21,6 +21,13 @@ describe('parseSrt', () => {
   it('empty → empty', () => {
     expect(parseSrt('')).toBe('');
   });
+  it('keeps a cue whose dialogue is only a number', () => {
+    const s =
+      '1\n00:00:01,000 --> 00:00:02,000\nCount down with me.\n\n' +
+      '2\n00:00:02,000 --> 00:00:03,000\n3\n\n' +
+      '3\n00:00:03,000 --> 00:00:04,000\n2\n1\n';
+    expect(parseSrt(s)).toBe('Count down with me.\n3\n2 1');
+  });
 });
 
 describe('importToText', () => {

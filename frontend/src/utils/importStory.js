@@ -15,10 +15,11 @@ export function parseSrt(content) {
       .map((l) => l.trim())
       .filter(Boolean);
     const text = lines
-      // Drop the cue index line (digits only) and the timestamp line. Use a
+      // Drop the timestamp line and the cue index line (digits only) right
+      // before it; digits after the timestamp are dialogue ("3", "1984"). Use a
       // plain substring check for the SRT time arrow — a `/-->/` regex trips
       // CodeQL's js/bad-tag-filter (it mistakes it for HTML-comment filtering).
-      .filter((l) => !/^\d+$/.test(l) && !l.includes('-->'))
+      .filter((l, i) => !l.includes('-->') && !(/^\d+$/.test(l) && lines[i + 1]?.includes('-->')))
       .join(' ')
       .trim();
     if (text) out.push(text);
