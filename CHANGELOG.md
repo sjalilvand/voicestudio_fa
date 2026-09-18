@@ -15,6 +15,9 @@ the frozen-backend fallback mirror it for their toolchains.
 ### Fixed
 
 - Resolve Confucius4 model assets from its clone while preserving relative configuration, cache, and reference paths, and reject missing reference clips (#2181, #2099) — thanks @rollroyces and @martinezpl!
+- GPT-SoVITS can use an explicitly configured default voice and avoids server-side re-splitting that can drop clauses (#2200) — thanks @jaketame!
+
+- Connect GPT-SoVITS to its api_v2 endpoint, accept healthy probe responses, and require a reference clip before generation (#2180, #2102) — thanks @rollroyces, @martinezpl and @jaketame!
 
 - A streaming generation that fails on an unsupported GPU, a Windows app-control block, or an audio-file error now says so and what to do, instead of only "Generation failed. Check the selected engine and try again." (#2195, #2177) — thanks @shivsin25!
 - A failure that cannot succeed on a retry — an unsupported GPU build, a blocked file — is reported as final, so the app stops re-rendering the whole passage to reach the same error (#2195, #2177) — thanks @shivsin25!
