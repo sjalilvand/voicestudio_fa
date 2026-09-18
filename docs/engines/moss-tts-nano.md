@@ -95,3 +95,13 @@ download runs out of time, raise the compute-time budget in
 See also: [languages.md](../languages.md),
 [expressive-speech.md](../expressive-speech.md),
 [disk usage](disk-usage.md).
+
+### Repairing older managed installations
+
+Older managed installs may lack the audio backend needed to read reference clips.
+Model Catalogue now detects their outdated dependency marker and offers Install
+again. Select it to repair dependencies in the existing environment; the checkout
+and cached models are retained. Checking installation status never downloads
+anything. Verification requires an available torchaudio audio backend, including
+when Python optimization is enabled. User-managed environments remain under your
+control: install `soundfile` in that engine’s virtual environment.
