@@ -15,8 +15,13 @@ def _analyse(frame_path):
 
 
 def test_pillow_runtime_floor_is_declared():
+    # TOML is UTF-8; a bare read_text() decodes in the locale code page, which
+    # cannot read pyproject.toml's em dashes on a Chinese, Japanese or Korean
+    # Windows, so this module could not run there at all.
     project = tomllib.loads(
-        (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text()
+        (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(
+            encoding="utf-8"
+        )
     )
     requirements = [Requirement(item) for item in project["project"]["dependencies"]]
     pillow = next(req for req in requirements if req.name.lower() == "pillow")
@@ -26,6 +31,54 @@ def test_pillow_runtime_floor_is_declared():
     )
     assert pillow.specifier.contains("12.1.0")
     assert not pillow.specifier.contains("12.0.99")
+
+
+def test_keyframe_extraction_spawns_the_resolved_ffmpeg(tmp_path, monkeypatch):
+    """Frame extraction must run the binary `find_ffmpeg()` resolved.
+
+    `shutil.which("ffmpeg")` only finds a system install; imageio-ffmpeg — the
+    app's default source — ships its binary as `ffmpeg-<platform>-v<version>`,
+    so this gate skipped extraction on hosts where the app's own ffmpeg was
+    resolvable the whole time (the same class as #1256).
+    """
+    import subprocess
+
+    from services import ffmpeg_utils
+
+    module = importlib.import_module("services.video_context")
+    bundled = str(tmp_path / "bundle" / "ffmpeg-linux-x86_64-v7.1")
+    frames_dir = tmp_path / "frames"
+    frames_dir.mkdir()
+    monkeypatch.setattr(ffmpeg_utils, "find_ffmpeg", lambda: bundled)
+    monkeypatch.setattr(module.tempfile, "mkdtemp", lambda **kw: str(frames_dir))
+
+    spawned = []
+
+    def _record(cmd, **kw):
+        spawned.append(cmd)
+        Image.new("RGB", (8, 8), (10, 10, 10)).save(cmd[-1], format="JPEG")
+        return subprocess.CompletedProcess(cmd, 0, b"", b"")
+
+    monkeypatch.setattr(subprocess, "run", _record)
+
+    frames = module._extract_keyframes("clip.mp4", [0.0, 1.5])
+
+    assert [ts for ts, _ in frames] == [0.0, 1.5]
+    assert spawned and all(cmd[0] == bundled for cmd in spawned)
+
+
+def test_keyframe_extraction_skips_when_no_ffmpeg_resolves(tmp_path, monkeypatch):
+    import subprocess
+
+    from services import ffmpeg_utils
+
+    module = importlib.import_module("services.video_context")
+    monkeypatch.setattr(ffmpeg_utils, "find_ffmpeg", lambda: None)
+    spawned = []
+    monkeypatch.setattr(subprocess, "run", lambda cmd, **kw: spawned.append(cmd))
+
+    assert module._extract_keyframes("clip.mp4", [0.0]) == []
+    assert not spawned
 
 
 def _save_jpeg(tmp_path, name: str, image: Image.Image):
