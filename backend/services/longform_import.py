@@ -342,8 +342,6 @@ def _toc_titles(
             toc = [nav for nav in navs if "toc" in nav.get(type_attribute, "").split()]
             # Legacy untyped navs are supported, but landmarks/page lists never name chapters.
             scopes = toc or [nav for nav in navs if not nav.get(type_attribute)]
-            if not navs:
-                scopes = [root]
             for scope in scopes:
                 for anchor in scope.iter():
                     if local_name(anchor) == "a" and anchor.get("href"):
@@ -393,20 +391,15 @@ def _read_member(zf: zipfile.ZipFile, name: str, budget: _ReadBudget, *, require
         if required:
             raise ValueError(f"not a valid EPUB: {name!r} is missing")
         return None
-    if required:
-        # container.xml and the OPF are a few KB in any real book: the
-        # per-entry ceiling protects against a crafted upload, and they do
-        # not draw on the content budget that bounds the chapters.
-        if info.file_size > budget.max_entry_bytes:
+    if not budget.allows(info):
+        if required:
             raise ValueError(f"EPUB member {name!r} exceeds the import size limit")
-    elif not budget.allows(info):
         return None
     try:
         raw = zf.read(name)
     except (zipfile.BadZipFile, RuntimeError, NotImplementedError, EOFError) as e:
         raise ValueError(f"EPUB member {name!r} is unreadable: {e}") from e
-    if not required:
-        budget.used += len(raw)
+    budget.used += len(raw)
     return raw
 
 

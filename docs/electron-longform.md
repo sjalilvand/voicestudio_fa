@@ -34,6 +34,8 @@ EPUB chapters honor byte-order marks and XML/HTML encoding declarations, includi
 legacy Latin and CJK encodings. Unsupported or invalid declarations use the shared
 text-import fallback so one bad declaration does not abort the book.
 
+EPUB decompression limits include required metadata as well as navigation and chapter content. A navigation document without a navigation element falls back to chapter headings.
+
 ### Long-script layout
 
 The Stories editor grows with the manuscript inside the page scroll container. Long scripts push generation progress and Generate/Stop controls below their content, so lines do not paint over those controls during rendering.

@@ -189,8 +189,11 @@ def test_oversized_nav_document_is_skipped_not_decompressed():
     assert script.startswith("# A New Arrival\n")  # heading fallback: the nav was never read
     # A nav that fits counts toward the shared total budget, so a ceiling it
     # nearly fills leaves nothing for the chapters — reported, not silently empty.
+    data = _epub(docs, nav=_NAV)
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        overhead = sum(info.file_size for info in archive.infolist() if info.filename.endswith(('container.xml', '.opf')))
     with pytest.raises(ValueError, match="no readable chapters"):
-        li.epub_to_chapter_script(_epub(docs, nav=_NAV), max_total_bytes=len(_NAV) + 10)
+        li.epub_to_chapter_script(data, max_total_bytes=overhead + len(_NAV) + 10)
 
 
 def test_bare_numbers_are_prose_even_when_the_book_is_paginated():
@@ -329,3 +332,24 @@ def test_semantic_namespace_scope_is_restored_after_nested_override():
 def test_malformed_optional_navigation_preserves_heading_and_body():
     script = li.epub_to_chapter_script(_epub({'c.xhtml': _doc('<h1>Chapter</h1><p>Body.</p>')}, nav='<html>'))
     assert script == '# Chapter\n\nBody.'
+
+
+def test_nav_without_nav_element_does_not_override_chapter_heading():
+    script = li.epub_to_chapter_script(_epub({'c.xhtml': _doc('<h1>Chapter</h1><p>Body.</p>')}, nav='<html><body><a href="c.xhtml">Advertisement</a></body></html>'))
+    assert script.startswith('# Chapter\n')
+
+
+def test_required_members_consume_total_budget_before_decompression():
+    from unittest.mock import patch
+    stream = io.BytesIO()
+    with zipfile.ZipFile(stream, 'w') as archive:
+        archive.writestr('container.xml', '12345')
+        archive.writestr('book.opf', '12345')
+    with zipfile.ZipFile(io.BytesIO(stream.getvalue())) as archive:
+        budget = li._ReadBudget(10, 9)
+        assert li._read_member(archive, 'container.xml', budget, required=True) == b'12345'
+        assert budget.used == 5
+        with patch.object(archive, 'read', wraps=archive.read) as read:
+            with pytest.raises(ValueError, match='size limit'):
+                li._read_member(archive, 'book.opf', budget, required=True)
+            read.assert_not_called()
