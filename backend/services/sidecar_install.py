@@ -174,6 +174,8 @@ class SidecarSpec:
     # Require the completion marker the import probe writes. Only IndexTTS,
     # installed before the marker existed, opts out.
     requires_install_marker: bool = True
+    # Opt-in recipe revision: legacy markers stay valid for unchanged engines.
+    install_revision: str = ""
     # The weights repo is also an ordinary Model Catalogue download that the
     # engine's in-process path uses (CosyVoice). Otherwise it is one only the
     # installer can place, and a plain download is not offered for it.
@@ -496,10 +498,22 @@ SPECS: dict[str, SidecarSpec] = {
         checkout_dirname="MOSS-TTS-Nano",
         env_var="OMNIVOICE_MOSS_TTS_NANO_DIR",
         probe_module="moss_tts_nano_runtime",
+        probe_code=(
+            "import moss_tts_nano_runtime, torchaudio\n"
+            "if not torchaudio.list_audio_backends():\n"
+            "    raise RuntimeError('torchaudio has no I/O backend (install soundfile)')"
+        ),
         source_revision="8b7bcc9341b3b4ef3a3a58ba1338a7d85ff133eb",
         source_required_path="moss_tts_nano_runtime.py",
         docs_path="docs/engines/moss-tts-nano.md",
         venv_args=("--python", "3.11"),
+        # Upstream's pyproject pins torchaudio==2.7.0 but ships no I/O backend
+        # — torchaudio 2.7 dispatches load/save to soundfile/torchcodec, and
+        # the engine cannot read its own bundled reference clip without one
+        # (#2100). Pulling soundfile alongside the editable install keeps
+        # every audio read inside this engine's own venv.
+        install_args=("-e", "{checkout}", "soundfile"),
+        install_revision="audio-backend-v1",
         uses_cuda_index=True,
         # torch 2.7 (CUDA build on NVIDIA hosts) + transformers + onnxruntime.
         # The model and its audio tokenizer download on first synthesis.
@@ -982,7 +996,15 @@ def _healthy(spec: SidecarSpec) -> bool:
     # is asked to reinstall.
     if not spec.requires_install_marker:
         return True
-    return (checkout / _INSTALL_COMPLETE_MARKER).is_file()
+    marker = checkout / _INSTALL_COMPLETE_MARKER
+    if not spec.install_revision:
+        return marker.is_file()
+    try:
+        return marker.read_text(encoding="utf-8").splitlines() == [
+            spec.probe_module, spec.install_revision,
+        ]
+    except (OSError, UnicodeError):
+        return False
 
 
 def _persist(spec: SidecarSpec) -> None:
@@ -1453,7 +1475,10 @@ def _step_verify(spec: SidecarSpec, job: dict) -> None:
             "the engine docs.",
         )
     _job_step(job, "verify")["detail"] = f"import {spec.probe_module} OK"
-    (checkout / _INSTALL_COMPLETE_MARKER).write_text(f"{spec.probe_module}\n", encoding="utf-8")
+    marker_text = f"{spec.probe_module}\n"
+    if spec.install_revision:
+        marker_text += f"{spec.install_revision}\n"
+    (checkout / _INSTALL_COMPLETE_MARKER).write_text(marker_text, encoding="utf-8")
     _log(job, "Venv verified.")
 
 

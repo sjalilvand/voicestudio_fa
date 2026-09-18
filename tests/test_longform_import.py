@@ -95,9 +95,10 @@ def test_plaintext_no_breaks_is_single_chapter():
 
 # ── EPUB ────────────────────────────────────────────────────────────────────
 
-def _make_epub(chapters: list[tuple[str, str]]) -> bytes:
+def _make_epub_raw(documents: list[bytes]) -> bytes:
     """Build a minimal EPUB: container.xml → content.opf (manifest+spine) →
-    one XHTML per chapter."""
+    one chapter document per entry, written verbatim so a test can control the
+    bytes (and therefore the encoding) the importer receives."""
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("mimetype", "application/epub+zip")
@@ -109,7 +110,7 @@ def _make_epub(chapters: list[tuple[str, str]]) -> bytes:
             'media-type="application/oebps-package+xml"/></rootfiles></container>',
         )
         items, refs = [], []
-        for i, (title, _body) in enumerate(chapters):
+        for i in range(len(documents)):
             items.append(f'<item id="c{i}" href="ch{i}.xhtml" media-type="application/xhtml+xml"/>')
             refs.append(f'<itemref idref="c{i}"/>')
         opf = (
@@ -119,13 +120,23 @@ def _make_epub(chapters: list[tuple[str, str]]) -> bytes:
             f'<spine>{"".join(refs)}</spine></package>'
         )
         z.writestr("OEBPS/content.opf", opf)
-        for i, (title, body) in enumerate(chapters):
-            z.writestr(
-                f"OEBPS/ch{i}.xhtml",
-                f"<html><head><title>{title}</title></head><body>"
-                f"<h1>{title}</h1><p>{body}</p></body></html>",
-            )
+        for i, document in enumerate(documents):
+            z.writestr(f"OEBPS/ch{i}.xhtml", document)
     return buf.getvalue()
+
+
+def _chapter_html(title: str, body: str) -> str:
+    return (
+        f"<html><head><title>{title}</title></head><body>"
+        f"<h1>{title}</h1><p>{body}</p></body></html>"
+    )
+
+
+def _make_epub(chapters: list[tuple[str, str]]) -> bytes:
+    """The common case: UTF-8 chapter documents, no encoding declaration."""
+    return _make_epub_raw(
+        [_chapter_html(title, body).encode("utf-8") for title, body in chapters]
+    )
 
 
 def test_epub_extracts_chapters_in_spine_order():
@@ -183,6 +194,91 @@ def test_epub_oversize_entry_skipped():
     data = _make_epub([("Big", "x" * 500)])
     with pytest.raises(ValueError):  # the one entry exceeds the cap → all skipped
         epub_to_chapter_script(data, max_entry_bytes=50)
+
+
+# ── EPUB: the encoding the document declares ────────────────────────────────
+# UTF-8 is only the *default* for an XML document. EPUB 2 books and Calibre
+# conversions of older HTML routinely declare something else, and decoding
+# those as UTF-8 with errors="ignore" deleted every accent, dash and curly
+# quote instead of reading them.
+
+_ACCENTED = "Le café était fermé — hélas."
+
+
+def test_epub_reads_a_declared_latin1_document():
+    document = (
+        '<?xml version="1.0" encoding="ISO-8859-1"?>'
+        + _chapter_html("Un", "Le caf\xe9 \xe9tait ferm\xe9.")
+    ).encode("iso-8859-1")
+    script = epub_to_chapter_script(_make_epub_raw([document]))
+    assert "Le café était fermé." in script
+
+
+def test_epub_reads_a_declared_windows1252_meta_charset():
+    # Written as bytes: 0xE9 is cp1252's "é" and 0x97 its em dash, and neither
+    # is valid UTF-8, so errors="ignore" used to drop both.
+    document = (
+        b'<html><head><meta charset="windows-1252"/><title>Un</title></head>'
+        b"<body><h1>Un</h1><p>Le caf\xe9 \x97 h\xe9las.</p></body></html>"
+    )
+    script = epub_to_chapter_script(_make_epub_raw([document]))
+    assert "Le café — hélas." in script
+
+
+def test_epub_reads_a_declared_cjk_document():
+    body = "こんにちは世界"  # "hello world", ja
+    document = (
+        '<?xml version="1.0" encoding="Shift_JIS"?>' + _chapter_html("Ch", body)
+    ).encode("shift_jis")
+    script = epub_to_chapter_script(_make_epub_raw([document]))
+    assert body in script
+
+
+def test_epub_reads_a_utf16_document_by_its_bom():
+    document = _chapter_html("Un", _ACCENTED).encode("utf-16-le")
+    document = b"\xff\xfe" + document
+    script = epub_to_chapter_script(_make_epub_raw([document]))
+    assert _ACCENTED in script
+
+
+def test_epub_undeclared_utf8_still_reads():
+    """UTF-8 stays the default when nothing is declared."""
+    script = epub_to_chapter_script(_make_epub([("Un", _ACCENTED)]))
+    assert _ACCENTED in script
+
+
+def test_epub_reads_a_utf32_document_by_its_bom():
+    """The UTF-32 LE mark starts with the UTF-16 LE one, so a BOM table that
+    checks UTF-16 first strips two bytes and reads the chapter as NUL-
+    interleaved UTF-16."""
+    document = b"\xff\xfe\x00\x00" + _chapter_html("Un", _ACCENTED).encode("utf-32-le")
+    script = epub_to_chapter_script(_make_epub_raw([document]))
+    assert _ACCENTED in script
+
+
+@pytest.mark.parametrize(
+    "wide", ["utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be"]
+)
+def test_epub_reads_a_wide_document_with_no_bom(wide):
+    """UTF-16 without a mark is out of spec, but real EPUBs carry it — and the
+    declaration is unreadable there, since the ASCII patterns never match
+    NUL-interleaved bytes. XML 1.0 §F reads the opening "<" instead."""
+    document = _chapter_html("Un", _ACCENTED).encode(wide)
+    assert not document.startswith(b"\xff\xfe") and not document.startswith(b"\xfe\xff")
+    script = epub_to_chapter_script(_make_epub_raw([document]))
+    assert _ACCENTED in script
+
+
+@pytest.mark.parametrize("declared", ["x-not-a-real-charset", "hex_codec", "idna"])
+def test_epub_undecodable_declared_encoding_falls_back_instead_of_failing(declared):
+    """An encoding Python doesn't have, and a bytes-to-bytes codec that
+    resolves but refuses to produce text, both guess rather than fail a book."""
+    document = (
+        f'<?xml version="1.0" encoding="{declared}"?>'
+        + _chapter_html("Un", "A pause — preserved.")
+    ).encode("windows-1252")
+    script = epub_to_chapter_script(_make_epub_raw([document]))
+    assert "A pause — preserved." in script
 
 
 # ── PDF ──────────────────────────────────────────────────────────────────
@@ -247,3 +343,12 @@ def test_import_endpoint_returns_chapter_count():
         assert res["text"].strip()
     # The two-chapter inputs parse to exactly two chapters.
     assert asyncio.run(audiobook_import(_upload("book.pdf", pdf)))["chapters"] == 2
+
+
+@pytest.mark.parametrize("wide", ["utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be"])
+@pytest.mark.parametrize("whitespace", [" ", "\t\r\n "])
+def test_epub_wide_document_with_leading_whitespace(wide, whitespace):
+    document = (whitespace + _chapter_html("Un", _ACCENTED)).encode(wide)
+    script = epub_to_chapter_script(_make_epub_raw([document]))
+    assert _ACCENTED in script
+    assert "\x00" not in script
