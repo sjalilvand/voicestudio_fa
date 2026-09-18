@@ -92,7 +92,7 @@ def _publisher_epub() -> bytes:
             ),
             "ch2.xhtml": _doc(
                 '<span epub:type="pagebreak" id="p5">5</span>'
-                '<h1 id="start">Too Many Questions</h1><p>120</p><p>“Fish for breakfast!”</p><p>iv</p><p>I</p>',
+                '<h1 id="start">Too Many Questions</h1><p class="page-number">120</p><p>“Fish for breakfast!”</p><p role="doc-pagebreak">iv</p><p>I</p>',
                 title="Too Many Questions",
                 section_type="bodymatter chapter",
             ),
@@ -193,9 +193,8 @@ def test_oversized_nav_document_is_skipped_not_decompressed():
         li.epub_to_chapter_script(_epub(docs, nav=_NAV), max_total_bytes=len(_NAV) + 10)
 
 
-def test_bare_numbers_are_prose_unless_the_book_is_paginated():
-    """Without page-number markup nothing numeric-looking is touched; with it,
-    only lowercase folios and bare arabic numbers go — "IV" and "civil" stay."""
+def test_bare_numbers_are_prose_even_when_the_book_is_paginated():
+    """Pagination elsewhere does not make a year or Roman numeral disposable."""
     body = "<h1>Orwell</h1><p>1984</p><p>IV</p><p>civil</p><p>iv</p>"
     plain = li.epub_to_chapter_script(_epub({"c.xhtml": _doc(body, section_type="bodymatter chapter")}))
     assert all(x in plain.split("\n") for x in ("1984", "IV", "civil", "iv"))
@@ -204,7 +203,7 @@ def test_bare_numbers_are_prose_unless_the_book_is_paginated():
     )
     lines = paginated.split("\n")
     assert "IV" in lines and "civil" in lines
-    assert "iv" not in lines and "1984" not in lines and "7" not in lines
+    assert "iv" in lines and "1984" in lines and "7" not in lines
 
 
 def test_only_the_toc_nav_names_sections_and_it_beats_the_ncx():
@@ -264,3 +263,69 @@ def test_oversized_container_or_opf_is_refused_before_decompression():
     with pytest.raises(ValueError, match="package.opf.*missing"):
         li.epub_to_chapter_script(buf.getvalue())
 
+
+@pytest.mark.parametrize('prefix', ['epub', 'book'])
+def test_toc_uses_namespace_uri_and_exact_attributes(prefix):
+    nav = (
+        f'<html xmlns="http://www.w3.org/1999/xhtml" xmlns:{prefix}="http://www.idpf.org/2007/ops" xmlns:data-{prefix}="urn:custom"><body>'
+        f'<nav data-{prefix}:type="toc"><a href="c.xhtml">Fake TOC</a></nav>'
+        f'<nav {prefix}:type="landmarks"><a href="c.xhtml">Start of Content</a></nav>'
+        f'<nav {prefix}:type="toc"><a data-href="c.xhtml">Not a link</a>'
+        '<a href="c.xhtml#start">Real <em>chapter</em></a></nav></body></html>'
+    )
+    script = li.epub_to_chapter_script(_epub({'c.xhtml': _doc('<h1>Short</h1><p>Body.</p>')}, nav=nav))
+    assert script.startswith('# Real chapter\n')
+
+
+def test_prefixed_ncx_uses_exact_content_source():
+    ncx = (
+        '<n:ncx xmlns:n="http://www.daisy.org/z3986/2005/ncx/"><n:navMap>'
+        '<n:navPoint><n:navLabel><n:text>Real chapter</n:text></n:navLabel>'
+        '<n:content data-src="wrong.xhtml" src="c.xhtml#start"/></n:navPoint></n:navMap></n:ncx>'
+    )
+    script = li.epub_to_chapter_script(_epub({'c.xhtml': _doc('<h1>Short</h1><p>Body.</p>')}, ncx=ncx))
+    assert script.startswith('# Real chapter\n')
+
+
+@pytest.mark.parametrize('prefix', ['epub', 'book'])
+def test_main_element_semantics_and_pagebreak_namespace(prefix):
+    front = _doc('<p>Not narration.</p>').replace('<section', '<main epub:type="frontmatter titlepage"').replace('</section>', '</main>')
+    front = front.replace('xmlns:epub=', f'xmlns:{prefix}=').replace('epub:type=', f'{prefix}:type=')
+    chapter = _doc('<p>Hello<span epub:type="pagebreak">12</span> world.</p>')
+    chapter = chapter.replace('xmlns:epub=', f'xmlns:{prefix}=').replace('epub:type=', f'{prefix}:type=')
+    script = li.epub_to_chapter_script(_epub({'front.xhtml': front, 'c.xhtml': chapter}))
+    assert 'Not narration.' not in script
+    assert 'Hello world.' in script
+
+
+@pytest.mark.parametrize('marker', ['<span epub:type="pagebreak"><img src="p.png">12</span>', '<br role="doc-pagebreak">'])
+def test_pagebreak_void_elements_do_not_swallow_following_prose(marker):
+    script = li.epub_to_chapter_script(_epub({'c.xhtml': _doc(f'<h1>Chapter</h1><p>Before {marker}after.</p>')}))
+    assert 'Before after.' in script
+
+
+def test_layout_page_break_class_is_not_a_page_number():
+    script = li.epub_to_chapter_script(_epub({'c.xhtml': _doc('<h1>Chapter</h1><p class="page-break-before">Keep this paragraph.</p>')}))
+    assert 'Keep this paragraph.' in script
+
+
+def test_malformed_container_is_a_value_error():
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w') as z:
+        z.writestr('META-INF/container.xml', '<container>')
+    with pytest.raises(ValueError, match='container.*XML'):
+        li.epub_to_chapter_script(buf.getvalue())
+
+def test_semantic_namespace_scope_is_restored_after_nested_override():
+    body = (
+        '<div xmlns:book="urn:custom"><p><span book:type="pagebreak">Keep</span></p></div>'
+        '<p><span book:type="pagebreak">99</span>After.</p>'
+    )
+    doc = _doc(body).replace('xmlns:epub=', 'xmlns:book=')
+    script = li.epub_to_chapter_script(_epub({'c.xhtml': doc}))
+    assert 'Keep' in script and 'After.' in script and '99' not in script
+
+
+def test_malformed_optional_navigation_preserves_heading_and_body():
+    script = li.epub_to_chapter_script(_epub({'c.xhtml': _doc('<h1>Chapter</h1><p>Body.</p>')}, nav='<html>'))
+    assert script == '# Chapter\n\nBody.'

@@ -12,7 +12,6 @@ just a front door onto the existing pipeline.
 
 from __future__ import annotations
 
-import html
 import io
 import logging
 import posixpath
@@ -132,7 +131,9 @@ class _TextExtractor(HTMLParser):
     #: ARIA ``role="doc-pagebreak"``, or a publisher class such as
     #: ``pagebreak-rw``). Inline, it glues onto prose ("happily as 2Zoe threw");
     #: block-level, it becomes a lone "120" / "iv" paragraph. Never narrated.
-    _PAGEBREAK_CLASS = re.compile(r"page-?(break|num(ber)?)", re.I)
+    _PAGEBREAK_CLASS = re.compile(r"page-?(?:break|num(?:ber)?)(?:-rw)?", re.I)
+    _VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"}
+    _EPUB_NS = "http://www.idpf.org/2007/ops"
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
@@ -141,42 +142,50 @@ class _TextExtractor(HTMLParser):
         self._pagebreak_stack: list[str] = []
         self._in_title = False
         self.title = ""
-        #: Set once any page-number markup was seen: the only evidence on which
-        #: a bare "120" / "iv" paragraph may be treated as a stray folio.
-        self.saw_pagebreak = False
+        self._elements: list[tuple[str, dict[str, str]]] = []
         #: ``epub:type`` tokens seen on the document's structural elements
-        #: (``body``/``section``/``article``/``div``): "frontmatter chapter" →
+        #: (``body``/``main``/``section``/``article``/``div``): "frontmatter chapter" →
         #: {"frontmatter", "chapter"}. Lets the caller drop title pages,
         #: dedications, copyright pages and other non-narrated matter.
         self.epub_types: set[str] = set()
 
     @classmethod
-    def _is_pagebreak(cls, attrs) -> bool:
+    def _is_pagebreak(cls, attrs, types: set[str]) -> bool:
+        if "pagebreak" in types:
+            return True
         for name, value in attrs:
             if not value:
                 continue
-            if name == "epub:type" and "pagebreak" in value.split():
-                return True
             if name == "role" and "doc-pagebreak" in value.split():
                 return True
-            if name == "class" and cls._PAGEBREAK_CLASS.search(value):
+            if name == "class" and any(cls._PAGEBREAK_CLASS.fullmatch(token) for token in value.split()):
                 return True
         return False
 
     def handle_starttag(self, tag, attrs):
+        # Resolve semantic attributes by namespace URI, preserving XML scope.
+        namespaces = dict(self._elements[-1][1] if self._elements else {"epub": self._EPUB_NS})
+        for name, value in attrs:
+            if name.startswith("xmlns:"):
+                namespaces[name[6:]] = value or ""
+        types = set()
+        for name, value in attrs:
+            prefix, separator, local = name.partition(":")
+            if separator and local == "type" and namespaces.get(prefix) == self._EPUB_NS:
+                types.update((value or "").split())
+        if tag not in self._VOID:
+            self._elements.append((tag, namespaces))
         if tag in self._SKIP:
             self._skip_depth += 1
-        if tag in ("body", "section", "article", "div"):
-            for name, value in attrs:
-                if name == "epub:type" and value:
-                    self.epub_types.update(value.split())
+        if tag in ("body", "main", "section", "article", "div"):
+            self.epub_types.update(types)
         if self._pagebreak_stack:
-            # Nested inside a page-number element: keep skipping until it closes.
-            self._pagebreak_stack.append(tag)
+            if tag not in self._VOID:
+                self._pagebreak_stack.append(tag)
             return
-        if self._is_pagebreak(attrs):
-            self.saw_pagebreak = True
-            self._pagebreak_stack.append(tag)
+        if self._is_pagebreak(attrs, types):
+            if tag not in self._VOID:
+                self._pagebreak_stack.append(tag)
             return
         if tag in ("h1", "h2", "title") and not self.title:
             self._in_title = True
@@ -184,12 +193,18 @@ class _TextExtractor(HTMLParser):
             self._parts.append("\n")
 
     def handle_endtag(self, tag):
-        if self._pagebreak_stack:
-            if self._pagebreak_stack[-1] == tag:
-                self._pagebreak_stack.pop()
-            return
+        for index in range(len(self._elements) - 1, -1, -1):
+            if self._elements[index][0] == tag:
+                del self._elements[index:]
+                break
         if tag in self._SKIP and self._skip_depth:
             self._skip_depth -= 1
+        if self._pagebreak_stack:
+            for index in range(len(self._pagebreak_stack) - 1, -1, -1):
+                if self._pagebreak_stack[index] == tag:
+                    del self._pagebreak_stack[index:]
+                    break
+            return
         if tag in ("h1", "h2", "title"):
             self._in_title = False
 
@@ -211,18 +226,9 @@ class _TextExtractor(HTMLParser):
         lines = [ln.strip() for ln in raw.split("\n")]
         out: list[str] = []
         for ln in lines:
-            if self.saw_pagebreak and _BARE_PAGE_NUMBER.fullmatch(ln):
-                continue  # a print folio that escaped the pagebreak markup
             if ln or (out and out[-1]):
                 out.append(ln)
         return "\n".join(out).strip()
-
-
-#: A paragraph that is only a print folio: arabic ("120") or a *lowercase* roman
-#: numeral ("iv", as front matter is paginated). Applied only to documents that
-#: carry page-number markup (``_TextExtractor.saw_pagebreak``), and never to an
-#: uppercase numeral ("IV" is a chapter number) or a word ("civil").
-_BARE_PAGE_NUMBER = re.compile(r"\d{1,4}|(?=[ivxlc])(?:c{0,3})(?:xc|xl|l?x{0,3})(?:ix|iv|v?i{0,3})")
 
 
 def _html_to_title_body(xhtml: str) -> tuple[str, str]:
@@ -251,7 +257,10 @@ def _opf_path(zf: zipfile.ZipFile, budget: _ReadBudget) -> str:
     container = _read_member(zf, "META-INF/container.xml", budget, required=True)
     # The EPUB is a local file the user chose to import (not a remote/untrusted
     # surface); stdlib ElementTree doesn't expand external entities by default.
-    root = ET.fromstring(container)  # nosec B314
+    try:
+        root = ET.fromstring(container)  # nosec B314
+    except ET.ParseError as e:
+        raise ValueError(f"EPUB container.xml is not well-formed XML: {e}") from e
     rootfile = root.find(".//c:rootfiles/c:rootfile", _OPF_NS)
     if rootfile is None or not rootfile.get("full-path"):
         raise ValueError("EPUB container.xml has no rootfile")
@@ -308,28 +317,42 @@ def _toc_titles(
         raw = _read_member(zf, full, budget)
         if raw is None:
             continue
-        doc = _decode_epub_entry(raw)
+        try:
+            root = ET.fromstring(_decode_epub_entry(raw))  # nosec B314 — bounded local EPUB XML
+        except ET.ParseError:
+            logger.warning("Malformed EPUB navigation; using chapter headings", exc_info=True)
+            continue
         nav_dir = posixpath.dirname(full)
-        if href.lower().endswith(".ncx"):
-            target, pairs = ncx_titles, [
-                (src, label)
-                for label, src in re.findall(
-                    r"<text>(.*?)</text>\s*</navLabel>\s*<content[^>]*\bsrc\s*=\s*[\"']([^\"'#]+)", doc, re.S
-                )
-            ]
+        pairs = []
+        def local_name(element):
+            return element.tag.rsplit("}", 1)[-1]
+        if local_name(root) == "ncx":
+            target = ncx_titles
+            for point in root.iter():
+                if local_name(point) != "navPoint":
+                    continue
+                label = next((child for child in point if local_name(child) == "navLabel"), None)
+                content = next((child for child in point if local_name(child) == "content"), None)
+                if label is not None and content is not None and content.get("src"):
+                    pairs.append((content.get("src"), "".join(label.itertext())))
         else:
-            # Only the table of contents names sections; a landmarks or
-            # page-list nav in the same document links the same files under
-            # labels such as "Start of Content". Documents without a typed
-            # toc nav are read whole (older exports).
-            scope = "".join(
-                re.findall(r"<nav\b[^>]*\bepub:type\s*=\s*[\"'][^\"']*\btoc\b[^\"']*[\"'][^>]*>(.*?)</nav>", doc, re.S)
-            ) or doc
-            target, pairs = nav_titles, re.findall(
-                r"<a\b[^>]*\bhref\s*=\s*[\"']([^\"'#]+)(?:#[^\"']*)?[\"'][^>]*>(.*?)</a>", scope, re.S
-            )
+            target = nav_titles
+            navs = [element for element in root.iter() if local_name(element) == "nav"]
+            type_attribute = "{http://www.idpf.org/2007/ops}type"
+            toc = [nav for nav in navs if "toc" in nav.get(type_attribute, "").split()]
+            # Legacy untyped navs are supported, but landmarks/page lists never name chapters.
+            scopes = toc or [nav for nav in navs if not nav.get(type_attribute)]
+            if not navs:
+                scopes = [root]
+            for scope in scopes:
+                for anchor in scope.iter():
+                    if local_name(anchor) == "a" and anchor.get("href"):
+                        pairs.append((anchor.get("href"), "".join(anchor.itertext())))
         for src, label in pairs:
-            target.setdefault(posixpath.normpath(posixpath.join(nav_dir, src)), _plain(label))
+            path = src.split("#", 1)[0]
+            label = " ".join(label.split())
+            if path and label:
+                target.setdefault(posixpath.normpath(posixpath.join(nav_dir, path)), label)
     titles = {**ncx_titles, **nav_titles}
     return {k: v for k, v in titles.items() if v}
 
@@ -385,10 +408,6 @@ def _read_member(zf: zipfile.ZipFile, name: str, budget: _ReadBudget, *, require
     if not required:
         budget.used += len(raw)
     return raw
-
-
-def _plain(markup: str) -> str:
-    return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", html.unescape(markup))).strip()
 
 
 def epub_to_chapter_script(
