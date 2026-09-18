@@ -2534,7 +2534,10 @@
     "ignored_unsupported": "Nicht unterstützte Anweisung ignoriert: {{items}}",
     "model_not_downloaded": "Das Modell wurde noch nicht heruntergeladen. Öffnen Sie die Einstellungen → Engines der Haupt-App, um sie zu installieren.",
     "backend_unreachable": "Die lokale Engine ist nicht erreichbar.",
-    "too_long": "Der Clip ist {{duration}}s. Die Engine akzeptiert höchstens {{max}}s ohne Transkript."
+    "too_long": "Der Clip ist {{duration}}s. Die Engine akzeptiert höchstens {{max}}s ohne Transkript.",
+    "gpu_arch_unsupported": "Diese PyTorch-Version unterstützt deine GPU nicht. Wähle CPU unter Einstellungen → Leistung & Gerät oder installiere eine kompatible PyTorch-Version.",
+    "windows_app_control_blocked": "Die Windows-Anwendungssteuerung hat eine benötigte Datei blockiert. Bitte deinen Administrator, die vertrauenswürdige VoiceStudio-Laufzeit zuzulassen, und starte die App neu.",
+    "audio_io_failed": "Die Audiodatei konnte nicht gelesen oder gespeichert werden. Prüfe Dateiformat, freien Speicherplatz und Dateiberechtigungen. Überprüfe den Ordner unter Einstellungen → Speicher."
   },
   "network": {
     "copied": "Kopiert",

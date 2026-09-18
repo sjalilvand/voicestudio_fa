@@ -2534,7 +2534,10 @@
     "ignored_unsupported": "Đã bỏ qua hướng dẫn không được hỗ trợ: {{items}}",
     "model_not_downloaded": "Mô hình chưa được tải xuống. Mở Cài đặt → Công cụ của ứng dụng chính để cài đặt nó.",
     "backend_unreachable": "Động cơ cục bộ không thể truy cập được.",
-    "too_long": "Đoạn clip có độ dài {{duration}}s. Công cụ chấp nhận tối đa {{max}} không có bản ghi."
+    "too_long": "Đoạn clip có độ dài {{duration}}s. Công cụ chấp nhận tối đa {{max}} không có bản ghi.",
+    "gpu_arch_unsupported": "Bản dựng PyTorch này không hỗ trợ GPU của bạn. Chọn CPU trong Cài đặt → Hiệu năng và thiết bị hoặc cài đặt bản dựng PyTorch tương thích.",
+    "windows_app_control_blocked": "Tính năng kiểm soát ứng dụng của Windows đã chặn một tệp cần thiết. Nhờ quản trị viên cho phép môi trường chạy VoiceStudio đáng tin cậy, rồi khởi động lại ứng dụng.",
+    "audio_io_failed": "Không thể đọc hoặc lưu âm thanh. Kiểm tra định dạng tệp, dung lượng đĩa trống và quyền truy cập tệp. Kiểm tra thư mục trong Cài đặt → Lưu trữ."
   },
   "network": {
     "copied": "Đã sao chép",

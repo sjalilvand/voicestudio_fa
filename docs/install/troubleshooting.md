@@ -39,6 +39,23 @@ Before digging through the entries below, let the app diagnose itself:
   the engine. Subprocess engines report memory visibility as false because
   their accelerator allocations belong to the child process.
 
+## Generation failure diagnosis
+
+Streaming and HTTP generation failures can identify these causes. Electron and
+web clients show the recovery guidance in the selected language; API clients
+receive a stable `docs_topic` and a safe fallback message, never private exception text.
+
+| Topic | Recovery |
+| --- | --- |
+| `GPU_ARCH_UNSUPPORTED` | The installed PyTorch build cannot run kernels on this GPU. Select CPU in Settings → Performance & Device, or use a PyTorch build compatible with the GPU. |
+| `WINDOWS_APP_CONTROL_BLOCKED` | Windows application control blocked a required file. Ask the administrator to allow the trusted VoiceStudio runtime, then restart the app. |
+| `AUDIO_IO_FAILED` | Check the audio format, free disk space, and file permissions; review the folder in Settings → Storage. |
+
+Unsupported GPU builds and application-control blocks are terminal for the current
+stream: the client does not automatically render the whole passage again. After
+correcting the cause, start a new generation. Unknown failures retain generic
+guidance; a report with only `RuntimeError` does not establish which cause applies.
+
 ## 1. `pkg_resources` missing (ModuleNotFoundError)
 
 <a id="pkg_resources-missing"></a>

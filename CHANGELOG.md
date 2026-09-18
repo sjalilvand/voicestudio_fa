@@ -10,12 +10,12 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
-- A generation that fails mid-stream now names the cause instead of "check the selected engine" (#2177)
+- Clearer recovery guidance for known GPU, Windows policy, and audio-file failures (#2195)
 
 ### Fixed
 
-- A streaming generation that fails on an unsupported GPU, a Windows app-control block, or an audio-file error now says so and what to do, instead of only "Generation failed. Check the selected engine and try again." (#2195, #2177)
-- A failure that cannot succeed on a retry — an unsupported GPU build, a blocked file — is reported as final, so the app stops re-rendering the whole passage to reach the same error (#2195, #2177)
+- A streaming generation that fails on an unsupported GPU, a Windows app-control block, or an audio-file error now says so and what to do, instead of only "Generation failed. Check the selected engine and try again." (#2195, #2177) — thanks @shivsin25!
+- A failure that cannot succeed on a retry — an unsupported GPU build, a blocked file — is reported as final, so the app stops re-rendering the whole passage to reach the same error (#2195, #2177) — thanks @shivsin25!
 
 ## [0.5.4] — 2026-09-17
 

@@ -53,7 +53,7 @@ _REDACTED_VALUE = "***REDACTED***"
 # taxonomy; the docs URL itself stays owned by error_docs_map.
 _HINTS: dict[str, str] = {
     "GPU_OOM": "Close other GPU-heavy apps or unload models, then retry. You can also choose CPU in Settings → Performance & Device or select a smaller TTS engine.",
-    "GPU_ARCH_UNSUPPORTED": "Your GPU's compute capability isn't in this PyTorch build's kernel list, so CUDA can't launch kernels for it. Switch the compute device to CPU in Settings → Performance & Device, or install a PyTorch build that matches your GPU (a cu128 build for RTX 50-series cards). Flushing models won't help — this is a build mismatch, not memory pressure.",
+    "GPU_ARCH_UNSUPPORTED": "This PyTorch build does not support your GPU. Choose CPU in Settings → Performance & Device, or install a compatible PyTorch build.",
     "WORKER_AT_CAPACITY": "Wait for a running job on that worker to finish, or choose another available worker and retry.",
     "MODEL_NOT_INSTALLED": "Install or enable this engine on the worker machine, then refresh its capabilities and retry.",
     "MODEL_NOT_DOWNLOADED": "Open Models, install this model on the selected worker, then retry when the download completes.",
@@ -368,6 +368,11 @@ _TERMINAL_FAILURE_CLASSES = frozenset({
     "GPU_ARCH_UNSUPPORTED",
     "WINDOWS_APP_CONTROL_BLOCKED",
 })
+
+
+def is_terminal_failure_topic(topic: str | None) -> bool:
+    """Whether repeating the same render cannot repair the diagnosed cause."""
+    return topic in _TERMINAL_FAILURE_CLASSES
 
 
 def append_hint(text: str) -> str:
