@@ -57,7 +57,9 @@ The env var overrides the persisted UI choice.
 - Cloning takes a short reference clip (`ref_audio`); 3–10 seconds is the
   sweet spot. A transcript of the clip improves conditioning — if the profile
   has none, VoiceStudio uses an already-installed speech recognizer on first
-  use and saves the result to the profile. The model-level Whisper fallback
+  use and saves the result to the profile. This includes the catalogue’s
+  Whisper Turbo CT2 build; cloning does not require a second Transformers copy.
+  The model-level Whisper fallback
   also requires cached weights; it never downloads another ASR during cloning.
   If no recognizer is installed, supply a matching reference transcript or
   explicitly install and select a speech-to-text model in Model Catalogue. A clip with a supplied transcript is limited
