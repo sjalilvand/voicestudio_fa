@@ -91,6 +91,7 @@ def _publisher_epub() -> bytes:
                 section_type="bodymatter chapter",
             ),
             "ch2.xhtml": _doc(
+                '<span epub:type="pagebreak" id="p5">5</span>'
                 '<h1 id="start">Too Many Questions</h1><p>120</p><p>“Fish for breakfast!”</p><p>iv</p><p>I</p>',
                 title="Too Many Questions",
                 section_type="bodymatter chapter",
