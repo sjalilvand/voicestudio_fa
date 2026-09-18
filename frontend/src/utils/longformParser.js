@@ -133,9 +133,9 @@ export function parseChapterBody(body, { defaultVoice = null, defaultSpeed = nul
           pause_ms_after: j === rendered.length - 1 ? pauseMs : 0,
           speed: sp,
         };
-        // Inline markup split one run of text: this span runs on into the next,
-        // so the join must not gap it. Key present only when true (py parity).
-        if (j < rendered.length - 1 && !rendered[j + 1][2]) span.continues = true;
+        // Inline markup split one run of text: say how this span joins the next —
+        // straight on, or across a blank line. Key present only here (py parity).
+        if (j < rendered.length - 1) span.join = rendered[j + 1][2] ? 'paragraph' : 'continue';
         spans.push(span);
       });
     }

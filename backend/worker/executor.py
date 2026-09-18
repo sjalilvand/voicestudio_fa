@@ -508,7 +508,8 @@ class TaskExecutor:
         spans = [Span(voice_id=str(i), text=row.get("text", ""),
                       pause_ms_after=int(row.get("pause_ms_after") or 0),
                       speed=row.get("speed"),
-                      continues=bool(row.get("continues"))) for i, row in enumerate(rows)]
+                      join=row.get("join") if row.get("join") in ("continue", "paragraph") else None)
+                 for i, row in enumerate(rows)]
         sample_rate = int(getattr(backend, "sample_rate", 0) or 24_000)
         audio, _duration = synthesize_chapter(
             spans, synth, sample_rate, lexicon=params.get("lexicon"),

@@ -113,7 +113,8 @@ consecutive lines that carry no `[pause]` of their own — an explicit `[pause]`
 replaces the gap rather than adding to it — and **Gap between paragraphs**
 (600 ms) at a blank line inside one line of script. A line that inline markup
 (`[slow]`, `[emphasis]`, `[spell]`) splits into several renders is still one
-line: no gap lands in the middle of it. With the paragraph gap at 0 a line is
+line: no gap lands in the middle of it (and a blank line sitting on that split
+still gets the paragraph gap). With the paragraph gap at 0 a line is
 rendered in one engine call exactly as before, so setting both gaps to 0 and
 turning trimming off gives the pre-existing hard joins (and their cache keys)
 back. The join stage adds at most 15 minutes of silence to one chapter; past

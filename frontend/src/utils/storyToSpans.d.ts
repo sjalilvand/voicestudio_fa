@@ -9,6 +9,6 @@ export function storyToSpans(
     text: string;
     pause_ms_after: number;
     speed?: number | null;
-    continues?: boolean;
+    join?: 'continue' | 'paragraph';
   }[];
 }[];

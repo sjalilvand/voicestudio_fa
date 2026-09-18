@@ -448,9 +448,9 @@ def test_line_gap_never_lands_inside_a_line_split_by_inline_markup():
     from services.longform_parser import _parse_chapter_body as parse_chapter_body
 
     parsed = parse_chapter_body("He was [slow]very[/slow] tired.\n")
-    assert [s.get("continues", False) for s in parsed] == [True, True, False]
+    assert [s.get("join") for s in parsed] == ["continue", "continue", None]
     # A plain line carries no key at all (byte-identical plans and cache keys).
-    assert all("continues" not in s for s in parse_chapter_body("Plain line."))
+    assert all("join" not in s for s in parse_chapter_body("Plain line."))
 
     sr = 1000
     tone = torch.ones(500)
@@ -459,8 +459,19 @@ def test_line_gap_never_lands_inside_a_line_split_by_inline_markup():
     # Exactly one gap: after the line, none between its three spans.
     assert audio.shape[-1] == 4 * 500 + 250
     # Round-trips through the manifest dict only when set.
-    assert spans[0].to_dict()["continues"] is True
-    assert "continues" not in spans[-1].to_dict()
+    assert spans[0].to_dict()["join"] == "continue"
+    assert "join" not in spans[-1].to_dict()
+
+    # A blank line sitting ON the markup boundary is a paragraph break: it gets
+    # the paragraph gap (the line gap when no paragraph gap is set), never none.
+    parsed = parse_chapter_body("Intro [slow]slowly[/slow]\n\nNew paragraph.")
+    assert [s.get("join") for s in parsed] == ["continue", "paragraph", None]
+    spans = [Span(**s) for s in parsed]
+    audio, _ = synthesize_chapter(spans, lambda *_: tone.clone(), sr,
+                                  line_gap_ms=250, paragraph_gap_ms=600)
+    assert audio.shape[-1] == 3 * 500 + 600
+    audio, _ = synthesize_chapter(spans, lambda *_: tone.clone(), sr, line_gap_ms=250)
+    assert audio.shape[-1] == 3 * 500 + 250
 
 
 def test_join_silence_budget_caps_what_the_join_stage_may_add():

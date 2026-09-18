@@ -1167,7 +1167,7 @@
             "text": "x",
             "pause_ms_after": 0,
             "speed": 1.15,
-            "continues": true
+            "join": "continue"
           },
           {
             "voice_id": "v1",
@@ -1488,14 +1488,14 @@
             "text": "He was",
             "pause_ms_after": 0,
             "speed": null,
-            "continues": true
+            "join": "continue"
           },
           {
             "voice_id": "v1",
             "text": "very",
             "pause_ms_after": 0,
             "speed": 0.85,
-            "continues": true
+            "join": "continue"
           },
           {
             "voice_id": "v1",
@@ -1526,13 +1526,14 @@
             "text": "Intro",
             "pause_ms_after": 0,
             "speed": null,
-            "continues": true
+            "join": "continue"
           },
           {
             "voice_id": "v1",
             "text": "slowly",
             "pause_ms_after": 0,
-            "speed": 0.85
+            "speed": 0.85,
+            "join": "paragraph"
           },
           {
             "voice_id": "v1",
@@ -1557,14 +1558,14 @@
             "text": "Intro",
             "pause_ms_after": 0,
             "speed": null,
-            "continues": true
+            "join": "continue"
           },
           {
             "voice_id": "v1",
             "text": "slowly",
             "pause_ms_after": 0,
             "speed": 0.85,
-            "continues": true
+            "join": "continue"
           },
           {
             "voice_id": "v1",
@@ -1588,7 +1589,8 @@
             "voice_id": "v1",
             "text": "One",
             "pause_ms_after": 0,
-            "speed": null
+            "speed": null,
+            "join": "paragraph"
           },
           {
             "voice_id": "v1",

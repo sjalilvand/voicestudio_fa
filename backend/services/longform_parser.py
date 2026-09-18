@@ -107,11 +107,11 @@ def _parse_chapter_body(
                     "pause_ms_after": pause_ms if j == len(rendered) - 1 else 0,
                     "speed": sp,
                 }
-                if j < len(rendered) - 1 and not rendered[j + 1][2]:
-                    # Inline markup split one run of text: this span runs on
-                    # into the next, so the join must not gap it. Key present
-                    # only when true — plain scripts parse byte-identically.
-                    span["continues"] = True
+                if j < len(rendered) - 1:
+                    # Inline markup split one run of text. Say how this span
+                    # joins the next: straight on, or across a blank line. Key
+                    # present only here — plain scripts parse byte-identically.
+                    span["join"] = "paragraph" if rendered[j + 1][2] else "continue"
                 spans.append(span)
     return spans
 

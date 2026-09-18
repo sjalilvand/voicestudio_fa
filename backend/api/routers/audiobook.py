@@ -32,6 +32,8 @@ from collections.abc import Awaitable, Callable
 
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from services.audiobook import (
@@ -629,12 +631,12 @@ def _render_chapter_cached(chapter, synth, sr, engine_id, resolve, cache_dir, le
 
     spans = [Span(voice_id=s.voice_id, text=normalize_for_tts(s.text, language),
                   pause_ms_after=s.pause_ms_after, speed=getattr(s, "speed", None),
-                  continues=bool(getattr(s, "continues", False)))
+                  join=getattr(s, "join", None))
              for s in chapter.spans]
-    # `continues` joins the tuple only when set, so a plan without inline-markup
+    # `join` enters the tuple only when set, so a plan without inline-markup
     # splits keeps its pre-existing chapter cache key.
     spans_tuples = [(s.voice_id, s.text, s.pause_ms_after, getattr(s, "speed", None))
-                    + (("continues",) if s.continues else ())
+                    + ((s.join,) if s.join else ())
                     for s in spans]
     voice_sigs: dict = {}
     for s in spans:
@@ -726,7 +728,7 @@ def _remote_chapter_call(chapter, *, engine_id, default_voice, voice_map,
             "text": normalize_for_tts(span.text, language),
             "pause_ms_after": span.pause_ms_after,
             "speed": getattr(span, "speed", None),
-            "continues": bool(getattr(span, "continues", False)),
+            "join": getattr(span, "join", None),
         })
         refs.append(voice.get("ref_audio"))
         voices.append({
@@ -1204,7 +1206,8 @@ class LongformSpan(BaseModel):
     text: str
     pause_ms_after: int = 0
     speed: float | None = None
-    continues: bool = False   # inline markup split this line; no line gap after it
+    # Set by the parser only where inline markup split one run of text.
+    join: Literal["continue", "paragraph"] | None = None
 
 
 class LongformChapter(BaseModel):
@@ -1242,7 +1245,7 @@ async def longform_render(req: LongformRenderRequest, request: Request = None):
         # spans carry inter-line silence with empty text).
         spans = [Span(voice_id=s.voice_id, text=(s.text or "").strip(),
                       pause_ms_after=max(0, int(s.pause_ms_after)), speed=s.speed,
-                      continues=bool(s.continues))
+                      join=s.join)
                  for s in c.spans if ((s.text and s.text.strip()) or s.pause_ms_after > 0)]
         if spans:
             chapters.append(Chapter(title=c.title or f"Chapter {i + 1}", spans=spans))

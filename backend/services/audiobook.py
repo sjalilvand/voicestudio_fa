@@ -209,17 +209,19 @@ class Span:
     text: str
     pause_ms_after: int = 0
     speed: Optional[float] = None
-    #: True when inline markup ([slow], [emphasis], [spell]…) split ONE line into
-    #: several spans and this one runs straight on into the next — so the join
-    #: must not put a line gap in the middle of the sentence. Emitted only when
-    #: set, so every existing plan, manifest and cache key is byte-identical.
-    continues: bool = False
+    #: How this span joins the NEXT one when inline markup ([slow], [emphasis],
+    #: [spell]…) split one run of text into several spans. ``"continue"``: the
+    #: sentence runs straight on — no gap. ``"paragraph"``: a blank line sat on
+    #: the markup boundary — paragraph gap. ``None`` (every ordinary span): the
+    #: line ends here — line gap. Emitted only when set, so every existing plan,
+    #: manifest and cache key is byte-identical.
+    join: Optional[str] = None
 
     def to_dict(self) -> dict:
         d = {"voice_id": self.voice_id, "text": self.text,
              "pause_ms_after": self.pause_ms_after, "speed": self.speed}
-        if self.continues:
-            d["continues"] = True
+        if self.join:
+            d["join"] = self.join
         return d
 
 
@@ -360,7 +362,7 @@ def synthesize_chapter(
     from services.chunked_tts import split_paragraphs
 
     items: list = []  # ("a", tensor) for audio, ("s", n_samples) for silence
-    pending_line_gap = False  # a spoken line just ended with no explicit pause
+    pending_gap_ms = 0  # join silence owed before the next spoken span
     budget = _GapBudget()
     # Per-occurrence index for identical spans (#1208 cache opt-out). The
     # segment cache folds it into its key ONLY when vary_repeats is on (else
@@ -401,16 +403,23 @@ def synthesize_chapter(
                 if audio is not None and segment_cache is not None:
                     segment_cache.store(span, audio, nonce=occ)
             if audio is not None:
-                if pending_line_gap and line_gap_ms > 0:
-                    n = int(sample_rate * budget.take(line_gap_ms) / 1000.0)
+                if pending_gap_ms > 0:
+                    n = int(sample_rate * budget.take(pending_gap_ms) / 1000.0)
                     if n > 0:
                         items.append(("s", n))
                 items.append(("a", audio))
-                # No gap after an explicit [pause] (it replaces the gap) or in
-                # the middle of a line that inline markup split into spans.
-                pending_line_gap = span.pause_ms_after <= 0 and not span.continues
+                # What follows this span: nothing in the middle of a line that
+                # inline markup split, the paragraph gap where a blank line sat
+                # on that split (line gap if no paragraph gap is set), else the
+                # line gap. An explicit [pause] below replaces any of them.
+                if span.join == "continue":
+                    pending_gap_ms = 0
+                elif span.join == "paragraph":
+                    pending_gap_ms = paragraph_gap_ms or line_gap_ms
+                else:
+                    pending_gap_ms = line_gap_ms
         if span.pause_ms_after > 0:
-            pending_line_gap = False
+            pending_gap_ms = 0
             n = int(sample_rate * span.pause_ms_after / 1000.0)
             if n > 0:
                 items.append(("s", n))
