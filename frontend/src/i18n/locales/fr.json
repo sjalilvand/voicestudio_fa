@@ -2233,7 +2233,10 @@
     "instruct_category_conflict": "Deux options de conception vocale contradictoires ont été sélectionnées dans la même catégorie (par ex. deux genres). Effacez-en une avant de régénérer.",
     "ref_audio_unusable": "Aucune voix n'a été détectée dans l'audio de référence — le clip est silencieux ou presque, il n'y a donc aucune voix à cloner. Réenregistrez plus près du micro (vérifiez que le bon périphérique d'entrée est sélectionné et que le niveau bouge) ou choisissez un autre clip.",
     "ref_audio_too_long": "Une référence peut durer au maximum 20 secondes avec transcription, ou 75 secondes sans transcription. Coupez-la sur un passage vocal clair de 3 à 10 secondes ; si vous fournissez du texte, coupez la transcription sur le même passage.",
-    "ref_audio_no_speech": "La détection automatique n'a trouvé aucune parole dans la référence. Coupez-la sur un passage vocal clair de 3 à 10 secondes ou fournissez une transcription correspondante."
+    "ref_audio_no_speech": "La détection automatique n'a trouvé aucune parole dans la référence. Coupez-la sur un passage vocal clair de 3 à 10 secondes ou fournissez une transcription correspondante.",
+    "gpu_arch_unsupported": "Cette version de PyTorch ne prend pas en charge votre GPU. Choisissez CPU dans Paramètres → Performances et appareil, ou installez une version compatible de PyTorch.",
+    "windows_app_control_blocked": "Le contrôle des applications de Windows a bloqué un fichier nécessaire. Demandez à votre administrateur d’autoriser l’environnement d’exécution fiable de VoiceStudio, puis redémarrez l’application.",
+    "audio_io_failed": "Impossible de lire ou d’enregistrer l’audio. Vérifiez le format du fichier, l’espace disque disponible et les autorisations. Vérifiez le dossier dans Paramètres → Stockage."
   },
   "sharing": {
     "title": "Partage et accès à distance",

@@ -1,3 +1,4 @@
+import { generationFailureMessage } from '../utils/generationFailureMessage.ts';
 import { languageRejectionMessage } from '../utils/languageRejection.ts';
 import i18n from 'i18next';
 import { abortableDelay } from '../utils/abortableDelay.ts';
@@ -298,7 +299,9 @@ const BACKEND_MARKER_HEADER = 'x-omnivoice-backend';
 // "Not Found" — the one non-JSON backend voice. That fallback is a heuristic,
 // which is exactly why the header exists: a proxy CAN return
 // `{"error":"Not Found"}` and impersonate the shape.
-async function readError(res: Response): Promise<{ detail: unknown; backendShaped: boolean }> {
+async function readError(
+  res: Response,
+): Promise<{ detail: unknown; backendShaped: boolean; localized?: string }> {
   const marked = Boolean(res.headers?.get?.(BACKEND_MARKER_HEADER));
   const text = await res.text().catch(() => '');
   try {
@@ -307,7 +310,9 @@ async function readError(res: Response): Promise<{ detail: unknown; backendShape
     // `{"detail":"Not Found"}` an unrouted path produces. `error` is used by
     // a few 4xx/5xx handlers but never for a 404, so an unmarked
     // `{"error":…}` 404 is a foreign server, not an old backend.
-    if (j.detail) return { detail: j.detail, backendShaped: true };
+    const localized =
+      generationFailureMessage(j, i18n.t) || generationFailureMessage(j.detail, i18n.t);
+    if (j.detail) return { detail: j.detail, backendShaped: true, localized };
     if (j.error) return { detail: j.error, backendShaped: marked };
     return { detail: text || res.statusText, backendShaped: marked };
   } catch {
@@ -542,7 +547,7 @@ export async function apiFetch(path: string, opts: ApiFetchOptions = {}): Promis
     }
     if (!res.ok) {
       // An HTTP error means the backend *did* respond — never retry it.
-      const { detail, backendShaped } = await readError(res);
+      const { detail, backendShaped, localized } = await readError(res);
       // #1385: a 404 in some other server's voice means the request never
       // reached a VoiceStudio backend at all — a static host's catch-all page
       // or a reverse proxy with no route for this path. Echoing that page
@@ -594,6 +599,7 @@ export async function apiFetch(path: string, opts: ApiFetchOptions = {}): Promis
       // human-readable `message` — use it for the Error message instead of
       // letting the object stringify to "[object Object]".
       const msg =
+        localized ||
         languageRejectionMessage(detail, i18n.t) ||
         (detail &&
         typeof detail === 'object' &&
