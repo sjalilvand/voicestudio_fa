@@ -13,6 +13,10 @@ the frozen-backend fallback mirror it for their toolchains.
 - Bug reports filed from the desktop app name the backend error class again, so two unrelated failures stop looking identical (#2197)
 - Clearer recovery guidance for known GPU, Windows policy, and audio-file failures (#2195)
 
+### Added
+
+- Stories' Paste & Split can now split by Sentences, Paragraphs (the new default) or whole Chapters, so a single narrator is no longer chopped into one take per sentence (#2217) — thanks @jaketame!
+
 ### Fixed
 
 - EPUB imports preserve accents and wide-character documents using their declared encoding or byte-order mark (#2191) — thanks @kevin9327!

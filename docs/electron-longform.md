@@ -22,7 +22,7 @@ Stories now includes named characters with saved voice assignments, character se
 
 Stories Auto-cast accepts tagged dialogue, screenplay text and attributed prose. The shared local parser appends lines, reuses existing characters/voices, and assigns available profiles to new speakers. Distinct names that normalize to the same identifier remain separate characters. No network or LLM call is involved.
 
-Stories imports TXT, Markdown and SRT locally; EPUB/PDF still use the shared backend importer. Imported text goes into a persisted review buffer, then Auto-cast or Split into lines appends to existing work. The sentence-aware splitter is shared with Tauri and offers the same 40-2000 character limit.
+Stories imports TXT, Markdown and SRT locally; EPUB/PDF still use the shared backend importer. Imported text goes into a persisted review buffer, then Auto-cast or Split into lines appends to existing work. The splitter is shared with Tauri and offers three presets: Sentences (the sentence-aware splitter with the same 40-2000 character limit), Paragraphs (the default; one line per blank-line paragraph) and Chapters (one line per chapter body, split only at `# ` headings). A `# ` heading is always its own line so it renders as a chapter marker.
 
 The Electron workspace keeps title, default voice, language and output format together in a fixed setup card. Advanced cast, project, production and book controls use separate collapsed cards. The editor keeps its full working width; an empty Story shows one Add First Line action, while an empty Audiobook shows the supported chapter and voice markup directly in the script field.
 
