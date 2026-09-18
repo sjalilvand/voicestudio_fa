@@ -32,6 +32,7 @@ Already using Electron? Install over your existing app and keep your data. If pr
 
 ### Fixed
 
+- Bundle Linux native helper libraries so dictation and clipboard support start without distribution-specific libxdo packages (#2196)
 - Forward saved Hugging Face tokens when downloading gated model weights and dependencies (#2173) — thanks @shivsin25!
 - Explain unsupported saved-profile languages consistently in Electron, web, and streaming generation (#2175) — thanks @shivsin25!
 - List every installed Kokoro language and accept its displayed name, including British English (#2174) — thanks @drakeo338!
