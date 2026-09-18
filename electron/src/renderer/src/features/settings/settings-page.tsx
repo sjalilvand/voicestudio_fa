@@ -72,11 +72,12 @@ import { SettingsContent, SettingsRow, SettingsSection } from './settings-layout
 import i18n, { APP_LANGUAGES, setAppLanguage, type AppLocale } from '@/i18n';
 import { setReviewMode, useReviewMode } from '@/hooks/use-review-mode';
 import { rememberSettingsRoute } from '@/lib/settings-route';
+import { setWorkspace, useWorkspace } from '@/lib/store/workspace';
 
 const sections = ['general', 'appearance'] as const;
 const fields = {
   general: ['language', 'review_mode'],
-  appearance: ['theme', 'font', 'ui_scale', 'glass'],
+  appearance: ['theme', 'font', 'ui_scale', 'glass', 'sidebar_expanded'],
 };
 
 const fieldKey = (key: string) =>
@@ -261,12 +262,14 @@ export function SettingsPage() {
   }, [pathname, target]);
   const { mode, setTheme, updateTheme } = useTheme();
   const appearance = useAppearance();
+  const workspace = useWorkspace();
   const reviewMode = useReviewMode();
   const targetIds: Record<string, string> = {
     theme: 'theme-label',
     font: 'font-label',
     ui_scale: 'scale-label',
     glass: 'glass-label',
+    sidebar_expanded: 'sidebar-expanded-label',
     language: 'language-label',
     review_mode: 'review-mode-label',
   };
@@ -613,6 +616,17 @@ export function SettingsPage() {
                       aria-labelledby="glass-label"
                       checked={appearance.glass}
                       onCheckedChange={(glass) => appearance.update({ glass })}
+                    />
+                  </SettingsRow>
+                  <SettingsRow
+                    id="sidebar-expanded-label"
+                    title={t('preferences.sidebar_expanded')}
+                    description={t('preferences.sidebar_expanded_hint')}
+                  >
+                    <Switch
+                      aria-labelledby="sidebar-expanded-label"
+                      checked={!workspace.autoCollapseSidebar}
+                      onCheckedChange={(keep) => setWorkspace({ autoCollapseSidebar: !keep })}
                     />
                   </SettingsRow>
                   <PalettePicker appearance="light" />

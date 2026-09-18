@@ -1,4 +1,4 @@
-import { Link, useRouterState } from '@tanstack/react-router';
+import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { PanelLeftIcon, PanelLeftOpenIcon, SettingsIcon } from 'lucide-react';
 import { brandIcon, brandArtwork } from '@/lib/brand';
@@ -6,75 +6,23 @@ import { isMac } from '@/components/bridge';
 import { cn } from '@/lib/utils';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { usePaneResize } from '@/hooks/use-pane-resize';
-import { setWorkspace, useWorkspace } from '@/lib/store/workspace';
+import { useWorkspace } from '@/lib/store/workspace';
+import { useWorkspaceSidebarState } from './use-workspace-sidebar';
 import { VoicesSidebar } from '@/features/clone/voices-sidebar';
 import { WorkspaceNavigation } from './workspace-menu';
 import { StatusBar } from './status-bar';
 import { SystemNotifications } from './system-notifications';
 import { useBackendStatus } from '@/hooks/use-backend-status';
-import { useState, useSyncExternalStore } from 'react';
-
-const SECONDARY_ROUTES = new Set([
-  '/stories',
-  '/audiobook',
-  '/tools',
-  '/batch',
-  '/gallery',
-  '/personas',
-  '/projects',
-  '/dub',
-  '/design',
-  '/transcriptions',
-  '/settings',
-]);
-// A local-controls pane needs enough room for the actual workspace. At the
-// default desktop window, preserve navigation as a rail and restore the full
-// voice library automatically once both it and a local-controls pane leave a
-// useful editing canvas. Browser zoom and Windows display scaling are included
-// in the CSS viewport width, so this threshold also covers high-DPI layouts.
-const COMPACT_QUERY = '(max-width: 1680px)';
-
-function routeHasSecondarySidebar(pathname: string): boolean {
-  const normalized = pathname.replace(/\/+$/, '') || '/';
-  return [...SECONDARY_ROUTES].some(
-    (route) => normalized === route || normalized.startsWith(`${route}/`),
-  );
-}
-
-function routeOwnsVoiceLibrary(pathname: string): boolean {
-  const normalized = pathname.replace(/\/+$/, '') || '/';
-  return normalized === '/personas' || normalized.startsWith('/personas/');
-}
-
-function useCompactViewport(): boolean {
-  return useSyncExternalStore(
-    (notify) => {
-      const query = window.matchMedia(COMPACT_QUERY);
-      query.addEventListener('change', notify);
-      return () => query.removeEventListener('change', notify);
-    },
-    () => window.matchMedia(COMPACT_QUERY).matches,
-    () => false,
-  );
-}
 
 export function WorkspaceSidebar() {
   const backend = useBackendStatus();
   const { t } = useTranslation();
   const mac = isMac();
   const { libraryOpen, libraryTab } = useWorkspace();
-  const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const compactViewport = useCompactViewport();
-  const compactContext = `${pathname}:${compactViewport}`;
-  const [expandedContext, setExpandedContext] = useState<string | null>(null);
-  const forceExpanded = expandedContext === compactContext;
-  const ownsVoiceLibrary = routeOwnsVoiceLibrary(pathname);
-  const compact =
-    !libraryOpen ||
-    ((ownsVoiceLibrary || (compactViewport && routeHasSecondarySidebar(pathname))) &&
-      !forceExpanded);
-  const secondaryWorkspace = routeHasSecondarySidebar(pathname);
-  const setLibraryOpen = (libraryOpen: boolean) => setWorkspace({ libraryOpen });
+  // One source of truth for "rail or full sidebar": the header toggle and the
+  // sidebar's own buttons used to keep separate copies of this state.
+  const { compact, compactViewport, forceExpanded, secondaryWorkspace, setOpen } =
+    useWorkspaceSidebarState();
   const sidebarResize = usePaneResize({
     storageKey: 'voicestudio.library-width',
     side: 'left',
@@ -108,23 +56,22 @@ export function WorkspaceSidebar() {
               mac ? 'min-h-[72px] items-end pb-1' : 'h-12 items-center',
             )}
           >
-            {!mac ? (
-              <img src={brandIcon} alt={t('app.name')} className="size-6 shrink-0" />
-            ) : (
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t('clone.toggle_sidebar')}
-                aria-expanded={false}
-                onClick={() => {
-                  setExpandedContext(compactContext);
-                  setLibraryOpen(true);
-                }}
-                className="shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
+            {/* The rail can always reopen itself, on every platform: the
+                brand icon alone gave Windows/Linux no local control. */}
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t('clone.toggle_sidebar')}
+              aria-expanded={false}
+              onClick={() => setOpen(true)}
+              className="shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {mac ? (
                 <PanelLeftOpenIcon className="size-5" aria-hidden="true" />
-              </Button>
-            )}
+              ) : (
+                <img src={brandIcon} alt="" className="size-6 shrink-0" />
+              )}
+            </Button>
           </div>
           <WorkspaceNavigation compact />
           {!mac && <StatusBar compact />}
@@ -181,10 +128,7 @@ export function WorkspaceSidebar() {
               variant="ghost"
               size="icon-sm"
               aria-label={t('common.close')}
-              onClick={() => {
-                setExpandedContext(null);
-                setLibraryOpen(false);
-              }}
+              onClick={() => setOpen(false)}
             >
               <PanelLeftIcon />
             </Button>

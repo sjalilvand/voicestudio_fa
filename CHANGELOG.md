@@ -18,6 +18,10 @@ the frozen-backend fallback mirror it for their toolchains.
 - The main sidebar (navigation, voice library, status) stays in place on Settings instead of being swapped for a separate panel; the Settings sections now sit in a column beside it (#2209) — thanks @jaketame!
 - The main navigation sits directly under the sidebar header, above the voice library, so it no longer moves with the library's height (#2210) — thanks @jaketame!
 
+### Added
+
+- Settings → Appearance → Keep sidebar expanded: stops the sidebar shrinking to a rail when Projects, Transcribe, Tools or another workspace opens its own panel on a narrower window (#2211) — thanks @jaketame!
+
 ### Fixed
 
 - EPUB import narrates the book, not its print furniture: page numbers no longer glue onto words or appear as lone lines, cover/title/dedication/copyright/contents pages are skipped, and chapters are titled from the book's table of contents (#2208) — thanks @jaketame!
