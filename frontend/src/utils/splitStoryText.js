@@ -1,3 +1,5 @@
+import { isChapterLine } from './storyExport';
+
 // Sentence-aware splitter for the "Paste & auto-split" panel. Walks the text
 // and breaks at the closest sentence boundary that keeps each chunk under
 // `maxChars`. Falls back to whitespace, then to the hard cap.
@@ -49,21 +51,19 @@ export function splitIntoChunks(text, maxChars) {
 //                heading itself stays its own line so it renders as a chapter
 //                marker. Paragraph breaks inside a body are kept (the renderer
 //                turns them into paragraph gaps).
-// A `# ` heading line is always its own line in every mode.
+// A chapter heading is always its own line in every mode. "Heading" means what
+// the renderer means (`isChapterLine`: a non-empty H1) — `## Scene` or a bare
+// `#` is body text there, so it must stay body text here.
 export const SPLIT_MODES = ['sentences', 'paragraphs', 'chapters'];
 export const DEFAULT_SPLIT_MODE = 'paragraphs';
 export const DEFAULT_SPLIT_MAX = { sentences: 180, paragraphs: 500, chapters: 500 };
-
-const HEADING = /^\s*#{1,6}(\s|$)/;
 
 function splitHeadings(text) {
   // → [{ heading: string|null, body: string }]
   const sections = [];
   let current = { heading: null, body: [] };
-  for (const line of String(text || '')
-    .replace(/\r\n/g, '\n')
-    .split('\n')) {
-    if (HEADING.test(line)) {
+  for (const line of String(text || '').split(/\r\n|\r|\n/)) {
+    if (isChapterLine(line)) {
       sections.push(current);
       current = { heading: line.trim(), body: [] };
     } else {

@@ -3,7 +3,6 @@ import { WaveformPlayer } from '@/components/waveform-player';
 import { previewStoryLine } from './story-preview';
 import { storyVoicesReady } from './story-inputs';
 import {
-  DEFAULT_SPLIT_MAX,
   DEFAULT_SPLIT_MODE,
   SPLIT_MODES,
   splitStoryText,
@@ -241,7 +240,8 @@ export function StoryEditor({
   const script = draft.importText;
   const setScript = (importText: string) => onChange({ importText });
   const [splitMode, setSplitMode] = useState<SplitMode>(DEFAULT_SPLIT_MODE);
-  const [maximum, setMaximum] = useState(DEFAULT_SPLIT_MAX.sentences);
+  // Electron's Sentences preset keeps its established 500-char ceiling.
+  const [maximum, setMaximum] = useState(500);
   const [inputOpen, setInputOpen] = useState(Boolean(script));
   useEffect(() => {
     if (script) setInputOpen(true);

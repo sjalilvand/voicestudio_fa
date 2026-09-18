@@ -70,6 +70,23 @@ describe('splitStoryText', () => {
     ]);
   });
 
+  it('only what the renderer treats as a chapter (a non-empty H1) is a boundary', () => {
+    expect(splitStoryText('# One\nBody.\n## Scene\nMore.\n#\nEnd.', 'chapters')).toEqual([
+      '# One',
+      'Body.\n## Scene\nMore.\n#\nEnd.',
+    ]);
+  });
+
+  it('LF, CRLF and lone CR all separate lines and paragraphs', () => {
+    for (const nl of ['\n', '\r\n', '\r']) {
+      expect(splitStoryText(`# One${nl}A.${nl}${nl}B.`, 'paragraphs')).toEqual([
+        '# One',
+        'A.',
+        'B.',
+      ]);
+    }
+  });
+
   it('empty and whitespace-only input give no lines, CRLF is normalised', () => {
     for (const mode of SPLIT_MODES) {
       expect(splitStoryText('', mode)).toEqual([]);
