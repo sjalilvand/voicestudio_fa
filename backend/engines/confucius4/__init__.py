@@ -128,8 +128,11 @@ class Confucius4Backend(SubprocessBackend):
         """Synthesize one utterance through the Confucius4 sidecar.
 
         kwargs honored:
-          * ``ref_audio`` — reference clip path → ``prompt_wav`` (zero-shot
-            cloning). Optional but recommended for a specific voice.
+          * ``ref_audio`` — reference clip path → ``prompt_wav``. **Required**
+            by the pinned upstream ``ConfuciusTTS.generate`` signature
+            (#2099); requests without it raise a clear error here instead of
+            surfacing the upstream ``TypeError: missing 1 required positional
+            argument: 'prompt_wav'``.
           * ``language`` — ISO code / name → ``lang`` (cross-lingual transfer).
           * ``ref_text`` is intentionally ignored — Confucius4 is unconstrained
             cloning (no reference transcript needed).
@@ -138,8 +141,13 @@ class Confucius4Backend(SubprocessBackend):
         """
         forwarded: dict = {}
         ref_audio = kw.get("ref_audio")
-        if ref_audio:
-            forwarded["ref_audio"] = ref_audio
+        if not ref_audio:
+            raise RuntimeError(
+                "Confucius4-TTS requires a reference audio for voice cloning "
+                "(prompt_wav). Pass ref_audio= with a path to a speaker "
+                "reference clip."
+            )
+        forwarded["ref_audio"] = os.path.abspath(os.fspath(ref_audio))
         language = kw.get("language")
         if language:
             forwarded["language"] = str(language)

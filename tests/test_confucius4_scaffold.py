@@ -58,3 +58,26 @@ def test_catalog_metadata_does_not_exclude_supported_accelerators():
     assert "CUDA/CPU" not in _INSTALL_HINTS[Confucius4Backend.id]
     for family in Confucius4Backend.gpu_compat:
         assert family in _INSTALL_HINTS[Confucius4Backend.id].lower()
+
+
+def test_parent_resolves_home_relative_clone_without_bootstrapping(monkeypatch, tmp_path):
+    from engines.confucius4 import bootstrap
+    from unittest.mock import Mock
+    clone = tmp_path / "home" / "Confucius4-TTS"
+    python = bootstrap._venv_python_path(clone / ".venv")
+    python.parent.mkdir(parents=True)
+    python.write_text("existing interpreter")
+    monkeypatch.setenv("HOME", str(clone.parent))
+    monkeypatch.setenv("USERPROFILE", str(clone.parent))
+    monkeypatch.setenv(bootstrap._CLONE_DIR_ENV, "~/Confucius4-TTS")
+    monkeypatch.setattr(bootstrap, "_ENGINES_VENV_DIR", tmp_path / "not-installed")
+    monkeypatch.setattr(bootstrap, "_resolved_python", None)
+    install = Mock(side_effect=AssertionError("must reuse the existing venv"))
+    probe = Mock(return_value="yes")
+    monkeypatch.setattr(bootstrap, "_bootstrap_engines_venv", install)
+    monkeypatch.setattr(bootstrap, "venv_can_import", probe)
+    assert bootstrap.is_confucius4_installed()
+    assert bootstrap.resolve_confucius4_venv() == python
+    assert probe.call_args.args[0] == python
+    assert repr(str(clone)) in probe.call_args.args[1]
+    install.assert_not_called()
