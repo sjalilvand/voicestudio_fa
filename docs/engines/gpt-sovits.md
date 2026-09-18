@@ -42,7 +42,7 @@ VoiceStudio marks the engine available only when the server responds
 | `OMNIVOICE_GPTSOVITS_URL` | `http://127.0.0.1:9880` | API server URL |
 | `OMNIVOICE_GPTSOVITS_REF_AUDIO` | (unset) | Default reference clip (3–10 s, path readable by the server) used when a request carries no voice profile |
 | `OMNIVOICE_GPTSOVITS_REF_TEXT` | (unset) | Verbatim transcript of that clip |
-| `OMNIVOICE_GPTSOVITS_REF_LANG` | text language | Language of the clip (`zh`/`en`/`ja`/`yue`/`ko`) |
+| `OMNIVOICE_GPTSOVITS_REF_LANG` | `auto` | Language of the clip (`zh`/`en`/`ja`/`yue`/`ko`) |
 | `OMNIVOICE_TRUSTED_NETWORKS` | (unset) | Required to allow a non-loopback server |
 
 **Remote servers:** by default VoiceStudio only talks to loopback addresses
@@ -99,3 +99,10 @@ system trusts.
 
 See also: [benchmarks.md](../benchmarks.md),
 [expressive-speech.md](../expressive-speech.md).
+
+Reference transcripts from saved profiles and uploaded clips use api_v2's
+`auto` language detection, independently of the output language. An English
+reference can therefore produce Japanese speech without being interpreted as
+Japanese. The configured default clip also uses `auto` unless
+`OMNIVOICE_GPTSOVITS_REF_LANG` specifies its language; that setting never
+applies to a different, explicitly supplied clip.

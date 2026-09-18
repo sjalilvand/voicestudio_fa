@@ -344,7 +344,7 @@ def test_gptsovits_generate_posts_json_to_tts_with_v2_schema(
     assert body["text_lang"] == "en"
     assert body["ref_audio_path"] == "/tmp/ref.wav"
     assert body["prompt_text"] == (ref_text or "")
-    assert body["prompt_lang"] == "en"
+    assert body["prompt_lang"] == "auto"
     # v1 names that the old adapter sent — must NOT appear anymore.
     for legacy in ("text_language", "refer_wav_path", "prompt_language"):
         assert legacy not in body, f"{legacy!r} is a v1 field, must not leak into v2"
@@ -555,6 +555,35 @@ def test_gptsovits_generate_uses_configured_default_reference(outbound_http, mon
     # An explicit clip on the request still wins over the default.
     GPTSoVITSBackend().generate("more", ref_audio="/clips/other.wav", ref_text="other words")
     assert captured["json"]["ref_audio_path"] == "/clips/other.wav"
-    assert captured["json"]["prompt_lang"] == "en"
+    assert captured["json"]["prompt_lang"] == "auto"
     # No speed override means no speed_factor key at all.
     assert "speed_factor" not in captured["json"]
+
+
+@pytest.mark.parametrize("target_language", ["en", "ja", "zh", "ko", "yue"])
+def test_explicit_reference_language_is_independent_of_target(
+    outbound_http, monkeypatch, target_language
+):
+    """Profile/upload references must not be phonemized in the target language."""
+    from services.tts_backend import GPTSoVITSBackend
+    captured = {}
+    _fake_open(monkeypatch, outbound_http, captured)
+    monkeypatch.setenv("OMNIVOICE_GPTSOVITS_REF_LANG", "ja")
+    GPTSoVITSBackend().generate(
+        "target text", language=target_language,
+        ref_audio="/clips/english.wav", ref_text="An English reference.",
+    )
+    assert captured["json"]["text_lang"] == target_language
+    assert captured["json"]["prompt_lang"] == "auto"
+
+
+def test_default_reference_without_language_uses_auto(outbound_http, monkeypatch):
+    from services.tts_backend import GPTSoVITSBackend
+    captured = {}
+    _fake_open(monkeypatch, outbound_http, captured)
+    monkeypatch.setenv("OMNIVOICE_GPTSOVITS_REF_AUDIO", "/clips/english.wav")
+    monkeypatch.setenv("OMNIVOICE_GPTSOVITS_REF_TEXT", "An English reference.")
+    monkeypatch.delenv("OMNIVOICE_GPTSOVITS_REF_LANG", raising=False)
+    GPTSoVITSBackend().generate("target text", language="ja")
+    assert captured["json"]["text_lang"] == "ja"
+    assert captured["json"]["prompt_lang"] == "auto"

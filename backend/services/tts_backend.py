@@ -2196,12 +2196,16 @@ class GPTSoVITSBackend(TTSBackend):
         # api_v2 has no server-side default reference (api.py's -dr/-dt/-dl
         # flags are v1 only) and answers 400 without one, so a plain TTS
         # request — no voice profile — needs the clip from the environment.
-        prompt_lang = text_lang
+        # Profiles store the desired output language, not the reference's
+        # spoken language. Let api_v2 detect the reference transcript language
+        # independently, including mixed-language clips, instead of forcing
+        # it through the target language's phonemizer.
+        prompt_lang = "auto"
         if not ref_audio:
             ref_audio = os.environ.get("OMNIVOICE_GPTSOVITS_REF_AUDIO") or None
             ref_text = os.environ.get("OMNIVOICE_GPTSOVITS_REF_TEXT", "") if ref_audio else ""
             prompt_lang = lang_map.get(
-                os.environ.get("OMNIVOICE_GPTSOVITS_REF_LANG", "").lower(), text_lang
+                os.environ.get("OMNIVOICE_GPTSOVITS_REF_LANG", "").lower(), "auto"
             )
         if not ref_audio:
             raise TTSInputError(
