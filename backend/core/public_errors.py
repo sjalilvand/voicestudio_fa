@@ -115,6 +115,19 @@ def stream_generation_failure(error: BaseException | object) -> dict[str, object
         topic = enriched.get("docs_topic")
         if topic:
             payload["docs_topic"] = topic
+            # #2177: a build mismatch, a device selection or an OS policy does
+            # not change between two renders of the same text. Marking these
+            # terminal stops the floor message's "try again" from being the
+            # only advice, and stops the client re-rendering the whole passage
+            # on the classic path to reach the identical failure.
+            try:
+                from core.failure import _TERMINAL_FAILURE_CLASSES
+
+                if topic in _TERMINAL_FAILURE_CLASSES:
+                    payload["terminal"] = True
+                    payload["retryable"] = False
+            except Exception:
+                pass
             try:
                 from core import error_docs_map
 

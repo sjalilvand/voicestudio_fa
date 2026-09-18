@@ -53,6 +53,7 @@ _REDACTED_VALUE = "***REDACTED***"
 # taxonomy; the docs URL itself stays owned by error_docs_map.
 _HINTS: dict[str, str] = {
     "GPU_OOM": "Close other GPU-heavy apps or unload models, then retry. You can also choose CPU in Settings → Performance & Device or select a smaller TTS engine.",
+    "GPU_ARCH_UNSUPPORTED": "Your GPU's compute capability isn't in this PyTorch build's kernel list, so CUDA can't launch kernels for it. Switch the compute device to CPU in Settings → Performance & Device, or install a PyTorch build that matches your GPU (a cu128 build for RTX 50-series cards). Flushing models won't help — this is a build mismatch, not memory pressure.",
     "WORKER_AT_CAPACITY": "Wait for a running job on that worker to finish, or choose another available worker and retry.",
     "MODEL_NOT_INSTALLED": "Install or enable this engine on the worker machine, then refresh its capabilities and retry.",
     "MODEL_NOT_DOWNLOADED": "Open Models, install this model on the selected worker, then retry when the download completes.",
@@ -302,6 +303,24 @@ _CONTEXT_FREE_HINT_CLASSES = frozenset({
     # Device allocator signatures are specific enough to attach the shared
     # recovery without exposing CUDA's process table or filesystem paths.
     "GPU_OOM",
+    # #2177: CUDA's own "no kernel image is available for execution" — a driver
+    # sentence no other failure produces, and the one class a streaming render
+    # on an unsupported card hits every single time. The non-streaming path has
+    # named this since #756; the streaming frame could only answer with the
+    # floor message, so the report arrived as a bare RuntimeError.
+    "GPU_ARCH_UNSUPPORTED",
+    # #1227's trigger is the numeric WinError (4551/1260), locale-independent
+    # and unmistakable — the same reasoning that already admits
+    # WINDOWS_UNTRUSTED_MOUNT (448) and WINDOWS_PAGING_FILE_TOO_SMALL (1455).
+    # Left out when those two were added, so a blocked load reached a streaming
+    # render with no way to learn an Application Control policy caused it.
+    "WINDOWS_APP_CONTROL_BLOCKED",
+    # Matched on the library name or ``audio_io.AUDIO_WRITE_FAILED_MARKER`` — a
+    # marker chosen over generic wording precisely so an unrelated open cannot
+    # claim the audio remedy. The desktop app already routes this topic to
+    # Settings → Storage, a recovery that could never fire while the hint was
+    # dropped before reaching the client.
+    "AUDIO_IO_FAILED",
     "SOCKS_PROXY_SUPPORT_MISSING",
     "SSL_HANDSHAKE_FAILURE",
     # Its trigger is an exact OpenSSL string, so it cannot be confused with
@@ -333,6 +352,21 @@ _CONTEXT_FREE_HINT_CLASSES = frozenset({
     # its hint there would leave the user with no way to know a redownload
     # is the fix.
     "MODEL_CACHE_CORRUPT",
+})
+
+
+#: Classes that cannot succeed on a retry of the same request. The failure is in
+#: the build, the device selection or an OS policy — none of which a second
+#: render changes — so the stream frame marks them terminal rather than
+#: inviting the "try again" the floor message ends with. #2177's reporter ran
+#: the same generation twice, ninety seconds apart, to the same result.
+#:
+#: `terminal` also stops the client re-rendering the whole text on the classic
+#: path (``shouldFallbackToClassic``), which for these classes would fail
+#: identically after paying for the render twice.
+_TERMINAL_FAILURE_CLASSES = frozenset({
+    "GPU_ARCH_UNSUPPORTED",
+    "WINDOWS_APP_CONTROL_BLOCKED",
 })
 
 
@@ -393,6 +427,15 @@ def classify(reason: str) -> str:
     low = (reason or "").lower()
     if is_gpu_oom(low):
         return "GPU_OOM"
+    # #2177: the GPU's compute capability isn't in this torch build's arch list,
+    # so CUDA refuses to launch kernels. Checked after the OOM branch so real
+    # memory pressure is never relabelled, and matched on CUDA's own sentence —
+    # nothing else produces it, which is what makes the hint safe to attach on
+    # the context-free surfaces. ``generation.py`` already re-raises this class
+    # with the same remedy; without a topic the streaming frame could only show
+    # "Generation failed. Check the selected engine and try again."
+    if "no kernel image is available" in low:
+        return "GPU_ARCH_UNSUPPORTED"
     if "pkg_resources" in low:
         return "PKG_RESOURCES_MISSING"
     if "quarantine" in low or "is damaged" in low or "gatekeeper" in low:
