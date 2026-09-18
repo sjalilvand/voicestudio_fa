@@ -14,6 +14,10 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- GPT-SoVITS can use an explicitly configured default voice and avoids server-side re-splitting that can drop clauses (#2200) — thanks @jaketame!
+
+- Connect GPT-SoVITS to its api_v2 endpoint, accept healthy probe responses, and require a reference clip before generation (#2180, #2102) — thanks @rollroyces, @martinezpl and @jaketame!
+
 - A streaming generation that fails on an unsupported GPU, a Windows app-control block, or an audio-file error now says so and what to do, instead of only "Generation failed. Check the selected engine and try again." (#2195, #2177) — thanks @shivsin25!
 - A failure that cannot succeed on a retry — an unsupported GPU build, a blocked file — is reported as final, so the app stops re-rendering the whole passage to reach the same error (#2195, #2177) — thanks @shivsin25!
 
@@ -66,7 +70,6 @@ Already using Electron? Install over your existing app and keep your data. If pr
 - Normalize Argos language aliases without silently changing Traditional Chinese to Simplified (#2143, #2152) — thanks @gyanu2507 and @rollroyces!
 - Clarify Blackwell import-crash diagnostics without blaming missing kernels (#2084) — thanks @Moep90!
 - Distinguish architecture preflight rejection from independent compile-stack failures (#2085) — thanks @Moep90!
-- GPT-SoVITS talks api_v2: any `/tts` answer counts as reachable, an `api.py` v1 server is reported as the wrong protocol, requests go unsplit (server-side splitting dropped clauses), and plain TTS clones a default clip from `OMNIVOICE_GPTSOVITS_REF_AUDIO`/`_REF_TEXT` instead of failing with a bare 400 (#2102, #2180) — thanks @rollroyces and @martinezpl!
 - Require the pinned Apple Silicon GGUF build to pass and document runtime preflight conditions (#2115) — thanks @LMGXENON and @martinezpl!
 - Correct the Windows Rustup installation command in tooling and documentation (#2066) — thanks @Rukhaam!
 - Show local setup guidance when remote native engine installation is unavailable (#2166)

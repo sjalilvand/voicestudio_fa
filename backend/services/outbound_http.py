@@ -4,6 +4,7 @@ from __future__ import annotations
 import http.client
 import re
 import socket
+from collections.abc import Collection
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
@@ -12,6 +13,14 @@ from api.dependencies import is_local_host
 
 class UnsafeEndpoint(ValueError):
     """The configured endpoint is outside VoiceStudio's trusted networks."""
+
+
+class EndpointHTTPError(OSError):
+    """A trusted server answered with an unexpected HTTP status."""
+
+    def __init__(self, status: int):
+        self.status = status
+        super().__init__(f"endpoint returned HTTP {status}")
 
 
 @dataclass(frozen=True)
@@ -104,8 +113,33 @@ class _PinnedHTTPSConnection(http.client.HTTPSConnection):
         self.sock = self._context.wrap_socket(sock, server_hostname=self.host)
 
 
-def _request(base_url, *, method, query, timeout, path, body, content_type):
-    """Send one request on a pinned connection; the caller owns both objects."""
+def open_trusted_endpoint(
+    base_url: str,
+    *,
+    method: str,
+    query: str = "",
+    timeout: float,
+    path: str = "",
+    body: bytes | None = None,
+    content_type: str | None = None,
+    allowed_statuses: Collection[int] = frozenset(),
+) -> http.client.HTTPResponse:
+    """Open one request without redirects, pinned to the validated DNS answer.
+
+    ``path`` defaults to ``""`` (the origin itself) and is restricted to a
+    small allowlist of known inference routes (``/tts`` today); anything else
+    is rejected so a misconfigured caller cannot route an arbitrary path at
+    a trusted origin.
+
+    ``body`` and ``content_type`` are forwarded as-is when supplied. Callers
+    that need JSON should pass the encoded bytes and the matching
+    ``Content-Type`` header (e.g. ``application/json``); the helper does not
+    interpret the body, so it never grows new escape hatches around
+    serialization. Leave both ``None`` for a body-less request.
+
+    ``allowed_statuses`` permits explicit HTTP error statuses for route probes.
+    It never permits redirects; generation callers keep the strict default.
+    """
     endpoint = resolve_trusted_endpoint(base_url)
     conn_cls = _PinnedHTTPSConnection if endpoint.scheme == "https" else _PinnedHTTPConnection
     conn = conn_cls(endpoint, timeout)
@@ -124,64 +158,15 @@ def _request(base_url, *, method, query, timeout, path, body, content_type):
     # Supplying the hostname ourselves drops non-default ports and IPv6
     # brackets, which can make Host-aware inference servers misroute requests.
     conn.request(method, target, body=body, headers=headers)
-    return conn, conn.getresponse()
-
-
-def probe_trusted_endpoint(base_url: str, *, timeout: float, path: str = "", query: str = "") -> int:
-    """Return the HTTP status a ``GET`` of ``path`` (plus ``query``) gets from the validated origin.
-
-    A reachability probe only needs an answer. Inference servers routinely
-    answer a parameterless GET with 400 or 405 (route exists, wrong verb or
-    inputs) and an unknown route with 404, so unlike
-    :func:`open_trusted_endpoint` no status is treated as an error here; the
-    caller reads meaning into the number. Raises ``OSError`` (or
-    ``UnsafeEndpoint``) only when nothing answered or the origin is not
-    trusted.
-    """
-    conn, response = _request(
-        base_url, method="GET", query=query, timeout=timeout, path=path, body=None, content_type=None
-    )
-    try:
-        return response.status
-    finally:
-        response.close()
-        conn.close()
-
-
-def open_trusted_endpoint(
-    base_url: str,
-    *,
-    method: str,
-    query: str = "",
-    timeout: float,
-    path: str = "",
-    body: bytes | None = None,
-    content_type: str | None = None,
-) -> http.client.HTTPResponse:
-    """Open one request without redirects, pinned to the validated DNS answer.
-
-    ``path`` defaults to ``""`` (the origin itself) and is restricted to a
-    small allowlist of known inference routes (``/tts`` today); anything else
-    is rejected so a misconfigured caller cannot route an arbitrary path at
-    a trusted origin.
-
-    ``body`` and ``content_type`` are forwarded as-is when supplied. Callers
-    that need JSON should pass the encoded bytes and the matching
-    ``Content-Type`` header (e.g. ``application/json``); the helper does not
-    interpret the body, so it never grows new escape hatches around
-    serialization. Leave both ``None`` for a body-less request.
-    """
-    conn, response = _request(
-        base_url, method=method, query=query, timeout=timeout, path=path, body=body, content_type=content_type
-    )
+    response = conn.getresponse()
     # Redirects are never followed: a configured inference origin must answer
     # directly, so a Location header cannot escape the validated connection.
     if 300 <= response.status < 400:
         response.close()
         conn.close()
         raise UnsafeEndpoint("endpoint redirects are not allowed")
-    if response.status >= 400:
+    if response.status >= 400 and response.status not in allowed_statuses:
         response.close()
         conn.close()
-        raise OSError(f"endpoint returned HTTP {response.status}")
+        raise EndpointHTTPError(response.status)
     return response
