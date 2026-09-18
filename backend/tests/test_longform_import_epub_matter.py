@@ -307,6 +307,18 @@ def test_pagebreak_void_elements_do_not_swallow_following_prose(marker):
     assert 'Before after.' in script
 
 
+@pytest.mark.parametrize(
+    'marker',
+    ['<span epub:type="pagebreak"/>', '<div role="doc-pagebreak"/>'],
+)
+def test_self_closing_pagebreak_does_not_swallow_following_prose(marker):
+    """HTMLParser balances start-end tags through handle_startendtag by default."""
+    script = li.epub_to_chapter_script(
+        _epub({'c.xhtml': _doc(f'<h1>Chapter</h1><p>Before{marker}After.</p>')})
+    )
+    assert 'BeforeAfter.' in script
+
+
 def test_layout_page_break_class_is_not_a_page_number():
     script = li.epub_to_chapter_script(_epub({'c.xhtml': _doc('<h1>Chapter</h1><p class="page-break-before">Keep this paragraph.</p>')}))
     assert 'Keep this paragraph.' in script
