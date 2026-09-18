@@ -85,7 +85,7 @@ export function ProductionSettings({
           onCheckedChange={(varyRepeats) => onChange({ ...value, varyRepeats })}
         />
       </label>
-      <p className="text-xs text-muted-foreground">{t('audiobook.line_gap_help')}</p>
+      <p className="text-xs text-muted-foreground">{t('audiobook.joins_help')}</p>
       {gaps.map((gap) => (
         <label key={gap.key} className="block space-y-2 text-xs">
           <span className="flex justify-between text-muted-foreground">

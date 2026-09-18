@@ -115,12 +115,16 @@ export function parseChapterBody(body, { defaultVoice = null, defaultSpeed = nul
         continue;
       }
       rendered.forEach(([st, sp], j) => {
-        spans.push({
+        const span = {
           voice_id: voice,
           text: st,
           pause_ms_after: j === rendered.length - 1 ? pauseMs : 0,
           speed: sp,
-        });
+        };
+        // Inline markup split one run of text: this span runs on into the next,
+        // so the join must not gap it. Key present only when true (py parity).
+        if (j < rendered.length - 1) span.continues = true;
+        spans.push(span);
       });
     }
   }

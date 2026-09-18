@@ -160,7 +160,7 @@ export default function AudiobookOverrides({ t, overrides, onChange, emotionSupp
           </div>
 
           <div className="flex flex-col gap-[6px] pt-[6px] [border-top:1px_solid_rgba(255,255,255,0.06)]">
-            <div className="text-[0.7rem] text-fg-muted">{t('audiobook.line_gap_help')}</div>
+            <div className="text-[0.7rem] text-fg-muted">{t('audiobook.joins_help')}</div>
             <div>
               <div className="label-row justify-between text-[0.7rem]">
                 <span>{t('audiobook.line_gap')}</span>

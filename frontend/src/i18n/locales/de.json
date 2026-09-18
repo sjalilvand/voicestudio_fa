@@ -2637,7 +2637,7 @@
     "vary_repeats": "Wiederholt Zeilen variieren",
     "vary_repeats_help": "Geben Sie identischen Zeilen unterschiedliche Takes, anstatt eine Aufnahme wiederzuverwenden.",
     "line_gap": "Pause zwischen Zeilen",
-    "line_gap_help": "Die eigene Anfangs- und Endstille jeder Zeile wird entfernt, dann werden diese Pausen bewusst eingefügt – zwischen Zeilen ohne eigenes [pause] und bei Leerzeilen.",
+    "joins_help": "Die eigene Anfangs- und Endstille jeder Zeile wird entfernt, dann werden diese Pausen bewusst eingefügt – zwischen Zeilen ohne eigenes [pause] und bei Leerzeilen.",
     "paragraph_gap": "Pause zwischen Absätzen",
     "trim_edges": "Engine-Stille kürzen",
     "trim_edges_help": "Die Stille, die die Engine an jede Zeile anhängt, vor dem Zusammenfügen entfernen. Ausschalten, um die Rohaufnahmen zu behalten.",

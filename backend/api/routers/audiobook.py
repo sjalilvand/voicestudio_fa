@@ -109,7 +109,7 @@ class ExpressiveMixin(BaseModel):
     # lines inside a line. Bounded so a request cannot pad a book with hours
     # of silence. Send 0 / false for the pre-existing hard joins.
     line_gap_ms: int = Field(default=250, ge=0, le=5000)
-    paragraph_gap_ms: int = Field(default=600, ge=0, le=10000)
+    paragraph_gap_ms: int = Field(default=600, ge=0, le=5000)
     trim_edges: bool = True
     num_step: int | None = Field(default=None, ge=1, le=512)
     guidance_scale: float | None = Field(default=None, ge=0.0, le=20.0)
@@ -628,9 +628,13 @@ def _render_chapter_cached(chapter, synth, sr, engine_id, resolve, cache_dir, le
     opts = opts or ExpressiveOptions()
 
     spans = [Span(voice_id=s.voice_id, text=normalize_for_tts(s.text, language),
-                  pause_ms_after=s.pause_ms_after, speed=getattr(s, "speed", None))
+                  pause_ms_after=s.pause_ms_after, speed=getattr(s, "speed", None),
+                  continues=bool(getattr(s, "continues", False)))
              for s in chapter.spans]
+    # `continues` joins the tuple only when set, so a plan without inline-markup
+    # splits keeps its pre-existing chapter cache key.
     spans_tuples = [(s.voice_id, s.text, s.pause_ms_after, getattr(s, "speed", None))
+                    + (("continues",) if s.continues else ())
                     for s in spans]
     voice_sigs: dict = {}
     for s in spans:
@@ -722,6 +726,7 @@ def _remote_chapter_call(chapter, *, engine_id, default_voice, voice_map,
             "text": normalize_for_tts(span.text, language),
             "pause_ms_after": span.pause_ms_after,
             "speed": getattr(span, "speed", None),
+            "continues": bool(getattr(span, "continues", False)),
         })
         refs.append(voice.get("ref_audio"))
         voices.append({
@@ -1199,6 +1204,7 @@ class LongformSpan(BaseModel):
     text: str
     pause_ms_after: int = 0
     speed: float | None = None
+    continues: bool = False   # inline markup split this line; no line gap after it
 
 
 class LongformChapter(BaseModel):
@@ -1235,7 +1241,8 @@ async def longform_render(req: LongformRenderRequest, request: Request = None):
         # Keep a span if it has text to speak OR a pause to render (pause-only
         # spans carry inter-line silence with empty text).
         spans = [Span(voice_id=s.voice_id, text=(s.text or "").strip(),
-                      pause_ms_after=max(0, int(s.pause_ms_after)), speed=s.speed)
+                      pause_ms_after=max(0, int(s.pause_ms_after)), speed=s.speed,
+                      continues=bool(s.continues))
                  for s in c.spans if ((s.text and s.text.strip()) or s.pause_ms_after > 0)]
         if spans:
             chapters.append(Chapter(title=c.title or f"Chapter {i + 1}", spans=spans))

@@ -23,9 +23,12 @@ ingestion, the streaming synth job + UI are deferred follow-ups.
 from __future__ import annotations
 
 import json
+import logging
 import zlib
 from dataclasses import dataclass, field
 from typing import Callable, Optional
+
+logger = logging.getLogger("omnivoice.audiobook")
 
 
 #: Mix constant for the per-occurrence seed nonce (#1208) — a large odd
@@ -206,10 +209,18 @@ class Span:
     text: str
     pause_ms_after: int = 0
     speed: Optional[float] = None
+    #: True when inline markup ([slow], [emphasis], [spell]…) split ONE line into
+    #: several spans and this one runs straight on into the next — so the join
+    #: must not put a line gap in the middle of the sentence. Emitted only when
+    #: set, so every existing plan, manifest and cache key is byte-identical.
+    continues: bool = False
 
     def to_dict(self) -> dict:
-        return {"voice_id": self.voice_id, "text": self.text,
-                "pause_ms_after": self.pause_ms_after, "speed": self.speed}
+        d = {"voice_id": self.voice_id, "text": self.text,
+             "pause_ms_after": self.pause_ms_after, "speed": self.speed}
+        if self.continues:
+            d["continues"] = True
+        return d
 
 
 @dataclass
@@ -261,6 +272,31 @@ def parse_audiobook_script(text: str, *, default_voice: Optional[str] = None) ->
         for c in parse_script_to_spans(text, default_voice=default_voice)
     ]
     return AudiobookPlan(chapters=chapters)
+
+
+#: Ceiling on the silence the join stage may ADD to one chapter. A real chapter
+#: needs a few minutes at most (hundreds of paragraphs x 0.6 s); without a
+#: ceiling a body of thousands of one-word paragraphs with a maxed-out gap
+#: allocates gigabytes of zeros. Explicit [pause] markers are the script's own
+#: and are not drawn from this budget.
+MAX_JOIN_SILENCE_MS = 15 * 60 * 1000
+
+
+class _GapBudget:
+    """Hands out join silence until :data:`MAX_JOIN_SILENCE_MS` is spent."""
+
+    def __init__(self, total_ms: int = MAX_JOIN_SILENCE_MS):
+        self.left = total_ms
+
+    def take(self, gap_ms: int, count: int = 1) -> int:
+        """Per-gap ms actually granted for ``count`` gaps of ``gap_ms`` each."""
+        if gap_ms <= 0 or count <= 0:
+            return 0
+        granted = min(gap_ms, self.left // count)
+        if granted < gap_ms:
+            logger.warning("join-silence budget spent; gaps shortened to %d ms", granted)
+        self.left -= granted * count
+        return granted
 
 
 def _join_with_gap(parts: list, sample_rate: int, gap_ms: int):
@@ -325,6 +361,7 @@ def synthesize_chapter(
 
     items: list = []  # ("a", tensor) for audio, ("s", n_samples) for silence
     pending_line_gap = False  # a spoken line just ended with no explicit pause
+    budget = _GapBudget()
     # Per-occurrence index for identical spans (#1208 cache opt-out). The
     # segment cache folds it into its key ONLY when vary_repeats is on (else
     # the key is byte-identical to pre-#1208), so a repeated identical line
@@ -341,7 +378,10 @@ def synthesize_chapter(
                 # A blank line inside one span is a paragraph break: render
                 # each paragraph on its own so the join can put a deliberate
                 # gap there instead of running the paragraphs together.
-                paragraphs = split_paragraphs(apply_lexicon(span.text, lexicon)) or [""]
+                # With no paragraph gap asked for, the span stays ONE engine
+                # call — the pre-existing bytes, seeds and prosody.
+                text = apply_lexicon(span.text, lexicon)
+                paragraphs = (split_paragraphs(text) if paragraph_gap_ms > 0 else []) or [text]
                 rendered_paragraphs = []
                 for paragraph in paragraphs:
                     chunks = split_text_into_chunks(paragraph)
@@ -355,16 +395,20 @@ def synthesize_chapter(
                                                   texts=chunks, trim_edges=trim_edges)
                     if joined is not None:
                         rendered_paragraphs.append(joined)
-                audio = _join_with_gap(rendered_paragraphs, sample_rate, paragraph_gap_ms)
+                audio = _join_with_gap(
+                    rendered_paragraphs, sample_rate,
+                    budget.take(paragraph_gap_ms, len(rendered_paragraphs) - 1))
                 if audio is not None and segment_cache is not None:
                     segment_cache.store(span, audio, nonce=occ)
             if audio is not None:
                 if pending_line_gap and line_gap_ms > 0:
-                    n = int(sample_rate * line_gap_ms / 1000.0)
+                    n = int(sample_rate * budget.take(line_gap_ms) / 1000.0)
                     if n > 0:
                         items.append(("s", n))
                 items.append(("a", audio))
-                pending_line_gap = span.pause_ms_after <= 0
+                # No gap after an explicit [pause] (it replaces the gap) or in
+                # the middle of a line that inline markup split into spans.
+                pending_line_gap = span.pause_ms_after <= 0 and not span.continues
         if span.pause_ms_after > 0:
             pending_line_gap = False
             n = int(sample_rate * span.pause_ms_after / 1000.0)

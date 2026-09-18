@@ -435,9 +435,50 @@ def test_synthesize_chapter_paragraph_gap_inside_one_span():
     audio, _ = synthesize_chapter(spans, synth, sr, paragraph_gap_ms=600)
     assert seen == ["First para.", "Second para."]
     assert audio.shape[-1] == 500 + 600 + 500
-    # Default (0) still renders per paragraph but joins them hard.
+    # No paragraph gap asked for → the span stays ONE engine call with its text
+    # untouched: the pre-existing bytes, seeds and prosody under the old key.
+    seen.clear()
     audio, _ = synthesize_chapter(spans, synth, sr)
-    assert audio.shape[-1] == 1000
+    assert seen == ["First para.\n\nSecond para."]
+    assert audio.shape[-1] == 500
+
+
+def test_line_gap_never_lands_inside_a_line_split_by_inline_markup():
+    """`He was [emphasis]very[/emphasis] tired.` is three spans but ONE line."""
+    from services.longform_parser import _parse_chapter_body as parse_chapter_body
+
+    parsed = parse_chapter_body("He was [slow]very[/slow] tired.\n")
+    assert [s.get("continues", False) for s in parsed] == [True, True, False]
+    # A plain line carries no key at all (byte-identical plans and cache keys).
+    assert all("continues" not in s for s in parse_chapter_body("Plain line."))
+
+    sr = 1000
+    tone = torch.ones(500)
+    spans = [Span(**s) for s in parsed] + [Span(voice_id=None, text="Next line.")]
+    audio, _ = synthesize_chapter(spans, lambda *_: tone.clone(), sr, line_gap_ms=250)
+    # Exactly one gap: after the line, none between its three spans.
+    assert audio.shape[-1] == 4 * 500 + 250
+    # Round-trips through the manifest dict only when set.
+    assert spans[0].to_dict()["continues"] is True
+    assert "continues" not in spans[-1].to_dict()
+
+
+def test_join_silence_budget_caps_what_the_join_stage_may_add():
+    from services.audiobook import MAX_JOIN_SILENCE_MS, _GapBudget
+
+    b = _GapBudget(total_ms=1000)
+    assert b.take(600) == 600
+    assert b.take(600) == 400          # shortened, not dropped
+    assert b.take(600) == 0            # spent
+    assert _GapBudget(1000).take(600, count=4) == 250   # shared evenly
+    assert _GapBudget().take(0) == 0 and _GapBudget().take(250, count=0) == 0
+
+    # Thousands of one-word paragraphs at the maximum gap stay bounded.
+    sr = 100
+    body = "\n\n".join(["a"] * 4000)
+    audio, _ = synthesize_chapter([Span(voice_id=None, text=body)],
+                                  lambda *_: torch.ones(1), sr, paragraph_gap_ms=5000)
+    assert audio.shape[-1] <= 4000 + sr * MAX_JOIN_SILENCE_MS // 1000
 
 
 def test_render_request_gap_fields_are_bounded_and_reach_options():
@@ -449,6 +490,8 @@ def test_render_request_gap_fields_are_bounded_and_reach_options():
     assert opts.cache_signature()  # non-default vs the dataclass → cache key moves
     with pytest.raises(ValueError):
         LongformRenderRequest(line_gap_ms=99999)
+    with pytest.raises(ValueError):
+        LongformRenderRequest(paragraph_gap_ms=5001)
     off = _expressive_opts(LongformRenderRequest(
         line_gap_ms=0, paragraph_gap_ms=0, trim_edges=False))
     assert off.cache_signature() == ""  # explicit "old joins" = today's cache key

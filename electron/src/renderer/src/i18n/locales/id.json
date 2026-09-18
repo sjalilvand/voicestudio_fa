@@ -1598,7 +1598,7 @@
     "vary_repeats": "Bervariasi baris berulang",
     "vary_repeats_help": "Berikan pengambilan yang berbeda untuk baris identik daripada menggunakan kembali satu perekaman.",
     "line_gap": "Jeda antar baris",
-    "line_gap_help": "Keheningan awal dan akhir setiap baris dipangkas, lalu jeda ini ditambahkan dengan sengaja: di antara baris tanpa [pause] sendiri dan pada baris kosong.",
+    "joins_help": "Keheningan awal dan akhir setiap baris dipangkas, lalu jeda ini ditambahkan dengan sengaja: di antara baris tanpa [pause] sendiri dan pada baris kosong.",
     "paragraph_gap": "Jeda antar paragraf",
     "trim_edges": "Pangkas keheningan mesin",
     "trim_edges_help": "Menghapus keheningan yang ditambahkan mesin ke setiap baris sebelum digabung. Matikan untuk mempertahankan render mentah.",

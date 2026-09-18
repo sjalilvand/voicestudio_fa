@@ -277,7 +277,7 @@
     "vary_repeats": "Vary repeated lines",
     "vary_repeats_help": "Give identical lines distinct takes instead of reusing one recording.",
     "line_gap": "Gap between lines",
-    "line_gap_help": "Each line's own lead-in and tail silence is trimmed, then these gaps are added on purpose — between lines with no [pause] of their own, and at blank lines.",
+    "joins_help": "Each line's own lead-in and tail silence is trimmed, then these gaps are added on purpose — between lines with no [pause] of their own, and at blank lines.",
     "paragraph_gap": "Gap between paragraphs",
     "trim_edges": "Trim engine silence",
     "trim_edges_help": "Cut the silence each engine pads onto a line before joining. Turn off to keep the raw renders.",

@@ -1598,7 +1598,7 @@
     "vary_repeats": "Tekrarlanan satırları değiştirin",
     "vary_repeats_help": "Özdeş satırlara bir kaydı yeniden kullanmak yerine farklı çekişler verin.",
     "line_gap": "Satırlar arası boşluk",
-    "line_gap_help": "Her satırın kendi baş ve son sessizliği kırpılır, ardından bu boşluklar bilerek eklenir: kendi [pause] etiketi olmayan satırlar arasına ve boş satırlara.",
+    "joins_help": "Her satırın kendi baş ve son sessizliği kırpılır, ardından bu boşluklar bilerek eklenir: kendi [pause] etiketi olmayan satırlar arasına ve boş satırlara.",
     "paragraph_gap": "Paragraflar arası boşluk",
     "trim_edges": "Motor sessizliğini kırp",
     "trim_edges_help": "Motorun her satıra eklediği sessizliği birleştirmeden önce keser. Ham kayıtları korumak için kapatın.",

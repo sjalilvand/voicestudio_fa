@@ -90,11 +90,17 @@ def _parse_chapter_body(
                                   "pause_ms_after": pause_ms, "speed": None})
                 continue
             for j, (st, sp) in enumerate(rendered):
-                spans.append({
+                span = {
                     "voice_id": voice, "text": st,
                     "pause_ms_after": pause_ms if j == len(rendered) - 1 else 0,
                     "speed": sp,
-                })
+                }
+                if j < len(rendered) - 1:
+                    # Inline markup split one run of text: this span runs on
+                    # into the next, so the join must not gap it. Key present
+                    # only when true — plain scripts parse byte-identically.
+                    span["continues"] = True
+                spans.append(span)
     return spans
 
 

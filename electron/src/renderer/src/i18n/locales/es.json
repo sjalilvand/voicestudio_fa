@@ -1600,7 +1600,7 @@
     "vary_repeats": "Variar líneas repetidas",
     "vary_repeats_help": "Proporcione tomas distintas a líneas idénticas en lugar de reutilizar una grabación.",
     "line_gap": "Pausa entre líneas",
-    "line_gap_help": "Se recorta el silencio inicial y final de cada línea y luego se añaden estas pausas a propósito: entre líneas sin su propio [pause] y en las líneas en blanco.",
+    "joins_help": "Se recorta el silencio inicial y final de cada línea y luego se añaden estas pausas a propósito: entre líneas sin su propio [pause] y en las líneas en blanco.",
     "paragraph_gap": "Pausa entre párrafos",
     "trim_edges": "Recortar silencio del motor",
     "trim_edges_help": "Quita el silencio que el motor añade a cada línea antes de unirlas. Desactívalo para conservar las tomas sin recortar.",
