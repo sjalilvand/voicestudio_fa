@@ -59,6 +59,7 @@ import { importToText } from '../utils/importStory';
 import { readTextFile } from '../utils/readTextFile';
 import { generateSpeech, audioUrl } from '../api/generate';
 import { playBlobAudio } from '../utils/media';
+import { stopActivePlayback } from '../utils/playback';
 import { downloadMedia } from '../utils/mediaDownload';
 import { encodeAudio } from '../api/stories';
 import { longformRender } from '../api/audiobook';
@@ -82,6 +83,10 @@ const RESET_BTN =
 const SPEED_RANGE = 'w-[120px]';
 const TRACK_BTN =
   'w-[26px] h-[26px] flex items-center justify-center bg-transparent text-fg-subtle cursor-pointer rounded-md [transition:color_0.15s,background_0.15s,opacity_0.15s] p-0 hover:bg-white/[0.06] focus-visible:[box-shadow:var(--focus-ring)]';
+
+function releasePreview(track) {
+  if (track.audioUrl) URL.revokeObjectURL(track.audioUrl);
+}
 
 // Trigger a browser download for a Blob.
 function download(blob, filename) {
@@ -210,6 +215,9 @@ export default function StoriesEditor({ profiles = [] }) {
   }, []);
 
   const [activeTrack, setActiveTrack] = useState(null);
+  // Bumped by clearScript so a preview that was still generating when the
+  // script went away never plays or writes audio back for a deleted line.
+  const previewGenRef = useRef(0);
   const [activeTab, setActiveTab] = useState('script');
   const [splitOpen, setSplitOpen] = useState(false);
   const [splitText, setSplitText] = useState('');
@@ -419,6 +427,34 @@ export default function StoriesEditor({ profiles = [] }) {
     setTracks((prev) => [...prev, makeTrack('narrator', `# ${t('stories.chapterN', { n })}`)]);
   }, [tracks, setTracks, t]);
 
+  // Clear every line and chapter at once (an import can add hundreds; the
+  // per-line trash icon was the only way to undo one). Cast is kept.
+  const clearScript = useCallback(async () => {
+    const count = tracks.length + (splitText.trim() ? 1 : 0);
+    if (!count) return;
+    const ok = await askConfirm(t('stories.clearConfirm', { count }), t('stories.clearScript'));
+    if (!ok) return;
+    // Invalidate previews still generating for lines that are about to go,
+    // and stop whatever is playing (#2203 review).
+    previewGenRef.current += 1;
+    stopActivePlayback();
+    // An empty script is exactly what the first-run bootstrap below treats as
+    // "pristine", so mark the sample as shown or it would reseed the demo.
+    sampleBootstrapRef.current = true;
+    try {
+      localStorage.setItem(DEFAULT_SAMPLE_KEY, '1');
+    } catch {
+      // Storage unavailable: the ref alone covers this mounted session.
+    }
+    setTracks((prev) => {
+      prev.forEach(releasePreview);
+      return [];
+    });
+    setSplitText('');
+    setSplitOpen(false);
+    toast.success(t('stories.cleared'));
+  }, [tracks.length, splitText, setTracks, t]);
+
   // ── Paste & auto-split ───────────────────────────────────────────────────
   const applySplit = useCallback(() => {
     const chunks = splitIntoChunks(splitText, splitMax);
@@ -467,7 +503,7 @@ export default function StoriesEditor({ profiles = [] }) {
     (id) =>
       setTracks((prev) =>
         prev.filter((tk) => {
-          if (tk.id === id && tk.audioUrl) URL.revokeObjectURL(tk.audioUrl); // free the preview blob
+          if (tk.id === id) releasePreview(tk);
           return tk.id !== id;
         }),
       ),
@@ -494,6 +530,8 @@ export default function StoriesEditor({ profiles = [] }) {
     async (track) => {
       const raw = (track.text || '').trim();
       if (!raw) return;
+      const gen = previewGenRef.current;
+      const stale = () => previewGenRef.current !== gen;
       const pid = effectiveProfile(track, cast);
       const spd = effectiveSpeed(track, globalSpeed);
       setTracks((prev) =>
@@ -503,11 +541,14 @@ export default function StoriesEditor({ profiles = [] }) {
       if (!hasStoryMarkers(raw)) {
         try {
           const blob = await fetchChunkBlob(raw, pid, spd);
+          if (stale()) return;
           const url = URL.createObjectURL(blob);
           setTracks((prev) =>
-            prev.map((tk) =>
-              tk.id === track.id ? { ...tk, audioUrl: url, generating: false } : tk,
-            ),
+            prev.map((tk) => {
+              if (tk.id !== track.id) return tk;
+              releasePreview(tk);
+              return { ...tk, audioUrl: url, generating: false };
+            }),
           );
           // Shared playback path (labelled with the line text): registers with
           // the single-playback manager + global mini-player, and — unlike the
@@ -534,15 +575,19 @@ export default function StoriesEditor({ profiles = [] }) {
             seg.type === 'chunk' ? await fetchChunkBlob(seg.text, seg.profileId, spd) : null,
           );
         }
+        if (stale()) return;
         let cursor = 0;
         const finish = () => {
           setTracks((prev) =>
-            prev.map((tk) =>
-              tk.id === track.id ? { ...tk, generating: false, audioUrl: null } : tk,
-            ),
+            prev.map((tk) => {
+              if (tk.id !== track.id) return tk;
+              releasePreview(tk);
+              return { ...tk, generating: false, audioUrl: null };
+            }),
           );
         };
         const step = () => {
+          if (stale()) return;
           while (cursor < parsed.length) {
             const seg = parsed[cursor];
             const blob = chunkBlobs[cursor];
@@ -793,6 +838,16 @@ export default function StoriesEditor({ profiles = [] }) {
               <Button size="sm" variant="ghost" onClick={addChapter}>
                 <Bookmark size={13} aria-hidden="true" />
                 {t('stories.addChapter')}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={clearScript}
+                disabled={!tracks.length && !splitText.trim()}
+                title={t('stories.clearScriptHint')}
+              >
+                <Trash2 size={13} aria-hidden="true" />
+                {t('stories.clearScript')}
               </Button>
             </div>
           )}
