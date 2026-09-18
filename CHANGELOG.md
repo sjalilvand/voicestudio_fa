@@ -12,6 +12,10 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Clearer recovery guidance for known GPU, Windows policy, and audio-file failures (#2195)
 
+### Added
+
+- Settings → Appearance → Keep sidebar expanded: stops the sidebar shrinking to a rail when Projects, Transcribe, Tools or another workspace opens its own panel on a narrower window (#2211)
+
 ### Fixed
 
 - Source installs on Chinese, Japanese and Korean Windows read bundled data as UTF-8, preventing startup and generation failures (#2190) — thanks @kevin9327!
