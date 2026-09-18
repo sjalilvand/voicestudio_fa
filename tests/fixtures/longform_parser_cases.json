@@ -1512,5 +1512,92 @@
         ]
       }
     ]
+  },
+  {
+    "name": "blank_line_on_markup_boundary_ends_the_line",
+    "input": "Intro [slow]slowly[/slow]\n\nNew paragraph.",
+    "default_voice": "v1",
+    "expected": [
+      {
+        "title": "Chapter 1",
+        "spans": [
+          {
+            "voice_id": "v1",
+            "text": "Intro",
+            "pause_ms_after": 0,
+            "speed": null,
+            "continues": true
+          },
+          {
+            "voice_id": "v1",
+            "text": "slowly",
+            "pause_ms_after": 0,
+            "speed": 0.85
+          },
+          {
+            "voice_id": "v1",
+            "text": "New paragraph.",
+            "pause_ms_after": 0,
+            "speed": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "single_newline_on_markup_boundary_continues",
+    "input": "Intro [slow]slowly[/slow]\nsame paragraph.",
+    "default_voice": "v1",
+    "expected": [
+      {
+        "title": "Chapter 1",
+        "spans": [
+          {
+            "voice_id": "v1",
+            "text": "Intro",
+            "pause_ms_after": 0,
+            "speed": null,
+            "continues": true
+          },
+          {
+            "voice_id": "v1",
+            "text": "slowly",
+            "pause_ms_after": 0,
+            "speed": 0.85,
+            "continues": true
+          },
+          {
+            "voice_id": "v1",
+            "text": "same paragraph.",
+            "pause_ms_after": 0,
+            "speed": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "blank_line_inside_dropped_segment_ends_the_line",
+    "input": "One [slow] \n\n [/slow]Two.",
+    "default_voice": "v1",
+    "expected": [
+      {
+        "title": "Chapter 1",
+        "spans": [
+          {
+            "voice_id": "v1",
+            "text": "One",
+            "pause_ms_after": 0,
+            "speed": null
+          },
+          {
+            "voice_id": "v1",
+            "text": "Two.",
+            "pause_ms_after": 0,
+            "speed": null
+          }
+        ]
+      }
+    ]
   }
 ]

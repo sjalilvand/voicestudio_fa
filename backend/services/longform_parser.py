@@ -34,6 +34,9 @@ _HEADING_RE = re.compile(r"^[ \t]*#[ \t]+(\S.*)$", re.MULTILINE)
 # match attempts across ``finditer`` (the ReDoS source). A voice name never
 # contains a bracket; the value is stripped in code. Empty → default voice.
 _VOICE_RE = re.compile(r"\[voice:([^\]\[]*)\]")
+# A blank line (paragraph break). Linear: one ``\n``, a run of inline
+# whitespace, one ``\n`` — no nested quantifiers.
+_BLANK_LINE_RE = re.compile(r"\n[ \t\r]*\n")
 
 
 def _normalize(text: Optional[str]) -> str:
@@ -75,27 +78,36 @@ def _parse_chapter_body(
             t = span_text.strip()
             if not t and pause_ms == 0:
                 continue  # pure whitespace between markers — nothing to render
-            rendered: list[tuple[str, Optional[float]]] = []
+            # (text, speed, paragraph_break_before). The whitespace BETWEEN two
+            # kept segments is tracked so a blank line that happens to sit on a
+            # markup boundary still ends the line instead of being swallowed.
+            rendered: list[tuple[str, Optional[float], bool]] = []
+            between = ""
             for seg in (parse_ssml_lite(t) if t else []):
-                st = (spell_out(seg["text"]) if seg["spell"] else seg["text"]).strip()
-                if st:
-                    # Inline SSML speed overrides the per-line default; a plain
-                    # segment inherits default_speed.
-                    sp = seg["speed"] if seg["speed"] is not None else default_speed
-                    rendered.append((st, sp))
+                raw = seg["text"]
+                st = (spell_out(raw) if seg["spell"] else raw).strip()
+                if not st:
+                    between += raw
+                    continue
+                # Inline SSML speed overrides the per-line default; a plain
+                # segment inherits default_speed.
+                sp = seg["speed"] if seg["speed"] is not None else default_speed
+                lead = raw[:len(raw) - len(raw.lstrip())]
+                rendered.append((st, sp, bool(_BLANK_LINE_RE.search(between + lead))))
+                between = raw[len(raw.rstrip()):]
             if not rendered:
                 # Only-markers / empty text but a real pause → carry the silence.
                 if pause_ms > 0:
                     spans.append({"voice_id": voice, "text": "",
                                   "pause_ms_after": pause_ms, "speed": None})
                 continue
-            for j, (st, sp) in enumerate(rendered):
+            for j, (st, sp, _brk) in enumerate(rendered):
                 span = {
                     "voice_id": voice, "text": st,
                     "pause_ms_after": pause_ms if j == len(rendered) - 1 else 0,
                     "speed": sp,
                 }
-                if j < len(rendered) - 1:
+                if j < len(rendered) - 1 and not rendered[j + 1][2]:
                     # Inline markup split one run of text: this span runs on
                     # into the next, so the join must not gap it. Key present
                     # only when true — plain scripts parse byte-identically.
