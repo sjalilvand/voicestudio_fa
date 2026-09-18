@@ -68,7 +68,9 @@ describe('composeBugReportUrl', () => {
   });
 
   it('still seeds the title with the error message', () => {
-    expect(bodyOf({ error: new Error('synthesis exploded') })).toContain('[Bug] synthesis exploded');
+    expect(bodyOf({ error: new Error('synthesis exploded') })).toContain(
+      '[Bug] synthesis exploded',
+    );
   });
 
   it('builds a report with no error at all', () => {
