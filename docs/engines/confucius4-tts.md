@@ -116,3 +116,7 @@ tests; this change does not certify synthesis on physical XPU/NPU hardware.
 MPS keeps the existing CPU fallback described in the validation record above.
 If modern accelerator detection or the legacy CUDA probe raises, loading falls
 back to CPU instead of aborting before model construction.
+
+The shared model manager recognizes registered Ascend NPU memory as dedicated
+VRAM and clears its allocator cache on engine unload. This is covered by mocked
+accelerator tests; it does not certify generation on physical Ascend hardware.
