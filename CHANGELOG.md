@@ -17,6 +17,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Keep macOS dictation keyboard operations on the main thread to prevent paste-delivery crashes (#2123)
 - Prevent reference voice cloning from silently downloading a second speech recognizer (#2116)
+- Load installed IndexTTS checkpoints when the upstream config names missing training-cluster paths, without rewriting user files (#2097) — thanks @martinezpl!
 
 - EPUB imports preserve accents and wide-character documents using their declared encoding or byte-order mark (#2191) — thanks @kevin9327!
 - Video watermark exports and dubbing keyframes use the bundled FFmpeg without requiring a system install (#2192) — thanks @kevin9327!

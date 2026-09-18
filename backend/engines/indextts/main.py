@@ -65,6 +65,7 @@ from __future__ import annotations
 import base64
 import contextlib
 import json
+import ntpath
 import os
 import struct
 import sys
@@ -237,6 +238,41 @@ def _resolve_cfg_path(model_dir: str, *, version: str) -> str:
     return os.path.join(model_dir, names[-1])
 
 
+@contextlib.contextmanager
+def _local_checkpoint_config(cfg_path: str, model_dir: str):
+    """Repair foreign training paths in memory, never in installed assets."""
+    from omegaconf import OmegaConf  # already required by upstream IndexTTS
+
+    config = OmegaConf.load(cfg_path)
+    changed = False
+    for key, filename in (("gpt_checkpoint", "gpt.pth"), ("s2mel_checkpoint", "s2mel.pth")):
+        value = config.get(key)
+        # Recognize both Windows and POSIX paths on every host. Valid custom
+        # paths (including relative ones) keep their existing meaning.
+        if (
+            isinstance(value, str)
+            and (os.path.isabs(value) or ntpath.isabs(value))
+            and not os.path.isfile(os.path.join(model_dir, value))
+            and os.path.isfile(os.path.join(model_dir, filename))
+        ):
+            config[key] = filename
+            changed = True
+    if not changed:
+        yield cfg_path
+        return
+
+    # Close before upstream reopens it: Windows does not allow reopening an
+    # open NamedTemporaryFile. Keep it alive for the whole constructor.
+    with tempfile.NamedTemporaryFile(suffix=".yaml", mode="w", encoding="utf-8", delete=False) as tmp:
+        temporary = tmp.name
+    try:
+        OmegaConf.save(config, temporary, resolve=False)
+        yield temporary
+    finally:
+        with contextlib.suppress(FileNotFoundError):
+            os.unlink(temporary)
+
+
 def _model_init_kwargs(
     repo_dir: str, *, version: str, reduced_precision: bool,
 ) -> dict:
@@ -293,7 +329,8 @@ def _load_model(stdout) -> object:
         repo_dir, version=_model_version, reduced_precision=reduced_precision,
     )
     with _heartbeat(stdout, "loading_model"):
-        _model = IndexTTS2(**model_kw)
+        with _local_checkpoint_config(model_kw["cfg_path"], model_kw["model_dir"]) as cfg_path:
+            _model = IndexTTS2(**{**model_kw, "cfg_path": cfg_path})
 
     _send(stdout, {"op": "progress", "stage": "loading_model", "percent": 100})
     return _model

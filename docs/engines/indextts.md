@@ -111,6 +111,19 @@ installs only worked after hand-renaming it to `config_v2_5.yaml`; both names
 are accepted, so a renamed checkout keeps working as-is and needs no
 reinstall.
 
+### Missing checkpoint under a foreign absolute path
+
+Some pinned configs name checkpoints on the upstream authors' training cluster.
+When a configured absolute `gpt_checkpoint` or `s2mel_checkpoint` is missing,
+VoiceStudio uses the installed `gpt.pth` or `s2mel.pth` if present. This also
+handles Windows paths on other operating systems. Existing valid custom paths
+and relative paths remain unchanged.
+
+The adjustment exists only in a temporary config while loading the model;
+your downloaded config and weights are never rewritten. No reinstall or
+additional download is needed. If the local fallback is also missing, the
+original loading error is preserved rather than substituting another model.
+
 ### `uv` not found
 
 Install `uv` from <https://docs.astral.sh/uv/> or configure the bundled binary
