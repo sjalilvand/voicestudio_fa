@@ -2219,6 +2219,7 @@
     "session_expired": "Esta sessão de dublagem expirou ou foi limpa. Reenvie seu vídeo para iniciar uma nova."
   },
   "tts_errors": {
+    "profile_language_rejected": "Automático usa o idioma do perfil de voz ({{language}}), não suportado por este motor. Altere o idioma do perfil, escolha um idioma compatível ou mude de motor.",
     "enter_text": "Por favor insira o texto",
     "upload_or_select": "Carregue um áudio ou selecione um perfil de voz",
     "trim_hint": "O áudio é {{duration}}s – ajuste para ≤{{max}}s para melhor clonagem",
@@ -2232,7 +2233,10 @@
     "instruct_category_conflict": "Foram selecionadas duas opções de design de voz conflitantes na mesma categoria (ex.: dois gêneros). Limpe uma delas antes de gerar novamente.",
     "ref_audio_unusable": "Nenhuma fala foi detectada no áudio de referência — o clipe está em silêncio ou quase, então não há voz para clonar. Grave novamente mais perto do microfone (confira se o dispositivo de entrada correto está selecionado e se o nível se move) ou escolha outro clipe.",
     "ref_audio_too_long": "Uma referência pode ter no máximo 20 segundos com transcrição ou 75 segundos sem ela. Corte-a para um trecho de fala claro de 3–10 segundos; se fornecer texto, corte a transcrição para o mesmo trecho.",
-    "ref_audio_no_speech": "A detecção automática não encontrou palavras faladas na referência. Corte-a para um trecho de fala claro de 3–10 segundos ou forneça uma transcrição correspondente."
+    "ref_audio_no_speech": "A detecção automática não encontrou palavras faladas na referência. Corte-a para um trecho de fala claro de 3–10 segundos ou forneça uma transcrição correspondente.",
+    "gpu_arch_unsupported": "Esta versão do PyTorch não é compatível com a sua GPU. Escolha CPU em Configurações → Desempenho e dispositivo ou instale uma versão compatível do PyTorch.",
+    "windows_app_control_blocked": "O controle de aplicativos do Windows bloqueou um arquivo necessário. Peça ao administrador para permitir o ambiente de execução confiável do VoiceStudio e reinicie o aplicativo.",
+    "audio_io_failed": "Não foi possível ler ou salvar o áudio. Verifique o formato do arquivo, o espaço livre e as permissões. Confira a pasta em Configurações → Armazenamento."
   },
   "sharing": {
     "title": "Compartilhamento e acesso remoto",
@@ -2824,6 +2828,7 @@
     "none_selected": "Nenhuma voz selecionada — descreva uma, solte um áudio ou escolha abaixo."
   },
   "convert": {
+    "cloning_required": "Escolha um modelo de síntese de voz pronto para uso que permita clonar vozes.",
     "source_kicker": "Clipe de origem",
     "drop_audio": "Solte o clipe a converter — ou clique. WAV, MP3, M4A…",
     "target_voice": "Voz de destino",

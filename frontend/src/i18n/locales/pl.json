@@ -2219,6 +2219,7 @@
     "session_expired": "Ta sesja dubowania wygasła lub została wyczyszczona — prześlij film ponownie, aby rozpocząć nową."
   },
   "tts_errors": {
+    "profile_language_rejected": "Tryb automatyczny używa języka profilu głosu ({{language}}), którego ten silnik nie obsługuje. Zmień język profilu, wybierz obsługiwany język lub zmień silnik.",
     "enter_text": "Proszę wpisać tekst",
     "upload_or_select": "Prześlij plik audio lub wybierz profil głosowy",
     "trim_hint": "Dźwięk wynosi {{duration}}s — przytnij do ≤{{max}}s, aby uzyskać najlepsze klonowanie",
@@ -2232,7 +2233,10 @@
     "instruct_category_conflict": "Wybrano dwie sprzeczne opcje projektowania głosu w tej samej kategorii (np. dwie płcie). Wyczyść jedną z nich przed ponownym generowaniem.",
     "ref_audio_unusable": "W nagraniu referencyjnym nie wykryto mowy — klip jest cichy lub prawie cichy, więc nie ma głosu do sklonowania. Nagraj ponownie bliżej mikrofonu (sprawdź, czy wybrano właściwe urządzenie wejściowe i czy poziom się porusza) albo wybierz inny klip.",
     "ref_audio_too_long": "Nagranie referencyjne może mieć najwyżej 20 sekund z transkrypcją lub 75 sekund bez niej. Przytnij je do wyraźnego fragmentu mowy 3–10 sekund; jeśli podajesz tekst, przytnij transkrypcję do tego samego fragmentu.",
-    "ref_audio_no_speech": "Automatyczne wykrywanie mowy nie znalazło wypowiedzianych słów. Przytnij nagranie do wyraźnego fragmentu mowy 3–10 sekund lub podaj pasującą transkrypcję."
+    "ref_audio_no_speech": "Automatyczne wykrywanie mowy nie znalazło wypowiedzianych słów. Przytnij nagranie do wyraźnego fragmentu mowy 3–10 sekund lub podaj pasującą transkrypcję.",
+    "gpu_arch_unsupported": "Ta wersja PyTorch nie obsługuje Twojego GPU. Wybierz CPU w Ustawienia → Wydajność i urządzenie lub zainstaluj zgodną wersję PyTorch.",
+    "windows_app_control_blocked": "Kontrola aplikacji systemu Windows zablokowała wymagany plik. Poproś administratora o zezwolenie na uruchamianie zaufanego środowiska VoiceStudio, a następnie uruchom aplikację ponownie.",
+    "audio_io_failed": "Nie można odczytać ani zapisać dźwięku. Sprawdź format pliku, wolne miejsce na dysku i uprawnienia do plików. Sprawdź folder w Ustawienia → Pamięć."
   },
   "sharing": {
     "title": "Udostępnianie i dostęp zdalny",
@@ -2824,6 +2828,7 @@
     "none_selected": "Nie wybrano głosu — opisz go, upuść audio albo wybierz poniżej."
   },
   "convert": {
+    "cloning_required": "Wybierz gotowy do użycia model syntezy mowy obsługujący klonowanie głosu.",
     "source_kicker": "Klip źródłowy",
     "drop_audio": "Upuść klip do konwersji — lub kliknij. WAV, MP3, M4A…",
     "target_voice": "Głos docelowy",

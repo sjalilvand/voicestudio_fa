@@ -2237,6 +2237,7 @@
     "tailscale_qr_alt": "Tailscale URL の QR コード"
   },
   "convert": {
+    "cloning_required": "音声クローンに対応した、使用可能な音声合成モデルを選択してください。",
     "source_kicker": "ソースクリップ",
     "drop_audio": "変換するクリップをドロップ — またはクリック。WAV、MP3、M4A…",
     "target_voice": "変換先の声",
@@ -2521,6 +2522,7 @@
     "recorder_unsupported": "このシステムではマイク音声をエンコードできません。"
   },
   "tts_errors": {
+    "profile_language_rejected": "自動では音声プロファイルの言語（{{language}}）が使われますが、このエンジンは対応していません。プロファイルの言語を変更するか、対応言語または別のエンジンを選択してください。",
     "generation_in_progress": "生成がすでに実行中です。完了してから次の生成を開始してください。",
     "error_prefix": "エラー: {{message}}",
     "ignored_duplicate": "無視 (カテゴリはすでに設定されています): {{items}}",
@@ -2532,7 +2534,10 @@
     "ignored_unsupported": "サポートされていない命令は無視されました: {{items}}",
     "too_long": "クリップは {{duration}}s です。エンジンは、トランスクリプトなしで最大 {{max}} を受け入れます。",
     "model_not_downloaded": "モデルはまだダウンロードされていません。メインアプリの「設定」→「エンジン」を開いてインストールします。",
-    "backend_unreachable": "ローカル エンジンにアクセスできません。"
+    "backend_unreachable": "ローカル エンジンにアクセスできません。",
+    "gpu_arch_unsupported": "このPyTorchビルドはお使いのGPUに対応していません。設定 → パフォーマンスとデバイスでCPUを選択するか、互換性のあるPyTorchビルドをインストールしてください。",
+    "windows_app_control_blocked": "Windowsのアプリケーション制御が必要なファイルをブロックしました。信頼できるVoiceStudioランタイムを許可するよう管理者に依頼し、アプリを再起動してください。",
+    "audio_io_failed": "音声を読み込むか保存することができませんでした。ファイル形式、ディスクの空き容量、ファイルのアクセス権を確認してください。設定 → ストレージでフォルダーを確認してください。"
   },
   "network": {
     "copied": "コピーされました",

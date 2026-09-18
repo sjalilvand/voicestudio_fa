@@ -1,3 +1,6 @@
+import { generationFailureMessage } from '../../../../../../frontend/src/utils/generationFailureMessage.ts';
+import i18next from 'i18next';
+import { languageRejectionMessage } from '../../../../../../frontend/src/utils/languageRejection.ts';
 import { ApiError, apiFetch, isAbortError } from './client';
 import type { CloneGenerateInput, GenerateResult } from './types';
 import { beginAppActivity } from '@/lib/app-activity';
@@ -219,11 +222,16 @@ export interface GenerateOptions {
 export class StreamingPreviewError extends Error {
   readonly retryable: boolean;
   readonly terminal: boolean;
-  constructor(message: string, options: { retryable?: boolean; terminal?: boolean } = {}) {
+  readonly errorClass?: string;
+  constructor(
+    message: string,
+    options: { retryable?: boolean; terminal?: boolean; errorClass?: unknown } = {},
+  ) {
     super(message);
     this.name = 'StreamingPreviewError';
     this.retryable = options.retryable === true;
     this.terminal = options.terminal === true;
+    this.errorClass = typeof options.errorClass === 'string' ? options.errorClass : undefined;
   }
 }
 
@@ -255,6 +263,11 @@ interface StreamEvent {
   count?: number;
   text?: string[];
   detail?: string;
+  code?: string;
+  language?: string;
+  docs_topic?: string;
+  error_class?: unknown;
+  terminal?: boolean;
   retryable?: boolean;
   percent?: number;
 }
@@ -300,13 +313,21 @@ export async function generateCloneStreaming(
       } else if (event.type === 'done') {
         meta = event;
       } else if (event.type === 'error') {
-        const message = event.detail || 'TTS stream reported an error';
-        const terminal = [
-          '[clone_ref_unusable]',
-          '[clone_ref_too_long]',
-          '[clone_ref_no_speech]',
-        ].some((marker) => message.includes(marker));
-        throw new StreamingPreviewError(message, { retryable: event.retryable, terminal });
+        const message =
+          languageRejectionMessage(event, i18next.t) ||
+          generationFailureMessage(event, i18next.t) ||
+          event.detail ||
+          'TTS stream reported an error';
+        const terminal =
+          event.terminal === true ||
+          ['[clone_ref_unusable]', '[clone_ref_too_long]', '[clone_ref_no_speech]'].some((marker) =>
+            message.includes(marker),
+          );
+        throw new StreamingPreviewError(message, {
+          retryable: event.retryable,
+          terminal,
+          errorClass: event.error_class,
+        });
       }
     };
     for (;;) {

@@ -85,6 +85,9 @@ def _family_payload(family: str, module):
 
         for backend in backends:
             engine_id = backend.get("id")
+            if engine_id == active == "mlx-audio":
+                # Constructor resolves model preferences only; never loads weights.
+                backend["supports_cloning"] = tts_backend.MLXAudioBackend().supports_cloning
             if engine_id in LICENSE_GATED_ENGINES:
                 backend["license_required"] = True
                 try:

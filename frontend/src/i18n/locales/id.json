@@ -2219,6 +2219,7 @@
     "session_expired": "Sesi sulih suara ini telah habis masa berlakunya atau telah dibersihkan — unggah ulang video Anda untuk memulai yang baru."
   },
   "tts_errors": {
+    "profile_language_rejected": "Otomatis menggunakan bahasa profil suara ({{language}}), yang tidak didukung mesin ini. Ubah bahasa profil, pilih bahasa yang didukung, atau ganti mesin.",
     "enter_text": "Silakan masukkan teks",
     "upload_or_select": "Unggah audio atau pilih profil suara",
     "trim_hint": "Audio adalah {{duration}}s — potong ke ≤{{max}}s untuk kloning terbaik",
@@ -2232,7 +2233,10 @@
     "instruct_category_conflict": "Dua opsi desain suara yang bertentangan dipilih dalam kategori yang sama (mis. dua gender). Hapus salah satu sebelum membuat ulang.",
     "ref_audio_unusable": "Tidak ada suara yang terdengar di audio referensi — klipnya senyap atau hampir senyap, jadi tidak ada suara untuk dikloning. Rekam ulang lebih dekat ke mikrofon (pastikan perangkat input yang benar dipilih dan meterannya bergerak), atau pilih klip lain.",
     "ref_audio_too_long": "Referensi maksimal 20 detik dengan transkrip atau 75 detik tanpa transkrip. Potong menjadi bagian ucapan jelas sepanjang 3–10 detik; jika menyertakan teks, potong transkrip ke bagian yang sama.",
-    "ref_audio_no_speech": "Deteksi otomatis tidak menemukan kata yang diucapkan dalam referensi. Potong menjadi bagian ucapan jelas sepanjang 3–10 detik atau sertakan transkrip yang cocok."
+    "ref_audio_no_speech": "Deteksi otomatis tidak menemukan kata yang diucapkan dalam referensi. Potong menjadi bagian ucapan jelas sepanjang 3–10 detik atau sertakan transkrip yang cocok.",
+    "gpu_arch_unsupported": "Versi PyTorch ini tidak mendukung GPU Anda. Pilih CPU di Pengaturan → Performa & Perangkat, atau instal versi PyTorch yang kompatibel.",
+    "windows_app_control_blocked": "Kontrol aplikasi Windows memblokir file yang diperlukan. Minta administrator mengizinkan runtime VoiceStudio yang tepercaya, lalu mulai ulang aplikasi.",
+    "audio_io_failed": "Audio tidak dapat dibaca atau disimpan. Periksa format file, ruang disk yang tersedia, dan izin file. Periksa folder di Pengaturan → Penyimpanan."
   },
   "sharing": {
     "title": "Berbagi & Akses Jarak Jauh",
@@ -2824,6 +2828,7 @@
     "none_selected": "Belum ada suara yang dipilih — deskripsikan satu, letakkan audio, atau pilih di bawah."
   },
   "convert": {
+    "cloning_required": "Pilih model teks ke suara yang siap digunakan dan mendukung kloning suara.",
     "source_kicker": "Klip sumber",
     "drop_audio": "Letakkan klip yang akan dikonversi — atau klik. WAV, MP3, M4A…",
     "target_voice": "Suara target",

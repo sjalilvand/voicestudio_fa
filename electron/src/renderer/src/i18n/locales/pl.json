@@ -2241,6 +2241,7 @@
     "tailscale_qr_alt": "Kod QR dla adresu URL Tailscale"
   },
   "convert": {
+    "cloning_required": "Wybierz gotowy do użycia model syntezy mowy obsługujący klonowanie głosu.",
     "source_kicker": "Klip źródłowy",
     "drop_audio": "Upuść klip do konwersji — lub kliknij. WAV, MP3, M4A…",
     "target_voice": "Głos docelowy",
@@ -2525,6 +2526,7 @@
     "channels_stereo": "Stereo"
   },
   "tts_errors": {
+    "profile_language_rejected": "Tryb automatyczny używa języka profilu głosu ({{language}}), którego ten silnik nie obsługuje. Zmień język profilu, wybierz obsługiwany język lub zmień silnik.",
     "generation_in_progress": "Generowanie już trwa — poczekaj na jego zakończenie przed rozpoczęciem kolejnego.",
     "error_prefix": "Błąd: {{message}}",
     "ignored_duplicate": "Ignorowane (kategoria już ustawiona): {{items}}",
@@ -2536,7 +2538,10 @@
     "ignored_unsupported": "Ignorowana nieobsługiwana instrukcja: {{items}}",
     "too_long": "Klip to {{duration}}s. Silnik akceptuje co najwyżej {{max}} bez transkrypcji.",
     "model_not_downloaded": "Model nie został jeszcze pobrany. Otwórz w głównej aplikacji Ustawienia → Silniki, aby ją zainstalować.",
-    "backend_unreachable": "Lokalny silnik jest nieosiągalny."
+    "backend_unreachable": "Lokalny silnik jest nieosiągalny.",
+    "gpu_arch_unsupported": "Ta wersja PyTorch nie obsługuje Twojego GPU. Wybierz CPU w Ustawienia → Wydajność i urządzenie lub zainstaluj zgodną wersję PyTorch.",
+    "windows_app_control_blocked": "Kontrola aplikacji systemu Windows zablokowała wymagany plik. Poproś administratora o zezwolenie na uruchamianie zaufanego środowiska VoiceStudio, a następnie uruchom aplikację ponownie.",
+    "audio_io_failed": "Nie można odczytać ani zapisać dźwięku. Sprawdź format pliku, wolne miejsce na dysku i uprawnienia do plików. Sprawdź folder w Ustawienia → Pamięć."
   },
   "network": {
     "copied": "Skopiowano",

@@ -2237,6 +2237,7 @@
     "tailscale_qr_alt": "QR-Code für die Tailscale-URL"
   },
   "convert": {
+    "cloning_required": "Wähle ein einsatzbereites Sprachsynthesemodell, das Stimmenklonen unterstützt.",
     "source_kicker": "Quellclip",
     "drop_audio": "Clip zum Konvertieren hier ablegen — oder klicken. WAV, MP3, M4A…",
     "target_voice": "Zielstimme",
@@ -2521,6 +2522,7 @@
     "channels_stereo": "Stereo"
   },
   "tts_errors": {
+    "profile_language_rejected": "Automatisch verwendet die Sprache des Stimmprofils ({{language}}), die diese Engine nicht unterstützt. Ändere die Profilsprache, wähle eine unterstützte Sprache oder wechsle die Engine.",
     "generation_in_progress": "Eine Generierung läuft bereits – warte, bis sie abgeschlossen ist, bevor du eine weitere startest.",
     "error_prefix": "Fehler: {{message}}",
     "ignored_duplicate": "Ignoriert (Kategorie bereits festgelegt): {{items}}",
@@ -2532,7 +2534,10 @@
     "ignored_unsupported": "Nicht unterstützte Anweisung ignoriert: {{items}}",
     "model_not_downloaded": "Das Modell wurde noch nicht heruntergeladen. Öffnen Sie die Einstellungen → Engines der Haupt-App, um sie zu installieren.",
     "backend_unreachable": "Die lokale Engine ist nicht erreichbar.",
-    "too_long": "Der Clip ist {{duration}}s. Die Engine akzeptiert höchstens {{max}}s ohne Transkript."
+    "too_long": "Der Clip ist {{duration}}s. Die Engine akzeptiert höchstens {{max}}s ohne Transkript.",
+    "gpu_arch_unsupported": "Diese PyTorch-Version unterstützt deine GPU nicht. Wähle CPU unter Einstellungen → Leistung & Gerät oder installiere eine kompatible PyTorch-Version.",
+    "windows_app_control_blocked": "Die Windows-Anwendungssteuerung hat eine benötigte Datei blockiert. Bitte deinen Administrator, die vertrauenswürdige VoiceStudio-Laufzeit zuzulassen, und starte die App neu.",
+    "audio_io_failed": "Die Audiodatei konnte nicht gelesen oder gespeichert werden. Prüfe Dateiformat, freien Speicherplatz und Dateiberechtigungen. Überprüfe den Ordner unter Einstellungen → Speicher."
   },
   "network": {
     "copied": "Kopiert",

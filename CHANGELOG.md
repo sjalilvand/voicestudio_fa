@@ -10,12 +10,44 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
-- More reliable engine installation, transcription, and sidecar recovery (#2165, #2109, #2111)
-- Preserve subtitle text and legacy manuscript encodings across desktop and web (#2077, #2151, #2073)
-- Clearer setup guidance and media failure diagnostics (#2166, #2167)
+- Clearer recovery guidance for known GPU, Windows policy, and audio-file failures (#2195)
 
 ### Fixed
 
+- A streaming generation that fails on an unsupported GPU, a Windows app-control block, or an audio-file error now says so and what to do, instead of only "Generation failed. Check the selected engine and try again." (#2195, #2177) — thanks @shivsin25!
+- A failure that cannot succeed on a retry — an unsupported GPU build, a blocked file — is reported as final, so the app stops re-rendering the whole passage to reach the same error (#2195, #2177) — thanks @shivsin25!
+
+## [0.5.4] — 2026-09-17
+
+**More reliable setup, generation, and dubbing.** This patch detects incomplete desktop runtimes before startup, repairs them without overwriting an existing Tauri installation, and makes engine failures easier to recover from. It also fixes gated model downloads, subtitle imports, and saved-voice language errors.
+
+**Download**
+
+| Platform | Installer |
+| --- | --- |
+| Windows x64 | [Installer](https://github.com/debpalash/VoiceStudio/releases/download/v0.5.4/VoiceStudio-Electron-0.5.4-win-x64.exe) |
+| macOS Apple Silicon | [DMG](https://github.com/debpalash/VoiceStudio/releases/download/v0.5.4/VoiceStudio-Electron-0.5.4-mac-arm64.dmg) |
+| macOS Intel | [DMG](https://github.com/debpalash/VoiceStudio/releases/download/v0.5.4/VoiceStudio-Electron-0.5.4-mac-x64.dmg) |
+| Linux x64 | [AppImage](https://github.com/debpalash/VoiceStudio/releases/download/v0.5.4/VoiceStudio-Electron-0.5.4-linux-x64.AppImage) · [deb](https://github.com/debpalash/VoiceStudio/releases/download/v0.5.4/VoiceStudio-Electron-0.5.4-linux-x64.deb) |
+
+Already using Electron? Install over your existing app and keep your data. If prompted, choose **Install local runtime** to refresh its dependencies. Moving from Tauri? Back up your data directory with the app closed, install Electron, then verify your voices and projects before removing Tauri. Follow the [migration guide](https://github.com/debpalash/VoiceStudio/blob/v0.5.4/docs/electron-migration.md). Tauri v0.5.3 remains the final Tauri release; its updater cannot install Electron.
+
+**Highlights**
+
+- Repair incomplete Electron runtimes and recover gated model downloads (#2179, #2173)
+- More reliable transcription, engine deadlines, and dubbing streams (#2165, #2109, #2111, #2138)
+- Preserve subtitle text and legacy manuscript encodings across desktop and web (#2077, #2151, #2073)
+- Clear language guidance and capability checks before voice generation (#2172, #2174, #2175)
+
+### Fixed
+
+- Bundle Linux native helper libraries so dictation and clipboard support start without distribution-specific libxdo packages (#2196)
+- Forward saved Hugging Face tokens when downloading gated model weights and dependencies (#2173) — thanks @shivsin25!
+- Explain unsupported saved-profile languages consistently in Electron, web, and streaming generation (#2175) — thanks @shivsin25!
+- List every installed Kokoro language and accept its displayed name, including British English (#2174) — thanks @drakeo338!
+
+- Validate Python dependencies before reusing a desktop runtime and offer setup for incomplete environments (#2176)
+- Check active model cloning support before starting voice conversion (#2147)
 - Accept both valid SIGKILL diagnostics in the desktop lifecycle regression check (#2170)
 
 - Repair CTranslate2 loading safely across ASR and translation, and retain the loaded Whisper model during CPU fallback (#2165) — thanks @guruthechosen!
@@ -43,76 +75,112 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - Handle missing Electron signing credentials and retry packaging fixes without moving release tags (#2157)
 
+### Contributors
+
+- @D3nii — compatibility with CPUs unsupported by newer pedalboard wheels.
+- @LMGXENON — engine deadlines, timeout diagnostics, and Apple Silicon build documentation.
+- @Moep90 — audio I/O fallbacks and GPU compatibility guidance.
+- @Rukhaam — Windows toolchain setup guidance.
+- @Shivendra-Coherent and @shivsin25 — numeric subtitle dialogue, gated downloads, and profile-language errors.
+- @SurefireStudios — request-sized sidecar generation deadlines.
+- @basil-k-aji-dev — cuDNN compatibility libraries in CUDA containers.
+- @denemon — dubbing stream keepalives and cancellation cleanup.
+- @guruthechosen — CTranslate2 repair and Whisper CPU recovery.
+- @gyanu2507 and @rollroyces — Argos language normalization and regression coverage.
+- @kapelame — ffprobe discovery and MLX audio resampling.
+- @kevin9327 — subtitle timing, text encodings, WebVTT, and Windows database migrations.
+- @drakeo338 — Kokoro supported-language reporting.
+- @debpalash — integration, Electron runtime recovery, localization, regression coverage, and release maintenance.
+
+### Bug reports
+
+- Thanks to @YChhunsann, @martinezpl, @denemon, @adeelahmadsiddique, @TehSmoo, @kmsitcomputer, @raya-mansouri, @infinitete, and @kor1998 for the reports behind the fixes above.
+
 ## [0.5.3] — 2026-09-17
+
+**A new look. A new desktop app. Still your voices, on your machine.**
+
+VoiceStudio moves to **Electron** with v0.5.3: a redesigned workspace for voice cloning, voice design, stories, dubbing, and transcription. Electron is now the primary desktop app on Windows, macOS, and Linux. Local voice creation still runs on your own hardware, without a required account or API key.
+
+![VoiceStudio's new Electron interface: voice cloning, saved voices, workspace navigation, and synthesis controls](https://raw.githubusercontent.com/debpalash/VoiceStudio/v0.5.3/docs/media/electron/voice-cloning.png)
 
 **Highlights**
 
-- The README is shorter, with a new Electron UI tour and refreshed screenshots (#2129)
+- A redesigned desktop with dedicated workspaces, collapsible navigation, and resizable sidebars (#1823, #2129)
+- Four-step setup with model packs and optional dictation configuration (#2129)
+- Better dubbing: zoomable timelines, saved translation direction, and background sound preserved around dialogue (#2129)
+- A simpler Model Catalogue and one-click installs for VoxCPM2, MOSS-TTS-Nano, and CosyVoice 3 (#2013, #2021, #2022, #2025)
+- More reliable generation on older NVIDIA GPUs and live remote-worker CPU, GPU, and memory readings (#2135, #2155)
 
-- Support pages feature cleaner donation cards, with a workspace support shortcut and sponsor footer with hover cards and email inquiries (#2129)
+![The Electron dubbing workspace with source and translated demos, language controls, and synchronized playback](https://raw.githubusercontent.com/debpalash/VoiceStudio/v0.5.3/docs/media/electron/dubbing.png)
 
-- Integrations has a dedicated sidebar workspace with featured sponsors, searchable AI providers, and smooth sponsor-strip scrolling (#2129)
+**Get the new desktop app**
 
-- Integrations now covers 100+ automation, communications, MCP, agent, developer, data, and productivity tools with config-driven detail pages (#2129)
+| Platform | Electron installer |
+| --- | --- |
+| Windows x64 | [Download EXE](https://github.com/debpalash/VoiceStudio/releases/download/v0.5.3/VoiceStudio-Electron-0.5.3-win-x64.exe) |
+| macOS Apple Silicon | [Download DMG](https://github.com/debpalash/VoiceStudio/releases/download/v0.5.3/VoiceStudio-Electron-0.5.3-mac-arm64.dmg) |
+| macOS Intel | [Download DMG](https://github.com/debpalash/VoiceStudio/releases/download/v0.5.3/VoiceStudio-Electron-0.5.3-mac-x64.dmg) |
+| Linux x64 | [AppImage](https://github.com/debpalash/VoiceStudio/releases/download/v0.5.3/VoiceStudio-Electron-0.5.3-linux-x64.AppImage) · [DEB](https://github.com/debpalash/VoiceStudio/releases/download/v0.5.3/VoiceStudio-Electron-0.5.3-linux-x64.deb) |
 
-- Electron now ships as a complete cross-platform VoiceStudio desktop app with local-first cloning, production workspaces, model packs, repair agents, native integrations, updates, parity checks, and the shared backend contracts required by those workflows (#1823)
+**Moving from Tauri? Install Electron separately.**
 
-- The Model Catalogue is one page: what you use now on top, then each family's engines and weights (#2013)
-- VoxCPM2 installs in one click into its own environment, with the CUDA build of PyTorch on NVIDIA GPUs (#2021)
-- MOSS-TTS-Nano installs in one click into its own environment, pinned to a reviewed upstream commit it works with (#2022)
-- CosyVoice 3 installs in one click into its own environment, with a trimmed dependency set that needs no TensorRT, DeepSpeed or third-party package feed (#2025)
+v0.5.3 is also the final Tauri update. The Tauri updater will not switch you to Electron; choose a **VoiceStudio-Electron** installer above. Legacy Tauri assets remain available for existing installations.
+
+1. Close Tauri and back up its entire data directory, plus any reference audio stored elsewhere.
+2. Install Electron and check its storage/backend configuration points to your existing data before generating. Never run both apps against that directory at once.
+3. Verify your voices, projects, history, and model locations; generate a short clip before removing Tauri.
+4. Recheck devices, shortcuts, theme, backend address, permissions, and credentials. Desktop preferences and credentials are not guaranteed to transfer.
+
+[Read the migration guide](https://github.com/debpalash/VoiceStudio/blob/v0.5.3/docs/electron-migration.md) · [Compare all changes since v0.5.2](https://github.com/debpalash/VoiceStudio/compare/v0.5.2...v0.5.3)
 
 ### Changed
 
-- Electron becomes the default source desktop, with artifact-only packaging rehearsals and a separate final Tauri update path (#2157)
-- Installable agent skills use current VoiceStudio names and Electron workflows (#2157)
-- README clarifies the Electron transition while keeping desktop contributions welcome (#2153) — thanks @cyberspace-cs!
+- Electron becomes the primary desktop app; Tauri retains a separate final update path (#2157)
+- Workspace sidebars resize and remember their width; video previews show thumbnails and keep playback controls in view (#2129)
+- Model Catalogue groups speech, transcription, and language models with engine details and downloadable weights together (#2013, #2020)
+- Models and voice previews move to Settings → Storage; the Hugging Face mirror moves to Network (#2013)
+- Integrations gets a searchable workspace covering 100+ tools, with provider details and configuration guidance (#2129)
+- Support pages gain donation cards, a workspace shortcut, and sponsor contact details (#2129)
+- README adds an Electron UI tour and refreshed screenshots; installable agent skills follow the new desktop workflow (#2129, #2157)
+- README explains the desktop transition and keeps contributions welcome (#2153) — thanks @cyberspace-cs!
 
-- Electron first run uses four simple steps with model packs, optional advanced controls and skippable dictation setup (#2129)
+### Added
 
-- Model Catalogue is one page: a setup summary (speech, transcription, dictation, language model) on top, one TTS / ASR / LLM switch, and each family's downloadable weights listed under its engines; the separate Models pane and the Settings → Voice → Engines / Models signposts are gone, the models directory and voice previews moved to Settings → Storage and the HF mirror to Network (#2013)
-- The engine list is one line per engine (engine, device it runs on, status, one action) with a detail panel for everything else; each engine's weights install from its panel, so the separate weights list and recommendation card are gone (#2020)
-- CosyVoice 3 installs patched protobuf and transformers releases, clearing five security advisories (#2030, #2031)
+- VoxCPM2, MOSS-TTS-Nano, and CosyVoice 3 install in isolated environments without disrupting other engines (#2021, #2022, #2025)
+- Remote workers report CPU, GPU, and memory usage; unavailable readings stay distinct from zero (#2155) — thanks @velixio!
+- Dubbing translation shows live logs, supports cancellation and retries, and remembers custom tone instructions (#2129)
 
 ### Fixed
 
-- Keep demo playback aligned across languages, preserve worker GPU metrics, and restrict unsigned releases to owner dispatches (#2157)
-
-- Desktop integration checks cover current dubbing safeguards, navigation, and the linked engine catalog (#2157)
-
-- Tauri and Electron now share native dictation, watch-folder, and Wayland shortcut contracts; focused paste stays ordered and first-run uv stays pinned at 0.12.13 (#2122)
-- Dubbing demos synchronize playheads without simultaneous playback and let you open a sample in the editor (#2131)
-- macOS desktop sidebar clears the traffic lights, uses a narrower collapsed rail, and places notifications and device controls with more space (#2126)
-- Dubbing timelines keep short segments proportional, support zoom, and remove timestamp-confirmed duplicate ASR context (#2129)
-
-- Dubbing translation shares the agent footer with live logs, validated output, cancellation and contextual retries (#2129)
-
-- Agent dubbing translation saves a custom tone and adaptation prompt and preserves it during timing rewrites (#2129)
-
-- Dubbing preserves original sound outside dialogue and mixes separated background only beneath replacement speech (#2129)
-
-- Dubbing repairs missing speech caches, rejects incomplete output, avoids oversized speaker references, and fits full speech without early clipping (#2129)
-- Workspace sidebars have a working right-edge resize handle, allow 40% more width, remember their size, and keep video controls inside the preview (#2129)
-- Pressing Play while a video is loading starts playback when it is ready instead of reporting playback unavailable (#2129)
-- Video previews show their thumbnail before playback, including the source video in Dub (#2129)
-- Linux and Windows workspace headers consistently expand and collapse the sidebar, with the app logo at the top of the collapsed rail (#2129)
-- Stopping a process on macOS no longer fails with "Operation not permitted" when it was already exiting (#2032)
-- A YouTube link blocked by its "not a bot" check now says how to attach signed-in cookies in Dub, instead of quoting yt-dlp's command-line flags (#2036, #2034)
-- An engine that fails to start now says whether it timed out, crashed (with its exit code and last output) or answered wrongly, instead of "did not signal ready: None" (#2037, #2026)
-- Transcribing an M4A file with PyTorch Whisper works, instead of failing with "Format not recognised" (#2042, #2039)
-- PyTorch Whisper runs on 6 GB NVIDIA cards instead of falling back to CPU, because its memory check now fits the model it loads (#2044, #2041)
-- MCP tools wait as long as the backend does, so a long transcription no longer fails at 120 s with an empty error (#2043, #2040)
-- Generating on an older NVIDIA GPU (Tesla T4, and other pre-Ampere cards) no longer kills the backend on the first request — CUDA graphs are not captured below sm_80 (#2135)
-- "Disable torch.compile" in Settings → Performance now works on macOS and Linux, not only Windows; it was greyed out on the platforms that needed it (#2135)
-- Setting `TORCH_COMPILE_DISABLE=1` in the environment now actually disables torch.compile, for the in-process engine and engine subprocesses alike (#2135)
-- A backend killed by a native crash now leaves the faulting thread's stack in `backend_err.log` instead of exiting silently (#2135)
+- Older NVIDIA GPUs, including Tesla T4, no longer kill the backend on first generation (#2135) — thanks @Shivendra-Coherent!
+- Disabling torch.compile works across desktop platforms and through the environment override; native crashes leave diagnostic stacks (#2135) — thanks @Shivendra-Coherent!
+- Dubbing keeps short segments proportional, supports timeline zoom, and removes duplicate transcription context (#2129)
+- Dubs preserve original sound outside dialogue, keep replacement speech complete, repair missing speech caches, and reject incomplete output (#2129)
+- Dubbing demos keep playback aligned across languages and can open a sample in the editor (#2131, #2157)
+- Pressing Play before a video finishes loading now starts it when ready (#2129)
+- Native dictation, watch folders, and Wayland shortcuts share desktop contracts; focused paste stays ordered (#2122)
+- macOS sidebar controls clear the window buttons; Linux and Windows sidebar headers expand and collapse consistently (#2126, #2129)
+- Stopping an already-exiting process on macOS no longer reports a permissions failure (#2032)
+- YouTube bot-check errors explain how to supply signed-in cookies in Dub (#2036, #2034) — thanks @celvintr!
+- Engine startup failures distinguish timeouts, crashes, and invalid responses (#2037, #2026) — thanks @dajiaohuang!
+- PyTorch Whisper transcribes M4A files and uses a model-appropriate VRAM budget on 6 GB NVIDIA cards (#2042, #2039, #2044, #2041) — thanks @xabiherdz-svg!
+- MCP transcription waits follow the backend timeout instead of failing after 120 seconds (#2043, #2040) — thanks @xabiherdz-svg!
+- CosyVoice 3 dependency updates address five security advisories (#2030, #2031)
 
 ### CI
 
-- A tagged release is published only after every platform's installers and checksums are attached, and its notes list all four platforms' checksums (#2029)
-- A worker-transport test no longer fails when a slow Windows runner takes over 2 seconds to tear down (#2038)
+- Release publication waits for platform artifacts and checksums; unsigned Electron builds require an explicit owner dispatch (#2029, #2157)
+- Desktop integration checks cover current dubbing, navigation, and model workflows; worker teardown tests tolerate slower Windows runners (#2157, #2038)
 
+### Contributors
 
+- @debpalash — Electron migration, redesigned workspaces, release engineering, and integration of community fixes.
+- @Shivendra-Coherent — the older-NVIDIA generation fix and compile/crash diagnostics (#2135).
+- @velixio — remote-worker telemetry and reliability improvements (#2155).
+- @cyberspace-cs — documentation for the Electron transition (#2153).
+- Thanks to @ShimeKano, @celvintr, @dajiaohuang, and @xabiherdz-svg for the bug reports behind this release's GPU, download, startup, transcription, and MCP fixes.
+- Dependency updates supplied by @dependabot[bot] (#2030, #2031).
 
 ## [0.5.2] — 2026-09-10
 
@@ -203,8 +271,6 @@ the frozen-backend fallback mirror it for their toolchains.
 - Voice Design simplified: the 12-row fine-grained block collapses to one summary line with a five-field editor, English accent and Chinese dialect merge into a single field, and the starting-point chips now show 5 with an overflow toggle (#1793)
 
 ### Added
-
-- Remote-worker metrics distinguish unavailable readings from zero and keep probes off the control loop (#2155)
 
 - The audiobook result is now a synced-lyrics player: chapter text follows playback with the current word highlighted and click-to-seek, timed from the render's own chapter durations with a karaoke-style even split — no ASR pass, fully local (#1766) — thanks @mvanhorn!
 - The dub CAST strip expands into a project-level casting board: drag voice chips (clone profiles, design presets, Default) onto speaker rows — or pick from a keyboard listbox — writing the same per-speaker cast fields as the existing dropdowns (#1767) — thanks @mvanhorn!
