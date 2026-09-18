@@ -14,6 +14,8 @@ the TOC.
 import io
 import zipfile
 
+import pytest
+
 from services import longform_import as li
 
 _CONTAINER = (
@@ -111,7 +113,7 @@ def test_page_numbers_never_reach_the_narration():
     assert "Meep.3" not in script and "2Zoe" not in script and "4Someone" not in script
     lines = [ln.strip() for ln in script.split("\n")]
     assert "120" not in lines and "iv" not in lines and "i" not in lines
-    assert "I" not in lines  # a lone roman numeral is a folio, not prose
+    assert "I" in lines  # an uppercase numeral (or the pronoun) is prose, not a folio
 
 
 def test_front_and_back_matter_are_skipped_and_chapters_take_toc_titles():
@@ -151,3 +153,55 @@ def test_section_typed_as_body_matter_survives_an_ancillary_looking_title():
         {"c1.xhtml": _doc("<h1>Acknowledgments</h1><p>A chapter really named that.</p>", section_type="bodymatter chapter")},
     )
     assert "A chapter really named that." in li.epub_to_chapter_script(epub)
+
+
+def test_toc_parsing_accepts_single_quoted_attributes():
+    nav = _NAV.replace('href="ch1.xhtml"', "href='ch1.xhtml'").replace('href="ch2.xhtml#start"', "href='ch2.xhtml#start'")
+    script = li.epub_to_chapter_script(
+        _epub(
+            {
+                "ch1.xhtml": _doc("<h1>A New Arrival</h1><p>One.</p>", section_type="bodymatter chapter"),
+                "ch2.xhtml": _doc("<h1>Too Many Questions</h1><p>Two.</p>", section_type="bodymatter chapter"),
+            },
+            nav=nav,
+        )
+    )
+    assert [ln for ln in script.split("\n") if ln.startswith("# ")] == [
+        "# Chapter One: A New Arrival",
+        "# Chapter Two: Too Many Questions",
+    ]
+    ncx = (
+        '<?xml version="1.0"?><ncx xmlns="http://www.daisy.org/z3986/2005/ncx/"><navMap>'
+        "<navPoint><navLabel><text>Part One</text></navLabel><content src='ch1.xhtml'/></navPoint></navMap></ncx>"
+    )
+    script = li.epub_to_chapter_script(
+        _epub({"ch1.xhtml": _doc("<h1>A New Arrival</h1><p>One.</p>", section_type="bodymatter chapter")}, ncx=ncx)
+    )
+    assert script.startswith("# Part One\n")
+
+
+def test_oversized_nav_document_is_skipped_not_decompressed():
+    """A nav/NCX member is user-supplied like any other: the zip-bomb limits apply before it is read."""
+    huge_nav = _NAV.replace("</ol>", "<li>" + "x" * 5000 + "</li></ol>")
+    docs = {"ch1.xhtml": _doc("<h1>A New Arrival</h1><p>One.</p>", section_type="bodymatter chapter")}
+    script = li.epub_to_chapter_script(_epub(docs, nav=huge_nav), max_entry_bytes=4000)
+    assert script.startswith("# A New Arrival\n")  # heading fallback: the nav was never read
+    # A nav that fits counts toward the shared total budget, so a ceiling it
+    # nearly fills leaves nothing for the chapters — reported, not silently empty.
+    with pytest.raises(ValueError, match="no readable chapters"):
+        li.epub_to_chapter_script(_epub(docs, nav=_NAV), max_total_bytes=len(_NAV) + 10)
+
+
+def test_bare_numbers_are_prose_unless_the_book_is_paginated():
+    """Without page-number markup nothing numeric-looking is touched; with it,
+    only lowercase folios and bare arabic numbers go — "IV" and "civil" stay."""
+    body = "<h1>Orwell</h1><p>1984</p><p>IV</p><p>civil</p><p>iv</p>"
+    plain = li.epub_to_chapter_script(_epub({"c.xhtml": _doc(body, section_type="bodymatter chapter")}))
+    assert all(x in plain.split("\n") for x in ("1984", "IV", "civil", "iv"))
+    paginated = li.epub_to_chapter_script(
+        _epub({"c.xhtml": _doc('<span epub:type="pagebreak">7</span>' + body, section_type="bodymatter chapter")})
+    )
+    lines = paginated.split("\n")
+    assert "IV" in lines and "civil" in lines
+    assert "iv" not in lines and "1984" not in lines and "7" not in lines
+

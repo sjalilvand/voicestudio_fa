@@ -75,6 +75,9 @@ class _TextExtractor(HTMLParser):
         self._pagebreak_stack: list[str] = []
         self._in_title = False
         self.title = ""
+        #: Set once any page-number markup was seen: the only evidence on which
+        #: a bare "120" / "iv" paragraph may be treated as a stray folio.
+        self.saw_pagebreak = False
         #: ``epub:type`` tokens seen on the document's structural elements
         #: (``body``/``section``/``article``/``div``): "frontmatter chapter" →
         #: {"frontmatter", "chapter"}. Lets the caller drop title pages,
@@ -106,6 +109,7 @@ class _TextExtractor(HTMLParser):
             self._pagebreak_stack.append(tag)
             return
         if self._is_pagebreak(attrs):
+            self.saw_pagebreak = True
             self._pagebreak_stack.append(tag)
             return
         if tag in ("h1", "h2", "title") and not self.title:
@@ -141,15 +145,18 @@ class _TextExtractor(HTMLParser):
         lines = [ln.strip() for ln in raw.split("\n")]
         out: list[str] = []
         for ln in lines:
-            if _BARE_PAGE_NUMBER.fullmatch(ln):
+            if self.saw_pagebreak and _BARE_PAGE_NUMBER.fullmatch(ln):
                 continue  # a print folio that escaped the pagebreak markup
             if ln or (out and out[-1]):
                 out.append(ln)
         return "\n".join(out).strip()
 
 
-#: A paragraph that is only a page number: arabic ("120") or roman folio ("iv").
-_BARE_PAGE_NUMBER = re.compile(r"(\d{1,4}|[ivxlc]{1,6})", re.I)
+#: A paragraph that is only a print folio: arabic ("120") or a *lowercase* roman
+#: numeral ("iv", as front matter is paginated). Applied only to documents that
+#: carry page-number markup (``_TextExtractor.saw_pagebreak``), and never to an
+#: uppercase numeral ("IV" is a chapter number) or a word ("civil").
+_BARE_PAGE_NUMBER = re.compile(r"\d{1,4}|(?=[ivxlc])(?:c{0,3})(?:xc|xl|l?x{0,3})(?:ix|iv|v?i{0,3})")
 
 
 def _html_to_title_body(xhtml: str) -> tuple[str, str]:
@@ -213,13 +220,28 @@ def _is_ancillary(types: set[str], title: str) -> bool:
     return bool(title and _ANCILLARY_TITLE.match(title))
 
 
-def _toc_titles(zf: zipfile.ZipFile, base: str, nav_hrefs: list[str], names: set[str]) -> dict[str, str]:
+def _toc_titles(
+    zf: zipfile.ZipFile,
+    base: str,
+    nav_hrefs: list[str],
+    names: set[str],
+    *,
+    max_entry_bytes: int,
+    budget: list[int],
+    max_total_bytes: int,
+) -> dict[str, str]:
     """Map each spine document (full zip path) to its table-of-contents label.
 
     Publishers label sections better than their headings do ("Chapter One:
     A New Arrival" versus an ``<h1>`` holding only "A New Arrival"). Reads
     the EPUB 3 nav document (``<a href>`` entries) and the EPUB 2 NCX
     (``navPoint/content@src``); the first label for a document wins.
+
+    Navigation documents come from the user's file like every other member,
+    so they draw on the same zip-bomb guards as the spine: an entry above
+    ``max_entry_bytes`` is skipped, and what is read counts against the
+    shared uncompressed-byte ``budget`` (a one-item list the caller keeps
+    tallying) up to ``max_total_bytes``.
     """
     titles: dict[str, str] = {}
     for href in nav_hrefs:
@@ -227,18 +249,29 @@ def _toc_titles(zf: zipfile.ZipFile, base: str, nav_hrefs: list[str], names: set
         if full not in names:
             continue
         try:
-            doc = zf.read(full).decode("utf-8", "ignore")
+            info = zf.getinfo(full)
         except KeyError:
             continue
+        if info.file_size > max_entry_bytes or budget[0] + info.file_size > max_total_bytes:
+            continue
+        try:
+            raw = zf.read(full)
+        except KeyError:
+            continue
+        budget[0] += len(raw)
+        doc = raw.decode("utf-8", "ignore")
         nav_dir = posixpath.dirname(full)
         if href.lower().endswith(".ncx"):
-            for label, src in re.findall(
-                r"<text>(.*?)</text>\s*</navLabel>\s*<content[^>]*src=\"([^\"#]+)", doc, re.S
-            ):
-                titles.setdefault(posixpath.normpath(posixpath.join(nav_dir, src)), _plain(label))
+            pairs = [
+                (src, label)
+                for label, src in re.findall(
+                    r"<text>(.*?)</text>\s*</navLabel>\s*<content[^>]*\bsrc\s*=\s*[\"']([^\"'#]+)", doc, re.S
+                )
+            ]
         else:
-            for src, label in re.findall(r"<a\b[^>]*href=\"([^\"#]+)(?:#[^\"]*)?\"[^>]*>(.*?)</a>", doc, re.S):
-                titles.setdefault(posixpath.normpath(posixpath.join(nav_dir, src)), _plain(label))
+            pairs = re.findall(r"<a\b[^>]*\bhref\s*=\s*[\"']([^\"'#]+)(?:#[^\"']*)?[\"'][^>]*>(.*?)</a>", doc, re.S)
+        for src, label in pairs:
+            titles.setdefault(posixpath.normpath(posixpath.join(nav_dir, src)), _plain(label))
     return {k: v for k, v in titles.items() if v}
 
 
@@ -280,10 +313,13 @@ def epub_to_chapter_script(
                 nav_hrefs.append(href)
 
     names = set(zf.namelist())
-    toc = _toc_titles(zf, base, nav_hrefs, names)
+    budget = [0]  # cumulative uncompressed bytes read — zip-bomb guard, shared with the TOC read
+    toc = _toc_titles(
+        zf, base, nav_hrefs, names, max_entry_bytes=max_entry_bytes, budget=budget, max_total_bytes=max_total_bytes
+    )
+    total = budget[0]
 
     blocks: list[str] = []
-    total = 0  # cumulative uncompressed bytes read — zip-bomb guard
     for ref in opf.findall(".//opf:spine/opf:itemref", _OPF_NS):
         href = manifest.get(ref.get("idref") or "")
         if not href or href in nav_hrefs:
