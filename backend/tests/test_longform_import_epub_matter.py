@@ -462,3 +462,19 @@ def test_unlisted_stray_pages_are_dropped_only_after_listed_back_matter_begins()
     assert "ends in a second, unlisted file" in script          # continuation kept
     for gone in ("Leaf by Niggle", "Ryde Road", "The reason for this use"):
         assert gone not in script
+
+
+def test_an_unlisted_ancillary_looking_page_does_not_open_back_matter():
+    # "Dedication" by heading only, NOT in the contents, sitting mid-book: the
+    # short unlisted file after it is still the chapter's continuation.
+    docs = _untyped_book()
+    docs["ch2.xhtml"] = docs.pop("ch2.xhtml")  # keep order: ch1, dedication, ch1b, ch2
+    ordered = {}
+    for name, doc in docs.items():
+        if name == "ch2.xhtml":
+            ordered["ded.xhtml"] = _doc("<h1>Dedication</h1><p>For Sam.</p>")
+            ordered["ch1b.xhtml"] = _doc("<p>The first chapter carries on here.</p>")
+        ordered[name] = doc
+    script = li.epub_to_chapter_script(_epub(ordered, nav=_PLAIN_NAV.format(extra="", landmarks="")))
+    assert "For Sam." not in script
+    assert "The first chapter carries on here." in script

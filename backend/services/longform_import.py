@@ -519,7 +519,10 @@ def epub_to_chapter_script(
     for index, (full, types, heading, body) in enumerate(sections):
         title = toc.get(full) or heading
         if _is_ancillary(types, title):
-            in_back_matter = index > start
+            # Only a section the contents LISTS opens back matter: an unlisted page
+            # that merely looks ancillary must not cost the next chapter's
+            # continuation file.
+            in_back_matter = index > start and full in toc
             continue  # cover, title page, dedication, copyright, contents, …
         unlisted = full not in toc and not (types & _BODY_TYPES)
         stray = not heading and len(body.split()) <= _FRONT_MATTER_MAX_WORDS
