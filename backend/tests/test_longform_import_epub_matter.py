@@ -478,3 +478,15 @@ def test_an_unlisted_ancillary_looking_page_does_not_open_back_matter():
     script = li.epub_to_chapter_script(_epub(ordered, nav=_PLAIN_NAV.format(extra="", landmarks="")))
     assert "For Sam." not in script
     assert "The first chapter carries on here." in script
+
+
+def test_an_unlisted_ancillary_page_inside_back_matter_keeps_it_open():
+    docs = _untyped_book()
+    docs["publisher.xhtml"] = _doc("<p>HarperCollins Publishers, 25 Ryde Road</p>")
+    docs["endnotes.xhtml"] = _doc("<h1>Endnotes</h1><p>1. See the appendix.</p>")   # unlisted
+    docs["stray.xhtml"] = _doc("<p>* The reason for this use is given elsewhere.</p>")
+    nav = _PLAIN_NAV.format(extra="", landmarks="").replace(
+        "</ol>", '<li><a href="publisher.xhtml">About the Publisher</a></li></ol>', 1)
+    script = li.epub_to_chapter_script(_epub(docs, nav=nav))
+    for gone in ("Ryde Road", "See the appendix", "The reason for this use"):
+        assert gone not in script
