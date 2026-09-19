@@ -54,3 +54,13 @@ it('shows how the render was made, and says so plainly when an old render has no
   render(<RenderDetails render={{ job_id: 'old', output: 'x.mp3' }} />);
   expect(screen.getByText(/before details were recorded/i)).toBeVisible();
 });
+
+it('never throws on a malformed record from an older or hand-edited store', () => {
+  const broken = {
+    job_id: 'b',
+    output: 'b.mp3',
+    summary: { voices: 'v1', speeds: 'fast', options: 'x' },
+  } as unknown as RenderRecord;
+  expect(renderRecipe(broken)).toBe('');
+  expect(() => render(<RenderDetails render={broken} />)).not.toThrow();
+});

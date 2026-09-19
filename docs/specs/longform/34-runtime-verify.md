@@ -980,17 +980,11 @@ Error paths (HTTP 400, `{"detail": …}`): empty → `"empty file"` (`:108-109`)
 ### `GET /longform/jobs?limit=50`
 → **200** `{ "jobs": [ { "job_id": "<16hex>", "type": "audiobook"|"story", "output":
 "<filename>", "duration_s": <2dp float>, "chapters": <int>, "created_at": <float epoch>
-[, "title": "<str>"][, "summary": {…}] } ] }`. Item shape notes:
+[, "title": "<str>"] } ] }`. Item shape notes:
 - Keys always present: `job_id, type, output, duration_s, chapters, created_at`
   (`longform_jobs.py:116-123`). **`title` is a conditional key** — added only when
-  recoverable. Renders made since the `done` event began carrying it have the book's
-  title (the request's `metadata.title`, else the first chapter title); older renders
-  have none.
-- **`summary` is a conditional key** — how the render was made, recorded on the `done`
-  event: `engine`, `voices` (`[{id, name}]`), `language`, `format`, `lines`, `words`,
-  `speeds` (distinct span speeds, unset = 1.0), `options` (the non-default expressive
-  options) and `chapter_titles`. Settings and counts only, never script text. Absent on
-  renders that predate it; a summary failure never fails a render.
+  recoverable (`:135-136`); for longform jobs it is **virtually always absent** (the
+  `done` event has no `title`, and `job_store.create` writes empty `meta_json`).
 - `output` is a bare filename → served at `/audio/<output>`.
 - Newest-first; only finished `audiobook`/`story` jobs (`_LONGFORM_TYPES`,
   `longform_jobs.py:29`) with a recoverable `done` event carrying an `output` filename.

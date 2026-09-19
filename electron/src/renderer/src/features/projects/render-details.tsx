@@ -32,7 +32,7 @@ export function clock(seconds: number | undefined): string {
 }
 
 export function speedLabel(speeds: number[] | undefined): string {
-  const values = (speeds || []).filter((value) => Number.isFinite(value));
+  const values = (Array.isArray(speeds) ? speeds : []).filter((value) => Number.isFinite(value));
   if (!values.length) return '';
   const low = Math.min(...values);
   const high = Math.max(...values);
@@ -40,8 +40,8 @@ export function speedLabel(speeds: number[] | undefined): string {
 }
 
 export const voiceLabel = (summary: RenderSummary | undefined) =>
-  (summary?.voices || [])
-    .map((voice) => voice.name || voice.id)
+  (Array.isArray(summary?.voices) ? summary.voices : [])
+    .map((voice) => voice?.name || voice?.id)
     .filter(Boolean)
     .join(', ');
 
@@ -63,7 +63,9 @@ export function RenderDetails({ render }: { render: RenderRecord }) {
   const summary = render.summary;
   if (!summary)
     return <p className="text-xs text-muted-foreground">{t('projects.render_no_details')}</p>;
-  const options = Object.entries(summary.options || {})
+  const options = Object.entries(
+    summary.options && typeof summary.options === 'object' ? summary.options : {},
+  )
     .map(([key, value]) => `${key.replaceAll('_', ' ')} ${String(value)}`)
     .join(' · ');
   const rows: [string, string][] = [

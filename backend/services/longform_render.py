@@ -553,8 +553,9 @@ def render_summary(
     voice, how fast, which engine, how it was joined. ``chapters`` is the plan
     (objects with ``title`` and ``spans`` carrying ``text``/``speed``);
     ``voices`` is the already-resolved ``[{"id", "name"}]`` actually used;
-    ``options`` is the render's non-default expressive options (any new knob —
-    join gaps included — shows up here without touching this function).
+    ``options`` is the render's non-default expressive options, already filtered
+    by the caller (any new knob — join gaps included — shows up here without
+    touching this function).
     Content-free by design: counts and settings, never the script text.
     """
     spans = [s for c in chapters for s in getattr(c, "spans", [])]
@@ -569,6 +570,8 @@ def render_summary(
         "lines": len(spoken),
         "words": sum(len(s.text.split()) for s in spoken),
         "speeds": speeds,
-        "options": {k: v for k, v in (options or {}).items() if v not in (None, False, 0, "", [])},
+        # The caller passes only non-default options; keep explicit falsy values
+        # (seed 0, postprocess off) — they are settings, not absences.
+        "options": {str(k): v for k, v in (options or {}).items() if v is not None},
         "chapter_titles": titles,
     }

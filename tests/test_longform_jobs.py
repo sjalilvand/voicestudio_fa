@@ -223,7 +223,7 @@ def test_library_carries_the_title_and_summary_the_done_event_recorded():
     item = next(j for j in build_longform_library(job_store.list_jobs, job_store.events_since, limit=500)
                 if j["job_id"] == jid)
     assert item["title"] == "The Super Sloth"
-    assert item["summary"] == summary
+    assert item["summary"] == {**summary, "language": "", "format": "", "chapter_titles": []}
 
 
 def test_library_tolerates_renders_without_or_with_a_malformed_summary():
@@ -250,6 +250,20 @@ def test_render_summary_is_settings_and_counts_never_script_text():
     assert out["voices"] == [{"id": "v1", "name": "Jake"}] and out["engine"] == "gpt-sovits"
     assert out["lines"] == 2 and out["words"] == 8
     assert out["speeds"] == [0.95, 1.0]                     # unset speed = engine default
-    assert out["options"] == {"seed": 7, "line_gap_ms": 250}   # only what was actually set
+    # The caller pre-filters to non-default options; explicit falsy values stay.
+    assert out["options"] == {"seed": 7, "vary_repeats": False, "line_gap_ms": 250}
     assert out["chapter_titles"] == ["Chapter One", "Chapter Two"]
     assert "Zoe" not in json.dumps(out)                        # content-free
+
+
+def test_a_summary_with_malformed_nested_fields_degrades_instead_of_reaching_clients():
+    jid = _uid("story_nested")
+    _seed_done(jid, type="story", done_payload={
+        "type": "done", "output": "nested.mp3",
+        "summary": {"engine": 7, "voices": "v1", "speeds": ["fast", 0.95, True], "lines": "12",
+                    "words": None, "options": {"seed": 0, "bad": {"x": 1}}, "chapter_titles": [1, "One"]}})
+    item = next(j for j in build_longform_library(job_store.list_jobs, job_store.events_since, limit=500)
+                if j["job_id"] == jid)
+    assert item["summary"] == {
+        "engine": "7", "voices": [], "language": "", "format": "", "lines": 12, "words": 0,
+        "speeds": [0.95], "options": {"seed": 0}, "chapter_titles": ["One"]}

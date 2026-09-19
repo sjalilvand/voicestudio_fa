@@ -291,14 +291,14 @@ def _voice_profile_exists(profile_id: str | None) -> bool:
     return row is not None
 
 
-def _render_summary(plan, default_voice, voice_map, language, fmt, opts) -> dict:
+def _render_summary(chapters, default_voice, voice_map, language, fmt, opts) -> dict:
     """The finished render's summary: resolve the voices it used to profile names."""
     from core.db import db_conn
     from services.longform_render import render_summary
     from services.tts_backend import active_backend_id
 
     ids: list[str] = []
-    for chapter in plan.chapters:
+    for chapter in chapters:
         for span in chapter.spans:
             pid = _map_span_voice(span.voice_id, default_voice, voice_map)
             if pid and pid not in ids:
@@ -309,11 +309,15 @@ def _render_summary(plan, default_voice, voice_map, language, fmt, opts) -> dict
         with db_conn() as conn:
             rows = conn.execute(f"SELECT id, name FROM voice_profiles WHERE id IN ({marks})", ids).fetchall()  # nosec B608 — placeholders only
         names = {row["id"]: row["name"] for row in rows}
+    # Options that differ from the defaults — by VALUE, so an explicit seed=0 or
+    # postprocess_output=False is recorded, and an untouched default is not.
+    defaults = ExpressiveOptions().to_manifest()
+    chosen = (opts or ExpressiveOptions()).to_manifest()
     return render_summary(
-        plan.chapters,
+        chapters,
         voices=[{"id": pid, "name": names.get(pid, "")} for pid in ids],
         engine_id=active_backend_id(), language=language, fmt=fmt,
-        options=(opts or ExpressiveOptions()).to_manifest(),
+        options={k: v for k, v in chosen.items() if v != defaults.get(k)},
     )
 
 
@@ -1153,7 +1157,11 @@ async def _render_longform_sse(
         if title:
             done["title"] = str(title)[:200]
         try:
-            done["summary"] = _render_summary(plan, default_voice, voice_map, language, fmt, opts)
+            # Only what is IN the file: chapters that failed are not summarised,
+            # and the language is the one synthesis actually used.
+            rendered = [c for i, c in enumerate(plan.chapters) if i not in set(failed)]
+            done["summary"] = _render_summary(
+                rendered, default_voice, voice_map, resolved_lang, fmt, opts)
         except Exception:
             logger.warning("longform: could not build the render summary", exc_info=True)
         # Loudness verdict only when a preset was requested — off/None paths keep
