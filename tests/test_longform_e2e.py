@@ -315,3 +315,39 @@ def test_off_path_emits_no_loudness_block(tmp_path, monkeypatch):
     events = _collect_events(_plan(("One", "hi")), monkeypatch, out, fmt="m4b")  # no loudness
     assert "mastering" not in [e["type"] for e in events]
     assert "loudness" not in events[-1]  # legacy done shape preserved
+
+
+# ── the finished render says what it is ─────────────────────────────────────
+
+def test_done_event_carries_the_title_and_how_it_was_rendered(tmp_path, monkeypatch):
+    from services.audiobook import AudiobookPlan, Chapter, ExpressiveOptions, Span
+
+    out = tmp_path / "outputs"
+    out.mkdir()
+    plan = AudiobookPlan(chapters=[Chapter(title="Chapter One", spans=[
+        Span(voice_id=None, text="Zoe raced along the path.", speed=0.95)])])
+    events = _collect_events(plan, monkeypatch, out, fmt="mp3", language="English",
+                             metadata={"title": "The Super Sloth"},
+                             opts=ExpressiveOptions(seed=7))
+    done = events[-1]
+    assert done["type"] == "done" and done["title"] == "The Super Sloth"
+    summary = done["summary"]
+    assert summary["speeds"] == [0.95] and summary["lines"] == 1 and summary["words"] == 5
+    assert summary["language"] == "English" and summary["format"] == "mp3"
+    assert summary["options"] == {"seed": 7}
+    assert summary["chapter_titles"] == ["Chapter One"]
+    assert "Zoe" not in json.dumps(summary)      # settings and counts, never the script
+
+
+def test_a_summary_failure_never_costs_the_render(tmp_path, monkeypatch):
+    from api.routers import audiobook
+
+    def boom(*_a, **_k):
+        raise RuntimeError("profile db unavailable")
+
+    monkeypatch.setattr(audiobook, "_render_summary", boom)
+    out = tmp_path / "outputs"
+    out.mkdir()
+    done = _collect_events(_plan(("One", "Hi.")), monkeypatch, out, fmt="mp3")[-1]
+    assert done["type"] == "done" and "summary" not in done
+    assert (out / done["output"]).exists()

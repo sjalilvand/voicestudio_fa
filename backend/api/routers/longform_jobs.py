@@ -79,7 +79,7 @@ def build_longform_library(
     * ``list_jobs(status="done", limit=...)`` → all done jobs, newest-first.
     * ``events_since(job_id)`` → that job's persisted SSE events.
 
-    Returns ``[{job_id, type, title?, output, duration_s, chapters,
+    Returns ``[{job_id, type, title?, summary?, output, duration_s, chapters,
     created_at}]``. Jobs that aren't a longform type, or whose ``done`` event /
     output filename can't be recovered, are silently skipped — the library only
     ever lists things the user can actually re-download.
@@ -142,6 +142,11 @@ def build_longform_library(
                         title = None
             if title:
                 item["title"] = title
+            # How it was made (voice, speed, engine, joins) — renders finished
+            # before this existed simply have none.
+            summary = done.get("summary")
+            if isinstance(summary, dict):
+                item["summary"] = summary
             out.append(item)
         except Exception:
             # Per-row isolation: one bad row never sinks the whole list.

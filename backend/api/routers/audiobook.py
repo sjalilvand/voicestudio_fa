@@ -291,6 +291,32 @@ def _voice_profile_exists(profile_id: str | None) -> bool:
     return row is not None
 
 
+def _render_summary(plan, default_voice, voice_map, language, fmt, opts) -> dict:
+    """The finished render's summary: resolve the voices it used to profile names."""
+    from core.db import db_conn
+    from services.longform_render import render_summary
+    from services.tts_backend import active_backend_id
+
+    ids: list[str] = []
+    for chapter in plan.chapters:
+        for span in chapter.spans:
+            pid = _map_span_voice(span.voice_id, default_voice, voice_map)
+            if pid and pid not in ids:
+                ids.append(pid)
+    names: dict[str, str] = {}
+    if ids:
+        marks = ",".join("?" * len(ids))
+        with db_conn() as conn:
+            rows = conn.execute(f"SELECT id, name FROM voice_profiles WHERE id IN ({marks})", ids).fetchall()  # nosec B608 — placeholders only
+        names = {row["id"]: row["name"] for row in rows}
+    return render_summary(
+        plan.chapters,
+        voices=[{"id": pid, "name": names.get(pid, "")} for pid in ids],
+        engine_id=active_backend_id(), language=language, fmt=fmt,
+        options=(opts or ExpressiveOptions()).to_manifest(),
+    )
+
+
 def _map_span_voice(
     voice_id: str | None, default_voice: str | None, voice_map: dict | None
 ) -> str | None:
@@ -889,8 +915,8 @@ async def _render_longform_sse(
 
     # Persist a durable resume manifest (plan + params) so an interrupted render
     # can be resumed later even without the original script. Best-effort.
+    title = (metadata or {}).get("title") or (plan.chapters[0].title if plan.chapters else "")
     try:
-        title = (metadata or {}).get("title") or (plan.chapters[0].title if plan.chapters else "")
         longform_resume.write_manifest(longform_resume.build_manifest(
             job_id=job_id, job_type=job_type, title=title,
             plan_chapters=[
@@ -1122,6 +1148,14 @@ async def _render_longform_sse(
         done = {"type": "done", "output": out_name,
                 "chapters": len(chapter_files), "duration_s": round(total_s, 2),
                 "cached_chapters": cached_n, "failed_chapters": failed}
+        # Say what this render IS, so the library can show more than a filename
+        # (#2233). Additive keys; best-effort — a summary never fails a render.
+        if title:
+            done["title"] = str(title)[:200]
+        try:
+            done["summary"] = _render_summary(plan, default_voice, voice_map, language, fmt, opts)
+        except Exception:
+            logger.warning("longform: could not build the render summary", exc_info=True)
         # Loudness verdict only when a preset was requested — off/None paths keep
         # the exact legacy `done` shape (additive, old clients unaffected).
         if norm in LOUDNESS_PRESETS:
