@@ -497,7 +497,7 @@ def test_render_request_gap_fields_are_bounded_and_reach_options():
 
     req = LongformRenderRequest()
     opts = _expressive_opts(req)
-    assert (opts.line_gap_ms, opts.paragraph_gap_ms, opts.trim_edges) == (250, 600, True)
+    assert (opts.line_gap_ms, opts.paragraph_gap_ms, opts.trim_edges) == (250, 350, True)
     assert opts.cache_signature()  # non-default vs the dataclass → cache key moves
     with pytest.raises(ValueError):
         LongformRenderRequest(line_gap_ms=99999)

@@ -12,7 +12,7 @@ const DISPLAY = {
   posTemp: 5.0,
   classTemp: 0.0,
   lineGapMs: 250,
-  paragraphGapMs: 600,
+  paragraphGapMs: 350,
 };
 
 const CHIP =

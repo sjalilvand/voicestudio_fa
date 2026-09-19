@@ -19,7 +19,7 @@ const knobs = [
 // these deliberate gaps go in instead. Server defaults shown when unset.
 const gaps = [
   { key: 'lineGapMs', label: 'line_gap', max: 2000, value: 250 },
-  { key: 'paragraphGapMs', label: 'paragraph_gap', max: 3000, value: 600 },
+  { key: 'paragraphGapMs', label: 'paragraph_gap', max: 3000, value: 350 },
 ] as const;
 export function ProductionSettings({
   value,

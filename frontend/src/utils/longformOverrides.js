@@ -8,7 +8,7 @@ export const DEFAULT_OVERRIDES = {
   varyRepeats: false,
   emoText: '',
   emoAlpha: null,
-  // Seamless joins: null = the server default (250 ms / 600 ms / trim on).
+  // Seamless joins: null = the server default (250 ms / 350 ms / trim on).
   lineGapMs: null,
   paragraphGapMs: null,
   trimEdges: null,

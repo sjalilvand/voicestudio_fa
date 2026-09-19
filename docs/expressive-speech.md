@@ -111,7 +111,7 @@ that padding (**Trim engine silence**, −40 dBFS with 40 ms kept at each edge)
 and inserts deliberate silence instead: **Gap between lines** (250 ms) between
 consecutive lines that carry no `[pause]` of their own — an explicit `[pause]`
 replaces the gap rather than adding to it — and **Gap between paragraphs**
-(600 ms) at a blank line inside one line of script. A line that inline markup
+(350 ms) at a blank line inside one line of script. A line that inline markup
 (`[slow]`, `[emphasis]`, `[spell]`) splits into several renders is still one
 line: no gap lands in the middle of it (and a blank line sitting on that split
 still gets the paragraph gap). A `[voice:NAME]` change is a line boundary and
