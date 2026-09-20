@@ -284,3 +284,38 @@ def test_nonfinite_persisted_values_keep_the_library_json_safe(value):
     assert item["duration_s"] == 0
     assert item["summary"]["speeds"] == [1.0]
     assert item["summary"]["options"] == {"seed": 0}
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_summary_sanitizes_nested_nonfinite_settings(value):
+    from types import SimpleNamespace as NS
+    from services.longform_render import render_summary
+    result = render_summary([NS(title="One", spans=[NS(text="hello", speed=value)])],
+                            voices=[], options={"emo_vector": [0, value], "nested": {"value": value}})
+    json.dumps(result, allow_nan=False)
+    assert result["speeds"] == []
+    assert result["options"]["emo_vector"] == [0, None]
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_longform_requests_reject_nonfinite_values(value):
+    from pydantic import ValidationError
+    from api.routers.audiobook import ExpressiveMixin, LongformSpan
+    with pytest.raises(ValidationError):
+        ExpressiveMixin(emo_vector=[value] + [0.0] * 7)
+    with pytest.raises(ValidationError):
+        LongformSpan(text="hello", speed=value)
+
+
+def test_summary_records_effective_tier_settings(monkeypatch):
+    from api.routers.audiobook import _render_summary
+    from services.audiobook import ExpressiveOptions
+    from services import performance_profiles, tts_backend
+    monkeypatch.setattr(tts_backend, "active_backend_id", lambda: "omnivoice")
+    monkeypatch.setattr(tts_backend, "get_backend_class", lambda _: tts_backend.OmniVoiceBackend)
+    monkeypatch.setattr(performance_profiles, "tts_defaults", lambda: {"num_step": 12, "postprocess_output": False})
+    implicit = _render_summary([], None, None, None, "mp3", ExpressiveOptions())
+    explicit = _render_summary([], None, None, None, "mp3", ExpressiveOptions(num_step=12, postprocess_output=False))
+    assert implicit == explicit
+    assert implicit["options"]["num_step"] == 12
+    assert implicit["options"]["postprocess_output"] is False

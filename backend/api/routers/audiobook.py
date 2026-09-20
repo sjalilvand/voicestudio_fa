@@ -32,7 +32,7 @@ from collections.abc import Awaitable, Callable
 
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from services.audiobook import (
     ExpressiveOptions,
@@ -99,6 +99,8 @@ class ExpressiveMixin(BaseModel):
     * ``vary_repeats`` — cache opt-out: give identical repeated lines distinct
       takes instead of replaying one recording (default off = today).
     """
+
+    model_config = ConfigDict(allow_inf_nan=False)
 
     # Bounds so a loopback POST (reachable by a browser-tab CSRF) can't pin a
     # GPU-pool worker with an absurd step count or otherwise feed the sampler
@@ -295,7 +297,7 @@ def _render_summary(chapters, default_voice, voice_map, language, fmt, opts) -> 
     """The finished render's summary: resolve the voices it used to profile names."""
     from core.db import db_conn
     from services.longform_render import render_summary
-    from services.tts_backend import active_backend_id
+    from services.tts_backend import OmniVoiceBackend, active_backend_id, get_backend_class
 
     ids: list[str] = []
     for chapter in chapters:
@@ -313,10 +315,16 @@ def _render_summary(chapters, default_voice, voice_map, language, fmt, opts) -> 
     # postprocess_output=False is recorded, and an untouched default is not.
     defaults = ExpressiveOptions().to_manifest()
     chosen = (opts or ExpressiveOptions()).to_manifest()
+    engine_id = active_backend_id()
+    cls = get_backend_class(engine_id)
+    if cls is OmniVoiceBackend or getattr(cls, "supports_native_omnivoice_controls", False):
+        # Record effective tier values as well as explicit overrides: two
+        # requests with identical synthesis settings must have identical details.
+        chosen.update(_omnivoice_sampling_kwargs(opts or ExpressiveOptions()))
     return render_summary(
         chapters,
         voices=[{"id": pid, "name": names.get(pid, "")} for pid in ids],
-        engine_id=active_backend_id(), language=language, fmt=fmt,
+        engine_id=engine_id, language=language, fmt=fmt,
         options={k: v for k, v in chosen.items() if v != defaults.get(k)},
     )
 
@@ -1227,6 +1235,7 @@ async def audiobook_synthesize(req: AudiobookRequest, request: Request = None):
 # ── Shared longform render: Stories (and any future front door) post a plan ──
 
 class LongformSpan(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False)
     voice_id: str | None = None
     text: str
     pause_ms_after: int = 0

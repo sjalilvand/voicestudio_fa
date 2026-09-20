@@ -334,8 +334,11 @@ def test_done_event_carries_the_title_and_how_it_was_rendered(tmp_path, monkeypa
     summary = done["summary"]
     assert summary["speeds"] == [0.95] and summary["lines"] == 1 and summary["words"] == 5
     assert summary["language"] == "English" and summary["format"] == "mp3"
-    # Explicit falsy settings are settings; untouched defaults are not recorded.
-    assert summary["options"] == {"seed": 0, "postprocess_output": False}
+    # Explicit falsy settings and effective sampling values are recorded.
+    assert summary["options"]["seed"] == 0
+    assert summary["options"]["postprocess_output"] is False
+    assert summary["options"]["num_step"] > 0
+    assert summary["options"]["guidance_scale"] == 2.0
     assert summary["chapter_titles"] == ["Chapter One"]
     assert "Zoe" not in json.dumps(summary)      # settings and counts, never the script
 
@@ -364,3 +367,13 @@ def test_summary_describes_only_the_chapters_that_made_it_into_the_file(tmp_path
     assert done["type"] == "done" and done["failed_chapters"]
     assert done["summary"]["chapter_titles"] == ["Good"]
     assert done["summary"]["words"] == 2
+
+
+def test_done_summary_from_old_manifest_is_strict_json(tmp_path, monkeypatch):
+    from services.audiobook import ExpressiveOptions
+    out = tmp_path / "outputs"
+    out.mkdir()
+    events = _collect_events(_plan(("One", "hello")), monkeypatch, out, fmt="mp3",
+                             opts=ExpressiveOptions(emo_vector=(float("nan"),) * 8))
+    assert events[-1]["type"] == "done"
+    json.dumps(events[-1], allow_nan=False)

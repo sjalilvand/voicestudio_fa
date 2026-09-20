@@ -538,6 +538,17 @@ def build_render_cmd(
 _SUMMARY_MAX_TITLES = 60
 
 
+def _summary_json_value(value):
+    """Keep nested settings JSON-safe even when recovering an old manifest."""
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if isinstance(value, dict):
+        return {str(k): _summary_json_value(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_summary_json_value(v) for v in value]
+    return value
+
+
 def render_summary(
     chapters: list,
     *,
@@ -560,7 +571,8 @@ def render_summary(
     """
     spans = [s for c in chapters for s in getattr(c, "spans", [])]
     spoken = [s for s in spans if (getattr(s, "text", "") or "").strip()]
-    speeds = sorted({round(float(getattr(s, "speed", None) or 1.0), 2) for s in spoken})
+    speeds = sorted({round(float(getattr(s, "speed", None) or 1.0), 2) for s in spoken
+                     if math.isfinite(float(getattr(s, "speed", None) or 1.0))})
     titles = [str(getattr(c, "title", "") or "") for c in chapters][:_SUMMARY_MAX_TITLES]
     return {
         "engine": engine_id or "",
@@ -572,6 +584,7 @@ def render_summary(
         "speeds": speeds,
         # The caller passes only non-default options; keep explicit falsy values
         # (seed 0, postprocess off) — they are settings, not absences.
-        "options": {str(k): v for k, v in (options or {}).items() if v is not None},
+        "options": {str(k): _summary_json_value(v) for k, v in (options or {}).items()
+                    if v is not None},
         "chapter_titles": titles,
     }

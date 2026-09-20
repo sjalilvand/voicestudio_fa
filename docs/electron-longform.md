@@ -45,3 +45,5 @@ The Stories editor grows with the manuscript inside the page scroll container. L
 Stories and Audiobook offer **Clear script** with confirmation. Stories removes all lines, chapter markers and pending import text while retaining the cast; Audiobook clears its manuscript. The web Stories editor clears pending pasted text too, stops playback, ignores late preview results and releases preview audio when clearing, removing or replacing lines. Confirmation also names pending imported text. Clearing an imported script does not recreate the demo story.
 
 Finished renders in Projects identify themselves: the row shows the book's title and a one-line recipe (voice · speed · engine · length), and **How it was made** expands to voice, speed, engine, language, format, size and the non-default settings. Renders made before this was recorded say so instead of showing a bare filename.
+
+Render history includes effective sampling settings (including performance-tier defaults). Non-finite request values are rejected; older malformed numeric details are sanitized so Projects and completion events remain readable.
