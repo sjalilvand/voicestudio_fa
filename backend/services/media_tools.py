@@ -296,6 +296,10 @@ def _install_staged_directory(staged: str, target: str) -> None:
     backup_root = tempfile.mkdtemp(prefix=".media-backup-", dir=os.path.dirname(target))
     backup = os.path.join(backup_root, "previous")
     keep_backup = False
+
+    def remove_backup() -> None:
+        shutil.rmtree(backup_root)
+
     try:
         if os.path.exists(target):
             _retry_tool_filesystem(lambda: os.replace(target, backup))
@@ -315,7 +319,7 @@ def _install_staged_directory(staged: str, target: str) -> None:
     finally:
         if not keep_backup:
             try:
-                _retry_tool_filesystem(lambda: shutil.rmtree(backup_root))
+                _retry_tool_filesystem(remove_backup)
             except OSError:
                 # A locked old binary must not turn a successful update into a
                 # reported failure, or mask the original publication error.
