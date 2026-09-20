@@ -118,7 +118,8 @@ order (see `backend/engines/dots_tts/bootstrap.py`):
 2. **`backend/engines/dots_tts/.venv/`** — VoiceStudio's own venv, created on
    demand by step 3.
 3. **Lazy bootstrap** — `uv venv` then `uv pip install -e <clone> -c
-   <clone>/constraints/recommended.txt`. Requires `OMNIVOICE_DOTS_TTS_DIR`.
+   <clone>/constraints/.voicestudio-compatible.txt` (generated from the original
+   constraints with the compatibility repairs above). Requires `OMNIVOICE_DOTS_TTS_DIR`.
 
 ## Voice cloning
 
