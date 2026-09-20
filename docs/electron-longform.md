@@ -46,3 +46,6 @@ Stories and Audiobook offer **Clear script** with confirmation. Stories removes 
 
 The pinned chapter tracker scrolls within the available setup-pane height, keeping Stop reachable in compact windows. Collapsing setup moves the controls into the editor; they remain visible while scrolling long scripts.
 SRT manuscript imports preserve spoken numbers, including countdowns and numeric-only cues; cue indices and timestamps are removed.
+Finished renders in Projects identify themselves: the row shows the book's title and a one-line recipe (voice · speed · engine · length), and **How it was made** expands to voice, speed, engine, language, format, size and the non-default settings. Renders made before this was recorded say so instead of showing a bare filename.
+
+Render history includes effective sampling settings (including performance-tier defaults). Non-finite request values are rejected; older malformed numeric details are sanitized so Projects and completion events remain readable.

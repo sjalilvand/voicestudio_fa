@@ -36,6 +36,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - Dubbing background preservation and long exports work with newer FFmpeg builds that removed the legacy filter-file option (#2236) — thanks @quan0pek!
 
 - Stories: the book-wide reading speed moved from the bottom of the collapsed Cast card to the setup card beside voice and language, shows how many lines override it, and resets them in one click (#2230) — thanks @jaketame!
+- Projects: a finished Story or Audiobook shows its title and how it was made (voice, speed, engine, length, settings) instead of a bare filename (#2233) — thanks @jaketame!
 - Reject unsupported synthesis languages before model loading, including named picker choices and per-item batch languages (#2219) — thanks @rollroyces!
 - EPUB import narrates the book, not its print furniture: page numbers no longer glue onto words or appear as lone lines, cover/title/dedication/copyright/contents pages are skipped, and chapters are titled from the book's table of contents (#2208) — thanks @jaketame!
 - Stories: a long script no longer paints over the generation progress panel and the Generate/Stop footer while an audiobook renders (#2213) — thanks @jaketame!
