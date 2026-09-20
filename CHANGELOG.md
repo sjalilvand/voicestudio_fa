@@ -3,18 +3,33 @@
 All notable changes to VoiceStudio.
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
-`frontend/package.json` is the app-version source of truth; Cargo, Python, and
-the frozen-backend fallback mirror it for their toolchains.
+`frontend/package.json` is the maintained app-version source of truth; Python
+metadata and the backend fallback mirror it. Archived Tauri manifests stay frozen.
 
 ## [Unreleased]
 
+## [0.5.4] — 2026-09-20
+
+**Working engines, smoother long-form audio, and useful local integrations.** CosyVoice repairs its runtime and preserves speech context with newer Transformers. Stories and audiobooks gain cleaner audio joins, better script controls, and more reliable EPUB imports. Electron setup and diagnostics make failures easier to recover from without discarding downloaded models or existing projects.
+
+**Download**
+
+| Platform | Installer |
+| --- | --- |
+| Windows x64 | [Installer](https://github.com/debpalash/VoiceStudio/releases/download/v0.5.4/VoiceStudio-Electron-0.5.4-win-x64.exe) |
+| macOS Apple Silicon | [DMG](https://github.com/debpalash/VoiceStudio/releases/download/v0.5.4/VoiceStudio-Electron-0.5.4-mac-arm64.dmg) |
+| macOS Intel | [DMG](https://github.com/debpalash/VoiceStudio/releases/download/v0.5.4/VoiceStudio-Electron-0.5.4-mac-x64.dmg) |
+| Linux x64 | [AppImage](https://github.com/debpalash/VoiceStudio/releases/download/v0.5.4/VoiceStudio-Electron-0.5.4-linux-x64.AppImage) · [deb](https://github.com/debpalash/VoiceStudio/releases/download/v0.5.4/VoiceStudio-Electron-0.5.4-linux-x64.deb) |
+
+Already using Electron? Install over your existing app and keep your data. If prompted, choose **Install local runtime** to refresh its dependencies. Moving from Tauri? Back up your data directory with the app closed, install Electron, then verify your voices and projects before removing Tauri. Follow the [migration guide](https://github.com/debpalash/VoiceStudio/blob/v0.5.4/docs/electron-migration.md). Tauri v0.5.3 remains the final Tauri release; its updater cannot install Electron.
+
 **Highlights**
 
-- n8n integrations export a manual local speech workflow with the active backend address (#2261)
-- Dubbing, batch and voice conversion on mlx-audio point at the one model switch that enables cloning, instead of asking you to change engine (#2204) — thanks @shivsin25!
-- Bug reports filed from the desktop app name the backend error class again, so two unrelated failures stop looking identical (#2197)
-- Clearer recovery guidance for known GPU, Windows policy, and audio-file failures (#2195)
-- Long stories and audiobooks join rendered audio in one pass while preserving crossfades (#2259) — thanks @shivsin25!
+- Repair CosyVoice generation and several engine installation paths without deleting downloaded models (#2258, #2240, #2243)
+- Cleaner story and audiobook joins, script controls, and EPUB imports (#2259, #2216, #2203, #2228)
+- Export local n8n speech workflows and configure Claude Code or Cursor through MCP (#2261, #2257)
+- More reliable Electron setup, dictation, and actionable crash reports (#2221, #2245, #2123, #2262)
+- Preserve dialogue, timing, and background audio through dubbing and subtitle imports (#2222, #2224, #2242)
 
 ### Changed
 
@@ -30,6 +45,8 @@ the frozen-backend fallback mirror it for their toolchains.
 - Stories' Paste & Split can now split by Sentences, Paragraphs (the new default) or whole Chapters, so a single narrator is no longer chopped into one take per sentence (#2217) — thanks @jaketame!
 
 ### Fixed
+
+- Preserve completed generation results when worker completion races with the timeout check (#2264)
 
 - CosyVoice repairs missing runtime dependencies and preserves speech context with newer Transformers (#2096) — thanks @martinezpl!
 - Electron native-crash reports retain the faulting thread instead of losing it behind long stacks and extension lists (#2262)
@@ -63,60 +80,6 @@ the frozen-backend fallback mirror it for their toolchains.
 - Prevent reference voice cloning from silently downloading a second speech recognizer (#2116)
 - Dubbing from a video's downloaded rolling captions speaks each line once while preserving intentional repeated dialogue (#2222) — thanks @kevin9327!
 
-### Docs
-
-- Install with prompt targets Electron, and active scripts, CI and contributor guidance treat Tauri as archived (#2220)
-- Load installed IndexTTS checkpoints when the upstream config names missing training-cluster paths, without rewriting user files (#2097) — thanks @martinezpl!
-- Cloning errors name the active mlx-audio model and recommend CSM while retaining alternative engines as a fallback (#2204, #2201) — thanks @shivsin25!
-- Exported WebVTT subtitles and transcriptions keep a cue like "I <3 you" or one containing `-->` whole in players, instead of cutting or emptying it (#2226) — thanks @kevin9327!
-- EPUB imports preserve accents and wide-character documents using their declared encoding or byte-order mark (#2191) — thanks @kevin9327!
-- Video watermark exports and dubbing keyframes use the bundled FFmpeg without requiring a system install (#2192) — thanks @kevin9327!
-- Restore the backend error class in auto-filed bug reports — the Electron app files through the shared report builder, which never carried it, so every report of an otherwise-generic failure was indistinguishable from the next (#2197) — thanks @shivsin25!
-- A streaming generation failure carries its backend error class to the report instead of dropping it at the stream boundary (#2197) — thanks @shivsin25!
-- Release cached Ascend NPU memory and recognize its dedicated VRAM when switching engines (#2194) — thanks @li-lizhe!
-- Downloaded and pasted WebVTT captions read `&`, `<` and `>` instead of `&amp;`, `&lt;` and `&gt;`, in the editor and in the dub (#2223) — thanks @kevin9327!
-- Source installs on Chinese, Japanese and Korean Windows read bundled data as UTF-8, preventing startup and generation failures (#2190) — thanks @kevin9327!
-- MOSS-TTS-Nano installs its audio backend and offers dependency repair for older managed installs without deleting cached models (#2182, #2100) — thanks @rollroyces and @martinezpl!
-- Resolve Confucius4 model assets from its clone while preserving relative configuration, cache, and reference paths, and reject missing reference clips (#2181, #2099) — thanks @rollroyces and @martinezpl!
-- GPT-SoVITS can use an explicitly configured default voice and avoids server-side re-splitting that can drop clauses (#2200) — thanks @jaketame!
-- Tabbing through a Dub segment's start or end time without typing no longer moves it to the nearest tenth of a second or changes its speed (#2224) — thanks @kevin9327!
-
-- Connect GPT-SoVITS to its api_v2 endpoint, accept healthy probe responses, and require a reference clip before generation (#2180, #2102) — thanks @rollroyces, @martinezpl and @jaketame!
-
-- A streaming generation that fails on an unsupported GPU, a Windows app-control block, or an audio-file error now says so and what to do, instead of only "Generation failed. Check the selected engine and try again." (#2195, #2177) — thanks @shivsin25!
-- A failure that cannot succeed on a retry — an unsupported GPU build, a blocked file — is reported as final, so the app stops re-rendering the whole passage to reach the same error (#2195, #2177) — thanks @shivsin25!
-- Importing an .srt into Stories keeps cues whose dialogue is only a number, such as a countdown (#2225) — thanks @kevin9327!
-
-### CI
-
-- Electron packaging rehearsals install and start a fresh managed runtime on Linux, Windows and Apple Silicon before passing (#2263)
-
-- Make the native ASR timeout regression reliable on slow runners and wait for its worker cleanup (#2202)
-
-## [0.5.4] — 2026-09-17
-
-**More reliable setup, generation, and dubbing.** This patch detects incomplete desktop runtimes before startup, repairs them without overwriting an existing Tauri installation, and makes engine failures easier to recover from. It also fixes gated model downloads, subtitle imports, and saved-voice language errors.
-
-**Download**
-
-| Platform | Installer |
-| --- | --- |
-| Windows x64 | [Installer](https://github.com/debpalash/VoiceStudio/releases/download/v0.5.4/VoiceStudio-Electron-0.5.4-win-x64.exe) |
-| macOS Apple Silicon | [DMG](https://github.com/debpalash/VoiceStudio/releases/download/v0.5.4/VoiceStudio-Electron-0.5.4-mac-arm64.dmg) |
-| macOS Intel | [DMG](https://github.com/debpalash/VoiceStudio/releases/download/v0.5.4/VoiceStudio-Electron-0.5.4-mac-x64.dmg) |
-| Linux x64 | [AppImage](https://github.com/debpalash/VoiceStudio/releases/download/v0.5.4/VoiceStudio-Electron-0.5.4-linux-x64.AppImage) · [deb](https://github.com/debpalash/VoiceStudio/releases/download/v0.5.4/VoiceStudio-Electron-0.5.4-linux-x64.deb) |
-
-Already using Electron? Install over your existing app and keep your data. If prompted, choose **Install local runtime** to refresh its dependencies. Moving from Tauri? Back up your data directory with the app closed, install Electron, then verify your voices and projects before removing Tauri. Follow the [migration guide](https://github.com/debpalash/VoiceStudio/blob/v0.5.4/docs/electron-migration.md). Tauri v0.5.3 remains the final Tauri release; its updater cannot install Electron.
-
-**Highlights**
-
-- Repair incomplete Electron runtimes and recover gated model downloads (#2179, #2173)
-- More reliable transcription, engine deadlines, and dubbing streams (#2165, #2109, #2111, #2138)
-- Preserve subtitle text and legacy manuscript encodings across desktop and web (#2077, #2151, #2073)
-- Clear language guidance and capability checks before voice generation (#2172, #2174, #2175)
-
-### Fixed
-
 - Bundle Linux native helper libraries so dictation and clipboard support start without distribution-specific libxdo packages (#2196)
 - Forward saved Hugging Face tokens when downloading gated model weights and dependencies (#2173) — thanks @shivsin25!
 - Explain unsupported saved-profile languages consistently in Electron, web, and streaming generation (#2175) — thanks @shivsin25!
@@ -147,7 +110,35 @@ Already using Electron? Install over your existing app and keep your data. If pr
 - Show local setup guidance when remote native engine installation is unavailable (#2166)
 - Show scrubbed native error tails and exit codes for failed dubbing extraction (#2167)
 
+### Docs
+
+- Install with prompt targets Electron, and active scripts, CI and contributor guidance treat Tauri as archived (#2220)
+- Load installed IndexTTS checkpoints when the upstream config names missing training-cluster paths, without rewriting user files (#2097) — thanks @martinezpl!
+- Cloning errors name the active mlx-audio model and recommend CSM while retaining alternative engines as a fallback (#2204, #2201) — thanks @shivsin25!
+- Exported WebVTT subtitles and transcriptions keep a cue like "I <3 you" or one containing `-->` whole in players, instead of cutting or emptying it (#2226) — thanks @kevin9327!
+- EPUB imports preserve accents and wide-character documents using their declared encoding or byte-order mark (#2191) — thanks @kevin9327!
+- Video watermark exports and dubbing keyframes use the bundled FFmpeg without requiring a system install (#2192) — thanks @kevin9327!
+- Restore the backend error class in auto-filed bug reports — the Electron app files through the shared report builder, which never carried it, so every report of an otherwise-generic failure was indistinguishable from the next (#2197) — thanks @shivsin25!
+- A streaming generation failure carries its backend error class to the report instead of dropping it at the stream boundary (#2197) — thanks @shivsin25!
+- Release cached Ascend NPU memory and recognize its dedicated VRAM when switching engines (#2194) — thanks @li-lizhe!
+- Downloaded and pasted WebVTT captions read `&`, `<` and `>` instead of `&amp;`, `&lt;` and `&gt;`, in the editor and in the dub (#2223) — thanks @kevin9327!
+- Source installs on Chinese, Japanese and Korean Windows read bundled data as UTF-8, preventing startup and generation failures (#2190) — thanks @kevin9327!
+- MOSS-TTS-Nano installs its audio backend and offers dependency repair for older managed installs without deleting cached models (#2182, #2100) — thanks @rollroyces and @martinezpl!
+- Resolve Confucius4 model assets from its clone while preserving relative configuration, cache, and reference paths, and reject missing reference clips (#2181, #2099) — thanks @rollroyces and @martinezpl!
+- GPT-SoVITS can use an explicitly configured default voice and avoids server-side re-splitting that can drop clauses (#2200) — thanks @jaketame!
+- Tabbing through a Dub segment's start or end time without typing no longer moves it to the nearest tenth of a second or changes its speed (#2224) — thanks @kevin9327!
+
+- Connect GPT-SoVITS to its api_v2 endpoint, accept healthy probe responses, and require a reference clip before generation (#2180, #2102) — thanks @rollroyces, @martinezpl and @jaketame!
+
+- A streaming generation that fails on an unsupported GPU, a Windows app-control block, or an audio-file error now says so and what to do, instead of only "Generation failed. Check the selected engine and try again." (#2195, #2177) — thanks @shivsin25!
+- A failure that cannot succeed on a retry — an unsupported GPU build, a blocked file — is reported as final, so the app stops re-rendering the whole passage to reach the same error (#2195, #2177) — thanks @shivsin25!
+- Importing an .srt into Stories keeps cues whose dialogue is only a number, such as a countdown (#2225) — thanks @kevin9327!
+
 ### CI
+
+- Electron packaging rehearsals install and start a fresh managed runtime on Linux, Windows and Apple Silicon before passing (#2263)
+
+- Make the native ASR timeout regression reliable on slow runners and wait for its worker cleanup (#2202)
 
 - Handle missing Electron signing credentials and retry packaging fixes without moving release tags (#2157)
 
@@ -167,10 +158,14 @@ Already using Electron? Install over your existing app and keep your data. If pr
 - @kevin9327 — subtitle timing, text encodings, WebVTT, and Windows database migrations.
 - @drakeo338 — Kokoro supported-language reporting.
 - @debpalash — integration, Electron runtime recovery, localization, regression coverage, and release maintenance.
+- @jaketame — sidebar navigation, script controls, EPUB imports, long-form audio, and GPT-SoVITS compatibility.
+- @joseedson18jc — API recovery, LM Studio discovery, dictation refinement, and AudioSeal sample-rate handling.
+- @li-lizhe — Ascend NPU memory cleanup and device detection.
 
 ### Bug reports
 
 - Thanks to @YChhunsann, @martinezpl, @denemon, @adeelahmadsiddique, @TehSmoo, @kmsitcomputer, @raya-mansouri, @infinitete, and @kor1998 for the reports behind the fixes above.
+- Thanks to @daniilganiev, @nevilbutani, @quan0pek, @baoyu0, @moonjoke001, @Splintercell89, @OtterBeWorking, and @iOSDevSK for additional setup, engine, dubbing, and dictation reports.
 
 ## [0.5.3] — 2026-09-17
 

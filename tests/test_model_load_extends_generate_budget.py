@@ -355,3 +355,46 @@ async def test_caller_cancellation_consumes_the_future(mm, pool, monkeypatch):
         "cancellation did not register a consumer for the abandoned future — "
         "its eventual exception will be logged as never retrieved"
     )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('worker_error', [None, ValueError, TimeoutError])
+async def test_completion_wins_when_timeout_wait_resumes_late(mm, pool, monkeypatch, worker_error):
+    """A completed worker has cleared its heartbeat before its waiter resumes."""
+    from types import SimpleNamespace
+
+    clock = [100.0]
+    monkeypatch.setattr(mm, 'time', SimpleNamespace(monotonic=lambda: clock[0]))
+    release = threading.Event()
+    real_wait = asyncio.wait
+    calls = 0
+
+    def worker():
+        mm.report_model_load_activity()
+        assert release.wait(5), 'test did not release worker'
+        if worker_error:
+            raise worker_error('worker failure')
+        return 'completed audio'
+
+    async def delayed_wait(futures, **kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            # The timeout has fired, but the completed worker's result arrives
+            # before this waiter resumes and makes its next deadline decision.
+            release.set()
+            done, pending = await real_wait(futures, timeout=5)
+            assert done and not pending
+            clock[0] += 1.0
+            return set(), set(futures)
+        return await real_wait(futures, **kwargs)
+
+    monkeypatch.setattr(asyncio, 'wait', delayed_wait)
+    try:
+        if worker_error:
+            with pytest.raises(worker_error, match='worker failure'):
+                await _run(mm, pool, worker, timeout=0.4)
+        else:
+            assert await _run(mm, pool, worker, timeout=0.4) == 'completed audio'
+    finally:
+        release.set()
