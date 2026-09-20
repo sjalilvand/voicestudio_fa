@@ -53,7 +53,9 @@ async function fetchSpec() {
     const knownDevProxy =
       import.meta.env.DEV &&
       ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname) &&
-      base.origin === 'http://127.0.0.1:3900';
+      base.protocol === 'http:' &&
+      ['localhost', '127.0.0.1', '[::1]'].includes(base.hostname) &&
+      base.port === '3900';
     if (!sameOrigin && !knownDevProxy) throw err;
     const headers = new Headers();
     const session = getAdminSession(API);
