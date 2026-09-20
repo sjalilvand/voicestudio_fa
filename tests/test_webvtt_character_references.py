@@ -43,3 +43,12 @@ def test_pasted_webvtt_translation_decodes_character_references():
         ">> Welcome to the Q&A.",
         "Is 3 < 4? Yes — always.",
     ]
+
+
+def test_webvtt_references_are_decoded_once_and_srt_is_unchanged():
+    from services.srt_parser import parse_srt
+    payload = '&amp;lt; &amp;amp;'
+    vtt = f'WEBVTT\n\n00:00:01.000 --> 00:00:02.000\n{payload}\n'
+    srt = f'1\n00:00:01,000 --> 00:00:02,000\n{payload}\n'
+    assert parse_srt(vtt).segments[0]['text'] == '&lt; &amp;'
+    assert parse_srt(srt).segments[0]['text'] == payload
