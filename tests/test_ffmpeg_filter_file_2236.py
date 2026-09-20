@@ -89,7 +89,10 @@ def test_modern_file_syntax_produces_real_audio(fu, monkeypatch, tmp_path):
         pytest.skip('system ffmpeg unavailable')
     # This host-level integration verifies the replacement spelling itself;
     # compatibility with removed/retained legacy options is tested above.
-    probe = subprocess.run([ffmpeg, '-version'], capture_output=True, text=True)
+    try:
+        probe = subprocess.run([ffmpeg, '-version'], capture_output=True, text=True, timeout=10)
+    except subprocess.TimeoutExpired:
+        pytest.fail('ffmpeg version probe timed out after 10 seconds')
     import re
     version = re.search(r'ffmpeg version (\d+)', probe.stdout)
     if version and int(version.group(1)) < 7:
