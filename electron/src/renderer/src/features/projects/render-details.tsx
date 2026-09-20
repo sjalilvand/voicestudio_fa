@@ -82,7 +82,7 @@ export function RenderDetails({ render }: { render: RenderRecord }) {
   const options = Object.entries(
     summary.options && typeof summary.options === 'object' ? summary.options : {},
   )
-    .filter(([key]) => key in OPTION_LABELS)
+    .filter(([key]) => Object.hasOwn(OPTION_LABELS, key))
     .map(([key, value]) => {
       const display =
         typeof value === 'boolean'

@@ -64,3 +64,16 @@ it('never throws on a malformed record from an older or hand-edited store', () =
   expect(renderRecipe(broken)).toBe('');
   expect(() => render(<RenderDetails render={broken} />)).not.toThrow();
 });
+
+it('ignores inherited object names in persisted settings', () => {
+  render(
+    <RenderDetails
+      render={{
+        ...record,
+        summary: { options: { toString: 'unsafe', constructor: 'unsafe', seed: 7 } },
+      }}
+    />,
+  );
+  expect(screen.getByText('Seed 7')).toBeVisible();
+  expect(screen.queryByText(/unsafe/)).not.toBeInTheDocument();
+});
