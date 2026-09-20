@@ -170,6 +170,40 @@ def _to_pcm_b64(wav) -> tuple[str, int]:
     return base64.b64encode(pcm).decode("ascii"), int(arr.shape[-1])
 
 
+def generation_kwargs(text: str, **options) -> dict:
+    """Map app controls to VoxCPM 2.0.3's three native generation modes.
+
+    Shared by the in-process adapter; keep this mapping stdlib-only so the
+    standalone sidecar does not depend on the application's environment.
+    """
+    ref_audio = options.get("ref_audio") or None
+    controls = []
+    if not ref_audio and options.get("description"):
+        controls.append(options["description"])
+    if options.get("instruct"):
+        controls.append(options["instruct"])
+    # Native inline instructions also select controllable cloning. A saved
+    # profile's transcript must not silently switch them into continuation.
+    inline = re.match(r"^\s*\(([^()]*)\)\s*(.*)$", text, re.DOTALL)
+    if inline:
+        controls.append(inline.group(1))
+        text = inline.group(2)
+    # Match the upstream demo: parentheses inside a control must not break
+    # the single '(control)text' prefix.
+    control = ", ".join(part.strip() for part in controls if part.strip())
+    control = " ".join(control.replace("(", " ").replace(")", " ").split())
+    ref_text = (options.get("ref_text") or "").strip()
+    continuation = bool(ref_audio and ref_text and not control)
+    return {
+        "text": f"({control}){text}" if control else text,
+        "cfg_value": options.get("guidance_scale", 2.0),
+        "inference_timesteps": options.get("num_step", 10),
+        "reference_wav_path": ref_audio,
+        "prompt_wav_path": ref_audio if continuation else None,
+        "prompt_text": ref_text if continuation else None,
+    }
+
+
 def _handle_synthesize(msg: dict, stdout) -> None:
     """One synthesize request. The mapping mirrors VoxCPM2Backend.generate."""
     text = msg.get("text")
@@ -181,28 +215,8 @@ def _handle_synthesize(msg: dict, stdout) -> None:
             "ref_audio must be a local file path; URLs are not accepted (local-first)."
         )
     model = _load_model(stdout)
-    description = msg.get("description")
-    cfg_value = msg.get("guidance_scale", 2.0)
-    timesteps = msg.get("num_step", 10)
-    if description and not ref_audio:
-        # Voice design: a voice from a text description, no reference clip.
-        wav = model.generate(
-            text=text,
-            voice_description=description,
-            cfg_value=cfg_value,
-            inference_timesteps=timesteps,
-        )
-    else:
-        instruct = msg.get("instruct")
-        ref_text = msg.get("ref_text")
-        wav = model.generate(
-            text=f"({instruct}){text}" if instruct else text,
-            cfg_value=cfg_value,
-            inference_timesteps=timesteps,
-            reference_wav_path=ref_audio,
-            prompt_wav_path=ref_audio if ref_text else None,
-            prompt_text=ref_text,
-        )
+    options = {key: value for key, value in msg.items() if key != "text"}
+    wav = model.generate(**generation_kwargs(text, **options))
     pcm_b64, n_samples = _to_pcm_b64(_at_engine_rate(wav, _sample_rate(model)))
     _send(stdout, {
         "op": "audio",

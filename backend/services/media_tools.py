@@ -54,6 +54,7 @@ underneath was never touched.
 """
 from __future__ import annotations
 
+import errno
 import hashlib
 import logging
 import os
@@ -63,6 +64,8 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
+from collections.abc import Callable
 import zipfile
 
 from core.config import DATA_DIR
@@ -270,6 +273,71 @@ def acquire_bundled(wait: bool = False) -> dict:
     return _op_snapshot()["acquire"]
 
 
+def _retry_tool_filesystem(operation: Callable[[], None]) -> None:
+    """Allow bounded time for probe images / virus scanners to release files."""
+    delays = (0.1, 0.25, 0.5, 1.0, 2.0)
+    for attempt in range(len(delays) + 1):
+        try:
+            operation()
+            return
+        except OSError as exc:
+            transient = (
+                exc.errno in (errno.EACCES, errno.EPERM, errno.EBUSY, errno.ENOTEMPTY)
+                or getattr(exc, "winerror", None) in (5, 32, 33)
+            )
+            if not transient or attempt == len(delays):
+                raise
+            time.sleep(delays[attempt])
+
+
+def _tool_path_exists(path: str) -> bool:
+    """Only missing paths are absent; permission failures must reach the UI."""
+    try:
+        os.stat(path)
+        return True
+    except (FileNotFoundError, NotADirectoryError):
+        return False
+
+
+def _install_staged_directory(staged: str, target: str) -> None:
+    # Keep the working installation until publication succeeds. The backup lives
+    # beside the target so both renames stay on the same filesystem.
+    backup_root = tempfile.mkdtemp(prefix=".media-backup-", dir=os.path.dirname(target))
+    backup = os.path.join(backup_root, "previous")
+    keep_backup = False
+
+    def remove_backup() -> None:
+        shutil.rmtree(backup_root)
+
+    try:
+        if _tool_path_exists(target):
+            _retry_tool_filesystem(lambda: os.replace(target, backup))
+            keep_backup = True
+        try:
+            _retry_tool_filesystem(lambda: os.replace(staged, target))
+        except OSError as publish_error:
+            if keep_backup:
+                try:
+                    _retry_tool_filesystem(lambda: os.replace(backup, target))
+                    keep_backup = False
+                except OSError as rollback_error:
+                    keep_backup = True
+                    raise OSError(
+                        f"{publish_error}; rollback failed: {rollback_error}. "
+                        f"Previous installation preserved at {backup}"
+                    ) from publish_error
+            raise
+        keep_backup = False
+    finally:
+        if not keep_backup:
+            try:
+                _retry_tool_filesystem(remove_backup)
+            except OSError:
+                # A locked old binary must not turn a successful update into a
+                # reported failure, or mask the original publication error.
+                logger.warning("media-tools: old backup retained: %s", os.path.basename(backup_root))
+
+
 def _do_acquire() -> None:
     url, sha, size = _expected_bundle()
     target = bundled_dir()
@@ -309,9 +377,7 @@ def _do_acquire() -> None:
                 raise RuntimeError(f"downloaded {base} failed its -version probe")
 
         # Finalize: swap the staged dir into place.
-        if os.path.isdir(target):
-            shutil.rmtree(target, ignore_errors=True)
-        os.replace(staged, target)
+        _install_staged_directory(staged, target)
 
     # Resolution caches may hold negative verdicts for the old paths.
     for t in TOOLS:
@@ -615,9 +681,7 @@ def _do_update_ytdlp() -> str:
         got = _read_ytdlp_version(os.path.join(staged, "yt_dlp"))
         if not got:
             raise RuntimeError("downloaded wheel has no readable yt_dlp version")
-        if os.path.isdir(overlay):
-            shutil.rmtree(overlay, ignore_errors=True)
-        os.replace(staged, overlay)
+        _install_staged_directory(staged, overlay)
     return version
 
 
@@ -650,7 +714,7 @@ def restore_ytdlp() -> dict:
     """Delete the overlay — the locked, tested yt-dlp underneath takes over on
     next start. Always safe: the locked install was never modified."""
     overlay = _ytdlp_overlay_dir()
-    if os.path.isdir(overlay):
-        shutil.rmtree(overlay, ignore_errors=True)
+    if _tool_path_exists(overlay):
+        _retry_tool_filesystem(lambda: shutil.rmtree(overlay))
     _set_op("ytdlp_update", state="idle", progress=0.0, error=None, version=None)
     return _ytdlp_status()

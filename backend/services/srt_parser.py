@@ -19,6 +19,7 @@ elsewhere in the backend:
 """
 from __future__ import annotations
 
+import html
 import re
 from dataclasses import dataclass
 
@@ -146,11 +147,17 @@ def parse_srt(content: str) -> SrtParseResult:
             skipped += 1
             continue
         lines = body.strip("\n").split("\n")
+        source_cue = "\n".join(line.strip() for line in lines if line.strip())
+        if is_webvtt:
+            # WebVTT escapes `&`, `<` and `>` in cue text ("Q&amp;A");
+            # SubRip has no escaping, so its text stays as written.
+            lines = [html.unescape(line) for line in lines]
         cue_text = "\n".join(line.strip() for line in lines if line.strip())
         if not cue_text:
             skipped += 1
             continue
-        raw.append({"start": start, "end": end, "text": cue_text})
+        raw.append({"start": start, "end": end, "text": cue_text,
+                    **({"webvtt_source": {"text": cue_text, "cue": source_cue}} if is_webvtt else {})})
 
     raw.sort(key=lambda r: r["start"])
 
@@ -165,7 +172,7 @@ def parse_srt(content: str) -> SrtParseResult:
         if e <= s:
             dropped += 1
             continue
-        out.append({"start": s, "end": e, "text": r["text"]})
+        out.append({**r, "start": s, "end": e})
         last_end = e
 
     segments = [
@@ -176,6 +183,7 @@ def parse_srt(content: str) -> SrtParseResult:
             "text": seg["text"],
             "text_original": seg["text"],
             "speaker_id": "Speaker 1",
+            **({"webvtt_source": seg["webvtt_source"]} if "webvtt_source" in seg else {}),
         }
         for i, seg in enumerate(out)
     ]
@@ -196,3 +204,40 @@ def format_cue_timestamp(seconds: float, ms_separator: str) -> str:
     m, rem = divmod(rem, 60_000)
     s, ms = divmod(rem, 1000)
     return f"{h:02d}:{m:02d}:{s:02d}{ms_separator}{ms:03d}"
+
+
+# Cue markup a segment may carry: WebVTT's tags (`<i>`, `<c.yellow>`,
+# `<v Roger>`), SubRip's `<font>` (players skip it) and timestamp tags.
+_CUE_MARKUP_RE = re.compile(
+    r"</?(?:[biu]|c|v|lang|ruby|rt|font)(?=[\s.>])[^<>\n]*>|<(?:\d+:)?\d{2}:\d{2}\.\d{3}>",
+    re.IGNORECASE,
+)
+# An `&` that does not already start a character reference.
+_BARE_AMPERSAND_RE = re.compile(r"&(?!#\d+;|#[xX][0-9a-fA-F]+;|[A-Za-z][A-Za-z0-9]*;)")
+
+
+def _escape_cue_span(span: str) -> str:
+    return _BARE_AMPERSAND_RE.sub("&amp;", span).replace("<", "&lt;").replace("-->", "--&gt;")
+
+
+def escape_webvtt_text(text: str, *, preserve_markup: bool = True) -> str:
+    """Make cue text safe for a WebVTT file without touching its markup.
+
+    Any other `<` opens a tag, so a player drops the rest of the cue ("I <3
+    you" shows as "I "), and a line containing `-->` ends the cue, emptying
+    it. A bare `&` becomes `&amp;`; an existing reference is not escaped
+    twice. SubRip has no escaping, so SRT text is written as-is.
+
+    Set ``preserve_markup=False`` for known plain text, such as fresh ASR
+    output. Literal tags and references then remain visible as spoken text.
+    """
+    if not preserve_markup:
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace("-->", "--&gt;")
+    parts = []
+    last = 0
+    for markup in _CUE_MARKUP_RE.finditer(text):
+        parts.append(_escape_cue_span(text[last:markup.start()]))
+        parts.append(markup.group(0))
+        last = markup.end()
+    parts.append(_escape_cue_span(text[last:]))
+    return "".join(parts)
