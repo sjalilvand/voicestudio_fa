@@ -1818,7 +1818,8 @@
     "port_in_use": "La porta {{port}} è già utilizzata da un altro programma. Chiudilo o imposta OMNIVOICE_PORT su una porta libera, quindi riprova.",
     "elapsed": "{{seconds}} s trascorsi",
     "first_run_hint": "Il primo avvio può richiedere diversi minuti durante la preparazione dell’ambiente Python.",
-    "port_in_use_short": "La porta {{port}} è in uso"
+    "port_in_use_short": "La porta {{port}} è in uso",
+    "proxy_bypass_help": "Le eccezioni del proxy Windows richiedono impostazioni esplicite. Imposta HTTP_PROXY/HTTPS_PROXY sull’URL del proxy e NO_PROXY sugli host esclusi, poi riprova."
   },
   "bootstrap": {
     "checking": "Verifica dell'ambiente…",

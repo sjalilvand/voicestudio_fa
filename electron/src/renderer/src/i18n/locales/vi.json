@@ -1816,7 +1816,8 @@
     "port_in_use": "Cổng {{port}} đang được chương trình khác sử dụng. Đóng chương trình đó hoặc đặt OMNIVOICE_PORT thành một cổng trống rồi thử lại.",
     "elapsed": "Đã qua {{seconds}} giây",
     "first_run_hint": "Lần chạy đầu có thể mất vài phút để chuẩn bị môi trường Python.",
-    "port_in_use_short": "Cổng {{port}} đang được sử dụng"
+    "port_in_use_short": "Cổng {{port}} đang được sử dụng",
+    "proxy_bypass_help": "Quy tắc bỏ qua proxy Windows cần được cấu hình rõ ràng. Đặt HTTP_PROXY/HTTPS_PROXY thành URL proxy và NO_PROXY thành các máy chủ được loại trừ, rồi thử lại."
   },
   "bootstrap": {
     "checking": "Đang kiểm tra môi trường…",

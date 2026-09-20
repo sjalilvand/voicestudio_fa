@@ -84,8 +84,9 @@ export function downloadProxyEnv(
     const raw = readSystemProxy();
     const settings = typeof raw === 'string' ? { server: raw } : raw;
     const hosts = proxyBypassHosts(settings?.bypass ?? '');
-    // Do not broaden proxy routing when a Windows-only bypass rule cannot be
-    // represented. Leave system handling intact; explicit env URLs remain available.
+    // Stop before uv can reinterpret the raw registry value as a hostname.
+    // Omitting a bypass rule could route private requests through the proxy.
+    if (settings && hosts === null) throw new Error('VOICESTUDIO_PROXY_BYPASS_UNSUPPORTED');
     if (settings && hosts !== null) {
       Object.assign(env, parseWinInetProxy(settings.server));
       systemBypass = hosts;

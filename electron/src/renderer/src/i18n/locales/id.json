@@ -1816,7 +1816,8 @@
     "port_in_use": "Port {{port}} sudah digunakan program lain. Tutup program tersebut atau atur OMNIVOICE_PORT ke port yang kosong, lalu coba lagi.",
     "elapsed": "{{seconds}} dtk berlalu",
     "first_run_hint": "Proses pertama dapat memakan waktu beberapa menit saat lingkungan Python disiapkan.",
-    "port_in_use_short": "Port {{port}} sedang digunakan"
+    "port_in_use_short": "Port {{port}} sedang digunakan",
+    "proxy_bypass_help": "Aturan pengecualian proksi Windows memerlukan pengaturan eksplisit. Isi HTTP_PROXY/HTTPS_PROXY dengan URL proksi dan NO_PROXY dengan host yang dikecualikan, lalu coba lagi."
   },
   "bootstrap": {
     "checking": "Memeriksa lingkungan…",

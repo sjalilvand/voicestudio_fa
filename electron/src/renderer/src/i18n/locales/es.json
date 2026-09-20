@@ -1818,7 +1818,8 @@
     "port_in_use": "Otro programa ya está usando el puerto {{port}}. Ciérralo o configura OMNIVOICE_PORT con un puerto libre y vuelve a intentarlo.",
     "elapsed": "{{seconds}} s transcurridos",
     "first_run_hint": "El primer inicio puede tardar varios minutos mientras se prepara el entorno de Python.",
-    "port_in_use_short": "El puerto {{port}} está en uso"
+    "port_in_use_short": "El puerto {{port}} está en uso",
+    "proxy_bypass_help": "Las excepciones del proxy de Windows requieren ajustes explícitos. Configura HTTP_PROXY/HTTPS_PROXY con la URL del proxy y NO_PROXY con los hosts excluidos; después, reintenta."
   },
   "bootstrap": {
     "checking": "Comprobando el entorno…",

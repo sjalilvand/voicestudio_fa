@@ -1824,7 +1824,8 @@
     "port_in_use": "المنفذ {{port}} مستخدم بالفعل من برنامج آخر. أغلقه أو اضبط OMNIVOICE_PORT على منفذ متاح، ثم أعد المحاولة.",
     "elapsed": "انقضت {{seconds}} ثانية",
     "first_run_hint": "قد يستغرق التشغيل الأول عدة دقائق أثناء إعداد بيئة Python.",
-    "port_in_use_short": "المنفذ {{port}} مستخدم"
+    "port_in_use_short": "المنفذ {{port}} مستخدم",
+    "proxy_bypass_help": "تتطلب قواعد تجاوز وكيل Windows إعدادات صريحة. اضبط HTTP_PROXY/HTTPS_PROXY على رابط الوكيل وNO_PROXY على المضيفين المستبعدين، ثم أعد المحاولة."
   },
   "bootstrap": {
     "checking": "جاري التحقق من البيئة…",

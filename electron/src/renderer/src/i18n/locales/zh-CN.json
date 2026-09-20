@@ -1820,7 +1820,8 @@
     "port_in_use": "端口 {{port}} 已被其他程序占用。请关闭该程序，或将 OMNIVOICE_PORT 设置为空闲端口，然后重试。",
     "elapsed": "已用时 {{seconds}} 秒",
     "first_run_hint": "首次运行需要准备 Python 环境，可能需要几分钟。",
-    "port_in_use_short": "端口 {{port}} 已被占用"
+    "port_in_use_short": "端口 {{port}} 已被占用",
+    "proxy_bypass_help": "Windows 代理绕过规则需要明确配置。请将 HTTP_PROXY/HTTPS_PROXY 设为代理 URL，将 NO_PROXY 设为排除的主机，然后重试。"
   },
   "bootstrap": {
     "checking": "正在检查环境…",

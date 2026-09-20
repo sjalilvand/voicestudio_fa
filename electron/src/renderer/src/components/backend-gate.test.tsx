@@ -27,6 +27,7 @@ beforeEach(() => {
   backendStatus.stage = 'setup_required';
   backendStatus.elapsedMs = 0;
   backendStatus.logTail = [];
+  delete backendStatus.message;
   delete backendStatus.setupPhase;
   delete backendStatus.setupProgress;
 });
@@ -95,4 +96,14 @@ it('keeps agent repair available when the backend is down', () => {
 
   expect(screen.getByText('repair dock')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: i18n.t('repairAgent.fix') })).toBeEnabled();
+});
+
+it('explains unsupported Windows proxy bypass rules before retrying setup', () => {
+  backendStatus.message = 'VOICESTUDIO_PROXY_BYPASS_UNSUPPORTED';
+  render(
+    <BackendGate>
+      <div>workspace</div>
+    </BackendGate>,
+  );
+  expect(screen.getByText(i18n.t('backend.proxy_bypass_help'))).toBeVisible();
 });

@@ -64,10 +64,6 @@ it('preserves representable system bypasses and declines lossy conversions', () 
     bypass: '*.example.com',
   }));
   expect(env.NO_PROXY).toContain('.example.com');
-  expect(
-    downloadProxyEnv({}, 'win32', () => ({ server: 'socks=proxy:1080', bypass: '<local>' }))
-      .HTTPS_PROXY,
-  ).toBeUndefined();
 });
 
 it('reads enabled registry values with a timeout and handles denied access', () => {
@@ -88,4 +84,10 @@ it('reads enabled registry values with a timeout and handles denied access', () 
     throw new Error('denied');
   });
   expect(downloadProxyEnv({}, 'win32').HTTPS_PROXY).toBeUndefined();
+});
+
+it('names unrepresentable proxy bypass rules instead of falling into misleading DNS errors', () => {
+  expect(() =>
+    downloadProxyEnv({}, 'win32', () => ({ server: 'socks=proxy:1080', bypass: '<local>' })),
+  ).toThrow('VOICESTUDIO_PROXY_BYPASS_UNSUPPORTED');
 });

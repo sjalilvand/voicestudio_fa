@@ -1816,7 +1816,8 @@
     "port_in_use": "{{port}} bağlantı noktası başka bir program tarafından kullanılıyor. Programı kapatın veya OMNIVOICE_PORT değerini boş bir bağlantı noktasına ayarlayıp yeniden deneyin.",
     "elapsed": "{{seconds}} sn geçti",
     "first_run_hint": "Python ortamı hazırlanırken ilk çalıştırma birkaç dakika sürebilir.",
-    "port_in_use_short": "{{port}} bağlantı noktası kullanımda"
+    "port_in_use_short": "{{port}} bağlantı noktası kullanımda",
+    "proxy_bypass_help": "Windows proxy istisnaları açık ayarlar gerektirir. HTTP_PROXY/HTTPS_PROXY değerini proxy URL’sine, NO_PROXY değerini hariç tutulan sunuculara ayarlayıp yeniden deneyin."
   },
   "bootstrap": {
     "checking": "Ortam kontrol ediliyor…",
