@@ -70,14 +70,25 @@ describe('OpenApiPanel', () => {
     expect(screen.getByText('http://127.0.0.1:3900/openapi.json')).toBeInTheDocument();
   });
 
-  it('never substitutes the page server for an unavailable remote backend', async () => {
-    backendBase.url = 'https://my-backend.example';
+  it('accepts the default localhost development backend', async () => {
+    backendBase.url = 'http://localhost:3900';
     apiFetch.mockRejectedValue(new TypeError('Failed to fetch'));
     fetch.mockResolvedValue({ ok: true, json: async () => MINIMAL_SPEC });
     render(<OpenApiPanel />);
-    expect(await screen.findByTestId('openapi-unreachable')).toBeInTheDocument();
-    expect(fetch).not.toHaveBeenCalled();
+    expect(await screen.findByTestId('scalar-mock')).toBeInTheDocument();
   });
+
+  it.each(['https://my-backend.example', 'http://localhost:3901', 'https://localhost:3900'])(
+    'never substitutes the page server for %s',
+    async (url) => {
+      backendBase.url = url;
+      apiFetch.mockRejectedValue(new TypeError('Failed to fetch'));
+      fetch.mockResolvedValue({ ok: true, json: async () => MINIMAL_SPEC });
+      render(<OpenApiPanel />);
+      expect(await screen.findByTestId('openapi-unreachable')).toBeInTheDocument();
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
 
   it('preserves the configured PIN through the known development proxy', async () => {
     sessionStorage.setItem('ov_pin', 'test-pin');
