@@ -3,11 +3,16 @@ import asyncio
 from pathlib import Path
 
 import pytest
-from services import ffmpeg_utils as fu
+
+
+@pytest.fixture
+def fu():
+    import importlib
+    return importlib.import_module("services.ffmpeg_utils")
 
 
 @pytest.mark.parametrize('modern', [False, True])
-def test_filter_file_works_with_legacy_and_modern_ffmpeg(monkeypatch, tmp_path, modern):
+def test_filter_file_works_with_legacy_and_modern_ffmpeg(fu, monkeypatch, tmp_path, modern):
     calls = []
     script = tmp_path / 'graph.txt'
     script.write_text('[0:a]anull[out]')
@@ -36,7 +41,7 @@ def test_filter_file_works_with_legacy_and_modern_ffmpeg(monkeypatch, tmp_path, 
     assert command[3] == '-filter_complex_script'  # caller's argv unchanged
 
 
-def test_filter_file_does_not_retry_a_real_processing_error(monkeypatch, tmp_path):
+def test_filter_file_does_not_retry_a_real_processing_error(fu, monkeypatch, tmp_path):
     calls = []
     class Process:
         returncode = 1
@@ -52,7 +57,7 @@ def test_filter_file_does_not_retry_a_real_processing_error(monkeypatch, tmp_pat
     assert len(calls) == 1
 
 
-def test_externalized_graph_survives_retry_then_is_cleaned(monkeypatch, tmp_path):
+def test_externalized_graph_survives_retry_then_is_cleaned(fu, monkeypatch, tmp_path):
     original_externalize = fu.externalize_long_filter_complex
     monkeypatch.setattr(fu.sys, 'platform', 'win32')
     monkeypatch.setattr(fu, 'externalize_long_filter_complex', lambda cmd: original_externalize(cmd, limit=1, tmp_dir=tmp_path))
@@ -75,7 +80,7 @@ def test_externalized_graph_survives_retry_then_is_cleaned(monkeypatch, tmp_path
     assert not paths[0].exists()
 
 
-def test_modern_file_syntax_produces_real_audio(monkeypatch, tmp_path):
+def test_modern_file_syntax_produces_real_audio(fu, monkeypatch, tmp_path):
     import shutil
     import subprocess
     import wave
