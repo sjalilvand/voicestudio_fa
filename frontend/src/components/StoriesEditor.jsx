@@ -46,6 +46,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, Menu } from '../ui';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import VoiceSelector from './VoiceSelector';
+import SearchableSelect from './SearchableSelect';
 import { useAppStore } from '../store';
 import { recordValueMoment } from '../utils/donationMoments';
 import {
@@ -1054,19 +1055,17 @@ export default function StoriesEditor({ profiles = [] }) {
                 <div className="flex items-center gap-[12px] flex-wrap">
                   <label className="flex items-center gap-[6px] [font-size:var(--text-xs)] text-fg-muted">
                     {t('stories.splitMode')}
-                    <select
-                      className="input-base w-auto [font-size:var(--text-xs)] px-[6px] py-[3px]"
+                    <SearchableSelect
                       value={splitMode}
-                      onChange={(e) => setSplitMode(e.target.value)}
-                      name="story-split-mode"
-                      title={t('stories.splitModeHint')}
-                    >
-                      {SPLIT_MODES.map((mode) => (
-                        <option key={mode} value={mode}>
-                          {t(`stories.split_${mode}`)}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setSplitMode}
+                      options={SPLIT_MODES.map((mode) => ({
+                        value: mode,
+                        label: t(`stories.split_${mode}`),
+                      }))}
+                      ariaLabel={t('stories.splitMode')}
+                      menuPortal
+                      size="sm"
+                    />
                   </label>
                   {splitMode === 'sentences' && (
                     <label className="flex items-center gap-[6px] [font-size:var(--text-xs)] text-fg-muted">
