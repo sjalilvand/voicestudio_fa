@@ -34,3 +34,14 @@ def test_active_engine_inventory_carries_language_choices(monkeypatch):
     assert 'english' in response['backends'][0]['supported_language_names']
     assert 'polish' not in response['backends'][0]['supported_language_names']
     assert 'supported_language_names' not in response['backends'][1]
+
+
+@pytest.mark.parametrize('engine', ['indextts2', 'omnivoice-subprocess'])
+def test_metadata_releases_temporary_sidecar_exit_handlers(monkeypatch, engine):
+    import atexit
+    callbacks = []
+    monkeypatch.setattr(atexit, 'register', lambda callback: callbacks.append(callback))
+    monkeypatch.setattr(atexit, 'unregister', lambda callback: callbacks.remove(callback))
+    for _ in range(3):
+        tts.language_options(engine)
+    assert callbacks == []

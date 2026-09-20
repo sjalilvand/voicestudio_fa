@@ -2991,6 +2991,7 @@ def language_options(backend_id: str) -> Optional[list[str]]:
     """
     from omnivoice.utils.lang_map import LANG_NAME_TO_ID
 
+    backend = None
     try:
         backend = get_backend_class(backend_id)()
         declared = backend.supported_languages
@@ -3002,6 +3003,19 @@ def language_options(backend_id: str) -> Optional[list[str]]:
     except Exception:  # Optional metadata must not take down discovery.
         logger.debug("Could not resolve language options for %s", backend_id, exc_info=True)
         return None
+    finally:
+        # Sidecar constructors register a bound exit handler, which otherwise
+        # retains every temporary metadata instance for the process lifetime.
+        shutdown = getattr(backend, "shutdown", None)
+        if callable(shutdown) and getattr(backend, "_is_subprocess_isolated", False):
+            import atexit
+            try:
+                shutdown()
+            except Exception:
+                logger.debug("Could not clean up language metadata instance", exc_info=True)
+            finally:
+                atexit.unregister(shutdown)
+
 
 
 def cloning_unavailable_detail(engine_id: str, backend, cloning_purpose: str) -> str:
