@@ -46,6 +46,8 @@ Already using Electron? Install over your existing app and keep your data. If pr
 
 ### Fixed
 
+- Preserve completed generation results when worker completion races with the timeout check (#2264)
+
 - CosyVoice repairs missing runtime dependencies and preserves speech context with newer Transformers (#2096) — thanks @martinezpl!
 - Electron native-crash reports retain the faulting thread instead of losing it behind long stacks and extension lists (#2262)
 

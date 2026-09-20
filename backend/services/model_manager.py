@@ -886,6 +886,11 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
                 if (_last is None
                         or _now - _last > _grace
                         or _now >= _hard_deadline):
+                    # A worker clears its heartbeat before the asyncio wrapper
+                    # receives its result. Prefer completed work over a timeout
+                    # snapshot taken just before that completion.
+                    if concurrent_fut.done():
+                        return await fut
                     raise asyncio.TimeoutError()
                 if not _extended:
                     _extended = True
