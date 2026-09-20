@@ -673,3 +673,19 @@ def test_locked_backup_cleanup_does_not_fail_successful_update(mt, monkeypatch, 
     monkeypatch.setattr(mt.time, 'sleep', lambda _: None)
     mt._install_staged_directory(str(staged), str(target))
     assert (target / 'version').read_text() == 'new'
+
+
+def test_restore_ytdlp_propagates_overlay_stat_denial(mt, monkeypatch):
+    import errno
+    overlay = mt._ytdlp_overlay_dir()
+    os.makedirs(overlay)
+    original_stat = mt.os.stat
+    def stat(path, *args, **kwargs):
+        if os.fspath(path) == overlay:
+            raise PermissionError(errno.EACCES, 'overlay access denied', path)
+        return original_stat(path, *args, **kwargs)
+    monkeypatch.setattr(mt.os, 'stat', stat)
+    mt._ops['ytdlp_update'].update(state='done', version='2099.01.01')
+    with pytest.raises(PermissionError, match='overlay access denied'):
+        mt.restore_ytdlp()
+    assert mt._ops['ytdlp_update']['version'] == '2099.01.01'

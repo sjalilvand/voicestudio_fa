@@ -290,6 +290,15 @@ def _retry_tool_filesystem(operation: Callable[[], None]) -> None:
             time.sleep(delays[attempt])
 
 
+def _tool_path_exists(path: str) -> bool:
+    """Only missing paths are absent; permission failures must reach the UI."""
+    try:
+        os.stat(path)
+        return True
+    except (FileNotFoundError, NotADirectoryError):
+        return False
+
+
 def _install_staged_directory(staged: str, target: str) -> None:
     # Keep the working installation until publication succeeds. The backup lives
     # beside the target so both renames stay on the same filesystem.
@@ -301,14 +310,16 @@ def _install_staged_directory(staged: str, target: str) -> None:
         shutil.rmtree(backup_root)
 
     try:
-        if os.path.exists(target):
+        if _tool_path_exists(target):
             _retry_tool_filesystem(lambda: os.replace(target, backup))
+            keep_backup = True
         try:
             _retry_tool_filesystem(lambda: os.replace(staged, target))
         except OSError as publish_error:
-            if os.path.exists(backup):
+            if keep_backup:
                 try:
                     _retry_tool_filesystem(lambda: os.replace(backup, target))
+                    keep_backup = False
                 except OSError as rollback_error:
                     keep_backup = True
                     raise OSError(
@@ -316,6 +327,7 @@ def _install_staged_directory(staged: str, target: str) -> None:
                         f"Previous installation preserved at {backup}"
                     ) from publish_error
             raise
+        keep_backup = False
     finally:
         if not keep_backup:
             try:
@@ -702,7 +714,7 @@ def restore_ytdlp() -> dict:
     """Delete the overlay — the locked, tested yt-dlp underneath takes over on
     next start. Always safe: the locked install was never modified."""
     overlay = _ytdlp_overlay_dir()
-    if os.path.isdir(overlay):
+    if _tool_path_exists(overlay):
         _retry_tool_filesystem(lambda: shutil.rmtree(overlay))
     _set_op("ytdlp_update", state="idle", progress=0.0, error=None, version=None)
     return _ytdlp_status()

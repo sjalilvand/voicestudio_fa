@@ -32,6 +32,8 @@ the user's engine selections.
 
 Media-tool installation retries temporary filesystem locks for up to four seconds,
 including Windows locks after the executable probe. It preserves the existing installation in a sibling backup
-until publication succeeds and restores it if publication fails. Persistent locks surface their original
+until publication succeeds and attempts to restore it if publication fails. If
+rollback also fails, the previous installation remains in `.media-backup-*/previous`;
+the error includes that recovery path. Persistent locks surface their original
 error; no system binaries or user media are deleted. The same behavior applies to
 yt-dlp overlay updates, and restoring the tested version reports failed cleanup.
