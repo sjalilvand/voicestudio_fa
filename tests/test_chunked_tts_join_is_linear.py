@@ -25,10 +25,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 
 torch = pytest.importorskip("torch")
 
-from services.chunked_tts import (  # noqa: E402
-    concatenate_audio_chunks,
-    join_rendered_chunks,
-)
+@pytest.fixture
+def chunked_tts():
+    import importlib
+    return importlib.import_module("services.chunked_tts")
+
 
 SR = 24000
 CROSSFADE_MS = 50
@@ -78,21 +79,21 @@ def _chunks(*lengths, channels=None):
     ("negative crossfade", _chunks(50, 100, 25), -50),
     ("two chunks", _chunks(SR, SR), CROSSFADE_MS),
 ])
-def test_output_is_identical_to_the_previous_join(name, chunks, crossfade):
+def test_output_is_identical_to_the_previous_join(name, chunks, crossfade, chunked_tts):
     expected = _previous_implementation(chunks, SR, crossfade)
-    actual = concatenate_audio_chunks(chunks, SR, crossfade_ms=crossfade)
+    actual = chunked_tts.concatenate_audio_chunks(chunks, SR, crossfade_ms=crossfade)
 
     assert actual.shape == expected.shape, name
     assert torch.allclose(actual, expected, atol=1e-6), name
 
 
-def test_no_sample_is_left_uninitialised():
+def test_no_sample_is_left_uninitialised(chunked_tts):
     """The output buffer is allocated uninitialised, so a gap would surface as
     whatever the allocator handed back — loud garbage in the middle of a take.
     Joining known-constant chunks makes any unwritten sample obvious."""
     chunks = [torch.full((1000,), float(i + 1)) for i in range(20)]
 
-    joined = concatenate_audio_chunks(chunks, SR, crossfade_ms=0)
+    joined = chunked_tts.concatenate_audio_chunks(chunks, SR, crossfade_ms=0)
 
     assert joined.shape[-1] == 20 * 1000
     assert torch.isfinite(joined).all()
@@ -107,7 +108,7 @@ def test_no_sample_is_left_uninitialised():
 # which is worse than no test. The copy count separates them exactly.
 
 
-def test_the_join_allocates_once_instead_of_once_per_chunk(monkeypatch):
+def test_the_join_allocates_once_instead_of_once_per_chunk(monkeypatch, chunked_tts):
     """A deterministic stand-in for "this is linear now".
 
     Timing on a shared CI runner is noise; counting the copies is not. The old
@@ -125,7 +126,7 @@ def test_the_join_allocates_once_instead_of_once_per_chunk(monkeypatch):
 
     monkeypatch.setattr(torch, "cat", counting_cat)
 
-    concatenate_audio_chunks(_chunks(*([SR] * 64)), SR, crossfade_ms=CROSSFADE_MS)
+    chunked_tts.concatenate_audio_chunks(_chunks(*([SR] * 64)), SR, crossfade_ms=CROSSFADE_MS)
 
     # 64 chunks used to mean 63 cats of an ever-growing buffer.
     assert cat_calls <= 1, f"joining re-copied the output {cat_calls} times"
@@ -134,16 +135,23 @@ def test_the_join_allocates_once_instead_of_once_per_chunk(monkeypatch):
 # ── the dropped-chunk filter ────────────────────────────────────────────────
 
 
-def test_dropped_chunks_are_filtered_without_rebuilding_the_index_set():
+def test_dropped_chunks_are_filtered_without_rebuilding_the_index_set(monkeypatch, chunked_tts):
     """`set(dropped)` sat inside the comprehension's condition, so it was built
     once per element. Behaviour is unchanged; only the cost is."""
+    constructions = 0
+    def counting_set(values):
+        nonlocal constructions
+        constructions += 1
+        return set(values)
+    monkeypatch.setattr(chunked_tts, "set", counting_set, raising=False)
     rendered = [torch.rand(SR) if i % 2 else None for i in range(40)]
 
-    joined = join_rendered_chunks(rendered, SR, crossfade_ms=0)
+    joined = chunked_tts.join_rendered_chunks(rendered, SR, crossfade_ms=0)
 
     assert joined is not None
     assert joined.shape[-1] == 20 * SR
+    assert constructions == 1
 
 
-def test_all_chunks_dropped_still_reports_nothing_rendered():
-    assert join_rendered_chunks([None, None], SR) is None
+def test_all_chunks_dropped_still_reports_nothing_rendered(chunked_tts):
+    assert chunked_tts.join_rendered_chunks([None, None], SR) is None
