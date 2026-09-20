@@ -106,6 +106,12 @@ describe('ErrorBoundary — stale module graph', () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
+  it('reloads for the Chromium stale import signature with a fresh guard', () => {
+    sessionStorage.clear();
+    boundary('projects', 'Failed to fetch dynamically imported module: /src/x.js');
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
   it('reloads at most once, so a genuinely missing chunk cannot loop', () => {
     boundary('clone-design', 'Importing a module script failed.');
     expect(reload).toHaveBeenCalledTimes(1);

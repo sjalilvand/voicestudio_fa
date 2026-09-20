@@ -10,8 +10,11 @@ vi.mock('@scalar/api-reference-react', async () => {
 });
 
 // Control the spec fetch + backend base without a live backend.
+const backendBase = vi.hoisted(() => ({ url: 'http://127.0.0.1:3900' }));
 vi.mock('../../api/client', () => ({
-  API: 'http://127.0.0.1:3900',
+  get API() {
+    return backendBase.url;
+  },
   apiFetch: vi.fn(),
 }));
 
@@ -36,6 +39,8 @@ const MINIMAL_SPEC = {
 describe('OpenApiPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    backendBase.url = 'http://127.0.0.1:3900';
+    sessionStorage.clear();
     // The same-origin fallback goes through the global fetch. Default it to
     // "nothing there" so the direct-path tests below stay about apiFetch.
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
@@ -57,9 +62,30 @@ describe('OpenApiPanel', () => {
 
     expect(await screen.findByTestId('scalar-mock')).toBeInTheDocument();
     expect(screen.queryByTestId('openapi-unreachable')).not.toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledWith('/openapi.json', expect.objectContaining({ cache: 'no-store' }));
+    expect(fetch).toHaveBeenCalledWith(
+      '/openapi.json',
+      expect.objectContaining({ cache: 'no-store' }),
+    );
     // The copy / open-raw affordances still name the real backend base.
     expect(screen.getByText('http://127.0.0.1:3900/openapi.json')).toBeInTheDocument();
+  });
+
+  it('never substitutes the page server for an unavailable remote backend', async () => {
+    backendBase.url = 'https://my-backend.example';
+    apiFetch.mockRejectedValue(new TypeError('Failed to fetch'));
+    fetch.mockResolvedValue({ ok: true, json: async () => MINIMAL_SPEC });
+    render(<OpenApiPanel />);
+    expect(await screen.findByTestId('openapi-unreachable')).toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('preserves the configured PIN through the known development proxy', async () => {
+    sessionStorage.setItem('ov_pin', 'test-pin');
+    apiFetch.mockRejectedValue(new TypeError('Failed to fetch'));
+    fetch.mockResolvedValue({ ok: true, json: async () => MINIMAL_SPEC });
+    render(<OpenApiPanel />);
+    await screen.findByTestId('scalar-mock');
+    expect(fetch.mock.calls[0][1].headers.get('X-OmniVoice-Pin')).toBe('test-pin');
   });
 
   it('still reports the backend unreachable when the same-origin copy is not there either', async () => {

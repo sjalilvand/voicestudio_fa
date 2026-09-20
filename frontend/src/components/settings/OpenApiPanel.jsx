@@ -3,6 +3,7 @@ import { AlertTriangle, Braces, Copy, ExternalLink, RefreshCw } from 'lucide-rea
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { API, apiFetch } from '../../api/client';
+import { getAdminSession } from '../../api/authSession';
 import { openExternal } from '../../api/external';
 import { copyText } from '../../utils/copyText';
 import { SettingsSection } from './primitives';
@@ -46,9 +47,26 @@ async function fetchSpec() {
   } catch (err) {
     const proto = typeof window !== 'undefined' ? window.location?.protocol : '';
     if (!/^https?:$/.test(proto)) throw err;
+    const base = new URL(API, window.location.href);
+    const sameOrigin = base.origin === window.location.origin;
+    // vite.config.js forwards to this one fixed local backend, not overrides.
+    const knownDevProxy =
+      import.meta.env.DEV &&
+      ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname) &&
+      base.origin === 'http://127.0.0.1:3900';
+    if (!sameOrigin && !knownDevProxy) throw err;
+    const headers = new Headers();
+    const session = getAdminSession(API);
+    if (session) headers.set('Authorization', `Bearer ${session.token}`);
+    try {
+      const pin = sessionStorage.getItem('ov_pin');
+      if (pin) headers.set('X-OmniVoice-Pin', pin);
+    } catch {
+      /* Cookie-authenticated requests also work without storage. */
+    }
     let res;
     try {
-      res = await fetch(SPEC_PATH, { cache: 'no-store' });
+      res = await fetch(SPEC_PATH, { cache: 'no-store', headers, credentials: 'include' });
     } catch {
       throw err;
     }

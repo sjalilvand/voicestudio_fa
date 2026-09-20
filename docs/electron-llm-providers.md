@@ -30,3 +30,7 @@ native loaded-model probe uses the configured API key; embedding-only listings
 are never selected for chat. Dictation refinement disables optional reasoning
 where supported, retries only errors naming that parameter, and preserves literal
 reasoning tags within an answer rather than truncating technical text.
+
+In the supported web development client, API-reference recovery may use the
+same-origin proxy only for its known local backend; remote overrides never fall
+back to a different server. The configured authentication is retained.
