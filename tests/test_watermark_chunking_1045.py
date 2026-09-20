@@ -21,7 +21,7 @@ from services.watermark import (
     embed_watermark,
 )
 
-SR = 24000
+SR = 16000
 
 
 class FakeGenerator:

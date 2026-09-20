@@ -51,7 +51,7 @@ def _wm():
 
 # ── Deterministic fake AudioSeal (marker survives 16-bit PCM round trips) ────
 #
-# The generator plants a sparse amplitude comb; the detector measures it. Both
+# The generator plants wide comb pulses that survive resampling; the detector measures their centers. Both
 # sit BEHIND the real embed_watermark/detect_watermark code (shape handling,
 # pref gate, #1045 chunking all real), so the tests exercise the actual
 # service seam every route calls — only the neural nets are substituted.
@@ -63,13 +63,14 @@ _AMP = 0.9375          # survives int16 (30719/32767 ≈ 0.93750) and stays > 0.
 class _MarkerGenerator:
     def __call__(self, audio, sample_rate, message=None):
         out = audio.clone()
-        out[..., ::_STRIDE] = _AMP
+        for offset in range(16):
+            out[..., offset::_STRIDE] = _AMP
         return out
 
 
 class _MarkerDetector:
     def detect_watermark(self, audio, sample_rate, message_threshold=0.5):
-        probes = audio[..., ::_STRIDE]
+        probes = audio[..., 8::_STRIDE]
         conf = float((probes > 0.9).float().mean()) if probes.numel() else 0.0
         if conf > 0.5:
             msg = torch.tensor(_wm().OMNI_MESSAGE, dtype=torch.float32)

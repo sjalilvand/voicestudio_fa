@@ -105,6 +105,15 @@ async def transcribe_audio(
             purpose="transcribe" if use_active_asr else "dictation",
             require_installed=requested_mode == "reference",
         )
+        if missing is not None and not use_active_asr:
+            transcribe_missing = await asyncio.to_thread(
+                asr_model_missing_error,
+                purpose="transcribe",
+                require_installed=True,
+            )
+            if transcribe_missing is None:
+                missing = None
+                use_active_asr = True
         if missing is not None:
             raise HTTPException(
                 status_code=409,

@@ -269,6 +269,65 @@ def _cached_discovery(pid: str) -> tuple[bool, Optional[str]]:
     return True, value
 
 
+#: LM Studio's native endpoint, unlike the OpenAI-compatible ``/v1/models``,
+#: reports which checkpoints are actually resident in memory. On a laptop only
+#: one usually is, and asking for any other makes LM Studio evict and reload
+#: multi-GB weights mid-request (or fail outright when they don't fit), so the
+#: loaded one is the only sane discovery answer.
+_LMSTUDIO_PROBE_TIMEOUT_S = 3.0
+
+
+def _probe_lmstudio_loaded_model(base_url: str, api_key: str = "local") -> Optional[str]:
+    """Return the id of a model LM Studio currently holds in memory, if any.
+
+    Best-effort and never raises: LM Studio not running, an older build without
+    ``/api/v0``, or any other host on that URL simply yields ``None`` and the
+    caller keeps its configured/default model without guessing from untyped IDs.
+    Only ever called through
+    :func:`discover_model`, which caches both outcomes — probing per request
+    would cost an HTTP round trip on every translated segment.
+    """
+    import json
+    import urllib.request
+    from urllib.parse import urlsplit
+
+    if not base_url:
+        return None
+    try:
+        parsed = urlsplit(base_url)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            return None
+        clean_base = base_url.rstrip("/")
+        if clean_base.endswith("/v1"):
+            clean_base = clean_base[: -len("/v1")]
+        headers = {"User-Agent": "VoiceStudio"}
+        if api_key and api_key != "local":
+            headers["Authorization"] = f"Bearer {api_key}"
+        req = urllib.request.Request(f"{clean_base}/api/v0/models", headers=headers)
+        class NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, newurl):
+                return None
+
+        # A configured API credential belongs only to the configured origin.
+        opener = urllib.request.build_opener(NoRedirect())
+        with opener.open(req, timeout=_LMSTUDIO_PROBE_TIMEOUT_S) as resp:  # nosec B310 — HTTP(S) validated above
+            data = json.loads(resp.read().decode("utf-8"))
+        loaded = [
+            str(m.get("id"))
+            for m in (data.get("data") or [])
+            if isinstance(m, dict)
+            and m.get("state") == "loaded"
+            and m.get("type") in {"llm", "vlm"}
+            and m.get("id")
+        ]
+    except Exception as e:  # noqa: BLE001 — discovery is best-effort by design
+        logger.debug("LM Studio loaded-model probe failed: %s", e)
+        return None
+    # Sorted for the same reason discover_model sorts: two runs on one machine
+    # must pick the same model when several are resident.
+    return sorted(loaded)[0] if loaded else None
+
+
 def discover_model(p: Provider) -> Optional[str]:
     """Ask an OpenAI-compatible server which model it is actually serving.
 
@@ -286,6 +345,17 @@ def discover_model(p: Provider) -> Optional[str]:
     base_url = resolve_base_url(p)
     if not base_url:
         return None
+
+    if p.id == "lmstudio":
+        loaded = _probe_lmstudio_loaded_model(base_url, resolve_api_key(p))
+        if loaded:
+            _DISCOVERED_MODEL[p.id] = (loaded, time.monotonic() + DISCOVERY_TTL_S)
+            return loaded
+        # /v1/models omits native types; opaque embedding IDs cannot be
+        # distinguished safely. Keep the user/default choice instead.
+        _DISCOVERED_MODEL[p.id] = (None, time.monotonic() + DISCOVERY_FAILURE_TTL_S)
+        return None
+
     try:
         from openai import OpenAI
 
@@ -302,9 +372,22 @@ def discover_model(p: Provider) -> Optional[str]:
     if not ids:
         _DISCOVERED_MODEL[p.id] = (None, time.monotonic() + DISCOVERY_FAILURE_TTL_S)
         return None
-    # Deterministic rather than "whatever the server listed first", so two runs
-    # on the same machine pick the same model and a bug report is reproducible.
-    chosen = sorted(ids)[0]
+
+    # An embedding checkpoint cannot serve chat — picking one yields a 400 on
+    # every request — so never return them as a chat discovery result.
+    chat_ids = [mid for mid in ids if not any(k in mid.lower() for k in ("embed", "bert"))]
+    if not chat_ids:
+        _DISCOVERED_MODEL[p.id] = (None, time.monotonic() + DISCOVERY_FAILURE_TTL_S)
+        return None
+    candidate_ids = chat_ids
+
+    # Prefer a known instruct family over whatever else is loaded, then sort
+    # WITHIN the chosen bucket: deterministic rather than "whatever the server
+    # listed first", so two runs on the same machine pick the same model and a
+    # bug report is reproducible.
+    preferred = [mid for mid in candidate_ids if any(k in mid.lower() for k in ("qwen", "llama"))]
+    chosen = sorted(preferred or candidate_ids)[0]
+
     if len(ids) > 1:
         logger.info(
             "%s has %d models loaded and no model is set in Settings; using %r. "
@@ -321,6 +404,13 @@ def resolve_model(p: Provider) -> str:
     Discovery sits between the user's choice and the built-in default so it can
     never override an explicit setting, and only runs for providers whose
     default is a placeholder — everyone else keeps a pure, offline resolution.
+    For LM Studio, "discovered" means the model actually loaded in memory
+    (:func:`_probe_lmstudio_loaded_model`) rather than the alphabetically first
+    one the server lists — but it stays BELOW the stored override like every
+    other discovery: picking a model in Settings → LLM Providers has to win, or
+    the "pick one deliberately" line this module logs would be a lie. Probing
+    from here would also re-open the per-segment cost the discovery cache
+    exists to prevent (a 200-segment dub × one HTTP round trip each).
     """
     from services import settings_store
     explicit = (
