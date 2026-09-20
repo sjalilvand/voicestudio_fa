@@ -6,6 +6,7 @@ From the repository root, install Bun and uv, then run:
 
 ```sh
 bun install
+bun run setup:api  # prepare Python dependencies before starting Electron
 bun run dev
 ```
 

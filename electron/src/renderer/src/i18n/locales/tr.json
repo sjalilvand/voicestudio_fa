@@ -1838,7 +1838,8 @@
     "port_in_use": "{{port}} bağlantı noktası başka bir program tarafından kullanılıyor. Programı kapatın veya OMNIVOICE_PORT değerini boş bir bağlantı noktasına ayarlayıp yeniden deneyin.",
     "elapsed": "{{seconds}} sn geçti",
     "first_run_hint": "Python ortamı hazırlanırken ilk çalıştırma birkaç dakika sürebilir.",
-    "port_in_use_short": "{{port}} bağlantı noktası kullanımda"
+    "port_in_use_short": "{{port}} bağlantı noktası kullanımda",
+    "proxy_bypass_help": "VoiceStudio’yu tamamen kapatın, terminalde HTTP_PROXY/HTTPS_PROXY değerini proxy URL’sine ve NO_PROXY değerini hariç tutulacak sunuculara ayarlayın, ardından VoiceStudio’yu o terminalden başlatın. Açık uygulamada yeniden denemek yeni ortam değişkenlerini yüklemez."
   },
   "bootstrap": {
     "checking": "Ortam kontrol ediliyor…",
@@ -2678,6 +2679,7 @@
     "included": "Dahil"
   },
   "integrationCatalog": {
+    "setupHint": "Bu yapılandırmayı {{file}} dosyasına ekleyin. VoiceStudio açık kalsın. Gerekli uzak bağlantı kimlik bilgilerini istemcinizde ayarlayın.",
     "title": "Entegrasyonlar",
     "featured": "Öne çıkan",
     "description": "Entegrasyonları ve öne çıkan iş ortaklarını keşfedin."

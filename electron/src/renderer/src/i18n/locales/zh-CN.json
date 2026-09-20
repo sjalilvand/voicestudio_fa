@@ -1842,7 +1842,8 @@
     "port_in_use": "端口 {{port}} 已被其他程序占用。请关闭该程序，或将 OMNIVOICE_PORT 设置为空闲端口，然后重试。",
     "elapsed": "已用时 {{seconds}} 秒",
     "first_run_hint": "首次运行需要准备 Python 环境，可能需要几分钟。",
-    "port_in_use_short": "端口 {{port}} 已被占用"
+    "port_in_use_short": "端口 {{port}} 已被占用",
+    "proxy_bypass_help": "完全退出 VoiceStudio，在终端中将 HTTP_PROXY/HTTPS_PROXY 设为代理 URL，将 NO_PROXY 设为排除的主机，然后从该终端启动 VoiceStudio。在当前应用中重试不会加载新的环境变量。"
   },
   "bootstrap": {
     "checking": "正在检查环境…",
@@ -2682,6 +2683,7 @@
     "included": "包含"
   },
   "integrationCatalog": {
+    "setupHint": "将此配置合并到 {{file}}，并保持 VoiceStudio 运行。如需远程连接凭据，请在客户端中设置。",
     "title": "集成",
     "featured": "精选",
     "description": "探索集成与精选合作伙伴。"

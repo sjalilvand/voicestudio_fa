@@ -1842,7 +1842,8 @@
     "port_in_use": "Port {{port}} jest już używany przez inny program. Zamknij go lub ustaw OMNIVOICE_PORT na wolny port i spróbuj ponownie.",
     "elapsed": "Upłynęło {{seconds}} s",
     "first_run_hint": "Pierwsze uruchomienie może potrwać kilka minut podczas przygotowywania środowiska Python.",
-    "port_in_use_short": "Port {{port}} jest zajęty"
+    "port_in_use_short": "Port {{port}} jest zajęty",
+    "proxy_bypass_help": "Całkowicie zamknij VoiceStudio, ustaw w terminalu HTTP_PROXY/HTTPS_PROXY na adres proxy oraz NO_PROXY na wykluczone hosty, a następnie uruchom VoiceStudio z tego terminala. Ponowienie próby w działającej aplikacji nie wczytuje nowych zmiennych środowiskowych."
   },
   "bootstrap": {
     "checking": "Sprawdzanie środowiska…",
@@ -2682,6 +2683,7 @@
     "included": "W zestawie"
   },
   "integrationCatalog": {
+    "setupHint": "Dodaj tę konfigurację do {{file}}. Pozostaw VoiceStudio uruchomione. Ustaw wymagane dane uwierzytelniające połączenia zdalnego w swoim kliencie.",
     "title": "Integracje",
     "featured": "Wyróżnione",
     "description": "Odkryj integracje i wyróżnionych partnerów."

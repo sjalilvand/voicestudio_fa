@@ -47,6 +47,7 @@ Run from the repository root:
 
 ```sh
 bun install
+bun run setup:api        # prepare the source Python runtime explicitly
 bun run dev              # Electron + supervised backend
 bun run typecheck        # Electron main, preload, and renderer
 bun run test             # Electron tests

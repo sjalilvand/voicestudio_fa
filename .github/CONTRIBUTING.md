@@ -50,11 +50,12 @@ for Fedora and Arch packages.
 git clone https://github.com/debpalash/VoiceStudio.git
 cd VoiceStudio
 bun install
+bun run setup:api  # prepare Python dependencies before starting Electron
 bun run dev
 ```
 
-This launches Electron with hot reload. Its runtime supervisor manages backend setup
-and startup; do not launch a second backend. See [Electron setup](../electron/README.md).
+This launches Electron with hot reload. Run source dependency setup explicitly before launching; the supervisor manages backend
+startup; do not launch a second backend. See [Electron setup](../electron/README.md).
 
 ```bash
 bun run build       # build Electron

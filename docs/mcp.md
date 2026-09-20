@@ -55,7 +55,7 @@ http://localhost:3900/mcp
 ```
 
 To bind this agent to a specific voice, send an
-`X-VoiceStudio-Client-Id` header (e.g. `claude-code`). See
+`X-OmniVoice-Client-Id` header (e.g. `claude-code`). See
 [per-agent voices](#per-agent-voices).
 
 **Agents in Docker or on another machine:** the MCP SDK rejects non-localhost
@@ -84,7 +84,7 @@ this into your client's MCP config (`docs/mcp.json` is a template):
 }
 ```
 
-The shim forwards `OMNIVOICE_CLIENT_ID` as the `X-VoiceStudio-Client-Id` header,
+The shim forwards `OMNIVOICE_CLIENT_ID` as the `X-OmniVoice-Client-Id` header,
 so the per-agent voice binding works the same as the HTTP path. It waits for
 the backend to be up, relays JSON-RPC, and exits cleanly when the client
 closes.

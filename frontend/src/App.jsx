@@ -1,3 +1,4 @@
+import { useOpenApiDeepLink } from './hooks/useOpenApiDeepLink';
 import { firstSoundRequest } from './utils/firstSound';
 import React, {
   useState,
@@ -624,6 +625,8 @@ function App() {
       setSidebarTab(availableSidebarTabs[0]);
     }
   }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useOpenApiDeepLink(openSettingsTab);
   const isSidebarProjectsCollapsed = useAppStore((s) => s.isSidebarProjectsCollapsed);
   const setIsSidebarProjectsCollapsed = useAppStore((s) => s.setIsSidebarProjectsCollapsed);
   const isSidebarCollapsed = useAppStore((s) => s.isSidebarCollapsed);

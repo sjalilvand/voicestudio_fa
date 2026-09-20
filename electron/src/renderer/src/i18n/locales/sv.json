@@ -1838,7 +1838,8 @@
     "port_in_use": "Port {{port}} används redan av ett annat program. Stäng det eller ställ in OMNIVOICE_PORT på en ledig port och försök igen.",
     "elapsed": "{{seconds}} s har gått",
     "first_run_hint": "Den första starten kan ta flera minuter medan Python-miljön förbereds.",
-    "port_in_use_short": "Port {{port}} används"
+    "port_in_use_short": "Port {{port}} används",
+    "proxy_bypass_help": "Avsluta VoiceStudio helt, ange proxyadressen i HTTP_PROXY/HTTPS_PROXY och undantagna värdar i NO_PROXY i en terminal och starta sedan VoiceStudio därifrån. Ett nytt försök i den öppna appen läser inte in nya miljövariabler."
   },
   "bootstrap": {
     "checking": "Kontrollerar miljö…",
@@ -2678,6 +2679,7 @@
     "included": "Ingår"
   },
   "integrationCatalog": {
+    "setupHint": "Lägg till konfigurationen i {{file}}. Låt VoiceStudio vara igång. Ange eventuella inloggningsuppgifter för fjärranslutning i din klient.",
     "title": "Integrationer",
     "featured": "Utvald",
     "description": "Upptäck integrationer och utvalda partner."

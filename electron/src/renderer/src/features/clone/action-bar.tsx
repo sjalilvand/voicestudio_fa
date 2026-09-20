@@ -40,7 +40,7 @@ import {
   type CloneSettings,
 } from '@/lib/store/clone-settings';
 import { cn } from '@/lib/utils';
-import { LanguagePicker } from './language-picker';
+import { EngineLanguagePicker } from './engine-language-picker';
 import { CloneDemoAction } from './clone-demo';
 import { useCloneDemo } from '@/hooks/use-clone-demo';
 
@@ -335,7 +335,7 @@ export function ActionBar({
       <div className="flex flex-wrap items-center gap-3">
         {onOpenSettings ? (
           <div className="flex items-center gap-1 rounded-lg bg-background/50 p-1 ring-1 ring-border/50">
-            <LanguagePicker />
+            <EngineLanguagePicker />
             <span aria-hidden="true" className="mx-1 h-4 w-px bg-border" />
             <Button
               variant={settingsOpen ? 'secondary' : 'ghost'}
@@ -354,7 +354,7 @@ export function ActionBar({
           >
             <div className="flex flex-wrap items-center gap-2">
               <div className="min-w-0">
-                <LanguagePicker />
+                <EngineLanguagePicker />
               </div>
               <PopoverTrigger
                 className={cn(

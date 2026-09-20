@@ -1838,7 +1838,8 @@
     "port_in_use": "ポート {{port}} は別のプログラムが使用中です。そのプログラムを終了するか、OMNIVOICE_PORT を空いているポートに設定して再試行してください。",
     "elapsed": "{{seconds}} 秒経過",
     "first_run_hint": "初回は Python 環境を準備するため、数分かかる場合があります。",
-    "port_in_use_short": "ポート {{port}} は使用中です"
+    "port_in_use_short": "ポート {{port}} は使用中です",
+    "proxy_bypass_help": "VoiceStudioを完全に終了し、ターミナルでHTTP_PROXY/HTTPS_PROXYにプロキシURL、NO_PROXYに除外するホストを設定してから、そのターミナルでVoiceStudioを起動してください。起動中のアプリで再試行しても新しい環境変数は読み込まれません。"
   },
   "bootstrap": {
     "checking": "環境の確認中…",
@@ -2678,6 +2679,7 @@
     "included": "利用可能"
   },
   "integrationCatalog": {
+    "setupHint": "この設定を {{file}} に追加してください。VoiceStudio を起動したままにし、必要なリモート認証情報はクライアントで設定してください。",
     "title": "連携",
     "featured": "注目",
     "description": "連携機能と注目のパートナーを見つけましょう。"

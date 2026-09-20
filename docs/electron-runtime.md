@@ -5,6 +5,8 @@ Electron shortcut, or set `VOICESTUDIO_OPEN_DEVTOOLS=1` before `bun run dev`.
 This prevents Chromium's detached performance monitor from injecting failing
 timers into the app execution context during route transitions.
 
+Source launches verify required imports offline, then use the repository’s prepared `.venv` interpreter directly; startup and Retry never run dependency synchronization. Run `bun run setup:api` once before `bun run dev`, and again after Python dependencies change. Let setup finish before launching the app so a large PyTorch download is not interrupted by the backend health-check deadline. An explicit `OMNIVOICE_BACKEND_CMD` remains responsible for its own environment.
+
 Packaged startup first checks for a running VoiceStudio backend. If one answers, the shell attaches without creating or modifying a Python environment.
 
 Otherwise, an installation matching the bundled `pyproject.toml` and `uv.lock` is required. The setup view explains the dependency download and waits for **Install local runtime**. Startup and Retry do not install automatically. Model downloads remain separate engine actions.
@@ -83,3 +85,19 @@ The shared video player renders Vidstack's poster before playback, including the
 On Linux Wayland systems where Chromium logs `eglCreateImage failed` / `OzoneImageBacking` and video or window contents flicker, launch Electron with `--disable-gpu-compositing`. For source development, run `bun run dev:software-compositing` from `electron/`. This opt-in uses software window compositing while leaving backend CUDA inference available; it does not disable acceleration for other installations. It requires a full Electron restart, not a renderer reload. A refused connection to port 3903 instead means the development proxy is stopped; restart the Electron development process to restore it.
 
 Secondary workspace sidebars resize from their right edge up to 40% wider than the previous limits (515 / 616 / 750 px by size), while reserving space for the main workspace. Widths are saved per size in the app profile’s local storage and restored on navigation and restart. Double-click the divider to reset the width; focus it and use arrow keys for keyboard resizing. Sidebar sections fill the resized width, and video controls adapt to the player width.
+
+### Windows proxy bootstrap
+
+Electron translates enabled WinINET `ProxyServer` maps (`http=…`, `https=…`,
+`socks=…`) into proxy URLs for both the HTTPS installer download and the dependency-install subprocess. Installer redirects retain proxy and bypass rules; downloads have a 60-second deadline and a 2 MiB limit. SOCKS maps use
+`socks5h://` so the proxy resolves download hostnames. Explicit `HTTP_PROXY`,
+`HTTPS_PROXY`, or `ALL_PROXY` settings, including lowercase forms, take priority.
+Loopback hosts remain excluded, and existing `NO_PROXY` entries are retained.
+Proxy credentials are never logged by this normalization.
+
+Simple WinINET bypass hosts and `*.domain` suffix rules are retained. Windows-only
+bypass patterns such as `<local>` stop setup with localized proxy configuration
+guidance before uv runs; dropping them would silently change routing semantics.
+Fully quit Electron, set an explicit proxy URL and the intended `NO_PROXY` exclusions in a terminal, then launch Electron from that same terminal. Retrying or relaunching from the existing process cannot pick up new environment variables. PAC remains handled by the existing system networking behavior; use the actual proxy protocol,
+not the `socks=` registry syntax. This repair applies to packaged runtime setup;
+it does not change browser networking or global Windows proxy settings.
