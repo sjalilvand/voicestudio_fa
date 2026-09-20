@@ -189,7 +189,7 @@ def test_requirements_drop_what_the_one_click_install_must_not_pull():
     assert not any(r.startswith("-") for r in reqs), "no index or option lines"
     for dropped in ("torch", "torchaudio", "deepspeed", "tensorrt-cu12", "onnxruntime-gpu",
                     "fastapi", "gradio", "uvicorn", "grpcio", "tensorboard",
-                    "wetext", "pyarrow", "pyworld"):
+                    "wetext", "pyworld"):
         assert dropped not in names, dropped
     assert "openai-whisper==20250625" in reqs  # 20231117 cannot build
     assert all("==" in r for r in reqs), "every requirement stays pinned"
@@ -274,3 +274,18 @@ def test_load_uses_full_precision_without_cuda(monkeypatch, tmp_path, cuda):
         assert part.weight.dtype == (torch.bfloat16 if cuda else torch.float32)
         if not cuda:
             assert torch.isfinite(part(torch.ones(1, 2))).all()
+
+
+def test_managed_install_probes_late_imports_and_restores_dependencies():
+    from services import sidecar_install
+    spec = sidecar_install.SPECS['cosyvoice']
+    reqs = _REQUIREMENTS.read_text()
+    for dependency in ('gdown==6.4.0', 'wget==3.2', 'pyarrow==25.0.1'):
+        assert dependency in reqs
+    assert 'cosyvoice.dataset.processor' in spec.probe_code
+    assert 'matcha.utils' in spec.probe_code
+    assert '{checkout}/third_party/PyWorld' in spec.install_args
+    assert spec.install_revision == 'inference-imports-v2'
+    sources = {source.path: source for source in spec.extra_sources}
+    assert sources['third_party/PyWorld'].revision == 'f31ad88d543fdaebbda2d0c9a5e4d4f991ae0b6c'
+    assert sources['third_party/PyWorld/lib/World'].revision == 'd625e7608ca23a870018f01e7c562ac683d9847f'

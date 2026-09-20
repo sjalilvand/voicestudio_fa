@@ -27,6 +27,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- CosyVoice installs its missing runtime dependencies and verifies late imports without downgrading setuptools (#2096) — thanks @martinezpl!
+
 - CosyVoice uses matching float32 weights and inputs without CUDA, preventing a worker-thread dtype failure while preserving CUDA precision (#2096)
 
 - Stories and Audiobook: Generate, the chapter tracker and the render status are pinned in the setup pane instead of sitting below the last line of the script, and a disabled Generate now says why (#2229) — thanks @jaketame!

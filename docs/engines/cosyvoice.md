@@ -41,8 +41,9 @@ It differs from upstream's own setup:
   GPUs.
 - **Leaner dependencies.** No TensorRT, DeepSpeed or GPU onnxruntime, and no
   third-party package index. Upstream uses them for extra speed on Linux;
-  synthesis works without them. Nothing needs a compiler, and SoX is not
-  needed.
+  synthesis works without them. PyWORLD requires a C++ compiler: Xcode Command
+  Line Tools on macOS, Visual Studio Build Tools with C++ on Windows, or the
+  distribution’s C++ build tools on Linux. SoX is not needed.
 - **Patched dependencies.** Where upstream pins a release with a published
   security advisory (diffusers, hydra-core, lightning, modelscope, onnx,
   protobuf, transformers), the install uses the fixed release. That set was
@@ -104,3 +105,15 @@ On hosts without CUDA, the managed sidecar normalizes the LLM, flow and vocoder
 weights to float32 to match upstream CPU inputs. CUDA keeps its selected
 precision. This prevents the CPU Float/BFloat16 matrix mismatch; it does not
 establish that every reported installation or speech-quality problem is fixed.
+
+### Repairing missing runtime imports
+
+The managed recipe includes gdown, wget and pyarrow, and builds pinned PyWORLD
+source that no longer needs `pkg_resources`. Its final check imports the dataset
+processor and Matcha utilities as well as AutoModel. Older completion markers
+are treated as needing repair; retry Install to reuse the existing model weights.
+User-managed environments are not rewritten. Do not downgrade setuptools merely
+to restore `pkg_resources`.
+
+This repairs dependency verification, not the separately reported truncated or
+glitched speech. Those outputs still require real-model validation.

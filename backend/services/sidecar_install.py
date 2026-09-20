@@ -546,7 +546,8 @@ SPECS: dict[str, SidecarSpec] = {
         probe_code=(
             "import os, sys; c = {checkout_repr}; "
             "sys.path[:0] = [c, os.path.join(c, 'third_party', 'Matcha-TTS')]; "
-            "from cosyvoice.cli.cosyvoice import AutoModel"
+            "from cosyvoice.cli.cosyvoice import AutoModel; "
+            "import cosyvoice.dataset.processor; import matcha.utils"
         ),
         source_revision="074ca6dc9e80a2f424f1f74b48bdd7d3fea531cc",
         source_manifest="requirements.txt",
@@ -561,9 +562,22 @@ SPECS: dict[str, SidecarSpec] = {
                 ),
                 required_path="matcha/__init__.py",
             ),
+            ExtraSource(
+                path="third_party/PyWorld",
+                revision="f31ad88d543fdaebbda2d0c9a5e4d4f991ae0b6c",
+                tarball_url="https://github.com/JeremyCCHsu/Python-Wrapper-for-World-Vocoder/archive/f31ad88d543fdaebbda2d0c9a5e4d4f991ae0b6c.tar.gz",
+                required_path="pyworld/__init__.py",
+            ),
+            ExtraSource(
+                path="third_party/PyWorld/lib/World",
+                revision="d625e7608ca23a870018f01e7c562ac683d9847f",
+                tarball_url="https://github.com/mmorise/World/archive/d625e7608ca23a870018f01e7c562ac683d9847f.tar.gz",
+                required_path="src/dio.cpp",
+            ),
         ),
         venv_args=("--python", "3.10"),
-        install_args=("-r", _COSYVOICE_REQUIREMENTS),
+        install_args=("-r", _COSYVOICE_REQUIREMENTS, "{checkout}/third_party/PyWorld"),
+        install_revision="inference-imports-v2",
         torch_pins=("torch==2.7.0", "torchaudio==2.7.0"),
         weights_repo_id="FunAudioLLM/Fun-CosyVoice3-0.5B-2512",
         weights_revision="29e01c4e8d000f4bcd70751be16fa94bf3d85a18",

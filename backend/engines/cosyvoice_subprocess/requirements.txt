@@ -16,16 +16,12 @@
 #   passes the installer's import probe (tests pin the advisory floors).
 #   transformers 5 was also checked against CosyVoice's own tokenizer (token
 #   ids identical to 4.57.6) and its cached step-by-step decoding.
-# - Dropped: deepspeed and tensorrt-cu12* (Linux-only acceleration);
-#   onnxruntime-gpu (the onnxruntime below serves every host); pyworld and
-#   pyarrow (not needed to import or run CosyVoice; pyworld has no Python 3.10
-#   wheels for Linux or macOS, pyarrow carried an advisory); wetext (its data
-#   is published only on ModelScope, which rate-limits downloads, and a
-#   half-downloaded normaliser failed silently; CosyVoice reads text as
-#   written without it); and the web UI, server, training and download tools
-#   (fastapi, fastapi-cli, gradio, grpcio, grpcio-tools, uvicorn, tensorboard,
-#   gdown, wget). Upstream's full list cannot be installed together anyway:
-#   its fastapi pin conflicts.
+# - Dropped: deepspeed and tensorrt-cu12* (Linux-only acceleration),
+#   onnxruntime-gpu, wetext (remote normalizer data), and unused web/training
+#   services. Keep gdown, wget and pyarrow: upstream imports them at runtime.
+# - PyWORLD is built separately from a pinned upstream source with its WORLD
+#   submodule. That revision uses importlib.metadata, so pkg_resources and
+#   an obsolete setuptools runtime are not required. A C++ compiler is needed.
 # - openai-whisper 20231117 -> 20250625: the older release needs
 #   pkg_resources at build time and fails to build. CosyVoice only uses its
 #   mel-spectrogram frontend.
@@ -53,3 +49,7 @@ rich==13.7.1
 soundfile==0.12.1
 transformers==5.10.1
 x-transformers==2.11.24
+
+gdown==6.4.0
+wget==3.2
+pyarrow==25.0.1
