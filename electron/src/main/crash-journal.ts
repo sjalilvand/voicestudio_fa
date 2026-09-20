@@ -5,6 +5,40 @@ import { nativeCrashExcerpt } from '../../../frontend/src/utils/crashReport';
 /** Small version-scoped local journal. Read failures must never block startup. */
 export class CrashJournal {
   private records: NativeCrashRecord[] = [];
+  private nativeLines: string[] = [];
+  private captureOpen = false;
+  private sawThread = false;
+  private streaming = false;
+  resetCapture(streaming = true): void {
+    this.nativeLines = [];
+    this.captureOpen = false;
+    this.sawThread = false;
+    this.streaming = streaming;
+  }
+  /** Capture before the supervisor ring evicts the start of an all-thread dump. */
+  captureLine(line: string): void {
+    this.streaming = true;
+    const trimmed = line.trim();
+    if (/^(?:Fatal Python error:|Windows fatal exception:)/.test(trimmed)) {
+      this.resetCapture();
+      this.nativeLines = [line.slice(0, 4096)];
+      this.captureOpen = true;
+      return;
+    }
+    if (!this.nativeLines.length) return;
+    if (/^Current thread\b/.test(trimmed)) {
+      this.nativeLines = [this.nativeLines[0]];
+      this.captureOpen = true;
+      this.sawThread = true;
+    } else if (/^Thread\b/.test(trimmed)) {
+      if (this.sawThread) this.captureOpen = false;
+      this.sawThread = true;
+    } else if (/^Extension modules:/.test(trimmed)) {
+      this.captureOpen = false;
+    }
+    if (this.captureOpen && this.nativeLines.length < 40)
+      this.nativeLines.push(line.slice(0, 4096));
+  }
   constructor(
     private path: string,
     private version: string,
@@ -50,9 +84,12 @@ export class CrashJournal {
     uptimeMs: number,
     logTail: string[],
   ): void {
+    const native = this.streaming
+      ? this.nativeLines.join('\n')
+      : nativeCrashExcerpt(logTail.join('\n'));
+    this.resetCapture(false);
     // EX_CONFIG is a port collision; Windows debugger termination is not a backend fault.
     if (exitCode === 78 || exitCode === 0x40010004) return;
-    const native = nativeCrashExcerpt(logTail.join('\n'));
     this.records.unshift({
       timestamp: Date.now(),
       version: this.version,
