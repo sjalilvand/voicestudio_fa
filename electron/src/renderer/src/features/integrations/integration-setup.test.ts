@@ -20,12 +20,12 @@ it('exports client-specific HTTP configuration for the actual backend and port',
   expect(JSON.parse(claude!.text).mcpServers.voicestudio).toEqual({
     type: 'http',
     url: 'http://127.0.0.1:3912/mcp',
-    headers: { 'X-VoiceStudio-Client-Id': 'claude-code' },
+    headers: { 'X-OmniVoice-Client-Id': 'claude-code' },
   });
   expect(cursor?.file).toBe('.cursor/mcp.json');
   expect(JSON.parse(cursor!.text).mcpServers.voicestudio).toEqual({
     url: 'https://voice.example/backend/mcp',
-    headers: { 'X-VoiceStudio-Client-Id': 'cursor' },
+    headers: { 'X-OmniVoice-Client-Id': 'cursor' },
   });
 });
 it('never exports credentials, unsafe URLs, or unsupported client configurations', () => {

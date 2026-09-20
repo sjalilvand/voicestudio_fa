@@ -27,7 +27,7 @@ export function mcpSetup(slug: string, baseUrl: string) {
             voicestudio: {
               ...(client.type ? { type: client.type } : {}),
               url,
-              headers: { 'X-VoiceStudio-Client-Id': slug },
+              headers: { 'X-OmniVoice-Client-Id': slug },
             },
           },
         },
