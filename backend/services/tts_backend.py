@@ -1148,11 +1148,6 @@ def _prepare_voxcpm_ref(path: str) -> str:
 class VoxCPM2Backend(TTSBackend):
     """OpenBMB VoxCPM2 wrapper — `pip install "voxcpm>=2.0.3"` required.
 
-    Ships as a scaffold: the class loads and reports unavailability cleanly
-    when the dep isn't installed, so Settings UI can gate the engine selector
-    without a hard crash. When `voxcpm` is present, `generate()` delegates to
-    the real model.
-
     Voice Design: VoxCPM2 uniquely supports creating voices from a text
     description (e.g. "young female, warm tone, British accent") without
     any reference audio. Pass `description=` without `ref_audio=` to use
@@ -1223,47 +1218,11 @@ class VoxCPM2Backend(TTSBackend):
         self._ensure_loaded()
         import numpy as np
 
-        ref_audio = kw.get("ref_audio")
-        ref_text = kw.get("ref_text")
-        description = kw.get("description")
-        instruct = kw.get("instruct")
+        from engines.voxcpm2_subprocess.main import generation_kwargs
 
-        # ── Voice Design mode: description-only, no reference audio ─────
-        # VoxCPM2's `generate_from_description()` creates a synthetic voice
-        # matching a natural-language description. This is the P0 feature
-        # from the roadmap — text → voice without any audio sample.
-        if description and not ref_audio:
-            logger.info(
-                "VoxCPM2: voice design mode — generating from description: %r",
-                description[:80],
-            )
-            wav = self._model.generate(
-                text=text,
-                voice_description=description,
-                cfg_value=kw.get("guidance_scale", 2.0),
-                inference_timesteps=kw.get("num_step", 10),
-            )
-            return self._finalize(wav)
-
-        # ── Standard clone / instruct mode ──────────────────────────────
-        # Map our instruct prop onto VoxCPM2's inline "(instruct)prompt" prefix.
-        # The reference clip is prepared first (edge-silence trim + length
-        # cap) — the model no longer trims it internally, so a raw user clip
-        # would condition generation on dead air. Fail-open: on any prep
-        # problem the raw path is used, exactly as before.
-        if ref_audio:
-            ref_audio = _prepare_voxcpm_ref(ref_audio)
-        prompt = text
-        if instruct:
-            prompt = f"({instruct}){text}"
-        wav = self._model.generate(
-            text=prompt,
-            cfg_value=kw.get("guidance_scale", 2.0),
-            inference_timesteps=kw.get("num_step", 10),
-            reference_wav_path=ref_audio,
-            prompt_wav_path=ref_audio if ref_text else None,
-            prompt_text=ref_text,
-        )
+        if kw.get("ref_audio"):
+            kw["ref_audio"] = _prepare_voxcpm_ref(kw["ref_audio"])
+        wav = self._model.generate(**generation_kwargs(text, **kw))
         return self._finalize(wav)
 
     def _finalize(self, wav) -> torch.Tensor:
