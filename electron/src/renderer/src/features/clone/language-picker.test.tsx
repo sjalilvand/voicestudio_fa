@@ -44,3 +44,18 @@ it('disables unsupported languages for pointer and keyboard selection', async ()
   fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' });
   expect(onValueChange).toHaveBeenCalledWith('English');
 });
+
+it('resets keyboard selection when the engine changes while open', async () => {
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(320);
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(340);
+  const onValueChange = vi.fn();
+  const { rerender } = render(
+    <LanguagePicker supportedOptions={['english', 'japanese']} onValueChange={onValueChange} />,
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Language' }));
+  await screen.findAllByRole('option', { name: 'English' });
+  fireEvent.keyDown(screen.getByRole('combobox'), { key: 'ArrowUp' });
+  rerender(<LanguagePicker supportedOptions={['english']} onValueChange={onValueChange} />);
+  fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' });
+  expect(onValueChange).toHaveBeenCalledWith('English');
+});
