@@ -82,3 +82,21 @@ it('clears streaming evidence between backend runs', () => {
   expect(journal.latest()!.logTail.join('\n')).toContain('RuntimeError: current failure');
   expect(journal.latest()!.logTail.join('\n')).not.toContain('old crash');
 });
+
+it.each([
+  '/Users/private-person/voice.py',
+  '/home/private-person/voice.py',
+  String.raw`C:\Users\private-person\voice.py`,
+])('scrubs home paths and credentials before persisting: %s', (source) => {
+  const path = join(mkdtempSync(join(tmpdir(), 'voice-crash-')), 'crashes.json');
+  const journal = new CrashJournal(path, '1');
+  journal.captureLine('Fatal Python error: Segmentation fault');
+  journal.captureLine(`  File "${source}", line 42 in load`);
+  journal.record(null, 'SIGSEGV', 100, []);
+  journal.record(1, null, 100, [`${source} Bearer ${'a'.repeat(32)}`]);
+  const stored = readFileSync(path, 'utf8');
+  expect(stored).not.toContain('private-person');
+  expect(stored).not.toContain('a'.repeat(32));
+  expect(stored).toContain('voice.py');
+  expect(stored).toContain('REDACTED');
+});

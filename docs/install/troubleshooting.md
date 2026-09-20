@@ -10,6 +10,8 @@ Electron native-crash reports preserve the fatal-error header and the current
 thread's first frames, rather than letting a long extension-module list displace
 them. Include the selected engine and GPU/driver when reporting a native crash;
 the excerpt is bounded, so attach the full scrubbed log if more context is needed.
+Home-directory prefixes and credential patterns are scrubbed before the local
+crash journal is written, as well as before reports are displayed or exported.
 
 <a id="self-diagnosis"></a>
 

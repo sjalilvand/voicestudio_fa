@@ -40,7 +40,11 @@ it('disables unsupported languages for pointer and keyboard selection', async ()
   fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' });
   expect(onValueChange).not.toHaveBeenCalled();
   fireEvent.change(screen.getByRole('combobox'), { target: { value: 'English' } });
-  await screen.findByRole('option', { name: 'English' });
+  const english = await screen.findByRole('option', { name: 'English' });
+  // The debounced rows render before the effect updates keyboard selection.
+  await waitFor(() =>
+    expect(screen.getByRole('combobox')).toHaveAttribute('aria-activedescendant', english.id),
+  );
   fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' });
   expect(onValueChange).toHaveBeenCalledWith('English');
 });

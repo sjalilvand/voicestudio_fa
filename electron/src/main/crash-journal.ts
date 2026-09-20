@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, renameSync } from 'node:fs';
 import type { NativeCrashRecord } from '../preload/index.d';
 import { nativeCrashExcerpt } from '../../../frontend/src/utils/crashReport';
+import { scrubText } from '../../../frontend/src/utils/scrub';
 
 /** Small version-scoped local journal. Read failures must never block startup. */
 export class CrashJournal {
@@ -17,6 +18,7 @@ export class CrashJournal {
   }
   /** Capture before the supervisor ring evicts the start of an all-thread dump. */
   captureLine(line: string): void {
+    line = scrubText(line);
     this.streaming = true;
     const trimmed = line.trim();
     if (/^(?:Fatal Python error:|Windows fatal exception:)/.test(trimmed)) {
@@ -62,7 +64,11 @@ export class CrashJournal {
               (value.exitCode === null || Number.isInteger(value.exitCode)) &&
               (value.signal === null || typeof value.signal === 'string'),
           )
-          .map((value) => ({ ...value, acknowledged: value.acknowledged === true }))
+          .map((value) => ({
+            ...value,
+            logTail: value.logTail.map(scrubText),
+            acknowledged: value.acknowledged === true,
+          }))
           .slice(0, 3);
     } catch {
       /* missing or corrupt journal */
@@ -84,6 +90,7 @@ export class CrashJournal {
     uptimeMs: number,
     logTail: string[],
   ): void {
+    logTail = logTail.map(scrubText);
     const native = this.streaming
       ? this.nativeLines.join('\n')
       : nativeCrashExcerpt(logTail.join('\n'));
