@@ -43,3 +43,26 @@ it('ignores port collisions and debugger exits, and tolerates corrupt or unwrita
   inaccessible.record(null, 'SIGKILL', 3000, ['out of memory']);
   expect(inaccessible.latest()).toMatchObject({ signal: 'SIGKILL', uptimeMs: 3000 });
 });
+
+it.each(['Fatal Python error: Segmentation fault', 'Windows fatal exception: access violation'])(
+  'retains the faulting thread instead of extension lists: %s',
+  (header) => {
+    const path = join(mkdtempSync(join(tmpdir(), 'voice-crash-')), 'crashes.json');
+    const journal = new CrashJournal(path, '1');
+    journal.record(null, 'SIGSEGV', 100, [
+      ...Array(100).fill('startup'),
+      header,
+      'Thread 0x111 (most recent call first):',
+      ...Array(50).fill('  File "threading.py", line 10 in wait'),
+      'Current thread 0x222 (most recent call first):',
+      '  File "failing_native_module.py", line 42 in load',
+      ...Array(60).fill('  File "runpy.py", line 198 in _run_module_as_main'),
+      `Extension modules: ${'torch._C, '.repeat(600)}`,
+    ]);
+    const restored = new CrashJournal(path, '1').latest()!;
+    expect(restored.logTail.join('\n')).toContain(header);
+    expect(restored.logTail.join('\n')).toContain('failing_native_module.py');
+    expect(restored.logTail.join('\n')).not.toContain('Extension modules:');
+    expect(restored.logTail.length).toBeLessThanOrEqual(40);
+  },
+);

@@ -6,6 +6,11 @@ this error" button targets directly.
 
 ## Start here: self-diagnosis
 
+Electron native-crash reports preserve the fatal-error header and the current
+thread's first frames, rather than letting a long extension-module list displace
+them. Include the selected engine and GPU/driver when reporting a native crash;
+the excerpt is bounded, so attach the full scrubbed log if more context is needed.
+
 <a id="self-diagnosis"></a>
 
 Before digging through the entries below, let the app diagnose itself:

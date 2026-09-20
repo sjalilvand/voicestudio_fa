@@ -22,12 +22,37 @@ export function rootCauseLine(text) {
 // act on than the raw newest output.
 const MIN_TAIL_CHARS = 400;
 
+/** Python's native-fault dump puts the failing frame FIRST, unlike a regular
+ * traceback. Prefer its current thread over other threads and extension lists. */
+export function nativeCrashExcerpt(text) {
+  const lines = text.split('\n');
+  const start = lines.findLastIndex((line) =>
+    /^(?:Fatal Python error:|Windows fatal exception:)/.test(line.trim()),
+  );
+  if (start < 0) return '';
+  const dump = lines.slice(start);
+  const current = dump.findIndex((line) => /^Current thread\b/.test(line.trim()));
+  const frames = current >= 0 ? dump.slice(current) : dump.slice(1);
+  const end = frames.findIndex((line, index) =>
+    /^Extension modules:/.test(line.trim()) ||
+    (index > 0 && /^(?:Thread|Current thread)\b/.test(line.trim())),
+  );
+  return [dump[0], ...(end < 0 ? frames : frames.slice(0, end))].join('\n').trim();
+}
+
 /** Bound the crash stderr to `max` characters, keeping the newest end AND — for
  *  a chained traceback — the root cause that would otherwise be cut.
  *
  *  The result never exceeds `max`: the prefix is budgeted for BEFORE slicing,
  *  not added on top of a full-size tail. */
 export function clampCrashTail(text, max = MAX_CRASH_TAIL_CHARS) {
+  const native = nativeCrashExcerpt(text);
+  if (native) {
+    const suffix = '\n… (truncated)';
+    return native.length <= max
+      ? native
+      : (native.slice(0, Math.max(0, max - suffix.length)) + suffix).slice(0, max);
+  }
   if (text.length <= max) return text;
 
   const PLAIN = '… (truncated)';
