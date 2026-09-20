@@ -156,7 +156,18 @@ def _load_model(stdout):
     with _heartbeat(stdout, "loading_model"):
         from cosyvoice.cli.cosyvoice import AutoModel  # type: ignore[import-not-found]  # noqa: PLC0415
 
-        _MODEL = AutoModel(model_dir=model_dir)
+        import torch  # noqa: PLC0415
+
+        model = AutoModel(model_dir=model_dir)
+        if not torch.cuda.is_available():
+            # Upstream's Qwen weights may load as bf16 even though its CPU
+            # token inputs are fp32. Keep CUDA's chosen precision unchanged.
+            components = getattr(model, "model", model)
+            for name in ("llm", "flow", "hift"):
+                component = getattr(components, name, None)
+                if component is not None and hasattr(component, "float"):
+                    component.float()
+        _MODEL = model
     _send(stdout, {"op": "progress", "stage": "loading_model", "percent": 100})
     return _MODEL
 

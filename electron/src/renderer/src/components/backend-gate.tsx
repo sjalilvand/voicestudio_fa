@@ -185,9 +185,11 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
             <p className={cn('text-base font-medium', failed && 'text-destructive')}>{stageText}</p>
             {(failed || setup) && status.message ? (
               <p className="text-sm text-muted-foreground">
-                {setup
-                  ? t(status.setupIssue ? `backend.setup_${status.setupIssue}` : 'backend.failed')
-                  : status.message}
+                {status.message === 'VOICESTUDIO_PROXY_BYPASS_UNSUPPORTED'
+                  ? t('backend.proxy_bypass_help')
+                  : setup
+                    ? t(status.setupIssue ? `backend.setup_${status.setupIssue}` : 'backend.failed')
+                    : status.message}
               </p>
             ) : null}
             {running ? (

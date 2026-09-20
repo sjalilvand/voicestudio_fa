@@ -1,3 +1,5 @@
+import { downloadProxyEnv } from './proxy-env';
+import { downloadRuntimeInstaller } from './runtime-download';
 import { execFile } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import {
@@ -390,6 +392,7 @@ export async function installRuntime(
   )
     uv = privateUv;
   const env: NodeJS.ProcessEnv = {
+    ...downloadProxyEnv(),
     ...(await runtimeDownloadEnv(region, signal)),
     UV_PROJECT_ENVIRONMENT: join(project, '.venv'),
     // Keep immutable downloads beside the replaceable project. Clean & Retry can
@@ -402,14 +405,12 @@ export async function installRuntime(
     await mkdir(tools, { recursive: true });
     const windows = process.platform === 'win32';
     const script = join(tools, windows ? 'install.ps1' : 'install.sh');
-    const response = await fetch(
+    const installer = await downloadRuntimeInstaller(
       `https://astral.sh/uv/${UV_VERSION}/install.${windows ? 'ps1' : 'sh'}`,
-      {
-        signal: AbortSignal.any([signal, AbortSignal.timeout(60_000)]),
-      },
+      env,
+      signal,
     );
-    if (!response.ok) throw new Error(`uv installer download failed (${response.status})`);
-    await writeFile(script, await response.text());
+    await writeFile(script, installer);
     signal.throwIfAborted();
     await run(
       windows ? 'powershell.exe' : 'sh',

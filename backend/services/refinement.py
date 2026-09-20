@@ -216,6 +216,7 @@ Forbidden:
 - Do not summarize, shorten, or omit ideas the speaker expressed.
 - Do not add words, examples, explanations, code, or details the speaker did not say.
 - Do not rephrase or substitute synonyms for the speaker's word choices. Keep their vocabulary.
+- Never translate to English or another language. Always preserve and output strictly in the speaker's original language (e.g. Portuguese, Spanish, French).
 - Do not wrap the output in quotes, code fences, or a preamble like "Here is the cleaned version". Output only the cleaned transcript itself."""
 
 _SMART_CLEANUP = """Remove disfluencies and empty filler words that interrupt the flow:
@@ -363,7 +364,16 @@ def refine_transcript(
         messages.append({"role": "assistant", "content": assistant_turn})
     messages.append({"role": "user", "content": transcript})
     budget = timeout_s if timeout_s is not None else _refine_timeout_s()
-    return backend.chat_messages(messages=messages, timeout=budget).strip()
+    try:
+        return backend.chat_messages(
+            messages=messages,
+            timeout=budget,
+            reasoning_effort="none",
+        ).strip()
+    except TypeError as exc:
+        if "reasoning_effort" not in str(exc):
+            raise
+        return backend.chat_messages(messages=messages, timeout=budget).strip()
 
 
 def maybe_refine(transcript: str, *, timeout_s: float | None = None) -> str | None:

@@ -10,8 +10,11 @@ vi.mock('@scalar/api-reference-react', async () => {
 });
 
 // Control the spec fetch + backend base without a live backend.
+const backendBase = vi.hoisted(() => ({ url: 'http://127.0.0.1:3900' }));
 vi.mock('../../api/client', () => ({
-  API: 'http://127.0.0.1:3900',
+  get API() {
+    return backendBase.url;
+  },
   apiFetch: vi.fn(),
 }));
 
@@ -36,6 +39,74 @@ const MINIMAL_SPEC = {
 describe('OpenApiPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    backendBase.url = 'http://127.0.0.1:3900';
+    sessionStorage.clear();
+    // The same-origin fallback goes through the global fetch. Default it to
+    // "nothing there" so the direct-path tests below stay about apiFetch.
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('falls back to the same-origin /openapi.json when the backend base is unreachable', async () => {
+    // An embedded webview (the Claude desktop browser pane) blocks every origin
+    // but the page's own, so the direct base fails while the dev-server proxy /
+    // backend-served copy on the page's origin answers. The reference must
+    // render from that copy instead of showing "backend unavailable".
+    apiFetch.mockRejectedValue(new TypeError('Failed to fetch'));
+    fetch.mockResolvedValue({ ok: true, json: async () => MINIMAL_SPEC });
+
+    render(<OpenApiPanel />);
+
+    expect(await screen.findByTestId('scalar-mock')).toBeInTheDocument();
+    expect(screen.queryByTestId('openapi-unreachable')).not.toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledWith(
+      '/openapi.json',
+      expect.objectContaining({ cache: 'no-store' }),
+    );
+    // The copy / open-raw affordances still name the real backend base.
+    expect(screen.getByText('http://127.0.0.1:3900/openapi.json')).toBeInTheDocument();
+  });
+
+  it('accepts the default localhost development backend', async () => {
+    backendBase.url = 'http://localhost:3900';
+    apiFetch.mockRejectedValue(new TypeError('Failed to fetch'));
+    fetch.mockResolvedValue({ ok: true, json: async () => MINIMAL_SPEC });
+    render(<OpenApiPanel />);
+    expect(await screen.findByTestId('scalar-mock')).toBeInTheDocument();
+  });
+
+  it.each(['https://my-backend.example', 'http://localhost:3901', 'https://localhost:3900'])(
+    'never substitutes the page server for %s',
+    async (url) => {
+      backendBase.url = url;
+      apiFetch.mockRejectedValue(new TypeError('Failed to fetch'));
+      fetch.mockResolvedValue({ ok: true, json: async () => MINIMAL_SPEC });
+      render(<OpenApiPanel />);
+      expect(await screen.findByTestId('openapi-unreachable')).toBeInTheDocument();
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it('preserves the configured PIN through the known development proxy', async () => {
+    sessionStorage.setItem('ov_pin', 'test-pin');
+    apiFetch.mockRejectedValue(new TypeError('Failed to fetch'));
+    fetch.mockResolvedValue({ ok: true, json: async () => MINIMAL_SPEC });
+    render(<OpenApiPanel />);
+    await screen.findByTestId('scalar-mock');
+    expect(fetch.mock.calls[0][1].headers.get('X-OmniVoice-Pin')).toBe('test-pin');
+  });
+
+  it('still reports the backend unreachable when the same-origin copy is not there either', async () => {
+    apiFetch.mockRejectedValue(new Error('backend down'));
+    fetch.mockResolvedValue({ ok: false, status: 404, json: async () => ({}) });
+
+    render(<OpenApiPanel />);
+
+    expect(await screen.findByTestId('openapi-unreachable')).toBeInTheDocument();
+    expect(screen.queryByTestId('scalar-mock')).not.toBeInTheDocument();
   });
 
   it('fetches the local /openapi.json spec and renders the Scalar reference', async () => {

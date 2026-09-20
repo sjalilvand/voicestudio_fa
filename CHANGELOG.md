@@ -21,11 +21,21 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Added
 
+- Claude Code and Cursor integration pages offer MCP setup for the current backend, and duplicate catalog routes are consolidated (#2257)
+
 - Settings → Appearance → Keep sidebar expanded: stops the sidebar shrinking to a rail when Projects, Transcribe, Tools or another workspace opens its own panel on a narrower window (#2211) — thanks @jaketame!
 - Stories and Audiobook: a Clear script button empties the whole script — every line and chapter, imported or typed — in one confirmed step instead of one trash icon at a time; the cast is kept (#2203) — thanks @jaketame!
 - Stories' Paste & Split can now split by Sentences, Paragraphs (the new default) or whole Chapters, so a single narrator is no longer chopped into one take per sentence (#2217) — thanks @jaketame!
 
 ### Fixed
+
+- Electron setup normalizes Windows proxy addresses while preserving explicit overrides and localhost exclusions (#2114)
+- Web API-reference recovery keeps the selected backend and credentials; AudioSeal embedding and detection normalize model sample rates without changing exported audio dimensions (#2252) — thanks @joseedson18jc!
+
+- LM Studio discovery respects the selected model and dictation refinement preserves literal text while handling unsupported reasoning options (#2252) — thanks @joseedson18jc!
+- CosyVoice uses matching float32 weights and inputs without CUDA, preventing a worker-thread dtype failure while preserving CUDA precision (#2096)
+- Source Electron launches reuse the prepared Python runtime instead of downloading dependencies inside the startup timeout (#2184)
+- Clone, Stories and Audiobook disable unsupported output-language choices for engines with a declared language list (#2104)
 
 - Stories and Audiobook: Generate, the chapter tracker and the render status are pinned in the setup pane instead of sitting below the last line of the script, and a disabled Generate now says why (#2229) — thanks @jaketame!
 - EPUB import no longer turns an unmarked teaser page, a "Works by" list, a publisher's address page or a stray footnotes page into chapters — the book's declared start and its contents decide what is front and back matter (#2228) — thanks @jaketame!

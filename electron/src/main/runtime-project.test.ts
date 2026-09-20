@@ -2,6 +2,7 @@
 import { mkdtemp, mkdir, readFile, rm, writeFile, statfs } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { downloadRuntimeInstaller } from './runtime-download';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   installRuntime,
@@ -15,6 +16,8 @@ import {
   stageRuntimeSources,
   UV_VERSION,
 } from './runtime-project';
+
+vi.mock('./runtime-download', () => ({ downloadRuntimeInstaller: vi.fn() }));
 
 vi.mock('node:fs/promises', async (importOriginal) => ({
   ...(await importOriginal<typeof import('node:fs/promises')>()),
@@ -47,11 +50,36 @@ async function interpreter(project: string) {
 }
 afterEach(async () => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   vi.mocked(statfs).mockClear();
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 
 describe('packaged runtime setup', () => {
+  it('downloads the first-run installer with the same proxy environment as uv', async () => {
+    const { bundle, project } = await fixture();
+    vi.stubEnv('HTTPS_PROXY', 'socks5h://127.0.0.1:1080');
+    vi.mocked(downloadRuntimeInstaller).mockResolvedValue('# installer');
+    const run = vi.fn(async () => {});
+    const signal = new AbortController().signal;
+    await installRuntime(bundle, project, null, run, signal, undefined, 'global');
+    expect(downloadRuntimeInstaller).toHaveBeenCalledWith(
+      expect.stringContaining('https://astral.sh/uv/'),
+      expect.objectContaining({ HTTPS_PROXY: 'socks5h://127.0.0.1:1080' }),
+      signal,
+    );
+    const script = join(
+      project,
+      '.tools',
+      process.platform === 'win32' ? 'install.ps1' : 'install.sh',
+    );
+    expect(await readFile(script, 'utf8')).toBe('# installer');
+    expect(run.mock.calls[0]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ HTTPS_PROXY: 'socks5h://127.0.0.1:1080' }),
+      ]),
+    );
+  });
   it('never reuses an interrupted install as a compatible Tauri environment', async () => {
     const { bundle, project } = await fixture();
     await stageRuntimeSources(bundle, project);
@@ -232,69 +260,83 @@ describe('packaged runtime setup', () => {
     expect(fetch).not.toHaveBeenCalled();
     expect(run.mock.calls[0]?.[0]).toBe(executable);
   });
-  it.skipIf(process.platform === 'darwin')('installs and validates cuDNN 8 compatibility on a CUDA runtime', async () => {
-    const { bundle, project } = await fixture();
-    const sitePackages = join(project, '.venv', 'Lib', 'site-packages');
-    const run = vi.fn(async (command: string, args: string[]) => {
-      if (args[0] === 'sync') await interpreter(project);
-      if (command === runtimePython(project) && args[1]?.includes('VOICESTUDIO_CUDNN8_PROBE=')) {
-        return `VOICESTUDIO_CUDNN8_PROBE=${JSON.stringify({ device: 'cuda', sitePackages })}\n`;
-      }
-      if (args[0] === 'pip') {
-        const libDir = join(
-          sitePackages,
-          'cudnn8_compat',
-          'nvidia',
-          'cudnn',
-          process.platform === 'win32' ? 'bin' : 'lib',
-        );
-        await mkdir(libDir, { recursive: true });
-        await Promise.all(
-          Array.from({ length: 5 }, (_, index) =>
-            writeFile(
-              join(
-                libDir,
-                process.platform === 'win32'
-                  ? `cudnn-${index}64_8.dll`
-                  : `libcudnn-${index}.so.8`,
+  it.skipIf(process.platform === 'darwin')(
+    'installs and validates cuDNN 8 compatibility on a CUDA runtime',
+    async () => {
+      const { bundle, project } = await fixture();
+      const sitePackages = join(project, '.venv', 'Lib', 'site-packages');
+      const run = vi.fn(async (command: string, args: string[]) => {
+        if (args[0] === 'sync') await interpreter(project);
+        if (command === runtimePython(project) && args[1]?.includes('VOICESTUDIO_CUDNN8_PROBE=')) {
+          return `VOICESTUDIO_CUDNN8_PROBE=${JSON.stringify({ device: 'cuda', sitePackages })}\n`;
+        }
+        if (args[0] === 'pip') {
+          const libDir = join(
+            sitePackages,
+            'cudnn8_compat',
+            'nvidia',
+            'cudnn',
+            process.platform === 'win32' ? 'bin' : 'lib',
+          );
+          await mkdir(libDir, { recursive: true });
+          await Promise.all(
+            Array.from({ length: 5 }, (_, index) =>
+              writeFile(
+                join(
+                  libDir,
+                  process.platform === 'win32'
+                    ? `cudnn-${index}64_8.dll`
+                    : `libcudnn-${index}.so.8`,
+                ),
+                'library',
               ),
-              'library',
             ),
-          ),
-        );
-      }
-      return undefined;
-    });
-    await installRuntime(
-      bundle,
-      project,
-      'uv',
-      run,
-      new AbortController().signal,
-      undefined,
-      'global',
-    );
-    const compatInstall = run.mock.calls.find(([, args]) => args[0] === 'pip');
-    expect(compatInstall?.[1]).toContain(CUDNN8_COMPAT_PIN);
-    expect(compatInstall?.[1]).toContain(join(sitePackages, 'cudnn8_compat'));
-    expect(await runtimeReady(bundle, project)).toBe(true);
-  });
-  it.skipIf(process.platform === 'darwin')('keeps a CUDA runtime incomplete when the compatibility wheel is partial', async () => {
-    const { bundle, project } = await fixture();
-    const sitePackages = join(project, '.venv', 'Lib', 'site-packages');
-    const run = vi.fn(async (command: string, args: string[]) => {
-      if (args[0] === 'sync') await interpreter(project);
-      if (command === runtimePython(project) && args[1]?.includes('VOICESTUDIO_CUDNN8_PROBE=')) {
-        return `VOICESTUDIO_CUDNN8_PROBE=${JSON.stringify({ device: 'cuda', sitePackages })}\n`;
-      }
-      return undefined;
-    });
-    await expect(
-      installRuntime(bundle, project, 'uv', run, new AbortController().signal, undefined, 'global'),
-    ).rejects.toThrow('did not install completely');
-    expect(await runtimeReady(bundle, project)).toBe(false);
-    expect(await runtimeCompatible(bundle, project)).toBe(false);
-  });
+          );
+        }
+        return undefined;
+      });
+      await installRuntime(
+        bundle,
+        project,
+        'uv',
+        run,
+        new AbortController().signal,
+        undefined,
+        'global',
+      );
+      const compatInstall = run.mock.calls.find(([, args]) => args[0] === 'pip');
+      expect(compatInstall?.[1]).toContain(CUDNN8_COMPAT_PIN);
+      expect(compatInstall?.[1]).toContain(join(sitePackages, 'cudnn8_compat'));
+      expect(await runtimeReady(bundle, project)).toBe(true);
+    },
+  );
+  it.skipIf(process.platform === 'darwin')(
+    'keeps a CUDA runtime incomplete when the compatibility wheel is partial',
+    async () => {
+      const { bundle, project } = await fixture();
+      const sitePackages = join(project, '.venv', 'Lib', 'site-packages');
+      const run = vi.fn(async (command: string, args: string[]) => {
+        if (args[0] === 'sync') await interpreter(project);
+        if (command === runtimePython(project) && args[1]?.includes('VOICESTUDIO_CUDNN8_PROBE=')) {
+          return `VOICESTUDIO_CUDNN8_PROBE=${JSON.stringify({ device: 'cuda', sitePackages })}\n`;
+        }
+        return undefined;
+      });
+      await expect(
+        installRuntime(
+          bundle,
+          project,
+          'uv',
+          run,
+          new AbortController().signal,
+          undefined,
+          'global',
+        ),
+      ).rejects.toThrow('did not install completely');
+      expect(await runtimeReady(bundle, project)).toBe(false);
+      expect(await runtimeCompatible(bundle, project)).toBe(false);
+    },
+  );
   it('clears CTranslate2 executable-stack requests in Linux ELF libraries', async () => {
     const { project } = await fixture();
     const sitePackages = join(project, '.venv', 'lib', 'python3.11', 'site-packages');
@@ -331,4 +373,28 @@ describe('packaged runtime setup', () => {
     );
     expect(release).toContain(`UV_VERSION: "${UV_VERSION}"`);
   });
+});
+
+it('hands explicit download proxies and loopback bypasses to uv', async () => {
+  const { bundle, project } = await fixture();
+  vi.stubEnv('HTTPS_PROXY', 'socks5h://127.0.0.1:10808');
+  vi.stubEnv('NO_PROXY', 'internal.example');
+  vi.stubEnv('PYTHONPATH', '/must-not-leak-into-runtime-overrides');
+  const run = vi.fn(
+    async (_command: string, _args: string[], _cwd: string, _env?: NodeJS.ProcessEnv) =>
+      interpreter(project),
+  );
+  await installRuntime(
+    bundle,
+    project,
+    'uv',
+    run,
+    new AbortController().signal,
+    undefined,
+    'global',
+  );
+  const env = run.mock.calls.find(([, args]) => args[0] === 'sync')?.[3];
+  expect(env?.HTTPS_PROXY).toBe('socks5h://127.0.0.1:10808');
+  expect(env?.NO_PROXY).toContain('localhost,127.0.0.1,::1');
+  expect(env?.PYTHONPATH).toBeUndefined();
 });

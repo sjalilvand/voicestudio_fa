@@ -49,7 +49,7 @@ import { getBridge } from '@/components/bridge';
 import { useProfiles } from '@/hooks/use-profiles';
 import { apiJson, apiPath, describeError } from '@/lib/api/client';
 import { saveExport } from '@/lib/export-history';
-import { LanguagePicker } from '@/features/clone/language-picker';
+import { EngineLanguagePicker } from '@/features/clone/engine-language-picker';
 import { LANG_CODES } from '../../../../../../frontend/src/utils/languages';
 import {
   editLongform,
@@ -245,7 +245,7 @@ export function LongformPage({ mode }: { mode: Mode }) {
                 <LanguagesIcon className="size-4" aria-hidden="true" />
                 {t('clone.language')}
               </h2>
-              <LanguagePicker
+              <EngineLanguagePicker
                 value={draft.language}
                 options={['Auto', ...LANG_CODES.map((l) => l.label)]}
                 disabled={locked}

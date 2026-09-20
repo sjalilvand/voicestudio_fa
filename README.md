@@ -79,7 +79,7 @@ Detect my OS, CPU architecture, GPU, available RAM/VRAM, free disk space,
 and any existing VoiceStudio installation, backend, or downloaded models.
 Reuse existing data and models. Prefer the latest stable Electron installer
 for my OS and architecture; select an asset named VoiceStudio-Electron.
-For source setup, follow electron/README.md: bun install, then bun run dev
+For source setup, follow electron/README.md: bun install, bun run setup:api, then bun run dev
 from the repository root. Let Electron supervise the backend; do not start
 a second backend or use legacy tauri scripts.
 If migrating from Tauri, follow docs/electron-migration.md and back up first.
@@ -105,6 +105,7 @@ identify any permissions or manual steps you cannot perform.
 git clone https://github.com/debpalash/VoiceStudio.git
 cd VoiceStudio
 bun install
+bun run setup:api  # prepare Python dependencies before starting Electron
 bun run dev
 ```
 

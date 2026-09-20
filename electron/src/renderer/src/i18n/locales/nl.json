@@ -1838,7 +1838,8 @@
     "port_in_use": "Poort {{port}} wordt al door een ander programma gebruikt. Sluit dat programma of stel OMNIVOICE_PORT in op een vrije poort en probeer opnieuw.",
     "elapsed": "{{seconds}} s verstreken",
     "first_run_hint": "De eerste start kan enkele minuten duren terwijl de Python-omgeving wordt voorbereid.",
-    "port_in_use_short": "Poort {{port}} is bezet"
+    "port_in_use_short": "Poort {{port}} is bezet",
+    "proxy_bypass_help": "Sluit VoiceStudio volledig af, stel in een terminal HTTP_PROXY/HTTPS_PROXY in op je proxy-URL en NO_PROXY op de uitgesloten hosts en start VoiceStudio vanuit die terminal. Opnieuw proberen in de geopende app laadt geen nieuwe omgevingsvariabelen."
   },
   "bootstrap": {
     "checking": "Omgeving controleren…",
@@ -2678,6 +2679,7 @@
     "included": "Inbegrepen"
   },
   "integrationCatalog": {
+    "setupHint": "Voeg deze configuratie toe aan {{file}}. Laat VoiceStudio draaien. Stel vereiste externe inloggegevens in je client in.",
     "title": "Integraties",
     "featured": "Uitgelicht",
     "description": "Ontdek integraties en uitgelichte partners."

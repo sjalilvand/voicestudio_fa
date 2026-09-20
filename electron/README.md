@@ -22,12 +22,13 @@ and remote workers require configuration; local generation stays on your machine
 ```sh
 # From the repository root
 bun install
+bun run setup:api  # prepare Python dependencies before starting Electron
 bun run dev        # electron-vite: main + preload + renderer with HMR
 ```
 
 On launch the shell probes `http://127.0.0.1:3900`. If a backend is already
 running (for example `bun run dev:api` from the repo root) it **attaches**;
-otherwise it **spawns** one with `uv run uvicorn …` from the repo checkout and
+otherwise it checks the prepared `.venv` imports, **spawns** its Python interpreter directly, and
 supervises it (restart on crash, exit code 78 = port already in use). The
 child's stdin is the liveness signal — closing it makes the backend exit.
 

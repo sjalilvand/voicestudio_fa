@@ -37,6 +37,24 @@ export default defineConfig({
     watch: {
       ignored: ['**/src-tauri/**'],
     },
+    proxy: {
+      '/docs': {
+        target: 'http://127.0.0.1:3900',
+        changeOrigin: true,
+      },
+      '/openapi.json': {
+        target: 'http://127.0.0.1:3900',
+        changeOrigin: true,
+      },
+      '/.well-known': {
+        target: 'http://127.0.0.1:3900',
+        changeOrigin: true,
+      },
+      '/v1': {
+        target: 'http://127.0.0.1:3900',
+        changeOrigin: true,
+      },
+    },
   },
   test: {
     globals: true,

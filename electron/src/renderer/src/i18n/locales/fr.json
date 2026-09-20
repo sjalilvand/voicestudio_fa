@@ -1840,7 +1840,8 @@
     "port_in_use": "Le port {{port}} est déjà utilisé par un autre programme. Fermez-le ou définissez OMNIVOICE_PORT sur un port libre, puis réessayez.",
     "elapsed": "{{seconds}} s écoulées",
     "first_run_hint": "Le premier démarrage peut prendre plusieurs minutes pendant la préparation de l’environnement Python.",
-    "port_in_use_short": "Le port {{port}} est utilisé"
+    "port_in_use_short": "Le port {{port}} est utilisé",
+    "proxy_bypass_help": "Quittez complètement VoiceStudio, définissez HTTP_PROXY/HTTPS_PROXY avec l’URL du proxy et NO_PROXY avec les hôtes exclus dans un terminal, puis lancez VoiceStudio depuis ce terminal. Réessayer dans l’application ouverte ne charge pas les nouvelles variables d’environnement."
   },
   "bootstrap": {
     "checking": "Vérification de l'environnement…",
@@ -2680,6 +2681,7 @@
     "included": "Inclus"
   },
   "integrationCatalog": {
+    "setupHint": "Intégrez cette configuration dans {{file}}. Gardez VoiceStudio ouvert. Configurez les identifiants distants nécessaires dans votre client.",
     "title": "Intégrations",
     "featured": "À la une",
     "description": "Découvrez les intégrations et les partenaires à la une."

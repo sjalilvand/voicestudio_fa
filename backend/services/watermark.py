@@ -35,6 +35,7 @@ from core.prefs import resolve
 
 logger = logging.getLogger("omnivoice.watermark")
 
+
 # ── Lazy-loaded AudioSeal models ──────────────────────────────────────────
 # Loaded on first use so cold-start isn't penalised when watermarking is off.
 _generator = None
@@ -423,6 +424,32 @@ async def mark_synthetic_async(
         return waveform
 
 
+_AUDIOSEAL_SAMPLE_RATE = 16000
+
+
+def _audioseal_resample(audio: torch.Tensor, source: int, target: int) -> torch.Tensor:
+    """Normalize model input without changing the exported audio's sample rate."""
+    if source <= 0 or target <= 0:
+        raise ValueError("Audio sample rates must be positive")
+    if source == target:
+        return audio
+    from torchaudio.functional import resample
+    return resample(audio, source, target)
+
+
+def _embed_chunk(generator, audio, sample_rate, message):
+    """Resample only the watermark residual back, preserving original high frequencies."""
+    model_audio = _audioseal_resample(audio, sample_rate, _AUDIOSEAL_SAMPLE_RATE)
+    marked = generator(model_audio, sample_rate=_AUDIOSEAL_SAMPLE_RATE, message=message)
+    if sample_rate == _AUDIOSEAL_SAMPLE_RATE:
+        return marked
+    delta = _audioseal_resample(marked - model_audio, _AUDIOSEAL_SAMPLE_RATE, sample_rate)
+    missing = audio.shape[-1] - delta.shape[-1]
+    if missing > 0:
+        delta = torch.nn.functional.pad(delta, (0, missing))
+    return audio + delta[..., :audio.shape[-1]]
+
+
 @torch.no_grad()
 def embed_watermark(
     waveform: torch.Tensor,
@@ -464,12 +491,12 @@ def embed_watermark(
         else:
             audio = waveform
 
-        # AudioSeal operates at 16kHz internally; it handles resampling, but
-        # we need to inform it of the source rate for correct embedding.
+        # AudioSeal 0.2 ignores sample_rate: normalize each bounded chunk
+        # explicitly, then add only the resampled watermark to the source.
         with _eager_audioseal():
             watermarked = torch.cat(
                 [
-                    generator(seg, sample_rate=sample_rate, message=msg)
+                    _embed_chunk(generator, seg, sample_rate, msg)
                     for seg in _iter_chunks(audio, sample_rate)
                 ],
                 dim=-1,
@@ -533,7 +560,8 @@ def detect_watermark(
         best_conf, decoded_msg = -1.0, None
         with _eager_audioseal():
             for seg in _iter_chunks(audio, sample_rate):
-                result = detector.detect_watermark(seg, sample_rate=sample_rate, message_threshold=0.5)
+                model_audio = _audioseal_resample(seg, sample_rate, _AUDIOSEAL_SAMPLE_RATE)
+                result = detector.detect_watermark(model_audio, sample_rate=_AUDIOSEAL_SAMPLE_RATE, message_threshold=0.5)
                 seg_conf = float(result[0]) if isinstance(result, tuple) else 0.0
                 if seg_conf > best_conf:
                     best_conf = seg_conf

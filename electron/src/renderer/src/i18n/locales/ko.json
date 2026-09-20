@@ -1838,7 +1838,8 @@
     "port_in_use": "다른 프로그램이 포트 {{port}}을(를) 사용 중입니다. 해당 프로그램을 닫거나 OMNIVOICE_PORT를 사용 가능한 포트로 설정한 후 다시 시도하세요.",
     "elapsed": "{{seconds}}초 경과",
     "first_run_hint": "처음 실행할 때 Python 환경을 준비하는 데 몇 분 정도 걸릴 수 있습니다.",
-    "port_in_use_short": "포트 {{port}} 사용 중"
+    "port_in_use_short": "포트 {{port}} 사용 중",
+    "proxy_bypass_help": "VoiceStudio를 완전히 종료하고 터미널에서 HTTP_PROXY/HTTPS_PROXY를 프록시 URL로, NO_PROXY를 제외할 호스트로 설정한 다음 해당 터미널에서 VoiceStudio를 실행하세요. 실행 중인 앱에서 재시도해도 새 환경 변수가 적용되지 않습니다."
   },
   "bootstrap": {
     "checking": "환경 확인 중…",
@@ -2678,6 +2679,7 @@
     "included": "포함"
   },
   "integrationCatalog": {
+    "setupHint": "이 설정을 {{file}}에 추가하세요. VoiceStudio를 실행한 상태로 유지하고 필요한 원격 인증 정보는 클라이언트에서 설정하세요.",
     "title": "연동",
     "featured": "추천",
     "description": "연동 기능과 추천 파트너를 살펴보세요."
