@@ -522,3 +522,17 @@ def test_ambiguous_short_heading_is_not_enough_to_delete_a_chapter():
     guide = '<reference type="text" href="ch1.xhtml"/>'
     script = importer.epub_to_chapter_script(_epub(docs, nav=_PLAIN_NAV.format(extra='', landmarks=''), guide=guide))
     assert 'A real scene.' in script
+
+
+@pytest.mark.parametrize('listed, substantive', [(True, False), (False, True)])
+def test_publisher_like_headings_keep_listed_or_substantive_sections(listed, substantive):
+    import importlib
+    importer = importlib.import_module('services.longform_import')
+    text = 'This is real narrative. ' * (200 if substantive else 1)
+    docs = _untyped_book(**{'teaser.xhtml': _doc('<h1>Published by Fate</h1><p>' + text + '</p>')})
+    nav = _PLAIN_NAV.format(extra='', landmarks='')
+    if listed:
+        nav = nav.replace('<li><a href="ch1.xhtml">', '<li><a href="teaser.xhtml">Published by Fate</a></li><li><a href="ch1.xhtml">')
+    guide = '<reference type="text" href="ch1.xhtml"/>'
+    script = importer.epub_to_chapter_script(_epub(docs, nav=nav, guide=guide))
+    assert 'This is real narrative.' in script

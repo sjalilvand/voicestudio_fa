@@ -283,7 +283,7 @@ _ANCILLARY_TITLE = re.compile(
     r"^\s*(cover|half[ -]?title|title[ -]?page|copyright|dedication|contents|"
     r"table of contents|acknowledg\w*|about the (author|illustrator|book)|"
     r"also (by|available)|praise for|imprint|colophon|newsletter|look out for|"
-    r"(other )?(works|books|titles|novels) by|published by|about the publisher|footnotes?|endnotes?)\b",
+    r"(other )?(works|books|titles) by|about the publisher|footnotes?|endnotes?)\b",
     re.I,
 )
 
@@ -526,7 +526,10 @@ def epub_to_chapter_script(
             continue  # cover, title page, dedication, copyright, contents, …
         unlisted = full not in toc and not (types & _BODY_TYPES)
         stray = not heading and len(body.split()) <= _FRONT_MATTER_MAX_WORDS
-        if index < start and unlisted and stray:
+        front_furniture = bool(heading and re.match(r"^\s*(novels by|published by)\b", heading, re.I))
+        if (index < start and unlisted
+                and len(body.split()) <= _FRONT_MATTER_MAX_WORDS
+                and (not heading or front_furniture)):
             continue  # unlisted page ahead of the book: a teaser/epigraph/blurb
         if in_back_matter and unlisted and stray:
             # Footnotes, a stray ad — but ONLY once listed back matter has begun:
