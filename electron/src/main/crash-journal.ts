@@ -33,7 +33,7 @@ export class CrashJournal {
     } else if (/^Thread\b/.test(trimmed)) {
       if (this.sawThread) this.captureOpen = false;
       this.sawThread = true;
-    } else if (/^Extension modules:/.test(trimmed)) {
+    } else if (trimmed.startsWith('Extension modules:')) {
       this.captureOpen = false;
     }
     if (this.captureOpen && this.nativeLines.length < 40)
