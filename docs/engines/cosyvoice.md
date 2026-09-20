@@ -13,8 +13,8 @@ availability. A downloaded
 machine. It does not prove that the VoiceStudio backend can import and run
 CosyVoice.
 
-For an existing source installation, the VoiceStudio backend interpreter must
-import:
+For an existing source installation, the same Python interpreter that runs
+the VoiceStudio backend must import:
 
 ```python
 from cosyvoice.cli.cosyvoice import AutoModel
