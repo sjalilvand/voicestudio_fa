@@ -1,7 +1,7 @@
 import { expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import '@/i18n';
-import { blankLongformDraft } from './longform-session';
+import { blankLongformDraft, renderBody } from './longform-session';
 import { StorySpeed, linesWithOwnSpeed } from './story-speed';
 
 const draft = {
@@ -53,4 +53,38 @@ it('shows no override row when every line follows the book', () => {
     />,
   );
   expect(screen.queryByRole('button', { name: 'Use for all lines' })).toBeNull();
+});
+
+
+it('applies the global speed to render requests without changing the cast or line voices', () => {
+  const onChange = vi.fn();
+  const story = {
+    ...draft,
+    cast: [{ id: 'actor', name: 'Actor', profileId: 'cast-voice' }],
+    lines: [
+      { id: 'one', text: 'First.', profileId: null, character: 'actor', speed: 1 },
+      { id: 'two', text: 'Second.', profileId: 'line-voice', speed: 0.8 },
+    ],
+  };
+  expect(linesWithOwnSpeed(story.lines)).toBe(2);
+  render(<StorySpeed draft={story} disabled={false} onChange={onChange} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Use for all lines' }));
+  const updated = { ...story, ...onChange.mock.calls[0][0] };
+  expect(updated.lines).toEqual(story.lines.map((line) => ({ ...line, speed: null })));
+  expect(renderBody('stories', updated)).toMatchObject({
+    chapters: [{ spans: [
+      { text: 'First.', voice_id: 'cast-voice', speed: 0.95 },
+      { text: 'Second.', voice_id: 'line-voice', speed: 0.95 },
+    ] }],
+  });
+});
+
+it('locks both speed controls during rendering', () => {
+  const onChange = vi.fn();
+  render(<StorySpeed draft={draft} disabled onChange={onChange} />);
+  expect(screen.getByRole('slider', { name: 'Speed' })).toBeDisabled();
+  const reset = screen.getByRole('button', { name: 'Use for all lines' });
+  expect(reset).toBeDisabled();
+  fireEvent.click(reset);
+  expect(onChange).not.toHaveBeenCalled();
 });
