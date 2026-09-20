@@ -282,7 +282,8 @@ def _probe_lmstudio_loaded_model(base_url: str, api_key: str = "local") -> Optio
 
     Best-effort and never raises: LM Studio not running, an older build without
     ``/api/v0``, or any other host on that URL simply yields ``None`` and the
-    caller falls back to ``/v1/models`` discovery. Only ever called through
+    caller keeps its configured/default model without guessing from untyped IDs.
+    Only ever called through
     :func:`discover_model`, which caches both outcomes — probing per request
     would cost an HTTP round trip on every translated segment.
     """
@@ -303,14 +304,20 @@ def _probe_lmstudio_loaded_model(base_url: str, api_key: str = "local") -> Optio
         if api_key and api_key != "local":
             headers["Authorization"] = f"Bearer {api_key}"
         req = urllib.request.Request(f"{clean_base}/api/v0/models", headers=headers)
-        with urllib.request.urlopen(req, timeout=_LMSTUDIO_PROBE_TIMEOUT_S) as resp:  # nosec B310 — HTTP(S) validated above
+        class NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, newurl):
+                return None
+
+        # A configured API credential belongs only to the configured origin.
+        opener = urllib.request.build_opener(NoRedirect())
+        with opener.open(req, timeout=_LMSTUDIO_PROBE_TIMEOUT_S) as resp:  # nosec B310 — HTTP(S) validated above
             data = json.loads(resp.read().decode("utf-8"))
         loaded = [
             str(m.get("id"))
             for m in (data.get("data") or [])
             if isinstance(m, dict)
             and m.get("state") == "loaded"
-            and m.get("type") != "embeddings"
+            and m.get("type") in {"llm", "vlm"}
             and m.get("id")
         ]
     except Exception as e:  # noqa: BLE001 — discovery is best-effort by design
@@ -344,6 +351,10 @@ def discover_model(p: Provider) -> Optional[str]:
         if loaded:
             _DISCOVERED_MODEL[p.id] = (loaded, time.monotonic() + DISCOVERY_TTL_S)
             return loaded
+        # /v1/models omits native types; opaque embedding IDs cannot be
+        # distinguished safely. Keep the user/default choice instead.
+        _DISCOVERED_MODEL[p.id] = (None, time.monotonic() + DISCOVERY_FAILURE_TTL_S)
+        return None
 
     try:
         from openai import OpenAI

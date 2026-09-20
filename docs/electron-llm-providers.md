@@ -34,3 +34,5 @@ reasoning tags within an answer rather than truncating technical text.
 In the supported web development client, API-reference recovery may use the
 same-origin proxy only for its known local backend; remote overrides never fall
 back to a different server. The configured authentication is retained.
+
+LM Studio automatic discovery accepts only loaded `llm`/`vlm` entries from its native model metadata. If that metadata is unavailable, set a model explicitly in Settings; untyped OpenAI-compatible IDs are not used to guess whether a model supports chat. The authenticated native probe rejects redirects so credentials remain on the configured origin.

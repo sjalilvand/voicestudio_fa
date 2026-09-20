@@ -47,13 +47,17 @@ def _no_env_or_store(monkeypatch, llm):
     test below would otherwise get that real model instead of the faked
     ``/v1/models`` listing. The probe path has its own test
     (``test_a_loaded_model_wins_over_the_listing``); everything else runs with
-    it answering "nothing loaded".
+    a transport fixture answering "nothing loaded" until the test supplies typed native metadata.
     """
     for var in ("LMSTUDIO_MODEL", "LMSTUDIO_BASE_URL", "OLLAMA_MODEL"):
         monkeypatch.delenv(var, raising=False)
     import services.settings_store as store
     monkeypatch.setattr(store, "get_text", lambda *a, **k: "")
-    monkeypatch.setattr(llm, "_probe_lmstudio_loaded_model", lambda url, api_key="local": None)
+    import urllib.request
+    from types import SimpleNamespace
+    import io
+    monkeypatch.setattr(urllib.request, 'build_opener', lambda *args: SimpleNamespace(
+        open=lambda *args, **kwargs: io.BytesIO(b'{"data": []}')))
 
 
 def _expire(llm, pid):
@@ -84,6 +88,16 @@ def _fake_openai(monkeypatch, llm, ids, raises=None):
 
     fake = type("openai", (), {"OpenAI": _Client})
     monkeypatch.setitem(sys.modules, "openai", fake)
+    import io
+    import json
+    import urllib.request
+    from types import SimpleNamespace
+    def native_response(*args, **kwargs):
+        models = _Models().list()
+        return io.BytesIO(json.dumps({'data': [
+            {'id': model.id, 'type': 'llm', 'state': 'loaded'} for model in models
+        ]}).encode())
+    monkeypatch.setattr(urllib.request, 'build_opener', lambda *args: SimpleNamespace(open=native_response))
     return calls
 
 

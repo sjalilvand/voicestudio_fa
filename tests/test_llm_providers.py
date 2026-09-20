@@ -335,7 +335,7 @@ def test_discover_model_probes_loaded_and_filters_embeddings(lp, monkeypatch):
 
     import openai
     monkeypatch.setattr(openai, "OpenAI", lambda **kw: _FakeClient())
-    assert lp.discover_model(p) == "qwen/qwen3.6-35b-a3b"
+    assert lp.discover_model(lp.get_provider("ollama")) == "qwen/qwen3.6-35b-a3b"
 
 
 
@@ -374,7 +374,7 @@ def test_lmstudio_discovery_uses_the_loaded_model_when_nothing_is_set(lp, monkey
 def test_discover_model_is_deterministic_regardless_of_server_order(lp, monkeypatch):
     """Two runs on one machine must pick the same model, or a bug report from
     this path is not reproducible."""
-    p = lp.get_provider("lmstudio")
+    p = lp.get_provider("ollama")
     monkeypatch.setattr(lp, "_probe_lmstudio_loaded_model", lambda url, api_key="local": None)
 
     class _FakeModel:
@@ -408,7 +408,7 @@ def test_discovery_does_not_select_embedding_only_models(lp, monkeypatch):
     from types import SimpleNamespace
     models = [SimpleNamespace(id=name) for name in ['text-embedding-nomic', 'bert-embedding']]
     monkeypatch.setattr(openai, 'OpenAI', lambda **kw: SimpleNamespace(models=SimpleNamespace(list=lambda **kw: models)))
-    assert lp.discover_model(lp.get_provider('lmstudio')) is None
+    assert lp.discover_model(lp.get_provider('ollama')) is None
 
 
 def test_loaded_model_probe_uses_the_configured_key(lp, monkeypatch):
@@ -420,7 +420,8 @@ def test_loaded_model_probe_uses_the_configured_key(lp, monkeypatch):
     def respond(request, timeout):
         requests.append(request)
         return io.BytesIO(json.dumps({'data': [{'id': 'loaded-chat', 'type': 'llm', 'state': 'loaded'}]}).encode())
-    monkeypatch.setattr(urllib.request, 'urlopen', respond)
+    from types import SimpleNamespace
+    monkeypatch.setattr(urllib.request, 'build_opener', lambda *args: SimpleNamespace(open=respond))
     assert lp.discover_model(lp.get_provider('lmstudio')) == 'loaded-chat'
     assert requests[0].get_header('Authorization') == 'Bearer test-only-secret'
 
@@ -432,6 +433,56 @@ def test_loaded_model_probe_rejects_non_http_targets(lp, monkeypatch, url):
     def forbidden(*args, **kwargs):
         calls.append(args)
         raise AssertionError('invalid URL must not reach transport')
-    monkeypatch.setattr(urllib.request, 'urlopen', forbidden)
+    from types import SimpleNamespace
+    monkeypatch.setattr(urllib.request, 'build_opener', lambda *args: SimpleNamespace(open=forbidden))
     assert lp._probe_lmstudio_loaded_model(url) is None
+    assert not calls
+
+
+def test_loaded_model_probe_never_forwards_credentials_through_redirect(lp):
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+    from threading import Thread
+    seen = []
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            seen.append((self.path, self.headers.get('Authorization')))
+            if self.path == '/api/v0/models':
+                self.send_response(302)
+                self.send_header('Location', f'http://localhost:{self.server.server_port}/other-origin')
+                self.end_headers()
+            else:
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'{"data": [{"id": "chat", "type": "llm", "state": "loaded"}]}')
+        def log_message(self, *args):
+            pass
+    server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        result = lp._probe_lmstudio_loaded_model(f'http://127.0.0.1:{server.server_port}/v1', 'test-only-secret')
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+    assert seen == [('/api/v0/models', 'Bearer test-only-secret')]
+    assert result is None
+
+
+@pytest.mark.parametrize('model_type', ['embeddings', 'reranker', None])
+def test_lmstudio_never_selects_an_opaque_embedding_id(lp, monkeypatch, model_type):
+    import io
+    import urllib.request
+    import openai
+    from types import SimpleNamespace
+    lp.forget_discovered_models()
+    payload = {'data': [{'id': 'opaque-123', 'type': model_type, 'state': 'loaded'}]}
+    monkeypatch.setattr(urllib.request, 'build_opener', lambda *args: SimpleNamespace(
+        open=lambda *args, **kwargs: io.BytesIO(json.dumps(payload).encode())))
+    calls = []
+    def fallback(**kwargs):
+        calls.append(True)
+        return SimpleNamespace(models=SimpleNamespace(list=lambda **kwargs: [SimpleNamespace(id='opaque-123')]))
+    monkeypatch.setattr(openai, 'OpenAI', fallback)
+    assert lp.discover_model(lp.get_provider('lmstudio')) is None
     assert not calls

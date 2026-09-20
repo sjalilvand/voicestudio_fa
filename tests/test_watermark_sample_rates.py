@@ -1,11 +1,14 @@
 """AudioSeal 0.2 ignores its sample_rate argument: normalize both model paths."""
 import pytest
 import torch
-from services import watermark
+def _wm():
+    from services import watermark
+    return watermark
 
 
 @pytest.mark.parametrize('rate', [8000, 16000, 22050, 24000, 44100, 48000, 96000])
 def test_model_rate_and_original_audio_are_preserved(monkeypatch, rate):
+    watermark = _wm()
     seen = []
     class Generator:
         def __call__(self, audio, sample_rate, message):
@@ -28,6 +31,7 @@ def test_model_rate_and_original_audio_are_preserved(monkeypatch, rate):
 
 
 def test_resampled_watermark_is_added_without_lowpassing_the_source(monkeypatch):
+    watermark = _wm()
     class Generator:
         def __call__(self, audio, sample_rate, message):
             return audio + 0.01
