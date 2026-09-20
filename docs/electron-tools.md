@@ -29,3 +29,9 @@ The live Windows conversion smoke now exercises the complete Tools > Convert pat
 Faster-Whisper and OmniVoice engines: upload, ASR, saved-profile conversion, returned waveform and
 Vidstack playback-clock advancement. The fixture uses an existing clone profile and does not change
 the user's engine selections.
+
+Media-tool installation retries temporary filesystem locks for up to four seconds,
+including Windows locks after the executable probe. It verifies destination cleanup
+before publishing the validated bundle. Persistent locks surface their original
+error; no system binaries or user media are deleted. The same behavior applies to
+yt-dlp overlay updates, and restoring the tested version reports failed cleanup.
