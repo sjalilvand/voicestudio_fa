@@ -504,3 +504,21 @@ def test_declared_reading_start_keeps_substantive_unlisted_prologue(body):
     docs = _untyped_book(**{'teaser.xhtml': _doc(body)})
     script = importer.epub_to_chapter_script(_epub(docs, nav=nav, guide=guide))
     assert 'opening scene' in script
+
+
+@pytest.mark.parametrize('heading', ['Novels by Amelia Cobb', 'Published by Example Press'])
+def test_publisher_and_bibliography_headings_are_ancillary(heading):
+    import importlib
+    importer = importlib.import_module('services.longform_import')
+    docs = _untyped_book(**{'teaser.xhtml': _doc(f'<h1>{heading}</h1><p>Print furniture.</p>')})
+    script = importer.epub_to_chapter_script(_epub(docs, nav=_PLAIN_NAV.format(extra='', landmarks='')))
+    assert 'Print furniture' not in script
+
+
+def test_ambiguous_short_heading_is_not_enough_to_delete_a_chapter():
+    import importlib
+    importer = importlib.import_module('services.longform_import')
+    docs = _untyped_book(**{'teaser.xhtml': _doc('<h1>Works</h1><p>A real scene.</p>')})
+    guide = '<reference type="text" href="ch1.xhtml"/>'
+    script = importer.epub_to_chapter_script(_epub(docs, nav=_PLAIN_NAV.format(extra='', landmarks=''), guide=guide))
+    assert 'A real scene.' in script

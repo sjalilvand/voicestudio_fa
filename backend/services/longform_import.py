@@ -283,7 +283,7 @@ _ANCILLARY_TITLE = re.compile(
     r"^\s*(cover|half[ -]?title|title[ -]?page|copyright|dedication|contents|"
     r"table of contents|acknowledg\w*|about the (author|illustrator|book)|"
     r"also (by|available)|praise for|imprint|colophon|newsletter|look out for|"
-    r"(other )?(works|books|titles) by|about the publisher|footnotes?|endnotes?)\b",
+    r"(other )?(works|books|titles|novels) by|published by|about the publisher|footnotes?|endnotes?)\b",
     re.I,
 )
 
