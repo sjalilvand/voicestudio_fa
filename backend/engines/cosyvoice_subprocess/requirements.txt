@@ -15,7 +15,8 @@
 #   protobuf and transformers. This exact set was installed on Windows and
 #   passes the installer's import probe (tests pin the advisory floors).
 #   transformers 5 was also checked against CosyVoice's own tokenizer (token
-#   ids identical to 4.57.6) and its cached step-by-step decoding.
+#   ids identical to 4.57.6). The sidecar repairs cached attention masks and
+#   checkpoint loading precision; real CPU synthesis is also validated.
 # - Dropped: deepspeed and tensorrt-cu12* (Linux-only acceleration),
 #   onnxruntime-gpu, wetext (remote normalizer data), and unused web/training
 #   services. Keep gdown, wget and pyarrow: upstream imports them at runtime.

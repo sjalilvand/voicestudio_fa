@@ -13,8 +13,8 @@ availability. A downloaded
 machine. It does not prove that the VoiceStudio backend can import and run
 CosyVoice.
 
-The current readiness check requires the same Python interpreter that runs the
-VoiceStudio backend to import:
+For an existing source installation, the VoiceStudio backend interpreter must
+import:
 
 ```python
 from cosyvoice.cli.cosyvoice import AutoModel
@@ -79,8 +79,8 @@ checkout's environment or project `.env` file.
 
 For upstream setup details, read the
 [official CosyVoice installation guide](https://github.com/QwenAudio/CosyVoice#install).
-Those steps create a standalone CosyVoice environment. They do not turn the
-current packaged VoiceStudio app into a CosyVoice installer.
+Those steps create a standalone CosyVoice environment. Prefer the managed
+one-click installer above for the Electron app.
 
 ## Diagnose an unavailable engine
 
@@ -115,5 +115,17 @@ are treated as needing repair; retry Install to reuse the existing model weights
 User-managed environments are not rewritten. Do not downgrade setuptools merely
 to restore `pkg_resources`.
 
-This repairs dependency verification, not the separately reported truncated or
-glitched speech. Those outputs still require real-model validation.
+### Speech context with newer Transformers
+
+The managed sidecar loads Qwen in float32 before applying the trained checkpoint,
+then preserves upstream's explicit precision choices. It also includes cached
+prompt tokens in incremental attention masks: a one-token mask in newer
+Transformers otherwise hides the text and voice context and produces unrelated
+or garbled speech. Existing Transformers 4 environments and legacy cache tuples
+remain supported; full masks are left intact.
+
+A real CosyVoice 3 CPU check with Transformers 5.10.1 now reproduces the complete
+89-word English input, verified with an independent local speech recognizer.
+A tiny randomly initialized Qwen regression checks cached versus full-context
+decoding without downloading any model in CI. This does not certify every
+language, voice reference, or GPU configuration.
