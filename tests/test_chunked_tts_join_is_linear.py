@@ -75,6 +75,7 @@ def _chunks(*lengths, channels=None):
     ("chunks shorter than the crossfade", _chunks(*([100] * 30)), CROSSFADE_MS),
     ("multi-channel", _chunks(*([SR] * 5), channels=2), CROSSFADE_MS),
     ("hard concat", _chunks(*([SR] * 5)), 0),
+    ("negative crossfade", _chunks(50, 100, 25), -50),
     ("two chunks", _chunks(SR, SR), CROSSFADE_MS),
 ])
 def test_output_is_identical_to_the_previous_join(name, chunks, crossfade):

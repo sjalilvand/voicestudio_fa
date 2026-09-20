@@ -482,7 +482,7 @@ def concatenate_audio_chunks(chunks: list, sample_rate: int,
     joined = lengths[0]
     overlaps: list[int] = []
     for length in lengths[1:]:
-        overlap = min(crossfade_samples, joined, length)
+        overlap = max(0, min(crossfade_samples, joined, length))
         overlaps.append(overlap)
         joined += length - overlap
 
@@ -490,7 +490,7 @@ def concatenate_audio_chunks(chunks: list, sample_rate: int,
     out[..., :lengths[0]] = first
     filled = lengths[0]
 
-    for chunk, overlap in zip(chunks[1:], overlaps):
+    for chunk, overlap in zip(chunks[1:], overlaps, strict=True):
         chunk = chunk.to(device=out.device, dtype=out.dtype)
         if overlap > 0:
             fade_out = torch.linspace(1.0, 0.0, overlap, dtype=out.dtype, device=out.device)
