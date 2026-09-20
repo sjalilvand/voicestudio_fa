@@ -358,8 +358,8 @@ async def test_caller_cancellation_consumes_the_future(mm, pool, monkeypatch):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('worker_fails', [False, True])
-async def test_completion_wins_when_timeout_wait_resumes_late(mm, pool, monkeypatch, worker_fails):
+@pytest.mark.parametrize('worker_error', [None, ValueError, TimeoutError])
+async def test_completion_wins_when_timeout_wait_resumes_late(mm, pool, monkeypatch, worker_error):
     """A completed worker has cleared its heartbeat before its waiter resumes."""
     from types import SimpleNamespace
 
@@ -372,8 +372,8 @@ async def test_completion_wins_when_timeout_wait_resumes_late(mm, pool, monkeypa
     def worker():
         mm.report_model_load_activity()
         assert release.wait(5), 'test did not release worker'
-        if worker_fails:
-            raise ValueError('worker failure')
+        if worker_error:
+            raise worker_error('worker failure')
         return 'completed audio'
 
     async def delayed_wait(futures, **kwargs):
@@ -391,8 +391,8 @@ async def test_completion_wins_when_timeout_wait_resumes_late(mm, pool, monkeypa
 
     monkeypatch.setattr(asyncio, 'wait', delayed_wait)
     try:
-        if worker_fails:
-            with pytest.raises(ValueError, match='worker failure'):
+        if worker_error:
+            with pytest.raises(worker_error, match='worker failure'):
                 await _run(mm, pool, worker, timeout=0.4)
         else:
             assert await _run(mm, pool, worker, timeout=0.4) == 'completed audio'

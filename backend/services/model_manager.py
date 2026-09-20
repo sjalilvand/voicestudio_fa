@@ -870,6 +870,10 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
     _soft_deadline = _t0 + timeout
     _hard_deadline = _soft_deadline + MODEL_LOAD_EXTRA_TIMEOUT_S
     _extended = False
+
+    class _ExecutionDeadlineExceeded(Exception):
+        """Internal deadline, distinct from a worker's own TimeoutError."""
+
     try:
         while True:
             _now = time.monotonic()
@@ -891,7 +895,7 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
                     # snapshot taken just before that completion.
                     if concurrent_fut.done():
                         return await fut
-                    raise asyncio.TimeoutError()
+                    raise _ExecutionDeadlineExceeded()
                 if not _extended:
                     _extended = True
                     logger.info(
@@ -918,7 +922,7 @@ async def run_on_gpu_pool_guarded(fn, *, what: str = "GPU job",
         _abandon()
         fut.add_done_callback(_swallow_abandoned)
         raise
-    except asyncio.TimeoutError as timeout_exc:
+    except _ExecutionDeadlineExceeded as timeout_exc:
         # Parity with the old wait_for semantics: cancel the asyncio wrapper;
         # the worker thread keeps going regardless. Consume whatever it
         # eventually produces.
