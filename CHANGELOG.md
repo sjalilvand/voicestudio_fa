@@ -13,8 +13,11 @@ the frozen-backend fallback mirror it for their toolchains.
 - Dubbing, batch and voice conversion on mlx-audio point at the one model switch that enables cloning, instead of asking you to change engine (#2204) — thanks @shivsin25!
 - Bug reports filed from the desktop app name the backend error class again, so two unrelated failures stop looking identical (#2197)
 - Clearer recovery guidance for known GPU, Windows policy, and audio-file failures (#2195)
+- Long scripts finish joining far faster: the step that stitches rendered chunks together no longer slows down as the script grows (#2255)
 
 ### Changed
+
+- Joining rendered audio chunks runs in a single pass instead of re-copying the whole take once per chunk, so a long story or audiobook chapter spends its time synthesising rather than stitching — about 40x less work at 400 chunks, and bit-identical audio (#2255)
 
 - The main sidebar (navigation, voice library, status) stays in place on Settings instead of being swapped for a separate panel; the Settings sections now sit in a column beside it (#2209) — thanks @jaketame!
 - The main navigation sits directly under the sidebar header, above the voice library, so it no longer moves with the library's height (#2210) — thanks @jaketame!
