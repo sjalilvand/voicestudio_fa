@@ -34,6 +34,14 @@ never contain stored credentials. Copying configuration does not prove the clien
 is connected; use its MCP tools/status view to confirm the connection.
 
 The schemas follow the official [Claude Code MCP guide](https://code.claude.com/docs/en/mcp)
-and [Cursor MCP guide](https://cursor.com/docs/mcp). Other directory entries remain
+and [Cursor MCP guide](https://cursor.com/docs/mcp). Other than the n8n workflow described below, remaining directory entries are
 capability references, not implemented connectors. The catalog has one card per
 route, retaining bundled logos and the correct category when entries overlap.
+
+## Automate speech with n8n
+
+The n8n detail page exports an inactive, manual workflow that calls the current
+backend's OpenAI-compatible speech endpoint and returns WAV audio. Edit the text
+and voice in n8n, then run it yourself. See [n8n setup](integrations/n8n.md) for
+container networking, credentials and validation. No credentials or automatic
+background requests are exported.

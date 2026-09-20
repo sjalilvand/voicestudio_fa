@@ -2682,7 +2682,8 @@
     "setupHint": "Merge this configuration into {{file}}. Keep VoiceStudio running. Set any required remote credentials in your client.",
     "title": "Integrations",
     "featured": "Featured",
-    "description": "Discover integrations and featured partners."
+    "description": "Discover integrations and featured partners.",
+    "n8nHint": "Import this workflow into n8n, edit the request, and run it. Keep VoiceStudio running. Docker and remote n8n need a reachable backend address and any required credentials."
   },
   "directoryExamples": {
     "example": "Directory example",

@@ -2903,7 +2903,8 @@
   "integrationCatalog": {
     "title": "Integrationer",
     "featured": "Utvald",
-    "description": "Upptäck integrationer och utvalda partner."
+    "description": "Upptäck integrationer och utvalda partner.",
+    "n8nHint": "Importera arbetsflödet till n8n, redigera begäran och kör det. Låt VoiceStudio vara igång. Docker och fjärranslutna n8n behöver en nåbar backendadress och eventuella inloggningsuppgifter."
   },
   "directoryExamples": {
     "example": "Katalogexempel",

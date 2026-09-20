@@ -2684,7 +2684,8 @@
     "setupHint": "Integra questa configurazione in {{file}}. Lascia VoiceStudio aperto. Imposta le credenziali remote richieste nel tuo client.",
     "title": "Integrazioni",
     "featured": "In evidenza",
-    "description": "Scopri integrazioni e partner in evidenza."
+    "description": "Scopri integrazioni e partner in evidenza.",
+    "n8nHint": "Importa questo flusso in n8n, modifica la richiesta ed eseguilo. Mantieni VoiceStudio aperto. Docker e n8n remoto richiedono un indirizzo backend raggiungibile e le credenziali necessarie."
   },
   "directoryExamples": {
     "example": "Esempio di catalogo",

@@ -2903,7 +2903,8 @@
   "integrationCatalog": {
     "title": "連携",
     "featured": "注目",
-    "description": "連携機能と注目のパートナーを見つけましょう。"
+    "description": "連携機能と注目のパートナーを見つけましょう。",
+    "n8nHint": "このワークフローをn8nにインポートし、リクエストを編集して実行します。VoiceStudioは起動したままにしてください。Dockerやリモートのn8nには、接続可能なバックエンドのアドレスと必要な認証情報を設定してください。"
   },
   "directoryExamples": {
     "example": "掲載例",
