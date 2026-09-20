@@ -27,3 +27,12 @@ it('decodes a UTF-16 manuscript before extracting subtitle speech', async () => 
   const file = { arrayBuffer: async () => bytes.buffer };
   expect(importToText('captions.srt', await readTextFile(file))).toBe('Café — hello');
 });
+
+it('retains numeric dialogue through the Electron manuscript importer', () => {
+  const text = importToText(
+    'countdown.srt',
+    '1\n00:00:01,000 --> 00:00:02,000\n3\n\n2\n00:00:02,000 --> 00:00:03,000\n2\n\n3\n00:00:03,000 --> 00:00:04,000\n1',
+  );
+  expect(text).toBe('3\n2\n1');
+  expect(splitIntoChunks(text, 100).join(' ')).toMatch(/3\s+2\s+1/);
+});
