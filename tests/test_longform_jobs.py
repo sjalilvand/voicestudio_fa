@@ -208,3 +208,119 @@ def test_route_survives_leaked_module_world_purge(monkeypatch):
         "route resolved job_store through the leaked module world instead of "
         "its import-time binding"
     )
+
+
+# ── Render summary: a finished render says what it is ────────────────────────
+
+
+def test_library_carries_the_title_and_summary_the_done_event_recorded():
+    jid = _uid("story_sum")
+    summary = {"engine": "gpt-sovits", "voices": [{"id": "v1", "name": "Jake"}],
+               "speeds": [0.95], "lines": 12, "words": 1564, "options": {"seed": 7}}
+    _seed_done(jid, type="story", done_payload={
+        "type": "done", "output": "story_sum.mp3", "chapters": 9, "duration_s": 3460.0,
+        "title": "The Super Sloth", "summary": summary})
+    item = next(j for j in build_longform_library(job_store.list_jobs, job_store.events_since, limit=500)
+                if j["job_id"] == jid)
+    assert item["title"] == "The Super Sloth"
+    assert item["summary"] == {**summary, "language": "", "format": "", "chapter_titles": []}
+
+
+def test_library_tolerates_renders_without_or_with_a_malformed_summary():
+    old, bad = _uid("story_old"), _uid("story_bad")
+    _seed_done(old, type="story", done_payload={"type": "done", "output": "old.mp3"})
+    _seed_done(bad, type="story", done_payload={"type": "done", "output": "bad.mp3", "summary": "nope"})
+    jobs = {j["job_id"]: j for j in build_longform_library(job_store.list_jobs, job_store.events_since, limit=500)}
+    assert "summary" not in jobs[old] and "summary" not in jobs[bad]
+
+
+def test_render_summary_is_settings_and_counts_never_script_text():
+    from types import SimpleNamespace as NS
+
+    from services.longform_render import render_summary
+
+    chapters = [
+        NS(title="Chapter One", spans=[NS(text="Zoe raced along the path.", speed=0.95),
+                                       NS(text="", speed=None)]),          # pause-only span
+        NS(title="Chapter Two", spans=[NS(text="Morning came early.", speed=None)]),
+    ]
+    out = render_summary(chapters, voices=[{"id": "v1", "name": "Jake"}], engine_id="gpt-sovits",
+                         language="English", fmt="mp3",
+                         options={"seed": 7, "num_step": None, "vary_repeats": False, "line_gap_ms": 250})
+    assert out["voices"] == [{"id": "v1", "name": "Jake"}] and out["engine"] == "gpt-sovits"
+    assert out["lines"] == 2 and out["words"] == 8
+    assert out["speeds"] == [0.95, 1.0]                     # unset speed = engine default
+    # The caller pre-filters to non-default options; explicit falsy values stay.
+    assert out["options"] == {"seed": 7, "vary_repeats": False, "line_gap_ms": 250}
+    assert out["chapter_titles"] == ["Chapter One", "Chapter Two"]
+    assert "Zoe" not in json.dumps(out)                        # content-free
+
+
+def test_a_summary_with_malformed_nested_fields_degrades_instead_of_reaching_clients():
+    jid = _uid("story_nested")
+    _seed_done(jid, type="story", done_payload={
+        "type": "done", "output": "nested.mp3",
+        "summary": {"engine": 7, "voices": "v1", "speeds": ["fast", 0.95, True], "lines": "12",
+                    "words": None, "options": {"seed": 0, "bad": {"x": 1}}, "chapter_titles": [1, "One"]}})
+    item = next(j for j in build_longform_library(job_store.list_jobs, job_store.events_since, limit=500)
+                if j["job_id"] == jid)
+    assert item["summary"] == {
+        "engine": "7", "voices": [], "language": "", "format": "", "lines": 12, "words": 0,
+        "speeds": [0.95], "options": {"seed": 0}, "chapter_titles": ["One"]}
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_nonfinite_persisted_values_keep_the_library_json_safe(value):
+    jid = _uid("story_nonfinite")
+    _seed_done(jid, type="story", done_payload={
+        "type": "done", "output": "ok.mp3", "duration_s": value,
+        "chapters": value,
+        "summary": {"speeds": [value, 1.0], "lines": value,
+                    "options": {"bad": value, "seed": 0}},
+    })
+    item = next(j for j in build_longform_library(job_store.list_jobs, job_store.events_since, limit=500)
+                if j["job_id"] == jid)
+    json.dumps(item, allow_nan=False)
+    assert item["duration_s"] == 0
+    assert item["summary"]["speeds"] == [1.0]
+    assert item["summary"]["options"] == {"seed": 0}
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_summary_sanitizes_nested_nonfinite_settings(value):
+    from types import SimpleNamespace as NS
+    from services.longform_render import render_summary
+    result = render_summary([NS(title="One", spans=[NS(text="hello", speed=value)])],
+                            voices=[], options={"emo_vector": [0, value], "nested": {"value": value}})
+    json.dumps(result, allow_nan=False)
+    assert result["speeds"] == []
+    assert result["options"]["emo_vector"] == [0, None]
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_longform_requests_reject_nonfinite_values(value):
+    from pydantic import ValidationError
+    from api.routers.audiobook import ExpressiveMixin, LongformSpan
+    with pytest.raises(ValidationError):
+        ExpressiveMixin(emo_vector=[value] + [0.0] * 7)
+    with pytest.raises(ValidationError):
+        LongformSpan(text="hello", speed=value)
+
+
+def test_summary_records_effective_tier_settings(monkeypatch):
+    from api.routers.audiobook import _render_summary
+    from services.audiobook import ExpressiveOptions
+    from services import performance_profiles, tts_backend
+    monkeypatch.setattr(tts_backend, "active_backend_id", lambda: "omnivoice")
+    monkeypatch.setattr(tts_backend, "get_backend_class", lambda _: tts_backend.OmniVoiceBackend)
+    monkeypatch.setattr(performance_profiles, "tts_defaults", lambda: {"num_step": 12, "postprocess_output": False})
+    implicit = _render_summary([], None, None, None, "mp3", ExpressiveOptions())
+    explicit = _render_summary([], None, None, None, "mp3", ExpressiveOptions(num_step=12, postprocess_output=False))
+    assert implicit == explicit
+    assert implicit["options"]["num_step"] == 12
+    assert implicit["options"]["postprocess_output"] is False
+
+
+def test_summary_oversized_speed_is_ignored():
+    from api.routers.longform_jobs import _clean_summary
+    assert _clean_summary({"speeds": [10 ** 1000, 1.2]})["speeds"] == [1.2]

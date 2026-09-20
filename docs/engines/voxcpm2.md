@@ -47,11 +47,19 @@ now retried once with a fresh client. See
 
 ## Behaviour notes
 
-- **Voice design:** provide a description and no reference audio.
+- **Voice design:** provide a description and no reference audio. VoiceStudio
+  passes it in the native `(description)text` format; there is no separate
+  `voice_description` argument in VoxCPM 2.0.3.
 - **Cloning:** the reference clip is prepared before use (edge-silence trim
   and length cap) so dead air in a raw clip doesn't condition the output; on
   any prep problem the raw clip is used as-is.
-- **Style instructions** are passed as an inline prefix to the text.
+- **Style instructions** (the Style field, API `instruct`, or a leading
+  `(instruction)` in the text) use controllable cloning: the reference supplies
+  timbre, without the saved transcript forcing continuation of its delivery.
+- **Plain cloning** with a reference and transcript retains upstream continuation
+  mode. A transcript without reference audio is ignored. These mappings follow
+  the [VoxCPM 2.0.3 examples](https://github.com/OpenBMB/VoxCPM/blob/2.0.3/README.md#-voice-design)
+  in both the managed sidecar and in-process adapter.
 - VoxCPM2 emits mastered, studio-grade audio, so VoiceStudio **skips its
   shared mastering chain** (which is tuned for 24 kHz engines) — only benign
   loudness normalization applies.

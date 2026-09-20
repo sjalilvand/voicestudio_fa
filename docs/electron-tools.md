@@ -29,3 +29,16 @@ The live Windows conversion smoke now exercises the complete Tools > Convert pat
 Faster-Whisper and OmniVoice engines: upload, ASR, saved-profile conversion, returned waveform and
 Vidstack playback-clock advancement. The fixture uses an existing clone profile and does not change
 the user's engine selections.
+
+Media-tool installation retries temporary filesystem locks for up to four seconds,
+including Windows locks after the executable probe. It preserves the existing installation in a sibling backup
+until publication succeeds and attempts to restore it if publication fails. If
+rollback also fails, the previous installation remains in `.media-backup-*/previous`;
+the error includes that recovery path. Persistent locks surface their original
+error; no system binaries or user media are deleted. The same behavior applies to
+yt-dlp overlay updates, and restoring the tested version reports failed cleanup.
+Dubbing background preservation and long export filter graphs support both legacy
+`-filter_complex_script` and modern FFmpeg `-/filter_complex` file arguments.
+If FFmpeg rejects the legacy option before processing, VoiceStudio retries once
+with the modern spelling; filter contents stay in a file to avoid Windows command
+line limits. Actual decoding/filter errors are reported without retrying.

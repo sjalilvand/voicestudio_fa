@@ -32,6 +32,18 @@ describe('overridesToRequest — only touched values reach the wire (#1208 D2/D3
     expect(overridesToRequest(DEFAULT_OVERRIDES, 'Auto')).toEqual({});
   });
 
+  it('seamless-join gaps ride along only once touched, and 0 / off are real values', () => {
+    expect(
+      overridesToRequest({ ...DEFAULT_OVERRIDES, lineGapMs: 0, trimEdges: false }, 'Auto'),
+    ).toEqual({
+      line_gap_ms: 0,
+      trim_edges: false,
+    });
+    expect(overridesToRequest({ ...DEFAULT_OVERRIDES, paragraphGapMs: 900 }, 'Auto')).toEqual({
+      paragraph_gap_ms: 900,
+    });
+  });
+
   it('language is sent when a non-Auto pick is made (fixes the D5 omission)', () => {
     expect(overridesToRequest(DEFAULT_OVERRIDES, 'Spanish')).toEqual({ language: 'Spanish' });
     expect(overridesToRequest(DEFAULT_OVERRIDES, 'Auto').language).toBeUndefined();
@@ -92,6 +104,14 @@ describe('AudiobookOverrides panel — renders, labels, persists (#1208 D2)', ()
     fireEvent.click(screen.getByRole('button', { name: new RegExp(en.audiobook.expressive, 'i') }));
     return onChange;
   };
+
+  it('displays the unchanged backend join defaults before any edits', () => {
+    open();
+    expect(screen.getByLabelText(en.audiobook.line_gap).value).toBe('0');
+    expect(screen.getByLabelText(en.audiobook.paragraph_gap).value).toBe('0');
+    expect(screen.getByLabelText(en.audiobook.trim_edges).checked).toBe(false);
+    expect(overridesToRequest(DEFAULT_OVERRIDES, 'Auto')).toEqual({});
+  });
 
   it('exposes the labelled sampling controls and persists an edit', () => {
     const onChange = open();

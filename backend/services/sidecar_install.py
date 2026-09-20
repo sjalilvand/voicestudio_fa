@@ -140,6 +140,8 @@ class SidecarSpec:
     # Extra `uv venv` arguments — an interpreter pin for an upstream that
     # declares one, e.g. ("--python", "3.10").
     venv_args: tuple[str, ...] = ()
+    # Existing environments may support more minors than the preferred pin.
+    compatible_python: tuple[str, ...] = ()
     # `uv pip install` target, "{checkout}" substituted. Each upstream installs
     # differently (editable, editable with an extra, a requirements file, a
     # constraints file); the default is the editable install IndexTTS uses.
@@ -307,6 +309,8 @@ SPECS: dict[str, SidecarSpec] = {
         checkout_dirname="index-tts-2.5",
         env_var="OMNIVOICE_INDEXTTS_DIR",
         probe_module="indextts.infer_v2_5",
+        venv_args=("--python", "3.11"),
+        compatible_python=("3.10", "3.11"),
         repo_ref="indextts-2.5",
         source_revision="bf2e967fac7933197143b017a60820b1ad40c448",
         source_required_path="indextts/infer_v2_5.py",
@@ -407,7 +411,7 @@ SPECS: dict[str, SidecarSpec] = {
         source_required_path="constraints/recommended.txt",
         # Upstream requires-python is >=3.10,<3.13.
         venv_args=("--python", "3.11"),
-        install_args=("-e", "{checkout}", "-c", "{checkout}/constraints/recommended.txt"),
+        install_args=("-e", "{checkout}", "-c", "{checkout_uri}/constraints/recommended.txt"),
         host_supported=_dots_host,
         docs_path="docs/engines/dots-tts.md",
         # ~7 GB venv now, ~9 GB checkpoint on first synthesis.
@@ -610,7 +614,9 @@ def installable_engine_ids() -> frozenset[str]:
 
 
 def _expand(value: str, checkout: Path) -> str:
-    return value.replace("{checkout_repr}", repr(str(checkout))).replace(
+    return value.replace("{checkout_uri}", checkout.resolve().as_uri()).replace(
+        "{checkout_repr}", repr(str(checkout))
+    ).replace(
         "{checkout}", str(checkout)
     )
 
@@ -1376,18 +1382,60 @@ def _safe_extract_members(tf: "tarfile.TarFile", dest: str) -> None:
         tf.extract(member, dest)
 
 
+def _existing_venv_compatible(spec: SidecarSpec, py: Path) -> bool:
+    if not spec.compatible_python:
+        return True
+    accepted = spec.compatible_python
+    try:
+        result = subprocess.run(
+            [str(py), "-I", "-c", "import sys; print('%s.%s' % sys.version_info[:2])"],
+            capture_output=True, text=True, timeout=15,
+        )
+        version = result.stdout.strip()
+        if result.returncode != 0 or not version or not all(
+            part.isdigit() for part in version.split(".")
+        ) or len(version.split(".")) != 2:
+            raise ValueError("interpreter did not report its Python version")
+    except (OSError, subprocess.TimeoutExpired, ValueError) as exc:
+        # TimeoutExpired includes the full command and OSError may include the
+        # user's home path. Keep job errors useful without copying either.
+        if isinstance(exc, subprocess.TimeoutExpired):
+            reason = "interpreter check timed out after 15 seconds"
+        elif isinstance(exc, OSError):
+            reason = f"{type(exc).__name__} (error {exc.errno})"
+        else:
+            reason = "interpreter did not report its Python version"
+        raise _StepError(
+            f"Could not check the existing {spec.display_name} Python environment: {reason}",
+            "Check that the environment's Python can run, then retry. "
+            "The existing environment has not been removed.",
+        ) from exc
+    return version in accepted
+
+
 def _step_create_venv(spec: SidecarSpec, job: dict) -> None:
     step = _job_step(job, "create_venv")
     checkout = managed_checkout(spec)
     venv_dir = checkout / ".venv"
     py = _venv_python(venv_dir)
     if py.is_file():
-        step["state"] = "done"
-        step["detail"] = "venv already present"
-        _log(job, f"Venv already present at {venv_dir} — skipping.")
-        return
+        if _existing_venv_compatible(spec, py):
+            step["state"] = "done"
+            step["detail"] = "venv already present"
+            _log(job, "Compatible .venv already present — skipping.")
+            return
+        # Never follow a user-provided venv symlink/junction when repairing.
+        if venv_dir.resolve() != checkout.resolve() / ".venv":
+            raise _StepError(
+                "Incompatible Python environment is linked outside its managed checkout.",
+                "Repair the linked environment manually or remove its link, then retry.",
+            )
+        _log(job, "Rebuilding incompatible .venv Python environment …")
+        (checkout / _INSTALL_COMPLETE_MARKER).unlink(missing_ok=True)
+        shutil.rmtree(venv_dir)
+        spec.invalidate()
     uv = _locate_uv()
-    _log(job, f"Creating venv at {venv_dir} …")
+    _log(job, "Creating managed .venv …")
     # Keep uv's cache on the engines volume (D:-install class) — see
     # uv_subprocess_env. The cache parent is the shared engines root, so
     # every sidecar engine reuses one cache.
@@ -1418,6 +1466,10 @@ def _step_install_deps(spec: SidecarSpec, job: dict) -> None:
     uv = _locate_uv()
     _log(job, f"Installing {spec.display_name} into its venv (this can take several minutes) …")
     target = [_expand(arg, checkout) for arg in spec.install_args]
+    if spec.engine_id == "dots-tts":
+        from engines.dots_tts.install import compatible_constraints
+        constraint = compatible_constraints(checkout / "constraints" / "recommended.txt")
+        target[target.index("-c") + 1] = constraint.resolve().as_uri()
     if spec.torch_pins:
         target += _torch_pin_args(spec)
     elif spec.cpu_torch_index:
@@ -1439,6 +1491,13 @@ def _step_install_deps(spec: SidecarSpec, job: dict) -> None:
             "Usually a network hiccup — re-run the install to resume. Behind a "
             "proxy, set HTTPS_PROXY in Settings → Environment first."
         )
+        if spec.engine_id == "dots-tts":
+            hint = (
+                "If the log mentions pynini or fst/util.h, install OpenFst and a "
+                "C++ compiler first (macOS: brew install openfst; Debian/Ubuntu: "
+                "sudo apt install libfst-dev libfst-tools build-essential), then "
+                "retry. See docs/engines/dots-tts.md for include/library paths. "
+            ) + hint
         if sys.platform == "win32":
             # Packages built from source (openai-whisper, for CosyVoice) nest
             # deep build folders under uv's cache; past Windows' 260-character

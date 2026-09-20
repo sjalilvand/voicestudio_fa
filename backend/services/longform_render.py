@@ -121,8 +121,8 @@ def chapter_cache_key(
 ) -> str:
     """Deterministic content hash for a chapter's rendered audio.
 
-    ``spans`` is an ordered list of ``(voice_id, text, pause_ms_after[, speed])``
-    (speed optional, defaults to None). Same inputs → same key → reuse the
+    ``spans`` is an ordered list of ``(voice_id, text, pause_ms_after[, speed[, join]])``
+    (speed optional, defaults to None; join only where inline markup split a line). Same inputs → same key → reuse the
     cached chapter WAV on a re-run (resume); any change (text, voice, order,
     pauses, speed, sample rate, engine, or a voice's resolved signature) → new
     key → re-render. ``voice_sig`` maps each voice id to a stable signature
@@ -132,7 +132,11 @@ def chapter_cache_key(
     payload = {
         "sr": int(sample_rate),
         "engine": engine_id or "",
-        "spans": [[s[0], s[1], int(s[2]), (s[3] if len(s) > 3 else None)] for s in spans],
+        # A 5th element is the span's ``join`` ("continue"/"paragraph") — it picks
+        # the silence after the span, so it must move the key. Appended only when
+        # present: a plan without one hashes exactly as it always has.
+        "spans": [[s[0], s[1], int(s[2]), (s[3] if len(s) > 3 else None)]
+                  + ([s[4]] if len(s) > 4 and s[4] else []) for s in spans],
         "voices": {k: voice_sig[k] for k in sorted(voice_sig)} if voice_sig else {},
     }
     raw = json.dumps(payload, sort_keys=True, ensure_ascii=False)
@@ -530,3 +534,61 @@ def build_render_cmd(
             cmd += ["-c:v", "copy"]
         cmd += ["-movflags", "+faststart", "-f", "mp4", str(out_path)]
     return cmd
+
+
+# ── Render summary (what a finished render WAS) ─────────────────────────────
+
+#: Cap on chapter titles kept in a summary — the library is a list, not a TOC.
+_SUMMARY_MAX_TITLES = 60
+
+
+def _summary_json_value(value):
+    """Keep nested settings JSON-safe even when recovering an old manifest."""
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if isinstance(value, dict):
+        return {str(k): _summary_json_value(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_summary_json_value(v) for v in value]
+    return value
+
+
+def render_summary(
+    chapters: list,
+    *,
+    voices: list[dict],
+    engine_id: str = "",
+    language: Optional[str] = None,
+    fmt: str = "",
+    options: Optional[dict] = None,
+) -> dict:
+    """How a render was made, small enough to ride on its ``done`` event.
+
+    A finished file in a library is only useful if it says what it is: which
+    voice, how fast, which engine, how it was joined. ``chapters`` is the plan
+    (objects with ``title`` and ``spans`` carrying ``text``/``speed``);
+    ``voices`` is the already-resolved ``[{"id", "name"}]`` actually used;
+    ``options`` is the render's non-default expressive options, already filtered
+    by the caller (any new knob — join gaps included — shows up here without
+    touching this function).
+    Content-free by design: counts and settings, never the script text.
+    """
+    spans = [s for c in chapters for s in getattr(c, "spans", [])]
+    spoken = [s for s in spans if (getattr(s, "text", "") or "").strip()]
+    speeds = sorted({round(float(getattr(s, "speed", None) or 1.0), 2) for s in spoken
+                     if math.isfinite(float(getattr(s, "speed", None) or 1.0))})
+    titles = [str(getattr(c, "title", "") or "") for c in chapters][:_SUMMARY_MAX_TITLES]
+    return {
+        "engine": engine_id or "",
+        "voices": [{"id": str(v.get("id") or ""), "name": str(v.get("name") or "")} for v in voices],
+        "language": language or "",
+        "format": fmt or "",
+        "lines": len(spoken),
+        "words": sum(len(s.text.split()) for s in spoken),
+        "speeds": speeds,
+        # The caller passes only non-default options; keep explicit falsy values
+        # (seed 0, postprocess off) — they are settings, not absences.
+        "options": {str(k): _summary_json_value(v) for k, v in (options or {}).items()
+                    if v is not None},
+        "chapter_titles": titles,
+    }

@@ -1,6 +1,9 @@
 import { expect, it } from 'vitest';
 import { importToText } from '../../../../../../frontend/src/utils/importStory';
-import { splitIntoChunks } from '../../../../../../frontend/src/utils/splitStoryText';
+import {
+  splitIntoChunks,
+  splitStoryText,
+} from '../../../../../../frontend/src/utils/splitStoryText';
 it('removes SRT metadata and retains spoken lines', () => {
   expect(
     importToText(
@@ -16,6 +19,28 @@ it('splits locally with bounded chunks and stable text order', () => {
   expect(chunks.join(' ')).toBe(text);
   expect(splitIntoChunks('', 500)).toEqual([]);
 });
+it('split presets give one line per paragraph or per chapter, headings kept separate', () => {
+  const book = '# One\nFirst para.\n\nSecond para.\n# Two\nLast.';
+  expect(splitStoryText(book, 'paragraphs')).toEqual([
+    '# One',
+    'First para.',
+    'Second para.',
+    '# Two',
+    'Last.',
+  ]);
+  expect(splitStoryText(book, 'chapters')).toEqual([
+    '# One',
+    'First para.\n\nSecond para.',
+    '# Two',
+    'Last.',
+  ]);
+  expect(splitStoryText(book, 'sentences', 500)).toEqual([
+    '# One',
+    'First para.\n\nSecond para.',
+    '# Two',
+    'Last.',
+  ]);
+});
 
 it('decodes a UTF-16 manuscript before extracting subtitle speech', async () => {
   const { readTextFile } = await import('../../../../../../frontend/src/utils/readTextFile');
@@ -26,4 +51,13 @@ it('decodes a UTF-16 manuscript before extracting subtitle speech', async () => 
   for (let i = 0; i < text.length; i++) view.setUint16(2 + i * 2, text.charCodeAt(i), true);
   const file = { arrayBuffer: async () => bytes.buffer };
   expect(importToText('captions.srt', await readTextFile(file))).toBe('Café — hello');
+});
+
+it('retains numeric dialogue through the Electron manuscript importer', () => {
+  const text = importToText(
+    'countdown.srt',
+    '1\n00:00:01,000 --> 00:00:02,000\n3\n\n2\n00:00:02,000 --> 00:00:03,000\n2\n\n3\n00:00:03,000 --> 00:00:04,000\n1',
+  );
+  expect(text).toBe('3\n2\n1');
+  expect(splitIntoChunks(text, 100).join(' ')).toMatch(/3\s+2\s+1/);
 });
