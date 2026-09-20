@@ -11,26 +11,40 @@ export function parseWinInetProxy(raw: string): NodeJS.ProcessEnv {
     const address = match?.[2] ?? item;
     if (/\s|=/.test(address)) continue;
     const candidate = address.includes('://')
-      ? address : `${scheme === 'socks' ? 'socks5h' : 'http'}://${address}`;
+      ? address
+      : `${scheme === 'socks' ? 'socks5h' : 'http'}://${address}`;
     try {
       const url = new URL(candidate);
-      if (!['http:', 'https:', 'socks4:', 'socks4a:', 'socks5:', 'socks5h:'].includes(url.protocol)) continue;
-      if (!url.hostname || (url.pathname && url.pathname !== '/') || url.search || url.hash) continue;
+      if (!['http:', 'https:', 'socks4:', 'socks4a:', 'socks5:', 'socks5h:'].includes(url.protocol))
+        continue;
+      if (!url.hostname || (url.pathname && url.pathname !== '/') || url.search || url.hash)
+        continue;
       urls[scheme] = candidate;
-    } catch { /* A malformed system value is not a valid proxy override. */ }
+    } catch {
+      /* A malformed system value is not a valid proxy override. */
+    }
   }
   const http = urls.http ?? urls.all ?? urls.socks;
   const https = urls.https ?? urls.all ?? urls.socks;
   return { ...(http ? { HTTP_PROXY: http } : {}), ...(https ? { HTTPS_PROXY: https } : {}) };
 }
 
-interface SystemProxy { server: string; bypass?: string }
+interface SystemProxy {
+  server: string;
+  bypass?: string;
+}
 
 /** Only translate bypass rules whose meaning NO_PROXY can preserve. */
 export function proxyBypassHosts(raw: string): string[] | null {
   const hosts: string[] = [];
-  for (const value of raw.split(';').map((part) => part.trim()).filter(Boolean)) {
-    if (value === '*') { hosts.push(value); continue; }
+  for (const value of raw
+    .split(';')
+    .map((part) => part.trim())
+    .filter(Boolean)) {
+    if (value === '*') {
+      hosts.push(value);
+      continue;
+    }
     const host = value.replace(/^\*\./, '.');
     if (!/^[a-z0-9_.:[\]-]+$/i.test(host) || value.includes('<')) return null;
     hosts.push(host);
@@ -41,14 +55,18 @@ export function proxyBypassHosts(raw: string): string[] | null {
 /** A bounded registry read; denied/unavailable registry access leaves uv's defaults intact. */
 function systemProxy(): SystemProxy | undefined {
   try {
-    const output = execFileSync('reg.exe', [
-      'query', 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings',
-    ], { encoding: 'utf8', timeout: 2500, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    const output = execFileSync(
+      'reg.exe',
+      ['query', 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings'],
+      { encoding: 'utf8', timeout: 2500, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] },
+    );
     if (!/^\s*ProxyEnable\s+REG_DWORD\s+0x0*1\s*$/im.test(output)) return undefined;
     const server = /^\s*ProxyServer\s+REG_SZ\s+(.+)$/im.exec(output)?.[1].trim();
     const bypass = /^\s*ProxyOverride\s+REG_SZ\s+(.+)$/im.exec(output)?.[1].trim();
     return server ? { server, bypass } : undefined;
-  } catch { return undefined; }
+  } catch {
+    return undefined;
+  }
 }
 
 /** uv download subprocess settings; explicit caller proxies always take precedence. */
@@ -74,8 +92,14 @@ export function downloadProxyEnv(
     }
   }
   const bypass = new Set([
-    ...`${env.NO_PROXY ?? ''},${env.no_proxy ?? ''}`.split(',').map((host) => host.trim()).filter(Boolean),
-    ...systemBypass, 'localhost', '127.0.0.1', '::1',
+    ...`${env.NO_PROXY ?? ''},${env.no_proxy ?? ''}`
+      .split(',')
+      .map((host) => host.trim())
+      .filter(Boolean),
+    ...systemBypass,
+    'localhost',
+    '127.0.0.1',
+    '::1',
   ]);
   env.NO_PROXY = env.no_proxy = [...bypass].join(',');
   return env;
