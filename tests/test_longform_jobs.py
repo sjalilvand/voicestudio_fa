@@ -267,3 +267,20 @@ def test_a_summary_with_malformed_nested_fields_degrades_instead_of_reaching_cli
     assert item["summary"] == {
         "engine": "7", "voices": [], "language": "", "format": "", "lines": 12, "words": 0,
         "speeds": [0.95], "options": {"seed": 0}, "chapter_titles": ["One"]}
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_nonfinite_persisted_values_keep_the_library_json_safe(value):
+    jid = _uid("story_nonfinite")
+    _seed_done(jid, type="story", done_payload={
+        "type": "done", "output": "ok.mp3", "duration_s": value,
+        "chapters": value,
+        "summary": {"speeds": [value, 1.0], "lines": value,
+                    "options": {"bad": value, "seed": 0}},
+    })
+    item = next(j for j in build_longform_library(job_store.list_jobs, job_store.events_since, limit=500)
+                if j["job_id"] == jid)
+    json.dumps(item, allow_nan=False)
+    assert item["duration_s"] == 0
+    assert item["summary"]["speeds"] == [1.0]
+    assert item["summary"]["options"] == {"seed": 0}

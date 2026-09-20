@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 from typing import Callable, Optional
 
 from fastapi import APIRouter, Query
@@ -55,14 +56,15 @@ def _done_payload_from_events(events: list[dict]) -> Optional[dict]:
 def _coerce_int(value, default: int = 0) -> int:
     try:
         return int(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return default
 
 
 def _coerce_float(value, default: float = 0.0) -> float:
     try:
-        return float(value)
-    except (TypeError, ValueError):
+        number = float(value)
+        return number if math.isfinite(number) else default
+    except (TypeError, ValueError, OverflowError):
         return default
 
 
@@ -83,13 +85,14 @@ def _clean_summary(raw) -> Optional[dict]:
     speeds = [
         round(float(x), 2)
         for x in (raw.get("speeds") if isinstance(raw.get("speeds"), list) else [])
-        if isinstance(x, (int, float)) and not isinstance(x, bool)
+        if isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
     ]
     titles = [str(t) for t in (raw.get("chapter_titles") if isinstance(raw.get("chapter_titles"), list) else [])
               if isinstance(t, str)]
     options = {
         str(k): v for k, v in (raw.get("options") if isinstance(raw.get("options"), dict) else {}).items()
         if isinstance(v, (str, int, float, bool))
+        and (not isinstance(v, float) or math.isfinite(v))
     }
     return {
         "engine": str(raw.get("engine") or ""),
