@@ -119,8 +119,10 @@ gets the line gap, blank line or not — the paragraph gap is for breaks inside
 one voice's text. With the paragraph gap at 0 a line is
 rendered in one engine call exactly as before, so setting both gaps to 0 and
 turning trimming off gives the pre-existing hard joins (and their cache keys)
-back. The join stage adds at most 15 minutes of silence to one chapter; past
-that, gaps shorten rather than grow the render without bound.
+back, including cached renders with seed or emotion overrides. A chapter may
+request at most 15 minutes of added join silence; larger requests fail before
+synthesis or cache reads. Reduce the gaps or split the chapter to proceed.
+Accepted gaps retain their exact duration on fresh renders and cache reuse.
 
 **Longform-only tags.** Audiobook and Stories additionally parse SSML-lite —
 `[slow]…[/slow]`, `[fast]…[/fast]`, `[emphasis]…[/emphasis]`, `[spell]` —

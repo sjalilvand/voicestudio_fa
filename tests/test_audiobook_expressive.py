@@ -474,22 +474,35 @@ def test_line_gap_never_lands_inside_a_line_split_by_inline_markup():
     assert audio.shape[-1] == 3 * 500 + 250
 
 
-def test_join_silence_budget_caps_what_the_join_stage_may_add():
-    from services.audiobook import MAX_JOIN_SILENCE_MS, _GapBudget
+def test_join_silence_budget_rejects_before_synthesis_or_cache(monkeypatch):
+    from services import audiobook
+    from unittest.mock import Mock
 
-    b = _GapBudget(total_ms=1000)
-    assert b.take(600) == 600
-    assert b.take(600) == 400          # shortened, not dropped
-    assert b.take(600) == 0            # spent
-    assert _GapBudget(1000).take(600, count=4) == 250   # shared evenly
-    assert _GapBudget().take(0) == 0 and _GapBudget().take(250, count=0) == 0
+    monkeypatch.setattr(audiobook, "MAX_JOIN_SILENCE_MS", 1000)
+    synth = Mock(return_value=torch.ones(10))
+    cache = Mock()
+    cache.load.return_value = torch.ones(70)
+    # Cached paragraph gaps must not bypass the budget. Shortening gaps during
+    # synthesis made cached audio depend on the order/cache state of other spans.
+    with pytest.raises(ValueError, match="join silence"):
+        synthesize_chapter(
+            [Span(voice_id=None, text="a\n\nb"), Span(voice_id=None, text="c")],
+            synth, 100, paragraph_gap_ms=600, line_gap_ms=600, segment_cache=cache,
+        )
+    synth.assert_not_called()
+    cache.load.assert_not_called()
 
-    # Thousands of one-word paragraphs at the maximum gap stay bounded.
-    sr = 100
-    body = "\n\n".join(["a"] * 4000)
-    audio, _ = synthesize_chapter([Span(voice_id=None, text=body)],
-                                  lambda *_: torch.ones(1), sr, paragraph_gap_ms=5000)
-    assert audio.shape[-1] <= 4000 + sr * MAX_JOIN_SILENCE_MS // 1000
+
+def test_join_silence_budget_keeps_exact_gaps_and_pause_precedence(monkeypatch):
+    from services import audiobook
+
+    monkeypatch.setattr(audiobook, "MAX_JOIN_SILENCE_MS", 1000)
+    spans = [Span(voice_id=None, text="a\n\nb", pause_ms_after=200),
+             Span(voice_id=None, text="c")]
+    audio, _ = synthesize_chapter(spans, lambda *_: torch.ones(10), 100,
+                                  paragraph_gap_ms=600, line_gap_ms=600)
+    # The explicit pause replaces the line gap; no trailing line gap is added.
+    assert audio.shape[-1] == 30 + 60 + 20
 
 
 def test_render_request_gap_fields_are_bounded_and_reach_options():
@@ -518,3 +531,13 @@ def test_chapter_cache_key_moves_with_a_span_join_and_is_legacy_without_one():
     cont = chapter_cache_key([("v", "a", 0, None, "continue"), ("v", "b", 0, None)], **kw)
     para = chapter_cache_key([("v", "a", 0, None, "paragraph"), ("v", "b", 0, None)], **kw)
     assert len({plain4, cont, para}) == 3        # each join → its own audio → its own key
+
+
+def test_disabled_joins_preserve_nondefault_legacy_cache_signatures():
+    # Persisted before join controls existed: a seeded/emotive render must still
+    # find its cached segments when the caller explicitly keeps legacy joins.
+    expected = ('{"class_temperature": null, "emo_alpha": null, "emo_text": "calm", '
+                '"emo_vector": null, "guidance_scale": null, "num_step": null, '
+                '"position_temperature": null, "postprocess_output": null, '
+                '"seed": 0, "vary_repeats": false}')
+    assert ExpressiveOptions(seed=0, emo_text="calm").cache_signature() == expected
