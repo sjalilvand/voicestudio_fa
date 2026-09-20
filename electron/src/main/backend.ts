@@ -282,7 +282,10 @@ function samePath(left: string, right: string): boolean {
     : normalizedLeft === normalizedRight;
 }
 
-function resolveSpawnPlan(port: number, packagedProject?: string): SpawnPlan | { error: string } {
+export function resolveSpawnPlan(
+  port: number,
+  packagedProject?: string,
+): SpawnPlan | { error: string } {
   const root = backendRoot();
   const override = parseBackendCmdOverride(process.env.OMNIVOICE_BACKEND_CMD);
   if (override) return { argv: override, cwd: root };
@@ -293,21 +296,17 @@ function resolveSpawnPlan(port: number, packagedProject?: string): SpawnPlan | {
       cwd: project,
     };
   }
-  const uv = findUv();
+  // Setup is explicit: `uv run` can sync gigabytes inside the health-check
+  // deadline and repeat that download after every restart (#2184).
   const portArg = ['--port', String(port)];
-  if (uv)
-    return {
-      argv: [uv, 'run', '--project', root, ...UVICORN_ARGS, ...portArg],
-      cwd: root,
-    };
   const python = venvPython(root);
   if (existsSync(python)) {
     return { argv: [python, '-m', ...UVICORN_ARGS, ...portArg], cwd: root };
   }
   return {
     error:
-      `Neither uv nor a Python venv was found for ${root}. ` +
-      'Install uv (https://docs.astral.sh/uv/) or run `uv sync` in the repo, then restart.',
+      `No prepared Python environment was found for ${root}. ` +
+      'Run `bun run setup:api` in the repository, wait for it to finish, then restart.',
   };
 }
 
