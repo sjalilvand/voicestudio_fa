@@ -98,3 +98,24 @@ def test_overlapping_cue_still_drops_the_words_it_repeats(tmp_path, monkeypatch)
     assert job["full_transcript"] == (
         "I told you we should go home before the last train leaves."
     )
+
+
+def test_touching_cues_keep_intentional_repetition_of_a_whole_phrase(tmp_path, monkeypatch):
+    manual = '\n'.join([
+        'WEBVTT', '',
+        '00:00:01.000 --> 00:00:03.000', 'Never give up.', '',
+        '00:00:03.000 --> 00:00:05.000', 'Never give up.', '',
+        '00:00:05.000 --> 00:00:07.000', 'Never give up. Keep going.', '',
+    ])
+    _, job = _seed_from(manual, tmp_path, monkeypatch)
+    assert job['full_transcript'] == 'Never give up. Never give up. Never give up. Keep going.'
+
+
+def test_rollup_detection_does_not_remove_later_spoken_repetitions(tmp_path, monkeypatch):
+    vtt = ROLLING_VTT + '\n'.join([
+        '', '00:00:07.000 --> 00:00:09.000', 'from scratch', '',
+    ])
+    _, job = _seed_from(vtt, tmp_path, monkeypatch)
+    assert job['full_transcript'] == (
+        'hey everyone welcome back today we are baking bread from scratch from scratch'
+    )

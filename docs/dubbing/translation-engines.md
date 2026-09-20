@@ -264,3 +264,5 @@ If the Argos native runtime cannot load, both desktop and browser clients show l
 WebVTT import separates metadata blocks from cue identifiers using the [WebVTT block-parsing rules](https://www.w3.org/TR/webvtt1/#file-parsing): a timing line immediately after an identifier makes a cue, even when that identifier is NOTE, STYLE, or REGION. Later timing examples inside metadata are ignored, and empty cues never borrow the next cue’s identifier as dialogue.
 
 Dubbing transcription emits keepalives during quiet diarization, reference-refinement, and cleanup steps. Disconnecting stops queued model work; native calls already running retain their model until they finish, then cleanup restores TTS. Task streams also request that proxies disable buffering so keepalives reach the client promptly.
+
+Downloaded rolling captions are deduplicated across their brief repeated bridge cues before translation. Ordinary consecutive cues keep intentional repeated words and phrases, even when their timestamps touch.
