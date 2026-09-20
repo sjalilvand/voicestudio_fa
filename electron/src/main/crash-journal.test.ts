@@ -66,3 +66,19 @@ it.each(['Fatal Python error: Segmentation fault', 'Windows fatal exception: acc
     expect(restored.logTail.length).toBeLessThanOrEqual(40);
   },
 );
+
+it('clears streaming evidence between backend runs', () => {
+  const path = join(mkdtempSync(join(tmpdir(), 'voice-crash-')), 'crashes.json');
+  const journal = new CrashJournal(path, '1');
+  journal.captureLine('Fatal Python error: old crash');
+  journal.captureLine('  File "old.py", line 1 in fault');
+  journal.resetCapture();
+  journal.captureLine('RuntimeError: current failure');
+  journal.record(1, null, 200, [
+    'Fatal Python error: old crash',
+    ...Array(45).fill('old output'),
+    'RuntimeError: current failure',
+  ]);
+  expect(journal.latest()!.logTail.join('\n')).toContain('RuntimeError: current failure');
+  expect(journal.latest()!.logTail.join('\n')).not.toContain('old crash');
+});

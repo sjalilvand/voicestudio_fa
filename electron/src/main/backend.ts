@@ -878,6 +878,7 @@ export class BackendSupervisor extends EventEmitter<{
   private pushLog(stream: 'out' | 'err', line: string): void {
     line = cleanProcessLine(line);
     if (!line) return;
+    if (stream === 'err') this.crashes.captureLine(line);
     this.log.push(line);
     if (this.log.length > LOG_RING_LINES) this.log.splice(0, this.log.length - LOG_RING_LINES);
     (stream === 'err' ? console.error : console.log)(`[backend] ${line}`);
@@ -911,6 +912,7 @@ export class BackendSupervisor extends EventEmitter<{
   }
 
   private spawnChild(plan: SpawnPlan, gen: number): void {
+    this.crashes.resetCapture();
     const [command, ...args] = plan.argv;
     if (!command) {
       this.setStage('failed', { message: 'Empty backend command' });
