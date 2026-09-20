@@ -83,3 +83,20 @@ The shared video player renders Vidstack's poster before playback, including the
 On Linux Wayland systems where Chromium logs `eglCreateImage failed` / `OzoneImageBacking` and video or window contents flicker, launch Electron with `--disable-gpu-compositing`. For source development, run `bun run dev:software-compositing` from `electron/`. This opt-in uses software window compositing while leaving backend CUDA inference available; it does not disable acceleration for other installations. It requires a full Electron restart, not a renderer reload. A refused connection to port 3903 instead means the development proxy is stopped; restart the Electron development process to restore it.
 
 Secondary workspace sidebars resize from their right edge up to 40% wider than the previous limits (515 / 616 / 750 px by size), while reserving space for the main workspace. Widths are saved per size in the app profile’s local storage and restored on navigation and restart. Double-click the divider to reset the width; focus it and use arrow keys for keyboard resizing. Sidebar sections fill the resized width, and video controls adapt to the player width.
+
+### Windows proxy bootstrap
+
+Electron translates enabled WinINET `ProxyServer` maps (`http=…`, `https=…`,
+`socks=…`) into proxy URLs for the dependency-install subprocess. SOCKS maps use
+`socks5h://` so the proxy resolves download hostnames. Explicit `HTTP_PROXY`,
+`HTTPS_PROXY`, or `ALL_PROXY` settings, including lowercase forms, take priority.
+Loopback hosts remain excluded, and existing `NO_PROXY` entries are retained.
+Proxy credentials are never logged by this normalization.
+
+Simple WinINET bypass hosts and `*.domain` suffix rules are retained. PAC and
+Windows-specific bypass patterns such as `<local>` are left to existing system
+handling rather than converted with different routing semantics. If uv reports a
+proxy DNS failure with those settings, set an explicit proxy URL and the intended
+`NO_PROXY` exclusions before launching Electron; use the actual proxy protocol,
+not the `socks=` registry syntax. This repair applies to packaged runtime setup;
+it does not change browser networking or global Windows proxy settings.

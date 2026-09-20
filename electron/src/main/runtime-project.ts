@@ -1,3 +1,4 @@
+import { downloadProxyEnv } from './proxy-env';
 import { execFile } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import {
@@ -390,6 +391,7 @@ export async function installRuntime(
   )
     uv = privateUv;
   const env: NodeJS.ProcessEnv = {
+    ...downloadProxyEnv(),
     ...(await runtimeDownloadEnv(region, signal)),
     UV_PROJECT_ENVIRONMENT: join(project, '.venv'),
     // Keep immutable downloads beside the replaceable project. Clean & Retry can

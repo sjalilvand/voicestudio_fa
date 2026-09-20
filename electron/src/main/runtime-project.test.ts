@@ -47,6 +47,7 @@ async function interpreter(project: string) {
 }
 afterEach(async () => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   vi.mocked(statfs).mockClear();
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
@@ -331,4 +332,18 @@ describe('packaged runtime setup', () => {
     );
     expect(release).toContain(`UV_VERSION: "${UV_VERSION}"`);
   });
+});
+
+
+it('hands explicit download proxies and loopback bypasses to uv', async () => {
+  const { bundle, project } = await fixture();
+  vi.stubEnv('HTTPS_PROXY', 'socks5h://127.0.0.1:10808');
+  vi.stubEnv('NO_PROXY', 'internal.example');
+  vi.stubEnv('PYTHONPATH', '/must-not-leak-into-runtime-overrides');
+  const run = vi.fn(async (_command: string, _args: string[], _cwd: string, _env?: NodeJS.ProcessEnv) => interpreter(project));
+  await installRuntime(bundle, project, 'uv', run, new AbortController().signal, undefined, 'global');
+  const env = run.mock.calls.find(([, args]) => args[0] === 'sync')?.[3];
+  expect(env?.HTTPS_PROXY).toBe('socks5h://127.0.0.1:10808');
+  expect(env?.NO_PROXY).toContain('localhost,127.0.0.1,::1');
+  expect(env?.PYTHONPATH).toBeUndefined();
 });
