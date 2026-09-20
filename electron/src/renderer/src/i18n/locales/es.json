@@ -1619,7 +1619,10 @@
     "emotion_text": "Descripción de emoción",
     "emotion_text_ph": "p. ej. suena agotado y triste",
     "emotion_alpha": "Intensidad emocional",
-    "lex_duplicate": "Usa una sola pronunciación por palabra."
+    "lex_duplicate": "Usa una sola pronunciación por palabra.",
+    "line_gap": "Pausa entre líneas",
+    "paragraph_gap": "Pausa entre párrafos",
+    "trim_edges": "Recortar silencio del motor"
   },
   "credentials": {
     "microsoft_key": "Clave del traductor de Microsoft",

@@ -1617,7 +1617,10 @@
     "emotion_text": "Mô tả cảm xúc",
     "emotion_text_ph": "ví dụ: nghe vẻ mệt mỏi và buồn",
     "emotion_alpha": "Độ mạnh của cảm xúc",
-    "lex_duplicate": "Chỉ dùng một cách phát âm cho mỗi từ."
+    "lex_duplicate": "Chỉ dùng một cách phát âm cho mỗi từ.",
+    "line_gap": "Khoảng nghỉ giữa các dòng",
+    "paragraph_gap": "Khoảng nghỉ giữa các đoạn",
+    "trim_edges": "Cắt khoảng lặng của engine"
   },
   "credentials": {
     "microsoft_key": "Khóa dịch của Microsoft",

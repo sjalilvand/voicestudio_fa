@@ -1710,7 +1710,10 @@
     "emotion_text": "Emotion description",
     "emotion_text_ph": "e.g. sounds exhausted and sad",
     "emotion_alpha": "Emotion strength",
-    "lex_duplicate": "Keep one pronunciation per word."
+    "lex_duplicate": "Keep one pronunciation per word.",
+    "line_gap": "Gap between lines",
+    "paragraph_gap": "Gap between paragraphs",
+    "trim_edges": "Trim engine silence"
   },
   "credentials": {
     "microsoft_key": "Microsoft Translator Key",

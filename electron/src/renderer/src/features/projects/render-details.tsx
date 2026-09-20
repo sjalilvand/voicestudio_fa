@@ -57,6 +57,22 @@ export function renderRecipe(render: RenderRecord): string {
     .join(' · ');
 }
 
+const OPTION_LABELS: Record<string, string> = {
+  "num_step": "clone.steps",
+  "guidance_scale": "clone.cfg",
+  "position_temperature": "clone.pos_temp",
+  "class_temperature": "clone.class_temp",
+  "postprocess_output": "clone.postprocess",
+  "seed": "audiobook.seed",
+  "emo_vector": "audiobook.emotion_help",
+  "emo_text": "audiobook.emotion_text",
+  "emo_alpha": "audiobook.emotion_alpha",
+  "vary_repeats": "audiobook.vary_repeats",
+  "line_gap_ms": "audiobook.line_gap",
+  "paragraph_gap_ms": "audiobook.paragraph_gap",
+  "trim_edges": "audiobook.trim_edges"
+};
+
 /** "How it was made" for one finished render; older renders have no summary. */
 export function RenderDetails({ render }: { render: RenderRecord }) {
   const { t } = useTranslation();
@@ -66,7 +82,13 @@ export function RenderDetails({ render }: { render: RenderRecord }) {
   const options = Object.entries(
     summary.options && typeof summary.options === 'object' ? summary.options : {},
   )
-    .map(([key, value]) => `${key.replaceAll('_', ' ')} ${String(value)}`)
+    .filter(([key]) => key in OPTION_LABELS)
+    .map(([key, value]) => {
+      const display = typeof value === 'boolean'
+        ? t(value ? 'pronunciation.enabled' : 'supportPlans.disabled')
+        : String(value);
+      return `${t(OPTION_LABELS[key])} ${display}`;
+    })
     .join(' · ');
   const rows: [string, string][] = [
     [t('projects.render_voice'), voiceLabel(summary)],

@@ -1619,7 +1619,10 @@
     "emotion_text": "Description de l'émotion",
     "emotion_text_ph": "p. ex. sonne épuisé et triste",
     "emotion_alpha": "Force de l'émotion",
-    "lex_duplicate": "Gardez une seule prononciation par mot."
+    "lex_duplicate": "Gardez une seule prononciation par mot.",
+    "line_gap": "Pause entre les lignes",
+    "paragraph_gap": "Pause entre les paragraphes",
+    "trim_edges": "Couper le silence du moteur"
   },
   "credentials": {
     "microsoft_key": "Clé du traducteur Microsoft",

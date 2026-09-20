@@ -1619,7 +1619,10 @@
     "emotion_text": "Descrizione dell'emozione",
     "emotion_text_ph": "es. suona stanco e triste",
     "emotion_alpha": "Forza emotiva",
-    "lex_duplicate": "Usa una sola pronuncia per parola."
+    "lex_duplicate": "Usa una sola pronuncia per parola.",
+    "line_gap": "Pausa tra le righe",
+    "paragraph_gap": "Pausa tra i paragrafi",
+    "trim_edges": "Taglia il silenzio del motore"
   },
   "credentials": {
     "microsoft_key": "Chiave del traduttore Microsoft",
