@@ -2686,7 +2686,8 @@
     "setupHint": "将此配置合并到 {{file}}，并保持 VoiceStudio 运行。如需远程连接凭据，请在客户端中设置。",
     "title": "集成",
     "featured": "精选",
-    "description": "探索集成与精选合作伙伴。"
+    "description": "探索集成与精选合作伙伴。",
+    "n8nHint": "将此工作流导入 n8n，编辑请求后运行。请保持 VoiceStudio 运行。Docker 和远程 n8n 需要可访问的后端地址及必要的凭据。"
   },
   "directoryExamples": {
     "example": "目录示例",

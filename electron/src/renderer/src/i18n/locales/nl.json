@@ -2682,7 +2682,8 @@
     "setupHint": "Voeg deze configuratie toe aan {{file}}. Laat VoiceStudio draaien. Stel vereiste externe inloggegevens in je client in.",
     "title": "Integraties",
     "featured": "Uitgelicht",
-    "description": "Ontdek integraties en uitgelichte partners."
+    "description": "Ontdek integraties en uitgelichte partners.",
+    "n8nHint": "Importeer deze workflow in n8n, bewerk het verzoek en voer hem uit. Laat VoiceStudio draaien. Docker en externe n8n-instanties hebben een bereikbaar backendadres en eventuele inloggegevens nodig."
   },
   "directoryExamples": {
     "example": "Directoryvoorbeeld",

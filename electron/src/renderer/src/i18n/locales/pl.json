@@ -2686,7 +2686,8 @@
     "setupHint": "Dodaj tę konfigurację do {{file}}. Pozostaw VoiceStudio uruchomione. Ustaw wymagane dane uwierzytelniające połączenia zdalnego w swoim kliencie.",
     "title": "Integracje",
     "featured": "Wyróżnione",
-    "description": "Odkryj integracje i wyróżnionych partnerów."
+    "description": "Odkryj integracje i wyróżnionych partnerów.",
+    "n8nHint": "Zaimportuj ten przepływ do n8n, edytuj żądanie i uruchom go. Pozostaw VoiceStudio uruchomione. Docker i zdalne n8n wymagają dostępnego adresu backendu oraz wymaganych danych uwierzytelniających."
   },
   "directoryExamples": {
     "example": "Przykład katalogowy",
