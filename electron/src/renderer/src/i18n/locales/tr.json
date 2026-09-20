@@ -2678,6 +2678,7 @@
     "included": "Dahil"
   },
   "integrationCatalog": {
+    "setupHint": "Bu yapılandırmayı {{file}} dosyasına ekleyin. VoiceStudio açık kalsın. Gerekli uzak bağlantı kimlik bilgilerini istemcinizde ayarlayın.",
     "title": "Entegrasyonlar",
     "featured": "Öne çıkan",
     "description": "Entegrasyonları ve öne çıkan iş ortaklarını keşfedin."

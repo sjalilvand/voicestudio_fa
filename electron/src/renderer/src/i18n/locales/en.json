@@ -2678,6 +2678,7 @@
     "included": "Included"
   },
   "integrationCatalog": {
+    "setupHint": "Merge this configuration into {{file}}. Keep VoiceStudio running. Set any required remote credentials in your client.",
     "title": "Integrations",
     "featured": "Featured",
     "description": "Discover integrations and featured partners."

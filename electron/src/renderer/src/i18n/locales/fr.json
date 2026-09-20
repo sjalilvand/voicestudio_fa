@@ -2680,6 +2680,7 @@
     "included": "Inclus"
   },
   "integrationCatalog": {
+    "setupHint": "Intégrez cette configuration dans {{file}}. Gardez VoiceStudio ouvert. Configurez les identifiants distants nécessaires dans votre client.",
     "title": "Intégrations",
     "featured": "À la une",
     "description": "Découvrez les intégrations et les partenaires à la une."

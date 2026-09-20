@@ -2678,6 +2678,7 @@
     "included": "Termasuk"
   },
   "integrationCatalog": {
+    "setupHint": "Gabungkan konfigurasi ini ke {{file}}. Biarkan VoiceStudio berjalan. Atur kredensial jarak jauh yang diperlukan di klien Anda.",
     "title": "Integrasi",
     "featured": "Unggulan",
     "description": "Temukan integrasi dan mitra unggulan."

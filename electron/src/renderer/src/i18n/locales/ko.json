@@ -2678,6 +2678,7 @@
     "included": "포함"
   },
   "integrationCatalog": {
+    "setupHint": "이 설정을 {{file}}에 추가하세요. VoiceStudio를 실행한 상태로 유지하고 필요한 원격 인증 정보는 클라이언트에서 설정하세요.",
     "title": "연동",
     "featured": "추천",
     "description": "연동 기능과 추천 파트너를 살펴보세요."

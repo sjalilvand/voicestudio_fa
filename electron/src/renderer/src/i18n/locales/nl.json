@@ -2678,6 +2678,7 @@
     "included": "Inbegrepen"
   },
   "integrationCatalog": {
+    "setupHint": "Voeg deze configuratie toe aan {{file}}. Laat VoiceStudio draaien. Stel vereiste externe inloggegevens in je client in.",
     "title": "Integraties",
     "featured": "Uitgelicht",
     "description": "Ontdek integraties en uitgelichte partners."

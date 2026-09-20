@@ -2678,6 +2678,7 @@
     "included": "Bao gồm"
   },
   "integrationCatalog": {
+    "setupHint": "Thêm cấu hình này vào {{file}}. Giữ VoiceStudio chạy. Thiết lập thông tin xác thực từ xa cần thiết trong ứng dụng khách.",
     "title": "Tích hợp",
     "featured": "Nổi bật",
     "description": "Khám phá các tích hợp và đối tác nổi bật."

@@ -2678,6 +2678,7 @@
     "included": "Enthalten"
   },
   "integrationCatalog": {
+    "setupHint": "Füge diese Konfiguration in {{file}} ein. Lass VoiceStudio laufen. Hinterlege erforderliche Zugangsdaten für Remote-Verbindungen in deinem Client.",
     "title": "Integrationen",
     "featured": "Hervorgehoben",
     "description": "Entdecke Integrationen und hervorgehobene Partner."
