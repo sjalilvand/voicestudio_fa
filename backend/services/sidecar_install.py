@@ -1396,8 +1396,16 @@ def _existing_venv_compatible(spec: SidecarSpec, py: Path) -> bool:
         ) or len(version.split(".")) != 2:
             raise ValueError("interpreter did not report its Python version")
     except (OSError, subprocess.TimeoutExpired, ValueError) as exc:
+        # TimeoutExpired includes the full command and OSError may include the
+        # user's home path. Keep job errors useful without copying either.
+        if isinstance(exc, subprocess.TimeoutExpired):
+            reason = "interpreter check timed out after 15 seconds"
+        elif isinstance(exc, OSError):
+            reason = f"{type(exc).__name__} (error {exc.errno})"
+        else:
+            reason = "interpreter did not report its Python version"
         raise _StepError(
-            f"Could not check the existing Python environment at {py}: {exc}",
+            f"Could not check the existing {spec.display_name} Python environment: {reason}",
             "Check that the environment's Python can run, then retry. "
             "The existing environment has not been removed.",
         ) from exc

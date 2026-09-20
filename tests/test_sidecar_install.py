@@ -1686,6 +1686,7 @@ def test_unproven_venv_is_not_destroyed(monkeypatch, failure):
                                stdout='invalid', stderr='')
 
     monkeypatch.setattr(si.subprocess, 'run', probe)
-    with pytest.raises(si._StepError, match='Could not check'):
+    with pytest.raises(si._StepError, match='Could not check') as error:
         si._step_create_venv(spec, si._new_job(spec.engine_id))
+    assert str(py) not in str(error.value)
     assert py.read_text() == 'user interpreter'
