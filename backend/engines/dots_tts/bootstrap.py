@@ -222,7 +222,9 @@ def _bootstrap_engines_venv(clone_dir: Path) -> Path:
     # Apply the upstream pin set when it ships with the clone.
     constraints = clone_dir / "constraints" / "recommended.txt"
     if constraints.is_file():
-        install_cmd += ["-c", str(constraints)]
+        # uv splits constraint arguments on whitespace, even with a proper argv.
+        # A file URI preserves spaces and reserved characters on every host.
+        install_cmd += ["-c", constraints.resolve().as_uri()]
     try:
         subprocess.run(
             install_cmd, check=True,

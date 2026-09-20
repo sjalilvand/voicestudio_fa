@@ -37,6 +37,10 @@ connection. The generation stays alive while the download makes progress;
 if a stalled download runs out of time, raise the compute-time budget in
 **Settings → Performance & Device** and try again.
 
+The installer and lazy bootstrap pass the constraints file as an encoded local
+file URL. This preserves spaces (including macOS `Application Support`) and
+reserved characters without moving your engine or model data.
+
 ## Install
 
 dots.tts is **not** bundled (large checkpoint + conflicting `transformers`).

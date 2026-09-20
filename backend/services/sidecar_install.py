@@ -407,7 +407,7 @@ SPECS: dict[str, SidecarSpec] = {
         source_required_path="constraints/recommended.txt",
         # Upstream requires-python is >=3.10,<3.13.
         venv_args=("--python", "3.11"),
-        install_args=("-e", "{checkout}", "-c", "{checkout}/constraints/recommended.txt"),
+        install_args=("-e", "{checkout}", "-c", "{checkout_uri}/constraints/recommended.txt"),
         host_supported=_dots_host,
         docs_path="docs/engines/dots-tts.md",
         # ~7 GB venv now, ~9 GB checkpoint on first synthesis.
@@ -610,7 +610,9 @@ def installable_engine_ids() -> frozenset[str]:
 
 
 def _expand(value: str, checkout: Path) -> str:
-    return value.replace("{checkout_repr}", repr(str(checkout))).replace(
+    return value.replace("{checkout_uri}", checkout.resolve().as_uri()).replace(
+        "{checkout_repr}", repr(str(checkout))
+    ).replace(
         "{checkout}", str(checkout)
     )
 

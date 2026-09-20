@@ -1076,7 +1076,7 @@ def test_uninstalling_one_engine_leaves_every_other_engine_intact(monkeypatch):
         ("confucius4-tts", ["--python", "3.10"], ["-r", "{c}/requirements.txt"],
          "OMNIVOICE_CONFUCIUS4_TTS_DIR"),
         ("dots-tts", ["--python", "3.11"],
-         ["-e", "{c}", "-c", "{c}/constraints/recommended.txt"],
+         ["-e", "{c}", "-c", "{uri}/constraints/recommended.txt"],
          "OMNIVOICE_DOTS_TTS_DIR"),
         # moss-tts-nano installs soundfile alongside the editable install so
         # torchaudio 2.7's I/O backend is present inside this engine's own
@@ -1101,7 +1101,8 @@ def test_new_specs_install_recipe(monkeypatch, engine_id, venv_args, install_arg
     venv_cmd = next(a for a in argvs if a[1] == "venv")
     assert venv_cmd[3:] == venv_args
     pip = next(a for a in argvs if a[1:3] == ["pip", "install"])
-    assert pip[5:] == [arg.replace("{c}", checkout) for arg in install_args]
+    assert pip[5:] == [arg.replace("{c}", checkout).replace("{uri}", si.managed_checkout(spec).resolve().as_uri())
+                      for arg in install_args]
 
 
 def test_moss_tts_nano_probe_asserts_an_audio_backend_is_present(monkeypatch):
