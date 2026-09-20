@@ -86,7 +86,7 @@ export function LanguagePicker({
   useEffect(() => {
     if (!open) return;
     setActive(firstItem);
-  }, [open, rows, firstItem]);
+  }, [open, rows, firstItem, supportedOptions]);
 
   const select = (value: string) => {
     if (disabled || !allowed(value)) return;
