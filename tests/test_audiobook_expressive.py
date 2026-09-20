@@ -547,3 +547,19 @@ def test_disabled_joins_preserve_nondefault_legacy_cache_signatures():
                 '"position_temperature": null, "postprocess_output": null, '
                 '"seed": 0, "vary_repeats": false}')
     assert ExpressiveOptions(seed=0, emo_text="calm").cache_signature() == expected
+
+
+@pytest.mark.parametrize('trim, expected', [(True, 1160), (False, 1800)])
+def test_multichunk_join_keeps_trimmed_audio_and_original_drop_indices(monkeypatch, trim, expected):
+    import importlib
+    chunks = importlib.import_module('services.chunked_tts')
+    reports = []
+    monkeypatch.setattr(chunks, 'report_dropped_chunks', lambda *args: reports.append(args))
+    waveform = torch.cat([torch.zeros(200), torch.ones(500), torch.zeros(200)])
+    output = chunks.join_rendered_chunks(
+        [waveform, None, waveform], 1000, crossfade_ms=0,
+        texts=['first', 'missing', 'last'], trim_edges=trim,
+    )
+    assert output.shape[-1] == expected
+    assert len(reports) == 1
+    assert reports[0][:3] == ([1], 3, ['first', 'missing', 'last'])

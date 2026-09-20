@@ -412,9 +412,10 @@ def join_rendered_chunks(rendered: list, sample_rate: int, *,
         if dropped:
             report_dropped_chunks(dropped, len(rendered), texts, sink)
         return kept[0]
-    return concatenate_audio_chunks(rendered, sample_rate,
-                                    crossfade_ms=crossfade_ms, texts=texts,
-                                    sink=sink)
+    if dropped:
+        report_dropped_chunks(dropped, len(rendered), texts, sink)
+    return concatenate_audio_chunks(kept, sample_rate,
+                                    crossfade_ms=crossfade_ms)
 
 
 def concatenate_audio_chunks(chunks: list, sample_rate: int,
