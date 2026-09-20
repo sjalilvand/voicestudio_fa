@@ -266,3 +266,4 @@ WebVTT import separates metadata blocks from cue identifiers using the [WebVTT b
 Dubbing transcription emits keepalives during quiet diarization, reference-refinement, and cleanup steps. Disconnecting stops queued model work; native calls already running retain their model until they finish, then cleanup restores TTS. Task streams also request that proxies disable buffering so keepalives reach the client promptly.
 
 WebVTT exports escape unsafe cue text while retaining imported subtitle markup and existing references. OpenAI-compatible VTT transcription responses escape all markup and references because newly recognized speech is plain text. SRT output is unchanged.
+Downloaded and pasted WebVTT captions decode character references once before editing or synthesis, so `Q&amp;A` becomes `Q&A`. SubRip imports keep their original text.
