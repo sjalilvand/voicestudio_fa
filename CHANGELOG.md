@@ -29,6 +29,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- CosyVoice repairs missing runtime dependencies and preserves speech context with newer Transformers (#2096) — thanks @martinezpl!
+
 - Electron setup normalizes Windows proxy addresses while preserving explicit overrides and localhost exclusions (#2114)
 - Web API-reference recovery keeps the selected backend and credentials; AudioSeal embedding and detection normalize model sample rates without changing exported audio dimensions (#2252) — thanks @joseedson18jc!
 

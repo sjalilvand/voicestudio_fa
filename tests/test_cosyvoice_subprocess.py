@@ -58,6 +58,10 @@ def _load_sidecar(monkeypatch, tmp_path, calls, *, model_class="CosyVoice3", sam
     monkeypatch.setitem(sys.modules, "cosyvoice", types.ModuleType("cosyvoice"))
     monkeypatch.setitem(sys.modules, "cosyvoice.cli", types.ModuleType("cosyvoice.cli"))
     monkeypatch.setitem(sys.modules, "cosyvoice.cli.cosyvoice", cli)
+    llm = types.ModuleType("cosyvoice.llm.llm")
+    llm.Qwen2Encoder = type("Qwen2Encoder", (), {})
+    monkeypatch.setitem(sys.modules, "cosyvoice.llm", types.ModuleType("cosyvoice.llm"))
+    monkeypatch.setitem(sys.modules, "cosyvoice.llm.llm", llm)
     monkeypatch.setattr(sys, "path", list(sys.path))
     spec = importlib.util.spec_from_file_location("_cosy_sidecar_under_test", _MAIN)
     module = importlib.util.module_from_spec(spec)
@@ -189,7 +193,7 @@ def test_requirements_drop_what_the_one_click_install_must_not_pull():
     assert not any(r.startswith("-") for r in reqs), "no index or option lines"
     for dropped in ("torch", "torchaudio", "deepspeed", "tensorrt-cu12", "onnxruntime-gpu",
                     "fastapi", "gradio", "uvicorn", "grpcio", "tensorboard",
-                    "wetext", "pyarrow", "pyworld"):
+                    "wetext", "pyworld"):
         assert dropped not in names, dropped
     assert "openai-whisper==20250625" in reqs  # 20231117 cannot build
     assert all("==" in r for r in reqs), "every requirement stays pinned"
@@ -274,3 +278,81 @@ def test_load_uses_full_precision_without_cuda(monkeypatch, tmp_path, cuda):
         assert part.weight.dtype == (torch.bfloat16 if cuda else torch.float32)
         if not cuda:
             assert torch.isfinite(part(torch.ones(1, 2))).all()
+
+
+def test_managed_install_probes_late_imports_and_restores_dependencies():
+    from services import sidecar_install
+    spec = sidecar_install.SPECS['cosyvoice']
+    reqs = _REQUIREMENTS.read_text()
+    for dependency in ('gdown==6.4.0', 'wget==3.2', 'pyarrow==25.0.1'):
+        assert dependency in reqs
+    assert 'cosyvoice.dataset.processor' in spec.probe_code
+    assert 'matcha.utils' in spec.probe_code
+    assert '{checkout}/third_party/PyWorld' in spec.install_args
+    assert spec.install_revision == 'inference-imports-v2'
+    sources = {source.path: source for source in spec.extra_sources}
+    assert sources['third_party/PyWorld'].revision == 'f31ad88d543fdaebbda2d0c9a5e4d4f991ae0b6c'
+    assert sources['third_party/PyWorld/lib/World'].revision == 'd625e7608ca23a870018f01e7c562ac683d9847f'
+
+
+@pytest.mark.parametrize("legacy_cache", [False, True])
+def test_cached_qwen_mask_includes_prompt_without_unmasking_padding(monkeypatch, tmp_path, legacy_cache):
+    sidecar, _ = _load_sidecar(monkeypatch, tmp_path, [])
+    xs = torch.zeros(1, 1, 4)
+    cache = ((torch.zeros(1, 2, 7, 4), torch.zeros(1, 2, 7, 4)),) if legacy_cache else types.SimpleNamespace(get_seq_length=lambda: 7)
+    current = torch.ones(1, 1, 1, dtype=torch.bool)
+    completed = sidecar._qwen_attention_mask(xs, current, cache)
+    assert completed.shape == (1, 1, 8)
+    assert completed.all()
+    padded = torch.tensor([[[False, True, True, True, True, True, True, True]]])
+    assert sidecar._qwen_attention_mask(xs, padded, cache) is padded
+    assert sidecar._qwen_attention_mask(xs, current, None) is current
+
+
+def test_qwen_initialization_preserves_checkpoint_precision_and_restores_loader(monkeypatch, tmp_path):
+    sidecar, _ = _load_sidecar(monkeypatch, tmp_path, [])
+    class Loader:
+        @classmethod
+        def from_pretrained(cls, path, **kwargs):
+            layer = torch.nn.Linear(1, 1, bias=False).to(kwargs.get("torch_dtype", torch.bfloat16))
+            layer.load_state_dict({"weight": torch.tensor([[1.003]])})
+            return layer
+    class Qwen(Loader):
+        pass
+    monkeypatch.setitem(sys.modules, "transformers", types.SimpleNamespace(Qwen2ForCausalLM=Qwen))
+    with sidecar._qwen_full_precision_load():
+        layer = Qwen.from_pretrained("local")
+        assert torch.equal(layer.weight, torch.tensor([[1.003]]))
+    assert "from_pretrained" not in Qwen.__dict__
+    with pytest.raises(ValueError), sidecar._qwen_full_precision_load():
+        raise ValueError("load failed")
+    assert "from_pretrained" not in Qwen.__dict__
+
+
+def test_qwen_cached_decode_matches_full_context_without_model_download(monkeypatch, tmp_path):
+    from transformers import Qwen2Config, Qwen2ForCausalLM
+
+    sidecar, _ = _load_sidecar(monkeypatch, tmp_path, [])
+    torch.manual_seed(19)
+    qwen = Qwen2ForCausalLM(Qwen2Config(
+        vocab_size=32, hidden_size=16, intermediate_size=32,
+        num_hidden_layers=2, num_attention_heads=2, num_key_value_heads=1,
+    )).eval()
+    base = sys.modules["cosyvoice.llm.llm"].Qwen2Encoder
+
+    class Encoder(base):
+        def forward_one_step(self, xs, masks, cache=None):
+            out = qwen(inputs_embeds=xs, attention_mask=masks[:, -1, :],
+                       past_key_values=cache, use_cache=True, output_hidden_states=True)
+            return out.hidden_states[-1], out.past_key_values
+
+    encoder = Encoder()
+    sidecar._repair_qwen_cache(types.SimpleNamespace(model=types.SimpleNamespace(
+        llm=types.SimpleNamespace(llm=encoder),
+    )))
+    xs = torch.randn(1, 8, 16)
+    with torch.no_grad():
+        expected, _ = encoder.forward_one_step(xs, torch.ones(1, 8, 8, dtype=torch.bool))
+        _, cache = encoder.forward_one_step(xs[:, :7], torch.ones(1, 7, 7, dtype=torch.bool))
+        actual, _ = encoder.forward_one_step(xs[:, 7:], torch.ones(1, 1, 1, dtype=torch.bool), cache)
+    torch.testing.assert_close(actual[:, -1], expected[:, -1], rtol=1e-4, atol=1e-5)
