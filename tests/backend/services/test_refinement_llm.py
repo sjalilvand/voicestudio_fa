@@ -391,3 +391,8 @@ def test_internal_type_error_is_not_retried_or_memoized(monkeypatch):
         refinement.refine_transcript('keep my words')
     assert len(seen) == 1
     assert not llm_backend._REASONING_EFFORT_REJECTED
+
+
+def test_multiple_leading_reasoning_blocks_keep_the_final_answer():
+    from services.llm_backend import _strip_reasoning
+    assert _strip_reasoning('<think>one</think>\n<thinking>two</thinking>Answer.') == 'Answer.'

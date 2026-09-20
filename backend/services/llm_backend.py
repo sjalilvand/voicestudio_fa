@@ -53,7 +53,9 @@ def _strip_reasoning(raw: str) -> str:
     whereas handing back the model's private monologue as if it were the answer
     would silently overwrite the user's words with it.
     """
-    cleaned = _OPEN_THINK_RE.sub("", _THINK_TAG_RE.sub("", raw))
+    while match := _THINK_TAG_RE.match(raw):
+        raw = raw[match.end():]
+    cleaned = _OPEN_THINK_RE.sub("", raw)
     return cleaned.strip()
 
 
