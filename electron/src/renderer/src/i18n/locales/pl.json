@@ -2683,6 +2683,7 @@
     "included": "W zestawie"
   },
   "integrationCatalog": {
+    "setupHint": "Dodaj tę konfigurację do {{file}}. Pozostaw VoiceStudio uruchomione. Ustaw wymagane dane uwierzytelniające połączenia zdalnego w swoim kliencie.",
     "title": "Integracje",
     "featured": "Wyróżnione",
     "description": "Odkryj integracje i wyróżnionych partnerów."

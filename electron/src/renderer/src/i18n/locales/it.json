@@ -2681,6 +2681,7 @@
     "included": "Inclusi"
   },
   "integrationCatalog": {
+    "setupHint": "Integra questa configurazione in {{file}}. Lascia VoiceStudio aperto. Imposta le credenziali remote richieste nel tuo client.",
     "title": "Integrazioni",
     "featured": "In evidenza",
     "description": "Scopri integrazioni e partner in evidenza."

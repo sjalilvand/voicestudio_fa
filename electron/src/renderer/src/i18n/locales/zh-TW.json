@@ -2679,6 +2679,7 @@
     "included": "包含"
   },
   "integrationCatalog": {
+    "setupHint": "將此設定合併至 {{file}}，並保持 VoiceStudio 執行。如需遠端連線憑證，請在用戶端中設定。",
     "title": "整合",
     "featured": "精選",
     "description": "探索整合與精選合作夥伴。"

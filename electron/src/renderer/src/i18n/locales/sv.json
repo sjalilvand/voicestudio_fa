@@ -2679,6 +2679,7 @@
     "included": "Ingår"
   },
   "integrationCatalog": {
+    "setupHint": "Lägg till konfigurationen i {{file}}. Låt VoiceStudio vara igång. Ange eventuella inloggningsuppgifter för fjärranslutning i din klient.",
     "title": "Integrationer",
     "featured": "Utvald",
     "description": "Upptäck integrationer och utvalda partner."

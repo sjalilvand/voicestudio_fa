@@ -2683,6 +2683,7 @@
     "included": "包含"
   },
   "integrationCatalog": {
+    "setupHint": "将此配置合并到 {{file}}，并保持 VoiceStudio 运行。如需远程连接凭据，请在客户端中设置。",
     "title": "集成",
     "featured": "精选",
     "description": "探索集成与精选合作伙伴。"

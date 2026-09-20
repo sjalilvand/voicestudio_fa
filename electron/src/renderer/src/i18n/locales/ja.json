@@ -2679,6 +2679,7 @@
     "included": "利用可能"
   },
   "integrationCatalog": {
+    "setupHint": "この設定を {{file}} に追加してください。VoiceStudio を起動したままにし、必要なリモート認証情報はクライアントで設定してください。",
     "title": "連携",
     "featured": "注目",
     "description": "連携機能と注目のパートナーを見つけましょう。"

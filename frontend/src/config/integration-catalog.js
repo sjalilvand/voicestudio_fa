@@ -191,7 +191,7 @@ const categoryDetails = {
   productivity: ['tools.title'],
 };
 
-export const INTEGRATION_CATALOG = [
+const catalogEntries = [
   ...VOICE_AI_DIRECTORY.map((entry) => ({ ...entry, category: 'comms', featured: false })),
   ...groups.flatMap(([category, items]) =>
     items.map((item) => {
@@ -218,3 +218,17 @@ export function integrationSlug(name) {
 export function getIntegrationBySlug(slug) {
   return INTEGRATION_CATALOG.find((entry) => integrationSlug(entry.name) === slug);
 }
+
+// Curated rows supply bundled logos; category groups supply taxonomy. Reconcile
+// them by the public route instead of rendering duplicate cards and React keys.
+const catalogBySlug = new Map();
+for (const entry of catalogEntries) {
+  const slug = integrationSlug(entry.name);
+  const previous = catalogBySlug.get(slug);
+  catalogBySlug.set(slug, {
+    ...entry,
+    logoUrl: previous?.logoUrl ?? entry.logoUrl,
+    detailKeys: [...new Set([...(previous?.detailKeys ?? []), ...entry.detailKeys])],
+  });
+}
+export const INTEGRATION_CATALOG = [...catalogBySlug.values()];
