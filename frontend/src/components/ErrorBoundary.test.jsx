@@ -121,6 +121,12 @@ describe('ErrorBoundary — stale module graph', () => {
     expect(screen.getByText(/Failed to fetch dynamically imported module/)).toBeInTheDocument();
   });
 
+  it('does not loop when a failed reload takes longer than ten seconds', () => {
+    sessionStorage.setItem('ov_stale_chunk_reload', String(Date.now() - 60_000));
+    boundary('projects', 'Failed to fetch dynamically imported module: /src/x.js');
+    expect(reload).not.toHaveBeenCalled();
+  });
+
   it('leaves an ordinary render error to the error card', () => {
     boundary('generate', "Cannot read properties of undefined (reading 'map')");
     expect(reload).not.toHaveBeenCalled();

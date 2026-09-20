@@ -13,7 +13,7 @@ import { Button } from '../ui';
 // Nothing in the app is broken — the tab is stale — but every Suspense
 // boundary throws at once, so the user gets a wall of
 // "Importing a module script failed" cards and no way out but a manual reload.
-// Reload once instead, guarded by a timestamp so a genuinely broken chunk
+// Reload once instead, guarded for the lifetime of this tab so a genuinely broken chunk
 // cannot put the tab in a reload loop.
 // Safari / Chrome / Firefox wordings for the same event, plus Chrome's message
 // when the SPA fallback answers a missing chunk URL with text/html.
@@ -22,17 +22,14 @@ const STALE_CHUNK_RE =
 // sessionStorage, not localStorage: the guard is per-tab and must die with it.
 // Registered in utils/prefKeys.js (PRESERVED_KEYS) like the other session keys.
 const STALE_CHUNK_RELOAD_KEY = 'ov_stale_chunk_reload';
-const STALE_CHUNK_RELOAD_WINDOW_MS = 10_000;
 
 function recoverFromStaleChunk(error) {
   // Kept unexported: this file may only export its component, or React Fast
   // Refresh stops working for the whole module (oxlint react/only-export-components).
   if (!STALE_CHUNK_RE.test(error?.message || String(error || ''))) return false;
   try {
-    const last = Number(sessionStorage.getItem(STALE_CHUNK_RELOAD_KEY) || 0);
-    // Already reloaded for this reason a moment ago: the chunk is really
-    // missing, so fall through and show the error card.
-    if (Number.isFinite(last) && Date.now() - last < STALE_CHUNK_RELOAD_WINDOW_MS) return false;
+    // Slow reloads must not expire the guard and restart a broken tab forever.
+    if (sessionStorage.getItem(STALE_CHUNK_RELOAD_KEY)) return false;
     sessionStorage.setItem(STALE_CHUNK_RELOAD_KEY, String(Date.now()));
   } catch {
     // Storage blocked (private mode / embedded webview): no guard, no reload.
