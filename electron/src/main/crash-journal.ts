@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, renameSync } from 'node:fs';
 import type { NativeCrashRecord } from '../preload/index.d';
+import { nativeCrashExcerpt } from '../../../frontend/src/utils/crashReport';
 
 /** Small version-scoped local journal. Read failures must never block startup. */
 export class CrashJournal {
@@ -51,13 +52,19 @@ export class CrashJournal {
   ): void {
     // EX_CONFIG is a port collision; Windows debugger termination is not a backend fault.
     if (exitCode === 78 || exitCode === 0x40010004) return;
+    const native = nativeCrashExcerpt(logTail.join('\n'));
     this.records.unshift({
       timestamp: Date.now(),
       version: this.version,
       exitCode,
       signal,
       uptimeMs: Math.max(0, uptimeMs),
-      logTail: logTail.slice(-40).map((line) => line.slice(-4096)),
+      logTail: native
+        ? native
+            .split('\n')
+            .slice(0, 40)
+            .map((line) => line.slice(0, 4096))
+        : logTail.slice(-40).map((line) => line.slice(-4096)),
       acknowledged: false,
     });
     this.records = this.records.slice(0, 3);
