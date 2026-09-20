@@ -388,18 +388,20 @@ def _prepare_downloaded_caption_segments(cues: list[dict], duration: float) -> l
         except (TypeError, ValueError):
             return 0.0
 
-    def remove_repeated_prefix(previous: str, current: str) -> str:
+    def remove_repeated_prefix(previous: str, current: str, whole: bool = False) -> str:
         previous_words = previous.split()
         current_words = current.split()
         folded_previous = [word.casefold() for word in previous_words]
         folded_current = [word.casefold() for word in current_words]
-        for count in range(min(len(previous_words), len(current_words)), 0, -1):
+        shortest = len(previous_words) if whole else 1
+        for count in range(min(len(previous_words), len(current_words)), shortest - 1, -1):
             if folded_previous[-count:] == folded_current[:count]:
                 return " ".join(current_words[count:])
         return current
 
     prepared: list[dict] = []
     previous_end = 0.0
+    rollup_bridge_end: float | None = None
     ordered = sorted((cue for cue in cues if isinstance(cue, dict)), key=cue_start)
     for index, cue in enumerate(ordered):
         try:
@@ -412,11 +414,23 @@ def _prepare_downloaded_caption_segments(cues: list[dict], duration: float) -> l
             if raw_start >= duration:
                 continue
             end = min(end, duration)
-        if prepared and raw_start < previous_end:
-            text = remove_repeated_prefix(prepared[-1]["text"], text)
+        # YouTube roll-ups insert a tiny repeated cue between spoken lines.
+        # Touching timestamps plus equal text alone are not evidence of a
+        # roll-up: a speaker can deliberately repeat a word or entire phrase.
+        # Only trim at that boundary for the bridge itself or its next cue.
+        touching = raw_start == previous_end
+        short_bridge = 0 < end - raw_start <= 0.05
+        follows_bridge = rollup_bridge_end == raw_start
+        rollup_bridge_end = None
+        if prepared and (
+            raw_start < previous_end or (touching and (short_bridge or follows_bridge))
+        ):
+            text = remove_repeated_prefix(prepared[-1]["text"], text, whole=touching)
             if not text:
                 prepared[-1]["end"] = round(max(previous_end, end), 3)
                 previous_end = max(previous_end, end)
+                if touching and short_bridge:
+                    rollup_bridge_end = previous_end
                 continue
         # Caption hosts commonly emit slightly overlapping cues. Dubbing needs
         # a monotonic timeline, so trim the later cue rather than manufacture
