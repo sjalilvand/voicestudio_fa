@@ -43,3 +43,5 @@ The Stories editor grows with the manuscript inside the page scroll container. L
 ### Clear a script
 
 Stories and Audiobook offer **Clear script** with confirmation. Stories removes all lines, chapter markers and pending import text while retaining the cast; Audiobook clears its manuscript. The web Stories editor clears pending pasted text too, stops playback, ignores late preview results and releases preview audio when clearing, removing or replacing lines. Confirmation also names pending imported text. Clearing an imported script does not recreate the demo story.
+
+SRT manuscript imports preserve spoken numbers, including countdowns and numeric-only cues; cue indices and timestamps are removed.
