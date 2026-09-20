@@ -676,6 +676,12 @@ def engine_venv_python(env_var: str) -> Optional[Path]:
     # multi-second import on every engine-list refresh.
     if not py.is_file() or not (Path(env_dir) / _INSTALL_COMPLETE_MARKER).is_file():
         return None
+    # Apply recipe upgrades only to app-managed environments. External source
+    # installations keep their own dependency contract and marker format.
+    spec = next((s for s in SPECS.values() if s.env_var == env_var), None)
+    if spec and Path(env_dir) == managed_checkout(spec):
+        if not _install_marker_valid(spec, Path(env_dir)):
+            return None
     return py
 
 
@@ -1022,6 +1028,11 @@ def _healthy(spec: SidecarSpec) -> bool:
     # is asked to reinstall.
     if not spec.requires_install_marker:
         return True
+    return _install_marker_valid(spec, checkout)
+
+
+def _install_marker_valid(spec: SidecarSpec, checkout: Path) -> bool:
+    """Share the completion verdict between inventory and runtime selection."""
     marker = checkout / _INSTALL_COMPLETE_MARKER
     if not spec.install_revision:
         return marker.is_file()
