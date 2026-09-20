@@ -18,8 +18,8 @@ const knobs = [
 // Seamless joins: engine padding is trimmed at every line/paragraph edge and
 // these deliberate gaps go in instead. Server defaults shown when unset.
 const gaps = [
-  { key: 'lineGapMs', label: 'line_gap', max: 2000, value: 250 },
-  { key: 'paragraphGapMs', label: 'paragraph_gap', max: 3000, value: 350 },
+  { key: 'lineGapMs', label: 'line_gap', max: 2000, value: 0 },
+  { key: 'paragraphGapMs', label: 'paragraph_gap', max: 3000, value: 0 },
 ] as const;
 export function ProductionSettings({
   value,
@@ -30,7 +30,12 @@ export function ProductionSettings({
   disabled: boolean;
   onChange: (value: Overrides) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const milliseconds = new Intl.NumberFormat(i18n.resolvedLanguage || i18n.language, {
+    style: 'unit',
+    unit: 'millisecond',
+    unitDisplay: 'short',
+  });
   const [open, setOpen] = useState(false);
   const engines = useQuery({
     queryKey: ['longform-tts-capabilities'],
@@ -90,7 +95,7 @@ export function ProductionSettings({
         <label key={gap.key} className="block space-y-2 text-xs">
           <span className="flex justify-between text-muted-foreground">
             <span>{t('audiobook.' + gap.label)}</span>
-            <span className="tabular-nums">{value[gap.key] ?? gap.value} ms</span>
+            <span className="tabular-nums">{milliseconds.format(value[gap.key] ?? gap.value)}</span>
           </span>
           <input
             aria-label={t('audiobook.' + gap.label)}
@@ -112,7 +117,7 @@ export function ProductionSettings({
         {t('audiobook.trim_edges')}
         <Switch
           disabled={disabled}
-          checked={value.trimEdges ?? true}
+          checked={value.trimEdges ?? false}
           onCheckedChange={(trimEdges) => onChange({ ...value, trimEdges })}
         />
       </label>

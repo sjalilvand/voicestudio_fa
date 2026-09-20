@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Settings2, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 import { DEFAULT_OVERRIDES } from '../../store/longformSlice';
 
@@ -11,8 +12,8 @@ const DISPLAY = {
   guidanceScale: 2.0,
   posTemp: 5.0,
   classTemp: 0.0,
-  lineGapMs: 250,
-  paragraphGapMs: 350,
+  lineGapMs: 0,
+  paragraphGapMs: 0,
 };
 
 const CHIP =
@@ -29,6 +30,12 @@ const CHIP =
  * controls on engines that ignore emotion.
  */
 export default function AudiobookOverrides({ t, overrides, onChange, emotionSupported = false }) {
+  const { i18n } = useTranslation();
+  const milliseconds = new Intl.NumberFormat(i18n.resolvedLanguage || i18n.language, {
+    style: 'unit',
+    unit: 'millisecond',
+    unitDisplay: 'short',
+  });
   const [open, setOpen] = useState(false);
   const o = overrides;
 
@@ -164,7 +171,9 @@ export default function AudiobookOverrides({ t, overrides, onChange, emotionSupp
             <div>
               <div className="label-row justify-between text-[0.7rem]">
                 <span>{t('audiobook.line_gap')}</span>
-                <span className={CHIP}>{o.lineGapMs ?? DISPLAY.lineGapMs} ms</span>
+                <span className={CHIP}>
+                  {milliseconds.format(o.lineGapMs ?? DISPLAY.lineGapMs)}
+                </span>
               </div>
               <input
                 type="range"
@@ -179,7 +188,9 @@ export default function AudiobookOverrides({ t, overrides, onChange, emotionSupp
             <div>
               <div className="label-row justify-between text-[0.7rem]">
                 <span>{t('audiobook.paragraph_gap')}</span>
-                <span className={CHIP}>{o.paragraphGapMs ?? DISPLAY.paragraphGapMs} ms</span>
+                <span className={CHIP}>
+                  {milliseconds.format(o.paragraphGapMs ?? DISPLAY.paragraphGapMs)}
+                </span>
               </div>
               <input
                 type="range"
@@ -197,7 +208,7 @@ export default function AudiobookOverrides({ t, overrides, onChange, emotionSupp
             >
               <input
                 type="checkbox"
-                checked={o.trimEdges ?? true}
+                checked={o.trimEdges ?? false}
                 onChange={(e) => onChange({ trimEdges: e.target.checked })}
               />{' '}
               {t('audiobook.trim_edges')}
