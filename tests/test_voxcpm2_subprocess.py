@@ -51,7 +51,7 @@ def _frames(buf):
     return out
 
 
-def test_voice_design_maps_to_voice_description(monkeypatch):
+def test_voice_design_uses_native_control_prefix(monkeypatch):
     calls = []
     sidecar = _load_sidecar(monkeypatch, calls)
     out = io.BytesIO()
@@ -59,8 +59,10 @@ def test_voice_design_maps_to_voice_description(monkeypatch):
     sidecar._handle_synthesize({"op": "synthesize", "text": "hello", "description": "warm, low"}, out)
 
     assert calls[-1] == {
-        "text": "hello",
-        "voice_description": "warm, low",
+        "text": "(warm, low)hello",
+        "reference_wav_path": None,
+        "prompt_wav_path": None,
+        "prompt_text": None,
         "cfg_value": 2.0,
         "inference_timesteps": 10,
     }
@@ -69,7 +71,7 @@ def test_voice_design_maps_to_voice_description(monkeypatch):
     assert audio["sample_rate"] == 48000 and audio["n_samples"] == 480
 
 
-def test_clone_mode_passes_the_reference_and_prompt(monkeypatch, tmp_path):
+def test_style_clone_does_not_use_continuation_prompt(monkeypatch, tmp_path):
     calls = []
     sidecar = _load_sidecar(monkeypatch, calls)
     ref = tmp_path / "ref.wav"
@@ -86,8 +88,8 @@ def test_clone_mode_passes_the_reference_and_prompt(monkeypatch, tmp_path):
         "cfg_value": 3.0,
         "inference_timesteps": 12,
         "reference_wav_path": str(ref),
-        "prompt_wav_path": str(ref),
-        "prompt_text": "hello there",
+        "prompt_wav_path": None,
+        "prompt_text": None,
     }
 
 
@@ -228,3 +230,41 @@ def test_a_failed_install_leaves_voxcpm2_in_process(monkeypatch, tmp_path):
     py.write_text("#!fake\n")
     monkeypatch.setenv("OMNIVOICE_VOXCPM2_DIR", str(tmp_path))
     assert tts_backend.get_backend_class("voxcpm2") is tts_backend.VoxCPM2Backend
+
+
+@pytest.mark.parametrize(('text', 'options', 'expected_text', 'continuation'), [
+    ('hello', {'description': 'warm, low'}, '(warm, low)hello', False),
+    ('hello', {'description': 'warm', 'instruct': 'calm'}, '(warm, calm)hello', False),
+    ('hello', {'ref_audio': 'voice.wav', 'ref_text': 'reference', 'instruct': 'calm'}, '(calm)hello', False),
+    ('(calm)hello', {'ref_audio': 'voice.wav', 'ref_text': 'reference'}, '(calm)hello', False),
+    ('hello', {'ref_audio': 'voice.wav', 'ref_text': 'reference'}, 'hello', True),
+    ('hello', {'ref_audio': 'voice.wav', 'ref_text': 'reference', 'instruct': '  '}, 'hello', True),
+    ('hello', {'ref_text': 'orphan transcript'}, 'hello', False),
+])
+def test_both_adapters_follow_native_modes(monkeypatch, text, options, expected_text, continuation):
+    from services import tts_backend
+    calls = []
+    sidecar = _load_sidecar(monkeypatch, calls)
+    # A strict signature catches unsupported API keywords, unlike **kwargs
+    # fakes which previously accepted the nonexistent voice_description.
+    def generate(text, cfg_value, inference_timesteps, reference_wav_path=None,
+                 prompt_wav_path=None, prompt_text=None):
+        calls.append(dict(text=text, cfg_value=cfg_value,
+                          inference_timesteps=inference_timesteps,
+                          reference_wav_path=reference_wav_path,
+                          prompt_wav_path=prompt_wav_path, prompt_text=prompt_text))
+        return np.zeros(480, dtype=np.float32)
+    model = types.SimpleNamespace(generate=generate, sample_rate=48000)
+    monkeypatch.setattr(sidecar, '_load_model', lambda _: model)
+    sidecar._handle_synthesize({'text': text, **options}, io.BytesIO())
+    sidecar_call = calls[-1]
+    engine = tts_backend.VoxCPM2Backend()
+    engine._model = model
+    monkeypatch.setattr(tts_backend, '_prepare_voxcpm_ref', lambda path: path)
+    engine.generate(text, **options)
+    assert calls[-1] == sidecar_call
+    assert sidecar_call['text'] == expected_text
+    assert sidecar_call['reference_wav_path'] == options.get('ref_audio')
+    assert sidecar_call['prompt_wav_path'] == (options['ref_audio'] if continuation else None)
+    assert sidecar_call['prompt_text'] == (options['ref_text'] if continuation else None)
+    assert engine.supports_voice_design

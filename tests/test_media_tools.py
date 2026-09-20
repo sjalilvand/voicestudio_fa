@@ -495,3 +495,197 @@ def test_server_mode_media_tool_mutations_require_api_key(mt, monkeypatch):
         "/media-tools/ffmpeg/use-system",
     ):
         assert remote.post(path).status_code == 403, path
+
+
+@pytest.mark.parametrize('locked_operation', ['rename', 'backup'])
+def test_acquire_recovers_from_transient_publish_locks(mt, monkeypatch, locked_operation):
+    import errno
+    import time
+    payload = _make_zip([mt._exe('ffmpeg'), mt._exe('ffprobe')])
+    _patched_bundle(mt, monkeypatch, payload)
+    monkeypatch.setattr(mt, '_binary_runs', lambda path: True)
+    target = mt.bundled_dir()
+    os.makedirs(target, exist_ok=True)  # incomplete earlier acquisition
+    calls = []
+    original_replace = mt.os.replace
+
+    def replace(src, dst):
+        if (dst == target and locked_operation == 'rename') or (src == target and locked_operation == 'backup'):
+            calls.append('rename')
+            if len(calls) <= 2:
+                raise PermissionError(errno.EACCES, 'probe image still mapped', src)
+        return original_replace(src, dst)
+
+    monkeypatch.setattr(mt.os, 'replace', replace)
+    monkeypatch.setattr(time, 'sleep', lambda seconds: None)
+    with patch('urllib.request.urlopen', return_value=_FakeResponse(payload)):
+        state = mt.acquire_bundled(wait=True)
+    assert state['state'] == 'done', state
+    assert len(calls) >= 3
+    assert all(mt.bundled_tool_path(tool) for tool in mt.TOOLS)
+
+
+def test_acquire_preserves_destination_backup_error(mt, monkeypatch):
+    import errno
+    import time
+    payload = _make_zip([mt._exe('ffmpeg'), mt._exe('ffprobe')])
+    _patched_bundle(mt, monkeypatch, payload)
+    monkeypatch.setattr(mt, '_binary_runs', lambda path: True)
+    target = mt.bundled_dir()
+    os.makedirs(target, exist_ok=True)
+    calls = []
+    original_replace = mt.os.replace
+
+    def replace(src, dst):
+        if src == target:
+            calls.append(src)
+            raise PermissionError(errno.EACCES, 'destination permanently locked', src)
+        return original_replace(src, dst)
+
+    monkeypatch.setattr(mt.os, 'replace', replace)
+    monkeypatch.setattr(time, 'sleep', lambda seconds: None)
+    with patch('urllib.request.urlopen', return_value=_FakeResponse(payload)):
+        state = mt.acquire_bundled(wait=True)
+    assert state['state'] == 'error'
+    assert 'destination permanently locked' in state['error']
+    assert 1 < len(calls) <= 10  # bounded, no background retry loop
+
+
+def test_ytdlp_update_recovers_from_locked_overlay(mt, monkeypatch):
+    import errno
+    import time
+    wheel = _fake_wheel('2099.01.01')
+    monkeypatch.setattr(mt, '_fetch_pypi_ytdlp', lambda: (
+        '2099.01.01', 'https://example.test/yt_dlp.whl', hashlib.sha256(wheel).hexdigest(),
+    ))
+    overlay = mt._ytdlp_overlay_dir()
+    original_replace = mt.os.replace
+    attempts = []
+
+    def replace(src, dst):
+        if dst == overlay:
+            attempts.append(dst)
+            if len(attempts) < 3:
+                raise PermissionError(errno.EACCES, 'scanner holds overlay', src)
+        return original_replace(src, dst)
+
+    monkeypatch.setattr(mt.os, 'replace', replace)
+    monkeypatch.setattr(time, 'sleep', lambda seconds: None)
+    with patch('urllib.request.urlopen', return_value=_FakeResponse(wheel)):
+        state = mt.update_ytdlp(wait=True)
+    assert state['state'] == 'done', state
+    assert mt._read_ytdlp_version(os.path.join(overlay, 'yt_dlp')) == '2099.01.01'
+
+
+def test_restore_ytdlp_reports_locked_overlay_instead_of_claiming_success(mt, monkeypatch):
+    import errno
+    import time
+    overlay = mt._ytdlp_overlay_dir()
+    os.makedirs(overlay)
+    original_rmtree = mt.shutil.rmtree
+
+    def rmtree(path, *args, **kwargs):
+        if path == overlay:
+            if kwargs.get('ignore_errors'):
+                return
+            raise PermissionError(errno.EACCES, 'overlay still in use', path)
+        return original_rmtree(path, *args, **kwargs)
+
+    monkeypatch.setattr(mt.shutil, 'rmtree', rmtree)
+    monkeypatch.setattr(time, 'sleep', lambda seconds: None)
+    mt._ops['ytdlp_update'].update(state='done', version='2099.01.01')
+    with pytest.raises(PermissionError, match='overlay still in use'):
+        mt.restore_ytdlp()
+    assert mt._ops['ytdlp_update']['version'] == '2099.01.01'
+
+
+def test_media_install_does_not_retry_non_lock_errors(mt, monkeypatch):
+    import errno
+    calls = []
+
+    def full_disk():
+        calls.append(True)
+        raise OSError(errno.ENOSPC, 'disk full')
+
+    with pytest.raises(OSError, match='disk full'):
+        mt._retry_tool_filesystem(full_disk)
+    assert calls == [True]
+
+
+def test_failed_publication_restores_working_directory(mt, monkeypatch, tmp_path):
+    import errno
+    staged, target = tmp_path / 'staged', tmp_path / 'current'
+    staged.mkdir()
+    target.mkdir()
+    (staged / 'version').write_text('new')
+    (target / 'version').write_text('working')
+    original_replace = mt.os.replace
+
+    def replace(src, dst):
+        if os.fspath(src) == str(staged):
+            raise PermissionError(errno.EACCES, 'publication locked')
+        return original_replace(src, dst)
+
+    monkeypatch.setattr(mt.os, 'replace', replace)
+    monkeypatch.setattr(mt.time, 'sleep', lambda _: None)
+    with pytest.raises(PermissionError, match='publication locked'):
+        mt._install_staged_directory(str(staged), str(target))
+    assert (target / 'version').read_text() == 'working'
+    assert (staged / 'version').read_text() == 'new'
+
+
+def test_failed_rollback_keeps_recoverable_backup(mt, monkeypatch, tmp_path):
+    import errno
+    staged, target = tmp_path / 'staged', tmp_path / 'current'
+    staged.mkdir()
+    target.mkdir()
+    (target / 'version').write_text('working')
+    original_replace = mt.os.replace
+
+    def replace(src, dst):
+        if os.fspath(dst) == str(target):
+            raise PermissionError(errno.EACCES, 'target locked')
+        return original_replace(src, dst)
+
+    monkeypatch.setattr(mt.os, 'replace', replace)
+    monkeypatch.setattr(mt.time, 'sleep', lambda _: None)
+    with pytest.raises(OSError, match='Previous installation preserved at'):
+        mt._install_staged_directory(str(staged), str(target))
+    backups = list(tmp_path.glob('.media-backup-*/previous/version'))
+    assert len(backups) == 1
+    assert backups[0].read_text() == 'working'
+
+
+def test_locked_backup_cleanup_does_not_fail_successful_update(mt, monkeypatch, tmp_path):
+    import errno
+    staged, target = tmp_path / 'staged', tmp_path / 'current'
+    staged.mkdir()
+    target.mkdir()
+    (staged / 'version').write_text('new')
+    original_rmtree = mt.shutil.rmtree
+
+    def rmtree(path, *args, **kwargs):
+        if '.media-backup-' in str(path):
+            raise PermissionError(errno.EACCES, 'old binary still running')
+        return original_rmtree(path, *args, **kwargs)
+
+    monkeypatch.setattr(mt.shutil, 'rmtree', rmtree)
+    monkeypatch.setattr(mt.time, 'sleep', lambda _: None)
+    mt._install_staged_directory(str(staged), str(target))
+    assert (target / 'version').read_text() == 'new'
+
+
+def test_restore_ytdlp_propagates_overlay_stat_denial(mt, monkeypatch):
+    import errno
+    overlay = mt._ytdlp_overlay_dir()
+    os.makedirs(overlay)
+    original_stat = mt.os.stat
+    def stat(path, *args, **kwargs):
+        if os.fspath(path) == overlay:
+            raise PermissionError(errno.EACCES, 'overlay access denied', path)
+        return original_stat(path, *args, **kwargs)
+    monkeypatch.setattr(mt.os, 'stat', stat)
+    mt._ops['ytdlp_update'].update(state='done', version='2099.01.01')
+    with pytest.raises(PermissionError, match='overlay access denied'):
+        mt.restore_ytdlp()
+    assert mt._ops['ytdlp_update']['version'] == '2099.01.01'

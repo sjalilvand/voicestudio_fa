@@ -315,3 +315,65 @@ def test_off_path_emits_no_loudness_block(tmp_path, monkeypatch):
     events = _collect_events(_plan(("One", "hi")), monkeypatch, out, fmt="m4b")  # no loudness
     assert "mastering" not in [e["type"] for e in events]
     assert "loudness" not in events[-1]  # legacy done shape preserved
+
+
+# ── the finished render says what it is ─────────────────────────────────────
+
+def test_done_event_carries_the_title_and_how_it_was_rendered(tmp_path, monkeypatch):
+    from services.audiobook import AudiobookPlan, Chapter, ExpressiveOptions, Span
+
+    out = tmp_path / "outputs"
+    out.mkdir()
+    plan = AudiobookPlan(chapters=[Chapter(title="Chapter One", spans=[
+        Span(voice_id=None, text="Zoe raced along the path.", speed=0.95)])])
+    events = _collect_events(plan, monkeypatch, out, fmt="mp3", language="English",
+                             metadata={"title": "The Super Sloth"},
+                             opts=ExpressiveOptions(seed=0, postprocess_output=False))
+    done = events[-1]
+    assert done["type"] == "done" and done["title"] == "The Super Sloth"
+    summary = done["summary"]
+    assert summary["speeds"] == [0.95] and summary["lines"] == 1 and summary["words"] == 5
+    assert summary["language"] == "English" and summary["format"] == "mp3"
+    # Explicit falsy settings and effective sampling values are recorded.
+    assert summary["options"]["seed"] == 0
+    assert summary["options"]["postprocess_output"] is False
+    assert summary["options"]["num_step"] > 0
+    assert summary["options"]["guidance_scale"] == 2.0
+    assert summary["chapter_titles"] == ["Chapter One"]
+    assert "Zoe" not in json.dumps(summary)      # settings and counts, never the script
+
+
+def test_a_summary_failure_never_costs_the_render(tmp_path, monkeypatch):
+    from api.routers import audiobook
+
+    def boom(*_a, **_k):
+        raise RuntimeError("profile db unavailable")
+
+    monkeypatch.setattr(audiobook, "_render_summary", boom)
+    out = tmp_path / "outputs"
+    out.mkdir()
+    done = _collect_events(_plan(("One", "Hi.")), monkeypatch, out, fmt="mp3")[-1]
+    assert done["type"] == "done" and "summary" not in done
+    assert (out / done["output"]).exists()
+
+
+def test_summary_describes_only_the_chapters_that_made_it_into_the_file(tmp_path, monkeypatch):
+    out = tmp_path / "outputs"
+    out.mkdir()
+    events = _collect_events(
+        _plan(("Good", "Hello world."), ("Bad", "BOOM please fail here.")),
+        monkeypatch, out, fmt="mp3", fail_on=lambda text: "BOOM" in text)
+    done = events[-1]
+    assert done["type"] == "done" and done["failed_chapters"]
+    assert done["summary"]["chapter_titles"] == ["Good"]
+    assert done["summary"]["words"] == 2
+
+
+def test_done_summary_from_old_manifest_is_strict_json(tmp_path, monkeypatch):
+    from services.audiobook import ExpressiveOptions
+    out = tmp_path / "outputs"
+    out.mkdir()
+    events = _collect_events(_plan(("One", "hello")), monkeypatch, out, fmt="mp3",
+                             opts=ExpressiveOptions(emo_vector=(float("nan"),) * 8))
+    assert events[-1]["type"] == "done"
+    json.dumps(events[-1], allow_nan=False)
