@@ -146,8 +146,12 @@ def _qwen_full_precision_load():
     time, and restores the inherited classmethod even when loading fails.
     """
     import torch
-    from transformers import Qwen2ForCausalLM
+    import transformers
 
+    Qwen2ForCausalLM = getattr(transformers, "Qwen2ForCausalLM", None)
+    if Qwen2ForCausalLM is None:
+        yield  # Legacy CosyVoice 1 environments do not use Qwen.
+        return
     owned = Qwen2ForCausalLM.__dict__.get("from_pretrained")
     original = Qwen2ForCausalLM.from_pretrained
 
@@ -181,8 +185,11 @@ def _qwen_attention_mask(xs, masks, cache):
 
 
 def _repair_qwen_cache(model):
-    from cosyvoice.llm.llm import Qwen2Encoder
+    from cosyvoice.llm import llm as llm_module
 
+    Qwen2Encoder = getattr(llm_module, "Qwen2Encoder", None)
+    if Qwen2Encoder is None:
+        return
     components = getattr(model, "model", model)
     encoder = getattr(getattr(components, "llm", None), "llm", None)
     if not isinstance(encoder, Qwen2Encoder):
