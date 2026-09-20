@@ -29,3 +29,9 @@ The live Windows conversion smoke now exercises the complete Tools > Convert pat
 Faster-Whisper and OmniVoice engines: upload, ASR, saved-profile conversion, returned waveform and
 Vidstack playback-clock advancement. The fixture uses an existing clone profile and does not change
 the user's engine selections.
+
+Dubbing background preservation and long export filter graphs support both legacy
+`-filter_complex_script` and modern FFmpeg `-/filter_complex` file arguments.
+If FFmpeg rejects the legacy option before processing, VoiceStudio retries once
+with the modern spelling; filter contents stay in a file to avoid Windows command
+line limits. Actual decoding/filter errors are reported without retrying.

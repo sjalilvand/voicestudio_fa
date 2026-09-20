@@ -716,46 +716,57 @@ async def run_ffmpeg(cmd, timeout: float = 1800.0, capture: bool = True,
         cmd, script_path = externalize_long_filter_complex(cmd)
     try:
         async with _get_semaphore():
-            proc = await _spawn_with_retry(cmd, stdout=stdout, stderr=stderr)
-            if job_id:
-                try:
-                    register_proc(job_id, proc)
-                except Exception as e:
-                    # Newline-strip the id inline — it can originate from a path
-                    # param, and the log stream must stay one-event-per-line.
-                    logger.debug("register_proc failed for %s: %s",
-                                 job_id.replace("\n", " ").replace("\r", " "), e)
-            try:
-                try:
-                    out, err = await asyncio.wait_for(proc.communicate(), timeout=timeout)
-                except asyncio.TimeoutError:
-                    try:
-                        proc.kill()
-                    except ProcessLookupError:
-                        pass
-                    try:
-                        await asyncio.wait_for(proc.wait(), timeout=5.0)
-                    except asyncio.TimeoutError:
-                        pass
-                    raise
-                return proc.returncode, out, err
-            finally:
+            for attempt in range(2):
+                proc = await _spawn_with_retry(cmd, stdout=stdout, stderr=stderr)
                 if job_id:
                     try:
-                        unregister_proc(job_id, proc)
+                        register_proc(job_id, proc)
                     except Exception as e:
-                        logger.debug("unregister_proc failed for %s: %s",
+                        # Newline-strip the id inline — it can originate from a path
+                        # param, and the log stream must stay one-event-per-line.
+                        logger.debug("register_proc failed for %s: %s",
                                      job_id.replace("\n", " ").replace("\r", " "), e)
-                # Guarantee reaping — prevents zombie pileup under timeouts or errors.
-                if proc.returncode is None:
+                try:
                     try:
-                        proc.kill()
-                    except ProcessLookupError:
-                        pass
-                    try:
-                        await asyncio.wait_for(proc.wait(), timeout=5.0)
+                        out, err = await asyncio.wait_for(proc.communicate(), timeout=timeout)
                     except asyncio.TimeoutError:
-                        pass
+                        try:
+                            proc.kill()
+                        except ProcessLookupError:
+                            pass
+                        try:
+                            await asyncio.wait_for(proc.wait(), timeout=5.0)
+                        except asyncio.TimeoutError:
+                            pass
+                        raise
+                    if (
+                        attempt == 0 and proc.returncode
+                        and "-filter_complex_script" in cmd
+                        and b"Unrecognized option 'filter_complex_script'" in (err or b"")
+                    ):
+                        # New FFmpeg builds removed the legacy spelling. Parsing
+                        # failed before any processing; retry once with the modern
+                        # file-argument syntax, retaining the short Windows argv.
+                        cmd = ["-/filter_complex" if arg == "-filter_complex_script" else arg for arg in cmd]
+                        continue
+                    return proc.returncode, out, err
+                finally:
+                    if job_id:
+                        try:
+                            unregister_proc(job_id, proc)
+                        except Exception as e:
+                            logger.debug("unregister_proc failed for %s: %s",
+                                         job_id.replace("\n", " ").replace("\r", " "), e)
+                    # Guarantee reaping — prevents zombie pileup under timeouts or errors.
+                    if proc.returncode is None:
+                        try:
+                            proc.kill()
+                        except ProcessLookupError:
+                            pass
+                        try:
+                            await asyncio.wait_for(proc.wait(), timeout=5.0)
+                        except asyncio.TimeoutError:
+                            pass
     finally:
         if script_path:
             try:
