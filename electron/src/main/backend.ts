@@ -282,10 +282,10 @@ function samePath(left: string, right: string): boolean {
     : normalizedLeft === normalizedRight;
 }
 
-export function resolveSpawnPlan(
+export async function resolveSpawnPlan(
   port: number,
   packagedProject?: string,
-): SpawnPlan | { error: string } {
+): Promise<SpawnPlan | { error: string }> {
   const root = backendRoot();
   const override = parseBackendCmdOverride(process.env.OMNIVOICE_BACKEND_CMD);
   if (override) return { argv: override, cwd: root };
@@ -300,12 +300,12 @@ export function resolveSpawnPlan(
   // deadline and repeat that download after every restart (#2184).
   const portArg = ['--port', String(port)];
   const python = venvPython(root);
-  if (existsSync(python)) {
+  if (existsSync(python) && (await runtimeDependenciesReady(root))) {
     return { argv: [python, '-m', ...UVICORN_ARGS, ...portArg], cwd: root };
   }
   return {
     error:
-      `No prepared Python environment was found for ${root}. ` +
+      `The Python environment in ${root} is missing or incomplete. ` +
       'Run `bun run setup:api` in the repository, wait for it to finish, then restart.',
   };
 }
@@ -517,7 +517,8 @@ export class BackendSupervisor extends EventEmitter<{
         await stageRuntimeSources(backendRoot(), project);
         if (gen !== this.generation) return;
       }
-      const plan = resolveSpawnPlan(this.port, this.runtimeProject ?? undefined);
+      const plan = await resolveSpawnPlan(this.port, this.runtimeProject ?? undefined);
+      if (gen !== this.generation) return;
       if ('error' in plan) {
         this.setStage('failed', { message: plan.error });
         return;
