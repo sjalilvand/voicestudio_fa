@@ -497,7 +497,7 @@ def test_server_mode_media_tool_mutations_require_api_key(mt, monkeypatch):
         assert remote.post(path).status_code == 403, path
 
 
-@pytest.mark.parametrize('locked_operation', ['rename', 'remove'])
+@pytest.mark.parametrize('locked_operation', ['rename', 'backup'])
 def test_acquire_recovers_from_transient_publish_locks(mt, monkeypatch, locked_operation):
     import errno
     import time
@@ -507,26 +507,16 @@ def test_acquire_recovers_from_transient_publish_locks(mt, monkeypatch, locked_o
     target = mt.bundled_dir()
     os.makedirs(target, exist_ok=True)  # incomplete earlier acquisition
     calls = []
-    original_replace, original_rmtree = mt.os.replace, mt.shutil.rmtree
+    original_replace = mt.os.replace
 
     def replace(src, dst):
-        if dst == target and locked_operation == 'rename':
+        if (dst == target and locked_operation == 'rename') or (src == target and locked_operation == 'backup'):
             calls.append('rename')
             if len(calls) <= 2:
                 raise PermissionError(errno.EACCES, 'probe image still mapped', src)
         return original_replace(src, dst)
 
-    def rmtree(path, *args, **kwargs):
-        if path == target and locked_operation == 'remove':
-            calls.append('remove')
-            if len(calls) <= 2:
-                if kwargs.get('ignore_errors'):
-                    return
-                raise PermissionError(errno.EACCES, 'destination temporarily locked', path)
-        return original_rmtree(path, *args, **kwargs)
-
     monkeypatch.setattr(mt.os, 'replace', replace)
-    monkeypatch.setattr(mt.shutil, 'rmtree', rmtree)
     monkeypatch.setattr(time, 'sleep', lambda seconds: None)
     with patch('urllib.request.urlopen', return_value=_FakeResponse(payload)):
         state = mt.acquire_bundled(wait=True)
@@ -535,7 +525,7 @@ def test_acquire_recovers_from_transient_publish_locks(mt, monkeypatch, locked_o
     assert all(mt.bundled_tool_path(tool) for tool in mt.TOOLS)
 
 
-def test_acquire_preserves_destination_cleanup_error(mt, monkeypatch):
+def test_acquire_preserves_destination_backup_error(mt, monkeypatch):
     import errno
     import time
     payload = _make_zip([mt._exe('ffmpeg'), mt._exe('ffprobe')])
@@ -544,17 +534,15 @@ def test_acquire_preserves_destination_cleanup_error(mt, monkeypatch):
     target = mt.bundled_dir()
     os.makedirs(target, exist_ok=True)
     calls = []
-    original_rmtree = mt.shutil.rmtree
+    original_replace = mt.os.replace
 
-    def rmtree(path, *args, **kwargs):
-        if path == target:
-            calls.append(path)
-            if kwargs.get('ignore_errors'):
-                return
-            raise PermissionError(errno.EACCES, 'destination permanently locked', path)
-        return original_rmtree(path, *args, **kwargs)
+    def replace(src, dst):
+        if src == target:
+            calls.append(src)
+            raise PermissionError(errno.EACCES, 'destination permanently locked', src)
+        return original_replace(src, dst)
 
-    monkeypatch.setattr(mt.shutil, 'rmtree', rmtree)
+    monkeypatch.setattr(mt.os, 'replace', replace)
     monkeypatch.setattr(time, 'sleep', lambda seconds: None)
     with patch('urllib.request.urlopen', return_value=_FakeResponse(payload)):
         state = mt.acquire_bundled(wait=True)
@@ -622,3 +610,66 @@ def test_media_install_does_not_retry_non_lock_errors(mt, monkeypatch):
     with pytest.raises(OSError, match='disk full'):
         mt._retry_tool_filesystem(full_disk)
     assert calls == [True]
+
+
+def test_failed_publication_restores_working_directory(mt, monkeypatch, tmp_path):
+    import errno
+    staged, target = tmp_path / 'staged', tmp_path / 'current'
+    staged.mkdir()
+    target.mkdir()
+    (staged / 'version').write_text('new')
+    (target / 'version').write_text('working')
+    original_replace = mt.os.replace
+
+    def replace(src, dst):
+        if os.fspath(src) == str(staged):
+            raise PermissionError(errno.EACCES, 'publication locked')
+        return original_replace(src, dst)
+
+    monkeypatch.setattr(mt.os, 'replace', replace)
+    monkeypatch.setattr(mt.time, 'sleep', lambda _: None)
+    with pytest.raises(PermissionError, match='publication locked'):
+        mt._install_staged_directory(str(staged), str(target))
+    assert (target / 'version').read_text() == 'working'
+    assert (staged / 'version').read_text() == 'new'
+
+
+def test_failed_rollback_keeps_recoverable_backup(mt, monkeypatch, tmp_path):
+    import errno
+    staged, target = tmp_path / 'staged', tmp_path / 'current'
+    staged.mkdir()
+    target.mkdir()
+    (target / 'version').write_text('working')
+    original_replace = mt.os.replace
+
+    def replace(src, dst):
+        if os.fspath(dst) == str(target):
+            raise PermissionError(errno.EACCES, 'target locked')
+        return original_replace(src, dst)
+
+    monkeypatch.setattr(mt.os, 'replace', replace)
+    monkeypatch.setattr(mt.time, 'sleep', lambda _: None)
+    with pytest.raises(OSError, match='Previous installation preserved at'):
+        mt._install_staged_directory(str(staged), str(target))
+    backups = list(tmp_path.glob('.media-backup-*/previous/version'))
+    assert len(backups) == 1
+    assert backups[0].read_text() == 'working'
+
+
+def test_locked_backup_cleanup_does_not_fail_successful_update(mt, monkeypatch, tmp_path):
+    import errno
+    staged, target = tmp_path / 'staged', tmp_path / 'current'
+    staged.mkdir()
+    target.mkdir()
+    (staged / 'version').write_text('new')
+    original_rmtree = mt.shutil.rmtree
+
+    def rmtree(path, *args, **kwargs):
+        if '.media-backup-' in str(path):
+            raise PermissionError(errno.EACCES, 'old binary still running')
+        return original_rmtree(path, *args, **kwargs)
+
+    monkeypatch.setattr(mt.shutil, 'rmtree', rmtree)
+    monkeypatch.setattr(mt.time, 'sleep', lambda _: None)
+    mt._install_staged_directory(str(staged), str(target))
+    assert (target / 'version').read_text() == 'new'

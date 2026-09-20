@@ -291,15 +291,35 @@ def _retry_tool_filesystem(operation: Callable[[], None]) -> None:
 
 
 def _install_staged_directory(staged: str, target: str) -> None:
-    def replace() -> None:
-        # Windows cannot replace even an empty directory. Never suppress a
-        # failed removal: retry it, or report that error instead of a misleading
-        # subsequent rename error. Keep validated staging intact until success.
-        if os.path.isdir(target):
-            shutil.rmtree(target)
-        os.replace(staged, target)
-
-    _retry_tool_filesystem(replace)
+    # Keep the working installation until publication succeeds. The backup lives
+    # beside the target so both renames stay on the same filesystem.
+    backup_root = tempfile.mkdtemp(prefix=".media-backup-", dir=os.path.dirname(target))
+    backup = os.path.join(backup_root, "previous")
+    keep_backup = False
+    try:
+        if os.path.exists(target):
+            _retry_tool_filesystem(lambda: os.replace(target, backup))
+        try:
+            _retry_tool_filesystem(lambda: os.replace(staged, target))
+        except OSError as publish_error:
+            if os.path.exists(backup):
+                try:
+                    _retry_tool_filesystem(lambda: os.replace(backup, target))
+                except OSError as rollback_error:
+                    keep_backup = True
+                    raise OSError(
+                        f"{publish_error}; rollback failed: {rollback_error}. "
+                        f"Previous installation preserved at {backup}"
+                    ) from publish_error
+            raise
+    finally:
+        if not keep_backup:
+            try:
+                _retry_tool_filesystem(lambda: shutil.rmtree(backup_root))
+            except OSError:
+                # A locked old binary must not turn a successful update into a
+                # reported failure, or mask the original publication error.
+                logger.warning("media-tools: old backup retained at %s", backup_root)
 
 
 def _do_acquire() -> None:

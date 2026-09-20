@@ -31,7 +31,7 @@ Vidstack playback-clock advancement. The fixture uses an existing clone profile 
 the user's engine selections.
 
 Media-tool installation retries temporary filesystem locks for up to four seconds,
-including Windows locks after the executable probe. It verifies destination cleanup
-before publishing the validated bundle. Persistent locks surface their original
+including Windows locks after the executable probe. It preserves the existing installation in a sibling backup
+until publication succeeds and restores it if publication fails. Persistent locks surface their original
 error; no system binaries or user media are deleted. The same behavior applies to
 yt-dlp overlay updates, and restoring the tested version reports failed cleanup.
