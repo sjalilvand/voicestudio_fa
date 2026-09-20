@@ -1825,7 +1825,7 @@
     "elapsed": "انقضت {{seconds}} ثانية",
     "first_run_hint": "قد يستغرق التشغيل الأول عدة دقائق أثناء إعداد بيئة Python.",
     "port_in_use_short": "المنفذ {{port}} مستخدم",
-    "proxy_bypass_help": "تتطلب قواعد تجاوز وكيل Windows إعدادات صريحة. اضبط HTTP_PROXY/HTTPS_PROXY على رابط الوكيل وNO_PROXY على المضيفين المستبعدين، ثم أعد المحاولة."
+    "proxy_bypass_help": "أغلق VoiceStudio تمامًا، واضبط HTTP_PROXY/HTTPS_PROXY على عنوان الوكيل وNO_PROXY على المضيفين المستثنين في الطرفية، ثم شغّل VoiceStudio من الطرفية نفسها. إعادة المحاولة في التطبيق الحالي لا تحمّل متغيرات البيئة الجديدة."
   },
   "bootstrap": {
     "checking": "جاري التحقق من البيئة…",

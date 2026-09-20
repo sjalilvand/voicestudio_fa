@@ -87,7 +87,7 @@ Secondary workspace sidebars resize from their right edge up to 40% wider than t
 ### Windows proxy bootstrap
 
 Electron translates enabled WinINET `ProxyServer` maps (`http=…`, `https=…`,
-`socks=…`) into proxy URLs for the dependency-install subprocess. SOCKS maps use
+`socks=…`) into proxy URLs for both the HTTPS installer download and the dependency-install subprocess. Installer redirects retain proxy and bypass rules; downloads have a 60-second deadline and a 2 MiB limit. SOCKS maps use
 `socks5h://` so the proxy resolves download hostnames. Explicit `HTTP_PROXY`,
 `HTTPS_PROXY`, or `ALL_PROXY` settings, including lowercase forms, take priority.
 Loopback hosts remain excluded, and existing `NO_PROXY` entries are retained.
@@ -96,7 +96,6 @@ Proxy credentials are never logged by this normalization.
 Simple WinINET bypass hosts and `*.domain` suffix rules are retained. Windows-only
 bypass patterns such as `<local>` stop setup with localized proxy configuration
 guidance before uv runs; dropping them would silently change routing semantics.
-Set an explicit proxy URL and the intended `NO_PROXY` exclusions before launching
-Electron. PAC remains handled by the existing system networking behavior; use the actual proxy protocol,
+Fully quit Electron, set an explicit proxy URL and the intended `NO_PROXY` exclusions in a terminal, then launch Electron from that same terminal. Retrying or relaunching from the existing process cannot pick up new environment variables. PAC remains handled by the existing system networking behavior; use the actual proxy protocol,
 not the `socks=` registry syntax. This repair applies to packaged runtime setup;
 it does not change browser networking or global Windows proxy settings.

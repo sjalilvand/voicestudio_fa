@@ -1817,7 +1817,7 @@
     "elapsed": "{{seconds}} dtk berlalu",
     "first_run_hint": "Proses pertama dapat memakan waktu beberapa menit saat lingkungan Python disiapkan.",
     "port_in_use_short": "Port {{port}} sedang digunakan",
-    "proxy_bypass_help": "Aturan pengecualian proksi Windows memerlukan pengaturan eksplisit. Isi HTTP_PROXY/HTTPS_PROXY dengan URL proksi dan NO_PROXY dengan host yang dikecualikan, lalu coba lagi."
+    "proxy_bypass_help": "Tutup VoiceStudio sepenuhnya, atur HTTP_PROXY/HTTPS_PROXY ke URL proksi dan NO_PROXY ke host yang dikecualikan di terminal, lalu jalankan VoiceStudio dari terminal itu. Mencoba lagi di aplikasi yang masih berjalan tidak memuat variabel lingkungan baru."
   },
   "bootstrap": {
     "checking": "Memeriksa lingkungan…",

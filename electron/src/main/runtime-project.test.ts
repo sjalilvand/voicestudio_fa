@@ -2,6 +2,7 @@
 import { mkdtemp, mkdir, readFile, rm, writeFile, statfs } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { downloadRuntimeInstaller } from './runtime-download';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   installRuntime,
@@ -15,6 +16,8 @@ import {
   stageRuntimeSources,
   UV_VERSION,
 } from './runtime-project';
+
+vi.mock('./runtime-download', () => ({ downloadRuntimeInstaller: vi.fn() }));
 
 vi.mock('node:fs/promises', async (importOriginal) => ({
   ...(await importOriginal<typeof import('node:fs/promises')>()),
@@ -53,6 +56,30 @@ afterEach(async () => {
 });
 
 describe('packaged runtime setup', () => {
+  it('downloads the first-run installer with the same proxy environment as uv', async () => {
+    const { bundle, project } = await fixture();
+    vi.stubEnv('HTTPS_PROXY', 'socks5h://127.0.0.1:1080');
+    vi.mocked(downloadRuntimeInstaller).mockResolvedValue('# installer');
+    const run = vi.fn(async () => {});
+    const signal = new AbortController().signal;
+    await installRuntime(bundle, project, null, run, signal, undefined, 'global');
+    expect(downloadRuntimeInstaller).toHaveBeenCalledWith(
+      expect.stringContaining('https://astral.sh/uv/'),
+      expect.objectContaining({ HTTPS_PROXY: 'socks5h://127.0.0.1:1080' }),
+      signal,
+    );
+    const script = join(
+      project,
+      '.tools',
+      process.platform === 'win32' ? 'install.ps1' : 'install.sh',
+    );
+    expect(await readFile(script, 'utf8')).toBe('# installer');
+    expect(run.mock.calls[0]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ HTTPS_PROXY: 'socks5h://127.0.0.1:1080' }),
+      ]),
+    );
+  });
   it('never reuses an interrupted install as a compatible Tauri environment', async () => {
     const { bundle, project } = await fixture();
     await stageRuntimeSources(bundle, project);

@@ -100,7 +100,7 @@
     "installing": "Installing…",
     "setup_space": "Free at least 9 GiB on the app’s drive, then retry.",
     "setup_access": "Allow write access to the app’s data folder, then retry.",
-    "proxy_bypass_help": "Windows proxy bypass rules need explicit settings. Set HTTP_PROXY/HTTPS_PROXY to a proxy URL and NO_PROXY to excluded hosts, then retry."
+    "proxy_bypass_help": "Fully quit VoiceStudio, set HTTP_PROXY/HTTPS_PROXY to your proxy URL and NO_PROXY to excluded hosts in a terminal, then launch VoiceStudio from that terminal. Retrying in the current app cannot load new environment variables."
   },
   "engines": {
     "selectCpuFallback": "{{engine}}: running on CPU — {{reason}}",

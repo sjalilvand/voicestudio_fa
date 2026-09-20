@@ -1817,7 +1817,7 @@
     "elapsed": "{{seconds}} सेकंड बीते",
     "first_run_hint": "पहली बार Python वातावरण तैयार होने में कई मिनट लग सकते हैं।",
     "port_in_use_short": "पोर्ट {{port}} उपयोग में है",
-    "proxy_bypass_help": "Windows प्रॉक्सी के अपवादों के लिए स्पष्ट सेटिंग चाहिए। HTTP_PROXY/HTTPS_PROXY में प्रॉक्सी URL और NO_PROXY में बाहर रखे जाने वाले होस्ट सेट करें, फिर दोबारा प्रयास करें।"
+    "proxy_bypass_help": "VoiceStudio को पूरी तरह बंद करें, टर्मिनल में HTTP_PROXY/HTTPS_PROXY को अपने प्रॉक्सी URL और NO_PROXY को बाहर रखे जाने वाले होस्ट पर सेट करें, फिर उसी टर्मिनल से VoiceStudio चलाएँ। खुले ऐप में दोबारा कोशिश करने से नए परिवेश चर लोड नहीं होंगे।"
   },
   "bootstrap": {
     "checking": "वातावरण की जाँच हो रही है…",

@@ -1817,7 +1817,7 @@
     "elapsed": "{{seconds}} s verstreken",
     "first_run_hint": "De eerste start kan enkele minuten duren terwijl de Python-omgeving wordt voorbereid.",
     "port_in_use_short": "Poort {{port}} is bezet",
-    "proxy_bypass_help": "Windows-proxy-uitzonderingen vereisen expliciete instellingen. Stel HTTP_PROXY/HTTPS_PROXY in op een proxy-URL en NO_PROXY op uitgesloten hosts. Probeer het daarna opnieuw."
+    "proxy_bypass_help": "Sluit VoiceStudio volledig af, stel in een terminal HTTP_PROXY/HTTPS_PROXY in op je proxy-URL en NO_PROXY op de uitgesloten hosts en start VoiceStudio vanuit die terminal. Opnieuw proberen in de geopende app laadt geen nieuwe omgevingsvariabelen."
   },
   "bootstrap": {
     "checking": "Omgeving controleren…",

@@ -1817,7 +1817,7 @@
     "elapsed": "{{seconds}} s har gått",
     "first_run_hint": "Den första starten kan ta flera minuter medan Python-miljön förbereds.",
     "port_in_use_short": "Port {{port}} används",
-    "proxy_bypass_help": "Windows proxyundantag kräver uttryckliga inställningar. Ange proxyadressen i HTTP_PROXY/HTTPS_PROXY och undantagna värdar i NO_PROXY och försök igen."
+    "proxy_bypass_help": "Avsluta VoiceStudio helt, ange proxyadressen i HTTP_PROXY/HTTPS_PROXY och undantagna värdar i NO_PROXY i en terminal och starta sedan VoiceStudio därifrån. Ett nytt försök i den öppna appen läser inte in nya miljövariabler."
   },
   "bootstrap": {
     "checking": "Kontrollerar miljö…",

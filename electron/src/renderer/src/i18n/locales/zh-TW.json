@@ -1817,7 +1817,7 @@
     "elapsed": "已經過 {{seconds}} 秒",
     "first_run_hint": "首次執行需要準備 Python 環境，可能需要幾分鐘。",
     "port_in_use_short": "連接埠 {{port}} 已被占用",
-    "proxy_bypass_help": "Windows 代理略過規則需要明確設定。請將 HTTP_PROXY/HTTPS_PROXY 設為代理 URL，將 NO_PROXY 設為排除的主機，然後重試。"
+    "proxy_bypass_help": "完全結束 VoiceStudio，在終端機中將 HTTP_PROXY/HTTPS_PROXY 設為代理 URL，將 NO_PROXY 設為排除的主機，然後從該終端機啟動 VoiceStudio。在目前的應用程式中重試不會載入新的環境變數。"
   },
   "bootstrap": {
     "checking": "正在檢查環境…",

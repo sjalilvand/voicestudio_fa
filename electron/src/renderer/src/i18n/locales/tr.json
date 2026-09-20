@@ -1817,7 +1817,7 @@
     "elapsed": "{{seconds}} sn geçti",
     "first_run_hint": "Python ortamı hazırlanırken ilk çalıştırma birkaç dakika sürebilir.",
     "port_in_use_short": "{{port}} bağlantı noktası kullanımda",
-    "proxy_bypass_help": "Windows proxy istisnaları açık ayarlar gerektirir. HTTP_PROXY/HTTPS_PROXY değerini proxy URL’sine, NO_PROXY değerini hariç tutulan sunuculara ayarlayıp yeniden deneyin."
+    "proxy_bypass_help": "VoiceStudio’yu tamamen kapatın, terminalde HTTP_PROXY/HTTPS_PROXY değerini proxy URL’sine ve NO_PROXY değerini hariç tutulacak sunuculara ayarlayın, ardından VoiceStudio’yu o terminalden başlatın. Açık uygulamada yeniden denemek yeni ortam değişkenlerini yüklemez."
   },
   "bootstrap": {
     "checking": "Ortam kontrol ediliyor…",

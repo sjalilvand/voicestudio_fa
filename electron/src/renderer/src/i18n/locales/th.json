@@ -1817,7 +1817,7 @@
     "elapsed": "ผ่านไป {{seconds}} วินาที",
     "first_run_hint": "การเริ่มใช้งานครั้งแรกอาจใช้เวลาหลายนาทีขณะเตรียมสภาพแวดล้อม Python",
     "port_in_use_short": "พอร์ต {{port}} ถูกใช้งานอยู่",
-    "proxy_bypass_help": "กฎยกเว้นพร็อกซีของ Windows ต้องตั้งค่าให้ชัดเจน ตั้ง HTTP_PROXY/HTTPS_PROXY เป็น URL พร็อกซี และ NO_PROXY เป็นโฮสต์ที่ยกเว้น แล้วลองอีกครั้ง"
+    "proxy_bypass_help": "ปิด VoiceStudio ให้หมด ตั้งค่า HTTP_PROXY/HTTPS_PROXY เป็น URL พร็อกซีและ NO_PROXY เป็นโฮสต์ที่ยกเว้นในเทอร์มินัล แล้วเปิด VoiceStudio จากเทอร์มินัลนั้น การลองใหม่ในแอปที่เปิดอยู่จะไม่โหลดตัวแปรสภาพแวดล้อมใหม่"
   },
   "bootstrap": {
     "checking": "กำลังตรวจสอบระบบ…",

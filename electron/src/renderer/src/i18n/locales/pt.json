@@ -1819,7 +1819,7 @@
     "elapsed": "{{seconds}} s decorridos",
     "first_run_hint": "A primeira execução pode levar vários minutos enquanto o ambiente Python é preparado.",
     "port_in_use_short": "A porta {{port}} está em uso",
-    "proxy_bypass_help": "As exceções do proxy do Windows exigem configuração explícita. Defina HTTP_PROXY/HTTPS_PROXY com a URL do proxy e NO_PROXY com os hosts excluídos e tente novamente."
+    "proxy_bypass_help": "Feche completamente o VoiceStudio, defina HTTP_PROXY/HTTPS_PROXY com a URL do proxy e NO_PROXY com os hosts excluídos em um terminal e abra o VoiceStudio a partir dele. Tentar novamente no aplicativo aberto não carrega as novas variáveis de ambiente."
   },
   "bootstrap": {
     "checking": "Verificando o ambiente…",
