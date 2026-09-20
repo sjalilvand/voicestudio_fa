@@ -373,3 +373,21 @@ def test_chat_messages_does_not_swallow_unrelated_failures(monkeypatch):
     with _pytest.raises(RuntimeError, match="502"):
         backend.chat_messages(messages=[{"role": "user", "content": "x"}], reasoning_effort="none")
     assert len(seen) == 1  # no blind retry
+
+
+def test_reasoning_filter_preserves_literal_tags_in_the_answer():
+    from services.llm_backend import _strip_reasoning
+    for text in ['Use <think> to start a block.', 'Explain <thinking>step</thinking> literally.', 'Example: <reasoning>unfinished']:
+        assert _strip_reasoning(text) == text
+
+
+def test_internal_type_error_is_not_retried_or_memoized(monkeypatch):
+    import pytest
+    from services import llm_backend, refinement
+    seen = []
+    backend = _bound_backend(monkeypatch, _fake_client(seen, boom=TypeError('internal decoder failure')))
+    monkeypatch.setattr(refinement, '_skill_llm', lambda: backend)
+    with pytest.raises(TypeError, match='internal decoder failure'):
+        refinement.refine_transcript('keep my words')
+    assert len(seen) == 1
+    assert not llm_backend._REASONING_EFFORT_REJECTED

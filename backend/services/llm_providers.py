@@ -277,7 +277,7 @@ def _cached_discovery(pid: str) -> tuple[bool, Optional[str]]:
 _LMSTUDIO_PROBE_TIMEOUT_S = 3.0
 
 
-def _probe_lmstudio_loaded_model(base_url: str) -> Optional[str]:
+def _probe_lmstudio_loaded_model(base_url: str, api_key: str = "local") -> Optional[str]:
     """Return the id of a model LM Studio currently holds in memory, if any.
 
     Best-effort and never raises: LM Studio not running, an older build without
@@ -295,9 +295,10 @@ def _probe_lmstudio_loaded_model(base_url: str) -> Optional[str]:
         clean_base = base_url.rstrip("/")
         if clean_base.endswith("/v1"):
             clean_base = clean_base[: -len("/v1")]
-        req = urllib.request.Request(
-            f"{clean_base}/api/v0/models", headers={"User-Agent": "VoiceStudio"}
-        )
+        headers = {"User-Agent": "VoiceStudio"}
+        if api_key and api_key != "local":
+            headers["Authorization"] = f"Bearer {api_key}"
+        req = urllib.request.Request(f"{clean_base}/api/v0/models", headers=headers)
         with urllib.request.urlopen(req, timeout=_LMSTUDIO_PROBE_TIMEOUT_S) as resp:
             data = json.loads(resp.read().decode("utf-8"))
         loaded = [
@@ -335,7 +336,7 @@ def discover_model(p: Provider) -> Optional[str]:
         return None
 
     if p.id == "lmstudio":
-        loaded = _probe_lmstudio_loaded_model(base_url)
+        loaded = _probe_lmstudio_loaded_model(base_url, resolve_api_key(p))
         if loaded:
             _DISCOVERED_MODEL[p.id] = (loaded, time.monotonic() + DISCOVERY_TTL_S)
             return loaded
@@ -358,9 +359,12 @@ def discover_model(p: Provider) -> Optional[str]:
         return None
 
     # An embedding checkpoint cannot serve chat — picking one yields a 400 on
-    # every request — so drop them, unless that would leave nothing to pick.
+    # every request — so never return them as a chat discovery result.
     chat_ids = [mid for mid in ids if not any(k in mid.lower() for k in ("embed", "bert"))]
-    candidate_ids = chat_ids or ids
+    if not chat_ids:
+        _DISCOVERED_MODEL[p.id] = (None, time.monotonic() + DISCOVERY_FAILURE_TTL_S)
+        return None
+    candidate_ids = chat_ids
 
     # Prefer a known instruct family over whatever else is loaded, then sort
     # WITHIN the chosen bucket: deterministic rather than "whatever the server

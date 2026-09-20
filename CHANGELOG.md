@@ -26,6 +26,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- LM Studio discovery respects the selected model and dictation refinement preserves literal text while handling unsupported reasoning options (#2252) — thanks @joseedson18jc!
+
 - Stories and Audiobook: Generate, the chapter tracker and the render status are pinned in the setup pane instead of sitting below the last line of the script, and a disabled Generate now says why (#2229) — thanks @jaketame!
 - Reject unsupported synthesis languages before model loading, including named picker choices and per-item batch languages (#2219) — thanks @rollroyces!
 - The desktop app points the backend at the `uv` it already ships, so one-click engine installs stop failing preflight with "uv was not found" on a clean install — the packaged binary sits in the app's own resources directory, which is on no `PATH`, and a GUI launch inherits none of the shell's `PATH` additions either (#2221, #2215) — thanks @baoyu0 for the diagnosis!

@@ -310,13 +310,13 @@ def test_discover_model_probes_loaded_and_filters_embeddings(lp, monkeypatch):
     # When LM Studio native API reports loaded model, it picks it
     monkeypatch.setattr(
         lp, "_probe_lmstudio_loaded_model",
-        lambda url: "qwen/qwen3.6-35b-a3b"
+        lambda url, api_key="local": "qwen/qwen3.6-35b-a3b"
     )
     assert lp.discover_model(p) == "qwen/qwen3.6-35b-a3b"
 
     # When fallback OpenAI models list runs, filters embeddings and picks preferred model
     lp.forget_discovered_models()
-    monkeypatch.setattr(lp, "_probe_lmstudio_loaded_model", lambda url: None)
+    monkeypatch.setattr(lp, "_probe_lmstudio_loaded_model", lambda url, api_key="local": None)
 
     class _FakeModel:
         def __init__(self, id):
@@ -356,7 +356,7 @@ def test_lmstudio_loaded_model_never_overrides_the_stored_choice(lp, monkeypatch
     probes: list[str] = []
     monkeypatch.setattr(
         lp, "_probe_lmstudio_loaded_model",
-        lambda url: (probes.append(url), "loaded/other-model")[1],
+        lambda url, api_key="local": (probes.append(url), "loaded/other-model")[1],
     )
     lp._text[lp._MODEL_KEY + "lmstudio"] = "my/deliberate-choice"
 
@@ -367,7 +367,7 @@ def test_lmstudio_loaded_model_never_overrides_the_stored_choice(lp, monkeypatch
 def test_lmstudio_discovery_uses_the_loaded_model_when_nothing_is_set(lp, monkeypatch):
     lp.forget_discovered_models()
     p = lp.get_provider("lmstudio")
-    monkeypatch.setattr(lp, "_probe_lmstudio_loaded_model", lambda url: "loaded/qwen3")
+    monkeypatch.setattr(lp, "_probe_lmstudio_loaded_model", lambda url, api_key="local": "loaded/qwen3")
     assert lp.resolve_model(p) == "loaded/qwen3"
 
 
@@ -375,7 +375,7 @@ def test_discover_model_is_deterministic_regardless_of_server_order(lp, monkeypa
     """Two runs on one machine must pick the same model, or a bug report from
     this path is not reproducible."""
     p = lp.get_provider("lmstudio")
-    monkeypatch.setattr(lp, "_probe_lmstudio_loaded_model", lambda url: None)
+    monkeypatch.setattr(lp, "_probe_lmstudio_loaded_model", lambda url, api_key="local": None)
 
     class _FakeModel:
         def __init__(self, mid):
@@ -399,3 +399,27 @@ def test_discover_model_is_deterministic_regardless_of_server_order(lp, monkeypa
         monkeypatch.setattr(openai, "OpenAI", _fake_openai(order))
         picks.add(lp.discover_model(p))
     assert picks == {"qwen/a-8b"}
+
+
+def test_discovery_does_not_select_embedding_only_models(lp, monkeypatch):
+    import openai
+    lp.forget_discovered_models()
+    monkeypatch.setattr(lp, '_probe_lmstudio_loaded_model', lambda *args: None)
+    from types import SimpleNamespace
+    models = [SimpleNamespace(id=name) for name in ['text-embedding-nomic', 'bert-embedding']]
+    monkeypatch.setattr(openai, 'OpenAI', lambda **kw: SimpleNamespace(models=SimpleNamespace(list=lambda **kw: models)))
+    assert lp.discover_model(lp.get_provider('lmstudio')) is None
+
+
+def test_loaded_model_probe_uses_the_configured_key(lp, monkeypatch):
+    import io
+    import urllib.request
+    lp.forget_discovered_models()
+    lp._secrets['llm_key.lmstudio'] = 'test-only-secret'
+    requests = []
+    def respond(request, timeout):
+        requests.append(request)
+        return io.BytesIO(json.dumps({'data': [{'id': 'loaded-chat', 'type': 'llm', 'state': 'loaded'}]}).encode())
+    monkeypatch.setattr(urllib.request, 'urlopen', respond)
+    assert lp.discover_model(lp.get_provider('lmstudio')) == 'loaded-chat'
+    assert requests[0].get_header('Authorization') == 'Bearer test-only-secret'

@@ -24,3 +24,9 @@ backend; it is not proof of a successful network probe. Non-LLM translation-prov
 credentials for DeepL and Microsoft are available under Settings > Credentials and are
 written through the backend environment-setting endpoint. The skills browser smoke
 verifies routing and disable behavior against mocked API responses.
+
+LM Studio discovery honors the selected model before probing loaded models. Its
+native loaded-model probe uses the configured API key; embedding-only listings
+are never selected for chat. Dictation refinement disables optional reasoning
+where supported, retries only errors naming that parameter, and preserves literal
+reasoning tags within an answer rather than truncating technical text.

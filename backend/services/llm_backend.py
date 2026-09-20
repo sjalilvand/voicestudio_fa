@@ -38,10 +38,10 @@ logger = logging.getLogger("omnivoice.llm")
 #: chain of thought in a <think> block ahead of the answer. It is not part of
 #: the answer — on the dictation path it would be pasted straight into the
 #: user's transcript.
-_THINK_TAG_RE = re.compile(r"<(think|thinking|reasoning)>.*?</\1>", re.DOTALL | re.IGNORECASE)
+_THINK_TAG_RE = re.compile(r"^\s*<(think|thinking|reasoning)>.*?</\1>", re.DOTALL | re.IGNORECASE)
 #: Output truncated mid-thought (token cap, or a stop that never came) leaves
 #: the block unclosed. Still not an answer: drop from the tag to the end.
-_OPEN_THINK_RE = re.compile(r"<(think|thinking|reasoning)>.*\Z", re.DOTALL | re.IGNORECASE)
+_OPEN_THINK_RE = re.compile(r"^\s*<(think|thinking|reasoning)>.*\Z", re.DOTALL | re.IGNORECASE)
 
 
 def _strip_reasoning(raw: str) -> str:
@@ -65,8 +65,6 @@ def _rejects_reasoning_effort(exc: BaseException) -> bool:
     field answers 400 — which is NOT a TypeError, so catching only that left
     refinement permanently broken against such an endpoint.
     """
-    if isinstance(exc, TypeError):
-        return True
     # Only when the server names the field: OpenAI ("Unsupported parameter:
     # 'reasoning_effort' …"), Azure ("Unrecognized request argument supplied:
     # reasoning_effort"), pydantic-validated servers (field listed). A generic

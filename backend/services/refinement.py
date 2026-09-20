@@ -370,7 +370,9 @@ def refine_transcript(
             timeout=budget,
             reasoning_effort="none",
         ).strip()
-    except TypeError:
+    except TypeError as exc:
+        if "reasoning_effort" not in str(exc):
+            raise
         return backend.chat_messages(messages=messages, timeout=budget).strip()
 
 

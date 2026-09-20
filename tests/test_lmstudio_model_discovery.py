@@ -53,7 +53,7 @@ def _no_env_or_store(monkeypatch, llm):
         monkeypatch.delenv(var, raising=False)
     import services.settings_store as store
     monkeypatch.setattr(store, "get_text", lambda *a, **k: "")
-    monkeypatch.setattr(llm, "_probe_lmstudio_loaded_model", lambda url: None)
+    monkeypatch.setattr(llm, "_probe_lmstudio_loaded_model", lambda url, api_key="local": None)
 
 
 def _expire(llm, pid):
@@ -261,7 +261,7 @@ def test_a_loaded_model_wins_over_the_listing(monkeypatch, llm):
     calls = _fake_openai(monkeypatch, llm, ["alpha", "zulu"])
     probes = {"n": 0}
 
-    def _probe(url):
+    def _probe(url, api_key="local"):
         probes["n"] += 1
         return "zulu"
 
