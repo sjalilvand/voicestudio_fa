@@ -24,7 +24,10 @@ loopback address. Configure remote access deliberately using the
 [API authentication guide](../api-auth.md), rather than exposing a desktop port
 without protection.
 
-For a protected backend, select **Generic Credential Type → Header Auth** in the
+For a protected backend, first use **HTTPS for every non-loopback connection**
+(including container host-gateway addresses). Do not attach a bearer key to a
+plain HTTP remote URL; configure TLS or a local encrypted tunnel first. Then
+select **Generic Credential Type → Header Auth** in the
 HTTP Request node and store `Authorization: Bearer <your key>` in n8n's credential
 manager. Never put keys in the URL or exported workflow JSON. Redirects are
 explicitly disabled, and non-success responses remain errors. The timeout is
