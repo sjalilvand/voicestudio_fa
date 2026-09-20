@@ -490,3 +490,17 @@ def test_an_unlisted_ancillary_page_inside_back_matter_keeps_it_open():
     script = li.epub_to_chapter_script(_epub(docs, nav=nav))
     for gone in ("Ryde Road", "See the appendix", "The reason for this use"):
         assert gone not in script
+
+
+@pytest.mark.parametrize('body', [
+    '<h1>Prologue</h1><p>A brief but real opening scene.</p>',
+    '<p>' + 'A substantive opening scene continues here. ' * 100 + '</p>',
+])
+def test_declared_reading_start_keeps_substantive_unlisted_prologue(body):
+    import importlib
+    importer = importlib.import_module('services.longform_import')
+    nav = _PLAIN_NAV.format(extra='', landmarks='')
+    guide = '<reference type="text" href="ch1.xhtml"/>'
+    docs = _untyped_book(**{'teaser.xhtml': _doc(body)})
+    script = importer.epub_to_chapter_script(_epub(docs, nav=nav, guide=guide))
+    assert 'opening scene' in script
