@@ -1639,7 +1639,10 @@
     "emotion_text": "감정 설명",
     "emotion_text_ph": "예: 지쳐 보이고 슬픈 소리",
     "emotion_alpha": "감정의 강도",
-    "lex_duplicate": "단어마다 발음을 하나만 지정하세요."
+    "lex_duplicate": "단어마다 발음을 하나만 지정하세요.",
+    "line_gap": "줄 사이 간격",
+    "paragraph_gap": "문단 사이 간격",
+    "trim_edges": "엔진 무음 잘라내기"
   },
   "credentials": {
     "microsoft_key": "마이크로소프트 번역기 키",

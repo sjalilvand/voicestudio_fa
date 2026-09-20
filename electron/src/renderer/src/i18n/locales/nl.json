@@ -1639,7 +1639,10 @@
     "emotion_text": "Emotie beschrijving",
     "emotion_text_ph": "bijv. klinkt uitgeput en verdrietig",
     "emotion_alpha": "Emotie sterkte",
-    "lex_duplicate": "Gebruik één uitspraak per woord."
+    "lex_duplicate": "Gebruik één uitspraak per woord.",
+    "line_gap": "Pauze tussen regels",
+    "paragraph_gap": "Pauze tussen alinea's",
+    "trim_edges": "Enginestilte inkorten"
   },
   "credentials": {
     "microsoft_key": "Microsoft Translator-sleutel",

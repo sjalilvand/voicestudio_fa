@@ -1643,7 +1643,10 @@
     "emotion_text": "Опис емоції",
     "emotion_text_ph": "напр. звучить виснажено і сумно",
     "emotion_alpha": "Інтенсивність емоції",
-    "lex_duplicate": "Укажіть одну вимову для кожного слова."
+    "lex_duplicate": "Укажіть одну вимову для кожного слова.",
+    "line_gap": "Пауза між рядками",
+    "paragraph_gap": "Пауза між абзацами",
+    "trim_edges": "Обрізати тишу рушія"
   },
   "credentials": {
     "microsoft_key": "Ключ перекладача Microsoft",

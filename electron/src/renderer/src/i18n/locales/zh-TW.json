@@ -1639,7 +1639,10 @@
     "emotion_text": "情感描述",
     "emotion_text_ph": "例如 聽起來很疲勞和悲傷",
     "emotion_alpha": "情感強度",
-    "lex_duplicate": "每個詞只保留一種發音。"
+    "lex_duplicate": "每個詞只保留一種發音。",
+    "line_gap": "行間停頓",
+    "paragraph_gap": "段落間停頓",
+    "trim_edges": "裁剪引擎靜音"
   },
   "credentials": {
     "microsoft_key": "微軟翻譯金鑰",

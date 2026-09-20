@@ -1643,7 +1643,10 @@
     "emotion_text": "Opis emocji",
     "emotion_text_ph": "np. brzmi wyczerpany i smutny",
     "emotion_alpha": "Siła emocji",
-    "lex_duplicate": "Użyj jednej wymowy dla każdego słowa."
+    "lex_duplicate": "Użyj jednej wymowy dla każdego słowa.",
+    "line_gap": "Przerwa między wierszami",
+    "paragraph_gap": "Przerwa między akapitami",
+    "trim_edges": "Przytnij ciszę silnika"
   },
   "credentials": {
     "microsoft_key": "Klucz tłumacza Microsoft",

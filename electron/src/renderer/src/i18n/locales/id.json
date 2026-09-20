@@ -1639,7 +1639,10 @@
     "emotion_text": "Deskripsi emosi",
     "emotion_text_ph": "mis. terdengar lelah dan sedih",
     "emotion_alpha": "Kekuatan emosi",
-    "lex_duplicate": "Gunakan satu pelafalan untuk setiap kata."
+    "lex_duplicate": "Gunakan satu pelafalan untuk setiap kata.",
+    "line_gap": "Jeda antar baris",
+    "paragraph_gap": "Jeda antar paragraf",
+    "trim_edges": "Pangkas keheningan mesin"
   },
   "credentials": {
     "microsoft_key": "Kunci Penerjemah Microsoft",

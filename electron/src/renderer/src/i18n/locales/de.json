@@ -1639,7 +1639,10 @@
     "emotion_text": "Emotionsbeschreibung",
     "emotion_text_ph": "z.B. klingt erschöpft und traurig",
     "emotion_alpha": "Emotionale Stärke",
-    "lex_duplicate": "Verwende nur eine Aussprache pro Wort."
+    "lex_duplicate": "Verwende nur eine Aussprache pro Wort.",
+    "line_gap": "Pause zwischen Zeilen",
+    "paragraph_gap": "Pause zwischen Absätzen",
+    "trim_edges": "Engine-Stille kürzen"
   },
   "credentials": {
     "microsoft_key": "Microsoft-Übersetzerschlüssel",

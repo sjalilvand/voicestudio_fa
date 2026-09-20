@@ -1647,7 +1647,10 @@
     "emotion_text": "وصف العاطفة",
     "emotion_text_ph": "على سبيل المثال يبدو متعباً وحزيناً",
     "emotion_alpha": "قوة العاطفة",
-    "lex_duplicate": "احتفظ بنطق واحد لكل كلمة."
+    "lex_duplicate": "احتفظ بنطق واحد لكل كلمة.",
+    "line_gap": "الفاصل بين الأسطر",
+    "paragraph_gap": "الفاصل بين الفقرات",
+    "trim_edges": "اقتطاع صمت المحرك"
   },
   "credentials": {
     "microsoft_key": "مفتاح مترجم مايكروسوفت",

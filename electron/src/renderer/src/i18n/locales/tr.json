@@ -1639,7 +1639,10 @@
     "emotion_text": "Duygu açıklaması",
     "emotion_text_ph": "örn. tükenmiş ve üzgün geliyor",
     "emotion_alpha": "Duygu gücü",
-    "lex_duplicate": "Her sözcük için tek bir telaffuz kullanın."
+    "lex_duplicate": "Her sözcük için tek bir telaffuz kullanın.",
+    "line_gap": "Satırlar arası boşluk",
+    "paragraph_gap": "Paragraflar arası boşluk",
+    "trim_edges": "Motor sessizliğini kırp"
   },
   "credentials": {
     "microsoft_key": "Microsoft Çevirmen Anahtarı",

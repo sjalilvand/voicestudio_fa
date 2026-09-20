@@ -1641,7 +1641,10 @@
     "emotion_text": "Descrição da emoção",
     "emotion_text_ph": "ex.: soa exausto e triste",
     "emotion_alpha": "Força emocional",
-    "lex_duplicate": "Use uma única pronúncia por palavra."
+    "lex_duplicate": "Use uma única pronúncia por palavra.",
+    "line_gap": "Pausa entre linhas",
+    "paragraph_gap": "Pausa entre parágrafos",
+    "trim_edges": "Cortar silêncio do motor"
   },
   "credentials": {
     "microsoft_key": "Chave do Microsoft Tradutor",

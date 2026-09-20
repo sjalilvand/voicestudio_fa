@@ -319,3 +319,8 @@ def test_summary_records_effective_tier_settings(monkeypatch):
     assert implicit == explicit
     assert implicit["options"]["num_step"] == 12
     assert implicit["options"]["postprocess_output"] is False
+
+
+def test_summary_oversized_speed_is_ignored():
+    from api.routers.longform_jobs import _clean_summary
+    assert _clean_summary({"speeds": [10 ** 1000, 1.2]})["speeds"] == [1.2]

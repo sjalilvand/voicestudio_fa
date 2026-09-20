@@ -83,9 +83,10 @@ def _clean_summary(raw) -> Optional[dict]:
         if isinstance(v, dict)
     ]
     speeds = [
-        round(float(x), 2)
+        round(value, 2)
         for x in (raw.get("speeds") if isinstance(raw.get("speeds"), list) else [])
-        if isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
+        if isinstance(x, (int, float)) and not isinstance(x, bool)
+        if math.isfinite(value := _coerce_float(x, float("nan")))
     ]
     titles = [str(t) for t in (raw.get("chapter_titles") if isinstance(raw.get("chapter_titles"), list) else [])
               if isinstance(t, str)]
