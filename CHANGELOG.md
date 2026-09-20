@@ -27,6 +27,8 @@ the frozen-backend fallback mirror it for their toolchains.
 ### Fixed
 
 - Stories: the book-wide reading speed moved from the bottom of the collapsed Cast card to the setup card beside voice and language, shows how many lines override it, and resets them in one click (#2230) — thanks @jaketame!
+- Reject unsupported synthesis languages before model loading, including named picker choices and per-item batch languages (#2219) — thanks @rollroyces!
+- The desktop app points the backend at the `uv` it already ships, so one-click engine installs stop failing preflight with "uv was not found" on a clean install — the packaged binary sits in the app's own resources directory, which is on no `PATH`, and a GUI launch inherits none of the shell's `PATH` additions either (#2221, #2215) — thanks @baoyu0 for the diagnosis!
 - EPUB import narrates the book, not its print furniture: page numbers no longer glue onto words or appear as lone lines, cover/title/dedication/copyright/contents pages are skipped, and chapters are titled from the book's table of contents (#2208) — thanks @jaketame!
 - Stories: a long script no longer paints over the generation progress panel and the Generate/Stop footer while an audiobook renders (#2213) — thanks @jaketame!
 - Keep macOS dictation keyboard operations on the main thread to prevent paste-delivery crashes (#2123)
