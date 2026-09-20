@@ -13,7 +13,7 @@ The default backend is `http://localhost:3900`; honor the user's configured addr
 
 1. Check `GET /health`.
 2. Discover the running version's contracts with `GET /openapi.json`, and voices/engines with `GET /v1/audio/voices`. Do not invent profile IDs or infer installed models from a catalog listing.
-3. If unavailable, launch the installed app. For an existing source checkout, follow its Electron README (`bun install`, then `bun run dev` from the repository root). Do not install a second backend or overwrite an existing checkout.
+3. If unavailable, launch the installed app. For an existing source checkout, follow its Electron README (`bun install`, `bun run setup:api`, then `bun run dev` from the repository root). Do not install a second backend or overwrite an existing checkout.
 4. Local configurations may permit unauthenticated calls; protected deployments require the configured credentials. Treat 401/403 as authentication failures, not permission to disable auth. Never print tokens or use a placeholder key as if it were a real credential.
 
 ## Generate speech

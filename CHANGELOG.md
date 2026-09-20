@@ -32,6 +32,7 @@ the frozen-backend fallback mirror it for their toolchains.
 
 - LM Studio discovery respects the selected model and dictation refinement preserves literal text while handling unsupported reasoning options (#2252) — thanks @joseedson18jc!
 - CosyVoice uses matching float32 weights and inputs without CUDA, preventing a worker-thread dtype failure while preserving CUDA precision (#2096)
+- Source Electron launches reuse the prepared Python runtime instead of downloading dependencies inside the startup timeout (#2184)
 
 - Stories and Audiobook: Generate, the chapter tracker and the render status are pinned in the setup pane instead of sitting below the last line of the script, and a disabled Generate now says why (#2229) — thanks @jaketame!
 - EPUB import no longer turns an unmarked teaser page, a "Works by" list, a publisher's address page or a stray footnotes page into chapters — the book's declared start and its contents decide what is front and back matter (#2228) — thanks @jaketame!

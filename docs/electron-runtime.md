@@ -5,6 +5,8 @@ Electron shortcut, or set `VOICESTUDIO_OPEN_DEVTOOLS=1` before `bun run dev`.
 This prevents Chromium's detached performance monitor from injecting failing
 timers into the app execution context during route transitions.
 
+Source launches verify required imports offline, then use the repository’s prepared `.venv` interpreter directly; startup and Retry never run dependency synchronization. Run `bun run setup:api` once before `bun run dev`, and again after Python dependencies change. Let setup finish before launching the app so a large PyTorch download is not interrupted by the backend health-check deadline. An explicit `OMNIVOICE_BACKEND_CMD` remains responsible for its own environment.
+
 Packaged startup first checks for a running VoiceStudio backend. If one answers, the shell attaches without creating or modifying a Python environment.
 
 Otherwise, an installation matching the bundled `pyproject.toml` and `uv.lock` is required. The setup view explains the dependency download and waits for **Install local runtime**. Startup and Retry do not install automatically. Model downloads remain separate engine actions.
