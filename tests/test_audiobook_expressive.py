@@ -475,7 +475,10 @@ def test_line_gap_never_lands_inside_a_line_split_by_inline_markup():
 
 
 def test_join_silence_budget_rejects_before_synthesis_or_cache(monkeypatch):
-    from services import audiobook
+    import importlib
+    audiobook = importlib.import_module("services.audiobook")
+    synthesize_chapter = audiobook.synthesize_chapter
+    Span = audiobook.Span
     from unittest.mock import Mock
 
     monkeypatch.setattr(audiobook, "MAX_JOIN_SILENCE_MS", 1000)
@@ -494,7 +497,10 @@ def test_join_silence_budget_rejects_before_synthesis_or_cache(monkeypatch):
 
 
 def test_join_silence_budget_keeps_exact_gaps_and_pause_precedence(monkeypatch):
-    from services import audiobook
+    import importlib
+    audiobook = importlib.import_module("services.audiobook")
+    synthesize_chapter = audiobook.synthesize_chapter
+    Span = audiobook.Span
 
     monkeypatch.setattr(audiobook, "MAX_JOIN_SILENCE_MS", 1000)
     spans = [Span(voice_id=None, text="a\n\nb", pause_ms_after=200),
