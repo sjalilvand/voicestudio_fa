@@ -356,3 +356,10 @@ def test_qwen_cached_decode_matches_full_context_without_model_download(monkeypa
         _, cache = encoder.forward_one_step(xs[:, :7], torch.ones(1, 7, 7, dtype=torch.bool))
         actual, _ = encoder.forward_one_step(xs[:, 7:], torch.ones(1, 1, 1, dtype=torch.bool), cache)
     torch.testing.assert_close(actual[:, -1], expected[:, -1], rtol=1e-4, atol=1e-5)
+
+
+def test_load_preserves_legacy_non_qwen_checkout(monkeypatch, tmp_path):
+    sidecar, _ = _load_sidecar(monkeypatch, tmp_path, [])
+    monkeypatch.delattr(sys.modules['cosyvoice.llm.llm'], 'Qwen2Encoder')
+    monkeypatch.setitem(sys.modules, 'transformers', types.ModuleType('transformers'))
+    assert sidecar._load_model(io.BytesIO()) is not None
