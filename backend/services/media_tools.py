@@ -335,7 +335,7 @@ def _install_staged_directory(staged: str, target: str) -> None:
             except OSError:
                 # A locked old binary must not turn a successful update into a
                 # reported failure, or mask the original publication error.
-                logger.warning("media-tools: old backup retained at %s", backup_root)
+                logger.warning("media-tools: old backup retained: %s", os.path.basename(backup_root))
 
 
 def _do_acquire() -> None:
