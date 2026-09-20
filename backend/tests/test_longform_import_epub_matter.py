@@ -16,7 +16,12 @@ import zipfile
 
 import pytest
 
-from services import longform_import as li
+@pytest.fixture(autouse=True)
+def _runtime_import_module():
+    global li
+    from services import longform_import
+    li = longform_import
+
 
 _CONTAINER = (
     '<?xml version="1.0"?>'
