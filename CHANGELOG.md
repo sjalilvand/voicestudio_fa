@@ -89,6 +89,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### CI
 
+- Electron packaging rehearsals install and start a fresh managed runtime on every desktop target before passing (#2263)
+
 - Make the native ASR timeout regression reliable on slow runners and wait for its worker cleanup (#2202)
 
 ## [0.5.4] — 2026-09-17
