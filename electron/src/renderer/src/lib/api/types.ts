@@ -50,6 +50,8 @@ export interface HistoryItem {
 
 // ── Engines (`GET /engines`) ───────────────────────────────────────────────
 export interface EngineBackend {
+  /** Lowercase picker names; null/absent means model-specific or unrestricted. */
+  supported_language_names?: string[] | null;
   execution_evidence?: {
     evidence_state: string;
     actual_execution_provider?: string | null;

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import '@/i18n';
 import { LanguagePicker } from './language-picker';
@@ -22,4 +22,25 @@ it('shows language options after the popover mounts and supports filtered select
   fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Japanese' } });
   fireEvent.click(await screen.findByRole('option', { name: 'Japanese' }));
   expect(select).toHaveBeenCalledWith('language', 'Japanese');
+});
+
+it('disables unsupported languages for pointer and keyboard selection', async () => {
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(320);
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(340);
+  const onValueChange = vi.fn();
+  render(<LanguagePicker supportedOptions={['english']} onValueChange={onValueChange} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Language' }));
+  fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Japanese' } });
+  const japanese = await screen.findByRole('option', { name: 'Japanese' });
+  expect(japanese).toBeDisabled();
+  await waitFor(() =>
+    expect(screen.queryByRole('option', { name: 'English' })).not.toBeInTheDocument(),
+  );
+  fireEvent.click(japanese);
+  fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' });
+  expect(onValueChange).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByRole('combobox'), { target: { value: 'English' } });
+  await screen.findByRole('option', { name: 'English' });
+  fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' });
+  expect(onValueChange).toHaveBeenCalledWith('English');
 });

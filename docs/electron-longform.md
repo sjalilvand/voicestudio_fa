@@ -49,3 +49,5 @@ SRT manuscript imports preserve spoken numbers, including countdowns and numeric
 Finished renders in Projects identify themselves: the row shows the book's title and a one-line recipe (voice · speed · engine · length), and **How it was made** expands to voice, speed, engine, language, format, size and the non-default settings. Renders made before this was recorded say so instead of showing a bare filename.
 
 Render history includes effective sampling settings (including performance-tier defaults). Non-finite request values are rejected; older malformed numeric details are sanitized so Projects and completion events remain readable.
+
+The output language picker in Clone, Stories and Audiobook disables languages outside the selected engine’s declared finite set. Auto remains available; unknown or model-specific language sets remain selectable and are checked by the backend. Reference recording languages and dubbing translation targets are independent of this output-language control. Switching engines preserves the selected language rather than rewriting saved projects.

@@ -27,6 +27,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Clone, Stories and Audiobook disable unsupported output-language choices for engines with a declared language list (#2104)
+
 - Stories and Audiobook: Generate, the chapter tracker and the render status are pinned in the setup pane instead of sitting below the last line of the script, and a disabled Generate now says why (#2229) — thanks @jaketame!
 - EPUB import no longer turns an unmarked teaser page, a "Works by" list, a publisher's address page or a stray footnotes page into chapters — the book's declared start and its contents decide what is front and back matter (#2228) — thanks @jaketame!
 - Retry temporary media-tool installation locks and report failed cleanup instead of hiding it (#2214) — thanks @baoyu0!

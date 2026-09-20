@@ -85,6 +85,8 @@ def _family_payload(family: str, module):
 
         for backend in backends:
             engine_id = backend.get("id")
+            if engine_id == active:
+                backend["supported_language_names"] = tts_backend.language_options(active)
             if engine_id == active == "mlx-audio":
                 # Constructor resolves model preferences only; never loads weights.
                 backend["supports_cloning"] = tts_backend.MLXAudioBackend().supports_cloning
