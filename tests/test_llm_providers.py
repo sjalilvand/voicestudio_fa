@@ -428,7 +428,10 @@ def test_loaded_model_probe_uses_the_configured_key(lp, monkeypatch):
 @pytest.mark.parametrize('url', ['file:///tmp/models', 'ftp://host/models', 'https:///missing-host'])
 def test_loaded_model_probe_rejects_non_http_targets(lp, monkeypatch, url):
     import urllib.request
+    calls = []
     def forbidden(*args, **kwargs):
+        calls.append(args)
         raise AssertionError('invalid URL must not reach transport')
     monkeypatch.setattr(urllib.request, 'urlopen', forbidden)
     assert lp._probe_lmstudio_loaded_model(url) is None
+    assert not calls
