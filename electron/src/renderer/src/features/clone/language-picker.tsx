@@ -42,12 +42,14 @@ export function LanguagePicker({
   value,
   onValueChange,
   options,
+  supportedOptions,
   disabled = false,
   className,
 }: {
   value?: string;
   onValueChange?: (value: string) => void;
   options?: string[];
+  supportedOptions?: readonly string[] | null;
   disabled?: boolean;
   className?: string;
 } = {}) {
@@ -75,7 +77,11 @@ export function LanguagePicker({
     overscan: 12,
   });
 
-  const firstItem = rows.findIndex((r) => r.kind === 'item');
+  const allowed = (value: string) =>
+    value.toLowerCase() === 'auto' ||
+    supportedOptions == null ||
+    supportedOptions.includes(value.toLowerCase());
+  const firstItem = rows.findIndex((r) => r.kind === 'item' && allowed(r.value));
 
   useEffect(() => {
     if (!open) return;
@@ -83,16 +89,19 @@ export function LanguagePicker({
   }, [open, rows, firstItem]);
 
   const select = (value: string) => {
+    if (disabled || !allowed(value)) return;
     if (onValueChange) onValueChange(value);
     else setCloneSetting('language', value);
     setOpen(false);
   };
 
   const move = (dir: 1 | -1) => {
+    if (firstItem < 0) return;
     let next = active;
     for (let i = 0; i < rows.length; i += 1) {
       next = (next + dir + rows.length) % rows.length;
-      if (rows[next]?.kind === 'item') break;
+      const row = rows[next];
+      if (row?.kind === 'item' && allowed(row.value)) break;
     }
     setActive(next);
     virtualizer.scrollToIndex(next, { align: 'auto' });
@@ -107,6 +116,7 @@ export function LanguagePicker({
       move(-1);
     } else if (event.key === 'Enter') {
       event.preventDefault();
+      if (query !== debouncedQuery) return;
       const row = rows[active];
       if (row?.kind === 'item') select(row.value);
     }
@@ -202,14 +212,18 @@ export function LanguagePicker({
                     id={`${listId}-${item.index}`}
                     role="option"
                     aria-selected={selected}
+                    aria-disabled={!allowed(row.value)}
+                    disabled={!allowed(row.value)}
                     tabIndex={-1}
                     className={cn(
-                      'absolute top-0 left-0 flex w-full items-center gap-2 rounded-md px-2 text-left text-sm outline-none',
+                      'absolute top-0 left-0 flex w-full items-center gap-2 rounded-md px-2 text-left text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50',
                       isActive && 'bg-accent text-accent-foreground',
                       selected && 'font-medium',
                     )}
                     style={style}
-                    onMouseMove={() => setActive(item.index)}
+                    onMouseMove={() => {
+                      if (allowed(row.value)) setActive(item.index);
+                    }}
                     onClick={() => select(row.value)}
                   >
                     <span className="min-w-0 flex-1 truncate">{row.value}</span>

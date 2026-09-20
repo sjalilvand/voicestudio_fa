@@ -158,3 +158,5 @@ describe('ActionBar', () => {
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '62');
   });
 });
+
+vi.mock('@/hooks/use-engines', () => ({ useEngines: () => ({ activeTts: null }) }));

@@ -2983,6 +2983,41 @@ def get_backend_class(backend_id: str) -> type[TTSBackend]:
     return _effective_backend_class(backend_id, _REGISTRY[backend_id])
 
 
+def language_options(backend_id: str) -> Optional[list[str]]:
+    """Picker names for a finite engine; None leaves unknown/model-specific sets open.
+
+    Adapter constructors configure references only. Never load weights or call
+    get_active_tts_backend here: discovery must not switch or unload an engine.
+    """
+    from omnivoice.utils.lang_map import LANG_NAME_TO_ID
+
+    backend = None
+    try:
+        backend = get_backend_class(backend_id)()
+        declared = backend.supported_languages
+        if not declared or "multi" in declared:
+            return None
+        codes = {backend._normalize_language_code(code) for code in declared}
+        return sorted(name for name in LANG_NAME_TO_ID
+                      if backend._normalize_language_code(name) in codes)
+    except Exception:  # Optional metadata must not take down discovery.
+        logger.debug("Could not resolve language options for %s", backend_id, exc_info=True)
+        return None
+    finally:
+        # Sidecar constructors register a bound exit handler, which otherwise
+        # retains every temporary metadata instance for the process lifetime.
+        shutdown = getattr(backend, "shutdown", None)
+        if callable(shutdown) and getattr(backend, "_is_subprocess_isolated", False):
+            import atexit
+            try:
+                shutdown()
+            except Exception:
+                logger.debug("Could not clean up language metadata instance", exc_info=True)
+            finally:
+                atexit.unregister(shutdown)
+
+
+
 def cloning_unavailable_detail(engine_id: str, backend, cloning_purpose: str) -> str:
     """Why the active engine can't clone, and the smallest change that fixes it.
 
