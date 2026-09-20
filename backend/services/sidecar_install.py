@@ -140,6 +140,8 @@ class SidecarSpec:
     # Extra `uv venv` arguments — an interpreter pin for an upstream that
     # declares one, e.g. ("--python", "3.10").
     venv_args: tuple[str, ...] = ()
+    # Existing environments may support more minors than the preferred pin.
+    compatible_python: tuple[str, ...] = ()
     # `uv pip install` target, "{checkout}" substituted. Each upstream installs
     # differently (editable, editable with an extra, a requirements file, a
     # constraints file); the default is the editable install IndexTTS uses.
@@ -307,6 +309,8 @@ SPECS: dict[str, SidecarSpec] = {
         checkout_dirname="index-tts-2.5",
         env_var="OMNIVOICE_INDEXTTS_DIR",
         probe_module="indextts.infer_v2_5",
+        venv_args=("--python", "3.11"),
+        compatible_python=("3.10", "3.11"),
         repo_ref="indextts-2.5",
         source_revision="bf2e967fac7933197143b017a60820b1ad40c448",
         source_required_path="indextts/infer_v2_5.py",
@@ -1376,16 +1380,59 @@ def _safe_extract_members(tf: "tarfile.TarFile", dest: str) -> None:
         tf.extract(member, dest)
 
 
+def _existing_venv_compatible(spec: SidecarSpec, py: Path) -> bool:
+    if "--python" not in spec.venv_args:
+        return True
+    pin = spec.venv_args[spec.venv_args.index("--python") + 1]
+    accepted = spec.compatible_python or (pin,)
+    try:
+        result = subprocess.run(
+            [str(py), "-I", "-c", "import sys; print('%s.%s' % sys.version_info[:2])"],
+            capture_output=True, text=True, timeout=15,
+        )
+        version = result.stdout.strip()
+        if result.returncode != 0 or not version or not all(
+            part.isdigit() for part in version.split(".")
+        ) or len(version.split(".")) != 2:
+            raise ValueError("interpreter did not report its Python version")
+    except (OSError, subprocess.TimeoutExpired, ValueError) as exc:
+        # TimeoutExpired includes the full command and OSError may include the
+        # user's home path. Keep job errors useful without copying either.
+        if isinstance(exc, subprocess.TimeoutExpired):
+            reason = "interpreter check timed out after 15 seconds"
+        elif isinstance(exc, OSError):
+            reason = f"{type(exc).__name__} (error {exc.errno})"
+        else:
+            reason = "interpreter did not report its Python version"
+        raise _StepError(
+            f"Could not check the existing {spec.display_name} Python environment: {reason}",
+            "Check that the environment's Python can run, then retry. "
+            "The existing environment has not been removed.",
+        ) from exc
+    return version in accepted
+
+
 def _step_create_venv(spec: SidecarSpec, job: dict) -> None:
     step = _job_step(job, "create_venv")
     checkout = managed_checkout(spec)
     venv_dir = checkout / ".venv"
     py = _venv_python(venv_dir)
     if py.is_file():
-        step["state"] = "done"
-        step["detail"] = "venv already present"
-        _log(job, f"Venv already present at {venv_dir} — skipping.")
-        return
+        if _existing_venv_compatible(spec, py):
+            step["state"] = "done"
+            step["detail"] = "venv already present"
+            _log(job, f"Compatible venv already present at {venv_dir} — skipping.")
+            return
+        # Never follow a user-provided venv symlink/junction when repairing.
+        if venv_dir.resolve() != checkout.resolve() / ".venv":
+            raise _StepError(
+                f"Incompatible Python environment is linked outside {checkout}.",
+                "Repair the linked environment manually or remove its link, then retry.",
+            )
+        _log(job, f"Rebuilding incompatible Python environment at {venv_dir} …")
+        (checkout / _INSTALL_COMPLETE_MARKER).unlink(missing_ok=True)
+        shutil.rmtree(venv_dir)
+        spec.invalidate()
     uv = _locate_uv()
     _log(job, f"Creating venv at {venv_dir} …")
     # Keep uv's cache on the engines volume (D:-install class) — see

@@ -1597,7 +1597,7 @@ def test_moss_existing_install_offers_dependency_repair(monkeypatch):
     monkeypatch.setattr(si, 'host_support', lambda _: (True, ''))
     assert si.start_install(spec.engine_id)['status'] == 'started'
     assert len(jobs) == 1
-    monkeypatch.setattr(si.subprocess, 'run', lambda *a, **k: SimpleNamespace(returncode=0))
+    monkeypatch.setattr(si.subprocess, 'run', lambda *a, **k: SimpleNamespace(returncode=0, stdout='3.11\n'))
     # Execute the repair transaction, including its real source/venv/deps/
     # verification/weights steps. Only external operations are stubbed.
     monkeypatch.setattr(si, '_step_preflight', lambda *_: None)
@@ -1613,3 +1613,80 @@ def test_moss_existing_install_offers_dependency_repair(monkeypatch):
     assert si._healthy(spec)
     assert weights.read_bytes() == b'existing weights'
     assert py.read_text() == 'existing interpreter'
+
+
+@pytest.mark.parametrize('version', ['3.14', '3.11', '3.10'])
+def test_indextts_repairs_only_incompatible_python(monkeypatch, version):
+    spec = si.SPECS['indextts2']
+    checkout = si.managed_checkout(spec)
+    py = si._venv_python(checkout / '.venv')
+    py.parent.mkdir(parents=True)
+    py.write_text('old interpreter')
+    weights = checkout / 'checkpoints' / 'model.bin'
+    weights.parent.mkdir()
+    weights.write_bytes(b'existing weights')
+    source = checkout / 'pyproject.toml'
+    source.write_text('existing source')
+    marker = checkout / si._INSTALL_COMPLETE_MARKER
+    marker.write_text('old success')
+    calls = []
+    monkeypatch.setattr(si, '_locate_uv', lambda: '/fake/uv')
+    monkeypatch.setattr(si, '_run_logged', _fake_run_logged(calls))
+    monkeypatch.setattr(si.subprocess, 'run', lambda *a, **k: SimpleNamespace(
+        returncode=0, stdout=version + '\n', stderr=''))
+    si._step_create_venv(spec, si._new_job(spec.engine_id))
+    if version == '3.14':
+        assert calls and calls[0][-2:] == ['--python', '3.11']
+        assert not marker.exists()
+        assert py.read_text() != 'old interpreter'
+    else:
+        assert calls == []
+        assert marker.exists()
+        assert py.read_text() == 'old interpreter'
+    assert weights.read_bytes() == b'existing weights'
+    assert source.read_text() == 'existing source'
+
+
+def test_all_sidecar_recipes_pin_python():
+    for spec in si.SPECS.values():
+        assert '--python' in spec.venv_args, spec.engine_id
+
+
+def test_incompatible_linked_venv_is_not_deleted(monkeypatch, tmp_path):
+    spec = _mk_spec(venv_args=('--python', '3.11'))
+    checkout = si.managed_checkout(spec)
+    checkout.mkdir(parents=True)
+    external = tmp_path / 'external'
+    py = si._venv_python(external)
+    py.parent.mkdir(parents=True)
+    py.write_text('user interpreter')
+    try:
+        (checkout / '.venv').symlink_to(external, target_is_directory=True)
+    except OSError:
+        pytest.skip('host does not permit directory symlinks')
+    monkeypatch.setattr(si.subprocess, 'run', lambda *a, **k: SimpleNamespace(
+        returncode=0, stdout='3.14\n', stderr=''))
+    with pytest.raises(si._StepError, match='linked outside'):
+        si._step_create_venv(spec, si._new_job(spec.engine_id))
+    assert py.read_text() == 'user interpreter'
+    assert (checkout / '.venv').is_symlink()
+
+
+@pytest.mark.parametrize('failure', ['timeout', 'invalid', 'exit'])
+def test_unproven_venv_is_not_destroyed(monkeypatch, failure):
+    spec = _mk_spec(venv_args=('--python', '3.11'))
+    py = si._venv_python(si.managed_checkout(spec) / '.venv')
+    py.parent.mkdir(parents=True)
+    py.write_text('user interpreter')
+
+    def probe(*args, **kwargs):
+        if failure == 'timeout':
+            raise subprocess.TimeoutExpired(args[0], 15)
+        return SimpleNamespace(returncode=1 if failure == 'exit' else 0,
+                               stdout='invalid', stderr='')
+
+    monkeypatch.setattr(si.subprocess, 'run', probe)
+    with pytest.raises(si._StepError, match='Could not check') as error:
+        si._step_create_venv(spec, si._new_job(spec.engine_id))
+    assert str(py) not in str(error.value)
+    assert py.read_text() == 'user interpreter'

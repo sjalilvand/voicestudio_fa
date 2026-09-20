@@ -21,7 +21,7 @@ require substantial disk space.
 The installer:
 
 - checks for `uv` and at least 12 GB of free space;
-- installs the reviewed `indextts-2.5` source revision in an isolated venv;
+- installs the reviewed `indextts-2.5` source revision in an isolated Python 3.11 venv;
 - downloads the reviewed `IndexTeam/IndexTTS-2.5` model revision;
 - resumes partial model downloads;
 - saves `OMNIVOICE_INDEXTTS_DIR` and activates the engine without a restart.
@@ -32,6 +32,11 @@ environment, and weights pass verification. User-managed clones are never
 modified or removed; their legacy
 `indextts.infer_v2` entry point remains supported.
 
+Retrying a partial install rebuilds an incompatible managed Python environment
+(such as Python 3.14), preserving source and downloaded weights. Existing
+Python 3.10/3.11 environments are reused. Linked environments are never removed;
+if their interpreter cannot be checked, the installer reports how to recover.
+
 ## Manual install
 
 Use a separate checkout and venv. Do not install IndexTTS into VoiceStudio's
@@ -40,7 +45,7 @@ root environment.
 ```bash
 git clone --branch indextts-2.5 https://github.com/index-tts/index-tts.git
 cd index-tts
-uv venv .venv
+uv venv .venv --python 3.11
 uv pip install --python .venv/bin/python -e .
 hf download IndexTeam/IndexTTS-2.5 --local-dir=checkpoints
 ```
