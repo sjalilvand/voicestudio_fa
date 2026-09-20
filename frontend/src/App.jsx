@@ -633,7 +633,8 @@ function App() {
   // 'settings' may be sitting on another category.
   useEffect(() => {
     const isApiDeepLink = (hash) =>
-      !!hash && (hash.startsWith('#tag/') || hash.includes('speech-platform') || hash.includes('openapi'));
+      !!hash &&
+      (hash.startsWith('#tag/') || hash.includes('speech-platform') || hash.includes('openapi'));
     const handleHash = ({ initial }) => {
       if (!isApiDeepLink(window.location.hash)) return;
       if (!initial && useAppStore.getState().mode === 'settings') return;
