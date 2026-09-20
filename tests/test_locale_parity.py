@@ -460,3 +460,17 @@ def test_dub_plan_actions_and_explanations_are_translated(locale):
     ):
         assert segment.get(key), f"{locale}: missing segment.{key}"
         assert segment[key] != _load("en")["segment"][key]
+
+
+def test_locale_objects_have_no_duplicate_keys():
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    for directory in (root / "frontend/src/i18n/locales", root / "electron/src/renderer/src/i18n/locales"):
+        for path in directory.glob("*.json"):
+            def unique_object(pairs):
+                result = {}
+                for key, value in pairs:
+                    assert key not in result, f"{path.name}: duplicate locale key {key}"
+                    result[key] = value
+                return result
+            json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique_object)

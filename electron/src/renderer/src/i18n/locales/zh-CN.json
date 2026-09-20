@@ -1643,10 +1643,7 @@
     "emotion_text": "情感描述",
     "emotion_text_ph": "例如：听起来疲惫而悲伤",
     "emotion_alpha": "情感强度",
-    "lex_duplicate": "每个词只保留一种发音。",
-    "line_gap": "行间停顿",
-    "paragraph_gap": "段落间停顿",
-    "trim_edges": "裁剪引擎静音"
+    "lex_duplicate": "每个词只保留一种发音。"
   },
   "credentials": {
     "microsoft_key": "Microsoft Translator 密钥",

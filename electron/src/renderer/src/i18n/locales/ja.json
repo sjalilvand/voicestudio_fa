@@ -1639,10 +1639,7 @@
     "emotion_text": "感情の説明",
     "emotion_text_ph": "例 疲れているように聞こえ、悲しい",
     "emotion_alpha": "感情の強さ",
-    "lex_duplicate": "各単語の発音は1つだけ指定してください。",
-    "line_gap": "行間の間",
-    "paragraph_gap": "段落間の間",
-    "trim_edges": "エンジンの無音を切り詰める"
+    "lex_duplicate": "各単語の発音は1つだけ指定してください。"
   },
   "credentials": {
     "microsoft_key": "Microsoft トランスレータ キー",

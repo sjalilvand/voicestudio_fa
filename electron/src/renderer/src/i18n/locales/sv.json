@@ -1639,10 +1639,7 @@
     "emotion_text": "Emotionsbeskrivning",
     "emotion_text_ph": "t.ex. låter uttömd och ledsen",
     "emotion_alpha": "Emotionsstyrka",
-    "lex_duplicate": "Ange ett uttal per ord.",
-    "line_gap": "Paus mellan rader",
-    "paragraph_gap": "Paus mellan stycken",
-    "trim_edges": "Trimma motorns tystnad"
+    "lex_duplicate": "Ange ett uttal per ord."
   },
   "credentials": {
     "microsoft_key": "Microsoft Translator-nyckel",
