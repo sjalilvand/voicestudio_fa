@@ -29,6 +29,8 @@ the frozen-backend fallback mirror it for their toolchains.
 
 ### Fixed
 
+- Electron native-crash reports retain the faulting thread instead of losing it behind long stacks and extension lists (#2262)
+
 - Electron setup normalizes Windows proxy addresses while preserving explicit overrides and localhost exclusions (#2114)
 - Web API-reference recovery keeps the selected backend and credentials; AudioSeal embedding and detection normalize model sample rates without changing exported audio dimensions (#2252) — thanks @joseedson18jc!
 

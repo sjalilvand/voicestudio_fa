@@ -5,16 +5,16 @@ const CHAIN_MARKER_RE =
 /** The error line that ends the FIRST block of a chained traceback — i.e. the
  *  original cause. Empty string when `text` is not a chained traceback. */
 export function rootCauseLine(text) {
-  const lines = text.split('\n');
+  const lines = text.split("\n");
   const marker = lines.findIndex((l) => CHAIN_MARKER_RE.test(l.trim()));
-  if (marker <= 0) return '';
+  if (marker <= 0) return "";
   // Walk back past the marker's blank line to the last non-indented line —
   // traceback frames are indented, the exception line is not.
   for (let i = marker - 1; i >= 0; i -= 1) {
     const line = lines[i];
     if (line.trim() && !/^\s/.test(line)) return line.trim();
   }
-  return '';
+  return "";
 }
 
 // Below this much room for actual log output, the root-cause header stops being
@@ -25,19 +25,20 @@ const MIN_TAIL_CHARS = 400;
 /** Python's native-fault dump puts the failing frame FIRST, unlike a regular
  * traceback. Prefer its current thread over other threads and extension lists. */
 export function nativeCrashExcerpt(text) {
-  const lines = text.split('\n');
+  const lines = text.split("\n");
   const start = lines.findLastIndex((line) =>
     /^(?:Fatal Python error:|Windows fatal exception:)/.test(line.trim()),
   );
-  if (start < 0) return '';
+  if (start < 0) return "";
   const dump = lines.slice(start);
   const current = dump.findIndex((line) => /^Current thread\b/.test(line.trim()));
   const frames = current >= 0 ? dump.slice(current) : dump.slice(1);
-  const end = frames.findIndex((line, index) =>
-    /^Extension modules:/.test(line.trim()) ||
-    (index > 0 && /^(?:Thread|Current thread)\b/.test(line.trim())),
+  const end = frames.findIndex(
+    (line, index) =>
+      /^Extension modules:/.test(line.trim()) ||
+      (index > 0 && /^(?:Thread|Current thread)\b/.test(line.trim())),
   );
-  return [dump[0], ...(end < 0 ? frames : frames.slice(0, end))].join('\n').trim();
+  return [dump[0], ...(end < 0 ? frames : frames.slice(0, end))].join("\n").trim();
 }
 
 /** Bound the crash stderr to `max` characters, keeping the newest end AND — for
@@ -48,14 +49,14 @@ export function nativeCrashExcerpt(text) {
 export function clampCrashTail(text, max = MAX_CRASH_TAIL_CHARS) {
   const native = nativeCrashExcerpt(text);
   if (native) {
-    const suffix = '\n… (truncated)';
+    const suffix = "\n… (truncated)";
     return native.length <= max
       ? native
       : (native.slice(0, Math.max(0, max - suffix.length)) + suffix).slice(0, max);
   }
   if (text.length <= max) return text;
 
-  const PLAIN = '… (truncated)';
+  const PLAIN = "… (truncated)";
   const plainTail = () => `${PLAIN}\n${text.slice(-Math.max(0, max - PLAIN.length - 1))}`;
 
   const root = rootCauseLine(text);
