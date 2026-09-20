@@ -259,3 +259,18 @@ def test_requirements_stay_above_the_advisory_fixes():
     for name, floor in _ADVISORY_FLOORS.items():
         assert name in pins, f"{name} is no longer pinned"
         assert Version(pins[name]) >= Version(floor), f"{name}=={pins[name]} is below {floor}"
+
+
+@pytest.mark.parametrize("cuda", [False, True])
+def test_load_uses_full_precision_without_cuda(monkeypatch, tmp_path, cuda):
+    calls = []
+    sidecar, _ = _load_sidecar(monkeypatch, tmp_path, calls)
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: cuda)
+    parts = {name: torch.nn.Linear(2, 2).to(dtype=torch.bfloat16) for name in ("llm", "flow", "hift")}
+    model = types.SimpleNamespace(model=types.SimpleNamespace(**parts))
+    monkeypatch.setattr(sys.modules["cosyvoice.cli.cosyvoice"], "AutoModel", lambda **kw: model)
+    assert sidecar._load_model(io.BytesIO()) is model
+    for part in parts.values():
+        assert part.weight.dtype == (torch.bfloat16 if cuda else torch.float32)
+        if not cuda:
+            assert torch.isfinite(part(torch.ones(1, 2))).all()

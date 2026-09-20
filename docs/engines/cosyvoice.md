@@ -98,3 +98,9 @@ cache or reinstall dependencies until the log identifies which state failed.
 
 The public report that exposed the misleading installed state is
 [Discussion 1631](https://github.com/debpalash/VoiceStudio/discussions/1631).
+
+
+On hosts without CUDA, the managed sidecar normalizes the LLM, flow and vocoder
+weights to float32 to match upstream CPU inputs. CUDA keeps its selected
+precision. This prevents the CPU Float/BFloat16 matrix mismatch; it does not
+establish that every reported installation or speech-quality problem is fixed.
