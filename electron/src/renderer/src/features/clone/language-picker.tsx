@@ -83,10 +83,13 @@ export function LanguagePicker({
     supportedOptions.includes(value.toLowerCase());
   const firstItem = rows.findIndex((r) => r.kind === 'item' && allowed(r.value));
 
+  const supportedKey =
+    supportedOptions == null ? null : JSON.stringify([...new Set(supportedOptions)].sort());
+
   useEffect(() => {
     if (!open) return;
     setActive(firstItem);
-  }, [open, rows, firstItem, supportedOptions]);
+  }, [open, rows, firstItem, supportedKey]);
 
   const select = (value: string) => {
     if (disabled || !allowed(value)) return;
