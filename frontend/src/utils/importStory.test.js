@@ -42,7 +42,9 @@ describe('parseSrt', () => {
     expect(parseSrt(s)).toBe('Count down with me. 3 Next');
   });
   it('preserves dialogue equal to the next index when cues are unnumbered', () => {
-    expect(parseSrt('00:00:01,000 --> 00:00:02,000\nCount\n2\n00:00:02,000 --> 00:00:03,000\nNext')).toBe('Count 2 Next');
+    expect(
+      parseSrt('00:00:01,000 --> 00:00:02,000\nCount\n2\n00:00:02,000 --> 00:00:03,000\nNext'),
+    ).toBe('Count 2 Next');
   });
   it('still drops the indices of a compact file', () => {
     const s =

@@ -35,7 +35,10 @@ export function parseSrt(content) {
       // dialogue ("3", "1984"), since a cue needs text.
       if (/^\d+$/.test(l) && lines[i + 1]?.includes('-->')) {
         const expected = (index ?? cues) + 1;
-        if (i === 0 || (index !== null && !lines[i - 1].includes('-->') && Number(l) === expected)) {
+        if (
+          i === 0 ||
+          (index !== null && !lines[i - 1].includes('-->') && Number(l) === expected)
+        ) {
           pending = Number(l);
           return;
         }
