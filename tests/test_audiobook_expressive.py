@@ -16,7 +16,12 @@ os.environ.setdefault("OMNIVOICE_DISABLE_FILE_LOG", "1")
 import pytest
 import torch
 
-from services.audiobook import Chapter, ExpressiveOptions, Span, segment_seed, synthesize_chapter
+@pytest.fixture(autouse=True)
+def _runtime_audiobook_symbols():
+    from services import audiobook
+    for name in ("Chapter", "ExpressiveOptions", "Span", "segment_seed", "synthesize_chapter"):
+        globals()[name] = getattr(audiobook, name)
+
 
 
 _RESOLVE = lambda _vid: {  # noqa: E731
@@ -514,7 +519,7 @@ def test_join_silence_budget_keeps_exact_gaps_and_pause_precedence(monkeypatch):
 def test_render_request_gap_fields_are_bounded_and_reach_options():
     from api.routers.audiobook import LongformRenderRequest, _expressive_opts
 
-    req = LongformRenderRequest()
+    req = LongformRenderRequest(line_gap_ms=250, paragraph_gap_ms=350, trim_edges=True)
     opts = _expressive_opts(req)
     assert (opts.line_gap_ms, opts.paragraph_gap_ms, opts.trim_edges) == (250, 350, True)
     assert opts.cache_signature()  # non-default vs the dataclass → cache key moves
@@ -563,3 +568,9 @@ def test_multichunk_join_keeps_trimmed_audio_and_original_drop_indices(monkeypat
     assert output.shape[-1] == expected
     assert len(reports) == 1
     assert reports[0][:3] == ([1], 3, ['first', 'missing', 'last'])
+
+
+def test_omitted_request_join_options_preserve_existing_audio():
+    from api.routers.audiobook import LongformRenderRequest
+    request = LongformRenderRequest()
+    assert (request.line_gap_ms, request.paragraph_gap_ms, request.trim_edges) == (0, 0, False)

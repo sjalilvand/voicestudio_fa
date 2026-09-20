@@ -251,3 +251,6 @@ description + strength, engine-gated. Still spec'd, not shipped: the
 engine-agnostic inline emotion/reaction tag grammar, the emotion-reference
 clip picker, and the Expression panel on the single-shot Voice page. No
 promised date — when each lands, this page gets updated in the same PR.
+
+Omitted API join options keep legacy hard joins (zero gaps, no edge trim).
+Clients enable seamless joins by sending their chosen gaps and trim explicitly.
