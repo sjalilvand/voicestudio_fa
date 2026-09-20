@@ -38,6 +38,13 @@ version only after validation.
 1. Merge only after required CI and review are green.
 2. Run the artifact-only Electron rehearsal, `.github/workflows/electron-build.yml`,
    and inspect all four outputs: Linux x64, Windows x64, macOS arm64, macOS x64.
+   It first checks the setup screen, then installs and starts the managed Python
+   runtime in a separate temporary profile on Linux, Windows and Apple Silicon.
+   Intel Macs retain packaging/setup checks under their existing
+   [UI/remote-only contract](install/macos.md). The local-runtime test downloads
+   runtime packages, keeps model downloads disabled, verifies the live backend
+   connection and clean shutdown, and removes the test profile. A setup-screen
+   check alone is not evidence that runtime installation works.
 3. Verify a packaged launch and managed backend startup on the changed platforms.
 4. Rename `## [Unreleased]` in `CHANGELOG.md` to `## [X.Y.Z] — YYYY-MM-DD`.
    Lead with the largest user-visible change, keep Highlights to 3–5 bullets,
