@@ -55,7 +55,6 @@ it('shows no override row when every line follows the book', () => {
   expect(screen.queryByRole('button', { name: 'Use for all lines' })).toBeNull();
 });
 
-
 it('applies the global speed to render requests without changing the cast or line voices', () => {
   const onChange = vi.fn();
   const story = {
@@ -72,10 +71,14 @@ it('applies the global speed to render requests without changing the cast or lin
   const updated = { ...story, ...onChange.mock.calls[0][0] };
   expect(updated.lines).toEqual(story.lines.map((line) => ({ ...line, speed: null })));
   expect(renderBody('stories', updated)).toMatchObject({
-    chapters: [{ spans: [
-      { text: 'First.', voice_id: 'cast-voice', speed: 0.95 },
-      { text: 'Second.', voice_id: 'line-voice', speed: 0.95 },
-    ] }],
+    chapters: [
+      {
+        spans: [
+          { text: 'First.', voice_id: 'cast-voice', speed: 0.95 },
+          { text: 'Second.', voice_id: 'line-voice', speed: 0.95 },
+        ],
+      },
+    ],
   });
 });
 
