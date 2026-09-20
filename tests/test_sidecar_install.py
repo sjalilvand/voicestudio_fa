@@ -1653,7 +1653,7 @@ def test_all_sidecar_recipes_pin_python():
 
 
 def test_incompatible_linked_venv_is_not_deleted(monkeypatch, tmp_path):
-    spec = _mk_spec(venv_args=('--python', '3.11'))
+    spec = _mk_spec(venv_args=('--python', '3.11'), compatible_python=('3.11',))
     checkout = si.managed_checkout(spec)
     checkout.mkdir(parents=True)
     external = tmp_path / 'external'
@@ -1674,7 +1674,7 @@ def test_incompatible_linked_venv_is_not_deleted(monkeypatch, tmp_path):
 
 @pytest.mark.parametrize('failure', ['timeout', 'invalid', 'exit'])
 def test_unproven_venv_is_not_destroyed(monkeypatch, failure):
-    spec = _mk_spec(venv_args=('--python', '3.11'))
+    spec = _mk_spec(venv_args=('--python', '3.11'), compatible_python=('3.11',))
     py = si._venv_python(si.managed_checkout(spec) / '.venv')
     py.parent.mkdir(parents=True)
     py.write_text('user interpreter')
@@ -1690,3 +1690,10 @@ def test_unproven_venv_is_not_destroyed(monkeypatch, failure):
         si._step_create_venv(spec, si._new_job(spec.engine_id))
     assert str(py) not in str(error.value)
     assert py.read_text() == 'user interpreter'
+
+
+@pytest.mark.parametrize("version", ["3.10", "3.12"])
+def test_unspecified_compatibility_does_not_rebuild_working_venv(monkeypatch, version):
+    spec = _mk_spec(venv_args=("--python", "3.11"))
+    monkeypatch.setattr(si.subprocess, "run", lambda *a, **k: SimpleNamespace(returncode=0, stdout=version, stderr=""))
+    assert si._existing_venv_compatible(spec, Path("existing-python"))
