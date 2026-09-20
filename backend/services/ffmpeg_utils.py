@@ -733,10 +733,12 @@ async def run_ffmpeg(cmd, timeout: float = 1800.0, capture: bool = True,
                         try:
                             proc.kill()
                         except ProcessLookupError:
+                            # It exited between the timeout check and kill.
                             pass
                         try:
                             await asyncio.wait_for(proc.wait(), timeout=5.0)
                         except asyncio.TimeoutError:
+                            # Reaping is bounded; preserve the original error.
                             pass
                         raise
                     if (
@@ -762,10 +764,12 @@ async def run_ffmpeg(cmd, timeout: float = 1800.0, capture: bool = True,
                         try:
                             proc.kill()
                         except ProcessLookupError:
+                            # It exited between the timeout check and kill.
                             pass
                         try:
                             await asyncio.wait_for(proc.wait(), timeout=5.0)
                         except asyncio.TimeoutError:
+                            # Reaping is bounded; preserve the original error.
                             pass
     finally:
         if script_path:
