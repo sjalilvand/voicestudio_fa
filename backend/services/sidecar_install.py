@@ -1383,10 +1383,9 @@ def _safe_extract_members(tf: "tarfile.TarFile", dest: str) -> None:
 
 
 def _existing_venv_compatible(spec: SidecarSpec, py: Path) -> bool:
-    if "--python" not in spec.venv_args:
+    if not spec.compatible_python:
         return True
-    pin = spec.venv_args[spec.venv_args.index("--python") + 1]
-    accepted = spec.compatible_python or (pin,)
+    accepted = spec.compatible_python
     try:
         result = subprocess.run(
             [str(py), "-I", "-c", "import sys; print('%s.%s' % sys.version_info[:2])"],
@@ -1423,20 +1422,20 @@ def _step_create_venv(spec: SidecarSpec, job: dict) -> None:
         if _existing_venv_compatible(spec, py):
             step["state"] = "done"
             step["detail"] = "venv already present"
-            _log(job, f"Compatible venv already present at {venv_dir} — skipping.")
+            _log(job, "Compatible .venv already present — skipping.")
             return
         # Never follow a user-provided venv symlink/junction when repairing.
         if venv_dir.resolve() != checkout.resolve() / ".venv":
             raise _StepError(
-                f"Incompatible Python environment is linked outside {checkout}.",
+                "Incompatible Python environment is linked outside its managed checkout.",
                 "Repair the linked environment manually or remove its link, then retry.",
             )
-        _log(job, f"Rebuilding incompatible Python environment at {venv_dir} …")
+        _log(job, "Rebuilding incompatible .venv Python environment …")
         (checkout / _INSTALL_COMPLETE_MARKER).unlink(missing_ok=True)
         shutil.rmtree(venv_dir)
         spec.invalidate()
     uv = _locate_uv()
-    _log(job, f"Creating venv at {venv_dir} …")
+    _log(job, "Creating managed .venv …")
     # Keep uv's cache on the engines volume (D:-install class) — see
     # uv_subprocess_env. The cache parent is the shared engines root, so
     # every sidecar engine reuses one cache.
