@@ -510,10 +510,9 @@ def epub_to_chapter_script(
             continue  # nav docs, empty pages
         sections.append((full, types, title, body))
 
-    start, declared = _front_matter_end(sections, toc, declared_start)
-    # A declared start is only trusted alongside a TOC: the TOC is what keeps a
-    # listed prologue that sits before a (commonly too-late) "start reading" mark.
-    trusted = declared and bool(toc)
+    start, _declared = _front_matter_end(sections, toc, declared_start)
+    # Reading-start metadata can skip a real unlisted prologue. Only discard
+    # short, headingless stray pages, never substantive opening sections.
     blocks: list[str] = []
     in_back_matter = False
     for index, (full, types, heading, body) in enumerate(sections):
@@ -527,7 +526,7 @@ def epub_to_chapter_script(
             continue  # cover, title page, dedication, copyright, contents, …
         unlisted = full not in toc and not (types & _BODY_TYPES)
         stray = not heading and len(body.split()) <= _FRONT_MATTER_MAX_WORDS
-        if index < start and unlisted and (trusted or stray):
+        if index < start and unlisted and stray:
             continue  # unlisted page ahead of the book: a teaser/epigraph/blurb
         if in_back_matter and unlisted and stray:
             # Footnotes, a stray ad — but ONLY once listed back matter has begun:
