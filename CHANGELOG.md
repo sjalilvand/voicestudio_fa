@@ -13,6 +13,7 @@ the frozen-backend fallback mirror it for their toolchains.
 - Dubbing, batch and voice conversion on mlx-audio point at the one model switch that enables cloning, instead of asking you to change engine (#2204) — thanks @shivsin25!
 - Bug reports filed from the desktop app name the backend error class again, so two unrelated failures stop looking identical (#2197)
 - Clearer recovery guidance for known GPU, Windows policy, and audio-file failures (#2195)
+- Long stories and audiobooks join rendered audio in one pass while preserving crossfades (#2259) — thanks @shivsin25!
 
 ### Changed
 
