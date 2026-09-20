@@ -624,6 +624,26 @@ function App() {
       setSidebarTab(availableSidebarTabs[0]);
     }
   }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Deep link: a Scalar anchor in the URL (#tag/speech-platform/GET/v1/…) opens
+  // Settings → API, where the embedded reference lives. Scalar rewrites the
+  // hash on every in-page click, so once we are already in Settings a change
+  // must NOT re-dispatch — it would set pendingSettingsTab on each click for
+  // nothing. The first evaluation always dispatches: a persisted mode of
+  // 'settings' may be sitting on another category.
+  useEffect(() => {
+    const isApiDeepLink = (hash) =>
+      !!hash && (hash.startsWith('#tag/') || hash.includes('speech-platform') || hash.includes('openapi'));
+    const handleHash = ({ initial }) => {
+      if (!isApiDeepLink(window.location.hash)) return;
+      if (!initial && useAppStore.getState().mode === 'settings') return;
+      openSettingsTab('openapi');
+    };
+    handleHash({ initial: true });
+    const onHashChange = () => handleHash({ initial: false });
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, [openSettingsTab]);
   const isSidebarProjectsCollapsed = useAppStore((s) => s.isSidebarProjectsCollapsed);
   const setIsSidebarProjectsCollapsed = useAppStore((s) => s.setIsSidebarProjectsCollapsed);
   const isSidebarCollapsed = useAppStore((s) => s.isSidebarCollapsed);

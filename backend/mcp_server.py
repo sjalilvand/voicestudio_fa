@@ -587,7 +587,7 @@ def create_mcp_server():
         raw, err = _read_input_audio(audio_base64, audio_path)
         if err:
             return json.dumps({"error": err})
-        data = {}
+        data = {"mode": "reference"}
         if language:
             data["language"] = language
         r = await _api_post_form(

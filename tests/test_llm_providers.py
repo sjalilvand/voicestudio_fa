@@ -301,3 +301,101 @@ def test_stored_active_provider_id_ignores_env_and_auto(lp, monkeypatch):
     assert lp.stored_active_provider_id() is None
     lp.set_active_provider("mistral")
     assert lp.stored_active_provider_id() == "mistral"
+
+
+def test_discover_model_probes_loaded_and_filters_embeddings(lp, monkeypatch):
+    lp.forget_discovered_models()
+    p = lp.get_provider("lmstudio")
+
+    # When LM Studio native API reports loaded model, it picks it
+    monkeypatch.setattr(
+        lp, "_probe_lmstudio_loaded_model",
+        lambda url: "qwen/qwen3.6-35b-a3b"
+    )
+    assert lp.discover_model(p) == "qwen/qwen3.6-35b-a3b"
+
+    # When fallback OpenAI models list runs, filters embeddings and picks preferred model
+    lp.forget_discovered_models()
+    monkeypatch.setattr(lp, "_probe_lmstudio_loaded_model", lambda url: None)
+
+    class _FakeModel:
+        def __init__(self, id):
+            self.id = id
+
+    class _FakeModels:
+        def list(self, timeout=None):
+            return [
+                _FakeModel("text-embedding-nomic-embed-text-v1.5"),
+                _FakeModel("qwen/qwen3.6-35b-a3b"),
+                _FakeModel("prism-ml/bonsai-27b"),
+            ]
+
+    class _FakeClient:
+        models = _FakeModels()
+
+    import openai
+    monkeypatch.setattr(openai, "OpenAI", lambda **kw: _FakeClient())
+    assert lp.discover_model(p) == "qwen/qwen3.6-35b-a3b"
+
+
+
+# ── LM Studio loaded-model discovery (regression) ───────────────────────────
+
+def test_lmstudio_loaded_model_never_overrides_the_stored_choice(lp, monkeypatch):
+    """The probe must sit BELOW the user's own choice.
+
+    Regression: it was wired into resolve_model above the stored override, so
+    picking a model in Settings → LLM Providers changed nothing for LM Studio —
+    the exact action the "pick one deliberately" log line tells the user to
+    take. It also cost an HTTP round trip on every resolve, which is what the
+    discovery cache exists to avoid.
+    """
+    lp.forget_discovered_models()
+    p = lp.get_provider("lmstudio")
+
+    probes: list[str] = []
+    monkeypatch.setattr(
+        lp, "_probe_lmstudio_loaded_model",
+        lambda url: (probes.append(url), "loaded/other-model")[1],
+    )
+    lp._text[lp._MODEL_KEY + "lmstudio"] = "my/deliberate-choice"
+
+    assert lp.resolve_model(p) == "my/deliberate-choice"
+    assert probes == []
+
+
+def test_lmstudio_discovery_uses_the_loaded_model_when_nothing_is_set(lp, monkeypatch):
+    lp.forget_discovered_models()
+    p = lp.get_provider("lmstudio")
+    monkeypatch.setattr(lp, "_probe_lmstudio_loaded_model", lambda url: "loaded/qwen3")
+    assert lp.resolve_model(p) == "loaded/qwen3"
+
+
+def test_discover_model_is_deterministic_regardless_of_server_order(lp, monkeypatch):
+    """Two runs on one machine must pick the same model, or a bug report from
+    this path is not reproducible."""
+    p = lp.get_provider("lmstudio")
+    monkeypatch.setattr(lp, "_probe_lmstudio_loaded_model", lambda url: None)
+
+    class _FakeModel:
+        def __init__(self, mid):
+            self.id = mid
+
+    def _fake_openai(order):
+        class _FakeModels:
+            def list(self, timeout=None):
+                return [_FakeModel(m) for m in order]
+
+        class _FakeClient:
+            models = _FakeModels()
+
+        return lambda **kw: _FakeClient()
+
+    import openai
+
+    picks = set()
+    for order in (["qwen/b-8b", "qwen/a-8b"], ["qwen/a-8b", "qwen/b-8b"]):
+        lp.forget_discovered_models()
+        monkeypatch.setattr(openai, "OpenAI", _fake_openai(order))
+        picks.add(lp.discover_model(p))
+    assert picks == {"qwen/a-8b"}

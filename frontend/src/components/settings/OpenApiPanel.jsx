@@ -27,6 +27,36 @@ const SPEC_PATH = '/openapi.json';
 
 const ScalarApiReference = lazy(() => import('./ScalarApiReference'));
 
+/**
+ * Fetch the spec from the backend base first — apiFetch is the path every other
+ * call takes (remote-backend override, LAN PIN, API key). When that transport
+ * fails and this page is itself served over http(s), try the SAME-ORIGIN copy:
+ * the dev server proxies `/openapi.json` to the backend (vite.config.js), and
+ * the packaged web build is served by the backend, so on those origins the
+ * relative URL IS the backend. This is what keeps the reference working in an
+ * embedded webview that walls off every origin but the page's own (the Claude
+ * desktop browser pane, for one) — there the direct base is unreachable while
+ * the same-origin route is fine. A file:// / app:// shell has no same-origin
+ * spec; the fallback fails too and the original error surfaces as before.
+ */
+async function fetchSpec() {
+  try {
+    const res = await apiFetch(SPEC_PATH);
+    return await res.json();
+  } catch (err) {
+    const proto = typeof window !== 'undefined' ? window.location?.protocol : '';
+    if (!/^https?:$/.test(proto)) throw err;
+    let res;
+    try {
+      res = await fetch(SPEC_PATH, { cache: 'no-store' });
+    } catch {
+      throw err;
+    }
+    if (!res.ok) throw err;
+    return await res.json();
+  }
+}
+
 function LoadingState({ label }) {
   return (
     <div
@@ -50,13 +80,12 @@ export default function OpenApiPanel() {
   const load = useCallback(async () => {
     setPhase('loading');
     try {
-      const res = await apiFetch(SPEC_PATH);
-      const data = await res.json();
-      setSpec(data);
+      setSpec(await fetchSpec());
       setPhase('ready');
     } catch {
-      // apiFetch already retried transient transport failures; a throw here
-      // means the backend genuinely isn't serving the spec right now.
+      // apiFetch already retried transient transport failures and the
+      // same-origin fallback was tried; a throw here means the backend
+      // genuinely isn't serving the spec right now.
       setSpec(null);
       setPhase('error');
     }

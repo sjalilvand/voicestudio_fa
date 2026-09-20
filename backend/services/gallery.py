@@ -447,7 +447,10 @@ async def check_for_updates(
         # A signature failure is not a transient network hiccup — it is the one
         # state the user should be able to see, so record it. The app still
         # works: previews render locally.
-        logger.warning("Voice gallery update rejected: %s", exc)
+        if "HTTP 404" in str(exc):
+            _quiet(exc)
+        else:
+            logger.warning("Voice gallery update rejected: %s", exc)
         state["last_checked"] = ts
         state["last_error"] = str(exc)
         _save_state(state)
@@ -590,7 +593,10 @@ async def fetch_featured(
             raise GalleryError("featured tarball digest does not match the manifest")
         extracted = _extract_featured(body, manifest)
     except GalleryError as exc:
-        logger.warning("Featured preview set rejected: %s", exc)
+        if "HTTP 404" in str(exc):
+            _quiet(exc)
+        else:
+            logger.warning("Featured preview set rejected: %s", exc)
         return status(now=now)
     except Exception as exc:
         _quiet(exc)

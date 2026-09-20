@@ -35,6 +35,21 @@ from core.prefs import resolve
 
 logger = logging.getLogger("omnivoice.watermark")
 
+
+class _AudiosealDeprecationFilter(logging.Filter):
+    """Suppress AudioSeal 0.2+ deprecated sample_rate warning.
+
+    AudioSeal 0.2+ operates without internal resampling and treats sample_rate as
+    a no-op, emitting a noisy warning on every call where sample_rate != 16000.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        msg = record.getMessage()
+        return not ("sample_rate" in msg and "will be ignored" in msg)
+
+
+logging.getLogger("Audioseal").addFilter(_AudiosealDeprecationFilter())
+
 # ── Lazy-loaded AudioSeal models ──────────────────────────────────────────
 # Loaded on first use so cold-start isn't penalised when watermarking is off.
 _generator = None
@@ -464,8 +479,12 @@ def embed_watermark(
         else:
             audio = waveform
 
-        # AudioSeal operates at 16kHz internally; it handles resampling, but
-        # we need to inform it of the source rate for correct embedding.
+        # AudioSeal 0.2+ does NOT resample internally: `sample_rate` is accepted
+        # but ignored (it only triggers the deprecation warning we filter at the
+        # top of this module), so the model runs at whatever rate the caller
+        # passes — embedding and detection use the same one, which is what makes
+        # the round trip consistent. Kept in the call for symmetry with
+        # detect_watermark and with pre-0.2 releases.
         with _eager_audioseal():
             watermarked = torch.cat(
                 [
