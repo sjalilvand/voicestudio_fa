@@ -6,7 +6,7 @@ covers **24 languages**, emits **48 kHz** audio, and is released under
 **Apache-2.0** (code + checkpoints).
 
 It runs in its own subprocess **and its own Python venv** with
-`transformers==4.57.0`, isolated from the VoiceStudio parent process which
+`transformers==4.57.1`, isolated from the VoiceStudio parent process which
 pins `transformers>=5.3` — the same isolation primitive used by
 [IndexTTS-2](indextts.md) and [MOSS-TTS-v1.5](moss-tts-v15.md).
 
@@ -41,6 +41,33 @@ The installer and lazy bootstrap pass the constraints file as an encoded local
 file URL. This preserves spaces (including macOS `Application Support`) and
 reserved characters without moving your engine or model data.
 
+### Dependencies and retrying a failed install
+
+VoiceStudio replaces the unavailable upstream `gradio==6.17.0` pin with
+`6.17.3` and the yanked `transformers==4.57.0` pin with `4.57.1` in a generated
+`.voicestudio-compatible.txt` beside the original constraints file. Original
+constraints, custom/newer pins, downloaded models and working environments stay
+intact. Managed installation and lazy bootstrap both use Python 3.11.
+
+The text normalizer depends on Pynini. Linux x86-64 has binary wheels; macOS
+and other hosts may need to build it against **OpenFst with FAR support** and a
+C++ compiler. On macOS install Xcode command-line tools (`xcode-select --install`)
+and `brew install openfst`. Set the following in the terminal launching
+VoiceStudio (or Settings → Environment) if Homebrew headers/libraries are not
+already on the compiler search path:
+
+```bash
+export CPLUS_INCLUDE_PATH="$(brew --prefix openfst)/include${CPLUS_INCLUDE_PATH:+:$CPLUS_INCLUDE_PATH}"
+export LIBRARY_PATH="$(brew --prefix openfst)/lib${LIBRARY_PATH:+:$LIBRARY_PATH}"
+```
+
+On Debian/Ubuntu source-build hosts, install
+`sudo apt install libfst-dev libfst-tools build-essential`. Other distributions
+need the equivalent OpenFst development package, including FAR libraries.
+Retry **Install** after preparing these dependencies; it reuses the existing
+source, environment and download cache. A missing `fst/util.h` is a compiler
+prerequisite failure, not a network error.
+
 ## Install
 
 dots.tts is **not** bundled (large checkpoint + conflicting `transformers`).
@@ -52,14 +79,18 @@ dots.tts is **not** bundled (large checkpoint + conflicting `transformers`).
    ```
 
 2. Install the editable package into a fresh venv with the upstream
-   constraints. Use `uv pip install -e . -c constraints/recommended.txt` —
+   compatible constraints below. Use `uv pip install -e . -c <constraints>` —
    **never** `uv sync --all-extras`, which would overwrite VoiceStudio's lock
    file with `transformers==4.57` and break the parent process:
 
    ```bash
    cd dots.tts
-   uv venv .venv
-   uv pip install -e . -c constraints/recommended.txt
+   uv venv .venv --python 3.11
+   # Repair the two known broken pins without editing upstream's file.
+   sed -e 's/^gradio==6.17.0$/gradio==6.17.3/' \
+       -e 's/^transformers==4.57.0$/transformers==4.57.1/' \
+       constraints/recommended.txt > constraints/.voicestudio-compatible.txt
+   uv pip install -e . -c constraints/.voicestudio-compatible.txt
    ```
 
 3. The ~9 GB checkpoint downloads from HuggingFace on first synthesize. The

@@ -1420,6 +1420,10 @@ def _step_install_deps(spec: SidecarSpec, job: dict) -> None:
     uv = _locate_uv()
     _log(job, f"Installing {spec.display_name} into its venv (this can take several minutes) …")
     target = [_expand(arg, checkout) for arg in spec.install_args]
+    if spec.engine_id == "dots-tts":
+        from engines.dots_tts.install import compatible_constraints
+        constraint = compatible_constraints(checkout / "constraints" / "recommended.txt")
+        target[target.index("-c") + 1] = constraint.resolve().as_uri()
     if spec.torch_pins:
         target += _torch_pin_args(spec)
     elif spec.cpu_torch_index:
@@ -1441,6 +1445,13 @@ def _step_install_deps(spec: SidecarSpec, job: dict) -> None:
             "Usually a network hiccup — re-run the install to resume. Behind a "
             "proxy, set HTTPS_PROXY in Settings → Environment first."
         )
+        if spec.engine_id == "dots-tts":
+            hint = (
+                "If the log mentions pynini or fst/util.h, install OpenFst and a "
+                "C++ compiler first (macOS: brew install openfst; Debian/Ubuntu: "
+                "sudo apt install libfst-dev libfst-tools build-essential), then "
+                "retry. See docs/engines/dots-tts.md for include/library paths. "
+            ) + hint
         if sys.platform == "win32":
             # Packages built from source (openai-whisper, for CosyVoice) nest
             # deep build folders under uv's cache; past Windows' 260-character

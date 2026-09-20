@@ -203,7 +203,7 @@ def _bootstrap_engines_venv(clone_dir: Path) -> Path:
 
     try:
         subprocess.run(
-            [uv, "venv", str(_ENGINES_VENV_DIR)],
+            [uv, "venv", str(_ENGINES_VENV_DIR), "--python", "3.11"],
             check=True, timeout=_UV_VENV_TIMEOUT_S, capture_output=True,
             env=_uv_env(),
         )
@@ -222,6 +222,8 @@ def _bootstrap_engines_venv(clone_dir: Path) -> Path:
     # Apply the upstream pin set when it ships with the clone.
     constraints = clone_dir / "constraints" / "recommended.txt"
     if constraints.is_file():
+        from .install import compatible_constraints
+        constraints = compatible_constraints(constraints)
         # uv splits constraint arguments on whitespace, even with a proper argv.
         # A file URI preserves spaces and reserved characters on every host.
         install_cmd += ["-c", constraints.resolve().as_uri()]
@@ -236,7 +238,8 @@ def _bootstrap_engines_venv(clone_dir: Path) -> Path:
             "uv pip install -e failed during dots.tts bootstrap "
             f"({clone_dir}): "
             f"{exc.stderr.decode('utf-8', errors='replace') if exc.stderr else exc}. "
-            "See docs/engines/dots-tts.md."
+            "If pynini reports missing fst/util.h, install OpenFst and a C++ "
+            "compiler first. See docs/engines/dots-tts.md for platform steps."
         ) from exc
 
     # Only a *proven* failure is fatal: a bootstrap that installed correctly

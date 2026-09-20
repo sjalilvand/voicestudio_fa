@@ -94,6 +94,10 @@ def _fake_run_logged(created: list):
             py = si._venv_python(venv)
             py.parent.mkdir(parents=True, exist_ok=True)
             py.write_text("#!fake python\n")
+            if job["engine_id"] == "dots-tts":
+                constraints = venv.parent / "constraints" / "recommended.txt"
+                constraints.parent.mkdir(parents=True, exist_ok=True)
+                constraints.write_text("six==1.17.0\n")
         # uv pip install: nothing to fabricate
         return 0
 
@@ -1016,6 +1020,9 @@ def _capture_install_argvs(monkeypatch, family="cuda"):
     monkeypatch.setattr(si, "_locate_uv", lambda: "/fake/uv")
     monkeypatch.setattr(si, "_host_family", lambda: family)
     monkeypatch.setattr(si, "_run_logged", _fake_run_logged(argvs))
+    constraints = si.managed_checkout(si.get_spec("dots-tts")) / "constraints" / "recommended.txt"
+    constraints.parent.mkdir(parents=True, exist_ok=True)
+    constraints.write_text("six==1.17.0\n")
     return argvs
 
 
