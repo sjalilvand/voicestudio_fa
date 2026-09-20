@@ -135,3 +135,16 @@ def test_openai_compat_vtt_transcription_escapes_cue_text(monkeypatch, text, esc
     ))
 
     assert _cues(response.body.decode("utf-8")) == [escaped]
+
+
+def test_imported_literal_tags_and_entities_keep_their_provenance():
+    from services.srt_parser import parse_srt
+    from services.dub_pipeline import _dub_jobs
+    source = "&lt;i&gt;literal&lt;/i&gt; &amp;lt;b&amp;gt; <i>real</i>"
+    job_id = _vtt_job(parse_srt("WEBVTT\n\n00:00:01.000 --> 00:00:02.000\n" + source).segments)
+    try:
+        exported = _client().get(f"/dub/vtt/{job_id}")
+        assert _shown(_cues(exported.text)[0]) == "<i>literal</i> &lt;b&gt; real"
+        assert "<i>real</i>" in exported.text
+    finally:
+        _dub_jobs.pop(job_id, None)

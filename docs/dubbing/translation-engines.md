@@ -267,3 +267,5 @@ Dubbing transcription emits keepalives during quiet diarization, reference-refin
 
 WebVTT exports escape unsafe cue text while retaining imported subtitle markup and existing references. OpenAI-compatible VTT transcription responses escape all markup and references because newly recognized speech is plain text. SRT output is unchanged.
 Downloaded and pasted WebVTT captions decode character references once before editing or synthesis, so `Q&amp;A` becomes `Q&A`. SubRip imports keep their original text.
+
+New WebVTT imports retain source cue syntax alongside decoded text, preserving literal escaped tags and entities on unchanged exports. Edited text and older projects retain the legacy markup interpretation.
