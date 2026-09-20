@@ -288,10 +288,14 @@ def _probe_lmstudio_loaded_model(base_url: str, api_key: str = "local") -> Optio
     """
     import json
     import urllib.request
+    from urllib.parse import urlsplit
 
     if not base_url:
         return None
     try:
+        parsed = urlsplit(base_url)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            return None
         clean_base = base_url.rstrip("/")
         if clean_base.endswith("/v1"):
             clean_base = clean_base[: -len("/v1")]
@@ -299,7 +303,7 @@ def _probe_lmstudio_loaded_model(base_url: str, api_key: str = "local") -> Optio
         if api_key and api_key != "local":
             headers["Authorization"] = f"Bearer {api_key}"
         req = urllib.request.Request(f"{clean_base}/api/v0/models", headers=headers)
-        with urllib.request.urlopen(req, timeout=_LMSTUDIO_PROBE_TIMEOUT_S) as resp:
+        with urllib.request.urlopen(req, timeout=_LMSTUDIO_PROBE_TIMEOUT_S) as resp:  # nosec B310 — HTTP(S) validated above
             data = json.loads(resp.read().decode("utf-8"))
         loaded = [
             str(m.get("id"))

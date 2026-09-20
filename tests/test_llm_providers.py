@@ -423,3 +423,12 @@ def test_loaded_model_probe_uses_the_configured_key(lp, monkeypatch):
     monkeypatch.setattr(urllib.request, 'urlopen', respond)
     assert lp.discover_model(lp.get_provider('lmstudio')) == 'loaded-chat'
     assert requests[0].get_header('Authorization') == 'Bearer test-only-secret'
+
+
+@pytest.mark.parametrize('url', ['file:///tmp/models', 'ftp://host/models', 'https:///missing-host'])
+def test_loaded_model_probe_rejects_non_http_targets(lp, monkeypatch, url):
+    import urllib.request
+    def forbidden(*args, **kwargs):
+        raise AssertionError('invalid URL must not reach transport')
+    monkeypatch.setattr(urllib.request, 'urlopen', forbidden)
+    assert lp._probe_lmstudio_loaded_model(url) is None
