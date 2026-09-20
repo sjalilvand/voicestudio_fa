@@ -110,12 +110,12 @@ class ExpressiveMixin(BaseModel):
     # silence between lines (unless a [pause] says otherwise) and at blank
     # lines inside a line. Bounded so a request cannot pad a book with hours
     # of silence. Send 0 / false for the pre-existing hard joins.
-    line_gap_ms: int = Field(default=250, ge=0, le=5000)
+    line_gap_ms: int = Field(default=0, ge=0, le=5000)
     # 350, not more: the trim keeps each paragraph's natural decay (~0.3-0.4 s of
     # near-silence), so the HEARD break is gap + decay. Measured on a full chapter
     # against a professional read, 600 put 26 breaks over a second; 300-400 matched.
-    paragraph_gap_ms: int = Field(default=350, ge=0, le=5000)
-    trim_edges: bool = True
+    paragraph_gap_ms: int = Field(default=0, ge=0, le=5000)
+    trim_edges: bool = False
     num_step: int | None = Field(default=None, ge=1, le=512)
     guidance_scale: float | None = Field(default=None, ge=0.0, le=20.0)
     position_temperature: float | None = Field(default=None, ge=0.0, le=100.0)
