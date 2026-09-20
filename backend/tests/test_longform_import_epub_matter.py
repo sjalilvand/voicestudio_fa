@@ -528,7 +528,7 @@ def test_ambiguous_short_heading_is_not_enough_to_delete_a_chapter():
 def test_publisher_like_headings_keep_listed_or_substantive_sections(listed, substantive):
     import importlib
     importer = importlib.import_module('services.longform_import')
-    text = 'This is real narrative. ' * (100 if substantive else 1)
+    text = 'This is real narrative. ' * (200 if substantive else 1)
     docs = _untyped_book(**{'teaser.xhtml': _doc('<h1>Published by Fate</h1><p>' + text + '</p>')})
     nav = _PLAIN_NAV.format(extra='', landmarks='')
     if listed:
