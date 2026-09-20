@@ -105,6 +105,14 @@ describe('AudiobookOverrides panel — renders, labels, persists (#1208 D2)', ()
     return onChange;
   };
 
+  it('displays the unchanged backend join defaults before any edits', () => {
+    open();
+    expect(screen.getByLabelText(en.audiobook.line_gap).value).toBe('0');
+    expect(screen.getByLabelText(en.audiobook.paragraph_gap).value).toBe('0');
+    expect(screen.getByLabelText(en.audiobook.trim_edges).checked).toBe(false);
+    expect(overridesToRequest(DEFAULT_OVERRIDES, 'Auto')).toEqual({});
+  });
+
   it('exposes the labelled sampling controls and persists an edit', () => {
     const onChange = open();
     // Labelled sliders (reused clone.* labels) are present.
