@@ -1857,7 +1857,16 @@ async def dub_export_vtt(
         s, e = cues[i] if cues else (seg["start"], seg["end"])
         vtt_lines.append(str(i + 1))
         vtt_lines.append(f"{_format_vtt_time(s)} --> {_format_vtt_time(e)}")
-        vtt_lines.append(_pick_subtitle_text(seg, dual, escape=escape_webvtt_text))
+        # Reuse imported cue syntax only while the corresponding text is unchanged.
+        # This distinguishes literal &lt;i&gt; from genuine <i> markup and survives
+        # persistence; older projects retain the legacy markup interpretation.
+        source = seg.get("webvtt_source")
+        def escape_text(text):
+            if (isinstance(source, dict) and source.get("text") == text
+                    and isinstance(source.get("cue"), str)):
+                return escape_webvtt_text(source["cue"])
+            return escape_webvtt_text(text)
+        vtt_lines.append(_pick_subtitle_text(seg, dual, escape=escape_text))
         vtt_lines.append("")
 
     vtt_content = "\n".join(vtt_lines)

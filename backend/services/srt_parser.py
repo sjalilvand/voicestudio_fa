@@ -147,6 +147,7 @@ def parse_srt(content: str) -> SrtParseResult:
             skipped += 1
             continue
         lines = body.strip("\n").split("\n")
+        source_cue = "\n".join(line.strip() for line in lines if line.strip())
         if is_webvtt:
             # WebVTT escapes `&`, `<` and `>` in cue text ("Q&amp;A");
             # SubRip has no escaping, so its text stays as written.
@@ -155,7 +156,8 @@ def parse_srt(content: str) -> SrtParseResult:
         if not cue_text:
             skipped += 1
             continue
-        raw.append({"start": start, "end": end, "text": cue_text})
+        raw.append({"start": start, "end": end, "text": cue_text,
+                    **({"webvtt_source": {"text": cue_text, "cue": source_cue}} if is_webvtt else {})})
 
     raw.sort(key=lambda r: r["start"])
 
@@ -170,7 +172,7 @@ def parse_srt(content: str) -> SrtParseResult:
         if e <= s:
             dropped += 1
             continue
-        out.append({"start": s, "end": e, "text": r["text"]})
+        out.append({**r, "start": s, "end": e})
         last_end = e
 
     segments = [
@@ -181,6 +183,7 @@ def parse_srt(content: str) -> SrtParseResult:
             "text": seg["text"],
             "text_original": seg["text"],
             "speaker_id": "Speaker 1",
+            **({"webvtt_source": seg["webvtt_source"]} if "webvtt_source" in seg else {}),
         }
         for i, seg in enumerate(out)
     ]
