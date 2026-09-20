@@ -36,6 +36,8 @@ def test_exported_n8n_request_returns_playable_wav(monkeypatch):
     monkeypatch.setattr(engine_routing, 'runtime_compute_profile_async', profile)
     workflow = json.loads((Path(__file__).resolve().parents[1] / 'electron/src/renderer/src/features/integrations/n8n-workflow.json').read_text())
     request = next(node['parameters'] for node in workflow['nodes'] if node['type'] == 'n8n-nodes-base.httpRequest')
+    # Default cold load (20 min) plus CPU generation (10 min), with headroom.
+    assert request["options"]["timeout"] >= (1200 + 600) * 1000
     from urllib.parse import urlsplit
     response = TestClient(app, client=('127.0.0.1', 50000)).request(
         request['method'], urlsplit(request['url']).path, json=json.loads(request['jsonBody']))

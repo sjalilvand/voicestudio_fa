@@ -31,7 +31,9 @@ select **Generic Credential Type → Header Auth** in the
 HTTP Request node and store `Authorization: Bearer <your key>` in n8n's credential
 manager. Never put keys in the URL or exported workflow JSON. Redirects are
 explicitly disabled, and non-success responses remain errors. The timeout is
-five minutes; cold model loading or long CPU generation may need a larger value.
+31 minutes, covering the default 20-minute model-load and 10-minute CPU-generation
+budgets plus overhead. Longer scripts or custom backend budgets may require a
+larger timeout in n8n.
 
 Copying/importing this workflow does not establish a live connection. A successful
 manual execution producing a WAV confirms your engine, address and credentials.
@@ -41,5 +43,7 @@ do with the audio is controlled by your workflow.
 The node configuration follows n8n's official
 [HTTP Request documentation](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.httprequest/).
 Tests send the exported request through VoiceStudio's real HTTP route with a local
-test engine, checking its WAV response. They do not claim that a running n8n
-installation or external account was connected automatically.
+test engine, checking its WAV response. The generated export was also imported
+and executed with n8n 2.39.8 on Linux, producing a valid WAV in its binary output.
+Each generated configuration has its own workflow ID, avoiding collisions with
+unrelated workflows. No external account is connected automatically.

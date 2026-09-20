@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useBackendStatus } from '@/hooks/use-backend-status';
@@ -29,7 +29,7 @@ export function IntegrationDetailPage() {
   const { slug } = useParams({ strict: false });
   const backend = useBackendStatus();
   const [saving, setSaving] = useState(false);
-  const workflow = n8nSetup(slug ?? '', backend.baseUrl);
+  const workflow = useMemo(() => n8nSetup(slug ?? '', backend.baseUrl), [slug, backend.baseUrl]);
   const setup = workflow ?? mcpSetup(slug ?? '', backend.baseUrl);
   const entry = getIntegrationBySlug(slug ?? '');
   if (!entry) {

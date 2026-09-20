@@ -23,7 +23,7 @@
         "specifyBody": "json",
         "jsonBody": "{\n  \"model\": \"tts-1\",\n  \"input\": \"VoiceStudio\",\n  \"voice\": \"default\",\n  \"response_format\": \"wav\"\n}",
         "options": {
-          "timeout": 300000,
+          "timeout": 1860000,
           "redirect": {
             "redirect": {
               "followRedirects": false

@@ -6,7 +6,10 @@ export function n8nSetup(slug: string, baseUrl: string) {
   if (slug !== 'n8n') return null;
   const url = backendEndpoint(baseUrl, '/v1/audio/speech');
   if (!url) return null;
-  const workflow = structuredClone(template);
+  const workflow = {
+    id: crypto.randomUUID().replaceAll('-', '').slice(0, 20),
+    ...structuredClone(template),
+  };
   const request = workflow.nodes.find((node) => node.type === 'n8n-nodes-base.httpRequest')!;
   request.parameters.url = url;
   return {

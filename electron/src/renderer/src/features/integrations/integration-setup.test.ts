@@ -47,6 +47,10 @@ it('exports a manual n8n workflow to the current backend without credentials', (
   const setup = n8nSetup('n8n', 'https://voice.example/backend/');
   const workflow = JSON.parse(setup!.text);
   expect(workflow.active).toBe(false);
+  expect(workflow.id).toMatch(/^[a-f0-9]{20}$/);
+  expect(JSON.parse(n8nSetup('n8n', 'https://voice.example/backend/')!.text).id).not.toBe(
+    workflow.id,
+  );
   expect(workflow.nodes[0].type).toBe('n8n-nodes-base.manualTrigger');
   const request = workflow.nodes[1];
   expect(request.parameters.url).toBe('https://voice.example/backend/v1/audio/speech');
