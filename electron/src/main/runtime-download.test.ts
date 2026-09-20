@@ -88,3 +88,35 @@ it('does not start cancelled downloads', async () => {
   ).rejects.toThrow();
   expect(get).not.toHaveBeenCalled();
 });
+
+it.each([
+  'ftp://private-user:private-pass@proxy.test',
+  'https://private-user:private-pass@[invalid',
+])('does not expose credentials in invalid proxy errors', (proxy) => {
+  expect(() => setupProxyForUrl('https://astral.sh', { HTTPS_PROXY: proxy })).toThrow(
+    'Invalid or unsupported proxy URL; use HTTP, HTTPS, or SOCKS.',
+  );
+});
+
+it('propagates a credential-free transport error to setup', async () => {
+  vi.mocked(get).mockImplementationOnce(((_url, options) => {
+    const request = new EventEmitter();
+    const agent = (options as unknown as { agent: { getProxyForUrl: (url: string) => string } })
+      .agent;
+    queueMicrotask(() => {
+      try {
+        agent.getProxyForUrl('https://astral.sh');
+      } catch (error) {
+        request.emit('error', error);
+      }
+    });
+    return request;
+  }) as typeof get);
+  await expect(
+    downloadRuntimeInstaller(
+      'https://astral.sh',
+      { HTTPS_PROXY: 'ftp://private-user:private-pass@proxy.test' },
+      new AbortController().signal,
+    ),
+  ).rejects.toThrow('Invalid or unsupported proxy URL; use HTTP, HTTPS, or SOCKS.');
+});

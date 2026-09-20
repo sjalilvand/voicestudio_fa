@@ -23,7 +23,24 @@ export function setupProxyForUrl(raw: string, env: NodeJS.ProcessEnv): string {
       return '';
   }
   const proxy = value(`${url.protocol.slice(0, -1)}_proxy`) || value('all_proxy');
-  return proxy && !proxy.includes('://') ? `http://${proxy}` : proxy;
+  if (!proxy) return '';
+  const candidate = proxy.includes('://') ? proxy : `http://${proxy}`;
+  try {
+    const parsed = new URL(candidate);
+    if (
+      !['http:', 'https:', 'socks:', 'socks4:', 'socks4a:', 'socks5:', 'socks5h:'].includes(
+        parsed.protocol,
+      ) ||
+      !parsed.hostname
+    ) {
+      throw new Error('unsupported');
+    }
+  } catch {
+    // proxy-agent includes the entire URL in unsupported-protocol errors.
+    // Validate before handing it credentials that could reach setup logs.
+    throw new Error('Invalid or unsupported proxy URL; use HTTP, HTTPS, or SOCKS.');
+  }
+  return candidate;
 }
 
 /** Download executable installer text only over HTTPS, including redirects. */
