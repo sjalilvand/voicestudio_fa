@@ -2903,7 +2903,8 @@
   "integrationCatalog": {
     "title": "Entegrasyonlar",
     "featured": "Öne çıkan",
-    "description": "Entegrasyonları ve öne çıkan iş ortaklarını keşfedin."
+    "description": "Entegrasyonları ve öne çıkan iş ortaklarını keşfedin.",
+    "n8nHint": "Bu iş akışını n8n içine aktarın, isteği düzenleyip çalıştırın. VoiceStudio açık kalsın. Docker ve uzak n8n için erişilebilir bir arka uç adresi ve gerekli kimlik bilgileri gerekir."
   },
   "directoryExamples": {
     "example": "Dizin örneği",

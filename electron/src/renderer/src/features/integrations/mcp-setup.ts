@@ -7,6 +7,29 @@ const CLIENTS = {
 export function mcpSetup(slug: string, baseUrl: string) {
   if (!Object.hasOwn(CLIENTS, slug)) return null;
   const client = CLIENTS[slug as keyof typeof CLIENTS];
+  const url = backendEndpoint(baseUrl, '/mcp');
+  if (!url) return null;
+  return {
+    file: client.file,
+    docs: client.docs,
+    text: JSON.stringify(
+      {
+        mcpServers: {
+          voicestudio: {
+            ...(client.type ? { type: client.type } : {}),
+            url,
+            headers: { 'X-OmniVoice-Client-Id': slug },
+          },
+        },
+      },
+      null,
+      2,
+    ),
+  };
+}
+
+/** Validate the configured backend without exporting URL credentials. */
+export function backendEndpoint(baseUrl: string, endpoint: string) {
   try {
     const base = new URL(baseUrl);
     if (
@@ -17,24 +40,7 @@ export function mcpSetup(slug: string, baseUrl: string) {
       base.hash
     )
       return null;
-    const url = `${base.href.replace(/\/+$/, '')}/mcp`;
-    return {
-      file: client.file,
-      docs: client.docs,
-      text: JSON.stringify(
-        {
-          mcpServers: {
-            voicestudio: {
-              ...(client.type ? { type: client.type } : {}),
-              url,
-              headers: { 'X-OmniVoice-Client-Id': slug },
-            },
-          },
-        },
-        null,
-        2,
-      ),
-    };
+    return `${base.href.replace(/\/+$/, '')}${endpoint}`;
   } catch {
     return null;
   }

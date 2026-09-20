@@ -10,9 +10,11 @@ the frozen-backend fallback mirror it for their toolchains.
 
 **Highlights**
 
+- n8n integrations export a manual local speech workflow with the active backend address (#2261)
 - Dubbing, batch and voice conversion on mlx-audio point at the one model switch that enables cloning, instead of asking you to change engine (#2204) — thanks @shivsin25!
 - Bug reports filed from the desktop app name the backend error class again, so two unrelated failures stop looking identical (#2197)
 - Clearer recovery guidance for known GPU, Windows policy, and audio-file failures (#2195)
+- Long stories and audiobooks join rendered audio in one pass while preserving crossfades (#2259) — thanks @shivsin25!
 
 ### Changed
 
@@ -28,6 +30,9 @@ the frozen-backend fallback mirror it for their toolchains.
 - Stories' Paste & Split can now split by Sentences, Paragraphs (the new default) or whole Chapters, so a single narrator is no longer chopped into one take per sentence (#2217) — thanks @jaketame!
 
 ### Fixed
+
+- CosyVoice repairs missing runtime dependencies and preserves speech context with newer Transformers (#2096) — thanks @martinezpl!
+- Electron native-crash reports retain the faulting thread instead of losing it behind long stacks and extension lists (#2262)
 
 - Electron setup normalizes Windows proxy addresses while preserving explicit overrides and localhost exclusions (#2114)
 - Web API-reference recovery keeps the selected backend and credentials; AudioSeal embedding and detection normalize model sample rates without changing exported audio dimensions (#2252) — thanks @joseedson18jc!

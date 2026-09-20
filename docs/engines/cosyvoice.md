@@ -13,8 +13,8 @@ availability. A downloaded
 machine. It does not prove that the VoiceStudio backend can import and run
 CosyVoice.
 
-The current readiness check requires the same Python interpreter that runs the
-VoiceStudio backend to import:
+For an existing source installation, the same Python interpreter that runs
+the VoiceStudio backend must import:
 
 ```python
 from cosyvoice.cli.cosyvoice import AutoModel
@@ -41,8 +41,9 @@ It differs from upstream's own setup:
   GPUs.
 - **Leaner dependencies.** No TensorRT, DeepSpeed or GPU onnxruntime, and no
   third-party package index. Upstream uses them for extra speed on Linux;
-  synthesis works without them. Nothing needs a compiler, and SoX is not
-  needed.
+  synthesis works without them. PyWORLD requires a C++ compiler: Xcode Command
+  Line Tools on macOS, Visual Studio Build Tools with C++ on Windows, or the
+  distribution’s C++ build tools on Linux. SoX is not needed.
 - **Patched dependencies.** Where upstream pins a release with a published
   security advisory (diffusers, hydra-core, lightning, modelscope, onnx,
   protobuf, transformers), the install uses the fixed release. That set was
@@ -78,8 +79,8 @@ checkout's environment or project `.env` file.
 
 For upstream setup details, read the
 [official CosyVoice installation guide](https://github.com/QwenAudio/CosyVoice#install).
-Those steps create a standalone CosyVoice environment. They do not turn the
-current packaged VoiceStudio app into a CosyVoice installer.
+Those steps create a standalone CosyVoice environment. Prefer the managed
+one-click installer above for the Electron app.
 
 ## Diagnose an unavailable engine
 
@@ -104,3 +105,27 @@ On hosts without CUDA, the managed sidecar normalizes the LLM, flow and vocoder
 weights to float32 to match upstream CPU inputs. CUDA keeps its selected
 precision. This prevents the CPU Float/BFloat16 matrix mismatch; it does not
 establish that every reported installation or speech-quality problem is fixed.
+
+### Repairing missing runtime imports
+
+The managed recipe includes gdown, wget and pyarrow, and builds pinned PyWORLD
+source that no longer needs `pkg_resources`. Its final check imports the dataset
+processor and Matcha utilities as well as AutoModel. Older completion markers
+are treated as needing repair; retry Install to reuse the existing model weights.
+User-managed environments are not rewritten. Do not downgrade setuptools merely
+to restore `pkg_resources`.
+
+### Speech context with newer Transformers
+
+The managed sidecar loads Qwen in float32 before applying the trained checkpoint,
+then preserves upstream's explicit precision choices. It also includes cached
+prompt tokens in incremental attention masks: a one-token mask in newer
+Transformers otherwise hides the text and voice context and produces unrelated
+or garbled speech. Existing Transformers 4 environments and legacy cache tuples
+remain supported; full masks are left intact.
+
+A real CosyVoice 3 CPU check with Transformers 5.10.1 now reproduces the complete
+89-word English input, verified with an independent local speech recognizer.
+A tiny randomly initialized Qwen regression checks cached versus full-context
+decoding without downloading any model in CI. This does not certify every
+language, voice reference, or GPU configuration.

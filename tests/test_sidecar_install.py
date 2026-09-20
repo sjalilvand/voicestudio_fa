@@ -1705,3 +1705,26 @@ def test_unspecified_compatibility_does_not_rebuild_working_venv(monkeypatch, ve
     spec = _mk_spec(venv_args=("--python", "3.11"))
     monkeypatch.setattr(si.subprocess, "run", lambda *a, **k: SimpleNamespace(returncode=0, stdout=version, stderr=""))
     assert si._existing_venv_compatible(spec, Path("existing-python"))
+
+
+@pytest.mark.parametrize('engine', ['cosyvoice', 'moss-tts-nano'])
+def test_runtime_rejects_old_managed_recipe_but_preserves_external_installs(monkeypatch, tmp_path, engine):
+    spec = si.SPECS[engine]
+    checkout = si.managed_checkout(spec)
+    py = si._venv_python(checkout / '.venv')
+    py.parent.mkdir(parents=True)
+    py.write_text('#!fake\n')
+    marker = checkout / si._INSTALL_COMPLETE_MARKER
+    marker.write_text(spec.probe_module + '\n')
+    monkeypatch.setenv(spec.env_var, str(checkout))
+    assert si.engine_venv_python(spec.env_var) is None
+    assert py.exists() and marker.exists()
+    marker.write_text(f'{spec.probe_module}\n{spec.install_revision}\n')
+    assert si.engine_venv_python(spec.env_var) == py
+    external = tmp_path / 'external'
+    external_py = si._venv_python(external / '.venv')
+    external_py.parent.mkdir(parents=True)
+    external_py.write_text('#!fake\n')
+    (external / si._INSTALL_COMPLETE_MARKER).write_text('external-version\n')
+    monkeypatch.setenv(spec.env_var, str(external))
+    assert si.engine_venv_python(spec.env_var) == external_py

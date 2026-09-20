@@ -2903,7 +2903,8 @@
   "integrationCatalog": {
     "title": "Integraciones",
     "featured": "Destacado",
-    "description": "Descubre integraciones y socios destacados."
+    "description": "Descubre integraciones y socios destacados.",
+    "n8nHint": "Importa este flujo en n8n, edita la solicitud y ejecútalo. Mantén VoiceStudio abierto. Docker y n8n remoto necesitan una dirección de backend accesible y las credenciales requeridas."
   },
   "directoryExamples": {
     "example": "Ejemplo del directorio",

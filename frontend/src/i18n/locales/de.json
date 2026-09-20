@@ -2903,7 +2903,8 @@
   "integrationCatalog": {
     "title": "Integrationen",
     "featured": "Hervorgehoben",
-    "description": "Entdecke Integrationen und hervorgehobene Partner."
+    "description": "Entdecke Integrationen und hervorgehobene Partner.",
+    "n8nHint": "Importiere diesen Workflow in n8n, bearbeite die Anfrage und führe ihn aus. Lass VoiceStudio laufen. Docker und entfernte n8n-Instanzen benötigen eine erreichbare Backend-Adresse und gegebenenfalls Zugangsdaten."
   },
   "directoryExamples": {
     "example": "Verzeichnisbeispiel",

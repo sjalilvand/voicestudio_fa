@@ -2682,7 +2682,8 @@
     "setupHint": "將此設定合併至 {{file}}，並保持 VoiceStudio 執行。如需遠端連線憑證，請在用戶端中設定。",
     "title": "整合",
     "featured": "精選",
-    "description": "探索整合與精選合作夥伴。"
+    "description": "探索整合與精選合作夥伴。",
+    "n8nHint": "將此工作流程匯入 n8n，編輯請求後執行。請保持 VoiceStudio 執行。Docker 和遠端 n8n 需要可存取的後端位址及必要的認證資訊。"
   },
   "directoryExamples": {
     "example": "目錄範例",

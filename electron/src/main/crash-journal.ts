@@ -1,9 +1,46 @@
 import { readFileSync, writeFileSync, renameSync } from 'node:fs';
 import type { NativeCrashRecord } from '../preload/index.d';
+import { nativeCrashExcerpt } from '../../../frontend/src/utils/crashReport';
+import { scrubText } from '../../../frontend/src/utils/scrub';
 
 /** Small version-scoped local journal. Read failures must never block startup. */
 export class CrashJournal {
   private records: NativeCrashRecord[] = [];
+  private nativeLines: string[] = [];
+  private captureOpen = false;
+  private sawThread = false;
+  private streaming = false;
+  resetCapture(streaming = true): void {
+    this.nativeLines = [];
+    this.captureOpen = false;
+    this.sawThread = false;
+    this.streaming = streaming;
+  }
+  /** Capture before the supervisor ring evicts the start of an all-thread dump. */
+  captureLine(line: string): void {
+    line = scrubText(line);
+    this.streaming = true;
+    const trimmed = line.trim();
+    if (/^(?:Fatal Python error:|Windows fatal exception:)/.test(trimmed)) {
+      this.resetCapture();
+      this.nativeLines = [line.slice(0, 4096)];
+      this.captureOpen = true;
+      return;
+    }
+    if (!this.nativeLines.length) return;
+    if (/^Current thread\b/.test(trimmed)) {
+      this.nativeLines = [this.nativeLines[0]];
+      this.captureOpen = true;
+      this.sawThread = true;
+    } else if (/^Thread\b/.test(trimmed)) {
+      if (this.sawThread) this.captureOpen = false;
+      this.sawThread = true;
+    } else if (trimmed.startsWith('Extension modules:')) {
+      this.captureOpen = false;
+    }
+    if (this.captureOpen && this.nativeLines.length < 40)
+      this.nativeLines.push(line.slice(0, 4096));
+  }
   constructor(
     private path: string,
     private version: string,
@@ -27,7 +64,11 @@ export class CrashJournal {
               (value.exitCode === null || Number.isInteger(value.exitCode)) &&
               (value.signal === null || typeof value.signal === 'string'),
           )
-          .map((value) => ({ ...value, acknowledged: value.acknowledged === true }))
+          .map((value) => ({
+            ...value,
+            logTail: value.logTail.map(scrubText),
+            acknowledged: value.acknowledged === true,
+          }))
           .slice(0, 3);
     } catch {
       /* missing or corrupt journal */
@@ -49,6 +90,11 @@ export class CrashJournal {
     uptimeMs: number,
     logTail: string[],
   ): void {
+    logTail = logTail.map(scrubText);
+    const native = this.streaming
+      ? this.nativeLines.join('\n')
+      : nativeCrashExcerpt(logTail.join('\n'));
+    this.resetCapture(false);
     // EX_CONFIG is a port collision; Windows debugger termination is not a backend fault.
     if (exitCode === 78 || exitCode === 0x40010004) return;
     this.records.unshift({
@@ -57,7 +103,12 @@ export class CrashJournal {
       exitCode,
       signal,
       uptimeMs: Math.max(0, uptimeMs),
-      logTail: logTail.slice(-40).map((line) => line.slice(-4096)),
+      logTail: native
+        ? native
+            .split('\n')
+            .slice(0, 40)
+            .map((line) => line.slice(0, 4096))
+        : logTail.slice(-40).map((line) => line.slice(-4096)),
       acknowledged: false,
     });
     this.records = this.records.slice(0, 3);

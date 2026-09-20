@@ -66,3 +66,34 @@ it('requires setup when an interpreter exists but required imports fail', async 
     error: expect.stringContaining('bun run setup:api'),
   });
 });
+
+it('keeps native fault frames when the production log ring overflows', async () => {
+  const { BackendSupervisor } = await import('./backend');
+  const supervisor = new BackendSupervisor();
+  const internals = supervisor as unknown as {
+    pushLog(stream: 'err', line: string): void;
+    log: string[];
+    crashes: import('./crash-journal').CrashJournal;
+  };
+  const output = vi.spyOn(console, 'error').mockImplementation(() => {});
+  try {
+    for (const line of [
+      'Fatal Python error: Segmentation fault',
+      'Thread 0x111 (most recent call first):',
+      ...Array(300).fill('  File "threading.py", line 10 in wait'),
+      'Current thread 0x222 (most recent call first):',
+      '  File "native_fault.py", line 42 in load',
+      ...Array(300).fill('  File "runpy.py", line 198 in _run_module_as_main'),
+      `Extension modules: ${'torch._C, '.repeat(600)}`,
+    ])
+      internals.pushLog('err', line);
+    expect(internals.log.length).toBeLessThanOrEqual(200);
+    expect(internals.log.join('\n')).not.toContain('native_fault.py');
+    internals.crashes.record(null, 'SIGSEGV', 100, internals.log);
+    const kept = internals.crashes.latest()!.logTail.join('\n');
+    expect(kept).toContain('Fatal Python error: Segmentation fault');
+    expect(kept).toContain('native_fault.py');
+  } finally {
+    output.mockRestore();
+  }
+});
