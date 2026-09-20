@@ -35,7 +35,7 @@ export function nativeCrashExcerpt(text) {
   const frames = current >= 0 ? dump.slice(current) : dump.slice(1);
   const end = frames.findIndex(
     (line, index) =>
-      /^Extension modules:/.test(line.trim()) ||
+      line.trim().startsWith("Extension modules:") ||
       (index > 0 && /^(?:Thread|Current thread)\b/.test(line.trim())),
   );
   return [dump[0], ...(end < 0 ? frames : frames.slice(0, end))].join("\n").trim();
