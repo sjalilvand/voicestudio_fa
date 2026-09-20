@@ -114,12 +114,16 @@ def test_dub_srt_download_keeps_text_as_written(dub_job):
     assert _TEXT in srt.text.splitlines()
 
 
-def test_openai_compat_vtt_transcription_escapes_cue_text(monkeypatch):
+@pytest.mark.parametrize(("text", "escaped"), [
+    (_TEXT, _ESCAPED),
+    ("Say &lt; and &#65; or <i> literally", "Say &amp;lt; and &amp;#65; or &lt;i> literally"),
+])
+def test_openai_compat_vtt_transcription_escapes_cue_text(monkeypatch, text, escaped):
     from api.routers import openai_compat
     from services import asr_backend
 
     async def fake_guarded(executor, fn, **kwargs):
-        return {"segments": [{"start": 0.0, "end": 2.0, "text": _TEXT}], "language": "en"}
+        return {"segments": [{"start": 0.0, "end": 2.0, "text": text}], "language": "en"}
 
     monkeypatch.setattr(asr_backend, "asr_model_missing_error", lambda: None)
     monkeypatch.setattr(asr_backend, "run_transcribe_guarded", fake_guarded)
@@ -130,4 +134,4 @@ def test_openai_compat_vtt_transcription_escapes_cue_text(monkeypatch):
         response_format="vtt", temperature=None,
     ))
 
-    assert _cues(response.body.decode("utf-8")) == [_ESCAPED]
+    assert _cues(response.body.decode("utf-8")) == [escaped]

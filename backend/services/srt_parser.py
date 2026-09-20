@@ -212,14 +212,19 @@ def _escape_cue_span(span: str) -> str:
     return _BARE_AMPERSAND_RE.sub("&amp;", span).replace("<", "&lt;").replace("-->", "--&gt;")
 
 
-def escape_webvtt_text(text: str) -> str:
+def escape_webvtt_text(text: str, *, preserve_markup: bool = True) -> str:
     """Make cue text safe for a WebVTT file without touching its markup.
 
     Any other `<` opens a tag, so a player drops the rest of the cue ("I <3
     you" shows as "I "), and a line containing `-->` ends the cue, emptying
     it. A bare `&` becomes `&amp;`; an existing reference is not escaped
     twice. SubRip has no escaping, so SRT text is written as-is.
+
+    Set ``preserve_markup=False`` for known plain text, such as fresh ASR
+    output. Literal tags and references then remain visible as spoken text.
     """
+    if not preserve_markup:
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace("-->", "--&gt;")
     parts = []
     last = 0
     for markup in _CUE_MARKUP_RE.finditer(text):

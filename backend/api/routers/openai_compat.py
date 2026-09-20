@@ -643,7 +643,7 @@ async def create_transcription(
             for seg in segments:
                 start = seg.get("start", 0.0)
                 end = seg.get("end", 0.0)
-                text = escape_webvtt_text(seg.get("text", "").strip())
+                text = escape_webvtt_text(seg.get("text", "").strip(), preserve_markup=False)
                 vtt_lines.append(
                     f"{_format_ts_vtt(start)} --> {_format_ts_vtt(end)}\n{text}\n"
                 )
