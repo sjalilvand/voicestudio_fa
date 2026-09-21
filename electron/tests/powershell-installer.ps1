@@ -77,15 +77,17 @@ $script:uninstaller = Join-Path $uninstallRoot 'Uninstall VoiceStudio.exe'
 function Get-ItemProperty($Path, $ErrorAction) {
     return @(
         @{ DisplayName = 'VoiceStudio'; UninstallString = 'MsiExec.exe /X{legacy-tauri}' },
-        @{ DisplayName = 'VoiceStudio'; UninstallString = '"' + $script:uninstaller + '"' },
+        @{ DisplayName = $script:displayName; UninstallString = '"' + $script:uninstaller + '" /currentuser' },
         @{ DisplayName = 'VoiceStudio'; UninstallString = 'MsiExec.exe /X{other-legacy}' }
     )
 }
 try {
+    $script:displayName = 'VoiceStudio 0.5.4'
     $script:cancel = $false; $script:launched = $false; $script:urls.Clear(); $script:launchCount = 0
     & $installer -Uninstall -Silent
-    if ($script:launchCount -ne 1 -or $script:lastArguments -notcontains '/S') { throw 'Expected exactly one silent Electron uninstall' }
+    if ($script:launchCount -ne 1 -or $script:lastArguments -notcontains '/S' -or $script:lastArguments -notcontains '/currentuser') { throw 'Expected exactly one silent Electron uninstall' }
     if (-not $script:launched -or $script:urls.Count) { throw 'Uninstall must launch registered setup without downloading' }
+    $script:displayName = 'VoiceStudio'
     $script:cancel = $true
     try { & $installer -Uninstall; throw 'Uninstall cancellation accepted' } catch {
         if ($_.Exception.Message -notmatch 'cancelled') { throw }
