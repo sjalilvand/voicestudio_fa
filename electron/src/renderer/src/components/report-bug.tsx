@@ -150,7 +150,7 @@ export function ReportBug({ error }: { error?: Error | string }) {
               : []),
             ...(isNativeFaultExit({
               exitCode: backend.exitCode,
-              signal: backend.stage === 'crashed' ? backend.lastCrash?.signal : null,
+              signal: backend.exitSignal,
             }) ? [t('reportBug.native_fault_cause')] : []),
             scrubText(backend.message),
             '',

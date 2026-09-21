@@ -383,6 +383,7 @@ export class BackendSupervisor extends EventEmitter<{
   private managed = false;
   private message: string | undefined;
   private exitCode: number | null | undefined;
+  private exitSignal: string | null | undefined;
   private startedAt = Date.now();
   private child: ChildProcess | null = null;
   private readonly log: string[] = [];
@@ -455,6 +456,7 @@ export class BackendSupervisor extends EventEmitter<{
     }
     if (this.message !== undefined) status.message = this.message;
     if (this.exitCode !== undefined) status.exitCode = this.exitCode;
+    if (this.exitSignal !== undefined) status.exitSignal = this.exitSignal;
     return status;
   }
 
@@ -477,6 +479,7 @@ export class BackendSupervisor extends EventEmitter<{
     this.shuttingDown = false;
     this.startedAt = Date.now();
     this.exitCode = undefined;
+    this.exitSignal = undefined;
     this.setStage('attaching', { managed: false, message: undefined });
     try {
       if (await this.probe()) {
@@ -727,6 +730,7 @@ export class BackendSupervisor extends EventEmitter<{
     this.installation?.abort();
     await this.killChild(true);
     this.exitCode = undefined;
+    this.exitSignal = undefined;
     this.setStage('idle', { managed: false, message: undefined });
   }
 
@@ -986,6 +990,7 @@ export class BackendSupervisor extends EventEmitter<{
       if (await this.probe()) {
         if (gen !== this.generation || this.shuttingDown) return;
         this.exitCode = undefined;
+        this.exitSignal = undefined;
         this.pushLog('out', 'Attached to the replacement VoiceStudio backend.');
         this.setStage('ready', { managed: false, message: undefined });
         this.supervise(gen);
@@ -1001,6 +1006,7 @@ export class BackendSupervisor extends EventEmitter<{
     this.generation++;
     this.crashes.record(code, signal, Date.now() - this.startedAt, this.log);
     this.exitCode = code;
+    this.exitSignal = signal;
     if (code === EXIT_PORT_IN_USE) {
       this.setStage('port_in_use', {
         message: `Port ${this.port} is already in use by another process. Stop it or set OMNIVOICE_PORT.`,

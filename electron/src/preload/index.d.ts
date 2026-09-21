@@ -58,6 +58,8 @@ export interface BackendStatus {
   /** Human-readable detail for failed/crashed/port_in_use. */
   message?: string;
   exitCode?: number | null;
+  /** Termination signal for the current backend run, never the persisted crash journal. */
+  exitSignal?: string | null;
   /** Milliseconds since the spawn/attach attempt started. */
   elapsedMs: number;
   /** Last ~40 lines of backend stdout/stderr (newest last) for the splash log. */
