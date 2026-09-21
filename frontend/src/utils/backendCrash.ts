@@ -1,5 +1,6 @@
 import { abortableDelay } from './abortableDelay.ts';
 import { deploymentMode, type DeploymentMode } from './deploymentMode.ts';
+import { isNativeFaultExit } from './nativeExit.ts';
 /**
  * backendCrash — frontend bridge to the desktop shell's crash forensics
  * (#941, src-tauri/src/crash.rs).
@@ -287,33 +288,15 @@ export function describeCrashExit(
  * instruction/abort — rather than memory pressure or an orderly exit.
  *
  * POSIX reports these as signals. Windows has no signals here: the shell sees
- * the raw NTSTATUS as a (negative, when read as i32) exit code, so the codes
- * have to be matched explicitly. 0xC0000005 is the access violation behind
- * #1275; the others are the same family and would otherwise be read as an
- * ordinary non-zero exit.
+ * the raw NTSTATUS as an exit code, and the two shells disagree on how to read
+ * it — Rust as a negative i32, Node as the unsigned DWORD. The table used to
+ * live here in Rust's representation, so the same access violation was a fault
+ * from Tauri and an ordinary non-zero exit from Electron (#2250). It now lives
+ * in `utils/nativeExit`, which normalises before matching, and both shells ask
+ * the same question of the same table.
  */
-const NT_FAULT_EXIT_CODES = new Set([
-  -1073741819, // 0xC0000005 STATUS_ACCESS_VIOLATION
-  -1073741795, // 0xC000001D STATUS_ILLEGAL_INSTRUCTION
-  -1073741674, // 0xC0000096 STATUS_PRIVILEGED_INSTRUCTION
-  -1073740791, // 0xC0000409 STATUS_STACK_BUFFER_OVERRUN
-  -1073741571, // 0xC00000FD STATUS_STACK_OVERFLOW
-]);
-
-// Deliberately only SIGILL (4) and SIGSEGV (11) — the two whose numbers are
-// identical on every POSIX platform and whose meaning is unambiguous.
-//
-// SIGABRT (6) is NOT here on purpose: abort() is how a fatal CUDA error exits,
-// including "CUDA error: out of memory" raised asynchronously, so it keeps the
-// VRAM guidance. SIGBUS is excluded because its number is platform-dependent
-// (7 on Linux, 10 on macOS, where 10 is SIGUSR1 on Linux) and guessing wrong
-// would misfile an ordinary signal as a hardware fault.
-// SIGKILL (9) is handled above — that is the OS memory killer, not a fault.
-const NATIVE_FAULT_SIGNALS = new Set([4, 11]);
-
 export function isNativeFault(marker: Pick<BackendCrashMarker, 'exit_code' | 'signal'>): boolean {
-  if (marker.signal != null && NATIVE_FAULT_SIGNALS.has(marker.signal)) return true;
-  return marker.exit_code != null && NT_FAULT_EXIT_CODES.has(marker.exit_code);
+  return isNativeFaultExit({ exitCode: marker.exit_code, signal: marker.signal });
 }
 
 /**

@@ -8,6 +8,14 @@ metadata and the backend fallback mirror it. Archived Tauri manifests stay froze
 
 ## [Unreleased]
 
+**Highlights**
+
+- A backend that dies natively is named — "access violation" instead of a bare exit code — in the crash panel and in the bug report (#2266)
+
+### Fixed
+
+- Name a native backend crash on both desktop shells. Windows reports the same fault as `-1073741819` from Tauri and `3221225477` from Electron, and the fault table only knew the first, so an Electron crash arrived as an anonymous exit code with nothing to say the backend had segfaulted (#2266, #2250)
+
 ## [0.5.4] — 2026-09-20
 
 **Working engines, smoother long-form audio, and useful local integrations.** CosyVoice repairs its runtime and preserves speech context with newer Transformers. Stories and audiobooks gain cleaner audio joins, better script controls, and more reliable EPUB imports. Electron setup and diagnostics make failures easier to recover from without discarding downloaded models or existing projects.
