@@ -55,7 +55,7 @@ projects, model downloads, and backend environments are not removed. Downgrades
 may not read data created by newer versions; back up important projects first.
 
 For isolated shell-installer testing, `VOICESTUDIO_INSTALL_DIR` selects an
-installation directory; create that directory before invoking the script.
+installation directory; it must be an absolute, existing, writable directory. Invalid overrides fail without falling back elsewhere.
 
 ## Uninstall
 
@@ -80,7 +80,8 @@ Remove-Item Env:VOICESTUDIO_VERSION -ErrorAction SilentlyContinue
 $env:VOICESTUDIO_INSTALL_MODE='uninstall'; irm https://voicestudio.sh/install.ps1 | iex
 ```
 
-Windows opens the registered Electron uninstall wizard. All platforms preserve
+Windows skips archived Tauri registry entries and opens one verified Electron uninstall wizard.
+Use `-Silent` for unattended Windows install/uninstall (for example, CI); interactive setup remains the default. All platforms preserve
 settings, projects, backend environments and models. To delete app data, use
 VoiceStudio's in-app data-removal confirmation **before** uninstalling; the CLI
 does not guess custom storage locations or delete shared model caches.

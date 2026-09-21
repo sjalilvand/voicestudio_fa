@@ -46,6 +46,7 @@ function fixture(t, options = {}) {
   mkdirSync(bin);
   mkdirSync(home);
   mkdirSync(join(home, 'Applications'));
+  mkdirSync(join(home, '.local/bin'), { recursive: true });
   const shim = (name, body) =>
     writeFileSync(join(bin, name), '#!/bin/sh\nset -eu\n' + body, { mode: 0o755 });
   shim(
@@ -106,7 +107,9 @@ if [ "$1 $2" = 'run electron-builder' ]; then printf '${payload}' > release/Voic
 `,
   );
   shim('cargo', 'exit 0\n');
-  shim('pgrep', options.running ? 'exit 0\n' : 'exit 1\n');
+  shim('pgrep', options.linuxRunning
+    ? `case "$*" in *voicestudio-electron*) exit 0;; *) exit 1;; esac\n`
+    : options.running ? 'exit 0\n' : 'exit 1\n');
   shim('lsregister', 'printf "%s\\n" "$*" >> "$TEST_ROOT/registration"\n' + (options.registrationFails ? 'exit 1\n' : ''));
   const settings = join(home, 'settings');
   writeFileSync(settings, 'preserve me');
@@ -117,6 +120,7 @@ if [ "$1 $2" = 'run electron-builder' ]; then printf '${payload}' > release/Voic
     run(args = []) {
       return spawnSync('sh', [installer, ...args], {
         encoding: 'utf8',
+        cwd: root,
         env: {
           ...process.env,
           PATH: `${bin}:${process.env.PATH}`,
@@ -124,9 +128,9 @@ if [ "$1 $2" = 'run electron-builder' ]; then printf '${payload}' > release/Voic
           TMPDIR: root,
           TEST_ROOT: root,
           TEST_DIGEST: options.badChecksum ? '0'.repeat(64) : digest,
-          VOICESTUDIO_INSTALL_DIR: options.mac
+          VOICESTUDIO_INSTALL_DIR: options.installDir ?? (options.mac
             ? join(home, 'Applications')
-            : join(home, '.local/bin'),
+            : join(home, '.local/bin')),
           TEST_MISSING: options.missing ? '1' : '0',
           TEST_BUILD_FAIL: options.buildFails ? '1' : '0',
         },
@@ -220,3 +224,22 @@ test('macOS still removes the launchable copy if stale registration refresh fail
   assert.match(result.stderr, /Warning/);
   assert.ok(result.stdout.includes(join(f.home, '.Trash')));
 });
+
+test('Linux packaged process blocks installation and uninstall before downloads', (t) => {
+  const f = fixture(t, { linuxRunning: true });
+  for (const args of [[], ['--uninstall']]) {
+    const r = f.run(args);
+    assert.notEqual(r.status, 0);
+    assert.match(r.stderr, /Quit VoiceStudio/);
+  }
+  assert.equal(existsSync(join(f.root, 'requests')), false);
+});
+for (const mac of [true, false]) {
+  for (const installDir of ['relative', '/nonexistent-voicestudio-test-directory']) {
+    test(`rejects invalid custom install directory ${installDir} mac=${mac}`, (t) => {
+      const f = fixture(t, { mac, installDir });
+      assert.notEqual(f.run().status, 0);
+      assert.equal(existsSync(join(f.root, 'requests')), false);
+    });
+  }
+}

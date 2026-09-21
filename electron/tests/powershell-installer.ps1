@@ -6,7 +6,7 @@ $tokens = $null; $parseErrors = $null
 $null = [Management.Automation.Language.Parser]::ParseInput($source, [ref]$tokens, [ref]$parseErrors)
 if ($parseErrors.Count) { throw ($parseErrors | Out-String) }
 # Remove only the platform check to exercise the Windows flow on macOS/Linux.
-$source = $source.Replace("if ([Environment]::OSVersion.Platform -ne 'Win32NT') { throw 'Use install.sh on macOS or Linux.' }", '')
+if ([Environment]::OSVersion.Platform -ne 'Win32NT') { $source = $source.Replace("if ([Environment]::OSVersion.Platform -ne 'Win32NT') { throw 'Use install.sh on macOS or Linux.' }", '') }
 $installer = [scriptblock]::Create($source)
 $env:PROCESSOR_ARCHITECTURE = 'AMD64'
 $env:VOICESTUDIO_VERSION = ''
@@ -15,12 +15,20 @@ $script:urls = [Collections.Generic.List[string]]::new()
 $script:launched = $false
 $script:corrupt = $false
 $script:cancel = $false
+$script:rateLimited = $false
+$script:legacyResponse = $false
 function Invoke-RestMethod($Uri) {
     $script:urls.Add($Uri)
+    if ($script:rateLimited) { throw 'GitHub quota exceeded' }
     return @{ tag_name = 'v1.2.3' }
 }
 function Invoke-WebRequest($Uri, $OutFile, [switch]$UseBasicParsing) {
     $script:urls.Add($Uri)
+    if ($Uri.EndsWith('/latest')) {
+        $target = [uri]'https://github.com/debpalash/VoiceStudio/releases/tag/v1.2.3'
+        if ($script:legacyResponse) { return @{ BaseResponse = @{ ResponseUri = $target } } }
+        return @{ BaseResponse = @{ RequestMessage = @{ RequestUri = $target } } }
+    }
     if ($Uri.EndsWith('.exe')) {
         [IO.File]::WriteAllText($OutFile, 'fixture installer')
         $script:downloaded = $OutFile
@@ -30,9 +38,11 @@ function Invoke-WebRequest($Uri, $OutFile, [switch]$UseBasicParsing) {
         [IO.File]::WriteAllText($OutFile, "$hash  $([IO.Path]::GetFileName($script:downloaded))")
     }
 }
-function Start-Process($FilePath, [switch]$Wait, [switch]$PassThru) {
+function Start-Process($FilePath, [switch]$Wait, [switch]$PassThru, $ArgumentList) {
     if (-not (Test-Path $FilePath)) { throw 'Installer missing' }
     $script:launched = $true
+    $script:launchCount++
+    $script:lastArguments = $ArgumentList
     return @{ ExitCode = $(if ($script:cancel) { 1 } else { 0 }) }
 }
 foreach ($version in @('', 'v1.0.0')) {
@@ -44,6 +54,12 @@ foreach ($version in @('', 'v1.0.0')) {
     if ($version -and ($script:urls -match '/latest')) { throw 'Pinned version consulted latest' }
     if (Test-Path $script:downloaded) { throw 'Temporary installer not cleaned up' }
 }
+$script:rateLimited = $true
+foreach ($legacy in @($true, $false)) {
+    $script:legacyResponse = $legacy
+    & $installer -Silent
+}
+$script:rateLimited = $false
 $script:corrupt = $true; $script:launched = $false
 try { & $installer -Version '1.2.3'; throw 'Checksum accepted' } catch {
     if ($_.Exception.Message -notmatch 'Checksum mismatch') { throw }
@@ -59,11 +75,16 @@ New-Item -ItemType Directory -Path $uninstallRoot | Out-Null
 $script:uninstaller = Join-Path $uninstallRoot 'Uninstall VoiceStudio.exe'
 [IO.File]::WriteAllText($script:uninstaller, 'fixture')
 function Get-ItemProperty($Path, $ErrorAction) {
-    return @{ DisplayName = 'VoiceStudio'; UninstallString = '"' + $script:uninstaller + '"' }
+    return @(
+        @{ DisplayName = 'VoiceStudio'; UninstallString = 'MsiExec.exe /X{legacy-tauri}' },
+        @{ DisplayName = 'VoiceStudio'; UninstallString = '"' + $script:uninstaller + '"' },
+        @{ DisplayName = 'VoiceStudio'; UninstallString = 'MsiExec.exe /X{other-legacy}' }
+    )
 }
 try {
-    $script:cancel = $false; $script:launched = $false; $script:urls.Clear()
-    & $installer -Uninstall
+    $script:cancel = $false; $script:launched = $false; $script:urls.Clear(); $script:launchCount = 0
+    & $installer -Uninstall -Silent
+    if ($script:launchCount -ne 1 -or $script:lastArguments -notcontains '/S') { throw 'Expected exactly one silent Electron uninstall' }
     if (-not $script:launched -or $script:urls.Count) { throw 'Uninstall must launch registered setup without downloading' }
     $script:cancel = $true
     try { & $installer -Uninstall; throw 'Uninstall cancellation accepted' } catch {

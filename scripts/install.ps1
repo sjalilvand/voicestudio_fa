@@ -1,5 +1,5 @@
 # VoiceStudio Electron: latest, a release version, or build main.
-param([string]$Version = $env:VOICESTUDIO_VERSION, [switch]$Main, [switch]$Source, [switch]$Uninstall, [switch]$Help)
+param([string]$Version = $env:VOICESTUDIO_VERSION, [switch]$Main, [switch]$Source, [switch]$Uninstall, [switch]$Help, [switch]$Silent)
 $ErrorActionPreference = 'Stop'
 if ($Help) {
     Write-Output @'
@@ -7,7 +7,7 @@ VoiceStudio Electron installer (Windows x64)
   irm https://voicestudio.sh/install | iex
   $env:VOICESTUDIO_VERSION='X.Y.Z'; irm https://voicestudio.sh/install | iex
   $env:VOICESTUDIO_INSTALL_MODE='main'; irm https://voicestudio.sh/install | iex
-File usage: .\install.ps1 [-Version X.Y.Z] [-Main | -Source]
+File usage: .\install.ps1 [-Version X.Y.Z] [-Main | -Source] [-Silent]
 Uninstall: .\install.ps1 -Uninstall (preserves user data)
   $env:VOICESTUDIO_INSTALL_MODE='uninstall'; irm https://voicestudio.sh/install.ps1 | iex
 Main requires Git, Node.js 22+, Bun, Rust/Cargo, and MSVC build tools.
@@ -26,11 +26,14 @@ if ($mode -eq 'uninstall') {
     $entries = @(Get-ItemProperty $keys -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq 'VoiceStudio' })
     foreach ($entry in $entries) {
         $command = [string]$entry.UninstallString
-        if ($command -notmatch '^"([^"]+\.exe)"(?:\s.*)?$') { throw 'Unrecognized uninstall command; use Windows Installed apps.' }
+        if ($command -notmatch '^"([^"]+\.exe)"(?:\s.*)?$') { continue }
         $exe = $Matches[1]
-        if ((Split-Path $exe -Leaf) -ne 'Uninstall VoiceStudio.exe' -or -not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'Verified Electron uninstaller not found; use Windows Installed apps.' }
-        $process = Start-Process -FilePath $exe -Wait -PassThru
+        if ((Split-Path $exe -Leaf) -ne 'Uninstall VoiceStudio.exe' -or -not (Test-Path -LiteralPath $exe -PathType Leaf)) { continue }
+        $launch = @{ FilePath = $exe; Wait = $true; PassThru = $true }
+        if ($Silent) { $launch.ArgumentList = @('/S') }
+        $process = Start-Process @launch
         if ($process.ExitCode -notin @(0, 3010)) { throw "Uninstall failed or cancelled (exit $($process.ExitCode))." }
+        break
     }
     Write-Output 'Uninstall complete (or app was not installed). User data is preserved.'
     return
@@ -73,8 +76,16 @@ try {
         $packageDir = Join-Path $checkout 'electron/release'
     } else {
         if (-not $Version) {
-            $release = Invoke-RestMethod 'https://api.github.com/repos/debpalash/VoiceStudio/releases/latest'
-            $Version = $release.tag_name -replace '^v', ''
+            try {
+                $release = Invoke-RestMethod 'https://api.github.com/repos/debpalash/VoiceStudio/releases/latest'
+                $Version = $release.tag_name -replace '^v', ''
+            } catch {
+                $response = Invoke-WebRequest -UseBasicParsing 'https://github.com/debpalash/VoiceStudio/releases/latest'
+                # HttpWebResponse on Windows PowerShell 5.1, HttpResponseMessage on 7.
+                $uri = if ($response.BaseResponse.ResponseUri) { $response.BaseResponse.ResponseUri } else { $response.BaseResponse.RequestMessage.RequestUri }
+                if ([string]$uri -notmatch '^https://github\.com/debpalash/VoiceStudio/releases/tag/v([^/?#]+)$') { throw 'Could not resolve the latest release tag.' }
+                $Version = $Matches[1]
+            }
             Assert-Version $Version
         }
         $packageDir = $work
@@ -96,7 +107,9 @@ try {
     }
     if (-not (Test-Path $package -PathType Leaf)) { throw "Expected Electron package missing: $package" }
     Write-Output 'Opening Electron setup. Existing settings and models are preserved.'
-    $process = Start-Process -FilePath $package -Wait -PassThru
+    $launch = @{ FilePath = $package; Wait = $true; PassThru = $true }
+    if ($Silent) { $launch.ArgumentList = @('/S') }
+    $process = Start-Process @launch
     if ($process.ExitCode -notin @(0, 3010)) { throw "Setup failed or was cancelled (exit $($process.ExitCode))." }
     Write-Output 'Electron installed. Open VoiceStudio to configure the backend and choose models.'
 } finally {
