@@ -50,6 +50,10 @@ Launch Services registration so Launchpad can find the new version.
 macOS installs `VoiceStudio.app` in
 `/Applications`, or `~/Applications` if `/Applications` is not writable.
 Linux installs `~/.local/bin/VoiceStudio`; include `~/.local/bin` in your PATH.
+Current Electron source builds also read archived setup configuration for custom
+data/model folders and portable storage; explicit launch environment overrides
+still win. The backend retains its existing durable Settings precedence. No files
+are moved or copied. Previously published installers retain their shipped behavior.
 The existing app is replaced only after staging succeeds. User settings,
 projects, model downloads, and backend environments are not removed. Downgrades
 may not read data created by newer versions; back up important projects first.

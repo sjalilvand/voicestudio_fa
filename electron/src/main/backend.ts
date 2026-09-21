@@ -10,6 +10,7 @@ import {
   type RuntimeRegion,
 } from './runtime-project';
 import { CrashJournal } from './crash-journal';
+import { legacyStorageEnv } from './legacy-storage';
 import { spawn, spawnSync, type ChildProcess, type StdioOptions } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import {
@@ -315,7 +316,10 @@ function childEnv(
   region: RuntimeRegion = 'auto',
   platform = process.platform,
 ): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...process.env };
+  const env: NodeJS.ProcessEnv = {
+    ...(app.isPackaged ? legacyStorageEnv(legacyTauriRoots()) : {}),
+    ...process.env,
+  };
   delete env.PYTHONHOME;
   delete env.PYTHONPATH;
   env.PYTHONUNBUFFERED = '1';
