@@ -90,7 +90,10 @@ export function ntStatusName(code: number | null | undefined): string | null {
  * it names nothing. The raw value is kept first so it still matches what the
  * shell logged and what a user searched for.
  */
-export function describeExitCode(code: number | null | undefined, unknownLabel = 'unknown'): string {
+export function describeExitCode(
+  code: number | null | undefined,
+  unknownLabel = 'unknown',
+): string {
   if (typeof code !== 'number' || !Number.isFinite(code)) return unknownLabel;
   const name = ntStatusName(code);
   if (!name) return String(code);
