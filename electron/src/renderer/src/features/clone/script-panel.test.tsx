@@ -30,6 +30,25 @@ describe('ScriptPanel', () => {
     expect(screen.queryByRole('menu')).toBeNull();
   });
 
+  it('does not open or reopen the token menu when the script box is clicked', () => {
+    render(<ScriptPanel />);
+    const textarea = screen.getByRole('textbox', { name: 'Script' }) as HTMLTextAreaElement;
+
+    // A plain click to place the caret must not summon the menu.
+    fireEvent.pointerDown(textarea);
+    fireEvent.click(textarea);
+    expect(screen.queryByRole('menu')).toBeNull();
+
+    // After inserting a token, clicking back in to keep writing must not
+    // bring the menu back (regression: onClick reopened it on every caret
+    // placement).
+    fireEvent.click(screen.getByRole('button', { name: 'Insert expression token' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: '[laughter]' }));
+    fireEvent.pointerDown(textarea);
+    fireEvent.click(textarea);
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
   it('shows the character count', () => {
     render(<ScriptPanel />);
     expect(screen.getByText('11 characters')).toBeInTheDocument();

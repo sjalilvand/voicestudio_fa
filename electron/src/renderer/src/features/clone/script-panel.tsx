@@ -341,7 +341,6 @@ export function ScriptPanel({
             onUserEdit?.();
             setCloneSetting('text', event.target.value);
           }}
-          onClick={() => openInsert(false)}
           placeholder={
             voiceName
               ? t('cloneFlow.prompt_named', { name: voiceName })
