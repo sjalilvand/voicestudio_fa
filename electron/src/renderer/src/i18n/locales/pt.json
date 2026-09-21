@@ -2189,6 +2189,7 @@
     "contact_lead": "O preço é cotado por implantação para se adequar à sua equipe e carga de trabalho. Diga-me seu caso de uso e eu lhe farei um orçamento."
   },
   "reportBug": {
+    "native_fault_cause": "Falha nativa: o processo falhou abaixo da camada Python, por isso não há rastreamento Python disponível.",
     "label": "Reportar um bug",
     "title": "Abre uma página pré-preenchida de problemas do GitHub em seu navegador. Nada é enviado até você clicar em Enviar.",
     "staleTitle": "Atualização disponível",

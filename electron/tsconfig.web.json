@@ -35,6 +35,7 @@
     "../frontend/src/api/types.ts",
     "../frontend/src/api/donation.ts",
     "../frontend/src/utils/runCrashRecord.ts",
+    "../frontend/src/utils/nativeExit.ts",
     "../frontend/src/utils/backendContact.ts",
     "../frontend/src/utils/deploymentMode.ts",
     "../frontend/src/utils/errorDocsMap.ts",

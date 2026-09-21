@@ -2189,6 +2189,7 @@
     "contact_lead": "Le prix est indiqué par déploiement afin de s'adapter à votre équipe et à votre charge de travail. Dites-moi votre cas d'utilisation et je vous ferai un devis."
   },
   "reportBug": {
+    "native_fault_cause": "Erreur native : le processus a planté sous la couche Python, donc aucune trace Python n’est disponible.",
     "label": "Signaler un bug",
     "title": "Ouvre une page de problèmes GitHub pré-remplie dans votre navigateur. Rien n'est envoyé jusqu'à ce que vous cliquiez sur Soumettre.",
     "staleTitle": "Mise à jour disponible",

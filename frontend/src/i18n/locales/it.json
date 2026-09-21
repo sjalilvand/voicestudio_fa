@@ -2284,6 +2284,7 @@
     "tailscale_qr_alt": "Codice QR per l'URL Tailscale"
   },
   "reportBug": {
+    "native_fault_cause": "Errore nativo: il processo è terminato al di sotto di Python, quindi non è disponibile una traccia Python.",
     "label": "Segnala un bug",
     "title": "Apre una pagina dei problemi di GitHub precompilata nel browser. Non viene inviato nulla finché non si fa clic su Invia.",
     "staleTitle": "Aggiornamento disponibile",

@@ -2187,6 +2187,7 @@
     "contact_lead": "Fiyatlandırma, ekibinize ve iş yükünüze uyacak şekilde dağıtım başına belirtilir. Bana kullanım durumunuzu söyleyin, ben de size bir fiyat teklifi vereyim."
   },
   "reportBug": {
+    "native_fault_cause": "Yerel kod hatası: işlem Python katmanının altında çöktüğü için Python geri izlemesi bulunmuyor.",
     "label": "Hata bildir",
     "title": "Tarayıcınızda önceden doldurulmuş bir GitHub Sorunları sayfasını açar. Siz Gönder'i tıklatana kadar hiçbir şey gönderilmez.",
     "staleTitle": "Güncelleme mevcut",

@@ -2284,6 +2284,7 @@
     "tailscale_qr_alt": "Código QR para o URL Tailscale"
   },
   "reportBug": {
+    "native_fault_cause": "Falha nativa: o processo falhou abaixo da camada Python, por isso não há rastreamento Python disponível.",
     "label": "Reportar um bug",
     "title": "Abre uma página pré-preenchida de problemas do GitHub em seu navegador. Nada é enviado até você clicar em Enviar.",
     "staleTitle": "Atualização disponível",

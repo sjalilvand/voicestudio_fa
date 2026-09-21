@@ -2284,6 +2284,7 @@
     "tailscale_qr_alt": "Tailscale URL の QR コード"
   },
   "reportBug": {
+    "native_fault_cause": "ネイティブ障害：Python より下位の層でプロセスが異常終了したため、Python のトレースバックはありません。",
     "label": "バグを報告する",
     "title": "ブラウザで事前に入力された GitHub の問題ページを開きます。 「送信」をクリックするまでは何も送信されません。",
     "staleTitle": "アップデートがあります",

@@ -2191,6 +2191,7 @@
     "contact_lead": "Ceny są podawane za wdrożenie, więc odpowiadają Twojemu zespołowi i obciążeniu pracą. Podaj mi swój przypadek użycia, a otrzymasz wycenę."
   },
   "reportBug": {
+    "native_fault_cause": "Błąd natywny: proces uległ awarii poniżej warstwy Pythona, więc ślad stosu Pythona jest niedostępny.",
     "label": "Zgłoś błąd",
     "title": "Otwiera wstępnie wypełnioną stronę problemów z GitHub w przeglądarce. Nic nie zostanie wysłane, dopóki nie klikniesz Prześlij.",
     "staleTitle": "Dostępna aktualizacja",

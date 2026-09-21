@@ -24,7 +24,10 @@ vi.mock('./runtime-project', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./runtime-project')>()),
   runtimeDependenciesReady: vi.fn(async () => state.ready),
 }));
-import { resolveSpawnPlan } from './backend';
+vi.mock('./legacy-storage', () => ({
+  legacyStorageEnv: () => ({ OMNIVOICE_DATA_DIR: '/legacy/data', OMNIVOICE_CACHE_DIR: '/legacy/models' }),
+}));
+import { resolveSpawnPlan, managedBackendSpawnOptions } from './backend';
 afterEach(() => {
   state.installed = true;
   state.ready = true;
@@ -96,4 +99,22 @@ it('keeps native fault frames when the production log ring overflows', async () 
   } finally {
     output.mockRestore();
   }
+});
+
+it('passes legacy storage to packaged backends while preserving explicit overrides', () => {
+  state.packaged = true;
+  vi.stubEnv('OMNIVOICE_DATA_DIR', undefined);
+  vi.stubEnv('OMNIVOICE_CACHE_DIR', undefined);
+  expect(managedBackendSpawnOptions(3900).env).toMatchObject({
+    OMNIVOICE_DATA_DIR: '/legacy/data', OMNIVOICE_CACHE_DIR: '/legacy/models',
+  });
+  vi.stubEnv('OMNIVOICE_DATA_DIR', '/chosen/data');
+  vi.stubEnv('OMNIVOICE_CACHE_DIR', '/chosen/models');
+  expect(managedBackendSpawnOptions(3900).env).toMatchObject({
+    OMNIVOICE_DATA_DIR: '/chosen/data', OMNIVOICE_CACHE_DIR: '/chosen/models',
+  });
+  state.packaged = false;
+  vi.stubEnv('OMNIVOICE_DATA_DIR', undefined);
+  vi.stubEnv('OMNIVOICE_CACHE_DIR', undefined);
+  expect(managedBackendSpawnOptions(3900).env.OMNIVOICE_DATA_DIR).toBeUndefined();
 });

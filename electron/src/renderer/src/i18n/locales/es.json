@@ -2189,6 +2189,7 @@
     "contact_lead": "El precio se cotiza por implementación para que se ajuste a su equipo y carga de trabajo. Cuénteme su caso de uso y le conseguiré una cotización."
   },
   "reportBug": {
+    "native_fault_cause": "Fallo nativo: el proceso falló por debajo de Python, por lo que no hay un rastreo de Python disponible.",
     "label": "Informar un error",
     "title": "Abre una página de Problemas de GitHub precargada en su navegador. No se envía nada hasta que haga clic en Enviar.",
     "staleTitle": "Actualización disponible",

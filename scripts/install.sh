@@ -1,611 +1,230 @@
 #!/bin/sh
-# VoiceStudio — universal installer.
-#
-# Default mode installs the prebuilt desktop app from GitHub Releases
-# (verified against the published SHA256SUMS). Use --source to clone and
-# build from source instead.
-#
-# Usage:
-#   curl -fsSL https://voicestudio.sh/install | sh
-#       Install the latest prebuilt app (macOS dmg / Linux AppImage).
-#
-#   curl -fsSL https://voicestudio.sh/install | sh -s -- --version 0.5.2
-#       Install a specific release.
-#
-#   curl -fsSL https://voicestudio.sh/install | sh -s -- --source
-#       Clone the repo and build from source instead (installs system deps,
-#       Python via uv, frontend via bun). Run ./run.sh afterwards.
-#
-# Options:
-#   --binary          Prebuilt app from GitHub Releases (default)
-#   --source          Clone and build from source
-#   --version X.Y.Z   Release version in binary mode (default: latest)
-#   --python V        Source mode: Python version for uv (default 3.11)
-#   --verbose         Show all subcommand output
-#   --help            This help
-#
-# Windows: run the PowerShell installer instead (`irm https://voicestudio.sh/install | iex`)
-# or this script inside WSL.
-set -e
+# Install Electron from a release, or build and install current main.
+set -eu
 
-# ── Output style ────────────────────────────────────────────────────────────
-RULE=""
-_rule_i=0
-while [ "$_rule_i" -lt 56 ]; do
-    RULE="${RULE}─"
-    _rule_i=$((_rule_i + 1))
-done
-
-if [ -n "${NO_COLOR:-}" ]; then
-    C_TITLE="" C_DIM="" C_OK="" C_WARN="" C_ERR="" C_RST=""
-elif [ -t 1 ] || [ -n "${FORCE_COLOR:-}" ]; then
-    _ESC="$(printf '\033')"
-    C_TITLE="${_ESC}[1;38;5;141m"   # bold purple
-    C_DIM="${_ESC}[38;5;245m"
-    C_OK="${_ESC}[38;5;108m"        # green
-    C_WARN="${_ESC}[38;5;136m"      # yellow
-    C_ERR="${_ESC}[91m"             # red
-    C_RST="${_ESC}[0m"
-else
-    C_TITLE="" C_DIM="" C_OK="" C_WARN="" C_ERR="" C_RST=""
-fi
-
-step()  { printf "  ${C_DIM}%-18.18s${C_RST}${3:-$C_OK}%s${C_RST}\n" "$1" "$2"; }
-note()  { printf "  ${C_DIM}%-18s${2:-$C_DIM}%s${C_RST}\n" "" "$1"; }
-warn()  { printf "  ${C_WARN}⚠  %s${C_RST}\n" "$1"; }
-die()   { printf "  ${C_ERR}✗  %s${C_RST}\n" "$1" >&2; exit 1; }
-have()  { command -v "$1" >/dev/null 2>&1; }
-
-show_usage() {
-    cat <<'USAGE'
-VoiceStudio installer
+die() { printf 'VoiceStudio: %s\n' "$*" >&2; exit 1; }
+have() { command -v "$1" >/dev/null 2>&1; }
+usage() {
+    cat <<'HELP'
+VoiceStudio Electron installer (macOS / Linux)
 
   curl -fsSL https://voicestudio.sh/install | sh
-      Install the latest prebuilt app (macOS dmg / Linux AppImage).
-
   curl -fsSL https://voicestudio.sh/install | sh -s -- --version X.Y.Z
-      Install a specific release.
+  curl -fsSL https://voicestudio.sh/install | sh -s -- --main
 
-  curl -fsSL https://voicestudio.sh/install | sh -s -- --source
-      Clone and build from source (system deps + uv + bun).
+  --version VERSION  Install a published Electron version (optional v prefix)
+  --main, --source   Clone main, build Electron, and install the desktop app
+  --binary          Install a release (default)
+  --uninstall       Remove the installed app, preserving all user data
+  --help            Show this help
 
-Options:
-  --binary          Prebuilt app from GitHub Releases (default)
-  --source          Clone and build from source
-  --version X.Y.Z   Release version in binary mode (default: latest)
-  --python V        Source mode: Python version for uv (default 3.11)
-  --verbose         Show all subcommand output
-USAGE
+Release installs require curl and a SHA-256 tool. Main builds also require
+Git, Node.js 22+, Bun, Rust/Cargo, and native build dependencies (see README).
+The installer preserves settings, models, and projects. Quit VoiceStudio first.
+Versions without Electron artifacts are not supported; Tauri is archived.
+HELP
 }
 
-# ── Parse flags ─────────────────────────────────────────────────────────────
-MODE="binary"
-VERBOSE=false
-_USER_PYTHON=""
-_VERSION_ARG=""
-_expect=""
-for arg in "$@"; do
-    if [ "$_expect" = "python" ]; then
-        _USER_PYTHON="$arg"; _expect=""
-        continue
-    fi
-    if [ "$_expect" = "version" ]; then
-        _VERSION_ARG="$arg"; _expect=""
-        continue
-    fi
-    case "$arg" in
-        --binary)        MODE="binary" ;;
-        --source)        MODE="source" ;;
-        --version)       _expect="version" ;;
-        --verbose|-v)    VERBOSE=true ;;
-        --python)        _expect="python" ;;
-        --help|-h)       show_usage; exit 0 ;;
-        *)               echo "Unknown option: $arg (see --help)" >&2; exit 1 ;;
+MODE=binary
+VERSION=
+UNINSTALL=0
+INSTALL_OPTION=0
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --main|--source) MODE=main; INSTALL_OPTION=1 ;;
+        --binary) MODE=binary; INSTALL_OPTION=1 ;;
+        --uninstall) UNINSTALL=1 ;;
+        --version)
+            [ "$#" -ge 2 ] || die '--version requires a value'
+            VERSION=${2#v}; INSTALL_OPTION=1; shift ;;
+        --help|-h) usage; exit 0 ;;
+        *) die "Unknown option: $1 (see --help)" ;;
     esac
+    shift
 done
-[ -z "$_expect" ] || { echo "--$_expect requires a value" >&2; exit 1; }
-
-run_quiet() {
-    if [ "$_VERBOSE" = true ]; then
-        "$@"
-    else
-        "$@" > /dev/null 2>&1
-    fi
+[ "$UNINSTALL-$INSTALL_OPTION" != 1-1 ] || die '--uninstall cannot be combined with installation options'
+[ "$MODE" != main ] || [ -z "$VERSION" ] || die '--main cannot be combined with --version'
+valid_version() {
+    # Versions are used in URLs and filenames; reject paths and shell syntax.
+    printf '%s\n' "$1" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9]+([.-][A-Za-z0-9]+)*)?$'
 }
-
-# ── Helper: download (curl or wget) ────────────────────────────────────────
-download() {
-    if have curl; then
-        curl -LsSf "$1" -o "$2"
-    elif have wget; then
-        wget -qO "$2" "$1"
-    else
-        die "Neither curl nor wget found. Install one and re-run."
-    fi
-}
-
-# ── Helper: open browser (cross-platform) ──────────────────────────────────
-open_browser() {
-    _url="$1"
-    if [ "$(uname)" = "Darwin" ] && have open; then
-        open "$_url"
-    elif grep -qi microsoft /proc/version 2>/dev/null; then
-        # WSL: use Windows browser
-        if have powershell.exe; then
-            powershell.exe -NoProfile -Command "Start-Process '$_url'" >/dev/null 2>&1 &
-        elif have cmd.exe; then
-            cmd.exe /c start "" "$_url" >/dev/null 2>&1 &
-        elif have xdg-open; then
-            xdg-open "$_url" >/dev/null 2>&1 &
-        else
-            echo "  Open in your browser: $_url"
-        fi
-    elif have xdg-open; then
-        xdg-open "$_url" >/dev/null 2>&1 &
-    else
-        echo "  Open in your browser: $_url"
-    fi
-}
-
-# ── Detect platform ────────────────────────────────────────────────────────
-OS="linux"
+[ -z "$VERSION" ] || valid_version "$VERSION" || die 'Invalid version; use X.Y.Z or X.Y.Z-prerelease'
 case "$(uname -s)" in
-    Darwin)               OS="macos" ;;
-    MINGW*|MSYS*|CYGWIN*)  OS="windows" ;;
-    *) if grep -qi microsoft /proc/version 2>/dev/null; then OS="wsl"; fi ;;
+    Darwin) OS=mac ;;
+    Linux) OS=linux ;;
+    *) die 'This shell installer supports macOS and Linux. On Windows, use the Electron .exe from GitHub Releases.' ;;
 esac
-
-if [ "$OS" = "windows" ]; then
-    echo "⚠  This script handles macOS / Linux only."
-    echo "   On Windows, run the PowerShell installer instead:"
-    echo "     irm https://voicestudio.sh/install | iex"
-    echo "   (or download the VoiceStudio installer (.msi) from the Releases page,"
-    echo "    or run this script inside WSL)."
+if [ "$OS" = mac ]; then
+    PATH="$PATH:/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support"
+    export PATH
+fi
+if [ -n "${VOICESTUDIO_INSTALL_DIR:-}" ]; then
+    case "$VOICESTUDIO_INSTALL_DIR" in /*) ;; *) die 'Install directory must be absolute';; esac
+    [ -d "$VOICESTUDIO_INSTALL_DIR" ] && [ -w "$VOICESTUDIO_INSTALL_DIR" ] || die 'Custom install directory must exist and be writable.'
+fi
+require_closed() {
+    if have pgrep && { pgrep -f '/VoiceStudio[.]app/Contents/MacOS/VoiceStudio([[:space:]]|$)' >/dev/null 2>&1 || pgrep -x VoiceStudio >/dev/null 2>&1 || pgrep -f '(^|/)voicestudio-electron([[:space:]]|$)' >/dev/null 2>&1; }; then
+        die 'Quit VoiceStudio completely (macOS: Command-Q), then run this command again. No app files were changed.'
+    fi
+}
+require_closed
+if [ "$UNINSTALL" = 1 ]; then
+    # Move only the named application into a recoverable sibling directory.
+    # Never traverse data locations or delete shared model caches.
+    remove_app() {
+        target=$1
+        [ -e "$target" ] || [ -L "$target" ] || return 0
+        [ ! -L "$target" ] || die "Refusing symlink: $target"
+        if [ "$OS" = mac ]; then
+            [ -f "$target/Contents/Resources/app.asar" ] || die "Not an Electron app: $target"
+        else
+            [ -f "$target" ] || die "Not an AppImage file: $target"
+        fi
+        if [ "$OS" = mac ]; then
+            # Hidden .app backups inside Applications still appear in Launchpad.
+            # Trash keeps recovery possible without leaving a launchable duplicate.
+            mkdir -p "$HOME/.Trash"
+            recovery=$(mktemp -d "$HOME/.Trash/VoiceStudio-uninstalled.XXXXXXXX")
+            # lsregister may return -10814 even after removing a stale record.
+            # Moving to Trash is still required to prevent rediscovery.
+            lsregister -u "$target" || printf 'Warning: macOS could not refresh the old registration; moving the app to Trash.\n' >&2
+        else
+            recovery=$(mktemp -d "$(dirname "$target")/.voicestudio-uninstalled.XXXXXXXX")
+        fi
+        mv "$target" "$recovery/" || die "Could not remove $target; check permissions."
+        printf 'Uninstalled: %s\nRecoverable copy: %s\n' "$target" "$recovery"
+    }
+    printf 'Quit VoiceStudio before uninstalling.\n'
+    if [ -n "${VOICESTUDIO_INSTALL_DIR:-}" ]; then
+        case "$VOICESTUDIO_INSTALL_DIR" in /*) ;; *) die 'Install directory must be absolute';; esac
+        if [ "$OS" = mac ]; then remove_app "$VOICESTUDIO_INSTALL_DIR/VoiceStudio.app";
+        else remove_app "$VOICESTUDIO_INSTALL_DIR/VoiceStudio"; fi
+    elif [ "$OS" = mac ]; then
+        remove_app /Applications/VoiceStudio.app
+        remove_app "$HOME/Applications/VoiceStudio.app"
+    else
+        remove_app "$HOME/.local/bin/VoiceStudio"
+    fi
+    printf 'Uninstall complete. Settings, models and projects are preserved.\n'
     exit 0
 fi
-ARCH=$(uname -m)
-
-echo ""
-printf "  ${C_TITLE}%s${C_RST}\n" "🎙 VoiceStudio Installer"
-printf "  ${C_DIM}%s${C_RST}\n" "$RULE"
-echo ""
-
-step "platform" "$OS ($ARCH)"
-
-# Detect Rosetta on macOS
-if [ "$OS" = "macos" ] && [ "$ARCH" = "x86_64" ]; then
-    if [ "$(sysctl -in hw.optional.arm64 2>/dev/null || echo 0)" = "1" ]; then
-        warn "Apple Silicon detected running under Rosetta (x86_64)."
-        note "Re-run from a native arm64 terminal for full MLX support."
-    fi
+have curl || die 'Install curl, then retry.'
+case "$(uname -m)" in
+    arm64|aarch64) ARCH=arm64 ;;
+    x86_64|amd64) ARCH=x64 ;;
+    *) die 'Unsupported processor architecture.' ;;
+esac
+if [ "$OS" = mac ] && [ "$ARCH" = x64 ] && [ "$(sysctl -in hw.optional.arm64 2>/dev/null || true)" = 1 ]; then
+    ARCH=arm64
+    [ "$MODE" != main ] || die 'Run --main from a native Apple Silicon terminal, not Rosetta.'
 fi
+[ "$OS-$ARCH" != linux-arm64 ] || die 'Linux arm64 Electron packages are not supported yet.'
 
-# ── Binary install (default): prebuilt app from GitHub Releases ────────────
-REPO_DOWNLOADS="https://github.com/debpalash/VoiceStudio/releases/download"
-REPO_LATEST="https://github.com/debpalash/VoiceStudio/releases/latest/download"
-
-strip_v() { printf '%s' "${1#v}"; }
-
-resolve_latest_version() {
-    _tmp=$(mktemp)
-    download "$REPO_LATEST/latest.json" "$_tmp" || die "Could not fetch the latest release manifest."
-    _v=$(sed -n 's/.*"version" *: *"\([^"]*\)".*/\1/p' "$_tmp" | head -n1)
-    rm -f "$_tmp"
-    [ -n "$_v" ] || die "Could not resolve the latest release version."
-    printf '%s' "$_v"
+WORK=$(mktemp -d "${TMPDIR:-/tmp}/voicestudio-install.XXXXXXXX")
+MOUNT=
+STAGED=
+BACKUP=
+DEST=
+cleanup() {
+    if [ -n "$MOUNT" ]; then hdiutil detach "$MOUNT" -quiet >/dev/null 2>&1 || true; fi
+    if [ -n "$BACKUP" ] && [ -e "$BACKUP" ] && [ ! -e "$DEST" ]; then mv "$BACKUP" "$DEST"; fi
+    if [ -n "$STAGED" ] && [ -d "$STAGED" ]; then rm -rf "$STAGED"; fi
+    rm -rf "$WORK"
 }
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM HUP
+download() { curl --proto '=https' --proto-redir '=https' --connect-timeout 30 --max-time 1800 -fLsS --retry 3 "$1" -o "$2"; }
 
-verify_sha256() { # <file> <sums-file> <asset-name>
-    if have shasum; then
-        _actual=$(shasum -a 256 "$1" | awk '{print $1}')
-    elif have sha256sum; then
-        _actual=$(sha256sum "$1" | awk '{print $1}')
-    else
-        warn "No sha256 tool found — skipping checksum verification."
-        return 0
-    fi
-    _expected=$(grep -F "$3" "$2" | awk '{print $1}' | head -n1)
-    [ -n "$_expected" ] || die "Checksum entry for $3 not found in $(basename "$2")."
-    [ "$_actual" = "$_expected" ] || die "Checksum mismatch for $3 — download corrupted?"
-    step "checksum" "OK"
-}
-
-install_binary() {
-    if [ -n "$_VERSION_ARG" ]; then
-        VERSION="$(strip_v "$_VERSION_ARG")"
-    else
-        step "release" "resolving latest version..."
-        VERSION="$(strip_v "$(resolve_latest_version)")"
-    fi
-    step "release" "v$VERSION"
-
-    BASE="$REPO_DOWNLOADS/v$VERSION"
-    case "$OS" in
-        macos)
-            case "$ARCH" in
-                arm64)
-                    ASSET="VoiceStudio_${VERSION}_aarch64.dmg"
-                    SUMS="SHA256SUMS-macOS.Apple.Silicon.txt" ;;
-                x86_64)
-                    ASSET="VoiceStudio_${VERSION}_x64.dmg"
-                    SUMS="SHA256SUMS-macOS.Intel.txt" ;;
-                *)
-                    die "Unsupported macOS architecture: $ARCH" ;;
-            esac
-            ;;
-        *)
-            case "$ARCH" in
-                x86_64)
-                    ASSET="VoiceStudio_${VERSION}_amd64.AppImage"
-                    SUMS="SHA256SUMS-Linux.x64.txt" ;;
-                *)
-                    die "No prebuilt Linux build for $ARCH yet. Try --source, or the Docker image." ;;
-            esac
-            ;;
-    esac
-
-    TMP=$(mktemp -d)
-    step "download" "$ASSET"
-    note "~100–230 MB depending on platform; runs through your GitHub connection."
-    download "$BASE/$ASSET" "$TMP/$ASSET" || die "Download failed. Check your network or try --version with an older release."
-    step "download" "$(du -h "$TMP/$ASSET" | cut -f1)"
-
-    step "checksum" "verifying..."
-    download "$BASE/$SUMS" "$TMP/$SUMS" || die "Could not fetch $SUMS."
-    verify_sha256 "$TMP/$ASSET" "$TMP/$SUMS" "$ASSET"
-
-    case "$OS" in
-        macos)
-            step "install" "mounting disk image..."
-            MOUNT_DIR=$(hdiutil attach -nobrowse "$TMP/$ASSET" | awk -F'\t' '/\/Volumes\//{print $NF}')
-            [ -n "$MOUNT_DIR" ] || die "Could not mount $ASSET"
-            APP_SRC=$(find "$MOUNT_DIR" -maxdepth 1 -name "*.app" | head -n1)
-            if [ -z "$APP_SRC" ]; then
-                hdiutil detach "$MOUNT_DIR" -quiet || true
-                die "No .app bundle found inside $ASSET"
-            fi
-            APP_NAME=$(basename "$APP_SRC")
-            DEST_DIR="/Applications"
-            if [ ! -w "/Applications" ]; then
-                DEST_DIR="$HOME/Applications"
-                mkdir -p "$DEST_DIR"
-                note "Applications folder not writable — installing to ~/Applications instead."
-            fi
-            step "install" "$DEST_DIR/$APP_NAME"
-            if [ -d "$DEST_DIR/$APP_NAME" ]; then
-                rm -rf "$DEST_DIR/$APP_NAME"
-            fi
-            ditto "$APP_SRC" "$DEST_DIR/$APP_NAME"
-            hdiutil detach "$MOUNT_DIR" -quiet || true
-            ;;
-        *)
-            BIN_DIR="$HOME/.local/bin"
-            mkdir -p "$BIN_DIR"
-            step "install" "$BIN_DIR/VoiceStudio"
-            if ! cp "$TMP/$ASSET" "$BIN_DIR/VoiceStudio"; then
-                rm -rf "$TMP"
-                die "Could not write to $BIN_DIR"
-            fi
-            chmod +x "$BIN_DIR/VoiceStudio"
-            case ":$PATH:" in
-                *":$BIN_DIR:"*) ;;
-                *) note "Add ~/.local/bin to your PATH to launch VoiceStudio from anywhere." ;;
-            esac
-            ;;
-    esac
-    rm -rf "$TMP"
-
-    if ! have ffmpeg; then
-        warn "ffmpeg not found — VoiceStudio needs it at runtime."
-        if [ "$OS" = "macos" ]; then
-            note "Install it with: brew install ffmpeg"
-        else
-            note "Install it with your package manager (e.g. sudo apt install ffmpeg)."
+install_app() {
+    require_closed
+    if [ "$OS" = mac ]; then
+        DEST_DIR=${VOICESTUDIO_INSTALL_DIR:-/Applications}
+        if [ ! -w "$DEST_DIR" ]; then DEST_DIR="$HOME/Applications"; mkdir -p "$DEST_DIR"; fi
+        DEST="$DEST_DIR/VoiceStudio.app"
+        STAGED=$(mktemp -d "$DEST_DIR/.voicestudio-install.XXXXXXXX")
+        # Copy and validate first, retaining the prior app until the copy succeeds.
+        ditto "$1" "$STAGED/VoiceStudio.app"
+        [ -f "$STAGED/VoiceStudio.app/Contents/Info.plist" ] || die 'Invalid application bundle.'
+        if [ -e "$DEST" ]; then
+            BACKUP="$STAGED/previous.app"
+            mv "$DEST" "$BACKUP"
         fi
-    fi
-
-    echo ""
-    printf "  ${C_TITLE}%s${C_RST}\n" "✓ Install complete!"
-    printf "  ${C_DIM}%s${C_RST}\n" "$RULE"
-    echo ""
-    if [ "$OS" = "macos" ]; then
-        step "next" "Open VoiceStudio from Applications, or run: open -a VoiceStudio"
+        mv "$STAGED/VoiceStudio.app" "$DEST"
+        lsregister -f "$DEST" || printf 'Warning: macOS registration failed; open the installed app directly.\n' >&2
     else
-        step "next" "Run VoiceStudio from ~/.local/bin (or your app launcher)"
+        DEST_DIR=${VOICESTUDIO_INSTALL_DIR:-"$HOME/.local/bin"}
+        mkdir -p "$DEST_DIR"
+        DEST="$DEST_DIR/VoiceStudio"
+        STAGED=$(mktemp -d "$DEST_DIR/.voicestudio-install.XXXXXXXX")
+        cp "$1" "$STAGED/VoiceStudio"
+        chmod +x "$STAGED/VoiceStudio"
+        mv -f "$STAGED/VoiceStudio" "$DEST"
     fi
-    echo ""
-    note "First launch downloads ML model weights (~5 GB). After that, launches are instant."
-    echo ""
+    printf 'Installed Electron: %s\n' "$DEST"
+    printf 'Open VoiceStudio to configure its local backend and choose models. Existing data is preserved.\n'
+    if [ "$OS" = mac ]; then printf 'Launch the installed app: open "%s"\n' "$DEST"; fi
 }
 
-if [ "$MODE" = "binary" ]; then
-    install_binary
-    exit 0
+if [ "$MODE" = main ]; then
+    for tool in git node bun cargo; do have "$tool" || die "Main builds require $tool; see the source-build prerequisites in README."; done
+    node -e 'if (Number(process.versions.node.split(".")[0]) < 22) process.exit(1)' || die 'Node.js 22 or newer is required.'
+    printf 'Building and installing Electron from main (this may take several minutes).\n'
+    # Never pull into, reset, or build from an existing user checkout.
+    git clone --depth 1 --branch main --single-branch https://github.com/debpalash/VoiceStudio.git "$WORK/source"
+    (
+        cd "$WORK/source"
+        printf 'Source commit: '; git rev-parse HEAD
+        bun install --frozen-lockfile
+        # Packaging includes the backend and builds its Rust native helper.
+        # Backend setup is performed by the installed app on first launch.
+        export CSC_IDENTITY_AUTO_DISCOVERY=false
+        cd electron
+        bun run build
+        node tests/packaging-contract.mjs
+        # Invoke the builder directly: bun appends flags to the last command
+        # in a chained package script, not necessarily to electron-builder.
+        bun run electron-builder --config electron-builder.config.mjs --publish never --"$OS" --"$ARCH"
+        node tests/update-package-contract.mjs
+    )
+    VERSION=$(node -p 'require(process.argv[1]).version' "$WORK/source/frontend/package.json")
+    valid_version "$VERSION" || die 'Invalid version in source checkout.'
+    PACKAGE_DIR="$WORK/source/electron/release"
+else
+    RELEASES=https://github.com/debpalash/VoiceStudio/releases
+    if [ -z "$VERSION" ]; then
+        # latest.json is the frozen Tauri feed. Resolve the release tag instead.
+        URL=$(curl --proto '=https' --proto-redir '=https' --connect-timeout 30 --max-time 60 -fLsS --retry 3 -o /dev/null -w '%{url_effective}' "$RELEASES/latest")
+        case "$URL" in "$RELEASES/tag/v"*) VERSION=${URL##*/v} ;; *) die 'Could not resolve the latest release tag.' ;; esac
+        valid_version "$VERSION" || die 'Invalid latest release version.'
+    fi
+    PACKAGE_DIR="$WORK"
 fi
-
-# ── Source mode: clone and build ────────────────────────────────────────────
-step "mode" "building from source (clones the repo — use --binary for the prebuilt app)"
-echo ""
-
-install_source() {
-
-    # ── Resolve repo root (for local installs) ─────────────────────────────────
-    # The script lives in scripts/, so the project root may be one level up.
-    SCRIPT_DIR=""
-    if [ -n "${0:-}" ] && [ -f "$0" ]; then
-        _script_dir=$(cd "$(dirname "$0")" 2>/dev/null && pwd) || true
-        if [ -f "$_script_dir/pyproject.toml" ]; then
-            SCRIPT_DIR="$_script_dir"
-        elif [ -f "$_script_dir/../pyproject.toml" ]; then
-            SCRIPT_DIR=$(cd "$_script_dir/.." 2>/dev/null && pwd) || true
-        fi
-    fi
-    if [ -z "$SCRIPT_DIR" ]; then
-        if [ -f "./pyproject.toml" ]; then
-            SCRIPT_DIR=$(pwd)
-        else
-            SCRIPT_DIR=""
-        fi
-    fi
-
-    # If run via curl pipe, clone the repo first
-    if [ ! -f "$SCRIPT_DIR/pyproject.toml" ]; then
-        step "clone" "downloading VoiceStudio..."
-        INSTALL_DIR="$HOME/VoiceStudio"
-        if [ -d "$INSTALL_DIR/.git" ]; then
-            note "Updating existing clone at $INSTALL_DIR"
-            (cd "$INSTALL_DIR" && git pull --ff-only 2>/dev/null || true)
-        else
-            if have git; then
-                git clone --depth 1 https://github.com/debpalash/VoiceStudio.git "$INSTALL_DIR"
-            else
-                die "git is required. Install git and re-run."
-            fi
-        fi
-        SCRIPT_DIR="$INSTALL_DIR"
-    fi
-
-    cd "$SCRIPT_DIR"
-
-    # ── Python version ──────────────────────────────────────────────────────────
-    if [ -n "$_USER_PYTHON" ]; then
-        PYTHON_VERSION="$_USER_PYTHON"
-        note "Using user-specified Python $PYTHON_VERSION"
-    else
-        PYTHON_VERSION="3.11"
-    fi
-
-    # ── System dependencies ────────────────────────────────────────────────────
-
-    # Helper: install system packages with the right package manager
-    _install_sys_pkgs() {
-        case "$OS" in
-            macos)
-                if ! have brew; then
-                    note "Installing Homebrew..."
-                    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" </dev/null
-                    if [ -x /opt/homebrew/bin/brew ]; then
-                        eval "$(/opt/homebrew/bin/brew shellenv)"
-                    elif [ -x /usr/local/bin/brew ]; then
-                        eval "$(/usr/local/bin/brew shellenv)"
-                    fi
-                fi
-                brew install "$@" </dev/null 2>/dev/null || true
-                ;;
-            linux|wsl)
-                if have apt-get; then
-                    # Try without sudo first, then escalate
-                    apt-get update -y </dev/null >/dev/null 2>&1 || true
-                    apt-get install -y "$@" </dev/null >/dev/null 2>&1 || {
-                        if have sudo; then
-                            echo ""
-                            echo "  Need elevated permissions to install: $*"
-                            sudo apt-get update -y </dev/null
-                            sudo apt-get install -y "$@" </dev/null
-                        else
-                            die "Cannot install $*. Run as root or install manually."
-                        fi
-                    }
-                elif have dnf; then
-                    sudo dnf install -y "$@" </dev/null 2>/dev/null || true
-                elif have yum; then
-                    sudo yum install -y "$@" </dev/null 2>/dev/null || true
-                elif have pacman; then
-                    sudo pacman -S --noconfirm "$@" 2>/dev/null || true
-                else
-                    warn "No supported package manager found. Please install manually: $*"
-                fi
-                ;;
-        esac
-    }
-
-    # Xcode CLT (macOS only)
-    if [ "$OS" = "macos" ]; then
-        step "xcode" "checking..."
-        if ! xcode-select -p >/dev/null 2>&1; then
-            note "Installing Xcode Command Line Tools..."
-            xcode-select --install </dev/null 2>/dev/null || true
-            until xcode-select -p >/dev/null 2>&1; do
-                note "Waiting for Xcode CLT install..."
-                sleep 10
-            done
-        fi
-        step "xcode" "$(xcode-select -p)"
-    fi
-
-    # ffmpeg (required for audio/video processing)
-    step "ffmpeg" "checking..."
-    if ! have ffmpeg; then
-        note "Installing ffmpeg..."
-        case "$OS" in
-            macos)  _install_sys_pkgs ffmpeg ;;
-            linux|wsl)
-                if have apt-get; then
-                    _install_sys_pkgs ffmpeg
-                elif have dnf; then
-                    _install_sys_pkgs ffmpeg-free  # Fedora
-                elif have pacman; then
-                    _install_sys_pkgs ffmpeg
-                else
-                    warn "Please install ffmpeg manually."
-                fi
-                ;;
-        esac
-    fi
-    if have ffmpeg; then
-        step "ffmpeg" "$(ffmpeg -version 2>/dev/null | head -n1 | cut -d' ' -f1-3)"
-    else
-        warn "ffmpeg not found — some features will be unavailable."
-    fi
-
-    # ── Install uv ──────────────────────────────────────────────────────────────
-    step "uv" "checking..."
-    UV_MIN_VERSION="0.7.0"
-
-    _version_ge() {
-        # Returns 0 if $1 >= $2 (dotted version comparison)
-        _a=$1; _b=$2
-        while [ -n "$_a" ] || [ -n "$_b" ]; do
-            _a_part=${_a%%.*}; _b_part=${_b%%.*}
-            [ "$_a" = "$_a_part" ] && _a="" || _a=${_a#*.}
-            [ "$_b" = "$_b_part" ] && _b="" || _b=${_b#*.}
-            [ -z "$_a_part" ] && _a_part=0
-            [ -z "$_b_part" ] && _b_part=0
-            if [ "$_a_part" -gt "$_b_part" ] 2>/dev/null; then return 0; fi
-            if [ "$_a_part" -lt "$_b_part" ] 2>/dev/null; then return 1; fi
-        done
-        return 0
-    }
-
-    _uv_ok() {
-        have uv || return 1
-        _raw=$(uv --version 2>/dev/null | awk '{print $2}') || return 1
-        [ -n "$_raw" ] || return 1
-        _ver=${_raw%%[-+]*}
-        _version_ge "$_ver" "$UV_MIN_VERSION"
-    }
-
-    if ! _uv_ok; then
-        note "Installing uv package manager..."
-        _uv_tmp=$(mktemp)
-        download "https://astral.sh/uv/install.sh" "$_uv_tmp"
-        run_quiet sh "$_uv_tmp" </dev/null
-        rm -f "$_uv_tmp"
-        # Source env if uv's installer created it
-        if [ -f "$HOME/.local/bin/env" ]; then
-            . "$HOME/.local/bin/env"
-        fi
-        export PATH="$HOME/.local/bin:$PATH"
-    fi
-    if ! have uv; then
-        die "uv installation failed. Install manually: curl -LsSf https://astral.sh/uv/install.sh | sh"
-    fi
-    step "uv" "$(uv --version 2>/dev/null)"
-
-    # ── Install bun (JS runtime for frontend) ──────────────────────────────────
-    step "bun" "checking..."
-    if ! have bun; then
-        note "Installing bun..."
-        # Fetch to a temp file instead of `curl | sh`: if the download fails,
-        # piping would run an empty script and exit 0, hiding the failure until
-        # `bun: command not found` much later (seen on a GitHub runner).
-        _bun_tmp=$(mktemp)
-        if download "https://bun.sh/install" "$_bun_tmp" && [ -s "$_bun_tmp" ]; then
-            run_quiet sh "$_bun_tmp" </dev/null || true
-        fi
-        rm -f "$_bun_tmp"
-        export PATH="$HOME/.bun/bin:$PATH"
-        if ! have bun && have npm; then
-            note "Falling back to npm install -g bun..."
-            run_quiet npm install -g bun </dev/null || true
-        fi
-    fi
-    have bun || die "bun installation failed. Install manually: curl -fsSL https://bun.sh/install | bash"
-    step "bun" "bun $(bun --version 2>/dev/null)"
-
-    # ── GPU detection (informational) ──────────────────────────────────────────
-    step "gpu" "detecting..."
-    GPU_INFO="CPU only"
-    if [ "$OS" = "macos" ] && [ "$ARCH" = "arm64" ]; then
-        GPU_INFO="Apple Silicon (Metal/MPS)"
-    elif have nvidia-smi; then
-        _gpu_name=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)
-        _cuda_ver=$(nvidia-smi 2>/dev/null | sed -n 's/.*CUDA Version:[[:space:]]*\([0-9]*\.[0-9]*\).*/\1/p' | head -1)
-        if [ -n "$_gpu_name" ]; then
-            GPU_INFO="NVIDIA $_gpu_name (CUDA $_cuda_ver)"
-        fi
-    elif have rocminfo; then
-        _amd_name=$(rocminfo 2>/dev/null | awk '/Marketing Name:/{$1=$2=""; print; exit}' | sed 's/^ *//')
-        if [ -n "$_amd_name" ]; then
-            GPU_INFO="AMD $_amd_name (ROCm)"
-        fi
-    fi
-    step "gpu" "$GPU_INFO"
-
-    # ── Python dependencies via uv ──────────────────────────────────────────────
-    step "python" "syncing dependencies..."
-    note "This can take 5–10 min the first time (torch + torchaudio + demucs...)"
-
-    # Restricted-network support: when OMNIVOICE_REGION is set to china/russia/restricted,
-    # route python-build-standalone downloads through ghproxy.net. See issues #57, #60.
-    # Honors any existing UV_* env vars (power-user override).
-    case "${OMNIVOICE_REGION:-}" in
-        china|russia|restricted)
-            : "${UV_PYTHON_INSTALL_MIRROR:=https://ghproxy.net/https://github.com/astral-sh/python-build-standalone/releases/download}"
-            export UV_PYTHON_INSTALL_MIRROR
-            note "Using ghproxy.net mirror for Python download (OMNIVOICE_REGION=${OMNIVOICE_REGION})"
-            ;;
-    esac
-    : "${UV_HTTP_TIMEOUT:=120}"
-    : "${UV_HTTP_RETRIES:=5}"
-    export UV_HTTP_TIMEOUT UV_HTTP_RETRIES
-
-    # Create venv with the target Python version if it doesn't exist.
-    # If the managed-python download fails (restricted network, mirror unreachable),
-    # fall back to the user's system Python.
-    if [ ! -d .venv ]; then
-        if ! uv venv --python "$PYTHON_VERSION"; then
-            warn "uv venv failed (likely Python download). Retrying with system Python..."
-            uv venv --python "$PYTHON_VERSION" --python-preference only-system \
-                || die "uv venv failed: install Python $PYTHON_VERSION system-wide, set OMNIVOICE_REGION=china|russia|restricted to route through a mirror, or check your network."
-        fi
-    fi
-
-    # Sync all deps from pyproject.toml + uv.lock
-    uv sync
-
-    step "python" "OK — virtualenv at .venv/"
-
-    # ── Frontend deps + build ──────────────────────────────────────────────────
-    step "frontend" "installing dependencies..."
-    (cd frontend && bun install)
-    step "frontend" "OK"
-
-    step "frontend" "building bundle..."
-    (cd frontend && bun run build)
-    step "frontend" "OK — output at frontend/dist/"
-
-    # ── Log directory ──────────────────────────────────────────────────────────
-    case "$OS" in
-        macos) LOG_DIR="$HOME/Library/Application Support/OmniVoice" ;;
-        *)     LOG_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/VoiceStudio" ;;
-    esac
-    mkdir -p "$LOG_DIR"
-
-    # ── Done ────────────────────────────────────────────────────────────────────
-    echo ""
-    printf "  ${C_TITLE}%s${C_RST}\n" "✓ Install complete!"
-    printf "  ${C_DIM}%s${C_RST}\n" "$RULE"
-    echo ""
-    step "next" "Run ./run.sh to start VoiceStudio"
-    echo ""
-    note "First launch downloads ~5 GB of ML model weights (VoiceStudio TTS + Whisper)."
-    note "After that, launches are instant."
-    echo ""
-    note "GPU: $GPU_INFO"
-    note "Logs: $LOG_DIR/omnivoice.log"
-    echo ""
-
-}
-
-install_source
+case "$OS" in
+    mac) ASSET="VoiceStudio-Electron-$VERSION-mac-$ARCH.dmg" ;;
+    linux) ASSET="VoiceStudio-Electron-$VERSION-linux-x64.AppImage" ;;
+esac
+PACKAGE="$PACKAGE_DIR/$ASSET"
+if [ "$MODE" = binary ]; then
+    BASE="$RELEASES/download/v$VERSION"
+    printf 'Downloading %s\n' "$ASSET"
+    download "$BASE/$ASSET" "$PACKAGE" || die "No downloadable Electron package for v$VERSION ($OS/$ARCH). Check the release; legacy Tauri versions are not installed."
+    download "$BASE/SHA256SUMS.txt" "$WORK/SHA256SUMS.txt" || die 'Published checksums are unavailable; refusing to install.'
+    EXPECTED=$(awk -v asset="$ASSET" '$2 == asset {print $1}' "$WORK/SHA256SUMS.txt")
+    printf '%s\n' "$EXPECTED" | grep -Eq '^[a-fA-F0-9]{64}$' || die 'Missing, duplicate, or invalid checksum entry.'
+    if have shasum; then ACTUAL=$(shasum -a 256 "$PACKAGE" | awk '{print $1}');
+    elif have sha256sum; then ACTUAL=$(sha256sum "$PACKAGE" | awk '{print $1}');
+    else die 'A SHA-256 tool (shasum or sha256sum) is required; refusing to install.'; fi
+    [ "$(printf '%s' "$EXPECTED" | tr 'A-F' 'a-f')" = "$ACTUAL" ] || die 'Checksum mismatch; refusing to install.'
+    printf 'Checksum verified.\n'
+fi
+[ -f "$PACKAGE" ] || die "Expected Electron package not found: $PACKAGE"
+if [ "$OS" = mac ]; then
+    MOUNT="$WORK/mount"
+    mkdir "$MOUNT"
+    hdiutil attach -readonly -nobrowse -mountpoint "$MOUNT" "$PACKAGE"
+    [ -d "$MOUNT/VoiceStudio.app" ] || die 'VoiceStudio.app is missing from the disk image.'
+    install_app "$MOUNT/VoiceStudio.app"
+else
+    install_app "$PACKAGE"
+fi
