@@ -2187,6 +2187,7 @@
     "contact_lead": "Giá được báo cho mỗi lần triển khai để phù hợp với nhóm và khối lượng công việc của bạn. Hãy cho tôi biết trường hợp sử dụng của bạn và tôi sẽ nhận được báo giá cho bạn."
   },
   "reportBug": {
+    "native_fault_cause": "Lỗi mã gốc: tiến trình gặp lỗi ở tầng bên dưới Python nên không có thông tin truy vết Python.",
     "label": "Báo cáo lỗi",
     "title": "Mở trang Vấn đề GitHub được điền sẵn trong trình duyệt của bạn. Không có gì được gửi cho đến khi bạn nhấp vào Gửi.",
     "staleTitle": "Có bản cập nhật",

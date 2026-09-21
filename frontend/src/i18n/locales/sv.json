@@ -2284,6 +2284,7 @@
     "tailscale_qr_alt": "QR-kod för Tailscale URL"
   },
   "reportBug": {
+    "native_fault_cause": "Internt fel i maskinkoden: processen kraschade under Python-lagret, så ingen Python-spårning finns tillgänglig.",
     "label": "Rapportera ett fel",
     "title": "Öppnar en förifylld GitHub-problemsida i din webbläsare. Inget skickas förrän du klickar på Skicka.",
     "staleTitle": "Uppdatering tillgänglig",

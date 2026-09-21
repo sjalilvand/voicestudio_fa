@@ -148,6 +148,10 @@ export function ReportBug({ error }: { error?: Error | string }) {
             ...(backend.exitCode != null
               ? ['Exit code: ' + describeExitCode(backend.exitCode)]
               : []),
+            ...(isNativeFaultExit({
+              exitCode: backend.exitCode,
+              signal: backend.stage === 'crashed' ? backend.lastCrash?.signal : null,
+            }) ? [t('reportBug.native_fault_cause')] : []),
             scrubText(backend.message),
             '',
             '```',
@@ -168,11 +172,11 @@ export function ReportBug({ error }: { error?: Error | string }) {
           // and neither reads as a segfault (#2250). Name it, and say outright
           // that a native fault leaves no Python traceback so nobody hunts for
           // one that was never written.
-          'Exit code: ' + describeExitCode(crash.exitCode),
+          'Exit code: ' + describeExitCode(crash.exitCode, t('common.unknown')),
           'Signal: ' + (crash.signal ?? '—'),
           ...(isNativeFaultExit({ exitCode: crash.exitCode, signal: crash.signal })
             ? [
-                'Cause: native fault — the process was killed below Python, so there is no traceback',
+                t('reportBug.native_fault_cause'),
               ]
             : []),
           'Uptime (seconds): ' + Math.round(crash.uptimeMs / 1000),

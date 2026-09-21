@@ -10,11 +10,11 @@ metadata and the backend fallback mirror it. Archived Tauri manifests stay froze
 
 **Highlights**
 
-- A backend that dies natively is named — "access violation" instead of a bare exit code — in the crash panel and in the bug report (#2266)
+- Electron crash details identify native faults instead of showing only numeric exit codes (#2267) — thanks @shivsin25!
 
 ### Fixed
 
-- Name a native backend crash on both desktop shells. Windows reports the same fault as `-1073741819` from Tauri and `3221225477` from Electron, and the fault table only knew the first, so an Electron crash arrived as an anonymous exit code with nothing to say the backend had segfaulted (#2266, #2250)
+- Bug reports distinguish native faults from Python errors and preserve signed Windows codes and POSIX signals (#2267) — thanks @shivsin25!
 
 ## [0.5.4] — 2026-09-20
 

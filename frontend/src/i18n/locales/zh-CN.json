@@ -2670,6 +2670,7 @@
     "tailscale_qr_alt": "Tailscale URL 的二维码"
   },
   "reportBug": {
+    "native_fault_cause": "原生代码故障：进程在 Python 底层崩溃，因此没有可用的 Python 回溯信息。",
     "label": "报告错误",
     "title": "在浏览器中打开预填的 GitHub issue 页面。在你点击“提交”之前不会发送任何内容。",
     "staleTitle": "有可用更新",

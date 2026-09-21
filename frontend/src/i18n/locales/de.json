@@ -2284,6 +2284,7 @@
     "tailscale_qr_alt": "QR-Code für die Tailscale-URL"
   },
   "reportBug": {
+    "native_fault_cause": "Nativer Fehler: Der Prozess ist unterhalb von Python abgestürzt, daher ist kein Python-Traceback verfügbar.",
     "label": "Melden Sie einen Fehler",
     "title": "Öffnet eine vorab ausgefüllte GitHub-Problemseite in Ihrem Browser. Es wird nichts gesendet, bis Sie auf „Senden“ klicken.",
     "staleTitle": "Update verfügbar",
