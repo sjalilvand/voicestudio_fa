@@ -1,259 +1,104 @@
-﻿# VoiceStudio — universal installer for Windows.
-#
-# Default mode installs the prebuilt .msi from GitHub Releases (checksum
-# verified) via msiexec. Use -Source to build from source instead:
-# system deps via winget, Python deps via uv, frontend via bun.
-#
-# Usage:
-#   irm https://voicestudio.sh/install | iex          # prebuilt app (default)
-#   powershell -ExecutionPolicy Bypass -File scripts\install.ps1 -Source
-#
-# Overrides (set before running):
-#   $env:VOICESTUDIO_VERSION = "0.5.2"  # release version in binary mode
-#   $env:VOICESTUDIO_INSTALL_MODE = "source"  # same as -Source when piped
-#   $env:OMNIVOICE_PYTHON = "3.12"      # Python version (source mode)
-#   $env:OMNIVOICE_REGION = "china"     # route Python downloads through a mirror
-
-param([switch]$Source)
-
-$ErrorActionPreference = "Stop"
-
-function Step($name, $value) {
-    Write-Host ("  {0,-18}" -f $name) -NoNewline -ForegroundColor DarkGray
-    Write-Host $value -ForegroundColor Green
+# VoiceStudio Electron: latest, a release version, or build main.
+param([string]$Version = $env:VOICESTUDIO_VERSION, [switch]$Main, [switch]$Source, [switch]$Uninstall, [switch]$Help)
+$ErrorActionPreference = 'Stop'
+if ($Help) {
+    Write-Output @'
+VoiceStudio Electron installer (Windows x64)
+  irm https://voicestudio.sh/install | iex
+  $env:VOICESTUDIO_VERSION='X.Y.Z'; irm https://voicestudio.sh/install | iex
+  $env:VOICESTUDIO_INSTALL_MODE='main'; irm https://voicestudio.sh/install | iex
+File usage: .\install.ps1 [-Version X.Y.Z] [-Main | -Source]
+Uninstall: .\install.ps1 -Uninstall (preserves user data)
+  $env:VOICESTUDIO_INSTALL_MODE='uninstall'; irm https://voicestudio.sh/install.ps1 | iex
+Main requires Git, Node.js 22+, Bun, Rust/Cargo, and MSVC build tools.
+Only Electron releases are supported. Quit the app first; user data is preserved.
+'@
+    return
 }
-function Note($msg) {
-    Write-Host ("  {0,-18}" -f "") -NoNewline -ForegroundColor DarkGray
-    Write-Host $msg -ForegroundColor DarkGray
-}
-function Warn($msg) { Write-Host "  ⚠  $msg" -ForegroundColor Yellow }
-function Die($msg)  { Write-Host "  ✗  $msg" -ForegroundColor Red; exit 1 }
-
-function Test-Command($name) {
-    return [bool](Get-Command $name -ErrorAction SilentlyContinue)
-}
-
-Write-Host ""
-Write-Host "🎙 VoiceStudio Installer" -ForegroundColor Magenta
-Write-Host ("─" * 56) -ForegroundColor DarkGray
-Write-Host ""
-
-Step "platform" "windows ($env:PROCESSOR_ARCHITECTURE)"
-
-$mode = if ($env:VOICESTUDIO_INSTALL_MODE) { $env:VOICESTUDIO_INSTALL_MODE } elseif ($Source) { "source" } else { "binary" }
-if ($mode -ne "binary" -and $mode -ne "source") {
-    Die "VOICESTUDIO_INSTALL_MODE must be 'binary' or 'source' (got '$mode')."
-}
-
-if ($mode -eq "binary") {
-    Step "release" "resolving latest version..."
-    try {
-        $manifest = Invoke-RestMethod "https://github.com/debpalash/VoiceStudio/releases/latest/download/latest.json"
-    } catch {
-        Die "Could not fetch the latest release manifest: $($_.Exception.Message)"
+if ([Environment]::OSVersion.Platform -ne 'Win32NT') { throw 'Use install.sh on macOS or Linux.' }
+if ($env:PROCESSOR_ARCHITECTURE -ne 'AMD64' -and $env:PROCESSOR_ARCHITEW6432 -ne 'AMD64') { throw 'Windows x64 is required.' }
+$mode = if ($Main -or $Source) { 'main' } elseif ($env:VOICESTUDIO_INSTALL_MODE) { $env:VOICESTUDIO_INSTALL_MODE } else { 'binary' }
+if ($mode -eq 'source') { $mode = 'main' }
+if ($Uninstall) { $mode = 'uninstall' }
+if ($mode -eq 'uninstall') {
+    if ($Main -or $Source -or $Version) { throw 'Uninstall cannot be combined with installation options; clear VOICESTUDIO_VERSION first.' }
+    $keys = @('HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*', 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*', 'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*')
+    $entries = @(Get-ItemProperty $keys -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq 'VoiceStudio' })
+    foreach ($entry in $entries) {
+        $command = [string]$entry.UninstallString
+        if ($command -notmatch '^"([^"]+\.exe)"(?:\s.*)?$') { throw 'Unrecognized uninstall command; use Windows Installed apps.' }
+        $exe = $Matches[1]
+        if ((Split-Path $exe -Leaf) -ne 'Uninstall VoiceStudio.exe' -or -not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'Verified Electron uninstaller not found; use Windows Installed apps.' }
+        $process = Start-Process -FilePath $exe -Wait -PassThru
+        if ($process.ExitCode -notin @(0, 3010)) { throw "Uninstall failed or cancelled (exit $($process.ExitCode))." }
     }
-    $vsVersion = if ($env:VOICESTUDIO_VERSION) { $env:VOICESTUDIO_VERSION.TrimStart("v") } else { $manifest.version }
-    $msiUrl = $manifest.platforms.'windows-x86_64-msi'.url
-    if (-not $msiUrl) { Die "No Windows .msi found in release manifest." }
-    Step "release" "v$vsVersion"
-
-    $tmpDir = Join-Path ([System.IO.Path]::GetTempPath()) ("voicestudio-install-" + [guid]::NewGuid())
-    New-Item -ItemType Directory -Force -Path $tmpDir | Out-Null
-    $msiPath = Join-Path $tmpDir ("VoiceStudio_$vsVersion.msi")
-    $sumsName = "SHA256SUMS-Windows.x64.txt"
-    $sumsPath = Join-Path $tmpDir $sumsName
-
-    Step "download" (Split-Path $msiUrl -Leaf)
-    Note "~165 MB; runs through your GitHub connection."
-    Invoke-WebRequest -Uri $msiUrl -OutFile $msiPath
-    if (-not (Test-Path $msiPath)) { Die "Download failed." }
-    Step "download" ("{0:N0} MB" -f ((Get-Item $msiPath).Length / 1MB))
-
-    Step "checksum" "verifying..."
-    $sumsUrl = "https://github.com/debpalash/VoiceStudio/releases/download/v$vsVersion/$sumsName"
-    Invoke-WebRequest -Uri $sumsUrl -OutFile $sumsPath
-    $expected = (Select-String -Path $sumsPath -Pattern ([regex]::Escape((Split-Path $msiUrl -Leaf))) |
-        Select-Object -First 1).Line.Split(" ")[0]
-    if (-not $expected) { Warn "Checksum entry not found — skipping verification." }
-    else {
-        $actual = (Get-FileHash -Algorithm SHA256 $msiPath).Hash.ToLower()
-        if ($actual -ne $expected.ToLower()) { Die "Checksum mismatch for the installer — download corrupted?" }
-        Step "checksum" "OK"
-    }
-
-    Step "install" "launching the VoiceStudio setup wizard..."
-    if ($env:CI) {
-        Step "install" "running msiexec silently (CI)..."
-        $proc = Start-Process -FilePath "msiexec.exe" -ArgumentList "/i", "`"$msiPath`"", "/norestart", "/qn" -Wait -PassThru
-        if ($proc.ExitCode -ne 0) { Die "msiexec failed with exit code $($proc.ExitCode)" }
-    }
-    else {
-        Step "install" "launching the VoiceStudio setup wizard..."
-        Start-Process -FilePath "msiexec.exe" -ArgumentList "/i", "`"$msiPath`""
-    }
-    Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
-
-    Write-Host ""
-    Write-Host "✓ Installer launched!" -ForegroundColor Magenta
-    Write-Host ("─" * 56) -ForegroundColor DarkGray
-    Write-Host ""
-    Write-Host "  next             Finish the setup wizard, then launch VoiceStudio" -ForegroundColor Green
-    Write-Host ""
-    Note "ffmpeg is required at runtime — if winget is available:"
-    Note "  winget install --id Gyan.FFmpeg -e"
-    Write-Host ""
-    exit 0
+    Write-Output 'Uninstall complete (or app was not installed). User data is preserved.'
+    return
 }
-
-# ── winget ───────────────────────────────────────────────────────────────────
-# Only required when a system package is actually missing — machines that
-# already have git/ffmpeg never need it.
-function Install-WingetPackage([string]$id, [string]$label) {
-    if (-not (Test-Command "winget")) {
-        Die "winget not found and $label is missing. Install 'App Installer' from the Microsoft Store, or install $label manually (see docs/install/windows.md)."
-    }
-    Note "Installing $label via winget..."
-    winget install --id $id -e --accept-source-agreements --accept-package-agreements --silent | Out-Null
-    if ($LASTEXITCODE -ne 0) { Warn "winget install of $label failed — install it manually if setup stops." }
-    # Refresh PATH so newly installed tools are visible in this session.
-    $machinePath = [Environment]::GetEnvironmentVariable("Path", "Machine")
-    $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
-    $env:Path = "$machinePath;$userPath"
+if ($mode -notin @('binary', 'main')) { throw 'Install mode must be binary, main, source, or uninstall.' }
+if ($mode -eq 'main' -and $Version) { throw 'Main cannot be combined with Version.' }
+function Assert-Version([string]$Value) {
+    if ($Value -notmatch '^\d+\.\d+\.\d+(-[A-Za-z0-9]+([.-][A-Za-z0-9]+)*)?$') { throw "Invalid version: $Value" }
 }
-
-# ── Git ──────────────────────────────────────────────────────────────────────
-Step "git" "checking..."
-if (-not (Test-Command "git")) {
-    Install-WingetPackage "Git.Git" "Git for Windows"
+function Run-Checked([string]$Command, [string[]]$Arguments) {
+    & $Command @Arguments
+    if ($LASTEXITCODE -ne 0) { throw "$Command failed (exit $LASTEXITCODE)." }
 }
-if (Test-Command "git") {
-    Step "git" (git --version)
-} else {
-    Die "git is required. Install Git for Windows and re-run."
-}
-
-# ── FFmpeg ───────────────────────────────────────────────────────────────────
-Step "ffmpeg" "checking..."
-if (-not (Test-Command "ffmpeg")) {
-    Install-WingetPackage "Gyan.FFmpeg" "ffmpeg"
-}
-if (Test-Command "ffmpeg") {
-    Step "ffmpeg" ((ffmpeg -Version 2>$null | Select-Object -First 1))
-} else {
-    Warn "ffmpeg not found — some features will be unavailable. Open a new terminal after this install so PATH picks it up."
-}
-
-# ── uv ───────────────────────────────────────────────────────────────────────
-Step "uv" "checking..."
-if (-not (Test-Command "uv")) {
-    Note "Installing uv package manager..."
-    Invoke-RestMethod https://astral.sh/uv/install.ps1 | Invoke-Expression
-    $env:Path = "$env:USERPROFILE\.local\bin;$env:Path"
-}
-Step "uv" (uv --version)
-
-# ── Bun ──────────────────────────────────────────────────────────────────────
-Step "bun" "checking..."
-if (-not (Test-Command "bun")) {
-    Note "Installing bun..."
-    Invoke-RestMethod https://bun.sh/install.ps1 | Invoke-Expression
-    $env:Path = "$env:USERPROFILE\.bun\bin;$env:Path"
-}
-Step "bun" "bun $(bun --version)"
-
-# ── GPU detection (informational) ────────────────────────────────────────────
-Step "gpu" "detecting..."
-$gpuInfo = "CPU only"
-if (Test-Command "nvidia-smi") {
-    $gpuName = (nvidia-smi --query-gpu=name --format=csv,noheader 2>$null | Select-Object -First 1)
-    if ($gpuName) { $gpuInfo = "NVIDIA $gpuName (CUDA)" }
-}
-Step "gpu" $gpuInfo
-
-# ── Resolve repo directory ───────────────────────────────────────────────────
-# If run from inside a checkout, use it; otherwise clone into %USERPROFILE%\VoiceStudio.
-$here = try { Split-Path -Parent $MyInvocation.MyCommand.Path } catch { $null }
-$repoDir = $null
-if ($here -and (Test-Path (Join-Path $here "..\pyproject.toml"))) {
-    $repoDir = (Resolve-Path (Join-Path $here "..")).Path
-}
-if (-not $repoDir) {
-    if (Test-Path ".\pyproject.toml") {
-        $repoDir = (Get-Location).Path
+if ($Version) { $Version = $Version -replace '^v', ''; Assert-Version $Version }
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+$work = Join-Path ([IO.Path]::GetTempPath()) ('voicestudio-install-' + [Guid]::NewGuid())
+New-Item -ItemType Directory -Path $work | Out-Null
+try {
+    if ($mode -eq 'main') {
+        foreach ($tool in @('git', 'node', 'bun', 'cargo')) {
+            if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) { throw "Main builds require $tool; see docs/install/script.md." }
+        }
+        Run-Checked node @('-e', 'if (Number(process.versions.node.split(".")[0]) < 22) process.exit(1)')
+        $checkout = Join-Path $work 'source'
+        Run-Checked git @('clone', '--depth', '1', '--branch', 'main', '--single-branch', 'https://github.com/debpalash/VoiceStudio.git', $checkout)
+        Push-Location $checkout
+        try {
+            Run-Checked git @('rev-parse', 'HEAD')
+            Run-Checked bun @('install', '--frozen-lockfile')
+            Push-Location 'electron'
+            try {
+                Run-Checked bun @('run', 'build')
+                Run-Checked node @('tests/packaging-contract.mjs')
+                Run-Checked bun @('run', 'electron-builder', '--config', 'electron-builder.config.mjs', '--publish', 'never', '--win', '--x64')
+                Run-Checked node @('tests/update-package-contract.mjs')
+            } finally { Pop-Location }
+        } finally { Pop-Location }
+        $Version = (Get-Content (Join-Path $checkout 'frontend/package.json') -Raw | ConvertFrom-Json).version
+        Assert-Version $Version
+        $packageDir = Join-Path $checkout 'electron/release'
     } else {
-        $repoDir = Join-Path $env:USERPROFILE "VoiceStudio"
-        if (Test-Path (Join-Path $repoDir ".git")) {
-            Note "Updating existing clone at $repoDir"
-            Push-Location $repoDir
-            git pull --ff-only 2>$null
-            Pop-Location
-        } else {
-            Step "clone" "downloading VoiceStudio..."
-            git clone --depth 1 https://github.com/debpalash/VoiceStudio.git $repoDir
+        if (-not $Version) {
+            $release = Invoke-RestMethod 'https://api.github.com/repos/debpalash/VoiceStudio/releases/latest'
+            $Version = $release.tag_name -replace '^v', ''
+            Assert-Version $Version
         }
+        $packageDir = $work
     }
-}
-Set-Location $repoDir
-
-# ── Python version ───────────────────────────────────────────────────────────
-$pythonVersion = if ($env:OMNIVOICE_PYTHON) { $env:OMNIVOICE_PYTHON } else { "3.11" }
-
-# Restricted-network support: mirrors python-build-standalone downloads through
-# ghproxy.net when OMNIVOICE_REGION is set (see issues #57, #60).
-switch ($env:OMNIVOICE_REGION) {
-    { $_ -in "china", "russia", "restricted" } {
-        if (-not $env:UV_PYTHON_INSTALL_MIRROR) {
-            $env:UV_PYTHON_INSTALL_MIRROR = "https://ghproxy.net/https://github.com/astral-sh/python-build-standalone/releases/download"
-        }
-        Note "Using ghproxy.net mirror for Python download (OMNIVOICE_REGION=$($env:OMNIVOICE_REGION))"
+    $asset = "VoiceStudio-Electron-$Version-win-x64.exe"
+    $package = Join-Path $packageDir $asset
+    if ($mode -eq 'binary') {
+        $base = "https://github.com/debpalash/VoiceStudio/releases/download/v$Version"
+        Write-Output "Downloading $asset"
+        Invoke-WebRequest -UseBasicParsing "$base/$asset" -OutFile $package
+        $sums = Join-Path $work 'SHA256SUMS.txt'
+        Invoke-WebRequest -UseBasicParsing "$base/SHA256SUMS.txt" -OutFile $sums
+        $pattern = '^([A-Fa-f0-9]{64})\s+' + [regex]::Escape($asset) + '$'
+        $entries = @(Get-Content $sums | Where-Object { $_ -match $pattern })
+        if ($entries.Count -ne 1) { throw 'Missing, duplicate, or invalid checksum entry; refusing to install.' }
+        $expected = ($entries[0] -split '\s+')[0]
+        if ((Get-FileHash $package -Algorithm SHA256).Hash -ne $expected) { throw 'Checksum mismatch; refusing to install.' }
+        Write-Output 'Checksum verified.'
     }
+    if (-not (Test-Path $package -PathType Leaf)) { throw "Expected Electron package missing: $package" }
+    Write-Output 'Opening Electron setup. Existing settings and models are preserved.'
+    $process = Start-Process -FilePath $package -Wait -PassThru
+    if ($process.ExitCode -notin @(0, 3010)) { throw "Setup failed or was cancelled (exit $($process.ExitCode))." }
+    Write-Output 'Electron installed. Open VoiceStudio to configure the backend and choose models.'
+} finally {
+    Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 }
-if (-not $env:UV_HTTP_TIMEOUT) { $env:UV_HTTP_TIMEOUT = "120" }
-if (-not $env:UV_HTTP_RETRIES) { $env:UV_HTTP_RETRIES = "5" }
-
-# ── Python dependencies via uv ───────────────────────────────────────────────
-Step "python" "syncing dependencies..."
-Note "This can take 5–10 min the first time (torch + torchaudio + demucs...)"
-
-if (-not (Test-Path ".venv")) {
-    uv venv --python $pythonVersion
-    if ($LASTEXITCODE -ne 0) {
-        Warn "uv venv failed (likely Python download). Retrying with system Python..."
-        uv venv --python $pythonVersion --python-preference only-system
-        if ($LASTEXITCODE -ne 0) {
-            Die "uv venv failed: install Python $pythonVersion system-wide, set OMNIVOICE_REGION=china|russia|restricted to route through a mirror, or check your network."
-        }
-    }
-}
-
-uv sync
-if ($LASTEXITCODE -ne 0) { Die "uv sync failed — see output above." }
-Step "python" "OK — virtualenv at .venv\"
-
-# ── Frontend deps + build ────────────────────────────────────────────────────
-Push-Location frontend
-Step "frontend" "installing dependencies..."
-bun install
-if ($LASTEXITCODE -ne 0) { Pop-Location; Die "bun install failed — see output above." }
-Step "frontend" "building bundle..."
-bun run build
-if ($LASTEXITCODE -ne 0) { Pop-Location; Die "frontend build failed — see output above." }
-Pop-Location
-Step "frontend" "OK — output at frontend\dist\"
-
-# ── Log directory ────────────────────────────────────────────────────────────
-$logDir = Join-Path $env:LOCALAPPDATA "VoiceStudio"
-New-Item -ItemType Directory -Force -Path $logDir | Out-Null
-
-# ── Done ─────────────────────────────────────────────────────────────────────
-Write-Host ""
-Write-Host "✓ Install complete!" -ForegroundColor Magenta
-Write-Host ("─" * 56) -ForegroundColor DarkGray
-Write-Host ""
-Write-Host "  next             Run bun run desktop-prod to start VoiceStudio" -ForegroundColor Green
-Write-Host ""
-Note "First launch downloads ~5 GB of ML model weights (VoiceStudio TTS + Whisper)."
-Note "After that, launches are instant."
-Write-Host ""
-Note "GPU: $gpuInfo"
-Note "Logs: $logDir\omnivoice.log"

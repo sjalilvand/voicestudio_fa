@@ -55,6 +55,28 @@ Local workflows run on your hardware. Remote services are optional; usage analyt
 
 ## Get started
 
+### One-command install (macOS / Linux)
+
+```sh
+# Latest Electron release
+curl -fsSL https://voicestudio.sh/install | sh
+
+# A specific published Electron release (replace X.Y.Z)
+curl -fsSL https://voicestudio.sh/install | sh -s -- --version X.Y.Z
+
+# Build current main and install the desktop app
+curl -fsSL https://voicestudio.sh/install | sh -s -- --main
+
+# Uninstall the app, keeping your data
+curl -fsSL https://voicestudio.sh/install | sh -s -- --uninstall
+```
+
+Release downloads require curl and a SHA-256 tool. `--main` requires Git,
+Node.js 22+, Bun, Rust/Cargo, and platform build tools; see
+[installer prerequisites and behavior](docs/install/script.md).
+The installer preserves your settings, projects, and models. Older versions
+must contain Electron packages; it never falls back to archived Tauri builds.
+
 Download from [Releases](https://github.com/debpalash/VoiceStudio/releases/latest), then follow your platform guide:
 
 **[macOS](docs/install/macos.md) · [Windows](docs/install/windows.md) · [Linux](docs/install/linux.md) · [Docker](docs/install/docker.md)**
