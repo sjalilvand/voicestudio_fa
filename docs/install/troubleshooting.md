@@ -36,6 +36,8 @@ Before digging through the entries below, let the app diagnose itself:
   produces a zip (self-check report, recent classified errors, scrubbed log
   tails) you can drag straight onto the GitHub issue. Home paths and
   anything token-shaped are redacted before they leave your machine.
+  Slow renders: include `render_traces.json` from that bundle; it records local
+  stage timings and counts without scripts or audio ([details](../performance.md#local-render-diagnostics)).
 
   The report's `engine_execution` rows distinguish declared compatibility
   from observed runtime state. `evidence_state: not_loaded` means no actual
@@ -1251,3 +1253,13 @@ are also identified as native faults. These failures happen below Python, so a
 Python traceback may not exist; include the captured crash details and system/GPU
 information when reporting them. The name identifies the failure category, not
 its cause: it does not by itself prove a driver, model, or memory problem.
+
+### ASR initialization errors
+
+A PyTorch Whisper initialization failure can come from an import, checkpoint,
+network or memory problem. The error preserves the original exception and the
+backend log contains its traceback. “PyTorch should be installed” alone does not
+prove that torch and torchvision versions are mismatched. Save the diagnostic
+bundle and check package versions in the environment running the backend before
+reinstalling anything. Faster Whisper is an alternative when only transcription
+is affected; it does not diagnose or repair the original environment.

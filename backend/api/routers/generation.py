@@ -8,6 +8,8 @@ import asyncio
 import tempfile
 import contextlib
 import logging
+
+from core.render_trace import timed as _render_timed
 import threading
 import traceback
 from typing import Optional
@@ -26,6 +28,7 @@ from services.model_manager import (
 from services.audio_io import _safe_torchaudio_save
 from services.binary_preflight import InvalidBinaryError
 from core import event_bus
+from core.render_trace import call as trace_call
 from core.logging_utils import log_safe
 from omnivoice.utils.voice_design import heal_design_instruct
 
@@ -199,13 +202,16 @@ def _resolve_profile_conditioning(row, *, ref_text=None, instruct=None,
             out["instruct"] = row["instruct"]
         if out["seed"] is None and row["seed"] is not None:
             out["seed"] = row["seed"]
-    if out["language"] == "Auto":
+    explicit_auto = isinstance(language, str) and language.strip().lower() == "auto"
+    if explicit_auto:
         out["language"] = None
     # #533: a profile's stored language must drive generation when the request
     # didn't pin one. An EXPLICIT non-Auto request language still wins; we
-    # only fill the gap. `row` is a sqlite3.Row, so guard the column lookup
+    # only fill an omitted value. Explicit Auto chooses language-agnostic
+    # synthesis from the target script, even when the reference voice has a
+    # saved language. `row` is a sqlite3.Row, so guard the column lookup
     # for pre-language DBs mid-upgrade.
-    if out["language"] is None:
+    if out["language"] is None and not explicit_auto:
         try:
             prof_lang = row["language"]
         except (KeyError, IndexError):
@@ -213,7 +219,7 @@ def _resolve_profile_conditioning(row, *, ref_text=None, instruct=None,
         if prof_lang and prof_lang != "Auto":
             out["language"] = prof_lang
             # #2156: record that the caller never asked for this language. The
-            # UI omits `language` entirely while its picker reads "Auto", so a
+            # Older clients omit `language` while their picker reads "Auto", so a
             # profile-filled language must not be reported back as if the user
             # had picked it — an engine that can't speak it would otherwise
             # tell them to "leave language as Auto", which is what they did.
@@ -299,6 +305,7 @@ def _sanitize_audio(audio_out):
     return audio_out
 
 
+@_render_timed('effects')
 def _apply_effect_chain(audio_out, sample_rate, effect_preset, *, skip_mastering=False):
     """Shared post-DSP for /generate: preset validation → mastering →
     effect chain → loudness normalization.
@@ -866,7 +873,7 @@ def _run_inference(
 
         def _gen(gen_text, gen_duration):
             """One generate call for this request's voice, reference encoded once."""
-            return generate_with_cached_ref(
+            return trace_call("synthesis", generate_with_cached_ref,
                 model, ref_audio=ref_audio_path, ref_text=ref_text,
                 text=gen_text, language=language, instruct=instruct,
                 duration=gen_duration, num_step=num_step,
@@ -985,7 +992,7 @@ def _run_backend_inference(
                 if native_proxy and first_span and used_seed is not None:
                     span_kwargs["seed"] = used_seed
                 first_span = False
-                return backend.generate(span_text, duration=None, **span_kwargs)
+                return trace_call("synthesis", backend.generate, span_text, duration=None, **span_kwargs)
             audio_out = _render_with_pauses(_gen_span, segments, sr)
         else:
             # Wave 1.2: sentence-boundary chunking for long text (see
@@ -1005,7 +1012,7 @@ def _run_backend_inference(
                     chunk_kwargs = dict(gen_kwargs)
                     if native_proxy and used_seed is not None:
                         chunk_kwargs["seed"] = used_seed + i
-                    parts.append(backend.generate(
+                    parts.append(trace_call("synthesis", backend.generate,
                         chunk_text, duration=None, **chunk_kwargs
                     ))
                     _note_generate_progress()
@@ -1015,7 +1022,7 @@ def _run_backend_inference(
             else:
                 if native_proxy and used_seed is not None:
                     gen_kwargs["seed"] = used_seed
-                audio_out = backend.generate(text, duration=duration, **gen_kwargs)
+                audio_out = trace_call("synthesis", backend.generate, text, duration=duration, **gen_kwargs)
 
         return _apply_effect_chain(
             audio_out, sr, effect_preset,
@@ -1760,6 +1767,10 @@ async def generate_speech(
     if used_seed is None:
         used_seed = random.randint(0, 2**31 - 1)
 
+    # Auto is a UI/API choice, not a language token for engines or workers.
+    if isinstance(language, str) and language.strip().lower() == "auto":
+        language = None
+
     # Engine-agnostic text normalization (junk strip, numbers→words,
     # abbreviations) — AFTER `language` is fully resolved, and BEFORE the
     # pronunciation dictionary so user dictionary entries operate on
@@ -2068,7 +2079,7 @@ async def generate_speech(
                     torch.manual_seed(used_seed + i)
                 if _backend is not None:
                     _lang = None if (language and language.lower() == "auto") else language
-                    raw = _backend.generate(
+                    raw = trace_call("synthesis", _backend.generate,
                         chunk_text, duration=None, language=_lang,
                         ref_audio=ref_audio_path, ref_text=ref_text,
                         instruct=instruct, num_step=num_step,
@@ -2097,7 +2108,7 @@ async def generate_speech(
                     # Same cached-reference path as _run_inference: chunk 0 encodes
                     # the reference, chunks 1..N hit the cache instead of re-encoding.
                     from services.tts_backend import generate_with_cached_ref
-                    raw = generate_with_cached_ref(
+                    raw = trace_call("synthesis", generate_with_cached_ref,
                         _model, ref_audio=ref_audio_path, ref_text=ref_text,
                         text=chunk_text, language=language, instruct=instruct,
                         duration=None, num_step=num_step,
