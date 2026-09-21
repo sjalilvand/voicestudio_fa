@@ -2187,6 +2187,7 @@
     "contact_lead": "定價按部署報價，因此適合您的團隊和工作負載。告訴我您的用例，我會給您報價。"
   },
   "reportBug": {
+    "native_fault_cause": "原生程式碼故障：程序在 Python 底層崩潰，因此沒有可用的 Python 回溯資訊。",
     "label": "報告錯誤",
     "title": "在瀏覽器中開啟預先填寫的 GitHub 問題頁面。在您按一下「提交」之前，不會傳送任何內容。",
     "staleTitle": "有可用更新",

@@ -5,6 +5,7 @@ import { formatBreadcrumbs } from '../../../../../frontend/src/utils/breadcrumbs
 import { contactAge, lastBackendContact } from '../../../../../frontend/src/utils/backendContact';
 import { clampCrashTail } from '../../../../../frontend/src/utils/crashReport';
 import { scrubText } from '../../../../../frontend/src/utils/scrub';
+import { describeExitCode, isNativeFaultExit } from '../../../../../frontend/src/utils/nativeExit';
 import {
   _adaptLastRunCrash,
   type LastRunCrashRecord,
@@ -144,7 +145,13 @@ export function ReportBug({ error }: { error?: Error | string }) {
             '',
             'Stage: ' + backend.stage,
             'Managed: ' + backend.managed,
-            ...(backend.exitCode != null ? ['Exit code: ' + backend.exitCode] : []),
+            ...(backend.exitCode != null
+              ? ['Exit code: ' + describeExitCode(backend.exitCode)]
+              : []),
+            ...(isNativeFaultExit({
+              exitCode: backend.exitCode,
+              signal: backend.exitSignal,
+            }) ? [t('reportBug.native_fault_cause')] : []),
             scrubText(backend.message),
             '',
             '```',
@@ -160,8 +167,18 @@ export function ReportBug({ error }: { error?: Error | string }) {
           '',
           'Detected: ' + new Date(crash.timestamp).toISOString(),
           'Version: ' + crash.version,
-          'Exit code: ' + crash.exitCode,
-          'Signal: ' + crash.signal,
+          // A bare NTSTATUS is not triageable: 3221225477 and -1073741819 are
+          // the same access violation, reported differently by Node and Rust,
+          // and neither reads as a segfault (#2250). Name it, and say outright
+          // that a native fault leaves no Python traceback so nobody hunts for
+          // one that was never written.
+          'Exit code: ' + describeExitCode(crash.exitCode, t('common.unknown')),
+          'Signal: ' + (crash.signal ?? '—'),
+          ...(isNativeFaultExit({ exitCode: crash.exitCode, signal: crash.signal })
+            ? [
+                t('reportBug.native_fault_cause'),
+              ]
+            : []),
           'Uptime (seconds): ' + Math.round(crash.uptimeMs / 1000),
           '```',
           clampCrashTail(scrubText(crash.logTail.join('\n'))),

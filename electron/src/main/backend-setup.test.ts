@@ -575,3 +575,21 @@ it('only ever names a uv that is really there', () => {
     expect(existsSync(env.OMNIVOICE_BUNDLED_UV)).toBe(true);
   }
 });
+
+it('exposes the current process signal separately from the durable crash journal', async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+  const supervisor = new BackendSupervisor();
+  const internal = supervisor as unknown as {
+    generation: number;
+    recoverAfterChildExit: (gen: number, code: number | null, signal: NodeJS.Signals | null) => Promise<void>;
+  };
+  internal.generation = 1;
+  const recovery = internal.recoverAfterChildExit(1, null, 'SIGSEGV');
+  await vi.advanceTimersByTimeAsync(10500);
+  await recovery;
+  expect(supervisor.status.exitSignal).toBe('SIGSEGV');
+  await supervisor.shutdown();
+  expect(supervisor.status.exitSignal).toBeUndefined();
+  vi.useRealTimers();
+});

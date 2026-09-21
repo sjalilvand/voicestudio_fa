@@ -2284,6 +2284,7 @@
     "tailscale_qr_alt": "Kode QR untuk URL Tailscale"
   },
   "reportBug": {
+    "native_fault_cause": "Kegagalan native: proses gagal di bawah lapisan Python, sehingga traceback Python tidak tersedia.",
     "label": "Laporkan bug",
     "title": "Membuka halaman Masalah GitHub yang telah diisi sebelumnya di browser Anda. Tidak ada yang dikirim sampai Anda mengklik Kirim.",
     "staleTitle": "Pembaruan tersedia",

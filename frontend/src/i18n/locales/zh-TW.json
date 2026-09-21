@@ -2284,6 +2284,7 @@
     "tailscale_qr_alt": "Tailscale URL 的二維碼"
   },
   "reportBug": {
+    "native_fault_cause": "原生程式碼故障：程序在 Python 底層崩潰，因此沒有可用的 Python 回溯資訊。",
     "label": "報告錯誤",
     "title": "在瀏覽器中開啟預先填寫的 GitHub 問題頁面。在您按一下「提交」之前，不會傳送任何內容。",
     "staleTitle": "有可用更新",

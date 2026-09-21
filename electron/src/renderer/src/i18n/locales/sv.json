@@ -2187,6 +2187,7 @@
     "contact_lead": "Priset anges per implementering så att det passar ditt team och arbetsbelastning. Berätta för mig ditt användningsfall så ska jag ge dig en offert."
   },
   "reportBug": {
+    "native_fault_cause": "Internt fel i maskinkoden: processen kraschade under Python-lagret, så ingen Python-spårning finns tillgänglig.",
     "label": "Rapportera ett fel",
     "title": "Öppnar en förifylld GitHub-problemsida i din webbläsare. Inget skickas förrän du klickar på Skicka.",
     "staleTitle": "Uppdatering tillgänglig",

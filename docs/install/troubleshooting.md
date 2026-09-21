@@ -1241,3 +1241,13 @@ model is ready and supports voice cloning. Use the Models link to choose one;
 the source recording and target voice are preserved when returning. Preset-only
 models such as MLX Kokoro cannot clone a target voice. This capability check does
 not download or load model weights.
+
+### Native backend crashes in Electron
+
+Crash details and bug reports keep the raw exit code and name recognized Windows
+faults (for example, `3221225477 (0xC0000005 STATUS_ACCESS_VIOLATION)`). The signed
+Windows representation `-1073741819` identifies the same fault. SIGSEGV and SIGILL
+are also identified as native faults. These failures happen below Python, so a
+Python traceback may not exist; include the captured crash details and system/GPU
+information when reporting them. The name identifies the failure category, not
+its cause: it does not by itself prove a driver, model, or memory problem.

@@ -11,12 +11,13 @@ metadata and the backend fallback mirror it. Archived Tauri manifests stay froze
 **Highlights**
 
 - Install the latest Electron release, a selected version, or build main with one command; uninstall without losing data (#2269)
+- Electron crash details identify native faults instead of showing only numeric exit codes (#2267) — thanks @shivsin25!
 
 ### Fixed
 
 - macOS shell installs refresh app registration, block replacement while running, and move uninstalled apps to Trash instead of leaving Launchpad-visible copies (#2269)
-
 - Electron upgrades preserve custom and portable storage paths recorded by archived setup (#2269)
+- Bug reports distinguish native faults from Python errors and preserve signed Windows codes and POSIX signals (#2267) — thanks @shivsin25!
 
 ## [0.5.4] — 2026-09-20
 

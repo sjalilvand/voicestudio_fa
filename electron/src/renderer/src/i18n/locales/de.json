@@ -2187,6 +2187,7 @@
     "contact_lead": "Die Preise werden pro Bereitstellung angegeben, sodass sie zu Ihrem Team und Ihrer Arbeitslast passen. Nennen Sie mir Ihren Anwendungsfall und ich erstelle Ihnen ein Angebot."
   },
   "reportBug": {
+    "native_fault_cause": "Nativer Fehler: Der Prozess ist unterhalb von Python abgestürzt, daher ist kein Python-Traceback verfügbar.",
     "label": "Melden Sie einen Fehler",
     "title": "Öffnet eine vorab ausgefüllte GitHub-Problemseite in Ihrem Browser. Es wird nichts gesendet, bis Sie auf „Senden“ klicken.",
     "staleTitle": "Update verfügbar",

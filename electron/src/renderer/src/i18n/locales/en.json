@@ -2242,6 +2242,7 @@
     "benefit_lang_desc": "Transcribe, translate, and dub across 646 languages with human-level quality."
   },
   "reportBug": {
+    "native_fault_cause": "Native fault: the process failed below Python, so no Python traceback is available.",
     "label": "Report a bug",
     "title": "Opens a prefilled GitHub Issues page in your browser. Nothing is sent until you click Submit.",
     "staleTitle": "Update available",
