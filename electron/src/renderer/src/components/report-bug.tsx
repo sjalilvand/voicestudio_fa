@@ -148,6 +148,7 @@ export function ReportBug({ error }: { error?: Error | string }) {
             ...(backend.exitCode != null
               ? ['Exit code: ' + describeExitCode(backend.exitCode)]
               : []),
+            ...(backend.exitSignal ? ['Signal: ' + backend.exitSignal] : []),
             ...(isNativeFaultExit({
               exitCode: backend.exitCode,
               signal: backend.exitSignal,

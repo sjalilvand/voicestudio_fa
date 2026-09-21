@@ -313,6 +313,7 @@ it.each([
   const body = new URL(mock.open.mock.calls[0]![0]).searchParams.get('body')!;
   expect(body.split('reportBug.native_fault_cause').length - 1).toBe(nativeFault ? 2 : 0);
   if (exitCode === 3221225477) expect(body).toContain('STATUS_ACCESS_VIOLATION');
+  if (signal) expect(body.split('## Last native backend exit')[0]).toContain('Signal: ' + signal);
 });
 
 it('does not label an unreachable backend using a previous run’s signal', async () => {
