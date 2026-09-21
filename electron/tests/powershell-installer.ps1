@@ -57,7 +57,12 @@ foreach ($version in @('', 'v1.0.0')) {
 $script:rateLimited = $true
 foreach ($legacy in @($true, $false)) {
     $script:legacyResponse = $legacy
+    $script:urls.Clear(); $script:launched = $false; $script:downloaded = $null; $script:launchCount = 0
     & $installer -Silent
+    if (-not $script:launched -or $script:launchCount -ne 1) { throw 'Fallback must launch setup exactly once' }
+    if (-not ($script:urls -match 'download/v1\.2\.3/VoiceStudio-Electron-1\.2\.3-win-x64\.exe')) { throw 'Rate-limit fallback selected wrong package' }
+    if ($script:lastArguments -notcontains '/S') { throw 'Silent fallback lost its setup flag' }
+    if (Test-Path $script:downloaded) { throw 'Fallback left its temporary installer behind' }
 }
 $script:rateLimited = $false
 $script:corrupt = $true; $script:launched = $false
@@ -78,6 +83,7 @@ function Get-ItemProperty($Path, $ErrorAction) {
     return @(
         @{ DisplayName = 'VoiceStudio'; UninstallString = 'MsiExec.exe /X{legacy-tauri}' },
         @{ DisplayName = $script:displayName; UninstallString = '"' + $script:uninstaller + '" /currentuser' },
+        @{ DisplayName = $script:displayName; UninstallString = '"' + $script:uninstaller + '" /allusers' },
         @{ DisplayName = 'VoiceStudio'; UninstallString = 'MsiExec.exe /X{other-legacy}' }
     )
 }
