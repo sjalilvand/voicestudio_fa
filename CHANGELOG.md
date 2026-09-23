@@ -14,9 +14,11 @@ metadata and the backend fallback mirror it. Archived Tauri manifests stay froze
 - Malayalam speech reads numbers in Malayalam (#2280) — thanks @nikhilkilivayil!
 - Stories and Audiobook can save a chapter cue sheet (`.txt`) after a render (#2278) — thanks @shivsin25!
 - Windows backend keeps answering after antivirus or VPN software resets a connection (#2276) — thanks @ialexbond!
+- Replace a saved voice clone's reference sample without creating a duplicate voice (#2282)
 
 ### Added
 
+- Edit a saved voice clone's reference sample: play it, replace it by upload or recording, and save back to the same voice (#2282) — thanks @Cengokill!
 - Answer Twilio phone calls in a saved voice: off by default, signed webhooks and single-use stream tokens, with a local phone-quality test (#2291)
 - Malayalam dubs and audiobooks speak numbers, percentages, and decimals in Malayalam instead of reading raw digits (#2280) — thanks @nikhilkilivayil!
 - Download a chapter cue sheet (`HH:MM:SS<TAB>Title`) after a Stories or Audiobook render; timestamps match the M4B's embedded chapters and give MP3 portable chapters (#2278) — thanks @shivsin25!
@@ -45,6 +47,7 @@ metadata and the backend fallback mirror it. Archived Tauri manifests stay froze
 ### Bug reporters
 
 - @castlecreati — audiobook chapter cache lost after a power-off (#2279).
+- @Cengokill — no way to replace a saved clone's reference sample (#2282).
 
 ### Docs
 
