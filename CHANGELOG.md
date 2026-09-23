@@ -12,6 +12,7 @@ metadata and the backend fallback mirror it. Archived Tauri manifests stay froze
 
 - A call agent that places or answers phone calls in your own voice to get a task done (#2306)
 - Footer integration logos open their in-app page (#2302)
+- Record or drop a voice sample from one view in Voice Clone (#2307)
 
 ### Added
 
@@ -20,6 +21,7 @@ metadata and the backend fallback mirror it. Archived Tauri manifests stay froze
 ### Changed
 
 - Integration logos in the footer open their page inside the app instead of an outside website (#2302)
+- Voice Clone shows upload and record side by side instead of behind a toggle (#2307)
 
 ### Docs
 
