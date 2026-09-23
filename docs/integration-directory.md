@@ -1,6 +1,6 @@
 # Integration directory
 
-Directory entries are not paid sponsors or endorsements. Only entries with a built-in setup block carry the **Works with VoiceStudio** badge and capability chips (MCP server, Speech API, Transcription API, Workflow template, Self-hosted, Local language model); every other card is marked **External link** and only opens the provider's website. Setup blocks live in one registry keyed by the catalog slug (`electron/src/renderer/src/features/integrations/setup-registry.ts`), so a connector is added in one place. Icons are bundled locally so viewing the catalog sends no logo requests to providers. Brand marks belong to their respective owners.
+Directory entries are not paid sponsors or endorsements. Only entries with a built-in setup block or setup panel carry the **Works with VoiceStudio** badge and capability chips (MCP server, Speech API, Transcription API, Workflow template, Self-hosted, Local language model, Phone calls); every other card is marked **External link** and only opens the provider's website. Setup blocks and panels live in one registry keyed by the catalog slug (`electron/src/renderer/src/features/integrations/setup-registry.ts`), so a connector is added in one place. Icons are bundled locally so viewing the catalog sends no logo requests to providers. Brand marks belong to their respective owners.
 
 | Company | Official source | Icon source |
 |---|---|---|
@@ -82,3 +82,17 @@ backend is never given one (put it behind https first); tracing is switched off 
 model must be set explicitly (`AGENT_LLM_BASE_URL`, `AGENT_LLM_MODEL`, for a
 local OpenAI-compatible server); the snippet never falls back to a hosted model. See
 [Agentic voice → OpenAI Agents SDK](agentic-voice.md#openai-agents-sdk).
+
+## Answer phone calls with Twilio
+
+The Twilio detail page answers calls to your Twilio number with a saved voice:
+VoiceStudio speaks a greeting over a Twilio Media Stream, then hangs up. It is
+off by default. When enabled, a separate loopback listener that your own HTTPS
+tunnel (cloudflared, ngrok) forwards to serves only two endpoints: the voice
+webhook, which must carry a valid Twilio signature, and the Media Stream, which
+must present a single-use per-call token. The main API is never exposed.
+**Test locally** plays the greeting at phone quality without Twilio. See
+[Twilio setup](integrations/twilio.md) for the
+tunnel, Twilio Console configuration, security model and limits. Twilio is an
+implemented connector; the other calling entries (Plivo, Telnyx) remain
+capability references.

@@ -148,6 +148,7 @@ export function IntegrationDetailPage() {
             ) : (
               <p>{t('integrationCatalog.setupUnavailable')}</p>
             )}
+            {setup.panel && <setup.panel />}
             <div className="flex flex-wrap items-center gap-3">
               {setup.voiceBindings && <Link to="/settings/sharing">{t('settings.mcp_title')}</Link>}
               <a href={setup.docs} target="_blank" rel="noopener noreferrer">
