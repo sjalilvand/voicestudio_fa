@@ -34,6 +34,7 @@ metadata and the backend fallback mirror it. Archived Tauri manifests stay froze
 
 ### Fixed
 
+- Pasted and imported captions no longer speak karaoke tags, `<i>`/`<font>` tags or `{\an8}` alignment prefixes, while SubRip dialogue such as `2 < 3` is kept; unchanged WebVTT and SubRip exports keep the original cue markup (#2295) — thanks @kevin9327!
 - Saved voices and uploads longer than 20 s clone on OmniVoice again; the best passage is picked automatically (#2281) — thanks @Cengokill!
 - VoxCPM2 no longer pairs a capped reference with a transcript of the whole clip (#2281)
 - Speaker diarisation uses Lightning 2.6.6, which blocks code execution from a crafted checkpoint (#2296)
