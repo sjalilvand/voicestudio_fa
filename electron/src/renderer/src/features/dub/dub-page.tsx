@@ -26,6 +26,7 @@ import { GlossaryPanel } from './glossary-panel';
 import { CastingBoard } from './casting-board';
 import { DubbingDemo } from './dubbing-demo';
 import { CheckpointBanner, type CheckpointStage } from './checkpoint-banner';
+import { ConfirmDialog } from '../clone/confirm-dialog';
 import { useDubOnsets } from './use-dub-onsets';
 import { useDubLivePreview } from './use-dub-live-preview';
 import { setDubQuality, setDubProduction, setDubTranslationOptions } from './dub-session';
@@ -96,6 +97,7 @@ import { LANG_CODES } from '../../../../../../frontend/src/utils/languages';
 import { cn } from '@/lib/utils';
 import {
   useDubSession,
+  useDubCancelling,
   uploadDub,
   translateDub,
   translateDubBatch,
@@ -114,6 +116,7 @@ import {
   redoDubEdit,
   resumeDub,
   discardDubRecovery,
+  resetDubSession,
   dismissDubError,
   applyDubQc,
   applyDubTranslationRows,
@@ -208,6 +211,7 @@ export function DubPage() {
   const { t, i18n } = useTranslation();
   const reviewMode = useReviewMode();
   const session = useDubSession();
+  const cancelling = useDubCancelling();
   const editHistory = useDubEditHistory();
   const input = useRef<HTMLInputElement>(null);
   const subtitles = useRef<HTMLInputElement>(null);
@@ -222,6 +226,7 @@ export function DubPage() {
   const [cookieFile, setCookieFile] = useState<File>();
   const [cookieError, setCookieError] = useState(false);
   const [fetchSubs, setFetchSubs] = useState(false);
+  const [removeVideoOpen, setRemoveVideoOpen] = useState(false);
   const [preview, setPreview] = useState('original');
   const [segmentPreview, setSegmentPreview] = useState<{
     id: string;
@@ -621,6 +626,19 @@ export function DubPage() {
     };
   }, [warmPreviewPaths]);
 
+  const removeVideo = () => {
+    if (busy || cancelling || session.recovery || !resetDubSession()) return;
+    livePreview.stop();
+    segmentPreviewAbort.current?.abort();
+    segmentPreviewAbort.current = null;
+    setSegmentPreview(null);
+    setPreviewingSegmentId(null);
+    setPreview('original');
+    setUrl('');
+    setCookieFile(undefined);
+    setCookieError(false);
+  };
+
   const previewDubSegment = async (segment: (typeof session.segments)[number]) => {
     if (!session.jobId || previewingSegmentId) return;
     segmentPreviewAbort.current?.abort();
@@ -893,14 +911,34 @@ export function DubPage() {
                     }
                   }}
                 >
-                  <Input
-                    type="url"
-                    value={url}
-                    onChange={(event) => setUrl(event.target.value)}
-                    aria-label={t('dub.paste_url')}
-                    placeholder={t('dub.paste_url')}
-                    disabled={busy || Boolean(session.recovery)}
-                  />
+                  <div className="flex items-center gap-2">
+                    <div className="min-w-0 flex-1">
+                      <Input
+                        type="url"
+                        value={url}
+                        onChange={(event) => setUrl(event.target.value)}
+                        aria-label={t('dub.paste_url')}
+                        placeholder={t('dub.paste_url')}
+                        disabled={busy || Boolean(session.recovery)}
+                      />
+                    </div>
+                    {url && (
+                      <Button
+                        type="button"
+                        size="xs"
+                        variant="ghost"
+                        aria-label={t('common.clear')}
+                        disabled={busy || Boolean(session.recovery)}
+                        onClick={() => {
+                          setUrl('');
+                          setCookieFile(undefined);
+                          setCookieError(false);
+                        }}
+                      >
+                        {t('common.clear')}
+                      </Button>
+                    )}
+                  </div>
                   {url && (
                     <details className="space-y-2">
                       <summary className="cursor-pointer text-xs text-muted-foreground">
@@ -976,6 +1014,27 @@ export function DubPage() {
                   onClick={() => input.current?.click()}
                 >
                   {t('dub.change_file')}
+                </Button>
+                <ConfirmDialog
+                  open={removeVideoOpen}
+                  onOpenChange={setRemoveVideoOpen}
+                  title={t('dub.remove_video')}
+                  description={t('dub.remove_video_confirm')}
+                  confirmLabel={t('dub.remove_video')}
+                  onConfirm={removeVideo}
+                />
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  aria-label={t('dub.remove_video')}
+                  disabled={busy || cancelling || Boolean(session.recovery)}
+                  onClick={() => {
+                    if (session.segments.length > 0 || editHistory.undoDepth > 0)
+                      setRemoveVideoOpen(true);
+                    else removeVideo();
+                  }}
+                >
+                  {t('dub.remove_video')}
                 </Button>
               </div>
             )}
