@@ -14,6 +14,7 @@ metadata and the backend fallback mirror it. Archived Tauri manifests stay froze
 - Integration pages use the full window, with a side panel on wide screens (#2304)
 - A call agent that places or answers phone calls in your own voice to get a task done (#2306)
 - Footer integration logos open their in-app page (#2302)
+- A reference longer than 20 s clones from its best 15 s window using the speech model already installed (#2301) — thanks @Cengokill!
 - Record or drop a voice sample from one view in Voice Clone (#2307)
 - Voice Clone keeps the original container of a one-shot MP3, M4A or WebM reference (#2311)
 - Videos without sound get a clear message instead of an ffmpeg error dump (#2308)
@@ -49,6 +50,8 @@ metadata and the backend fallback mirror it. Archived Tauri manifests stay froze
 - Hardsub exports on Windows pass the caption path in ffmpeg's filter form so burned-in line and karaoke captions render (#2312) — thanks @kevin9327!
 
 - `/generate` writes an uploaded clone reference with its real extension instead of always `.wav`, so a non-WAV one-shot clip still decodes (#2311)
+
+- A reference longer than 20 s is transcribed with the speech-to-text model already installed, instead of failing when OmniVoice's own Whisper snapshot is not cached (#2301) — thanks @Cengokill!
 
 ## [0.5.6] — 2026-09-23
 
