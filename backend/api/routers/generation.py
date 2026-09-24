@@ -8,13 +8,15 @@ import asyncio
 import tempfile
 import contextlib
 import logging
+from collections import OrderedDict
+import weakref
 
 from core.render_trace import timed as _render_timed
 import threading
 import traceback
 from typing import Optional
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
 
 import sqlite3
@@ -34,6 +36,80 @@ from omnivoice.utils.voice_design import heal_design_instruct
 
 router = APIRouter()
 logger = logging.getLogger("omnivoice.generate")
+
+# A URL can be fetched repeatedly (including the MCP readiness probe). Cache
+# the encoded bytes by WAV version, and coordinate misses per WAV so a slow
+# render cannot block cache hits or unrelated audio.
+_OGG_CACHE_LIMIT = 32 * 1024 * 1024
+_ogg_cache: OrderedDict[tuple[str, int, int, int], bytes] = OrderedDict()
+_ogg_cache_bytes = 0
+_ogg_state_lock = threading.Lock()
+_ogg_encode_locks = weakref.WeakValueDictionary()
+
+
+def _ogg_cache_key(path: str) -> tuple[str, int, int, int]:
+    info = os.stat(path)
+    return path, info.st_ino, info.st_mtime_ns, info.st_size
+
+
+def _cached_ogg(key: tuple[str, int, int, int]) -> bytes | None:
+    with _ogg_state_lock:
+        encoded = _ogg_cache.get(key)
+        if encoded is not None:
+            _ogg_cache.move_to_end(key)
+        return encoded
+
+
+@router.get("/audio/{audio_id}.ogg")
+@router.get("/audio/{audio_id}.opus")
+async def generated_ogg_opus(audio_id: str):
+    """Serve the same render as /audio/<id>.wav, encoded as Ogg/Opus."""
+    if not re.fullmatch(r"[0-9a-f]{8}", audio_id):
+        raise HTTPException(status_code=404, detail="Audio file not found")
+    path = _safe_output_path(f"{audio_id}.wav")
+    if path is None:
+        raise HTTPException(status_code=404, detail="Audio file not found")
+    try:
+        key = _ogg_cache_key(path)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Audio file not found") from None
+    encoded = _cached_ogg(key)
+    if encoded is not None:
+        return Response(encoded, media_type="audio/ogg")
+
+    with _ogg_state_lock:
+        encode_lock = _ogg_encode_locks.get(key)
+        if encode_lock is None:
+            encode_lock = asyncio.Lock()
+            _ogg_encode_locks[key] = encode_lock
+    async with encode_lock:
+        try:
+            if _ogg_cache_key(path) != key:
+                return await generated_ogg_opus(audio_id)
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="Audio file not found") from None
+        encoded = _cached_ogg(key)
+        if encoded is None:
+            from services.audio_io import encode_ogg_opus
+            try:
+                encoded = await encode_ogg_opus(path)
+            except asyncio.TimeoutError as exc:
+                logger.warning("Ogg/Opus encoding timed out")
+                raise HTTPException(
+                    status_code=503, detail="Ogg/Opus encoding timed out; try again later"
+                ) from exc
+            except RuntimeError as exc:
+                logger.warning("Ogg/Opus encoding failed: %s", exc)
+                raise HTTPException(status_code=503, detail=str(exc)) from exc
+            if len(encoded) <= _OGG_CACHE_LIMIT:
+                global _ogg_cache_bytes
+                with _ogg_state_lock:
+                    while _ogg_cache_bytes + len(encoded) > _OGG_CACHE_LIMIT:
+                        _ogg_cache_bytes -= len(_ogg_cache.popitem(last=False)[1])
+                    _ogg_cache[key] = encoded
+                    _ogg_cache_bytes += len(encoded)
+    return Response(encoded, media_type="audio/ogg")
+
 
 # Same containers POST /profiles stores for a clone reference. /generate used
 # to write every upload with suffix=".wav"; pydub then passes -f wav to ffmpeg,
