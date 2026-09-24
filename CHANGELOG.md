@@ -41,6 +41,7 @@ metadata and the backend fallback mirror it. Archived Tauri manifests stay froze
 - Integration and featured logos open their page in VoiceStudio; the vendor website opens only from the page's Website card (#2304)
 - Stories caption imports drop the WebVTT header, NOTE/STYLE/REGION blocks and cue identifiers, keep `&` from `&amp;`, accept `.vtt`, and read CR-only files (#2310) — thanks @kevin9327!
 - Pickers show readable labels instead of raw values such as `__default__`, `auto` or language codes before they are opened (#2304)
+- Pure Dub timeline moves keep both millisecond cue times without unintended playback-speed changes (#2309) — thanks @kevin9327!
 
 ### Fixed
 
