@@ -15,6 +15,7 @@ metadata and the backend fallback mirror it. Archived Tauri manifests stay froze
 - A call agent that places or answers phone calls in your own voice to get a task done (#2306)
 - Footer integration logos open their in-app page (#2302)
 - Record or drop a voice sample from one view in Voice Clone (#2307)
+- Voice Clone keeps the original container of a one-shot MP3, M4A or WebM reference (#2311)
 - Videos without sound get a clear message instead of an ffmpeg error dump (#2308)
 
 ### Added
@@ -42,12 +43,12 @@ metadata and the backend fallback mirror it. Archived Tauri manifests stay froze
 - Pickers show readable labels instead of raw values such as `__default__`, `auto` or language codes before they are opened (#2304)
 - Pure Dub timeline moves keep both millisecond cue times without unintended playback-speed changes (#2309) — thanks @kevin9327!
 
-### Fixed
-
 - A video with no audio track now says so in Dub, Batch, transcription, cloning and imports instead of showing ffmpeg's exit-234 dump (#2308)
 - Engine model-download failures name the engine and offer retry guidance instead of a generic internal error (#2316) — thanks @shivsin25!
 - Cache flushes after a dubbing offload or a failed generation reach every accelerator an engine can run on — Ascend NPU and Intel XPU included, not just CUDA and MPS (#2317) — thanks @li-lizhe!
 - Hardsub exports on Windows pass the caption path in ffmpeg's filter form so burned-in line and karaoke captions render (#2312) — thanks @kevin9327!
+
+- `/generate` writes an uploaded clone reference with its real extension instead of always `.wav`, so a non-WAV one-shot clip still decodes (#2311)
 
 ## [0.5.6] — 2026-09-23
 
