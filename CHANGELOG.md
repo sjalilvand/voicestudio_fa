@@ -45,6 +45,7 @@ metadata and the backend fallback mirror it. Archived Tauri manifests stay froze
 ### Fixed
 
 - A video with no audio track now says so in Dub, Batch, transcription, cloning and imports instead of showing ffmpeg's exit-234 dump (#2308)
+- Engine model-download failures name the engine and offer retry guidance instead of a generic internal error (#2316) — thanks @shivsin25!
 - Cache flushes after a dubbing offload or a failed generation reach every accelerator an engine can run on — Ascend NPU and Intel XPU included, not just CUDA and MPS (#2317) — thanks @li-lizhe!
 - Hardsub exports on Windows pass the caption path in ffmpeg's filter form so burned-in line and karaoke captions render (#2312) — thanks @kevin9327!
 
