@@ -42,7 +42,10 @@ import {
   type DragEvent,
 } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
+import { runRendererTask } from '@/lib/global-error-recovery';
+import { canCreateStoryFromDub, loadDubIntoStories, storiesDraftOccupied } from './dub-to-story';
+import { useLongformSession } from '../longform/longform-session';
 import { useTranslation } from 'react-i18next';
 import {
   AlertCircleIcon,
@@ -51,6 +54,7 @@ import {
   ChevronDownIcon,
   ClipboardPasteIcon,
   Clock3Icon,
+  AudioLinesIcon,
   FilmIcon,
   GaugeIcon,
   HeadphonesIcon,
@@ -277,6 +281,26 @@ export function DubPage() {
   const llmSkills = useLlmSkills();
   const modelCatalogue = useModelCatalogue();
   const profiles = useProfiles();
+  const navigate = useNavigate();
+  const longform = useLongformSession();
+  const [storyOpen, setStoryOpen] = useState(false);
+  // A dub already knows who says what: diarisation grouped the segments and the
+  // Cast strip gave each speaker a voice. Rebuilding that as a Story by hand
+  // means retyping every line, so offer it once there are segments to carry.
+  const storyFromDub = canCreateStoryFromDub(session);
+  // Loading replaces whatever is in Stories, so ask first — but only when there
+  // is something to lose.
+  const storyOccupied = storiesDraftOccupied(longform.drafts.stories);
+  const createStoryFromDub = () => {
+    if (!profiles.isSuccess) return;
+    const loaded = loadDubIntoStories(session.segments, {
+      profiles: profiles.data,
+      unknownSpeakerLabel: t('dubWorkspace.storySpeaker'),
+    });
+    // Nothing was loaded — a render started while the confirm was open, say.
+    // Navigating would show the old script and look like the action worked.
+    if (loaded) runRendererTask('Create Story from dub', () => navigate({ to: '/stories' }));
+  };
   // The current remote Dubbing producer still prepares a local fallback
   // before dispatch, so do not promise remote-only readiness yet.
   const ttsBlocker = useTtsReadiness('dub');
@@ -835,7 +859,36 @@ export function DubPage() {
         >
           {compactSourceLabel(session.filename)}
         </span>
+        {storyFromDub && (
+          <Button
+            variant="ghost"
+            size="sm"
+            // editLongform is a no-op while a longform render is running, so the
+            // action would navigate to Stories having loaded nothing.
+            disabled={Boolean(longform.active) || !profiles.isSuccess}
+            title={
+              longform.active
+                ? t('dubWorkspace.storyBusy')
+                : !profiles.isSuccess
+                  ? t(profiles.isError ? 'common.error' : 'common.loading')
+                  : undefined
+            }
+            onClick={() => (storyOccupied ? setStoryOpen(true) : createStoryFromDub())}
+          >
+            <AudioLinesIcon />
+            {t('dubWorkspace.createStory')}
+          </Button>
+        )}
       </WorkspaceHeader>
+      <ConfirmDialog
+        open={storyOpen}
+        onOpenChange={setStoryOpen}
+        title={t('dubWorkspace.createStory')}
+        description={t('dubWorkspace.createStoryConfirm')}
+        confirmLabel={t('dubWorkspace.createStory')}
+        destructive
+        onConfirm={createStoryFromDub}
+      />
       <div className="flex min-h-0 flex-1 @max-[40rem]:flex-col">
         <SecondarySidebar
           title={t('dubWorkspace.title')}
@@ -1364,10 +1417,15 @@ export function DubPage() {
                   maxLength={5000}
                   value={session.translationInstructions || ''}
                   disabled={busy || Boolean(session.recovery)}
-                  onChange={(event) => setDubTranslationOptions({ translationInstructions: event.target.value })}
+                  onChange={(event) =>
+                    setDubTranslationOptions({ translationInstructions: event.target.value })
+                  }
                   className="w-full resize-y rounded-lg border border-input bg-background/40 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                 />
-                <p id="dub-translation-instructions-help" className="text-xs leading-5 text-muted-foreground">
+                <p
+                  id="dub-translation-instructions-help"
+                  className="text-xs leading-5 text-muted-foreground"
+                >
                   {t('dubStyle.help')}
                 </p>
               </div>
