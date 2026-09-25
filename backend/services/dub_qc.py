@@ -22,14 +22,32 @@ import re
 from dataclasses import dataclass
 
 
+# Scripts written without spaces between words: CJK ideographs, kana, Thai,
+# Lao, Myanmar and Khmer. ``\w+`` takes a whole clause of these as one token,
+# so a single wrong character would score as total drift; each codepoint is
+# a token there instead (a character error rate, as ASR is scored for them).
+_NO_SPACE_SCRIPT = (
+    "\u3040-\u30ff"  # hiragana, katakana
+    "\u3400-\u4dbf"  # CJK ideographs, extension A
+    "\u4e00-\u9fff"  # CJK unified ideographs
+    "\uf900-\ufaff"  # CJK compatibility ideographs
+    "\uff66-\uff9f"  # halfwidth katakana
+    "\u0e00-\u0e7f"  # Thai
+    "\u0e80-\u0eff"  # Lao
+    "\u1000-\u109f"  # Myanmar
+    "\u1780-\u17ff"  # Khmer
+)
+_TOKEN_RE = re.compile(rf"[{_NO_SPACE_SCRIPT}]|[^\W{_NO_SPACE_SCRIPT}]+")
+
+
 def _tokens(text: str) -> list[str]:
     """Lowercase word tokens, punctuation stripped — the unit drift is scored
-    in. Script-agnostic: for no-space scripts each character is a token, which
+    in. Script-agnostic: for no-space scripts each codepoint is a token, which
     still gives a sensible edit-distance ratio."""
     text = (text or "").lower().strip()
     if not text:
         return []
-    words = re.findall(r"\w+", text, flags=re.UNICODE)
+    words = _TOKEN_RE.findall(text)
     return words or list(text.replace(" ", ""))
 
 
