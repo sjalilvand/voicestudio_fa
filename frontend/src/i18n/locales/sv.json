@@ -1416,7 +1416,12 @@
     "story_voices_plural": "{{count}} röster",
     "audiobooks": "Ljudböcker",
     "audiobook": "Ljudbok",
-    "story": "Berättelse"
+    "story": "Berättelse",
+    "select_visible": "Markera synliga",
+    "select_item": "Markera {{name}}",
+    "delete_selected": "Ta bort markerade ({{count}})",
+    "deleted_count": "Borttagna: {{count}}",
+    "delete_warning": "Detta kan inte ångras. Projekt och transkriptioner tas bort. När röster eller tagningar tas bort raderas även deras sparade ljud. Exporterade filer och färdigrenderat ljud behålls."
   },
   "batch": {
     "title": "Batchdubbning",

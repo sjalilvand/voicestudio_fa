@@ -1416,7 +1416,12 @@
     "story_voices_plural": "{{count}} Stimmen",
     "audiobooks": "Hörbücher",
     "audiobook": "Hörbuch",
-    "story": "Geschichte"
+    "story": "Geschichte",
+    "select_visible": "Sichtbare auswählen",
+    "select_item": "{{name}} auswählen",
+    "delete_selected": "Auswahl löschen ({{count}})",
+    "deleted_count": "Gelöscht: {{count}}",
+    "delete_warning": "Dies kann nicht rückgängig gemacht werden. Projekte und Transkripte werden entfernt. Beim Löschen von Stimmen oder Aufnahmen wird auch deren gespeichertes Audio gelöscht. Exportierte Dateien und fertig gerendertes Audio bleiben erhalten."
   },
   "batch": {
     "title": "Batch-Überspielung",

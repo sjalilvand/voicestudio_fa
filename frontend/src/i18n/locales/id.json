@@ -1416,7 +1416,12 @@
     "story_voices_plural": "{{count}} suara",
     "audiobooks": "Buku audio",
     "audiobook": "Buku Audio",
-    "story": "Cerita"
+    "story": "Cerita",
+    "select_visible": "Pilih yang terlihat",
+    "select_item": "Pilih {{name}}",
+    "delete_selected": "Hapus pilihan ({{count}})",
+    "deleted_count": "Dihapus: {{count}}",
+    "delete_warning": "Tindakan ini tidak dapat dibatalkan. Proyek dan transkrip dihapus. Menghapus suara atau rekaman juga menghapus audio tersimpannya. File ekspor dan audio hasil render yang selesai tetap disimpan."
   },
   "batch": {
     "title": "Sulih suara batch",

@@ -1471,7 +1471,12 @@
     "render_size_label": "Dimensione",
     "render_size": "{{chapters}} capitoli · {{lines}} righe · {{words}} parole",
     "render_settings": "Impostazioni",
-    "render_no_details": "Generato prima che i dettagli venissero registrati."
+    "render_no_details": "Generato prima che i dettagli venissero registrati.",
+    "select_visible": "Seleziona elementi visibili",
+    "select_item": "Seleziona {{name}}",
+    "delete_selected": "Elimina selezione ({{count}})",
+    "deleted_count": "Eliminati: {{count}}",
+    "delete_warning": "Questa azione è irreversibile. Progetti e trascrizioni vengono rimossi. Eliminare voci o registrazioni rimuove anche il relativo audio salvato. I file esportati e i rendering audio completati vengono conservati."
   },
   "projectActions": {
     "delete": "Eliminare “{{name}}”? Questa azione è irreversibile.",

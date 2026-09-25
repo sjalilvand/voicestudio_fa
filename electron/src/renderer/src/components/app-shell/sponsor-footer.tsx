@@ -1,11 +1,13 @@
 import { runRendererTask } from '@/lib/global-error-recovery';
 import { VOICE_AI_DIRECTORY } from '../../../../../../frontend/src/config/voice-ai-directory';
+import { integrationSlug } from '../../../../../../frontend/src/config/integration-catalog';
 import './sponsor-footer.css';
 import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 import { SponsorInquiry } from './sponsor-inquiry';
 import {
   ArrowUpRightIcon,
+  ArrowRightIcon,
   BlocksIcon,
   CircleIcon,
   SearchIcon,
@@ -15,7 +17,6 @@ import {
   XIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { getBridge } from '@/components/bridge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { SPONSORS, SPONSOR_TIERS } from '../../../../../../frontend/src/config/sponsors';
 
@@ -53,7 +54,12 @@ export function SponsorFooter() {
     setExpanded(false);
     toggleRef.current?.focus();
   };
-  const [failed, setFailed] = useState(false);
+  const openIntegration = (name: string) => {
+    setExpanded(false);
+    runRendererTask('Open integration', () =>
+      navigate({ to: '/integrations/$slug', params: { slug: integrationSlug(name) } }),
+    );
+  };
   const [inquiryOpen, setInquiryOpen] = useState(false);
   return (
     <div className="sponsor-footer-host">
@@ -96,19 +102,11 @@ export function SponsorFooter() {
           </label>
           <div className="sponsor-catalog-grid">
             {visibleSponsors.map((sponsor) => (
-              <a
+              <button
+                type="button"
                 key={sponsor.url}
-                href={sponsor.url}
-                target="_blank"
-                rel="noreferrer"
                 className="sponsor-catalog-card"
-                onClick={(event) => {
-                  const bridge = getBridge();
-                  if (!bridge) return;
-                  event.preventDefault();
-                  setFailed(false);
-                  void bridge.files.openExternal(sponsor.url).catch(() => setFailed(true));
-                }}
+                onClick={() => openIntegration(sponsor.name)}
               >
                 <div className="sponsor-catalog-card-top">
                   <img
@@ -119,7 +117,7 @@ export function SponsorFooter() {
                       event.currentTarget.style.display = 'none';
                     }}
                   />
-                  <ArrowUpRightIcon aria-hidden="true" className="size-4" />
+                  <BlocksIcon aria-hidden="true" className="size-4" />
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <h3>{sponsor.name}</h3>
@@ -135,7 +133,7 @@ export function SponsorFooter() {
                   <span>{t('support.sponsors_tier_' + sponsor.tier)}</span>
                 )}
                 <p>{sponsor.url}</p>
-              </a>
+              </button>
             ))}
             {entries.length > 0 && visibleSponsors.length === 0 && (
               <p role="status" className="text-sm text-muted-foreground">
@@ -188,19 +186,11 @@ export function SponsorFooter() {
             <Tooltip key={sponsor.url}>
               <TooltipTrigger
                 render={
-                  <a
-                    href={sponsor.url}
-                    target="_blank"
-                    rel="noreferrer"
+                  <button
+                    type="button"
                     className="sponsor-logo-tile"
-                    aria-label={t('support.sponsors_logo_aria', { name: sponsor.name })}
-                    onClick={(event) => {
-                      const bridge = getBridge();
-                      if (!bridge) return;
-                      event.preventDefault();
-                      setFailed(false);
-                      void bridge.files.openExternal(sponsor.url).catch(() => setFailed(true));
-                    }}
+                    aria-label={`${t('integrationCatalog.title')}: ${sponsor.name}`}
+                    onClick={() => openIntegration(sponsor.name)}
                   />
                 }
               >
@@ -208,50 +198,41 @@ export function SponsorFooter() {
                   src={sponsor.logoUrl}
                   alt=""
                   loading="lazy"
-                  className="h-5 max-w-24 object-contain"
+                  className="sponsor-tile-icon"
                   onError={(event) => {
                     event.currentTarget.style.display = 'none';
                   }}
                 />
-                <span>{sponsor.name}</span>
+                <span className="sponsor-tile-name">{sponsor.name}</span>
               </TooltipTrigger>
               <TooltipContent
                 surface="theme"
                 side="top"
                 sideOffset={8}
                 showArrow={false}
-                className="sponsor-logo-tooltip w-[min(50vw,320px)] max-w-[min(50vw,320px)] min-h-[124px] flex-col items-start justify-between gap-2 break-words p-3"
+                className="sponsor-logo-tooltip w-[min(78vw,260px)] max-w-[min(78vw,260px)] flex-col items-stretch gap-2 p-3"
               >
                 <span className="sponsor-tooltip-heading">
                   <img src={sponsor.logoUrl} alt="" loading="lazy" />
-                  <span className="font-medium text-foreground">{sponsor.name}</span>
+                  <strong className="min-w-0 flex-1 text-sm font-semibold leading-tight text-foreground">
+                    {sponsor.name}
+                  </strong>
                 </span>
-                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                  {t(
-                    sponsor.featured ? 'integrationCatalog.featured' : 'directoryExamples.example',
-                  )}
-                </span>
-                {SPONSOR_TIERS.includes(sponsor.tier) && (
-                  <span className="text-xs text-muted-foreground">
-                    {t('support.sponsors_tier_' + sponsor.tier)}
+                {sponsor.featured && (
+                  <span className="text-[11px] font-medium text-primary">
+                    {t('integrationCatalog.featured')}
+                    {SPONSOR_TIERS.includes(sponsor.tier) &&
+                      ` · ${t('support.sponsors_tier_' + sponsor.tier)}`}
                   </span>
                 )}
-                <span className="text-xs leading-relaxed text-muted-foreground">
-                  {t('integrationCatalog.description')}
-                </span>
-                <span className="flex max-w-full items-center gap-1 text-xs text-primary">
-                  <span className="break-all">{sponsor.url}</span>
-                  <ArrowUpRightIcon aria-hidden="true" className="size-3 shrink-0" />
+                <span className="sponsor-tooltip-destination">
+                  <span className="min-w-0 flex-1">{t('integrationCatalog.title')}</span>
+                  <ArrowRightIcon aria-hidden="true" className="size-3 shrink-0" />
                 </span>
               </TooltipContent>
             </Tooltip>
           ))}
         </div>
-        {failed && (
-          <span role="alert" className="text-xs text-destructive">
-            {t('common.error')}
-          </span>
-        )}
         <Tooltip>
           <TooltipTrigger
             render={

@@ -38,6 +38,7 @@ export function WorkspaceSidebar() {
         <aside
           aria-label={t('clone.saved_profiles')}
           data-slot="compact-main-sidebar"
+          onDoubleClick={() => setOpen(true)}
           className={cn(
             'brand-sidebar relative isolate grid h-dvh min-h-0 shrink-0 grid-rows-[auto_minmax(0,1fr)_auto_auto] overflow-hidden bg-sidebar',
             mac ? 'w-16' : 'w-12 border-r border-border/50',

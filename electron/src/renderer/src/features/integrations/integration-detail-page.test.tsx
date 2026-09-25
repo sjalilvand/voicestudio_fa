@@ -3,6 +3,11 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import '@/i18n';
 import { IntegrationDetailPage } from './integration-detail-page';
+vi.mock('../../../../../../frontend/src/config/sponsors', () => ({
+  SPONSORS: [
+    { name: 'Example sponsor', url: 'https://example.org', logoUrl: '/example.svg', tier: 'gold' },
+  ],
+}));
 const route = vi.hoisted(() => ({ slug: 'claude-code' }));
 const save = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/local-export', () => ({ saveLocalFile: save }));
@@ -77,6 +82,15 @@ it('presents entries without a setup block as external links with no capability 
   expect(screen.queryByText('Works with VoiceStudio')).toBeNull();
   expect(screen.getByRole('heading', { name: 'Website' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Capabilities' })).toBeInTheDocument();
+});
+
+it('shows a sponsor reached from the footer even when it is absent from the directory', () => {
+  route.slug = 'example-sponsor';
+  render(<IntegrationDetailPage />);
+  expect(screen.getByRole('heading', { level: 2, name: 'Example sponsor' })).toBeInTheDocument();
+  expect(screen.getByText('https://example.org')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Website' })).toBeInTheDocument();
+  expect(screen.queryByText(/not sponsors or connected integrations/)).toBeNull();
 });
 
 it('offers copyable API snippets for the current backend', () => {

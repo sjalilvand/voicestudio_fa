@@ -1469,7 +1469,12 @@
     "render_size_label": "Ukuran",
     "render_size": "{{chapters}} bab · {{lines}} baris · {{words}} kata",
     "render_settings": "Pengaturan",
-    "render_no_details": "Dibuat sebelum detail mulai dicatat."
+    "render_no_details": "Dibuat sebelum detail mulai dicatat.",
+    "select_visible": "Pilih yang terlihat",
+    "select_item": "Pilih {{name}}",
+    "delete_selected": "Hapus pilihan ({{count}})",
+    "deleted_count": "Dihapus: {{count}}",
+    "delete_warning": "Tindakan ini tidak dapat dibatalkan. Proyek dan transkrip dihapus. Menghapus suara atau rekaman juga menghapus audio tersimpannya. File ekspor dan audio hasil render yang selesai tetap disimpan."
   },
   "projectActions": {
     "delete": "Hapus “{{name}}”? Tindakan ini tidak dapat dibatalkan.",

@@ -10,7 +10,11 @@ import { Link, useParams } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { WorkspaceHeader } from '@/components/app-shell/workspace-header';
 import { getBridge } from '@/components/bridge';
-import { getIntegrationBySlug } from '../../../../../../frontend/src/config/integration-catalog';
+import {
+  getIntegrationBySlug,
+  integrationSlug,
+} from '../../../../../../frontend/src/config/integration-catalog';
+import { SPONSORS } from '../../../../../../frontend/src/config/sponsors';
 import './integrations-page.css';
 
 const categoryLabels: Record<string, [string, string]> = {
@@ -84,7 +88,9 @@ export function IntegrationDetailPage() {
   const backend = useBackendStatus();
   const setup = integrationSetup(slug ?? '');
   const blocks = useMemo(() => setup?.blocks(backend.baseUrl) ?? null, [setup, backend.baseUrl]);
-  const entry = getIntegrationBySlug(slug ?? '');
+  const catalogEntry = getIntegrationBySlug(slug ?? '');
+  const sponsor = SPONSORS.find((item) => integrationSlug(item.name) === slug);
+  const entry = sponsor ? { ...catalogEntry, ...sponsor } : catalogEntry;
   if (!entry) {
     return (
       <div className="integrations-page">
@@ -101,7 +107,7 @@ export function IntegrationDetailPage() {
       </div>
     );
   }
-  const [categoryKey, categoryFallback] = categoryLabels[entry.category] ?? [
+  const [categoryKey, categoryFallback] = categoryLabels[entry.category ?? ''] ?? [
     'tools.title',
     'Integration',
   ];
@@ -127,11 +133,19 @@ export function IntegrationDetailPage() {
           <div>
             <p className="integration-detail-kicker">
               <BlocksIcon />
-              {t(categoryKey, { defaultValue: categoryFallback })}
+              {t(sponsor ? 'integrationCatalog.featured' : categoryKey, {
+                defaultValue: categoryFallback,
+              })}
             </p>
             <h2>{entry.name}</h2>
             <p>
-              {t(setup ? 'integrationCatalog.worksWithHint' : 'integrationCatalog.externalHint')}
+              {t(
+                setup
+                  ? 'integrationCatalog.worksWithHint'
+                  : sponsor
+                    ? 'integrationCatalog.featured'
+                    : 'integrationCatalog.externalHint',
+              )}
             </p>
           </div>
         </section>
@@ -173,7 +187,9 @@ export function IntegrationDetailPage() {
                 </div>
               </>
             ) : (
-              <p className="integration-detail-note">{t('directoryExamples.notice')}</p>
+              <p className="integration-detail-note">
+                {t(sponsor ? 'integrationCatalog.featured' : 'directoryExamples.notice')}
+              </p>
             )}
           </section>
           <section className="integration-detail-panel integration-detail-action">

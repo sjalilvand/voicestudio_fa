@@ -121,6 +121,15 @@ def record_export(req: ExportRecordRequest):
     return {"success": True, "id": export_id}
 
 
+@router.delete("/export/history/{export_id}")
+def delete_export_history(export_id: str):
+    """Forget an export record without touching its source or destination file."""
+    with db_conn() as conn:
+        conn.execute("DELETE FROM export_history WHERE id = ?", (export_id,))
+    event_bus.emit("export_history", {"action": "deleted", "id": export_id})
+    return {"deleted": export_id}
+
+
 @router.get("/export/history")
 def get_export_history():
     with db_conn() as conn:

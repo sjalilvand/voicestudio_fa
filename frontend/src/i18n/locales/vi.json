@@ -1416,7 +1416,12 @@
     "story_voices_plural": "{{count}} giọng nói",
     "audiobooks": "Sách nói",
     "audiobook": "Sách nói",
-    "story": "Câu chuyện"
+    "story": "Câu chuyện",
+    "select_visible": "Chọn mục đang hiển thị",
+    "select_item": "Chọn {{name}}",
+    "delete_selected": "Xóa mục đã chọn ({{count}})",
+    "deleted_count": "Đã xóa: {{count}}",
+    "delete_warning": "Không thể hoàn tác. Dự án và bản chép lời sẽ bị xóa. Xóa giọng nói hoặc bản thu cũng xóa âm thanh đã lưu của chúng. Tệp đã xuất và âm thanh kết xuất hoàn tất được giữ lại."
   },
   "batch": {
     "title": "Lồng tiếng hàng loạt",

@@ -1416,7 +1416,12 @@
     "story_voices_plural": "{{count}} voces",
     "audiobooks": "Audiolibros",
     "audiobook": "Audiolibro",
-    "story": "historia"
+    "story": "historia",
+    "select_visible": "Seleccionar visibles",
+    "select_item": "Seleccionar {{name}}",
+    "delete_selected": "Eliminar selección ({{count}})",
+    "deleted_count": "Eliminados: {{count}}",
+    "delete_warning": "Esta acción no se puede deshacer. Se eliminan los proyectos y las transcripciones. Al eliminar voces o tomas también se borra su audio guardado. Se conservan los archivos exportados y el audio de los renderizados terminados."
   },
   "batch": {
     "title": "Doblaje por lotes",

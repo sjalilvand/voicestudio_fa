@@ -74,6 +74,8 @@ The main workspace sidebar stays visible on Settings routes, including while the
 
 In the expanded sidebar, workspace navigation sits immediately below the header and above the voice library. The status bar and Settings entry remain at the bottom; voice-library scrolling does not move the navigation.
 
+In the compact rail, Voice, Stories and Dubbing open flyouts on mouse hover or click, with full-row click targets. Hover uses a short opening delay and a pointer transit delay into the flyout; touch users can click, and keyboard users can press Enter or Arrow Right/Down to open it, then Arrow Left or Escape to return to the trigger. Choosing a destination keeps its flyout mounted until the route changes; choosing the current destination closes it immediately. Outside clicks close flyouts. Double-clicking the compact rail expands the full sidebar; the header button remains the single-click control. The flyout appears beside its icon without a scale shift while the pointer moves into it.
+
 ## Sidebar expansion preference
 
 Settings → Appearance → Keep sidebar expanded persists the choice locally. It disables automatic compaction on narrower secondary-pane workspaces; the default remains automatic. The explicit close control still works, and the Profiles workspace still avoids duplicating its voice library. The header toggle and sidebar share one state. A compact rail can reopen itself on every desktop platform, using the brand icon on Windows/Linux.

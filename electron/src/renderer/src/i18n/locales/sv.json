@@ -1469,7 +1469,12 @@
     "render_size_label": "Omfång",
     "render_size": "{{chapters}} kapitel · {{lines}} rader · {{words}} ord",
     "render_settings": "Inställningar",
-    "render_no_details": "Skapad innan detaljer började sparas."
+    "render_no_details": "Skapad innan detaljer började sparas.",
+    "select_visible": "Markera synliga",
+    "select_item": "Markera {{name}}",
+    "delete_selected": "Ta bort markerade ({{count}})",
+    "deleted_count": "Borttagna: {{count}}",
+    "delete_warning": "Detta kan inte ångras. Projekt och transkriptioner tas bort. När röster eller tagningar tas bort raderas även deras sparade ljud. Exporterade filer och färdigrenderat ljud behålls."
   },
   "projectActions": {
     "delete": "Ta bort ”{{name}}”? Detta kan inte ångras.",

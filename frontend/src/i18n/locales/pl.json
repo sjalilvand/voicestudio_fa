@@ -1416,7 +1416,12 @@
     "story_voices_plural": "{{count}} głosy",
     "audiobooks": "Audiobooki",
     "audiobook": "Książka audio",
-    "story": "Historia"
+    "story": "Historia",
+    "select_visible": "Zaznacz widoczne",
+    "select_item": "Zaznacz {{name}}",
+    "delete_selected": "Usuń zaznaczone ({{count}})",
+    "deleted_count": "Usunięto: {{count}}",
+    "delete_warning": "Tej operacji nie można cofnąć. Projekty i transkrypcje zostaną usunięte. Usunięcie głosów lub nagrań usuwa też ich zapisany dźwięk. Wyeksportowane pliki i ukończone rendery audio pozostaną."
   },
   "batch": {
     "title": "Dubbing wsadowy",

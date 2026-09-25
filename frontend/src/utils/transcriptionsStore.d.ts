@@ -17,3 +17,4 @@ export const TRANSCRIPTION_EVENT: string;
 export function loadTranscriptions(): TranscriptEntry[];
 export function addTranscription(entry: Partial<TranscriptEntry>): TranscriptEntry;
 export function subscribeTranscriptions(listener: (entries: TranscriptEntry[]) => void): () => void;
+export function removeTranscription(id: number): void;

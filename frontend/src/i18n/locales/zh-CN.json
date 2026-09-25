@@ -1667,7 +1667,12 @@
     "story_voices_plural": "{{count}} 声音",
     "audiobooks": "有声读物",
     "audiobook": "有声读物",
-    "story": "故事"
+    "story": "故事",
+    "select_visible": "选择可见项",
+    "select_item": "选择{{name}}",
+    "delete_selected": "删除所选项（{{count}}）",
+    "deleted_count": "已删除：{{count}}",
+    "delete_warning": "此操作无法撤销。项目和转录文本将被删除。删除声音或录音也会删除其保存的音频。导出的文件和已完成渲染的音频将保留。"
   },
   "batch": {
     "title": "批量配音",

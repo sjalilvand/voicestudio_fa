@@ -1416,7 +1416,12 @@
     "story_voices_plural": "{{count}} voix",
     "audiobooks": "Livres audio",
     "audiobook": "Livre audio",
-    "story": "Histoire"
+    "story": "Histoire",
+    "select_visible": "Sélectionner les éléments visibles",
+    "select_item": "Sélectionner {{name}}",
+    "delete_selected": "Supprimer la sélection ({{count}})",
+    "deleted_count": "Supprimés : {{count}}",
+    "delete_warning": "Cette action est irréversible. Les projets et transcriptions sont supprimés. Supprimer des voix ou des prises efface aussi leur audio enregistré. Les fichiers exportés et les rendus audio terminés sont conservés."
   },
   "batch": {
     "title": "Doublage par lots",

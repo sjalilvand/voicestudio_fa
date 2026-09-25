@@ -1473,7 +1473,12 @@
     "render_size_label": "Rozmiar",
     "render_size": "Rozdziały: {{chapters}} · wiersze: {{lines}} · słowa: {{words}}",
     "render_settings": "Ustawienia",
-    "render_no_details": "Wygenerowano, zanim zaczęto zapisywać szczegóły."
+    "render_no_details": "Wygenerowano, zanim zaczęto zapisywać szczegóły.",
+    "select_visible": "Zaznacz widoczne",
+    "select_item": "Zaznacz {{name}}",
+    "delete_selected": "Usuń zaznaczone ({{count}})",
+    "deleted_count": "Usunięto: {{count}}",
+    "delete_warning": "Tej operacji nie można cofnąć. Projekty i transkrypcje zostaną usunięte. Usunięcie głosów lub nagrań usuwa też ich zapisany dźwięk. Wyeksportowane pliki i ukończone rendery audio pozostaną."
   },
   "projectActions": {
     "delete": "Usunąć „{{name}}”? Tej czynności nie można cofnąć.",

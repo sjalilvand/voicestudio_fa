@@ -1469,7 +1469,12 @@
     "render_size_label": "Quy mô",
     "render_size": "{{chapters}} chương · {{lines}} dòng · {{words}} từ",
     "render_settings": "Cài đặt",
-    "render_no_details": "Được tạo trước khi chi tiết được ghi lại."
+    "render_no_details": "Được tạo trước khi chi tiết được ghi lại.",
+    "select_visible": "Chọn mục đang hiển thị",
+    "select_item": "Chọn {{name}}",
+    "delete_selected": "Xóa mục đã chọn ({{count}})",
+    "deleted_count": "Đã xóa: {{count}}",
+    "delete_warning": "Không thể hoàn tác. Dự án và bản chép lời sẽ bị xóa. Xóa giọng nói hoặc bản thu cũng xóa âm thanh đã lưu của chúng. Tệp đã xuất và âm thanh kết xuất hoàn tất được giữ lại."
   },
   "projectActions": {
     "delete": "Xóa “{{name}}”? Không thể hoàn tác thao tác này.",

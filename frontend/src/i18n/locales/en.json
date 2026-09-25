@@ -1655,7 +1655,12 @@
     "export": "Export",
     "transcription": "Transcription",
     "designed_voice": "Designed voice",
-    "cloned_voice": "Cloned voice"
+    "cloned_voice": "Cloned voice",
+    "select_visible": "Select visible",
+    "select_item": "Select {{name}}",
+    "delete_selected": "Delete selected ({{count}})",
+    "deleted_count": "Deleted: {{count}}",
+    "delete_warning": "This cannot be undone. Projects and transcripts are removed. Deleting voices or takes also removes their stored audio. Exported files and finished render audio are kept."
   },
   "batch": {
     "title": "Batch dubbing",

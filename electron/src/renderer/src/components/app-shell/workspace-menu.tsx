@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/popover';
 import { Link, useRouterState } from '@tanstack/react-router';
 import {
@@ -72,20 +72,33 @@ function NavigationLink({
   destination: [to, label, Icon, activate],
   compact = false,
   nested = false,
+  flyout = false,
+  onCurrentRoute,
 }: {
   destination: Destination;
   compact?: boolean;
   nested?: boolean;
+  flyout?: boolean;
+  onCurrentRoute?: () => void;
 }) {
   const { t } = useTranslation();
   const link = (
     <Link
       to={to}
       aria-label={compact ? t(label) : undefined}
-      onClick={activate}
+      onClick={() => {
+        activate?.();
+        onCurrentRoute?.();
+      }}
       className={cn(
         itemClass,
-        compact ? 'justify-center px-0' : nested ? 'h-7 gap-2 px-2 text-xs' : 'gap-2.5 px-2.5',
+        compact
+          ? 'h-10 justify-center px-0'
+          : flyout
+            ? 'h-10 gap-2 px-3 text-sm'
+            : nested
+              ? 'h-7 gap-2 px-2 text-xs'
+              : 'gap-2.5 px-2.5',
       )}
       activeProps={{
         className:
@@ -123,29 +136,113 @@ function NavigationGroup({
   const active = children.some(([to]) => pathname === to || pathname.startsWith(to + '/'));
   const [expanded, setExpanded] = useState(active);
   const [popupOpen, setPopupOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+  const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelOpen = () => {
+    if (openTimer.current !== null) clearTimeout(openTimer.current);
+    openTimer.current = null;
+  };
+  const cancelClose = () => {
+    if (closeTimer.current !== null) clearTimeout(closeTimer.current);
+    closeTimer.current = null;
+  };
+  const scheduleClose = () => {
+    cancelClose();
+    closeTimer.current = setTimeout(() => setPopupOpen(false), 240);
+  };
   const id = useId();
+  useEffect(
+    () => () => {
+      cancelOpen();
+      cancelClose();
+    },
+    [],
+  );
   useEffect(() => {
+    cancelOpen();
+    cancelClose();
     setExpanded(active);
     setPopupOpen(false);
   }, [pathname, active]);
   const triggerClass = cn(
     itemClass,
     'w-full',
-    compact ? 'justify-center' : 'gap-2.5 px-2.5 font-medium',
+    compact ? 'h-10 justify-center' : 'gap-2.5 px-2.5 font-medium',
     active &&
       'bg-sidebar-accent/65 text-sidebar-foreground ring-1 ring-inset ring-sidebar-border/50',
   );
   if (compact)
     return (
-      <Popover open={popupOpen} onOpenChange={setPopupOpen}>
-        <PopoverTrigger aria-label={t(label)} className={triggerClass}>
+      <Popover
+        open={popupOpen}
+        onOpenChange={(open) => {
+          cancelOpen();
+          cancelClose();
+          setPopupOpen(open);
+        }}
+      >
+        <PopoverTrigger
+          ref={triggerRef}
+          aria-label={t(label)}
+          className={triggerClass}
+          onKeyDown={(event) => {
+            if (event.key !== 'ArrowRight' && event.key !== 'ArrowDown') return;
+            event.preventDefault();
+            cancelOpen();
+            setPopupOpen(true);
+            requestAnimationFrame(() => popupRef.current?.querySelector('a')?.focus());
+          }}
+          onPointerEnter={(event) => {
+            if (event.pointerType !== 'mouse') return;
+            cancelClose();
+            if (!popupOpen) {
+              cancelOpen();
+              openTimer.current = setTimeout(() => setPopupOpen(true), 90);
+            }
+          }}
+          onPointerLeave={(event) => {
+            if (event.pointerType === 'mouse') {
+              cancelOpen();
+              if (popupOpen) scheduleClose();
+            }
+          }}
+          onClickCapture={(event) => {
+            // A press on an already hover-open trigger should keep the flyout
+            // available. Keyboard and touch presses retain Base UI's toggle.
+            if (popupOpen && event.detail > 0) event.stopPropagation();
+          }}
+        >
           <Icon className={iconClass} aria-hidden="true" />
         </PopoverTrigger>
-        <PopoverContent side="right" className="w-52 p-2">
-          <div className="px-2 pb-2 pt-1 text-xs font-medium text-muted-foreground">{t(label)}</div>
-          <div onClick={() => setPopupOpen(false)}>
+        <PopoverContent
+          ref={popupRef}
+          side="right"
+          sideOffset={0}
+          className="w-52 p-1.5 data-open:zoom-in-100 data-closed:zoom-out-100"
+          onPointerEnter={cancelClose}
+          onPointerLeave={(event) => {
+            if (event.pointerType === 'mouse') scheduleClose();
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== 'ArrowLeft') return;
+            event.preventDefault();
+            setPopupOpen(false);
+            triggerRef.current?.focus();
+          }}
+        >
+          <div className="px-3 pb-1 pt-1.5 text-xs font-medium text-muted-foreground">
+            {t(label)}
+          </div>
+          <div>
             {children.map((destination) => (
-              <NavigationLink key={destination[0]} destination={destination} />
+              <NavigationLink
+                key={destination[0]}
+                destination={destination}
+                flyout
+                onCurrentRoute={pathname === destination[0] ? () => setPopupOpen(false) : undefined}
+              />
             ))}
           </div>
         </PopoverContent>

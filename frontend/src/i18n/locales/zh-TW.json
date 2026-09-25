@@ -1416,7 +1416,12 @@
     "story_voices_plural": "{{count}} 聲音",
     "audiobooks": "有聲書",
     "audiobook": "有聲書",
-    "story": "故事"
+    "story": "故事",
+    "select_visible": "選取可見項目",
+    "select_item": "選取{{name}}",
+    "delete_selected": "刪除所選項目（{{count}}）",
+    "deleted_count": "已刪除：{{count}}",
+    "delete_warning": "此操作無法復原。專案和轉錄文字將被刪除。刪除聲音或錄音也會刪除其儲存的音訊。匯出的檔案和已完成算繪的音訊將保留。"
   },
   "batch": {
     "title": "大量配音",

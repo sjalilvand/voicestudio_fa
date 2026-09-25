@@ -1471,7 +1471,12 @@
     "render_size_label": "Tamaño",
     "render_size": "{{chapters}} capítulos · {{lines}} líneas · {{words}} palabras",
     "render_settings": "Ajustes",
-    "render_no_details": "Generado antes de que se registraran los detalles."
+    "render_no_details": "Generado antes de que se registraran los detalles.",
+    "select_visible": "Seleccionar visibles",
+    "select_item": "Seleccionar {{name}}",
+    "delete_selected": "Eliminar selección ({{count}})",
+    "deleted_count": "Eliminados: {{count}}",
+    "delete_warning": "Esta acción no se puede deshacer. Se eliminan los proyectos y las transcripciones. Al eliminar voces o tomas también se borra su audio guardado. Se conservan los archivos exportados y el audio de los renderizados terminados."
   },
   "projectActions": {
     "delete": "¿Eliminar «{{name}}»? No se puede deshacer.",

@@ -2,6 +2,8 @@
 
 Directory entries are not paid sponsors or endorsements. Only entries with a built-in setup block or setup panel carry the **Works with VoiceStudio** badge and capability chips (MCP server, Speech API, Transcription API, Workflow template, Self-hosted, Local language model, Phone calls); every other card is marked **External link** and only opens the provider's website. Setup blocks and panels live in one registry keyed by the catalog slug (`electron/src/renderer/src/features/integrations/setup-registry.ts`), so a connector is added in one place. Icons are bundled locally so viewing the catalog sends no logo requests to providers. Brand marks belong to their respective owners.
 
+Compact footer logo tiles open the matching page in Integrations; their full names remain available on hover or focus. Each detail page offers the provider's website as a separate action; featured sponsors also have a detail page when they are not in the directory.
+
 | Company | Official source | Icon source |
 |---|---|---|
 | Twilio | [Website](https://www.twilio.com) | Bundled site icon |

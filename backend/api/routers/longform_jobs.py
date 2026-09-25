@@ -20,7 +20,7 @@ import logging
 import math
 from typing import Callable, Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
 from core import job_store
 
@@ -30,6 +30,24 @@ router = APIRouter()
 #: Job types this library surfaces. Both flow through the shared longform
 #: renderer (``_render_longform_sse``) and emit the same ``done`` event shape.
 _LONGFORM_TYPES = ("audiobook", "story")
+
+
+@router.delete("/longform/jobs/{job_id}")
+def delete_longform_job(job_id: str) -> dict:
+    """Remove a finished library record and its events, preserving render audio."""
+    with job_store.db_conn() as conn:
+        # Take the write lock before checking status, so it cannot change between
+        # validation and deletion. Never remove live jobs or another job type.
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute("SELECT type, status FROM jobs WHERE id = ?", (job_id,)).fetchone()
+        if row is not None:
+            if row["type"] not in _LONGFORM_TYPES:
+                raise HTTPException(404, "Longform render not found")
+            if row["status"] != "done":
+                raise HTTPException(409, "Only completed renders can be removed")
+            conn.execute("DELETE FROM job_events WHERE job_id = ?", (job_id,))
+            conn.execute("DELETE FROM jobs WHERE id = ?", (job_id,))
+    return {"deleted": job_id}
 
 
 def _done_payload_from_events(events: list[dict]) -> Optional[dict]:

@@ -1416,7 +1416,12 @@
     "story_voices_plural": "{{count}} の声",
     "audiobooks": "オーディオブック",
     "audiobook": "オーディオブック",
-    "story": "ストーリー"
+    "story": "ストーリー",
+    "select_visible": "表示中の項目を選択",
+    "select_item": "{{name}}を選択",
+    "delete_selected": "選択項目を削除（{{count}}）",
+    "deleted_count": "削除済み：{{count}}",
+    "delete_warning": "この操作は取り消せません。プロジェクトと文字起こしが削除されます。音声やテイクを削除すると、保存された音声も削除されます。エクスポートしたファイルと完成したレンダリング音声は保持されます。"
   },
   "batch": {
     "title": "一括ダビング",

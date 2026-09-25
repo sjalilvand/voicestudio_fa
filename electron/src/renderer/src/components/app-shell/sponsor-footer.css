@@ -2,11 +2,11 @@
   display: flex;
   flex-shrink: 0;
   align-items: center;
-  gap: 1px;
+  gap: 0;
   min-height: var(--workspace-footer-height);
   padding: 0;
   border-top: 1px solid var(--border);
-  background: color-mix(in srgb, var(--foreground) 2%, var(--background));
+  background: var(--background);
 }
 .sponsor-strip-logos {
   display: flex;
@@ -14,27 +14,42 @@
   justify-content: flex-start;
   flex: 1;
   min-width: 0;
-  gap: 1px;
+  gap: 0;
   overflow-x: auto;
   scrollbar-width: none;
   padding: 0;
 }
 .sponsor-strip-logos::-webkit-scrollbar { display: none; }
-.sponsor-logo-tile,
-.sponsor-book-tile {
+.sponsor-logo-tile {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   flex: 0 0 auto;
-  gap: 12px;
+  gap: 9px;
+  max-width: 154px;
   height: calc(var(--workspace-footer-height) - 1px);
-  min-height: calc(var(--workspace-footer-height) - 1px);
-  padding: 6px 12px;
-  border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+  padding: 6px 11px;
+  border: 0;
+  border-right: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
   border-radius: 0;
-  background: var(--background);
-  color: var(--foreground);
+  background: transparent;
+  color: color-mix(in srgb, var(--foreground) 83%, var(--muted-foreground));
   cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.sponsor-tile-icon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  object-fit: contain;
+}
+.sponsor-tile-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .sponsor-logo-preview {
   width: min(100%, 210px);
@@ -75,12 +90,20 @@
   color: var(--muted-foreground);
 }
 .sponsor-book-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  gap: 12px;
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  width: 190px;
-  min-width: 190px;
+  width: 174px;
+  min-width: 174px;
+  height: calc(var(--workspace-footer-height) - 1px);
+  padding: 6px 10px;
   border: 1px dashed color-mix(in srgb, var(--primary) 48%, var(--border));
+  border-radius: 0;
   background: transparent;
   color: var(--muted-foreground);
   font-size: 12px;
@@ -316,9 +339,11 @@
 @media (hover: hover) {
   .sponsor-logo-tile:hover,
   .sponsor-book-tile:hover {
-    border-color: var(--primary);
     color: var(--foreground);
-    box-shadow: 0 3px 15px -10px var(--primary);
+    background: color-mix(in srgb, var(--primary) 7%, var(--background));
+  }
+  .sponsor-book-tile:hover {
+    border-color: var(--primary);
   }
 }
 @media (prefers-reduced-motion: no-preference) {
@@ -340,8 +365,8 @@
     padding-inline: 0;
   }
   .sponsor-book-tile {
-    min-width: 185px;
-    max-width: 185px;
+    min-width: 174px;
+    max-width: 174px;
     padding: 8px;
   }
   .sponsor-logo-tile {
@@ -358,17 +383,20 @@
   min-width: 0;
 }
 .sponsor-logo-tooltip {
-  border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
-  border-radius: 12px;
-  background: linear-gradient(
-    145deg,
-    color-mix(in srgb, var(--primary) 14%, var(--popover)),
-    var(--popover)
-  );
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--popover);
   box-shadow:
-    0 16px 38px rgb(0 0 0 / 32%),
-    inset 0 1px 0 rgb(255 255 255 / 9%);
-  backdrop-filter: blur(18px);
+    0 12px 28px rgb(0 0 0 / 24%),
+    inset 0 1px 0 rgb(255 255 255 / 6%);
+}
+.sponsor-tooltip-destination {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--muted-foreground);
+  font-size: 11px;
 }
 .sponsor-tooltip-heading {
   display: flex;

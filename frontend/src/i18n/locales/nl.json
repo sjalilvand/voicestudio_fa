@@ -1416,7 +1416,12 @@
     "story_voices_plural": "{{count}} stemmen",
     "audiobooks": "Audioboeken",
     "audiobook": "Audioboek",
-    "story": "Verhaal"
+    "story": "Verhaal",
+    "select_visible": "Zichtbare items selecteren",
+    "select_item": "{{name}} selecteren",
+    "delete_selected": "Selectie verwijderen ({{count}})",
+    "deleted_count": "Verwijderd: {{count}}",
+    "delete_warning": "Dit kan niet ongedaan worden gemaakt. Projecten en transcripties worden verwijderd. Bij het verwijderen van stemmen of opnamen wordt ook hun opgeslagen audio verwijderd. Geëxporteerde bestanden en voltooide audiorenders blijven bewaard."
   },
   "batch": {
     "title": "Batch-nasynchronisatie",

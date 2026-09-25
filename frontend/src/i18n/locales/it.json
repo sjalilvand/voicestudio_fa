@@ -1416,7 +1416,12 @@
     "story_voices_plural": "{{count}} voci",
     "audiobooks": "Audiolibri",
     "audiobook": "Audiolibro",
-    "story": "Storia"
+    "story": "Storia",
+    "select_visible": "Seleziona elementi visibili",
+    "select_item": "Seleziona {{name}}",
+    "delete_selected": "Elimina selezione ({{count}})",
+    "deleted_count": "Eliminati: {{count}}",
+    "delete_warning": "Questa azione è irreversibile. Progetti e trascrizioni vengono rimossi. Eliminare voci o registrazioni rimuove anche il relativo audio salvato. I file esportati e i rendering audio completati vengono conservati."
   },
   "batch": {
     "title": "Doppiaggio batch",

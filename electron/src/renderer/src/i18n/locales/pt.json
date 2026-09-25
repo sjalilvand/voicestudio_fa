@@ -1471,7 +1471,12 @@
     "render_size_label": "Tamanho",
     "render_size": "{{chapters}} capítulos · {{lines}} linhas · {{words}} palavras",
     "render_settings": "Configurações",
-    "render_no_details": "Gerado antes de os detalhes serem registrados."
+    "render_no_details": "Gerado antes de os detalhes serem registrados.",
+    "select_visible": "Selecionar visíveis",
+    "select_item": "Selecionar {{name}}",
+    "delete_selected": "Excluir selecionados ({{count}})",
+    "deleted_count": "Excluídos: {{count}}",
+    "delete_warning": "Esta ação não pode ser desfeita. Projetos e transcrições serão removidos. Excluir vozes ou gravações também remove o áudio salvo. Arquivos exportados e áudios de renderizações concluídas serão mantidos."
   },
   "projectActions": {
     "delete": "Excluir “{{name}}”? Esta ação não pode ser desfeita.",

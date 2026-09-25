@@ -1416,7 +1416,12 @@
     "story_voices_plural": "{{count}} sesler",
     "audiobooks": "Sesli kitaplar",
     "audiobook": "Sesli kitap",
-    "story": "Hikaye"
+    "story": "Hikaye",
+    "select_visible": "Görünenleri seç",
+    "select_item": "{{name}} seç",
+    "delete_selected": "Seçilenleri sil ({{count}})",
+    "deleted_count": "Silinen: {{count}}",
+    "delete_warning": "Bu işlem geri alınamaz. Projeler ve dökümler kaldırılır. Sesleri veya kayıtları silmek, saklanan ses dosyalarını da siler. Dışa aktarılan dosyalar ve tamamlanmış işleme sesleri korunur."
   },
   "batch": {
     "title": "Toplu dublaj",
