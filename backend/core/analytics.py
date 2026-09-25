@@ -54,8 +54,8 @@ _OFF_VALUES = {"1", "true", "yes", "on"}
 #: desktop shell; developers can point at their own project) always wins.
 #: Committed-token guard: tests/test_no_committed_analytics_token.py allows a
 #: `phc_` literal in exactly this file and frontend/src/utils/analytics.ts.
-_PUBLIC_PROJECT_TOKEN = "phc_v5wMjnYMPMaEcRNLRKQsTYCzPaYWh7wcHPhXNkNajVf9"  # gitleaks:allow — publishable write-only key (#1193)
-_DEFAULT_HOST = "https://eu.i.posthog.com"
+_PUBLIC_PROJECT_TOKEN = "phc_kJK9nFqtwFmB4CYWS4bMDTY7z9P4KCRyiRT7CzJTXm9f"  # gitleaks:allow — publishable write-only key (#1193)
+_DEFAULT_HOST = "https://us.i.posthog.com"
 
 #: The ONLY property keys that may leave this machine. Anything else is dropped.
 #: Deliberately conservative: no free text, no paths, no names, no ids of user

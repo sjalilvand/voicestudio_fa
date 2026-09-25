@@ -4,7 +4,7 @@ import { expect, it, vi } from 'vitest';
 const route = vi.hoisted(() => ({ pathname: '/gallery' }));
 vi.mock('@tanstack/react-router', () => ({
   useRouterState: ({ select }: any) => select({ location: route }),
-  Link: ({ to, activeProps, children, ...props }: any) => (
+  Link: ({ to, activeProps: _activeProps, children, ...props }: any) => (
     <a href={to} {...props}>
       {children}
     </a>
@@ -19,7 +19,7 @@ it('opens the current workflow, lets users collapse it, and follows route change
   const voice = screen.getByRole('button', { name: 'nav.voice' });
   expect(voice).toHaveAttribute('aria-expanded', 'true');
   expect(screen.getByRole('link', { name: 'nav.gallery' })).toHaveAttribute('href', '/gallery');
-  expect(screen.getByRole('link', { name: 'nav.calls' })).toHaveAttribute('href', '/calls');
+  expect(screen.getByRole('link', { name: 'workflows.title' })).toHaveAttribute('href', '/calls');
   fireEvent.click(voice);
   expect(voice).toHaveAttribute('aria-expanded', 'false');
   route.pathname = '/audiobook';

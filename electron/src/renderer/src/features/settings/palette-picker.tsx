@@ -32,7 +32,7 @@ export function PalettePicker({ appearance }: { appearance: ThemeAppearance }) {
               type="button"
               key={option.id}
               aria-pressed={selected}
-              onClick={() => settings.updateTheme({ [appearance]: option.id })}
+              onClick={() => settings.updateTheme({ [appearance]: option.id, mode: appearance })}
               className={cn(
                 'overflow-hidden rounded-lg border border-border/70 text-left outline-none transition-colors hover:border-ring/60 focus-visible:ring-2 focus-visible:ring-ring',
                 selected && 'border-ring ring-1 ring-ring',

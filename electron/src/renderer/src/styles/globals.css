@@ -67,7 +67,7 @@
 }
 
 :root {
-  --workspace-footer-height: 49px;
+  --workspace-footer-height: 40px;
   --control-radius: 0.5rem;
   --workspace-gap: 1rem;
   --workspace-inset: 1.5rem;

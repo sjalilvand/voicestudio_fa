@@ -11,7 +11,20 @@ const frontendPkg = JSON.parse(
   readFileSync(resolve(__dirname, '../frontend/package.json'), 'utf-8'),
 ) as { version: string };
 
-const define = { __APP_VERSION__: JSON.stringify(frontendPkg.version) };
+const define = {
+  __APP_VERSION__: JSON.stringify(frontendPkg.version),
+  __PRO_STORE_ID__: JSON.stringify(process.env.VOICESTUDIO_PRO_STORE_ID ?? ''),
+  __PRO_PRODUCT_ID__: JSON.stringify(process.env.VOICESTUDIO_PRO_PRODUCT_ID ?? ''),
+  __PRO_YEARLY_VARIANT_ID__: JSON.stringify(process.env.VOICESTUDIO_PRO_YEARLY_VARIANT_ID ?? ''),
+  __PRO_LIFETIME_VARIANT_ID__: JSON.stringify(
+    process.env.VOICESTUDIO_PRO_LIFETIME_VARIANT_ID ?? '',
+  ),
+  // Keep the renderer and its managed Python backend on one analytics project.
+  __POSTHOG_PROJECT_TOKEN__: JSON.stringify(
+    process.env.VITE_POSTHOG_KEY ?? process.env.POSTHOG_PROJECT_TOKEN ?? '',
+  ),
+  __POSTHOG_HOST__: JSON.stringify(process.env.VITE_POSTHOG_HOST ?? process.env.POSTHOG_HOST ?? ''),
+};
 
 export default defineConfig({
   main: {

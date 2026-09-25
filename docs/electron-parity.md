@@ -68,6 +68,8 @@ route with no failures.
 
 ## Settings navigation
 
+Studio is the default palette for both Light and Dark on a fresh install. Selecting a palette under either appearance applies it immediately and saves it for later switches, including System mode changes. Existing saved palette choices remain unchanged.
+
 The main workspace sidebar stays visible on Settings routes, including while the backend is starting or unavailable. Settings keeps its own section list beside it, with a Settings heading instead of a duplicate brand header. Narrow windows use the same compact-rail behavior as other secondary-pane workspaces.
 
 ## Navigation order

@@ -40,8 +40,12 @@ import { inspectDataRelocation, relocateDataDirectory } from './data-relocation'
 import { createUninstallPlan, scanUninstallTargets, type UninstallRoots } from './uninstall-data';
 import { scheduleUninstallCleanup } from './uninstall-cleanup';
 import { sendToLiveWindow } from './window-safety';
+import { activateProLicense, deactivateProLicense, proLicenseStatus } from './pro-license';
 
 export const CHANNELS = {
+  proStatus: 'pro:status',
+  proActivate: 'pro:activate',
+  proDeactivate: 'pro:deactivate',
   permissionsGetState: 'permissions:getState',
   permissionsOpenSettings: 'permissions:openSettings',
   filesAuthorizeMediaTool: 'files:authorizeMediaTool',
@@ -318,6 +322,19 @@ export function registerIpc(
     createdAt: number;
   } | null = null;
   supervisor.subscribe((status: BackendStatus) => broadcast(CHANNELS.backendStatus, status));
+
+  ipcMain.handle(CHANNELS.proStatus, (event) => {
+    assertTrustedMainFrame(event, getMainWindow());
+    return proLicenseStatus();
+  });
+  ipcMain.handle(CHANNELS.proActivate, (event, key: unknown) => {
+    assertTrustedMainFrame(event, getMainWindow());
+    return activateProLicense(key);
+  });
+  ipcMain.handle(CHANNELS.proDeactivate, (event) => {
+    assertTrustedMainFrame(event, getMainWindow());
+    return deactivateProLicense();
+  });
 
   ipcMain.handle(CHANNELS.permissionsGetState, (event) => {
     const owner = getMainWindow();

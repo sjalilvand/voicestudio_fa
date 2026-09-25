@@ -15,6 +15,9 @@ optional Python package.
 | MyMemory | online | `deep_translator` | no |
 | LLM (OpenAI-compatible) | llm | `openai` | usually yes |
 
+Electron's Settings > Models > Translation page shows available and unavailable
+engines together, so install and configuration options remain visible.
+
 If you pick an engine whose package isn't importable yet, the Engine label shows
 a **highlighted Install affordance**, and — if you try to translate anyway — the
 backend returns a single, actionable error telling you exactly what to install

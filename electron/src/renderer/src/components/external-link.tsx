@@ -3,7 +3,15 @@ import { useTranslation } from 'react-i18next';
 import { ExternalLinkIcon } from 'lucide-react';
 import { buttonVariants } from './ui/button';
 import { getBridge } from './bridge';
-export function ExternalLink({ href, children }: { href: string; children: React.ReactNode }) {
+export function ExternalLink({
+  href,
+  children,
+  showIcon = true,
+}: {
+  href: string;
+  children: React.ReactNode;
+  showIcon?: boolean;
+}) {
   const { t } = useTranslation();
   const [failed, setFailed] = useState(false);
   return (
@@ -22,7 +30,7 @@ export function ExternalLink({ href, children }: { href: string; children: React
         }}
       >
         {children}
-        <ExternalLinkIcon />
+        {showIcon && <ExternalLinkIcon />}
       </a>
       {failed && (
         <span role="alert" className="text-sm text-destructive">

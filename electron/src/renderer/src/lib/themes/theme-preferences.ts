@@ -30,9 +30,10 @@ export function parseThemePreferences(
   };
   const palette = (value: unknown) => {
     const id = typeof value === 'string' ? (aliases[value] ?? value) : value;
-    return typeof id === 'string' && AVAILABLE_PALETTES.some((theme) => theme.id === id)
+    return typeof id === 'string' &&
+      (id === 'default' || AVAILABLE_PALETTES.some((theme) => theme.id === id))
       ? id
-      : 'signal';
+      : 'default';
   };
   return {
     mode: ['light', 'dark', 'system'].includes(value.mode ?? '')

@@ -86,12 +86,19 @@ export function WorkspaceSidebar() {
               to="/settings"
               aria-label={t('nav.settings')}
               title={t('nav.settings')}
-              className={buttonVariants({
-                variant: 'ghost',
-                size: mac ? 'icon-xs' : 'icon-sm',
-              })}
+              className={cn(
+                buttonVariants({
+                  variant: 'ghost',
+                  size: mac ? 'icon-xs' : 'icon-sm',
+                }),
+                'workspace-nav-item',
+              )}
             >
-              <SettingsIcon />
+              <SettingsIcon
+                className="workspace-nav-icon"
+                data-tone="settings"
+                data-motion="turn"
+              />
             </Link>
             {mac && <StatusBar compact inline />}
             {!mac && <SystemNotifications enabled={backend.stage === 'ready'} compact />}
@@ -153,17 +160,34 @@ export function WorkspaceSidebar() {
                     to="/settings"
                     aria-label={t('nav.settings')}
                     title={t('nav.settings')}
-                    className={buttonVariants({ variant: 'ghost', size: 'icon-xs' })}
+                    className={cn(
+                      buttonVariants({ variant: 'ghost', size: 'icon-xs' }),
+                      'workspace-nav-item',
+                    )}
                   >
-                    <SettingsIcon />
+                    <SettingsIcon
+                      className="workspace-nav-icon"
+                      data-tone="settings"
+                      data-motion="turn"
+                    />
                   </Link>
                 ) : undefined
               }
             />
             {!mac && (
               <div className="flex items-center justify-between gap-2 border-t border-border/50 px-3 py-2">
-                <Link to="/settings" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
-                  <SettingsIcon />
+                <Link
+                  to="/settings"
+                  className={cn(
+                    buttonVariants({ variant: 'ghost', size: 'sm' }),
+                    'workspace-nav-item',
+                  )}
+                >
+                  <SettingsIcon
+                    className="workspace-nav-icon"
+                    data-tone="settings"
+                    data-motion="turn"
+                  />
                   {t('nav.settings')}
                 </Link>
                 <SystemNotifications enabled={backend.stage === 'ready'} />

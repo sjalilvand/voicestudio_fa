@@ -73,8 +73,8 @@ parsed 165 usable cues.
 A disconnected preparation or generation stream retains its existing task for Resume or Cancel. Editing and new jobs remain disabled until that task finishes or cancellation is confirmed; reconnecting never creates a replacement generation. A task already absent from the backend counts as cancelled. If the backend cannot confirm cancellation, Change file explicitly abandons the unreachable local recovery record so the workspace cannot become permanently blocked.
 
 The setup sidebar groups the source, target language and translation engine, timing,
-production overrides and export choices into stable sections. Advanced controls stay
-collapsed until requested. Before media is loaded, the main workspace presents the
+production overrides and export choices into stable sections. Translation quality and
+its options stay visible; other advanced controls open when requested. Before media is loaded, the main workspace presents the
 three actual steps—upload and transcribe, translate, generate—and hides inactive
 generation actions.
 
@@ -271,8 +271,8 @@ The field accepts up to 5,000 characters and is locked while work is running.
 
 Translation and timing rewrites use the same footer area as Repair Agent. It opens
 with live CLI stdout/stderr in **Logs**; **Translations** shows original text beside
-validated translated output. Collapse **Details** to keep the status, language,
-elapsed time and Cancel action visible. Output from each language stays available
+validated translated output. The details stay open during and after translation;
+the status, language, elapsed time and Cancel action remain visible. Output from each language stays available
 until dismissed, the app reloads, or translation starts in another project. Logs are bounded to the
 latest 250,000 characters per run and are not saved into project files.
 

@@ -1,5 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
-import { sanitizeProps, hardenedConfig, initAnalyticsFromConsent } from '../utils/analytics';
+import {
+  sanitizeException,
+  sanitizeProps,
+  capturePageview,
+  sanitizeOutgoingEvent,
+  hardenedConfig,
+  initAnalyticsFromConsent,
+} from '../utils/analytics';
 
 // The usual posthog-js integration is `posthog.init(...)` at module load with
 // autocapture on. Both halves would be a disaster here:
@@ -17,6 +24,7 @@ describe('hardenedConfig — the settings that make the promises true', () => {
     const c = hardenedConfig();
     expect(c.autocapture).toBe(false); // would send DOM text
     expect(c.disable_session_recording).toBe(true); // would record the screen
+    expect(c.capture_exceptions).toBe(false); // raw exception messages and paths
     expect(c.capture_pageview).toBe(false);
     expect(c.capture_pageleave).toBe(false);
   });
@@ -65,6 +73,66 @@ describe('sanitizeProps — content cannot get out, even by accident', () => {
   it('is safe on empty input', () => {
     expect(sanitizeProps()).toEqual({});
     expect(sanitizeProps({})).toEqual({});
+  });
+});
+
+describe('sanitizeException — error tracking keeps frames, not user data', () => {
+  it('replaces the message and removes credentials, home paths and extension frames', () => {
+    const failure = new TypeError(
+      'Private script at /home/pal/secret with token sk-12345678901234567890',
+    );
+    failure.stack = [
+      failure.message,
+      '    at render (/home/pal/github/VoiceStudio/electron/src/app.tsx:12:3)',
+      '    at extension (chrome-extension://private/content.js:2:1)',
+    ].join('\n');
+    const clean = sanitizeException(failure);
+    expect(clean.name).toBe('TypeError');
+    expect(clean.message).toBe('VoiceStudio renderer error');
+    expect(clean.stack).toContain('~/github/VoiceStudio/electron/src/app.tsx:12:3');
+    expect(clean.stack).not.toContain('Private script');
+    expect(clean.stack).not.toContain('/home/pal');
+    expect(clean.stack).not.toContain('sk-');
+    expect(clean.stack).not.toContain('chrome-extension');
+  });
+});
+
+describe('capturePageview — Web Analytics receives fixed app paths only', () => {
+  it('is safe before analytics consent resolves and rejects dynamic screen labels', () => {
+    expect(() => capturePageview('view:clone')).not.toThrow();
+    expect(() => capturePageview('view:integrations/private-project')).not.toThrow();
+  });
+});
+
+describe('sanitizeOutgoingEvent — renderer URLs never leave', () => {
+  it('removes SDK-added URL metadata from product events', () => {
+    const clean = sanitizeOutgoingEvent({
+      event: 'screen_viewed',
+      properties: {
+        stage: 'view:integrations',
+        $current_url: 'http://localhost:3902/#/integrations/private-slug',
+        $pathname: '/',
+        $title: 'Private project',
+        $referrer: 'https://private.example/',
+      },
+    });
+    expect(clean.properties).toEqual({ stage: 'view:integrations' });
+  });
+
+  it('keeps only the synthetic app URL for manual pageviews', () => {
+    const clean = sanitizeOutgoingEvent({
+      event: '$pageview',
+      properties: {
+        $current_url: 'http://localhost:3902/#/clone/private-id',
+        $pathname: '/clone',
+        $title: 'Private voice',
+      },
+    });
+    expect(clean.properties).toEqual({
+      $current_url: 'https://app.voicestudio.sh/clone',
+      $host: 'app.voicestudio.sh',
+      $pathname: '/clone',
+    });
   });
 });
 

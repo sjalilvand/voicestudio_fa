@@ -1,6 +1,22 @@
-# Using Calls
+# Workflows and Calls
 
-The **Calls** workspace lets VoiceStudio phone someone for you, in your own
+The **Workflows** sidebar entry opens a local visual canvas. Create multiple
+workflows, or start from the restaurant booking, appointment rescheduling, or
+opening-hours templates. Templates create a Start → Call → End draft with an
+editable brief; enter the destination number in the Call step. Add Start,
+Agent, Speak, Condition, Call and End steps, connect them, and edit a selected
+step in the inspector. Pan, zoom and use the minimap to navigate;
+selected steps can also be moved with the arrow keys. Drafts save in this
+device's app storage and can be duplicated or deleted.
+
+The canvas is a **designer**, not an automatic workflow executor. It does not
+run Agent, Speak or Condition steps or place calls from a graph. A Call step's
+**Prepare call** button fills its phone number and brief into the existing
+Calls form. The same readiness checks, voice ownership rules, disclosure and
+final confirmation still apply. Use the **Calls** button to view history or
+start a call outside a workflow.
+
+The **Calls** view lets VoiceStudio phone someone for you, in your own
 voice, and handle a short task: "book a table for 2 at 8pm Friday", "move my
 appointment to next week", "ask what time you open on Sunday". You watch the
 call live, can take over at any moment, and get a summary when it ends.
@@ -10,7 +26,8 @@ confirm a call, and nothing else leaves your machine. Twilio setup is covered
 in [integrations/twilio.md](integrations/twilio.md); the API is described in
 [integrations/calls.md](integrations/calls.md).
 
-Open it from the sidebar: **Calls** (or press Ctrl/⌘ K and type "Calls").
+Open **Workflows** from the sidebar (or press Ctrl/⌘ K and type
+"Workflows"), then choose **Calls**.
 
 ## Before your first call
 

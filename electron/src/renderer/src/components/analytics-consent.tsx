@@ -7,7 +7,13 @@ import { Button } from '@/components/ui/button';
 import { apiJson } from '@/lib/api/client';
 import { useBackendStatus } from '@/hooks/use-backend-status';
 import { setupWasStarted } from '@/lib/setup-progress';
-import { disableAnalytics, enableAnalytics } from '../../../../../frontend/src/utils/analytics';
+import {
+  capture,
+  capturePageview,
+  disableAnalytics,
+  enableAnalytics,
+} from '../../../../../frontend/src/utils/analytics';
+import { routeBreadcrumb } from '@/lib/report-breadcrumb';
 
 interface AnalyticsState {
   available: boolean;
@@ -28,7 +34,11 @@ export function AnalyticsRuntime() {
   useEffect(() => {
     if (!analytics.data) return;
     if (analytics.data.available && analytics.data.opted_in) {
-      void enableAnalytics();
+      void enableAnalytics().then(() => {
+        const screen = routeBreadcrumb(window.location.hash);
+        capture('screen_viewed', { stage: screen });
+        capturePageview(screen);
+      });
     } else {
       disableAnalytics();
     }

@@ -17,17 +17,20 @@ export interface TranslationRun {
 
 export const translationActivity = new Store<{
   runs: TranslationRun[];
-  expanded: boolean;
   tab: 'output' | 'logs';
-}>({ runs: [], expanded: true, tab: 'output' });
+}>({ runs: [], tab: 'output' });
 
-export function startTranslationRun(run: Omit<TranslationRun, 'id' | 'status' | 'startedAt' | 'logs'>): string {
+export function startTranslationRun(
+  run: Omit<TranslationRun, 'id' | 'status' | 'startedAt' | 'logs'>,
+): string {
   const id = crypto.randomUUID();
   translationActivity.setState((state) => ({
     ...state,
-    expanded: true,
     tab: state.runs.length ? state.tab : 'logs',
-    runs: [...state.runs.filter((r) => r.jobId === run.jobId), { ...run, id, status: 'running', startedAt: Date.now(), logs: '' }],
+    runs: [
+      ...state.runs.filter((r) => r.jobId === run.jobId),
+      { ...run, id, status: 'running', startedAt: Date.now(), logs: '' },
+    ],
   }));
   return id;
 }
@@ -35,15 +38,18 @@ export function startTranslationRun(run: Omit<TranslationRun, 'id' | 'status' | 
 export function updateTranslationRun(id: string, update: Partial<TranslationRun>) {
   translationActivity.setState((state) => ({
     ...state,
-    runs: state.runs.map((run) => run.id === id ? { ...run, ...update } : run),
+    runs: state.runs.map((run) => (run.id === id ? { ...run, ...update } : run)),
   }));
 }
 
 export function appendTranslationLog(id: string, text: string) {
   translationActivity.setState((state) => ({
     ...state,
-    runs: state.runs.map((run) => run.id === id && run.status === 'running'
-      ? { ...run, logs: (run.logs + text).slice(-250_000) } : run),
+    runs: state.runs.map((run) =>
+      run.id === id && run.status === 'running'
+        ? { ...run, logs: (run.logs + text).slice(-250_000) }
+        : run,
+    ),
   }));
 }
 

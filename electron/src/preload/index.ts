@@ -19,6 +19,11 @@ function subscribe<T>(channel: string, cb: (payload: T) => void): () => void {
 }
 
 const bridge: VoiceStudioBridge = {
+  pro: {
+    status: () => ipcRenderer.invoke('pro:status'),
+    activate: (key) => ipcRenderer.invoke('pro:activate', key),
+    deactivate: () => ipcRenderer.invoke('pro:deactivate'),
+  },
   repair: {
     list: () => ipcRenderer.invoke('repair:list'),
     getState: () => ipcRenderer.invoke('repair:getState'),

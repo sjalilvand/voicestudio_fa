@@ -163,7 +163,7 @@ export function CommandPalette() {
     },
     {
       id: 'calls',
-      label: t('nav.calls'),
+      label: t('workflows.title'),
       group: workspaceGroup,
       icon: PhoneCallIcon,
       run: () => navigate({ to: '/calls' }),
