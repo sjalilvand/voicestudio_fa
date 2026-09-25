@@ -56,7 +56,9 @@ it('opens the sponsor detail in Integrations and shows a themed tooltip on focus
   expect(tile.querySelector('img')).toHaveAttribute('src', '/sponsor.svg');
   fireEvent.focus(tile);
   await waitFor(() =>
-    expect(screen.getByText('integrationCatalog.featured · support.sponsors_tier_gold')).toBeVisible(),
+    expect(
+      screen.getByText('integrationCatalog.featured · support.sponsors_tier_gold'),
+    ).toBeVisible(),
   );
   expect(screen.getByText('integrationCatalog.title')).toBeVisible();
   expect(screen.queryByText('integrationCatalog.description')).toBeNull();

@@ -8,13 +8,15 @@ import asyncio
 import tempfile
 import contextlib
 import logging
+from collections import OrderedDict
+import weakref
 
 from core.render_trace import timed as _render_timed
 import threading
 import traceback
 from typing import Optional
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
 
 import sqlite3
@@ -34,6 +36,94 @@ from omnivoice.utils.voice_design import heal_design_instruct
 
 router = APIRouter()
 logger = logging.getLogger("omnivoice.generate")
+
+# A URL can be fetched repeatedly (including the MCP readiness probe). Cache
+# the encoded bytes by WAV version, and coordinate misses per WAV so a slow
+# render cannot block cache hits or unrelated audio.
+_OGG_CACHE_LIMIT = 32 * 1024 * 1024
+_ogg_cache: OrderedDict[tuple[str, int, int, int], bytes] = OrderedDict()
+_ogg_cache_bytes = 0
+_ogg_state_lock = threading.Lock()
+_ogg_encode_locks = weakref.WeakValueDictionary()
+
+
+def _ogg_cache_key(path: str) -> tuple[str, int, int, int]:
+    info = os.stat(path)
+    return path, info.st_ino, info.st_mtime_ns, info.st_size
+
+
+def _cached_ogg(key: tuple[str, int, int, int]) -> bytes | None:
+    with _ogg_state_lock:
+        encoded = _ogg_cache.get(key)
+        if encoded is not None:
+            _ogg_cache.move_to_end(key)
+        return encoded
+
+
+@router.get("/audio/{audio_id}.ogg")
+@router.get("/audio/{audio_id}.opus")
+async def generated_ogg_opus(audio_id: str):
+    """Serve the same render as /audio/<id>.wav, encoded as Ogg/Opus."""
+    if not re.fullmatch(r"[0-9a-f]{8}", audio_id):
+        raise HTTPException(status_code=404, detail="Audio file not found")
+    path = _safe_output_path(f"{audio_id}.wav")
+    if path is None:
+        raise HTTPException(status_code=404, detail="Audio file not found")
+    try:
+        key = _ogg_cache_key(path)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Audio file not found") from None
+    encoded = _cached_ogg(key)
+    if encoded is not None:
+        return Response(encoded, media_type="audio/ogg")
+
+    with _ogg_state_lock:
+        encode_lock = _ogg_encode_locks.get(key)
+        if encode_lock is None:
+            encode_lock = asyncio.Lock()
+            _ogg_encode_locks[key] = encode_lock
+    async with encode_lock:
+        try:
+            if _ogg_cache_key(path) != key:
+                return await generated_ogg_opus(audio_id)
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="Audio file not found") from None
+        encoded = _cached_ogg(key)
+        if encoded is None:
+            from services.audio_io import encode_ogg_opus
+            try:
+                encoded = await encode_ogg_opus(path)
+            except asyncio.TimeoutError as exc:
+                logger.warning("Ogg/Opus encoding timed out")
+                raise HTTPException(
+                    status_code=503, detail="Ogg/Opus encoding timed out; try again later"
+                ) from exc
+            except RuntimeError as exc:
+                logger.warning("Ogg/Opus encoding failed: %s", exc)
+                raise HTTPException(status_code=503, detail=str(exc)) from exc
+            if len(encoded) <= _OGG_CACHE_LIMIT:
+                global _ogg_cache_bytes
+                with _ogg_state_lock:
+                    while _ogg_cache_bytes + len(encoded) > _OGG_CACHE_LIMIT:
+                        _ogg_cache_bytes -= len(_ogg_cache.popitem(last=False)[1])
+                    _ogg_cache[key] = encoded
+                    _ogg_cache_bytes += len(encoded)
+    return Response(encoded, media_type="audio/ogg")
+
+
+# Same containers POST /profiles stores for a clone reference. /generate used
+# to write every upload with suffix=".wav"; pydub then passes -f wav to ffmpeg,
+# so an MP3/M4A/WebM one-shot clip failed to decode while a saved voice of the
+# same file worked.
+_REF_UPLOAD_EXTS = frozenset({
+    ".wav", ".mp3", ".m4a", ".flac", ".ogg", ".oga", ".opus", ".aac", ".webm",
+})
+
+
+def _ref_upload_suffix(filename: Optional[str]) -> str:
+    """On-disk suffix for a one-shot /generate reference upload."""
+    ext = os.path.splitext(filename or "")[1].lower()
+    return ext if ext in _REF_UPLOAD_EXTS else ".wav"
 
 
 class _TempReferenceLease:
@@ -591,12 +681,10 @@ def _oom_friendly_reraise(e):
     """Best-effort cache flush + the user-facing OOM hint shared by both
     inference paths."""
     import gc
-    import torch
+    from services.model_manager import release_device_cache
+
     gc.collect()
-    if torch.backends.mps.is_available():
-        torch.mps.empty_cache()
-    elif torch.cuda.is_available():
-        torch.cuda.empty_cache()
+    release_device_cache()
     # #278: don't mislabel a torch.compile/Triton/Inductor crash as an
     # out-of-memory condition. (model_manager's generate wrapper already
     # retries these eagerly; this only triggers if that retry also died.)
@@ -1670,7 +1758,28 @@ async def generate_speech(
                     f"for progress), not that generation failed. Retry once the "
                     f"model shows as installed."
                 ),
+                headers={"Retry-After": "30", "X-OmniVoice-Retryable": "true"},
             ) from exc
+        except HTTPException:
+            raise
+        # #2298: everything else the load can raise. A JSONResponse rather than
+        # an HTTPException because the classified `hint` / `docs_topic` are
+        # top-level keys the client already reads off a failure body, and
+        # HTTPException would bury them under `detail`. The global 500 handler
+        # produced exactly this shape — the only thing that changes is that the
+        # reply now names the engine and the model load, and arrives as a 503
+        # the client can treat as retryable instead of a crash.
+        except Exception as exc:
+            if type(exc).__name__ == "ModelLoadInterruptedByShutdown":
+                raise
+            from core.public_errors import model_load_failure
+
+            logger.error("engine model load failed")
+            return JSONResponse(
+                status_code=503,
+                content=model_load_failure(engine_id, exc),
+                headers={"Retry-After": "30", "X-OmniVoice-Retryable": "true"},
+            )
 
     ref_audio_path = None
     cleanup_ref = False
@@ -1717,7 +1826,8 @@ async def generate_speech(
                 persist_ref_text_profile_id = profile_id
     elif ref_audio is not None:
         try:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
+            suffix = _ref_upload_suffix(ref_audio.filename)
+            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as f:
                 f.write(await ref_audio.read())
                 ref_audio_path = f.name
                 cleanup_ref = True

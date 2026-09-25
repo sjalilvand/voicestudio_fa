@@ -7,7 +7,12 @@ its signed updater feeds and installers are immutable compatibility assets.
 
 Electron publication uses these GitHub Actions secrets:
 
-- `ELECTRON_CSC_LINK` and `ELECTRON_CSC_KEY_PASSWORD` for Windows/macOS signing.
+- `ELECTRON_MACOS_CSC_LINK` and `ELECTRON_MACOS_CSC_KEY_PASSWORD` for the
+  Developer ID Application `.p12` certificate and its password.
+- `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD` (not the Apple ID login password)
+  and `APPLE_TEAM_ID` for macOS notarization and stapling.
+- `ELECTRON_WINDOWS_CSC_LINK` and `ELECTRON_WINDOWS_CSC_KEY_PASSWORD` for
+  Windows Authenticode signing. The macOS certificate cannot sign Windows apps.
 - The repository `GITHUB_TOKEN` for draft creation and asset uploads.
 - `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` for the Docker Hub mirror.
 
@@ -102,16 +107,30 @@ rehearsal channel; no Tauri or desktop-preview build is maintained.
 
 Linux packages must carry the native helper's non-glibc libraries under
 `resources/native/lib`. Packaging checks reject missing or host-resolved
-libraries. Test the downloaded AppImage on a clean host because build-runner
-libraries can hide relocation errors.
+libraries. AppImages use the static runtime, which needs no host libfuse2; test
+the downloaded image on a clean host because build-runner libraries can hide
+relocation errors.
+
+Linux release AppImages include `gh-releases-zsync` update information and a
+versioned `.AppImage.zsync` asset for AppImageUpdate/AppImageLauncher. Stable
+images follow the latest stable GitHub release; previews follow the `preview`
+release instead of downgrading to stable. The build uses `readelf` and
+`zsyncmake` (Ubuntu package `zsync`) to embed this information before
+regenerating electron-updater's blockmap and checksums; the existing in-app
+updater still uses its separate channel manifest. Verify both update paths
+against the final downloaded artifact, not the pre-publish build.
 
 Electron update manifests use platform and architecture channels. Confirm every
 manifest names an uploaded installer, reports the tagged version, and matches the
 artifact bytes. Exercise at least one installed update hop before publication.
 
-Electron signing uses `ELECTRON_CSC_LINK` and `ELECTRON_CSC_KEY_PASSWORD`.
-Tauri signing keys cannot sign Electron packages. Existing artifact names, app
-IDs, data paths, and updater channels are compatibility contracts.
+Signed Electron macOS releases require a paid Apple Developer identity and the
+secrets above. A draft build without credentials can remain unsigned; a normal
+publish refuses missing signing/notarization credentials and verifies both the
+signature and stapled ticket. Do not accept `allow_unsigned` merely to close a
+signing report. Tauri signing keys cannot sign Electron packages. Existing
+artifact names, app IDs, data paths, and updater channels are compatibility
+contracts.
 
 ## Retry and rollback
 

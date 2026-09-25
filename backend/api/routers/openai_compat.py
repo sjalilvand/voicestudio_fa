@@ -50,6 +50,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from services.model_manager import _gpu_pool, run_on_gpu_pool_guarded
 from core.http_headers import content_disposition
+from services.audio_io import OPUS_CODEC_ARGS, OPUS_SAMPLE_RATE
 
 logger = logging.getLogger("omnivoice.openai_compat")
 
@@ -383,7 +384,7 @@ _FORMAT_MEDIA = {
 _FFMPEG_FORMATS = {
     "mp3": (["-c:a", "libmp3lame", "-b:a", "128k"], "mp3",
             {8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000}),
-    "opus": (["-c:a", "libopus", "-b:a", "64k"], "ogg", {48000}),
+    "opus": (OPUS_CODEC_ARGS, "ogg", {OPUS_SAMPLE_RATE}),
     "aac": (["-c:a", "aac", "-b:a", "128k"], "adts",
             {8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000, 64000, 88200, 96000}),
 }
@@ -440,7 +441,7 @@ async def _encode_ffmpeg(ffmpeg: str, wav_tensor, sample_rate: int, fmt: str) ->
     from services.ffmpeg_utils import run_ffmpeg
 
     codec_args, container, rates = _FFMPEG_FORMATS[fmt]
-    out_rate = sample_rate if sample_rate in rates else (48000 if fmt == "opus" else PCM_SAMPLE_RATE)
+    out_rate = sample_rate if sample_rate in rates else (OPUS_SAMPLE_RATE if fmt == "opus" else PCM_SAMPLE_RATE)
     fd, src = tempfile.mkstemp(suffix=".wav")
     os.close(fd)
     try:
@@ -715,13 +716,28 @@ async def create_speech(req: SpeechRequest):
                 f"progress), not that generation failed. Retry once the model "
                 f"shows as installed."
             ),
+            headers={"Retry-After": "30", "X-OmniVoice-Retryable": "true"},
         ) from e
     except Exception as e:
+        if type(e).__name__ == "ModelLoadInterruptedByShutdown":
+            raise
         # A sidecar engine's load can also hit the #1172 class (broken venv
         # interpreter / placeholder binary) — surface the typed 503 here too.
         http = _typed_speech_http_error(e)
         if http is None:
-            raise
+            # #2298: an untyped load failure — the weight download refused,
+            # DNS gone, the mirror down — used to re-raise into the generic
+            # 500. Same actionable sentence as /generate's twin catch; this
+            # route keeps a string detail because its errors are read by
+            # OpenAI-shaped clients.
+            from core.public_errors import model_load_failure
+
+            logger.error("OpenAI TTS model load failed")
+            raise HTTPException(
+                status_code=503,
+                detail=str(model_load_failure(backend.id, e)["detail"]),
+                headers={"Retry-After": "30", "X-OmniVoice-Retryable": "true"},
+            ) from e
         logger.warning("OpenAI TTS engine load failed: %s", e)
         raise http from e
 
@@ -1081,6 +1097,12 @@ async def _transcribe_request(
         logger.warning("OpenAI transcription timed out: %s", e)
         raise HTTPException(status_code=504, detail=str(e))
     except Exception as e:
+        from core.failure import NO_AUDIO_TRACK_MESSAGE, NoAudioTrackError
+        from services.ffmpeg_utils import raise_for_audio_extract_failure
+        try:
+            await asyncio.to_thread(raise_for_audio_extract_failure, str(e), tmp_path)
+        except NoAudioTrackError:
+            raise OpenAIError(400, NO_AUDIO_TRACK_MESSAGE, param="file", code="no_audio_track")
         logger.exception("OpenAI transcription failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
     finally:
