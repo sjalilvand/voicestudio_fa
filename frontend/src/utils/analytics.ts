@@ -163,7 +163,11 @@ export function sanitizeException(error: unknown): Error {
   const frames = scrubText(sourceStack)
     .split('\n')
     .slice(1)
-    .filter((line) => /^\s*at (?:[\w$.[\]<>]+ )?\(?(?:https?:\/\/|file:\/\/|app:\/\/|~?\/)[^()\s]+:\d+:\d+\)?$/.test(line))
+    .filter((line) =>
+      /^\s*at (?:[\w$.[\]<>]+ )?\(?(?:https?:\/\/|file:\/\/|app:\/\/|~?\/)[^()\s]+:\d+:\d+\)?$/.test(
+        line,
+      ),
+    )
     .slice(0, MAX_STACK_LINES)
     .map((line) => line.slice(0, MAX_STACK_LINE_LENGTH));
   const safe = new Error('VoiceStudio renderer error');

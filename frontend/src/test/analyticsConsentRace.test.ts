@@ -2,9 +2,17 @@ import { expect, it, vi } from 'vitest';
 
 it('cannot opt back in when SDK loading completes after consent was withdrawn', async () => {
   vi.resetModules();
-  const sdk = { init: vi.fn(), opt_in_capturing: vi.fn(), opt_out_capturing: vi.fn(), reset: vi.fn(), captureException: vi.fn() };
+  const sdk = {
+    init: vi.fn(),
+    opt_in_capturing: vi.fn(),
+    opt_out_capturing: vi.fn(),
+    reset: vi.fn(),
+    captureException: vi.fn(),
+  };
   let finish!: (value: { default: typeof sdk }) => void;
-  const loading = new Promise<{ default: typeof sdk }>((resolve) => { finish = resolve; });
+  const loading = new Promise<{ default: typeof sdk }>((resolve) => {
+    finish = resolve;
+  });
   const imported = vi.fn(() => loading);
   vi.doMock('posthog-js/dist/module.slim.no-external', imported);
   vi.doMock('posthog-js/dist/extension-bundles', () => ({ ErrorTrackingExtensions: {} }));

@@ -117,7 +117,7 @@ describe('sanitizeOutgoingEvent — renderer URLs never leave', () => {
         $referrer: 'https://private.example/',
       },
     });
-    expect(clean.properties).toEqual({ stage: 'view:integrations' });
+    expect(clean?.properties).toEqual({ stage: 'view:integrations' });
   });
 
   it('keeps only the synthetic app URL for manual pageviews', () => {
@@ -129,7 +129,7 @@ describe('sanitizeOutgoingEvent — renderer URLs never leave', () => {
         $title: 'Private voice',
       },
     });
-    expect(clean.properties).toEqual({
+    expect(clean?.properties).toEqual({
       $current_url: 'https://app.voicestudio.sh/clone',
       $host: 'app.voicestudio.sh',
       $pathname: '/clone',
@@ -182,7 +182,8 @@ describe('initAnalyticsFromConsent — silence is not consent', () => {
 
 it('drops multiline error messages while preserving genuine stack frames', () => {
   const error = new Error('Failed\nPrivate transcript\nCustomer address');
-  error.stack = 'Error: Failed\nPrivate transcript\nCustomer address\n    at render (app://voicestudio/assets/index.js:3:4)';
+  error.stack =
+    'Error: Failed\nPrivate transcript\nCustomer address\n    at render (app://voicestudio/assets/index.js:3:4)';
   const safe = sanitizeException(error);
   expect(safe.stack).not.toContain('Private transcript');
   expect(safe.stack).not.toContain('Customer address');
@@ -191,7 +192,12 @@ it('drops multiline error messages while preserving genuine stack frames', () =>
 
 it('does not revive analytics when a stale consent request resolves after opt-out', async () => {
   let finish!: (value: { available: boolean; opted_in: boolean }) => void;
-  const pending = initAnalyticsFromConsent(() => new Promise((resolve) => { finish = resolve; }));
+  const pending = initAnalyticsFromConsent(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
   disableAnalytics();
   finish({ available: true, opted_in: true });
   expect(await pending).toBe(false);
