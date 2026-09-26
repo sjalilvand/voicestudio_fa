@@ -22,14 +22,37 @@ import re
 from dataclasses import dataclass
 
 
+# Scripts written without spaces between words: CJK ideographs, kana, Thai,
+# Lao, Myanmar and Khmer. ``\w+`` takes a whole clause of these as one token,
+# so a single wrong character would score as total drift; each codepoint is
+# a token there instead (a character error rate, as ASR is scored for them).
+# Letters and marks only: the punctuation of these scripts (the katakana middle
+# dot U+30FB, the ideographic full stop U+3002, the Thai fongman U+0E4F) is
+# stripped like any other, and their digits stay word tokens.
+_NO_SPACE_SCRIPT = (
+    "\u3041-\u3096\u3099-\u309f"  # hiragana, its sound and iteration marks
+    "\u30a1-\u30fa\u30fc-\u30ff"  # katakana, prolonged sound, iteration marks
+    "\u3400-\u4dbf"  # CJK ideographs, extension A
+    "\u4e00-\u9fff"  # CJK unified ideographs
+    "\uf900-\ufaff"  # CJK compatibility ideographs
+    "\uff66-\uff9f"  # halfwidth katakana
+    "\U00020000-\U000323af"  # CJK ideographs, extensions B to I, compatibility supplement
+    "\u0e01-\u0e3a\u0e40-\u0e4e"  # Thai letters, vowels, tone marks
+    "\u0e81-\u0ece\u0edc-\u0edf"  # Lao letters, vowels, tone marks
+    "\u1000-\u103f\u1050-\u108f\u109a-\u109d"  # Myanmar letters and marks
+    "\u1780-\u17d3\u17d7\u17dc\u17dd"  # Khmer letters and marks
+)
+_TOKEN_RE = re.compile(rf"[{_NO_SPACE_SCRIPT}]|[^\W{_NO_SPACE_SCRIPT}]+")
+
+
 def _tokens(text: str) -> list[str]:
     """Lowercase word tokens, punctuation stripped — the unit drift is scored
-    in. Script-agnostic: for no-space scripts each character is a token, which
+    in. Script-agnostic: for no-space scripts each codepoint is a token, which
     still gives a sensible edit-distance ratio."""
     text = (text or "").lower().strip()
     if not text:
         return []
-    words = re.findall(r"\w+", text, flags=re.UNICODE)
+    words = _TOKEN_RE.findall(text)
     return words or list(text.replace(" ", ""))
 
 

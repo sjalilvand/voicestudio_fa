@@ -32,6 +32,33 @@ def test_wer_completely_different():
     assert word_error_rate("alpha beta", "x y z") >= 1.0
 
 
+def test_wer_no_space_scripts_score_per_character():
+    # ``\w+`` took a whole Chinese, Japanese or Thai clause as one token, so a
+    # single wrong character scored as total drift. One codepoint per token.
+    assert word_error_rate("你好世界", "你好世晚") == pytest.approx(1 / 4)
+    assert word_error_rate("こんにちは世界", "こんにちは世界です") == pytest.approx(2 / 7)
+    # Thai vowel marks are not word characters; they count as codepoints too.
+    assert word_error_rate("สวัสดีชาวโลก", "สวัสดีชาวโลกครับ") == pytest.approx(4 / 12)
+
+
+def test_wer_supplementary_ideographs_score_per_character():
+    # Extension B ideographs are outside the BMP; a wrong one is one character.
+    reference = "\U00020000\U00020001\U00020002\U00020003"
+    hypothesis = "\U00020000\U00020001\U00020002\U00020004"
+    assert word_error_rate(reference, hypothesis) == pytest.approx(1 / 4)
+
+
+def test_wer_no_space_script_punctuation_is_stripped():
+    # ・ and 。 are punctuation, not characters of the line; so is Thai ๏.
+    assert word_error_rate("東京・大阪。", "東京大阪") == pytest.approx(0.0)
+    assert word_error_rate("สวัสดี๏", "สวัสดี") == pytest.approx(0.0)
+    assert word_error_rate("東京・大阪", "東京・京都") == pytest.approx(2 / 4)
+
+
+def test_wer_spaced_scripts_keep_word_tokens():
+    assert word_error_rate("naïve café", "naïve cafe") == pytest.approx(1 / 2)
+
+
 # ── score_dub ────────────────────────────────────────────────────────────────
 
 def _seg(start, end, text, sid=None):
@@ -57,6 +84,14 @@ def test_drifted_segment_is_flagged():
     out = score_dub(dub, recog, drift_threshold=0.5)
     assert out[0].flagged is True
     assert out[0].recognized_text == "the quarter lee deport is read"
+
+
+def test_one_wrong_character_does_not_flag_a_chinese_line():
+    dub = [_seg(0, 3, "今天天气很好，我们去公园吧", "a")]
+    recog = [_seg(0, 3, "今天天气很好，我们去公园把")]  # one character off
+    out = score_dub(dub, recog, drift_threshold=0.5)
+    assert out[0].drift == pytest.approx(1 / 12, abs=1e-3)
+    assert out[0].flagged is False
 
 
 def test_measured_timing_from_recognition():
