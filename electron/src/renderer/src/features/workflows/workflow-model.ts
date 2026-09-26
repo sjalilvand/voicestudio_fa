@@ -132,7 +132,6 @@ export function parseWorkflowLibrary(raw: string | null, untitled: string): Work
         });
         const ids = new Set(steps.map((step) => step.id));
         const connections = (Array.isArray(item.connections) ? item.connections : [])
-          .slice(0, 600)
           .flatMap((candidateEdge: unknown): WorkflowConnection[] => {
             if (!candidateEdge || typeof candidateEdge !== 'object') return [];
             const edge = candidateEdge as Record<string, unknown>;

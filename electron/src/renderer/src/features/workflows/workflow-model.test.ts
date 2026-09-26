@@ -97,8 +97,10 @@ it('repairs copied legacy keys and numbers new copies without compounding names'
 it('preserves libraries and graphs beyond the former silent truncation limits', () => {
   const documents = Array.from({ length: 105 }, (_, i) => makeWorkflow(`Workflow ${i}`));
   documents[104].steps = Array.from({ length: 305 }, () => makeWorkflow('x').steps[0]);
+  documents[104].connections = Array.from({ length: 605 }, (_, i) => ({ id: String(i), source: documents[104].steps[0].id, target: documents[104].steps[1].id }));
   const loaded = parseWorkflowLibrary(JSON.stringify({ version: 1, activeId: documents[104].id, documents }), 'Untitled');
   expect(loaded.documents).toHaveLength(105);
   expect(loaded.documents[104].steps).toHaveLength(305);
+  expect(loaded.documents[104].connections).toHaveLength(605);
   expect(loaded.activeId).toBe(documents[104].id);
 });
