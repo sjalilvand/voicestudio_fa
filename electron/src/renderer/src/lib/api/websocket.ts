@@ -1,5 +1,7 @@
 import { getBridge } from '@/components/bridge';
 import { getBackendStatusSnapshot, type BackendStatus } from '@/hooks/use-backend-status';
+import { absoluteApiBase } from './client';
+import { authenticatedWsUrl } from '../../../../../../frontend/src/api/authSession';
 
 export type BackendWebSocketPath = '/ws/events' | '/ws/transcribe' | '/ws/tts';
 
@@ -10,6 +12,9 @@ export async function backendWebSocketUrl(
 ): Promise<string> {
   const backend = status || getBackendStatusSnapshot();
   const bridge = getBridge();
+  if (__WEB_DEPLOYMENT__) {
+    return authenticatedWsUrl(path, { apiBase: absoluteApiBase() });
+  }
   const mainOwned = window.location.protocol === 'app:' || backend.remote;
   const raw =
     bridge && mainOwned
