@@ -26,8 +26,9 @@ from dataclasses import dataclass
 # Lao, Myanmar and Khmer. ``\w+`` takes a whole clause of these as one token,
 # so a single wrong character would score as total drift; each codepoint is
 # a token there instead (a character error rate, as ASR is scored for them).
-# Letters and marks only: the punctuation of these scripts (``・``, ``。``,
-# ``ฯ``) is stripped like any other, and their digits stay word tokens.
+# Letters and marks only: the punctuation of these scripts (the katakana middle
+# dot U+30FB, the ideographic full stop U+3002, the Thai fongman U+0E4F) is
+# stripped like any other, and their digits stay word tokens.
 _NO_SPACE_SCRIPT = (
     "\u3041-\u3096\u3099-\u309f"  # hiragana, its sound and iteration marks
     "\u30a1-\u30fa\u30fc-\u30ff"  # katakana, prolonged sound, iteration marks
