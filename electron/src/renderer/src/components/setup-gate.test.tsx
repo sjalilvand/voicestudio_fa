@@ -92,7 +92,7 @@ it('requires passing preflight and installed models before completion', async ()
   );
   fireEvent.click(screen.getByRole('button', { name: 'setup.continue_ok' }));
   await screen.findByRole('button', { name: 'Choose privacy' });
-  expect(screen.queryByText('Privacy')).not.toBeInTheDocument();
+  expect(screen.getByText('Privacy')).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Choose privacy' }));
   await waitFor(() =>
     expect(screen.getByRole('button', { name: 'setup.continue_ok' })).toBeEnabled(),
