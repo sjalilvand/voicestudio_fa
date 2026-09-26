@@ -248,3 +248,16 @@ export function makeProcessingWorkflow(name: string, kinds: StepKind[]): Workflo
     })),
   };
 }
+
+/** Duplicated workflows can share source blobs; only the last reference releases one. */
+export function removedWorkflowData(before: WorkflowLibrary, after: WorkflowLibrary) {
+  const mediaIds = (document: WorkflowDocument) => document.steps.flatMap((step) => step.media?.map((file) => file.id) || []);
+  const retained = new Set(after.documents.flatMap(mediaIds));
+  return {
+    media: [...new Set(before.documents.flatMap(mediaIds))].filter((id) => !retained.has(id)),
+    runs: before.documents.filter((document) => {
+      const next = after.documents.find((entry) => entry.id === document.id);
+      return !next || mediaIds(document).some((id) => !mediaIds(next).includes(id));
+    }).map((document) => document.id),
+  };
+}

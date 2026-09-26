@@ -23,11 +23,11 @@ beforeEach(() => {
   mocks.encrypt.mockReturnValue(Buffer.from('encrypted'));
 });
 afterEach(() => vi.unstubAllGlobals());
-it.each([false, true])('refuses plaintext storage and rolls back activation (encryption=%s)', async (available) => {
+it.each([false, true])('refuses plaintext storage before consuming an activation (encryption=%s)', async (available) => {
   mocks.available.mockReturnValue(available); mocks.backend.mockReturnValue('basic_text');
   expect(await activateProLicense(key)).toMatchObject({ active: false, error: 'storage' });
   expect(mocks.write).not.toHaveBeenCalled();
-  expect(mocks.fetch.mock.calls[1][0]).toMatch(/deactivate$/);
+  expect(mocks.fetch).not.toHaveBeenCalled();
 });
 it('persists only encrypted license material', async () => {
   expect(await activateProLicense(key)).toMatchObject({ active: true });

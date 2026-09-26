@@ -76,7 +76,7 @@ export function compileWorkflow(document: WorkflowDocument, engine = ''): Execut
   const signature = JSON.stringify({ engine,
     steps: steps.map(({ id, kind, voiceId, language, speed, targetDb, sourceLanguage, provider }) => ['speak', 'convert'].includes(kind)
       ? { id, kind, voiceId, language: language || 'Auto', speed: speed ?? 1 } : kind === 'normalize' ? { id, kind, targetDb: targetDb ?? -2 } : kind === 'translate' ? { id, kind, sourceLanguage, language, provider: provider || 'argos' }
-      : kind === 'transcribe' ? { id, kind, language: language || 'Auto' } : { id, kind }),
+      : kind === 'transcribe' ? { id, kind } : { id, kind }),
     scripts,
   });
   return { steps, scripts, signature };

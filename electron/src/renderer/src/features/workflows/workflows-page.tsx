@@ -21,7 +21,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { CallsPage } from '@/features/calls/calls-page';
 import {
   WORKFLOW_STORAGE_KEY, STEP_KINDS, addWorkflowStep, connectWorkflowSteps,
-  duplicateWorkflowName, makeCallWorkflow, makeWorkflow, parseWorkflowLibrary, removeWorkflowStep,
+  duplicateWorkflowName, makeCallWorkflow, makeWorkflow, parseWorkflowLibrary, removedWorkflowData, removeWorkflowStep,
   repairWorkflowName,
   type StepKind, type WorkflowDocument, type WorkflowLibrary, type WorkflowStep,
 } from './workflow-model';
@@ -31,7 +31,7 @@ import { useProfiles } from '@/hooks/use-profiles';
 import { WorkflowRunner } from './workflow-runner';
 import { WorkflowInputs } from './workflow-inputs';
 import { makeSpeechWorkflow, makeProcessingWorkflow } from './workflow-model';
-import { deleteWorkflowRun } from './workflow-run-store';
+import { deleteWorkflowArtifacts, deleteWorkflowRun } from './workflow-run-store';
 
 const icons = {
   start: PlayIcon, agent: BotIcon, speak: MessageSquareIcon,
@@ -66,6 +66,22 @@ function WorkflowCanvas({ onCalls }: { onCalls: (call?: Pick<WorkflowStep, 'phon
   const { t } = useTranslation();
   const untitled = t('workflows.untitled', { defaultValue: en.workflows.untitled });
   const [library, setLibrary] = useState(() => readLibrary(untitled));
+  const previousLibrary = useRef(library);
+  const pendingCleanup = useRef<ReturnType<typeof removedWorkflowData>[]>([]);
+  const cleaning = useRef(false);
+  const [cleanupError, setCleanupError] = useState('');
+  const retryCleanup = useCallback(async () => {
+    if (cleaning.current) return;
+    cleaning.current = true;
+    try {
+      while (pendingCleanup.current.length) {
+        await deleteWorkflowArtifacts(pendingCleanup.current[0]);
+        pendingCleanup.current.shift();
+      }
+      setCleanupError('');
+    } catch (error) { setCleanupError(describeError(error)); }
+    finally { cleaning.current = false; }
+  }, []);
   const [runnerOpen, setRunnerOpen] = useState(false);
   const [running, setRunning] = useState(false);
   const profiles = useProfiles();
@@ -100,8 +116,12 @@ function WorkflowCanvas({ onCalls }: { onCalls: (call?: Pick<WorkflowStep, 'phon
 
   useEffect(() => {
     try { window.localStorage.setItem(WORKFLOW_STORAGE_KEY, JSON.stringify(library)); }
-    catch { /* Storage may be disabled; the current session still works. */ }
-  }, [library]);
+    catch (error) { setCleanupError(describeError(error)); return; }
+    const removed = removedWorkflowData(previousLibrary.current, library);
+    previousLibrary.current = library;
+    if (removed.media.length || removed.runs.length) pendingCleanup.current.push(removed);
+    void retryCleanup();
+  }, [library, retryCleanup]);
 
   const mappedNodes = useMemo<CanvasNode[]>(() => document.steps.map((step) => ({
     id: step.id, type: 'workflowStep', position: step.position, selected: step.id === selectedId,
@@ -180,6 +200,7 @@ function WorkflowCanvas({ onCalls }: { onCalls: (call?: Pick<WorkflowStep, 'phon
       <h1 className="text-sm font-medium">{t('workflows.title')}</h1>
       <Button size="sm" variant="outline" disabled={running} onClick={() => onCalls()}><PhoneCallIcon aria-hidden="true" />{t('calls.title')}</Button>
     </WorkspaceHeader>
+    {cleanupError && <div role="alert" className="flex items-center gap-2 px-4 text-xs text-destructive">{cleanupError}<Button size="sm" variant="ghost" onClick={() => void retryCleanup()}>{t('common.retry')}</Button></div>}
     <div className="workflow-intro">
       <div><h2>{t('workflows.heading')}</h2><p>{t('workflowRun.hint')}</p></div>
       <div className="workflow-intro__actions">

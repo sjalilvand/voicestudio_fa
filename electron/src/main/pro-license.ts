@@ -78,6 +78,7 @@ export async function activateProLicense(raw: unknown): Promise<ProLicenseStatus
   try {
     const existing = await readStored();
     if (existing?.key === key) return proLicenseStatus();
+    if (!safeStorage.isEncryptionAvailable() || safeStorage.getSelectedStorageBackend?.() === 'basic_text') return { active: false, configured: true, error: 'storage' };
     const result = await request('activate', key);
     if (!result.activated || !result.instance?.id) return { active: false, configured: true, error: 'invalid' };
     if (!matchesProLicense(result, ids())) {

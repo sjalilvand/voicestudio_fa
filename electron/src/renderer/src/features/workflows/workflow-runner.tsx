@@ -47,7 +47,7 @@ export function WorkflowRunner({ document, onClose, onBusy }: {
     return () => { mounted.current = false; controller.current?.abort(); onBusy(false); };
   }, [document.id, onBusy]);
   const start = async (fresh = false) => {
-    if (!plan || controller.current) return;
+    if (!plan || !engines.data || controller.current) return;
     const abort = new AbortController();
     controller.current = abort;
     setBusy(true); onBusy(true); setError('');
@@ -74,11 +74,12 @@ export function WorkflowRunner({ document, onClose, onBusy }: {
     <div className="workflow-runner__body">
       {validation && <p role="alert" className="text-xs text-destructive">{validation}</p>}
       {error && <p role="alert" className="text-xs text-destructive">{error.startsWith('workflowRun.') ? t(error) : error}</p>}
+      {engines.isError && <p role="alert" className="text-xs text-destructive">{describeError(engines.error)}<Button size="sm" variant="ghost" onClick={engines.retry}>{t('common.retry')}</Button></p>}
       {needsSpeech && <EngineNotice operation="tts" />}
       <div className="flex gap-2">
         {busy ? <Button className="flex-1" variant="outline" onClick={() => controller.current?.abort()}><SquareIcon />{t('common.cancel')}</Button>
-          : <Button className="flex-1" disabled={loading || !plan || (needsSpeech && blocker !== null)} onClick={() => void start(Boolean(matches && run && done === run.items.length))}><PlayIcon />{t(matches && run ? done === run.items.length ? 'workflowRun.restart' : 'common.retry' : 'workflowRun.run')}</Button>}
-        {!busy && run && done < run.items.length && <Button size="icon-sm" variant="outline" disabled={!plan || (needsSpeech && blocker !== null)} onClick={() => void start(true)} aria-label={t('workflowRun.restart')} title={t('workflowRun.restart')}><RotateCcwIcon /></Button>}
+          : <Button className="flex-1" disabled={loading || !engines.data || !plan || (needsSpeech && blocker !== null)} onClick={() => void start(Boolean(matches && run && done === run.items.length))}><PlayIcon />{t(matches && run ? done === run.items.length ? 'workflowRun.restart' : 'common.retry' : 'workflowRun.run')}</Button>}
+        {!busy && run && done < run.items.length && <Button size="icon-sm" variant="outline" disabled={!engines.data || !plan || (needsSpeech && blocker !== null)} onClick={() => void start(true)} aria-label={t('workflowRun.restart')} title={t('workflowRun.restart')}><RotateCcwIcon /></Button>}
       </div>
       {run && <>
         <p role="status" aria-live="polite" className="text-xs tabular-nums">{t('workflowRun.progress', { done, total: run.items.length })}</p>

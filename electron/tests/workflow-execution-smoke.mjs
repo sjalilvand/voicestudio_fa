@@ -135,6 +135,42 @@ try {
   assert.equal(translated, 1);
   assert.equal(generated, 3);
   await page.screenshot({ path: join(tmpdir(), 'voicestudio-workflow-localization.png') });
+  // Removing a source releases its blob only after the last duplicated reference.
+  await page.locator('.workflow-templates').getByRole('button', { name: 'Audio to transcript', exact: true }).click();
+  await page.getByLabel('Add audio', { exact: true }).setInputFiles({ name: 'remove-me.wav', mimeType: 'audio/wav', buffer: wav });
+  await page.getByText('remove-me.wav', { exact: true }).waitFor();
+  await page.getByLabel('Name', { exact: true }).fill('Source cleanup');
+  const sourceId = await page.evaluate(() => {
+    const library = JSON.parse(localStorage.getItem('voicestudio.workflows.v1'));
+    return library.documents.find((item) => item.id === library.activeId).steps[0].media[0].id;
+  });
+  const hasSource = (id) => page.evaluate((id) => new Promise((resolve, reject) => {
+    const open = indexedDB.open('voicestudio.workflow-runs', 1);
+    open.onerror = () => reject(open.error);
+    open.onsuccess = () => {
+      const db = open.result; const request = db.transaction('runs').objectStore('runs').get('media:' + id);
+      request.onsuccess = () => { resolve(Boolean(request.result)); db.close(); };
+    };
+  }), id);
+  await page.getByRole('button', { name: 'Duplicate', exact: true }).click();
+  await page.locator('.workflow-intro').getByRole('button', { name: 'Delete', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Delete', exact: true }).click();
+  assert.equal(await hasSource(sourceId), true, 'a shared source survives deleting one duplicate');
+  await page.getByRole('button', { name: 'Source cleanup', exact: true }).click();
+  await page.locator('.react-flow__node').filter({ hasText: 'Source clip' }).click();
+  await page.getByRole('complementary', { name: 'Step details' }).getByRole('button', { name: 'Delete', exact: true }).click();
+  for (let i = 0; i < 40 && await hasSource(sourceId); i++) await page.waitForTimeout(50);
+  assert.equal(await hasSource(sourceId), false, 'removing the final reference deletes the source blob');
+  await page.getByLabel('Add audio', { exact: true }).setInputFiles({ name: 'delete-workflow.wav', mimeType: 'audio/wav', buffer: wav });
+  await page.getByText('delete-workflow.wav', { exact: true }).waitFor();
+  const deletedId = await page.evaluate(() => {
+    const library = JSON.parse(localStorage.getItem('voicestudio.workflows.v1'));
+    return library.documents.find((item) => item.id === library.activeId).steps[0].media[0].id;
+  });
+  await page.locator('.workflow-intro').getByRole('button', { name: 'Delete', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Delete', exact: true }).click();
+  for (let i = 0; i < 40 && await hasSource(deletedId); i++) await page.waitForTimeout(50);
+  assert.equal(await hasSource(deletedId), false, 'deleting the final workflow releases its source');
   assert.deepEqual(errors, []);
   console.log('Workflow execution, recovery, persisted audio and export smoke passed');
 } finally { await browser.close(); }

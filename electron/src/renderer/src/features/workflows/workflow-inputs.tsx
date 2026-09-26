@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { UploadIcon, XIcon } from 'lucide-react';
 import { useProfiles } from '@/hooks/use-profiles';
@@ -12,13 +12,15 @@ import { LANGUAGES } from '@/lib/languages';
 import VoiceSelector from '../../../../../../frontend/src/components/VoiceSelector';
 // @ts-expect-error shared JSX component has no declaration file
 import SearchableSelect from '../../../../../../frontend/src/components/SearchableSelect';
-import { saveWorkflowMedia } from './workflow-run-store';
+import { deleteWorkflowArtifacts, saveWorkflowMedia } from './workflow-run-store';
 import type { WorkflowStep } from './workflow-model';
 
 export function WorkflowInputs({ step, onChange }: { step: WorkflowStep; onChange(change: Partial<WorkflowStep>): void }) {
   const { t } = useTranslation();
   const profiles = useProfiles();
   const input = useRef<HTMLInputElement>(null);
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const [error, setError] = useState(false);
   const [importing, setImporting] = useState(false);
   if (step.kind === 'speak' || step.kind === 'convert') return <>
@@ -35,7 +37,8 @@ export function WorkflowInputs({ step, onChange }: { step: WorkflowStep; onChang
       onChange={(event) => { const speed = Number(event.target.value); if (Number.isFinite(speed)) onChange({ speed: Math.max(0.5, Math.min(2, speed)) }); }} />
     <p className="text-xs text-muted-foreground">{t('workflowRun.normalized')}</p></>}
   </>;
-  if (step.kind === 'transcribe' || step.kind === 'translate') return <>
+  if (step.kind === 'transcribe') return <><label>{t('clone.language')}</label><p className="text-xs text-muted-foreground">{t('clone.auto')}</p></>;
+  if (step.kind === 'translate') return <>
     {step.kind === 'translate' && <>
       <label>{t('workflowRun.source_language')}</label>
       <SearchableSelect value={step.sourceLanguage || ''} onChange={(sourceLanguage: string) => onChange({ sourceLanguage })}
@@ -49,18 +52,19 @@ export function WorkflowInputs({ step, onChange }: { step: WorkflowStep; onChang
     </>}
     <label>{t('clone.language')}</label>
     <SearchableSelect value={step.language || 'Auto'} onChange={(language: string) => onChange({ language })}
-      options={LANGUAGES.filter((language) => step.kind === 'transcribe' || language !== 'Auto').map((value) => ({ value, label: value === 'Auto' ? t('clone.auto') : value }))}
+      options={LANGUAGES.filter((language) => language !== 'Auto').map((value) => ({ value, label: value === 'Auto' ? t('clone.auto') : value }))}
       ariaLabel={t('clone.language')} menuPortal menuClassName="workflow-shared-select" buttonClassName="workflow-select-trigger" />
   </>;
   if (step.kind === 'audio') return <>
     <p className="text-xs text-muted-foreground">{t('workflowRun.audio_hint')}</p>
     {step.media?.map((file) => <div key={file.id} className="flex items-center justify-between text-xs gap-2">
-      <span className="truncate">{file.name}</span><Button size="icon-xs" variant="ghost" aria-label={t('common.delete')}
+      <span className="truncate">{file.name}</span><Button size="icon-xs" variant="ghost" disabled={importing} aria-label={t('common.delete')}
         onClick={() => onChange({ media: step.media!.filter((entry) => entry.id !== file.id) })}><XIcon /></Button>
     </div>)}
     <input ref={input} type="file" multiple accept=".wav,.mp3,.m4a,.ogg,.flac,.webm" className="hidden" aria-label={t('workflowRun.add_audio')} onChange={async (event) => {
       const files = Array.from(event.target.files || []); event.target.value = '';
       setError(false); setImporting(true);
+      const uploaded: string[] = [];
       try {
         if (files.length + (step.media?.length || 0) > 50 || files.some((file) => !file.size || file.size > 64 * 1024 * 1024))
           throw new Error('limit');
@@ -68,10 +72,12 @@ export function WorkflowInputs({ step, onChange }: { step: WorkflowStep; onChang
         for (const file of files) {
           const id = crypto.randomUUID();
           await saveWorkflowMedia(id, file);
+          uploaded.push(id);
           media.push({ id, name: file.name, type: file.type, size: file.size });
         }
+        if (!mounted.current) throw new Error('cancelled');
         onChange({ media: [...(step.media || []), ...media] });
-      } catch { setError(true); }
+      } catch { await deleteWorkflowArtifacts({ media: uploaded, runs: [] }).catch(() => {}); if (mounted.current) setError(true); }
       finally { setImporting(false); }
     }} />
     <Button variant="outline" disabled={importing} onClick={() => input.current?.click()}><UploadIcon />{t('workflowRun.add_audio')}</Button>

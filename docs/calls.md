@@ -28,9 +28,10 @@ It is peak normalization, not a LUFS loudness target.
 - **Translate and narrate**: import audio → Transcribe → Translate → Speak → export WAV.
 
 Audio inputs accept up to 50 files, each no larger than 64 MiB. Imported files
-stay in local browser storage; the original files are never modified. Select
-Transcribe to choose the source language or automatic detection. Accurate ASR
-must already be installed; a transcription-only workflow does not need TTS.
+stay in local browser storage; removing the last workflow reference deletes
+the stored source and invalidates its cached run; the original files are never modified. Transcription
+automatically detects the spoken language and uses the installed ASR engine
+without downloading word-alignment models; a transcription-only workflow does not need TTS.
 
 Translation uses an explicitly selected local Argos or NLLB engine. Select the
 source and target languages and install the model or language pair in Settings

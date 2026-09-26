@@ -8,6 +8,7 @@ import {
   parseWorkflowLibrary,
   repairWorkflowName,
   removeWorkflowStep,
+  removedWorkflowData,
 } from './workflow-model';
 
 it('creates a connected, editable call template without a destination number', () => {
@@ -103,4 +104,15 @@ it('preserves libraries and graphs beyond the former silent truncation limits', 
   expect(loaded.documents[104].steps).toHaveLength(305);
   expect(loaded.documents[104].connections).toHaveLength(605);
   expect(loaded.activeId).toBe(documents[104].id);
+});
+
+it('deletes media only after its last shared reference and invalidates affected runs', () => {
+  const original = makeWorkflow('Original');
+  original.steps[0].media = [{ id: 'source', name: 'source.wav', type: 'audio/wav', size: 10 }];
+  const copy = { ...structuredClone(original), id: 'copy' };
+  const before = { version: 1 as const, activeId: original.id, documents: [original, copy] };
+  const one = { ...before, documents: [copy] };
+  expect(removedWorkflowData(before, one)).toEqual({ media: [], runs: [original.id] });
+  const noMedia = { ...one, documents: [{ ...copy, steps: [] }] };
+  expect(removedWorkflowData(one, noMedia)).toEqual({ media: ['source'], runs: ['copy'] });
 });

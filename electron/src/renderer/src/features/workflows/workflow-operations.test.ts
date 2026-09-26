@@ -14,8 +14,8 @@ it('checks transcription readiness and disables optional LLM refinement', async 
   const step = { ...makeStep('transcribe', { x: 0, y: 0 }), language: 'French' };
   expect(await workflowOperations.transcribe!(new Blob(['audio']), step, signal())).toBe('Transcript');
   const form = mock.json.mock.calls[1][1].body as FormData;
-  expect(form.get('mode')).toBe('accurate');
-  expect(form.get('language')).toBe('fr');
+  expect(form.get('mode')).toBe('reference');
+  expect(form.get('language')).toBeNull(); // This endpoint auto-detects language.
   expect(form.get('refine')).toBe('false');
 });
 

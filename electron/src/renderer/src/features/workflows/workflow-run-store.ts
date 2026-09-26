@@ -52,3 +52,12 @@ export async function loadWorkflowMedia(id: string): Promise<Blob> {
   if (!(audio instanceof Blob) || !audio.size) throw new Error('workflowRun.invalid_media');
   return audio;
 }
+
+export async function deleteWorkflowArtifacts({ media, runs }: { media: string[]; runs: string[] }): Promise<void> {
+  const keys = [...media.map((id) => 'media:' + id), ...runs];
+  if (!keys.length) return;
+  await withStore('readwrite', (store) => {
+    for (const key of keys.slice(0, -1)) store.delete(key);
+    return store.delete(keys[keys.length - 1]);
+  });
+}

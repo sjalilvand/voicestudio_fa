@@ -26,14 +26,13 @@ export const workflowOperations: WorkflowOperations = {
     body.set('target_dbfs', String(step.targetDb ?? -2));
     return (await apiFetch('/tools/normalize-speech', { method: 'POST', body, signal })).blob();
   },
-  transcribe: async (audio, step, signal) => {
+  transcribe: async (audio, _step, signal) => {
     const readiness = await apiJson<{ ready: boolean }>('/dictation/readiness?purpose=transcribe', { signal });
     if (!readiness.ready) throw new Error('workflowRun.asr_required');
     const body = new FormData();
     body.set('audio', audio, audio instanceof File ? audio.name : 'workflow.wav');
-    body.set('mode', 'accurate');
+    body.set('mode', 'reference');
     body.set('refine', 'false');
-    if (step.language && step.language !== 'Auto') body.set('language', languageCode(step.language)!);
     const result = await apiJson<{ text: string }>('/transcribe', { method: 'POST', body, signal });
     return result.text;
   },
