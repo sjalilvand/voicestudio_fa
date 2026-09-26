@@ -12,18 +12,18 @@ describe('theme preferences', () => {
   it('preserves the old appearance and tolerates malformed saved preferences', () => {
     expect(parseThemePreferences('{', 'light')).toEqual({
       mode: 'light',
-      light: 'signal',
-      dark: 'signal',
+      light: 'default',
+      dark: 'default',
     });
     expect(parseThemePreferences('{"mode":"invalid","light":"missing","dark":"current"}')).toEqual({
       mode: 'dark',
-      light: 'signal',
+      light: 'default',
       dark: 'current',
     });
     expect(parseThemePreferences('null')).toEqual({
       mode: 'dark',
-      light: 'signal',
-      dark: 'signal',
+      light: 'default',
+      dark: 'default',
     });
   });
   it('resolves independent halves when the operating system changes', () => {
@@ -43,6 +43,11 @@ describe('theme preferences', () => {
       light: 'signal',
       dark: 'heritage',
     });
+  });
+  it('keeps Studio as a valid saved palette for both appearances', () => {
+    const preferences = parseThemePreferences('{"mode":"dark","light":"default","dark":"default"}');
+    expect(preferences).toEqual({ mode: 'dark', light: 'default', dark: 'default' });
+    expect(resolveTheme(preferences, false)).toEqual({ appearance: 'dark', paletteId: 'default' });
   });
   it('ships complete semantic colors for both appearances of every palette', () => {
     expect(BUILT_IN_THEMES.map((theme) => theme.id)).toEqual([

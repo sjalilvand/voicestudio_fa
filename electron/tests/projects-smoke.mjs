@@ -1,11 +1,24 @@
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 const browser = await chromium.launch({
-  channel: process.env.PLAYWRIGHT_CHANNEL || 'msedge',
+  ...(process.env.CHROMIUM_PATH
+    ? { executablePath: process.env.CHROMIUM_PATH }
+    : { channel: process.env.PLAYWRIGHT_CHANNEL || 'msedge' }),
   headless: true,
 });
 try {
   const page = await browser.newPage();
+  await page.addInitScript(() => localStorage.setItem('voicestudio.setup.complete.v1', '1'));
+  await page.route((url) => url.pathname.startsWith('/api/'), (route) => {
+    const path = new URL(route.request().url()).pathname;
+    const fixtures = {
+      '/api/health': { status: 'ok' },
+      '/api/setup/status': { ready: true },
+      '/api/models/install/status': { jobs: [] },
+      '/api/workers/target': { target: 'local', op: 'tts', active: { remote: false, label: 'Local', reason: '' }, targets: [], remote_operations: [] },
+    };
+    return path in fixtures ? route.fulfill({ json: fixtures[path] }) : route.fulfill({ status: 404, json: { detail: 'Not mocked' } });
+  });
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   const stored = {
@@ -133,7 +146,12 @@ try {
   assert.equal(await page.locator('#project-name').inputValue(), 'Library renamed');
   await page.getByRole('button', { name: 'Delete Library renamed', exact: true }).click();
   assert(row);
-  await page.getByRole('button', { name: 'Confirm', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.waitFor();
+  const bounds = await dialog.boundingBox();
+  assert(bounds && bounds.y >= 0 && bounds.y + bounds.height <= page.viewportSize().height);
+  if (process.env.VOICESTUDIO_SCREENSHOT) await page.screenshot({ path: process.env.VOICESTUDIO_SCREENSHOT });
+  await page.getByRole('dialog').getByRole('button', { name: 'Delete', exact: true }).click();
   await page
     .getByRole('button', { name: 'Library renamed', exact: true })
     .waitFor({ state: 'detached' });

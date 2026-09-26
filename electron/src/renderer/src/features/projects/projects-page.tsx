@@ -34,6 +34,16 @@ import {
   TrashIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { useDeleteProfile } from '@/hooks/use-profiles';
+import { deleteHistoryItem } from '@/lib/api/history';
 import { Input } from '@/components/ui/input';
 import { apiJson, apiPath, describeError } from '@/lib/api/client';
 import { runRendererTask } from '@/lib/global-error-recovery';
@@ -44,6 +54,7 @@ import { selectCloneProfile } from '@/lib/store/reference';
 import type { HistoryItem, Profile } from '@/lib/api/types';
 import {
   loadTranscriptions,
+  removeTranscription,
   subscribeTranscriptions,
   type TranscriptEntry,
 } from '../../../../../../frontend/src/utils/transcriptionsStore';
@@ -114,6 +125,7 @@ export function ProjectsPage() {
   const session = useDubSession();
   const longform = useLongformSession();
   const profiles = useProfiles();
+  const deleteProfile = useDeleteProfile();
   const history = useHistory();
   const [transcripts, setTranscripts] = useState<TranscriptEntry[]>(loadTranscriptions);
   const [rename, setRename] = useState('');
@@ -124,8 +136,13 @@ export function ProjectsPage() {
   const [confirm, setConfirm] = useState<{
     id: string;
     kind: 'dub' | Mode;
-    action: 'open' | 'delete' | 'rename';
+    action: 'open' | 'rename';
   } | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState<LibraryRow[] | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletedCount, setDeletedCount] = useState(0);
+  const cancelDelete = useRef<HTMLButtonElement>(null);
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
   const [error, setError] = useState<string | null>(null);
@@ -192,13 +209,7 @@ export function ProjectsPage() {
       if (!confirm) return;
       if (confirm.kind !== 'dub') {
         if (longformSession.state.active) throw new Error('Longform work is active');
-        if (confirm.action === 'delete') {
-          await projectLibrary.remove(confirm.id);
-          for (const mode of ['stories', 'audiobook'] as const) {
-            if (longformSession.state.drafts[mode].projectId === confirm.id)
-              editLongform(mode, { projectId: null });
-          }
-        } else if (confirm.action === 'rename') await projectLibrary.rename(confirm.id, rename);
+        if (confirm.action === 'rename') await projectLibrary.rename(confirm.id, rename);
         else {
           const project = (await projectLibrary.list()).find(
             (project) => project.id === confirm.id,
@@ -215,10 +226,7 @@ export function ProjectsPage() {
         }
       } else {
         const path = '/projects/' + encodeURIComponent(confirm.id);
-        if (confirm.action === 'delete') {
-          await apiJson(path, { method: 'DELETE' });
-          detachDubProject(confirm.id);
-        } else if (confirm.action === 'rename') {
+        if (confirm.action === 'rename') {
           await apiJson(path, {
             method: 'PATCH',
             body: JSON.stringify({ name: rename.trim() }),
@@ -238,6 +246,64 @@ export function ProjectsPage() {
       }
       setConfirm(null);
     });
+
+  const requestDelete = (targets: LibraryRow[]) => {
+    if (locked || !targets.length) return;
+    setConfirm(null);
+    setDeleteError(null);
+    setDeleting(targets);
+  };
+  const deleteRows = async () => {
+    if (pending.current || locked || !deleting?.length) return;
+    pending.current = true;
+    setBusy(true);
+    setDeleteError(null);
+    const failed: LibraryRow[] = [];
+    const removed = new Set<string>();
+    const messages: string[] = [];
+    try {
+      for (const row of deleting) {
+        try {
+          const id = encodeURIComponent(row.id);
+          if (row.projectKind === 'dub') {
+            await apiJson('/projects/' + id, { method: 'DELETE' });
+            detachDubProject(row.id);
+          } else if (row.projectKind) {
+            await projectLibrary.remove(row.id);
+            for (const mode of ['stories', 'audiobook'] as const) {
+              if (longformSession.state.drafts[mode].projectId === row.id)
+                editLongform(mode, { projectId: null });
+            }
+          } else if (row.profile) await deleteProfile.mutateAsync(row.id);
+          else if (row.take) await deleteHistoryItem(row.id);
+          else if (row.transcript) removeTranscription(row.transcript.id);
+          else if (row.export) await apiJson('/export/history/' + id, { method: 'DELETE' });
+          else if (row.render) await apiJson('/longform/jobs/' + id, { method: 'DELETE' });
+          removed.add(row.key);
+        } catch (error) {
+          failed.push(row);
+          messages.push(row.name + ': ' + describeError(error));
+        }
+      }
+      setSelected((current) => new Set([...current].filter((key) => !removed.has(key))));
+      setDeletedCount(removed.size);
+      setDeleting(failed.length ? failed : null);
+      setDeleteError(messages.length ? messages.join('\n') : null);
+      await Promise.all(
+        [
+          'projects',
+          'longform-projects',
+          'profiles',
+          'history',
+          'export-history',
+          'longform-jobs',
+        ].map((key) => client.invalidateQueries({ queryKey: [key] })),
+      );
+    } finally {
+      pending.current = false;
+      setBusy(false);
+    }
+  };
 
   const rows = useMemo<LibraryRow[]>(() => {
     const result: LibraryRow[] = [];
@@ -355,6 +421,7 @@ export function ProjectsPage() {
     const term = search.trim().toLocaleLowerCase();
     return !term || `${row.name} ${row.subtitle}`.toLocaleLowerCase().includes(term);
   });
+  const selectedRows = visible.filter((row) => selected.has(row.key));
   const filterItems: {
     id: Filter;
     label: string;
@@ -433,7 +500,10 @@ export function ProjectsPage() {
                 className="h-9 w-full justify-start gap-2.5 rounded-lg px-2.5 font-normal [&_svg]:text-muted-foreground"
                 variant={filter === item.id ? 'secondary' : 'ghost'}
                 aria-pressed={filter === item.id}
-                onClick={() => setFilter(item.id)}
+                onClick={() => {
+                  setFilter(item.id);
+                  setSelected(new Set());
+                }}
               >
                 <Icon />
                 <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
@@ -496,7 +566,10 @@ export function ProjectsPage() {
                   aria-label={t('projects.search_placeholder')}
                   placeholder={t('projects.search_placeholder')}
                   value={search}
-                  onChange={(event) => setSearch(event.target.value)}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                    setSelected(new Set());
+                  }}
                 />
               </div>
               <div className="flex rounded-lg border border-border/50 bg-muted/20 p-0.5">
@@ -520,6 +593,44 @@ export function ProjectsPage() {
                 </Button>
               </div>
             </div>
+            {visible.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={locked}
+                  onClick={() => setSelected(new Set(visible.map((row) => row.key)))}
+                >
+                  {t('projects.select_visible')}
+                </Button>
+                {selectedRows.length > 0 && (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={locked}
+                      onClick={() => setSelected(new Set())}
+                    >
+                      {t('common.clear')}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      disabled={locked}
+                      onClick={() => requestDelete(selectedRows)}
+                    >
+                      <TrashIcon />
+                      {t('projects.delete_selected', { count: selectedRows.length })}
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
+            {deletedCount > 0 && (
+              <p role="status" className="text-sm text-muted-foreground">
+                {t('projects.deleted_count', { count: deletedCount })}
+              </p>
+            )}
             {failure && (
               <PipelineFailure
                 fallback={failure}
@@ -584,6 +695,22 @@ export function ProjectsPage() {
                     }
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <input
+                        type="checkbox"
+                        className="size-4 shrink-0 accent-primary"
+                        disabled={locked}
+                        aria-label={t('projects.select_item', { name: row.name })}
+                        checked={selected.has(row.key)}
+                        onChange={(event) => {
+                          const checked = event.target.checked;
+                          setSelected((current) => {
+                            const next = new Set(current);
+                            if (checked) next.add(row.key);
+                            else next.delete(row.key);
+                            return next;
+                          });
+                        }}
+                      />
                       {row.profile ? (
                         <ProfileAvatar name={row.profile.name} imageUrl={row.profile.image_url} />
                       ) : (
@@ -724,23 +851,17 @@ export function ProjectsPage() {
                           >
                             <PencilIcon />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label={t('common.delete') + ' ' + row.name}
-                            disabled={locked}
-                            onClick={() =>
-                              setConfirm({
-                                id: row.id,
-                                kind: row.projectKind!,
-                                action: 'delete',
-                              })
-                            }
-                          >
-                            <TrashIcon />
-                          </Button>
                         </>
                       )}
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={t('common.delete') + ' ' + row.name}
+                        disabled={locked}
+                        onClick={() => requestDelete([row])}
+                      >
+                        <TrashIcon />
+                      </Button>
                     </div>
                     {row.projectKind &&
                       confirm?.id === row.id &&
@@ -761,16 +882,11 @@ export function ProjectsPage() {
                             />
                           ) : (
                             <span className="flex-1">
-                              {t(
-                                confirm.action === 'delete'
-                                  ? 'projectActions.delete'
-                                  : 'projectActions.open',
-                                { name: row.name },
-                              )}
+                              {t('projectActions.open', { name: row.name })}
                             </span>
                           )}
                           <Button
-                            variant={confirm.action === 'delete' ? 'destructive' : 'default'}
+                            variant="default"
                             disabled={locked || (confirm.action === 'rename' && !rename.trim())}
                             onClick={() => void apply()}
                           >
@@ -792,6 +908,55 @@ export function ProjectsPage() {
           </div>
         </section>
       </div>
+      <Dialog
+        open={!!deleting}
+        onOpenChange={(open) => {
+          if (!open && !busy) setDeleting(null);
+        }}
+      >
+        <DialogContent
+          showCloseButton={false}
+          initialFocus={cancelDelete}
+          className="sm:max-w-lg"
+          style={{ background: 'var(--popover)' }}
+        >
+          <DialogHeader>
+            <DialogTitle>
+              {t('projects.delete_selected', { count: deleting?.length ?? 0 })}
+            </DialogTitle>
+            <DialogDescription>{t('projects.delete_warning')}</DialogDescription>
+          </DialogHeader>
+          <ul className="max-h-48 space-y-1 overflow-y-auto text-sm">
+            {deleting?.map((row) => (
+              <li key={row.key} className="break-words">
+                {row.name}
+              </li>
+            ))}
+          </ul>
+          {deleteError && (
+            <p
+              role="alert"
+              className="max-h-32 overflow-y-auto whitespace-pre-wrap text-sm text-destructive"
+            >
+              {deleteError}
+            </p>
+          )}
+          <DialogFooter>
+            <Button
+              ref={cancelDelete}
+              variant="ghost"
+              disabled={busy}
+              onClick={() => setDeleting(null)}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button variant="destructive" disabled={locked} onClick={() => void deleteRows()}>
+              <TrashIcon />
+              {busy ? t('common.loading') : t(deleteError ? 'common.retry' : 'common.delete')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

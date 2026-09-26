@@ -1,5 +1,5 @@
 import { useBackendStatus } from '@/hooks/use-backend-status';
-import { ChevronRightIcon, LanguagesIcon } from 'lucide-react';
+import { LanguagesIcon } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -150,16 +150,15 @@ export function TranslationSettings() {
         <>
           {availableEngines?.map(renderEngine)}
           {unavailableEngines && unavailableEngines.length > 0 && (
-            <details className="group">
-              <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground">
+            <div>
+              <div className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-muted-foreground">
                 {t('modelSettings.unavailable')}
                 <span className="text-xs tabular-nums">{unavailableEngines.length}</span>
-                <ChevronRightIcon className="ml-auto size-4 transition-transform duration-150 group-open:rotate-90" />
-              </summary>
+              </div>
               <div className="border-t border-border/50 [&>*+*]:border-t [&>*+*]:border-border/50">
                 {unavailableEngines.map(renderEngine)}
               </div>
-            </details>
+            </div>
           )}
         </>
       )}

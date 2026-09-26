@@ -1416,7 +1416,12 @@
     "story_voices_plural": "{{count}} głosy",
     "audiobooks": "Audiobooki",
     "audiobook": "Książka audio",
-    "story": "Historia"
+    "story": "Historia",
+    "select_visible": "Zaznacz widoczne",
+    "select_item": "Zaznacz {{name}}",
+    "delete_selected": "Usuń zaznaczone ({{count}})",
+    "deleted_count": "Usunięto: {{count}}",
+    "delete_warning": "Tej operacji nie można cofnąć. Projekty i transkrypcje zostaną usunięte. Usunięcie głosów lub nagrań usuwa też ich zapisany dźwięk. Wyeksportowane pliki i ukończone rendery audio pozostaną."
   },
   "batch": {
     "title": "Dubbing wsadowy",
@@ -2911,5 +2916,42 @@
   "directoryExamples": {
     "example": "Przykład katalogowy",
     "notice": "Wyłącznie przykłady katalogowe — nie sponsorzy ani połączone integracje."
+  },
+  "workflowRun": {
+    "run": "Uruchom przepływ",
+    "restart": "Nowy przebieg",
+    "recipe": "Narracja seryjna",
+    "clean_recipe": "Narracja seryjna · Normalizuj dźwięk",
+    "scripts": "Skrypty",
+    "import": "Importuj skrypty",
+    "sample": "Witaj na tej lekcji. Zaczynajmy.",
+    "hint": "Kroki zapisują się lokalnie. Ponów po anulowaniu lub wyjściu, aby kontynuować.",
+    "scripts_hint": "Rozdziel klipy wierszem --- lub zaimportuj skrypty.",
+    "normalized": "Mowa używa bieżącego silnika, masteringu i normalizacji szczytów.",
+    "progress": "{{done}} / {{total}} klipów gotowych",
+    "changed": "Zmieniono ustawienia. Uruchomienie utworzy nowe wyniki.",
+    "incomplete": "Mowa niepełna. Ponów przed eksportem.",
+    "invalid_graph": "Połącz wszystkie kroki od początku do końca bez rozgałęzień ani pętli.",
+    "invalid_unsupported": "Niezgodne kroki: tekst do tłumaczenia lub mowy, audio do transkrypcji lub konwersji, wygenerowana mowa do normalizacji.",
+    "invalid_voice": "Wybierz zapisany głos dla każdego kroku mowy lub konwersji.",
+    "invalid_scripts": "Dodaj 1–50 niepustych skryptów po maksymalnie 20 000 znaków.",
+    "peak": "Szczyt (dBFS)",
+    "source_language": "Język źródłowy",
+    "local_translation": "Używa tylko zainstalowanych lokalnych modeli tłumaczenia.",
+    "audio_hint": "Importuj do 50 klipów audio po 64 MiB.",
+    "add_audio": "Dodaj audio",
+    "invalid_media": "Dodaj poprawne klipy audio mniejsze niż 64 MiB każdy.",
+    "asr_required": "Najpierw skonfiguruj silnik transkrypcji w Ustawieniach.",
+    "transcription_recipe": "Audio na tekst",
+    "conversion_recipe": "Zmień głos",
+    "localization_recipe": "Przetłumacz i przeczytaj",
+    "invalid_language": "Wybierz język źródłowy i docelowy."
+  },
+  "workflows": {
+    "step_normalize": "Normalizuj dźwięk",
+    "step_audio": "Klip źródłowy",
+    "step_transcribe": "Transkrybuj",
+    "step_translate": "Przetłumacz",
+    "step_convert": "Konwertuj"
   }
 }

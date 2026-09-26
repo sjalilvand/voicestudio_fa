@@ -29,9 +29,9 @@ import './integrations-page.css';
 /** Catalog entries and featured sponsors both have an in-app page. */
 function findIntegration(slug: string): IntegrationCatalogEntry | undefined {
   const entry = getIntegrationBySlug(slug);
-  if (entry) return entry;
   const sponsor = SPONSORS.find((item) => integrationSlug(item.name) === slug);
-  return sponsor && { ...sponsor, category: '', featured: true };
+  if (sponsor) return { ...entry, ...sponsor, category: entry?.category ?? '', featured: true };
+  return entry;
 }
 
 function openExternal(url: string) {
@@ -119,6 +119,11 @@ function DetailHero({
         </p>
         <div className="integration-detail-title-row">
           <h2 id="integration-detail-name">{entry.name}</h2>
+          {entry.featured && (
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+              {t('integrationCatalog.featured')}
+            </span>
+          )}
           {status}
         </div>
         <p className="integration-detail-tagline">
@@ -187,7 +192,9 @@ export function IntegrationDetailPage() {
           </div>
         </>
       ) : (
-        <p className="integration-detail-note">{t('directoryExamples.notice')}</p>
+        <p className="integration-detail-note">
+          {t(entry.featured ? 'integrationCatalog.featured' : 'directoryExamples.notice')}
+        </p>
       )}
     </section>
   );

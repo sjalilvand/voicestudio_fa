@@ -48,6 +48,7 @@ import {
   addTranscription,
   loadTranscriptions,
   subscribeTranscriptions,
+  removeTranscription,
   TRANSCRIPTIONS_KEY,
   TRANSCRIPTION_EVENT,
   type TranscriptEntry,
@@ -209,9 +210,7 @@ export function TranscriptionsPage() {
   }, [selectedId, visible]);
   const remove = (id: number) => {
     try {
-      const next = loadTranscriptions().filter((entry) => entry.id !== id);
-      localStorage.setItem(TRANSCRIPTIONS_KEY, JSON.stringify(next));
-      setEntries(next);
+      removeTranscription(id);
       if (selectedId === id) setSelectedId(null);
     } catch {
       toast.error(t('modelSettings.failed'));

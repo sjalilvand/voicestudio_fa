@@ -1667,7 +1667,12 @@
     "story_voices_plural": "{{count}} 声音",
     "audiobooks": "有声读物",
     "audiobook": "有声读物",
-    "story": "故事"
+    "story": "故事",
+    "select_visible": "选择可见项",
+    "select_item": "选择{{name}}",
+    "delete_selected": "删除所选项（{{count}}）",
+    "deleted_count": "已删除：{{count}}",
+    "delete_warning": "此操作无法撤销。项目和转录文本将被删除。删除声音或录音也会删除其保存的音频。导出的文件和已完成渲染的音频将保留。"
   },
   "batch": {
     "title": "批量配音",
@@ -3389,5 +3394,42 @@
   "directoryExamples": {
     "example": "目录示例",
     "notice": "仅为目录示例，并非赞助商或已连接的集成。"
+  },
+  "workflowRun": {
+    "run": "运行工作流",
+    "restart": "开始新一轮运行",
+    "recipe": "批量旁白",
+    "clean_recipe": "批量旁白 · 音频归一化",
+    "scripts": "脚本",
+    "import": "导入脚本",
+    "sample": "欢迎来到本课。让我们开始吧。",
+    "hint": "已完成的步骤保存在本地。取消或离开页面后，重试即可继续。",
+    "scripts_hint": "用单独一行 --- 分隔片段，或导入脚本。",
+    "normalized": "语音使用当前引擎，并进行母带处理和峰值归一化。",
+    "progress": "{{done}} / {{total}} 个片段已就绪",
+    "changed": "设置已更改。运行将生成新输出。",
+    "incomplete": "语音不完整。请在导出前重试。",
+    "invalid_graph": "将所有步骤从开始连接到结束，不要分支或循环。",
+    "invalid_unsupported": "步骤不兼容：文本连接翻译或说话，音频连接转录或转换，合成语音连接归一化。",
+    "invalid_voice": "请为每个说话或转换步骤选择已保存的声音。",
+    "invalid_scripts": "添加 1–50 个非空脚本，每个最多 20,000 字符。",
+    "peak": "峰值 (dBFS)",
+    "source_language": "源语言",
+    "local_translation": "仅使用已安装的本地翻译模型。",
+    "audio_hint": "最多导入 50 个音频片段，每个 64 MiB。",
+    "add_audio": "添加音频",
+    "invalid_media": "添加有效音频片段，每个小于 64 MiB。",
+    "asr_required": "请先在设置中准备转录引擎。",
+    "transcription_recipe": "音频转文字",
+    "conversion_recipe": "更换声音",
+    "localization_recipe": "翻译并配音",
+    "invalid_language": "请选择源语言和目标语言。"
+  },
+  "workflows": {
+    "step_normalize": "音频归一化",
+    "step_audio": "源音频",
+    "step_transcribe": "转录",
+    "step_translate": "翻译",
+    "step_convert": "转换"
   }
 }

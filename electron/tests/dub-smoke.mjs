@@ -377,7 +377,8 @@ try {
   ]);
   assert.equal(generation, undefined, 'translation must remain reviewable before generation');
   await translatorPicker.getByRole('button', { name: 'Argos', exact: true }).click();
-  await page.locator('summary').filter({ hasText: 'Translation quality' }).click();
+  // Translation controls stay expanded without an extra disclosure click.
+  await page.getByRole('button', { name: 'Cinematic', exact: true }).waitFor({ state: 'visible' });
   await page.getByRole('button', { name: 'Cinematic', exact: true }).click();
   await page.getByRole('button', { name: 'Translate All', exact: true }).click();
   await waitForSegmentText(0, 'Hola');
@@ -403,7 +404,8 @@ try {
   await page.reload();
   script = await editSegment(0);
   assert.equal(await script.inputValue(), 'Hola mundo');
-  await page.locator('summary').filter({ hasText: 'Translation quality' }).click();
+  // Translation controls stay expanded without an extra disclosure click.
+  await page.getByRole('button', { name: 'Cinematic', exact: true }).waitFor({ state: 'visible' });
   assert.equal(
     await page.getByRole('button', { name: 'Cinematic', exact: true }).getAttribute('aria-pressed'),
     'true',

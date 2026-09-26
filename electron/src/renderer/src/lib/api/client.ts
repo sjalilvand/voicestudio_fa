@@ -99,7 +99,10 @@ export async function errorFromResponse(res: Response): Promise<ApiError> {
   }
   const detail =
     generationFailureMessage(payload, tr) ||
-    (payload && 'detail' in payload ? detailToString(payload.detail) : text.trim());
+    (payload && 'detail' in payload ? detailToString(payload.detail)
+      : payload && typeof payload.error === 'string' ? payload.error.trim()
+      : payload && typeof payload.message === 'string' ? payload.message.trim()
+      : text.trim());
   const statusLine = `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ''}`;
   return new ApiError(res.status, detail || statusLine, payload);
 }

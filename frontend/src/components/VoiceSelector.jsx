@@ -90,6 +90,7 @@ export default function VoiceSelector({
   size = 'md',
   buttonClassName,
   menuPortal = false,
+  menuClassName = '',
 }) {
   const { t } = useTranslation();
 
@@ -303,6 +304,7 @@ export default function VoiceSelector({
         buttonClassName={buttonClassName}
         ariaLabel={ariaLabel}
         menuPortal={menuPortal}
+        menuClassName={menuClassName}
         onOpenChange={setOpen}
         onQueryChange={setRawQuery}
       />

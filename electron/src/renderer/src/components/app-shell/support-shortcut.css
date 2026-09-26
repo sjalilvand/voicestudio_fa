@@ -2,7 +2,17 @@
   position: relative;
   isolation: isolate;
   overflow: hidden;
+  border: 1px solid color-mix(in oklab, var(--primary) 28%, var(--border));
   border-radius: 8px;
+  background: color-mix(in oklab, var(--primary) 11%, var(--card));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--foreground) 5%, transparent);
+  transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+.support-shortcut:hover,
+.support-shortcut:focus-visible {
+  border-color: color-mix(in oklab, var(--primary) 50%, var(--border));
+  background: color-mix(in oklab, var(--primary) 17%, var(--card));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--foreground) 8%, transparent);
 }
 .support-shortcut::before {
   position: absolute;
@@ -26,6 +36,7 @@
   to { transform: translateX(12%) rotate(5deg) scale(1.08); }
 }
 @media (prefers-reduced-motion: reduce) {
+  .support-shortcut,
   .support-shortcut::before { transition: none; }
   .support-shortcut:hover::before,
   .support-shortcut:focus-visible::before { animation: none; }

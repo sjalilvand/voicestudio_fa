@@ -24,3 +24,24 @@ Browser regressions verify all-source counts and profile/transcript filters alon
 save, unified-list rename, reload, confirmed open with original script intact, and deletion; dubbing
 rename preserves unexposed options and updates the current save name. A disposable real backend
 rename/read/delete round trip confirmed state preservation.
+
+## Delete management
+
+Every row has a delete action in both list and grid views. Select individual checkboxes or
+**Select visible**, then **Delete selected** to review the names before confirming. Changing the
+search or category clears selection, so hidden items are never included. Cancel is focused first;
+active dubbing/longform work blocks deletion. A failed batch keeps only failed items in the dialog
+for retry; successful deletions are refreshed immediately and are not repeated.
+
+- Saved dubbing, Stories and Audiobook projects: remove the saved record, detach the current
+  draft, and keep source/generated media.
+- Transcripts: remove stored text and update other open transcription views.
+- Voice profiles and generated takes: use their existing deletion behavior, including removal
+  of associated stored audio. Exported copies are unaffected.
+- Export history and completed longform renders: remove library records only; files remain on
+  disk. Active or unrelated jobs cannot be removed through the render-library endpoint.
+
+The confirmation describes these consequences. Deletion cannot be undone. Backend metadata
+routes are `DELETE /export/history/{id}` and `DELETE /longform/jobs/{job_id}`; both are idempotent.
+Tests: `projects-page.test.tsx`, `transcript-deletion.test.ts`, and
+`tests/test_projects_delete_management.py` use disposable data, not the user's library.

@@ -13,8 +13,8 @@ import {
   ShieldCheckIcon,
   StarIcon,
 } from 'lucide-react';
-import { useSearch, useNavigate } from '@tanstack/react-router';
-import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { brandIcon } from '@/lib/brand';
 import { DonationGoal } from './donation-goal';
@@ -39,14 +39,6 @@ import './support-settings.css';
 export function SupportSettings() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const search = useSearch({ strict: false }) as { compare?: boolean };
-  const comparison = useRef<HTMLElement>(null);
-  useEffect(() => {
-    if (search.compare) {
-      comparison.current?.scrollIntoView({ block: 'start' });
-      comparison.current?.focus({ preventScroll: true });
-    }
-  }, [search.compare]);
   const [amount, setAmount] = useState<number | 'custom' | null>(null);
   const sponsorGroups = [...SPONSOR_TIERS, '']
     .map((tier) => ({
@@ -74,51 +66,6 @@ export function SupportSettings() {
         <h1>{t('donate.hero_title')}</h1>
         <p>{t('donate.footer')}</p>
       </header>
-
-      {search.compare && (
-        <section
-          ref={comparison}
-          tabIndex={-1}
-          aria-labelledby="support-plans-title"
-          className="mb-6 scroll-mt-6 rounded-2xl border border-primary/25 bg-card p-6 outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        >
-          <h2 id="support-plans-title" className="text-xl font-semibold tracking-tight">
-            {t('supportPlans.title')}
-          </h2>
-          <table className="mt-5 w-full text-left text-sm">
-            <thead>
-              <tr>
-                <th scope="col" className="pb-3">
-                  {t('supportPlans.sponsor_bar')}
-                </th>
-                <th scope="col" className="pb-3">
-                  {t('supportPlans.free')}
-                </th>
-                <th scope="col" className="pb-3 text-primary">
-                  {t('supportPlans.pro')}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                ['sponsor_bar', 'visible', 'hideable'],
-                ['telemetry', 'opt_in', 'disabled'],
-                ['badge', 'standard', 'included'],
-                ['advanced', 'standard', 'included'],
-              ].map(([label, free, pro]) => (
-                <tr key={label} className="border-t border-border">
-                  <th scope="row" className="py-4 font-normal">
-                    {t('supportPlans.' + label)}
-                  </th>
-                  <td className="p-2 text-muted-foreground">{t('supportPlans.' + free)}</td>
-                  <td className="p-2">{t('supportPlans.' + pro)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="text-xs text-muted-foreground">{t('supportPlans.unavailable')}</p>
-        </section>
-      )}
 
       <section className="support-giving" aria-label={t('donate.goal.title')}>
         <div className="support-progress">
@@ -212,29 +159,15 @@ export function SupportSettings() {
           <span className="mb-4 w-fit rounded-md bg-primary/10 px-2 py-1 text-xs font-semibold tracking-wider text-primary">
             {t('supportPlans.pro')}
           </span>
-          <h2 id="support-pro-heading">{t('supportPlans.pro')}</h2>
-          <ul className="my-4 grid gap-3 text-sm text-muted-foreground">
-            {[
-              ['telemetry', 'disabled'],
-              ['sponsor_bar', 'hideable'],
-              ['badge', 'included'],
-              ['advanced', 'included'],
-            ].map(([label, value]) => (
-              <li key={label} className="flex items-center gap-2">
-                <CheckIcon aria-hidden="true" className="size-4 shrink-0 text-primary" />
-                <span>
-                  {t('supportPlans.' + label)} · {t('supportPlans.' + value)}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p>{t('supportPlans.unavailable')}</p>
+          <h2 id="support-pro-heading">{t('proPage.title')}</h2>
+          <p>{t('proPage.hero_body')}</p>
+          <p>{t('proPage.billing_note')}</p>
           <button
             type="button"
-            onClick={() => runRendererTask('Open support', () => navigate({ to: '/settings/support', search: { compare: true } }))}
+            onClick={() => runRendererTask('Open Pro', () => navigate({ to: '/pro' }))}
             className="mt-4 flex min-h-11 items-center gap-2 text-sm font-medium text-primary hover:underline focus-visible:outline-2 focus-visible:outline-primary"
           >
-            {t('supportPlans.title')}
+            {t('supportPlans.get_pro')}
             <ArrowUpRightIcon aria-hidden="true" className="size-3" />
           </button>
         </section>

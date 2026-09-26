@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/popover';
 import { Link, useRouterState } from '@tanstack/react-router';
 import {
@@ -15,12 +15,13 @@ import {
   UsersRoundIcon,
   ChevronRightIcon,
   BlocksIcon,
-  PhoneCallIcon,
+  WorkflowIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { setWorkspace } from '@/lib/store/workspace';
 import { cn } from '@/lib/utils';
+import './workspace-menu.css';
 
 type Destination = readonly [
   to:
@@ -60,35 +61,64 @@ const dubDestinations: Destination[] = [
 ];
 const laterDestinations: Destination[] = [
   ['/transcriptions', 'nav.transcribe', MicIcon],
-  ['/calls', 'nav.calls', PhoneCallIcon],
+  ['/calls', 'workflows.title', WorkflowIcon],
   ['/projects', 'projects.title', FolderIcon],
   ['/tools', 'tools.title', WrenchIcon],
   ['/integrations', 'integrationCatalog.title', BlocksIcon],
 ];
 
 const itemClass =
-  'group relative isolate flex h-8 min-w-0 items-center overflow-hidden rounded-md text-sm text-sidebar-foreground/80 outline-none transition-[color,background-color,box-shadow,backdrop-filter] duration-150 before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-[inherit] before:bg-gradient-to-r before:from-white/[0.07] before:via-white/[0.025] before:to-transparent before:opacity-0 before:transition-opacity before:duration-150 hover:bg-sidebar-accent/65 hover:text-sidebar-foreground hover:backdrop-blur-xl hover:shadow-[inset_0_1px_0_rgb(255_255_255/9%),0_6px_18px_rgb(0_0_0/10%)] hover:ring-1 hover:ring-inset hover:ring-sidebar-border/60 hover:before:opacity-100 focus-visible:ring-2 focus-visible:ring-ring';
+  'workspace-nav-item group relative isolate flex h-8 min-w-0 items-center overflow-hidden rounded-md text-sm text-sidebar-foreground/80 outline-none transition-[color,background-color,box-shadow,backdrop-filter] duration-150 before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-[inherit] before:bg-gradient-to-r before:from-white/[0.07] before:via-white/[0.025] before:to-transparent before:opacity-0 before:transition-opacity before:duration-150 hover:bg-sidebar-accent/65 hover:text-sidebar-foreground hover:backdrop-blur-xl hover:shadow-[inset_0_1px_0_rgb(255_255_255/9%),0_6px_18px_rgb(0_0_0/10%)] hover:ring-1 hover:ring-inset hover:ring-sidebar-border/60 hover:before:opacity-100 focus-visible:ring-2 focus-visible:ring-ring';
 const iconClass =
-  'size-4 shrink-0 text-muted-foreground transition-[color,filter] duration-150 group-hover:text-sidebar-foreground group-hover:drop-shadow-[0_1px_3px_rgb(0_0_0/22%)]';
+  'workspace-nav-icon size-4 shrink-0 text-muted-foreground transition-[color,filter] duration-150';
+
+const iconMotion: Record<Destination[0], string> = {
+  '/clone': 'pulse',
+  '/design': 'tilt',
+  '/personas': 'nudge',
+  '/gallery': 'lift',
+  '/stories': 'wave',
+  '/audiobook': 'tilt',
+  '/dub': 'tilt',
+  '/batch': 'lift',
+  '/transcriptions': 'nudge',
+  '/calls': 'pulse',
+  '/projects': 'lift',
+  '/tools': 'tilt',
+  '/integrations': 'turn',
+};
 
 function NavigationLink({
   destination: [to, label, Icon, activate],
   compact = false,
   nested = false,
+  flyout = false,
+  onCurrentRoute,
 }: {
   destination: Destination;
   compact?: boolean;
   nested?: boolean;
+  flyout?: boolean;
+  onCurrentRoute?: () => void;
 }) {
   const { t } = useTranslation();
   const link = (
     <Link
       to={to}
       aria-label={compact ? t(label) : undefined}
-      onClick={activate}
+      onClick={() => {
+        activate?.();
+        onCurrentRoute?.();
+      }}
       className={cn(
         itemClass,
-        compact ? 'justify-center px-0' : nested ? 'h-7 gap-2 px-2 text-xs' : 'gap-2.5 px-2.5',
+        compact
+          ? 'h-10 justify-center px-0'
+          : flyout
+            ? 'h-10 gap-2 px-3 text-sm'
+            : nested
+              ? 'h-7 gap-2 px-2 text-xs'
+              : 'gap-2.5 px-2.5',
       )}
       activeProps={{
         className:
@@ -96,7 +126,12 @@ function NavigationLink({
         'aria-current': 'page',
       }}
     >
-      <Icon className={cn(iconClass, nested && 'size-3.5')} aria-hidden="true" />
+      <Icon
+        className={cn(iconClass, nested && 'size-3.5')}
+        data-tone={to.slice(1)}
+        data-motion={iconMotion[to]}
+        aria-hidden="true"
+      />
       {!compact && <span className="truncate">{t(label)}</span>}
     </Link>
   );
@@ -124,31 +159,127 @@ function NavigationGroup({
 }) {
   const { t } = useTranslation();
   const active = children.some(([to]) => pathname === to || pathname.startsWith(to + '/'));
+  const groupTone =
+    label === 'nav.stories'
+      ? 'stories-group'
+      : label === 'nav.dub'
+        ? 'dubbing-group'
+        : label.slice(4);
   const [expanded, setExpanded] = useState(active);
   const [popupOpen, setPopupOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+  const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelOpen = () => {
+    if (openTimer.current !== null) clearTimeout(openTimer.current);
+    openTimer.current = null;
+  };
+  const cancelClose = () => {
+    if (closeTimer.current !== null) clearTimeout(closeTimer.current);
+    closeTimer.current = null;
+  };
+  const scheduleClose = () => {
+    cancelClose();
+    closeTimer.current = setTimeout(() => setPopupOpen(false), 240);
+  };
   const id = useId();
+  useEffect(
+    () => () => {
+      cancelOpen();
+      cancelClose();
+    },
+    [],
+  );
   useEffect(() => {
+    cancelOpen();
+    cancelClose();
     setExpanded(active);
     setPopupOpen(false);
   }, [pathname, active]);
   const triggerClass = cn(
     itemClass,
     'w-full',
-    compact ? 'justify-center' : 'gap-2.5 px-2.5 font-medium',
+    compact ? 'h-10 justify-center' : 'gap-2.5 px-2.5 font-medium',
     active &&
       'bg-sidebar-accent/65 text-sidebar-foreground ring-1 ring-inset ring-sidebar-border/50',
   );
   if (compact)
     return (
-      <Popover open={popupOpen} onOpenChange={setPopupOpen}>
-        <PopoverTrigger aria-label={t(label)} className={triggerClass}>
-          <Icon className={iconClass} aria-hidden="true" />
+      <Popover
+        open={popupOpen}
+        onOpenChange={(open) => {
+          cancelOpen();
+          cancelClose();
+          setPopupOpen(open);
+        }}
+      >
+        <PopoverTrigger
+          ref={triggerRef}
+          aria-label={t(label)}
+          data-active={active}
+          className={triggerClass}
+          onKeyDown={(event) => {
+            if (event.key !== 'ArrowRight' && event.key !== 'ArrowDown') return;
+            event.preventDefault();
+            cancelOpen();
+            setPopupOpen(true);
+            requestAnimationFrame(() => popupRef.current?.querySelector('a')?.focus());
+          }}
+          onPointerEnter={(event) => {
+            if (event.pointerType !== 'mouse') return;
+            cancelClose();
+            if (!popupOpen) {
+              cancelOpen();
+              openTimer.current = setTimeout(() => setPopupOpen(true), 90);
+            }
+          }}
+          onPointerLeave={(event) => {
+            if (event.pointerType === 'mouse') {
+              cancelOpen();
+              if (popupOpen) scheduleClose();
+            }
+          }}
+          onClickCapture={(event) => {
+            // A press on an already hover-open trigger should keep the flyout
+            // available. Keyboard and touch presses retain Base UI's toggle.
+            if (popupOpen && event.detail > 0) event.stopPropagation();
+          }}
+        >
+          <Icon
+            className={iconClass}
+            data-tone={groupTone}
+            data-motion={label === 'nav.stories' ? 'wave' : 'pulse'}
+            aria-hidden="true"
+          />
         </PopoverTrigger>
-        <PopoverContent side="right" className="w-52 p-2">
-          <div className="px-2 pb-2 pt-1 text-xs font-medium text-muted-foreground">{t(label)}</div>
-          <div onClick={() => setPopupOpen(false)}>
+        <PopoverContent
+          ref={popupRef}
+          side="right"
+          sideOffset={0}
+          className="w-52 p-1.5 data-open:zoom-in-100 data-closed:zoom-out-100"
+          onPointerEnter={cancelClose}
+          onPointerLeave={(event) => {
+            if (event.pointerType === 'mouse') scheduleClose();
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== 'ArrowLeft') return;
+            event.preventDefault();
+            setPopupOpen(false);
+            triggerRef.current?.focus();
+          }}
+        >
+          <div className="px-3 pb-1 pt-1.5 text-xs font-medium text-muted-foreground">
+            {t(label)}
+          </div>
+          <div>
             {children.map((destination) => (
-              <NavigationLink key={destination[0]} destination={destination} />
+              <NavigationLink
+                key={destination[0]}
+                destination={destination}
+                flyout
+                onCurrentRoute={pathname === destination[0] ? () => setPopupOpen(false) : undefined}
+              />
             ))}
           </div>
         </PopoverContent>
@@ -160,10 +291,16 @@ function NavigationGroup({
         type="button"
         aria-expanded={expanded}
         aria-controls={id}
+        data-active={active}
         onClick={() => setExpanded((value) => !value)}
         className={triggerClass}
       >
-        <Icon className={iconClass} aria-hidden="true" />
+        <Icon
+          className={iconClass}
+          data-tone={groupTone}
+          data-motion={label === 'nav.stories' ? 'wave' : 'pulse'}
+          aria-hidden="true"
+        />
         <span className="truncate">{t(label)}</span>
         <ChevronRightIcon
           aria-hidden="true"

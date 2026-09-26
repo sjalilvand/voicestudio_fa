@@ -1,12 +1,23 @@
 import { beforeEach, expect, it } from 'vitest';
-import { appendTranslationLog, finishTranslationRun, startTranslationRun, translationActivity, updateTranslationRun } from './translation-activity';
+import {
+  appendTranslationLog,
+  finishTranslationRun,
+  startTranslationRun,
+  translationActivity,
+  updateTranslationRun,
+} from './translation-activity';
 
-beforeEach(() => translationActivity.setState(() => ({ runs: [], expanded: false, tab: 'output' })));
-const request = { jobId: 'job', agent: 'codex', target: 'Bengali', purpose: 'translate' as const, rows: [{ id: 'a', source: 'Hello' }] };
+beforeEach(() => translationActivity.setState(() => ({ runs: [], tab: 'output' })));
+const request = {
+  jobId: 'job',
+  agent: 'codex',
+  target: 'Bengali',
+  purpose: 'translate' as const,
+  rows: [{ id: 'a', source: 'Hello' }],
+};
 it('opens logs without inventing completed segments, then retains validated output', () => {
   const id = startTranslationRun(request);
   appendTranslationLog(id, 'Working…');
-  expect(translationActivity.state.expanded).toBe(true);
   expect(translationActivity.state.tab).toBe('logs');
   expect(translationActivity.state.runs[0].rows[0].text).toBeUndefined();
   updateTranslationRun(id, { rows: [{ id: 'a', source: 'Hello', text: 'হ্যালো' }] });

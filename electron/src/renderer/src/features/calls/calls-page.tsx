@@ -1,4 +1,4 @@
-import { useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -9,6 +9,7 @@ import {
   PhoneIncomingIcon,
   PlusIcon,
   RefreshCwIcon,
+  WorkflowIcon,
 } from 'lucide-react';
 import { WorkspaceHeader } from '@/components/app-shell/workspace-header';
 import { Button } from '@/components/ui/button';
@@ -106,7 +107,7 @@ function EmptyCall() {
   );
 }
 
-export function CallsPage() {
+export function CallsPage({ onCanvas, initialDraft }: { onCanvas?: () => void; initialDraft?: Pick<CallDraft, 'to' | 'brief'> }) {
   const { t } = useTranslation();
   const layout = useCallsLayout();
   const queryClient = useQueryClient();
@@ -136,7 +137,10 @@ export function CallsPage() {
   const [side, setSide] = useState<'new' | 'details'>('new');
   const [tab, setTab] = useState<'history' | 'new' | 'call'>('new');
   const [inboundOpen, setInboundOpen] = useState(false);
-  const [draft, setDraft] = useState<CallDraft>(EMPTY_DRAFT);
+  const [draft, setDraft] = useState<CallDraft>(() => ({ ...EMPTY_DRAFT, ...initialDraft }));
+  useEffect(() => {
+    if (initialDraft) setDraft((current) => ({ ...current, ...initialDraft }));
+  }, [initialDraft]);
   // Full numbers never come back from the server (it returns them masked), so
   // "Call again" can only prefill numbers dialled in this session.
   const dialled = useRef(new Map<string, { to: string; maxMinutes: number }>());
@@ -359,6 +363,7 @@ export function CallsPage() {
     <div className="flex h-full min-h-0 flex-col" data-layout={layout}>
       <WorkspaceHeader>
         <h1 className="text-sm font-medium">{t('calls.title')}</h1>
+        {onCanvas && <Button size="sm" variant="outline" onClick={onCanvas}><WorkflowIcon aria-hidden="true" />{t('workflows.canvas')}</Button>}
         <Button
           size="sm"
           variant="ghost"

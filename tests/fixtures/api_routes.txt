@@ -9,11 +9,13 @@ DELETE /dub/history
 DELETE /dub/history/{history_id}
 DELETE /engines/sidecar/{engine_id}/install
 DELETE /engines/translation/{engine_id}
+DELETE /export/history/{export_id}
 DELETE /gallery/voices/{voice_id}
 DELETE /glossary/{project_id}
 DELETE /glossary/{project_id}/{term_id}
 DELETE /history
 DELETE /history/{history_id}
+DELETE /longform/jobs/{job_id}
 DELETE /marketplace/{filename}
 DELETE /models/{repo_id:path}
 DELETE /profiles/{profile_id}
@@ -288,6 +290,7 @@ POST /system/tailscale/enable
 POST /tasks/cancel/{task_id}
 POST /tools/direction
 POST /tools/incremental
+POST /tools/normalize-speech
 POST /tools/probe
 POST /tools/rate-fit
 POST /tools/video-context/{job_id}

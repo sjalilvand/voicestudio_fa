@@ -70,3 +70,30 @@ it('refreshes performance selections immediately after changing translation engi
   );
   expect(mock.toast.success).toHaveBeenCalledWith('settings.engine_switched');
 });
+
+it('shows unavailable translation engines without an extra expansion step', async () => {
+  mock.api.mockResolvedValue({
+    active: 'argos',
+    sandboxed: false,
+    engines: [
+      {
+        id: 'deepl',
+        display_name: 'DeepL',
+        category: 'online',
+        installed: false,
+        ready: false,
+        needs_key: true,
+        pip_package: null,
+      },
+    ],
+  });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={client}>
+      <TranslationSettings />
+    </QueryClientProvider>,
+  );
+
+  expect(await screen.findByRole('heading', { name: 'DeepL' })).toBeVisible();
+  expect(screen.getByText('modelSettings.unavailable')).toBeVisible();
+});

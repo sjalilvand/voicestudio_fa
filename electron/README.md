@@ -109,6 +109,13 @@ playback persist locally. Settings remain accessible without a ready backend.
 The sidebar footer places engine status and model above a separate Settings and
 Theme control row, with a labeled Settings link on the left and Theme on the right.
 
+The workspace footer shows Integrations, Become a Sponsor, and a right-aligned X.
+They open the integration directory, partner inquiry form, and dedicated
+VoiceStudio Pro page respectively. The sponsor hover/focus card shows dated
+GitHub reach data. The Pro page compares Free and Pro, opens website pricing,
+and offers licence activation and deactivation when the live product IDs are
+configured. Checkout remains gated until the paid tools and terms are ready.
+
 The composer groups language and generation options beside a single primary action.
 Its shortcut appears inline when the composer has space, and controls wrap in narrow panes.
 
@@ -207,3 +214,12 @@ Stories and Audiobook under Stories; and single/batch dubbing under Dubbing.
 The current workflow opens automatically. Group buttons can expand or collapse
 without navigating; the compact rail opens the same destinations in a flyout.
 Transcribe, Projects, Tools, and Integrations remain directly accessible.
+
+### Desktop Pro licence configuration
+
+The Pro page opens the public pricing site. Licence activation requires the live
+Lemon Squeezy store, product, and variant IDs at build time:
+`VOICESTUDIO_PRO_STORE_ID`, `VOICESTUDIO_PRO_PRODUCT_ID`,
+`VOICESTUDIO_PRO_YEARLY_VARIANT_ID`, and `VOICESTUDIO_PRO_LIFETIME_VARIANT_ID`.
+Builds without all four IDs keep activation
+unavailable. See `docs/specs/desktop-pro-page.md` for the checkout release gates.

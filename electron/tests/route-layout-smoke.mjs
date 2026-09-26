@@ -17,6 +17,7 @@ const routes = [
   '/projects',
   '/tools',
   '/integrations',
+  '/pro',
   '/settings',
   '/settings/general',
   '/settings/appearance',

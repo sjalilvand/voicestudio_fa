@@ -224,3 +224,10 @@ it.each([false, true])('localizes HTTP failure topics (nested: %s)', async (nest
     translate.mockRestore();
   }
 });
+
+it('shows top-level API recovery errors without exposing raw JSON', async () => {
+  const payload = { error: 'Install the Argos language pack for en → es before translating.', code: 'argos_pack_missing', pairs: [{ source_lang: 'en', target_lang: 'es', installed: false }] };
+  const error = await errorFromResponse(new Response(JSON.stringify(payload), { status: 400 }));
+  expect(error.message).toBe(payload.error);
+  expect(error.payload).toEqual(payload);
+});

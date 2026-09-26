@@ -30,7 +30,9 @@ const used = new Map();
 const callPattern = /\b(?:t|tr)\(\s*(['"])([A-Za-z0-9_.:-]+)\1/g;
 const transPattern = /\bi18nKey\s*=\s*(['"])([A-Za-z0-9_.:-]+)\1/g;
 
-for (const file of await sourceFiles(sourceDirectory)) {
+const sharedControls = ['SearchableSelect', 'VoiceSelector'].map((name) =>
+  new URL(`../../frontend/src/components/${name}.jsx`, import.meta.url));
+for (const file of [...await sourceFiles(sourceDirectory), ...sharedControls]) {
   const source = await readFile(file, 'utf8');
   for (const pattern of [callPattern, transPattern]) {
     pattern.lastIndex = 0;
@@ -41,7 +43,7 @@ for (const file of await sourceFiles(sourceDirectory)) {
       if (/[._:]$/.test(key)) continue;
       const line = source.slice(0, match.index).split('\n').length;
       const locations = used.get(key) ?? [];
-      locations.push(`${file.pathname.split('/src/renderer/src/')[1]}:${line}`);
+      locations.push(`${file.pathname.split('/src/renderer/src/')[1] ?? file.pathname}:${line}`);
       used.set(key, locations);
     }
   }

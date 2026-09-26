@@ -53,3 +53,14 @@ export function subscribeTranscriptions(listener) {
     window.removeEventListener('storage', storage);
   };
 }
+
+/** Delete from the latest stored list; failed writes leave observers unchanged. */
+export function removeTranscription(id) {
+  const entries = JSON.parse(localStorage.getItem(TRANSCRIPTIONS_KEY) || '[]');
+  if (!Array.isArray(entries)) throw new Error('Invalid transcription history');
+  localStorage.setItem(
+    TRANSCRIPTIONS_KEY,
+    JSON.stringify(entries.filter((entry) => entry.id !== id)),
+  );
+  window.dispatchEvent(new CustomEvent(TRANSCRIPTION_EVENT));
+}

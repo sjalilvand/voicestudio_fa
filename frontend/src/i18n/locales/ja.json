@@ -1416,7 +1416,12 @@
     "story_voices_plural": "{{count}} の声",
     "audiobooks": "オーディオブック",
     "audiobook": "オーディオブック",
-    "story": "ストーリー"
+    "story": "ストーリー",
+    "select_visible": "表示中の項目を選択",
+    "select_item": "{{name}}を選択",
+    "delete_selected": "選択項目を削除（{{count}}）",
+    "deleted_count": "削除済み：{{count}}",
+    "delete_warning": "この操作は取り消せません。プロジェクトと文字起こしが削除されます。音声やテイクを削除すると、保存された音声も削除されます。エクスポートしたファイルと完成したレンダリング音声は保持されます。"
   },
   "batch": {
     "title": "一括ダビング",
@@ -2911,5 +2916,42 @@
   "directoryExamples": {
     "example": "掲載例",
     "notice": "ディレクトリの掲載例です。スポンサーや接続済みの連携ではありません。"
+  },
+  "workflowRun": {
+    "run": "ワークフローを実行",
+    "restart": "新しい実行を開始",
+    "recipe": "一括ナレーション",
+    "clean_recipe": "一括ナレーション · 音声を正規化",
+    "scripts": "台本",
+    "import": "台本を読み込む",
+    "sample": "このレッスンへようこそ。始めましょう。",
+    "hint": "完了したステップはローカル保存されます。キャンセルや画面移動後は再試行で再開できます。",
+    "scripts_hint": "--- の行でクリップを区切るか、台本を読み込んでください。",
+    "normalized": "現在のエンジンで音声を生成し、マスタリングとピーク正規化を行います。",
+    "progress": "{{done}} / {{total}} クリップ完了",
+    "changed": "設定が変更されました。実行すると新しい出力を作成します。",
+    "incomplete": "音声が不完全です。書き出す前に再試行してください。",
+    "invalid_graph": "分岐や循環なしで開始から終了まですべてのステップを接続してください。",
+    "invalid_unsupported": "互換性のないステップです。テキストは翻訳か発話、音声は文字起こしか変換、生成音声は正規化に接続してください。",
+    "invalid_voice": "発話または変換の各ステップで保存済みの声を選んでください。",
+    "invalid_scripts": "空でない台本を1～50件、各20,000文字以内で追加してください。",
+    "peak": "ピーク (dBFS)",
+    "source_language": "元の言語",
+    "local_translation": "インストール済みのローカル翻訳モデルのみを使用します。",
+    "audio_hint": "最大50件、各64 MiBまでの音声クリップを読み込めます。",
+    "add_audio": "音声を追加",
+    "invalid_media": "各64 MiB未満の有効な音声クリップを追加してください。",
+    "asr_required": "設定で文字起こしエンジンを準備してください。",
+    "transcription_recipe": "音声を文字起こし",
+    "conversion_recipe": "声を変更",
+    "localization_recipe": "翻訳して読み上げ",
+    "invalid_language": "元の言語と翻訳先の言語を選んでください。"
+  },
+  "workflows": {
+    "step_normalize": "音声を正規化",
+    "step_audio": "ソースクリップ",
+    "step_transcribe": "転写する",
+    "step_translate": "翻訳する",
+    "step_convert": "変換"
   }
 }

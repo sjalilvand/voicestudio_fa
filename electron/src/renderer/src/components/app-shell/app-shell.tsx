@@ -14,8 +14,8 @@ export function AppShell() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-  const settings = pathname.startsWith('/settings');
-  const macWorkspace = isMac() && !settings;
+  const shellOnly = pathname.startsWith('/settings') || pathname === '/pro';
+  const macWorkspace = isMac() && !shellOnly;
   const SettingsWorkspace = pathname === '/settings/openapi' ? 'div' : 'main';
   return (
     <div
@@ -25,7 +25,7 @@ export function AppShell() {
       )}
     >
       <div className="flex min-h-0 flex-1">
-        {settings ? (
+        {shellOnly ? (
           <>
             <CommandPalette />
             {/* The main sidebar (navigation, library, status) stays where it is

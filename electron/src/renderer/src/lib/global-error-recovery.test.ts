@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
 const openRepairAgent = vi.fn();
+const captureException = vi.fn();
 vi.mock('@/lib/repair-agent-events', () => ({ openRepairAgent }));
+vi.mock('../../../../../frontend/src/utils/analytics', () => ({ captureException }));
 
 describe('global renderer error recovery', () => {
   it('hands uncaught faults to repair once while ignoring cancellation and foreign noise', async () => {
@@ -24,6 +26,7 @@ describe('global renderer error recovery', () => {
       expect.stringContaining('startup module failed'),
       true,
     );
+    expect(captureException).toHaveBeenCalledWith(expect.any(Error), 'renderer:uncaught');
     const privatePath = 'C:\\Users\\pal\\secret\\renderer.ts';
     const failure = new Error(`boom at ${privatePath}`);
 
@@ -50,6 +53,7 @@ describe('global renderer error recovery', () => {
     );
     expect(openRepairAgent.mock.calls[1][0]).not.toContain('C:\\Users\\pal');
     expect(repeatedFailure.defaultPrevented).toBe(true);
+    expect(captureException).toHaveBeenCalledWith(failure, 'renderer:uncaught');
 
     const cancelled = new Event('unhandledrejection');
     Object.defineProperty(cancelled, 'reason', {
@@ -74,11 +78,13 @@ describe('global renderer error recovery', () => {
     window.dispatchEvent(ownRejection);
     expect(openRepairAgent).toHaveBeenCalledTimes(3);
     expect(ownRejection.defaultPrevented).toBe(true);
+    expect(captureException).toHaveBeenCalledWith(ownFailure, 'renderer:rejection');
 
     runRendererTask('Command action', () => Promise.reject(new Error('route failed')));
     await Promise.resolve();
     expect(openRepairAgent).toHaveBeenCalledTimes(4);
     expect(openRepairAgent.mock.calls[3][0]).toContain('Command action');
+    expect(captureException).toHaveBeenCalledWith(expect.any(Error), 'renderer:task');
 
     runRendererTask('Immediate action', () => {
       throw new Error('sync failed');

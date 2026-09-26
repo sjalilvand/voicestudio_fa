@@ -29,6 +29,7 @@ import {
   PanelLeftOpenIcon,
   WandSparklesIcon,
   WrenchIcon,
+  WorkflowIcon,
   type LucideIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -121,6 +122,12 @@ export function HomePage() {
       label: t('nav.transcribe'),
       description: t('demo.dictation_lede'),
       Icon: MicIcon,
+    },
+    {
+      to: '/calls',
+      label: t('workflows.title'),
+      description: t('workflows.description'),
+      Icon: WorkflowIcon,
     },
     {
       to: '/tools',

@@ -5,6 +5,11 @@ import '@/i18n';
 import { IntegrationDetailPage } from './integration-detail-page';
 import { INTEGRATION_SETUPS } from './setup-registry';
 import en from '@/i18n/locales/en.json';
+vi.mock('../../../../../../frontend/src/config/sponsors', () => ({
+  SPONSORS: [
+    { name: 'Example sponsor', url: 'https://example.org', logoUrl: '/example.svg', tier: 'gold' },
+  ],
+}));
 const route = vi.hoisted(() => ({ slug: 'claude-code' }));
 const save = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/local-export', () => ({ saveLocalFile: save }));
@@ -91,6 +96,14 @@ it('presents entries without a setup block as external links with no capability 
   expect(screen.queryByText('Works with VoiceStudio')).toBeNull();
   expect(screen.getByRole('heading', { name: 'Website' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Capabilities' })).toBeInTheDocument();
+});
+
+it('opens a featured sponsor on its own detail page', () => {
+  route.slug = 'example-sponsor';
+  render(<IntegrationDetailPage />);
+  expect(screen.getByRole('heading', { name: 'Example sponsor', level: 2 })).toBeInTheDocument();
+  expect(screen.getAllByText('Featured')).toHaveLength(2);
+  expect(screen.getByText('https://example.org')).toBeInTheDocument();
 });
 
 it('offers copyable API snippets for the current backend', () => {

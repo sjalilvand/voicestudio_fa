@@ -24,7 +24,9 @@ import os
 import re
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
+from fastapi.responses import Response
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
 from services import director, speech_rate, incremental
@@ -200,3 +202,54 @@ async def analyse_video_context(job_id: str):
     segments = job.get("segments") or []
     ctx = await analyse_video(str(video_path), segments)
     return ctx.to_dict()
+
+
+# Workflow audio is already synthetic. Re-mark after processing through the
+# existing chokepoint rather than routing it through human mic cleanup.
+def _decode_workflow_audio(data: bytes):
+    import io
+    import numpy as np
+    import soundfile as sf
+    import torch
+
+    try:
+        with sf.SoundFile(io.BytesIO(data)) as source:
+            if source.format != "WAV" or source.channels not in (1, 2):
+                raise ValueError("Expected mono or stereo WAV")
+            if source.frames < 1 or source.frames * source.channels > 16_000_000:
+                raise ValueError("Audio exceeds the processing limit")
+            audio = source.read(dtype="float32", always_2d=True)
+            rate = source.samplerate
+        if not np.isfinite(audio).all():
+            raise ValueError("Invalid audio samples")
+        return torch.from_numpy(audio.T.copy()), rate
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(status_code=422, detail="Provide a valid WAV within the audio size limit.") from exc
+
+
+def _encode_workflow_audio(audio, rate: int) -> bytes:
+    import io
+    from services.audio_io import _safe_soundfile_write
+
+    output = io.BytesIO()
+    _safe_soundfile_write(output, audio.detach().cpu().numpy().T, rate, format="WAV", subtype="PCM_16")
+    return output.getvalue()
+
+
+@router.post("/tools/normalize-speech")
+async def normalize_workflow_speech(
+    audio: UploadFile = File(...),
+    target_dbfs: float = Form(-2.0, ge=-24.0, le=-1.0),
+):
+    """Peak-normalize synthetic speech; bounded and entirely local."""
+    from services.audio_dsp import normalize_audio
+    from services.watermark import mark_synthetic_async
+
+    data = await audio.read(64 * 1024 * 1024 + 1)
+    if len(data) > 64 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Audio exceeds 64 MiB.")
+    waveform, rate = await run_in_threadpool(_decode_workflow_audio, data)
+    waveform = await run_in_threadpool(normalize_audio, waveform, target_dBFS=target_dbfs)
+    waveform = await mark_synthetic_async(waveform, rate, context="workflow.normalize")
+    encoded = await run_in_threadpool(_encode_workflow_audio, waveform, rate)
+    return Response(encoded, media_type="audio/wav")

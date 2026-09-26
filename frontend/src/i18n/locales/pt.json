@@ -1416,7 +1416,12 @@
     "story_voices_plural": "{{count}} vozes",
     "audiobooks": "Audiolivros",
     "audiobook": "Audiolivro",
-    "story": "História"
+    "story": "História",
+    "select_visible": "Selecionar visíveis",
+    "select_item": "Selecionar {{name}}",
+    "delete_selected": "Excluir selecionados ({{count}})",
+    "deleted_count": "Excluídos: {{count}}",
+    "delete_warning": "Esta ação não pode ser desfeita. Projetos e transcrições serão removidos. Excluir vozes ou gravações também remove o áudio salvo. Arquivos exportados e áudios de renderizações concluídas serão mantidos."
   },
   "batch": {
     "title": "Dublagem em lote",
@@ -2911,5 +2916,42 @@
   "directoryExamples": {
     "example": "Exemplo do diretório",
     "notice": "Apenas exemplos do diretório — não são patrocinadores nem integrações conectadas."
+  },
+  "workflowRun": {
+    "run": "Executar fluxo",
+    "restart": "Iniciar nova execução",
+    "recipe": "Narração em lote",
+    "clean_recipe": "Narração em lote · Normalizar áudio",
+    "scripts": "Roteiros",
+    "import": "Importar roteiros",
+    "sample": "Bem-vindo a esta lição. Vamos começar.",
+    "hint": "Etapas salvas localmente. Tente novamente após cancelar ou sair para continuar.",
+    "scripts_hint": "Separe clipes com uma linha --- ou importe roteiros.",
+    "normalized": "A voz usa o mecanismo atual, masterização e normalização de picos.",
+    "progress": "{{done}} / {{total}} clipes prontos",
+    "changed": "Configurações alteradas. Executar cria novas saídas.",
+    "incomplete": "Voz incompleta. Tente novamente antes de exportar.",
+    "invalid_graph": "Conecte todas as etapas do Início ao Fim sem ramificações ou ciclos.",
+    "invalid_unsupported": "Etapas incompatíveis: texto para tradução ou fala, áudio para transcrição ou conversão e fala gerada para normalização.",
+    "invalid_voice": "Escolha uma voz salva para cada etapa de fala ou conversão.",
+    "invalid_scripts": "Adicione 1–50 roteiros não vazios com até 20.000 caracteres cada.",
+    "peak": "Pico (dBFS)",
+    "source_language": "Idioma de origem",
+    "local_translation": "Usa apenas modelos de tradução locais instalados.",
+    "audio_hint": "Importe até 50 clipes de áudio de 64 MiB cada.",
+    "add_audio": "Adicionar áudio",
+    "invalid_media": "Adicione clipes de áudio válidos com menos de 64 MiB cada.",
+    "asr_required": "Configure primeiro um mecanismo de transcrição nas configurações.",
+    "transcription_recipe": "Áudio para texto",
+    "conversion_recipe": "Mudar a voz",
+    "localization_recipe": "Traduzir e narrar",
+    "invalid_language": "Escolha os idiomas de origem e destino."
+  },
+  "workflows": {
+    "step_normalize": "Normalizar áudio",
+    "step_audio": "Clipe de origem",
+    "step_transcribe": "Transcrever",
+    "step_translate": "Traduzir",
+    "step_convert": "Converter"
   }
 }

@@ -1416,7 +1416,12 @@
     "story_voices_plural": "{{count}} Stimmen",
     "audiobooks": "Hörbücher",
     "audiobook": "Hörbuch",
-    "story": "Geschichte"
+    "story": "Geschichte",
+    "select_visible": "Sichtbare auswählen",
+    "select_item": "{{name}} auswählen",
+    "delete_selected": "Auswahl löschen ({{count}})",
+    "deleted_count": "Gelöscht: {{count}}",
+    "delete_warning": "Dies kann nicht rückgängig gemacht werden. Projekte und Transkripte werden entfernt. Beim Löschen von Stimmen oder Aufnahmen wird auch deren gespeichertes Audio gelöscht. Exportierte Dateien und fertig gerendertes Audio bleiben erhalten."
   },
   "batch": {
     "title": "Batch-Überspielung",
@@ -2911,5 +2916,42 @@
   "directoryExamples": {
     "example": "Verzeichnisbeispiel",
     "notice": "Nur Verzeichnisbeispiele — keine Sponsoren oder verbundenen Integrationen."
+  },
+  "workflowRun": {
+    "run": "Workflow ausführen",
+    "restart": "Neuen Durchlauf starten",
+    "recipe": "Stapelvertonung",
+    "clean_recipe": "Stapelvertonung · Audio normalisieren",
+    "scripts": "Skripte",
+    "import": "Skripte importieren",
+    "sample": "Willkommen zu dieser Lektion. Fangen wir an.",
+    "hint": "Schritte werden lokal gespeichert. Nach Abbruch oder Verlassen erneut versuchen.",
+    "scripts_hint": "Clips mit einer Zeile --- trennen oder Skripte importieren.",
+    "normalized": "Sprache nutzt die aktuelle Engine, Mastering und Spitzennormalisierung.",
+    "progress": "{{done}} / {{total}} Clips bereit",
+    "changed": "Einstellungen geändert. Erneutes Ausführen erzeugt neue Ausgaben.",
+    "incomplete": "Sprache unvollständig. Vor dem Export erneut versuchen.",
+    "invalid_graph": "Alle Schritte ohne Verzweigungen oder Schleifen von Start bis Ende verbinden.",
+    "invalid_unsupported": "Unvereinbare Schritte: Text mit Übersetzung oder Sprache verbinden, Audio mit Transkription oder Konvertierung und erzeugte Sprache mit Normalisierung.",
+    "invalid_voice": "Für jeden Sprach- oder Konvertierungsschritt eine gespeicherte Stimme auswählen.",
+    "invalid_scripts": "1–50 nicht leere Skripte mit jeweils höchstens 20.000 Zeichen hinzufügen.",
+    "peak": "Spitzenpegel (dBFS)",
+    "source_language": "Ausgangssprache",
+    "local_translation": "Verwendet nur installierte lokale Übersetzungsmodelle.",
+    "audio_hint": "Bis zu 50 Audioclips mit je 64 MiB importieren.",
+    "add_audio": "Audio hinzufügen",
+    "invalid_media": "Gültige Audioclips unter jeweils 64 MiB hinzufügen.",
+    "asr_required": "Zuerst eine Transkriptionsengine in den Einstellungen einrichten.",
+    "transcription_recipe": "Audio in Text",
+    "conversion_recipe": "Stimme ändern",
+    "localization_recipe": "Übersetzen und vertonen",
+    "invalid_language": "Ausgangs- und Zielsprache auswählen."
+  },
+  "workflows": {
+    "step_normalize": "Audio normalisieren",
+    "step_audio": "Quellclip",
+    "step_transcribe": "Transkribieren",
+    "step_translate": "Übersetzen",
+    "step_convert": "Konvertieren"
   }
 }

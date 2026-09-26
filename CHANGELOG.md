@@ -9,10 +9,12 @@ metadata and the backend fallback mirror it. Archived Tauri manifests stay froze
 ## [Unreleased]
 
 **Highlights**
+- Manage Projects with confirmed individual and bulk deletion, retry failed items, and keep exported files and render audio (#2333)
 - Twilio setup is a guided checklist with live status and exact commands (#2304)
 - Integration pages use the full window, with a side panel on wide screens (#2304)
 - A call agent that places or answers phone calls in your own voice to get a task done (#2306)
-- Footer integration logos open their in-app page (#2302)
+- Footer shows Integrations, Become a Sponsor, and a VoiceStudio Pro shortcut (#2302)
+- Pro keeps core generation unlimited and presents ten production benefits with $99/user yearly, $299/user lifetime, and Enterprise contact options, including quantity totals, commercial work, remote devices, workers, and GPU sharing (#2302)
 - A reference longer than 20 s clones from its best 15 s window using the speech model already installed (#2301) — thanks @Cengokill!
 - Record or drop a voice sample from one view in Voice Clone (#2307)
 - Voice Clone keeps the original container of a one-shot MP3, M4A or WebM reference (#2311)
@@ -21,6 +23,8 @@ metadata and the backend fallback mirror it. Archived Tauri manifests stay froze
 - Turn a finished dub into a Stories script in one click, speakers and voices included (#2300) — thanks @shivsin25!
 
 ### Added
+
+- Run local narration, transcription, translation and voice-conversion recipes with resumable steps and WAV/TXT exports (#2333)
 
 - Call agent backend: place or answer phone calls that hold a task conversation in your verified or designed voice, with an editable AI disclosure, take-over and an after-call summary (#2306)
 - Calls workspace with a live transcript, take-over, hang-up and an after-call summary (#2305)
@@ -31,7 +35,7 @@ metadata and the backend fallback mirror it. Archived Tauri manifests stay froze
 
 - Twilio setup is a guided checklist: account, tunnel, phone number and voice steps with live status, exact tunnel commands for your OS and gateway port, copyable webhook URL, a readiness panel and clear reasons when an action is unavailable (#2304)
 - Integration pages use the full window: setup beside a side panel with status, capabilities and website on wide screens, stacked on narrow ones, with the scrollbar at the window edge (#2304)
-- Integration logos in the footer open their page inside the app instead of an outside website (#2302)
+- Footer sponsor hover details show dated GitHub reach, and its X opens the Pro page (#2302)
 - Linux AppImages use the static runtime so launching them no longer needs libfuse2 (#2328) — thanks @shuvashish76!
 - Voice Clone shows upload and record side by side instead of behind a toggle (#2307)
 
@@ -41,6 +45,8 @@ metadata and the backend fallback mirror it. Archived Tauri manifests stay froze
 - The Twilio guide and integration directory describe the guided setup and in-app integration pages (#2304)
 
 ### Fixed
+
+- Preserve large workflow libraries and keyboard moves, secure library deletion and license storage, and keep analytics opt-out authoritative during startup (#2333)
 
 - Signed macOS releases now notarize and staple Electron installers when the owner supplies Apple Developer credentials (#1779)
 - Numbers grouped with a period in German, Spanish, French and the other comma-decimal languages, such as "10.000", keep their digits instead of being spoken as ten (#2334) — thanks @kevin9327!

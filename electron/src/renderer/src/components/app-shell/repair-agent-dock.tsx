@@ -9,7 +9,9 @@ import {
   AlertTriangleIcon,
   BotIcon,
   CheckCircle2Icon,
+  ChevronRightIcon,
   FolderOpenIcon,
+  PencilLineIcon,
   PlayIcon,
   ShieldCheckIcon,
   SquareIcon,
@@ -23,6 +25,7 @@ import openCodeIcon from '@lobehub/icons-static-svg/icons/opencode.svg';
 import piIcon from '@lobehub/icons-static-svg/icons/pi.svg';
 import { getBridge } from '@/components/bridge';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { getFrontendLogs } from '../../../../../../frontend/src/utils/consoleBuffer';
 import { useBackendStatus } from '@/hooks/use-backend-status';
@@ -40,6 +43,7 @@ import {
 import { apiJson } from '@/lib/api/client';
 import { collectRepairLogLines, repairLogCause } from '@/lib/repair-log-analysis';
 import { canRunRepairRequest, isAppOperationRequest } from '../../../../shared/repair-request';
+import './repair-agent-dock.css';
 
 const OUTPUT_LIMIT = 250_000;
 const AGENT_ICONS = {
@@ -94,6 +98,8 @@ export function RepairAgentDock() {
   const [error, setError] = useState('');
   const [autoFixReport, setAutoFixReport] = useState('');
   const [chooseDefault, setChooseDefault] = useState(false);
+  const [showReportEditor, setShowReportEditor] = useState(false);
+  const [logsOpen, setLogsOpen] = useState(false);
   const terminal = useRef<HTMLPreElement>(null);
   const translationRunId = translation.runs.at(-1)?.id;
   useEffect(() => {
@@ -145,6 +151,8 @@ export function RepairAgentDock() {
         setCaptured(collectRepairLogLines(lines));
         setReport(detail.report);
         if (detail.autoFix) setAutoFixReport(detail.report);
+        setShowReportEditor(false);
+        setLogsOpen(false);
       }
       setOpen(true);
     };
@@ -210,6 +218,19 @@ export function RepairAgentDock() {
     Boolean(backend.lastCrash && !backend.lastCrash.acknowledged) ||
     ['crashed', 'failed'].includes(backend.stage);
   const recognizedCause = repairLogCause(captured);
+  const selectedAgent = agents.find((agent) => agent.id === selected);
+  const selectedAgentIcon = AGENT_ICONS[selected];
+  const statusText = t(
+    status === 'running'
+      ? 'common.loading'
+      : status === 'failed'
+        ? 'common.error'
+        : status === 'stopped'
+          ? 'common.stop'
+          : status === 'complete'
+            ? 'repairAgent.complete'
+            : 'repairAgent.ready',
+  );
   const causeText =
     recognizedCause === 'hfAccess'
       ? t('modelMaintenance.gatedAccessRequired')
@@ -281,26 +302,34 @@ export function RepairAgentDock() {
   }
 
   return (
-    <AgentDockFrame label={t('repairAgent.title')}>
-      <header className="flex min-h-10 shrink-0 items-center gap-2 border-b border-sidebar-border px-3">
-        <RepairGlyph className="text-foreground" />
-        <div className="w-72 min-w-0 shrink-0">
-          <p className="truncate text-sm font-semibold">{t('repairAgent.title')}</p>
-          <p className="truncate text-[10px] text-muted-foreground" role="status">
-            {t(
-              status === 'running'
-                ? 'common.loading'
-                : status === 'failed'
-                  ? 'common.error'
-                  : status === 'stopped'
-                    ? 'common.stop'
-                    : status === 'complete'
-                      ? 'repairAgent.complete'
-                      : 'repairAgent.ready',
-            )}
-          </p>
+    <AgentDockFrame
+      label={t('repairAgent.title')}
+      className="repair-dock"
+      resizable
+      resizeStorageKey="voicestudio.repair-dock-height"
+    >
+      <header className="repair-dock-header">
+        <div className="repair-dock-identity">
+          <span className="repair-dock-glyph">
+            <RepairGlyph className="text-foreground" />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-xs font-semibold">{t('repairAgent.title')}</p>
+            <p className="repair-dock-status" role="status" title={statusText}>
+              <span
+                className={cn(
+                  'repair-dock-status-dot',
+                  status === 'running' && 'is-running',
+                  status === 'failed' && 'is-failed',
+                  status === 'complete' && 'is-complete',
+                )}
+                aria-hidden="true"
+              />
+              <span className={status === 'idle' ? 'sr-only' : 'truncate'}>{statusText}</span>
+            </p>
+          </div>
         </div>
-        <div className="ml-3 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none]">
+        <div className="repair-dock-agents" role="group" aria-label={t('repairAgent.title')}>
           {agents.map((agent) => {
             const agentIcon = AGENT_ICONS[agent.id];
             return (
@@ -313,7 +342,7 @@ export function RepairAgentDock() {
                 aria-pressed={selected === agent.id}
                 title={agent.available ? agent.version : t('repairAgent.notInstalled')}
                 onClick={() => setSelected(agent.id)}
-                className="h-8 shrink-0 rounded-md px-2.5"
+                className="repair-dock-agent"
               >
                 <img
                   src={agentIcon.src}
@@ -325,40 +354,40 @@ export function RepairAgentDock() {
             );
           })}
         </div>
-        {running && (
-          <Button type="button" size="sm" variant="ghost" onClick={() => void repair.stop()}>
-            <SquareIcon />
-            {t('common.stop')}
+        <div className="repair-dock-header-actions">
+          {running && (
+            <Button type="button" size="sm" variant="ghost" onClick={() => void repair.stop()}>
+              <SquareIcon />
+              {t('common.stop')}
+            </Button>
+          )}
+          <Button
+            type="button"
+            size="icon-sm"
+            variant="ghost"
+            aria-label={t('common.close')}
+            onClick={() => setOpen(false)}
+          >
+            <XIcon />
           </Button>
-        )}
-        <Button
-          type="button"
-          size="icon-sm"
-          variant="ghost"
-          aria-label={t('common.close')}
-          onClick={() => setOpen(false)}
-        >
-          <XIcon />
-        </Button>
+        </div>
       </header>
-      <div className="flex min-h-0 flex-1 flex-col @3xl:flex-row">
+      <div className="repair-dock-body">
         {output ? (
           <pre
             ref={terminal}
             role="log"
             aria-live="polite"
-            className="studio-scrollbar min-h-0 min-w-0 flex-1 overflow-auto whitespace-pre-wrap break-words bg-[var(--app-theme-terminal-background,var(--background))] p-3 font-mono text-xs leading-5 text-[var(--app-theme-terminal-foreground,var(--foreground))]"
+            className="repair-dock-terminal studio-scrollbar"
           >
             {output}
           </pre>
         ) : (
-          <div
-            role="status"
-            aria-live="polite"
-            className="flex min-h-24 min-w-0 flex-1 flex-col items-center justify-center gap-2 bg-[var(--app-theme-terminal-background,var(--background))] p-4 text-center text-muted-foreground"
-          >
-            <RepairGlyph className="size-7 text-muted-foreground" />
-            <p className="max-w-md text-sm leading-5">
+          <div role="status" aria-live="polite" className="repair-dock-empty">
+            <span className="repair-dock-empty-icon">
+              <RepairGlyph className="size-6 text-muted-foreground" />
+            </span>
+            <p className="max-w-sm text-xs leading-5">
               {t(
                 !canRun
                   ? 'repairAgent.noSource'
@@ -369,7 +398,7 @@ export function RepairAgentDock() {
             </p>
           </div>
         )}
-        <div className="studio-scrollbar flex min-h-0 w-full shrink-0 flex-col gap-1.5 overflow-y-auto border-t border-sidebar-border bg-sidebar p-2.5 @3xl:w-[28rem] @3xl:border-l @3xl:border-t-0">
+        <div className="repair-dock-inspector studio-scrollbar">
           {!workspaceAvailable && !appOperation && (
             <Button type="button" variant="outline" onClick={() => void chooseWorkspace()}>
               <FolderOpenIcon />
@@ -377,13 +406,22 @@ export function RepairAgentDock() {
             </Button>
           )}
           {chooseDefault && canRun && available && (
-            <div className="rounded-md border border-sidebar-border bg-sidebar-control-surface p-2.5 text-xs">
-              <p className="leading-4 text-foreground/85">{t('repairAgent.chooseDefault')}</p>
-              <div className="mt-2 flex gap-2">
+            <div className="repair-dock-card repair-dock-default">
+              <div className="repair-dock-default-copy">
+                <span className="repair-dock-default-agent" aria-hidden="true">
+                  <img
+                    src={selectedAgentIcon.src}
+                    alt=""
+                    className={cn('size-4', selectedAgentIcon.monochrome && 'dark:invert')}
+                  />
+                </span>
+                <p>{t('repairAgent.chooseDefault')}</p>
+              </div>
+              <div className="repair-dock-default-actions">
                 <Button
                   type="button"
                   size="sm"
-                  disabled={!agents.find((agent) => agent.id === selected)?.available}
+                  disabled={!selectedAgent?.available}
                   onClick={() => {
                     const pending = autoFixReport || report;
                     setChooseDefault(false);
@@ -393,7 +431,7 @@ export function RepairAgentDock() {
                 >
                   <WrenchIcon />
                   {t('repairAgent.useAutomatically', {
-                    agent: agents.find((agent) => agent.id === selected)?.label ?? selected,
+                    agent: selectedAgent?.label ?? selected,
                   })}
                 </Button>
                 <Button
@@ -411,37 +449,67 @@ export function RepairAgentDock() {
             </div>
           )}
           {captured.length > 0 ? (
-            <div className="rounded-md border border-sidebar-border border-l-2 border-l-destructive bg-sidebar-control-surface p-2.5 text-xs">
-              <p className="flex items-center gap-2 font-medium text-destructive">
-                <AlertTriangleIcon className="size-3.5" />
-                {t('repairAgent.captured', { count: captured.length })}
-              </p>
+            <div
+              className="repair-dock-problems"
+              role="region"
+              aria-label={t('repairAgent.captured', { count: captured.length })}
+            >
+              <div className="repair-dock-problem-heading">
+                <p className="flex min-w-0 items-center gap-2 font-medium text-destructive">
+                  <span className="repair-dock-problem-icon">
+                    <AlertTriangleIcon className="size-3.5" />
+                  </span>
+                  <span className="truncate">
+                    {t('repairAgent.captured', { count: captured.length })}
+                  </span>
+                </p>
+                <Button
+                  type="button"
+                  size="icon-xs"
+                  variant={showReportEditor ? 'secondary' : 'ghost'}
+                  aria-label={t('repairAgent.placeholder')}
+                  aria-pressed={showReportEditor}
+                  title={t('repairAgent.placeholder')}
+                  onClick={() => setShowReportEditor((current) => !current)}
+                >
+                  <PencilLineIcon />
+                </Button>
+              </div>
               {causeText && <p className="mt-1.5 leading-4 text-foreground/80">{causeText}</p>}
-              <details className="mt-2 text-muted-foreground">
-                <summary className="cursor-pointer select-none">{t('crash.stderr_title')}</summary>
-                <pre className="studio-scrollbar mt-1.5 max-h-24 overflow-auto whitespace-pre-wrap break-words rounded-md bg-background p-2 text-[10px] leading-4">
-                  {captured.join('\n')}
-                </pre>
-              </details>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="repair-dock-log-toggle"
+                aria-expanded={logsOpen}
+                onClick={() => setLogsOpen((current) => !current)}
+              >
+                <ChevronRightIcon
+                  className={cn('repair-dock-log-chevron', logsOpen && 'is-open')}
+                />
+                <span className="truncate">{t('crash.stderr_title')}</span>
+              </Button>
+              {logsOpen && (
+                <pre className="repair-dock-log studio-scrollbar">{captured.join('\n')}</pre>
+              )}
             </div>
           ) : (
-            <p className="flex items-center gap-2 rounded-md border border-sidebar-border bg-sidebar-control-surface p-2.5 text-xs text-muted-foreground">
+            <p className="repair-dock-card flex items-center gap-2 text-xs text-muted-foreground">
               <CheckCircle2Icon className="size-3.5" />
               {t('logs.all_clear')}
             </p>
           )}
-          <textarea
-            value={report}
-            disabled={running || !canRun || !available}
-            onChange={(event) => setReport(event.target.value)}
-            placeholder={t('repairAgent.placeholder')}
-            aria-label={t('repairAgent.placeholder')}
-            className="min-h-16 max-h-24 shrink-0 resize-y rounded-md border border-sidebar-border bg-sidebar-control-surface px-3 py-1.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-          />
-          <p className="flex items-start gap-1.5 text-[10px] leading-4 text-muted-foreground">
-            <ShieldCheckIcon className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
-            {t('repairAgent.contextNotice')}
-          </p>
+          {(captured.length === 0 || showReportEditor) && (
+            <textarea
+              value={report}
+              disabled={running || !canRun || !available}
+              onChange={(event) => setReport(event.target.value)}
+              placeholder={t('repairAgent.placeholder')}
+              aria-label={t('repairAgent.placeholder')}
+              className="repair-dock-report"
+              autoFocus={showReportEditor}
+            />
+          )}
           {(error || (status === 'failed' && !output)) && (
             <p role="alert" className="text-xs text-destructive">
               {error || t('common.error')}
@@ -450,24 +518,43 @@ export function RepairAgentDock() {
           {status === 'complete' && mode === 'fix' && workspaceAvailable && (
             <p className="text-xs text-emerald-500">{t('repairAgent.prReady')}</p>
           )}
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={running || !canRun || !available}
-              onClick={() => void run('diagnose')}
-            >
-              <PlayIcon />
-              {t('repairAgent.diagnose')}
-            </Button>
-            <Button
-              type="button"
-              disabled={running || !canRun || !available}
-              onClick={() => void run('fix')}
-            >
-              <WrenchIcon />
-              {t('repairAgent.fix')}
-            </Button>
+          <div className="repair-dock-footer">
+            <div className="repair-dock-actions">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={running || !canRun || !available}
+                onClick={() => void run('diagnose')}
+              >
+                <PlayIcon />
+                {t('repairAgent.diagnose')}
+              </Button>
+              <Button
+                type="button"
+                disabled={running || !canRun || !available}
+                onClick={() => void run('fix')}
+              >
+                <WrenchIcon />
+                {t('repairAgent.fix')}
+              </Button>
+            </div>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    size="icon-sm"
+                    variant="ghost"
+                    aria-label={t('repairAgent.contextNotice')}
+                  />
+                }
+              >
+                <ShieldCheckIcon />
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-72 text-xs leading-5">
+                {t('repairAgent.contextNotice')}
+              </TooltipContent>
+            </Tooltip>
           </div>
           {sessionId && (
             <span className="truncate font-mono text-[9px] text-muted-foreground">{sessionId}</span>

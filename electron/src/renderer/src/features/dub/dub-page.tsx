@@ -1431,12 +1431,11 @@ export function DubPage() {
               </div>
             )}
             {session.quality !== 'agent' && (
-              <details className="group space-y-2 border-t border-border/50 pt-2">
-                <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-medium text-muted-foreground">
+              <div className="space-y-2 border-t border-border/50 pt-2">
+                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                   <GaugeIcon className="size-3.5" />
                   {t('settings.translate_quality')}
-                  <ChevronDownIcon className="ml-auto size-3.5 transition-transform group-open:rotate-180" />
-                </summary>
+                </div>
                 <p className="text-xs text-muted-foreground">
                   {t('settings.translate_quality_desc')}
                 </p>
@@ -1505,7 +1504,7 @@ export function DubPage() {
                     />
                   </label>
                 </div>
-              </details>
+              </div>
             )}
             {session.translationFallback && (
               <div role="status" className="space-y-2 text-xs text-muted-foreground">

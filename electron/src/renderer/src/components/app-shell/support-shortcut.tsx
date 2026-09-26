@@ -11,7 +11,7 @@ export function SupportShortcut() {
       <TooltipTrigger
         render={
           <Link
-            to="/settings/support"
+            to="/pro"
             aria-label={t('supportPlans.get_pro')}
             className="support-shortcut app-no-drag flex h-8 items-center gap-1.5 px-1.5 text-primary hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary motion-safe:transition-colors"
           />

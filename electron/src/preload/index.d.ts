@@ -274,6 +274,11 @@ export interface UninstallTarget {
 }
 
 export interface VoiceStudioBridge {
+  pro: {
+    status(): Promise<{ active: boolean; configured: boolean; error?: 'offline' | 'invalid' | 'storage' }>;
+    activate(key: string): Promise<{ active: boolean; configured: boolean; error?: 'offline' | 'invalid' | 'storage' }>;
+    deactivate(): Promise<{ active: boolean; configured: boolean; error?: 'offline' | 'invalid' | 'storage' }>;
+  };
   repair: {
     list(): Promise<RepairAgentInfo[]>;
     getState(): Promise<RepairAgentState>;

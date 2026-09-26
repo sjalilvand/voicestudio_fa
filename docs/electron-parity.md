@@ -68,11 +68,15 @@ route with no failures.
 
 ## Settings navigation
 
+Studio is the default palette for both Light and Dark on a fresh install. Selecting a palette under either appearance applies it immediately and saves it for later switches, including System mode changes. Existing saved palette choices remain unchanged.
+
 The main workspace sidebar stays visible on Settings routes, including while the backend is starting or unavailable. Settings keeps its own section list beside it, with a Settings heading instead of a duplicate brand header. Narrow windows use the same compact-rail behavior as other secondary-pane workspaces.
 
 ## Navigation order
 
 In the expanded sidebar, workspace navigation sits immediately below the header and above the voice library. The status bar and Settings entry remain at the bottom; voice-library scrolling does not move the navigation.
+
+In the compact rail, Voice, Stories and Dubbing open flyouts on mouse hover or click, with full-row click targets. Hover uses a short opening delay and a pointer transit delay into the flyout; touch users can click, and keyboard users can press Enter or Arrow Right/Down to open it, then Arrow Left or Escape to return to the trigger. Choosing a destination keeps its flyout mounted until the route changes; choosing the current destination closes it immediately. Outside clicks close flyouts. Double-clicking the compact rail expands the full sidebar; the header button remains the single-click control. The flyout appears beside its icon without a scale shift while the pointer moves into it.
 
 ## Sidebar expansion preference
 

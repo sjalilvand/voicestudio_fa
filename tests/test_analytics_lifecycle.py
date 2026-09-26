@@ -331,7 +331,7 @@ def test_uninstall_ping_info_written_when_enabled_and_removed_when_not(
     assert info.exists()
     payload = json.loads(info.read_text())
     assert payload["token"] == "phc_test"
-    assert payload["host"] == "https://eu.i.posthog.com"
+    assert payload["host"] == "https://us.i.posthog.com"
     assert payload["distinct_id"] == analytics.installation_id()
     assert payload["app_version"] == analytics._app_version()
     # Consent withdrawn → the file goes with it.
@@ -349,7 +349,7 @@ def test_uninstall_ping_info_written_for_a_source_build_with_the_default_token(
     assert info.exists()
     payload = json.loads(info.read_text())
     assert payload["token"] == analytics._PUBLIC_PROJECT_TOKEN
-    assert payload["host"] == "https://eu.i.posthog.com"
+    assert payload["host"] == "https://us.i.posthog.com"
 
 
 def test_uninstall_ping_info_never_written_without_any_token(sent, monkeypatch, tmp_path):
