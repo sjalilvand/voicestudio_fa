@@ -150,6 +150,18 @@ _DECIMAL_LANGS = frozenset({
     "no", "sv", "fi", "ro", "hu", "id",
 })
 
+# Every vetted locale except English writes decimals with a comma and groups
+# thousands with a period: "1.000" is one thousand there, not 1.0.
+_COMMA_DECIMAL_LANGS = _DECIMAL_LANGS - {"en"}
+
+
+def _thousands_group(lang: str, fraction: str) -> bool:
+    """True when a period-separated ``fraction`` is a thousands group for
+    ``lang`` ("10.000" in German), which keeps its digits like "1,000" in
+    English does. English keeps "3.500" as a decimal."""
+    return lang in _COMMA_DECIMAL_LANGS and len(fraction) == 3
+
+
 # "50%" → "fifty <word>" only where the spoken percent word is unambiguous.
 _PERCENT_WORD = {
     "en": "percent",
@@ -557,7 +569,8 @@ def _numbers_to_words(text: str, lang: str) -> str:
         def _percent(m: re.Match) -> str:
             raw = m.group(1)
             if "." in raw:
-                if lang not in _DECIMAL_LANGS:
+                fraction = raw.split(".", 1)[1]
+                if lang not in _DECIMAL_LANGS or _thousands_group(lang, fraction):
                     return m.group(0)
                 value: object = float(raw)
             else:
@@ -568,6 +581,8 @@ def _numbers_to_words(text: str, lang: str) -> str:
 
     if lang in _DECIMAL_LANGS:
         def _decimal(m: re.Match) -> str:
+            if _thousands_group(lang, m.group(2)):
+                return m.group(0)
             return num2words(float(f"{m.group(1)}.{m.group(2)}"), lang=lang)
 
         text = _DECIMAL_RE.sub(lambda m: _safe(m, _decimal), text)

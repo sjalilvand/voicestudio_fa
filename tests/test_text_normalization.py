@@ -41,6 +41,9 @@ _CHANGE_CASES = [
     ("English", "Just $1 more", "Just one dollar more"),
     ("English", "It costs $5.99 now", "It costs five dollars, ninety-nine cents now"),
     ("English", "rated 3.5 stars", "rated three point five stars"),
+    # English writes decimals with a period, so three digits after it are a
+    # decimal here (the same digits are a thousands group in German, below).
+    ("English", "pi is 3.141 here", "pi is three point one four one here"),
     ("English", "battery at 50%", "battery at fifty percent"),
     ("English", "back in 1984", "back in nineteen eighty-four"),
     ("English", "I have 3.", "I have three."),
@@ -60,6 +63,7 @@ _CHANGE_CASES = [
     ("German", "z.B. Dr. Meier", "zum Beispiel Doktor Meier"),
     ("German", "Nr. 5 gewinnt", "Nummer fünf gewinnt"),
     ("German", "etwa 50%", "etwa fünfzig Prozent"),
+    ("German", "etwa 3.5 Kilo", "etwa drei Komma fünf Kilo"),
     ("Spanish", "tengo 42 gatos", "tengo cuarenta y dos gatos"),
     ("Spanish", "el Sr. García", "el Señor García"),
     ("French", "il a 42 chats", "il a quarante-deux chats"),
@@ -153,6 +157,14 @@ _UNCHANGED_CASES = [
     ("English", "I said no. Fine."),            # the word "no.", not "number"
     ("English", "down main st. Anyway"),        # lowercase "st." is not Saint
     ("German", "es kostet 3,5 Euro"),           # decimal comma: ambiguous
+    # A period before three digits is a thousands group where the decimal
+    # mark is a comma: kept as written, like "1,000" in English (it used to
+    # read as 1.0, 2.5 and 12.5).
+    ("German", "über 10.000 Menschen"),
+    ("German", "Preis 2.500 Euro"),
+    ("German", "etwa 12.500%"),                  # the percent rule shares it
+    ("Spanish", "más de 1.000 personas"),
+    ("French", "plus de 1.000 personnes"),
     # Malayalam native path keeps the same conservative boundaries
     ("Malayalam", "1,000 രൂപ"),                  # thousands separator
     ("Malayalam", "പേജ് 3-5 വായിക്കുക"),           # range
