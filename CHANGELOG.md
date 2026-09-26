@@ -9,7 +9,7 @@ metadata and the backend fallback mirror it. Archived Tauri manifests stay froze
 ## [Unreleased]
 
 **Highlights**
-- Manage Projects with confirmed individual and bulk deletion, retry failed items, and keep exported files and render audio
+- Manage Projects with confirmed individual and bulk deletion, retry failed items, and keep exported files and render audio (#2333)
 - Twilio setup is a guided checklist with live status and exact commands (#2304)
 - Integration pages use the full window, with a side panel on wide screens (#2304)
 - A call agent that places or answers phone calls in your own voice to get a task done (#2306)
