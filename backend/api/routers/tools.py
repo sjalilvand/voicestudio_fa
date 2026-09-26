@@ -229,10 +229,10 @@ def _decode_workflow_audio(data: bytes):
 
 def _encode_workflow_audio(audio, rate: int) -> bytes:
     import io
-    import soundfile as sf
+    from services.audio_io import _safe_soundfile_write
 
     output = io.BytesIO()
-    sf.write(output, audio.detach().cpu().numpy().T, rate, format="WAV", subtype="PCM_16")
+    _safe_soundfile_write(output, audio.detach().cpu().numpy().T, rate, format="WAV", subtype="PCM_16")
     return output.getvalue()
 
 
