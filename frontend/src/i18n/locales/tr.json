@@ -2916,5 +2916,42 @@
   "directoryExamples": {
     "example": "Dizin örneği",
     "notice": "Yalnızca dizin örnekleri; sponsor veya bağlı entegrasyon değildir."
+  },
+  "workflowRun": {
+    "run": "İş akışını çalıştır",
+    "restart": "Yeni çalıştırma",
+    "recipe": "Toplu seslendirme",
+    "clean_recipe": "Toplu seslendirme · Sesi normalleştir",
+    "scripts": "Metinler",
+    "import": "Metinleri içe aktar",
+    "sample": "Bu derse hoş geldiniz. Başlayalım.",
+    "hint": "Adımlar yerel kaydedilir. İptal veya çıkış sonrası devam etmek için yeniden deneyin.",
+    "scripts_hint": "Klipleri --- satırıyla ayırın veya metinleri içe aktarın.",
+    "normalized": "Konuşma mevcut motoru, mastering ve tepe normalizasyonunu kullanır.",
+    "progress": "{{done}} / {{total}} klip hazır",
+    "changed": "Ayarlar değişti. Çalıştırmak yeni çıktılar oluşturur.",
+    "incomplete": "Konuşma eksik. Dışa aktarmadan önce yeniden deneyin.",
+    "invalid_graph": "Tüm adımları dallanma veya döngü olmadan Başlangıçtan Sona bağlayın.",
+    "invalid_unsupported": "Uyumsuz adımlar: metni çeviri veya konuşmaya, sesi yazıya dökme veya dönüştürmeye, üretilen konuşmayı normalleştirmeye bağlayın.",
+    "invalid_voice": "Her konuşma veya dönüştürme adımı için kayıtlı bir ses seçin.",
+    "invalid_scripts": "Her biri en fazla 20.000 karakterlik 1–50 boş olmayan metin ekleyin.",
+    "peak": "Tepe (dBFS)",
+    "source_language": "Kaynak dil",
+    "local_translation": "Yalnızca yüklü yerel çeviri modellerini kullanır.",
+    "audio_hint": "Her biri 64 MiB olan en fazla 50 ses klibi içe aktarın.",
+    "add_audio": "Ses ekle",
+    "invalid_media": "Her biri 64 MiB altında geçerli ses klipleri ekleyin.",
+    "asr_required": "Önce Ayarlar’dan bir yazıya dökme motoru kurun.",
+    "transcription_recipe": "Sesten metne",
+    "conversion_recipe": "Sesi değiştir",
+    "localization_recipe": "Çevir ve seslendir",
+    "invalid_language": "Kaynak ve hedef dilleri seçin."
+  },
+  "workflows": {
+    "step_normalize": "Sesi normalleştir",
+    "step_audio": "Kaynak klip",
+    "step_transcribe": "Metne dönüştür",
+    "step_translate": "Çevir",
+    "step_convert": "Dönüştür"
   }
 }

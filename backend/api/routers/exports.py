@@ -6,7 +6,7 @@ import subprocess
 import platform
 from fastapi import APIRouter, Depends, HTTPException
 
-from api.dependencies import require_native_access
+from api.dependencies import require_native_access, require_loopback
 from core.db import db_conn
 from core.config import DATA_DIR, OUTPUTS_DIR
 from core import event_bus
@@ -121,7 +121,7 @@ def record_export(req: ExportRecordRequest):
     return {"success": True, "id": export_id}
 
 
-@router.delete("/export/history/{export_id}")
+@router.delete("/export/history/{export_id}", dependencies=[Depends(require_loopback)])
 def delete_export_history(export_id: str):
     """Forget an export record without touching its source or destination file."""
     with db_conn() as conn:

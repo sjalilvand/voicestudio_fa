@@ -20,8 +20,9 @@ import logging
 import math
 from typing import Callable, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
+from api.dependencies import require_loopback
 from core import job_store
 
 logger = logging.getLogger("omnivoice.longform_jobs")
@@ -32,7 +33,7 @@ router = APIRouter()
 _LONGFORM_TYPES = ("audiobook", "story")
 
 
-@router.delete("/longform/jobs/{job_id}")
+@router.delete("/longform/jobs/{job_id}", dependencies=[Depends(require_loopback)])
 def delete_longform_job(job_id: str) -> dict:
     """Remove a finished library record and its events, preserving render audio."""
     with job_store.db_conn() as conn:
@@ -224,7 +225,8 @@ def longform_jobs(limit: int = Query(50, ge=1, le=500)) -> dict:
     backend hiccup it returns an empty list rather than an error.
 
     ``job_store`` is bound at module import (top of file), NOT re-imported
-    here at call time. A call-time ``from core import job_store`` re-resolves
+    here at call time. A call-time ``from api.dependencies import require_loopback
+from core import job_store`` re-resolves
     through ``sys.modules`` on every request — and several test suites purge
     and re-import the whole ``core``/``services`` namespace under a
     temporary OMNIVOICE_DATA_DIR (the ``isolated_db`` pattern,

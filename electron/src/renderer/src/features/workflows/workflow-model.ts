@@ -1,7 +1,7 @@
 export const WORKFLOW_STORAGE_KEY = 'voicestudio.workflows.v1';
 
-export type StepKind = 'start' | 'agent' | 'speak' | 'condition' | 'call' | 'end';
-export const STEP_KINDS: StepKind[] = ['start', 'agent', 'speak', 'condition', 'call', 'end'];
+export type StepKind = 'start' | 'agent' | 'speak' | 'condition' | 'call' | 'normalize' | 'audio' | 'transcribe' | 'translate' | 'convert' | 'end';
+export const STEP_KINDS: StepKind[] = ['start', 'agent', 'speak', 'condition', 'call', 'normalize', 'audio', 'transcribe', 'translate', 'convert', 'end'];
 
 export interface WorkflowStep {
   id: string;
@@ -10,6 +10,14 @@ export interface WorkflowStep {
   title: string;
   text: string;
   phone: string;
+  voiceId?: string;
+  language?: string;
+  speed?: number;
+  targetDb?: number;
+  sourceLanguage?: string;
+  provider?: 'argos' | 'nllb';
+  media?: { id: string; name: string; type: string; size: number }[];
+  scripts?: { name: string; text: string }[];
 }
 
 export interface WorkflowConnection {
@@ -54,7 +62,7 @@ export function makeStep(kind: StepKind, position: { x: number; y: number }): Wo
 
 export function makeWorkflow(name: string, autoNamed = false): WorkflowDocument {
   const start = makeStep('start', { x: 40, y: 80 });
-  const agent = makeStep('agent', { x: 315, y: 80 });
+  const agent = makeStep('speak', { x: 315, y: 80 });
   const end = makeStep('end', { x: 590, y: 80 });
   return {
     id: crypto.randomUUID(),
@@ -74,7 +82,7 @@ export function makeCallWorkflow(name: string, brief: string): WorkflowDocument 
   const document = makeWorkflow(name);
   return {
     ...document,
-    steps: document.steps.map((step) => step.kind === 'agent'
+    steps: document.steps.map((step) => step.kind === 'speak'
       ? { ...step, kind: 'call' as const, title: name, text: brief }
       : step),
   };
@@ -85,12 +93,12 @@ export function parseWorkflowLibrary(raw: string | null, untitled: string): Work
   try {
     const value = JSON.parse(raw ?? 'null');
     if (value?.version === 1 && Array.isArray(value.documents)) {
-      const documents: WorkflowDocument[] = value.documents.slice(0, 100).flatMap((candidate: unknown) => {
+      const documents: WorkflowDocument[] = value.documents.flatMap((candidate: unknown) => {
         if (!candidate || typeof candidate !== 'object') return [];
         const item = candidate as Record<string, unknown>;
         if (typeof item.id !== 'string' || typeof item.name !== 'string' || !Array.isArray(item.steps))
           return [];
-        const steps = item.steps.slice(0, 300).flatMap((candidateStep: unknown): WorkflowStep[] => {
+        const steps = item.steps.flatMap((candidateStep: unknown): WorkflowStep[] => {
           if (!candidateStep || typeof candidateStep !== 'object') return [];
           const step = candidateStep as Record<string, unknown>;
           const position = step.position as Record<string, unknown> | undefined;
@@ -108,6 +116,17 @@ export function parseWorkflowLibrary(raw: string | null, untitled: string): Work
             position: { x: position.x as number, y: position.y as number },
             title: typeof step.title === 'string' ? step.title.slice(0, 120) : '',
             text: typeof step.text === 'string' ? step.text.slice(0, 20_000) : '',
+            voiceId: typeof step.voiceId === 'string' ? step.voiceId.slice(0, 200) : '',
+            language: typeof step.language === 'string' ? step.language.slice(0, 80) : 'Auto',
+            speed: typeof step.speed === 'number' && Number.isFinite(step.speed) ? Math.min(2, Math.max(0.5, step.speed)) : 1,
+            sourceLanguage: typeof step.sourceLanguage === 'string' ? step.sourceLanguage.slice(0, 80) : '',
+            provider: step.provider === 'nllb' ? 'nllb' : 'argos',
+            media: Array.isArray(step.media) ? step.media.slice(0, 50).flatMap((entry) =>
+              entry && typeof entry.id === 'string' && typeof entry.name === 'string' &&
+              typeof entry.size === 'number' && entry.size > 0 && entry.size <= 64 * 1024 * 1024
+                ? [{ id: entry.id.slice(0, 80), name: entry.name.slice(0, 120), type: typeof entry.type === 'string' ? entry.type.slice(0, 80) : '', size: entry.size }] : []) : [],
+            targetDb: typeof step.targetDb === 'number' && Number.isFinite(step.targetDb) ? Math.min(-1, Math.max(-24, step.targetDb)) : -2,
+            scripts: Array.isArray(step.scripts) ? step.scripts.slice(0, 50).flatMap((entry) => entry && typeof entry.name === 'string' && typeof entry.text === 'string' ? [{ name: entry.name.slice(0, 120), text: entry.text.slice(0, 20_000) }] : []) : [],
             phone: typeof step.phone === 'string' ? step.phone.slice(0, 80) : '',
           }];
         });
@@ -200,5 +219,33 @@ export function removeWorkflowStep(document: WorkflowDocument, id: string): Work
     updatedAt: Date.now(),
     steps: document.steps.filter((step) => step.id !== id),
     connections: document.connections.filter((edge) => edge.source !== id && edge.target !== id),
+  };
+}
+
+export function makeSpeechWorkflow(name: string, script: string, cleanup = false): WorkflowDocument {
+  const document = makeWorkflow(name);
+  const steps = [
+    { ...document.steps[0], text: script },
+    { ...document.steps[1], kind: 'speak' as const, voiceId: '', language: 'Auto', speed: 1 },
+    ...(cleanup ? [makeStep('normalize', { x: 315, y: 250 })] : []),
+    { ...document.steps[2], position: { x: cleanup ? 40 : 590, y: cleanup ? 250 : 80 } },
+  ];
+  return { ...document, steps, connections: steps.slice(1).map((step, index) => ({
+    id: crypto.randomUUID(), source: steps[index].id, target: step.id,
+  })) };
+}
+
+export function makeProcessingWorkflow(name: string, kinds: StepKind[]): WorkflowDocument {
+  const steps = kinds.map((kind, index) => ({
+    ...makeStep(kind, { x: 40 + (index % 2) * 290, y: 80 + Math.floor(index / 2) * 160 }),
+    language: kind === 'translate' ? 'Spanish' : 'Auto',
+    sourceLanguage: 'English',
+    provider: 'argos' as const,
+  }));
+  return {
+    id: crypto.randomUUID(), name, updatedAt: Date.now(), steps,
+    connections: steps.slice(1).map((step, index) => ({
+      id: crypto.randomUUID(), source: steps[index].id, target: step.id,
+    })),
   };
 }

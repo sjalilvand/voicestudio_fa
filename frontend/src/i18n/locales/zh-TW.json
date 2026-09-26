@@ -2916,5 +2916,42 @@
   "directoryExamples": {
     "example": "目錄範例",
     "notice": "僅為目錄範例，並非贊助商或已連接的整合。"
+  },
+  "workflowRun": {
+    "run": "執行工作流程",
+    "restart": "開始新一輪執行",
+    "recipe": "批次旁白",
+    "clean_recipe": "批次旁白 · 音訊正規化",
+    "scripts": "腳本",
+    "import": "匯入腳本",
+    "sample": "歡迎來到本課。讓我們開始吧。",
+    "hint": "已完成的步驟儲存在本機。取消或離開頁面後，重試即可繼續。",
+    "scripts_hint": "用單獨一行 --- 分隔片段，或匯入腳本。",
+    "normalized": "語音使用目前引擎，並進行母帶處理和峰值正規化。",
+    "progress": "{{done}} / {{total}} 個片段已就緒",
+    "changed": "設定已變更。執行將產生新輸出。",
+    "incomplete": "語音不完整。請在匯出前重試。",
+    "invalid_graph": "將所有步驟從開始連接到結束，不要分支或循環。",
+    "invalid_unsupported": "步驟不相容：文字連接翻譯或說話，音訊連接轉錄或轉換，合成語音連接正規化。",
+    "invalid_voice": "請為每個說話或轉換步驟選擇已儲存的聲音。",
+    "invalid_scripts": "新增 1–50 個非空腳本，每個最多 20,000 字元。",
+    "peak": "峰值 (dBFS)",
+    "source_language": "來源語言",
+    "local_translation": "僅使用已安裝的本機翻譯模型。",
+    "audio_hint": "最多匯入 50 個音訊片段，每個 64 MiB。",
+    "add_audio": "新增音訊",
+    "invalid_media": "新增有效音訊片段，每個小於 64 MiB。",
+    "asr_required": "請先在設定中準備轉錄引擎。",
+    "transcription_recipe": "音訊轉文字",
+    "conversion_recipe": "更換聲音",
+    "localization_recipe": "翻譯並配音",
+    "invalid_language": "請選擇來源語言和目標語言。"
+  },
+  "workflows": {
+    "step_normalize": "音訊正規化",
+    "step_audio": "來源音訊",
+    "step_transcribe": "轉錄",
+    "step_translate": "翻譯",
+    "step_convert": "轉換"
   }
 }

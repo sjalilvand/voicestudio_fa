@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
+  disableAnalytics,
   sanitizeException,
   sanitizeProps,
   capturePageview,
@@ -161,7 +162,7 @@ describe('initAnalyticsFromConsent — silence is not consent', () => {
   });
 
   it('starts ONLY when the user opted in and a destination exists', async () => {
-    vi.mock('posthog-js', () => ({
+    vi.mock('posthog-js/dist/module.slim.no-external', () => ({
       default: {
         init: vi.fn(),
         opt_in_capturing: vi.fn(),
@@ -177,4 +178,21 @@ describe('initAnalyticsFromConsent — silence is not consent', () => {
     }));
     expect(started).toBe(true);
   });
+});
+
+it('drops multiline error messages while preserving genuine stack frames', () => {
+  const error = new Error('Failed\nPrivate transcript\nCustomer address');
+  error.stack = 'Error: Failed\nPrivate transcript\nCustomer address\n    at render (app://voicestudio/assets/index.js:3:4)';
+  const safe = sanitizeException(error);
+  expect(safe.stack).not.toContain('Private transcript');
+  expect(safe.stack).not.toContain('Customer address');
+  expect(safe.stack).toContain('index.js:3:4');
+});
+
+it('does not revive analytics when a stale consent request resolves after opt-out', async () => {
+  let finish!: (value: { available: boolean; opted_in: boolean }) => void;
+  const pending = initAnalyticsFromConsent(() => new Promise((resolve) => { finish = resolve; }));
+  disableAnalytics();
+  finish({ available: true, opted_in: true });
+  expect(await pending).toBe(false);
 });

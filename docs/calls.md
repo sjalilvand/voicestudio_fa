@@ -1,20 +1,76 @@
 # Workflows and Calls
 
-The **Workflows** sidebar entry opens a local visual canvas. Create multiple
-workflows, or start from the restaurant booking, appointment rescheduling, or
-opening-hours templates. Templates create a Start → Call → End draft with an
-editable brief; enter the destination number in the Call step. Add Start,
-Agent, Speak, Condition, Call and End steps, connect them, and edit a selected
-step in the inspector. Pan, zoom and use the minimap to navigate;
-selected steps can also be moved with the arrow keys. Drafts save in this
-device's app storage and can be duplicated or deleted.
+The **Workflows** sidebar opens a local canvas with executable audio and text recipes and
+call drafts. Steps reuse VoiceStudio’s speech, transcription, translation and
+voice-conversion APIs and saved voices.
 
-The canvas is a **designer**, not an automatic workflow executor. It does not
-run Agent, Speak or Condition steps or place calls from a graph. A Call step's
-**Prepare call** button fills its phone number and brief into the existing
-Calls form. The same readiness checks, voice ownership rules, disclosure and
-final confirmation still apply. Use the **Calls** button to view history or
-start a call outside a workflow.
+## Run a speech workflow
+
+1. Choose **Batch narration**, or its **Normalize audio** variant.
+2. Select Start. Paste scripts separated by a line containing `---`, or import
+   TXT, Markdown, DOC/DOCX, PDF or EPUB files. Each file becomes one clip.
+   Runs accept up to 50 nonempty scripts of 20,000 characters each.
+3. Select Speak. Choose a saved voice, language and speed. Install the selected
+   engine explicitly in Settings if it is not ready.
+4. Choose **Run workflow**, then run from the output panel. Preview and export
+   the resulting WAV clips with numbered, filesystem-safe names.
+
+Speech goes through the normal generation endpoint, including mastering,
+normalization and synthetic marking. The optional Normalize audio step applies
+adjustable peak normalization (−24 to −1 dBFS, default −2) with a silence guard and re-marks synthetic audio;
+it does not download a cleanup model or silently substitute unprocessed audio.
+It is peak normalization, not a LUFS loudness target.
+
+## Audio and text recipes
+
+- **Audio to transcript**: import audio → Transcribe → export TXT.
+- **Change the voice**: import audio → Convert with a saved voice → export WAV.
+- **Translate and narrate**: import audio → Transcribe → Translate → Speak → export WAV.
+
+Audio inputs accept up to 50 files, each no larger than 64 MiB. Imported files
+stay in local browser storage; the original files are never modified. Select
+Transcribe to choose the source language or automatic detection. Accurate ASR
+must already be installed; a transcription-only workflow does not need TTS.
+
+Translation uses an explicitly selected local Argos or NLLB engine. Select the
+source and target languages and install the model or language pair in Settings
+before running. Workflows never install models or switch to a cloud translator
+on their own. Select Speak or Convert to choose the output voice.
+
+Steps have typed inputs: Speak consumes text; Transcribe consumes audio;
+Translate consumes text; Convert consumes audio. Normalize audio accepts only
+generated or converted speech, preserving the synthetic-audio marking contract.
+Connect these steps into one path ending at End. Cycles, branches, disconnected
+steps, incompatible types and missing voices are rejected before inference.
+Agent, Condition and Call remain clearly labelled design-only steps.
+
+Execution is serial, with per-clip and per-step status. Each completed text or audio
+step is checkpointed in local IndexedDB. Cancel or leave the page to stop
+scheduling work; Retry reuses saved outputs and resumes the interrupted or failed
+step. In-flight backend work may finish after the client disconnects. A process
+interrupted before its checkpoint may need that step regenerated. Reopening
+never runs a workflow automatically.
+
+Each workflow retains its latest run, including playable audio or readable text, until another
+run replaces it or the workflow is deleted. Export files you want to keep.
+Changing source files, scripts, voice, languages, translation provider, speed,
+normalization target, graph order or active engine/model
+starts a fresh run; moving nodes or renaming the workflow does not invalidate
+completed audio. The output panel identifies results from changed settings.
+Closing the app stops execution; this is not a background scheduler. Storage
+failure stops the run rather than claiming that recovery is available.
+
+## Call drafts
+
+Restaurant booking, appointment rescheduling and opening-hours templates create
+a Start → Call → End draft. **Prepare call** fills the destination and brief in
+the Calls form. Readiness checks, voice ownership, disclosure and final
+confirmation still apply; the workflow runner never dials. Use **Calls** to view
+call history or start a call independently.
+
+Pan, zoom and use the minimap to navigate the canvas. Arrow keys move selected
+steps. Drafts save locally and can be duplicated or deleted. Keyboard moves persist
+just like dragging; reopening preserves all saved workflows and steps.
 
 The **Calls** view lets VoiceStudio phone someone for you, in your own
 voice, and handle a short task: "book a table for 2 at 8pm Friday", "move my

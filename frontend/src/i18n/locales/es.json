@@ -2916,5 +2916,42 @@
   "directoryExamples": {
     "example": "Ejemplo del directorio",
     "notice": "Solo ejemplos del directorio; no son patrocinadores ni integraciones conectadas."
+  },
+  "workflowRun": {
+    "run": "Ejecutar flujo",
+    "restart": "Iniciar otra ejecución",
+    "recipe": "Narración por lotes",
+    "clean_recipe": "Narración por lotes · Normalizar audio",
+    "scripts": "Guiones",
+    "import": "Importar guiones",
+    "sample": "Bienvenido a esta lección. Comencemos.",
+    "hint": "Los pasos se guardan localmente. Reintenta tras cancelar o salir para continuar.",
+    "scripts_hint": "Separa los clips con una línea --- o importa guiones.",
+    "normalized": "La voz usa el motor actual, masterización y normalización de picos.",
+    "progress": "{{done}} / {{total}} clips listos",
+    "changed": "La configuración cambió. Ejecutar crea nuevas salidas.",
+    "incomplete": "Voz incompleta. Reintenta antes de exportar.",
+    "invalid_graph": "Conecta todos los pasos de Inicio a Fin sin ramas ni ciclos.",
+    "invalid_unsupported": "Pasos incompatibles: texto a traducción o voz, audio a transcripción o conversión y voz generada a normalización.",
+    "invalid_voice": "Elige una voz guardada para cada paso de voz o conversión.",
+    "invalid_scripts": "Añade 1–50 guiones no vacíos de hasta 20.000 caracteres cada uno.",
+    "peak": "Pico (dBFS)",
+    "source_language": "Idioma de origen",
+    "local_translation": "Solo usa modelos de traducción locales instalados.",
+    "audio_hint": "Importa hasta 50 clips de audio de 64 MiB cada uno.",
+    "add_audio": "Añadir audio",
+    "invalid_media": "Añade clips de audio válidos de menos de 64 MiB cada uno.",
+    "asr_required": "Configura primero un motor de transcripción en Ajustes.",
+    "transcription_recipe": "Audio a texto",
+    "conversion_recipe": "Cambiar la voz",
+    "localization_recipe": "Traducir y narrar",
+    "invalid_language": "Elige los idiomas de origen y destino."
+  },
+  "workflows": {
+    "step_normalize": "Normalizar audio",
+    "step_audio": "Clip de origen",
+    "step_transcribe": "Transcribir",
+    "step_translate": "Traducir",
+    "step_convert": "Convertir"
   }
 }

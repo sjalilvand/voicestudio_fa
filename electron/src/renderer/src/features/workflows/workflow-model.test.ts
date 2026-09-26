@@ -93,3 +93,12 @@ it('repairs copied legacy keys and numbers new copies without compounding names'
   ];
   expect(duplicateWorkflowName('Untitled workflow (3)', documents)).toBe('Untitled workflow (4)');
 });
+
+it('preserves libraries and graphs beyond the former silent truncation limits', () => {
+  const documents = Array.from({ length: 105 }, (_, i) => makeWorkflow(`Workflow ${i}`));
+  documents[104].steps = Array.from({ length: 305 }, () => makeWorkflow('x').steps[0]);
+  const loaded = parseWorkflowLibrary(JSON.stringify({ version: 1, activeId: documents[104].id, documents }), 'Untitled');
+  expect(loaded.documents).toHaveLength(105);
+  expect(loaded.documents[104].steps).toHaveLength(305);
+  expect(loaded.activeId).toBe(documents[104].id);
+});

@@ -16,3 +16,7 @@ AudioSeal receives 16 kHz audio for embedding and detection, including with
 AudioSeal 0.2, which no longer resamples internally. Processing remains bounded
 by chunk size. Only the watermark residual is resampled back and added to the
 original signal, retaining its sample rate, length, and high-frequency content.
+
+Pending analytics initialization is invalidated when consent is withdrawn,
+including a consent lookup or SDK import already in flight. Renderer reports
+retain only validated stack frames; multiline error messages are discarded.

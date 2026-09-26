@@ -52,9 +52,8 @@ async function saveStored(key: string, instanceId: string): Promise<void> {
   const file = path();
   const temporary = `${file}.${randomUUID()}.tmp`;
   await mkdir(dirname(file), { recursive: true });
-  const stored: StoredLicense = safeStorage.isEncryptionAvailable()
-    ? { encryptedKey: safeStorage.encryptString(key).toString('base64'), instanceId }
-    : { fileKey: key, instanceId };
+  if (!safeStorage.isEncryptionAvailable() || safeStorage.getSelectedStorageBackend?.() === 'basic_text') throw new Error('storage');
+  const stored: StoredLicense = { encryptedKey: safeStorage.encryptString(key).toString('base64'), instanceId };
   await writeFile(temporary, JSON.stringify(stored), { mode: 0o600 });
   await rename(temporary, file);
 }
@@ -106,7 +105,7 @@ export async function deactivateProLicense(): Promise<ProLicenseStatus> {
     if (!response.deactivated) return { active: true, configured: true, error: 'invalid' };
     await unlink(path());
     return { active: false, configured: true };
-  } catch {
-    return { active: true, configured: true, error: 'offline' };
+  } catch (error) {
+    return { active: true, configured: true, error: error instanceof Error && error.message === 'invalid' ? 'invalid' : 'offline' };
   }
 }

@@ -2916,5 +2916,42 @@
   "directoryExamples": {
     "example": "Contoh direktori",
     "notice": "Hanya contoh direktori — bukan sponsor atau integrasi yang terhubung."
+  },
+  "workflowRun": {
+    "run": "Jalankan alur",
+    "restart": "Mulai eksekusi baru",
+    "recipe": "Narasi massal",
+    "clean_recipe": "Narasi massal · Normalisasi audio",
+    "scripts": "Naskah",
+    "import": "Impor naskah",
+    "sample": "Selamat datang di pelajaran ini. Mari mulai.",
+    "hint": "Langkah disimpan lokal. Coba lagi setelah membatalkan atau keluar untuk melanjutkan.",
+    "scripts_hint": "Pisahkan klip dengan baris --- atau impor naskah.",
+    "normalized": "Ucapan memakai mesin saat ini, mastering dan normalisasi puncak.",
+    "progress": "{{done}} / {{total}} klip siap",
+    "changed": "Pengaturan berubah. Eksekusi membuat keluaran baru.",
+    "incomplete": "Ucapan tidak lengkap. Coba lagi sebelum ekspor.",
+    "invalid_graph": "Hubungkan semua langkah dari Mulai ke Selesai tanpa cabang atau siklus.",
+    "invalid_unsupported": "Langkah tidak cocok: teks ke terjemahan atau ucapan, audio ke transkripsi atau konversi, ucapan buatan ke normalisasi.",
+    "invalid_voice": "Pilih suara tersimpan untuk setiap langkah ucapan atau konversi.",
+    "invalid_scripts": "Tambahkan 1–50 naskah tidak kosong, maksimal 20.000 karakter per naskah.",
+    "peak": "Puncak (dBFS)",
+    "source_language": "Bahasa sumber",
+    "local_translation": "Hanya memakai model terjemahan lokal yang terpasang.",
+    "audio_hint": "Impor hingga 50 klip audio, masing-masing 64 MiB.",
+    "add_audio": "Tambah audio",
+    "invalid_media": "Tambahkan klip audio valid di bawah 64 MiB per klip.",
+    "asr_required": "Siapkan mesin transkripsi di Pengaturan terlebih dahulu.",
+    "transcription_recipe": "Audio menjadi teks",
+    "conversion_recipe": "Ubah suara",
+    "localization_recipe": "Terjemahkan dan narasikan",
+    "invalid_language": "Pilih bahasa sumber dan tujuan."
+  },
+  "workflows": {
+    "step_normalize": "Normalisasi audio",
+    "step_audio": "Klip sumber",
+    "step_transcribe": "Transkripsikan",
+    "step_translate": "Terjemahkan",
+    "step_convert": "Konversi"
   }
 }

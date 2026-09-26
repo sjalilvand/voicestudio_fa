@@ -151,6 +151,8 @@ export function ProPage() {
     try {
       setStatus(await bridge.pro.activate(key));
       setKey('');
+    } catch {
+      setStatus({ active: false, configured: true, error: 'offline' });
     } finally {
       setBusy(false);
     }
@@ -161,6 +163,8 @@ export function ProPage() {
     setBusy(true);
     try {
       setStatus(await bridge.pro.deactivate());
+    } catch {
+      setStatus({ active: true, configured: true, error: 'offline' });
     } finally {
       setBusy(false);
     }

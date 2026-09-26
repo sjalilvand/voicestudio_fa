@@ -3394,5 +3394,42 @@
   "directoryExamples": {
     "example": "Directory example",
     "notice": "Directory examples only — not sponsors or connected integrations."
+  },
+  "workflowRun": {
+    "run": "Run workflow",
+    "restart": "Start a new run",
+    "recipe": "Batch narration",
+    "clean_recipe": "Batch narration · Normalize audio",
+    "scripts": "Scripts",
+    "import": "Import scripts",
+    "sample": "Welcome to this lesson. Let’s get started.",
+    "hint": "Steps save locally. Retry after cancelling or leaving to resume.",
+    "scripts_hint": "Separate clips with a line containing ---, or import scripts.",
+    "normalized": "Speech uses the current engine, mastering and peak normalization.",
+    "progress": "{{done}} / {{total}} clips ready",
+    "changed": "Settings changed. Running again creates new outputs.",
+    "incomplete": "Incomplete speech. Retry before exporting.",
+    "invalid_graph": "Connect all steps from Start to End without branches or cycles.",
+    "invalid_unsupported": "Incompatible steps. Connect text to translation or speech, audio to transcription or conversion, and generated speech to normalization.",
+    "invalid_voice": "Choose a saved voice for each speech or conversion step.",
+    "invalid_scripts": "Add 1–50 nonempty scripts, each at most 20,000 characters.",
+    "peak": "Peak (dBFS)",
+    "source_language": "Source language",
+    "local_translation": "Uses installed local translation models only.",
+    "audio_hint": "Import up to 50 audio clips, 64 MiB each.",
+    "add_audio": "Add audio",
+    "invalid_media": "Add valid audio clips, each under 64 MiB.",
+    "asr_required": "Set up a transcription engine in Settings first.",
+    "transcription_recipe": "Audio to transcript",
+    "conversion_recipe": "Change the voice",
+    "localization_recipe": "Translate and narrate",
+    "invalid_language": "Choose source and target languages."
+  },
+  "workflows": {
+    "step_normalize": "Normalize audio",
+    "step_audio": "Source clip",
+    "step_transcribe": "Transcribe",
+    "step_translate": "Translate",
+    "step_convert": "Convert"
   }
 }

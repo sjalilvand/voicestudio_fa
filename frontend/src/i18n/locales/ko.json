@@ -3394,5 +3394,42 @@
   "directoryExamples": {
     "example": "디렉터리 예시",
     "notice": "디렉터리 예시이며 스폰서나 연결된 연동이 아닙니다."
+  },
+  "workflowRun": {
+    "run": "워크플로 실행",
+    "restart": "새 실행 시작",
+    "recipe": "일괄 내레이션",
+    "clean_recipe": "일괄 내레이션 · 오디오 정규화",
+    "scripts": "스크립트",
+    "import": "스크립트 가져오기",
+    "sample": "이번 수업에 오신 것을 환영합니다. 시작하겠습니다.",
+    "hint": "완료된 단계는 로컬에 저장됩니다. 취소하거나 페이지를 떠난 후 재시도하면 이어집니다.",
+    "scripts_hint": "--- 줄로 클립을 구분하거나 스크립트를 가져오세요.",
+    "normalized": "현재 엔진으로 음성을 생성하고 마스터링과 피크 정규화를 적용합니다.",
+    "progress": "{{done}} / {{total}} 클립 준비됨",
+    "changed": "설정이 변경되었습니다. 실행하면 새 출력이 생성됩니다.",
+    "incomplete": "음성이 불완전합니다. 내보내기 전에 재시도하세요.",
+    "invalid_graph": "분기나 순환 없이 시작부터 끝까지 모든 단계를 연결하세요.",
+    "invalid_unsupported": "호환되지 않는 단계입니다. 텍스트는 번역이나 말하기에, 오디오는 받아쓰기나 변환에, 생성된 음성은 정규화에 연결하세요.",
+    "invalid_voice": "각 말하기 또는 변환 단계에서 저장된 음성을 선택하세요.",
+    "invalid_scripts": "비어 있지 않은 스크립트 1~50개를 각각 20,000자 이하로 추가하세요.",
+    "peak": "피크 (dBFS)",
+    "source_language": "원본 언어",
+    "local_translation": "설치된 로컬 번역 모델만 사용합니다.",
+    "audio_hint": "최대 50개의 오디오 클립을 각각 64 MiB까지 가져옵니다.",
+    "add_audio": "오디오 추가",
+    "invalid_media": "각각 64 MiB 미만인 유효한 오디오 클립을 추가하세요.",
+    "asr_required": "먼저 설정에서 받아쓰기 엔진을 준비하세요.",
+    "transcription_recipe": "오디오를 텍스트로",
+    "conversion_recipe": "목소리 변경",
+    "localization_recipe": "번역하고 읽기",
+    "invalid_language": "원본 및 대상 언어를 선택하세요."
+  },
+  "workflows": {
+    "step_normalize": "오디오 정규화",
+    "step_audio": "소스 클립",
+    "step_transcribe": "전사",
+    "step_translate": "번역",
+    "step_convert": "변환"
   }
 }

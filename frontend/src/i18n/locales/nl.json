@@ -2916,5 +2916,42 @@
   "directoryExamples": {
     "example": "Directoryvoorbeeld",
     "notice": "Alleen directoryvoorbeelden — geen sponsors of verbonden integraties."
+  },
+  "workflowRun": {
+    "run": "Workflow uitvoeren",
+    "restart": "Nieuwe uitvoering",
+    "recipe": "Batchvertelling",
+    "clean_recipe": "Batchvertelling · Audio normaliseren",
+    "scripts": "Scripts",
+    "import": "Scripts importeren",
+    "sample": "Welkom bij deze les. Laten we beginnen.",
+    "hint": "Stappen worden lokaal opgeslagen. Probeer na annuleren of verlaten opnieuw om verder te gaan.",
+    "scripts_hint": "Scheid clips met een regel --- of importeer scripts.",
+    "normalized": "Spraak gebruikt de huidige engine, mastering en pieknormalisatie.",
+    "progress": "{{done}} / {{total}} clips gereed",
+    "changed": "Instellingen gewijzigd. Uitvoeren maakt nieuwe uitvoer.",
+    "incomplete": "Spraak onvolledig. Probeer opnieuw vóór export.",
+    "invalid_graph": "Verbind alle stappen van Start tot Einde zonder vertakkingen of lussen.",
+    "invalid_unsupported": "Onverenigbare stappen: tekst naar vertaling of spraak, audio naar transcriptie of conversie en gegenereerde spraak naar normalisatie.",
+    "invalid_voice": "Kies een opgeslagen stem voor elke spraak- of conversiestap.",
+    "invalid_scripts": "Voeg 1–50 niet-lege scripts van maximaal 20.000 tekens toe.",
+    "peak": "Piek (dBFS)",
+    "source_language": "Brontaal",
+    "local_translation": "Gebruikt alleen geïnstalleerde lokale vertaalmodellen.",
+    "audio_hint": "Importeer maximaal 50 audioclips van elk 64 MiB.",
+    "add_audio": "Audio toevoegen",
+    "invalid_media": "Voeg geldige audioclips van minder dan 64 MiB toe.",
+    "asr_required": "Stel eerst een transcriptie-engine in bij Instellingen.",
+    "transcription_recipe": "Audio naar tekst",
+    "conversion_recipe": "Stem wijzigen",
+    "localization_recipe": "Vertalen en vertellen",
+    "invalid_language": "Kies bron- en doeltaal."
+  },
+  "workflows": {
+    "step_normalize": "Audio normaliseren",
+    "step_audio": "Bronclip",
+    "step_transcribe": "Transcriberen",
+    "step_translate": "Vertalen",
+    "step_convert": "Converteren"
   }
 }

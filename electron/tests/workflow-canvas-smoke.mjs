@@ -1,8 +1,10 @@
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
 const base = process.env.VOICESTUDIO_UI_URL || 'http://localhost:3912';
-const browser = await chromium.launch({ executablePath: '/usr/bin/chromium', headless: true });
+const browser = await chromium.launch({ ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}), headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
 async function mockBackend(target) {
   await target.route((url) => url.pathname.startsWith('/api/'), (route) => {
@@ -57,6 +59,15 @@ try {
     throw error;
   }
   assert.equal(await page.locator('.react-flow__node').count(), 3);
+  const node = page.locator('.react-flow__node').first();
+  const before = await page.evaluate(() => JSON.parse(localStorage.getItem('voicestudio.workflows.v1')).documents[0].steps[0].position.x);
+  await node.click();
+  await node.focus();
+  await node.press('ArrowRight');
+  await page.waitForFunction((before) => JSON.parse(localStorage.getItem('voicestudio.workflows.v1')).documents[0].steps[0].position.x > before, before);
+  await page.reload();
+  await page.getByRole('heading', { name: 'Design a voice workflow' }).waitFor();
+  assert((await page.evaluate(() => JSON.parse(localStorage.getItem('voicestudio.workflows.v1')).documents[0].steps[0].position.x)) > before);
   await page.getByRole('button', { name: 'Call', exact: true }).click();
   await page.waitForFunction(() => document.querySelectorAll('.react-flow__node').length === 4);
   assert.equal(await page.locator('.react-flow__node').count(), 4);
@@ -74,7 +85,7 @@ try {
   const deleteDialog = page.getByRole('dialog', { name: 'Delete' });
   await deleteDialog.waitFor();
   await page.waitForTimeout(180);
-  await page.screenshot({ path: '/tmp/voicestudio-workflow-delete.png', fullPage: true });
+  await page.screenshot({ path: join(tmpdir(), 'voicestudio-workflow-delete.png'), fullPage: true });
   await deleteDialog.getByRole('button', { name: 'Cancel' }).click();
   assert.equal(await page.getByRole('button', { name: 'Untitled workflow (2)' }).count(), 1);
   await page.locator('.workflow-intro').getByRole('button', { name: 'Delete' }).click();
@@ -94,15 +105,15 @@ try {
   await page.getByRole('button', { name: 'Canvas', exact: true }).click();
   await page.getByRole('heading', { name: 'Design a voice workflow' }).waitFor();
   assert.equal(await page.locator('.react-flow__node').count(), 3);
-  await page.screenshot({ path: '/tmp/voicestudio-workflow-canvas.png', fullPage: true });
+  await page.screenshot({ path: join(tmpdir(), 'voicestudio-workflow-canvas.png'), fullPage: true });
   await page.setViewportSize({ width: 1440, height: 1500 });
   const tallNode = await page.locator('.react-flow__node').nth(1).boundingBox();
   assert(tallNode && tallNode.y < 450 && tallNode.width >= 240, 'the call stays readable near the top of a tall canvas');
-  await page.screenshot({ path: '/tmp/voicestudio-workflow-tall.png', fullPage: true });
+  await page.screenshot({ path: join(tmpdir(), 'voicestudio-workflow-tall.png'), fullPage: true });
   await page.setViewportSize({ width: 640, height: 720 });
   const mobileWidth = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
   assert(mobileWidth.scroll <= mobileWidth.client, 'workflow canvas overflows a narrow window');
-  await page.screenshot({ path: '/tmp/voicestudio-workflow-mobile.png', fullPage: true });
+  await page.screenshot({ path: join(tmpdir(), 'voicestudio-workflow-mobile.png'), fullPage: true });
   assert.deepEqual(errors, []);
 
   const localized = await browser.newPage({ viewport: { width: 1280, height: 800 } });
@@ -128,7 +139,7 @@ try {
   await localized.getByRole('button', { name: 'Bedingung' }).waitFor();
   assert.equal(await localized.getByRole('complementary', { name: 'Schrittdetails' }).count(), 0);
   assert.equal(await localized.getByText('workflows.untitled').count(), 0);
-  await localized.screenshot({ path: '/tmp/voicestudio-workflow-light.png', fullPage: true });
+  await localized.screenshot({ path: join(tmpdir(), 'voicestudio-workflow-light.png'), fullPage: true });
   await localized.close();
   console.log('Workflow canvas smoke passed');
 } finally {

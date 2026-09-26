@@ -134,6 +134,7 @@ export function sanitizeOutgoingEvent<T extends OutgoingAnalyticsEvent>(
 }
 
 let client: AnalyticsClient | null = null;
+let consentGeneration = 0;
 let captureState: 'unresolved' | 'enabled' | 'disabled' = 'unresolved';
 
 export const ANALYTICS_EXCEPTION_STAGES = [
@@ -162,7 +163,7 @@ export function sanitizeException(error: unknown): Error {
   const frames = scrubText(sourceStack)
     .split('\n')
     .slice(1)
-    .filter((line) => !/(?:chrome|moz|safari)-extension:/i.test(line))
+    .filter((line) => /^\s*at (?:[\w$.[\]<>]+ )?\(?(?:https?:\/\/|file:\/\/|app:\/\/|~?\/)[^()\s]+:\d+:\d+\)?$/.test(line))
     .slice(0, MAX_STACK_LINES)
     .map((line) => line.slice(0, MAX_STACK_LINE_LENGTH));
   const safe = new Error('VoiceStudio renderer error');
@@ -233,6 +234,7 @@ export function hardenedConfig() {
 
 /** Start analytics. Call ONLY when the user has opted in. Idempotent. */
 export async function enableAnalytics(): Promise<void> {
+  const generation = ++consentGeneration;
   try {
     if (!POSTHOG_TOKEN) return; // no destination in this build — nothing to start
     if (!client) {
@@ -242,6 +244,7 @@ export async function enableAnalytics(): Promise<void> {
         import('posthog-js/dist/module.slim.no-external'),
         import('posthog-js/dist/extension-bundles'),
       ]);
+      if (generation !== consentGeneration) return;
       posthog.init(POSTHOG_TOKEN, {
         ...hardenedConfig(),
         __extensionClasses: { ...ErrorTrackingExtensions },
@@ -249,13 +252,14 @@ export async function enableAnalytics(): Promise<void> {
       client = posthog;
     }
     const activeClient = client;
-    if (!activeClient) return;
+    if (!activeClient || generation !== consentGeneration) return;
     activeClient.opt_in_capturing();
     captureState = 'enabled';
     for (const pending of pendingExceptions.splice(0)) {
       sendException(pending.error, pending.stage);
     }
   } catch (e) {
+    if (generation !== consentGeneration) return;
     captureState = 'disabled';
     pendingExceptions.length = 0;
     console.warn('[analytics] init failed (non-fatal)', e);
@@ -264,6 +268,7 @@ export async function enableAnalytics(): Promise<void> {
 
 /** Stop analytics and forget the local id. Safe to call when never started. */
 export function disableAnalytics(): void {
+  consentGeneration += 1;
   try {
     captureState = 'disabled';
     pendingExceptions.length = 0;
@@ -307,11 +312,13 @@ export function capturePageview(screen: string): void {
 export async function initAnalyticsFromConsent(
   fetchState: () => Promise<{ opted_in?: boolean; available?: boolean }>,
 ): Promise<boolean> {
+  const generation = consentGeneration;
   try {
     const s = await fetchState();
+    if (generation !== consentGeneration) return false;
     if (s?.available && s?.opted_in) {
       await enableAnalytics();
-      return true;
+      return captureState === 'enabled';
     }
   } catch {
     /* backend unreachable → stay off. Silence is not consent. */

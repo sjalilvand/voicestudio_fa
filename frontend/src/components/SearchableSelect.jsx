@@ -43,6 +43,7 @@ export default function SearchableSelect({
   buttonClassName = 'input-base',
   ariaLabel,
   size = 'md',
+  menuClassName = '',
   // When true, emit a `.ss-group-label` header each time `option.group` changes
   // (and `option.groupLabel` is non-empty) while walking the MAIN rows. Default
   // false so the two pre-existing call sites are unaffected. (#22)
@@ -287,7 +288,7 @@ export default function SearchableSelect({
         wrapMenu(
           <div
             ref={menuRef}
-            className={`z-[1000] bg-[var(--color-bg)] border-0 rounded-lg shadow-xl overflow-hidden max-w-[calc(100vw-16px)] ${
+            className={`${menuClassName} z-[1000] bg-[var(--color-bg)] border-0 rounded-lg shadow-xl overflow-hidden max-w-[calc(100vw-16px)] ${
               menuPortal ? 'fixed' : 'absolute top-[calc(100%+4px)] left-0 right-0'
             }`}
             style={

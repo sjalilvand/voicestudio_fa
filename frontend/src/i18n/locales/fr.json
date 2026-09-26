@@ -2916,5 +2916,42 @@
   "directoryExamples": {
     "example": "Exemple du répertoire",
     "notice": "Exemples uniquement : ni sponsors ni intégrations connectées."
+  },
+  "workflowRun": {
+    "run": "Exécuter le flux",
+    "restart": "Nouvelle exécution",
+    "recipe": "Narration par lot",
+    "clean_recipe": "Narration par lot · Normaliser l’audio",
+    "scripts": "Scripts",
+    "import": "Importer des scripts",
+    "sample": "Bienvenue dans cette leçon. Commençons.",
+    "hint": "Étapes enregistrées localement. Réessayez après annulation ou départ pour reprendre.",
+    "scripts_hint": "Séparez les clips par une ligne --- ou importez des scripts.",
+    "normalized": "La voix utilise le moteur actuel, le mastering et la normalisation des crêtes.",
+    "progress": "{{done}} / {{total}} clips prêts",
+    "changed": "Paramètres modifiés. Relancer crée de nouvelles sorties.",
+    "incomplete": "Voix incomplète. Réessayez avant d’exporter.",
+    "invalid_graph": "Reliez toutes les étapes du début à la fin, sans branches ni cycles.",
+    "invalid_unsupported": "Étapes incompatibles : texte vers traduction ou parole, audio vers transcription ou conversion, parole générée vers normalisation.",
+    "invalid_voice": "Choisissez une voix enregistrée pour chaque étape de parole ou conversion.",
+    "invalid_scripts": "Ajoutez 1 à 50 scripts non vides de 20 000 caractères maximum chacun.",
+    "peak": "Crête (dBFS)",
+    "source_language": "Langue source",
+    "local_translation": "Utilise uniquement les modèles de traduction locaux installés.",
+    "audio_hint": "Importez jusqu’à 50 clips audio de 64 Mio chacun.",
+    "add_audio": "Ajouter un audio",
+    "invalid_media": "Ajoutez des clips audio valides de moins de 64 Mio chacun.",
+    "asr_required": "Configurez d’abord un moteur de transcription dans les paramètres.",
+    "transcription_recipe": "Audio en texte",
+    "conversion_recipe": "Changer la voix",
+    "localization_recipe": "Traduire et raconter",
+    "invalid_language": "Choisissez les langues source et cible."
+  },
+  "workflows": {
+    "step_normalize": "Normaliser l’audio",
+    "step_audio": "Clip source",
+    "step_transcribe": "Transcrire",
+    "step_translate": "Traduire",
+    "step_convert": "Convertir"
   }
 }

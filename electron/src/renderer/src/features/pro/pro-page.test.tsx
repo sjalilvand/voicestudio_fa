@@ -107,3 +107,14 @@ it('keeps the page usable when an older main process has no Pro handler', async 
   fireEvent.click(screen.getByRole('button', { name: 'proPage.activate_title' }));
   expect(await screen.findByText('proPage.not_configured')).toBeVisible();
 });
+
+it('recovers from rejected license IPC without leaving activation busy', async () => {
+  activate.mockRejectedValueOnce(new Error('IPC unavailable'));
+  render(<ProPage />);
+  await waitFor(() => expect(status).toHaveBeenCalled());
+  fireEvent.click(screen.getByRole('button', { name: 'proPage.activate_title' }));
+  fireEvent.change(screen.getByLabelText('proPage.key_label'), { target: { value: 'test-license-123456' } });
+  fireEvent.click(screen.getByRole('button', { name: 'proPage.activate' }));
+  await waitFor(() => expect(screen.getByText('proPage.error_offline')).toBeVisible());
+  expect(screen.getByRole('button', { name: 'proPage.activate' })).not.toBeDisabled();
+});

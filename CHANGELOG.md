@@ -24,6 +24,8 @@ metadata and the backend fallback mirror it. Archived Tauri manifests stay froze
 
 ### Added
 
+- Run local narration, transcription, translation and voice-conversion recipes with resumable steps and WAV/TXT exports (#2333)
+
 - Call agent backend: place or answer phone calls that hold a task conversation in your verified or designed voice, with an editable AI disclosure, take-over and an after-call summary (#2306)
 - Calls workspace with a live transcript, take-over, hang-up and an after-call summary (#2305)
 - Create Story from a dub: its speakers become characters, its segments become lines, and each character keeps the voice the dub assigned — no retyping the script (#2300) — thanks @shivsin25!
@@ -43,6 +45,8 @@ metadata and the backend fallback mirror it. Archived Tauri manifests stay froze
 - The Twilio guide and integration directory describe the guided setup and in-app integration pages (#2304)
 
 ### Fixed
+
+- Preserve large workflow libraries and keyboard moves, secure library deletion and license storage, and keep analytics opt-out authoritative during startup (#2333)
 
 - Signed macOS releases now notarize and staple Electron installers when the owner supplies Apple Developer credentials (#1779)
 - Integration pages show each integration's own category and summary instead of borrowed labels such as "Dubbing" for Twilio (#2304)

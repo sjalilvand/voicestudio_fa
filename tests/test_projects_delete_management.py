@@ -13,7 +13,7 @@ def library(tmp_path, monkeypatch):
     app = FastAPI()
     app.include_router(exports.router)
     app.include_router(longform_jobs.router)
-    return TestClient(app), db, job_store
+    return TestClient(app, client=("127.0.0.1", 50000)), db, job_store
 
 
 def test_delete_export_record_keeps_file_and_other_records(library, tmp_path):
@@ -56,3 +56,9 @@ def test_delete_rejects_active_or_unrelated_job(library, kind, status, code):
     assert client.delete('/longform/jobs/protected').status_code == code
     assert jobs.get('protected')['status'] == status
     assert len(jobs.events_since('protected')) == 1
+
+@pytest.mark.parametrize('path', ['/export/history/remove', '/longform/jobs/remove'])
+def test_remote_clients_cannot_delete_local_library(library, path):
+    local, _, _ = library
+    with TestClient(local.app, client=('203.0.113.5', 50000)) as remote:
+        assert remote.delete(path).status_code == 403
