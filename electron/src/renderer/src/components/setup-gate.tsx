@@ -201,7 +201,7 @@ export function SetupGate({ children }: { children: ReactNode }) {
               {step === 2 && (
                 <>
                   <AnalyticsConsent onRequirementChange={setConsentRequired} />
-                  {advanced && <PrivacySettings showAnalytics={false} />}
+                  <PrivacySettings showAnalytics={false} />
                 </>
               )}
               {step === 3 && (
