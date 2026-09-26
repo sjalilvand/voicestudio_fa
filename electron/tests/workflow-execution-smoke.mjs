@@ -167,10 +167,26 @@ try {
     const library = JSON.parse(localStorage.getItem('voicestudio.workflows.v1'));
     return library.documents.find((item) => item.id === library.activeId).steps[0].media[0].id;
   });
+  await page.evaluate(() => { IDBObjectStore.prototype.delete = function () { throw new Error('Temporary storage failure'); }; });
+  await page.getByRole('complementary', { name: 'Step details' }).getByRole('button', { name: 'Delete', exact: true }).click();
+  await page.getByRole('alert').filter({ hasText: 'Temporary storage failure' }).waitFor();
+  assert.equal(await hasSource(deletedId), true);
+  assert(await page.evaluate(() => JSON.parse(localStorage.getItem('voicestudio.workflows.v1')).cleanup.length > 0));
+  await page.reload(); // Reload restores IndexedDB and retries the persisted deletion queue.
+  await page.getByRole('heading', { name: 'Design a voice workflow' }).waitFor();
+  for (let i = 0; i < 40 && await hasSource(deletedId); i++) await page.waitForTimeout(50);
+  assert.equal(await hasSource(deletedId), false, 'queued deletions are retried after a reload');
+  await page.locator('.react-flow__node').filter({ hasText: 'Source clip' }).click();
+  await page.getByLabel('Add audio', { exact: true }).setInputFiles({ name: 'last.wav', mimeType: 'audio/wav', buffer: wav });
+  await page.getByText('last.wav', { exact: true }).waitFor();
+  const lastId = await page.evaluate(() => {
+    const library = JSON.parse(localStorage.getItem('voicestudio.workflows.v1'));
+    return library.documents.find((item) => item.id === library.activeId).steps[0].media[0].id;
+  });
   await page.locator('.workflow-intro').getByRole('button', { name: 'Delete', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Delete', exact: true }).click();
-  for (let i = 0; i < 40 && await hasSource(deletedId); i++) await page.waitForTimeout(50);
-  assert.equal(await hasSource(deletedId), false, 'deleting the final workflow releases its source');
+  for (let i = 0; i < 40 && await hasSource(lastId); i++) await page.waitForTimeout(50);
+  assert.equal(await hasSource(lastId), false, 'deleting the final workflow releases its source');
   assert.deepEqual(errors, []);
   console.log('Workflow execution, recovery, persisted audio and export smoke passed');
 } finally { await browser.close(); }

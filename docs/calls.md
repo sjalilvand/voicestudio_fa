@@ -29,7 +29,8 @@ It is peak normalization, not a LUFS loudness target.
 
 Audio inputs accept up to 50 files, each no larger than 64 MiB. Imported files
 stay in local browser storage; removing the last workflow reference deletes
-the stored source and invalidates its cached run; the original files are never modified. Transcription
+the stored source and invalidates its cached run. Pending deletions are saved
+with the draft and retried after reopening if storage temporarily fails; the original files are never modified. Transcription
 automatically detects the spoken language and uses the installed ASR engine
 without downloading word-alignment models; a transcription-only workflow does not need TTS.
 

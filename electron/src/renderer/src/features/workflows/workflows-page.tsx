@@ -65,19 +65,30 @@ function readLibrary(untitled: string): WorkflowLibrary {
 function WorkflowCanvas({ onCalls }: { onCalls: (call?: Pick<WorkflowStep, 'phone' | 'text'>) => void }) {
   const { t } = useTranslation();
   const untitled = t('workflows.untitled', { defaultValue: en.workflows.untitled });
-  const [library, setLibrary] = useState(() => readLibrary(untitled));
-  const previousLibrary = useRef(library);
-  const pendingCleanup = useRef<ReturnType<typeof removedWorkflowData>[]>([]);
+  const [library, setStoredLibrary] = useState(() => readLibrary(untitled));
+  const libraryRef = useRef(library);
+  libraryRef.current = library;
+  const setLibrary = useCallback((update: (current: WorkflowLibrary) => WorkflowLibrary) => {
+    setStoredLibrary((current) => {
+      const next = update(current);
+      if (next === current) return current;
+      const removed = removedWorkflowData(current, next);
+      return removed.media.length || removed.runs.length
+        ? { ...next, cleanup: [...(current.cleanup || []), removed] } : next;
+    });
+  }, []);
   const cleaning = useRef(false);
   const [cleanupError, setCleanupError] = useState('');
   const retryCleanup = useCallback(async () => {
     if (cleaning.current) return;
     cleaning.current = true;
     try {
-      while (pendingCleanup.current.length) {
-        await deleteWorkflowArtifacts(pendingCleanup.current[0]);
-        pendingCleanup.current.shift();
-      }
+      const current = libraryRef.current;
+      // Draft changes and their deletion queue are one atomic localStorage write.
+      window.localStorage.setItem(WORKFLOW_STORAGE_KEY, JSON.stringify(current));
+      const batch = current.cleanup || [];
+      for (const task of batch) await deleteWorkflowArtifacts(task);
+      if (batch.length) setStoredLibrary((latest) => ({ ...latest, cleanup: (latest.cleanup || []).filter((task) => !batch.includes(task)) }));
       setCleanupError('');
     } catch (error) { setCleanupError(describeError(error)); }
     finally { cleaning.current = false; }
@@ -117,9 +128,6 @@ function WorkflowCanvas({ onCalls }: { onCalls: (call?: Pick<WorkflowStep, 'phon
   useEffect(() => {
     try { window.localStorage.setItem(WORKFLOW_STORAGE_KEY, JSON.stringify(library)); }
     catch (error) { setCleanupError(describeError(error)); return; }
-    const removed = removedWorkflowData(previousLibrary.current, library);
-    previousLibrary.current = library;
-    if (removed.media.length || removed.runs.length) pendingCleanup.current.push(removed);
     void retryCleanup();
   }, [library, retryCleanup]);
 
@@ -265,7 +273,7 @@ function WorkflowCanvas({ onCalls }: { onCalls: (call?: Pick<WorkflowStep, 'phon
           <MiniMap pannable zoomable nodeColor="var(--muted-foreground)" maskColor="color-mix(in srgb, var(--background) 58%, transparent)" />
         </ReactFlow>
       </section>
-      {runnerOpen && <WorkflowRunner key={document.id} document={document} onBusy={setRunning} onClose={() => setRunnerOpen(false)} />}
+      {runnerOpen && <WorkflowRunner key={document.id} document={document} storageReady={!library.cleanup?.length && !cleanupError} onBusy={setRunning} onClose={() => setRunnerOpen(false)} />}
       {!runnerOpen && selected && <aside className="workflow-inspector studio-scrollbar" aria-label={t('workflows.inspector')}>
         <div className="workflow-panel-heading">{t('workflows.inspector')}</div>
         <div className="workflow-inspector__content">

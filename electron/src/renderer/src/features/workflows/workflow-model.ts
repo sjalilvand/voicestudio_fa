@@ -40,6 +40,7 @@ export interface WorkflowLibrary {
   version: 1;
   activeId: string;
   documents: WorkflowDocument[];
+  cleanup?: { media: string[]; runs: string[] }[];
 }
 
 export function repairWorkflowName(name: string, untitled: string): string {
@@ -171,6 +172,9 @@ export function parseWorkflowLibrary(raw: string | null, untitled: string): Work
             ? value.activeId
             : documents[0].id,
           documents,
+          cleanup: Array.isArray(value.cleanup) ? value.cleanup.filter((task: { media?: unknown; runs?: unknown }) =>
+            task && Array.isArray(task.media) && task.media.every((id) => typeof id === 'string') &&
+            Array.isArray(task.runs) && task.runs.every((id) => typeof id === 'string')) : [],
         };
       }
     }

@@ -116,3 +116,10 @@ it('deletes media only after its last shared reference and invalidates affected 
   const noMedia = { ...one, documents: [{ ...copy, steps: [] }] };
   expect(removedWorkflowData(one, noMedia)).toEqual({ media: ['source'], runs: ['copy'] });
 });
+
+it('retains queued media deletions across reloads and ignores malformed queue entries', () => {
+  const document = makeWorkflow('Remaining');
+  const queued = { media: ['deleted-source'], runs: ['deleted-workflow'] };
+  const loaded = parseWorkflowLibrary(JSON.stringify({ version: 1, activeId: document.id, documents: [document], cleanup: [queued, null, { media: [42], runs: [] }] }), 'Untitled');
+  expect(loaded.cleanup).toEqual([queued]);
+});
