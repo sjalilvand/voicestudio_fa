@@ -41,6 +41,20 @@ def test_wer_no_space_scripts_score_per_character():
     assert word_error_rate("สวัสดีชาวโลก", "สวัสดีชาวโลกครับ") == pytest.approx(4 / 12)
 
 
+def test_wer_supplementary_ideographs_score_per_character():
+    # Extension B ideographs are outside the BMP; a wrong one is one character.
+    reference = "\U00020000\U00020001\U00020002\U00020003"
+    hypothesis = "\U00020000\U00020001\U00020002\U00020004"
+    assert word_error_rate(reference, hypothesis) == pytest.approx(1 / 4)
+
+
+def test_wer_no_space_script_punctuation_is_stripped():
+    # ・ and 。 are punctuation, not characters of the line; so is Thai ๏.
+    assert word_error_rate("東京・大阪。", "東京大阪") == pytest.approx(0.0)
+    assert word_error_rate("สวัสดี๏", "สวัสดี") == pytest.approx(0.0)
+    assert word_error_rate("東京・大阪", "東京・京都") == pytest.approx(2 / 4)
+
+
 def test_wer_spaced_scripts_keep_word_tokens():
     assert word_error_rate("naïve café", "naïve cafe") == pytest.approx(1 / 2)
 
