@@ -3141,6 +3141,7 @@
     "commercial_body": "Dùng công cụ sản xuất Pro cho công việc khách hàng và doanh nghiệp có trả phí. VoiceStudio cốt lõi vẫn được phép dùng thương mại theo AGPL-3.0.",
     "plan_enterprise": "Doanh nghiệp",
     "enterprise_price": "Tùy chỉnh",
+    "usd_price": "{{amount, currency(currency: USD; maximumFractionDigits: 0)}}",
     "for_teams": "cho nhóm",
     "enterprise_detail": "Cấp phép linh hoạt và hỗ trợ triển khai cho nhóm lớn.",
     "enterprise_volume": "Cấp phép số lượng lớn và hóa đơn",

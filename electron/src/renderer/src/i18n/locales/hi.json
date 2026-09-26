@@ -3141,6 +3141,7 @@
     "commercial_body": "भुगतान वाले क्लाइंट और व्यावसायिक काम के लिए Pro प्रोडक्शन टूल इस्तेमाल करें। मुख्य VoiceStudio का व्यावसायिक उपयोग AGPL-3.0 के तहत उपलब्ध रहता है।",
     "plan_enterprise": "एंटरप्राइज़",
     "enterprise_price": "कस्टम",
+    "usd_price": "{{amount, currency(currency: USD; maximumFractionDigits: 0)}}",
     "for_teams": "टीमों के लिए",
     "enterprise_detail": "बड़ी टीमों के लिए लचीली लाइसेंसिंग और रोलआउट सहायता।",
     "enterprise_volume": "वॉल्यूम लाइसेंसिंग और इनवॉइसिंग",

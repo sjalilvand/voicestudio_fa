@@ -3141,6 +3141,7 @@
     "commercial_body": "Pro üretim araçlarını ücretli müşteri ve iş projelerinde kullanın. VoiceStudio’nun ticari kullanımı AGPL-3.0 kapsamında sunulmaya devam eder.",
     "plan_enterprise": "Kurumsal",
     "enterprise_price": "Özel",
+    "usd_price": "{{amount, currency(currency: USD; maximumFractionDigits: 0)}}",
     "for_teams": "ekipler için",
     "enterprise_detail": "Büyük ekipler için esnek lisanslama ve kurulum desteği.",
     "enterprise_volume": "Toplu lisanslama ve faturalandırma",

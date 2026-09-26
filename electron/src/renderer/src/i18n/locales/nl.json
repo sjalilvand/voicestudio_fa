@@ -3141,6 +3141,7 @@
     "commercial_body": "Gebruik de Pro-productietools voor betaald klant- en bedrijfswerk. VoiceStudio blijft commercieel bruikbaar onder AGPL-3.0.",
     "plan_enterprise": "Enterprise",
     "enterprise_price": "Op maat",
+    "usd_price": "{{amount, currency(currency: USD; maximumFractionDigits: 0)}}",
     "for_teams": "voor teams",
     "enterprise_detail": "Flexibele licenties en implementatiehulp voor grotere teams.",
     "enterprise_volume": "Volumelicenties en facturering",

@@ -3149,6 +3149,7 @@
     "commercial_body": "استخدم أدوات إنتاج Pro لأعمال العملاء والأعمال المدفوعة. يظل الاستخدام التجاري الأساسي لـ VoiceStudio متاحًا بموجب AGPL-3.0.",
     "plan_enterprise": "المؤسسات",
     "enterprise_price": "مخصص",
+    "usd_price": "{{amount, currency(currency: USD; maximumFractionDigits: 0)}}",
     "for_teams": "للفرق",
     "enterprise_detail": "ترخيص مرن ودعم في النشر للفرق الكبيرة.",
     "enterprise_volume": "ترخيص بالجملة وفواتير",

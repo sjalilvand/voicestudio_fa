@@ -3141,6 +3141,7 @@
     "commercial_body": "ใช้เครื่องมือการผลิต Pro สำหรับงานลูกค้าและธุรกิจที่มีค่าตอบแทน VoiceStudio หลักยังคงใช้เชิงพาณิชย์ได้ภายใต้ AGPL-3.0",
     "plan_enterprise": "องค์กร",
     "enterprise_price": "กำหนดเอง",
+    "usd_price": "{{amount, currency(currency: USD; maximumFractionDigits: 0)}}",
     "for_teams": "สำหรับทีม",
     "enterprise_detail": "สิทธิ์ใช้งานแบบยืดหยุ่นและความช่วยเหลือในการนำไปใช้สำหรับทีมขนาดใหญ่",
     "enterprise_volume": "สิทธิ์ใช้งานแบบจำนวนมากและใบแจ้งหนี้",

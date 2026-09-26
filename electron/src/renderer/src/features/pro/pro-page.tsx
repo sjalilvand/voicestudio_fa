@@ -27,20 +27,17 @@ const plans = [
   {
     id: 'yearly',
     unitPrice: 99,
-    price: '$99',
     period: 'per_user_year',
     detail: 'yearly_detail',
   },
   {
     id: 'lifetime',
     unitPrice: 299,
-    price: '$299',
     period: 'per_user_once',
     detail: 'lifetime_detail',
   },
   {
     id: 'enterprise',
-    price: null,
     period: 'for_teams',
     detail: 'enterprise_detail',
   },
@@ -196,7 +193,11 @@ export function ProPage() {
                       )}
                     </div>
                     <div className="pro-plan-price">
-                      <strong>{plan.price ?? t('proPage.enterprise_price')}</strong>
+                      <strong>
+                        {plan.id === 'enterprise'
+                          ? t('proPage.enterprise_price')
+                          : t('proPage.usd_price', { amount: plan.unitPrice })}
+                      </strong>
                       <span>{t(`proPage.${plan.period}`)}</span>
                     </div>
                     <p>{t(`proPage.${plan.detail}`)}</p>
@@ -226,7 +227,9 @@ export function ProPage() {
                         </div>
                         <div className="pro-seat-total">
                           <span>{t('proPage.total')}</span>
-                          <strong>${plan.unitPrice * quantity}</strong>
+                          <strong>
+                            {t('proPage.usd_price', { amount: plan.unitPrice * quantity })}
+                          </strong>
                         </div>
                       </div>
                     )}

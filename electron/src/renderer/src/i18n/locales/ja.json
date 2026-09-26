@@ -3141,6 +3141,7 @@
     "commercial_body": "Pro 制作ツールを有償のクライアント案件や業務に利用できます。VoiceStudio 本体の商用利用は AGPL-3.0 のもとで引き続き可能です。",
     "plan_enterprise": "Enterprise",
     "enterprise_price": "要相談",
+    "usd_price": "{{amount, currency(currency: USD; maximumFractionDigits: 0)}}",
     "for_teams": "チーム向け",
     "enterprise_detail": "大規模チーム向けの柔軟なライセンスと導入支援。",
     "enterprise_volume": "ボリュームライセンスと請求書払い",

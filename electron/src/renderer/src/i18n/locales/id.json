@@ -3141,6 +3141,7 @@
     "commercial_body": "Gunakan alat produksi Pro untuk pekerjaan klien berbayar dan bisnis. VoiceStudio inti tetap dapat digunakan secara komersial berdasarkan AGPL-3.0.",
     "plan_enterprise": "Perusahaan",
     "enterprise_price": "Kustom",
+    "usd_price": "{{amount, currency(currency: USD; maximumFractionDigits: 0)}}",
     "for_teams": "untuk tim",
     "enterprise_detail": "Lisensi fleksibel dan dukungan peluncuran untuk tim yang lebih besar.",
     "enterprise_volume": "Lisensi volume dan faktur",

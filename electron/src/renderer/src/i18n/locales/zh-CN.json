@@ -3145,6 +3145,7 @@
     "commercial_body": "使用 Pro 制作工具完成付费客户和企业项目。VoiceStudio 核心功能仍可依据 AGPL-3.0 用于商业用途。",
     "plan_enterprise": "企业版",
     "enterprise_price": "定制",
+    "usd_price": "{{amount, currency(currency: USD; maximumFractionDigits: 0)}}",
     "for_teams": "适合团队",
     "enterprise_detail": "面向大型团队的灵活许可与部署支持。",
     "enterprise_volume": "批量许可与发票",

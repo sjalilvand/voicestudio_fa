@@ -3145,6 +3145,7 @@
     "commercial_body": "Використовуйте інструменти Pro для оплачуваних клієнтських і бізнес-проєктів. Комерційне використання VoiceStudio залишається дозволеним за AGPL-3.0.",
     "plan_enterprise": "Корпоративний",
     "enterprise_price": "За запитом",
+    "usd_price": "{{amount, currency(currency: USD; maximumFractionDigits: 0)}}",
     "for_teams": "для команд",
     "enterprise_detail": "Гнучке ліцензування та допомога з упровадженням для великих команд.",
     "enterprise_volume": "Корпоративні ліцензії та рахунки",
