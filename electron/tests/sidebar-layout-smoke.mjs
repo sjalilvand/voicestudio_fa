@@ -82,6 +82,55 @@ try {
       await compactMain.waitFor();
     }
   }
+  const macStartupPage = await browser.newPage();
+  try {
+    await macStartupPage.addInitScript(() => {
+      Object.defineProperty(window, 'voicestudio', {
+        value: {
+          app: {
+            version: 'test',
+            platform: 'darwin',
+            isDev: true,
+            onNavigate: () => () => {},
+            onPersistenceFlush: () => () => {},
+          },
+          backend: {
+            getStatus: async () => ({
+              stage: 'starting',
+              baseUrl: '',
+              port: 3900,
+              managed: true,
+              remote: false,
+              elapsedMs: 4_000,
+              logTail: [],
+            }),
+            onStatus: () => () => {},
+          },
+          repair: {
+            list: async () => [],
+            getState: async () => ({
+              status: 'idle',
+              output: '',
+              workspaceAvailable: false,
+            }),
+            onEvent: () => () => {},
+          },
+        },
+      });
+    });
+    await macStartupPage.goto(ui + '/#/clone');
+    const startupBrand = macStartupPage.getByRole('banner').getByText('VoiceStudio', {
+      exact: true,
+    });
+    await startupBrand.waitFor();
+    const startupBrandBounds = await startupBrand.boundingBox();
+    assert.ok(
+      startupBrandBounds && startupBrandBounds.x >= 96,
+      'macOS startup brand must clear the traffic lights',
+    );
+  } finally {
+    await macStartupPage.close();
+  }
   const macPage = await browser.newPage();
   try {
     await macPage.addInitScript(() => {
@@ -124,7 +173,8 @@ try {
     ).filter(Boolean);
     assert.ok(
       macNotificationBounds &&
-        titlebarActionBounds.length > 0 && titlebarActionBounds.every(
+        titlebarActionBounds.length > 0 &&
+        titlebarActionBounds.every(
           (bounds) => bounds.x + bounds.width <= macNotificationBounds.x - 12,
         ),
       'macOS titlebar actions must leave space before notifications',

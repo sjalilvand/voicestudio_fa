@@ -4,7 +4,7 @@ import i18n from '@/i18n';
 import type { BackendStatus } from '../../../preload/index.d';
 import { BackendGate } from './backend-gate';
 
-const { backendStatus } = vi.hoisted(() => ({
+const { backendStatus, platform } = vi.hoisted(() => ({
   backendStatus: {
     stage: 'setup_required',
     baseUrl: 'http://127.0.0.1:3900',
@@ -17,10 +17,16 @@ const { backendStatus } = vi.hoisted(() => ({
     runtimeInterrupted: true,
     runtimeRegion: 'auto',
   } as BackendStatus,
+  platform: { current: 'linux' },
 }));
 
 vi.mock('@/hooks/use-backend-status', () => ({
   useBackendStatus: () => backendStatus,
+}));
+
+vi.mock('./bridge', () => ({
+  getBridge: () => null,
+  isMac: () => platform.current === 'darwin',
 }));
 
 beforeEach(() => {
@@ -30,6 +36,7 @@ beforeEach(() => {
   delete backendStatus.message;
   delete backendStatus.setupPhase;
   delete backendStatus.setupProgress;
+  platform.current = 'linux';
 });
 
 it('presents an interrupted runtime as a resumable install', () => {
@@ -60,6 +67,27 @@ it('keeps branded chrome outside the scrolling installer content', () => {
   const scrollRegion = screen.getByTestId('backend-gate-scroll');
   expect(header).toHaveTextContent(i18n.t('app.name'));
   expect(scrollRegion).not.toContainElement(header);
+});
+
+it('keeps the startup brand clear of macOS traffic lights only on macOS', () => {
+  backendStatus.stage = 'starting';
+  platform.current = 'darwin';
+
+  const { rerender } = render(
+    <BackendGate>
+      <div>workspace</div>
+    </BackendGate>,
+  );
+
+  expect(screen.getByRole('banner')).toHaveClass('pl-24');
+
+  platform.current = 'win32';
+  rerender(
+    <BackendGate>
+      <div>workspace</div>
+    </BackendGate>,
+  );
+  expect(screen.getByRole('banner')).not.toHaveClass('pl-24');
 });
 
 it('shows package installation after the last large download instead of a stale package', () => {

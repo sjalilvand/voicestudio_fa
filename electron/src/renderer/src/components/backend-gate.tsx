@@ -28,7 +28,7 @@ import i18n, { APP_LANGUAGE_ITEMS, APP_LANGUAGES, setAppLanguage, type AppLocale
 import { brandIcon } from '@/lib/brand';
 import { cn } from '@/lib/utils';
 import type { RuntimeRegion } from '../../../preload/index.d';
-import { getBridge } from './bridge';
+import { getBridge, isMac } from './bridge';
 
 interface BackendGateProps {
   children: ReactNode;
@@ -164,7 +164,12 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
         recovering && 'z-30 bg-background/90 backdrop-blur-sm',
       )}
     >
-      <header className="workspace-titlebar flex shrink-0 items-center gap-2 border-b border-border/50 px-5">
+      <header
+        className={cn(
+          'workspace-titlebar flex shrink-0 items-center gap-2 border-b border-border/50 px-5',
+          isMac() && 'pl-24',
+        )}
+      >
         <img src={brandIcon} alt="" className="size-6 shrink-0" />
         <span className="whitespace-nowrap text-sm font-medium tracking-tight">
           {t('app.name')}

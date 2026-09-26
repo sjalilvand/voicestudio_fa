@@ -16,8 +16,10 @@ import { MirrorSettings } from '@/features/settings/mirror-settings';
 import { PrivacySettings } from '@/features/settings/privacy-settings';
 import { ShortcutSettings } from '@/features/settings/shortcut-settings';
 import { brandIcon } from '@/lib/brand';
+import { cn } from '@/lib/utils';
 import { appearanceScales, useAppearance } from '@/hooks/use-appearance';
 import { FIRST_SOUND_EVENT } from '@/lib/first-sound';
+import { isMac } from './bridge';
 import {
   rememberSetupCompleted,
   rememberSetupStarted,
@@ -97,7 +99,12 @@ export function SetupGate({ children }: { children: ReactNode }) {
           : true);
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
-      <header className="workspace-titlebar flex shrink-0 items-center gap-2 border-b border-border/50 px-5">
+      <header
+        className={cn(
+          'workspace-titlebar flex shrink-0 items-center gap-2 border-b border-border/50 px-5',
+          isMac() && 'pl-24',
+        )}
+      >
         <img src={brandIcon} alt="" className="size-6" />
         <h1 className="text-sm font-medium">{t('app.name')}</h1>
         {advanced && (
