@@ -385,7 +385,8 @@ export class BackendSupervisor extends EventEmitter<{
     __APP_VERSION__,
   );
   private readonly remotePath = join(app.getPath('userData'), 'remote-backend.json');
-  private localPort = resolvePort();
+  private readonly configuredPort = resolvePort();
+  private localPort = this.configuredPort;
   get port(): number {
     return this.localPort;
   }
@@ -519,6 +520,20 @@ export class BackendSupervisor extends EventEmitter<{
         });
         void this.waitUntilReady(gen, Number.POSITIVE_INFINITY);
         return;
+      }
+
+      // A previous fallback is only useful while its backend still answers.
+      // Once it is gone, retry the configured endpoint before spawning anew.
+      if (this.localPort !== this.configuredPort) {
+        this.localPort = this.configuredPort;
+        const attached = await this.probe();
+        if (gen !== this.generation) return;
+        if (attached) {
+          this.runtimeInterrupted = false;
+          this.setStage('ready');
+          this.supervise(gen);
+          return;
+        }
       }
 
       if (app.isPackaged && !parseBackendCmdOverride(process.env.OMNIVOICE_BACKEND_CMD)) {
