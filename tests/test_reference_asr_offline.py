@@ -155,6 +155,23 @@ def test_pytorch_reference_defers_pipeline_loading(monkeypatch, installed):
     loader.assert_not_called()
 
 
+def test_reference_preserves_explicit_remote_provider(monkeypatch):
+    from services import asr_backend as ab
+    backend = ab.OpenAICompatASRBackend.__new__(ab.OpenAICompatASRBackend)
+    transcribe = Mock(return_value={"text": "Configured provider words."})
+    monkeypatch.setattr(backend, "transcribe", transcribe)
+    monkeypatch.setattr(ab, "active_backend_id", lambda: "openai-compat-asr")
+    monkeypatch.setattr(ab, "get_active_asr_backend", lambda **kw: backend)
+    monkeypatch.setattr(ab, "_ref_audio_fingerprint", lambda _: None)
+    monkeypatch.setattr(ab, "_capture_whisper_repo", lambda: "missing-local-model")
+    monkeypatch.setattr(ab, "dictation_model_id", lambda: None)
+    monkeypatch.setattr(ab, "_repo_installed", lambda *args, **kw: False)
+    monkeypatch.setattr(ab, "_recommended_asr_model", lambda *args, **kw: None)
+    monkeypatch.setattr(ab, "_installed_reference_fallbacks", lambda _: [])
+    assert ab.transcribe_reference("ref.wav", release_after=True) == "Configured provider words."
+    transcribe.assert_called_once_with("ref.wav", word_timestamps=False)
+
+
 @pytest.mark.parametrize("fails", [False, True])
 def test_reference_releases_all_candidates_when_requested(fails):
     from services.asr_backend import _transcribe_reference_candidates

@@ -3318,12 +3318,17 @@ def transcribe_reference(audio_path: str, *, release_after: bool = False) -> str
     # introduced spurious words at the start of short generations. Neither
     # branch may download weights implicitly.
     candidates: list[ASRBackend] = []
-    offline_missing = asr_model_missing_error(require_installed=True)
+    # This provider is only reachable through an explicit settings/env choice;
+    # it has no local weights to verify and must keep the user's opt-in working.
+    selected_remote = active_backend_id() == "openai-compat-asr"
+    offline_missing = asr_model_missing_error(require_installed=not selected_remote)
     if offline_missing is None:
         try:
             # `load_*`, not `get_*`: a backend whose shallow probe passes but
             # whose deep import chain is broken must fall through cleanly.
-            backend = load_active_asr_backend(require_installed=True, defer_pytorch=True)
+            backend = load_active_asr_backend(
+                require_installed=not selected_remote, defer_pytorch=True,
+            )
             if not isinstance(backend, PyTorchWhisperBackend):
                 candidates.append(backend)
         except Exception:  # noqa: BLE001 — reference ASR is best-effort
