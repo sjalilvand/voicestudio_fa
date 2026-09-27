@@ -9,8 +9,10 @@ vi.mock('@/lib/app-activity', () => ({ useAppActivities: () => ({}) }));
 vi.mock('./system-preflight', () => ({ SystemPreflight: () => null }));
 vi.mock('@/components/performance-profile', () => ({ PerformanceProfile: () => null }));
 vi.mock('@shared/components/SearchableSelect', () => ({
-  default: ({ onChange }: { onChange: (value: string) => void }) => (
-    <button onClick={() => onChange('GPU-second')}>Choose adapter</button>
+  default: ({ onChange, disabled }: { onChange: (value: string) => void; disabled: boolean }) => (
+    <button disabled={disabled} onClick={() => onChange('GPU-second')}>
+      Choose adapter
+    </button>
   ),
 }));
 import { PerformanceSettings } from './performance-settings';
@@ -49,10 +51,23 @@ it.each([null, 'cuda', 'compute'])(
         <PerformanceSettings />
       </QueryClientProvider>,
     );
-    fireEvent.click(await screen.findByRole('button', { name: 'Choose adapter' }));
+    const selector = await screen.findByRole('button', { name: 'Choose adapter' });
+    await waitFor(() => expect(selector).toBeEnabled());
+    fireEvent.click(selector);
     await screen.findByRole('alert');
     retried = true;
+    const reads = (endpoint: string) =>
+      mock.api.mock.calls.filter(
+        ([path, init]) => path === endpoint && (!init?.method || init.method === 'GET'),
+      ).length;
+    const endpoints = ['/api/settings/compute-device', '/api/settings/cuda-device'];
+    const beforeRetry = endpoints.map(reads);
     fireEvent.click(screen.getByRole('button', { name: 'common.retry' }));
+    await waitFor(() =>
+      endpoints.forEach((endpoint, index) => {
+        expect(reads(endpoint)).toBe(beforeRetry[index] + 1);
+      }),
+    );
     await waitFor(() => expect(client.isFetching()).toBe(0));
     if (failRefetch) expect(screen.getByRole('alert')).toBeInTheDocument();
     else await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
