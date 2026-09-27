@@ -1,5 +1,5 @@
 import { LS_API_KEY, LS_BACKEND_URL } from '../api/client.ts';
-import { clearAdminSession, revokeAdminSession } from '../api/authSession.ts';
+import { revokeAdminSession } from '../api/authSession.ts';
 
 export type RemoteProbeKind = 'tls' | 'cors' | 'network' | 'timeout' | 'http' | 'wrong_port';
 
@@ -47,7 +47,6 @@ export async function disableRemoteBackend(reload: () => void | Promise<void>): 
       // Local logout and recovery must not depend on backend reachability.
     }
   }
-  clearAdminSession();
   await reload();
 }
 
