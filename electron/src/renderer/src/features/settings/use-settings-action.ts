@@ -20,5 +20,12 @@ export function useSettingsAction() {
       setBusy(false);
     }
   };
-  return { busy, error, saved, run, reset: () => setSaved(false) };
+  return {
+    busy,
+    error,
+    saved,
+    run,
+    reset: () => setSaved(false),
+    clearError: () => setError(false),
+  };
 }
