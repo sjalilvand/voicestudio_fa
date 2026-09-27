@@ -52,6 +52,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- Electron detects and repairs incomplete PyTorch, torchaudio and torchvision runtime wheels before backend startup (#2354) — thanks @jonathanmoronta1-lab!
 - Main-source installs use the built app version even when platform tooling has its own `Version` variable (#2343)
 - The macOS application menu says VoiceStudio instead of Electron in development launches (#2342)
 - Engine health checks recognize one-click TTS engines such as VoxCPM2 and MOSS-TTS-Nano in their isolated environments (#2339)
