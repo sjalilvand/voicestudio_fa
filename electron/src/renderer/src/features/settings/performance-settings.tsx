@@ -469,7 +469,7 @@ function ComputeDevice() {
                 { value: 'auto', label: t('settings.compute_device_auto') },
                 ...(cuda?.devices || []).map((device) => ({
                   value: device.value,
-                  label: `GPU ${device.index} — ${device.name}`,
+                  label: `${t('settings.device_family_gpu')} ${device.index} — ${device.name}`,
                 })),
               ]}
               onChange={(value: string) =>

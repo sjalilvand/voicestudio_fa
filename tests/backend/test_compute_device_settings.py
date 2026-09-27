@@ -159,6 +159,23 @@ def test_cuda_device_selection_persists_stable_uuid_for_next_restart(fresh_app, 
     assert prefs.get("env.CUDA_VISIBLE_DEVICES") is None
 
 
+@pytest.mark.parametrize('value', ['auto', 'GPU-not-present', ''])
+def test_generic_env_setter_cannot_bypass_cuda_validation(fresh_app, monkeypatch, value):
+    import asyncio
+    import os
+    from fastapi import HTTPException
+    from api.routers.system import set_env_var
+    from core import prefs
+
+    monkeypatch.setenv('CUDA_VISIBLE_DEVICES', 'GPU-running')
+    prefs.set_('env.CUDA_VISIBLE_DEVICES', 'GPU-saved')
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(set_env_var({'key': 'CUDA_VISIBLE_DEVICES', 'value': value}))
+    assert error.value.status_code == 400
+    assert os.environ['CUDA_VISIBLE_DEVICES'] == 'GPU-running'
+    assert prefs.get('env.CUDA_VISIBLE_DEVICES') == 'GPU-saved'
+
+
 def test_cuda_device_rejects_unknown_adapter(fresh_app, monkeypatch):
     from api.routers import settings as settings_router
 

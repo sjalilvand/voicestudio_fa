@@ -1182,9 +1182,6 @@ PERSISTENT_KEYS = {
     # first imported ("ml_imports"), so the restored value is what the module
     # captures. The Settings UI must say so (RestartBadge).
     "OMNIVOICE_GENERATE_TIMEOUT_S", "OMNIVOICE_CPU_GENERATE_TIMEOUT_S",
-    # Physical NVIDIA adapter selected in Settings → Performance. CUDA reads
-    # this before torch initializes, so it is restored only for the next start.
-    "CUDA_VISIBLE_DEVICES",
 }
 
 # Sidecar-engine install dirs (OMNIVOICE_INDEXTTS_DIR, …). The one-click

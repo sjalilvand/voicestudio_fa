@@ -2,6 +2,8 @@
 
 Settings > Compute device exposes the existing device override, a physical CUDA adapter selector on multi-GPU NVIDIA hosts, the torch.compile workaround, generation time budgets, and hardware readouts. The CUDA selector persists a stable GPU UUID through `CUDA_VISIBLE_DEVICES`; restart the app to apply it to the backend and every engine subprocess.
 
+CUDA selection uses the validated `/api/settings/cuda-device` endpoint; the generic environment setter cannot change it or alter the running process's GPU visibility.
+
 Device choices come from the backend's detected families plus Auto. The chosen preference and currently active family are displayed separately. Environment-pinned choices are disabled, an ignored unavailable override is explained, and a changed preference shows its actual restart requirement. Failed saves keep the last confirmed state. Nothing automatically restarts the backend or changes the active model.
 
 The torch.compile workaround matches Tauri: since #2135 it is selectable on every platform, because the compile failures it works around are not Windows-only. Generation budgets preserve separate GPU and CPU limits, validate the existing positive/21600-second range, and keep edits during refetches. An externally overridden budget reports that fact instead of implying the saved value will take effect after restart. Hardware RAM/VRAM readouts poll only while this view is mounted.
