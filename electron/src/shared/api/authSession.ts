@@ -139,6 +139,25 @@ function clearAdminSessionIfMatches(
   }
 }
 
+function storedAdminSessionRaw(storage: StorageLike | null): string | null {
+  try {
+    return storage?.getItem(ADMIN_SESSION_STORAGE_KEY) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function clearAdminSessionRawIfMatches(expectedRaw: string | null, storage: StorageLike | null): void {
+  if (expectedRaw === null) return;
+  try {
+    if (storage?.getItem(ADMIN_SESSION_STORAGE_KEY) === expectedRaw) {
+      storage.removeItem(ADMIN_SESSION_STORAGE_KEY);
+    }
+  } catch {
+    // Best effort; a concurrent or inaccessible session must not be removed.
+  }
+}
+
 export function getAdminSession(
   apiBase: string,
   {
@@ -288,6 +307,7 @@ export async function exchangeApiKey(
   if (!master || master.length > 8192) throw new AuthSessionError();
   const base = normalizedApiBase(apiBase);
   const transport = isSameOriginApi(base, windowLike) ? 'cookie' : 'bearer';
+  const sessionAtStart = storedAdminSessionRaw(storage);
 
   let response: Response;
   const controller = new AbortController();
@@ -314,7 +334,7 @@ export async function exchangeApiKey(
 
   if (transport === 'cookie') {
     if (response.status !== 204) throw new AuthSessionError(response.status);
-    clearAdminSession({ storage });
+    clearAdminSessionRawIfMatches(sessionAtStart, storage);
     removeLegacyMaster(legacyStorage);
     return { transport };
   }

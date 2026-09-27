@@ -211,6 +211,32 @@ describe('short-lived admin session client', () => {
     expect(JSON.parse(localStorage.getItem(ADMIN_SESSION_STORAGE_KEY) ?? '')).toEqual(existing);
   });
 
+  it('preserves a newer bearer session when an earlier cookie exchange succeeds', async () => {
+    let resolveFetch: (value: Response) => void = () => {};
+    const fetchImpl = vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveFetch = resolve;
+        }),
+    );
+    const pending = exchangeApiKey(MASTER, {
+      apiBase: 'https://voice.test',
+      fetchImpl,
+      windowLike: sameOriginWindow,
+    });
+    const newer = {
+      token: `${SESSION}-newer`,
+      expiresAt: NOW_SECONDS + 1800,
+      apiBase: 'https://gpu.test:3900',
+    };
+    localStorage.setItem(ADMIN_SESSION_STORAGE_KEY, JSON.stringify(newer));
+
+    resolveFetch(response(null, 204));
+    await pending;
+
+    expect(JSON.parse(localStorage.getItem(ADMIN_SESSION_STORAGE_KEY) ?? '')).toEqual(newer);
+  });
+
   it('bounds a hung exchange and retains the durable master for the next migration attempt', async () => {
     vi.useFakeTimers();
     localStorage.setItem(LEGACY_API_KEY_STORAGE_KEY, MASTER);
