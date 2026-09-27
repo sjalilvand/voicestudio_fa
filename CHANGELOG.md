@@ -53,6 +53,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- Returning to local mode discards sessions from unsaved remote-backend connection tests (#2356)
 - Remote administrator sessions survive reloads and new tabs without storing the master API key (#2352) — thanks @brunobarrientos!
 - Dub extraction shows ffmpeg's actual error instead of its Homebrew version banner (#2353) — thanks @lyrenth!
 - Main-source installs use the built app version even when platform tooling has its own `Version` variable (#2343)

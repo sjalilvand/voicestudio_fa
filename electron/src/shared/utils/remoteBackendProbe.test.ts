@@ -151,6 +151,38 @@ describe('remote backend probe', () => {
     expect(reload).toHaveBeenCalledOnce();
   });
 
+  it.each([null, 'http://configured-box:3900'])('discards a tested session when returning to local from %s', async (configured) => {
+    if (configured) localStorage.setItem('ov_backend_url', configured);
+    localStorage.setItem(ADMIN_SESSION_STORAGE_KEY, JSON.stringify({
+      apiBase: 'http://tested-box:3900',
+      token: `ovs_admin_session_${'a'.repeat(43)}`,
+      expiresAt: Date.now() / 1000 + 3600,
+    }));
+    const reload = vi.fn();
+    await disableRemoteBackend(reload);
+    expect(localStorage.getItem(ADMIN_SESSION_STORAGE_KEY)).toBeNull();
+    expect(reload).toHaveBeenCalledOnce();
+  });
+
+  it('does not discard a newer login while server revocation finishes', async () => {
+    localStorage.setItem('ov_backend_url', 'http://configured-box:3900');
+    const session = JSON.stringify({
+      apiBase: 'http://configured-box:3900',
+      token: `ovs_admin_session_${'a'.repeat(43)}`,
+      expiresAt: Date.now() / 1000 + 3600,
+    });
+    localStorage.setItem(ADMIN_SESSION_STORAGE_KEY, session);
+    let finish!: (response: Response) => void;
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((resolve) => { finish = resolve; })));
+    const pending = disableRemoteBackend(vi.fn());
+    expect(localStorage.getItem(ADMIN_SESSION_STORAGE_KEY)).toBeNull();
+    const newer = session.replace('configured-box', 'newer-box');
+    localStorage.setItem(ADMIN_SESSION_STORAGE_KEY, newer);
+    finish(new Response(null, { status: 204 }));
+    await pending;
+    expect(localStorage.getItem(ADMIN_SESSION_STORAGE_KEY)).toBe(newer);
+  });
+
   it('still reloads when persistent storage is blocked', async () => {
     const blockedStorage = {
       getItem: vi.fn(() => {
@@ -166,7 +198,7 @@ describe('remote backend probe', () => {
     await expect(disableRemoteBackend(reload)).resolves.toBeUndefined();
 
     expect(blockedStorage.getItem).toHaveBeenCalled();
-    expect(blockedStorage.removeItem).toHaveBeenCalledTimes(2);
+    expect(blockedStorage.removeItem).toHaveBeenCalledTimes(3);
     expect(reload).toHaveBeenCalledOnce();
   });
 });

@@ -172,6 +172,10 @@ The bundled UI uses a narrower protocol:
    `OMNIVOICE_API_KEY`, backend restart, explicit logout, and the eight-hour
    deadline also invalidate it.
 
+Choosing **Use local** discards the current stored bearer session, including
+one created by testing an unsaved backend URL. The configured backend's session
+is also revoked on a best-effort basis; local cleanup does not wait for it.
+
 The master is never written to localStorage/sessionStorage, never returned by
 the backend, and never placed in a WebSocket URL. Legacy `ov_api_key` browser
 storage is deleted before migration waits on the network. All auth responses,
