@@ -190,6 +190,27 @@ describe('short-lived admin session client', () => {
     expect(localStorage.getItem(LEGACY_API_KEY_STORAGE_KEY)).toBe(MASTER);
   });
 
+  it('preserves another tab session when an exchange fails', async () => {
+    const existing = {
+      token: `${SESSION}-existing`,
+      expiresAt: NOW_SECONDS + 1800,
+      apiBase: 'https://gpu.test:3900',
+    };
+    localStorage.setItem(ADMIN_SESSION_STORAGE_KEY, JSON.stringify(existing));
+    const fetchImpl = vi.fn().mockResolvedValue(response(null, 401));
+
+    await expect(
+      exchangeApiKey(MASTER, {
+        apiBase: 'https://gpu.test:3900',
+        fetchImpl,
+        windowLike: crossOriginWindow,
+        now: () => NOW_SECONDS * 1000,
+      }),
+    ).rejects.toBeInstanceOf(AuthSessionError);
+
+    expect(JSON.parse(localStorage.getItem(ADMIN_SESSION_STORAGE_KEY) ?? '')).toEqual(existing);
+  });
+
   it('bounds a hung exchange and retains the durable master for the next migration attempt', async () => {
     vi.useFakeTimers();
     localStorage.setItem(LEGACY_API_KEY_STORAGE_KEY, MASTER);
