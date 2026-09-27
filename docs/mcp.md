@@ -94,8 +94,22 @@ To bind this agent to a specific voice, send an
 `X-OmniVoice-Client-Id` header (e.g. `claude-code`). See
 [per-agent voices](#per-agent-voices).
 
-**Agents in Docker or on another machine:** the MCP SDK rejects non-localhost
-Host headers by default (DNS-rebinding guard). Set
+**Agents on another machine:** turn on **Settings → Sharing → Local network**.
+Use the displayed LAN address and share port with `/mcp/`, and send the shown
+access PIN as `X-OmniVoice-Pin`. For example:
+
+```toml
+[mcp_servers.voicestudio]
+url = "http://192.168.1.50:3901/mcp/"
+http_headers = { "X-OmniVoice-Pin" = "123456", "X-OmniVoice-Client-Id" = "codex-cli" }
+```
+
+VoiceStudio admits its current LAN addresses to the MCP DNS-rebinding guard
+only while PIN-gated sharing is enabled, and removes them when sharing stops.
+The same PIN protects both ordinary API requests and MCP sessions.
+
+**Docker, a hostname, or a manually bound server:** the MCP SDK rejects
+non-localhost Host headers by default (DNS-rebinding guard). Set
 `OMNIVOICE_MCP_ALLOWED_HOSTS` to a comma-separated list of host patterns the
 agent connects from (e.g. `host.containers.internal:*,192.168.1.50:*`).
 Keep this on a trusted LAN or behind TLS (Tailscale Serve, a reverse proxy
