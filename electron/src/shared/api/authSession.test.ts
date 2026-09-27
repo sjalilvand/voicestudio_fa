@@ -317,6 +317,43 @@ describe('short-lived admin session client', () => {
     });
   });
 
+  it('rejects a pending exchange when disable intentionally invalidates an expired session', async () => {
+    localStorage.setItem(
+      ADMIN_SESSION_STORAGE_KEY,
+      JSON.stringify({
+        token: `ovs_admin_session_${'E'.repeat(43)}`,
+        expiresAt: NOW_SECONDS + 1,
+        apiBase: 'https://old-gpu.test:3900',
+      }),
+    );
+    let currentTime = NOW_SECONDS * 1000;
+    let resolveFetch: (value: Response) => void = () => {};
+    const pending = exchangeApiKey(MASTER, {
+      apiBase: 'https://new-gpu.test:3900',
+      fetchImpl: vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            resolveFetch = resolve;
+          }),
+      ),
+      windowLike: crossOriginWindow,
+      now: () => currentTime,
+    });
+    const observed = pending.catch((error) => error);
+
+    currentTime += 2000;
+    await expect(
+      revokeAdminSession('https://old-gpu.test:3900', {
+        fetchImpl: vi.fn(),
+        now: () => currentTime,
+      }),
+    ).resolves.toBe(true);
+    resolveFetch(response({ token: SESSION, expires_at: NOW_SECONDS + 3600 }));
+
+    expect(await observed).toBeInstanceOf(AuthSessionError);
+    expect(localStorage.getItem(ADMIN_SESSION_STORAGE_KEY)).toBeNull();
+  });
+
   it('bounds a hung exchange and retains the durable master for the next migration attempt', async () => {
     vi.useFakeTimers();
     localStorage.setItem(LEGACY_API_KEY_STORAGE_KEY, MASTER);
