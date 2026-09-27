@@ -22,6 +22,12 @@ def test_the_ghcr_paths_are_explicit_and_keep_the_legacy_alias():
     assert "github.repository" not in str(env)
 
 
+def test_release_backfills_require_an_actual_git_tag():
+    workflow = open(WORKFLOW, encoding="utf-8").read()
+    assert workflow.count('git rev-parse "refs/tags/${RELEASE_REF}^{commit}"') == 2
+    assert 'git rev-parse "${RELEASE_REF}^{commit}"' not in workflow
+
+
 def test_both_ghcr_paths_are_published_by_both_builds():
     text = open(WORKFLOW, encoding="utf-8").read()
     assert text.count("${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}") == 2
@@ -30,7 +36,11 @@ def test_both_ghcr_paths_are_published_by_both_builds():
 
 def test_current_release_tags_are_backfilled_for_both_gpu_flavors():
     text = open(WORKFLOW, encoding="utf-8").read()
-    assert text.count('test "$RELEASE_REF" = "v${VERSION}"') == 2
+    assert text.count('[[ "$RELEASE_REF" =~ ^v[0-9]+\\.[0-9]+\\.[0-9]+$ ]]') == 2
+    assert text.count('${RELEASE_REF}^{commit}') == 2
+    assert text.count('VERSION="${RELEASE_REF#v}"') == 4
+    assert text.count("test \"$PACKAGE_VERSION\" = '1.0.0'") == 2
+    assert text.count('test "$PACKAGE_VERSION" = "$TAG_VERSION"') == 2
     assert text.count('if [[ "$PROMOTE_STABLE" == "true" ]]') == 2
     assert text.count("docker buildx imagetools create") == 4
 
