@@ -2088,6 +2088,7 @@
     "test_text": "你好——这是对该声音的测试。"
   },
   "nav": {
+    "home": "主页",
     "voice": "声音",
     "clone_short": "克隆",
     "workspaces": "工作区",
