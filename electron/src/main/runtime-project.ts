@@ -38,6 +38,8 @@ export const RUNTIME_REPAIR_PACKAGES = [
   'torchaudio',
   'torchvision',
 ] as const;
+export const RUNTIME_NATIVE_IMPORT_PROBE =
+  'import sentencepiece, torch, torchaudio, torchvision';
 export const RUNTIME_IMPORT_PROBE =
   'import fastapi, uvicorn, omnivoice, faster_whisper, sentencepiece, torch, torchaudio, torchvision';
 const RUNTIME_SCHEMA = 'electron-runtime-v2-cudnn8';
@@ -470,10 +472,16 @@ export async function installRuntime(
       try {
         await run(runtimePython(project), ['-c', RUNTIME_IMPORT_PROBE], project);
       } catch {
-        // A native wheel can be missing or ABI-broken while its dist-info still
-        // convinces `uv sync` that it is installed. Reinstall the matched stack
-        // without discarding the otherwise healthy managed interpreter.
-        repairPackages = RUNTIME_REPAIR_PACKAGES;
+        // Classify the failed full probe before evicting multi-GB native wheels.
+        // A missing FastAPI/uvicorn install is repaired by ordinary frozen sync
+        // and must retain the app-private wheel cache for offline recovery.
+        try {
+          await run(runtimePython(project), ['-c', RUNTIME_NATIVE_IMPORT_PROBE], project);
+        } catch {
+          // A native wheel can be missing or ABI-broken while its dist-info
+          // still convinces uv sync that it is installed. Reinstall only then.
+          repairPackages = RUNTIME_REPAIR_PACKAGES;
+        }
       }
     } catch {
       // Retry must not keep a wrong-base or native-crashing interpreter simply
@@ -487,7 +495,6 @@ export async function installRuntime(
     : ['--managed-python', '--python', '3.11'];
   // A failed native import may leave distribution metadata intact, so uv's
   // ordinary sync would otherwise consider the broken wheel already satisfied.
-  if (interpreterExists && !existingPython) repairPackages = RUNTIME_REPAIR_PACKAGES;
   const repairArgs = repairPackages.flatMap((name) => ['--reinstall-package', name]);
   signal.throwIfAborted();
   if (repairArgs.length) {

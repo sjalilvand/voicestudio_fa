@@ -11,6 +11,7 @@ import {
   ROCM_TORCH_INDEX,
   ROCM_TORCH_PINS,
   RUNTIME_IMPORT_PROBE,
+  RUNTIME_NATIVE_IMPORT_PROBE,
   RUNTIME_REPAIR_PACKAGES,
   clearCtranslate2ExecutableStack,
   runtimePython,
@@ -276,12 +277,8 @@ describe('packaged runtime setup', () => {
     const sync = run.mock.calls.find(([, args]) => args[0] === 'sync');
     expect(sync?.[1]).toContain('--managed-python');
     expect(sync?.[1]).not.toContain(runtimePython(project));
-    for (const name of RUNTIME_REPAIR_PACKAGES) {
-      expect(sync?.[1]).toContain(name);
-    }
     const cleanIndex = run.mock.calls.findIndex(([, args]) => args[0] === 'cache');
-    expect(run.mock.calls[cleanIndex]?.[1]).toEqual(['cache', 'clean', ...RUNTIME_REPAIR_PACKAGES]);
-    expect(cleanIndex).toBeLessThan(run.mock.calls.findIndex(([, args]) => args[0] === 'sync'));
+    expect(cleanIndex).toBe(-1);
   });
   it('repairs a broken native PyTorch stack without replacing the interpreter', async () => {
     const { bundle, project } = await fixture();
@@ -289,7 +286,11 @@ describe('packaged runtime setup', () => {
     let repaired = false;
     const run = vi.fn(async (command: string, args: string[]) => {
       if (args[0] === 'sync') repaired = true;
-      if (!repaired && command === runtimePython(project) && args[1] === RUNTIME_IMPORT_PROBE) {
+      if (
+        !repaired &&
+        command === runtimePython(project) &&
+        (args[1] === RUNTIME_IMPORT_PROBE || args[1] === RUNTIME_NATIVE_IMPORT_PROBE)
+      ) {
         throw new Error('missing libtorchaudio.pyd');
       }
     });
@@ -305,6 +306,27 @@ describe('packaged runtime setup', () => {
       'clean',
       ...RUNTIME_REPAIR_PACKAGES,
     ]);
+  });
+  it('repairs an unrelated missing dependency without evicting native wheels', async () => {
+    const { bundle, project } = await fixture();
+    await interpreter(project);
+    let synced = false;
+    const run = vi.fn(async (command: string, args: string[]) => {
+      if (args[0] === 'sync') synced = true;
+      if (!synced && command === runtimePython(project) && args[1] === RUNTIME_IMPORT_PROBE) {
+        throw new Error('No module named fastapi');
+      }
+    });
+    await installRuntime(bundle, project, 'uv', run, new AbortController().signal);
+    const sync = run.mock.calls.find(([, args]) => args[0] === 'sync');
+    expect(sync?.[1]).not.toContain('--reinstall-package');
+    expect(run.mock.calls.some(([, args]) => args[0] === 'cache')).toBe(false);
+    expect(
+      run.mock.calls.some(
+        ([command, args]) =>
+          command === runtimePython(project) && args[1] === RUNTIME_NATIVE_IMPORT_PROBE,
+      ),
+    ).toBe(true);
   });
   it('does not continue a cancelled interpreter probe into dependency installation', async () => {
     const { bundle, project } = await fixture();
