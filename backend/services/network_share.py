@@ -127,6 +127,7 @@ class _ShareRuntime:
     task: Optional["asyncio.Task"] = None
     mcp_allowed_hosts: list[str] = field(default_factory=list)
     mcp_allowed_origins: list[str] = field(default_factory=list)
+    lifecycle_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
 
 _runtime = _ShareRuntime()
@@ -200,6 +201,11 @@ def get_state() -> ShareState:
 
 
 async def enable(app) -> ShareState:
+    async with _runtime.lifecycle_lock:
+        return await _enable(app)
+
+
+async def _enable(app) -> ShareState:
     if _runtime.state.enabled:
         return _runtime.state
     port = _find_free_port(share_port_base())
@@ -254,6 +260,11 @@ async def enable(app) -> ShareState:
 
 
 async def disable(app) -> ShareState:
+    async with _runtime.lifecycle_lock:
+        return await _disable(app)
+
+
+async def _disable(app) -> ShareState:
     if _runtime.server is not None:
         _runtime.server.should_exit = True
         if _runtime.task is not None:

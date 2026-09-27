@@ -110,6 +110,8 @@ http_headers = { "X-OmniVoice-Pin" = "123456", "X-OmniVoice-Client-Id" = "codex-
 
 VoiceStudio admits its current LAN addresses to the MCP DNS-rebinding guard
 only while PIN-gated sharing is enabled, and removes them when sharing stops.
+Overlapping enable/disable requests are serialized so a listener or temporary
+MCP allowlist cannot be left behind by competing lifecycle changes.
 The same PIN protects both ordinary API requests and MCP sessions.
 
 **Docker, a hostname, or a manually bound server:** the MCP SDK rejects
