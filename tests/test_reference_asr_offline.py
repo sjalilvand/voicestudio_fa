@@ -70,6 +70,58 @@ def test_supplied_transcript_does_not_look_for_asr(monkeypatch):
     lookup.assert_not_called()
 
 
+@pytest.mark.parametrize("ref_text", [None, "", "   "])
+def test_sidecar_reuses_installed_asr_for_short_reference(monkeypatch, tmp_path, ref_text):
+    """Sidecar callers must reuse catalogue ASR just like in-process cloning."""
+    import soundfile as sf
+    from huggingface_hub.errors import LocalEntryNotFoundError
+    from engines.omnivoice_subprocess import OmniVoiceSubprocessBackend
+    from services.subprocess_backend import SubprocessBackend
+    from services import asr_backend
+
+    reference = tmp_path / "reference.wav"
+    sf.write(reference, torch.full((24_000,), 0.1).numpy(), 24_000)
+    model = _model()
+    lookup = Mock(side_effect=LocalEntryNotFoundError("model-specific Whisper not installed"))
+    monkeypatch.setattr("huggingface_hub.snapshot_download", lookup)
+    transcribe = Mock(return_value="Installed recognizer words.")
+    monkeypatch.setattr(asr_backend, "transcribe_reference", transcribe)
+
+    def synthesize(_backend, _text, **kwargs):
+        return model.create_voice_clone_prompt(
+            kwargs["ref_audio"], ref_text=kwargs.get("ref_text"), preprocess_prompt=False,
+        )
+
+    monkeypatch.setattr(SubprocessBackend, "generate", synthesize)
+    prompt = OmniVoiceSubprocessBackend().generate(
+        "New words.", ref_audio=str(reference), ref_text=ref_text,
+    )
+    assert prompt.ref_text == "Installed recognizer words."
+    transcribe.assert_called_once_with(str(reference))
+    lookup.assert_not_called()
+
+
+@pytest.mark.parametrize("supplied", [True, False])
+@pytest.mark.parametrize("fails", [True, False])
+def test_sidecar_preserves_supplied_text_and_local_fallback(monkeypatch, supplied, fails):
+    from engines.omnivoice_subprocess import OmniVoiceSubprocessBackend
+    from services.subprocess_backend import SubprocessBackend
+    from services import asr_backend, tts_backend
+
+    monkeypatch.setattr(tts_backend, "reference_duration_s", lambda _: 1.0)
+    transcribe = Mock(side_effect=RuntimeError("unavailable")) if fails else Mock(return_value=None)
+    monkeypatch.setattr(asr_backend, "transcribe_reference", transcribe)
+    monkeypatch.setattr(SubprocessBackend, "generate", lambda _self, _text, **kw: kw)
+    words = "Verified words." if supplied else None
+    result = OmniVoiceSubprocessBackend().generate("New words.", ref_audio="ref.wav", ref_text=words)
+    assert result["ref_text"] == words
+    assert result["ref_audio"] == "ref.wav"
+    if supplied:
+        transcribe.assert_not_called()
+    else:
+        transcribe.assert_called_once_with("ref.wav")
+
+
 def test_catalogue_ct2_reference_is_reused_without_transformers_asr(monkeypatch, tmp_path):
     from collections import OrderedDict
     from services import asr_backend as ab, sherpa_dictation

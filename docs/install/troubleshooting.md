@@ -50,6 +50,13 @@ Before digging through the entries below, let the app diagnose itself:
 
 ## Generation failure diagnosis
 
+OmniVoice's in-process and subprocess engines both reuse an installed speech
+recognizer when reference audio has no transcript, including short clips sent
+through batch or API callers. A supplied transcript is preserved for short
+references. This does not download an ASR model automatically: if no installed
+recognizer can transcribe the clip and no local model fallback is available,
+provide the matching transcript or explicitly install a speech-to-text model.
+
 Streaming and HTTP generation failures can identify these causes. Electron and
 web clients show the recovery guidance in the selected language; API clients
 receive a stable `docs_topic` and a safe fallback message, never private exception text.
