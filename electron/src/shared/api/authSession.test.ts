@@ -300,6 +300,7 @@ describe('short-lived admin session client', () => {
       }),
     );
     expect(getAdminSession('https://gpu.test', { now: () => NOW_SECONDS * 1000 })).toBeNull();
+    expect(localStorage.getItem(ADMIN_SESSION_STORAGE_KEY)).toContain('https://other.test');
 
     localStorage.setItem(
       ADMIN_SESSION_STORAGE_KEY,
@@ -493,6 +494,43 @@ describe('short-lived admin session client', () => {
     expect(windowLike.dispatchEvent).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'ov:auth-required' }),
     );
+  });
+
+  it('keeps a replacement session when an older ticket request is rejected late', async () => {
+    const replacement = `ovs_admin_session_${'C'.repeat(43)}`;
+    localStorage.setItem(
+      ADMIN_SESSION_STORAGE_KEY,
+      JSON.stringify({
+        token: SESSION,
+        expiresAt: NOW_SECONDS + 3600,
+        apiBase: 'https://gpu.test:3900',
+      }),
+    );
+    let resolveFetch: (response: Response) => void = () => {};
+    const fetchImpl = vi.fn(() => new Promise<Response>((resolve) => (resolveFetch = resolve)));
+    const windowLike = { ...crossOriginWindow, dispatchEvent: vi.fn() };
+    const pending = requestWebSocketTicket('/ws/events', {
+      apiBase: 'https://gpu.test:3900',
+      fetchImpl,
+      windowLike,
+      now: () => NOW_SECONDS * 1000,
+    });
+
+    localStorage.setItem(
+      ADMIN_SESSION_STORAGE_KEY,
+      JSON.stringify({
+        token: replacement,
+        expiresAt: NOW_SECONDS + 3600,
+        apiBase: 'https://gpu.test:3900',
+      }),
+    );
+    resolveFetch(response({ detail: 'expired' }, 401));
+    await expect(pending).rejects.toBeInstanceOf(AuthSessionError);
+
+    expect(getAdminSession('https://gpu.test:3900', { now: () => NOW_SECONDS * 1000 })?.token).toBe(
+      replacement,
+    );
+    expect(windowLike.dispatchEvent).not.toHaveBeenCalled();
   });
 
   it('clears session state idempotently without touching unrelated storage', () => {

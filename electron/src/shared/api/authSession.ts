@@ -123,6 +123,22 @@ export function clearAdminSession({
   }
 }
 
+function clearAdminSessionIfMatches(
+  expected: Pick<StoredAdminSession, 'token' | 'apiBase'>,
+  storage: StorageLike | null,
+): boolean {
+  try {
+    const raw = storage?.getItem(ADMIN_SESSION_STORAGE_KEY);
+    if (!raw) return false;
+    const current = JSON.parse(raw) as Partial<StoredAdminSession>;
+    if (current.token !== expected.token || current.apiBase !== expected.apiBase) return false;
+    storage?.removeItem(ADMIN_SESSION_STORAGE_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function getAdminSession(
   apiBase: string,
   {
@@ -134,7 +150,6 @@ export function getAdminSession(
   try {
     normalized = normalizedApiBase(apiBase);
   } catch {
-    clearAdminSession({ storage });
     return null;
   }
 
@@ -157,12 +172,14 @@ export function getAdminSession(
       typeof parsed.expiresAt !== 'number' ||
       !Number.isFinite(parsed.expiresAt) ||
       parsed.expiresAt <= nowSeconds ||
-      parsed.expiresAt > nowSeconds + MAX_SESSION_LIFETIME_SECONDS ||
-      parsed.apiBase !== normalized
+      parsed.expiresAt > nowSeconds + MAX_SESSION_LIFETIME_SECONDS
     ) {
       clearAdminSession({ storage });
       return null;
     }
+    // localStorage is shared by tabs. A tab still connected to backend A must
+    // not delete backend B's valid session after B authenticates in another tab.
+    if (parsed.apiBase !== normalized) return null;
     return {
       token: parsed.token as string,
       expiresAt: parsed.expiresAt,
@@ -462,8 +479,9 @@ export async function requestWebSocketTicket(
 
   if (response.status !== 201) {
     if (response.status === 401 || response.status === 403) {
-      clearAdminSession({ storage });
-      dispatchAuthRequired(windowLike);
+      // A late rejection belongs to the exact token sent above. Another tab
+      // may already have exchanged a replacement session in shared storage.
+      if (clearAdminSessionIfMatches(session, storage)) dispatchAuthRequired(windowLike);
     }
     throw new AuthSessionError(response.status);
   }
