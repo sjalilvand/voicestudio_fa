@@ -35,6 +35,7 @@ metadata and the backend fallback mirror it.
 
 ### Changed
 
+- MCP clients on another machine can connect through PIN-gated Local network sharing, which admits LAN hosts only while sharing is enabled (#2347) — thanks @z0tedd!
 - Docker, web setup, and documentation now use the canonical `ghcr.io/debpalash/voicestudio` image while the old GHCR path remains compatible (#2350)
 - GHCR publishes the VoiceStudio container coordinate alongside the existing path, with a release-tag backfill for a safe migration (#2348)
 - Electron is now the only desktop and web UI, with native helpers, packaging, setup, Docker and Network Sharing owned by maintained Electron paths (#2343)
