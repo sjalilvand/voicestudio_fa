@@ -168,6 +168,9 @@ it.each([200, 404])('skips unrelated occupied fallback listeners (HTTP %s)', asy
     expect(runningPort).toBe(5900);
     await vi.waitFor(() => expect(supervisor.status.stage).toBe('ready'));
     expect(supervisor.baseUrl).toBe('http://127.0.0.1:5900');
+    expect(vi.mocked(fetch).mock.calls.every(([, options]) => options?.redirect === 'error')).toBe(
+      true,
+    );
   } finally {
     (supervisor as unknown as { child: null }).child = null;
     await supervisor.shutdown();

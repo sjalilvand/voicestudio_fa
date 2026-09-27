@@ -1078,6 +1078,7 @@ export class BackendSupervisor extends EventEmitter<{
       const res = await fetch(`${baseUrl}/health`, {
         headers: this.requestHeaders(),
         signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+        redirect: this.remoteUrl ? 'follow' : 'error',
       });
       // Fallback ports were not explicitly chosen by the user. A generic
       // health JSON must never redirect renderer content to another service.
