@@ -103,12 +103,12 @@ def test_sidecar_reuses_installed_asr_for_short_reference(monkeypatch, tmp_path,
 
 @pytest.mark.parametrize("supplied", [True, False])
 @pytest.mark.parametrize("fails", [True, False])
-def test_sidecar_preserves_supplied_text_and_local_fallback(monkeypatch, supplied, fails):
+def test_sidecar_preserves_supplied_text_and_local_fallback(monkeypatch, supplied, fails, caplog):
     from engines.omnivoice_subprocess import main as sidecar
     from services import asr_backend, tts_backend
 
     monkeypatch.setattr(tts_backend, "reference_duration_s", lambda _: 1.0)
-    transcribe = Mock(side_effect=RuntimeError("unavailable")) if fails else Mock(return_value=None)
+    transcribe = Mock(side_effect=RuntimeError("private-reference.wav")) if fails else Mock(return_value=None)
     monkeypatch.setattr(asr_backend, "transcribe_reference", transcribe)
     generate = Mock(return_value=[torch.zeros(1, 16)])
     monkeypatch.setattr(sidecar, "_load_model", lambda _: SimpleNamespace(generate=generate, sampling_rate=24_000))
@@ -122,6 +122,18 @@ def test_sidecar_preserves_supplied_text_and_local_fallback(monkeypatch, supplie
         transcribe.assert_not_called()
     else:
         transcribe.assert_called_once_with("ref.wav")
+    assert "private-reference.wav" not in caplog.text
+
+
+def test_reference_candidate_failure_does_not_log_audio_paths(caplog):
+    from services.asr_backend import _transcribe_reference_candidates
+    backend = SimpleNamespace(
+        id="test-recognizer",
+        transcribe=Mock(side_effect=OSError("private-reference.wav")),
+    )
+    assert _transcribe_reference_candidates([backend], "private-reference.wav") == ""
+    assert "test-recognizer" in caplog.text
+    assert "private-reference.wav" not in caplog.text
 
 
 def test_catalogue_ct2_reference_is_reused_without_transformers_asr(monkeypatch, tmp_path):

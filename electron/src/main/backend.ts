@@ -555,7 +555,9 @@ export class BackendSupervisor extends EventEmitter<{
         !process.env.OMNIVOICE_PORT?.trim() &&
         !parseBackendCmdOverride(process.env.OMNIVOICE_BACKEND_CMD)
       ) {
-        const port = await availableBackendPort(this.port);
+        const port = await availableBackendPort(this.port, (candidate) =>
+          this.probe(`http://127.0.0.1:${candidate}`, true),
+        );
         if (gen !== this.generation) return;
         this.localPort = port;
         if (port !== this.configuredPort) {
@@ -1068,15 +1070,20 @@ export class BackendSupervisor extends EventEmitter<{
     });
   }
 
-  private async probe(): Promise<boolean> {
+  private async probe(baseUrl = this.baseUrl, identityOnly = false): Promise<boolean> {
     try {
       // This runs for the entire desktop session. Use the canonical, tiny
       // liveness response instead of repeatedly serializing full hardware,
       // settings and path information from /system/info.
-      const res = await fetch(`${this.baseUrl}/health`, {
+      const res = await fetch(`${baseUrl}/health`, {
         headers: this.requestHeaders(),
         signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
       });
+      // Fallback ports were not explicitly chosen by the user. A generic
+      // health JSON must never redirect renderer content to another service.
+      const marked = Boolean(res.headers.get('x-omnivoice-backend'));
+      if (identityOnly) return marked;
+      if (!this.remoteUrl && this.port !== this.configuredPort && !marked) return false;
       if (!res.ok) return false;
       const body: unknown = await res.json();
       return (

@@ -81,7 +81,9 @@ it.each([false, true])(
       vi.fn(async (url: string) => {
         if (!runningPort || !url.startsWith(`http://127.0.0.1:${runningPort}/`))
           throw new Error('unreachable');
-        return new Response(JSON.stringify({ status: 'ok', version: 'test' }));
+        return new Response(JSON.stringify({ status: 'ok', version: 'test' }), {
+          headers: { 'x-omnivoice-backend': 'test' },
+        });
       }),
     );
     const supervisor = new BackendSupervisor();
@@ -132,6 +134,45 @@ it.each([false, true])(
     }
   },
 );
+
+it.each([200, 404])('skips unrelated occupied fallback listeners (HTTP %s)', async (status) => {
+  vi.stubEnv('OMNIVOICE_PORT', '');
+  vi.stubEnv('OMNIVOICE_BACKEND_CMD', '');
+  vi.stubEnv('VOICESTUDIO_SKIP_BACKEND', '');
+  mocks.occupied.add(4900);
+  let runningPort = 0;
+  mocks.spawn.mockImplementation((_command: string, args: string[]) => {
+    runningPort = Number(args.at(-1));
+    return Object.assign(new EventEmitter(), {
+      stdin: null,
+      stdout: null,
+      stderr: null,
+      stdio: [],
+    });
+  });
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string) => {
+      if (url.startsWith('http://127.0.0.1:4900/'))
+        return new Response(JSON.stringify({ status: 'ok', version: 'test' }), { status });
+      if (runningPort && url.startsWith(`http://127.0.0.1:${runningPort}/`))
+        return new Response(JSON.stringify({ status: 'ok', version: 'test' }), {
+          headers: { 'x-omnivoice-backend': 'test' },
+        });
+      throw new Error('unreachable');
+    }),
+  );
+  const supervisor = new BackendSupervisor();
+  try {
+    await supervisor.start();
+    expect(runningPort).toBe(5900);
+    await vi.waitFor(() => expect(supervisor.status.stage).toBe('ready'));
+    expect(supervisor.baseUrl).toBe('http://127.0.0.1:5900');
+  } finally {
+    (supervisor as unknown as { child: null }).child = null;
+    await supervisor.shutdown();
+  }
+});
 
 it.each([null, 'EADDRINUSE'])(
   'preserves the preferred port for %s (including replacement attachment)',

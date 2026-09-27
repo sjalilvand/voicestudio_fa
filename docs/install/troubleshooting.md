@@ -56,6 +56,9 @@ loopback port before launching; its API proxy and health checks follow that port
 automatically. Candidates advance by 1000, up to 16 alternatives, so additional
 app windows discover and attach to the same backend. A fresh launch retries the
 default after a fallback backend stops. This recovery is available on all desktop platforms.
+Occupied fallback ports must carry VoiceStudio's backend response marker before
+attachment; unrelated listeners are skipped. This marker distinguishes services,
+not malicious processes running as the same local user.
 It does not override an explicit `OMNIVOICE_PORT`, a custom backend command, or an
 externally managed backend. For those configurations, choose an allowed port in
 your launch environment. An ordinary “address already in use” conflict still uses

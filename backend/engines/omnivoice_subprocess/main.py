@@ -226,8 +226,8 @@ def _handle_synthesize(msg: dict, stdout) -> None:
             ref_text = None
             try:
                 ref_text = transcribe_reference(ref_audio)
-            except Exception as exc:  # noqa: BLE001 — preserve installed-only model fallback
-                logging.getLogger(__name__).warning("reference transcript resolution failed: %s", exc)
+            except Exception:  # noqa: BLE001 — preserve installed-only model fallback
+                logging.getLogger(__name__).warning("reference transcript resolution failed")
 
     model = _load_model(stdout)
     gen_kw = {k: msg[k] for k in _GEN_KW_ALLOWLIST if k in msg}

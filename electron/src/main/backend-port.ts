@@ -20,10 +20,13 @@ function probePort(port: number): Promise<number> {
  * Preserve ordinary port-conflict/attachment handling; only bypass denied ports.
  * This is a preflight, not a reservation: uvicorn still handles bind-time races.
  */
-export async function availableBackendPort(preferred: number): Promise<number> {
+export async function availableBackendPort(
+  preferred: number,
+  isBackend: (port: number) => Promise<boolean> = async () => false,
+): Promise<number> {
   // Deterministic candidates let additional Electron instances discover the
-  // same backend. Never skip an occupied candidate: the caller must probe it
-  // for attachment, or retain the normal conflict/ownership handoff behavior.
+  // same backend. Keep occupied VoiceStudio candidates for attachment/handoff,
+  // but skip unrelated listeners on fallback ports.
   let denied: unknown;
   for (let offset = 0; offset <= 16; offset++) {
     const port = preferred + offset * 1000;
@@ -33,7 +36,11 @@ export async function availableBackendPort(preferred: number): Promise<number> {
       return port;
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
-      if (code === 'EADDRINUSE') return port;
+      if (code === 'EADDRINUSE') {
+        if (offset === 0 || (await isBackend(port))) return port;
+        denied = error;
+        continue;
+      }
       if (code !== 'EACCES') throw error;
       denied = error;
     }

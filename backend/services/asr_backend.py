@@ -3236,14 +3236,14 @@ def _transcribe_reference_candidates(
             candidate_text = (candidate_text or "").strip()
             if candidate_text:
                 return candidate_text
-        except Exception as exc:  # noqa: BLE001 - try the next local engine
-            logger.warning("transcribe_reference: %s failed (%s)", backend.id, exc)
+        except Exception:  # noqa: BLE001 - try the next local engine
+            logger.warning("transcribe_reference: %s failed", backend.id)
         finally:
             if getattr(backend, "_reference_ephemeral", False):
                 try:
                     backend.unload()
                 except Exception:  # noqa: BLE001 - release is best-effort
-                    logger.warning("reference ASR fallback unload failed", exc_info=True)
+                    logger.warning("reference ASR fallback unload failed")
     return ""
 
 
@@ -3284,8 +3284,8 @@ def transcribe_reference(audio_path: str) -> str | None:
             backend = load_active_asr_backend()
             if not isinstance(backend, PyTorchWhisperBackend):
                 candidates.append(backend)
-        except Exception as e:  # noqa: BLE001 — reference ASR is best-effort
-            logger.warning("transcribe_reference: offline ASR unavailable (%s)", e)
+        except Exception:  # noqa: BLE001 — reference ASR is best-effort
+            logger.warning("transcribe_reference: offline ASR unavailable")
 
     capture_missing = asr_model_missing_error(purpose="dictation")
     if capture_missing is None:
@@ -3296,8 +3296,8 @@ def transcribe_reference(audio_path: str) -> str | None:
                 for item in candidates
             ):
                 candidates.append(capture)
-        except Exception as e:  # noqa: BLE001 — reference ASR is best-effort
-            logger.warning("transcribe_reference: dictation ASR unavailable (%s)", e)
+        except Exception:  # noqa: BLE001 — reference ASR is best-effort
+            logger.warning("transcribe_reference: dictation ASR unavailable")
 
     text = _transcribe_reference_candidates(candidates, audio_path)
     fallbacks: list[ASRBackend] = []
