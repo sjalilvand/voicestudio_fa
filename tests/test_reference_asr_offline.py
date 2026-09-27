@@ -97,7 +97,7 @@ def test_sidecar_reuses_installed_asr_for_short_reference(monkeypatch, tmp_path,
     monkeypatch.setattr(sidecar, "_send", lambda *_: None)
     sidecar._handle_synthesize({"text": "New words.", "ref_audio": str(reference), "ref_text": ref_text}, None)
     assert prompts[0].ref_text == "Installed recognizer words."
-    transcribe.assert_called_once_with(str(reference))
+    transcribe.assert_called_once_with(str(reference), release_after=True)
     lookup.assert_not_called()
 
 
@@ -121,7 +121,7 @@ def test_sidecar_preserves_supplied_text_and_local_fallback(monkeypatch, supplie
     if supplied:
         transcribe.assert_not_called()
     else:
-        transcribe.assert_called_once_with("ref.wav")
+        transcribe.assert_called_once_with("ref.wav", release_after=True)
     assert "private-reference.wav" not in caplog.text
 
 
@@ -134,6 +134,54 @@ def test_reference_candidate_failure_does_not_log_audio_paths(caplog):
     assert _transcribe_reference_candidates([backend], "private-reference.wav") == ""
     assert "test-recognizer" in caplog.text
     assert "private-reference.wav" not in caplog.text
+
+
+@pytest.mark.parametrize("fails", [False, True])
+def test_reference_releases_all_candidates_when_requested(fails):
+    from services.asr_backend import _transcribe_reference_candidates
+    first = SimpleNamespace(id="first", unload=Mock(), transcribe=Mock(
+        side_effect=RuntimeError("failed") if fails else None,
+        return_value={"text": "words"},
+    ))
+    second = SimpleNamespace(id="second", unload=Mock(), transcribe=Mock(return_value={"text": "words"}))
+    assert _transcribe_reference_candidates([first, second], "ref.wav", release_after=True) == "words"
+    first.unload.assert_called_once()
+    second.unload.assert_called_once()
+
+
+def test_mlx_unload_releases_library_model_cache(monkeypatch):
+    import sys
+    from services.asr_backend import MLXWhisperBackend
+    holder = SimpleNamespace(model=object(), model_path="local-model")
+    clear = Mock()
+    monkeypatch.setitem(sys.modules, "mlx_whisper.transcribe", SimpleNamespace(ModelHolder=holder))
+    monkeypatch.setitem(sys.modules, "mlx.core", SimpleNamespace(clear_cache=clear))
+    MLXWhisperBackend().unload()
+    assert holder.model is None
+    assert holder.model_path is None
+    clear.assert_called_once()
+
+
+@pytest.mark.parametrize("fails", [False, True])
+def test_sidecar_releases_reference_asr_before_loading_tts(monkeypatch, fails):
+    from engines.omnivoice_subprocess import main as sidecar
+    from services import asr_backend as ab, tts_backend
+    released = []
+    backend = SimpleNamespace(id="test", transcribe=Mock(
+        side_effect=RuntimeError("failed") if fails else None,
+        return_value={"text": "words"},
+    ), unload=lambda: released.append(True))
+    monkeypatch.setattr(ab, "_ref_audio_fingerprint", lambda _: None)
+    monkeypatch.setattr(ab, "asr_model_missing_error", lambda **kw: "missing" if kw else None)
+    monkeypatch.setattr(ab, "load_active_asr_backend", lambda: backend)
+    monkeypatch.setattr(ab, "_installed_reference_fallbacks", lambda _: [])
+    monkeypatch.setattr(tts_backend, "reference_duration_s", lambda _: 1.0)
+    def load(_):
+        assert released == [True]
+        return SimpleNamespace(generate=lambda **kw: [torch.zeros(1, 16)], sampling_rate=24_000)
+    monkeypatch.setattr(sidecar, "_load_model", load)
+    monkeypatch.setattr(sidecar, "_send", lambda *_: None)
+    sidecar._handle_synthesize({"text": "New words.", "ref_audio": "ref.wav"}, None)
 
 
 def test_catalogue_ct2_reference_is_reused_without_transformers_asr(monkeypatch, tmp_path):

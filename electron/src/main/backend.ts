@@ -555,9 +555,11 @@ export class BackendSupervisor extends EventEmitter<{
         !process.env.OMNIVOICE_PORT?.trim() &&
         !parseBackendCmdOverride(process.env.OMNIVOICE_BACKEND_CMD)
       ) {
-        const port = await availableBackendPort(this.port, (candidate) =>
-          this.probe(`http://127.0.0.1:${candidate}`, true),
-        );
+        let identifiedBackend = false;
+        const port = await availableBackendPort(this.port, async (candidate) => {
+          identifiedBackend = await this.probe(`http://127.0.0.1:${candidate}`, true);
+          return identifiedBackend;
+        });
         if (gen !== this.generation) return;
         this.localPort = port;
         if (port !== this.configuredPort) {
@@ -566,6 +568,12 @@ export class BackendSupervisor extends EventEmitter<{
           if (attached) {
             this.setStage('ready');
             this.supervise(gen);
+            return;
+          }
+          if (identifiedBackend) {
+            // Another instance owns this listener but is still loading. Never
+            // spawn over it; attachment has the same bounded startup budget.
+            void this.waitUntilReady(gen, startupBudgetMs());
             return;
           }
         }
@@ -1107,11 +1115,7 @@ export class BackendSupervisor extends EventEmitter<{
         this.supervise(gen);
         return;
       }
-      if (gen !== this.generation || this.stage !== 'starting') {
-        if (gen === this.generation && this.stage === 'attaching') {
-          await delay(READY_POLL_MS);
-          continue;
-        }
+      if (gen !== this.generation || (this.stage !== 'starting' && this.stage !== 'attaching')) {
         return;
       }
       if (Date.now() > deadline) {

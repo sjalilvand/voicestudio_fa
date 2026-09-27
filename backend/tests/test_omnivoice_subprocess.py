@@ -127,7 +127,7 @@ def test_reference_asr_hang_is_killed_and_next_request_recovers(monkeypatch, tmp
         "import importlib.util, sys, time, types\n"
         f"spec = importlib.util.spec_from_file_location('child', {str(Path(sidecar.__file__).resolve())!r})\n"
         "child = importlib.util.module_from_spec(spec); spec.loader.exec_module(child)\n"
-        "def transcribe(path):\n"
+        "def transcribe(path, *, release_after=False):\n"
         "    if path == 'hang.wav':\n"
         f"        open({str(marker)!r}, 'w').write('entered')\n"
         "        while True: time.sleep(0.1)\n"

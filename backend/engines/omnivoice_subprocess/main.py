@@ -225,7 +225,7 @@ def _handle_synthesize(msg: dict, stdout) -> None:
 
             ref_text = None
             try:
-                ref_text = transcribe_reference(ref_audio)
+                ref_text = transcribe_reference(ref_audio, release_after=True)
             except Exception:  # noqa: BLE001 — preserve installed-only model fallback
                 logging.getLogger(__name__).warning("reference transcript resolution failed")
 

@@ -48,6 +48,7 @@ import { BackendSupervisor } from './backend';
 import { availableBackendPort } from './backend-port';
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
   vi.clearAllMocks();
@@ -55,6 +56,48 @@ afterEach(() => {
   mocks.occupied.clear();
   mocks.denyAll = false;
 });
+
+it.each(['ready', 'timeout', 'shutdown'])(
+  'waits for an identified starting fallback: %s',
+  async (outcome) => {
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
+    vi.stubEnv('OMNIVOICE_PORT', '');
+    vi.stubEnv('OMNIVOICE_BACKEND_CMD', '');
+    vi.stubEnv('VOICESTUDIO_SKIP_BACKEND', '');
+    vi.stubEnv('OMNIVOICE_STARTUP_BUDGET_S', '10');
+    mocks.occupied.add(4900);
+    let ready = false;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (!url.startsWith('http://127.0.0.1:4900/')) throw new Error('unreachable');
+        return new Response(
+          JSON.stringify({ status: ready ? 'ok' : 'starting', version: 'test' }),
+          {
+            status: ready ? 200 : 503,
+            headers: { 'x-omnivoice-backend': 'test' },
+          },
+        );
+      }),
+    );
+    const supervisor = new BackendSupervisor();
+    try {
+      await supervisor.start();
+      expect(mocks.spawn).not.toHaveBeenCalled();
+      expect(supervisor.status.stage).toBe('attaching');
+      if (outcome === 'shutdown') await supervisor.shutdown();
+      ready = outcome !== 'timeout';
+      await vi.advanceTimersByTimeAsync(11_000);
+      expect(supervisor.status.stage).toBe(
+        outcome === 'ready' ? 'ready' : outcome === 'timeout' ? 'failed' : 'idle',
+      );
+      expect(mocks.spawn).not.toHaveBeenCalled();
+    } finally {
+      (supervisor as unknown as { child: null }).child = null;
+      await supervisor.shutdown();
+    }
+  },
+);
 
 it.each([false, true])(
   'recovers a denied default and retries it on restart (existing default backend: %s)',
