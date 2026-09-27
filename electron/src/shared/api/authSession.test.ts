@@ -237,6 +237,43 @@ describe('short-lived admin session client', () => {
     expect(JSON.parse(localStorage.getItem(ADMIN_SESSION_STORAGE_KEY) ?? '')).toEqual(newer);
   });
 
+  it('rejects an older bearer response instead of replacing a newer session', async () => {
+    let resolveOlder: (value: Response) => void = () => {};
+    const olderFetch = vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveOlder = resolve;
+        }),
+    );
+    const older = exchangeApiKey(MASTER, {
+      apiBase: 'https://old-gpu.test:3900',
+      fetchImpl: olderFetch,
+      windowLike: crossOriginWindow,
+      now: () => NOW_SECONDS * 1000,
+    });
+    const observedOlder = older.catch((error) => error);
+    const newerToken = `ovs_admin_session_${'N'.repeat(43)}`;
+
+    await expect(
+      exchangeApiKey(MASTER, {
+        apiBase: 'https://new-gpu.test:3900',
+        fetchImpl: vi
+          .fn()
+          .mockResolvedValue(response({ token: newerToken, expires_at: NOW_SECONDS + 3600 })),
+        windowLike: crossOriginWindow,
+        now: () => NOW_SECONDS * 1000,
+      }),
+    ).resolves.toEqual({ transport: 'bearer', expiresAt: NOW_SECONDS + 3600 });
+
+    resolveOlder(response({ token: SESSION, expires_at: NOW_SECONDS + 3600 }));
+    expect(await observedOlder).toBeInstanceOf(AuthSessionError);
+    expect(getAdminSession('https://new-gpu.test:3900', { now: () => NOW_SECONDS * 1000 })).toEqual({
+      token: newerToken,
+      expiresAt: NOW_SECONDS + 3600,
+      apiBase: 'https://new-gpu.test:3900',
+    });
+  });
+
   it('bounds a hung exchange and retains the durable master for the next migration attempt', async () => {
     vi.useFakeTimers();
     localStorage.setItem(LEGACY_API_KEY_STORAGE_KEY, MASTER);

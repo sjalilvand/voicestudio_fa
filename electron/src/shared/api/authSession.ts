@@ -158,6 +158,20 @@ function clearAdminSessionRawIfMatches(expectedRaw: string | null, storage: Stor
   }
 }
 
+function storeAdminSessionIfUnchanged(
+  expectedRaw: string | null,
+  record: StoredAdminSession,
+  storage: StorageLike | null,
+): boolean {
+  try {
+    if (!storage || storage.getItem(ADMIN_SESSION_STORAGE_KEY) !== expectedRaw) return false;
+    storage.setItem(ADMIN_SESSION_STORAGE_KEY, JSON.stringify(record));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function getAdminSession(
   apiBase: string,
   {
@@ -348,12 +362,7 @@ export async function exchangeApiKey(
   }
 
   const record: StoredAdminSession = { token, expiresAt, apiBase: base };
-  try {
-    if (!storage) throw new TypeError();
-    storage.setItem(ADMIN_SESSION_STORAGE_KEY, JSON.stringify(record));
-  } catch {
-    throw new AuthSessionError();
-  }
+  if (!storeAdminSessionIfUnchanged(sessionAtStart, record, storage)) throw new AuthSessionError();
   removeLegacyMaster(legacyStorage);
   return { transport, expiresAt };
 }
