@@ -13,4 +13,3 @@ def find_nvidia_smi() -> str | None:
     if executable:
         return executable
     return _WSL_NVIDIA_SMI if os.path.isfile(_WSL_NVIDIA_SMI) else None
-
