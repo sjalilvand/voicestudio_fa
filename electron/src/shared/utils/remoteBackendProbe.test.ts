@@ -166,7 +166,7 @@ describe('remote backend probe', () => {
     await expect(disableRemoteBackend(reload)).resolves.toBeUndefined();
 
     expect(blockedStorage.getItem).toHaveBeenCalled();
-    expect(blockedStorage.removeItem).toHaveBeenCalledTimes(3);
+    expect(blockedStorage.removeItem).toHaveBeenCalledTimes(2);
     expect(reload).toHaveBeenCalledOnce();
   });
 });

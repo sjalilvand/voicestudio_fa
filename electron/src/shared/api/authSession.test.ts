@@ -619,6 +619,44 @@ describe('short-lived admin session client', () => {
     await expect(pending).resolves.toBe(true);
   });
 
+  it('preserves a replacement session while revoking the captured session', async () => {
+    const original = JSON.stringify({
+      token: SESSION,
+      expiresAt: NOW_SECONDS + 3600,
+      apiBase: 'https://gpu.test:3900',
+    });
+    const replacement = JSON.stringify({
+      token: `${SESSION.slice(0, -1)}B`,
+      expiresAt: NOW_SECONDS + 3600,
+      apiBase: 'https://backup.test:3900',
+    });
+    let current: string | null = original;
+    const storage = {
+      getItem: vi
+        .fn()
+        .mockImplementationOnce(() => {
+          current = replacement;
+          return original;
+        })
+        .mockImplementation(() => current),
+      setItem: vi.fn(),
+      removeItem: vi.fn(() => {
+        current = null;
+      }),
+    };
+
+    await expect(
+      revokeAdminSession('https://gpu.test:3900', {
+        fetchImpl: vi.fn().mockResolvedValue(response(null, 204)),
+        storage,
+        now: () => NOW_SECONDS * 1000,
+      }),
+    ).resolves.toBe(true);
+
+    expect(current).toBe(replacement);
+    expect(storage.removeItem).not.toHaveBeenCalled();
+  });
+
   it('revokes a same-origin cookie session with the CSRF marker', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(response(null, 204));
 

@@ -375,12 +375,11 @@ export async function revokeAdminSession(
   try {
     base = normalizedApiBase(apiBase);
   } catch {
-    clearAdminSession({ storage });
     return false;
   }
   const session = getAdminSession(base, { storage, now });
   const sameOrigin = isSameOriginApi(base, windowLike);
-  clearAdminSession({ storage });
+  if (session) clearAdminSessionIfMatches(session, storage);
   // Cross-origin cookie auth cannot work (the cookie is SameSite=Strict), and
   // without a bearer token there is nothing meaningful to revoke remotely.
   if (!session && !sameOrigin) return true;
