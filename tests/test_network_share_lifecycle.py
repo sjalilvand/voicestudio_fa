@@ -19,6 +19,8 @@ from services import network_share as ns
 
 @pytest.mark.parametrize('second_operation', ['enable', 'disable'])
 def test_overlapping_lifecycle_calls_leave_no_listener_or_mcp_hosts(monkeypatch, second_operation):
+    from services import network_share as ns
+
     async def exercise():
         servers = []
         serving = []

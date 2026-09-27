@@ -102,6 +102,11 @@ network observer could capture and reuse the PIN. On an untrusted or shared
 network, use an encrypted tunnel or HTTPS (for example, Tailscale Serve or a
 TLS reverse proxy) instead.
 
+A reverse proxy must enforce its own authentication: loopback requests with an
+accepted Host bypass the sharing PIN gate, so forwarding `/mcp/` through a
+local proxy does not make the share PIN an access-control boundary. HTTPS
+encrypts the connection but does not replace that proxy-side authentication.
+
 ```toml
 [mcp_servers.voicestudio]
 url = "http://192.168.1.50:3901/mcp/"
