@@ -151,18 +151,33 @@ describe('remote backend probe', () => {
     expect(reload).toHaveBeenCalledOnce();
   });
 
-  it.each([null, 'http://configured-box:3900'])('discards a tested session when returning to local from %s', async (configured) => {
-    if (configured) localStorage.setItem('ov_backend_url', configured);
-    localStorage.setItem(ADMIN_SESSION_STORAGE_KEY, JSON.stringify({
-      apiBase: 'http://tested-box:3900',
-      token: `ovs_admin_session_${'a'.repeat(43)}`,
-      expiresAt: Date.now() / 1000 + 3600,
-    }));
-    const reload = vi.fn();
-    await disableRemoteBackend(reload);
-    expect(localStorage.getItem(ADMIN_SESSION_STORAGE_KEY)).toBeNull();
-    expect(reload).toHaveBeenCalledOnce();
-  });
+  it.each([null, 'http://configured-box:3900'])(
+    'discards a tested session when returning to local from %s',
+    async (configured) => {
+      const fetchImpl = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+      vi.stubGlobal('fetch', fetchImpl);
+      if (configured) localStorage.setItem('ov_backend_url', configured);
+      localStorage.setItem(
+        ADMIN_SESSION_STORAGE_KEY,
+        JSON.stringify({
+          apiBase: 'http://tested-box:3900',
+          token: `ovs_admin_session_${'a'.repeat(43)}`,
+          expiresAt: Date.now() / 1000 + 3600,
+        }),
+      );
+      const reload = vi.fn();
+      await disableRemoteBackend(reload);
+      expect(localStorage.getItem(ADMIN_SESSION_STORAGE_KEY)).toBeNull();
+      expect(fetchImpl).toHaveBeenCalledExactlyOnceWith(
+        'http://tested-box:3900/api/auth/session',
+        expect.objectContaining({
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ovs_admin_session_${'a'.repeat(43)}` },
+        }),
+      );
+      expect(reload).toHaveBeenCalledOnce();
+    },
+  );
 
   it('does not discard a newer login while server revocation finishes', async () => {
     localStorage.setItem('ov_backend_url', 'http://configured-box:3900');
@@ -173,7 +188,15 @@ describe('remote backend probe', () => {
     });
     localStorage.setItem(ADMIN_SESSION_STORAGE_KEY, session);
     let finish!: (response: Response) => void;
-    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((resolve) => { finish = resolve; })));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            finish = resolve;
+          }),
+      ),
+    );
     const pending = disableRemoteBackend(vi.fn());
     expect(localStorage.getItem(ADMIN_SESSION_STORAGE_KEY)).toBeNull();
     const newer = session.replace('configured-box', 'newer-box');

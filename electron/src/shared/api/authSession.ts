@@ -179,7 +179,10 @@ function storedAdminSessionRaw(storage: StorageLike | null): string | null {
   }
 }
 
-function clearAdminSessionRawIfMatches(expectedRaw: string | null, storage: StorageLike | null): void {
+function clearAdminSessionRawIfMatches(
+  expectedRaw: string | null,
+  storage: StorageLike | null,
+): void {
   try {
     if (expectedRaw !== null && storage?.getItem(ADMIN_SESSION_STORAGE_KEY) === expectedRaw) {
       storage.removeItem(ADMIN_SESSION_STORAGE_KEY);
@@ -423,6 +426,24 @@ export async function exchangeApiKey(
   }
   removeLegacyMaster(legacyStorage);
   return { transport, expiresAt };
+}
+
+/** Revoke an unsaved connection-test session against its own validated base. */
+export async function revokeStoredAdminSession(
+  options: Omit<CommonOptions, 'apiBase'> = {},
+): Promise<boolean> {
+  const storage = options.storage === undefined ? defaultAdminSessionStorage() : options.storage;
+  try {
+    const raw = storage?.getItem(ADMIN_SESSION_STORAGE_KEY);
+    if (!raw || raw.length > 4096) return false;
+    const parsed = JSON.parse(raw) as Partial<StoredAdminSession>;
+    if (typeof parsed.apiBase !== 'string') return false;
+    const session = getAdminSession(parsed.apiBase, { storage, now: options.now });
+    if (!session) return false;
+    return await revokeAdminSession(session.apiBase, { ...options, storage });
+  } catch {
+    return false;
+  }
 }
 
 /** Best-effort server revocation used when switching away from a backend.

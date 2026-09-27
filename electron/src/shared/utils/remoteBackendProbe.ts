@@ -1,5 +1,9 @@
 import { LS_API_KEY, LS_BACKEND_URL } from '../api/client.ts';
-import { clearAdminSession, revokeAdminSession } from '../api/authSession.ts';
+import {
+  clearAdminSession,
+  revokeAdminSession,
+  revokeStoredAdminSession,
+} from '../api/authSession.ts';
 
 export type RemoteProbeKind = 'tls' | 'cors' | 'network' | 'timeout' | 'http' | 'wrong_port';
 
@@ -43,10 +47,11 @@ export async function disableRemoteBackend(reload: () => void | Promise<void>): 
   // Capture the configured session for server revocation before discarding
   // all local credentials, including a session from an unsaved connection test.
   // Clear before awaiting so a newer login is not deleted on network completion.
-  const revocation = target ? revokeAdminSession(target) : Promise.resolve();
+  const revocations = [revokeStoredAdminSession()];
+  if (target) revocations.push(revokeAdminSession(target));
   clearAdminSession();
   try {
-    await revocation;
+    await Promise.all(revocations);
   } catch {
     // Local logout and recovery must not depend on backend reachability.
   }
