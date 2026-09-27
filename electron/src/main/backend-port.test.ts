@@ -6,6 +6,8 @@ const mocks = vi.hoisted(() => ({
   spawn: vi.fn(),
   listen: vi.fn(),
   bindError: 'EACCES' as string | null,
+  occupied: new Set<number>(),
+  denyAll: false,
   close: vi.fn(),
 }));
 vi.mock('electron', () => ({ app: { isPackaged: true, getPath: () => '/unused-port-test' } }));
@@ -15,12 +17,14 @@ vi.mock('node:net', () => ({
     const server = Object.assign(new EventEmitter(), {
       listen: (options: { port: number }, done: () => void) => {
         mocks.listen(options);
-        if (options.port === 3900 && mocks.bindError) {
+        const code = mocks.occupied.has(options.port)
+          ? 'EADDRINUSE'
+          : options.port === 3900 || mocks.denyAll
+            ? mocks.bindError
+            : null;
+        if (code) {
           queueMicrotask(() =>
-            server.emit(
-              'error',
-              Object.assign(new Error('bind failed'), { code: mocks.bindError }),
-            ),
+            server.emit('error', Object.assign(new Error('bind failed'), { code })),
           );
         } else queueMicrotask(done);
         return server;
@@ -48,6 +52,8 @@ afterEach(() => {
   vi.unstubAllEnvs();
   vi.clearAllMocks();
   mocks.bindError = 'EACCES';
+  mocks.occupied.clear();
+  mocks.denyAll = false;
 });
 
 it.each([false, true])(
@@ -67,6 +73,7 @@ it.each([false, true])(
       const port = Number(args.at(-1));
       // Replay the reported bind denial: this port cannot host a healthy backend.
       runningPort = port === 3900 ? 0 : port;
+      if (runningPort) mocks.occupied.add(runningPort);
       return child;
     });
     vi.stubGlobal(
@@ -80,13 +87,26 @@ it.each([false, true])(
     const supervisor = new BackendSupervisor();
     try {
       await supervisor.start();
-      expect(runningPort).toBe(49152);
+      expect(runningPort).toBe(4900);
       await vi.waitFor(() => expect(supervisor.status.stage).toBe('ready'));
-      expect(supervisor.status.baseUrl).toBe('http://127.0.0.1:49152');
-      expect(mocks.spawn.mock.calls[0][2].env.OMNIVOICE_PORT).toBe('49152');
+      expect(supervisor.status.baseUrl).toBe('http://127.0.0.1:4900');
+      expect(mocks.spawn.mock.calls[0][2].env.OMNIVOICE_PORT).toBe('4900');
+      vi.stubEnv('VOICESTUDIO_ALLOW_MULTIPLE_INSTANCES', '1');
+      const second = new BackendSupervisor();
+      try {
+        await second.start();
+        expect(mocks.spawn).toHaveBeenCalledTimes(1);
+        expect(second.status.stage).toBe('ready');
+        expect(second.status.managed).toBe(false);
+        expect(second.baseUrl).toBe(supervisor.baseUrl);
+      } finally {
+        (second as unknown as { child: null }).child = null;
+        await second.shutdown();
+      }
       (supervisor as unknown as { child: null }).child = null;
       await supervisor.shutdown();
       runningPort = existingDefault ? 3900 : 0;
+      mocks.occupied.clear();
       mocks.bindError = null;
       mocks.listen.mockClear();
       mocks.spawn.mockImplementation((_command: string, args: string[]) => {
@@ -131,6 +151,13 @@ it('does not hide unrelated bind failures', async () => {
   mocks.bindError = 'EMFILE';
   await expect(availableBackendPort(3900)).rejects.toMatchObject({ code: 'EMFILE' });
   expect(mocks.listen).toHaveBeenCalledTimes(1);
+});
+
+it('bounds fallback attempts when all candidates are denied', async () => {
+  mocks.denyAll = true;
+  await expect(availableBackendPort(3900)).rejects.toMatchObject({ code: 'EACCES' });
+  expect(mocks.listen).toHaveBeenCalledTimes(17);
+  expect(mocks.listen.mock.calls.every(([options]) => options.port !== 0)).toBe(true);
 });
 
 it.each(['explicit port', 'custom command', 'external backend', 'healthy backend'])(

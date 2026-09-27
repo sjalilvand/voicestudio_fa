@@ -21,13 +21,22 @@ function probePort(port: number): Promise<number> {
  * This is a preflight, not a reservation: uvicorn still handles bind-time races.
  */
 export async function availableBackendPort(preferred: number): Promise<number> {
-  try {
-    await probePort(preferred);
-    return preferred;
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    if (code === 'EADDRINUSE') return preferred;
-    if (code !== 'EACCES') throw error;
-    return probePort(0);
+  // Deterministic candidates let additional Electron instances discover the
+  // same backend. Never skip an occupied candidate: the caller must probe it
+  // for attachment, or retain the normal conflict/ownership handoff behavior.
+  let denied: unknown;
+  for (let offset = 0; offset <= 16; offset++) {
+    const port = preferred + offset * 1000;
+    if (port > 65535) break;
+    try {
+      await probePort(port);
+      return port;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === 'EADDRINUSE') return port;
+      if (code !== 'EACCES') throw error;
+      denied = error;
+    }
   }
+  throw denied;
 }

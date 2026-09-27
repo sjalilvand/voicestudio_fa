@@ -558,6 +558,15 @@ export class BackendSupervisor extends EventEmitter<{
         const port = await availableBackendPort(this.port);
         if (gen !== this.generation) return;
         this.localPort = port;
+        if (port !== this.configuredPort) {
+          const attached = await this.probe();
+          if (gen !== this.generation) return;
+          if (attached) {
+            this.setStage('ready');
+            this.supervise(gen);
+            return;
+          }
+        }
       }
       const plan = await resolveSpawnPlan(this.port, this.runtimeProject ?? undefined);
       if (gen !== this.generation) return;
