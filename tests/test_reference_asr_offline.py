@@ -136,6 +136,25 @@ def test_reference_candidate_failure_does_not_log_audio_paths(caplog):
     assert "private-reference.wav" not in caplog.text
 
 
+@pytest.mark.parametrize("installed", [False, True])
+def test_pytorch_reference_defers_pipeline_loading(monkeypatch, installed):
+    from services import asr_backend as ab
+    from api.routers.setup import models
+    monkeypatch.setattr(ab, "active_backend_id", lambda: "pytorch-whisper")
+    monkeypatch.setattr(ab, "_ref_audio_fingerprint", lambda _: None)
+    monkeypatch.setattr(ab, "_capture_whisper_repo", lambda: "openai/whisper-large-v3-turbo")
+    monkeypatch.setattr(ab, "dictation_model_id", lambda: None)
+    monkeypatch.setattr(ab, "_repo_installed", lambda *args, **kw: installed)
+    monkeypatch.setattr(ab, "get_capture_asr_backend", lambda: ab.PyTorchWhisperBackend())
+    monkeypatch.setattr(ab, "_recommended_asr_model", lambda *args, **kw: None)
+    monkeypatch.setattr(models, "get_model_catalog", lambda: {})
+    monkeypatch.setattr(ab, "_installed_reference_fallbacks", lambda _: [])
+    loader = Mock(side_effect=RuntimeError("network-capable loader invoked"))
+    monkeypatch.setattr(ab.PyTorchWhisperBackend, "_ensure_pipe", loader)
+    assert ab.transcribe_reference("ref.wav", release_after=True) is None
+    loader.assert_not_called()
+
+
 @pytest.mark.parametrize("fails", [False, True])
 def test_reference_releases_all_candidates_when_requested(fails):
     from services.asr_backend import _transcribe_reference_candidates
@@ -172,8 +191,8 @@ def test_sidecar_releases_reference_asr_before_loading_tts(monkeypatch, fails):
         return_value={"text": "words"},
     ), unload=lambda: released.append(True))
     monkeypatch.setattr(ab, "_ref_audio_fingerprint", lambda _: None)
-    monkeypatch.setattr(ab, "asr_model_missing_error", lambda **kw: "missing" if kw else None)
-    monkeypatch.setattr(ab, "load_active_asr_backend", lambda: backend)
+    monkeypatch.setattr(ab, "asr_model_missing_error", lambda **kw: "missing" if kw.get("purpose") == "dictation" else None)
+    monkeypatch.setattr(ab, "load_active_asr_backend", lambda **kw: backend)
     monkeypatch.setattr(ab, "_installed_reference_fallbacks", lambda _: [])
     monkeypatch.setattr(tts_backend, "reference_duration_s", lambda _: 1.0)
     def load(_):

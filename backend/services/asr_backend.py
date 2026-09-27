@@ -3053,7 +3053,9 @@ class ASRModelMissingError(RuntimeError):
         super().__init__(asr_model_missing_detail(payload))
 
 
-def load_active_asr_backend(*, asr_pipe=None, require_installed: bool = False) -> ASRBackend:
+def load_active_asr_backend(
+    *, asr_pipe=None, require_installed: bool = False, defer_pytorch: bool = False,
+) -> ASRBackend:
     """:func:`get_active_asr_backend` + eager ``ensure_loaded()``, degrading
     past backends whose deep import chain is broken (#1185).
 
@@ -3076,11 +3078,16 @@ def load_active_asr_backend(*, asr_pipe=None, require_installed: bool = False) -
     primary would let the fallback silently auto-download multi-GB weights.
     A fallback without installed weights raises :class:`ASRModelMissingError`
     (typed payload → the caller's download CTA).
+    Reference transcription uses ``defer_pytorch`` to leave that pipeline to
+    the TTS model's installed-only fallback, without eagerly loading a second
+    copy that the reference caller would immediately discard.
     """
     from core.scrub import scrub_text
     tried: set[str] = set()
     while True:
         backend = get_active_asr_backend(asr_pipe=asr_pipe)
+        if defer_pytorch and isinstance(backend, PyTorchWhisperBackend):
+            return backend
         bid = getattr(backend, "id", "?")
         if tried or require_installed:
             # Preflight the SPECIFIC candidate about to load — not the global
@@ -3311,18 +3318,18 @@ def transcribe_reference(audio_path: str, *, release_after: bool = False) -> str
     # introduced spurious words at the start of short generations. Neither
     # branch may download weights implicitly.
     candidates: list[ASRBackend] = []
-    offline_missing = asr_model_missing_error()
+    offline_missing = asr_model_missing_error(require_installed=True)
     if offline_missing is None:
         try:
             # `load_*`, not `get_*`: a backend whose shallow probe passes but
             # whose deep import chain is broken must fall through cleanly.
-            backend = load_active_asr_backend()
+            backend = load_active_asr_backend(require_installed=True, defer_pytorch=True)
             if not isinstance(backend, PyTorchWhisperBackend):
                 candidates.append(backend)
         except Exception:  # noqa: BLE001 — reference ASR is best-effort
             logger.warning("transcribe_reference: offline ASR unavailable")
 
-    capture_missing = asr_model_missing_error(purpose="dictation")
+    capture_missing = asr_model_missing_error(purpose="dictation", require_installed=True)
     if capture_missing is None:
         try:
             capture = get_capture_asr_backend()

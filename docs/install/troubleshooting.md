@@ -78,6 +78,8 @@ Sidecar stderr is scrubbed for home directories and secrets before logging.
 This does not download an ASR model automatically: if no installed
 recognizer can transcribe the clip and no local model fallback is available,
 provide the matching transcript or explicitly install a speech-to-text model.
+Unknown or unverifiable ASR selections are skipped for automatic reference
+transcription; an explicit transcription job keeps its normal provider settings.
 
 Streaming and HTTP generation failures can identify these causes. Electron and
 web clients show the recovery guidance in the selected language; API clients
