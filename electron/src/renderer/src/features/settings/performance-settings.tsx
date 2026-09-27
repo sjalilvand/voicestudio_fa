@@ -467,6 +467,9 @@ function ComputeDevice() {
               value={cuda?.value || 'auto'}
               options={[
                 { value: 'auto', label: t('settings.compute_device_auto') },
+                ...(cuda?.value === 'disabled'
+                  ? [{ value: 'disabled', label: t('supportPlans.disabled') }]
+                  : []),
                 ...(cuda?.devices || []).map((device) => ({
                   value: device.value,
                   label: `${t('settings.device_family_gpu')} ${device.index} — ${device.name}`,

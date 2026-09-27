@@ -327,12 +327,15 @@ def _cuda_device_state() -> dict:
 
     external = prefs.is_env_shadowed(_CUDA_VISIBLE_DEVICES)
     saved = str(prefs.get(f"env.{_CUDA_VISIBLE_DEVICES}", "") or "").strip()
-    applied = str(os.environ.get(_CUDA_VISIBLE_DEVICES, "") or "").strip()
+    applied = (
+        os.environ[_CUDA_VISIBLE_DEVICES].strip() or "disabled"
+        if _CUDA_VISIBLE_DEVICES in os.environ else "auto"
+    )
     value = applied if external else saved
     return {
         "value": value or "auto",
-        "applied": applied or "auto",
-        "restart_required": (value or "auto") != (applied or "auto"),
+        "applied": applied,
+        "restart_required": (value or "auto") != applied,
         "env_pinned": external,
         "devices": _cuda_devices(),
     }

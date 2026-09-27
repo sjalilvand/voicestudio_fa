@@ -209,13 +209,15 @@ def test_cuda_device_selection_uses_wsl_nvidia_smi(fresh_app, monkeypatch):
     assert calls[0][0] == "/usr/lib/wsl/lib/nvidia-smi"
 
 
-def test_external_cuda_visibility_pin_wins_over_saved_choice(fresh_app, monkeypatch):
+@pytest.mark.parametrize('override, expected', [('1', '1'), ('', 'disabled')])
+def test_external_cuda_visibility_pin_wins_over_saved_choice(fresh_app, monkeypatch, override, expected):
     from api.routers import settings as settings_router
     from core import prefs
 
     monkeypatch.setattr(settings_router, "_cuda_devices", lambda: [])
     monkeypatch.setattr(prefs, "is_env_shadowed", lambda key: key == "CUDA_VISIBLE_DEVICES")
-    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "1")
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", override)
     state = _client(fresh_app).get("/api/settings/cuda-device").json()
-    assert state["value"] == state["applied"] == "1"
+    assert state["value"] == state["applied"] == expected
+    assert state["restart_required"] is False
     assert state["env_pinned"] is True
