@@ -15,7 +15,6 @@ import asyncio
 import logging
 import os
 import re
-import shutil
 import subprocess
 from dataclasses import asdict
 
@@ -23,6 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from core.logging_utils import log_safe
+from core.nvidia_smi import find_nvidia_smi
 from core.engine_licenses import LICENSE_GATED_ENGINES
 from api.dependencies import require_admin, require_admin_action
 
@@ -293,7 +293,7 @@ def _cuda_devices() -> list[dict]:
     cannot offer a way back to a currently hidden card. nvidia-smi sees the
     physical inventory and gives us stable UUIDs, which CUDA accepts directly.
     """
-    executable = shutil.which("nvidia-smi")
+    executable = find_nvidia_smi()
     if not executable:
         return []
     try:

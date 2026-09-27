@@ -127,7 +127,7 @@ def test_auto_summary_reports_registered_npu(fresh_app, monkeypatch):
 def test_cuda_device_selection_persists_stable_uuid_for_next_restart(fresh_app, monkeypatch):
     from api.routers import settings as settings_router
 
-    monkeypatch.setattr(settings_router.shutil, "which", lambda _name: "nvidia-smi")
+    monkeypatch.setattr(settings_router, "find_nvidia_smi", lambda: "nvidia-smi")
     monkeypatch.setattr(
         settings_router.subprocess,
         "run",
@@ -167,6 +167,29 @@ def test_cuda_device_rejects_unknown_adapter(fresh_app, monkeypatch):
         "/api/settings/cuda-device", json={"value": "GPU-not-present"}
     )
     assert response.status_code == 400
+
+
+def test_cuda_device_selection_uses_wsl_nvidia_smi(fresh_app, monkeypatch):
+    from api.routers import settings as settings_router
+
+    monkeypatch.setattr(
+        settings_router, "find_nvidia_smi", lambda: "/usr/lib/wsl/lib/nvidia-smi"
+    )
+    calls = []
+    monkeypatch.setattr(
+        settings_router.subprocess,
+        "run",
+        lambda args, **_kwargs: (
+            calls.append(args)
+            or SimpleNamespace(
+                returncode=0,
+                stdout="0, GPU-aaaaaaaa-bbbb, NVIDIA GeForce RTX 3060\n",
+            )
+        ),
+    )
+    state = _client(fresh_app).get("/api/settings/cuda-device").json()
+    assert state["devices"][0]["value"] == "GPU-aaaaaaaa-bbbb"
+    assert calls[0][0] == "/usr/lib/wsl/lib/nvidia-smi"
 
 
 def test_external_cuda_visibility_pin_wins_over_saved_choice(fresh_app, monkeypatch):
