@@ -10,6 +10,8 @@ import {
   CUDNN8_COMPAT_PIN,
   ROCM_TORCH_INDEX,
   ROCM_TORCH_PINS,
+  RUNTIME_IMPORT_PROBE,
+  RUNTIME_REPAIR_PACKAGES,
   clearCtranslate2ExecutableStack,
   runtimePython,
   runtimeReady,
@@ -256,11 +258,11 @@ describe('packaged runtime setup', () => {
     expect(sync?.[1]).not.toContain('--reinstall-package');
     expect(sync?.[1]).toContain(runtimePython(project));
   });
-  it('does not reuse an existing interpreter that fails the version/native probe', async () => {
+  it('does not reuse an existing interpreter with the wrong Python version', async () => {
     const { bundle, project } = await fixture();
     await interpreter(project);
     const run = vi.fn(async (_command: string, args: string[]) => {
-      if (args[1]?.includes('import sys, sentencepiece')) throw new Error('broken interpreter');
+      if (args[1]?.includes('sys.version_info')) throw new Error('broken interpreter');
     });
     await installRuntime(
       bundle,
@@ -274,18 +276,42 @@ describe('packaged runtime setup', () => {
     const sync = run.mock.calls.find(([, args]) => args[0] === 'sync');
     expect(sync?.[1]).toContain('--managed-python');
     expect(sync?.[1]).not.toContain(runtimePython(project));
-    expect(sync?.[1]).toContain('--reinstall-package');
-    expect(sync?.[1]).toContain('sentencepiece');
+    for (const name of RUNTIME_REPAIR_PACKAGES) {
+      expect(sync?.[1]).toContain(name);
+    }
     const cleanIndex = run.mock.calls.findIndex(([, args]) => args[0] === 'cache');
-    expect(run.mock.calls[cleanIndex]?.[1]).toEqual(['cache', 'clean', 'sentencepiece']);
+    expect(run.mock.calls[cleanIndex]?.[1]).toEqual(['cache', 'clean', ...RUNTIME_REPAIR_PACKAGES]);
     expect(cleanIndex).toBeLessThan(run.mock.calls.findIndex(([, args]) => args[0] === 'sync'));
+  });
+  it('repairs a broken native PyTorch stack without replacing the interpreter', async () => {
+    const { bundle, project } = await fixture();
+    await interpreter(project);
+    let repaired = false;
+    const run = vi.fn(async (command: string, args: string[]) => {
+      if (args[0] === 'sync') repaired = true;
+      if (!repaired && command === runtimePython(project) && args[1] === RUNTIME_IMPORT_PROBE) {
+        throw new Error('missing libtorchaudio.pyd');
+      }
+    });
+    await installRuntime(bundle, project, 'uv', run, new AbortController().signal);
+    const sync = run.mock.calls.find(([, args]) => args[0] === 'sync');
+    expect(sync?.[1]).toContain(runtimePython(project));
+    expect(sync?.[1]).not.toContain('--managed-python');
+    for (const name of RUNTIME_REPAIR_PACKAGES) {
+      expect(sync?.[1]).toContain(name);
+    }
+    expect(run.mock.calls.find(([, args]) => args[0] === 'cache')?.[1]).toEqual([
+      'cache',
+      'clean',
+      ...RUNTIME_REPAIR_PACKAGES,
+    ]);
   });
   it('does not continue a cancelled interpreter probe into dependency installation', async () => {
     const { bundle, project } = await fixture();
     await interpreter(project);
     const controller = new AbortController();
     const run = vi.fn(async (_command: string, args: string[]) => {
-      if (args[1]?.includes('import sys, sentencepiece')) {
+      if (args[1]?.includes('sys.version_info')) {
         controller.abort();
         throw new Error('probe aborted');
       }
