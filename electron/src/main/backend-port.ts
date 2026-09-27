@@ -1,16 +1,14 @@
 import { createServer } from 'node:net';
 
 /** Check bind permissions without leaving a listener behind. */
-function probePort(port: number): Promise<number> {
+function probePort(port: number): Promise<void> {
   return new Promise((resolve, reject) => {
     const server = createServer();
     server.once('error', reject);
     server.listen({ host: '127.0.0.1', port, exclusive: true }, () => {
-      const address = server.address();
       server.close((error) => {
         if (error) reject(error);
-        else if (address && typeof address !== 'string') resolve(address.port);
-        else reject(new Error('Backend port probe did not bind'));
+        else resolve();
       });
     });
   });

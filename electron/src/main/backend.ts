@@ -1108,9 +1108,13 @@ export class BackendSupervisor extends EventEmitter<{
 
   private async waitUntilReady(gen: number, budgetMs: number): Promise<void> {
     const deadline = this.startedAt + budgetMs;
-    while (gen === this.generation) {
-      if (await this.probe()) {
-        if (gen !== this.generation) return;
+    const waitingStage = this.stage;
+    while (gen === this.generation && this.stage === waitingStage) {
+      const ready = await this.probe();
+      // Child-exit recovery owns its own grace period. Its transition from
+      // starting to attaching must retire this launch's readiness deadline.
+      if (gen !== this.generation || this.stage !== waitingStage) return;
+      if (ready) {
         this.setStage('ready', { message: undefined });
         this.supervise(gen);
         return;

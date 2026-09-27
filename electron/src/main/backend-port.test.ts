@@ -220,6 +220,46 @@ it.each([200, 404])('skips unrelated occupied fallback listeners (HTTP %s)', asy
   }
 });
 
+it('gives a replacement its full handoff grace after a late startup exit', async () => {
+  vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
+  vi.stubEnv('OMNIVOICE_PORT', '');
+  vi.stubEnv('OMNIVOICE_BACKEND_CMD', '');
+  vi.stubEnv('VOICESTUDIO_SKIP_BACKEND', '');
+  vi.stubEnv('OMNIVOICE_STARTUP_BUDGET_S', '10');
+  let ready = false;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => {
+      if (!ready) throw new Error('starting');
+      return new Response(JSON.stringify({ status: 'ok', version: 'test' }), {
+        headers: { 'x-omnivoice-backend': 'test' },
+      });
+    }),
+  );
+  const child = Object.assign(new EventEmitter(), {
+    stdin: null,
+    stdout: null,
+    stderr: null,
+    stdio: [],
+  });
+  mocks.spawn.mockReturnValue(child);
+  const supervisor = new BackendSupervisor();
+  try {
+    await supervisor.start();
+    await vi.advanceTimersByTimeAsync(9_000);
+    child.emit('exit', 0, null);
+    await vi.advanceTimersByTimeAsync(8_000);
+    expect(supervisor.status.stage).toBe('attaching');
+    ready = true;
+    await vi.advanceTimersByTimeAsync(500);
+    expect(supervisor.status.stage).toBe('ready');
+    expect(supervisor.status.managed).toBe(false);
+  } finally {
+    (supervisor as unknown as { child: null }).child = null;
+    await supervisor.shutdown();
+  }
+});
+
 it.each([null, 'EADDRINUSE'])(
   'preserves the preferred port for %s (including replacement attachment)',
   async (error) => {
