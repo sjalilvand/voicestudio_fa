@@ -12,6 +12,7 @@ Covers the API contract of GET/PUT /api/settings/compute-device:
 from __future__ import annotations
 
 import sys
+from types import SimpleNamespace
 
 import pytest
 
@@ -21,6 +22,7 @@ def fresh_app(monkeypatch, tmp_path):
     """Same isolation pattern as tests/backend/test_perf_settings.py."""
     monkeypatch.setenv("OMNIVOICE_DATA_DIR", str(tmp_path))
     monkeypatch.delenv("OMNIVOICE_DEVICE", raising=False)
+    monkeypatch.delenv("CUDA_VISIBLE_DEVICES", raising=False)
     monkeypatch.delenv("HF_TOKEN", raising=False)
     monkeypatch.delenv("HUGGING_FACE_HUB_TOKEN", raising=False)
 
@@ -120,3 +122,60 @@ def test_auto_summary_reports_registered_npu(fresh_app, monkeypatch):
     assert body['auto_family'] == body['effective_family'] == 'npu'
     # Detection does not globally opt unrelated engines into NPU execution.
     assert 'npu' not in body['choices']
+
+
+def test_cuda_device_selection_persists_stable_uuid_for_next_restart(fresh_app, monkeypatch):
+    from api.routers import settings as settings_router
+
+    monkeypatch.setattr(settings_router.shutil, "which", lambda _name: "nvidia-smi")
+    monkeypatch.setattr(
+        settings_router.subprocess,
+        "run",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            returncode=0,
+            stdout=(
+                "0, GPU-aaaaaaaa-bbbb, NVIDIA GeForce RTX 3060\n"
+                "1, GPU-cccccccc-dddd, NVIDIA GeForce RTX 4070\n"
+            ),
+        ),
+    )
+    c = _client(fresh_app)
+    state = c.get("/api/settings/cuda-device").json()
+    assert state["value"] == state["applied"] == "auto"
+    assert [device["index"] for device in state["devices"]] == [0, 1]
+
+    selected = "GPU-cccccccc-dddd"
+    saved = c.put("/api/settings/cuda-device", json={"value": selected})
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["value"] == selected
+    assert saved.json()["applied"] == "auto"
+    assert saved.json()["restart_required"] is True
+
+    from core import prefs
+    assert prefs.get("env.CUDA_VISIBLE_DEVICES") == selected
+
+    cleared = c.put("/api/settings/cuda-device", json={"value": "auto"})
+    assert cleared.status_code == 200
+    assert prefs.get("env.CUDA_VISIBLE_DEVICES") is None
+
+
+def test_cuda_device_rejects_unknown_adapter(fresh_app, monkeypatch):
+    from api.routers import settings as settings_router
+
+    monkeypatch.setattr(settings_router, "_cuda_devices", lambda: [])
+    response = _client(fresh_app).put(
+        "/api/settings/cuda-device", json={"value": "GPU-not-present"}
+    )
+    assert response.status_code == 400
+
+
+def test_external_cuda_visibility_pin_wins_over_saved_choice(fresh_app, monkeypatch):
+    from api.routers import settings as settings_router
+    from core import prefs
+
+    monkeypatch.setattr(settings_router, "_cuda_devices", lambda: [])
+    monkeypatch.setattr(prefs, "is_env_shadowed", lambda key: key == "CUDA_VISIBLE_DEVICES")
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "1")
+    state = _client(fresh_app).get("/api/settings/cuda-device").json()
+    assert state["value"] == state["applied"] == "1"
+    assert state["env_pinned"] is True
