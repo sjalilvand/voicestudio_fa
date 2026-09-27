@@ -59,7 +59,7 @@ describe('RemoteBackendPanel', () => {
       expiresAt: Date.now() / 1000 + 60,
     });
     authMocks.clearAdminSession.mockImplementation(() =>
-      sessionStorage.removeItem('ov_admin_session'),
+      localStorage.removeItem('ov_admin_session'),
     );
     reload = vi.fn();
   });
@@ -225,7 +225,7 @@ describe('RemoteBackendPanel', () => {
 
   it('clears a restored session before switching targets without a new key', async () => {
     localStorage.setItem('ov_backend_url', 'http://old-box:3900');
-    sessionStorage.setItem(
+    localStorage.setItem(
       'ov_admin_session',
       JSON.stringify({
         token: `ovs_admin_session_${'S'.repeat(43)}`,

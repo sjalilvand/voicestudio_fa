@@ -3,7 +3,8 @@
  *
  * The configured master key is accepted only as an input to `exchangeApiKey`.
  * It is never written to storage and never placed in a WebSocket URL. Browser
- * clients retain only a backend-bound, short-lived session in sessionStorage;
+ * clients retain only a backend-bound, short-lived session in localStorage so
+ * it survives reloads and new tabs; its server-enforced expiry remains bounded.
  * same-origin clients use an HttpOnly cookie that JavaScript cannot read.
  */
 
@@ -55,9 +56,9 @@ function defaultWindow(): AuthWindow | undefined {
   return typeof window === 'undefined' ? undefined : window;
 }
 
-function defaultSessionStorage(): StorageLike | null {
+function defaultAdminSessionStorage(): StorageLike | null {
   try {
-    return typeof sessionStorage === 'undefined' ? null : sessionStorage;
+    return typeof localStorage === 'undefined' ? null : localStorage;
   } catch {
     return null;
   }
@@ -113,7 +114,7 @@ function removeLegacyMaster(storage: StorageLike | null = defaultLocalStorage())
 }
 
 export function clearAdminSession({
-  storage = defaultSessionStorage(),
+  storage = defaultAdminSessionStorage(),
 }: { storage?: StorageLike | null } = {}): void {
   try {
     storage?.removeItem(ADMIN_SESSION_STORAGE_KEY);
@@ -125,7 +126,7 @@ export function clearAdminSession({
 export function getAdminSession(
   apiBase: string,
   {
-    storage = defaultSessionStorage(),
+    storage = defaultAdminSessionStorage(),
     now = Date.now,
   }: { storage?: StorageLike | null; now?: () => number } = {},
 ): StoredAdminSession | null {
@@ -259,7 +260,7 @@ export async function exchangeApiKey(
   {
     apiBase,
     fetchImpl = fetch,
-    storage = defaultSessionStorage(),
+    storage = defaultAdminSessionStorage(),
     windowLike = defaultWindow(),
     now = Date.now,
     legacyStorage = defaultLocalStorage(),
@@ -336,7 +337,7 @@ export async function revokeAdminSession(
   apiBase: string,
   {
     fetchImpl = fetch,
-    storage = defaultSessionStorage(),
+    storage = defaultAdminSessionStorage(),
     windowLike = defaultWindow(),
     now = Date.now,
     timeoutMs = 1500,
@@ -419,7 +420,7 @@ export async function requestWebSocketTicket(
   {
     apiBase,
     fetchImpl = fetch,
-    storage = defaultSessionStorage(),
+    storage = defaultAdminSessionStorage(),
     windowLike = defaultWindow(),
     now = Date.now,
     timeoutMs = 5000,
