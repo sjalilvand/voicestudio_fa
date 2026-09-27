@@ -162,7 +162,8 @@ The bundled UI uses a narrower protocol:
 2. Cookie transport returns `204` and sets `ov_session` as HttpOnly,
    SameSite=Strict, path `/`, with an eight-hour maximum lifetime. Bearer
    transport returns an opaque `ovs_admin_session_…` value which the UI keeps
-   in **sessionStorage only**, bound to the exact backend base URL. Bearer JSON
+   in **localStorage**, bound to the exact backend base URL, so authenticated
+   reloads and new tabs reuse it until its bounded expiry. Bearer JSON
    responses include both `expires_at` and a bounded `expires_in`; the UI uses
    the relative lifetime when available so clock skew between a remote GPU host
    and the browser cannot reject a valid session. `expires_at` remains for

@@ -54,6 +54,8 @@ metadata and the backend fallback mirror it.
 ### Fixed
 
 - macOS development launches use the maintained Electron version and icon paths (#2351)
+- Remote administrator sessions survive reloads and new tabs without storing the master API key (#2352) — thanks @brunobarrientos!
+- Dub extraction shows ffmpeg's actual error instead of its Homebrew version banner (#2353) — thanks @lyrenth!
 - Main-source installs use the built app version even when platform tooling has its own `Version` variable (#2343)
 - The macOS application menu says VoiceStudio instead of Electron in development launches (#2342)
 - Engine health checks recognize one-click TTS engines such as VoxCPM2 and MOSS-TTS-Nano in their isolated environments (#2339)
