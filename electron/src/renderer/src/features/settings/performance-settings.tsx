@@ -517,8 +517,18 @@ function ComputeDevice() {
       {(action.error || query.isError || cudaAction.error || cudaQuery.isError) && (
         <ErrorRow
           retry={() => {
-            void query.refetch();
-            void cudaQuery.refetch();
+            void Promise.all([
+              query.refetch({ throwOnError: true }),
+              cudaQuery.refetch({ throwOnError: true }),
+            ]).then(
+              () => {
+                action.clearError();
+                cudaAction.clearError();
+              },
+              () => {
+                // Preserve the action error until both settings reload successfully.
+              },
+            );
           }}
         />
       )}
