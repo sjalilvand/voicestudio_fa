@@ -10,6 +10,7 @@ import {
   type RuntimeRegion,
 } from './runtime-project';
 import { CrashJournal } from './crash-journal';
+import { availableBackendPort } from './backend-port';
 import { legacyStorageEnv } from './legacy-storage';
 import { spawn, spawnSync, type ChildProcess, type StdioOptions } from 'node:child_process';
 import { EventEmitter } from 'node:events';
@@ -384,8 +385,11 @@ export class BackendSupervisor extends EventEmitter<{
     __APP_VERSION__,
   );
   private readonly remotePath = join(app.getPath('userData'), 'remote-backend.json');
-  readonly port = resolvePort();
-  private readonly localBaseUrl = `http://127.0.0.1:${this.port}`;
+  private readonly configuredPort = resolvePort();
+  private localPort = this.configuredPort;
+  get port(): number {
+    return this.localPort;
+  }
   private remoteUrl = loadRemoteBackend(this.remotePath);
   private remoteSession: RemoteSession | null = null;
   private testedRemote: { url: string; session: RemoteSession | null } | null = null;
@@ -413,7 +417,7 @@ export class BackendSupervisor extends EventEmitter<{
   private runtimeRegion: RuntimeRegion = loadRuntimeRegion();
 
   get baseUrl(): string {
-    return this.remoteUrl || this.localBaseUrl;
+    return this.remoteUrl || `http://127.0.0.1:${this.port}`;
   }
 
   get connection(): BackendConnection {
@@ -518,6 +522,20 @@ export class BackendSupervisor extends EventEmitter<{
         return;
       }
 
+      // A previous fallback is only useful while its backend still answers.
+      // Once it is gone, retry the configured endpoint before spawning anew.
+      if (this.localPort !== this.configuredPort) {
+        this.localPort = this.configuredPort;
+        const attached = await this.probe();
+        if (gen !== this.generation) return;
+        if (attached) {
+          this.runtimeInterrupted = false;
+          this.setStage('ready');
+          this.supervise(gen);
+          return;
+        }
+      }
+
       if (app.isPackaged && !parseBackendCmdOverride(process.env.OMNIVOICE_BACKEND_CMD)) {
         const { project, ready } = await this.resolveRuntimeProject();
         if (!ready) {
@@ -530,6 +548,25 @@ export class BackendSupervisor extends EventEmitter<{
         this.runtimeInterrupted = false;
         await stageRuntimeSources(backendRoot(), project);
         if (gen !== this.generation) return;
+      }
+      // Explicit ports/custom commands are contracts with external callers. Only
+      // the default managed launch may move away from an OS-reserved port.
+      if (
+        !process.env.OMNIVOICE_PORT?.trim() &&
+        !parseBackendCmdOverride(process.env.OMNIVOICE_BACKEND_CMD)
+      ) {
+        const port = await availableBackendPort(this.port);
+        if (gen !== this.generation) return;
+        this.localPort = port;
+        if (port !== this.configuredPort) {
+          const attached = await this.probe();
+          if (gen !== this.generation) return;
+          if (attached) {
+            this.setStage('ready');
+            this.supervise(gen);
+            return;
+          }
+        }
       }
       const plan = await resolveSpawnPlan(this.port, this.runtimeProject ?? undefined);
       if (gen !== this.generation) return;

@@ -1,0 +1,42 @@
+import { createServer } from 'node:net';
+
+/** Check bind permissions without leaving a listener behind. */
+function probePort(port: number): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.once('error', reject);
+    server.listen({ host: '127.0.0.1', port, exclusive: true }, () => {
+      const address = server.address();
+      server.close((error) => {
+        if (error) reject(error);
+        else if (address && typeof address !== 'string') resolve(address.port);
+        else reject(new Error('Backend port probe did not bind'));
+      });
+    });
+  });
+}
+
+/** Reserved Windows ports can deny bind even though no process is listening.
+ * Preserve ordinary port-conflict/attachment handling; only bypass denied ports.
+ * This is a preflight, not a reservation: uvicorn still handles bind-time races.
+ */
+export async function availableBackendPort(preferred: number): Promise<number> {
+  // Deterministic candidates let additional Electron instances discover the
+  // same backend. Never skip an occupied candidate: the caller must probe it
+  // for attachment, or retain the normal conflict/ownership handoff behavior.
+  let denied: unknown;
+  for (let offset = 0; offset <= 16; offset++) {
+    const port = preferred + offset * 1000;
+    if (port > 65535) break;
+    try {
+      await probePort(port);
+      return port;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === 'EADDRINUSE') return port;
+      if (code !== 'EACCES') throw error;
+      denied = error;
+    }
+  }
+  throw denied;
+}
