@@ -3,6 +3,7 @@
 Settings > Compute device exposes the existing device override, a physical CUDA adapter selector on multi-GPU NVIDIA hosts, the torch.compile workaround, generation time budgets, and hardware readouts. The CUDA selector persists a stable GPU UUID through `CUDA_VISIBLE_DEVICES`; restart the app to apply it to the backend and every engine subprocess.
 
 CUDA selection uses the validated `/api/settings/cuda-device` endpoint; the generic environment setter cannot change it or alter the running process's GPU visibility.
+Adapter discovery checks PATH, the Windows NVSMI installation directory, and the WSL NVIDIA CLI location so non-DCH Windows drivers do not require a manual PATH edit.
 An externally set, empty `CUDA_VISIBLE_DEVICES` is shown as Disabled, not Auto: it hides all CUDA adapters and keeps the selector pinned.
 After a failed save, Retry reloads both compute settings and clears the observed error only when both requests succeed; it does not silently retry the write or dismiss failures from a newer save.
 

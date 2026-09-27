@@ -1,6 +1,29 @@
 """Live NVIDIA statistics follow the adapter selected for CUDA."""
 
 from types import SimpleNamespace
+import pytest
+
+
+@pytest.mark.parametrize('variable', ['ProgramW6432', 'ProgramFiles'])
+def test_nvidia_smi_locator_finds_windows_non_dch_install(monkeypatch, variable):
+    from core import nvidia_smi
+    import sys
+
+    monkeypatch.setattr(sys, 'platform', 'win32')
+    monkeypatch.delenv('ProgramW6432', raising=False)
+    monkeypatch.delenv('ProgramFiles', raising=False)
+    monkeypatch.setenv(variable, 'D:/Program Files')
+    executable = nvidia_smi.os.path.join('D:/Program Files', 'NVIDIA Corporation', 'NVSMI', 'nvidia-smi.exe')
+    monkeypatch.setattr(nvidia_smi.shutil, 'which', lambda _: None)
+    monkeypatch.setattr(nvidia_smi.os.path, 'isfile', lambda path: path == executable)
+    assert nvidia_smi.find_nvidia_smi() == executable
+
+
+def test_nvidia_smi_locator_prefers_path(monkeypatch):
+    from core import nvidia_smi
+
+    monkeypatch.setattr(nvidia_smi.shutil, 'which', lambda _: '/custom/nvidia-smi')
+    assert nvidia_smi.find_nvidia_smi() == '/custom/nvidia-smi'
 
 
 def test_nvidia_smi_locator_uses_wsl_fallback(monkeypatch):
