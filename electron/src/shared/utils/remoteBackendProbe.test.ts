@@ -142,17 +142,16 @@ describe('remote backend probe', () => {
   it('clears URL, legacy master, and short-lived session before reloading', async () => {
     localStorage.setItem('ov_backend_url', 'http://gpu-box:3900');
     localStorage.setItem('ov_api_key', 'secret');
-    sessionStorage.setItem(ADMIN_SESSION_STORAGE_KEY, 'session');
+    localStorage.setItem(ADMIN_SESSION_STORAGE_KEY, 'session');
     const reload = vi.fn();
     await disableRemoteBackend(reload);
     expect(localStorage.getItem('ov_backend_url')).toBeNull();
     expect(localStorage.getItem('ov_api_key')).toBeNull();
-    expect(sessionStorage.getItem(ADMIN_SESSION_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(ADMIN_SESSION_STORAGE_KEY)).toBeNull();
     expect(reload).toHaveBeenCalledOnce();
   });
 
-  it('still clears the in-memory session and reloads when local storage is blocked', async () => {
-    sessionStorage.setItem(ADMIN_SESSION_STORAGE_KEY, 'session');
+  it('still reloads when persistent storage is blocked', async () => {
     const blockedStorage = {
       getItem: vi.fn(() => {
         throw new DOMException('blocked', 'SecurityError');
@@ -168,7 +167,6 @@ describe('remote backend probe', () => {
 
     expect(blockedStorage.getItem).toHaveBeenCalled();
     expect(blockedStorage.removeItem).toHaveBeenCalledTimes(2);
-    expect(sessionStorage.getItem(ADMIN_SESSION_STORAGE_KEY)).toBeNull();
     expect(reload).toHaveBeenCalledOnce();
   });
 });
