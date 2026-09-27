@@ -274,6 +274,49 @@ describe('short-lived admin session client', () => {
     });
   });
 
+  it('accepts a bearer response when another tab only cleaned the expired snapshot', async () => {
+    const expiringToken = `ovs_admin_session_${'E'.repeat(43)}`;
+    localStorage.setItem(
+      ADMIN_SESSION_STORAGE_KEY,
+      JSON.stringify({
+        token: expiringToken,
+        expiresAt: NOW_SECONDS + 1,
+        apiBase: 'https://old-gpu.test:3900',
+      }),
+    );
+    let currentTime = NOW_SECONDS * 1000;
+    let resolveFetch: (value: Response) => void = () => {};
+    const pending = exchangeApiKey(MASTER, {
+      apiBase: 'https://new-gpu.test:3900',
+      fetchImpl: vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            resolveFetch = resolve;
+          }),
+      ),
+      windowLike: crossOriginWindow,
+      now: () => currentTime,
+    });
+
+    currentTime += 2000;
+    expect(
+      getAdminSession('https://old-gpu.test:3900', {
+        now: () => currentTime,
+      }),
+    ).toBeNull();
+    resolveFetch(response({ token: SESSION, expires_at: NOW_SECONDS + 3600 }));
+
+    await expect(pending).resolves.toEqual({
+      transport: 'bearer',
+      expiresAt: NOW_SECONDS + 3600,
+    });
+    expect(getAdminSession('https://new-gpu.test:3900', { now: () => currentTime })).toEqual({
+      token: SESSION,
+      expiresAt: NOW_SECONDS + 3600,
+      apiBase: 'https://new-gpu.test:3900',
+    });
+  });
+
   it('bounds a hung exchange and retains the durable master for the next migration attempt', async () => {
     vi.useFakeTimers();
     localStorage.setItem(LEGACY_API_KEY_STORAGE_KEY, MASTER);

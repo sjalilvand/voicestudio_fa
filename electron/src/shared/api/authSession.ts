@@ -162,11 +162,31 @@ function storeAdminSessionIfUnchanged(
   expectedRaw: string | null,
   record: StoredAdminSession,
   storage: StorageLike | null,
+  nowMs: number,
 ): boolean {
   try {
-    if (!storage || storage.getItem(ADMIN_SESSION_STORAGE_KEY) !== expectedRaw) return false;
+    if (!storage) return false;
+    const currentRaw = storage.getItem(ADMIN_SESSION_STORAGE_KEY);
+    const expiredSnapshotWasCleaned =
+      currentRaw === null && storedAdminSessionExpired(expectedRaw, nowMs);
+    if (currentRaw !== expectedRaw && !expiredSnapshotWasCleaned) return false;
     storage.setItem(ADMIN_SESSION_STORAGE_KEY, JSON.stringify(record));
     return true;
+  } catch {
+    return false;
+  }
+}
+
+function storedAdminSessionExpired(raw: string | null, nowMs: number): boolean {
+  if (!raw || raw.length > 4096) return false;
+  try {
+    const parsed = JSON.parse(raw) as Partial<StoredAdminSession>;
+    return (
+      ADMIN_SESSION_RE.test(String(parsed.token ?? '')) &&
+      typeof parsed.expiresAt === 'number' &&
+      Number.isFinite(parsed.expiresAt) &&
+      parsed.expiresAt <= nowMs / 1000
+    );
   } catch {
     return false;
   }
@@ -362,7 +382,9 @@ export async function exchangeApiKey(
   }
 
   const record: StoredAdminSession = { token, expiresAt, apiBase: base };
-  if (!storeAdminSessionIfUnchanged(sessionAtStart, record, storage)) throw new AuthSessionError();
+  if (!storeAdminSessionIfUnchanged(sessionAtStart, record, storage, now())) {
+    throw new AuthSessionError();
+  }
   removeLegacyMaster(legacyStorage);
   return { transport, expiresAt };
 }
