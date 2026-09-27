@@ -35,6 +35,7 @@ metadata and the backend fallback mirror it.
 
 ### Changed
 
+- Electron recovers from OS-denied default backend ports without changing explicitly configured ports (#2358) — thanks @rishi2288!
 - Home opens directly on project actions, and Integrations lists only connectors with completed in-app setup (#2351)
 - Multi-GPU NVIDIA hosts can choose which physical CUDA adapter VoiceStudio and its engine subprocesses use (#2346) — thanks @z0tedd!
 - MCP clients on another machine can connect through PIN-gated Local network sharing, which admits LAN hosts only while sharing is enabled (#2347) — thanks @z0tedd!

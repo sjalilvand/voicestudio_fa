@@ -48,6 +48,18 @@ Before digging through the entries below, let the app diagnose itself:
   the engine. Subprocess engines report memory visibility as false because
   their accelerator allocations belong to the child process.
 
+## Backend cannot bind its local port
+
+Windows can reserve port ranges even when no process is listening. If the OS
+denies binding the default port 3900, Electron's managed backend selects an
+OS-assigned loopback port before launching; its API proxy and health checks follow
+that port automatically. This recovery is available on all desktop platforms.
+It does not override an explicit `OMNIVOICE_PORT`, a custom backend command, or an
+externally managed backend. For those configurations, choose an allowed port in
+your launch environment. An ordinary “address already in use” conflict still uses
+the existing backend-attachment/conflict flow; VoiceStudio does not stop unrelated
+processes or change firewall rules.
+
 ## Generation failure diagnosis
 
 Streaming and HTTP generation failures can identify these causes. Electron and
