@@ -307,6 +307,26 @@ describe('packaged runtime setup', () => {
       ...RUNTIME_REPAIR_PACKAGES,
     ]);
   });
+  it('repairs sentencepiece without evicting healthy PyTorch wheels', async () => {
+    const { bundle, project } = await fixture();
+    await interpreter(project);
+    let synced = false;
+    const run = vi.fn(async (command: string, args: string[]) => {
+      if (args[0] === 'sync') synced = true;
+      if (!synced && command === runtimePython(project) && args[1]?.includes('sentencepiece')) {
+        throw new Error('broken sentencepiece native library');
+      }
+    });
+    await installRuntime(bundle, project, 'uv', run, new AbortController().signal);
+    expect(run.mock.calls.find(([, args]) => args[0] === 'cache')?.[1]).toEqual([
+      'cache', 'clean', 'sentencepiece',
+    ]);
+    const sync = run.mock.calls.find(([, args]) => args[0] === 'sync');
+    expect(sync?.[1]).toContain('sentencepiece');
+    for (const name of ['torch', 'torchaudio', 'torchvision']) {
+      expect(sync?.[1]).not.toContain(name);
+    }
+  });
   it('repairs an unrelated missing dependency without evicting native wheels', async () => {
     const { bundle, project } = await fixture();
     await interpreter(project);

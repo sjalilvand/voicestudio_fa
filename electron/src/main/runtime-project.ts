@@ -33,13 +33,12 @@ export const ROCM_TORCH_PINS = [
   'torchvision==0.23.0',
 ] as const;
 export const RUNTIME_REPAIR_PACKAGES = [
-  'sentencepiece',
   'torch',
   'torchaudio',
   'torchvision',
 ] as const;
 export const RUNTIME_NATIVE_IMPORT_PROBE =
-  'import sentencepiece, torch, torchaudio, torchvision';
+  'import torch, torchaudio, torchvision';
 export const RUNTIME_IMPORT_PROBE =
   'import fastapi, uvicorn, omnivoice, faster_whisper, sentencepiece, torch, torchaudio, torchvision';
 const RUNTIME_SCHEMA = 'electron-runtime-v2-cudnn8';
@@ -460,7 +459,7 @@ export async function installRuntime(
     () => false,
   );
   let existingPython = false;
-  let repairPackages: readonly string[] = [];
+  const repairPackages: string[] = [];
   if (interpreterExists) {
     try {
       await run(
@@ -480,7 +479,14 @@ export async function installRuntime(
         } catch {
           // A native wheel can be missing or ABI-broken while its dist-info
           // still convinces uv sync that it is installed. Reinstall only then.
-          repairPackages = RUNTIME_REPAIR_PACKAGES;
+          repairPackages.push(...RUNTIME_REPAIR_PACKAGES);
+        }
+        // Sentencepiece has its own native wheel, independent of PyTorch.
+        signal.throwIfAborted();
+        try {
+          await run(runtimePython(project), ['-c', 'import sentencepiece'], project);
+        } catch {
+          repairPackages.push('sentencepiece');
         }
       }
     } catch {
