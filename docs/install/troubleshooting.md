@@ -53,7 +53,8 @@ Before digging through the entries below, let the app diagnose itself:
 OmniVoice's in-process and subprocess engines both reuse an installed speech
 recognizer when reference audio has no transcript, including short clips sent
 through batch or API callers. A supplied transcript is preserved for short
-references. This does not download an ASR model automatically: if no installed
+references. Subprocess reference recognition runs inside the killable child,
+under its synthesis watchdog, before loading TTS. This does not download an ASR model automatically: if no installed
 recognizer can transcribe the clip and no local model fallback is available,
 provide the matching transcript or explicitly install a speech-to-text model.
 

@@ -75,8 +75,7 @@ def test_sidecar_reuses_installed_asr_for_short_reference(monkeypatch, tmp_path,
     """Sidecar callers must reuse catalogue ASR just like in-process cloning."""
     import soundfile as sf
     from huggingface_hub.errors import LocalEntryNotFoundError
-    from engines.omnivoice_subprocess import OmniVoiceSubprocessBackend
-    from services.subprocess_backend import SubprocessBackend
+    from engines.omnivoice_subprocess import main as sidecar
     from services import asr_backend
 
     reference = tmp_path / "reference.wav"
@@ -87,16 +86,17 @@ def test_sidecar_reuses_installed_asr_for_short_reference(monkeypatch, tmp_path,
     transcribe = Mock(return_value="Installed recognizer words.")
     monkeypatch.setattr(asr_backend, "transcribe_reference", transcribe)
 
-    def synthesize(_backend, _text, **kwargs):
-        return model.create_voice_clone_prompt(
+    prompts = []
+    def synthesize(**kwargs):
+        prompts.append(model.create_voice_clone_prompt(
             kwargs["ref_audio"], ref_text=kwargs.get("ref_text"), preprocess_prompt=False,
-        )
+        ))
+        return [torch.zeros(1, 16)]
 
-    monkeypatch.setattr(SubprocessBackend, "generate", synthesize)
-    prompt = OmniVoiceSubprocessBackend().generate(
-        "New words.", ref_audio=str(reference), ref_text=ref_text,
-    )
-    assert prompt.ref_text == "Installed recognizer words."
+    monkeypatch.setattr(sidecar, "_load_model", lambda _: SimpleNamespace(generate=synthesize, sampling_rate=24_000))
+    monkeypatch.setattr(sidecar, "_send", lambda *_: None)
+    sidecar._handle_synthesize({"text": "New words.", "ref_audio": str(reference), "ref_text": ref_text}, None)
+    assert prompts[0].ref_text == "Installed recognizer words."
     transcribe.assert_called_once_with(str(reference))
     lookup.assert_not_called()
 
@@ -104,16 +104,18 @@ def test_sidecar_reuses_installed_asr_for_short_reference(monkeypatch, tmp_path,
 @pytest.mark.parametrize("supplied", [True, False])
 @pytest.mark.parametrize("fails", [True, False])
 def test_sidecar_preserves_supplied_text_and_local_fallback(monkeypatch, supplied, fails):
-    from engines.omnivoice_subprocess import OmniVoiceSubprocessBackend
-    from services.subprocess_backend import SubprocessBackend
+    from engines.omnivoice_subprocess import main as sidecar
     from services import asr_backend, tts_backend
 
     monkeypatch.setattr(tts_backend, "reference_duration_s", lambda _: 1.0)
     transcribe = Mock(side_effect=RuntimeError("unavailable")) if fails else Mock(return_value=None)
     monkeypatch.setattr(asr_backend, "transcribe_reference", transcribe)
-    monkeypatch.setattr(SubprocessBackend, "generate", lambda _self, _text, **kw: kw)
+    generate = Mock(return_value=[torch.zeros(1, 16)])
+    monkeypatch.setattr(sidecar, "_load_model", lambda _: SimpleNamespace(generate=generate, sampling_rate=24_000))
+    monkeypatch.setattr(sidecar, "_send", lambda *_: None)
     words = "Verified words." if supplied else None
-    result = OmniVoiceSubprocessBackend().generate("New words.", ref_audio="ref.wav", ref_text=words)
+    sidecar._handle_synthesize({"text": "New words.", "ref_audio": "ref.wav", "ref_text": words}, None)
+    result = generate.call_args.kwargs
     assert result["ref_text"] == words
     assert result["ref_audio"] == "ref.wav"
     if supplied:

@@ -83,18 +83,6 @@ class OmniVoiceSubprocessBackend(SubprocessBackend):
                     passage = selected[0]
                 elif kw.get("ref_text"):
                     kw["ref_text"] = omnivoice_ref_text(audio, kw["ref_text"])
-            elif not (kw.get("ref_text") or "").strip():
-                # Match the in-process prompt path for callers that do not
-                # resolve references at the HTTP boundary (batch, dub, API).
-                # The catalogue resolver only reuses installed recognizers;
-                # the child must not require a second Whisper model copy.
-                from services.asr_backend import transcribe_reference
-
-                kw["ref_text"] = None
-                try:
-                    kw["ref_text"] = transcribe_reference(audio)
-                except Exception as exc:  # noqa: BLE001 — retain local model fallback
-                    logger.warning("reference transcript resolution failed: %s", exc)
         try:
             return super().generate(text, **kw)
         finally:
