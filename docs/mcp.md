@@ -96,7 +96,11 @@ To bind this agent to a specific voice, send an
 
 **Agents on another machine:** turn on **Settings → Sharing → Local network**.
 Use the displayed LAN address and share port with `/mcp/`, and send the shown
-access PIN as `X-OmniVoice-Pin`. For example:
+access PIN as `X-OmniVoice-Pin`. Use the following HTTP example **only on a
+trusted LAN**: HTTP sends the PIN and MCP traffic without encryption, so a
+network observer could capture and reuse the PIN. On an untrusted or shared
+network, use an encrypted tunnel or HTTPS (for example, Tailscale Serve or a
+TLS reverse proxy) instead.
 
 ```toml
 [mcp_servers.voicestudio]
