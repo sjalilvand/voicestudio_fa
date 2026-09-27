@@ -35,6 +35,7 @@ metadata and the backend fallback mirror it.
 
 ### Changed
 
+- Home opens directly on project actions, and Integrations lists only connectors with completed in-app setup (#2351)
 - Electron is now the only desktop and web UI, with native helpers, packaging, setup, Docker and Network Sharing owned by maintained Electron paths (#2343)
 - Docker, `build:web`, and `dev:web` now build the maintained Electron renderer instead of the archived browser interface (#2341)
 - Twilio setup is a guided checklist: account, tunnel, phone number and voice steps with live status, exact tunnel commands for your OS and gateway port, copyable webhook URL, a readiness panel and clear reasons when an action is unavailable (#2304)
@@ -50,6 +51,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- macOS development launches use the maintained Electron version and icon paths (#2351)
 - Main-source installs use the built app version even when platform tooling has its own `Version` variable (#2343)
 - The macOS application menu says VoiceStudio instead of Electron in development launches (#2342)
 - Engine health checks recognize one-click TTS engines such as VoxCPM2 and MOSS-TTS-Nano in their isolated environments (#2339)
