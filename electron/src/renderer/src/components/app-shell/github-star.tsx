@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next';
 import { StarIcon } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
 import { getBridge } from '@/components/bridge';
 import { runRendererTask } from '@/lib/global-error-recovery';
 import { REPO_URL } from '@shared/utils/contactLinks';
@@ -14,37 +13,12 @@ function GithubIcon({ className }: { className?: string }) {
   );
 }
 
-const STARS_URL = 'https://api.github.com/repos/debpalash/VoiceStudio/stargazers/count';
-const REFRESH_MS = 20 * 60 * 1000;
-// Shown immediately and retained whenever GitHub or the network is unavailable.
-const FALLBACK_STARS = 43_638;
+// Bundled snapshot, 2026-09-28. Opening a workspace must stay offline.
+const BUNDLED_STARS = 43_638;
 const compactCount = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
-
-async function fetchStarCount(signal: AbortSignal): Promise<number> {
-  const response = await fetch(STARS_URL, {
-    signal: AbortSignal.any([signal, AbortSignal.timeout(8_000)]),
-    credentials: 'omit',
-    referrerPolicy: 'no-referrer',
-  });
-  if (!response.ok) throw new Error('GitHub star count unavailable');
-  const data: unknown = await response.json();
-  const count = (data as { count?: unknown } | null)?.count;
-  if (!Number.isSafeInteger(count) || (count as number) < 0)
-    throw new Error('Invalid GitHub star count');
-  return count as number;
-}
 
 export function GithubStar() {
   const { t } = useTranslation();
-  const stars = useQuery({
-    queryKey: ['github-star-count'],
-    queryFn: ({ signal }) => fetchStarCount(signal),
-    staleTime: REFRESH_MS,
-    gcTime: REFRESH_MS,
-    refetchInterval: REFRESH_MS,
-    refetchIntervalInBackground: false,
-    retry: false,
-  });
   return (
     <Tooltip>
       <TooltipTrigger
@@ -68,7 +42,7 @@ export function GithubStar() {
         <span>{t('support.star_short')}</span>
         <span className="github-star-count">
           <StarIcon aria-hidden="true" className="size-3" />
-          {compactCount.format(stars.data ?? FALLBACK_STARS)}
+          {compactCount.format(BUNDLED_STARS)}
         </span>
       </TooltipTrigger>
       <TooltipContent surface="theme" side="bottom">
