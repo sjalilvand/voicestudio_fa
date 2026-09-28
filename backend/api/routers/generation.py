@@ -1365,7 +1365,26 @@ async def _finalize_generation(
         # see or remove this take yet. Encoding and disk I/O stay off the loop.
         return Path(audio_path).read_bytes() if include_wav_bytes else None
 
-    response_bytes = await asyncio.to_thread(_save_take)
+    saving = asyncio.create_task(asyncio.to_thread(_save_take))
+    try:
+        response_bytes = await asyncio.shield(saving)
+    except asyncio.CancelledError:
+        # Cancelling an await cannot stop its writer thread. Wait for that
+        # thread before removing the unpublished take, including repeated
+        # cancellation from disconnect/shutdown, so it cannot recreate the WAV.
+        while not saving.done():
+            try:
+                await asyncio.shield(saving)
+            except asyncio.CancelledError:
+                continue
+            except Exception:
+                break
+        try:
+            saving.result()
+        except Exception:
+            pass  # Preserve cancellation if the interrupted write also failed.
+        Path(audio_path).unlink(missing_ok=True)
+        raise
 
     audio_dur = round(audio_tensor.shape[-1] / sample_rate, 2)
 

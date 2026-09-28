@@ -426,3 +426,48 @@ def test_finalization_retains_current_take_when_stars_fill_cap(api, monkeypatch)
     assert gen._prune_history_over_cap(keep_id="next") == 1
     assert not (outdir / meta["filename"]).exists()
     assert meta["_wav_bytes"].startswith(b"RIFF")
+
+
+@pytest.mark.parametrize("write_fails", [False, True])
+def test_cancel_during_save_cleans_up_after_writer_stops(api, monkeypatch, write_fails):
+    import asyncio
+    import threading
+    import time
+    import torch
+    from pathlib import Path
+
+    _client, dbf, outdir, gen = api
+    started, release = threading.Event(), threading.Event()
+
+    def slow_writer(path, *args, **kwargs):
+        Path(path).write_bytes(b"partial")
+        started.set()
+        assert release.wait(5)
+        Path(path).write_bytes(b"completed")
+        if write_fails:
+            raise OSError("write failed")
+
+    monkeypatch.setattr(gen, "save_generation_wav", slow_writer)
+
+    async def run():
+        task = asyncio.create_task(gen._finalize_generation(
+            torch.zeros(1, 240), 24000, text="hello", history_mode="design",
+            ref_audio_path=None, language="English", instruct=None,
+            resolved_profile_id=None, used_seed=42, start_time=time.time(),
+            already_marked=True,
+        ))
+        try:
+            assert await asyncio.to_thread(started.wait, 3)
+            task.cancel()
+            await asyncio.sleep(0)
+            assert not task.done(), "cancellation must wait for the active writer"
+            task.cancel()
+        finally:
+            release.set()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+    asyncio.run(run())
+    assert not list(outdir.glob("*.wav"))
+    with sqlite3.connect(str(dbf)) as conn:
+        assert conn.execute("SELECT COUNT(*) FROM generation_history").fetchone()[0] == 0
