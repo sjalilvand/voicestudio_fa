@@ -9,16 +9,16 @@ metadata and the backend fallback mirror it.
 ## [Unreleased]
 
 **Highlights**
-- Ask VoiceStudio Agent adds chat, harness selection, feature presets, read-only planning and autopilot app actions without a source checkout (#2302)
-- Home credits contributors with over 10 commits in three responsive rows of round avatars stacked from right to left with an All contributors link, with GitHub and X links on Palash's hover card (#2302)
-- The VoiceStudio.sh Open Source title opens a website preview below the clicked item, within the right content area, with navigation and external-browser controls (#2302)
-- Home cards use feature-specific SVG icons with brief hover and keyboard-focus animations that respect reduced motion (#2302)
-- Renamed the Dub workspace to Dubbing across navigation, project labels, and keyboard shortcuts (#2302)
-- Home prioritizes creation tools with clearer descriptions and controls; the footer can collapse and reopen (#2302)
-- Top bar adds a GitHub Star shortcut beside Get Pro with a compact count refreshed every 20 minutes (#2302)
-- Footer adds one X button with follow cards for @idebpalash and @voicestudiosh plus a compact support-links menu beside Pro (#2302)
-- Enter Studio opens its optional permissions and shortcut settings expanded by default (#2129)
-- Model packs can be selected and installed before preset-compatible engines are active, with changes applied only when installing or using the chosen pack (#2129)
+- Ask VoiceStudio Agent adds chat, harness selection, feature presets, read-only planning and autopilot app actions without a source checkout (#2407)
+- Home credits contributors with over 10 commits in three responsive rows of round avatars stacked from right to left with an All contributors link, with GitHub and X links on Palash's hover card (#2407)
+- The VoiceStudio.sh Open Source title opens a website preview below the clicked item, within the right content area, with navigation and external-browser controls (#2407)
+- Home cards use feature-specific SVG icons with brief hover and keyboard-focus animations that respect reduced motion (#2407)
+- Renamed the Dub workspace to Dubbing across navigation, project labels, and keyboard shortcuts (#2407)
+- Home prioritizes creation tools with clearer descriptions and controls; the footer can collapse and reopen (#2407)
+- Top bar adds a GitHub Star shortcut beside Get Pro with a compact count refreshed every 20 minutes (#2407)
+- Footer adds one X button with follow cards for @idebpalash and @voicestudiosh plus a compact support-links menu beside Pro (#2407)
+- Enter Studio opens its optional permissions and shortcut settings expanded by default (#2407)
+- Model packs can be selected and installed before preset-compatible engines are active, with changes applied only when installing or using the chosen pack (#2407)
 - Electron is now the only desktop and web UI; the retired Tauri shell and legacy entry points are removed (#2343)
 - Docker and browser deployments now use the same maintained interface as the Electron desktop app (#2341)
 - Manage Projects with confirmed individual and bulk deletion, retry failed items, and keep exported files and render audio (#2333)
@@ -74,7 +74,7 @@ metadata and the backend fallback mirror it.
 ### Fixed
 
 - Preserve float audio and requested seeds through OmniVoice/VoxCPM2 sidecars, and keep playback and saved WAV precision consistent (#2406)
-- Development launches rebuild main and preload changes so embedded website previews do not keep stale browser IPC after UI updates (#2302)
+- Development launches rebuild main and preload changes so embedded website previews do not keep stale browser IPC after UI updates (#2407)
 
 - macOS development launches use the maintained Electron version and icon paths (#2351)
 - Electron detects and repairs incomplete PyTorch, torchaudio and torchvision runtime wheels before backend startup (#2354) — thanks @jonathanmoronta1-lab!
