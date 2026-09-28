@@ -80,6 +80,7 @@ metadata and the backend fallback mirror it.
 - Preserve float audio and requested seeds through OmniVoice/VoxCPM2 sidecars, and keep playback and saved WAV precision consistent (#2406)
 - Development launches rebuild main and preload changes so embedded website previews do not keep stale browser IPC after UI updates (#2407)
 
+- Dubbing reports damaged source files clearly and removes partial or failed copies when storage runs out (#2411)
 - macOS development launches use the maintained Electron version and icon paths (#2351)
 - Electron detects and repairs incomplete PyTorch, torchaudio and torchvision runtime wheels before backend startup (#2354) — thanks @jonathanmoronta1-lab!
 - Returning to local mode discards sessions from unsaved remote-backend connection tests (#2356)

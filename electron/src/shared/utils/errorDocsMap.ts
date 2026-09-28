@@ -19,6 +19,7 @@ export const ERROR_DOCS: Record<string, string> = {
   GPU_ARCH_UNSUPPORTED: `${BASE}/docs/install/troubleshooting.md#generation-failure-diagnosis`,
   WINDOWS_APP_CONTROL_BLOCKED: `${BASE}/docs/install/troubleshooting.md#generation-failure-diagnosis`,
   AUDIO_IO_FAILED: `${BASE}/docs/install/troubleshooting.md#generation-failure-diagnosis`,
+  INVALID_MEDIA_FILE: `${BASE}/docs/electron-dubbing.md#unreadable-source-file`,
 
   DIARIZATION_LOAD_FAILED: `${BASE}/docs/features/diarization.md#troubleshooting`,
   DIARIZATION_MODEL_MISSING: `${BASE}/docs/features/diarization.md#local-installation-and-repair`,
@@ -45,6 +46,7 @@ export const ERROR_CLASS_KEYS = [
   'GPU_ARCH_UNSUPPORTED',
   'WINDOWS_APP_CONTROL_BLOCKED',
   'AUDIO_IO_FAILED',
+  'INVALID_MEDIA_FILE',
 
   'DIARIZATION_LOAD_FAILED',
   'DIARIZATION_MODEL_MISSING',
@@ -66,6 +68,7 @@ export function classifyError(error: unknown): ErrorClass | null {
   const message =
     (error as { message?: string } | null | undefined)?.message ?? String(error ?? '');
   const lower = message.toLowerCase();
+  if (/media file is damaged or incomplete/.test(lower)) return 'INVALID_MEDIA_FILE';
   if (/pkg_resources/.test(lower)) return 'PKG_RESOURCES_MISSING';
   if (
     /pocket(?:tts|[-_ ]tts)|kyutai/.test(lower) &&

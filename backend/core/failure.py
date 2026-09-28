@@ -70,6 +70,22 @@ class NoAudioTrackError(ValueError):
         super().__init__(message)
 
 
+INVALID_MEDIA_FILE_MESSAGE = (
+    "The selected media file is damaged or incomplete, so its audio cannot be read. "
+    "Choose a finished, playable file or download a fresh copy."
+)
+
+
+class InvalidMediaFileError(ValueError):
+    """The source container is incomplete or unreadable before any dub work."""
+
+    code = "invalid_media_file"
+    docs_topic = "INVALID_MEDIA_FILE"
+
+    def __init__(self, message: str = INVALID_MEDIA_FILE_MESSAGE):
+        super().__init__(message)
+
+
 def is_no_audio_stream_stderr(text: "str | bytes | None") -> bool:
     """True when ffmpeg's stderr says the input had no audio stream to extract.
 
@@ -180,6 +196,7 @@ _HINTS: dict[str, str] = {
     # stream … Error opening output files: Invalid argument", which the dub
     # page showed verbatim and which read as a disk/permission problem.
     "NO_AUDIO_TRACK": "Check that the file plays with sound in a media player. If its audio is in a separate file, choose that file instead, or merge the audio into the video first.",
+    "INVALID_MEDIA_FILE": "Check the source in a media player. If it cannot play, wait for the download or copy to finish, free disk space if needed, then download a fresh copy and upload it again.",
     # HF_MIRROR_UNREACHABLE has a DYNAMIC hint (it names the configured mirror)
     # — see hf_mirror_hint(); build_failure special-cases it.
 }
@@ -501,6 +518,8 @@ def classify(reason: str) -> str:
     # OS write refusal and must not be handed the TEMP-folder remedy.
     if NO_AUDIO_TRACK_MESSAGE.lower() in low or is_no_audio_stream_stderr(low):
         return "NO_AUDIO_TRACK"
+    if INVALID_MEDIA_FILE_MESSAGE.lower() in low:
+        return "INVALID_MEDIA_FILE"
     if "pkg_resources" in low:
         return "PKG_RESOURCES_MISSING"
     if "quarantine" in low or "is damaged" in low or "gatekeeper" in low:

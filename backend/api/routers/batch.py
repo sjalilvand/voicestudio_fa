@@ -289,10 +289,12 @@ async def _run_batch_pipeline(job_id: str, job: dict):
         find_ffmpeg,
         raise_for_audio_extract_failure,
         require_audio_stream,
+        validate_media_source,
     )
     ffmpeg = find_ffmpeg()
 
     def _extract():
+        validate_media_source(video_path)
         # A video with no audio stream has nothing to dub: say so rather than
         # fail with ffmpeg's bare "returned non-zero exit status 234".
         require_audio_stream(video_path)
