@@ -1358,9 +1358,18 @@ async def _finalize_generation(
         )
     gen_time = round(time.time() - start_time, 2)
 
-    audio_id = str(uuid.uuid4())[:8]
-    audio_filename = f"{audio_id}.wav"
-    audio_path = os.path.join(OUTPUTS_DIR, audio_filename)
+    for _ in range(16):
+        audio_id = str(uuid.uuid4())[:8]
+        audio_filename = f"{audio_id}.wav"
+        audio_path = os.path.join(OUTPUTS_DIR, audio_filename)
+        try:
+            reservation = os.open(audio_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        except FileExistsError:
+            continue
+        os.close(reservation)
+        break
+    else:
+        raise OSError("Could not reserve a unique recording filename")
     def _save_take():
         try:
             save_generation_wav(audio_path, audio_tensor, sample_rate, bits=wav_bits)
