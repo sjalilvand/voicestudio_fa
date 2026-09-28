@@ -15,7 +15,7 @@ metadata and the backend fallback mirror it.
 - Home cards use feature-specific SVG icons with brief hover and keyboard-focus animations that respect reduced motion (#2407)
 - Renamed the Dub workspace to Dubbing across navigation, project labels, and keyboard shortcuts (#2407)
 - Home prioritizes creation tools with clearer descriptions and controls; the footer can collapse and reopen (#2407)
-- Top bar adds a GitHub Star shortcut beside Get Pro with an offline bundled star count (#2407)
+- Top bar adds a GitHub Star shortcut beside Get Pro with an exact count refreshed every 20 minutes (#2407)
 - Footer adds one X button with follow cards for @idebpalash and @voicestudiosh plus a compact support-links menu beside Pro (#2407)
 - Enter Studio opens its optional permissions and shortcut settings expanded by default (#2407)
 - Model packs can be selected and installed before preset-compatible engines are active, with changes applied only when installing or using the chosen pack (#2407)
