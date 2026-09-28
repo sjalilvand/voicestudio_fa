@@ -29,6 +29,8 @@ from services.model_manager import (
     GpuPoolBusyError,
 )
 from services.generation_audio import save_generation_wav
+# Compatibility export used by archetype previews and the gallery renderer.
+from services.audio_io import _safe_torchaudio_save
 from services.binary_preflight import InvalidBinaryError
 from core import event_bus
 from core.render_trace import call as trace_call
