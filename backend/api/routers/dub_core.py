@@ -818,9 +818,7 @@ async def dub_upload(
             pass  # Best effort: keep the original upload error.
         raise
 
-    try:
-        await asyncio.to_thread(_stream_upload_to_disk)
-    except OSError as exc:
+    def _discard_upload():
         try:
             os.unlink(video_path)
         except OSError:
@@ -828,7 +826,29 @@ async def dub_upload(
         try:
             os.rmdir(job_dir)
         except OSError:
-            pass  # Best effort: keep the original upload error.
+            pass  # Best effort: only remove our empty reserved directory.
+
+    copying = asyncio.create_task(asyncio.to_thread(_stream_upload_to_disk))
+    try:
+        await asyncio.shield(copying)
+    except asyncio.CancelledError:
+        # A cancelled await cannot stop a file-copy thread. Keep its input open
+        # until it stops, then remove only this reserved upload's partial copy.
+        while not copying.done():
+            try:
+                await asyncio.shield(copying)
+            except asyncio.CancelledError:
+                continue
+            except Exception:
+                break
+        try:
+            copying.result()
+        except Exception:
+            pass  # Preserve the caller's cancellation if the copy also failed.
+        _discard_upload()
+        raise
+    except OSError as exc:
+        _discard_upload()
         if exc.errno == errno.ENOSPC or getattr(exc, "winerror", None) == 112:
             raise _dub_upload_disk_error() from exc
         raise
