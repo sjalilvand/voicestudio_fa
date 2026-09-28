@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { chromium } from 'playwright';
 
-const browser = await chromium.launch({ channel: 'msedge', headless: true });
+const browser = await chromium.launch({
+  ...(process.env.PLAYWRIGHT_BUNDLED === '1' ? {} : { channel: 'msedge' }),
+  headless: true,
+});
 const ui = process.env.VOICESTUDIO_UI_URL || 'http://localhost:3912';
 try {
   for (const platform of ['win32', 'darwin', 'linux']) {
@@ -34,6 +37,19 @@ try {
           };
         },
         { platform, locale },
+      );
+      await page.route('**/api/profiles', (route) =>
+        route.fulfill({
+          json: [
+            {
+              id: 'sidebar-layout-fixture',
+              name: 'Sidebar layout fixture',
+              kind: 'clone',
+              ref_audio_path: 'fixture.wav',
+              created_at: 0,
+            },
+          ],
+        }),
       );
       await page.goto(ui + '/#/clone');
       const sidebar = page.locator('aside').first();
@@ -96,6 +112,22 @@ try {
         assert.ok(
           bounds && bounds.y >= 0 && bounds.y + bounds.height <= 600,
           `${platform}/${locale}: Settings must remain on-screen`,
+        );
+        // A taller engine footer must leave a usable voice library, even when
+        // navigation needs to scroll. Check its real visible bounds.
+        const preview = sidebar
+          .getByRole('button', { name: strings.clone.preview_voice, exact: true })
+          .first();
+        await preview.scrollIntoViewIfNeeded();
+        const previewBounds = await preview.boundingBox();
+        const tabBounds = await sidebar
+          .getByRole('tab', { name: strings.clone.saved_profiles, exact: true })
+          .boundingBox();
+        const footerBounds = await footer.boundingBox();
+        assert.ok(
+          previewBounds.y >= tabBounds.y + tabBounds.height &&
+            previewBounds.y + previewBounds.height <= footerBounds.y,
+          `${platform}/${locale}/${level}: Voice preview must fit between tabs and engines`,
         );
         assert.ok(
           await footer.evaluate((el) => el.scrollWidth <= el.clientWidth),
