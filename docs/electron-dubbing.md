@@ -331,4 +331,6 @@ Audiobook render is running.
 
 Upload job IDs are reserved before writing, so a duplicate upload cannot replace
 or delete an existing source. Disk preflight checks the source copy size; smaller
-recordings do not require an arbitrary 1 GiB reserve.
+recordings do not require an arbitrary 1 GiB reserve. Failed or cancelled audio
+extraction removes its partial WAVs. The original user file outside the job
+directory remains unchanged.

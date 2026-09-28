@@ -152,3 +152,30 @@ def test_small_upload_does_not_require_one_gib_reserve(tmp_path, monkeypatch):
     response = asyncio.run(dub_core.dub_upload(video=upload, job_id="job", input_type="audio", source_lang=None))
     assert response.status_code == 202
     assert (job_dir / "original.wav").read_bytes() == b"test media"
+
+
+@pytest.mark.parametrize("cancelled", [False, True])
+def test_failed_extraction_removes_partial_working_audio(tmp_path, monkeypatch, cancelled):
+    from services import dub_pipeline
+    job_dir = tmp_path / "job"
+    job_dir.mkdir()
+    source = tmp_path / "original.wav"
+    source.write_bytes(b"valid source bytes")
+    monkeypatch.setattr(dub_pipeline, "find_ffmpeg", lambda: "ffmpeg")
+    monkeypatch.setattr(dub_pipeline, "require_audio_stream", lambda _: None)
+    async def fail_extract(cmd):
+        (job_dir / "audio.wav").write_bytes(b"partial output")
+        if cancelled:
+            raise asyncio.CancelledError()
+        raise OSError(errno.ENOSPC, "No space left")
+    monkeypatch.setattr(dub_pipeline, "run_proc_factory", lambda _: fail_extract)
+    async def collect():
+        return [event async for event in dub_pipeline.ingest_pipeline(
+            "extract_failure", str(job_dir), {"kind": "file", "path": str(source), "input_type": "audio"})]
+    if cancelled:
+        with pytest.raises(asyncio.CancelledError):
+            asyncio.run(collect())
+    else:
+        asyncio.run(collect())
+    assert source.read_bytes() == b"valid source bytes"
+    assert not (job_dir / "audio.wav").exists()

@@ -90,6 +90,19 @@ def _media_process_error(tool: str, returncode: int, stderr: bytes, *, paths=())
     return f"{tool} exited with code {returncode}" + (f": {tail}" if tail else ". No diagnostic output.")
 
 
+def _discard_partial_audio(*paths: str | None) -> None:
+    """Remove only the extraction outputs owned by the failed stage."""
+    for path in paths:
+        if path is None:
+            continue
+        try:
+            os.unlink(path)
+        except FileNotFoundError:
+            pass  # The failed process may not have created an output yet.
+        except OSError:
+            logger.warning("Could not remove partial extraction output")
+
+
 def _discard_invalid_source_copy(job_dir: str, media_path: str) -> None:
     """Free a failed ingest copy, never a source outside an app-owned job dir."""
     job = os.path.realpath(job_dir)
@@ -1356,6 +1369,7 @@ async def ingest_pipeline(
             filename = filename_hint or os.path.basename(video_path)
 
         audio_path = os.path.join(job_dir, "audio.wav")
+        audio_hq_path = os.path.join(job_dir, "audio_hq.wav")
         ffmpeg = find_ffmpeg()
         run_proc = run_proc_factory(job_id)
 
@@ -1386,7 +1400,6 @@ async def ingest_pipeline(
             # stereo original costs about the same and returns a true-stereo,
             # full-band bed. Best-effort: on failure Demucs falls back to the
             # ASR file, which is exactly the old behavior.
-            audio_hq_path = os.path.join(job_dir, "audio_hq.wav")
             try:
                 p_hq, _, stderr_hq = await run_proc([
                     ffmpeg, "-i", video_path, "-vn", "-acodec", "pcm_s16le",
@@ -1397,13 +1410,17 @@ async def ingest_pipeline(
                         "HQ audio extraction failed (rc=%s) — separation falls "
                         "back to the 16k mono ASR file", p_hq.returncode,
                     )
+                    _discard_partial_audio(audio_hq_path)
                     audio_hq_path = None
             except Exception as e_hq:  # noqa: BLE001 — quality upgrade, never fatal
                 logger.warning("HQ audio extraction errored (%s) — falling back", log_safe(e_hq))
+                _discard_partial_audio(audio_hq_path)
                 audio_hq_path = None
         except asyncio.CancelledError:
+            _discard_partial_audio(audio_path, audio_hq_path)
             raise
         except Exception as e:
+            _discard_partial_audio(audio_path, audio_hq_path)
             logger.error("Extract failed for job %s: %s", log_safe(job_id), log_safe(e))
             if isinstance(e, failure.InvalidMediaFileError):
                 await asyncio.to_thread(_discard_invalid_source_copy, job_dir, video_path)
