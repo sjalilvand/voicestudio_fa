@@ -2,6 +2,8 @@
 
 The top bar places a GitHub Star button immediately right of Get Pro, loading GitHub's small public star-count response when shown and every 20 minutes while visible. Browser caching keeps repeat requests small; a bundled count remains visible if GitHub is unavailable. The request sends no credentials or referrer. The project website icon sits immediately left of X in the footer. The footer includes one X button with a hover popup of follow cards for @idebpalash and @voicestudiosh, plus a heart shortcut to donation options, immediately left of the footer collapse control. The profile popup also opens by click or keyboard; follow links open in the external browser. Profile cards span the popup and bundle their images locally for offline display. The heart opens compact cards with locally bundled brand icons for Ko-fi, PayPal, GitHub stars, and Discord, plus the full Support page. Both popups support click and keyboard access. Icons have localized accessible labels. The footer chevron collapses the bar; a slim expand control restores it. Get Pro remains in the top bar.
 
+Low-disk warnings in the notification menu open Settings > Storage, where users can inspect disk use and clear temporary files.
+
 The development launcher watches main-process and preload source changes as well as renderer changes, rebuilding and restarting or reloading Electron to keep IPC contracts synchronized. After changing the launcher itself, stop and restart `bun run dev` once; a renderer refresh alone cannot update the running main process.
 
 The development shell keeps DevTools closed by default. Open it with the normal

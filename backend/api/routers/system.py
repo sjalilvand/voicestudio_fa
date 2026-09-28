@@ -1014,7 +1014,7 @@ def system_notifications():
                 "level": "warn",
                 "title": f"Low disk space ({free_gb:.1f} GB free)",
                 "message": "VoiceStudio needs disk space for models, audio, and temp files.",
-                "action": None,
+                "action": {"type": "settings-tab", "target": "storage"},
             })
     except Exception:
         pass

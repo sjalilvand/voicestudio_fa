@@ -176,7 +176,15 @@ export function SystemNotifications({
       .map((note) => note.title || note.message)
       .filter(Boolean)
       .join('. ') ||
-    t(!enabled ? 'modelSettings.unavailable' : query.isError ? 'common.error' : query.isPending ? 'preferences.loading' : 'logs.all_clear');
+    t(
+      !enabled
+        ? 'modelSettings.unavailable'
+        : query.isError
+          ? 'common.error'
+          : query.isPending
+            ? 'preferences.loading'
+            : 'logs.all_clear',
+    );
   return (
     <Popover>
       <PopoverTrigger
@@ -211,7 +219,9 @@ export function SystemNotifications({
         className="max-h-[min(28rem,calc(100vh-2rem))] w-[min(22rem,calc(100vw-2rem))] space-y-1 overflow-y-auto p-1.5"
       >
         {!enabled && visible.length === 0 && (
-          <p className="px-3 py-4 text-center text-xs text-muted-foreground">{t('modelSettings.unavailable')}</p>
+          <p className="px-3 py-4 text-center text-xs text-muted-foreground">
+            {t('modelSettings.unavailable')}
+          </p>
         )}
         {enabled && query.isPending && visible.length === 0 && (
           <p className="px-3 py-4 text-center text-xs text-muted-foreground">
@@ -233,6 +243,9 @@ export function SystemNotifications({
         )}
         {visible.map((note) => {
           const actionable = Boolean(note.action);
+          const actionLabel =
+            note.action?.label ??
+            (note.id === 'disk-low' && note.action ? t('settings.storage') : null);
           return (
             <div
               key={note.id}
@@ -260,9 +273,9 @@ export function SystemNotifications({
                     {note.message}
                   </span>
                 )}
-                {note.action?.label && (
+                {actionLabel && (
                   <span className="mt-1 inline-flex items-center gap-0.5 text-[11px] font-medium">
-                    {note.action.label}
+                    {actionLabel}
                     <ChevronRightIcon className="size-3" aria-hidden="true" />
                   </span>
                 )}

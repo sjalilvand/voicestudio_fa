@@ -75,6 +75,8 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- Low-disk notifications open Storage settings directly (#2407)
+
 - Preserve float audio and requested seeds through OmniVoice/VoxCPM2 sidecars, and keep playback and saved WAV precision consistent (#2406)
 - Development launches rebuild main and preload changes so embedded website previews do not keep stale browser IPC after UI updates (#2407)
 
