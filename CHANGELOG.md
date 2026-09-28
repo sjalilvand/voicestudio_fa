@@ -9,6 +9,16 @@ metadata and the backend fallback mirror it.
 ## [Unreleased]
 
 **Highlights**
+- Ask VoiceStudio Agent adds chat, harness selection, feature presets, read-only planning and autopilot app actions without a source checkout (#2302)
+- Home credits contributors with over 10 commits in three responsive rows of round avatars stacked from right to left with an All contributors link, with GitHub and X links on Palash's hover card (#2302)
+- The VoiceStudio.sh Open Source title opens a website preview below the clicked item, within the right content area, with navigation and external-browser controls (#2302)
+- Home cards use feature-specific SVG icons with brief hover and keyboard-focus animations that respect reduced motion (#2302)
+- Renamed the Dub workspace to Dubbing across navigation, project labels, and keyboard shortcuts (#2302)
+- Home prioritizes creation tools with clearer descriptions and controls; the footer can collapse and reopen (#2302)
+- Top bar adds a GitHub Star shortcut beside Get Pro with a compact count refreshed every 20 minutes (#2302)
+- Footer adds one X button with follow cards for @idebpalash and @voicestudiosh plus a compact support-links menu beside Pro (#2302)
+- Enter Studio opens its optional permissions and shortcut settings expanded by default (#2129)
+- Model packs can be selected and installed before preset-compatible engines are active, with changes applied only when installing or using the chosen pack (#2129)
 - Electron is now the only desktop and web UI; the retired Tauri shell and legacy entry points are removed (#2343)
 - Docker and browser deployments now use the same maintained interface as the Electron desktop app (#2341)
 - Manage Projects with confirmed individual and bulk deletion, retry failed items, and keep exported files and render audio (#2333)
@@ -26,6 +36,8 @@ metadata and the backend fallback mirror it.
 
 ### Added
 
+- Choose 16/24/32-bit WAV precision, sampling effort and mastering in Clone and Design, with file sizes and optional audio checks (#2406)
+
 - Run local narration, transcription, translation and voice-conversion recipes with resumable steps and WAV/TXT exports (#2333)
 
 - Call agent backend: place or answer phone calls that hold a task conversation in your verified or designed voice, with an editable AI disclosure, take-over and an after-call summary (#2306)
@@ -34,7 +46,11 @@ metadata and the backend fallback mirror it.
 - Linux AppImages include standard update information and a published `.zsync` file so AppImageUpdate and desktop managers can download only changed bytes (#2327) — thanks @shuvashish76!
 
 ### Changed
+- Sidebar keeps its quality slider, adds hardware-aware Auto with TTS-first model selection, and groups compact engine status with icon-based Simple, Models and Details views (#2396)
 
+- LLM setup verifies a model response before enabling features, replaces the misleading engine inventory with connection guidance, and supports authenticated local servers (#2397)
+- LLM skills can use installed coding CLIs through the repair-agent runner, native paid providers through LiteLLM (#2397)
+- Dubbing supports Google Cloud Translation and Amazon Translate with explicit provider setup (#2397)
 - OmniVoice sidecars reuse installed speech recognition for short references without transcripts, matching in-process cloning (#2320)
 - Electron recovers from OS-denied default backend ports without changing explicitly configured ports (#2358) — thanks @rishi2288!
 - Home opens directly on project actions, and Integrations lists only connectors with completed in-app setup (#2351)
@@ -56,6 +72,9 @@ metadata and the backend fallback mirror it.
 - The Twilio guide and integration directory describe the guided setup and in-app integration pages (#2304)
 
 ### Fixed
+
+- Preserve float audio and requested seeds through OmniVoice/VoxCPM2 sidecars, and keep playback and saved WAV precision consistent (#2406)
+- Development launches rebuild main and preload changes so embedded website previews do not keep stale browser IPC after UI updates (#2302)
 
 - macOS development launches use the maintained Electron version and icon paths (#2351)
 - Electron detects and repairs incomplete PyTorch, torchaudio and torchvision runtime wheels before backend startup (#2354) — thanks @jonathanmoronta1-lab!

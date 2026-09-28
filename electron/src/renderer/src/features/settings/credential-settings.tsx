@@ -199,6 +199,7 @@ function TranslationCredentials() {
 }
 function ProviderCredential({ field }: { field: (typeof PROVIDER_FIELDS)[number] }) {
   const { t } = useTranslation();
+  const label = (field.labelPrefix ? field.labelPrefix + ' · ' : '') + t(field.labelKey);
   const client = useQueryClient();
   const [value, setValue] = useState('');
   const action = useSettingsAction();
@@ -213,11 +214,7 @@ function ProviderCredential({ field }: { field: (typeof PROVIDER_FIELDS)[number]
     });
   return (
     <div>
-      <SettingsRow
-        id={'credential-' + field.key}
-        title={t(field.labelKey)}
-        description={t(field.helpKey)}
-      >
+      <SettingsRow id={'credential-' + field.key} title={label} description={t(field.helpKey)}>
         <form
           className="flex flex-wrap gap-2"
           onSubmit={(event) => {
@@ -229,7 +226,7 @@ function ProviderCredential({ field }: { field: (typeof PROVIDER_FIELDS)[number]
             type={field.isPassword ? 'password' : 'text'}
             autoComplete="new-password"
             spellCheck={false}
-            aria-label={t(field.labelKey)}
+            aria-label={label}
             value={value}
             disabled={action.busy}
             onChange={(event) => {

@@ -1,4 +1,114 @@
 {
+  "cloneQuality": {
+    "title": "Ljudkvalitet",
+    "precision": "WAV-precision",
+    "size": "~{{size}} MiB/min vid 24 kHz mono; varierar med motor.",
+    "hint16": "Minsta WAV; brett spelarstöd.",
+    "hint24": "Högre precision vid redigering; 50 % större än 16-bitars.",
+    "hint32": "Bevarar flyttalssampel; dubbelt så stor som 16-bitars. Förbättrar inte själva rösten.",
+    "effort": "Samplingssteg",
+    "effortHint": "Fler steg tar längre tid och ger inte alltid bättre ljud; filstorleken förblir densamma.",
+    "mastering": "Mastering för sändning",
+    "masteringHint": "Stäng av för att hoppa över tillagd EQ, komprimering och normalisering.",
+    "nextTake": "Gäller nästa tagning. Befintligt ljud ändras inte.",
+    "bits16": "16-bitars PCM",
+    "bits24": "24-bitars PCM",
+    "bits32": "32-bitars flyttal",
+    "fileInfo": "{{size}} MiB · {{rate}} kHz · {{channels}} kanaler · {{bits}} bitar {{encoding}}",
+    "fileSize": "{{size}} MiB",
+    "float": "flyttal"
+  },
+  "audioQuality": {
+    "check": "Kontrollera ljud",
+    "failed": "Ljudanalys är inte tillgänglig.",
+    "advisory": "Endast vägledning: pauser och volymvariationer kan vara avsiktliga. Ljudet ändras inte.",
+    "truncated": "Analysen eller varningslistan är begränsad.",
+    "clear": "Inga problem upptäcktes i den analyserade delen.",
+    "empty": "Tomt ljud",
+    "silence": "Möjlig tystnad",
+    "quiet": "Ovanligt låg volym",
+    "loud": "Ovanligt hög volym",
+    "clipping": "Möjlig klippning",
+    "invalid": "Ogiltiga ljudsamplingar"
+  },
+  "agentWorkspace": {
+    "repair": "Åtgärda ett problem",
+    "setup": "Konfigurera min studio",
+    "new_chat": "Ny chatt",
+    "harness": "Agentmiljö",
+    "mode": "Körläge",
+    "plan": "Planera",
+    "autopilot": "Autopilot",
+    "features": "Funktioner",
+    "source": "Tillåt reparation av källkod",
+    "conversation": "Konversation",
+    "welcome": "Din lokala studio, med en agent vid din sida. Börja med en uppgift eller välj en förinställning.",
+    "starter": "Hjälp mig med {{feature}}. Granska appen, välj en praktisk konfiguration och fråga bara efter nödvändiga uppgifter som saknas.",
+    "you": "Du",
+    "placeholder": "Be mig skapa, konfigurera eller reparera något…",
+    "send": "Skicka",
+    "autopilot_hint": "Autopilot utför begärda åtgärder. Enter skickar; Skift+Enter ger en ny rad.",
+    "plan_hint": "Planera granskar appens tillstånd utan att ändra det.",
+    "no_harness": "Installera och logga in i Codex, Claude Code, OpenCode eller Pi för att ansluta en agent."
+  },
+  "repairAgent": {
+    "title": "Fråga VoiceStudio Agent",
+    "notInstalled": "Inte installerad",
+    "noSource": "Öppna en skrivbar VoiceStudio källcheck för att låta en agent reparera den.",
+    "noneFound": "Installera Codex, Claude Code, OpenCode eller Pi för att använda lokal reparation.",
+    "ready": "Redo",
+    "placeholder": "Vad gick fel? L?gg till steg, synliga fel eller f?rv?ntat beteende.",
+    "prReady": "Fixning klar. Se över ändringarna och föreslå en PR när de målinriktade testerna passerar.",
+    "diagnose": "Diagnostisera",
+    "fix": "Reparera",
+    "chooseDefault": "Välj agenten som VoiceStudio ska använda automatiskt om den här vyn kraschar.",
+    "useAutomatically": "Använd {{agent}} automatiskt",
+    "captured": "{{count}} problemrader i loggen samlades in",
+    "contextNotice": "Den valda agenten får den här rapporten, den aktuella vyn, aktuella app- och backendloggar samt systemdiagnostik.",
+    "complete": "Klart"
+  },
+  "siteBrowser": {
+    "return_studio": "Tillbaka till studion",
+    "preview": "Förhandsvisa den officiella webbplatsen direkt i VoiceStudio",
+    "open_in": "Öppna i webbläsare",
+    "back": "Bakåt",
+    "forward": "Framåt",
+    "reload": "Ladda om",
+    "stop": "Stoppa laddning",
+    "address": "Webbadress",
+    "default_browser": "Standardwebbläsare",
+    "failed": "Åtgärden kunde inte slutföras. Kontrollera adressen och anslutningen eller öppna sidan i din webbläsare."
+  },
+  "sidebarTools": {
+    "simple": "Enkel",
+    "details": "Detaljer",
+    "title": "Verktygsinställningar",
+    "help": "Välj ett verktyg för att ställa in det eller byta modell.",
+    "tts": "Text till tal",
+    "asr": "Tal till text",
+    "llm": "Skrivhjälp",
+    "translation": "Översättning",
+    "dictation": "Röstinmatning",
+    "diarisation": "Identifiera talare",
+    "onDemand": "Laddas vid användning",
+    "checkSetup": "Kontrollera inställningar",
+    "wait": "Vänta tills det pågående arbetet är klart innan du ändrar detta.",
+    "speedHelp": "Högre kvalitet kan ta längre tid. Börja med Balanserad."
+  },
+  "homeUi": {
+    "subtitle": "Ditt alternativ till ElevenLabs med öppen källkod, helt lokalt — klona och skapa röster, dubba videor, diktera, transkribera och skapa ljudböcker på 646 språk.",
+    "brand_by": "{{brand}} av",
+    "all": "Alla",
+    "allContributors": "Alla bidragsgivare",
+    "title": "VoiceStudio.sh Öppen källkod",
+    "design": "Skapa en röst utifrån en beskrivning.",
+    "dub": "Översätt och dubba ljud eller video.",
+    "stories": "Skapa scener med flera röster.",
+    "audiobook": "Skapa ljudböcker med kapitel.",
+    "transcribe": "Omvandla inspelningar till text.",
+    "collapseFooter": "Fäll ihop sidfoten",
+    "expandFooter": "Fäll ut sidfoten"
+  },
   "longformPersistence": {
     "storage_unavailable_title": "Projekten kunde inte läsas in",
     "storage_unavailable_body": "VoiceStudio kunde inte läsa det lokala projektlagret. Dina data har inte ändrats. Försök igen för att öppna dem säkert.",
@@ -94,7 +204,12 @@
     "llmp_test": "Testa",
     "llmp_active_badge": "aktiv",
     "llmp_test_ok": "ok — {{model}} · {{ms}} ms",
-    "llmp_err_config": "API-nyckel eller bas-URL saknas — fyll i dem och spara.",
+    "llmp_active_env_pin": "LLM-valet är låst av LLM_DEFAULT_PROVIDER eller OMNIVOICE_LLM_BACKEND.",
+    "llmp_connect": "Anslut och aktivera",
+    "llmp_setup_hint": "Välj en leverantör, starta dess server eller lägg till en API-nyckel och anslut. VoiceStudio verifierar ett modellsvar innan LLM-funktioner aktiveras.",
+    "llmp_disable": "Stäng av LLM",
+    "llmp_optional_key": "API-nyckel (valfritt)",
+    "llmp_err_config": "Fyll i leverantörens inställningar: bas-URL, modell och eventuell API-nyckel eller konto-ID.",
     "llmp_err_auth": "Nyckeln avvisades (401/403) — kontrollera din API-nyckel.",
     "llmp_err_not_found": "Hittades inte (404) — kontrollera modellnamnet och bas-URL:ens sökväg.",
     "llmp_err_rate_limit": "Hastighetsbegränsad (429) — nyckeln fungerar; försök igen om en stund.",
@@ -364,7 +479,10 @@
     "reduce_motion_desc": "Stoppar bakgrundsanimationer och övergångar. Systeminställningen gäller ändå; det här läggs till.",
     "perf_torch_compile": "Inaktivera torch.compile",
     "perf_torch_compile_note": "Använder direkt körning för att undvika minnesfel i Triton.",
-    "perf_torch_compile_hint": "Använder direkt körning för att undvika minnesfel i Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
+    "perf_torch_compile_hint": "Använder direkt körning för att undvika minnesfel i Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>",
+    "llmp_cli_help": "Använder installerad CLI och dess inloggning via samma körning som agentreparation. Lämna Modell tomt för CLI-standard. Svaren kan vara långsammare; kostnader följer ditt CLI-konto.",
+    "llmp_sdk_help": "Inbyggda leverantörer använder LiteLLM. Ange provider/model för andra. Bedrock använder API-nyckel eller AWS-profil; Vertex använder konto-ID som projekt och Google-autentisering. Bas-URL är valfri.",
+    "llmp_cli_auth": "Åtkomst till CLI-kontot nekades. Kontrollera inloggning, prenumeration och vald modell."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -594,7 +712,7 @@
     "cleaning": "Rengör...",
     "using_profile": "Använder profilen: {{name}}",
     "clear": "klart",
-    "production_overrides": "Åsidosättande av produktion",
+    "production_overrides": "Röstinställningar",
     "denoise": "Denoise",
     "postprocess": "Efterbearbetning",
     "duration": "Varaktighet",
@@ -782,7 +900,9 @@
     "group_huggingface": "KramarFace",
     "group_translate": "Översättning (LLM / filmisk)",
     "group_deepl": "DeepL Custom Endpoint",
-    "group_microsoft": "Microsoft Translator anpassad slutpunkt"
+    "group_microsoft": "Microsoft Translator anpassad slutpunkt",
+    "region": "Region",
+    "aws_profile": "AWS-profil"
   },
   "engines": {
     "banners_on": "Scenbanderoller på",
@@ -1611,7 +1731,7 @@
   "donate": {
     "title": "Support",
     "desc": "Om du gillar det här projektet, överväg att donera för att stödja vår utveckling.",
-    "hero_title": "Stöd VoiceStudio",
+    "hero_title": "Donera till VoiceStudio-projektet",
     "hero_desc": "VoiceStudio är gratis, öppen källkod och körs helt på din hårdvara. Om det ger värde till ditt arbetsflöde, överväg att stödja kärnteamet.",
     "github_desc": "Återkommande eller engångsföreteelse — direkt via GitHub.",
     "coffee_desc": "Köp laget en kaffe. Inget konto behövs.",
@@ -1848,7 +1968,7 @@
     "trim_zoomIn": "Zooma in/ut",
     "trim_fitAll": "Anpassa alla / Anpassa urval",
     "trim_confirm": "Bekräfta trimning",
-    "dub": "Dub",
+    "dub": "Dubba",
     "dub_generate": "Generera dub",
     "dub_sidebar": "Växla sidofältet"
   },
@@ -1991,7 +2111,7 @@
     "locked": "Låst",
     "clone_label": "Klona",
     "design_label": "Design",
-    "dub_label": "Dub",
+    "dub_label": "Dubba",
     "save_label": "Spara",
     "lock_identity": "Lås röstidentitet",
     "in_folder": "i {{folder}}",
@@ -2360,6 +2480,7 @@
     "tab_license": "Kommersiell licens",
     "toggle_label": "Support eller kommersiell licens",
     "other_ways": "Andra sätt att hjälpa till",
+    "star_short": "Stjärna",
     "star_github": "Stjärna på GitHub",
     "join_discord": "Gå med i Discord"
   },
@@ -2767,6 +2888,7 @@
     "website_desc": "Mer om projektet och skaparen.",
     "follow_title": "Följ på X",
     "follow_desc": "Release-noteringar, nya motorer och ibland en titt på vad som byggs härnäst. Praktiskt om du hellre slipper sitta i en chattserver.",
+    "support_follow_title": "Stöd projektet genom att följa oss på X",
     "follow_cta": "Följ på X"
   },
   "permissions": {
@@ -2953,5 +3075,42 @@
     "step_transcribe": "Transkribera",
     "step_translate": "Översätt",
     "step_convert": "Konvertera"
+  },
+  "performanceProfile": {
+    "auto": "Auto"
+  },
+  "performanceHardware": {
+    "fits": "Passar din maskinvara",
+    "adjusted": "Anpassat till din maskinvara",
+    "unknown": "Maskinvarukontroll saknas",
+    "priority": "Röstkvalitet först. Övriga verktyg delar på det återstående minnet.",
+    "specs": "{{ram}} GB RAM · {{cores}} CPU-trådar",
+    "vram": "{{memory}} GB VRAM",
+    "estimate": "Uppskattning med utrymme för systemet. Använder installerade modeller som stöder språket; laddas vid användning.",
+    "reason": {
+      "fits": "Passar",
+      "memory": "Minnesgräns",
+      "installed": "Endast installerade modeller",
+      "kept": "Ditt val behålls",
+      "unknown": "Maskinvarukontroll saknas"
+    },
+    "liveUsage": "Aktuell användning",
+    "everyTwoSeconds": "Varannan sekund",
+    "appVram": "Appens VRAM",
+    "voiceFirst": "Röstkvalitet först"
+  },
+  "voiceControls": {
+    "title": "Röstinställningar",
+    "options": "Fler alternativ",
+    "advanced": "Avancerad modelljustering",
+    "guidance": "Instruktionens påverkan",
+    "timing": "Tidpunkt för förfining",
+    "order": "Variation i samplingsordning",
+    "variation": "Ljudvariation",
+    "balance": "Balans mellan grovt och fint",
+    "denoise": "Ta bort brus från referensen",
+    "polish": "Förfina genererat ljud",
+    "basics": "1× är normal hastighet. Lämna längden tom för naturlig timing.",
+    "hint": "Behåll vanligtvis standardvärdena. Vägledning styr instruktionens påverkan; övriga reglage ändrar hur modellen bygger ljudet. Ändra ett i taget."
   }
 }

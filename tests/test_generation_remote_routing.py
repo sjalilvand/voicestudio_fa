@@ -270,7 +270,7 @@ def test_remote_assignment_carries_the_whole_chunked_render(client, monkeypatch)
     _install(monkeypatch, gateway, _remote_decision())
 
     r = _post(client, max_chunk_chars="40", crossfade_ms="70", seed="4242",
-              effect_preset="broadcast")
+              effect_preset="broadcast", wav_bits="32")
     assert r.status_code == 200, r.text
 
     assert len(gateway.calls) == 1, "one op per render, never one per chunk"
@@ -282,6 +282,7 @@ def test_remote_assignment_carries_the_whole_chunked_render(client, monkeypatch)
     assert params["max_chunk_chars"] == 40
     assert params["crossfade_ms"] == 70
     assert params["effect_preset"] == "broadcast"
+    assert params["wav_bits"] == 32
     # The FULL text, unsplit: the split belongs to the worker.
     assert params["text"].startswith("The first sentence")
     assert params["text"].endswith("everything up now.")

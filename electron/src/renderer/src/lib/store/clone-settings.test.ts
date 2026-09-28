@@ -18,6 +18,17 @@ afterEach(() => {
 });
 
 describe('parsePersistedCloneSettings', () => {
+  it('restores valid quality choices and discards invalid persisted enums', async () => {
+    const { parsePersistedCloneSettings } = await loadModule();
+    expect(parsePersistedCloneSettings('{"wavBits":32,"effectPreset":"raw"}')).toMatchObject({
+      wavBits: 32,
+      effectPreset: 'raw',
+    });
+    expect(parsePersistedCloneSettings('{"wavBits":64,"effectPreset":"unknown"}')).toMatchObject({
+      wavBits: 16,
+      effectPreset: 'broadcast',
+    });
+  });
   it('returns defaults for null, malformed JSON and non-objects', async () => {
     const { parsePersistedCloneSettings, DEFAULT_CLONE_SETTINGS } = await loadModule();
     expect(parsePersistedCloneSettings(null)).toEqual(DEFAULT_CLONE_SETTINGS);

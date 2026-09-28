@@ -1,3 +1,4 @@
+import { registerSiteBrowser } from './site-browser';
 import { saveFiltersFor } from './save-filters';
 import { resolveBackendDownloadUrl } from './backend-download';
 import {
@@ -314,6 +315,7 @@ export function registerIpc(
   getMainWindow: () => BrowserWindow | null,
   exitForUninstall: () => Promise<void> = async () => app.exit(0),
 ): void {
+  registerSiteBrowser(getMainWindow);
   let maintenanceBusy = false;
   let relocationSelection: {
     authorization: string;

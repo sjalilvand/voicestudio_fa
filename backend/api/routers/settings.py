@@ -108,7 +108,7 @@ from services.performance_profiles import (
 
 
 class _PerformanceProfileBody(BaseModel):
-    tier: str = Field(..., description="fast | balanced | quality | max")
+    tier: str = Field(..., description="fast | balanced | quality | max | auto")
     family: str | None = Field(None, description="Engine family, or null to set the global tier")
 
 
@@ -122,18 +122,23 @@ def get_performance_profile():
 
 @router.put("/performance-profile")
 def set_performance_profile(body: _PerformanceProfileBody):
-    """Persist a performance preference and apply installed Max-capacity picks."""
+    """Persist a performance preference and apply installed compatible picks."""
     from core import prefs
 
     tier = body.tier.strip().lower()
-    if tier not in _PERFORMANCE_TIERS:
+    if tier not in (*_PERFORMANCE_TIERS, "auto"):
         raise HTTPException(status_code=400, detail="Unknown performance tier")
     family = body.family.strip().lower() if body.family else None
     if family is not None and family not in _PERFORMANCE_FAMILIES:
         raise HTTPException(status_code=400, detail="Unknown engine family")
+    if family is not None and tier == "auto":
+        raise HTTPException(status_code=400, detail="Auto manages the whole device; use the global control")
     state = _performance_profile_state()
     applicable = state["applicable_families"]
-    if (family is not None and family not in applicable) or (family is None and not applicable):
+    # A global pack policy must be saved before its first models are installed.
+    # Activation is installed-only; the installer reconciles the saved policy
+    # as models become available. Family controls still need a usable engine.
+    if family is not None and family not in applicable:
         raise HTTPException(status_code=409, detail="The selected engines do not support this performance preset")
     from core import job_store
     from api.routers.batch import list_batch_jobs
@@ -145,7 +150,10 @@ def set_performance_profile(body: _PerformanceProfileBody):
             # choice, so a crash cannot leave half of a global change persisted.
             prefs.update_mapping(_PERFORMANCE_PROFILE_KEY, {"global": tier}, replace=True)
         else:
-            prefs.update_mapping(_PERFORMANCE_PROFILE_KEY, {family: tier})
+            stored = prefs.get(_PERFORMANCE_PROFILE_KEY, {})
+            resolved = dict(stored.get("resolved", {})) if isinstance(stored, dict) else {}
+            resolved.pop(family, None)
+            prefs.update_mapping(_PERFORMANCE_PROFILE_KEY, {family: tier, "resolved": resolved})
     except Exception:
         logger.exception("set_performance_profile failed")
         raise HTTPException(status_code=500, detail="Failed to persist performance profile")
@@ -501,9 +509,10 @@ def set_llm_endpoint(body: _LLMEndpointBody):
 
     Reuses the env-var persistence path (prefs.json, restored at startup):
     base_url -> TRANSLATE_BASE_URL, model -> TRANSLATE_MODEL,
-    api_key -> TRANSLATE_API_KEY. A None field is left unchanged; an empty
+    api_key -> encrypted TRANSLATE_API_KEY storage. A None field is left unchanged; an empty
     string clears it. Ollama ignores the key; vLLM / LM Studio require it.
     """
+    from services import settings_store
     from core.prefs import set_ as prefs_set, delete as prefs_delete
 
     mapping = {
@@ -517,9 +526,13 @@ def set_llm_endpoint(body: _LLMEndpointBody):
         val = val.strip()
         if val:
             os.environ[env_key] = val
-            prefs_set(f"env.{env_key}", val)
+            if env_key != "TRANSLATE_API_KEY":
+                prefs_set(f"env.{env_key}", val)
         else:
             os.environ.pop(env_key, None)
+            prefs_delete(f"env.{env_key}")
+        if env_key == "TRANSLATE_API_KEY":
+            settings_store.set_secret("translation_env.TRANSLATE_API_KEY", val or None)
             prefs_delete(f"env.{env_key}")
     # get_active_llm_backend() builds a fresh backend (and its OpenAI client
     # reads env at construction) on every call, so there's no singleton to
@@ -538,6 +551,7 @@ class _LLMProviderBody(BaseModel):
     model: str | None = None
     account_id: str | None = Field(None, description="Cloudflare account id")
     make_active: bool = False
+    activate_if_unset: bool = True  # Legacy clients; editors opt out for save/test.
 
 
 class _LLMActiveBody(BaseModel):
@@ -550,9 +564,11 @@ def list_llm_providers():
 
     Never returns key material — only `has_key`/`key_from_env` booleans.
     """
-    from services import llm_providers
+    from services import llm_providers, llm_backend
     return {
         "active": llm_providers.active_provider_id(),
+        "engine_active": llm_backend.active_backend_id(),
+        "engine_from_env": bool(os.environ.get("OMNIVOICE_LLM_BACKEND")),
         "providers": [llm_providers.describe(p) for p in llm_providers.all_providers()],
     }
 
@@ -567,6 +583,13 @@ def save_llm_provider(provider_id: str, body: _LLMProviderBody):
     p = llm_providers.get_provider(provider_id)
     if p is None:
         raise HTTPException(status_code=404, detail=f"unknown provider {provider_id!r}")
+    if not body.make_active and not body.activate_if_unset:
+        from core import prefs
+        from services import llm_backend
+        # Persist the pre-save mode before adding a first cloud key. Otherwise
+        # legacy key auto-detection would enable LLMs before Connect verifies it.
+        if prefs.get("llm_backend") is None and not os.environ.get("OMNIVOICE_LLM_BACKEND"):
+            prefs.set_("llm_backend", llm_backend.active_backend_id())
     if body.api_key is not None:
         llm_providers.save_key(provider_id, body.api_key.strip())
     llm_providers.save_overrides(
@@ -580,8 +603,11 @@ def save_llm_provider(provider_id: str, body: _LLMProviderBody):
     # "Save" left nothing persisted to resolve. Gated on the STORED selection
     # only — an explicit prior choice is never stolen by a plain save, and an
     # unconfigured provider can't claim the slot.
-    if body.make_active or (
-        llm_providers.stored_active_provider_id() is None
+    if body.make_active:
+        _activate_llm_provider(provider_id)
+    elif (
+        body.activate_if_unset
+        and llm_providers.stored_active_provider_id() is None
         and llm_providers.is_configured(p)
     ):
         llm_providers.set_active_provider(provider_id)
@@ -593,8 +619,48 @@ def set_active_llm_provider(body: _LLMActiveBody):
     from services import llm_providers
     if llm_providers.get_provider(body.provider) is None:
         raise HTTPException(status_code=404, detail=f"unknown provider {body.provider!r}")
-    llm_providers.set_active_provider(body.provider)
+    _activate_llm_provider(body.provider)
     return list_llm_providers()
+
+
+def _validate_llm_activation(provider_id: str) -> None:
+    from services import llm_providers
+    pin = llm_providers._active_env_pin()
+    if (pin and pin != provider_id) or os.environ.get("OMNIVOICE_LLM_BACKEND") not in (None, "", "openai-compat"):
+        raise HTTPException(status_code=409, detail="LLM selection is pinned by the environment.")
+    p = llm_providers.get_provider(provider_id)
+    if p is None:
+        raise HTTPException(status_code=404, detail="Unknown LLM provider.")
+    error = llm_providers.configuration_error(p)
+    if error:
+        raise HTTPException(status_code=400, detail=error)
+
+
+def _activate_llm_provider(provider_id: str) -> None:
+    """Explicit activation enables both provider and engine; pins still win."""
+    from core import prefs
+    from services import llm_providers
+    _validate_llm_activation(provider_id)
+    llm_providers.set_active_provider(provider_id)
+    prefs.set_("llm_backend", "openai-compat")
+
+
+@router.post("/llm-providers/{provider_id}/connect")
+def connect_llm_provider(provider_id: str):
+    """Enable a provider only after it returns a usable completion."""
+    from services import llm_providers
+    p = llm_providers.get_provider(provider_id)
+    _validate_llm_activation(provider_id)
+    def configuration():
+        return (llm_providers.resolve_base_url(p), llm_providers.configured_model(p),
+                llm_providers.resolve_api_key(p))
+    verified = configuration()
+    result = test_llm_provider(provider_id)
+    if result["ok"]:
+        if configuration() != verified:
+            return {"ok": False, "kind": "config"}
+        _activate_llm_provider(provider_id)
+    return result
 
 
 def _scrub_llm_detail(e: Exception, api_key: str | None) -> str:
@@ -617,7 +683,8 @@ def _classify_llm_error(e: Exception) -> str:
     Status codes win when the OpenAI SDK provides one; exception-family
     names catch the non-HTTP failures (DNS, refused, TLS, timeout).
     """
-    status = getattr(e, "status_code", None)
+    from urllib.error import HTTPError
+    status = e.code if isinstance(e, HTTPError) else getattr(e, "status_code", None)
     if status in (401, 403):
         return "auth"
     if status == 404:
@@ -625,7 +692,7 @@ def _classify_llm_error(e: Exception) -> str:
     if status == 429:
         return "rate_limit"
     name = type(e).__name__
-    if name in ("APIConnectionError", "APITimeoutError", "ConnectError",
+    if name in ("APIConnectionError", "APITimeoutError", "ConnectError", "URLError",
                 "ConnectTimeout", "TimeoutError"):
         return "network"
     if name == "AuthenticationError":
@@ -655,26 +722,32 @@ def test_llm_provider(provider_id: str):
         raise HTTPException(status_code=404, detail=f"unknown provider {provider_id!r}")
     base_url = llm_providers.resolve_base_url(p)
     api_key = llm_providers.resolve_api_key(p)
-    if not base_url:
-        return {"ok": False, "kind": "config", "detail": "No Base URL set for this provider."}
-    if not api_key:
-        return {"ok": False, "kind": "config", "detail": "No API key configured for this provider."}
+    error = llm_providers.configuration_error(p)
+    if error:
+        return {"ok": False, "kind": "config", "detail": error}
     t0 = _time.monotonic()
     try:
-        from openai import OpenAI
+        from httpx import Timeout
+        from services.llm_transport import create_client
         # max_retries=0: this is an interactive probe with a live spinner — the
         # SDK's default 2 automatic retries turn a 429/timeout into a ~34s hang.
         # Surface the first failure immediately instead.
-        client = OpenAI(api_key=api_key, base_url=base_url, max_retries=0)
+        client = create_client(p)
+        model = llm_providers.resolve_model(p)
         res = client.chat.completions.create(
-            model=llm_providers.resolve_model(p),
+            model=model,
             messages=[{"role": "user", "content": "Reply with the single word: ok"}],
-            timeout=20,
+            # Local runtimes may spend over 20s loading weights on first use.
+            # Keep connection failures fast while allowing that cold start.
+            timeout=Timeout(120 if p.local or p.transport == "cli" else 20, connect=5),
         )
-        reply = (res.choices[0].message.content or "").strip()
+        from services.llm_backend import _strip_reasoning
+        reply = _strip_reasoning(res.choices[0].message.content or "")
+        if not reply:
+            raise ValueError("Provider returned no usable answer.")
         return {
             "ok": True,
-            "model": llm_providers.resolve_model(p),
+            "model": model,
             "reply": reply[:80],
             "latency_ms": int((_time.monotonic() - t0) * 1000),
         }
@@ -729,9 +802,11 @@ def list_llm_provider_models(provider_id: str):
     p = llm_providers.get_provider(provider_id)
     if p is None:
         raise HTTPException(status_code=404, detail=f"unknown provider {provider_id!r}")
+    if p.transport != "openai":
+        return {"ok": True, "models": [], "truncated": False}
     base_url = llm_providers.resolve_base_url(p)
     api_key = llm_providers.resolve_api_key(p)
-    if not base_url or not api_key:
+    if llm_providers.configuration_error(p, require_model=False):
         return {"ok": False, "kind": "config", "models": []}
     try:
         from openai import OpenAI

@@ -257,27 +257,39 @@ def test_stream_yields_chunks_incrementally(monkeypatch, no_omnivoice_model):
     assert start["seed"] == 7
 
 
+@pytest.mark.parametrize("bits,subtype", [(16, "PCM_16"), (24, "PCM_24"), (32, "FLOAT")])
 def test_stream_final_file_identical_to_classic_output(client, monkeypatch,
-                                                       no_omnivoice_model):
+                                                       no_omnivoice_model, bits, subtype):
     """The saved take must be byte-identical whether or not the preview
     streamed — streaming is a delivery channel, not a different render."""
     fake = _make_deterministic_engine()
     monkeypatch.setitem(_tts_mod()._REGISTRY, "stream-fake", fake)
     data = {
         "text": LONG_TEXT, "engine": "stream-fake",
-        "seed": "42", "max_chunk_chars": "60",
+        "seed": "42", "max_chunk_chars": "60", "wav_bits": str(bits),
     }
 
     classic = client.post("/generate", data=data)
     assert classic.status_code == 200, classic.text
     classic_bytes = _saved_wav_bytes(classic.headers["x-audio-path"])
+    import io
+    import soundfile as sf
+    assert classic.content == classic_bytes
+    assert sf.info(io.BytesIO(classic_bytes)).subtype == subtype
 
     events = _stream_events(client, data)
     done = events[-1][0]
     assert done["type"] == "done"
     streamed_bytes = _saved_wav_bytes(done["audio_path"])
 
-    assert streamed_bytes == classic_bytes
+    # libsndfile FLOAT WAVs include a PEAK-chunk creation timestamp. Compare
+    # decoded samples as well as format; byte equality remains valid for PCM.
+    if bits != 32:
+        assert streamed_bytes == classic_bytes
+    assert sf.info(io.BytesIO(streamed_bytes)).subtype == subtype
+    import numpy as np
+    np.testing.assert_array_equal(sf.read(io.BytesIO(streamed_bytes))[0],
+                                  sf.read(io.BytesIO(classic_bytes))[0])
     assert done["seed"] == 42
     assert done["duration"] > 0
 

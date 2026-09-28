@@ -47,6 +47,59 @@ def test_registry_has_all_providers(lp):
         assert expected in ids, expected
 
 
+def test_catalogue_does_not_discover_or_persist_a_placeholder(lp, monkeypatch):
+    p = lp.get_provider("lmstudio")
+    monkeypatch.setattr(lp, "discover_model", lambda p: pytest.fail("catalogue made a network probe"))
+    assert lp.describe(p)["model"] == ""
+    assert lp.describe(p)["has_api_key"] is False
+    lp.save_key(p.id, "local-auth-secret")
+    assert lp.describe(p)["has_api_key"] is True
+
+
+def test_saved_lmstudio_placeholder_recovers_automatic_discovery(lp, monkeypatch):
+    p = lp.get_provider("lmstudio")
+    lp.save_overrides(p.id, model="local-model")
+    monkeypatch.setattr(lp, "discover_model", lambda p: "loaded-chat-model")
+    assert lp.resolve_model(p) == "loaded-chat-model"
+    assert lp.describe(p)["model"] == ""
+
+
+@pytest.mark.parametrize("url,model", [
+    ("localhost:1234/v1", "chat"), ("file:///tmp/model", "chat"),
+    ("http://localhost:bad/v1", "chat"), ("http://localhost:1234/v1", ""),
+])
+def test_incomplete_custom_provider_is_not_ready(lp, url, model):
+    lp.save_overrides("custom", base_url=url, model=model)
+    lp.set_active_provider("custom")
+    p = lp.get_provider("custom")
+    assert not lp.is_configured(p)
+    from services.llm_backend import OpenAICompatBackend
+    assert not OpenAICompatBackend.is_available()[0]
+    from services.llm_skills import resolve_skill
+    assert not resolve_skill("dub_translation").ready
+
+
+def test_account_scoped_provider_requires_account_only_for_templated_url(lp):
+    p = lp.get_provider("cloudflare")
+    lp.save_key(p.id, "test-key")
+    assert not lp.is_configured(p)
+    lp.save_overrides(p.id, account_id="account123")
+    assert lp.is_configured(p)
+    lp.save_overrides(p.id, account_id="", base_url="https://gateway.example/v1")
+    assert lp.is_configured(p)
+
+
+@pytest.mark.parametrize("pid,env", [("ollama", "OLLAMA_API_KEY"), ("lmstudio", "LMSTUDIO_API_KEY")])
+def test_local_server_key_env_is_supported_without_discovery(lp, monkeypatch, pid, env):
+    p = lp.get_provider(pid)
+    lp.save_key(pid, "stored-key")
+    monkeypatch.setenv(env, "env-key")
+    monkeypatch.setattr(lp, "discover_model", lambda p: pytest.fail("unexpected probe"))
+    assert lp.resolve_api_key(p) == "env-key"
+    assert lp.describe(p)["key_from_env"] is True
+    assert lp.describe(p)["has_api_key"] is True
+
+
 def test_orcarouter_provider_contract(lp, monkeypatch):
     p = lp.get_provider("orcarouter")
     assert p.default_base_url == "https://api.orcarouter.ai/v1"

@@ -1,4 +1,98 @@
 {
+  "cloneQuality": {
+    "title": "Kualitas audio",
+    "precision": "Presisi WAV",
+    "size": "~{{size}} MiB/menit pada 24 kHz mono; bergantung mesin.",
+    "hint16": "WAV terkecil; kompatibilitas pemutar luas.",
+    "hint24": "Presisi penyuntingan lebih tinggi; 50% lebih besar dari 16-bit.",
+    "hint32": "Mempertahankan sampel float; dua kali ukuran 16-bit. Tidak meningkatkan suara itu sendiri.",
+    "effort": "Langkah sampling",
+    "effortHint": "Lebih banyak langkah memerlukan waktu lebih lama dan belum tentu lebih baik; ukuran berkas tetap sama.",
+    "mastering": "Mastering siaran",
+    "masteringHint": "Matikan untuk melewati EQ, kompresi, dan normalisasi tambahan.",
+    "nextTake": "Berlaku untuk rekaman berikutnya. Audio yang ada tidak berubah.",
+    "bits16": "PCM 16-bit",
+    "bits24": "PCM 24-bit",
+    "bits32": "Float 32-bit",
+    "fileInfo": "{{size}} MiB · {{rate}} kHz · {{channels}} kanal · {{bits}}-bit {{encoding}}",
+    "fileSize": "{{size}} MiB",
+    "float": "float"
+  },
+  "audioQuality": {
+    "check": "Periksa audio",
+    "failed": "Analisis audio tidak tersedia.",
+    "advisory": "Hanya saran: jeda dan variasi volume dapat disengaja. Audio tidak diubah.",
+    "truncated": "Analisis atau daftar peringatan dibatasi.",
+    "clear": "Tidak ada masalah terdeteksi pada bagian yang dianalisis.",
+    "empty": "Audio kosong",
+    "silence": "Kemungkinan hening",
+    "quiet": "Volume tidak biasa rendah",
+    "loud": "Volume tidak biasa tinggi",
+    "clipping": "Kemungkinan clipping",
+    "invalid": "Sampel audio tidak valid"
+  },
+  "agentWorkspace": {
+    "repair": "Perbaiki masalah",
+    "setup": "Siapkan studio saya",
+    "new_chat": "Chat baru",
+    "harness": "Lingkungan agen",
+    "mode": "Mode eksekusi",
+    "plan": "Rencanakan",
+    "autopilot": "Autopilot",
+    "features": "Fitur",
+    "source": "Izinkan perbaikan kode sumber",
+    "conversation": "Percakapan",
+    "welcome": "Studio lokal Anda, dengan agen yang mendampingi. Mulai dengan tugas atau pilih preset.",
+    "starter": "Bantu saya dengan {{feature}}. Periksa aplikasi, pilih pengaturan praktis, dan tanyakan hanya masukan penting yang belum tersedia.",
+    "you": "Anda",
+    "placeholder": "Minta saya membuat, menyiapkan, atau memperbaiki sesuatu…",
+    "send": "Kirim",
+    "autopilot_hint": "Autopilot menjalankan tindakan yang diminta. Enter mengirim; Shift+Enter membuat baris baru.",
+    "plan_hint": "Rencanakan memeriksa keadaan aplikasi tanpa mengubahnya.",
+    "no_harness": "Instal dan masuk ke Codex, Claude Code, OpenCode, atau Pi untuk menghubungkan agen."
+  },
+  "siteBrowser": {
+    "return_studio": "Kembali ke Studio",
+    "preview": "Pratinjau singkat situs resmi, langsung di VoiceStudio",
+    "open_in": "Buka di browser",
+    "back": "Kembali",
+    "forward": "Maju",
+    "reload": "Muat ulang",
+    "stop": "Hentikan pemuatan",
+    "address": "Alamat situs web",
+    "default_browser": "Browser default",
+    "failed": "Tindakan tidak dapat diselesaikan. Periksa alamat dan koneksi, atau buka di browser Anda."
+  },
+  "sidebarTools": {
+    "simple": "Sederhana",
+    "details": "Detail",
+    "title": "Pengaturan alat",
+    "help": "Pilih alat untuk menyiapkannya atau mengganti modelnya.",
+    "tts": "Teks ke suara",
+    "asr": "Suara ke teks",
+    "llm": "Bantuan menulis",
+    "translation": "Terjemahan",
+    "dictation": "Ketik dengan suara",
+    "diarisation": "Kenali pembicara",
+    "onDemand": "Dimuat saat dipakai",
+    "checkSetup": "Periksa pengaturan",
+    "wait": "Tunggu pekerjaan saat ini selesai sebelum mengubah ini.",
+    "speedHelp": "Kualitas lebih tinggi bisa memakan waktu lebih lama. Mulai dengan Seimbang."
+  },
+  "homeUi": {
+    "subtitle": "Alternatif ElevenLabs Anda yang sumber terbuka dan sepenuhnya lokal — kloning dan rancang suara, sulihsuarakan video, dikte, transkripsikan, dan buat buku audio dalam 646 bahasa.",
+    "brand_by": "{{brand}} oleh",
+    "all": "Semua",
+    "allContributors": "Semua kontributor",
+    "title": "VoiceStudio.sh Sumber Terbuka",
+    "design": "Rancang suara dari deskripsi.",
+    "dub": "Terjemahkan dan sulihsuarakan audio atau video.",
+    "stories": "Buat adegan dengan beberapa suara.",
+    "audiobook": "Buat buku audio dengan bab.",
+    "transcribe": "Ubah rekaman menjadi teks.",
+    "collapseFooter": "Ciutkan footer",
+    "expandFooter": "Perluas footer"
+  },
   "twilioIntegration": {
     "exposureWarning": "Mengaktifkan ini membuka port lokal terpisah yang dipublikasikan tunnel Anda ke internet. Hanya permintaan yang ditandatangani dengan Auth Token Twilio Anda yang diterima; bagian lain VoiceStudio tetap privat.",
     "accountSid": "Account SID",
@@ -370,7 +464,7 @@
     "cleaning": "Membersihkan…",
     "using_profile": "Menggunakan profil: {{name}}",
     "clear": "jelas",
-    "production_overrides": "Pengesampingan Produksi",
+    "production_overrides": "Kontrol suara",
     "denoise": "Tolak kebisingan",
     "postprocess": "Pascaproses",
     "duration": "Durasi",
@@ -838,7 +932,7 @@
     "unknown": "tidak dikenal"
   },
   "dubWorkspace": {
-    "title": "Sulih Suara",
+    "title": "Sulih suara",
     "start": "Mulai",
     "end": "Akhir",
     "createStory": "Buat Cerita",
@@ -1109,7 +1203,11 @@
     "llmp_test": "Uji",
     "llmp_active_badge": "aktif",
     "llmp_test_ok": "ok — {{model}} · {{ms}} ms",
-    "llmp_err_config": "Kunci API atau URL dasar belum diisi — isi lalu simpan.",
+    "llmp_connect": "Hubungkan dan aktifkan",
+    "llmp_setup_hint": "Pilih penyedia, jalankan servernya atau tambahkan kunci API, lalu hubungkan. VoiceStudio memverifikasi respons model sebelum mengaktifkan fitur LLM.",
+    "llmp_disable": "Matikan LLM",
+    "llmp_optional_key": "Kunci API (opsional)",
+    "llmp_err_config": "Lengkapi pengaturan penyedia: URL dasar, model, serta kunci API atau ID akun jika diperlukan.",
     "llmp_err_auth": "Kunci ditolak (401/403) — periksa kunci API Anda.",
     "llmp_err_not_found": "Tidak ditemukan (404) — periksa nama model dan jalur URL dasar.",
     "llmp_err_rate_limit": "Terkena batas laju (429) — kunci berfungsi; coba lagi sebentar lagi.",
@@ -1281,7 +1379,7 @@
     "uninstall_models_warning": "Ini termasuk cache Hugging Face bersama ({{size}}) — model alat AI lain yang diunduh mungkin disertakan dengannya.",
     "uninstall_total": "Lokasi {{count}} · {{size}} akan dibebaskan",
     "llmp_saved_not_active": "Tersimpan — belum digunakan untuk terjemahan. Klik “Simpan & gunakan untuk terjemahan” untuk beralih.",
-    "llmp_active_env_pin": "Penyedia aktif disematkan oleh variabel lingkungan LLM_DEFAULT_PROVIDER.",
+    "llmp_active_env_pin": "Pilihan LLM ditetapkan oleh LLM_DEFAULT_PROVIDER atau OMNIVOICE_LLM_BACKEND.",
     "llm_skills": "LLM Keterampilan",
     "llmskills_desc": "Arahkan setiap fitur yang didukung AI ke LLM masing-masing — pertahankan pekerjaan sensitif pada model lokal (Ollama/LM Studio) sementara pekerjaan yang lebih berat menggunakan penyedia jarak jauh — atau nonaktifkan fitur sepenuhnya. Off berperilaku persis seperti tidak ada LLM yang dikonfigurasi: fitur akan kembali ke jalur non-LLM.",
     "llmskills_needs_setup": "perlu pengaturan",
@@ -1338,7 +1436,10 @@
     "review_mode_desc": "Jeda di antara tahapan alur sehingga Anda dapat meninjau ASR/output terjemahan.",
     "review_mode_on": "Ulasan",
     "review_mode_off": "Tembakan cepat",
-    "translate_agent": "Agen cocok"
+    "translate_agent": "Agen cocok",
+    "llmp_cli_help": "Menggunakan CLI terpasang dan loginnya melalui pelaksana yang sama dengan perbaikan agen. Kosongkan Model untuk bawaan CLI. Respons mungkin lebih lambat; biaya mengikuti akun CLI.",
+    "llmp_sdk_help": "Penyedia native memakai LiteLLM. Untuk penyedia lain, masukkan provider/model. Bedrock memakai kunci API atau profil AWS; Vertex memakai ID akun sebagai proyek dan kredensial Google. URL dasar opsional.",
+    "llmp_cli_auth": "Akses akun CLI ditolak. Periksa login, langganan, dan model yang dipilih."
   },
   "gallery": {
     "title": "VoiceStudio Galeri",
@@ -1786,7 +1887,9 @@
     "saved": "✓ Tetapkan",
     "deepl_base_url": "URL Basis DeepL",
     "deepl_base_url_help": "Titik akhir API DeepL khusus (default: https://api.deepl.com/v2). Ubah untuk proxy/hosting mandiri.",
-    "microsoft_base_url_help": "Titik akhir Azure Translator kustom (default: https://api.cognitive.microsofttranslator.com)."
+    "microsoft_base_url_help": "Titik akhir Azure Translator kustom (default: https://api.cognitive.microsofttranslator.com).",
+    "region": "Wilayah",
+    "aws_profile": "Profil AWS"
   },
   "about": {
     "architecture": "Arsitektur",
@@ -2215,6 +2318,7 @@
     "website_desc": "Lebih lanjut tentang proyek dan pembuatnya.",
     "follow_title": "Ikuti di X",
     "follow_desc": "Catatan rilis, mesin baru, dan sesekali intip apa yang sedang dibangun. Praktis jika Anda tidak ingin berada di server obrolan.",
+    "support_follow_title": "Dukung proyek dengan mengikuti kami di X",
     "follow_cta": "Ikuti di X",
     "bug_title": "Laporkan bug",
     "channels_label": "Cara untuk menghubungi",
@@ -2237,7 +2341,7 @@
   "donate": {
     "title": "Dukungan",
     "desc": "Jika Anda menikmati proyek ini, pertimbangkan untuk berdonasi untuk mendukung pengembangan kami.",
-    "hero_title": "Mendukung VoiceStudio",
+    "hero_title": "Berdonasi untuk proyek VoiceStudio",
     "hero_desc": "VoiceStudio gratis, bersumber terbuka, dan berjalan sepenuhnya di perangkat keras Anda. Jika hal ini memberikan nilai pada alur kerja Anda, pertimbangkan untuk mendukung tim inti.",
     "github_desc": "Berulang atau satu kali — langsung melalui GitHub.",
     "coffee_desc": "Belikan kopi untuk tim. Tidak diperlukan akun.",
@@ -2279,6 +2383,7 @@
     "tab_license": "Lisensi Komersial",
     "toggle_label": "Dukungan atau lisensi komersial",
     "other_ways": "Cara lain untuk membantu",
+    "star_short": "Beri bintang",
     "star_github": "Bintangi di GitHub",
     "join_discord": "Bergabunglah dengan Perselisihan",
     "sponsors_title": "Sponsor",
@@ -2593,7 +2698,7 @@
     "trim_zoomIn": "Memperbesar / memperkecil",
     "trim_fitAll": "Cocok untuk semua / Pilihan pas",
     "trim_confirm": "Konfirmasikan pemangkasan",
-    "dub": "sulih suara",
+    "dub": "Sulih suara",
     "dub_generate": "Hasilkan sulih suara",
     "dub_sidebar": "Alihkan bilah sisi"
   },
@@ -2679,7 +2784,8 @@
     "fast": "Cepat",
     "balanced": "Seimbang",
     "quality": "Kualitas",
-    "hint": "Berlaku untuk sampling OmniVoice dan decoding Faster-Whisper / NLLB. Mesin lain mempertahankan pengaturannya."
+    "hint": "Berlaku untuk sampling OmniVoice dan decoding Faster-Whisper / NLLB. Mesin lain mempertahankan pengaturannya.",
+    "auto": "Otomatis"
   },
   "recording": {
     "input_device": "Perangkat masukan",
@@ -2744,11 +2850,11 @@
     "token_once": "Pindai atau tempelkan ini di mesin yang lain. Hanya ditampilkan sekali."
   },
   "repairAgent": {
-    "title": "Perbaiki dengan agen",
+    "title": "Tanya VoiceStudio Agent",
     "notInstalled": "Belum terpasang",
     "noSource": "Buka checkout sumber VoiceStudio yang dapat ditulis agar agen dapat memperbaikinya.",
     "noneFound": "Pasang Codex, Claude Code, OpenCode, atau Pi untuk perbaikan lokal.",
-    "ready": "Jelaskan masalahnya, lalu diagnosis atau perbaiki.",
+    "ready": "Siap",
     "placeholder": "Apa yang salah? Tambahkan langkah, galat yang terlihat, atau perilaku yang diharapkan.",
     "prReady": "Perbaikan selesai. Tinjau perubahan dan usulkan PR setelah pengujian terarah lulus.",
     "diagnose": "Diagnosis",
@@ -3197,5 +3303,39 @@
     "addingVoice": "Menambahkan suara…",
     "engineDefault": "Default mesin",
     "preview": "Pratinjau suara"
+  },
+  "performanceHardware": {
+    "fits": "Sesuai perangkat keras Anda",
+    "adjusted": "Disesuaikan dengan perangkat Anda",
+    "unknown": "Pemeriksaan perangkat tidak tersedia",
+    "priority": "Kualitas suara diutamakan. Alat lain berbagi sisa memori.",
+    "specs": "{{ram}} GB RAM · {{cores}} utas CPU",
+    "vram": "{{memory}} GB VRAM",
+    "estimate": "Perkiraan dengan ruang untuk sistem. Menggunakan model terpasang yang mendukung bahasa; dimuat saat digunakan.",
+    "reason": {
+      "fits": "Sesuai",
+      "memory": "Batas memori",
+      "installed": "Hanya model terpasang",
+      "kept": "Pilihan Anda dipertahankan",
+      "unknown": "Pemeriksaan perangkat tidak tersedia"
+    },
+    "liveUsage": "Penggunaan saat ini",
+    "everyTwoSeconds": "Setiap 2 dtk",
+    "appVram": "VRAM aplikasi",
+    "voiceFirst": "Utamakan kualitas suara"
+  },
+  "voiceControls": {
+    "title": "Kontrol suara",
+    "options": "Opsi lainnya",
+    "advanced": "Penyetelan model lanjutan",
+    "guidance": "Pengaruh instruksi",
+    "timing": "Waktu penyempurnaan",
+    "order": "Variasi urutan pengambilan sampel",
+    "variation": "Variasi suara",
+    "balance": "Keseimbangan kasar ke halus",
+    "denoise": "Bersihkan derau referensi",
+    "polish": "Sempurnakan audio yang dihasilkan",
+    "basics": "1× adalah kecepatan normal. Kosongkan durasi untuk irama alami.",
+    "hint": "Biasanya biarkan nilai bawaan. Panduan mengatur pengaruh instruksi; kontrol lain mengubah cara model membentuk suara. Ubah satu per satu."
   }
 }

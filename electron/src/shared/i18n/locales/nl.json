@@ -1,4 +1,114 @@
 {
+  "cloneQuality": {
+    "title": "Audiokwaliteit",
+    "precision": "WAV-precisie",
+    "size": "~{{size}} MiB/min bij 24 kHz mono; verschilt per engine.",
+    "hint16": "Kleinste WAV; breed ondersteund.",
+    "hint24": "Meer precisie bij bewerken; 50% groter dan 16-bit.",
+    "hint32": "Behoudt floatsamples; tweemaal de grootte van 16-bit. Verbetert de stem zelf niet.",
+    "effort": "Samplingstappen",
+    "effortHint": "Meer stappen duren langer en klinken niet altijd beter; de bestandsgrootte blijft gelijk.",
+    "mastering": "Mastering voor uitzending",
+    "masteringHint": "Uitschakelen om extra EQ, compressie en normalisatie over te slaan.",
+    "nextTake": "Geldt voor de volgende opname. Bestaande audio blijft gelijk.",
+    "bits16": "16-bits PCM",
+    "bits24": "24-bits PCM",
+    "bits32": "32-bits zwevendekomma",
+    "fileInfo": "{{size}} MiB · {{rate}} kHz · {{channels}} kanalen · {{bits}}-bits {{encoding}}",
+    "fileSize": "{{size}} MiB",
+    "float": "zwevendekomma"
+  },
+  "audioQuality": {
+    "check": "Audio controleren",
+    "failed": "Audioanalyse niet beschikbaar.",
+    "advisory": "Alleen ter indicatie: pauzes en volumeverschillen kunnen bedoeld zijn. Audio blijft ongewijzigd.",
+    "truncated": "De analyse of waarschuwingslijst is beperkt.",
+    "clear": "Geen problemen gevonden in het geanalyseerde gedeelte.",
+    "empty": "Lege audio",
+    "silence": "Mogelijke stilte",
+    "quiet": "Ongewoon zacht",
+    "loud": "Ongewoon luid",
+    "clipping": "Mogelijke oversturing",
+    "invalid": "Ongeldige audiosamples"
+  },
+  "agentWorkspace": {
+    "repair": "Probleem oplossen",
+    "setup": "Mijn studio instellen",
+    "new_chat": "Nieuwe chat",
+    "harness": "Agentomgeving",
+    "mode": "Uitvoermodus",
+    "plan": "Plannen",
+    "autopilot": "Automatisch",
+    "features": "Functies",
+    "source": "Reparatie van broncode toestaan",
+    "conversation": "Gesprek",
+    "welcome": "Je lokale studio, met een agent naast je. Begin met een taak of kies een voorinstelling.",
+    "starter": "Help me met {{feature}}. Bekijk de app, kies een praktische configuratie en vraag alleen om ontbrekende essentiële gegevens.",
+    "you": "Jij",
+    "placeholder": "Vraag me iets te maken, in te stellen of te repareren…",
+    "send": "Versturen",
+    "autopilot_hint": "Automatisch voert de gevraagde acties uit. Enter verstuurt; Shift+Enter begint een nieuwe regel.",
+    "plan_hint": "Plannen bekijkt de appstatus zonder wijzigingen.",
+    "no_harness": "Installeer Codex, Claude Code, OpenCode of Pi en meld je daar aan om een agent te verbinden."
+  },
+  "repairAgent": {
+    "title": "Vraag het VoiceStudio Agent",
+    "notInstalled": "Niet geïnstalleerd",
+    "noSource": "Open een beschrijfbare VoiceStudio-broncheckout zodat een agent deze kan repareren.",
+    "noneFound": "Installeer Codex, Claude Code, OpenCode of Pi voor lokale reparatie.",
+    "ready": "Gereed",
+    "placeholder": "Wat ging er mis? Voeg stappen, zichtbare fouten of verwacht gedrag toe.",
+    "prReady": "Reparatie voltooid. Controleer de wijzigingen en stel een PR voor zodra de gerichte tests slagen.",
+    "diagnose": "Diagnosticeren",
+    "fix": "Repareren",
+    "chooseDefault": "Kies de agent die VoiceStudio automatisch gebruikt als dit scherm crasht.",
+    "useAutomatically": "{{agent}} automatisch gebruiken",
+    "captured": "{{count}} problematische logregels vastgelegd",
+    "contextNotice": "De geselecteerde agent ontvangt dit rapport, het huidige scherm, recente app- en backendlogboeken en systeemdiagnostiek.",
+    "complete": "Voltooid"
+  },
+  "siteBrowser": {
+    "return_studio": "Terug naar Studio",
+    "preview": "Bekijk de officiële website, rechtstreeks in VoiceStudio",
+    "open_in": "Openen in browser",
+    "back": "Terug",
+    "forward": "Vooruit",
+    "reload": "Herladen",
+    "stop": "Laden stoppen",
+    "address": "Websiteadres",
+    "default_browser": "Standaardbrowser",
+    "failed": "De actie kon niet worden voltooid. Controleer het adres en de verbinding of open de pagina in je browser."
+  },
+  "sidebarTools": {
+    "simple": "Eenvoudig",
+    "details": "Details",
+    "title": "Gereedschapsinstellingen",
+    "help": "Kies een hulpmiddel om het in te stellen of het model te wijzigen.",
+    "tts": "Tekst naar spraak",
+    "asr": "Spraak naar tekst",
+    "llm": "Schrijfhulp",
+    "translation": "Vertaling",
+    "dictation": "Typen met je stem",
+    "diarisation": "Sprekers herkennen",
+    "onDemand": "Laadt bij gebruik",
+    "checkSetup": "Instellingen nakijken",
+    "wait": "Wacht tot het huidige werk klaar is voordat je dit wijzigt.",
+    "speedHelp": "Hogere kwaliteit kan langer duren. Begin met Gebalanceerd."
+  },
+  "homeUi": {
+    "subtitle": "Jouw open-source, volledig lokale alternatief voor ElevenLabs — kloon en ontwerp stemmen, dub video’s, dicteer, transcribeer en maak luisterboeken in 646 talen.",
+    "brand_by": "{{brand}} door",
+    "all": "Allen",
+    "allContributors": "Alle bijdragers",
+    "title": "VoiceStudio.sh Open source",
+    "design": "Ontwerp een stem op basis van een beschrijving.",
+    "dub": "Vertaal en dub audio of video.",
+    "stories": "Maak scènes met meerdere stemmen.",
+    "audiobook": "Maak luisterboeken met hoofdstukken.",
+    "transcribe": "Zet opnamen om in tekst.",
+    "collapseFooter": "Voettekst inklappen",
+    "expandFooter": "Voettekst uitklappen"
+  },
   "longformPersistence": {
     "storage_unavailable_title": "Projecten konden niet worden geladen",
     "storage_unavailable_body": "VoiceStudio kon de lokale projectopslag niet lezen. Je gegevens zijn niet gewijzigd. Probeer opnieuw om ze veilig te openen.",
@@ -94,7 +204,12 @@
     "llmp_test": "Testen",
     "llmp_active_badge": "actief",
     "llmp_test_ok": "ok — {{model}} · {{ms}} ms",
-    "llmp_err_config": "API-sleutel of basis-URL ontbreekt — vul ze in en sla op.",
+    "llmp_active_env_pin": "De LLM-keuze is vastgezet door LLM_DEFAULT_PROVIDER of OMNIVOICE_LLM_BACKEND.",
+    "llmp_connect": "Verbinden en inschakelen",
+    "llmp_setup_hint": "Kies een provider, start de server of voeg de API-sleutel toe en maak verbinding. VoiceStudio controleert een modelantwoord voordat LLM-functies worden ingeschakeld.",
+    "llmp_disable": "LLM uitschakelen",
+    "llmp_optional_key": "API-sleutel (optioneel)",
+    "llmp_err_config": "Vul de providerinstellingen aan: basis-URL, model en eventueel een vereiste API-sleutel of account-ID.",
     "llmp_err_auth": "Sleutel geweigerd (401/403) — controleer je API-sleutel.",
     "llmp_err_not_found": "Niet gevonden (404) — controleer de modelnaam en het pad van de basis-URL.",
     "llmp_err_rate_limit": "Limiet bereikt (429) — de sleutel werkt; probeer het zo opnieuw.",
@@ -364,7 +479,10 @@
     "reduce_motion_desc": "Stopt achtergrondanimaties en overgangen. Je systeeminstelling blijft op zichzelf gelden; dit komt daarbij.",
     "perf_torch_compile": "torch.compile uitschakelen",
     "perf_torch_compile_note": "Gebruikt directe uitvoering om Triton-geheugenfouten te voorkomen.",
-    "perf_torch_compile_hint": "Gebruikt directe uitvoering om Triton-geheugenfouten te voorkomen. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
+    "perf_torch_compile_hint": "Gebruikt directe uitvoering om Triton-geheugenfouten te voorkomen. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>",
+    "llmp_cli_help": "Gebruikt de geïnstalleerde CLI en aanmelding via dezelfde uitvoerder als agentreparatie. Laat Model leeg voor de CLI-standaard. Antwoorden kunnen trager zijn; kosten vallen onder je CLI-account.",
+    "llmp_sdk_help": "Native providers gebruiken LiteLLM. Voer voor andere providers provider/model in. Bedrock gebruikt een API-sleutel of AWS-profiel; Vertex gebruikt Account-ID als project en Google-inloggegevens. Basis-URL is optioneel.",
+    "llmp_cli_auth": "Toegang tot het CLI-account is geweigerd. Controleer je aanmelding, abonnement en gekozen model."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -594,7 +712,7 @@
     "cleaning": "Schoonmaken…",
     "using_profile": "Profiel gebruiken: {{name}}",
     "clear": "duidelijk",
-    "production_overrides": "Productie-overschrijvingen",
+    "production_overrides": "Steminstellingen",
     "denoise": "Denoise",
     "postprocess": "Naproces",
     "duration": "Duur",
@@ -782,7 +900,9 @@
     "group_huggingface": "Knuffelend Gezicht",
     "group_translate": "Vertaling (LLM / filmisch)",
     "group_deepl": "DeepL aangepast eindpunt",
-    "group_microsoft": "Aangepast eindpunt van Microsoft Translator"
+    "group_microsoft": "Aangepast eindpunt van Microsoft Translator",
+    "region": "Regio",
+    "aws_profile": "AWS-profiel"
   },
   "engines": {
     "banners_on": "Podiumbanners aan",
@@ -1611,7 +1731,7 @@
   "donate": {
     "title": "Ondersteuning",
     "desc": "Als je dit project leuk vindt, overweeg dan om te doneren om onze ontwikkeling te ondersteunen.",
-    "hero_title": "Ondersteuning VoiceStudio",
+    "hero_title": "Doneer aan het VoiceStudio-project",
     "hero_desc": "VoiceStudio is gratis, open-source en draait volledig op uw hardware. Als het waarde toevoegt aan uw workflow, overweeg dan om het kernteam te ondersteunen.",
     "github_desc": "Terugkerend of eenmalig – rechtstreeks via GitHub.",
     "coffee_desc": "Koop een kopje koffie voor het team. Geen account nodig.",
@@ -1848,7 +1968,7 @@
     "trim_zoomIn": "In-/uitzoomen",
     "trim_fitAll": "Pas alles aan / Pas selectie aan",
     "trim_confirm": "Bevestig het trimmen",
-    "dub": "Dub",
+    "dub": "Dubben",
     "dub_generate": "Dub genereren",
     "dub_sidebar": "Zijbalk schakelen"
   },
@@ -1991,7 +2111,7 @@
     "locked": "Vergrendeld",
     "clone_label": "Kloon",
     "design_label": "Ontwerp",
-    "dub_label": "Dub",
+    "dub_label": "Dubben",
     "save_label": "Opslaan",
     "lock_identity": "Stemidentiteit vergrendelen",
     "in_folder": "in {{folder}}",
@@ -2360,6 +2480,7 @@
     "tab_license": "Commerciële licentie",
     "toggle_label": "Ondersteuning of commerciële licentie",
     "other_ways": "Andere manieren om te helpen",
+    "star_short": "Ster",
     "star_github": "Ster op GitHub",
     "join_discord": "Sluit je aan bij Discord"
   },
@@ -2767,6 +2888,7 @@
     "website_desc": "Meer over het project en de maker.",
     "follow_title": "Volg ons op X",
     "follow_desc": "Release-notities, nieuwe engines en af en toe een blik op wat er volgt. Handig als u liever niet in een chatserver zit.",
+    "support_follow_title": "Steun het project door ons te volgen op X",
     "follow_cta": "Volgen op X"
   },
   "permissions": {
@@ -2953,5 +3075,42 @@
     "step_transcribe": "Transcriberen",
     "step_translate": "Vertalen",
     "step_convert": "Converteren"
+  },
+  "performanceProfile": {
+    "auto": "Auto"
+  },
+  "performanceHardware": {
+    "fits": "Past bij je hardware",
+    "adjusted": "Aangepast aan je hardware",
+    "unknown": "Hardwarecontrole niet beschikbaar",
+    "priority": "Spraakkwaliteit eerst. Andere hulpmiddelen delen het resterende geheugen.",
+    "specs": "{{ram}} GB RAM · {{cores}} CPU-threads",
+    "vram": "{{memory}} GB VRAM",
+    "estimate": "Schatting met ruimte voor het systeem. Gebruikt geïnstalleerde modellen die de taal ondersteunen; laadt bij gebruik.",
+    "reason": {
+      "fits": "Past",
+      "memory": "Geheugenlimiet",
+      "installed": "Alleen geïnstalleerde modellen",
+      "kept": "Je keuze behouden",
+      "unknown": "Hardwarecontrole niet beschikbaar"
+    },
+    "liveUsage": "Actueel gebruik",
+    "everyTwoSeconds": "Elke 2 s",
+    "appVram": "App-VRAM",
+    "voiceFirst": "Spraakkwaliteit eerst"
+  },
+  "voiceControls": {
+    "title": "Steminstellingen",
+    "options": "Meer opties",
+    "advanced": "Geavanceerde modelinstellingen",
+    "guidance": "Invloed van de instructie",
+    "timing": "Timing van verfijning",
+    "order": "Variatie in bemonsteringsvolgorde",
+    "variation": "Geluidsvariatie",
+    "balance": "Balans tussen grof en fijn",
+    "denoise": "Ruis uit referentie verwijderen",
+    "polish": "Gegenereerde audio verfijnen",
+    "basics": "1× is normale snelheid. Laat de duur leeg voor een natuurlijk ritme.",
+    "hint": "Gebruik doorgaans de standaardwaarden. Sturing bepaalt de invloed van de instructie; de andere instellingen veranderen hoe het model geluid opbouwt. Wijzig één instelling tegelijk."
   }
 }

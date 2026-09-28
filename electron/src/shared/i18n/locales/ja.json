@@ -1,4 +1,114 @@
 {
+  "cloneQuality": {
+    "title": "音声品質",
+    "precision": "WAV精度",
+    "size": "24 kHzモノラルで約{{size}} MiB/分。エンジンにより異なります。",
+    "hint16": "最小のWAV。多くのプレーヤーに対応。",
+    "hint24": "編集時の精度が向上。16ビットより50%大きくなります。",
+    "hint32": "浮動小数点のサンプルを保持。16ビットの2倍のサイズ。声自体の品質は改善しません。",
+    "effort": "サンプリングステップ数",
+    "effortHint": "ステップを増やすと時間がかかりますが、音質が向上するとは限りません。ファイルサイズは変わりません。",
+    "mastering": "放送用マスタリング",
+    "masteringHint": "オフにすると追加のEQ、圧縮、正規化を省略します。",
+    "nextTake": "次のテイクに適用。既存の音声は変更されません。",
+    "bits16": "16ビットPCM",
+    "bits24": "24ビットPCM",
+    "bits32": "32ビット浮動小数点",
+    "fileInfo": "{{size}} MiB · {{rate}} kHz · {{channels}} チャンネル · {{bits}}ビット {{encoding}}",
+    "fileSize": "{{size}} MiB",
+    "float": "浮動小数点"
+  },
+  "audioQuality": {
+    "check": "音声を確認",
+    "failed": "音声を解析できません。",
+    "advisory": "参考情報です。間や音量の変化は意図的な場合があります。音声は変更されません。",
+    "truncated": "解析範囲または警告一覧に制限があります。",
+    "clear": "解析した部分に問題は検出されませんでした。",
+    "empty": "空の音声",
+    "silence": "無音の可能性",
+    "quiet": "通常より小さい音量",
+    "loud": "通常より大きい音量",
+    "clipping": "クリッピングの可能性",
+    "invalid": "無効な音声サンプル"
+  },
+  "agentWorkspace": {
+    "repair": "問題を修復",
+    "setup": "スタジオを設定",
+    "new_chat": "新しいチャット",
+    "harness": "エージェント実行環境",
+    "mode": "実行モード",
+    "plan": "計画",
+    "autopilot": "自動実行",
+    "features": "機能",
+    "source": "ソースコードの修復を許可",
+    "conversation": "会話",
+    "welcome": "ローカルスタジオをエージェントと一緒に。タスクを入力するかプリセットを選んでください。",
+    "starter": "{{feature}}を手伝ってください。アプリの状態を確認して適切に設定し、必須の不足情報だけを質問してください。",
+    "you": "あなた",
+    "placeholder": "作成、設定、修復を依頼してください…",
+    "send": "送信",
+    "autopilot_hint": "自動実行は依頼した操作を行います。Enterで送信、Shift+Enterで改行します。",
+    "plan_hint": "計画はアプリの状態を変更せずに確認します。",
+    "no_harness": "Codex、Claude Code、OpenCode、Piのいずれかをインストールしてログインしてください。"
+  },
+  "repairAgent": {
+    "title": "VoiceStudio Agent に相談",
+    "notInstalled": "未インストール",
+    "noSource": "エージェントが修復できるよう、書き込み可能な VoiceStudio のソースチェックアウトを開いてください。",
+    "noneFound": "ローカル修復を使うには Codex、Claude Code、OpenCode、または Pi をインストールしてください。",
+    "ready": "準備完了",
+    "placeholder": "何が起きましたか？手順、表示されたエラー、期待する動作を入力してください。",
+    "prReady": "修復が完了しました。変更を確認し、対象テストが通ったら PR を提案してください。",
+    "diagnose": "診断",
+    "fix": "修復",
+    "chooseDefault": "この画面がクラッシュしたときにVoiceStudioが自動で使うエージェントを選択します。",
+    "useAutomatically": "{{agent}}を自動的に使用",
+    "captured": "問題のあるログを{{count}}行取得しました",
+    "contextNotice": "選択したエージェントには、この報告、現在の画面、最近のアプリとバックエンドのログ、システム診断が渡されます。",
+    "complete": "完了"
+  },
+  "siteBrowser": {
+    "return_studio": "スタジオに戻る",
+    "preview": "公式サイトをVoiceStudio内ですばやくプレビュー",
+    "open_in": "ブラウザーで開く",
+    "back": "戻る",
+    "forward": "進む",
+    "reload": "再読み込み",
+    "stop": "読み込みを停止",
+    "address": "ウェブサイトのアドレス",
+    "default_browser": "既定のブラウザー",
+    "failed": "操作を完了できませんでした。アドレスと接続を確認するか、ブラウザーで開いてください。"
+  },
+  "sidebarTools": {
+    "simple": "シンプル",
+    "details": "詳細",
+    "title": "ツール設定",
+    "help": "ツールを選んで設定やモデルの変更を行います。",
+    "tts": "テキスト読み上げ",
+    "asr": "音声の文字起こし",
+    "llm": "文章作成の補助",
+    "translation": "翻訳",
+    "dictation": "音声入力",
+    "diarisation": "話者の識別",
+    "onDemand": "使用時に読み込み",
+    "checkSetup": "設定を確認",
+    "wait": "この設定を変更するには、現在の処理が完了するまでお待ちください。",
+    "speedHelp": "高品質にすると時間がかかる場合があります。まずは「バランス」をお試しください。"
+  },
+  "homeUi": {
+    "subtitle": "オープンソースで完全ローカルなElevenLabsの代替 — 声のクローンとデザイン、動画の吹き替え、音声入力、文字起こし、オーディオブック制作を646言語で。",
+    "brand_by": "{{brand}} 開発者",
+    "all": "全員",
+    "allContributors": "すべての貢献者",
+    "title": "VoiceStudio.sh オープンソース",
+    "design": "説明から声をデザイン。",
+    "dub": "音声や動画を翻訳・吹き替え。",
+    "stories": "複数の声でシーンを作成。",
+    "audiobook": "章立てのオーディオブックを作成。",
+    "transcribe": "録音を文字に起こす。",
+    "collapseFooter": "フッターを折りたたむ",
+    "expandFooter": "フッターを展開"
+  },
   "longformPersistence": {
     "storage_unavailable_title": "プロジェクトを読み込めませんでした",
     "storage_unavailable_body": "VoiceStudio はローカルのプロジェクトストレージを読み取れませんでした。データは変更されていません。安全に開くには再試行してください。",
@@ -94,7 +204,12 @@
     "llmp_test": "テスト",
     "llmp_active_badge": "アクティブ",
     "llmp_test_ok": "OK — {{model}} · {{ms}} ms",
-    "llmp_err_config": "API キーまたはベース URL が未入力です — 入力して保存してください。",
+    "llmp_active_env_pin": "LLMの選択はLLM_DEFAULT_PROVIDERまたはOMNIVOICE_LLM_BACKENDで固定されています。",
+    "llmp_connect": "接続して有効化",
+    "llmp_setup_hint": "プロバイダーを選び、サーバーを起動するかAPIキーを追加して接続してください。VoiceStudioはモデルの応答を確認してからLLM機能を有効にします。",
+    "llmp_disable": "LLMを無効化",
+    "llmp_optional_key": "APIキー（任意）",
+    "llmp_err_config": "プロバイダー設定を入力してください：ベースURL、モデル、必要に応じてAPIキーまたはアカウントID。",
     "llmp_err_auth": "キーが拒否されました (401/403) — API キーを確認してください。",
     "llmp_err_not_found": "見つかりません (404) — モデル名とベース URL のパスを確認してください。",
     "llmp_err_rate_limit": "レート制限中 (429) — キーは有効です。しばらくしてから再試行してください。",
@@ -364,7 +479,10 @@
     "reduce_motion_desc": "背景アニメーションとトランジションを停止します。システム設定は単独で有効なままで、これはそれに加わります。",
     "perf_torch_compile": "torch.compile を無効にする",
     "perf_torch_compile_note": "直接実行を使用して Triton のメモリエラーを回避します。",
-    "perf_torch_compile_hint": "直接実行を使用して Triton のメモリエラーを回避します。 <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
+    "perf_torch_compile_hint": "直接実行を使用して Triton のメモリエラーを回避します。 <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>",
+    "llmp_cli_help": "インストール済みCLIとそのログインを、エージェント修復と同じ実行機能で使用します。モデルを空欄にするとCLIの既定値を使います。応答が遅くなる場合があり、料金はCLIアカウントに従います。",
+    "llmp_sdk_help": "ネイティブプロバイダーにはLiteLLMを使います。その他はprovider/modelを入力してください。BedrockはAPIキーまたはAWSプロファイル、VertexはアカウントIDをプロジェクトとしてGoogle認証情報を使用します。ベースURLは任意です。",
+    "llmp_cli_auth": "CLIアカウントのアクセスが拒否されました。ログイン、契約、選択したモデルを確認してください。"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -594,7 +712,7 @@
     "cleaning": "ノイズ除去中…",
     "using_profile": "使用プロファイル: {{name}}",
     "clear": "クリア",
-    "production_overrides": "プロダクションオーバーライド",
+    "production_overrides": "音声コントロール",
     "denoise": "ノイズ除去",
     "postprocess": "後処理",
     "duration": "期間",
@@ -782,7 +900,9 @@
     "group_huggingface": "ハグ顔",
     "group_translate": "翻訳 (LLM / 映画)",
     "group_deepl": "DeepL カスタム エンドポイント",
-    "group_microsoft": "Microsoft 翻訳者のカスタム エンドポイント"
+    "group_microsoft": "Microsoft 翻訳者のカスタム エンドポイント",
+    "region": "リージョン",
+    "aws_profile": "AWSプロファイル"
   },
   "engines": {
     "banners_on": "ステージバナーが貼られています",
@@ -1611,7 +1731,7 @@
   "donate": {
     "title": "サポート",
     "desc": "このプロジェクトを気に入っていただけましたら、開発をサポートするために寄付をご検討ください。",
-    "hero_title": "オムニボイスのサポート",
+    "hero_title": "VoiceStudioプロジェクトに寄付",
     "hero_desc": "VoiceStudio は無料のオープンソースであり、ハードウェア上で完全に実行されます。それがワークフローに価値をもたらす場合は、コア チームのサポートを検討してください。",
     "github_desc": "定期的または 1 回限り — GitHub 経由で直接。",
     "coffee_desc": "チームにコーヒーをおごってください。アカウントは必要ありません。",
@@ -1848,7 +1968,7 @@
     "trim_zoomIn": "ズームイン/アウト",
     "trim_fitAll": "すべてに適合 / 選択を適合",
     "trim_confirm": "トリムを確認する",
-    "dub": "ダブ",
+    "dub": "ダビング",
     "dub_generate": "ダブの生成",
     "dub_sidebar": "サイドバーの切り替え"
   },
@@ -1991,7 +2111,7 @@
     "locked": "ロックされています",
     "clone_label": "クローン",
     "design_label": "デザイン",
-    "dub_label": "ダブ",
+    "dub_label": "ダビング",
     "save_label": "保存",
     "lock_identity": "音声 ID をロックする",
     "in_folder": "{{folder}} に",
@@ -2360,6 +2480,7 @@
     "tab_license": "商用ライセンス",
     "toggle_label": "サポートまたは商用ライセンス",
     "other_ways": "その他の支援方法",
+    "star_short": "スター",
     "star_github": "GitHub でスターを付ける",
     "join_discord": "Discordに参加する"
   },
@@ -2767,6 +2888,7 @@
     "website_desc": "プロジェクトとメーカーについて詳しく説明します。",
     "follow_title": "X でフォローする",
     "follow_desc": "リリースノート、新しいエンジン、そして次に作っているものの様子をときどき。チャットサーバーに常駐したくない方に便利です。",
+    "support_follow_title": "Xでフォローしてプロジェクトを応援",
     "follow_cta": "X でフォロー"
   },
   "permissions": {
@@ -2953,5 +3075,42 @@
     "step_transcribe": "転写する",
     "step_translate": "翻訳する",
     "step_convert": "変換"
+  },
+  "performanceProfile": {
+    "auto": "自動"
+  },
+  "performanceHardware": {
+    "fits": "この機器に適合",
+    "adjusted": "機器に合わせて調整",
+    "unknown": "ハードウェアを確認できません",
+    "priority": "音声品質を優先。ほかのツールは残りのメモリを共有します。",
+    "specs": "RAM {{ram}} GB · CPU {{cores}} スレッド",
+    "vram": "VRAM {{memory}} GB",
+    "estimate": "システム用の余裕を含む推定です。言語に対応するインストール済みモデルを使用時に読み込みます。",
+    "reason": {
+      "fits": "適合",
+      "memory": "メモリ制限",
+      "installed": "インストール済みのみ",
+      "kept": "選択を維持",
+      "unknown": "ハードウェアを確認できません"
+    },
+    "liveUsage": "現在の使用状況",
+    "everyTwoSeconds": "2秒ごと",
+    "appVram": "アプリのVRAM",
+    "voiceFirst": "音声品質を優先"
+  },
+  "voiceControls": {
+    "title": "音声コントロール",
+    "options": "その他の設定",
+    "advanced": "モデルの詳細調整",
+    "guidance": "プロンプトの影響",
+    "timing": "補正のタイミング",
+    "order": "サンプリング順序の変化",
+    "variation": "音の変化",
+    "balance": "構造と細部のバランス",
+    "denoise": "参照音声のノイズ除去",
+    "polish": "生成音声の仕上げ",
+    "basics": "1×が通常速度です。自然な長さにするには時間を空欄にします。",
+    "hint": "通常は既定値のままで構いません。ガイダンスはプロンプトの影響を、その他の設定はモデルの音の組み立て方を調整します。一度に一つずつ変更してください。"
   }
 }

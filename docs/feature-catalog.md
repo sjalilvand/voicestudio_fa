@@ -4,7 +4,7 @@ Engine availability depends on installed models, hardware, and configured provid
 
 ## Features
 
-- **Voice Cloning**
+- **Voice Cloning** - [Audio quality, export precision, and local checks](audio-quality.md)
 - **Voice Design**
 - **Video Dubbing**
 - **Dictation Widget**

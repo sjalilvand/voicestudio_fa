@@ -65,7 +65,9 @@ def _family_payload(family: str, module):
     if family == "asr":
         model = asr_backend._offline_asr_repo(active)
     elif family == "llm" and active != "off":
-        model = llm_backend.get_active_llm_backend().model_name
+        from services import llm_providers
+        provider = llm_providers.active_provider()
+        model = llm_providers.configured_model(provider) if provider else None
     elif family == "tts":
         if active in {"omnivoice", "omnivoice-subprocess"}:
             from services.model_manager import resolve_omnivoice_checkpoint

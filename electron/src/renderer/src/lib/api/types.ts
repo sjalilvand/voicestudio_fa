@@ -124,6 +124,8 @@ export interface SystemInfo {
 /** Everything the clone form sends. Names are the UI names; `toGenerateForm`
  *  in generate.ts maps them to the multipart field names. */
 export interface CloneGenerateInput {
+  wavBits?: 16 | 24 | 32;
+  effectPreset?: 'broadcast' | 'raw';
   seed?: number;
   text: string;
   /** Display-name language ("English"). "Auto" is omitted on the wire. */

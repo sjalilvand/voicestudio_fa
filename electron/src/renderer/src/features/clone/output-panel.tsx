@@ -7,6 +7,8 @@ import { audioUrl } from '@/lib/api/client';
 import { clearLatestOutput, useLatestOutput } from '@/lib/store/output';
 import { activePlaybackSource, stopActivePlayback } from '@/lib/audio/playback';
 import { formatSeconds } from './format';
+import { AudioQuality } from './audio-quality';
+import { AudioFileDetails } from './audio-file-details';
 import { SectionLabel } from './section-label';
 
 export function OutputPanel() {
@@ -49,6 +51,8 @@ export function OutputPanel() {
         {result && objectUrl ? (
           <>
             <WaveformPlayer key={objectUrl} src={objectUrl} source="output" height={36} />
+            <AudioFileDetails blob={result.blob} />
+            {result.audioPath && <AudioQuality key={objectUrl} audioPath={result.audioPath} />}
             <div className="flex flex-wrap items-start justify-between gap-3">
               <p
                 className="line-clamp-2 min-w-40 flex-1 text-sm text-muted-foreground"

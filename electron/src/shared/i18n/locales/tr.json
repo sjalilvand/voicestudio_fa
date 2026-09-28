@@ -1,4 +1,114 @@
 {
+  "cloneQuality": {
+    "title": "Ses kalitesi",
+    "precision": "WAV hassasiyeti",
+    "size": "24 kHz mono için ~{{size}} MiB/dk; motora göre değişir.",
+    "hint16": "En küçük WAV; geniş oynatıcı desteği.",
+    "hint24": "Düzenlemede daha fazla hassasiyet; 16 bitten %50 büyük.",
+    "hint32": "Kayan noktalı örnekleri korur; 16 bitin iki katı. Sesin kendisini iyileştirmez.",
+    "effort": "Örnekleme adımları",
+    "effortHint": "Daha fazla adım daha uzun sürer ve sesi her zaman iyileştirmez; dosya boyutu değişmez.",
+    "mastering": "Yayın mastering işlemi",
+    "masteringHint": "Ek EQ, sıkıştırma ve normalleştirmeyi atlamak için kapatın.",
+    "nextTake": "Sonraki kayda uygulanır. Mevcut ses değişmez.",
+    "bits16": "16 bit PCM",
+    "bits24": "24 bit PCM",
+    "bits32": "32 bit kayan nokta",
+    "fileInfo": "{{size}} MiB · {{rate}} kHz · {{channels}} kanal · {{bits}} bit {{encoding}}",
+    "fileSize": "{{size}} MiB",
+    "float": "kayan nokta"
+  },
+  "audioQuality": {
+    "check": "Sesi kontrol et",
+    "failed": "Ses analizi kullanılamıyor.",
+    "advisory": "Yalnızca öneri: duraklamalar ve ses düzeyi değişimleri kasıtlı olabilir. Ses değiştirilmez.",
+    "truncated": "Analiz veya uyarı listesi sınırlıdır.",
+    "clear": "Analiz edilen bölümde sorun bulunamadı.",
+    "empty": "Boş ses",
+    "silence": "Olası sessizlik",
+    "quiet": "Alışılmadık derecede kısık",
+    "loud": "Alışılmadık derecede yüksek",
+    "clipping": "Olası kırpılma",
+    "invalid": "Geçersiz ses örnekleri"
+  },
+  "agentWorkspace": {
+    "repair": "Bir sorunu gider",
+    "setup": "Stüdyomu kur",
+    "new_chat": "Yeni sohbet",
+    "harness": "Ajan ortamı",
+    "mode": "Çalışma modu",
+    "plan": "Planla",
+    "autopilot": "Otomatik pilot",
+    "features": "Özellikler",
+    "source": "Kaynak kodu onarımına izin ver",
+    "conversation": "Sohbet",
+    "welcome": "Yanınızda bir ajanla yerel stüdyonuz. Bir görevle başlayın veya hazır ayar seçin.",
+    "starter": "{{feature}} konusunda yardım et. Uygulamayı incele, uygun bir kurulum seç ve yalnızca gerekli eksik bilgileri sor.",
+    "you": "Siz",
+    "placeholder": "Bir şey oluşturmamı, kurmamı veya düzeltmemi isteyin…",
+    "send": "Gönder",
+    "autopilot_hint": "Otomatik pilot istenen işlemleri yapar. Enter gönderir; Shift+Enter yeni satır ekler.",
+    "plan_hint": "Planla, uygulama durumunu değiştirmeden inceler.",
+    "no_harness": "Bir ajan bağlamak için Codex, Claude Code, OpenCode veya Pi kurup oturum açın."
+  },
+  "repairAgent": {
+    "title": "VoiceStudio Agent’a sor",
+    "notInstalled": "Yüklü değil",
+    "noSource": "Bir ajanın onarabilmesi için yazılabilir bir VoiceStudio kaynak çalışma kopyası açın.",
+    "noneFound": "Yerel onarım için Codex, Claude Code, OpenCode veya Pi yükleyin.",
+    "ready": "Hazır",
+    "placeholder": "Ne yanlış gitti? Adımları, görünen hataları veya beklenen davranışı ekleyin.",
+    "prReady": "Düzeltme tamamlandı. Değişiklikleri inceleyin ve hedefli testler geçince bir PR önerin.",
+    "diagnose": "Tanıla",
+    "fix": "Düzelt",
+    "chooseDefault": "Bu ekran çöktüğünde VoiceStudio'nun otomatik kullanacağı aracıyı seçin.",
+    "useAutomatically": "{{agent}} aracısını otomatik kullan",
+    "captured": "{{count}} sorunlu günlük satırı yakalandı",
+    "contextNotice": "Seçilen aracı bu raporu, mevcut ekranı, son uygulama ve arka uç günlüklerini ve sistem tanılamasını alır.",
+    "complete": "Tamamlandı"
+  },
+  "siteBrowser": {
+    "return_studio": "Stüdyoya dön",
+    "preview": "Resmî siteyi doğrudan VoiceStudio içinde önizleyin",
+    "open_in": "Tarayıcıda aç",
+    "back": "Geri",
+    "forward": "İleri",
+    "reload": "Yenile",
+    "stop": "Yüklemeyi durdur",
+    "address": "Web sitesi adresi",
+    "default_browser": "Varsayılan tarayıcı",
+    "failed": "İşlem tamamlanamadı. Adresi ve bağlantıyı kontrol edin veya sayfayı tarayıcınızda açın."
+  },
+  "sidebarTools": {
+    "simple": "Basit",
+    "details": "Ayrıntılar",
+    "title": "Araç ayarları",
+    "help": "Ayarlamak veya modelini değiştirmek için bir araç seçin.",
+    "tts": "Metinden sese",
+    "asr": "Sesten metne",
+    "llm": "Yazma yardımı",
+    "translation": "Çeviri",
+    "dictation": "Sesle yazma",
+    "diarisation": "Konuşmacıları tanıma",
+    "onDemand": "Kullanırken yüklenir",
+    "checkSetup": "Kurulumu kontrol et",
+    "wait": "Bunu değiştirmeden önce mevcut işin bitmesini bekleyin.",
+    "speedHelp": "Daha yüksek kalite daha uzun sürebilir. Dengeli ile başlayın."
+  },
+  "homeUi": {
+    "subtitle": "ElevenLabs’a açık kaynaklı, tamamen yerel alternatifiniz — 646 dilde ses klonlayıp tasarlayın, videolara dublaj yapın, dikte edin, yazıya dökün ve sesli kitaplar oluşturun.",
+    "brand_by": "{{brand}} geliştiricisi",
+    "all": "Tümü",
+    "allContributors": "Tüm katkıda bulunanlar",
+    "title": "VoiceStudio.sh Açık Kaynak",
+    "design": "Bir açıklamadan ses tasarlayın.",
+    "dub": "Ses veya videoyu çevirip dublaj yapın.",
+    "stories": "Birden fazla sesle sahneler oluşturun.",
+    "audiobook": "Bölümlü sesli kitaplar oluşturun.",
+    "transcribe": "Kayıtları metne dönüştürün.",
+    "collapseFooter": "Alt çubuğu daralt",
+    "expandFooter": "Alt çubuğu genişlet"
+  },
   "longformPersistence": {
     "storage_unavailable_title": "Projeler yüklenemedi",
     "storage_unavailable_body": "VoiceStudio yerel proje depolamasını okuyamadı. Verileriniz değiştirilmedi. Güvenle açmak için yeniden deneyin.",
@@ -94,7 +204,12 @@
     "llmp_test": "Test et",
     "llmp_active_badge": "etkin",
     "llmp_test_ok": "tamam — {{model}} · {{ms}} ms",
-    "llmp_err_config": "API anahtarı veya Temel URL eksik — doldurup kaydedin.",
+    "llmp_active_env_pin": "LLM seçimi LLM_DEFAULT_PROVIDER veya OMNIVOICE_LLM_BACKEND tarafından sabitlenmiştir.",
+    "llmp_connect": "Bağlan ve etkinleştir",
+    "llmp_setup_hint": "Bir sağlayıcı seçin, sunucusunu başlatın veya API anahtarını ekleyin ve bağlanın. VoiceStudio, LLM özelliklerini etkinleştirmeden önce model yanıtını doğrular.",
+    "llmp_disable": "LLM’yi kapat",
+    "llmp_optional_key": "API anahtarı (isteğe bağlı)",
+    "llmp_err_config": "Sağlayıcı ayarlarını tamamlayın: temel URL, model ve gerekiyorsa API anahtarı veya hesap kimliği.",
     "llmp_err_auth": "Anahtar reddedildi (401/403) — API anahtarınızı kontrol edin.",
     "llmp_err_not_found": "Bulunamadı (404) — model adını ve Temel URL yolunu kontrol edin.",
     "llmp_err_rate_limit": "Hız sınırına takıldı (429) — anahtar çalışıyor; birazdan yeniden deneyin.",
@@ -364,7 +479,10 @@
     "reduce_motion_desc": "Arka plan animasyonlarını ve geçişleri durdurur. Sistem ayarınız kendi başına geçerlidir; bu ona eklenir.",
     "perf_torch_compile": "torch.compile devre dışı",
     "perf_torch_compile_note": "Triton bellek hatalarını önlemek için doğrudan yürütme kullanır.",
-    "perf_torch_compile_hint": "Triton bellek hatalarını önlemek için doğrudan yürütme kullanır. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
+    "perf_torch_compile_hint": "Triton bellek hatalarını önlemek için doğrudan yürütme kullanır. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>",
+    "llmp_cli_help": "Yüklü CLI'yi ve oturumunu, aracıyla onarımla aynı çalıştırıcı üzerinden kullanır. CLI varsayılanı için Model'i boş bırakın. Yanıtlar yavaş olabilir; ücretler CLI hesabınıza yansır.",
+    "llmp_sdk_help": "Yerel sağlayıcı bağdaştırıcıları LiteLLM kullanır. Diğerleri için provider/model girin. Bedrock API anahtarı veya AWS profili; Vertex ise proje olarak hesap kimliği ve Google kimlik bilgileri kullanır. Temel URL isteğe bağlıdır.",
+    "llmp_cli_auth": "CLI hesabına erişim reddedildi. Oturumunuzu, aboneliğinizi ve seçilen modeli kontrol edin."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -594,7 +712,7 @@
     "cleaning": "Temizlik…",
     "using_profile": "Profil kullanılıyor: {{name}}",
     "clear": "açık",
-    "production_overrides": "Üretim Geçersiz Kılmaları",
+    "production_overrides": "Ses kontrolleri",
     "denoise": "gürültüyü giderme",
     "postprocess": "İşlem sonrası",
     "duration": "Süre",
@@ -782,7 +900,9 @@
     "group_huggingface": "SarılmaYüz",
     "group_translate": "Çeviri (LLM / Sinematik)",
     "group_deepl": "DeepL Özel Uç Nokta",
-    "group_microsoft": "Microsoft Translator Özel Uç Noktası"
+    "group_microsoft": "Microsoft Translator Özel Uç Noktası",
+    "region": "Bölge",
+    "aws_profile": "AWS profili"
   },
   "engines": {
     "banners_on": "Sahne pankartları açık",
@@ -1611,7 +1731,7 @@
   "donate": {
     "title": "Destek",
     "desc": "Bu projeyi beğendiyseniz gelişimimizi desteklemek için bağış yapmayı düşünün.",
-    "hero_title": "VoiceStudio'u destekleyin",
+    "hero_title": "VoiceStudio projesine bağış yapın",
     "hero_desc": "VoiceStudio ücretsizdir, açık kaynaklıdır ve tamamen donanımınızda çalışır. İş akışınıza değer katıyorsa çekirdek ekibi desteklemeyi düşünün.",
     "github_desc": "Tekrarlanan veya tek seferlik — doğrudan GitHub aracılığıyla.",
     "coffee_desc": "Takıma bir kahve ısmarla. Hesaba gerek yok.",
@@ -2360,6 +2480,7 @@
     "tab_license": "Ticari Lisans",
     "toggle_label": "Destek veya ticari lisans",
     "other_ways": "Yardım etmenin diğer yolları",
+    "star_short": "Yıldız",
     "star_github": "GitHub'da yıldız",
     "join_discord": "Discord'a Katılın"
   },
@@ -2767,6 +2888,7 @@
     "website_desc": "Proje ve yapımcı hakkında daha fazla bilgi.",
     "follow_title": "X'te takip edin",
     "follow_desc": "Sürüm notları, yeni motorlar ve sırada ne olduğuna dair ara ara bakışlar. Bir sohbet sunucusunda durmak istemiyorsanız pratik.",
+    "support_follow_title": "X’te takip ederek projeyi destekleyin",
     "follow_cta": "X'te takip et"
   },
   "permissions": {
@@ -2953,5 +3075,42 @@
     "step_transcribe": "Metne dönüştür",
     "step_translate": "Çevir",
     "step_convert": "Dönüştür"
+  },
+  "performanceProfile": {
+    "auto": "Otomatik"
+  },
+  "performanceHardware": {
+    "fits": "Donanımınıza uygun",
+    "adjusted": "Donanımınıza uyarlandı",
+    "unknown": "Donanım denetimi kullanılamıyor",
+    "priority": "Önce ses kalitesi. Diğer araçlar kalan belleği paylaşır.",
+    "specs": "{{ram}} GB RAM · {{cores}} CPU iş parçacığı",
+    "vram": "{{memory}} GB VRAM",
+    "estimate": "Sistem için pay ayrılmış tahmin. Dili destekleyen yüklü modeller kullanılır; gerektiğinde yüklenir.",
+    "reason": {
+      "fits": "Uygun",
+      "memory": "Bellek sınırı",
+      "installed": "Yalnızca yüklü modeller",
+      "kept": "Seçiminiz korundu",
+      "unknown": "Donanım denetimi kullanılamıyor"
+    },
+    "liveUsage": "Anlık kullanım",
+    "everyTwoSeconds": "Her 2 sn",
+    "appVram": "Uygulama VRAM’i",
+    "voiceFirst": "Önce ses kalitesi"
+  },
+  "voiceControls": {
+    "title": "Ses kontrolleri",
+    "options": "Diğer seçenekler",
+    "advanced": "Gelişmiş model ayarları",
+    "guidance": "İstem etkisi",
+    "timing": "İyileştirme zamanlaması",
+    "order": "Örnekleme sırası değişkenliği",
+    "variation": "Ses değişkenliği",
+    "balance": "Kaba-ince denge",
+    "denoise": "Referans gürültüsünü temizle",
+    "polish": "Üretilen sesi iyileştir",
+    "basics": "1× normal hızdır. Doğal zamanlama için süreyi boş bırakın.",
+    "hint": "Genellikle varsayılanları koruyun. Yönlendirme istemin etkisini ayarlar; diğer kontroller modelin sesi oluşturma şeklini değiştirir. Her seferinde birini değiştirin."
   }
 }

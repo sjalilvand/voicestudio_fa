@@ -146,7 +146,7 @@ export function prepareMacDevElectron({
   return plan.destinationExecutable;
 }
 
-function launchElectronVite() {
+export function launchElectronVite(args = process.argv.slice(2), spawnProcess = spawn) {
   const electronVitePackage = require.resolve('electron-vite/package.json');
   const { bin } = JSON.parse(readFileSync(electronVitePackage, 'utf8'));
   const electronViteBin = resolve(dirname(electronVitePackage), bin['electron-vite']);
@@ -166,7 +166,7 @@ function launchElectronVite() {
     });
   }
 
-  const child = spawn(process.execPath, [electronViteBin, 'dev', ...process.argv.slice(2)], {
+  const child = spawnProcess(process.execPath, [electronViteBin, 'dev', '--watch', ...args], {
     cwd: electronRoot,
     env,
     stdio: 'inherit',

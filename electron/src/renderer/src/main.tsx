@@ -1,4 +1,5 @@
 import { CaptureWidget } from './features/transcriptions/capture-widget';
+import { SiteBrowserHost } from './features/browser/site-browser-host';
 import { installConsoleCapture } from '@shared/utils/consoleBuffer';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -19,7 +20,9 @@ createRoot(document.getElementById('root')!).render(
     <CaptureWidget />
   ) : (
     <StrictMode>
-      <App />
+      <SiteBrowserHost>
+        <App />
+      </SiteBrowserHost>
     </StrictMode>
   ),
 );

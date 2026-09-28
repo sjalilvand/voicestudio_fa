@@ -1,4 +1,114 @@
 {
+  "cloneQuality": {
+    "title": "音訊品質",
+    "precision": "WAV 精度",
+    "size": "24 kHz 單聲道約 {{size}} MiB/分鐘；依引擎而異。",
+    "hint16": "最小的 WAV；相容多數播放器。",
+    "hint24": "編輯精度更高；比 16 位元大 50%。",
+    "hint32": "保留浮點取樣；大小是 16 位元的兩倍。不會改善聲音本身。",
+    "effort": "取樣步數",
+    "effortHint": "增加步數會耗費更多時間，但不一定改善音質；檔案大小不變。",
+    "mastering": "廣播母帶處理",
+    "masteringHint": "關閉以略過額外的等化、壓縮和正規化。",
+    "nextTake": "套用於下次生成。現有音訊不變。",
+    "bits16": "16 位元 PCM",
+    "bits24": "24 位元 PCM",
+    "bits32": "32 位元浮點",
+    "fileInfo": "{{size}} MiB · {{rate}} kHz · {{channels}} 聲道 · {{bits}} 位元 {{encoding}}",
+    "fileSize": "{{size}} MiB",
+    "float": "浮點"
+  },
+  "audioQuality": {
+    "check": "檢查音訊",
+    "failed": "音訊分析無法使用。",
+    "advisory": "僅供參考：停頓和音量變化可能是刻意的。音訊不會被修改。",
+    "truncated": "分析範圍或警告清單有限。",
+    "clear": "在已分析的部分未發現問題。",
+    "empty": "空音訊",
+    "silence": "可能存在靜音",
+    "quiet": "音量異常偏低",
+    "loud": "音量異常偏高",
+    "clipping": "可能存在削波",
+    "invalid": "無效音訊取樣"
+  },
+  "agentWorkspace": {
+    "repair": "修復問題",
+    "setup": "設定我的工作室",
+    "new_chat": "新增對話",
+    "harness": "代理程式執行環境",
+    "mode": "執行模式",
+    "plan": "規劃",
+    "autopilot": "自動執行",
+    "features": "功能",
+    "source": "允許修復原始碼",
+    "conversation": "對話",
+    "welcome": "在本機工作室裡，讓代理程式助你一臂之力。輸入任務或選擇預設即可開始。",
+    "starter": "請協助我完成{{feature}}。檢查應用程式狀態，選擇適當設定，只詢問缺少的必要資訊。",
+    "you": "你",
+    "placeholder": "讓我幫你建立、設定或修復…",
+    "send": "傳送",
+    "autopilot_hint": "自動執行會完成你要求的操作。Enter 傳送，Shift+Enter 換行。",
+    "plan_hint": "規劃模式只檢查應用程式狀態，不做變更。",
+    "no_harness": "安裝並登入 Codex、Claude Code、OpenCode 或 Pi 即可連接代理程式。"
+  },
+  "repairAgent": {
+    "title": "詢問 VoiceStudio Agent",
+    "notInstalled": "未安裝",
+    "noSource": "請開啟可寫入的 VoiceStudio 原始碼簽出目錄，讓代理進行修復。",
+    "noneFound": "安裝 Codex、Claude Code、OpenCode 或 Pi 以使用本機修復。",
+    "ready": "就緒",
+    "placeholder": "出了什麼問題？請加入操作步驟、可見錯誤或預期行為。",
+    "prReady": "修復已完成。請檢查變更，並在目標測試通過後提出 PR。",
+    "diagnose": "診斷",
+    "fix": "修復",
+    "chooseDefault": "選擇此畫面當機時 VoiceStudio 自動使用的代理程式。",
+    "useAutomatically": "自動使用 {{agent}}",
+    "captured": "已擷取 {{count}} 行問題日誌",
+    "contextNotice": "所選代理將收到此報告、目前畫面、最近的應用程式與後端記錄以及系統診斷資訊。",
+    "complete": "已完成"
+  },
+  "siteBrowser": {
+    "return_studio": "返回工作室",
+    "preview": "在 VoiceStudio 內快速預覽官方網站",
+    "open_in": "在瀏覽器中開啟",
+    "back": "上一頁",
+    "forward": "下一頁",
+    "reload": "重新載入",
+    "stop": "停止載入",
+    "address": "網站位址",
+    "default_browser": "預設瀏覽器",
+    "failed": "無法完成此操作。請檢查位址與網路連線，或在瀏覽器中開啟。"
+  },
+  "sidebarTools": {
+    "simple": "簡潔",
+    "details": "詳細",
+    "title": "工具設定",
+    "help": "選擇工具以進行設定或更換模型。",
+    "tts": "文字轉語音",
+    "asr": "語音轉文字",
+    "llm": "寫作輔助",
+    "translation": "翻譯",
+    "dictation": "語音輸入",
+    "diarisation": "辨識說話者",
+    "onDemand": "使用時載入",
+    "checkSetup": "檢查設定",
+    "wait": "請等待目前的工作完成後再變更此設定。",
+    "speedHelp": "更高的品質可能需要更長時間。建議從「平衡」開始。"
+  },
+  "homeUi": {
+    "subtitle": "你的開源、完全本機執行的 ElevenLabs 替代方案——複製與設計聲音、影片配音、語音輸入、轉錄和有聲書製作，支援 646 種語言。",
+    "brand_by": "{{brand}} 作者",
+    "all": "全部",
+    "allContributors": "所有貢獻者",
+    "title": "VoiceStudio.sh 開源",
+    "design": "根據描述設計聲音。",
+    "dub": "翻譯並配音音訊或影片。",
+    "stories": "用多種聲音創作場景。",
+    "audiobook": "製作分章節的有聲書。",
+    "transcribe": "將錄音轉成文字。",
+    "collapseFooter": "收合底欄",
+    "expandFooter": "展開底欄"
+  },
   "longformPersistence": {
     "storage_unavailable_title": "無法載入專案",
     "storage_unavailable_body": "VoiceStudio 無法讀取本機專案儲存空間。你的資料未被變更。請重試以安全開啟專案。",
@@ -94,7 +204,12 @@
     "llmp_test": "測試",
     "llmp_active_badge": "已啟用",
     "llmp_test_ok": "正常：{{model}} · {{ms}} ms",
-    "llmp_err_config": "缺少 API 金鑰或基礎 URL，請填寫後儲存。",
+    "llmp_active_env_pin": "LLM 選擇由 LLM_DEFAULT_PROVIDER 或 OMNIVOICE_LLM_BACKEND 固定。",
+    "llmp_connect": "連線並啟用",
+    "llmp_setup_hint": "選擇供應商，啟動其伺服器或新增 API 金鑰，然後連線。VoiceStudio 會先驗證模型回應，再啟用 LLM 功能。",
+    "llmp_disable": "關閉 LLM",
+    "llmp_optional_key": "API 金鑰（選填）",
+    "llmp_err_config": "請補全供應商設定：基礎 URL、模型，以及所需的 API 金鑰或帳戶 ID。",
     "llmp_err_auth": "金鑰遭拒（401/403），請檢查你的 API 金鑰。",
     "llmp_err_not_found": "找不到（404），請檢查模型名稱與基礎 URL 路徑。",
     "llmp_err_rate_limit": "已達速率限制（429），金鑰有效，請稍後再試。",
@@ -364,7 +479,10 @@
     "reduce_motion_desc": "停止背景動畫與轉場效果。系統設定本身仍然生效，此項在其基礎上疊加。",
     "perf_torch_compile": "停用 torch.compile",
     "perf_torch_compile_note": "使用即時執行以避免 Triton 記憶體錯誤。",
-    "perf_torch_compile_hint": "使用即時執行以避免 Triton 記憶體錯誤。 <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
+    "perf_torch_compile_hint": "使用即時執行以避免 Triton 記憶體錯誤。 <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>",
+    "llmp_cli_help": "透過與代理修復相同的執行器使用已安裝的 CLI 及其登入。模型留空將使用 CLI 預設值。回應可能較慢，費用依 CLI 帳戶計收。",
+    "llmp_sdk_help": "原生供應商使用 LiteLLM。其他供應商請輸入 provider/model。Bedrock 使用 API 金鑰或 AWS 設定檔；Vertex 將帳戶 ID 用作專案，並使用 Google 應用程式憑證。基礎 URL 為選填。",
+    "llmp_cli_auth": "CLI 帳戶存取遭拒。請檢查登入、訂閱和所選模型。"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -594,7 +712,7 @@
     "cleaning": "清潔…",
     "using_profile": "使用設定檔：{{name}}",
     "clear": "清晰",
-    "production_overrides": "生產覆蓋",
+    "production_overrides": "語音控制",
     "denoise": "去噪",
     "postprocess": "後處理",
     "duration": "持續時間",
@@ -782,7 +900,9 @@
     "group_huggingface": "抱臉",
     "group_translate": "翻譯（法學碩士/電影）",
     "group_deepl": "DeepL 自訂端點",
-    "group_microsoft": "Microsoft Translator 自訂端點"
+    "group_microsoft": "Microsoft Translator 自訂端點",
+    "region": "區域",
+    "aws_profile": "AWS 設定檔"
   },
   "engines": {
     "banners_on": "舞台橫幅",
@@ -1611,7 +1731,7 @@
   "donate": {
     "title": "支援",
     "desc": "如果您喜歡這個項目，請考慮捐贈以支持我們的發展。",
-    "hero_title": "支持VoiceStudio",
+    "hero_title": "捐款支持 VoiceStudio 專案",
     "hero_desc": "VoiceStudio 是免費、開源的，並且完全在您的硬體上運行。如果它為您的工作流程帶來價值，請考慮支援核心團隊。",
     "github_desc": "重複或一次性—直接透過 GitHub。",
     "coffee_desc": "請團隊喝杯咖啡。無需帳戶。",
@@ -1848,7 +1968,7 @@
     "trim_zoomIn": "放大/縮小",
     "trim_fitAll": "適合全部/適合選擇",
     "trim_confirm": "確認修剪",
-    "dub": "配音",
+    "dub": "影片配音",
     "dub_generate": "生成配音",
     "dub_sidebar": "切換側邊欄"
   },
@@ -1991,7 +2111,7 @@
     "locked": "鎖定",
     "clone_label": "複製",
     "design_label": "設計",
-    "dub_label": "配音",
+    "dub_label": "影片配音",
     "save_label": "儲存",
     "lock_identity": "鎖定語音身份",
     "in_folder": "在 {{folder}} 中",
@@ -2360,6 +2480,7 @@
     "tab_license": "商業許可",
     "toggle_label": "支持或商業許可",
     "other_ways": "其他幫助方法",
+    "star_short": "加星",
     "star_github": "在 GitHub 上加星標",
     "join_discord": "加入不和諧"
   },
@@ -2767,6 +2888,7 @@
     "website_desc": "有關該項目和製造商的更多資訊。",
     "follow_title": "在 X 上追蹤",
     "follow_desc": "版本說明、新引擎，以及偶爾透露接下來在做什麼。如果你不想常駐聊天伺服器，這裡更方便。",
+    "support_follow_title": "在 X 上追蹤，支持專案",
     "follow_cta": "在 X 上追蹤"
   },
   "permissions": {
@@ -2953,5 +3075,42 @@
     "step_transcribe": "轉錄",
     "step_translate": "翻譯",
     "step_convert": "轉換"
+  },
+  "performanceProfile": {
+    "auto": "自動"
+  },
+  "performanceHardware": {
+    "fits": "適合目前硬體",
+    "adjusted": "已依硬體調整",
+    "unknown": "無法偵測硬體",
+    "priority": "優先保障語音品質，其他工具共用剩餘記憶體。",
+    "specs": "{{ram}} GB 記憶體 · {{cores}} 個 CPU 執行緒",
+    "vram": "{{memory}} GB 顯示記憶體",
+    "estimate": "此為預估，已為系統預留空間。僅使用已安裝且支援目前語言的模型，使用時載入。",
+    "reason": {
+      "fits": "適合",
+      "memory": "記憶體限制",
+      "installed": "僅限已安裝模型",
+      "kept": "保留你的選擇",
+      "unknown": "無法偵測硬體"
+    },
+    "liveUsage": "即時用量",
+    "everyTwoSeconds": "每 2 秒更新",
+    "appVram": "應用程式顯示記憶體",
+    "voiceFirst": "優先確保語音品質"
+  },
+  "voiceControls": {
+    "title": "語音控制",
+    "options": "更多選項",
+    "advanced": "模型進階調整",
+    "guidance": "提示詞影響",
+    "timing": "細化時機",
+    "order": "取樣順序變化",
+    "variation": "聲音變化",
+    "balance": "結構與細節平衡",
+    "denoise": "清除參考音訊雜訊",
+    "polish": "潤飾生成音訊",
+    "basics": "1× 為正常語速。時長留空可使用自然節奏。",
+    "hint": "通常建議保留預設值。引導強度控制提示詞的影響，其他選項改變模型建構聲音的方式。每次只調整一項。"
   }
 }

@@ -1,4 +1,114 @@
 {
+  "cloneQuality": {
+    "title": "Chất lượng âm thanh",
+    "precision": "Độ chính xác WAV",
+    "size": "~{{size}} MiB/phút ở 24 kHz mono; tùy bộ máy.",
+    "hint16": "WAV nhỏ nhất; hỗ trợ nhiều trình phát.",
+    "hint24": "Chính xác hơn khi chỉnh sửa; lớn hơn 16-bit 50%.",
+    "hint32": "Giữ mẫu dấu phẩy động; gấp đôi kích thước 16-bit. Không cải thiện bản thân giọng nói.",
+    "effort": "Số bước lấy mẫu",
+    "effortHint": "Nhiều bước hơn mất nhiều thời gian hơn và chưa chắc cho âm thanh tốt hơn; kích thước tệp không đổi.",
+    "mastering": "Xử lý âm thanh phát sóng",
+    "masteringHint": "Tắt để bỏ qua EQ, nén và chuẩn hóa bổ sung.",
+    "nextTake": "Áp dụng cho lần tạo tiếp theo. Âm thanh hiện có không đổi.",
+    "bits16": "PCM 16 bit",
+    "bits24": "PCM 24 bit",
+    "bits32": "Số thực 32 bit",
+    "fileInfo": "{{size}} MiB · {{rate}} kHz · {{channels}} kênh · {{bits}} bit {{encoding}}",
+    "fileSize": "{{size}} MiB",
+    "float": "số thực"
+  },
+  "audioQuality": {
+    "check": "Kiểm tra âm thanh",
+    "failed": "Không thể phân tích âm thanh.",
+    "advisory": "Chỉ mang tính tham khảo: khoảng nghỉ và thay đổi âm lượng có thể là chủ ý. Âm thanh không bị thay đổi.",
+    "truncated": "Phân tích hoặc danh sách cảnh báo bị giới hạn.",
+    "clear": "Không phát hiện vấn đề trong phần đã phân tích.",
+    "empty": "Âm thanh trống",
+    "silence": "Có thể có khoảng lặng",
+    "quiet": "Âm lượng thấp bất thường",
+    "loud": "Âm lượng cao bất thường",
+    "clipping": "Có thể bị cắt đỉnh",
+    "invalid": "Mẫu âm thanh không hợp lệ"
+  },
+  "agentWorkspace": {
+    "repair": "Khắc phục sự cố",
+    "setup": "Thiết lập studio",
+    "new_chat": "Cuộc trò chuyện mới",
+    "harness": "Môi trường tác nhân",
+    "mode": "Chế độ chạy",
+    "plan": "Lập kế hoạch",
+    "autopilot": "Tự động",
+    "features": "Tính năng",
+    "source": "Cho phép sửa mã nguồn",
+    "conversation": "Cuộc trò chuyện",
+    "welcome": "Studio cục bộ của bạn, với tác nhân đồng hành. Bắt đầu bằng một nhiệm vụ hoặc chọn thiết lập sẵn.",
+    "starter": "Giúp tôi với {{feature}}. Kiểm tra ứng dụng, chọn thiết lập phù hợp và chỉ hỏi thông tin thiết yếu còn thiếu.",
+    "you": "Bạn",
+    "placeholder": "Yêu cầu tôi tạo, thiết lập hoặc sửa điều gì đó…",
+    "send": "Gửi",
+    "autopilot_hint": "Chế độ tự động thực hiện các thao tác được yêu cầu. Enter để gửi; Shift+Enter để xuống dòng.",
+    "plan_hint": "Lập kế hoạch kiểm tra trạng thái ứng dụng mà không thay đổi.",
+    "no_harness": "Cài đặt và đăng nhập Codex, Claude Code, OpenCode hoặc Pi để kết nối tác nhân."
+  },
+  "repairAgent": {
+    "title": "Hỏi VoiceStudio Agent",
+    "notInstalled": "Chưa được cài đặt",
+    "noSource": "Mở bản mã nguồn VoiceStudio có quyền ghi để trợ lý có thể sửa lỗi.",
+    "noneFound": "Cài đặt Codex, Claude Code, OpenCode hoặc Pi để sử dụng tính năng sửa chữa cục bộ.",
+    "ready": "Sẵn sàng",
+    "placeholder": "?i?u g? ?? x?y ra? Th?m c?c b??c, l?i hi?n th? ho?c h?nh vi mong ??i.",
+    "prReady": "Sửa xong. Xem xét các thay đổi và đề xuất PR khi các bài kiểm tra mục tiêu vượt qua.",
+    "diagnose": "Chẩn đoán",
+    "fix": "Sửa chữa",
+    "chooseDefault": "Chọn tác nhân mà VoiceStudio sẽ tự động dùng khi màn hình này gặp sự cố.",
+    "useAutomatically": "Tự động dùng {{agent}}",
+    "captured": "Đã thu thập {{count}} dòng nhật ký có vấn đề",
+    "contextNotice": "Tác nhân đã chọn nhận báo cáo này, màn hình hiện tại, nhật ký ứng dụng và backend gần đây cùng thông tin chẩn đoán hệ thống.",
+    "complete": "Hoàn thành"
+  },
+  "siteBrowser": {
+    "return_studio": "Quay lại Studio",
+    "preview": "Xem nhanh trang web chính thức ngay trong VoiceStudio",
+    "open_in": "Mở bằng trình duyệt",
+    "back": "Quay lại",
+    "forward": "Tiến tới",
+    "reload": "Tải lại",
+    "stop": "Dừng tải",
+    "address": "Địa chỉ trang web",
+    "default_browser": "Trình duyệt mặc định",
+    "failed": "Không thể hoàn tất thao tác. Hãy kiểm tra địa chỉ và kết nối hoặc mở trong trình duyệt của bạn."
+  },
+  "sidebarTools": {
+    "simple": "Đơn giản",
+    "details": "Chi tiết",
+    "title": "Cài đặt công cụ",
+    "help": "Chọn công cụ để thiết lập hoặc đổi mô hình.",
+    "tts": "Văn bản thành giọng nói",
+    "asr": "Giọng nói thành văn bản",
+    "llm": "Hỗ trợ viết",
+    "translation": "Dịch thuật",
+    "dictation": "Nhập bằng giọng nói",
+    "diarisation": "Nhận diện người nói",
+    "onDemand": "Tải khi sử dụng",
+    "checkSetup": "Kiểm tra thiết lập",
+    "wait": "Đợi công việc hiện tại hoàn tất trước khi thay đổi.",
+    "speedHelp": "Chất lượng cao hơn có thể mất nhiều thời gian hơn. Hãy bắt đầu với Cân bằng."
+  },
+  "homeUi": {
+    "subtitle": "Giải pháp thay thế ElevenLabs mã nguồn mở, chạy hoàn toàn trên máy — nhân bản và thiết kế giọng nói, lồng tiếng video, nhập liệu bằng giọng nói, phiên âm và tạo sách nói bằng 646 ngôn ngữ.",
+    "brand_by": "{{brand}} bởi",
+    "all": "Tất cả",
+    "allContributors": "Tất cả người đóng góp",
+    "title": "VoiceStudio.sh Mã nguồn mở",
+    "design": "Thiết kế giọng nói từ mô tả.",
+    "dub": "Dịch và lồng tiếng âm thanh hoặc video.",
+    "stories": "Tạo cảnh với nhiều giọng nói.",
+    "audiobook": "Tạo sách nói có chương.",
+    "transcribe": "Chuyển bản ghi âm thành văn bản.",
+    "collapseFooter": "Thu gọn chân trang",
+    "expandFooter": "Mở rộng chân trang"
+  },
   "longformPersistence": {
     "storage_unavailable_title": "Không thể tải dự án",
     "storage_unavailable_body": "VoiceStudio không thể đọc bộ nhớ dự án cục bộ. Dữ liệu của bạn chưa bị thay đổi. Hãy thử lại để mở dữ liệu an toàn.",
@@ -94,7 +204,12 @@
     "llmp_test": "Kiểm tra",
     "llmp_active_badge": "đang hoạt động",
     "llmp_test_ok": "ok — {{model}} · {{ms}} ms",
-    "llmp_err_config": "Thiếu khóa API hoặc URL cơ sở — hãy điền và lưu.",
+    "llmp_active_env_pin": "Lựa chọn LLM được cố định bởi LLM_DEFAULT_PROVIDER hoặc OMNIVOICE_LLM_BACKEND.",
+    "llmp_connect": "Kết nối và bật",
+    "llmp_setup_hint": "Chọn nhà cung cấp, khởi động máy chủ hoặc thêm khóa API rồi kết nối. VoiceStudio xác minh phản hồi của mô hình trước khi bật tính năng LLM.",
+    "llmp_disable": "Tắt LLM",
+    "llmp_optional_key": "Khóa API (tùy chọn)",
+    "llmp_err_config": "Hoàn tất cài đặt nhà cung cấp: URL cơ sở, mô hình và khóa API hoặc ID tài khoản nếu cần.",
     "llmp_err_auth": "Khóa bị từ chối (401/403) — kiểm tra khóa API của bạn.",
     "llmp_err_not_found": "Không tìm thấy (404) — kiểm tra tên mô hình và đường dẫn của URL cơ sở.",
     "llmp_err_rate_limit": "Bị giới hạn tốc độ (429) — khóa vẫn hoạt động; hãy thử lại sau giây lát.",
@@ -364,7 +479,10 @@
     "reduce_motion_desc": "Dừng hoạt ảnh nền và hiệu ứng chuyển tiếp. Cài đặt hệ thống vẫn có hiệu lực riêng; mục này bổ sung thêm.",
     "perf_torch_compile": "Tắt torch.compile",
     "perf_torch_compile_note": "Thực thi trực tiếp để tránh lỗi bộ nhớ Triton.",
-    "perf_torch_compile_hint": "Thực thi trực tiếp để tránh lỗi bộ nhớ Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
+    "perf_torch_compile_hint": "Thực thi trực tiếp để tránh lỗi bộ nhớ Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>",
+    "llmp_cli_help": "Dùng CLI đã cài và phiên đăng nhập qua cùng bộ chạy với tính năng sửa bằng tác nhân. Để trống Mô hình để dùng mặc định của CLI. Phản hồi có thể chậm hơn; phí tính theo tài khoản CLI.",
+    "llmp_sdk_help": "Nhà cung cấp gốc dùng LiteLLM. Với nhà cung cấp khác, nhập provider/model. Bedrock dùng khóa API hoặc hồ sơ AWS; Vertex dùng ID tài khoản làm dự án và thông tin xác thực Google. URL cơ sở là tùy chọn.",
+    "llmp_cli_auth": "Quyền truy cập tài khoản CLI bị từ chối. Kiểm tra đăng nhập, gói đăng ký và mô hình đã chọn."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -594,7 +712,7 @@
     "cleaning": "Dọn dẹp…",
     "using_profile": "Sử dụng hồ sơ: {{name}}",
     "clear": "rõ ràng",
-    "production_overrides": "Ghi đè sản xuất",
+    "production_overrides": "Điều chỉnh giọng nói",
     "denoise": "Khử nhiễu",
     "postprocess": "Hậu xử lý",
     "duration": "Thời lượng",
@@ -782,7 +900,9 @@
     "group_huggingface": "ôm mặt",
     "group_translate": "Dịch thuật (LLM / Điện ảnh)",
     "group_deepl": "Điểm cuối tùy chỉnh DeepL",
-    "group_microsoft": "Điểm cuối tùy chỉnh của Microsoft Translator"
+    "group_microsoft": "Điểm cuối tùy chỉnh của Microsoft Translator",
+    "region": "Khu vực",
+    "aws_profile": "Hồ sơ AWS"
   },
   "engines": {
     "banners_on": "Biểu ngữ sân khấu bật",
@@ -1611,7 +1731,7 @@
   "donate": {
     "title": "Hỗ trợ",
     "desc": "Nếu bạn thích dự án này, hãy cân nhắc quyên góp để hỗ trợ sự phát triển của chúng tôi.",
-    "hero_title": "Hỗ trợ VoiceStudio",
+    "hero_title": "Quyên góp cho dự án VoiceStudio",
     "hero_desc": "VoiceStudio miễn phí, mã nguồn mở và chạy hoàn toàn trên phần cứng của bạn. Nếu nó mang lại giá trị cho quy trình làm việc của bạn, hãy cân nhắc việc hỗ trợ nhóm nòng cốt.",
     "github_desc": "Định kỳ hoặc một lần - trực tiếp thông qua GitHub.",
     "coffee_desc": "Mua cho đội một ly cà phê. Không cần tài khoản.",
@@ -1848,7 +1968,7 @@
     "trim_zoomIn": "Phóng to / thu nhỏ",
     "trim_fitAll": "Phù hợp với tất cả / Lựa chọn phù hợp",
     "trim_confirm": "Xác nhận cắt",
-    "dub": "lồng tiếng",
+    "dub": "Lồng tiếng",
     "dub_generate": "Tạo lồng tiếng",
     "dub_sidebar": "Chuyển đổi thanh bên"
   },
@@ -1991,7 +2111,7 @@
     "locked": "Đã khóa",
     "clone_label": "bản sao",
     "design_label": "Thiết kế",
-    "dub_label": "lồng tiếng",
+    "dub_label": "Lồng tiếng",
     "save_label": "Lưu",
     "lock_identity": "Khóa nhận dạng giọng nói",
     "in_folder": "trong {{folder}}",
@@ -2360,6 +2480,7 @@
     "tab_license": "Giấy phép thương mại",
     "toggle_label": "Hỗ trợ hoặc giấy phép thương mại",
     "other_ways": "Những cách khác để giúp đỡ",
+    "star_short": "Gắn sao",
     "star_github": "Sao trên GitHub",
     "join_discord": "Tham gia bất hòa"
   },
@@ -2767,6 +2888,7 @@
     "website_desc": "Thông tin thêm về dự án và nhà sản xuất.",
     "follow_title": "Theo dõi trên X",
     "follow_desc": "Ghi chú phát hành, engine mới, và đôi khi là hé lộ những gì đang được xây dựng. Tiện nếu bạn không muốn ở trong một máy chủ chat.",
+    "support_follow_title": "Ủng hộ dự án bằng cách theo dõi trên X",
     "follow_cta": "Theo dõi trên X"
   },
   "permissions": {
@@ -2953,5 +3075,42 @@
     "step_transcribe": "Phiên âm",
     "step_translate": "Dịch",
     "step_convert": "Chuyển đổi"
+  },
+  "performanceProfile": {
+    "auto": "Tự động"
+  },
+  "performanceHardware": {
+    "fits": "Phù hợp với phần cứng",
+    "adjusted": "Đã điều chỉnh theo phần cứng",
+    "unknown": "Không thể kiểm tra phần cứng",
+    "priority": "Ưu tiên chất lượng giọng nói. Các công cụ khác chia sẻ bộ nhớ còn lại.",
+    "specs": "{{ram}} GB RAM · {{cores}} luồng CPU",
+    "vram": "{{memory}} GB VRAM",
+    "estimate": "Ước tính có chừa bộ nhớ cho hệ thống. Dùng mô hình đã cài hỗ trợ ngôn ngữ; tải khi sử dụng.",
+    "reason": {
+      "fits": "Phù hợp",
+      "memory": "Giới hạn bộ nhớ",
+      "installed": "Chỉ mô hình đã cài",
+      "kept": "Giữ lựa chọn của bạn",
+      "unknown": "Không thể kiểm tra phần cứng"
+    },
+    "liveUsage": "Mức sử dụng hiện tại",
+    "everyTwoSeconds": "Mỗi 2 giây",
+    "appVram": "VRAM ứng dụng",
+    "voiceFirst": "Ưu tiên chất lượng giọng nói"
+  },
+  "voiceControls": {
+    "title": "Điều chỉnh giọng nói",
+    "options": "Tùy chọn khác",
+    "advanced": "Tinh chỉnh mô hình nâng cao",
+    "guidance": "Ảnh hưởng của lời nhắc",
+    "timing": "Thời điểm tinh chỉnh",
+    "order": "Biến thiên thứ tự lấy mẫu",
+    "variation": "Biến thiên âm thanh",
+    "balance": "Cân bằng cấu trúc và chi tiết",
+    "denoise": "Lọc nhiễu bản tham chiếu",
+    "polish": "Trau chuốt âm thanh đã tạo",
+    "basics": "1× là tốc độ bình thường. Để trống thời lượng để có nhịp tự nhiên.",
+    "hint": "Thường nên giữ giá trị mặc định. Độ dẫn hướng điều chỉnh ảnh hưởng của lời nhắc; các nút khác thay đổi cách mô hình tạo âm thanh. Mỗi lần chỉ đổi một mục."
   }
 }

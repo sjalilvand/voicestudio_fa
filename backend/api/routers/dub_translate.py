@@ -870,8 +870,10 @@ async def dub_translate(req: TranslateRequest):
         # Preflight the optional `deep_translator` dep once so we fail with a
         # single actionable error instead of N identical per-segment
         # ModuleNotFoundErrors that flood the UI's error badge.
+        from services.translation_apis import PAID_PROVIDERS, Translator as ApiTranslator
         try:
-            import deep_translator  # noqa: F401
+            if provider not in PAID_PROVIDERS:
+                import deep_translator  # noqa: F401
         except ImportError:
             # Same single-source install command as the Engine selector's Install
             # button (translation_engines.install_command) — google/deepl/
@@ -895,23 +897,11 @@ async def dub_translate(req: TranslateRequest):
         _msft_key = os.environ.get("MICROSOFT_API_KEY") or api_key
 
         def _build_translator(src, tgt):
-            if provider == "deepl":
-                from deep_translator import DeeplTranslator
-                tr = DeeplTranslator(api_key=_deepl_key, source=src, target=tgt, use_free_api=False)
-                _custom = os.environ.get("DEEPL_BASE_URL")
-                if _custom:
-                    tr._base_url = _custom.rstrip("/") + "/"
-                return tr
+            if provider in PAID_PROVIDERS:
+                return ApiTranslator(provider, src, tgt, api_key=api_key)
             if provider == "mymemory":
                 from deep_translator import MyMemoryTranslator
                 return MyMemoryTranslator(source=src, target=tgt, proxies=_proxies)
-            if provider == "microsoft":
-                from deep_translator import MicrosoftTranslator
-                tr = MicrosoftTranslator(api_key=_msft_key, source=src, target=tgt, proxies=_proxies)
-                _custom = os.environ.get("MICROSOFT_BASE_URL")
-                if _custom:
-                    tr._base_url = _custom.rstrip("/") + "/translate?api-version=3.0"
-                return tr
             from deep_translator import GoogleTranslator
             return GoogleTranslator(source=src, target=tgt, proxies=_proxies)
 

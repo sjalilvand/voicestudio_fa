@@ -1,9 +1,31 @@
 import { basename, join, resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 // This is a Node launcher shared with the package script, so it intentionally
 // remains plain ESM rather than being compiled into Electron's main process.
 // @ts-expect-error JavaScript launcher has no separate declaration file.
-import { createMacDevBundlePlan } from '../../scripts/dev.mjs';
+import { createMacDevBundlePlan, launchElectronVite } from '../../scripts/dev.mjs';
+
+it('watches main and preload changes so renderer updates cannot leave stale browser IPC running', () => {
+  const spawn = vi.fn(() => ({ on: vi.fn() }));
+  const platform = Object.getOwnPropertyDescriptor(process, 'platform')!;
+  Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
+  try {
+    launchElectronVite(['--', '--disable-gpu-compositing'], spawn);
+    expect(spawn).toHaveBeenCalledWith(
+      process.execPath,
+      [
+        expect.stringContaining('electron-vite'),
+        'dev',
+        '--watch',
+        '--',
+        '--disable-gpu-compositing',
+      ],
+      expect.objectContaining({ stdio: 'inherit' }),
+    );
+  } finally {
+    Object.defineProperty(process, 'platform', platform);
+  }
+});
 
 describe('macOS development bundle branding', () => {
   it('uses a VoiceStudio bundle while preserving Electron development detection', () => {

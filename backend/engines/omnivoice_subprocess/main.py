@@ -187,7 +187,7 @@ def _load_model(stdout):
     return _model
 
 
-def _tensor_to_pcm_b64(audio, sample_rate: int) -> tuple[str, int, int]:
+def _tensor_to_pcm_b64(audio, sample_rate: int, audio_format="s16le") -> tuple[str, int, int]:
     """Convert a torch waveform tensor (1, N) in [-1, 1] to base64 int16 PCM."""
     import numpy as np
 
@@ -200,7 +200,10 @@ def _tensor_to_pcm_b64(audio, sample_rate: int) -> tuple[str, int, int]:
         # not a downmix but a destroyed waveform. (#1328)
         arr = arr.mean(axis=int(np.argmin(arr.shape)))
     arr = np.clip(arr, -1.0, 1.0)
-    pcm = (arr * 32767.0).astype(np.int16).tobytes()
+    if audio_format not in ("s16le", "f32le"):
+        raise ValueError("Unsupported audio transport format")
+    pcm = (arr.astype("<f4").tobytes() if audio_format == "f32le"
+           else (arr * 32767.0).astype("<i2").tobytes())
     return base64.b64encode(pcm).decode("ascii"), int(sample_rate), int(arr.shape[0])
 
 
@@ -244,10 +247,12 @@ def _handle_synthesize(msg: dict, stdout) -> None:
     audio = audios[0] if isinstance(audios, (list, tuple)) else audios
     sample_rate = int(getattr(model, "sampling_rate", OMNIVOICE_SAMPLE_RATE))
 
-    pcm_b64, sr, n_samples = _tensor_to_pcm_b64(audio, sample_rate)
+    audio_format = msg.get("audio_format", "s16le")
+    pcm_b64, sr, n_samples = _tensor_to_pcm_b64(audio, sample_rate, audio_format)
     _send(stdout, {
         "op": "audio",
         "audio_pcm_b64": pcm_b64,
+        "audio_format": audio_format,
         "sample_rate": sr,
         "n_samples": n_samples,
     })

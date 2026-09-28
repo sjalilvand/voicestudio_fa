@@ -1,7 +1,7 @@
 """The official ``openai`` SDK — and the OpenAI Agents SDK voice pipeline built
 on it — must work against VoiceStudio's /v1 routes unmodified.
 
-Drives the routes through the real SDK: its httpx2 client uses a transport
+Drives the routes through the real SDK: its HTTP client uses a transport
 that hands each request to Starlette's TestClient, so what is tested is the
 exact wire format the SDK produces (multipart ``timestamp_granularities[]``,
 ``extra_body`` fields, streaming reads, error-body parsing).
@@ -25,8 +25,8 @@ import io
 import struct
 import wave
 
-import httpx2
 import openai
+from openai._base_client import httpx as sdk_httpx
 import pytest
 import torch
 from fastapi.testclient import TestClient
@@ -84,20 +84,20 @@ def client():
 
     tc = TestClient(app, client=("127.0.0.1", 50000))
 
-    def _forward(request: httpx2.Request) -> httpx2.Response:
+    def _forward(request: sdk_httpx.Request) -> sdk_httpx.Response:
         res = tc.request(
             request.method,
             request.url.raw_path.decode("ascii"),
             headers={k: v for k, v in request.headers.items() if k.lower() != "host"},
             content=request.read(),
         )
-        return httpx2.Response(res.status_code, headers=res.headers.multi_items(), content=res.content)
+        return sdk_httpx.Response(res.status_code, headers=res.headers.multi_items(), content=res.content)
 
     return openai.OpenAI(
         base_url="http://testserver/v1",
         api_key="not-needed",
         max_retries=0,
-        http_client=httpx2.Client(transport=httpx2.MockTransport(_forward)),
+        http_client=sdk_httpx.Client(transport=sdk_httpx.MockTransport(_forward)),
     )
 
 
