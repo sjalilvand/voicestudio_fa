@@ -36,7 +36,8 @@ metadata and the backend fallback mirror it.
 ### Changed
 
 - LLM setup verifies a model response before enabling features, replaces the misleading engine inventory with connection guidance, and supports authenticated local servers (#2397)
-- LLM skills can use installed coding CLIs through the repair-agent runner, native paid providers through LiteLLM, and Google Cloud or Amazon translation APIs (#2397)
+- LLM skills can use installed coding CLIs through the repair-agent runner, native paid providers through LiteLLM (#2397)
+- Dubbing supports Google Cloud Translation and Amazon Translate with explicit provider setup (#2397)
 
 - OmniVoice sidecars reuse installed speech recognition for short references without transcripts, matching in-process cloning (#2320)
 - Electron recovers from OS-denied default backend ports without changing explicitly configured ports (#2358) — thanks @rishi2288!

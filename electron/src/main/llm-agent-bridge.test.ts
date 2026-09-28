@@ -80,3 +80,19 @@ describe('shared CLI completion bridge', () => {
     }
   });
 });
+
+it('reports a shared agent runner busy state as retryable', async () => {
+  const bridge = await startLlmAgentBridge(async () => {
+    throw Object.assign(new Error('An agent is already running'), { name: 'AgentRateLimitError' });
+  });
+  try {
+    const response = await fetch(bridge.url + '/complete', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + bridge.token },
+      body: JSON.stringify(request),
+    });
+    expect(response.status).toBe(429);
+  } finally {
+    bridge.close();
+  }
+});

@@ -237,7 +237,8 @@ def _configured(entry: dict) -> tuple[bool, str | None]:
     if engine_id == "google-cloud":
         return bool(os.environ.get("GOOGLE_TRANSLATE_API_KEY")), None
     if engine_id == "amazon":
-        return bool(os.environ.get("AWS_PROFILE") or os.environ.get("AWS_ACCESS_KEY_ID")), None
+        # Resolve shared-file, SSO and role credentials only on an explicit request.
+        return True, None
     return True, None
 
 

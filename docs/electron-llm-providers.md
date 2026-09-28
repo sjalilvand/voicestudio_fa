@@ -22,8 +22,8 @@ as the Google project, application default credentials, and `VERTEXAI_LOCATION`
 (default `global`). Provider access and billing remain tied to your accounts.
 Model IDs vary by account; native SDK and CLI entries use manual model entry,
 while compatible endpoints offer model discovery. The generic LiteLLM entry
-requires a provider-prefixed model and key; provider-specific configuration can
-also come from its documented environment variables.
+requires a provider-prefixed model. Credentials can use a saved key, provider
+environment variables or the provider's identity chain; Connect validates access.
 The Google AI default is `gemini-3.8-flash`; the former `gemini-2.0-flash` default
 has been retired ([Google's deprecation schedule](https://ai.google.dev/gemini-api/docs/deprecations)).
 Explicitly saved model choices remain unchanged.
@@ -50,7 +50,8 @@ offline engines. Configure Google Cloud's API key, Azure region, AWS profile and
 AWS region in **Settings > Credentials**. Amazon uses the standard AWS credential
 chain. DeepL Free keys ending in `:fx` automatically use the Free API; paid keys
 use the Pro endpoint. DeepL/Microsoft/Google Cloud keys are encrypted, including
-migration of older plaintext translation-key preferences. These paid requests
+migration of older plaintext translation-key preferences. The legacy compatible
+endpoint key uses the same encrypted storage. These paid requests
 have bounded connection/read timeouts and do not follow credential-bearing redirects.
 
 Provider protocol references: [LiteLLM](https://docs.litellm.ai/docs/providers),

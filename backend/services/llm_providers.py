@@ -521,11 +521,11 @@ def configuration_error(p: Provider, *, require_model: bool = True) -> Optional[
         if p.id == "vertex":
             if not resolve_account_id(p):
                 return "Set the Vertex AI project as Account ID and configure Google application credentials."
-        elif p.id == "bedrock":
-            if not (resolve_api_key(p) or os.environ.get("AWS_PROFILE") or os.environ.get("AWS_ACCESS_KEY_ID")):
-                return "Configure an AWS profile, AWS credentials, or a Bedrock API key."
-        elif not has_key(p):
+        elif p.id not in {"sdk", "bedrock"} and not has_key(p):
             return "Add an API key in Settings > Models > LLM."
+        # Generic SDK and Bedrock also support provider environment keys and
+        # workload identities. The explicit Connect request validates them;
+        # catalogue/config checks must not initiate identity-network probes.
         if not resolve_base_url(p):
             return None
 

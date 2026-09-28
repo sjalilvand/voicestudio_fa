@@ -722,7 +722,7 @@ export async function registerRepairAgents(
   });
   ipcMain.handle(REPAIR_CHANNELS.start, async (event, request: RepairAgentRunRequest) => {
     trusted(event, getMainWindow());
-    if (child || translationChild) throw new Error('An agent is already running');
+    if (child || translationChild) throw Object.assign(new Error('An agent is already running'), { name: 'AgentRateLimitError' });
     if (workspaceRoot && !isVoiceStudioCheckout(workspaceRoot)) {
       workspaceRoot = null;
       state = { ...state, workspaceAvailable: false, workspacePath: undefined };
@@ -855,7 +855,7 @@ export async function registerRepairAgents(
     timeoutMs = 10 * 60 * 1_000,
   ): Promise<DubAgentTranslationResult> => {
     validateDubTranslationRequest(request);
-    if (child || translationChild) throw new Error('An agent is already running');
+    if (child || translationChild) throw Object.assign(new Error('An agent is already running'), { name: 'AgentRateLimitError' });
     const definition = DEFINITIONS.find((item) => item.id === request.agent)!;
     const command = commands.get(request.agent) ?? locate(definition.command);
     if (!command) throw new Error('That agent is not installed');

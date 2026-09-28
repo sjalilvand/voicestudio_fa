@@ -501,9 +501,10 @@ def set_llm_endpoint(body: _LLMEndpointBody):
 
     Reuses the env-var persistence path (prefs.json, restored at startup):
     base_url -> TRANSLATE_BASE_URL, model -> TRANSLATE_MODEL,
-    api_key -> TRANSLATE_API_KEY. A None field is left unchanged; an empty
+    api_key -> encrypted TRANSLATE_API_KEY storage. A None field is left unchanged; an empty
     string clears it. Ollama ignores the key; vLLM / LM Studio require it.
     """
+    from services import settings_store
     from core.prefs import set_ as prefs_set, delete as prefs_delete
 
     mapping = {
@@ -517,9 +518,13 @@ def set_llm_endpoint(body: _LLMEndpointBody):
         val = val.strip()
         if val:
             os.environ[env_key] = val
-            prefs_set(f"env.{env_key}", val)
+            if env_key != "TRANSLATE_API_KEY":
+                prefs_set(f"env.{env_key}", val)
         else:
             os.environ.pop(env_key, None)
+            prefs_delete(f"env.{env_key}")
+        if env_key == "TRANSLATE_API_KEY":
+            settings_store.set_secret("translation_env.TRANSLATE_API_KEY", val or None)
             prefs_delete(f"env.{env_key}")
     # get_active_llm_backend() builds a fresh backend (and its OpenAI client
     # reads env at construction) on every call, so there's no singleton to

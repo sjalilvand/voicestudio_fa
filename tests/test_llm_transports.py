@@ -96,3 +96,10 @@ def test_native_cloud_overrides_validate_urls_without_fake_keys(registry, monkey
     registry.save_overrides(provider, model="test-model", base_url="file:///credentials", account_id="project")
     assert registry.resolve_api_key(registry.get_provider(provider)) is None
     assert "HTTP(S)" in registry.configuration_error(registry.get_provider(provider))
+
+
+def test_generic_sdk_accepts_provider_environment_credentials(registry, monkeypatch):
+    registry.save_overrides("sdk", model="openai/gpt-test")
+    monkeypatch.setenv("OPENAI_API_KEY", "fixture")
+    monkeypatch.delenv("LITELLM_API_KEY", raising=False)
+    assert registry.configuration_error(registry.get_provider("sdk")) is None

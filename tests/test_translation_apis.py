@@ -50,7 +50,7 @@ def test_amazon_uses_sdk_and_closes_client(monkeypatch):
     import boto3
     calls = []; closed = []
     client = SimpleNamespace(translate_text=lambda **kw: calls.append(kw) or {"TranslatedText": "hola"}, close=lambda: closed.append(True))
-    monkeypatch.setattr(boto3, "client", lambda *args, **kw: client)
+    monkeypatch.setattr(boto3.session, "Session", lambda: SimpleNamespace(client=lambda *args, **kw: client))
     assert Translator("amazon", "auto", "zh-CN").translate("hello") == "hola"
     assert calls == [{"Text": "hello", "SourceLanguageCode": "auto", "TargetLanguageCode": "zh"}]
     assert closed
@@ -63,6 +63,7 @@ def test_translation_key_save_is_encrypted_and_legacy_pref_removed(monkeypatch):
     monkeypatch.setattr(settings_store, "set_secret", lambda *args: saved.append(args))
     monkeypatch.setattr(system, "prefs_delete", lambda key: removed.append(key))
     monkeypatch.setattr(system, "prefs_set", lambda *args: pytest.fail("Secret written to plaintext prefs"))
+    monkeypatch.setenv("GOOGLE_TRANSLATE_API_KEY", "")
     monkeypatch.delenv("GOOGLE_TRANSLATE_API_KEY", raising=False)
     asyncio.run(system.set_env_var({"key": "GOOGLE_TRANSLATE_API_KEY", "value": "fixture-secret"}))
     assert saved == [("translation_env.GOOGLE_TRANSLATE_API_KEY", "fixture-secret")]
@@ -78,9 +79,17 @@ def test_restore_migrates_legacy_keys_and_preserves_external_env(monkeypatch):
     monkeypatch.setattr(settings_store, "set_secret", lambda key, value: stored.__setitem__(key, value))
     monkeypatch.setattr(prefs, "delete", lambda key: removed.append(key))
     monkeypatch.setenv("DEEPL_API_KEY", "external")
+    monkeypatch.setenv("MICROSOFT_API_KEY", "")
     monkeypatch.delenv("MICROSOFT_API_KEY", raising=False)
     prefs.restore_env({"env.DEEPL_API_KEY": "legacy", "env.MICROSOFT_API_KEY": "microsoft"})
     assert stored["translation_env.DEEPL_API_KEY"] == "legacy"
     assert os.environ["DEEPL_API_KEY"] == "external"
     assert os.environ["MICROSOFT_API_KEY"] == "microsoft"
     assert "env.DEEPL_API_KEY" in removed
+
+
+def test_amazon_readiness_allows_default_credential_chain(monkeypatch):
+    from services.translation_engines import _configured
+    monkeypatch.delenv("AWS_PROFILE", raising=False)
+    monkeypatch.delenv("AWS_ACCESS_KEY_ID", raising=False)
+    assert _configured({"id": "amazon"}) == (True, None)

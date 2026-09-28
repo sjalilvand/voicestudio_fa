@@ -3,7 +3,7 @@ import html
 import os
 
 PAID_PROVIDERS = {"deepl", "microsoft", "google-cloud", "amazon"}
-SECRET_ENV_KEYS = {"DEEPL_API_KEY", "MICROSOFT_API_KEY", "GOOGLE_TRANSLATE_API_KEY"}
+SECRET_ENV_KEYS = {"DEEPL_API_KEY", "MICROSOFT_API_KEY", "GOOGLE_TRANSLATE_API_KEY", "TRANSLATE_API_KEY"}
 
 
 class Translator:
@@ -19,7 +19,7 @@ class Translator:
             import boto3
             from botocore.config import Config
             aliases = {"zh-CN": "zh", "zh-TW": "zh-TW"}
-            client = boto3.client("translate", region_name=os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION"),
+            client = boto3.session.Session().client("translate", region_name=os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION"),
                 config=Config(connect_timeout=5, read_timeout=30, retries={"total_max_attempts": 1}))
             try:
                 return client.translate_text(Text=text, SourceLanguageCode=aliases.get(source, source),
