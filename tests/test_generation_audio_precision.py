@@ -5,11 +5,11 @@ import pytest
 import soundfile as sf
 import torch
 
-from services.generation_audio import save_generation_wav
 
 
 @pytest.mark.parametrize("bits,subtype", [(16, "PCM_16"), (24, "PCM_24"), (32, "FLOAT")])
 def test_wav_precision_preserves_samples_and_metadata(bits, subtype):
+    from services.generation_audio import save_generation_wav
     # Deliberately below a 16-bit quantization step; float must not be upcast PCM.
     audio = torch.tensor([[0.000001, -0.000002, 0.25, -0.5]]).repeat(2, 50)
     original = audio.clone()
@@ -26,6 +26,7 @@ def test_wav_precision_preserves_samples_and_metadata(bits, subtype):
 
 
 def test_invalid_precision_rejected_before_writing():
+    from services.generation_audio import save_generation_wav
     output = io.BytesIO()
     with pytest.raises(ValueError, match="precision"):
         save_generation_wav(output, torch.zeros(10), 24000, 8)
@@ -33,6 +34,7 @@ def test_invalid_precision_rejected_before_writing():
 
 
 def test_integer_audio_scales_and_clipping_does_not_modify_input():
+    from services.generation_audio import save_generation_wav
     output = io.BytesIO()
     save_generation_wav(output, torch.tensor([16384, -16384], dtype=torch.int16), 24000, 32)
     output.seek(0)
@@ -65,8 +67,8 @@ def test_invalid_api_precision_rejected_without_model_work():
     from api.routers.generation import router
     app = FastAPI()
     app.include_router(router)
-    with TestClient(app) as client:
-        assert client.post('/generate', data={'text': 'hello', 'wav_bits': '8'}).status_code == 422
+    client = TestClient(app)
+    assert client.post('/generate', data={'text': 'hello', 'wav_bits': '8'}).status_code == 422
 
 
 @pytest.mark.parametrize('engine', ['omnivoice', 'voxcpm2'])

@@ -956,7 +956,10 @@ class SubprocessBackend(TTSBackend):
         if header is None:
             return None
         (n,) = struct.unpack("!I", header)
-        if n > MAX_FRAME_BYTES:
+        # Float samples occupy twice the PCM16 payload. Keep the previous
+        # maximum audio duration while retaining a bounded allocation guard.
+        response_limit = MAX_FRAME_BYTES * (2 if getattr(self, "supports_float_transport", False) else 1)
+        if n > response_limit:
             # T-02-01 — refuse to allocate before the body even arrives.
             raise IOError(f"frame too large: {n}")
         body = _read_exact(stdout, n)

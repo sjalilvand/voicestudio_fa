@@ -1320,7 +1320,7 @@ def _persist_profile_ref_text(profile_id: str, ref_text: str) -> None:
 async def _finalize_generation(
     audio_tensor, sample_rate, *, text, history_mode, ref_audio_path,
     language, instruct, resolved_profile_id, used_seed, start_time,
-    already_marked=False, wav_bits=16,
+    already_marked=False, wav_bits=16, include_wav_bytes=False,
 ):
     """Shared tail of a successful generation: watermark → save WAV →
     history row (self-healing) → retention prune → event emit.
@@ -1360,6 +1360,9 @@ async def _finalize_generation(
     audio_filename = f"{audio_id}.wav"
     audio_path = os.path.join(OUTPUTS_DIR, audio_filename)
     save_generation_wav(audio_path, audio_tensor, sample_rate, bits=wav_bits)
+    # Capture before retention (or a later request) can delete the saved take.
+    # No await separates writing and capturing this canonical encoded payload.
+    response_bytes = Path(audio_path).read_bytes() if include_wav_bytes else None
 
     audio_dur = round(audio_tensor.shape[-1] / sample_rate, 2)
 
@@ -1390,7 +1393,7 @@ async def _finalize_generation(
     # unbounded forever. Best-effort — a prune failure must never affect
     # the generation that just succeeded.
     try:
-        _prune_history_over_cap()
+        _prune_history_over_cap(keep_id=audio_id)
     except Exception as e:  # noqa: BLE001
         logger.warning("history retention prune failed (non-fatal): %s", e)
     event_bus.emit("generation_history", {"action": "created", "id": audio_id})
@@ -1419,6 +1422,7 @@ async def _finalize_generation(
         "filename": audio_filename,
         "duration": audio_dur,
         "gen_time": gen_time,
+        **({"_wav_bytes": response_bytes} if include_wav_bytes else {}),
     }
 
 
@@ -2605,7 +2609,7 @@ async def generate_speech(
             audio_tensor, sample_rate, text=text, history_mode=history_mode,
             ref_audio_path=ref_audio_path, language=language, instruct=instruct,
             resolved_profile_id=resolved_profile_id, used_seed=used_seed,
-            start_time=start_time, already_marked=_already_marked, wav_bits=int(wav_bits),
+            start_time=start_time, already_marked=_already_marked, wav_bits=int(wav_bits), include_wav_bytes=True,
         )
         audio_id = _meta["id"]
         audio_filename = _meta["filename"]
@@ -2613,9 +2617,7 @@ async def generate_speech(
         gen_time = _meta["gen_time"]
 
         # Playback, history, and downloads share the exact same encoded take.
-        wav_bytes = await asyncio.to_thread(
-            Path(OUTPUTS_DIR, audio_filename).read_bytes,
-        )
+        wav_bytes = _meta.pop("_wav_bytes")
 
         async def _stream_wav():
             chunk_size = 16384
@@ -2811,10 +2813,11 @@ def _history_cap() -> int:
     return max(0, cap)
 
 
-def _prune_history_over_cap() -> int:
+def _prune_history_over_cap(*, keep_id: str | None = None) -> int:
     """Retention: keep the newest ``_history_cap()`` takes; delete the oldest
     UNstarred rows over the cap plus their WAVs (via the unreferenced guard).
     Starred takes are never pruned — even when they alone exceed the cap.
+    The currently generated take is retained until a later generation.
     Returns the number of rows pruned."""
     cap = _history_cap()
     if cap <= 0:
@@ -2826,8 +2829,9 @@ def _prune_history_over_cap() -> int:
             return 0
         victims = conn.execute(
             "SELECT id, audio_path FROM generation_history "
-            "WHERE COALESCE(starred, 0)=0 ORDER BY created_at ASC LIMIT ?",
-            (excess,),
+            "WHERE COALESCE(starred, 0)=0 AND (? IS NULL OR id != ?) "
+            "ORDER BY created_at ASC LIMIT ?",
+            (keep_id, keep_id, excess),
         ).fetchall()
         if not victims:
             return 0

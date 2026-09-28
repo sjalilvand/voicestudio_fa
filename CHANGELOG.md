@@ -68,6 +68,8 @@ metadata and the backend fallback mirror it.
 
 ### Docs
 
+- Record the supplied audio comparisons and installed-engine quality validation (#2406)
+
 - New call agent guide covering setup, disclosure, recording consent and safeguards (#2306)
 - The Twilio guide and integration directory describe the guided setup and in-app integration pages (#2304)
 
