@@ -2,10 +2,10 @@ import numpy as np
 import pytest
 import soundfile as sf
 
-from services.audio_quality import analyze_audio
 
 
 def check(tmp_path, samples, sr=8000):
+    from services.audio_quality import analyze_audio
     path = tmp_path / 'audio.wav'
     sf.write(path, samples, sr, subtype='FLOAT')
     before = path.read_bytes()
@@ -48,6 +48,7 @@ def test_channels_do_not_cancel_and_bad_samples_detected(tmp_path):
 
 
 def test_scan_and_warning_bounds(tmp_path):
+    from services.audio_quality import analyze_audio
     result = check(tmp_path, tone(3))
     assert result.duration == 3
     path = tmp_path / 'audio.wav'

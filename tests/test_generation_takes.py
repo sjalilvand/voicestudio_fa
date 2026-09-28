@@ -396,3 +396,25 @@ def test_history_retention_get_put_roundtrip(settings_client):
 def test_history_retention_rejects_negative(settings_client):
     r = settings_client.put("/api/settings/history-retention", json={"cap": -1})
     assert r.status_code == 422
+
+
+def test_finalization_retains_current_take_when_stars_fill_cap(api, monkeypatch):
+    import asyncio
+    import time
+    import torch
+    _client, dbf, outdir, gen = api
+    monkeypatch.setattr(gen, "_history_cap", lambda: 1)
+    _insert_take(dbf, outdir, "favorite", 0, starred=1)
+    monkeypatch.setattr("core.analytics.capture", lambda *args: None)
+    _, meta = asyncio.run(gen._finalize_generation(
+        torch.zeros(1, 240), 24000, text="hello", history_mode="design",
+        ref_audio_path=None, language="English", instruct=None,
+        resolved_profile_id=None, used_seed=42, start_time=time.time(), already_marked=True, include_wav_bytes=True,
+    ))
+    assert (outdir / meta["filename"]).is_file()
+    with sqlite3.connect(str(dbf)) as conn:
+        assert conn.execute("SELECT COUNT(*) FROM generation_history").fetchone()[0] == 2
+    # The next generation can retire this unstarred take; stars remain safe.
+    assert gen._prune_history_over_cap(keep_id="next") == 1
+    assert not (outdir / meta["filename"]).exists()
+    assert meta["_wav_bytes"].startswith(b"RIFF")

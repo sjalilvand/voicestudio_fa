@@ -45,7 +45,10 @@ use PCM16; their completed take uses the selected precision. Updated remote
 workers honor the requested precision before returning audio. Older workers or
 engines that only deliver PCM16 cannot recover extra detail through a larger export.
 OmniVoice and VoxCPM2 subprocesses negotiate float32 transport; legacy PCM16
-responses remain supported without reinstalling engines.
+responses remain supported without reinstalling engines. Float-capable responses
+have a bounded 128 MiB frame allowance, preserving the old PCM16 duration limit;
+other engines and requests retain their 64 MiB limit. Retention protects the take
+being generated even when starred history entries already fill the cap.
 
 ## Optional signal checks
 
@@ -94,7 +97,7 @@ python scripts/compare_generation_quality.py \
   --ref-audio /path/to/reference.wav --ref-text "Reference transcript"
 ```
 
-The script runs offline, uses installed models, writes provenance-marked WAVs and
+The script runs offline, uses installed models, routes WAVs through provenance marking when enabled and available, and writes
 `results.json`, and refuses to overwrite an output directory. Omit the reference
 arguments for TTS only; use `--text`, `--steps` and `--seed` to vary the experiment.
 Keep private recordings and generated voice comparisons outside Git. The original
