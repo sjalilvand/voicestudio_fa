@@ -93,3 +93,27 @@ def test_amazon_readiness_allows_default_credential_chain(monkeypatch):
     monkeypatch.delenv("AWS_PROFILE", raising=False)
     monkeypatch.delenv("AWS_ACCESS_KEY_ID", raising=False)
     assert _configured({"id": "amazon"}) == (True, None)
+
+
+@pytest.mark.parametrize("region,credentials,expected", [
+    (None, True, "region"), ("us-east-1", False, "credentials"),
+])
+def test_amazon_explicit_preflight_rejects_incomplete_setup(monkeypatch, region, credentials, expected):
+    import boto3
+    from services.translation_apis import validate_amazon_configuration
+    frozen = SimpleNamespace(access_key="fixture", secret_key="fixture")
+    credential = SimpleNamespace(get_frozen_credentials=lambda: frozen) if credentials else None
+    session = SimpleNamespace(region_name=region, get_credentials=lambda: credential)
+    monkeypatch.setattr(boto3.session, "Session", lambda **kw: session)
+    with pytest.raises(ValueError, match=expected): validate_amazon_configuration()
+
+
+def test_amazon_selection_validates_before_saving(monkeypatch):
+    from api.routers import engines
+    from services import translation_apis, translation_engines
+    monkeypatch.setattr(translation_engines, "is_installed", lambda _: True)
+    monkeypatch.setattr(translation_engines, "is_ready", lambda _: True)
+    monkeypatch.setattr(engines.prefs, "set_", lambda *a: pytest.fail("Must not persist an invalid selection"))
+    monkeypatch.setattr(translation_apis, "validate_amazon_configuration", lambda: (_ for _ in ()).throw(ValueError("AWS credentials missing")))
+    with pytest.raises(Exception) as exc: engines.select_translation_engine(engines.TranslationSelection(engine_id="amazon"))
+    assert exc.value.status_code == 409

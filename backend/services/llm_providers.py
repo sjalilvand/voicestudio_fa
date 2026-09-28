@@ -587,7 +587,7 @@ def active_provider_id() -> Optional[str]:
     # LM Studio) are *always* "configured" (no key needed) but we must NOT
     # assume their server is running — they require an explicit selection.
     for p in _PROVIDERS:
-        if not p.local and p.transport != "cli" and is_configured(p):
+        if not p.local and p.transport != "cli" and has_key(p) and is_configured(p):
             return p.id
     return None
 

@@ -6,6 +6,25 @@ PAID_PROVIDERS = {"deepl", "microsoft", "google-cloud", "amazon"}
 SECRET_ENV_KEYS = {"DEEPL_API_KEY", "MICROSOFT_API_KEY", "GOOGLE_TRANSLATE_API_KEY", "TRANSLATE_API_KEY"}
 
 
+def validate_amazon_configuration():
+    """Explicit selection/job preflight; catalogue reads never resolve AWS identity."""
+    import boto3
+    try:
+        session = boto3.session.Session(
+            region_name=os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION"))
+        if not session.region_name:
+            raise ValueError("Configure an AWS region before using Amazon Translate.")
+        credentials = session.get_credentials()
+        frozen = credentials.get_frozen_credentials() if credentials else None
+        if not frozen or not frozen.access_key or not frozen.secret_key:
+            raise ValueError("Configure AWS credentials before using Amazon Translate.")
+    except ValueError:
+        raise
+    except Exception:
+        raise ValueError("AWS credentials could not be resolved. Check your AWS profile and sign-in.") from None
+    return session
+
+
 class Translator:
     def __init__(self, provider, source, target, api_key=""):
         self.provider, self.source, self.target = provider, source, target
