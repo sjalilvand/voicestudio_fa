@@ -3197,5 +3197,18 @@
     "addingVoice": "Lägger till röst…",
     "engineDefault": "Standard för motor",
     "preview": "Förhandsgranska röst"
+  },
+  "languagePicker": {
+    "auto": "Automatiskt",
+    "unavailable": "Stöds inte",
+    "unsupportedBy": "Stöds inte av {{model}}",
+    "chooseSupported": "Välj ett språk som stöds",
+    "clearSearch": "Rensa sökning",
+    "results": "{{enabled}} tillgängliga · {{total}} resultat",
+    "loading": "Kontrollerar språk",
+    "unknown": "Språkstöd okänt",
+    "error": "Kunde inte kontrollera språk",
+    "modelLanguages": "Språk för den här modellen",
+    "changeModel": "Byt modell"
   }
 }

@@ -2953,5 +2953,18 @@
     "step_transcribe": "Phiên âm",
     "step_translate": "Dịch",
     "step_convert": "Chuyển đổi"
+  },
+  "languagePicker": {
+    "auto": "Tự động",
+    "unavailable": "Không hỗ trợ",
+    "unsupportedBy": "{{model}} không hỗ trợ",
+    "chooseSupported": "Chọn ngôn ngữ được hỗ trợ",
+    "clearSearch": "Xóa tìm kiếm",
+    "results": "{{enabled}} khả dụng · {{total}} kết quả",
+    "loading": "Đang kiểm tra ngôn ngữ",
+    "unknown": "Chưa rõ ngôn ngữ được hỗ trợ",
+    "error": "Không thể kiểm tra ngôn ngữ",
+    "modelLanguages": "Ngôn ngữ của mô hình này",
+    "changeModel": "Đổi mô hình"
   }
 }

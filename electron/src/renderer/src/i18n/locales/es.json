@@ -3199,5 +3199,18 @@
     "addingVoice": "Añadiendo voz…",
     "engineDefault": "Valor predeterminado del motor",
     "preview": "Vista previa de voz"
+  },
+  "languagePicker": {
+    "auto": "Automático",
+    "unavailable": "No compatible",
+    "unsupportedBy": "No compatible con {{model}}",
+    "chooseSupported": "Elige un idioma compatible",
+    "clearSearch": "Borrar búsqueda",
+    "results": "{{enabled}} disponibles · {{total}} resultados",
+    "loading": "Comprobando idiomas",
+    "unknown": "Compatibilidad de idiomas desconocida",
+    "error": "No se pudieron comprobar los idiomas",
+    "modelLanguages": "Idiomas de este modelo",
+    "changeModel": "Cambiar modelo"
   }
 }

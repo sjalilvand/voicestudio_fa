@@ -9,6 +9,9 @@ import { DUB_DRAFT_KEY, restoreDubDraft } from './dub-draft';
 import { Store } from '@tanstack/store';
 import { useStore } from '@tanstack/react-store';
 import { apiJson, ApiError } from '@/lib/api/client';
+import { queryClient } from '@/lib/query';
+import { cachedTtsLanguagesSupported } from '@/lib/language-options';
+import { tr } from '@/lib/i18n-text';
 import { describeDubTranslationError } from './translation-error';
 import { beginAppActivity } from '@/lib/app-activity';
 import { recordActionBreadcrumb } from '@/lib/report-breadcrumb';
@@ -1394,6 +1397,9 @@ export async function generateDub(
   const finishActivity = beginAppActivity('synthesis');
   try {
     return await run('generating', async (signal) => {
+      if (!cachedTtsLanguagesSupported(queryClient, 'dub', [language, ...snapshot.segments.map((segment) => segment.target_lang || language)])) {
+        throw new Error(tr('languagePicker.chooseSupported'));
+      }
       let regenOnly = options.regenOnly;
       const agentEnabled = snapshot.quality === 'agent';
       const maxAgentPasses = 2;

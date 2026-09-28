@@ -3431,5 +3431,18 @@
     "step_transcribe": "转录",
     "step_translate": "翻译",
     "step_convert": "转换"
+  },
+  "languagePicker": {
+    "auto": "自动",
+    "unavailable": "不支持",
+    "unsupportedBy": "{{model}} 不支持",
+    "chooseSupported": "请选择支持的语言",
+    "clearSearch": "清除搜索",
+    "results": "{{enabled}} 个可选 · {{total}} 个结果",
+    "loading": "正在检查语言",
+    "unknown": "支持的语言未知",
+    "error": "无法检查语言",
+    "modelLanguages": "此模型的语言",
+    "changeModel": "更换模型"
   }
 }

@@ -3197,5 +3197,18 @@
     "addingVoice": "Stimme wird hinzugefügt…",
     "engineDefault": "Motorstandard",
     "preview": "Vorschau der Stimme"
+  },
+  "languagePicker": {
+    "auto": "Automatisch",
+    "unavailable": "Nicht unterstützt",
+    "unsupportedBy": "Von {{model}} nicht unterstützt",
+    "chooseSupported": "Unterstützte Sprache wählen",
+    "clearSearch": "Suche löschen",
+    "results": "{{enabled}} verfügbar · {{total}} Ergebnisse",
+    "loading": "Sprachen werden geprüft",
+    "unknown": "Sprachunterstützung unbekannt",
+    "error": "Sprachen konnten nicht geprüft werden",
+    "modelLanguages": "Sprachen dieses Modells",
+    "changeModel": "Modell wechseln"
   }
 }

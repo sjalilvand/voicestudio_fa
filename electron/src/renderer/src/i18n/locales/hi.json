@@ -3197,5 +3197,18 @@
     "addingVoice": "आवाज़ जोड़ी जा रही है…",
     "engineDefault": "इंजन डिफ़ॉल्ट",
     "preview": "आवाज का पूर्वावलोकन करें"
+  },
+  "languagePicker": {
+    "auto": "स्वतः",
+    "unavailable": "समर्थित नहीं",
+    "unsupportedBy": "{{model}} द्वारा समर्थित नहीं",
+    "chooseSupported": "समर्थित भाषा चुनें",
+    "clearSearch": "खोज साफ़ करें",
+    "results": "{{enabled}} उपलब्ध · {{total}} परिणाम",
+    "loading": "भाषाओं की जाँच हो रही है",
+    "unknown": "भाषा समर्थन अज्ञात है",
+    "error": "भाषाओं की जाँच नहीं हो सकी",
+    "modelLanguages": "इस मॉडल की भाषाएँ",
+    "changeModel": "मॉडल बदलें"
   }
 }

@@ -3205,5 +3205,18 @@
     "addingVoice": "جارٍ إضافة الصوت…",
     "engineDefault": "المحرك الافتراضي",
     "preview": "معاينة الصوت"
+  },
+  "languagePicker": {
+    "auto": "تلقائي",
+    "unavailable": "غير مدعومة",
+    "unsupportedBy": "غير مدعومة بواسطة {{model}}",
+    "chooseSupported": "اختر لغة مدعومة",
+    "clearSearch": "مسح البحث",
+    "results": "{{enabled}} متاحة · {{total}} نتيجة",
+    "loading": "جارٍ التحقق من اللغات",
+    "unknown": "دعم اللغات غير معروف",
+    "error": "تعذر التحقق من اللغات",
+    "modelLanguages": "لغات هذا النموذج",
+    "changeModel": "تغيير النموذج"
   }
 }

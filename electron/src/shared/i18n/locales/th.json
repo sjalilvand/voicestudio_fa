@@ -2953,5 +2953,18 @@
     "step_transcribe": "ถอดเสียง",
     "step_translate": "แปล",
     "step_convert": "แปลง"
+  },
+  "languagePicker": {
+    "auto": "อัตโนมัติ",
+    "unavailable": "ไม่รองรับ",
+    "unsupportedBy": "{{model}} ไม่รองรับ",
+    "chooseSupported": "เลือกภาษาที่รองรับ",
+    "clearSearch": "ล้างการค้นหา",
+    "results": "เลือกได้ {{enabled}} · {{total}} ผลลัพธ์",
+    "loading": "กำลังตรวจสอบภาษา",
+    "unknown": "ไม่ทราบภาษาที่รองรับ",
+    "error": "ตรวจสอบภาษาไม่ได้",
+    "modelLanguages": "ภาษาสำหรับโมเดลนี้",
+    "changeModel": "เปลี่ยนโมเดล"
   }
 }

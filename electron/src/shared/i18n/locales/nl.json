@@ -2953,5 +2953,18 @@
     "step_transcribe": "Transcriberen",
     "step_translate": "Vertalen",
     "step_convert": "Converteren"
+  },
+  "languagePicker": {
+    "auto": "Automatisch",
+    "unavailable": "Niet ondersteund",
+    "unsupportedBy": "Niet ondersteund door {{model}}",
+    "chooseSupported": "Kies een ondersteunde taal",
+    "clearSearch": "Zoekopdracht wissen",
+    "results": "{{enabled}} beschikbaar · {{total}} resultaten",
+    "loading": "Talen controleren",
+    "unknown": "Taalondersteuning onbekend",
+    "error": "Talen konden niet worden gecontroleerd",
+    "modelLanguages": "Talen voor dit model",
+    "changeModel": "Model wijzigen"
   }
 }

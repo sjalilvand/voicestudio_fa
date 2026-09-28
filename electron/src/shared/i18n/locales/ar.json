@@ -2953,5 +2953,18 @@
     "step_transcribe": "نسخ",
     "step_translate": "ترجمة",
     "step_convert": "تحويل"
+  },
+  "languagePicker": {
+    "auto": "تلقائي",
+    "unavailable": "غير مدعومة",
+    "unsupportedBy": "غير مدعومة بواسطة {{model}}",
+    "chooseSupported": "اختر لغة مدعومة",
+    "clearSearch": "مسح البحث",
+    "results": "{{enabled}} متاحة · {{total}} نتيجة",
+    "loading": "جارٍ التحقق من اللغات",
+    "unknown": "دعم اللغات غير معروف",
+    "error": "تعذر التحقق من اللغات",
+    "modelLanguages": "لغات هذا النموذج",
+    "changeModel": "تغيير النموذج"
   }
 }

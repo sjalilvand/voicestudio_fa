@@ -2953,5 +2953,18 @@
     "step_transcribe": "轉錄",
     "step_translate": "翻譯",
     "step_convert": "轉換"
+  },
+  "languagePicker": {
+    "auto": "自動",
+    "unavailable": "不支援",
+    "unsupportedBy": "{{model}} 不支援",
+    "chooseSupported": "請選擇支援的語言",
+    "clearSearch": "清除搜尋",
+    "results": "{{enabled}} 個可選 · {{total}} 個結果",
+    "loading": "正在檢查語言",
+    "unknown": "支援的語言未知",
+    "error": "無法檢查語言",
+    "modelLanguages": "此模型的語言",
+    "changeModel": "更換模型"
   }
 }

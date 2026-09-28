@@ -3199,5 +3199,18 @@
     "addingVoice": "Aggiunta voce…",
     "engineDefault": "Motore difettoso",
     "preview": "Anteprima della voce"
+  },
+  "languagePicker": {
+    "auto": "Auto",
+    "unavailable": "Non supportata",
+    "unsupportedBy": "Non supportata da {{model}}",
+    "chooseSupported": "Scegli una lingua supportata",
+    "clearSearch": "Cancella ricerca",
+    "results": "{{enabled}} disponibili · {{total}} risultati",
+    "loading": "Verifica delle lingue",
+    "unknown": "Supporto lingue sconosciuto",
+    "error": "Impossibile verificare le lingue",
+    "modelLanguages": "Lingue di questo modello",
+    "changeModel": "Cambia modello"
   }
 }

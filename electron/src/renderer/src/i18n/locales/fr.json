@@ -3199,5 +3199,18 @@
     "addingVoice": "Ajout de la voix…",
     "engineDefault": "Moteur par défaut",
     "preview": "Aperçu de la voix"
+  },
+  "languagePicker": {
+    "auto": "Auto",
+    "unavailable": "Non pris en charge",
+    "unsupportedBy": "Non pris en charge par {{model}}",
+    "chooseSupported": "Choisir une langue prise en charge",
+    "clearSearch": "Effacer la recherche",
+    "results": "{{enabled}} disponibles · {{total}} résultats",
+    "loading": "Vérification des langues",
+    "unknown": "Langues prises en charge inconnues",
+    "error": "Impossible de vérifier les langues",
+    "modelLanguages": "Langues de ce modèle",
+    "changeModel": "Changer de modèle"
   }
 }

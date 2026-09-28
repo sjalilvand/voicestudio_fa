@@ -25,7 +25,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { UploadIcon, XIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { LanguagePicker } from '@/features/clone/language-picker';
+import { EngineLanguagePicker } from '@/features/clone/engine-language-picker';
 import { Switch } from '@/components/ui/switch';
 import { useProfiles } from '@/hooks/use-profiles';
 import { useTtsReadiness } from '@/hooks/use-tts-readiness';
@@ -37,6 +37,7 @@ import { PRESETS } from '@shared/utils/constants';
 import type { BatchJob } from '@shared/api/batch-types';
 import { generationFailureMessage } from '@shared/utils/generationFailureMessage';
 import { enqueueVideos } from './enqueue';
+import { cachedTtsLanguagesSupported } from '@/lib/language-options';
 import { useTranslationEngines } from '@/features/settings/translation-settings';
 const languageOptions = LANG_CODES.map((item) => item.label);
 export function BatchPage() {
@@ -81,6 +82,10 @@ export function BatchPage() {
   });
   const submit = async () => {
     if (uploading.current || ttsBlocker !== null || !files.length || !langs.length) return;
+    if (!cachedTtsLanguagesSupported(client, 'batch', langs)) {
+      setError(t('languagePicker.chooseSupported'));
+      return;
+    }
     uploading.current = true;
     setBusy(true);
     setError(null);
@@ -246,7 +251,8 @@ export function BatchPage() {
               <LanguagesIcon className="size-4" />
               {t('batch.target_languages')}
             </h2>
-            <LanguagePicker
+            <EngineLanguagePicker
+              operation="batch"
               options={languageOptions}
               value={langs.at(-1) || 'Spanish'}
               disabled={busy}

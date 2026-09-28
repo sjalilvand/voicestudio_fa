@@ -3197,5 +3197,18 @@
     "addingVoice": "Adding voice…",
     "engineDefault": "Engine default",
     "preview": "Preview voice"
+  },
+  "languagePicker": {
+    "auto": "Auto",
+    "unavailable": "Not supported",
+    "unsupportedBy": "Not supported by {{model}}",
+    "chooseSupported": "Choose a supported language",
+    "clearSearch": "Clear search",
+    "results": "{{enabled}} available · {{total}} results",
+    "loading": "Checking languages",
+    "unknown": "Language support unknown",
+    "error": "Could not check languages",
+    "modelLanguages": "Languages for this model",
+    "changeModel": "Change model"
   }
 }

@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { ApiError, apiJson, describeError, isAbortError } from '@/lib/api/client';
 import { generateClone, sanitizeInstruct } from '@/lib/api/generate';
 import type { GenerateResult } from '@/lib/api/types';
+import { cachedTtsLanguagesSupported } from '@/lib/language-options';
 import { tr } from '@/lib/i18n-text';
 import { queryKeys } from '@/lib/query';
 import { cloneSettingsStore } from '@/lib/store/clone-settings';
@@ -220,6 +221,14 @@ function useGenerateController(): UseGenerateClone {
     async (design?: DesignGenerateInput) => {
       const settings = cloneSettingsStore.state;
       const reference = referenceStore.state;
+      if (
+        !cachedTtsLanguagesSupported(queryClient, design ? 'tts' : 'clone', [
+          design?.language ?? settings.language,
+        ])
+      ) {
+        setError(tr('languagePicker.chooseSupported'));
+        return;
+      }
       if (
         design
           ? designBlocker || !design.text.trim()

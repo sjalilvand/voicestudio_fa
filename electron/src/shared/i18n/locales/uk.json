@@ -2953,5 +2953,18 @@
     "step_transcribe": "Транскрибувати",
     "step_translate": "Перекласти",
     "step_convert": "Перетворити"
+  },
+  "languagePicker": {
+    "auto": "Авто",
+    "unavailable": "Не підтримується",
+    "unsupportedBy": "Не підтримується моделлю {{model}}",
+    "chooseSupported": "Виберіть підтримувану мову",
+    "clearSearch": "Очистити пошук",
+    "results": "Доступно: {{enabled}} · Знайдено: {{total}}",
+    "loading": "Перевірка мов",
+    "unknown": "Підтримка мов невідома",
+    "error": "Не вдалося перевірити мови",
+    "modelLanguages": "Мови цієї моделі",
+    "changeModel": "Змінити модель"
   }
 }

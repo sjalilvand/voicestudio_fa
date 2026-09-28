@@ -58,10 +58,11 @@ it('resets keyboard selection when the engine changes while open', async () => {
   );
   fireEvent.click(screen.getByRole('button', { name: 'Language' }));
   await screen.findAllByRole('option', { name: 'English' });
-  fireEvent.keyDown(screen.getByRole('combobox'), { key: 'ArrowUp' });
+  fireEvent.keyDown(screen.getByRole('combobox'), { key: 'ArrowDown' });
+  fireEvent.keyDown(screen.getByRole('combobox'), { key: 'ArrowDown' });
   rerender(<LanguagePicker supportedOptions={['english']} onValueChange={onValueChange} />);
   fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' });
-  expect(onValueChange).toHaveBeenCalledWith('English');
+  expect(onValueChange).toHaveBeenCalledWith('Auto');
 });
 
 it('preserves keyboard selection when a refresh returns the same supported set', async () => {
@@ -73,10 +74,56 @@ it('preserves keyboard selection when a refresh returns the same supported set',
   );
   fireEvent.click(screen.getByRole('button', { name: 'Language' }));
   await screen.findAllByRole('option', { name: 'English' });
-  fireEvent.keyDown(screen.getByRole('combobox'), { key: 'ArrowUp' });
+  fireEvent.keyDown(screen.getByRole('combobox'), { key: 'ArrowDown' });
+  fireEvent.keyDown(screen.getByRole('combobox'), { key: 'ArrowDown' });
   rerender(
     <LanguagePicker supportedOptions={['japanese', 'english']} onValueChange={onValueChange} />,
   );
   fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' });
   expect(onValueChange).toHaveBeenCalledWith('Japanese');
+});
+
+it('commits the current search immediately, including native names and codes', async () => {
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(320);
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(340);
+  const onValueChange = vi.fn();
+  render(
+    <LanguagePicker
+      options={['Auto', 'English', 'German', 'Japanese']}
+      onValueChange={onValueChange}
+    />,
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Language' }));
+  const input = await screen.findByRole('combobox');
+  fireEvent.change(input, { target: { value: 'Deutsch' } });
+  expect(screen.getByRole('option', { name: 'German' })).toBeInTheDocument();
+  fireEvent.change(input, { target: { value: 'ja' } });
+  fireEvent.keyDown(input, { key: 'Enter' });
+  expect(onValueChange).toHaveBeenCalledWith('Japanese');
+});
+
+it('ranks enabled options before disabled matches and keeps every language unique', async () => {
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(320);
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(340);
+  render(
+    <LanguagePicker options={['Japanese', 'English', 'Japanese']} supportedOptions={['english']} />,
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Language' }));
+  const rows = await screen.findAllByRole('option');
+  expect(rows.map((row) => row.getAttribute('aria-label'))).toEqual(['English', 'Japanese']);
+  expect(rows[1]).toHaveAttribute('aria-description', 'Not supported');
+});
+
+it('does not select while an IME composition is in progress', async () => {
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(320);
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(340);
+  const onValueChange = vi.fn();
+  render(<LanguagePicker onValueChange={onValueChange} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Language' }));
+  fireEvent.keyDown(await screen.findByRole('combobox'), {
+    key: 'Enter',
+    isComposing: true,
+    keyCode: 229,
+  });
+  expect(onValueChange).not.toHaveBeenCalled();
 });

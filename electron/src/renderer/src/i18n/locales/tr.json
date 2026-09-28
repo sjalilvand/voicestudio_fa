@@ -3197,5 +3197,18 @@
     "addingVoice": "Ses ekleniyor…",
     "engineDefault": "Motor varsayılanı",
     "preview": "Sesi önizle"
+  },
+  "languagePicker": {
+    "auto": "Otomatik",
+    "unavailable": "Desteklenmiyor",
+    "unsupportedBy": "{{model}} tarafından desteklenmiyor",
+    "chooseSupported": "Desteklenen bir dil seçin",
+    "clearSearch": "Aramayı temizle",
+    "results": "{{enabled}} kullanılabilir · {{total}} sonuç",
+    "loading": "Diller kontrol ediliyor",
+    "unknown": "Dil desteği bilinmiyor",
+    "error": "Diller kontrol edilemedi",
+    "modelLanguages": "Bu modelin dilleri",
+    "changeModel": "Modeli değiştir"
   }
 }

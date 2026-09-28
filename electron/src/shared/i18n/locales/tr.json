@@ -2953,5 +2953,18 @@
     "step_transcribe": "Metne dönüştür",
     "step_translate": "Çevir",
     "step_convert": "Dönüştür"
+  },
+  "languagePicker": {
+    "auto": "Otomatik",
+    "unavailable": "Desteklenmiyor",
+    "unsupportedBy": "{{model}} tarafından desteklenmiyor",
+    "chooseSupported": "Desteklenen bir dil seçin",
+    "clearSearch": "Aramayı temizle",
+    "results": "{{enabled}} kullanılabilir · {{total}} sonuç",
+    "loading": "Diller kontrol ediliyor",
+    "unknown": "Dil desteği bilinmiyor",
+    "error": "Diller kontrol edilemedi",
+    "modelLanguages": "Bu modelin dilleri",
+    "changeModel": "Modeli değiştir"
   }
 }

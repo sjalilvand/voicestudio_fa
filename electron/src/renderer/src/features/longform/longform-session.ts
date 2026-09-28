@@ -10,6 +10,9 @@ import { createCoalescedJsonStorage } from '@shared/utils/coalescedJsonStorage';
 import { Store } from '@tanstack/store';
 import { useStore } from '@tanstack/react-store';
 import { apiFetch } from '@/lib/api/client';
+import { queryClient } from '@/lib/query';
+import { cachedTtsLanguagesSupported } from '@/lib/language-options';
+import { tr } from '@/lib/i18n-text';
 import { consumeLongformStream } from '@shared/utils/longformStream';
 import { storyToSpans } from '@shared/utils/storyToSpans';
 import { beginAppActivity } from '@/lib/app-activity';
@@ -241,6 +244,14 @@ export async function renderLongform(mode: Mode, resumeId?: string) {
   let outputChapters: AudiobookRenderChapter[] = [];
   try {
     const draft = longformSession.state.drafts[mode];
+    if (
+      !resumeId &&
+      !cachedTtsLanguagesSupported(queryClient, mode === 'stories' ? 'longform' : 'audiobook', [
+        draft.language,
+      ])
+    ) {
+      throw new Error(tr('languagePicker.chooseSupported'));
+    }
     const response = await apiFetch(
       resumeId
         ? '/audiobook/resume/' + encodeURIComponent(resumeId)

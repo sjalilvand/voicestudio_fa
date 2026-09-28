@@ -2953,5 +2953,18 @@
     "step_transcribe": "Transkrybuj",
     "step_translate": "Przetłumacz",
     "step_convert": "Konwertuj"
+  },
+  "languagePicker": {
+    "auto": "Automatycznie",
+    "unavailable": "Nieobsługiwany",
+    "unsupportedBy": "Nieobsługiwany przez {{model}}",
+    "chooseSupported": "Wybierz obsługiwany język",
+    "clearSearch": "Wyczyść wyszukiwanie",
+    "results": "Dostępne: {{enabled}} · Wyniki: {{total}}",
+    "loading": "Sprawdzanie języków",
+    "unknown": "Obsługiwane języki nieznane",
+    "error": "Nie udało się sprawdzić języków",
+    "modelLanguages": "Języki tego modelu",
+    "changeModel": "Zmień model"
   }
 }
