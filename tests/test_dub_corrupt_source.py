@@ -6,6 +6,7 @@ import errno
 import io
 import json
 from types import SimpleNamespace
+from pathlib import Path
 
 import pytest
 
@@ -164,7 +165,7 @@ def test_failed_extraction_removes_partial_working_audio(tmp_path, monkeypatch, 
     monkeypatch.setattr(dub_pipeline, "find_ffmpeg", lambda: "ffmpeg")
     monkeypatch.setattr(dub_pipeline, "require_audio_stream", lambda _: None)
     async def fail_extract(cmd):
-        (job_dir / "audio.wav").write_bytes(b"partial output")
+        Path(cmd[-2]).write_bytes(b"partial output")
         if cancelled:
             raise asyncio.CancelledError()
         raise OSError(errno.ENOSPC, "No space left")
@@ -178,4 +179,31 @@ def test_failed_extraction_removes_partial_working_audio(tmp_path, monkeypatch, 
     else:
         asyncio.run(collect())
     assert source.read_bytes() == b"valid source bytes"
-    assert not (job_dir / "audio.wav").exists()
+    assert not list(job_dir.glob("*.wav"))
+
+
+@pytest.mark.parametrize("fail_before_launch", [True, False])
+def test_failed_reingest_preserves_completed_audio(tmp_path, monkeypatch, fail_before_launch):
+    from services import dub_pipeline
+    job_dir = tmp_path / "job"
+    job_dir.mkdir()
+    source = tmp_path / "original.wav"
+    source.write_bytes(b"valid source bytes")
+    for name in ("audio.wav", "audio_hq.wav"):
+        (job_dir / name).write_bytes(b"completed audio")
+    monkeypatch.setattr(dub_pipeline, "find_ffmpeg", lambda: "ffmpeg")
+    def validate(_):
+        if fail_before_launch:
+            raise ValueError("invalid source")
+    monkeypatch.setattr(dub_pipeline, "validate_media_source", validate)
+    monkeypatch.setattr(dub_pipeline, "require_audio_stream", lambda _: None)
+    async def fail_extract(cmd):
+        Path(cmd[-2]).write_bytes(b"partial output")
+        raise OSError(errno.ENOSPC, "No space left")
+    monkeypatch.setattr(dub_pipeline, "run_proc_factory", lambda _: fail_extract)
+    async def collect():
+        return [event async for event in dub_pipeline.ingest_pipeline(
+            "reingest", str(job_dir), {"kind": "file", "path": str(source), "input_type": "audio"})]
+    asyncio.run(collect())
+    assert {p.name: p.read_bytes() for p in job_dir.iterdir()} == {
+        "audio.wav": b"completed audio", "audio_hq.wav": b"completed audio"}

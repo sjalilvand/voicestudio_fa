@@ -31,6 +31,7 @@ import hashlib
 import json
 import logging
 import os
+import uuid
 import re
 import shutil
 import subprocess
@@ -1370,6 +1371,9 @@ async def ingest_pipeline(
 
         audio_path = os.path.join(job_dir, "audio.wav")
         audio_hq_path = os.path.join(job_dir, "audio_hq.wav")
+        attempt = uuid.uuid4().hex
+        extract_path = os.path.join(job_dir, f"audio-{attempt}.partial.wav")
+        extract_hq_path = os.path.join(job_dir, f"audio-hq-{attempt}.partial.wav")
         ffmpeg = find_ffmpeg()
         run_proc = run_proc_factory(job_id)
 
@@ -1382,7 +1386,7 @@ async def ingest_pipeline(
             await asyncio.to_thread(require_audio_stream, video_path)
             p, _, stderr = await run_proc([
                 ffmpeg, "-i", video_path, "-vn", "-acodec", "pcm_s16le",
-                "-ar", "16000", "-ac", "1", audio_path, "-y",
+                "-ar", "16000", "-ac", "1", extract_path, "-y",
             ])
             if p.returncode != 0:
                 # The probe can be undetermined (no ffprobe); recognize the
@@ -1390,6 +1394,7 @@ async def ingest_pipeline(
                 await asyncio.to_thread(raise_for_audio_extract_failure, stderr, video_path)
                 msg = _media_process_error("FFmpeg", p.returncode, stderr, paths=(video_path, audio_path, job_dir))
                 raise Exception(msg)
+            os.replace(extract_path, audio_path)
             # Second, FULL-QUALITY extraction for source separation. audio.wav
             # is deliberately 16 kHz mono — that's what ASR wants — but Demucs
             # used to separate that same file, so the music bed inherited mono
@@ -1403,24 +1408,26 @@ async def ingest_pipeline(
             try:
                 p_hq, _, stderr_hq = await run_proc([
                     ffmpeg, "-i", video_path, "-vn", "-acodec", "pcm_s16le",
-                    "-ar", "44100", "-ac", "2", audio_hq_path, "-y",
+                    "-ar", "44100", "-ac", "2", extract_hq_path, "-y",
                 ])
-                if p_hq.returncode != 0 or not os.path.exists(audio_hq_path):
+                if p_hq.returncode != 0 or not os.path.exists(extract_hq_path):
                     logger.warning(
                         "HQ audio extraction failed (rc=%s) — separation falls "
                         "back to the 16k mono ASR file", p_hq.returncode,
                     )
-                    _discard_partial_audio(audio_hq_path)
+                    _discard_partial_audio(extract_hq_path)
                     audio_hq_path = None
+                else:
+                    os.replace(extract_hq_path, audio_hq_path)
             except Exception as e_hq:  # noqa: BLE001 — quality upgrade, never fatal
                 logger.warning("HQ audio extraction errored (%s) — falling back", log_safe(e_hq))
-                _discard_partial_audio(audio_hq_path)
+                _discard_partial_audio(extract_hq_path)
                 audio_hq_path = None
         except asyncio.CancelledError:
-            _discard_partial_audio(audio_path, audio_hq_path)
+            _discard_partial_audio(extract_path, extract_hq_path)
             raise
         except Exception as e:
-            _discard_partial_audio(audio_path, audio_hq_path)
+            _discard_partial_audio(extract_path, extract_hq_path)
             logger.error("Extract failed for job %s: %s", log_safe(job_id), log_safe(e))
             if isinstance(e, failure.InvalidMediaFileError):
                 await asyncio.to_thread(_discard_invalid_source_copy, job_dir, video_path)
