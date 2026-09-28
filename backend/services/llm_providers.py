@@ -503,6 +503,35 @@ def _key_in_store(pid: str) -> bool:
     return (SECRET_PREFIX + pid) in settings_store.list_secret_names()
 
 
+def credential_transport_error(p: Provider) -> Optional[str]:
+    """Never send provider credentials over remote plaintext transport."""
+    from ipaddress import ip_address
+    from urllib.parse import urlsplit
+
+    base = resolve_base_url(p)
+    if not base or p.transport == "cli":
+        return None
+    key = resolve_api_key(p)
+    if p.transport != "sdk" and (not key or key == "local"):
+        return None
+    try:
+        url = urlsplit(base)
+        if url.scheme == "https" and url.hostname:
+            return None
+        host = (url.hostname or "").lower()
+        loopback = host == "localhost"
+        if not loopback:
+            try:
+                loopback = ip_address(host).is_loopback
+            except ValueError:
+                pass
+        if url.scheme == "http" and loopback:
+            return None
+    except ValueError:
+        pass
+    return "Use HTTPS for a credentialed provider, or HTTP on localhost."
+
+
 def configuration_error(p: Provider, *, require_model: bool = True) -> Optional[str]:
     """Check local configuration only; never claim a successful network probe."""
     from urllib.parse import urlsplit
@@ -541,6 +570,9 @@ def configuration_error(p: Provider, *, require_model: bool = True) -> Optional[
         valid_url = False
     if not valid_url:
         return "Set a valid HTTP(S) Base URL in Settings > Models > LLM."
+    transport_error = credential_transport_error(p)
+    if transport_error:
+        return transport_error
     if p.transport == "openai" and not has_key(p):
         return "Add an API key in Settings > Models > LLM."
     if require_model and not p.model_is_placeholder and not configured_model(p):
