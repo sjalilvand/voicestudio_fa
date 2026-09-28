@@ -1,6 +1,6 @@
 // Run after `bun run build`: exercises real Chromium views with local fixtures only.
 import { _electron as electron } from 'playwright';
-import { build } from 'esbuild';
+import { build } from 'vite';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, copyFileSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -24,12 +24,16 @@ try {
   mkdirSync(join(scratch, 'preload'));
   copyFileSync(resolve('out/preload/index.mjs'), join(scratch, 'preload/index.mjs'));
   await build({
-    entryPoints: ['src/main/site-browser.ts'],
-    outfile: join(scratch, 'main/site-browser.mjs'),
-    bundle: true,
-    format: 'esm',
-    platform: 'node',
-    external: ['electron'],
+    configFile: false,
+    build: {
+      ssr: resolve('src/main/site-browser.ts'),
+      outDir: join(scratch, 'main'),
+      emptyOutDir: false,
+      rolldownOptions: {
+        external: ['electron'],
+        output: { format: 'es', entryFileNames: 'site-browser.mjs' },
+      },
+    },
   });
   const harness = join(scratch, 'main/harness.mjs');
   writeFileSync(
