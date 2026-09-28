@@ -3560,11 +3560,11 @@ def _installed_kokoro_language_options() -> Optional[list[str]]:
     Unknown/new package layouts stay unknown rather than using a guessed list.
     """
     import ast
-    import importlib.metadata
+    from importlib import metadata
     from omnivoice.utils.lang_map import LANG_NAME_TO_ID
 
     try:
-        distribution = importlib.metadata.distribution("mlx-audio")
+        distribution = metadata.distribution("mlx-audio")
         path = distribution.locate_file("mlx_audio/tts/models/kokoro/pipeline.py")
         tree = ast.parse(path.read_text(encoding="utf-8"))
         tables = {}

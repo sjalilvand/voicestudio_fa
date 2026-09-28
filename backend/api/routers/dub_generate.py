@@ -46,6 +46,18 @@ class _RemoteDubBackend:
     sample_rate = 24_000
 
 
+def _validate_render_languages(backend, req, seg_ids, regen_only):
+    """Validate the final local render set, including repaired cache misses."""
+    check = getattr(backend, "_check_language", None)
+    if not callable(check):
+        return  # Remote workers validate against their own model metadata.
+    for index, segment in enumerate(req.segments):
+        sid = seg_ids[index] if index < len(seg_ids) else f"seg_{index}"
+        if not segment.text.strip() or (regen_only is not None and sid not in regen_only):
+            continue
+        check(segment.target_lang or req.language)
+
+
 async def _resolve_dub_execution():
     """Resolve routing without loading local weights for a remote dub."""
     engine_id = active_backend_id()
@@ -737,6 +749,7 @@ async def dub_generate(job_id: str, req: DubRequest):
                     intact = False
                 if not intact:
                     regen_only.add(sid)
+        _validate_render_languages(backend, req, seg_ids, regen_only)
         # Manifest: stable segment id per current index. Per-segment WAVs are
         # named by stable id (dub_seg_path) so regen reuses the right audio after
         # reorder; index-keyed readers (preview/export) resolve via this manifest.
@@ -772,6 +785,7 @@ async def dub_generate(job_id: str, req: DubRequest):
             nonlocal backend, _has_native_batch, _native_batch_width
             if isinstance(backend, _RemoteDubBackend):
                 backend = await resolve_generation_backend(require_cloning=True)
+                _validate_render_languages(backend, req, seg_ids, regen_only)
                 _has_native_batch = (
                     getattr(type(backend), "generate_batch", TTSBackend.generate_batch)
                     is not TTSBackend.generate_batch

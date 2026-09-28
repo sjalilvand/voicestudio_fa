@@ -56,3 +56,7 @@ checks browser layout, flags, focus return, disabled selection, active-option mo
 and measures filtering with English/German/Arabic and desktop platform bridge fixtures.
 Set `VOICESTUDIO_UI_URL` to the smoke server and optionally `PLAYWRIGHT_CHANNEL`.
 These bridge fixtures do not replace native OS or manual screen-reader testing.
+
+Partial dub regeneration checks the selected segments in the renderer. The backend
+validates its final local render set, including segments promoted because their
+cache is missing, corrupt or from an incompatible timing format, before synthesis.
