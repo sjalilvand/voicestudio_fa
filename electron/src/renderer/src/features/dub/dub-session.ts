@@ -1406,7 +1406,7 @@ export async function generateDub(
         const current = dubSession.state;
         const selected = regenOnly?.length ? new Set(regenOnly) : null;
         const languages = current.segments
-          .filter((segment) => (!selected || selected.has(segment.id)) && segment.text.trim())
+          .filter((segment) => (!selected || selected.has(segment.id)) && segment.text.trim() && segment.end - segment.start > 0.05)
           .map((segment) => segment.target_lang || language);
         if (!cachedTtsLanguagesSupported(queryClient, 'dub', languages)) {
           throw new Error(tr('languagePicker.chooseSupported'));
