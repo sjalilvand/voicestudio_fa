@@ -402,15 +402,23 @@ def test_finalization_retains_current_take_when_stars_fill_cap(api, monkeypatch)
     import asyncio
     import time
     import torch
+    import threading
     _client, dbf, outdir, gen = api
     monkeypatch.setattr(gen, "_history_cap", lambda: 1)
     _insert_take(dbf, outdir, "favorite", 0, starred=1)
     monkeypatch.setattr("core.analytics.capture", lambda *args: None)
+    writing_threads = []
+    writer = gen.save_generation_wav
+    def record_writer(*args, **kwargs):
+        writing_threads.append(threading.get_ident())
+        return writer(*args, **kwargs)
+    monkeypatch.setattr(gen, "save_generation_wav", record_writer)
     _, meta = asyncio.run(gen._finalize_generation(
         torch.zeros(1, 240), 24000, text="hello", history_mode="design",
         ref_audio_path=None, language="English", instruct=None,
         resolved_profile_id=None, used_seed=42, start_time=time.time(), already_marked=True, include_wav_bytes=True,
     ))
+    assert writing_threads and threading.get_ident() not in writing_threads
     assert (outdir / meta["filename"]).is_file()
     with sqlite3.connect(str(dbf)) as conn:
         assert conn.execute("SELECT COUNT(*) FROM generation_history").fetchone()[0] == 2
