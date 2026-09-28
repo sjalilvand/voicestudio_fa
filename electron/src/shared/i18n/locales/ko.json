@@ -1,4 +1,36 @@
 {
+  "cloneQuality": {
+    "title": "오디오 품질",
+    "precision": "WAV 정밀도",
+    "size": "24 kHz 모노 기준 약 {{size}} MiB/분. 엔진에 따라 다릅니다.",
+    "hint16": "가장 작은 WAV. 대부분의 플레이어 지원.",
+    "hint24": "편집 정밀도 향상. 16비트보다 50% 큽니다.",
+    "hint32": "부동 소수점 샘플 보존. 16비트의 두 배 크기이며 목소리 자체를 개선하지 않습니다.",
+    "effort": "샘플링 단계",
+    "effortHint": "단계가 많으면 시간이 더 걸리며 음질이 좋아진다는 보장은 없습니다. 파일 크기는 같습니다.",
+    "mastering": "방송용 마스터링",
+    "masteringHint": "끄면 추가 EQ, 압축 및 정규화를 건너뜁니다.",
+    "nextTake": "다음 테이크에 적용됩니다. 기존 오디오는 바뀌지 않습니다.",
+    "bits16": "16비트 PCM",
+    "bits24": "24비트 PCM",
+    "bits32": "32비트 부동 소수점",
+    "fileInfo": "{{size}} MiB · {{rate}} kHz · {{channels}} 채널 · {{bits}}비트 {{encoding}}",
+    "fileSize": "{{size}} MiB",
+    "float": "부동 소수점"
+  },
+  "audioQuality": {
+    "check": "오디오 확인",
+    "failed": "오디오를 분석할 수 없습니다.",
+    "advisory": "참고용입니다. 멈춤과 음량 변화는 의도된 것일 수 있습니다. 오디오는 변경되지 않습니다.",
+    "truncated": "분석 또는 경고 목록이 제한됩니다.",
+    "clear": "분석된 구간에서 문제가 감지되지 않았습니다.",
+    "empty": "빈 오디오",
+    "silence": "무음 가능성",
+    "quiet": "비정상적으로 작은 음량",
+    "loud": "비정상적으로 큰 음량",
+    "clipping": "클리핑 가능성",
+    "invalid": "유효하지 않은 오디오 샘플"
+  },
   "longformPersistence": {
     "storage_unavailable_title": "프로젝트를 불러올 수 없습니다",
     "storage_unavailable_body": "VoiceStudio가 로컬 프로젝트 저장소를 읽지 못했습니다. 데이터는 변경되지 않았습니다. 안전하게 열려면 다시 시도하세요.",
@@ -824,7 +856,7 @@
     "cleaning": "노이즈 제거 중…",
     "using_profile": "프로필 사용: {{name}}",
     "clear": "지우기",
-    "production_overrides": "프로덕션 재정의",
+    "production_overrides": "음성 설정",
     "denoise": "노이즈 제거",
     "postprocess": "후처리",
     "duration": "길이",
@@ -3431,5 +3463,19 @@
     "step_transcribe": "전사",
     "step_translate": "번역",
     "step_convert": "변환"
+  },
+  "voiceControls": {
+    "title": "음성 설정",
+    "options": "추가 옵션",
+    "advanced": "고급 모델 조정",
+    "guidance": "프롬프트 영향",
+    "timing": "보정 시점",
+    "order": "샘플링 순서 변화",
+    "variation": "소리 변화",
+    "balance": "구조와 세부 균형",
+    "denoise": "참조 음성 잡음 제거",
+    "polish": "생성된 오디오 다듬기",
+    "basics": "1×는 일반 속도입니다. 자연스러운 길이를 원하면 시간을 비워 두세요.",
+    "hint": "보통 기본값을 유지하세요. 가이던스는 프롬프트의 영향을 조정하고, 다른 설정은 모델이 소리를 구성하는 방식을 바꿉니다. 한 번에 하나씩 변경하세요."
   }
 }

@@ -1,4 +1,36 @@
 {
+  "cloneQuality": {
+    "title": "Audioqualität",
+    "precision": "WAV-Präzision",
+    "size": "~{{size}} MiB/min bei 24 kHz mono; je nach Engine.",
+    "hint16": "Kleinste WAV-Datei; breite Player-Unterstützung.",
+    "hint24": "Mehr Präzision beim Bearbeiten; 50 % größer als 16 Bit.",
+    "hint32": "Erhält Gleitkomma-Samples; doppelte Größe von 16 Bit. Verbessert nicht die Stimme selbst.",
+    "effort": "Sampling-Schritte",
+    "effortHint": "Mehr Schritte dauern länger und klingen nicht unbedingt besser; die Dateigröße bleibt gleich.",
+    "mastering": "Broadcast-Mastering",
+    "masteringHint": "Ausschalten, um zusätzlichen EQ, Kompression und Normalisierung zu überspringen.",
+    "nextTake": "Gilt für die nächste Aufnahme. Vorhandenes Audio bleibt unverändert.",
+    "bits16": "16-Bit-PCM",
+    "bits24": "24-Bit-PCM",
+    "bits32": "32-Bit-Gleitkomma",
+    "fileInfo": "{{size}} MiB · {{rate}} kHz · {{channels}} Kanäle · {{bits}} Bit {{encoding}}",
+    "fileSize": "{{size}} MiB",
+    "float": "Gleitkomma"
+  },
+  "audioQuality": {
+    "check": "Audio prüfen",
+    "failed": "Audioanalyse nicht verfügbar.",
+    "advisory": "Nur ein Hinweis: Pausen und Lautstärke können beabsichtigt sein. Audio bleibt unverändert.",
+    "truncated": "Analyse oder Warnungsliste ist begrenzt.",
+    "clear": "Im analysierten Abschnitt wurden keine Probleme erkannt.",
+    "empty": "Leere Audiodatei",
+    "silence": "Mögliche Stille",
+    "quiet": "Ungewöhnlich leise",
+    "loud": "Ungewöhnlich laut",
+    "clipping": "Mögliche Übersteuerung",
+    "invalid": "Ungültige Audiodaten"
+  },
   "twilioIntegration": {
     "exposureWarning": "Beim Einschalten wird ein separater lokaler Port geöffnet, den dein Tunnel im Internet veröffentlicht. Nur mit deinem Twilio Auth Token signierte Anfragen werden akzeptiert; der Rest von VoiceStudio bleibt privat.",
     "accountSid": "Account SID",
@@ -208,7 +240,8 @@
     "choose_voice": "Wählen Sie eine Stimme",
     "change_voice": "Stimme ändern",
     "voice_sample": "Stimmprobe",
-    "prompt_named": "Was soll {{name}} sagen?"
+    "prompt_named": "Was soll {{name}} sagen?",
+    "expressive": "Stimmeinstellungen"
   },
   "profileIdentity": {
     "save_hint": "Speichere diese Stimme, um sie mit einem Klick erneut zu verwenden.",
@@ -370,7 +403,7 @@
     "cleaning": "Reinigung…",
     "using_profile": "Profil verwenden: {{name}}",
     "clear": "klar",
-    "production_overrides": "Produktionsüberschreibungen",
+    "production_overrides": "Stimmeinstellungen",
     "denoise": "Denoise",
     "postprocess": "Nachbearbeitung",
     "duration": "Dauer",
@@ -3197,5 +3230,19 @@
     "addingVoice": "Stimme wird hinzugefügt…",
     "engineDefault": "Motorstandard",
     "preview": "Vorschau der Stimme"
+  },
+  "voiceControls": {
+    "title": "Stimmeinstellungen",
+    "options": "Weitere Optionen",
+    "advanced": "Erweiterte Modellabstimmung",
+    "guidance": "Einfluss der Vorgabe",
+    "timing": "Zeitpunkt der Verfeinerung",
+    "order": "Variation der Abtastreihenfolge",
+    "variation": "Klangvariation",
+    "balance": "Balance zwischen grob und fein",
+    "denoise": "Rauschen der Referenz entfernen",
+    "polish": "Erzeugtes Audio verfeinern",
+    "basics": "1× ist normale Geschwindigkeit. Für natürliches Timing die Dauer leer lassen.",
+    "hint": "Meist sind die Standardwerte passend. Die Vorgabe beeinflusst das Ergebnis; die anderen Regler ändern den Klangaufbau des Modells. Jeweils nur einen ändern."
   }
 }

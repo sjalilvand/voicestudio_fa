@@ -1,9 +1,11 @@
 # Electron audio-quality investigation handoff
 
-Updated 2026-09-29. **The reported degradation is unresolved.** This document
-records measurements and a continuation plan, not a sound-quality fix.
-This PR contains documentation only; no audio, private reference recordings,
-generation-default changes, or runtime changes are included.
+Updated 2026-09-28. **The original perceptual regression is not established.**
+The owner redirected the work toward normal-to-highest-precision generation
+and cloning across supported TTS engines. PR #2406 now includes quality
+controls, deterministic export precision, and lossless float transport for
+OmniVoice/VoxCPM2 sidecars. See [Audio quality](audio-quality.md) for controls,
+engine coverage, and validation. Private recordings remain outside Git.
 
 ## Report and sample mapping
 
@@ -48,7 +50,7 @@ is the fix. No controlled listening verdict has been recorded.
 Checkpoint used throughout:
 `k2-fsa/OmniVoice`, revision `c5fdb5ccb189668d56333f77ba2629f4cd7535f4`.
 
-## September 29: isolated bit-depth comparison
+## Supplied isolated bit-depth comparison
 
 One new waveform was generated on MPS, seed 42, 16 steps, explicit English,
 guidance 2, denoise and model postprocessing enabled, without a voice reference.
@@ -103,7 +105,7 @@ Converting the old 16-bit sample to float cannot restore lost information.
 Use identical player settings and playback volume; disable automatic loudness
 adjustment, EQ, enhancement, and spatial audio for the comparison.
 
-## September 29: higher-quality candidate, not a controlled A/B
+## Supplied higher-quality candidate, not a controlled A/B
 
 A second generation used the same text, seed 42, explicit English, guidance 2,
 **32 steps**, denoise and model postprocessing enabled. The preceding float
@@ -119,6 +121,10 @@ Do not ship these settings as a proven fix based on this sample alone.
 
 ## Files and code available to the next machine
 
+The supplied archive was checked locally: its six WAVs and two JSON files
+match the export measurements above. The archive did not contain the original
+voice reference or transcript for the three historical outputs. Its directory
+labels include `20260929`; those labels do not establish the experiment date.
 The WAVs are **local only**, not attached to this PR. Transfer privately if
 needed; obtain permission before publishing any reporter recordings.
 
@@ -133,12 +139,13 @@ needed; obtain permission before publishing any reporter recordings.
 - Separately pushed branch `fix/desktop-packs-audio-quality-polish`, commit
   `30c814a0`, contains `scripts/compare_generation_quality.py`,
   `scripts/compare_release_clone.py`, and the earlier
-  `docs/audio-feedback-tasklist.md`. These are **not part of this docs-only PR**.
+  `docs/audio-feedback-tasklist.md`. The release-comparison script remains on that branch; the generation-quality
+  script is now maintained in this PR.
   Inspect them with `git show 30c814a0:scripts/compare_release_clone.py` after
   fetching that branch. Use an installed checkpoint and offline mode; do not
   assume `/tmp` artifacts or the original developer's cache exist elsewhere.
-- That branch also implements advisory audio-quality warnings (#2375). Warnings
-  are separate from the unresolved sound regression and are not its fix.
+- Advisory audio-quality warnings from that branch (#2375) are now included.
+  They describe signal issues, not voice similarity or perceived quality.
 
 ## Next-machine task list and acceptance criteria
 

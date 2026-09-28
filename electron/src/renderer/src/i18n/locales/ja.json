@@ -1,4 +1,36 @@
 {
+  "cloneQuality": {
+    "title": "音声品質",
+    "precision": "WAV精度",
+    "size": "24 kHzモノラルで約{{size}} MiB/分。エンジンにより異なります。",
+    "hint16": "最小のWAV。多くのプレーヤーに対応。",
+    "hint24": "編集時の精度が向上。16ビットより50%大きくなります。",
+    "hint32": "浮動小数点のサンプルを保持。16ビットの2倍のサイズ。声自体の品質は改善しません。",
+    "effort": "サンプリングステップ数",
+    "effortHint": "ステップを増やすと時間がかかりますが、音質が向上するとは限りません。ファイルサイズは変わりません。",
+    "mastering": "放送用マスタリング",
+    "masteringHint": "オフにすると追加のEQ、圧縮、正規化を省略します。",
+    "nextTake": "次のテイクに適用。既存の音声は変更されません。",
+    "bits16": "16ビットPCM",
+    "bits24": "24ビットPCM",
+    "bits32": "32ビット浮動小数点",
+    "fileInfo": "{{size}} MiB · {{rate}} kHz · {{channels}} チャンネル · {{bits}}ビット {{encoding}}",
+    "fileSize": "{{size}} MiB",
+    "float": "浮動小数点"
+  },
+  "audioQuality": {
+    "check": "音声を確認",
+    "failed": "音声を解析できません。",
+    "advisory": "参考情報です。間や音量の変化は意図的な場合があります。音声は変更されません。",
+    "truncated": "解析範囲または警告一覧に制限があります。",
+    "clear": "解析した部分に問題は検出されませんでした。",
+    "empty": "空の音声",
+    "silence": "無音の可能性",
+    "quiet": "通常より小さい音量",
+    "loud": "通常より大きい音量",
+    "clipping": "クリッピングの可能性",
+    "invalid": "無効な音声サンプル"
+  },
   "twilioIntegration": {
     "exposureWarning": "オンにすると、トンネルがインターネットに公開する別のローカルポートが開きます。Twilio Auth Token で署名されたリクエストのみ受け付け、VoiceStudio のその他の部分は非公開のままです。",
     "accountSid": "Account SID",
@@ -208,7 +240,8 @@
     "choose_voice": "音声を選択",
     "change_voice": "音声を変更",
     "voice_sample": "音声サンプル",
-    "prompt_named": "{{name}}に何を話してもらいますか？"
+    "prompt_named": "{{name}}に何を話してもらいますか？",
+    "expressive": "音声コントロール"
   },
   "profileIdentity": {
     "save_hint": "この音声を保存すると、次回からワンクリックで使えます。",
@@ -370,7 +403,7 @@
     "cleaning": "ノイズ除去中…",
     "using_profile": "使用プロファイル: {{name}}",
     "clear": "クリア",
-    "production_overrides": "プロダクションオーバーライド",
+    "production_overrides": "音声コントロール",
     "denoise": "ノイズ除去",
     "postprocess": "後処理",
     "duration": "期間",
@@ -3197,5 +3230,19 @@
     "addingVoice": "音声を追加中…",
     "engineDefault": "エンジンのデフォルト",
     "preview": "プレビュー音声"
+  },
+  "voiceControls": {
+    "title": "音声コントロール",
+    "options": "その他の設定",
+    "advanced": "モデルの詳細調整",
+    "guidance": "プロンプトの影響",
+    "timing": "補正のタイミング",
+    "order": "サンプリング順序の変化",
+    "variation": "音の変化",
+    "balance": "構造と細部のバランス",
+    "denoise": "参照音声のノイズ除去",
+    "polish": "生成音声の仕上げ",
+    "basics": "1×が通常速度です。自然な長さにするには時間を空欄にします。",
+    "hint": "通常は既定値のままで構いません。ガイダンスはプロンプトの影響を、その他の設定はモデルの音の組み立て方を調整します。一度に一つずつ変更してください。"
   }
 }

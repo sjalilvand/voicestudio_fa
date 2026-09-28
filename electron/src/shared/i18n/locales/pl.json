@@ -1,4 +1,36 @@
 {
+  "cloneQuality": {
+    "title": "Jakość dźwięku",
+    "precision": "Precyzja WAV",
+    "size": "~{{size}} MiB/min przy 24 kHz mono; zależy od silnika.",
+    "hint16": "Najmniejszy WAV; szeroka zgodność.",
+    "hint24": "Większa precyzja edycji; o 50% większy niż 16 bitów.",
+    "hint32": "Zachowuje próbki zmiennoprzecinkowe; dwukrotnie większy niż 16 bitów. Nie poprawia samego głosu.",
+    "effort": "Kroki próbkowania",
+    "effortHint": "Więcej kroków zajmuje więcej czasu i nie zawsze poprawia dźwięk; rozmiar pliku pozostaje taki sam.",
+    "mastering": "Mastering emisyjny",
+    "masteringHint": "Wyłącz, aby pominąć dodatkową korekcję, kompresję i normalizację.",
+    "nextTake": "Dotyczy następnego ujęcia. Istniejący dźwięk się nie zmieni.",
+    "bits16": "PCM 16-bit",
+    "bits24": "PCM 24-bit",
+    "bits32": "32-bit zmiennoprzecinkowe",
+    "fileInfo": "{{size}} MiB · {{rate}} kHz · {{channels}} kanały · {{bits}}-bit {{encoding}}",
+    "fileSize": "{{size}} MiB",
+    "float": "zmiennoprzecinkowe"
+  },
+  "audioQuality": {
+    "check": "Sprawdź dźwięk",
+    "failed": "Analiza dźwięku niedostępna.",
+    "advisory": "Tylko wskazówka: pauzy i zmiany głośności mogą być celowe. Dźwięk pozostaje bez zmian.",
+    "truncated": "Analiza lub lista ostrzeżeń jest ograniczona.",
+    "clear": "Nie wykryto problemów w analizowanej części.",
+    "empty": "Puste nagranie",
+    "silence": "Możliwa cisza",
+    "quiet": "Nietypowo cicho",
+    "loud": "Nietypowo głośno",
+    "clipping": "Możliwe przesterowanie",
+    "invalid": "Nieprawidłowe próbki audio"
+  },
   "longformPersistence": {
     "storage_unavailable_title": "Nie udało się wczytać projektów",
     "storage_unavailable_body": "VoiceStudio nie mógł odczytać lokalnego magazynu projektów. Twoje dane nie zostały zmienione. Spróbuj ponownie, aby bezpiecznie je otworzyć.",
@@ -594,7 +626,7 @@
     "cleaning": "Czyszczenie…",
     "using_profile": "Korzystanie z profilu: {{name}}",
     "clear": "jasne",
-    "production_overrides": "Nadpisania produkcyjne",
+    "production_overrides": "Ustawienia głosu",
     "denoise": "Odszumić",
     "postprocess": "Postprocessing",
     "duration": "Czas trwania",
@@ -2953,5 +2985,19 @@
     "step_transcribe": "Transkrybuj",
     "step_translate": "Przetłumacz",
     "step_convert": "Konwertuj"
+  },
+  "voiceControls": {
+    "title": "Ustawienia głosu",
+    "options": "Więcej opcji",
+    "advanced": "Zaawansowane ustawienia modelu",
+    "guidance": "Wpływ polecenia",
+    "timing": "Moment dopracowania",
+    "order": "Zmienność kolejności próbkowania",
+    "variation": "Zmienność dźwięku",
+    "balance": "Równowaga między strukturą a detalami",
+    "denoise": "Usuń szum z nagrania wzorcowego",
+    "polish": "Dopracuj wygenerowany dźwięk",
+    "basics": "1× to normalna prędkość. Pozostaw czas pusty, aby zachować naturalne tempo.",
+    "hint": "Zwykle najlepiej pozostawić wartości domyślne. Sterowanie określa wpływ polecenia; pozostałe ustawienia zmieniają sposób budowania dźwięku. Zmieniaj jedno naraz."
   }
 }

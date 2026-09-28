@@ -1,4 +1,36 @@
 {
+  "cloneQuality": {
+    "title": "Audio quality",
+    "precision": "WAV precision",
+    "size": "~{{size}} MiB/min at 24 kHz mono; varies by engine.",
+    "hint16": "Smallest WAV; wide player support.",
+    "hint24": "More editing precision; 50% larger than 16-bit.",
+    "hint32": "Preserves float samples; twice the size of 16-bit. Does not improve the voice itself.",
+    "effort": "Sampling steps",
+    "effortHint": "More steps take longer and may not sound better; file size stays the same.",
+    "mastering": "Broadcast mastering",
+    "masteringHint": "Turn off to skip added EQ, compression, and normalization.",
+    "nextTake": "Applies to the next take. Existing audio stays unchanged.",
+    "bits16": "16-bit PCM",
+    "bits24": "24-bit PCM",
+    "bits32": "32-bit float",
+    "fileInfo": "{{size}} MiB · {{rate}} kHz · {{channels}} ch · {{bits}}-bit {{encoding}}",
+    "fileSize": "{{size}} MiB",
+    "float": "float"
+  },
+  "audioQuality": {
+    "check": "Check audio",
+    "failed": "Audio analysis unavailable.",
+    "advisory": "Advisory only: pauses and expressive volume can be intentional. Audio is unchanged.",
+    "truncated": "Analysis or warning list is limited.",
+    "clear": "No issues detected in the analyzed portion.",
+    "empty": "Empty audio",
+    "silence": "Possible silence",
+    "quiet": "Unusually quiet",
+    "loud": "Unusually loud",
+    "clipping": "Possible clipping",
+    "invalid": "Invalid audio samples"
+  },
   "twilioIntegration": {
     "exposureWarning": "Turning this on opens a separate local port that your tunnel publishes to the internet. Only requests signed with your Twilio Auth Token are accepted; the rest of VoiceStudio stays private.",
     "accountSid": "Account SID",
@@ -286,7 +318,7 @@
     "history_delete_failed": "Could not delete the take: {{message}}",
     "history_clear_failed": "Could not clear history: {{message}}",
     "history_star_failed": "Could not update the take: {{message}}",
-    "production_overrides": "Production overrides",
+    "production_overrides": "Voice controls",
     "steps": "Steps",
     "cfg": "CFG",
     "speed": "Speed",
@@ -534,7 +566,8 @@
     "choose_voice": "Choose a voice",
     "change_voice": "Change voice",
     "voice_sample": "Voice sample",
-    "prompt_named": "What should {{name}} say?"
+    "prompt_named": "What should {{name}} say?",
+    "expressive": "Voice controls"
   },
   "profileIdentity": {
     "save_hint": "Save this voice to use it again in one click.",
@@ -3197,5 +3230,19 @@
     "addingVoice": "Adding voice…",
     "engineDefault": "Engine default",
     "preview": "Preview voice"
+  },
+  "voiceControls": {
+    "title": "Voice controls",
+    "options": "More options",
+    "advanced": "Advanced model tuning",
+    "guidance": "Prompt guidance",
+    "timing": "Refinement timing",
+    "order": "Sampling order variation",
+    "variation": "Sound variation",
+    "balance": "Coarse-to-fine balance",
+    "denoise": "Clean reference noise",
+    "polish": "Polish generated audio",
+    "basics": "1× is normal speed. Leave duration blank for natural timing.",
+    "hint": "Usually leave these at defaults. Guidance adjusts prompt influence; the other controls change how the model builds the sound. Change one at a time."
   }
 }

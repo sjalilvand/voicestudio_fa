@@ -1,4 +1,36 @@
 {
+  "cloneQuality": {
+    "title": "Audio quality",
+    "precision": "WAV precision",
+    "size": "~{{size}} MiB/min at 24 kHz mono; varies by engine.",
+    "hint16": "Smallest WAV; wide player support.",
+    "hint24": "More editing precision; 50% larger than 16-bit.",
+    "hint32": "Preserves float samples; twice the size of 16-bit. Does not improve the voice itself.",
+    "effort": "Sampling steps",
+    "effortHint": "More steps take longer and may not sound better; file size stays the same.",
+    "mastering": "Broadcast mastering",
+    "masteringHint": "Turn off to skip added EQ, compression, and normalization.",
+    "nextTake": "Applies to the next take. Existing audio stays unchanged.",
+    "bits16": "16-bit PCM",
+    "bits24": "24-bit PCM",
+    "bits32": "32-bit float",
+    "fileInfo": "{{size}} MiB · {{rate}} kHz · {{channels}} ch · {{bits}}-bit {{encoding}}",
+    "fileSize": "{{size}} MiB",
+    "float": "float"
+  },
+  "audioQuality": {
+    "check": "Check audio",
+    "failed": "Audio analysis unavailable.",
+    "advisory": "Advisory only: pauses and expressive volume can be intentional. Audio is unchanged.",
+    "truncated": "Analysis or warning list is limited.",
+    "clear": "No issues detected in the analyzed portion.",
+    "empty": "Empty audio",
+    "silence": "Possible silence",
+    "quiet": "Unusually quiet",
+    "loud": "Unusually loud",
+    "clipping": "Possible clipping",
+    "invalid": "Invalid audio samples"
+  },
   "longformPersistence": {
     "storage_unavailable_title": "Projects couldn't be loaded",
     "storage_unavailable_body": "VoiceStudio couldn't read local project storage. Your data has not been changed. Retry to open it safely.",
@@ -364,7 +396,7 @@
     "cleaning": "Cleaning…",
     "using_profile": "Using profile: {{name}}",
     "clear": "clear",
-    "production_overrides": "Production Overrides",
+    "production_overrides": "Voice controls",
     "denoise": "Denoise",
     "postprocess": "Postprocess",
     "duration": "Duration",
@@ -3431,5 +3463,19 @@
     "step_transcribe": "Transcribe",
     "step_translate": "Translate",
     "step_convert": "Convert"
+  },
+  "voiceControls": {
+    "title": "Voice controls",
+    "options": "More options",
+    "advanced": "Advanced model tuning",
+    "guidance": "Prompt guidance",
+    "timing": "Refinement timing",
+    "order": "Sampling order variation",
+    "variation": "Sound variation",
+    "balance": "Coarse-to-fine balance",
+    "denoise": "Clean reference noise",
+    "polish": "Polish generated audio",
+    "basics": "1× is normal speed. Leave duration blank for natural timing.",
+    "hint": "Usually leave these at defaults. Guidance adjusts prompt influence; the other controls change how the model builds the sound. Change one at a time."
   }
 }

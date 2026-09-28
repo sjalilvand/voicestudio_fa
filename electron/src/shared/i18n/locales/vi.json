@@ -1,4 +1,36 @@
 {
+  "cloneQuality": {
+    "title": "Chất lượng âm thanh",
+    "precision": "Độ chính xác WAV",
+    "size": "~{{size}} MiB/phút ở 24 kHz mono; tùy bộ máy.",
+    "hint16": "WAV nhỏ nhất; hỗ trợ nhiều trình phát.",
+    "hint24": "Chính xác hơn khi chỉnh sửa; lớn hơn 16-bit 50%.",
+    "hint32": "Giữ mẫu dấu phẩy động; gấp đôi kích thước 16-bit. Không cải thiện bản thân giọng nói.",
+    "effort": "Số bước lấy mẫu",
+    "effortHint": "Nhiều bước hơn mất nhiều thời gian hơn và chưa chắc cho âm thanh tốt hơn; kích thước tệp không đổi.",
+    "mastering": "Xử lý âm thanh phát sóng",
+    "masteringHint": "Tắt để bỏ qua EQ, nén và chuẩn hóa bổ sung.",
+    "nextTake": "Áp dụng cho lần tạo tiếp theo. Âm thanh hiện có không đổi.",
+    "bits16": "PCM 16 bit",
+    "bits24": "PCM 24 bit",
+    "bits32": "Số thực 32 bit",
+    "fileInfo": "{{size}} MiB · {{rate}} kHz · {{channels}} kênh · {{bits}} bit {{encoding}}",
+    "fileSize": "{{size}} MiB",
+    "float": "số thực"
+  },
+  "audioQuality": {
+    "check": "Kiểm tra âm thanh",
+    "failed": "Không thể phân tích âm thanh.",
+    "advisory": "Chỉ mang tính tham khảo: khoảng nghỉ và thay đổi âm lượng có thể là chủ ý. Âm thanh không bị thay đổi.",
+    "truncated": "Phân tích hoặc danh sách cảnh báo bị giới hạn.",
+    "clear": "Không phát hiện vấn đề trong phần đã phân tích.",
+    "empty": "Âm thanh trống",
+    "silence": "Có thể có khoảng lặng",
+    "quiet": "Âm lượng thấp bất thường",
+    "loud": "Âm lượng cao bất thường",
+    "clipping": "Có thể bị cắt đỉnh",
+    "invalid": "Mẫu âm thanh không hợp lệ"
+  },
   "longformPersistence": {
     "storage_unavailable_title": "Không thể tải dự án",
     "storage_unavailable_body": "VoiceStudio không thể đọc bộ nhớ dự án cục bộ. Dữ liệu của bạn chưa bị thay đổi. Hãy thử lại để mở dữ liệu an toàn.",
@@ -594,7 +626,7 @@
     "cleaning": "Dọn dẹp…",
     "using_profile": "Sử dụng hồ sơ: {{name}}",
     "clear": "rõ ràng",
-    "production_overrides": "Ghi đè sản xuất",
+    "production_overrides": "Điều chỉnh giọng nói",
     "denoise": "Khử nhiễu",
     "postprocess": "Hậu xử lý",
     "duration": "Thời lượng",
@@ -2953,5 +2985,19 @@
     "step_transcribe": "Phiên âm",
     "step_translate": "Dịch",
     "step_convert": "Chuyển đổi"
+  },
+  "voiceControls": {
+    "title": "Điều chỉnh giọng nói",
+    "options": "Tùy chọn khác",
+    "advanced": "Tinh chỉnh mô hình nâng cao",
+    "guidance": "Ảnh hưởng của lời nhắc",
+    "timing": "Thời điểm tinh chỉnh",
+    "order": "Biến thiên thứ tự lấy mẫu",
+    "variation": "Biến thiên âm thanh",
+    "balance": "Cân bằng cấu trúc và chi tiết",
+    "denoise": "Lọc nhiễu bản tham chiếu",
+    "polish": "Trau chuốt âm thanh đã tạo",
+    "basics": "1× là tốc độ bình thường. Để trống thời lượng để có nhịp tự nhiên.",
+    "hint": "Thường nên giữ giá trị mặc định. Độ dẫn hướng điều chỉnh ảnh hưởng của lời nhắc; các nút khác thay đổi cách mô hình tạo âm thanh. Mỗi lần chỉ đổi một mục."
   }
 }

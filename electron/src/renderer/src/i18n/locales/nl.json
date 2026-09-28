@@ -1,4 +1,36 @@
 {
+  "cloneQuality": {
+    "title": "Audiokwaliteit",
+    "precision": "WAV-precisie",
+    "size": "~{{size}} MiB/min bij 24 kHz mono; verschilt per engine.",
+    "hint16": "Kleinste WAV; breed ondersteund.",
+    "hint24": "Meer precisie bij bewerken; 50% groter dan 16-bit.",
+    "hint32": "Behoudt floatsamples; tweemaal de grootte van 16-bit. Verbetert de stem zelf niet.",
+    "effort": "Samplingstappen",
+    "effortHint": "Meer stappen duren langer en klinken niet altijd beter; de bestandsgrootte blijft gelijk.",
+    "mastering": "Mastering voor uitzending",
+    "masteringHint": "Uitschakelen om extra EQ, compressie en normalisatie over te slaan.",
+    "nextTake": "Geldt voor de volgende opname. Bestaande audio blijft gelijk.",
+    "bits16": "16-bits PCM",
+    "bits24": "24-bits PCM",
+    "bits32": "32-bits zwevendekomma",
+    "fileInfo": "{{size}} MiB · {{rate}} kHz · {{channels}} kanalen · {{bits}}-bits {{encoding}}",
+    "fileSize": "{{size}} MiB",
+    "float": "zwevendekomma"
+  },
+  "audioQuality": {
+    "check": "Audio controleren",
+    "failed": "Audioanalyse niet beschikbaar.",
+    "advisory": "Alleen ter indicatie: pauzes en volumeverschillen kunnen bedoeld zijn. Audio blijft ongewijzigd.",
+    "truncated": "De analyse of waarschuwingslijst is beperkt.",
+    "clear": "Geen problemen gevonden in het geanalyseerde gedeelte.",
+    "empty": "Lege audio",
+    "silence": "Mogelijke stilte",
+    "quiet": "Ongewoon zacht",
+    "loud": "Ongewoon luid",
+    "clipping": "Mogelijke oversturing",
+    "invalid": "Ongeldige audiosamples"
+  },
   "twilioIntegration": {
     "exposureWarning": "Inschakelen opent een aparte lokale poort die je tunnel op internet publiceert. Alleen verzoeken die met je Twilio Auth Token zijn ondertekend worden geaccepteerd; de rest van VoiceStudio blijft privé.",
     "accountSid": "Account SID",
@@ -208,7 +240,8 @@
     "choose_voice": "Kies een stem",
     "change_voice": "Stem wijzigen",
     "voice_sample": "Stemvoorbeeld",
-    "prompt_named": "Wat moet {{name}} zeggen?"
+    "prompt_named": "Wat moet {{name}} zeggen?",
+    "expressive": "Steminstellingen"
   },
   "profileIdentity": {
     "save_hint": "Bewaar deze stem om hem met één klik opnieuw te gebruiken.",
@@ -370,7 +403,7 @@
     "cleaning": "Schoonmaken…",
     "using_profile": "Profiel gebruiken: {{name}}",
     "clear": "duidelijk",
-    "production_overrides": "Productie-overschrijvingen",
+    "production_overrides": "Steminstellingen",
     "denoise": "Denoise",
     "postprocess": "Naproces",
     "duration": "Duur",
@@ -3197,5 +3230,19 @@
     "addingVoice": "Stem toevoegen…",
     "engineDefault": "Standaard motor",
     "preview": "Voorbeeldstem"
+  },
+  "voiceControls": {
+    "title": "Steminstellingen",
+    "options": "Meer opties",
+    "advanced": "Geavanceerde modelinstellingen",
+    "guidance": "Invloed van de instructie",
+    "timing": "Timing van verfijning",
+    "order": "Variatie in bemonsteringsvolgorde",
+    "variation": "Geluidsvariatie",
+    "balance": "Balans tussen grof en fijn",
+    "denoise": "Ruis uit referentie verwijderen",
+    "polish": "Gegenereerde audio verfijnen",
+    "basics": "1× is normale snelheid. Laat de duur leeg voor een natuurlijk ritme.",
+    "hint": "Gebruik doorgaans de standaardwaarden. Sturing bepaalt de invloed van de instructie; de andere instellingen veranderen hoe het model geluid opbouwt. Wijzig één instelling tegelijk."
   }
 }

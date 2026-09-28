@@ -84,6 +84,15 @@ describe('sanitizeInstruct', () => {
 });
 
 describe('toGenerateForm', () => {
+  it('keeps existing defaults and sends explicit quality choices', () => {
+    const defaults = toGenerateForm(BASE_INPUT);
+    expect(defaults.get('wav_bits')).toBe('16');
+    expect(defaults.get('effect_preset')).toBe('broadcast');
+    const chosen = toGenerateForm({ ...BASE_INPUT, wavBits: 32, effectPreset: 'raw', steps: 32 });
+    expect(chosen.get('wav_bits')).toBe('32');
+    expect(chosen.get('effect_preset')).toBe('raw');
+    expect(chosen.get('num_step')).toBe('32');
+  });
   it('maps tuning fields and explicitly sends Auto to override a saved voice language', () => {
     const form = toGenerateForm({ ...BASE_INPUT, profileId: 'p1' });
     expect(form.get('text')).toBe('Hello there');

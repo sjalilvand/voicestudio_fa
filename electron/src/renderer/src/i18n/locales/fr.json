@@ -1,4 +1,36 @@
 {
+  "cloneQuality": {
+    "title": "Qualité audio",
+    "precision": "Précision WAV",
+    "size": "~{{size}} MiB/min à 24 kHz mono ; varie selon le moteur.",
+    "hint16": "WAV le plus petit ; largement compatible.",
+    "hint24": "Plus de précision au montage ; 50 % plus volumineux que 16 bits.",
+    "hint32": "Préserve les échantillons flottants ; deux fois la taille du 16 bits. N’améliore pas la voix elle-même.",
+    "effort": "Étapes d’échantillonnage",
+    "effortHint": "Plus d’étapes prennent plus de temps sans garantir un meilleur son ; la taille du fichier reste identique.",
+    "mastering": "Mastering de diffusion",
+    "masteringHint": "Désactivez pour éviter l’égalisation, la compression et la normalisation ajoutées.",
+    "nextTake": "S’applique à la prochaine prise. L’audio existant reste inchangé.",
+    "bits16": "PCM 16 bits",
+    "bits24": "PCM 24 bits",
+    "bits32": "Flottant 32 bits",
+    "fileInfo": "{{size}} MiB · {{rate}} kHz · {{channels}} canaux · {{bits}} bits {{encoding}}",
+    "fileSize": "{{size}} MiB",
+    "float": "flottant"
+  },
+  "audioQuality": {
+    "check": "Vérifier l’audio",
+    "failed": "Analyse audio indisponible.",
+    "advisory": "À titre indicatif : les pauses et variations de volume peuvent être voulues. L’audio reste inchangé.",
+    "truncated": "L’analyse ou la liste des alertes est limitée.",
+    "clear": "Aucun problème détecté dans la partie analysée.",
+    "empty": "Audio vide",
+    "silence": "Silence possible",
+    "quiet": "Volume inhabituellement faible",
+    "loud": "Volume inhabituellement élevé",
+    "clipping": "Écrêtage possible",
+    "invalid": "Échantillons audio invalides"
+  },
   "twilioIntegration": {
     "exposureWarning": "L'activation ouvre un port local distinct que votre tunnel publie sur internet. Seules les requêtes signées avec votre Auth Token Twilio sont acceptées ; le reste de VoiceStudio reste privé.",
     "accountSid": "Account SID",
@@ -210,7 +242,8 @@
     "choose_voice": "Choisir une voix",
     "change_voice": "Changer de voix",
     "voice_sample": "Échantillon vocal",
-    "prompt_named": "Que doit dire {{name}} ?"
+    "prompt_named": "Que doit dire {{name}} ?",
+    "expressive": "Réglages de la voix"
   },
   "profileIdentity": {
     "save_hint": "Enregistrez cette voix pour la réutiliser en un clic.",
@@ -372,7 +405,7 @@
     "cleaning": "Nettoyage…",
     "using_profile": "Utilisation du profil : {{name}}",
     "clear": "clair",
-    "production_overrides": "Dépassements de production",
+    "production_overrides": "Réglages de la voix",
     "denoise": "Débruit",
     "postprocess": "Post-traitement",
     "duration": "Durée",
@@ -3199,5 +3232,19 @@
     "addingVoice": "Ajout de la voix…",
     "engineDefault": "Moteur par défaut",
     "preview": "Aperçu de la voix"
+  },
+  "voiceControls": {
+    "title": "Réglages de la voix",
+    "options": "Plus d’options",
+    "advanced": "Réglages avancés du modèle",
+    "guidance": "Influence de la consigne",
+    "timing": "Moment du raffinement",
+    "order": "Variation de l’ordre d’échantillonnage",
+    "variation": "Variation du son",
+    "balance": "Équilibre du grossier au fin",
+    "denoise": "Nettoyer le bruit de référence",
+    "polish": "Peaufiner l’audio généré",
+    "basics": "1× est la vitesse normale. Laissez la durée vide pour un rythme naturel.",
+    "hint": "Gardez généralement les valeurs par défaut. Le guidage règle l’influence de la consigne ; les autres réglages modifient la construction du son. Changez un seul réglage à la fois."
   }
 }

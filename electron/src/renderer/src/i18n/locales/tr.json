@@ -1,4 +1,36 @@
 {
+  "cloneQuality": {
+    "title": "Ses kalitesi",
+    "precision": "WAV hassasiyeti",
+    "size": "24 kHz mono için ~{{size}} MiB/dk; motora göre değişir.",
+    "hint16": "En küçük WAV; geniş oynatıcı desteği.",
+    "hint24": "Düzenlemede daha fazla hassasiyet; 16 bitten %50 büyük.",
+    "hint32": "Kayan noktalı örnekleri korur; 16 bitin iki katı. Sesin kendisini iyileştirmez.",
+    "effort": "Örnekleme adımları",
+    "effortHint": "Daha fazla adım daha uzun sürer ve sesi her zaman iyileştirmez; dosya boyutu değişmez.",
+    "mastering": "Yayın mastering işlemi",
+    "masteringHint": "Ek EQ, sıkıştırma ve normalleştirmeyi atlamak için kapatın.",
+    "nextTake": "Sonraki kayda uygulanır. Mevcut ses değişmez.",
+    "bits16": "16 bit PCM",
+    "bits24": "24 bit PCM",
+    "bits32": "32 bit kayan nokta",
+    "fileInfo": "{{size}} MiB · {{rate}} kHz · {{channels}} kanal · {{bits}} bit {{encoding}}",
+    "fileSize": "{{size}} MiB",
+    "float": "kayan nokta"
+  },
+  "audioQuality": {
+    "check": "Sesi kontrol et",
+    "failed": "Ses analizi kullanılamıyor.",
+    "advisory": "Yalnızca öneri: duraklamalar ve ses düzeyi değişimleri kasıtlı olabilir. Ses değiştirilmez.",
+    "truncated": "Analiz veya uyarı listesi sınırlıdır.",
+    "clear": "Analiz edilen bölümde sorun bulunamadı.",
+    "empty": "Boş ses",
+    "silence": "Olası sessizlik",
+    "quiet": "Alışılmadık derecede kısık",
+    "loud": "Alışılmadık derecede yüksek",
+    "clipping": "Olası kırpılma",
+    "invalid": "Geçersiz ses örnekleri"
+  },
   "twilioIntegration": {
     "exposureWarning": "Bunu açmak, tünelinizin internette yayımladığı ayrı bir yerel bağlantı noktası açar. Yalnızca Twilio Auth Token'ınızla imzalanan istekler kabul edilir; VoiceStudio'nun geri kalanı gizli kalır.",
     "accountSid": "Account SID",
@@ -208,7 +240,8 @@
     "choose_voice": "Bir ses seçin",
     "change_voice": "Sesi değiştir",
     "voice_sample": "Ses örneği",
-    "prompt_named": "{{name}} ne söylesin?"
+    "prompt_named": "{{name}} ne söylesin?",
+    "expressive": "Ses kontrolleri"
   },
   "profileIdentity": {
     "save_hint": "Tek tıklamayla tekrar kullanmak için bu sesi kaydedin.",
@@ -370,7 +403,7 @@
     "cleaning": "Temizlik…",
     "using_profile": "Profil kullanılıyor: {{name}}",
     "clear": "açık",
-    "production_overrides": "Üretim Geçersiz Kılmaları",
+    "production_overrides": "Ses kontrolleri",
     "denoise": "gürültüyü giderme",
     "postprocess": "İşlem sonrası",
     "duration": "Süre",
@@ -3197,5 +3230,19 @@
     "addingVoice": "Ses ekleniyor…",
     "engineDefault": "Motor varsayılanı",
     "preview": "Sesi önizle"
+  },
+  "voiceControls": {
+    "title": "Ses kontrolleri",
+    "options": "Diğer seçenekler",
+    "advanced": "Gelişmiş model ayarları",
+    "guidance": "İstem etkisi",
+    "timing": "İyileştirme zamanlaması",
+    "order": "Örnekleme sırası değişkenliği",
+    "variation": "Ses değişkenliği",
+    "balance": "Kaba-ince denge",
+    "denoise": "Referans gürültüsünü temizle",
+    "polish": "Üretilen sesi iyileştir",
+    "basics": "1× normal hızdır. Doğal zamanlama için süreyi boş bırakın.",
+    "hint": "Genellikle varsayılanları koruyun. Yönlendirme istemin etkisini ayarlar; diğer kontroller modelin sesi oluşturma şeklini değiştirir. Her seferinde birini değiştirin."
   }
 }

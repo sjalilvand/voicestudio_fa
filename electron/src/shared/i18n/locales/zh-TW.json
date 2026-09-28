@@ -1,4 +1,36 @@
 {
+  "cloneQuality": {
+    "title": "音訊品質",
+    "precision": "WAV 精度",
+    "size": "24 kHz 單聲道約 {{size}} MiB/分鐘；依引擎而異。",
+    "hint16": "最小的 WAV；相容多數播放器。",
+    "hint24": "編輯精度更高；比 16 位元大 50%。",
+    "hint32": "保留浮點取樣；大小是 16 位元的兩倍。不會改善聲音本身。",
+    "effort": "取樣步數",
+    "effortHint": "增加步數會耗費更多時間，但不一定改善音質；檔案大小不變。",
+    "mastering": "廣播母帶處理",
+    "masteringHint": "關閉以略過額外的等化、壓縮和正規化。",
+    "nextTake": "套用於下次生成。現有音訊不變。",
+    "bits16": "16 位元 PCM",
+    "bits24": "24 位元 PCM",
+    "bits32": "32 位元浮點",
+    "fileInfo": "{{size}} MiB · {{rate}} kHz · {{channels}} 聲道 · {{bits}} 位元 {{encoding}}",
+    "fileSize": "{{size}} MiB",
+    "float": "浮點"
+  },
+  "audioQuality": {
+    "check": "檢查音訊",
+    "failed": "音訊分析無法使用。",
+    "advisory": "僅供參考：停頓和音量變化可能是刻意的。音訊不會被修改。",
+    "truncated": "分析範圍或警告清單有限。",
+    "clear": "在已分析的部分未發現問題。",
+    "empty": "空音訊",
+    "silence": "可能存在靜音",
+    "quiet": "音量異常偏低",
+    "loud": "音量異常偏高",
+    "clipping": "可能存在削波",
+    "invalid": "無效音訊取樣"
+  },
   "longformPersistence": {
     "storage_unavailable_title": "無法載入專案",
     "storage_unavailable_body": "VoiceStudio 無法讀取本機專案儲存空間。你的資料未被變更。請重試以安全開啟專案。",
@@ -594,7 +626,7 @@
     "cleaning": "清潔…",
     "using_profile": "使用設定檔：{{name}}",
     "clear": "清晰",
-    "production_overrides": "生產覆蓋",
+    "production_overrides": "語音控制",
     "denoise": "去噪",
     "postprocess": "後處理",
     "duration": "持續時間",
@@ -2953,5 +2985,19 @@
     "step_transcribe": "轉錄",
     "step_translate": "翻譯",
     "step_convert": "轉換"
+  },
+  "voiceControls": {
+    "title": "語音控制",
+    "options": "更多選項",
+    "advanced": "模型進階調整",
+    "guidance": "提示詞影響",
+    "timing": "細化時機",
+    "order": "取樣順序變化",
+    "variation": "聲音變化",
+    "balance": "結構與細節平衡",
+    "denoise": "清除參考音訊雜訊",
+    "polish": "潤飾生成音訊",
+    "basics": "1× 為正常語速。時長留空可使用自然節奏。",
+    "hint": "通常建議保留預設值。引導強度控制提示詞的影響，其他選項改變模型建構聲音的方式。每次只調整一項。"
   }
 }

@@ -1,4 +1,36 @@
 {
+  "cloneQuality": {
+    "title": "Kualitas audio",
+    "precision": "Presisi WAV",
+    "size": "~{{size}} MiB/menit pada 24 kHz mono; bergantung mesin.",
+    "hint16": "WAV terkecil; kompatibilitas pemutar luas.",
+    "hint24": "Presisi penyuntingan lebih tinggi; 50% lebih besar dari 16-bit.",
+    "hint32": "Mempertahankan sampel float; dua kali ukuran 16-bit. Tidak meningkatkan suara itu sendiri.",
+    "effort": "Langkah sampling",
+    "effortHint": "Lebih banyak langkah memerlukan waktu lebih lama dan belum tentu lebih baik; ukuran berkas tetap sama.",
+    "mastering": "Mastering siaran",
+    "masteringHint": "Matikan untuk melewati EQ, kompresi, dan normalisasi tambahan.",
+    "nextTake": "Berlaku untuk rekaman berikutnya. Audio yang ada tidak berubah.",
+    "bits16": "PCM 16-bit",
+    "bits24": "PCM 24-bit",
+    "bits32": "Float 32-bit",
+    "fileInfo": "{{size}} MiB · {{rate}} kHz · {{channels}} kanal · {{bits}}-bit {{encoding}}",
+    "fileSize": "{{size}} MiB",
+    "float": "float"
+  },
+  "audioQuality": {
+    "check": "Periksa audio",
+    "failed": "Analisis audio tidak tersedia.",
+    "advisory": "Hanya saran: jeda dan variasi volume dapat disengaja. Audio tidak diubah.",
+    "truncated": "Analisis atau daftar peringatan dibatasi.",
+    "clear": "Tidak ada masalah terdeteksi pada bagian yang dianalisis.",
+    "empty": "Audio kosong",
+    "silence": "Kemungkinan hening",
+    "quiet": "Volume tidak biasa rendah",
+    "loud": "Volume tidak biasa tinggi",
+    "clipping": "Kemungkinan clipping",
+    "invalid": "Sampel audio tidak valid"
+  },
   "longformPersistence": {
     "storage_unavailable_title": "Proyek tidak dapat dimuat",
     "storage_unavailable_body": "VoiceStudio tidak dapat membaca penyimpanan proyek lokal. Data Anda tidak diubah. Coba lagi untuk membukanya dengan aman.",
@@ -594,7 +626,7 @@
     "cleaning": "Membersihkan…",
     "using_profile": "Menggunakan profil: {{name}}",
     "clear": "jelas",
-    "production_overrides": "Pengesampingan Produksi",
+    "production_overrides": "Kontrol suara",
     "denoise": "Tolak kebisingan",
     "postprocess": "Pascaproses",
     "duration": "Durasi",
@@ -2953,5 +2985,19 @@
     "step_transcribe": "Transkripsikan",
     "step_translate": "Terjemahkan",
     "step_convert": "Konversi"
+  },
+  "voiceControls": {
+    "title": "Kontrol suara",
+    "options": "Opsi lainnya",
+    "advanced": "Penyetelan model lanjutan",
+    "guidance": "Pengaruh instruksi",
+    "timing": "Waktu penyempurnaan",
+    "order": "Variasi urutan pengambilan sampel",
+    "variation": "Variasi suara",
+    "balance": "Keseimbangan kasar ke halus",
+    "denoise": "Bersihkan derau referensi",
+    "polish": "Sempurnakan audio yang dihasilkan",
+    "basics": "1× adalah kecepatan normal. Kosongkan durasi untuk irama alami.",
+    "hint": "Biasanya biarkan nilai bawaan. Panduan mengatur pengaruh instruksi; kontrol lain mengubah cara model membentuk suara. Ubah satu per satu."
   }
 }

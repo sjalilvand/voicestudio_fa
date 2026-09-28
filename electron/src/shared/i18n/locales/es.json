@@ -1,4 +1,36 @@
 {
+  "cloneQuality": {
+    "title": "Calidad de audio",
+    "precision": "Precisión WAV",
+    "size": "~{{size}} MiB/min a 24 kHz mono; varía según el motor.",
+    "hint16": "WAV más pequeño; amplia compatibilidad.",
+    "hint24": "Más precisión al editar; un 50 % más grande que 16 bits.",
+    "hint32": "Conserva muestras flotantes; duplica el tamaño de 16 bits. No mejora la voz en sí.",
+    "effort": "Pasos de muestreo",
+    "effortHint": "Más pasos tardan más y no siempre suenan mejor; el tamaño del archivo no cambia.",
+    "mastering": "Masterización para emisión",
+    "masteringHint": "Desactívala para omitir ecualización, compresión y normalización adicionales.",
+    "nextTake": "Se aplica a la próxima toma. El audio existente no cambia.",
+    "bits16": "PCM de 16 bits",
+    "bits24": "PCM de 24 bits",
+    "bits32": "Flotante de 32 bits",
+    "fileInfo": "{{size}} MiB · {{rate}} kHz · {{channels}} canales · {{bits}} bits {{encoding}}",
+    "fileSize": "{{size}} MiB",
+    "float": "flotante"
+  },
+  "audioQuality": {
+    "check": "Revisar audio",
+    "failed": "Análisis de audio no disponible.",
+    "advisory": "Solo orientativo: las pausas y el volumen expresivo pueden ser intencionales. El audio no cambia.",
+    "truncated": "El análisis o la lista de avisos está limitado.",
+    "clear": "No se detectaron problemas en la parte analizada.",
+    "empty": "Audio vacío",
+    "silence": "Posible silencio",
+    "quiet": "Volumen inusualmente bajo",
+    "loud": "Volumen inusualmente alto",
+    "clipping": "Posible saturación",
+    "invalid": "Muestras de audio no válidas"
+  },
   "longformPersistence": {
     "storage_unavailable_title": "No se pudieron cargar los proyectos",
     "storage_unavailable_body": "VoiceStudio no pudo leer el almacenamiento local de proyectos. Tus datos no se han modificado. Vuelve a intentarlo para abrirlos de forma segura.",
@@ -594,7 +626,7 @@
     "cleaning": "Limpieza…",
     "using_profile": "Usando perfil: {{name}}",
     "clear": "claro",
-    "production_overrides": "Anulaciones de producción",
+    "production_overrides": "Controles de voz",
     "denoise": "eliminar ruido",
     "postprocess": "Postproceso",
     "duration": "Duración",
@@ -2953,5 +2985,19 @@
     "step_transcribe": "Transcribir",
     "step_translate": "Traducir",
     "step_convert": "Convertir"
+  },
+  "voiceControls": {
+    "title": "Controles de voz",
+    "options": "Más opciones",
+    "advanced": "Ajustes avanzados del modelo",
+    "guidance": "Influencia de la indicación",
+    "timing": "Momento del refinamiento",
+    "order": "Variación del orden de muestreo",
+    "variation": "Variación del sonido",
+    "balance": "Equilibrio entre grueso y fino",
+    "denoise": "Limpiar ruido de referencia",
+    "polish": "Pulir el audio generado",
+    "basics": "1× es la velocidad normal. Deja la duración vacía para un ritmo natural.",
+    "hint": "Normalmente conviene usar los valores predeterminados. La guía ajusta la influencia de la indicación; los demás controles cambian cómo el modelo construye el sonido. Cambia uno a la vez."
   }
 }

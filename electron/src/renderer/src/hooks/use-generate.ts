@@ -19,7 +19,8 @@ import { throttle } from '@tanstack/react-pacer';
 import { toast } from 'sonner';
 import { ApiError, apiJson, describeError, isAbortError } from '@/lib/api/client';
 import { generateClone, sanitizeInstruct } from '@/lib/api/generate';
-import type { GenerateResult } from '@/lib/api/types';
+import type { EnginesResponse, GenerateResult } from '@/lib/api/types';
+import { effectiveSamplingSteps } from '@/lib/audio/quality';
 import { tr } from '@/lib/i18n-text';
 import { queryKeys } from '@/lib/query';
 import { cloneSettingsStore } from '@/lib/store/clone-settings';
@@ -266,7 +267,12 @@ function useGenerateController(): UseGenerateClone {
           refAudio: design || settings.selectedProfileId ? null : reference.file,
           refText: design ? undefined : settings.refText,
           instruct,
-          steps: settings.steps,
+          steps: effectiveSamplingSteps(
+            settings.steps,
+            queryClient.getQueryData<EnginesResponse>(queryKeys.engines)?.tts?.active,
+          ),
+          wavBits: settings.wavBits,
+          effectPreset: settings.effectPreset,
           cfg: settings.cfg,
           speed: settings.speed,
           tShift: settings.tShift,

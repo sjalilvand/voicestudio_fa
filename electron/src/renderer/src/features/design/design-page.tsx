@@ -44,6 +44,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useGenerateClone } from '@/hooks/use-generate';
 import { OutputPanel } from '@/features/clone/output-panel';
+import { QualityControls } from '@/features/clone/quality-controls';
 import { ProductionSettings } from '@/features/clone/action-bar';
 import { LanguagePicker } from '@/features/clone/language-picker';
 import { queryKeys } from '@/lib/query';
@@ -491,6 +492,7 @@ export function DesignPage() {
                 }))
               }
             />
+            <QualityControls disabled={generation.isGenerating} />
           </div>
           <div className="mx-auto w-full max-w-4xl shrink-0 px-6 pb-4">
             {generation.designBlocker === 'engine' && !generation.isGenerating && (

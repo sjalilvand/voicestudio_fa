@@ -1,4 +1,36 @@
 {
+  "cloneQuality": {
+    "title": "Ljudkvalitet",
+    "precision": "WAV-precision",
+    "size": "~{{size}} MiB/min vid 24 kHz mono; varierar med motor.",
+    "hint16": "Minsta WAV; brett spelarstöd.",
+    "hint24": "Högre precision vid redigering; 50 % större än 16-bitars.",
+    "hint32": "Bevarar flyttalssampel; dubbelt så stor som 16-bitars. Förbättrar inte själva rösten.",
+    "effort": "Samplingssteg",
+    "effortHint": "Fler steg tar längre tid och ger inte alltid bättre ljud; filstorleken förblir densamma.",
+    "mastering": "Mastering för sändning",
+    "masteringHint": "Stäng av för att hoppa över tillagd EQ, komprimering och normalisering.",
+    "nextTake": "Gäller nästa tagning. Befintligt ljud ändras inte.",
+    "bits16": "16-bitars PCM",
+    "bits24": "24-bitars PCM",
+    "bits32": "32-bitars flyttal",
+    "fileInfo": "{{size}} MiB · {{rate}} kHz · {{channels}} kanaler · {{bits}} bitar {{encoding}}",
+    "fileSize": "{{size}} MiB",
+    "float": "flyttal"
+  },
+  "audioQuality": {
+    "check": "Kontrollera ljud",
+    "failed": "Ljudanalys är inte tillgänglig.",
+    "advisory": "Endast vägledning: pauser och volymvariationer kan vara avsiktliga. Ljudet ändras inte.",
+    "truncated": "Analysen eller varningslistan är begränsad.",
+    "clear": "Inga problem upptäcktes i den analyserade delen.",
+    "empty": "Tomt ljud",
+    "silence": "Möjlig tystnad",
+    "quiet": "Ovanligt låg volym",
+    "loud": "Ovanligt hög volym",
+    "clipping": "Möjlig klippning",
+    "invalid": "Ogiltiga ljudsamplingar"
+  },
   "longformPersistence": {
     "storage_unavailable_title": "Projekten kunde inte läsas in",
     "storage_unavailable_body": "VoiceStudio kunde inte läsa det lokala projektlagret. Dina data har inte ändrats. Försök igen för att öppna dem säkert.",
@@ -594,7 +626,7 @@
     "cleaning": "Rengör...",
     "using_profile": "Använder profilen: {{name}}",
     "clear": "klart",
-    "production_overrides": "Åsidosättande av produktion",
+    "production_overrides": "Röstinställningar",
     "denoise": "Denoise",
     "postprocess": "Efterbearbetning",
     "duration": "Varaktighet",
@@ -2953,5 +2985,19 @@
     "step_transcribe": "Transkribera",
     "step_translate": "Översätt",
     "step_convert": "Konvertera"
+  },
+  "voiceControls": {
+    "title": "Röstinställningar",
+    "options": "Fler alternativ",
+    "advanced": "Avancerad modelljustering",
+    "guidance": "Instruktionens påverkan",
+    "timing": "Tidpunkt för förfining",
+    "order": "Variation i samplingsordning",
+    "variation": "Ljudvariation",
+    "balance": "Balans mellan grovt och fint",
+    "denoise": "Ta bort brus från referensen",
+    "polish": "Förfina genererat ljud",
+    "basics": "1× är normal hastighet. Lämna längden tom för naturlig timing.",
+    "hint": "Behåll vanligtvis standardvärdena. Vägledning styr instruktionens påverkan; övriga reglage ändrar hur modellen bygger ljudet. Ändra ett i taget."
   }
 }

@@ -12,6 +12,8 @@ export interface CloneSettings {
   refText: string;
   instruct: string;
   steps: number;
+  wavBits: 16 | 24 | 32;
+  effectPreset: 'broadcast' | 'raw';
   cfg: number;
   speed: number;
   tShift: number;
@@ -33,6 +35,8 @@ export const DEFAULT_CLONE_SETTINGS: CloneSettings = {
   refText: '',
   instruct: '',
   steps: 16, // ~16 avoids ODE destabilisation in the flow-matcher.
+  wavBits: 16,
+  effectPreset: 'broadcast',
   cfg: 2.0,
   speed: 1.0,
   tShift: 0.1,
@@ -48,6 +52,8 @@ export const DEFAULT_CLONE_SETTINGS: CloneSettings = {
 };
 
 function acceptsValue(key: keyof CloneSettings, value: unknown): boolean {
+  if (key === 'wavBits') return value === 16 || value === 24 || value === 32;
+  if (key === 'effectPreset') return value === 'broadcast' || value === 'raw';
   if (key === 'selectedProfileId') return value === null || typeof value === 'string';
   const expected = typeof DEFAULT_CLONE_SETTINGS[key];
   if (typeof value !== expected) return false;
@@ -131,6 +137,8 @@ export function resetOverrides(): void {
   const { steps, cfg, speed, tShift, posTemp, classTemp, layerPenalty, denoise, postprocess } =
     DEFAULT_CLONE_SETTINGS;
   patchCloneSettings({
+    wavBits: DEFAULT_CLONE_SETTINGS.wavBits,
+    effectPreset: DEFAULT_CLONE_SETTINGS.effectPreset,
     steps,
     cfg,
     speed,

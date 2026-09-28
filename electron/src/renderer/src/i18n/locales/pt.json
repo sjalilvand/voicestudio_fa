@@ -1,4 +1,36 @@
 {
+  "cloneQuality": {
+    "title": "Qualidade do áudio",
+    "precision": "Precisão WAV",
+    "size": "~{{size}} MiB/min a 24 kHz mono; varia por motor.",
+    "hint16": "Menor WAV; ampla compatibilidade.",
+    "hint24": "Mais precisão na edição; 50% maior que 16 bits.",
+    "hint32": "Preserva amostras flutuantes; o dobro de 16 bits. Não melhora a voz em si.",
+    "effort": "Etapas de amostragem",
+    "effortHint": "Mais etapas demoram mais e nem sempre melhoram o som; o tamanho do arquivo permanece igual.",
+    "mastering": "Masterização para transmissão",
+    "masteringHint": "Desative para ignorar EQ, compressão e normalização adicionais.",
+    "nextTake": "Aplica-se à próxima tomada. O áudio existente não muda.",
+    "bits16": "PCM de 16 bits",
+    "bits24": "PCM de 24 bits",
+    "bits32": "Ponto flutuante de 32 bits",
+    "fileInfo": "{{size}} MiB · {{rate}} kHz · {{channels}} canais · {{bits}} bits {{encoding}}",
+    "fileSize": "{{size}} MiB",
+    "float": "ponto flutuante"
+  },
+  "audioQuality": {
+    "check": "Verificar áudio",
+    "failed": "Análise de áudio indisponível.",
+    "advisory": "Apenas indicativo: pausas e variações de volume podem ser intencionais. O áudio não é alterado.",
+    "truncated": "A análise ou a lista de avisos está limitada.",
+    "clear": "Nenhum problema detectado na parte analisada.",
+    "empty": "Áudio vazio",
+    "silence": "Possível silêncio",
+    "quiet": "Volume incomumente baixo",
+    "loud": "Volume incomumente alto",
+    "clipping": "Possível saturação",
+    "invalid": "Amostras de áudio inválidas"
+  },
   "twilioIntegration": {
     "exposureWarning": "Ativar isto abre uma porta local separada que seu túnel publica na internet. Apenas solicitações assinadas com seu Auth Token do Twilio são aceitas; o restante do VoiceStudio continua privado.",
     "accountSid": "Account SID",
@@ -210,7 +242,8 @@
     "choose_voice": "Escolha uma voz",
     "change_voice": "Alterar voz",
     "voice_sample": "Amostra de voz",
-    "prompt_named": "O que {{name}} deve dizer?"
+    "prompt_named": "O que {{name}} deve dizer?",
+    "expressive": "Controles de voz"
   },
   "profileIdentity": {
     "save_hint": "Salve esta voz para usá-la novamente com um clique.",
@@ -372,7 +405,7 @@
     "cleaning": "Limpeza…",
     "using_profile": "Usando perfil: {{name}}",
     "clear": "claro",
-    "production_overrides": "Substituições de produção",
+    "production_overrides": "Controles de voz",
     "denoise": "Denoise",
     "postprocess": "Pós-processamento",
     "duration": "Duração",
@@ -3199,5 +3232,19 @@
     "addingVoice": "Adicionando voz…",
     "engineDefault": "Padrão do mecanismo",
     "preview": "Visualizar voz"
+  },
+  "voiceControls": {
+    "title": "Controles de voz",
+    "options": "Mais opções",
+    "advanced": "Ajustes avançados do modelo",
+    "guidance": "Influência da instrução",
+    "timing": "Momento do refinamento",
+    "order": "Variação da ordem de amostragem",
+    "variation": "Variação do som",
+    "balance": "Equilíbrio entre estrutura e detalhe",
+    "denoise": "Limpar ruído da referência",
+    "polish": "Aprimorar o áudio gerado",
+    "basics": "1× é a velocidade normal. Deixe a duração vazia para um ritmo natural.",
+    "hint": "Em geral, mantenha os valores padrão. A orientação ajusta a influência da instrução; os outros controles mudam como o modelo constrói o som. Altere um de cada vez."
   }
 }

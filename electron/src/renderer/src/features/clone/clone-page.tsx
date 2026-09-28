@@ -33,6 +33,7 @@ import { ActionBar, ProductionSettings } from './action-bar';
 import { OutputPanel } from './output-panel';
 import { ReferencePanel, SaveProfileForm } from './reference-panel';
 import { ScriptPanel } from './script-panel';
+import { QualityControls } from './quality-controls';
 import { useCloneDemo } from '@/hooks/use-clone-demo';
 import { runRendererTask } from '@/lib/global-error-recovery';
 
@@ -253,6 +254,7 @@ export function ClonePage() {
                   coachmark={showDemoCoachmark ? t('demo.clone_coachmark') : undefined}
                   onUserEdit={() => setShowDemoCoachmark(false)}
                 />
+                <QualityControls disabled={isGenerating} />
               </>
             )}
           </div>

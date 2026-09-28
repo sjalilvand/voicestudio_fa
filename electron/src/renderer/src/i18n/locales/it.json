@@ -1,4 +1,36 @@
 {
+  "cloneQuality": {
+    "title": "Qualità audio",
+    "precision": "Precisione WAV",
+    "size": "~{{size}} MiB/min a 24 kHz mono; varia in base al motore.",
+    "hint16": "WAV più piccolo; ampia compatibilità.",
+    "hint24": "Più precisione nel montaggio; 50% più grande di 16 bit.",
+    "hint32": "Conserva i campioni float; il doppio di 16 bit. Non migliora la voce stessa.",
+    "effort": "Passaggi di campionamento",
+    "effortHint": "Più passaggi richiedono più tempo e non garantiscono un suono migliore; la dimensione del file resta uguale.",
+    "mastering": "Mastering per trasmissione",
+    "masteringHint": "Disattiva per saltare EQ, compressione e normalizzazione aggiuntivi.",
+    "nextTake": "Si applica alla prossima registrazione. L’audio esistente non cambia.",
+    "bits16": "PCM a 16 bit",
+    "bits24": "PCM a 24 bit",
+    "bits32": "Virgola mobile a 32 bit",
+    "fileInfo": "{{size}} MiB · {{rate}} kHz · {{channels}} canali · {{bits}} bit {{encoding}}",
+    "fileSize": "{{size}} MiB",
+    "float": "virgola mobile"
+  },
+  "audioQuality": {
+    "check": "Controlla audio",
+    "failed": "Analisi audio non disponibile.",
+    "advisory": "Solo indicativo: pause e variazioni di volume possono essere intenzionali. L’audio resta invariato.",
+    "truncated": "L’analisi o l’elenco degli avvisi è limitato.",
+    "clear": "Nessun problema rilevato nella parte analizzata.",
+    "empty": "Audio vuoto",
+    "silence": "Possibile silenzio",
+    "quiet": "Volume insolitamente basso",
+    "loud": "Volume insolitamente alto",
+    "clipping": "Possibile clipping",
+    "invalid": "Campioni audio non validi"
+  },
   "twilioIntegration": {
     "exposureWarning": "Attivandolo si apre una porta locale separata che il tuo tunnel pubblica su internet. Sono accettate solo richieste firmate con il tuo Auth Token Twilio; il resto di VoiceStudio resta privato.",
     "accountSid": "Account SID",
@@ -210,7 +242,8 @@
     "choose_voice": "Scegli una voce",
     "change_voice": "Cambia voce",
     "voice_sample": "Campione vocale",
-    "prompt_named": "Cosa deve dire {{name}}?"
+    "prompt_named": "Cosa deve dire {{name}}?",
+    "expressive": "Controlli vocali"
   },
   "profileIdentity": {
     "save_hint": "Salva questa voce per riutilizzarla con un clic.",
@@ -372,7 +405,7 @@
     "cleaning": "Pulizia…",
     "using_profile": "Utilizzo del profilo: {{name}}",
     "clear": "chiaro",
-    "production_overrides": "Sostituzioni di produzione",
+    "production_overrides": "Controlli vocali",
     "denoise": "Eliminazione del rumore",
     "postprocess": "Postelaborazione",
     "duration": "Durata",
@@ -3199,5 +3232,19 @@
     "addingVoice": "Aggiunta voce…",
     "engineDefault": "Motore difettoso",
     "preview": "Anteprima della voce"
+  },
+  "voiceControls": {
+    "title": "Controlli vocali",
+    "options": "Altre opzioni",
+    "advanced": "Regolazione avanzata del modello",
+    "guidance": "Influenza del prompt",
+    "timing": "Momento del perfezionamento",
+    "order": "Variazione dell’ordine di campionamento",
+    "variation": "Variazione del suono",
+    "balance": "Equilibrio tra struttura e dettaglio",
+    "denoise": "Rimuovi rumore dal riferimento",
+    "polish": "Rifinisci l’audio generato",
+    "basics": "1× è la velocità normale. Lascia vuota la durata per un ritmo naturale.",
+    "hint": "Di solito vanno bene i valori predefiniti. La guida regola l’influenza del prompt; gli altri controlli cambiano come il modello costruisce il suono. Modificane uno alla volta."
   }
 }
