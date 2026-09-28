@@ -13,7 +13,10 @@ vi.mock('@tanstack/react-router', () => ({
   ),
   useNavigate: () => vi.fn(),
 }));
-vi.mock('@tanstack/react-query', () => ({ useQuery: () => ({ data: [] }) }));
+vi.mock('@tanstack/react-query', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@tanstack/react-query')>(),
+  useQuery: () => ({ data: [] }),
+}));
 vi.mock('@/hooks/use-profiles', () => ({ useProfiles: () => ({ data: [] }) }));
 vi.mock('@/components/app-shell/workspace-header', () => ({
   WorkspaceHeader: ({ children }: { children: ReactNode }) => <header>{children}</header>,
