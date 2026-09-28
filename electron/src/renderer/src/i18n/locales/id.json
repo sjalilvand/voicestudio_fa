@@ -1109,7 +1109,7 @@
     "llmp_test": "Uji",
     "llmp_active_badge": "aktif",
     "llmp_test_ok": "ok — {{model}} · {{ms}} ms",
-    "llmp_err_config": "Kunci API atau URL dasar belum diisi — isi lalu simpan.",
+    "llmp_err_config": "Lengkapi pengaturan penyedia: URL dasar, model, serta kunci API atau ID akun jika diperlukan.",
     "llmp_err_auth": "Kunci ditolak (401/403) — periksa kunci API Anda.",
     "llmp_err_not_found": "Tidak ditemukan (404) — periksa nama model dan jalur URL dasar.",
     "llmp_err_rate_limit": "Terkena batas laju (429) — kunci berfungsi; coba lagi sebentar lagi.",
@@ -1281,7 +1281,7 @@
     "uninstall_models_warning": "Ini termasuk cache Hugging Face bersama ({{size}}) — model alat AI lain yang diunduh mungkin disertakan dengannya.",
     "uninstall_total": "Lokasi {{count}} · {{size}} akan dibebaskan",
     "llmp_saved_not_active": "Tersimpan — belum digunakan untuk terjemahan. Klik “Simpan & gunakan untuk terjemahan” untuk beralih.",
-    "llmp_active_env_pin": "Penyedia aktif disematkan oleh variabel lingkungan LLM_DEFAULT_PROVIDER.",
+    "llmp_active_env_pin": "Pilihan LLM ditetapkan oleh LLM_DEFAULT_PROVIDER atau OMNIVOICE_LLM_BACKEND.",
     "llm_skills": "LLM Keterampilan",
     "llmskills_desc": "Arahkan setiap fitur yang didukung AI ke LLM masing-masing — pertahankan pekerjaan sensitif pada model lokal (Ollama/LM Studio) sementara pekerjaan yang lebih berat menggunakan penyedia jarak jauh — atau nonaktifkan fitur sepenuhnya. Off berperilaku persis seperti tidak ada LLM yang dikonfigurasi: fitur akan kembali ke jalur non-LLM.",
     "llmskills_needs_setup": "perlu pengaturan",
@@ -1338,7 +1338,14 @@
     "review_mode_desc": "Jeda di antara tahapan alur sehingga Anda dapat meninjau ASR/output terjemahan.",
     "review_mode_on": "Ulasan",
     "review_mode_off": "Tembakan cepat",
-    "translate_agent": "Agen cocok"
+    "translate_agent": "Agen cocok",
+    "llmp_connect": "Hubungkan dan aktifkan",
+    "llmp_setup_hint": "Pilih penyedia, jalankan servernya atau tambahkan kunci API, lalu hubungkan. VoiceStudio memverifikasi respons model sebelum mengaktifkan fitur LLM.",
+    "llmp_disable": "Matikan LLM",
+    "llmp_optional_key": "Kunci API (opsional)",
+    "llmp_cli_help": "Menggunakan CLI terpasang dan loginnya melalui pelaksana yang sama dengan perbaikan agen. Kosongkan Model untuk bawaan CLI. Respons mungkin lebih lambat; biaya mengikuti akun CLI.",
+    "llmp_sdk_help": "Penyedia native memakai LiteLLM. Untuk penyedia lain, masukkan provider/model. Bedrock memakai kunci API atau profil AWS; Vertex memakai ID akun sebagai proyek dan kredensial Google. URL dasar opsional.",
+    "llmp_cli_auth": "Akses akun CLI ditolak. Periksa login, langganan, dan model yang dipilih."
   },
   "gallery": {
     "title": "VoiceStudio Galeri",
@@ -1786,7 +1793,9 @@
     "saved": "✓ Tetapkan",
     "deepl_base_url": "URL Basis DeepL",
     "deepl_base_url_help": "Titik akhir API DeepL khusus (default: https://api.deepl.com/v2). Ubah untuk proxy/hosting mandiri.",
-    "microsoft_base_url_help": "Titik akhir Azure Translator kustom (default: https://api.cognitive.microsofttranslator.com)."
+    "microsoft_base_url_help": "Titik akhir Azure Translator kustom (default: https://api.cognitive.microsofttranslator.com).",
+    "region": "Wilayah",
+    "aws_profile": "Profil AWS"
   },
   "about": {
     "architecture": "Arsitektur",

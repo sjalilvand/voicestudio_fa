@@ -84,8 +84,9 @@ REGISTRY: dict[str, dict] = {
     "deepl": {
         "id": "deepl",
         "display_name": "DeepL (Online, Key)",
-        "pip_package": "deep_translator",
-        "probe_module": "deep_translator",
+        "pip_package": "httpx",
+        "probe_module": "httpx",
+        "builtin": True,
         "category": "online",
         "needs_key": True,
         "notes": "High-quality EU MT. Free tier: 500K chars/month. Set DEEPL_API_KEY.",
@@ -93,11 +94,20 @@ REGISTRY: dict[str, dict] = {
     "microsoft": {
         "id": "microsoft",
         "display_name": "Microsoft Translator (Online, Key)",
-        "pip_package": "deep_translator",
-        "probe_module": "deep_translator",
+        "pip_package": "httpx",
+        "probe_module": "httpx",
+        "builtin": True,
         "category": "online",
         "needs_key": True,
         "notes": "Azure Cognitive Services. Free tier: 2M chars/month. Set MICROSOFT_API_KEY.",
+    },
+    "google-cloud": {
+        "id": "google-cloud", "display_name": "Google Cloud Translation", "pip_package": "httpx",
+        "probe_module": "httpx", "category": "online", "needs_key": True, "builtin": True,
+    },
+    "amazon": {
+        "id": "amazon", "display_name": "Amazon Translate", "pip_package": "boto3",
+        "probe_module": "boto3", "category": "online", "needs_key": True, "builtin": True,
     },
     "mymemory": {
         "id": "mymemory",
@@ -224,6 +234,10 @@ def _configured(entry: dict) -> tuple[bool, str | None]:
         return bool(os.environ.get("DEEPL_API_KEY") or os.environ.get("TRANSLATE_API_KEY")), None
     if engine_id == "microsoft":
         return bool(os.environ.get("MICROSOFT_API_KEY") or os.environ.get("TRANSLATE_API_KEY")), None
+    if engine_id == "google-cloud":
+        return bool(os.environ.get("GOOGLE_TRANSLATE_API_KEY")), None
+    if engine_id == "amazon":
+        return bool(os.environ.get("AWS_PROFILE") or os.environ.get("AWS_ACCESS_KEY_ID")), None
     return True, None
 
 
@@ -290,7 +304,7 @@ def uninstall_blocker(engine_id: str) -> "tuple[int, str] | None":
     pkg = entry.get("pip_package") if entry else None
     if not pkg:
         return None
-    if _normalize(pkg) in _app_dependency_names():
+    if entry.get("builtin") or _normalize(pkg) in _app_dependency_names():
         return 400, (
             f"{entry['display_name']} uses {pkg}, which VoiceStudio itself "
             "depends on. Uninstalling it would break the app."

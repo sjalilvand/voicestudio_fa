@@ -1109,7 +1109,7 @@
     "llmp_test": "Kiểm tra",
     "llmp_active_badge": "đang hoạt động",
     "llmp_test_ok": "ok — {{model}} · {{ms}} ms",
-    "llmp_err_config": "Thiếu khóa API hoặc URL cơ sở — hãy điền và lưu.",
+    "llmp_err_config": "Hoàn tất cài đặt nhà cung cấp: URL cơ sở, mô hình và khóa API hoặc ID tài khoản nếu cần.",
     "llmp_err_auth": "Khóa bị từ chối (401/403) — kiểm tra khóa API của bạn.",
     "llmp_err_not_found": "Không tìm thấy (404) — kiểm tra tên mô hình và đường dẫn của URL cơ sở.",
     "llmp_err_rate_limit": "Bị giới hạn tốc độ (429) — khóa vẫn hoạt động; hãy thử lại sau giây lát.",
@@ -1281,7 +1281,7 @@
     "uninstall_models_warning": "Điều này bao gồm bộ đệm Hugging Face được chia sẻ ({{size}}) — các mô hình mà các công cụ AI khác được tải xuống có thể đi kèm với nó.",
     "uninstall_total": "Vị trí {{count}} · {{size}} sẽ được giải phóng",
     "llmp_saved_not_active": "Đã lưu - chưa được sử dụng để dịch. Nhấp vào “Lưu và sử dụng cho bản dịch” để chuyển đổi.",
-    "llmp_active_env_pin": "Nhà cung cấp đang hoạt động được ghim bởi biến môi trường LLM_DEFAULT_PROVIDER.",
+    "llmp_active_env_pin": "Lựa chọn LLM được cố định bởi LLM_DEFAULT_PROVIDER hoặc OMNIVOICE_LLM_BACKEND.",
     "llmp_models_truncated": "{{count}} đầu tiên được hiển thị — nhập để thu hẹp tên mô hình",
     "llm_skills": "LLM Kỹ năng",
     "llmskills_desc": "Định tuyến từng tính năng do AI hỗ trợ tới LLM của chính nó — duy trì công việc nhạy cảm trên mô hình cục bộ (Ollama/LM Studio) trong khi các công việc nặng hơn sử dụng nhà cung cấp từ xa — hoặc tắt hoàn toàn một tính năng. Tắt hoạt động giống hệt như không có LLM được định cấu hình: tính năng này quay trở lại đường dẫn không phải LLM.",
@@ -1338,7 +1338,14 @@
     "review_mode_desc": "Tạm dừng giữa các giai đoạn quy trình để bạn có thể xem lại đầu ra ASR/bản dịch.",
     "review_mode_on": "Xem lại",
     "review_mode_off": "Bắn nhanh",
-    "translate_agent": "Điều chỉnh bằng tác nhân"
+    "translate_agent": "Điều chỉnh bằng tác nhân",
+    "llmp_connect": "Kết nối và bật",
+    "llmp_setup_hint": "Chọn nhà cung cấp, khởi động máy chủ hoặc thêm khóa API rồi kết nối. VoiceStudio xác minh phản hồi của mô hình trước khi bật tính năng LLM.",
+    "llmp_disable": "Tắt LLM",
+    "llmp_optional_key": "Khóa API (tùy chọn)",
+    "llmp_cli_help": "Dùng CLI đã cài và phiên đăng nhập qua cùng bộ chạy với tính năng sửa bằng tác nhân. Để trống Mô hình để dùng mặc định của CLI. Phản hồi có thể chậm hơn; phí tính theo tài khoản CLI.",
+    "llmp_sdk_help": "Nhà cung cấp gốc dùng LiteLLM. Với nhà cung cấp khác, nhập provider/model. Bedrock dùng khóa API hoặc hồ sơ AWS; Vertex dùng ID tài khoản làm dự án và thông tin xác thực Google. URL cơ sở là tùy chọn.",
+    "llmp_cli_auth": "Quyền truy cập tài khoản CLI bị từ chối. Kiểm tra đăng nhập, gói đăng ký và mô hình đã chọn."
   },
   "gallery": {
     "title": "VoiceStudio Thư viện ảnh",
@@ -1786,7 +1793,9 @@
     "saved": "✓ Đặt",
     "deepl_base_url": "URL cơ sở DeepL",
     "deepl_base_url_help": "Điểm cuối API DeepL tùy chỉnh (mặc định: https://api.deepl.com/v2). Thay đổi cho proxy/tự lưu trữ.",
-    "microsoft_base_url_help": "Điểm cuối Azure Translator tùy chỉnh (mặc định: https://api.cognitive.microsofttranslator.com)."
+    "microsoft_base_url_help": "Điểm cuối Azure Translator tùy chỉnh (mặc định: https://api.cognitive.microsofttranslator.com).",
+    "region": "Khu vực",
+    "aws_profile": "Hồ sơ AWS"
   },
   "about": {
     "architecture": "Kiến trúc",

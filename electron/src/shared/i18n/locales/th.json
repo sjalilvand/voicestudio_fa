@@ -94,7 +94,7 @@
     "llmp_test": "ทดสอบ",
     "llmp_active_badge": "ใช้งานอยู่",
     "llmp_test_ok": "โอเค — {{model}} · {{ms}} ms",
-    "llmp_err_config": "ไม่มีคีย์ API หรือ Base URL — กรอกข้อมูลแล้วบันทึก",
+    "llmp_err_config": "กรอกการตั้งค่าผู้ให้บริการให้ครบ: URL หลัก โมเดล และคีย์ API หรือรหัสบัญชีหากจำเป็น",
     "llmp_err_auth": "คีย์ถูกปฏิเสธ (401/403) — ตรวจสอบคีย์ API ของคุณ",
     "llmp_err_not_found": "ไม่พบ (404) — ตรวจสอบชื่อโมเดลและพาธของ Base URL",
     "llmp_err_rate_limit": "ถูกจำกัดอัตรา (429) — คีย์ใช้งานได้ ลองอีกครั้งในอีกสักครู่",
@@ -364,7 +364,15 @@
     "reduce_motion_desc": "หยุดแอนิเมชันพื้นหลังและทรานซิชัน การตั้งค่าระบบยังมีผลด้วยตัวเอง ส่วนนี้เพิ่มเข้าไป",
     "perf_torch_compile": "ปิดใช้ torch.compile",
     "perf_torch_compile_note": "ใช้การประมวลผลโดยตรงเพื่อหลีกเลี่ยงข้อผิดพลาดหน่วยความจำของ Triton",
-    "perf_torch_compile_hint": "ใช้การประมวลผลโดยตรงเพื่อหลีกเลี่ยงข้อผิดพลาดหน่วยความจำของ Triton <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
+    "perf_torch_compile_hint": "ใช้การประมวลผลโดยตรงเพื่อหลีกเลี่ยงข้อผิดพลาดหน่วยความจำของ Triton <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>",
+    "llmp_active_env_pin": "การเลือก LLM ถูกกำหนดโดย LLM_DEFAULT_PROVIDER หรือ OMNIVOICE_LLM_BACKEND",
+    "llmp_connect": "เชื่อมต่อและเปิดใช้งาน",
+    "llmp_setup_hint": "เลือกผู้ให้บริการ เริ่มเซิร์ฟเวอร์หรือเพิ่มคีย์ API แล้วเชื่อมต่อ VoiceStudio จะตรวจสอบคำตอบของโมเดลก่อนเปิดใช้ฟีเจอร์ LLM",
+    "llmp_disable": "ปิด LLM",
+    "llmp_optional_key": "คีย์ API (ไม่บังคับ)",
+    "llmp_cli_help": "ใช้ CLI ที่ติดตั้งและการเข้าสู่ระบบผ่านตัวเรียกใช้เดียวกับการซ่อมด้วยเอเจนต์ เว้นโมเดลว่างไว้เพื่อใช้ค่าเริ่มต้นของ CLI การตอบอาจช้าลงและคิดค่าบริการตามบัญชี CLI",
+    "llmp_sdk_help": "ผู้ให้บริการแบบเนทีฟใช้ LiteLLM สำหรับรายอื่นให้ป้อน provider/model Bedrock ใช้คีย์ API หรือโปรไฟล์ AWS ส่วน Vertex ใช้รหัสบัญชีเป็นโปรเจกต์และข้อมูลรับรอง Google ไม่จำเป็นต้องระบุ URL หลัก",
+    "llmp_cli_auth": "การเข้าถึงบัญชี CLI ถูกปฏิเสธ ตรวจสอบการเข้าสู่ระบบ การสมัครสมาชิก และโมเดลที่เลือก"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -782,7 +790,9 @@
     "group_huggingface": "กอดใบหน้า",
     "group_translate": "การแปล (LLM / ภาพยนตร์)",
     "group_deepl": "ตำแหน่งข้อมูลแบบกำหนดเองของ DeepL",
-    "group_microsoft": "จุดสิ้นสุดแบบกำหนดเองของนักแปลของ Microsoft"
+    "group_microsoft": "จุดสิ้นสุดแบบกำหนดเองของนักแปลของ Microsoft",
+    "region": "ภูมิภาค",
+    "aws_profile": "โปรไฟล์ AWS"
   },
   "engines": {
     "banners_on": "ป้ายบนเวทีเปิดอยู่",

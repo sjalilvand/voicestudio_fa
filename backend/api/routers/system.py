@@ -1170,6 +1170,7 @@ PERSISTENT_KEYS = {
     "TRANSLATE_BASE_URL", "TRANSLATE_API_KEY", "TRANSLATE_MODEL",
     "DEEPL_API_KEY", "DEEPL_BASE_URL",
     "MICROSOFT_API_KEY", "MICROSOFT_BASE_URL",
+    "GOOGLE_TRANSLATE_API_KEY", "MICROSOFT_REGION", "AWS_PROFILE", "AWS_REGION",
     # User-configurable network ports. Persisted so they survive restarts;
     # the Rust sidecar reads OMNIVOICE_PORT at startup and the backend derives
     # the LAN-share/UI ports from the others.
@@ -1305,7 +1306,12 @@ async def set_env_var(body: dict):
     # startup in main.py). Non-persistent keys stay process-local.
     if key != "HF_TOKEN" and key in PERSISTENT_KEYS:
         prefs_key = f"env.{key}"
-        if value:
+        from services.translation_apis import SECRET_ENV_KEYS
+        if key in SECRET_ENV_KEYS:
+            from services import settings_store
+            settings_store.set_secret("translation_env." + key, value or None)
+            prefs_delete(prefs_key)
+        elif value:
             prefs_set(prefs_key, value)
         else:
             prefs_delete(prefs_key)

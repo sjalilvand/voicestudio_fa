@@ -1109,7 +1109,7 @@
     "llmp_test": "ทดสอบ",
     "llmp_active_badge": "ใช้งานอยู่",
     "llmp_test_ok": "โอเค — {{model}} · {{ms}} ms",
-    "llmp_err_config": "ไม่มีคีย์ API หรือ Base URL — กรอกข้อมูลแล้วบันทึก",
+    "llmp_err_config": "กรอกการตั้งค่าผู้ให้บริการให้ครบ: URL หลัก โมเดล และคีย์ API หรือรหัสบัญชีหากจำเป็น",
     "llmp_err_auth": "คีย์ถูกปฏิเสธ (401/403) — ตรวจสอบคีย์ API ของคุณ",
     "llmp_err_not_found": "ไม่พบ (404) — ตรวจสอบชื่อโมเดลและพาธของ Base URL",
     "llmp_err_rate_limit": "ถูกจำกัดอัตรา (429) — คีย์ใช้งานได้ ลองอีกครั้งในอีกสักครู่",
@@ -1277,7 +1277,7 @@
     "uninstall_models_warning": "ซึ่งรวมถึงแคช Hugging Face ที่แชร์ ({{size}}) — แบบจำลองที่เครื่องมือ AI อื่นๆ ที่ดาวน์โหลดอาจใช้ร่วมกันได้",
     "uninstall_total": "ตำแหน่ง {{count}} · {{size}} จะถูกปลดปล่อย",
     "llmp_env_override": "ตั้งค่าผ่านตัวแปรสภาพแวดล้อม - แทนที่ฟิลด์นี้",
-    "llmp_active_env_pin": "ผู้ให้บริการที่ใช้งานอยู่จะถูกปักหมุดโดยตัวแปรสภาพแวดล้อม LLM_DEFAULT_PROVIDER",
+    "llmp_active_env_pin": "การเลือก LLM ถูกกำหนดโดย LLM_DEFAULT_PROVIDER หรือ OMNIVOICE_LLM_BACKEND",
     "llmp_models_truncated": "อันดับแรก {{count}} ที่แสดง — พิมพ์เพื่อจำกัดชื่อรุ่นให้แคบลง",
     "llm_skills": "LLM ทักษะ",
     "llmskills_desc": "กำหนดเส้นทางฟีเจอร์ที่ขับเคลื่อนด้วย AI แต่ละรายการไปยัง LLM ของตัวเอง — เก็บงานที่ละเอียดอ่อนไว้บนโมเดลในเครื่อง (Ollama/LM Studio) ในขณะที่งานที่หนักกว่านั้นต้องใช้ผู้ให้บริการระยะไกล — หรือปิดฟีเจอร์ทั้งหมด Off ทำงานเหมือนกับไม่มีการกำหนดค่า LLM เลย โดยคุณลักษณะนี้จะกลับไปใช้เส้นทางที่ไม่ใช่ LLM",
@@ -1338,7 +1338,14 @@
     "review_mode_desc": "หยุดชั่วคราวระหว่างขั้นตอนไปป์ไลน์เพื่อให้คุณสามารถตรวจสอบ ASR / เอาต์พุตการแปลได้",
     "review_mode_on": "รีวิว",
     "review_mode_off": "ยิงเร็ว",
-    "translate_agent": "ปรับความพอดีด้วยเอเจนต์"
+    "translate_agent": "ปรับความพอดีด้วยเอเจนต์",
+    "llmp_connect": "เชื่อมต่อและเปิดใช้งาน",
+    "llmp_setup_hint": "เลือกผู้ให้บริการ เริ่มเซิร์ฟเวอร์หรือเพิ่มคีย์ API แล้วเชื่อมต่อ VoiceStudio จะตรวจสอบคำตอบของโมเดลก่อนเปิดใช้ฟีเจอร์ LLM",
+    "llmp_disable": "ปิด LLM",
+    "llmp_optional_key": "คีย์ API (ไม่บังคับ)",
+    "llmp_cli_help": "ใช้ CLI ที่ติดตั้งและการเข้าสู่ระบบผ่านตัวเรียกใช้เดียวกับการซ่อมด้วยเอเจนต์ เว้นโมเดลว่างไว้เพื่อใช้ค่าเริ่มต้นของ CLI การตอบอาจช้าลงและคิดค่าบริการตามบัญชี CLI",
+    "llmp_sdk_help": "ผู้ให้บริการแบบเนทีฟใช้ LiteLLM สำหรับรายอื่นให้ป้อน provider/model Bedrock ใช้คีย์ API หรือโปรไฟล์ AWS ส่วน Vertex ใช้รหัสบัญชีเป็นโปรเจกต์และข้อมูลรับรอง Google ไม่จำเป็นต้องระบุ URL หลัก",
+    "llmp_cli_auth": "การเข้าถึงบัญชี CLI ถูกปฏิเสธ ตรวจสอบการเข้าสู่ระบบ การสมัครสมาชิก และโมเดลที่เลือก"
   },
   "gallery": {
     "title": "VoiceStudio แกลเลอรี่",
@@ -1786,7 +1793,9 @@
     "saved": "✓ ตั้งค่า",
     "deepl_base_url": "URL ฐาน DeepL",
     "deepl_base_url_help": "ตำแหน่งข้อมูล DeepL API ที่กำหนดเอง (ค่าเริ่มต้น: https://api.deepl.com/v2) การเปลี่ยนแปลงสำหรับพร็อกซี/โฮสต์ด้วยตนเอง",
-    "microsoft_base_url_help": "จุดสิ้นสุด Azure Translator แบบกำหนดเอง (ค่าเริ่มต้น: https://api.cognitive.microsofttranslator.com)"
+    "microsoft_base_url_help": "จุดสิ้นสุด Azure Translator แบบกำหนดเอง (ค่าเริ่มต้น: https://api.cognitive.microsofttranslator.com)",
+    "region": "ภูมิภาค",
+    "aws_profile": "โปรไฟล์ AWS"
   },
   "about": {
     "architecture": "สถาปัตยกรรม",

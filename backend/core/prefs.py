@@ -139,6 +139,18 @@ def restore_env(data: dict) -> None:
     """
     global _EXTERNALLY_PROVIDED
     _EXTERNALLY_PROVIDED = frozenset(os.environ.keys())
+    from services.translation_apis import SECRET_ENV_KEYS
+    from services import settings_store
+    for key in SECRET_ENV_KEYS:
+        legacy = data.get("env." + key)
+        saved = settings_store.get_secret("translation_env." + key)
+        if legacy and not saved:
+            settings_store.set_secret("translation_env." + key, str(legacy))
+            saved = str(legacy)
+        if legacy:
+            delete("env." + key)
+        if saved:
+            os.environ.setdefault(key, saved)
     for k, v in data.items():
         if not k.startswith("env.") or not v:
             continue

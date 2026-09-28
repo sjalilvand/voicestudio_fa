@@ -94,7 +94,7 @@
     "llmp_test": "Testuj",
     "llmp_active_badge": "aktywny",
     "llmp_test_ok": "ok — {{model}} · {{ms}} ms",
-    "llmp_err_config": "Brak klucza API lub bazowego adresu URL — uzupełnij je i zapisz.",
+    "llmp_err_config": "Uzupełnij ustawienia dostawcy: bazowy adres URL, model oraz wymagany klucz API lub identyfikator konta.",
     "llmp_err_auth": "Klucz odrzucony (401/403) — sprawdź swój klucz API.",
     "llmp_err_not_found": "Nie znaleziono (404) — sprawdź nazwę modelu i ścieżkę bazowego adresu URL.",
     "llmp_err_rate_limit": "Limit zapytań (429) — klucz działa; spróbuj ponownie za chwilę.",
@@ -364,7 +364,15 @@
     "reduce_motion_desc": "Zatrzymuje animacje tła i przejścia. Ustawienie systemowe działa samo z siebie; to je uzupełnia.",
     "perf_torch_compile": "Wyłącz torch.compile",
     "perf_torch_compile_note": "Używa bezpośredniego wykonywania, aby uniknąć błędów pamięci Triton.",
-    "perf_torch_compile_hint": "Używa bezpośredniego wykonywania, aby uniknąć błędów pamięci Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
+    "perf_torch_compile_hint": "Używa bezpośredniego wykonywania, aby uniknąć błędów pamięci Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>",
+    "llmp_active_env_pin": "Wybór LLM jest ustalony przez LLM_DEFAULT_PROVIDER lub OMNIVOICE_LLM_BACKEND.",
+    "llmp_connect": "Połącz i włącz",
+    "llmp_setup_hint": "Wybierz dostawcę, uruchom jego serwer lub dodaj klucz API, a następnie połącz. VoiceStudio sprawdza odpowiedź modelu przed włączeniem funkcji LLM.",
+    "llmp_disable": "Wyłącz LLM",
+    "llmp_optional_key": "Klucz API (opcjonalny)",
+    "llmp_cli_help": "Używa zainstalowanego CLI i jego logowania przez ten sam mechanizm co naprawa z agentem. Puste pole Model oznacza domyślny model CLI. Odpowiedzi mogą być wolniejsze; koszty obciążają konto CLI.",
+    "llmp_sdk_help": "Natywni dostawcy używają LiteLLM. Dla innych wpisz provider/model. Bedrock używa klucza API lub profilu AWS; Vertex używa identyfikatora konta jako projektu i danych logowania Google. Bazowy URL jest opcjonalny.",
+    "llmp_cli_auth": "Odrzucono dostęp do konta CLI. Sprawdź logowanie, subskrypcję i wybrany model."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -782,7 +790,9 @@
     "group_huggingface": "Przytulana twarz",
     "group_translate": "Tłumaczenie (LLM / filmowe)",
     "group_deepl": "Niestandardowy punkt końcowy DeepL",
-    "group_microsoft": "Niestandardowy punkt końcowy usługi Microsoft Translator"
+    "group_microsoft": "Niestandardowy punkt końcowy usługi Microsoft Translator",
+    "region": "Region",
+    "aws_profile": "Profil AWS"
   },
   "engines": {
     "banners_on": "Włączono banery sceniczne",

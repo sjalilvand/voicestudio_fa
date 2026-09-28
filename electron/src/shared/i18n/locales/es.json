@@ -94,7 +94,7 @@
     "llmp_test": "Probar",
     "llmp_active_badge": "activo",
     "llmp_test_ok": "ok — {{model}} · {{ms}} ms",
-    "llmp_err_config": "Falta la clave API o la URL base — rellénalas y guarda.",
+    "llmp_err_config": "Completa la configuración del proveedor: URL base, modelo y la clave API o el ID de cuenta que se requieran.",
     "llmp_err_auth": "Clave rechazada (401/403) — comprueba tu clave API.",
     "llmp_err_not_found": "No encontrado (404) — comprueba el nombre del modelo y la ruta de la URL base.",
     "llmp_err_rate_limit": "Límite de peticiones (429) — la clave funciona; inténtalo de nuevo en un momento.",
@@ -364,7 +364,15 @@
     "reduce_motion_desc": "Detiene las animaciones de fondo y las transiciones. Tu ajuste del sistema se respeta por sí solo; esto se suma.",
     "perf_torch_compile": "Desactivar torch.compile",
     "perf_torch_compile_note": "Usa ejecución directa para evitar errores de memoria de Triton.",
-    "perf_torch_compile_hint": "Usa ejecución directa para evitar errores de memoria de Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
+    "perf_torch_compile_hint": "Usa ejecución directa para evitar errores de memoria de Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>",
+    "llmp_active_env_pin": "La selección del LLM está fijada por LLM_DEFAULT_PROVIDER u OMNIVOICE_LLM_BACKEND.",
+    "llmp_connect": "Conectar y activar",
+    "llmp_setup_hint": "Elige un proveedor, inicia su servidor o añade su clave API y conecta. VoiceStudio verifica una respuesta del modelo antes de activar las funciones LLM.",
+    "llmp_disable": "Desactivar LLM",
+    "llmp_optional_key": "Clave API (opcional)",
+    "llmp_cli_help": "Usa la CLI instalada y su sesión mediante el mismo ejecutor que la reparación con agente. Deja Modelo vacío para usar el predeterminado. Puede ser más lento; el coste corresponde a tu cuenta de la CLI.",
+    "llmp_sdk_help": "Los proveedores nativos usan LiteLLM. Para otros, introduce provider/model. Bedrock usa una clave API o perfil AWS; Vertex usa el ID de cuenta como proyecto y credenciales de Google. La URL base es opcional.",
+    "llmp_cli_auth": "Se rechazó el acceso de la cuenta CLI. Revisa la sesión, la suscripción y el modelo seleccionado."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -782,7 +790,9 @@
     "group_huggingface": "AbrazosCara",
     "group_translate": "Traducción (LLM / Cinemática)",
     "group_deepl": "Punto final personalizado de DeepL",
-    "group_microsoft": "Punto final personalizado de Microsoft Translator"
+    "group_microsoft": "Punto final personalizado de Microsoft Translator",
+    "region": "Región",
+    "aws_profile": "Perfil de AWS"
   },
   "engines": {
     "banners_on": "Pancartas del escenario encendidas",

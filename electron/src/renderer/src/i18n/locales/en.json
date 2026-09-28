@@ -1238,7 +1238,7 @@
     "llmp_test": "Test",
     "llmp_active_badge": "active",
     "llmp_test_ok": "ok — {{model}} · {{ms}} ms",
-    "llmp_err_config": "Missing API key or Base URL — fill them in and save.",
+    "llmp_err_config": "Complete the provider settings: Base URL, model, and any required API key or account ID.",
     "llmp_err_auth": "Key rejected (401/403) — check your API key.",
     "llmp_err_not_found": "Not found (404) — check the model name and Base URL path.",
     "llmp_err_rate_limit": "Rate-limited (429) — the key works; try again in a moment.",
@@ -1247,7 +1247,7 @@
     "llmp_load_failed": "Failed to load providers",
     "llmp_save_failed": "Failed to save",
     "llmp_env_override": "set via an environment variable — overrides this field",
-    "llmp_active_env_pin": "Active provider is pinned by the LLM_DEFAULT_PROVIDER environment variable.",
+    "llmp_active_env_pin": "LLM selection is pinned by LLM_DEFAULT_PROVIDER or OMNIVOICE_LLM_BACKEND.",
     "llmp_models_truncated": "first {{count}} shown — type to narrow the model name",
     "llm_skills": "LLM Skills",
     "llmskills_desc": "Route each AI-powered feature to its own LLM — keep sensitive work on a local model (Ollama/LM Studio) while heavier jobs use a remote provider — or switch a feature off entirely. Off behaves exactly like having no LLM configured: the feature falls back to its non-LLM path.",
@@ -1446,7 +1446,14 @@
     "review_mode_desc": "Pause between pipeline stages so you can review ASR / translation output.",
     "review_mode_on": "Pause for review",
     "review_mode_off": "Run straight through",
-    "translate_agent": "Agent fit"
+    "translate_agent": "Agent fit",
+    "llmp_connect": "Connect & enable",
+    "llmp_setup_hint": "Choose a provider, start its server or add its API key, then connect. VoiceStudio verifies a model response before enabling LLM features.",
+    "llmp_disable": "Turn off LLM",
+    "llmp_optional_key": "API key (optional)",
+    "llmp_cli_help": "Uses the installed CLI and its login, through the same runner as Repair with an agent. Leave Model blank for the CLI default. CLI responses may be slower; paid usage follows your CLI account.",
+    "llmp_sdk_help": "Native providers use LiteLLM. For other providers, enter provider/model. Bedrock uses an API key or AWS profile; Vertex uses Account ID as project and Google application credentials. Base URL is optional.",
+    "llmp_cli_auth": "CLI account access was rejected. Check your login, subscription, and selected model."
   },
   "gallery": {
     "title": "VoiceStudio Gallery",
@@ -1882,7 +1889,9 @@
     "saved": "✓ Set",
     "deepl_base_url": "DeepL Base URL",
     "deepl_base_url_help": "Custom DeepL API endpoint (default: https://api.deepl.com/v2). Change for proxy/self-hosted.",
-    "microsoft_base_url_help": "Custom Azure Translator endpoint (default: https://api.cognitive.microsofttranslator.com)."
+    "microsoft_base_url_help": "Custom Azure Translator endpoint (default: https://api.cognitive.microsofttranslator.com).",
+    "region": "Region",
+    "aws_profile": "AWS profile"
   },
   "about": {
     "architecture": "Architecture",

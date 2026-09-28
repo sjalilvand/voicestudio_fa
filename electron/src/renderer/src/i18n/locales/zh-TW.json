@@ -1109,7 +1109,7 @@
     "llmp_test": "測試",
     "llmp_active_badge": "已啟用",
     "llmp_test_ok": "正常：{{model}} · {{ms}} ms",
-    "llmp_err_config": "缺少 API 金鑰或基礎 URL，請填寫後儲存。",
+    "llmp_err_config": "請補全供應商設定：基礎 URL、模型，以及所需的 API 金鑰或帳戶 ID。",
     "llmp_err_auth": "金鑰遭拒（401/403），請檢查你的 API 金鑰。",
     "llmp_err_not_found": "找不到（404），請檢查模型名稱與基礎 URL 路徑。",
     "llmp_err_rate_limit": "已達速率限制（429），金鑰有效，請稍後再試。",
@@ -1283,7 +1283,7 @@
     "uninstall_total": "{{count}} 位置 · {{size}} 將會被釋放",
     "llmp_saved_not_active": "已儲存 — 尚未用於翻譯。點擊「儲存並用於翻譯」進行切換。",
     "llmp_env_override": "透過環境變數設定 - 覆蓋此字段",
-    "llmp_active_env_pin": "活動提供者由 LLM_DEFAULT_PROVIDER 環境變數固定。",
+    "llmp_active_env_pin": "LLM 選擇由 LLM_DEFAULT_PROVIDER 或 OMNIVOICE_LLM_BACKEND 固定。",
     "llmp_models_truncated": "顯示的第一個 {{count}} — 鍵入以縮小型號名稱",
     "llm_skills": "LLM 技能",
     "llmskills_desc": "將每個 AI 驅動的功能路由到其自己的 LLM - 將敏感工作保留在本地模型上 (Ollama/LM Studio)，而繁重的工作則使用遠端提供者 - 或完全關閉功能。關閉的行為與未配置 LLM 完全相同：此功能回退到其非LLM 路徑。",
@@ -1338,7 +1338,14 @@
     "review_mode_desc": "在管道階段之間暫停，以便您可以查看 ASR/翻譯輸出。",
     "review_mode_on": "評論",
     "review_mode_off": "速射",
-    "translate_agent": "代理適配"
+    "translate_agent": "代理適配",
+    "llmp_connect": "連線並啟用",
+    "llmp_setup_hint": "選擇供應商，啟動其伺服器或新增 API 金鑰，然後連線。VoiceStudio 會先驗證模型回應，再啟用 LLM 功能。",
+    "llmp_disable": "關閉 LLM",
+    "llmp_optional_key": "API 金鑰（選填）",
+    "llmp_cli_help": "透過與代理修復相同的執行器使用已安裝的 CLI 及其登入。模型留空將使用 CLI 預設值。回應可能較慢，費用依 CLI 帳戶計收。",
+    "llmp_sdk_help": "原生供應商使用 LiteLLM。其他供應商請輸入 provider/model。Bedrock 使用 API 金鑰或 AWS 設定檔；Vertex 將帳戶 ID 用作專案，並使用 Google 應用程式憑證。基礎 URL 為選填。",
+    "llmp_cli_auth": "CLI 帳戶存取遭拒。請檢查登入、訂閱和所選模型。"
   },
   "gallery": {
     "title": "VoiceStudio 畫廊",
@@ -1786,7 +1793,9 @@
     "saved": "✓ 設定",
     "deepl_base_url": "DeepL 基本 URL",
     "deepl_base_url_help": "自訂 DeepL API 端點（預設：https://api.deepl.com/v2）。變更為代理/自架。",
-    "microsoft_base_url_help": "自訂 Azure 翻譯端點（預設：https://api.cognitive.microsofttranslator.com）。"
+    "microsoft_base_url_help": "自訂 Azure 翻譯端點（預設：https://api.cognitive.microsofttranslator.com）。",
+    "region": "區域",
+    "aws_profile": "AWS 設定檔"
   },
   "about": {
     "architecture": "大樓",

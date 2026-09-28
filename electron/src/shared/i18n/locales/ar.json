@@ -94,7 +94,7 @@
     "llmp_test": "اختبار",
     "llmp_active_badge": "نشط",
     "llmp_test_ok": "تم — {{model}} · {{ms}} ms",
-    "llmp_err_config": "مفتاح API أو عنوان URL الأساسي مفقود — أدخلهما ثم احفظ.",
+    "llmp_err_config": "أكمل إعدادات المزوّد: عنوان URL الأساسي والنموذج وأي مفتاح API أو معرّف حساب مطلوب.",
     "llmp_err_auth": "رُفض المفتاح (401/403) — تحقق من مفتاح API الخاص بك.",
     "llmp_err_not_found": "غير موجود (404) — تحقق من اسم النموذج ومسار عنوان URL الأساسي.",
     "llmp_err_rate_limit": "تم تجاوز حد الطلبات (429) — المفتاح يعمل؛ حاول مجددًا بعد قليل.",
@@ -364,7 +364,15 @@
     "reduce_motion_desc": "يوقف الرسوم المتحركة في الخلفية والانتقالات. إعداد النظام يظل ساريًا بذاته؛ وهذا يضاف إليه.",
     "perf_torch_compile": "تعطيل torch.compile",
     "perf_torch_compile_note": "يستخدم التنفيذ المباشر لتجنب أخطاء ذاكرة Triton.",
-    "perf_torch_compile_hint": "يستخدم التنفيذ المباشر لتجنب أخطاء ذاكرة Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
+    "perf_torch_compile_hint": "يستخدم التنفيذ المباشر لتجنب أخطاء ذاكرة Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>",
+    "llmp_active_env_pin": "اختيار نموذج اللغة مثبت بواسطة LLM_DEFAULT_PROVIDER أو OMNIVOICE_LLM_BACKEND.",
+    "llmp_connect": "الاتصال والتفعيل",
+    "llmp_setup_hint": "اختر مزوّدًا وشغّل خادمه أو أضف مفتاح API ثم اتصل. يتحقق VoiceStudio من استجابة النموذج قبل تفعيل ميزات LLM.",
+    "llmp_disable": "إيقاف LLM",
+    "llmp_optional_key": "مفتاح API (اختياري)",
+    "llmp_cli_help": "يستخدم أداة CLI المثبتة وتسجيل دخولها عبر مشغّل إصلاح الوكيل نفسه. اترك النموذج فارغًا لاستخدام الافتراضي. قد تكون الاستجابات أبطأ وتُحتسب الرسوم على حساب CLI.",
+    "llmp_sdk_help": "تستخدم الخدمات الأصلية LiteLLM. للخدمات الأخرى أدخل provider/model. يستخدم Bedrock مفتاح API أو ملف AWS؛ ويستخدم Vertex معرّف الحساب كمشروع وبيانات اعتماد Google. عنوان URL الأساسي اختياري.",
+    "llmp_cli_auth": "رُفض وصول حساب CLI. تحقق من تسجيل الدخول والاشتراك والنموذج المحدد."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -782,7 +790,9 @@
     "group_huggingface": "HuggingFace",
     "group_translate": "الترجمة (ماجستير / سينمائية)",
     "group_deepl": "نقطة النهاية المخصصة DeepL",
-    "group_microsoft": "نقطة النهاية المخصصة لمترجم مايكروسوفت"
+    "group_microsoft": "نقطة النهاية المخصصة لمترجم مايكروسوفت",
+    "region": "المنطقة",
+    "aws_profile": "ملف AWS"
   },
   "engines": {
     "banners_on": "لافتات المرحلة على",

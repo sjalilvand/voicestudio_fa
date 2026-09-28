@@ -17,6 +17,7 @@ import { startRepairApiBridge, type RepairApiBridge } from './repair-api-bridge'
 import { isTrustedRenderer } from './trusted-renderer';
 import { isAppOperationRequest } from '../shared/repair-request';
 import { sendToLiveWindow } from './window-safety';
+import { startLlmAgentBridge } from './llm-agent-bridge';
 import type {
   RepairAgentEvent,
   RepairAgentId,
@@ -357,13 +358,19 @@ function validateDubTranslationRequest(
 ): asserts value is DubAgentTranslationRequest {
   if (!value || typeof value !== 'object') throw new Error('Invalid agent translation request');
   const request = value as DubAgentTranslationRequest;
-  if (request.requestId !== undefined && (typeof request.requestId !== 'string' || request.requestId.length > 100))
+  if (
+    request.requestId !== undefined &&
+    (typeof request.requestId !== 'string' || request.requestId.length > 100)
+  )
     throw new Error('Invalid translation request id');
   if (!DEFINITIONS.some((item) => item.id === request.agent)) throw new Error('Unknown agent');
   if (request.purpose !== 'translate' && request.purpose !== 'fit')
     throw new Error('Invalid agent translation purpose');
-  if (request.translationInstructions !== undefined &&
-      (typeof request.translationInstructions !== 'string' || request.translationInstructions.length > 5000))
+  if (
+    request.translationInstructions !== undefined &&
+    (typeof request.translationInstructions !== 'string' ||
+      request.translationInstructions.length > 5000)
+  )
     throw new Error('Invalid translation instructions');
   if (!request.targetLanguage?.trim() || request.targetLanguage.length > 100)
     throw new Error('Invalid target language');
@@ -430,6 +437,9 @@ export function translationLaunchArgs(agent: RepairAgentId): string[] {
       'read-only',
       '--ephemeral',
       '--skip-git-repo-check',
+      '--ignore-user-config',
+      '-c',
+      'features.shell_tool=false',
       '--color',
       'never',
       '-',
@@ -446,9 +456,42 @@ export function translationLaunchArgs(agent: RepairAgentId): string[] {
       '--tools',
       '',
       '--no-session-persistence',
+      '--strict-mcp-config',
+      '--mcp-config',
+      '{"mcpServers":{}}',
     ];
   if (agent === 'opencode') return ['run', '--format', 'json', '--pure'];
-  return ['--print', '--mode', 'json'];
+  return [
+    '--print',
+    '--mode',
+    'json',
+    '--no-tools',
+    '--no-extensions',
+    '--no-skills',
+    '--no-prompt-templates',
+    '--no-context-files',
+    '--no-session',
+    '--offline',
+  ];
+}
+
+export function agentProviderFailure(output: string): Error | null {
+  for (const line of output.split(/\r?\n/)) {
+    try {
+      const event = JSON.parse(line);
+      if (event.type !== 'error' && !event.is_api_error_message) continue;
+      const status = event.error?.data?.statusCode ?? event.api_error_status;
+      let name = '';
+      if (status === 401 || status === 403 || event.error === 'account_on_hold')
+        name = 'AgentAuthenticationError';
+      else if (status === 429) name = 'AgentRateLimitError';
+      else if (status === 404) name = 'AgentModelError';
+      if (name) return Object.assign(new Error('Agent provider rejected the request'), { name });
+    } catch {
+      /* Non-JSON progress is not a provider error. */
+    }
+  }
+  return null;
 }
 
 function jsonObjects(text: string): unknown[] {
@@ -614,12 +657,12 @@ ${task}
 ${request.context.slice(0, MAX_CONTEXT)}${context}`;
 }
 
-export function registerRepairAgents(
+export async function registerRepairAgents(
   supervisor: BackendSupervisor,
   initialRoot: string,
   getMainWindow: () => BrowserWindow | null,
   recentMainErrors: () => string = () => '',
-): () => void {
+): Promise<() => void> {
   let child: ChildProcessWithoutNullStreams | null = null;
   let translationChild: ChildProcessWithoutNullStreams | null = null;
   let translationTemp: string | null = null;
@@ -746,6 +789,9 @@ export function registerRepairAgents(
           NO_COLOR: '1',
           FORCE_COLOR: '0',
           VOICESTUDIO_REPAIR_CONTEXT_FILE: apiBridge.contextFile,
+          VOICESTUDIO_LLM_AGENT_TOKEN: undefined,
+          VOICESTUDIO_LLM_AGENT_URL: undefined,
+          ...(command.prefix.length ? { ELECTRON_RUN_AS_NODE: '1' } : {}),
           ...(request.agent === 'opencode' && apiBridge.openCodeConfigFile
             ? { OPENCODE_CONFIG: apiBridge.openCodeConfigFile }
             : {}),
@@ -802,122 +848,156 @@ export function registerRepairAgents(
     return state;
   });
 
-  ipcMain.handle(
-    REPAIR_CHANNELS.translate,
-    async (event, request: DubAgentTranslationRequest): Promise<DubAgentTranslationResult> => {
-      trusted(event, getMainWindow());
-      validateDubTranslationRequest(request);
-      if (child || translationChild) throw new Error('An agent is already running');
-      const definition = DEFINITIONS.find((item) => item.id === request.agent)!;
-      const command = commands.get(request.agent) ?? locate(definition.command);
-      if (!command) throw new Error('That agent is not installed');
+  const translate = async (
+    request: DubAgentTranslationRequest,
+    promptOverride?: string,
+    model = '',
+    timeoutMs = 10 * 60 * 1_000,
+  ): Promise<DubAgentTranslationResult> => {
+    validateDubTranslationRequest(request);
+    if (child || translationChild) throw new Error('An agent is already running');
+    const definition = DEFINITIONS.find((item) => item.id === request.agent)!;
+    const command = commands.get(request.agent) ?? locate(definition.command);
+    if (!command) throw new Error('That agent is not installed');
 
-      const prompt = dubTranslationPrompt(request);
-      const sessionId = randomUUID();
-      translationTemp = mkdtempSync(join(app.getPath('temp'), 'voicestudio-dub-agent-'));
-      const promptPath = join(translationTemp, `${sessionId}.md`);
-      const openCodeConfigPath = join(translationTemp, 'opencode.json');
-      const args = [...command.prefix, ...translationLaunchArgs(request.agent)];
-      if (request.agent === 'opencode') {
-        writeFileSync(promptPath, prompt, 'utf8');
-        writeFileSync(
-          openCodeConfigPath,
-          JSON.stringify({
-            $schema: 'https://opencode.ai/config.json',
-            permission: { '*': 'deny' },
-          }),
-          'utf8',
-        );
-        args.push(
-          'Translate the attached dubbing segments and return only the requested JSON.',
-          '--file',
-          promptPath,
-        );
-      }
-      let output = '';
-      const stdoutDecoder = new StringDecoder('utf8');
-      const stderrDecoder = new StringDecoder('utf8');
-      let pendingLog = '';
-      let logTimer: ReturnType<typeof setTimeout> | undefined;
-      const flushLog = () => {
-        if (logTimer) clearTimeout(logTimer);
-        logTimer = undefined;
-        if (pendingLog && request.requestId)
-          sendToLiveWindow(getMainWindow(), REPAIR_CHANNELS.translationEvent,
-            { requestId: request.requestId, text: pendingLog });
-        pendingLog = '';
-      };
-      const append = (text: string, stdout = true) => {
-        if (stdout) output = (output + text).slice(-MAX_TRANSLATION_OUTPUT);
-        pendingLog = (pendingLog + text).slice(-250_000);
-        if (!logTimer) logTimer = setTimeout(flushLog, 100);
-      };
-      try {
-        return await new Promise<DubAgentTranslationResult>((resolvePromise, rejectPromise) => {
-          let settled = false;
-          const finish = (callback: () => void) => {
-            if (settled) return;
-            settled = true;
-            clearTimeout(timeout);
-            append(stdoutDecoder.end());
-            append(stderrDecoder.end(), false);
-            flushLog();
-            translationChild = null;
-            if (translationTemp) rmSync(translationTemp, { recursive: true, force: true });
-            translationTemp = null;
-            callback();
-          };
-          const timeout = setTimeout(
-            () => {
-              const running = translationChild;
-              if (running) terminateAgentProcess(running);
-              finish(() => rejectPromise(new Error('Agent translation timed out')));
-            },
-            10 * 60 * 1_000,
-          );
-          translationChild = spawn(command.executable, args, {
-            cwd: translationTemp!,
-            env: {
-              ...process.env,
-              NO_COLOR: '1',
-              FORCE_COLOR: '0',
-              ...(request.agent === 'opencode' ? { OPENCODE_CONFIG: openCodeConfigPath } : {}),
-            },
-            windowsHide: true,
-            stdio: ['pipe', 'pipe', 'pipe'],
-          });
-          guardAgentProcessStreams(translationChild, (error) => finish(() => rejectPromise(error)));
-          translationChild.stdout.on('data', (value: Buffer) => append(stdoutDecoder.write(value)));
-          translationChild.stderr.on('data', (value: Buffer) => append(stderrDecoder.write(value), false));
-          translationChild.on('error', (error) =>
-            finish(() => rejectPromise(new Error(`Agent could not start: ${error.message}`))),
-          );
-          translationChild.on('close', (code) =>
-            finish(() => {
-              if (code !== 0) {
-                rejectPromise(
-                  new Error(`Agent translation failed (exit code ${code ?? 'unknown'})`),
-                );
-                return;
-              }
-              try {
-                resolvePromise(parseDubAgentTranslations(output, request));
-              } catch (error) {
-                rejectPromise(error);
-              }
-            }),
-          );
-          if (request.agent === 'opencode') translationChild.stdin.end();
-          else translationChild.stdin.end(prompt);
+    const prompt = promptOverride ?? dubTranslationPrompt(request);
+    const sessionId = randomUUID();
+    translationTemp = mkdtempSync(join(app.getPath('temp'), 'voicestudio-dub-agent-'));
+    const promptPath = join(translationTemp, `${sessionId}.md`);
+    const openCodeConfigPath = join(translationTemp, 'opencode.json');
+    const args = [...command.prefix, ...translationLaunchArgs(request.agent)];
+    if (model) args.push('--model', model);
+    if (request.agent === 'opencode') {
+      writeFileSync(promptPath, prompt, 'utf8');
+      writeFileSync(
+        openCodeConfigPath,
+        JSON.stringify({
+          $schema: 'https://opencode.ai/config.json',
+          permission: { '*': 'deny' },
+        }),
+        'utf8',
+      );
+      args.push(
+        'Process the attached request and return only the requested JSON.',
+        '--file',
+        promptPath,
+      );
+    }
+    let output = '';
+    const stdoutDecoder = new StringDecoder('utf8');
+    const stderrDecoder = new StringDecoder('utf8');
+    let pendingLog = '';
+    let logTimer: ReturnType<typeof setTimeout> | undefined;
+    const flushLog = () => {
+      if (logTimer) clearTimeout(logTimer);
+      logTimer = undefined;
+      if (pendingLog && request.requestId)
+        sendToLiveWindow(getMainWindow(), REPAIR_CHANNELS.translationEvent, {
+          requestId: request.requestId,
+          text: pendingLog,
         });
-      } catch (error) {
-        flushLog();
-        if (translationTemp) rmSync(translationTemp, { recursive: true, force: true });
-        translationTemp = null;
-        translationChild = null;
-        throw error;
-      }
-    },
+      pendingLog = '';
+    };
+    const append = (text: string, stdout = true) => {
+      if (stdout) output = (output + text).slice(-MAX_TRANSLATION_OUTPUT);
+      pendingLog = (pendingLog + text).slice(-250_000);
+      if (!logTimer) logTimer = setTimeout(flushLog, 100);
+    };
+    try {
+      return await new Promise<DubAgentTranslationResult>((resolvePromise, rejectPromise) => {
+        let settled = false;
+        const finish = (callback: () => void) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
+          append(stdoutDecoder.end());
+          append(stderrDecoder.end(), false);
+          flushLog();
+          translationChild = null;
+          if (translationTemp) rmSync(translationTemp, { recursive: true, force: true });
+          translationTemp = null;
+          callback();
+        };
+        const timeout = setTimeout(() => {
+          const running = translationChild;
+          if (running) terminateAgentProcess(running);
+          finish(() => rejectPromise(new Error('Agent translation timed out')));
+        }, timeoutMs);
+        translationChild = spawn(command.executable, args, {
+          cwd: translationTemp!,
+          env: {
+            ...process.env,
+            // Agent subprocesses must not inherit the backend-only capability.
+            VOICESTUDIO_LLM_AGENT_TOKEN: undefined,
+            VOICESTUDIO_LLM_AGENT_URL: undefined,
+            ...(command.prefix.length ? { ELECTRON_RUN_AS_NODE: '1' } : {}),
+            NO_COLOR: '1',
+            FORCE_COLOR: '0',
+            ...(request.agent === 'opencode' ? { OPENCODE_CONFIG: openCodeConfigPath } : {}),
+          },
+          windowsHide: true,
+          stdio: ['pipe', 'pipe', 'pipe'],
+        });
+        guardAgentProcessStreams(translationChild, (error) => finish(() => rejectPromise(error)));
+        translationChild.stdout.on('data', (value: Buffer) => append(stdoutDecoder.write(value)));
+        translationChild.stderr.on('data', (value: Buffer) =>
+          append(stderrDecoder.write(value), false),
+        );
+        translationChild.on('error', (error) =>
+          finish(() => rejectPromise(new Error(`Agent could not start: ${error.message}`))),
+        );
+        translationChild.on('close', (code) =>
+          finish(() => {
+            const providerFailure = agentProviderFailure(output);
+            if (providerFailure) {
+              rejectPromise(providerFailure);
+              return;
+            }
+            if (code !== 0) {
+              rejectPromise(new Error(`Agent translation failed (exit code ${code ?? 'unknown'})`));
+              return;
+            }
+            try {
+              resolvePromise(parseDubAgentTranslations(output, request));
+            } catch (error) {
+              rejectPromise(error);
+            }
+          }),
+        );
+        if (request.agent === 'opencode') translationChild.stdin.end();
+        else translationChild.stdin.end(prompt);
+      });
+    } catch (error) {
+      flushLog();
+      if (translationTemp) rmSync(translationTemp, { recursive: true, force: true });
+      translationTemp = null;
+      translationChild = null;
+      throw error;
+    }
+  };
+  ipcMain.handle(REPAIR_CHANNELS.translate, (event, request: DubAgentTranslationRequest) => {
+    trusted(event, getMainWindow());
+    return translate(request);
+  });
+  const llmBridge = await startLlmAgentBridge(async (request) => {
+    const prompt = `Complete the following chat as a text-only assistant. Follow the system message and answer the final user message. Do not use tools or read files. Return exactly one JSON object: {"translations":[{"id":"reply","text":"your answer"}]}. Preserve any JSON requested by the chat inside the text string.\n${JSON.stringify(request.messages)}`;
+    const result = await translate(
+      {
+        agent: request.agent,
+        purpose: 'translate',
+        targetLanguage: 'en',
+        segments: [{ id: 'reply', sourceText: 'completion', start: 0, end: 1 }],
+      },
+      prompt,
+      request.model,
+      request.timeoutMs,
+    );
+    return result.translations[0].text;
+  });
+  process.env.VOICESTUDIO_LLM_AGENT_URL = llmBridge.url;
+  process.env.VOICESTUDIO_LLM_AGENT_TOKEN = llmBridge.token;
+  process.env.VOICESTUDIO_LLM_AGENTS = JSON.stringify(
+    DEFINITIONS.filter((item) => locate(item.command)).map((item) => item.id),
   );
   ipcMain.handle(REPAIR_CHANNELS.stopTranslation, (event) => {
     trusted(event, getMainWindow());
@@ -926,6 +1006,10 @@ export function registerRepairAgents(
   });
 
   return () => {
+    llmBridge.close();
+    delete process.env.VOICESTUDIO_LLM_AGENT_URL;
+    delete process.env.VOICESTUDIO_LLM_AGENT_TOKEN;
+    delete process.env.VOICESTUDIO_LLM_AGENTS;
     if (child) terminateAgentProcess(child);
     if (translationChild) terminateAgentProcess(translationChild);
     if (promptFile) rmSync(promptFile, { force: true });
@@ -936,7 +1020,10 @@ export function registerRepairAgents(
     translationChild = null;
     translationTemp = null;
     Object.values(REPAIR_CHANNELS)
-      .filter((channel) => channel !== REPAIR_CHANNELS.event && channel !== REPAIR_CHANNELS.translationEvent)
+      .filter(
+        (channel) =>
+          channel !== REPAIR_CHANNELS.event && channel !== REPAIR_CHANNELS.translationEvent,
+      )
       .forEach((channel) => ipcMain.removeHandler(channel));
   };
 }

@@ -94,7 +94,7 @@
     "llmp_test": "테스트",
     "llmp_active_badge": "활성",
     "llmp_test_ok": "정상 — {{model}} · {{ms}} ms",
-    "llmp_err_config": "API 키 또는 기본 URL이 없습니다 — 입력한 후 저장하세요.",
+    "llmp_err_config": "공급자 설정을 완료하세요: 기본 URL, 모델, 필요한 API 키 또는 계정 ID.",
     "llmp_err_auth": "키가 거부되었습니다(401/403) — API 키를 확인하세요.",
     "llmp_err_not_found": "찾을 수 없습니다(404) — 모델 이름과 기본 URL 경로를 확인하세요.",
     "llmp_err_rate_limit": "요청 한도 초과(429) — 키는 정상입니다. 잠시 후 다시 시도하세요.",
@@ -395,7 +395,7 @@
     "hf_token_verified": "확인됨",
     "hf_token_whoami_failed": "whoami 실패",
     "llm_skills": "LLM 스킬",
-    "llmp_active_env_pin": "활성 공급자가 LLM_DEFAULT_PROVIDER 환경 변수로 고정되어 있습니다.",
+    "llmp_active_env_pin": "LLM 선택이 LLM_DEFAULT_PROVIDER 또는 OMNIVOICE_LLM_BACKEND에 의해 고정되어 있습니다.",
     "llmp_env_override": "환경 변수로 설정됨 — 이 필드보다 우선 적용됩니다",
     "llmp_models_truncated": "처음 {{count}}개만 표시됨 — 모델 이름을 입력해 좁혀보세요",
     "llmp_saved_not_active": "저장됨 — 아직 번역에 사용되지 않습니다. 전환하려면 “저장하고 번역에 사용”을 클릭하세요.",
@@ -583,7 +583,14 @@
     "theme_auto": "시스템 자동",
     "theme_light": "라이트",
     "reduce_motion": "모션 줄이기",
-    "reduce_motion_desc": "배경 애니메이션과 전환을 중지합니다. 시스템 설정은 그대로 적용되며, 이 옵션은 거기에 더해집니다."
+    "reduce_motion_desc": "배경 애니메이션과 전환을 중지합니다. 시스템 설정은 그대로 적용되며, 이 옵션은 거기에 더해집니다.",
+    "llmp_connect": "연결 및 활성화",
+    "llmp_setup_hint": "공급자를 선택하고 서버를 시작하거나 API 키를 추가한 뒤 연결하세요. VoiceStudio는 모델 응답을 확인한 후 LLM 기능을 활성화합니다.",
+    "llmp_disable": "LLM 끄기",
+    "llmp_optional_key": "API 키(선택 사항)",
+    "llmp_cli_help": "설치된 CLI와 로그인 정보를 에이전트 복구와 같은 실행기로 사용합니다. CLI 기본값을 쓰려면 모델을 비워 두세요. 응답이 느릴 수 있으며 요금은 CLI 계정에 적용됩니다.",
+    "llmp_sdk_help": "기본 공급자는 LiteLLM을 사용합니다. 다른 공급자는 provider/model을 입력하세요. Bedrock은 API 키 또는 AWS 프로필을, Vertex는 계정 ID를 프로젝트로 사용하고 Google 인증 정보를 사용합니다. 기본 URL은 선택 사항입니다.",
+    "llmp_cli_auth": "CLI 계정 접근이 거부되었습니다. 로그인, 구독 및 선택한 모델을 확인하세요."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -1023,7 +1030,9 @@
     "group_translate": "번역(LLM/시네마틱)",
     "group_deepl": "DeepL 사용자 정의 엔드포인트",
     "group_microsoft": "Microsoft 번역기 사용자 지정 엔드포인트",
-    "saved_persisted": "{{key}} 저장됨"
+    "saved_persisted": "{{key}} 저장됨",
+    "region": "리전",
+    "aws_profile": "AWS 프로필"
   },
   "engines": {
     "banners_on": "무대 배너 켜짐",

@@ -287,6 +287,13 @@ export function ModelSettings({
         client.invalidateQueries({ queryKey: ['sidebar-dictation'] }),
         client.invalidateQueries({ queryKey: ['dictation-shortcut-prefs'] }),
         client.invalidateQueries({ queryKey: ['performance-profile'] }),
+        ...(family === 'llm'
+          ? [
+              client.invalidateQueries({ queryKey: ['llm-skills'] }),
+              client.invalidateQueries({ queryKey: ['translation-engines'] }),
+              client.invalidateQueries({ queryKey: ['dictation-refinement'] }),
+            ]
+          : []),
       ]);
       const feedback = engineSelectionFeedback(
         family === 'dictation' ? { active: id } : result,
@@ -396,16 +403,19 @@ export function ModelSettings({
           detail:
             engine.local_install_required && !engine.available
               ? t('engines.localInstallRequired')
-              : engine.id === selected
-                ? engineState.active_model
-                : !engine.available
-                  ? engine.install_hint || engine.reason || engine.hint || undefined
-                  : undefined,
+              : !engine.available
+                ? engine.reason || engine.install_hint || engine.hint || undefined
+                : engine.id === selected
+                  ? engineState.active_model || engine.hint || undefined
+                  : engine.hint || undefined,
           models: engine.curated_models,
           installable: engine.one_click_install,
           setupSnippet: !engine.available ? engine.setup_snippet || undefined : undefined,
           docsUrl: engine.docs_url || undefined,
-          device: engine.effective_device || undefined,
+          device:
+            family === 'llm' && engine.id === 'off'
+              ? undefined
+              : engine.effective_device || undefined,
           routingStatus: engine.routing_status || undefined,
           routingReason: engine.routing_reason || undefined,
           isolationMode: engine.isolation_mode,
@@ -474,8 +484,13 @@ export function ModelSettings({
               {formatComputeRuntime(row.device)}
             </span>
           )}
-          {family !== 'dictation' && (
+          {family !== 'dictation' && !(family === 'llm' && row.id === 'off') && (
             <EngineHealth id={row.id} available={row.available} isolationMode={row.isolationMode} />
+          )}
+          {family === 'llm' && !row.available && (
+            <a href="#llm-provider" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+              {t('settings.llmskills_open_providers')}
+            </a>
           )}
           {!row.available && row.docsUrl && (
             <ExternalLink href={row.docsUrl}>
@@ -529,14 +544,15 @@ export function ModelSettings({
       </div>
     );
   };
+  if (family === 'llm')
+    return (
+      <>
+        <LlmProviders />
+        <LlmSkills />
+      </>
+    );
   return (
     <>
-      {family === 'llm' && (
-        <>
-          <LlmProviders />
-          <LlmSkills />
-        </>
-      )}
       <SettingsSection icon={familyIcons[family]} title={t('engineSidebar.' + family)}>
         {family === 'dictation' && (
           <SettingsRow id="dictation-enabled" title={t('engineSidebar.dictation')} titleHidden>
@@ -556,18 +572,7 @@ export function ModelSettings({
             />
           </SettingsRow>
         )}
-        {family === 'llm' && engines.isError ? (
-          <SettingsActionError
-            className="m-4"
-            title={t('modelSettings.failed')}
-            detail={describeError(engines.error)}
-            action={
-              <Button size="xs" variant="ghost" onClick={() => engines.retry()}>
-                {t('backend.retry')}
-              </Button>
-            }
-          />
-        ) : !rows ? (
+        {!rows ? (
           <SettingsRowsSkeleton label={t('preferences.loading')} />
         ) : (
           <>
@@ -588,7 +593,7 @@ export function ModelSettings({
         )}
       </SettingsSection>
       {family === 'asr' && <AsrOpenAiCompatSettings />}
-      {showLibrary && family !== 'llm' && <ModelLibrary family={family} />}
+      {showLibrary && <ModelLibrary family={family} />}
       {family === 'dictation' && (
         <>
           <ShortcutSettings />

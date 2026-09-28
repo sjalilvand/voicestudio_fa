@@ -1109,7 +1109,7 @@
     "llmp_test": "Testen",
     "llmp_active_badge": "aktiv",
     "llmp_test_ok": "OK — {{model}} · {{ms}} ms",
-    "llmp_err_config": "API-Schlüssel oder Basis-URL fehlt — ausfüllen und speichern.",
+    "llmp_err_config": "Vervollständige die Anbietereinstellungen: Basis-URL, Modell und gegebenenfalls API-Schlüssel oder Konto-ID.",
     "llmp_err_auth": "Schlüssel abgelehnt (401/403) — API-Schlüssel prüfen.",
     "llmp_err_not_found": "Nicht gefunden (404) — Modellname und Pfad der Basis-URL prüfen.",
     "llmp_err_rate_limit": "Rate-Limit erreicht (429) — der Schlüssel funktioniert; gleich erneut versuchen.",
@@ -1322,7 +1322,7 @@
     "remote_backend_confirm_unverified": "Diese Backend-URL hat einen Verbindungstest nicht bestanden. Speichern und trotzdem neu laden? Wenn es falsch ist, kann die App kein Backend erreichen, bis Sie es hier wieder ändern.",
     "remote_backend_confirm_title": "Nicht verifiziertes Backend verwenden?",
     "llmp_env_override": "Wird über eine Umgebungsvariable festgelegt – überschreibt dieses Feld",
-    "llmp_active_env_pin": "Aktiver Anbieter wird durch den angepinntLLM_DEFAULT_PROVIDERUmgebungsvariable.",
+    "llmp_active_env_pin": "Die LLM-Auswahl ist durch LLM_DEFAULT_PROVIDER oder OMNIVOICE_LLM_BACKEND festgelegt.",
     "llm_skills": "LLM-Fähigkeiten",
     "llmskills_desc": "Leiten Sie jede KI-gestützte Funktion an ihr eigenes LLM weiter – behalten Sie sensible Arbeiten auf einem lokalen Modell (Ollama/LM Studio), während schwerere Aufgaben einen Remote-Anbieter nutzen – oder schalten Sie eine Funktion vollständig aus. Aus verhält sich genau so, als ob kein LLM konfiguriert wäre: Die Funktion greift auf ihren Nicht-LLM-Pfad zurück.",
     "llmskills_needs_setup": "Muss eingerichtet werden",
@@ -1338,7 +1338,14 @@
     "review_mode_desc": "Machen Sie eine Pause zwischen den Pipeline-Stufen, damit Sie die ASR-/Übersetzungsausgabe überprüfen können.",
     "review_mode_on": "Rezension",
     "review_mode_off": "Schnellfeuer",
-    "translate_agent": "Agententauglich"
+    "translate_agent": "Agententauglich",
+    "llmp_connect": "Verbinden und aktivieren",
+    "llmp_setup_hint": "Wähle einen Anbieter, starte seinen Server oder füge seinen API-Schlüssel hinzu und verbinde dich. VoiceStudio prüft eine Modellantwort, bevor LLM-Funktionen aktiviert werden.",
+    "llmp_disable": "LLM ausschalten",
+    "llmp_optional_key": "API-Schlüssel (optional)",
+    "llmp_cli_help": "Verwendet die installierte CLI und deren Anmeldung über denselben Prozess wie die Agentenreparatur. Modell leer lassen für den CLI-Standard. Antworten können langsamer sein; Kosten fallen beim CLI-Konto an.",
+    "llmp_sdk_help": "Native Anbieter verwenden LiteLLM. Für andere Anbieter provider/model eingeben. Bedrock nutzt API-Schlüssel oder AWS-Profil; Vertex die Konto-ID als Projekt und Google-Anmeldedaten. Basis-URL ist optional.",
+    "llmp_cli_auth": "CLI-Kontozugriff wurde abgelehnt. Anmeldung, Abonnement und gewähltes Modell prüfen."
   },
   "gallery": {
     "title": "VoiceStudio Galerie",
@@ -1786,7 +1793,9 @@
     "saved": "✓ Festlegen",
     "deepl_base_url": "DeepL-Basis-URL",
     "deepl_base_url_help": "Benutzerdefinierter DeepL-API-Endpunkt (Standard: https://api.deepl.com/v2). Änderung für Proxy/Selbstgehostet.",
-    "microsoft_base_url_help": "Benutzerdefinierter Azure Translator-Endpunkt (Standard: https://api.cognitive.microsofttranslator.com)."
+    "microsoft_base_url_help": "Benutzerdefinierter Azure Translator-Endpunkt (Standard: https://api.cognitive.microsofttranslator.com).",
+    "region": "Region",
+    "aws_profile": "AWS-Profil"
   },
   "about": {
     "architecture": "Architektur",

@@ -2,6 +2,7 @@ import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { describe, expect, it, vi } from 'vitest';
 import {
+  agentProviderFailure,
   agentCommandMatchesPlatform,
   dubTranslationPrompt,
   guardAgentProcessStreams,
@@ -21,6 +22,22 @@ const request = {
 };
 
 describe('packaged app repair sessions', () => {
+  it('classifies provider account failures without forwarding their output', () => {
+    expect(
+      agentProviderFailure(
+        '{"type":"assistant","is_api_error_message":true,"error":"account_on_hold"}',
+      )?.name,
+    ).toBe('AgentAuthenticationError');
+    expect(
+      agentProviderFailure(
+        '{"type":"error","error":{"data":{"statusCode":403,"message":"private"}}}',
+      )?.name,
+    ).toBe('AgentAuthenticationError');
+    expect(agentProviderFailure('{"type":"error","error":{"data":{"statusCode":429}}}')?.name).toBe(
+      'AgentRateLimitError',
+    );
+    expect(agentProviderFailure('{"translations":[{"id":"reply","text":"ok"}]}')).toBeNull();
+  });
   it('contains prompt pipe closures instead of raising uncaught process errors', () => {
     const stdin = new EventEmitter();
     const stdout = new EventEmitter();

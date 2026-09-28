@@ -94,7 +94,7 @@
     "llmp_test": "Kiểm tra",
     "llmp_active_badge": "đang hoạt động",
     "llmp_test_ok": "ok — {{model}} · {{ms}} ms",
-    "llmp_err_config": "Thiếu khóa API hoặc URL cơ sở — hãy điền và lưu.",
+    "llmp_err_config": "Hoàn tất cài đặt nhà cung cấp: URL cơ sở, mô hình và khóa API hoặc ID tài khoản nếu cần.",
     "llmp_err_auth": "Khóa bị từ chối (401/403) — kiểm tra khóa API của bạn.",
     "llmp_err_not_found": "Không tìm thấy (404) — kiểm tra tên mô hình và đường dẫn của URL cơ sở.",
     "llmp_err_rate_limit": "Bị giới hạn tốc độ (429) — khóa vẫn hoạt động; hãy thử lại sau giây lát.",
@@ -364,7 +364,15 @@
     "reduce_motion_desc": "Dừng hoạt ảnh nền và hiệu ứng chuyển tiếp. Cài đặt hệ thống vẫn có hiệu lực riêng; mục này bổ sung thêm.",
     "perf_torch_compile": "Tắt torch.compile",
     "perf_torch_compile_note": "Thực thi trực tiếp để tránh lỗi bộ nhớ Triton.",
-    "perf_torch_compile_hint": "Thực thi trực tiếp để tránh lỗi bộ nhớ Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
+    "perf_torch_compile_hint": "Thực thi trực tiếp để tránh lỗi bộ nhớ Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>",
+    "llmp_active_env_pin": "Lựa chọn LLM được cố định bởi LLM_DEFAULT_PROVIDER hoặc OMNIVOICE_LLM_BACKEND.",
+    "llmp_connect": "Kết nối và bật",
+    "llmp_setup_hint": "Chọn nhà cung cấp, khởi động máy chủ hoặc thêm khóa API rồi kết nối. VoiceStudio xác minh phản hồi của mô hình trước khi bật tính năng LLM.",
+    "llmp_disable": "Tắt LLM",
+    "llmp_optional_key": "Khóa API (tùy chọn)",
+    "llmp_cli_help": "Dùng CLI đã cài và phiên đăng nhập qua cùng bộ chạy với tính năng sửa bằng tác nhân. Để trống Mô hình để dùng mặc định của CLI. Phản hồi có thể chậm hơn; phí tính theo tài khoản CLI.",
+    "llmp_sdk_help": "Nhà cung cấp gốc dùng LiteLLM. Với nhà cung cấp khác, nhập provider/model. Bedrock dùng khóa API hoặc hồ sơ AWS; Vertex dùng ID tài khoản làm dự án và thông tin xác thực Google. URL cơ sở là tùy chọn.",
+    "llmp_cli_auth": "Quyền truy cập tài khoản CLI bị từ chối. Kiểm tra đăng nhập, gói đăng ký và mô hình đã chọn."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -782,7 +790,9 @@
     "group_huggingface": "ôm mặt",
     "group_translate": "Dịch thuật (LLM / Điện ảnh)",
     "group_deepl": "Điểm cuối tùy chỉnh DeepL",
-    "group_microsoft": "Điểm cuối tùy chỉnh của Microsoft Translator"
+    "group_microsoft": "Điểm cuối tùy chỉnh của Microsoft Translator",
+    "region": "Khu vực",
+    "aws_profile": "Hồ sơ AWS"
   },
   "engines": {
     "banners_on": "Biểu ngữ sân khấu bật",

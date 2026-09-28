@@ -1109,7 +1109,7 @@
     "llmp_test": "परीक्षण करें",
     "llmp_active_badge": "सक्रिय",
     "llmp_test_ok": "ठीक — {{model}} · {{ms}} ms",
-    "llmp_err_config": "API कुंजी या बेस URL मौजूद नहीं — उन्हें भरें और सहेजें।",
+    "llmp_err_config": "प्रदाता की सेटिंग पूरी करें: बेस URL, मॉडल और ज़रूरी API कुंजी या खाता ID।",
     "llmp_err_auth": "कुंजी अस्वीकृत (401/403) — अपनी API कुंजी जाँचें।",
     "llmp_err_not_found": "नहीं मिला (404) — मॉडल का नाम और बेस URL पथ जाँचें।",
     "llmp_err_rate_limit": "रेट-लिमिट (429) — कुंजी काम करती है; थोड़ी देर में पुनः प्रयास करें।",
@@ -1280,7 +1280,7 @@
     "uninstall_models_warning": "इसमें साझा Hugging Face कैश ({{size}}) शामिल है - डाउनलोड किए गए मॉडल अन्य AI उपकरण इसके साथ जा सकते हैं।",
     "uninstall_total": "{{count}} स्थान · {{size}} मुक्त कर दिया जाएगा",
     "llmp_env_override": "एक पर्यावरण चर के माध्यम से सेट करें - इस फ़ील्ड को ओवरराइड करता है",
-    "llmp_active_env_pin": "सक्रिय प्रदाता को LLM_DEFAULT_PROVIDER पर्यावरण चर द्वारा पिन किया गया है।",
+    "llmp_active_env_pin": "LLM का चयन LLM_DEFAULT_PROVIDER या OMNIVOICE_LLM_BACKEND द्वारा तय किया गया है।",
     "llmp_models_truncated": "पहले {{count}} दिखाया गया - मॉडल नाम को सीमित करने के लिए टाइप करें",
     "llm_skills": "LLM कौशल",
     "llmskills_use_active": "सक्रिय प्रदाता का उपयोग करें",
@@ -1338,7 +1338,14 @@
     "review_mode_desc": "पाइपलाइन चरणों के बीच रुकें ताकि आप एएसआर/अनुवाद आउटपुट की समीक्षा कर सकें।",
     "review_mode_on": "समीक्षा",
     "review_mode_off": "तेजी से आग",
-    "translate_agent": "एजेंट फिट"
+    "translate_agent": "एजेंट फिट",
+    "llmp_connect": "कनेक्ट करके सक्षम करें",
+    "llmp_setup_hint": "प्रदाता चुनें, उसका सर्वर शुरू करें या API कुंजी जोड़ें, फिर कनेक्ट करें। VoiceStudio LLM सुविधाएँ सक्षम करने से पहले मॉडल का उत्तर जाँचता है।",
+    "llmp_disable": "LLM बंद करें",
+    "llmp_optional_key": "API कुंजी (वैकल्पिक)",
+    "llmp_cli_help": "इंस्टॉल की गई CLI और उसके लॉगिन का उपयोग एजेंट मरम्मत वाले रनर से करता है। CLI का डिफ़ॉल्ट उपयोग करने के लिए मॉडल खाली रखें। जवाब धीमे हो सकते हैं; शुल्क CLI खाते पर लगता है।",
+    "llmp_sdk_help": "नेटिव प्रदाता LiteLLM उपयोग करते हैं। अन्य के लिए provider/model दर्ज करें। Bedrock में API कुंजी या AWS प्रोफ़ाइल और Vertex में खाता ID को प्रोजेक्ट तथा Google क्रेडेंशियल के रूप में उपयोग करें। बेस URL वैकल्पिक है।",
+    "llmp_cli_auth": "CLI खाते का ऐक्सेस अस्वीकार कर दिया गया। लॉगिन, सदस्यता और चुना गया मॉडल जाँचें।"
   },
   "gallery": {
     "title": "VoiceStudio गैलरी",
@@ -1786,7 +1793,9 @@
     "saved": "✓ सेट",
     "deepl_base_url": "डीपएल बेस यूआरएल",
     "deepl_base_url_help": "कस्टम डीपएल एपीआई एंडपॉइंट (डिफ़ॉल्ट: https://api.depl.com/v2)। प्रॉक्सी/स्वयं-होस्टेड के लिए परिवर्तन।",
-    "microsoft_base_url_help": "कस्टम एज़्योर ट्रांसलेटर एंडपॉइंट (डिफ़ॉल्ट: https://api.cognitive.microsofttranslator.com)।"
+    "microsoft_base_url_help": "कस्टम एज़्योर ट्रांसलेटर एंडपॉइंट (डिफ़ॉल्ट: https://api.cognitive.microsofttranslator.com)।",
+    "region": "क्षेत्र",
+    "aws_profile": "AWS प्रोफ़ाइल"
   },
   "about": {
     "architecture": "वास्तुकला",

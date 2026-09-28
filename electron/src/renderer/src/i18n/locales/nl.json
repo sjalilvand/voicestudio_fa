@@ -1109,7 +1109,7 @@
     "llmp_test": "Testen",
     "llmp_active_badge": "actief",
     "llmp_test_ok": "ok — {{model}} · {{ms}} ms",
-    "llmp_err_config": "API-sleutel of basis-URL ontbreekt — vul ze in en sla op.",
+    "llmp_err_config": "Vul de providerinstellingen aan: basis-URL, model en eventueel een vereiste API-sleutel of account-ID.",
     "llmp_err_auth": "Sleutel geweigerd (401/403) — controleer je API-sleutel.",
     "llmp_err_not_found": "Niet gevonden (404) — controleer de modelnaam en het pad van de basis-URL.",
     "llmp_err_rate_limit": "Limiet bereikt (429) — de sleutel werkt; probeer het zo opnieuw.",
@@ -1281,7 +1281,7 @@
     "uninstall_models_warning": "Dit omvat de gedeelde Hugging Face cache ({{size}}) - modellen die andere gedownloade AI-tools kunnen gebruiken.",
     "uninstall_total": "{{count}} locaties · {{size}} wordt vrijgegeven",
     "llmp_saved_not_active": "Opgeslagen — nog niet gebruikt voor vertaling. Klik op 'Opslaan en gebruiken voor vertaling' om te schakelen.",
-    "llmp_active_env_pin": "Actieve provider wordt vastgezet door de omgevingsvariabele LLM_DEFAULT_PROVIDER.",
+    "llmp_active_env_pin": "De LLM-keuze is vastgezet door LLM_DEFAULT_PROVIDER of OMNIVOICE_LLM_BACKEND.",
     "llmp_models_truncated": "eerste {{count}} getoond: typ om de modelnaam te beperken",
     "llm_skills": "LLM vaardigheden",
     "llmskills_desc": "Leid elke AI-aangedreven functie naar zijn eigen LLM. Houd gevoelig werk op een lokaal model (Ollama/LM Studio), terwijl voor zwaardere taken een externe provider wordt gebruikt. Of schakel een functie helemaal uit. Uit gedraagt ​​zich precies alsof er geen LLM is geconfigureerd: de functie valt terug op het pad dat niet LLM is.",
@@ -1338,7 +1338,14 @@
     "review_mode_desc": "Pauzeer tussen pijplijnfasen, zodat u de ASR-/vertaaluitvoer kunt bekijken.",
     "review_mode_on": "Beoordeling",
     "review_mode_off": "Snelvuur",
-    "translate_agent": "Agent geschikt"
+    "translate_agent": "Agent geschikt",
+    "llmp_connect": "Verbinden en inschakelen",
+    "llmp_setup_hint": "Kies een provider, start de server of voeg de API-sleutel toe en maak verbinding. VoiceStudio controleert een modelantwoord voordat LLM-functies worden ingeschakeld.",
+    "llmp_disable": "LLM uitschakelen",
+    "llmp_optional_key": "API-sleutel (optioneel)",
+    "llmp_cli_help": "Gebruikt de geïnstalleerde CLI en aanmelding via dezelfde uitvoerder als agentreparatie. Laat Model leeg voor de CLI-standaard. Antwoorden kunnen trager zijn; kosten vallen onder je CLI-account.",
+    "llmp_sdk_help": "Native providers gebruiken LiteLLM. Voer voor andere providers provider/model in. Bedrock gebruikt een API-sleutel of AWS-profiel; Vertex gebruikt Account-ID als project en Google-inloggegevens. Basis-URL is optioneel.",
+    "llmp_cli_auth": "Toegang tot het CLI-account is geweigerd. Controleer je aanmelding, abonnement en gekozen model."
   },
   "gallery": {
     "title": "VoiceStudio Galerij",
@@ -1786,7 +1793,9 @@
     "saved": "✓ Instellen",
     "deepl_base_url": "DeepL-basis-URL",
     "deepl_base_url_help": "Aangepast DeepL API-eindpunt (standaard: https://api.deepl.com/v2). Wijzigen voor proxy/zelf-gehost.",
-    "microsoft_base_url_help": "Aangepast Azure Translator-eindpunt (standaard: https://api.cognitive.microsofttranslator.com)."
+    "microsoft_base_url_help": "Aangepast Azure Translator-eindpunt (standaard: https://api.cognitive.microsofttranslator.com).",
+    "region": "Regio",
+    "aws_profile": "AWS-profiel"
   },
   "about": {
     "architecture": "Architectuur",

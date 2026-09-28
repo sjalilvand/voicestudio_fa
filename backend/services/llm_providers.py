@@ -1,11 +1,8 @@
-"""LLM provider registry — the OpenAI-compatible providers VoiceStudio can use
-for Cinematic / Autofit translation (and any future LLM feature).
+"""LLM provider registry for every VoiceStudio LLM skill.
 
-Every provider here speaks the OpenAI chat-completions shape, so a single
-client (`llm_backend.OpenAICompatBackend`) drives all of them — the only
-per-provider differences are ``base_url``, ``model``, and the API key. This
-module is the one place that knows those defaults and resolves the live value
-for the *active* provider.
+OpenAI-compatible, native SDK and desktop CLI transports share the same
+completion interface. This module resolves configuration without contacting
+providers or starting agents; llm_transport handles explicit inference calls.
 
 Resolution precedence for every field (key / base_url / model), highest first:
     1. Environment variable  — power-user / `.env` override, wins always.
@@ -64,6 +61,8 @@ class Provider:
     account_env: Optional[str] = None
     signup_url: str = ""
     notes: str = ""
+    transport: str = "openai"
+    sdk_provider: str = ""
 
 
 # Order here is the display order in the settings page. OpenAI first (the
@@ -98,7 +97,7 @@ _PROVIDERS: tuple[Provider, ...] = (
              notes="Fastest Llama inference. Free tier."),
     Provider("google-ai", "Google AI (Gemini)",
              "https://generativelanguage.googleapis.com/v1beta/openai",
-             "gemini-2.0-flash",
+             "gemini-3.8-flash",
              key_envs=("GOOGLE_AI_API_KEY",), base_url_env="GOOGLE_AI_BASE_URL",
              model_env="GOOGLE_AI_MODEL",
              signup_url="https://aistudio.google.com/app/apikey",
@@ -149,7 +148,7 @@ _PROVIDERS: tuple[Provider, ...] = (
              model_env="SILICONFLOW_MODEL", signup_url="https://siliconflow.com",
              notes="Qwen/DeepSeek and more. Strong for CJK."),
     Provider("ollama", "Ollama (local)", "http://localhost:11434/v1",
-             "llama3.1", local=True,
+             "llama3.1", local=True, key_envs=("OLLAMA_API_KEY",),
              base_url_env="OLLAMA_BASE_URL", model_env="OLLAMA_MODEL",
              signup_url="https://ollama.com",
              notes="Fully offline. Run `ollama pull llama3.1` first."),
@@ -159,10 +158,49 @@ _PROVIDERS: tuple[Provider, ...] = (
     # a real name people actually pull) worked on the same machine (#1332).
     # resolve_model asks the server instead of shipping a guess.
     Provider("lmstudio", "LM Studio (local)", "http://localhost:1234/v1",
-             "local-model", local=True, model_is_placeholder=True,
+             "local-model", local=True, model_is_placeholder=True, key_envs=("LMSTUDIO_API_KEY",),
              base_url_env="LMSTUDIO_BASE_URL", model_env="LMSTUDIO_MODEL",
              signup_url="https://lmstudio.ai",
              notes="Fully offline. Start the LM Studio local server and load a model."),
+    Provider("anthropic", "Anthropic (Claude)", "", "claude-sonnet-4-6",
+             key_envs=("ANTHROPIC_API_KEY",), model_env="ANTHROPIC_MODEL",
+             transport="sdk", sdk_provider="anthropic", signup_url="https://console.anthropic.com"),
+    Provider("deepseek", "DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat",
+             key_envs=("DEEPSEEK_API_KEY",), model_env="DEEPSEEK_MODEL"),
+    Provider("xai", "xAI (Grok)", "https://api.x.ai/v1", "grok-4",
+             key_envs=("XAI_API_KEY",), model_env="XAI_MODEL"),
+    Provider("together", "Together AI", "https://api.together.xyz/v1", "",
+             key_envs=("TOGETHER_API_KEY",), model_env="TOGETHER_MODEL"),
+    Provider("fireworks", "Fireworks AI", "https://api.fireworks.ai/inference/v1", "",
+             key_envs=("FIREWORKS_API_KEY",), model_env="FIREWORKS_MODEL"),
+    Provider("perplexity", "Perplexity", "https://api.perplexity.ai", "sonar",
+             key_envs=("PERPLEXITY_API_KEY",), model_env="PERPLEXITY_MODEL"),
+    Provider("qwen", "Alibaba Cloud (Qwen)", "https://dashscope-intl.aliyuncs.com/compatible-mode/v1", "qwen-plus",
+             key_envs=("DASHSCOPE_API_KEY",), model_env="QWEN_MODEL"),
+    Provider("moonshot", "Moonshot (Kimi)", "https://api.moonshot.ai/v1", "",
+             key_envs=("MOONSHOT_API_KEY",), model_env="MOONSHOT_MODEL"),
+    Provider("minimax", "MiniMax", "https://api.minimax.io/v1", "",
+             key_envs=("MINIMAX_API_KEY",), model_env="MINIMAX_MODEL"),
+    Provider("zai", "Z.AI (GLM)", "https://api.z.ai/api/paas/v4", "",
+             key_envs=("ZAI_API_KEY",), model_env="ZAI_MODEL"),
+    Provider("azure", "Azure OpenAI", "", "",
+             key_envs=("AZURE_API_KEY",), base_url_env="AZURE_OPENAI_BASE_URL", model_env="AZURE_DEPLOYMENT"),
+    Provider("bedrock", "Amazon Bedrock", "", "",
+             key_envs=("AWS_BEARER_TOKEN_BEDROCK",), model_env="BEDROCK_MODEL",
+             key_optional=True, transport="sdk", sdk_provider="bedrock"),
+    Provider("vertex", "Google Vertex AI", "", "",
+             model_env="VERTEX_MODEL", key_optional=True, transport="sdk", sdk_provider="vertex_ai",
+             needs_account=True, account_env="VERTEXAI_PROJECT"),
+    Provider("sdk", "LiteLLM (other providers)", "", "",
+             key_envs=("LITELLM_API_KEY",), model_env="LITELLM_MODEL", transport="sdk"),
+    Provider("claude-code", "Claude Code (CLI)", "", "",
+             transport="cli", sdk_provider="claude", model_env="VOICESTUDIO_CLAUDE_MODEL"),
+    Provider("codex-cli", "Codex (CLI)", "", "",
+             transport="cli", sdk_provider="codex", model_env="VOICESTUDIO_CODEX_MODEL"),
+    Provider("pi-cli", "Pi (CLI)", "", "",
+             transport="cli", sdk_provider="pi", model_env="VOICESTUDIO_PI_MODEL"),
+    Provider("opencode-cli", "OpenCode (CLI)", "", "",
+             transport="cli", sdk_provider="opencode", model_env="VOICESTUDIO_OPENCODE_MODEL"),
     Provider("custom", "Custom (OpenAI-compatible)", "", "",
              key_envs=("TRANSLATE_API_KEY",), base_url_env="TRANSLATE_BASE_URL",
              model_env="TRANSLATE_MODEL", key_optional=True,
@@ -398,6 +436,21 @@ def discover_model(p: Provider) -> Optional[str]:
     return chosen
 
 
+def configured_model(p: Provider) -> str:
+    """Offline model setting for forms and inventory; blank means discovery.
+
+    Never put discovered IDs or the old LM Studio placeholder into an editable
+    form: saving that form would freeze automatic discovery to a stale model.
+    """
+    from services import settings_store
+    value = (
+        (p.model_env and os.environ.get(p.model_env))
+        or settings_store.get_text(_MODEL_KEY + p.id)
+        or p.default_model
+    ).strip()
+    return "" if p.model_is_placeholder and value == p.default_model else value
+
+
 def resolve_model(p: Provider) -> str:
     """Env override → stored override → discovered → default.
 
@@ -412,11 +465,7 @@ def resolve_model(p: Provider) -> str:
     from here would also re-open the per-segment cost the discovery cache
     exists to prevent (a 200-segment dub × one HTTP round trip each).
     """
-    from services import settings_store
-    explicit = (
-        (p.model_env and os.environ.get(p.model_env))
-        or settings_store.get_text(_MODEL_KEY + p.id)
-    )
+    explicit = configured_model(p)
     if explicit:
         return explicit
     if p.model_is_placeholder:
@@ -435,7 +484,7 @@ def resolve_api_key(p: Provider) -> Optional[str]:
     stored = settings_store.get_secret(SECRET_PREFIX + p.id)
     if stored:
         return stored
-    if p.local or (p.key_optional and resolve_base_url(p)):
+    if p.local or (p.transport == "openai" and p.key_optional and resolve_base_url(p)):
         return "local"  # self-hosted OpenAI-compatible servers ignore the key
     return None
 
@@ -446,7 +495,7 @@ def has_key(p: Provider) -> bool:
         return True
     if _env_first(p.key_envs) or _key_in_store(p.id):
         return True
-    return bool(p.key_optional and resolve_base_url(p))
+    return bool(p.transport == "openai" and p.key_optional and resolve_base_url(p))
 
 
 def _key_in_store(pid: str) -> bool:
@@ -454,11 +503,53 @@ def _key_in_store(pid: str) -> bool:
     return (SECRET_PREFIX + pid) in settings_store.list_secret_names()
 
 
+def configuration_error(p: Provider, *, require_model: bool = True) -> Optional[str]:
+    """Check local configuration only; never claim a successful network probe."""
+    from urllib.parse import urlsplit
+
+    if p.transport == "cli":
+        from services.llm_cli import executable
+        return None if executable(p.sdk_provider) else "Install and sign in to the selected CLI, then restart VoiceStudio."
+    if p.transport == "sdk":
+        import importlib.util
+        if importlib.util.find_spec("litellm") is None:
+            return "Install the LiteLLM SDK in the VoiceStudio backend."
+        if require_model and not configured_model(p):
+            return "Set the Model in Settings > Models > LLM."
+        if p.id == "sdk" and require_model and "/" not in configured_model(p):
+            return "Use a provider/model identifier for LiteLLM."
+        if p.id == "vertex":
+            if not resolve_account_id(p):
+                return "Set the Vertex AI project as Account ID and configure Google application credentials."
+        elif p.id == "bedrock":
+            if not (resolve_api_key(p) or os.environ.get("AWS_PROFILE") or os.environ.get("AWS_ACCESS_KEY_ID")):
+                return "Configure an AWS profile, AWS credentials, or a Bedrock API key."
+        elif not has_key(p):
+            return "Add an API key in Settings > Models > LLM."
+        if not resolve_base_url(p):
+            return None
+
+    raw_url = resolve_base_url(p, substitute=False)
+    if "{account_id}" in raw_url and not resolve_account_id(p).strip():
+        return "Set the Account ID in Settings > Models > LLM."
+    try:
+        url = urlsplit(resolve_base_url(p))
+        valid_url = url.scheme in {"http", "https"} and bool(url.hostname)
+        # Access validates malformed/out-of-range ports too.
+        _ = url.port
+    except ValueError:
+        valid_url = False
+    if not valid_url:
+        return "Set a valid HTTP(S) Base URL in Settings > Models > LLM."
+    if p.transport == "openai" and not has_key(p):
+        return "Add an API key in Settings > Models > LLM."
+    if require_model and not p.model_is_placeholder and not configured_model(p):
+        return "Set the Model in Settings > Models > LLM."
+    return None
+
+
 def is_configured(p: Provider) -> bool:
-    """Usable end-to-end: has a base_url (custom needs one set) and a key."""
-    if not resolve_base_url(p):
-        return False
-    return has_key(p)
+    return configuration_error(p) is None
 
 
 # ── Active provider selection ─────────────────────────────────────────────
@@ -496,7 +587,7 @@ def active_provider_id() -> Optional[str]:
     # LM Studio) are *always* "configured" (no key needed) but we must NOT
     # assume their server is running — they require an explicit selection.
     for p in _PROVIDERS:
-        if not p.local and is_configured(p):
+        if not p.local and p.transport != "cli" and is_configured(p):
             return p.id
     return None
 
@@ -569,16 +660,23 @@ def describe(p: Provider) -> dict:
         "id": p.id,
         "display_name": p.display_name,
         "local": p.local,
+        "transport": p.transport,
+        "supports_model_listing": p.transport == "openai",
         "needs_account": p.needs_account,
         "signup_url": p.signup_url,
         "notes": p.notes,
         "base_url": resolve_base_url(p, substitute=False),
-        "model": resolve_model(p),
+        "model": configured_model(p),
         "has_key": has_key(p),
+        "has_api_key": bool(_env_first(p.key_envs) or _key_in_store(p.id)),
         "key_from_env": bool(_env_first(p.key_envs)),
         "base_url_from_env": bool(p.base_url_env and os.environ.get(p.base_url_env)),
         "model_from_env": bool(p.model_env and os.environ.get(p.model_env)),
         "active_from_env": _active_env_pin() is not None,
+        "activation_blocked": bool(
+            (_active_env_pin() and _active_env_pin() != p.id)
+            or os.environ.get("OMNIVOICE_LLM_BACKEND") not in (None, "", "openai-compat")
+        ),
         "configured": is_configured(p),
     }
     if p.needs_account:

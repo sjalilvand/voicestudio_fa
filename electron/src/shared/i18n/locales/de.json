@@ -94,7 +94,7 @@
     "llmp_test": "Testen",
     "llmp_active_badge": "aktiv",
     "llmp_test_ok": "OK — {{model}} · {{ms}} ms",
-    "llmp_err_config": "API-Schlüssel oder Basis-URL fehlt — ausfüllen und speichern.",
+    "llmp_err_config": "Vervollständige die Anbietereinstellungen: Basis-URL, Modell und gegebenenfalls API-Schlüssel oder Konto-ID.",
     "llmp_err_auth": "Schlüssel abgelehnt (401/403) — API-Schlüssel prüfen.",
     "llmp_err_not_found": "Nicht gefunden (404) — Modellname und Pfad der Basis-URL prüfen.",
     "llmp_err_rate_limit": "Rate-Limit erreicht (429) — der Schlüssel funktioniert; gleich erneut versuchen.",
@@ -364,7 +364,15 @@
     "reduce_motion_desc": "Stoppt Hintergrundanimationen und Übergänge. Die Systemeinstellung gilt weiterhin für sich; dies kommt hinzu.",
     "perf_torch_compile": "torch.compile deaktivieren",
     "perf_torch_compile_note": "Verwendet direkte Ausführung, um Triton-Speicherfehler zu vermeiden.",
-    "perf_torch_compile_hint": "Verwendet direkte Ausführung, um Triton-Speicherfehler zu vermeiden. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
+    "perf_torch_compile_hint": "Verwendet direkte Ausführung, um Triton-Speicherfehler zu vermeiden. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>",
+    "llmp_active_env_pin": "Die LLM-Auswahl ist durch LLM_DEFAULT_PROVIDER oder OMNIVOICE_LLM_BACKEND festgelegt.",
+    "llmp_connect": "Verbinden und aktivieren",
+    "llmp_setup_hint": "Wähle einen Anbieter, starte seinen Server oder füge seinen API-Schlüssel hinzu und verbinde dich. VoiceStudio prüft eine Modellantwort, bevor LLM-Funktionen aktiviert werden.",
+    "llmp_disable": "LLM ausschalten",
+    "llmp_optional_key": "API-Schlüssel (optional)",
+    "llmp_cli_help": "Verwendet die installierte CLI und deren Anmeldung über denselben Prozess wie die Agentenreparatur. Modell leer lassen für den CLI-Standard. Antworten können langsamer sein; Kosten fallen beim CLI-Konto an.",
+    "llmp_sdk_help": "Native Anbieter verwenden LiteLLM. Für andere Anbieter provider/model eingeben. Bedrock nutzt API-Schlüssel oder AWS-Profil; Vertex die Konto-ID als Projekt und Google-Anmeldedaten. Basis-URL ist optional.",
+    "llmp_cli_auth": "CLI-Kontozugriff wurde abgelehnt. Anmeldung, Abonnement und gewähltes Modell prüfen."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -782,7 +790,9 @@
     "group_huggingface": "Umarmendes Gesicht",
     "group_translate": "Übersetzung (LLM / Film)",
     "group_deepl": "Benutzerdefinierter DeepL-Endpunkt",
-    "group_microsoft": "Benutzerdefinierter Microsoft Translator-Endpunkt"
+    "group_microsoft": "Benutzerdefinierter Microsoft Translator-Endpunkt",
+    "region": "Region",
+    "aws_profile": "AWS-Profil"
   },
   "engines": {
     "banners_on": "Bühnenbanner auf",

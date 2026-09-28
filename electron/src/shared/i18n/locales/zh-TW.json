@@ -94,7 +94,7 @@
     "llmp_test": "測試",
     "llmp_active_badge": "已啟用",
     "llmp_test_ok": "正常：{{model}} · {{ms}} ms",
-    "llmp_err_config": "缺少 API 金鑰或基礎 URL，請填寫後儲存。",
+    "llmp_err_config": "請補全供應商設定：基礎 URL、模型，以及所需的 API 金鑰或帳戶 ID。",
     "llmp_err_auth": "金鑰遭拒（401/403），請檢查你的 API 金鑰。",
     "llmp_err_not_found": "找不到（404），請檢查模型名稱與基礎 URL 路徑。",
     "llmp_err_rate_limit": "已達速率限制（429），金鑰有效，請稍後再試。",
@@ -364,7 +364,15 @@
     "reduce_motion_desc": "停止背景動畫與轉場效果。系統設定本身仍然生效，此項在其基礎上疊加。",
     "perf_torch_compile": "停用 torch.compile",
     "perf_torch_compile_note": "使用即時執行以避免 Triton 記憶體錯誤。",
-    "perf_torch_compile_hint": "使用即時執行以避免 Triton 記憶體錯誤。 <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
+    "perf_torch_compile_hint": "使用即時執行以避免 Triton 記憶體錯誤。 <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>",
+    "llmp_active_env_pin": "LLM 選擇由 LLM_DEFAULT_PROVIDER 或 OMNIVOICE_LLM_BACKEND 固定。",
+    "llmp_connect": "連線並啟用",
+    "llmp_setup_hint": "選擇供應商，啟動其伺服器或新增 API 金鑰，然後連線。VoiceStudio 會先驗證模型回應，再啟用 LLM 功能。",
+    "llmp_disable": "關閉 LLM",
+    "llmp_optional_key": "API 金鑰（選填）",
+    "llmp_cli_help": "透過與代理修復相同的執行器使用已安裝的 CLI 及其登入。模型留空將使用 CLI 預設值。回應可能較慢，費用依 CLI 帳戶計收。",
+    "llmp_sdk_help": "原生供應商使用 LiteLLM。其他供應商請輸入 provider/model。Bedrock 使用 API 金鑰或 AWS 設定檔；Vertex 將帳戶 ID 用作專案，並使用 Google 應用程式憑證。基礎 URL 為選填。",
+    "llmp_cli_auth": "CLI 帳戶存取遭拒。請檢查登入、訂閱和所選模型。"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -782,7 +790,9 @@
     "group_huggingface": "抱臉",
     "group_translate": "翻譯（法學碩士/電影）",
     "group_deepl": "DeepL 自訂端點",
-    "group_microsoft": "Microsoft Translator 自訂端點"
+    "group_microsoft": "Microsoft Translator 自訂端點",
+    "region": "區域",
+    "aws_profile": "AWS 設定檔"
   },
   "engines": {
     "banners_on": "舞台橫幅",

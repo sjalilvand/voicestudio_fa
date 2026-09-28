@@ -1111,7 +1111,7 @@
     "llmp_test": "Testar",
     "llmp_active_badge": "ativo",
     "llmp_test_ok": "ok — {{model}} · {{ms}} ms",
-    "llmp_err_config": "Falta a chave de API ou a URL base — preencha e salve.",
+    "llmp_err_config": "Complete as configurações do provedor: URL base, modelo e qualquer chave de API ou ID de conta necessário.",
     "llmp_err_auth": "Chave rejeitada (401/403) — verifique sua chave de API.",
     "llmp_err_not_found": "Não encontrado (404) — verifique o nome do modelo e o caminho da URL base.",
     "llmp_err_rate_limit": "Limite de requisições (429) — a chave funciona; tente novamente em instantes.",
@@ -1282,7 +1282,7 @@
     "uninstall_total": "Locais {{count}} · {{size}} serão liberados",
     "llmp_saved_not_active": "Salvo — ainda não usado para tradução. Clique em “Salvar e usar para tradução” para mudar.",
     "llmp_env_override": "definido por meio de uma variável de ambiente — substitui este campo",
-    "llmp_active_env_pin": "O provedor ativo é fixado pela variável de ambiente LLM_DEFAULT_PROVIDER.",
+    "llmp_active_env_pin": "A seleção do LLM é fixada por LLM_DEFAULT_PROVIDER ou OMNIVOICE_LLM_BACKEND.",
     "llmp_models_truncated": "primeiro {{count}} mostrado — digite para restringir o nome do modelo",
     "llmskills_desc": "Direcione cada recurso baseado em IA para seu próprio LLM — mantenha o trabalho confidencial em um modelo local (Ollama/LM Studio) enquanto trabalhos mais pesados ​​usam um provedor remoto — ou desative um recurso completamente. Off se comporta exatamente como não ter nenhum LLM configurado: o recurso volta para seu caminho não LLM.",
     "llmskills_needs_setup": "precisa de configuração",
@@ -1340,7 +1340,14 @@
     "review_mode_desc": "Faça uma pausa entre os estágios do pipeline para poder revisar a saída de ASR/tradução.",
     "review_mode_on": "Revisão",
     "review_mode_off": "Fogo rápido",
-    "translate_agent": "Ajuste do agente"
+    "translate_agent": "Ajuste do agente",
+    "llmp_connect": "Conectar e ativar",
+    "llmp_setup_hint": "Escolha um provedor, inicie seu servidor ou adicione a chave de API e conecte. O VoiceStudio verifica uma resposta do modelo antes de ativar os recursos LLM.",
+    "llmp_disable": "Desativar LLM",
+    "llmp_optional_key": "Chave de API (opcional)",
+    "llmp_cli_help": "Usa a CLI instalada e sua sessão pelo mesmo executor do reparo com agente. Deixe Modelo vazio para usar o padrão da CLI. As respostas podem ser mais lentas; os custos seguem sua conta da CLI.",
+    "llmp_sdk_help": "Provedores nativos usam LiteLLM. Para outros, insira provider/model. Bedrock usa chave de API ou perfil AWS; Vertex usa o ID da conta como projeto e credenciais do Google. A URL base é opcional.",
+    "llmp_cli_auth": "O acesso à conta CLI foi recusado. Verifique o login, a assinatura e o modelo selecionado."
   },
   "gallery": {
     "title": "VoiceStudio Galeria",
@@ -1788,7 +1795,9 @@
     "saved": "✓ Definir",
     "deepl_base_url": "URL base do DeepL",
     "deepl_base_url_help": "Endpoint personalizado da API DeepL (padrão: https://api.deepl.com/v2). Mudança para proxy/auto-hospedado.",
-    "microsoft_base_url_help": "Ponto de extremidade personalizado do Azure Translator (padrão: https://api.cognitive.microsofttranslator.com)."
+    "microsoft_base_url_help": "Ponto de extremidade personalizado do Azure Translator (padrão: https://api.cognitive.microsofttranslator.com).",
+    "region": "Região",
+    "aws_profile": "Perfil AWS"
   },
   "about": {
     "architecture": "Arquitetura",

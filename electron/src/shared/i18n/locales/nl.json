@@ -94,7 +94,7 @@
     "llmp_test": "Testen",
     "llmp_active_badge": "actief",
     "llmp_test_ok": "ok — {{model}} · {{ms}} ms",
-    "llmp_err_config": "API-sleutel of basis-URL ontbreekt — vul ze in en sla op.",
+    "llmp_err_config": "Vul de providerinstellingen aan: basis-URL, model en eventueel een vereiste API-sleutel of account-ID.",
     "llmp_err_auth": "Sleutel geweigerd (401/403) — controleer je API-sleutel.",
     "llmp_err_not_found": "Niet gevonden (404) — controleer de modelnaam en het pad van de basis-URL.",
     "llmp_err_rate_limit": "Limiet bereikt (429) — de sleutel werkt; probeer het zo opnieuw.",
@@ -364,7 +364,15 @@
     "reduce_motion_desc": "Stopt achtergrondanimaties en overgangen. Je systeeminstelling blijft op zichzelf gelden; dit komt daarbij.",
     "perf_torch_compile": "torch.compile uitschakelen",
     "perf_torch_compile_note": "Gebruikt directe uitvoering om Triton-geheugenfouten te voorkomen.",
-    "perf_torch_compile_hint": "Gebruikt directe uitvoering om Triton-geheugenfouten te voorkomen. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
+    "perf_torch_compile_hint": "Gebruikt directe uitvoering om Triton-geheugenfouten te voorkomen. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>",
+    "llmp_active_env_pin": "De LLM-keuze is vastgezet door LLM_DEFAULT_PROVIDER of OMNIVOICE_LLM_BACKEND.",
+    "llmp_connect": "Verbinden en inschakelen",
+    "llmp_setup_hint": "Kies een provider, start de server of voeg de API-sleutel toe en maak verbinding. VoiceStudio controleert een modelantwoord voordat LLM-functies worden ingeschakeld.",
+    "llmp_disable": "LLM uitschakelen",
+    "llmp_optional_key": "API-sleutel (optioneel)",
+    "llmp_cli_help": "Gebruikt de geïnstalleerde CLI en aanmelding via dezelfde uitvoerder als agentreparatie. Laat Model leeg voor de CLI-standaard. Antwoorden kunnen trager zijn; kosten vallen onder je CLI-account.",
+    "llmp_sdk_help": "Native providers gebruiken LiteLLM. Voer voor andere providers provider/model in. Bedrock gebruikt een API-sleutel of AWS-profiel; Vertex gebruikt Account-ID als project en Google-inloggegevens. Basis-URL is optioneel.",
+    "llmp_cli_auth": "Toegang tot het CLI-account is geweigerd. Controleer je aanmelding, abonnement en gekozen model."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -782,7 +790,9 @@
     "group_huggingface": "Knuffelend Gezicht",
     "group_translate": "Vertaling (LLM / filmisch)",
     "group_deepl": "DeepL aangepast eindpunt",
-    "group_microsoft": "Aangepast eindpunt van Microsoft Translator"
+    "group_microsoft": "Aangepast eindpunt van Microsoft Translator",
+    "region": "Regio",
+    "aws_profile": "AWS-profiel"
   },
   "engines": {
     "banners_on": "Podiumbanners aan",

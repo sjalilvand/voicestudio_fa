@@ -194,10 +194,9 @@ class OpenAICompatBackend(LLMBackend):
                 "(OpenAI/OpenRouter/OrcaRouter/Groq/… or a local Ollama), or set "
                 "TRANSLATE_BASE_URL (+ TRANSLATE_API_KEY)."
             )
-        if not llm_providers.resolve_base_url(p):
-            return False, f"{p.display_name}: set a Base URL in Settings → LLM Providers."
-        if not llm_providers.has_key(p):
-            return False, f"{p.display_name}: add an API key in Settings → LLM Providers."
+        error = llm_providers.configuration_error(p)
+        if error:
+            return False, error
         return True, f"ready ({p.display_name})"
 
     @property
@@ -211,21 +210,12 @@ class OpenAICompatBackend(LLMBackend):
     def _get_client(self):
         if self._client is not None:
             return self._client
-        from openai import OpenAI
         from services import llm_providers
         p = self._resolve_provider()
         if p is None:
             raise RuntimeError("LLM not configured. See `is_available()` for the hint.")
-        base_url = llm_providers.resolve_base_url(p)
-        api_key = llm_providers.resolve_api_key(p)
-        if not api_key:
-            raise RuntimeError("LLM not configured. See `is_available()` for the hint.")
-        kw = {"api_key": api_key}
-        if base_url:
-            kw["base_url"] = base_url
-        # max_retries=0 so a 429 + Retry-After can't make one chat() sleep
-        # through the Autofit fit-pass wall-clock budget (speech_rate).
-        self._client = OpenAI(max_retries=0, **kw)
+        from services.llm_transport import create_client
+        self._client = create_client(p)
         return self._client
 
     def chat(self, *, system: str, user: str, timeout: Optional[float] = None,
@@ -414,7 +404,7 @@ def _provider_hint(bid: str) -> str | None:
         p = llm_providers.active_provider()
         if p is None:
             return None
-        model = llm_providers.resolve_model(p)
+        model = llm_providers.configured_model(p)
         return f"{p.display_name} · {model}" if model else p.display_name
     except Exception:
         # The hint is decoration; a provider-registry hiccup must not take

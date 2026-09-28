@@ -1111,7 +1111,7 @@
     "llmp_test": "Probar",
     "llmp_active_badge": "activo",
     "llmp_test_ok": "ok — {{model}} · {{ms}} ms",
-    "llmp_err_config": "Falta la clave API o la URL base — rellénalas y guarda.",
+    "llmp_err_config": "Completa la configuración del proveedor: URL base, modelo y la clave API o el ID de cuenta que se requieran.",
     "llmp_err_auth": "Clave rechazada (401/403) — comprueba tu clave API.",
     "llmp_err_not_found": "No encontrado (404) — comprueba el nombre del modelo y la ruta de la URL base.",
     "llmp_err_rate_limit": "Límite de peticiones (429) — la clave funciona; inténtalo de nuevo en un momento.",
@@ -1285,7 +1285,7 @@
     "uninstall_total": "Ubicaciones de {{count}} · {{size}} serán liberadas",
     "llmp_saved_not_active": "Guardado: aún no se ha utilizado para la traducción. Haga clic en \"Guardar y usar para traducción\" para cambiar.",
     "llmp_env_override": "establecido a través de una variable de entorno: anula este campo",
-    "llmp_active_env_pin": "El proveedor activo está fijado por la variable de entorno LLM_DEFAULT_PROVIDER.",
+    "llmp_active_env_pin": "La selección del LLM está fijada por LLM_DEFAULT_PROVIDER u OMNIVOICE_LLM_BACKEND.",
     "llmp_models_truncated": "primer {{count}} mostrado: escriba para limitar el nombre del modelo",
     "llm_skills": "LLM Habilidades",
     "llmskills_desc": "Enrute cada función impulsada por IA a su propio LLM: mantenga el trabajo confidencial en un modelo local (Ollama/LM Studio) mientras que los trabajos más pesados ​​utilizan un proveedor remoto, o desactive una función por completo. Desactivado se comporta exactamente como si no tuviera ningún LLM configurado: la función vuelve a su ruta que no es LLM.",
@@ -1340,7 +1340,14 @@
     "review_mode_desc": "Haga una pausa entre las etapas del proceso para que pueda revisar el resultado de ASR/traducción.",
     "review_mode_on": "Revisión",
     "review_mode_off": "Fuego rápido",
-    "translate_agent": "Agente apto"
+    "translate_agent": "Agente apto",
+    "llmp_connect": "Conectar y activar",
+    "llmp_setup_hint": "Elige un proveedor, inicia su servidor o añade su clave API y conecta. VoiceStudio verifica una respuesta del modelo antes de activar las funciones LLM.",
+    "llmp_disable": "Desactivar LLM",
+    "llmp_optional_key": "Clave API (opcional)",
+    "llmp_cli_help": "Usa la CLI instalada y su sesión mediante el mismo ejecutor que la reparación con agente. Deja Modelo vacío para usar el predeterminado. Puede ser más lento; el coste corresponde a tu cuenta de la CLI.",
+    "llmp_sdk_help": "Los proveedores nativos usan LiteLLM. Para otros, introduce provider/model. Bedrock usa una clave API o perfil AWS; Vertex usa el ID de cuenta como proyecto y credenciales de Google. La URL base es opcional.",
+    "llmp_cli_auth": "Se rechazó el acceso de la cuenta CLI. Revisa la sesión, la suscripción y el modelo seleccionado."
   },
   "gallery": {
     "title": "VoiceStudio Galería",
@@ -1788,7 +1795,9 @@
     "saved": "✓ Establecer",
     "deepl_base_url": "URL base de DeepL",
     "deepl_base_url_help": "Punto final de API DeepL personalizado (predeterminado: https://api.deepl.com/v2). Cambio por proxy/autohospedado.",
-    "microsoft_base_url_help": "Punto final personalizado de Azure Translator (predeterminado: https://api.cognitive.microsofttranslator.com)."
+    "microsoft_base_url_help": "Punto final personalizado de Azure Translator (predeterminado: https://api.cognitive.microsofttranslator.com).",
+    "region": "Región",
+    "aws_profile": "Perfil de AWS"
   },
   "about": {
     "architecture": "Arquitectura",

@@ -94,7 +94,7 @@
     "llmp_test": "Перевірити",
     "llmp_active_badge": "активний",
     "llmp_test_ok": "ок — {{model}} · {{ms}} мс",
-    "llmp_err_config": "Не вказано ключ API або базовий URL — заповніть їх і збережіть.",
+    "llmp_err_config": "Заповніть налаштування провайдера: базову URL-адресу, модель і, за потреби, ключ API або ідентифікатор облікового запису.",
     "llmp_err_auth": "Ключ відхилено (401/403) — перевірте свій ключ API.",
     "llmp_err_not_found": "Не знайдено (404) — перевірте назву моделі та шлях базового URL.",
     "llmp_err_rate_limit": "Перевищено ліміт запитів (429) — ключ працює; спробуйте ще раз за мить.",
@@ -364,7 +364,15 @@
     "reduce_motion_desc": "Зупиняє фонові анімації та переходи. Системне налаштування діє саме по собі; це доповнює його.",
     "perf_torch_compile": "Вимкнути torch.compile",
     "perf_torch_compile_note": "Використовує пряме виконання для запобігання помилкам пам’яті Triton.",
-    "perf_torch_compile_hint": "Використовує пряме виконання для запобігання помилкам пам’яті Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
+    "perf_torch_compile_hint": "Використовує пряме виконання для запобігання помилкам пам’яті Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>",
+    "llmp_active_env_pin": "Вибір LLM закріплено змінною LLM_DEFAULT_PROVIDER або OMNIVOICE_LLM_BACKEND.",
+    "llmp_connect": "Підключити й увімкнути",
+    "llmp_setup_hint": "Виберіть провайдера, запустіть його сервер або додайте ключ API, потім підключіться. VoiceStudio перевірить відповідь моделі перед увімкненням функцій LLM.",
+    "llmp_disable": "Вимкнути LLM",
+    "llmp_optional_key": "Ключ API (необов’язково)",
+    "llmp_cli_help": "Використовує встановлений CLI та його авторизацію через той самий механізм, що й виправлення агентом. Порожнє поле моделі означає типову модель CLI. Відповіді можуть бути повільнішими; оплата через обліковий запис CLI.",
+    "llmp_sdk_help": "Нативні провайдери використовують LiteLLM. Для інших введіть provider/model. Bedrock використовує API-ключ або профіль AWS; Vertex — ID облікового запису як проєкт і облікові дані Google. Базова URL-адреса необов’язкова.",
+    "llmp_cli_auth": "Доступ до облікового запису CLI відхилено. Перевірте авторизацію, підписку та вибрану модель."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -782,7 +790,9 @@
     "group_huggingface": "HuggingFace",
     "group_translate": "Переклад (магістр права / кіно)",
     "group_deepl": "Спеціальна кінцева точка DeepL",
-    "group_microsoft": "Спеціальна кінцева точка Microsoft Translator"
+    "group_microsoft": "Спеціальна кінцева точка Microsoft Translator",
+    "region": "Регіон",
+    "aws_profile": "Профіль AWS"
   },
   "engines": {
     "banners_on": "Етап банери на",

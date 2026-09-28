@@ -94,7 +94,7 @@
     "llmp_test": "テスト",
     "llmp_active_badge": "アクティブ",
     "llmp_test_ok": "OK — {{model}} · {{ms}} ms",
-    "llmp_err_config": "API キーまたはベース URL が未入力です — 入力して保存してください。",
+    "llmp_err_config": "プロバイダー設定を入力してください：ベースURL、モデル、必要に応じてAPIキーまたはアカウントID。",
     "llmp_err_auth": "キーが拒否されました (401/403) — API キーを確認してください。",
     "llmp_err_not_found": "見つかりません (404) — モデル名とベース URL のパスを確認してください。",
     "llmp_err_rate_limit": "レート制限中 (429) — キーは有効です。しばらくしてから再試行してください。",
@@ -364,7 +364,15 @@
     "reduce_motion_desc": "背景アニメーションとトランジションを停止します。システム設定は単独で有効なままで、これはそれに加わります。",
     "perf_torch_compile": "torch.compile を無効にする",
     "perf_torch_compile_note": "直接実行を使用して Triton のメモリエラーを回避します。",
-    "perf_torch_compile_hint": "直接実行を使用して Triton のメモリエラーを回避します。 <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
+    "perf_torch_compile_hint": "直接実行を使用して Triton のメモリエラーを回避します。 <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>",
+    "llmp_active_env_pin": "LLMの選択はLLM_DEFAULT_PROVIDERまたはOMNIVOICE_LLM_BACKENDで固定されています。",
+    "llmp_connect": "接続して有効化",
+    "llmp_setup_hint": "プロバイダーを選び、サーバーを起動するかAPIキーを追加して接続してください。VoiceStudioはモデルの応答を確認してからLLM機能を有効にします。",
+    "llmp_disable": "LLMを無効化",
+    "llmp_optional_key": "APIキー（任意）",
+    "llmp_cli_help": "インストール済みCLIとそのログインを、エージェント修復と同じ実行機能で使用します。モデルを空欄にするとCLIの既定値を使います。応答が遅くなる場合があり、料金はCLIアカウントに従います。",
+    "llmp_sdk_help": "ネイティブプロバイダーにはLiteLLMを使います。その他はprovider/modelを入力してください。BedrockはAPIキーまたはAWSプロファイル、VertexはアカウントIDをプロジェクトとしてGoogle認証情報を使用します。ベースURLは任意です。",
+    "llmp_cli_auth": "CLIアカウントのアクセスが拒否されました。ログイン、契約、選択したモデルを確認してください。"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -782,7 +790,9 @@
     "group_huggingface": "ハグ顔",
     "group_translate": "翻訳 (LLM / 映画)",
     "group_deepl": "DeepL カスタム エンドポイント",
-    "group_microsoft": "Microsoft 翻訳者のカスタム エンドポイント"
+    "group_microsoft": "Microsoft 翻訳者のカスタム エンドポイント",
+    "region": "リージョン",
+    "aws_profile": "AWSプロファイル"
   },
   "engines": {
     "banners_on": "ステージバナーが貼られています",

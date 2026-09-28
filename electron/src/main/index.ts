@@ -260,7 +260,7 @@ if (process.env.VOICESTUDIO_ALLOW_MULTIPLE_INSTANCES !== '1' && !app.requestSing
           app.exit(0);
         },
       );
-      closeRepairAgents = registerRepairAgents(
+      closeRepairAgents = await registerRepairAgents(
         backend,
         backendRoot(),
         () => mainWindow,

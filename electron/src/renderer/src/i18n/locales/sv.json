@@ -1109,7 +1109,7 @@
     "llmp_test": "Testa",
     "llmp_active_badge": "aktiv",
     "llmp_test_ok": "ok — {{model}} · {{ms}} ms",
-    "llmp_err_config": "API-nyckel eller bas-URL saknas — fyll i dem och spara.",
+    "llmp_err_config": "Fyll i leverantörens inställningar: bas-URL, modell och eventuell API-nyckel eller konto-ID.",
     "llmp_err_auth": "Nyckeln avvisades (401/403) — kontrollera din API-nyckel.",
     "llmp_err_not_found": "Hittades inte (404) — kontrollera modellnamnet och bas-URL:ens sökväg.",
     "llmp_err_rate_limit": "Hastighetsbegränsad (429) — nyckeln fungerar; försök igen om en stund.",
@@ -1280,7 +1280,7 @@
     "uninstall_optional_group": "Frivillig",
     "uninstall_models_warning": "Detta inkluderar den delade Hugging Face-cachen ({{size}}) – modeller som andra nedladdade AI-verktyg kan följa med.",
     "llmp_env_override": "inställd via en miljövariabel — åsidosätter detta fält",
-    "llmp_active_env_pin": "Aktiv leverantör är fäst av miljövariabeln LLM_DEFAULT_PROVIDER.",
+    "llmp_active_env_pin": "LLM-valet är låst av LLM_DEFAULT_PROVIDER eller OMNIVOICE_LLM_BACKEND.",
     "llmp_models_truncated": "första {{count}} visas – skriv för att begränsa modellnamnet",
     "llm_skills": "LLM Färdigheter",
     "llmskills_desc": "Dirigera varje AI-driven funktion till sin egen LLM – behåll känsligt arbete på en lokal modell (Ollama/LM Studio) medan tyngre jobb använder en fjärrleverantör – eller stäng av en funktion helt. Off beter sig exakt som att ha ingen LLM konfigurerad: funktionen faller tillbaka till sin icke-LLM sökväg.",
@@ -1338,7 +1338,14 @@
     "review_mode_desc": "Pausa mellan stegen i pipeline så att du kan granska ASR/översättningsutdata.",
     "review_mode_on": "Granska",
     "review_mode_off": "Snabb eld",
-    "translate_agent": "Agent passar"
+    "translate_agent": "Agent passar",
+    "llmp_connect": "Anslut och aktivera",
+    "llmp_setup_hint": "Välj en leverantör, starta dess server eller lägg till en API-nyckel och anslut. VoiceStudio verifierar ett modellsvar innan LLM-funktioner aktiveras.",
+    "llmp_disable": "Stäng av LLM",
+    "llmp_optional_key": "API-nyckel (valfritt)",
+    "llmp_cli_help": "Använder installerad CLI och dess inloggning via samma körning som agentreparation. Lämna Modell tomt för CLI-standard. Svaren kan vara långsammare; kostnader följer ditt CLI-konto.",
+    "llmp_sdk_help": "Inbyggda leverantörer använder LiteLLM. Ange provider/model för andra. Bedrock använder API-nyckel eller AWS-profil; Vertex använder konto-ID som projekt och Google-autentisering. Bas-URL är valfri.",
+    "llmp_cli_auth": "Åtkomst till CLI-kontot nekades. Kontrollera inloggning, prenumeration och vald modell."
   },
   "gallery": {
     "title": "VoiceStudio Galleri",
@@ -1786,7 +1793,9 @@
     "saved": "✓ Ställ in",
     "deepl_base_url": "DeepL Base URL",
     "deepl_base_url_help": "Anpassad DeepL API-slutpunkt (standard: https://api.deepl.com/v2). Ändra för proxy/självvärd.",
-    "microsoft_base_url_help": "Anpassad Azure Translator-slutpunkt (standard: https://api.cognitive.microsofttranslator.com)."
+    "microsoft_base_url_help": "Anpassad Azure Translator-slutpunkt (standard: https://api.cognitive.microsofttranslator.com).",
+    "region": "Region",
+    "aws_profile": "AWS-profil"
   },
   "about": {
     "architecture": "Arkitektur",

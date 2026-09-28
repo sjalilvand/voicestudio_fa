@@ -1109,7 +1109,7 @@
     "llmp_test": "Test et",
     "llmp_active_badge": "etkin",
     "llmp_test_ok": "tamam — {{model}} · {{ms}} ms",
-    "llmp_err_config": "API anahtarı veya Temel URL eksik — doldurup kaydedin.",
+    "llmp_err_config": "Sağlayıcı ayarlarını tamamlayın: temel URL, model ve gerekiyorsa API anahtarı veya hesap kimliği.",
     "llmp_err_auth": "Anahtar reddedildi (401/403) — API anahtarınızı kontrol edin.",
     "llmp_err_not_found": "Bulunamadı (404) — model adını ve Temel URL yolunu kontrol edin.",
     "llmp_err_rate_limit": "Hız sınırına takıldı (429) — anahtar çalışıyor; birazdan yeniden deneyin.",
@@ -1277,7 +1277,7 @@
     "uninstall_models_caveat": "Bu makinedeki diğer AI araçlarıyla paylaşılan standart Hugging Face önbelleği; bunun kaldırılması, VoiceStudio'in hiç indirilmemiş modellerinin silinmesine neden olabilir. VoiceStudio ile ilgili her şeyin tekrar indirilmesi gerekiyor.",
     "uninstall_models_warning": "Bu, paylaşılan Hugging Face önbelleğini ({{size}}) içerir; indirilen diğer AI araçlarının onunla birlikte gidebileceği modeller.",
     "uninstall_total": "{{count}} konumları · {{size}} serbest bırakılacak",
-    "llmp_active_env_pin": "Etkin sağlayıcı, LLM_DEFAULT_PROVIDER ortam değişkeni tarafından sabitlenir.",
+    "llmp_active_env_pin": "LLM seçimi LLM_DEFAULT_PROVIDER veya OMNIVOICE_LLM_BACKEND tarafından sabitlenmiştir.",
     "llmp_models_truncated": "gösterilen ilk {{count}} — model adını daraltmak için yazın",
     "llmskills_desc": "Yapay zeka destekli her özelliği kendi LLM'ına yönlendirin; daha ağır işler uzak bir sağlayıcı kullanırken hassas çalışmaları yerel bir modelde (Ollama/LM Studio) sürdürün veya bir özelliği tamamen kapatın. Kapalı, tam olarak yapılandırılmış bir LLM yokmuş gibi davranır: özellik, LLM olmayan yoluna geri döner.",
     "llmskills_use_active": "Etkin sağlayıcıyı kullan",
@@ -1338,7 +1338,14 @@
     "review_mode_desc": "ASR / çeviri çıktısını gözden geçirebilmek için ardışık düzen aşamaları arasında duraklayın.",
     "review_mode_on": "İncele",
     "review_mode_off": "Hızlı ateş",
-    "translate_agent": "Ajanla uyarlama"
+    "translate_agent": "Ajanla uyarlama",
+    "llmp_connect": "Bağlan ve etkinleştir",
+    "llmp_setup_hint": "Bir sağlayıcı seçin, sunucusunu başlatın veya API anahtarını ekleyin ve bağlanın. VoiceStudio, LLM özelliklerini etkinleştirmeden önce model yanıtını doğrular.",
+    "llmp_disable": "LLM’yi kapat",
+    "llmp_optional_key": "API anahtarı (isteğe bağlı)",
+    "llmp_cli_help": "Yüklü CLI'yi ve oturumunu, aracıyla onarımla aynı çalıştırıcı üzerinden kullanır. CLI varsayılanı için Model'i boş bırakın. Yanıtlar yavaş olabilir; ücretler CLI hesabınıza yansır.",
+    "llmp_sdk_help": "Yerel sağlayıcı bağdaştırıcıları LiteLLM kullanır. Diğerleri için provider/model girin. Bedrock API anahtarı veya AWS profili; Vertex ise proje olarak hesap kimliği ve Google kimlik bilgileri kullanır. Temel URL isteğe bağlıdır.",
+    "llmp_cli_auth": "CLI hesabına erişim reddedildi. Oturumunuzu, aboneliğinizi ve seçilen modeli kontrol edin."
   },
   "gallery": {
     "title": "VoiceStudio Galeri",
@@ -1786,7 +1793,9 @@
     "saved": "✓ Ayarla",
     "deepl_base_url": "DeepL Temel URL'si",
     "deepl_base_url_help": "Özel DeepL API uç noktası (varsayılan: https://api.deepl.com/v2). Proxy/kendi kendine barındırılan için değişiklik.",
-    "microsoft_base_url_help": "Özel Azure Translator uç noktası (varsayılan: https://api.cognitive.microsofttranslator.com)."
+    "microsoft_base_url_help": "Özel Azure Translator uç noktası (varsayılan: https://api.cognitive.microsofttranslator.com).",
+    "region": "Bölge",
+    "aws_profile": "AWS profili"
   },
   "about": {
     "architecture": "Mimarlık",
