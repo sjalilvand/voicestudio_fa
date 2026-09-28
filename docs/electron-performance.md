@@ -48,3 +48,6 @@ Crash-isolated Faster-Whisper receives the same ASR decoding preset with each tr
 Uploaded voice references use the selected ASR engine through the shared transcribe endpoint's reference mode. This skips word alignment, checks locally installed models before loading, and never enables LLM refinement. Dictation selection remains independent. Missing models leave the optional transcript editable and retryable; asynchronous results do not overwrite manual edits or a subsequently selected saved voice.
 
 Reference mode fails closed if local installation cannot be verified, including unknown model selections and preflight errors. The loader rechecks the actual selected engine and every fallback immediately before loading, bypassing stale positive cache entries.
+
+When dedicated GPU capacity is unavailable, the planner still considers installed
+CPU-only candidates within the RAM budget. It does not assume GPU models fit.

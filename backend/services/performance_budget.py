@@ -77,8 +77,7 @@ def make_plan(choice: str, hardware: dict, inventory: dict[str, list[Candidate]]
     ram = float(hardware.get("ram_gb") or 0)
     gpu = float(hardware.get("vram_gb") or 0)
     known = ram > 0 and hardware.get("probe_ok", True)
-    gpu_required = hardware.get("device") in {"cuda", "rocm", "xpu"}
-    known = known and (not gpu_required or gpu > 0)
+    # Unknown dedicated VRAM must not disable CPU-only candidates.
     remaining_ram = max(0, ram - max(4, ram * .2))
     remaining_gpu = max(0, gpu - max(1, gpu * .15))
     budgets = {"ram_gb": round(remaining_ram, 1), "vram_gb": round(remaining_gpu, 1)}

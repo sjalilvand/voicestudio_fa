@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   usePerformanceProfile,
   type PerformanceProfileState,
@@ -645,8 +645,14 @@ export function StatusBar({
     diarisation: diarisation.isFetching,
   };
   const presetRefreshing = Object.values(refreshing).some(Boolean);
+  const appliedRefreshStarted = useRef(false);
   useEffect(() => {
-    if (!presetRefreshing) setAppliedProfile(null);
+    if (!appliedProfile) return;
+    if (presetRefreshing) appliedRefreshStarted.current = true;
+    else if (appliedRefreshStarted.current) {
+      appliedRefreshStarted.current = false;
+      setAppliedProfile(null);
+    }
   }, [presetRefreshing, appliedProfile]);
   const applicable = profile.data?.applicable_families ?? profile.data?.implemented_families ?? [];
   const displayEngines = engines.map((row) =>
@@ -781,6 +787,7 @@ export function StatusBar({
         {status.stage === 'ready' && (
           <PerformanceProfile
             onApplied={(applied) => {
+              appliedRefreshStarted.current = presetRefreshing;
               setAppliedProfile(applied);
               if (level === 'simple') chooseLevel('models');
             }}

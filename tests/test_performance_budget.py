@@ -106,3 +106,11 @@ def test_override_is_part_of_shared_plan():
     plan = make_plan("max", host(), inventory(), overrides={"asr": "fast"})
     assert plan["families"]["asr"]["selection"]["model"] == "tiny"
     assert plan["families"]["tts"]["tier"] == "max"
+
+
+@pytest.mark.parametrize("device", ["xpu", "cuda", "rocm"])
+def test_unknown_vram_keeps_cpu_candidates_available(device):
+    rows = make_plan("max", host(32, 0, device), inventory())["families"]
+    assert rows["tts"]["selection"]["engine"] == "kittentts"
+    assert rows["dictation"]["selection"]["model"] == "parakeet"
+    assert rows["asr"]["selection"] is None
