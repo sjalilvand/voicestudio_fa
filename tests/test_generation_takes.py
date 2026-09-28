@@ -510,3 +510,26 @@ def test_failed_finalization_removes_unpublished_wav(api, monkeypatch, failure):
     assert not list(outdir.glob("*.wav"))
     with sqlite3.connect(str(dbf)) as conn:
         assert conn.execute("SELECT COUNT(*) FROM generation_history").fetchone()[0] == 0
+
+
+def test_colliding_take_id_does_not_remove_saved_audio(api, monkeypatch):
+    import asyncio
+    import time
+    import torch
+    from pathlib import Path
+    _client, dbf, outdir, gen = api
+    existing = outdir / "aaaaaaaa.wav"
+    existing.write_bytes(b"saved take")
+    ids = iter(["aaaaaaaa", "bbbbbbbb"])
+    monkeypatch.setattr(gen.uuid, "uuid4", lambda: next(ids))
+    def fail_write(path, *args, **kwargs):
+        Path(path).write_bytes(b"partial")
+        raise OSError("write failed")
+    monkeypatch.setattr(gen, "save_generation_wav", fail_write)
+    with pytest.raises(OSError, match="write failed"):
+        asyncio.run(gen._finalize_generation(
+            torch.zeros(1, 240), 24000, text="hello", history_mode="design",
+            ref_audio_path=None, language="English", instruct=None,
+            resolved_profile_id=None, used_seed=42, start_time=time.time(), already_marked=True))
+    assert existing.read_bytes() == b"saved take"
+    assert not (outdir / "bbbbbbbb.wav").exists()
