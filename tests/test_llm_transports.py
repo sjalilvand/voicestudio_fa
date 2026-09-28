@@ -33,6 +33,7 @@ def test_cli_never_auto_activates_or_needs_an_api_key(registry, monkeypatch):
     ("vertex", "gemini-test", "vertex_ai/gemini-test"),
 ])
 def test_sdk_passes_messages_and_credentials_per_request(registry, monkeypatch, provider, model, expected):
+    monkeypatch.setattr("services.llm_transport._configure_sdk_http", lambda *args: None, raising=False)
     from services.llm_transport import create_client
     calls = []
     monkeypatch.setitem(sys.modules, "litellm", SimpleNamespace(completion=lambda **kw: calls.append(kw) or "response"))
@@ -109,3 +110,41 @@ def test_model_only_sdk_never_auto_selects_but_can_be_probed(registry):
     registry.save_overrides("sdk", model="openai/gpt-test")
     assert registry.configuration_error(registry.get_provider("sdk")) is None
     assert registry.active_provider_id() is None
+
+
+@pytest.mark.parametrize("env", ["OPENAI_BASE_URL", "OPENAI_API_BASE"])
+def test_sdk_rejects_effective_remote_http_url(registry, monkeypatch, env):
+    from services.llm_transport import sdk_completion
+    monkeypatch.setenv(env, "http://example.com/v1")
+    monkeypatch.setenv("OPENAI_API_KEY", "fixture-secret")
+    monkeypatch.setenv("OPENAI_BASE_URL" if env == "OPENAI_API_BASE" else "OPENAI_API_BASE", "")
+    import httpx
+    monkeypatch.setattr(httpx.HTTPTransport, "handle_request", lambda *a, **kw: pytest.fail("Credentialed network request escaped validation"))
+    with pytest.raises(Exception):
+        sdk_completion(registry.get_provider("sdk"), model="openai/test", messages=[{"role": "user", "content": "hi"}])
+
+
+def test_anthropic_does_not_follow_credentialed_redirect(registry):
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+    from threading import Thread
+    from services.llm_transport import sdk_completion
+    seen = []
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *args): pass
+        def do_POST(self):
+            seen.append(self.path)
+            self.rfile.read(int(self.headers.get("Content-Length", 0)))
+            self.send_response(307)
+            self.send_header("Location", "/leaked")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = Thread(target=server.serve_forever, daemon=True); thread.start()
+    try:
+        registry.save_key("anthropic", "fixture-secret")
+        registry.save_overrides("anthropic", base_url=f"http://127.0.0.1:{server.server_port}")
+        with pytest.raises(Exception):
+            sdk_completion(registry.get_provider("anthropic"), model="claude-test", messages=[{"role": "user", "content": "hi"}], timeout=2)
+        assert seen == ["/v1/messages"]
+    finally:
+        server.shutdown(); server.server_close(); thread.join(timeout=2)

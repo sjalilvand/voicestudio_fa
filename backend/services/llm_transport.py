@@ -2,7 +2,45 @@
 from __future__ import annotations
 
 import os
+import atexit
+from functools import lru_cache
 from types import SimpleNamespace
+
+
+def _check_sdk_request(request):
+    """Validate the effective URL after SDK environment/provider resolution."""
+    from ipaddress import ip_address
+    if request.url.scheme == "https":
+        return
+    host = request.url.host.lower()
+    loopback = host == "localhost"
+    if not loopback:
+        try:
+            loopback = ip_address(host).is_loopback
+        except ValueError:
+            pass  # A non-IP host other than localhost is remote.
+    if request.url.scheme != "http" or not loopback:
+        raise ValueError("SDK provider requests require HTTPS outside localhost")
+
+
+@lru_cache(maxsize=1)
+def _sdk_http_client():
+    # A shared thread-safe pool also keeps streaming responses alive after
+    # completion() returns. It carries no provider credentials of its own.
+    import httpx
+    client = httpx.Client(follow_redirects=False, event_hooks={"request": [_check_sdk_request]})
+    atexit.register(client.close)
+    return client
+
+
+def _configure_sdk_http(litellm, model, kwargs):
+    client = _sdk_http_client()
+    # OpenAI-compatible SDK adapters use LiteLLM's documented shared session.
+    litellm.client_session = client
+    if model.split("/", 1)[0] in {"anthropic", "bedrock", "vertex_ai"}:
+        # Native adapters accept HTTPHandler instead of an OpenAI SDK client.
+        from litellm.llms.custom_httpx.http_handler import HTTPHandler
+        kwargs["client"] = HTTPHandler(client=client)
 
 
 def create_client(provider):
@@ -46,5 +84,6 @@ def sdk_completion(provider, **kwargs):
     if provider.id == "vertex":
         kwargs["vertex_project"] = registry.resolve_account_id(provider)
         kwargs["vertex_location"] = os.environ.get("VERTEXAI_LOCATION", "global")
+    _configure_sdk_http(litellm, model, kwargs)
     kwargs.update(num_retries=0, drop_params=True)
     return litellm.completion(model=model, **kwargs)

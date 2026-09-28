@@ -146,3 +146,7 @@ same-origin proxy only for its known local backend; remote overrides never fall
 back to a different server. The configured authentication is retained.
 
 LM Studio automatic discovery accepts only loaded `llm`/`vlm` entries from its native model metadata. If that metadata is unavailable, set a model explicitly in Settings; untyped OpenAI-compatible IDs are not used to guess whether a model supports chat. The authenticated native probe rejects redirects so credentials remain on the configured origin.
+
+SDK transport validates the final request URL, including environment-derived
+OpenAI endpoints, and disables redirects for OpenAI-compatible and native
+Anthropic, Bedrock, and Vertex requests.
