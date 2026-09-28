@@ -46,7 +46,7 @@ metadata and the backend fallback mirror it.
 - Linux AppImages include standard update information and a published `.zsync` file so AppImageUpdate and desktop managers can download only changed bytes (#2327) — thanks @shuvashish76!
 
 ### Changed
-- Sidebar keeps its quality slider, adds hardware-aware Auto with TTS-first model selection, and groups compact engine status with icon-based Simple, Models and Details views (#2396)
+- Sidebar keeps its quality slider, adds hardware-aware Auto with live resource usage and TTS-first model selection, and groups compact engine status with icon-based Simple, Models and Details views (#2396)
 
 - LLM setup verifies a model response before enabling features, replaces the misleading engine inventory with connection guidance, and supports authenticated local servers (#2397)
 - LLM skills can use installed coding CLIs through the repair-agent runner, native paid providers through LiteLLM (#2397)

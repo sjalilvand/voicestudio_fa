@@ -346,11 +346,11 @@ def select_translation_engine(request: TranslationSelection):
     if not translation_engines.is_ready(request.engine_id):
         raise HTTPException(409, "Configure this translation provider before selecting it")
     if request.engine_id == "amazon":
-        from services.translation_apis import validate_amazon_configuration
+        from services.translation_apis import AmazonConfigurationError, validate_amazon_configuration
         try:
             validate_amazon_configuration()
-        except ValueError as exc:
-            raise HTTPException(409, str(exc)) from None
+        except AmazonConfigurationError as exc:
+            raise HTTPException(409, exc.public_message) from None
     prefs.set_("translation_backend", request.engine_id)
     return {"active": request.engine_id}
 
