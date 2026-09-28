@@ -653,7 +653,7 @@ def connect_llm_provider(provider_id: str):
     _validate_llm_activation(provider_id)
     def configuration():
         return (llm_providers.resolve_base_url(p), llm_providers.configured_model(p),
-                llm_providers.resolve_api_key(p))
+                llm_providers.resolve_api_key(p), llm_providers.resolve_account_id(p))
     verified = configuration()
     result = test_llm_provider(provider_id)
     if result["ok"]:

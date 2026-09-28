@@ -55,7 +55,8 @@ a model name alone. DeepL Free keys ending in `:fx` automatically use the Free A
 use the Pro endpoint. DeepL/Microsoft/Google Cloud keys are encrypted, including
 migration of older plaintext translation-key preferences. The legacy compatible
 endpoint key uses the same encrypted storage. These paid requests
-have bounded connection/read timeouts and do not follow credential-bearing redirects.
+require HTTPS, have bounded connection/read timeouts, and do not follow credential-bearing redirects.
+Connect also checks that the project/account stayed unchanged during verification.
 
 Provider protocol references: [LiteLLM](https://docs.litellm.ai/docs/providers),
 [Codex](https://developers.openai.com/codex/noninteractive/),

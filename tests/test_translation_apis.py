@@ -5,8 +5,6 @@ from types import SimpleNamespace
 import httpx
 import pytest
 
-from services.translation_apis import Translator
-
 
 @pytest.mark.parametrize("provider,key,target,expected_host", [
     ("deepl", "fixture:fx", "zh-CN", "api-free.deepl.com"),
@@ -15,6 +13,7 @@ from services.translation_apis import Translator
     ("google-cloud", "fixture", "es", "translation.googleapis.com"),
 ])
 def test_paid_http_contract(monkeypatch, provider, key, target, expected_host):
+    from services.translation_apis import Translator
     for name in ["DEEPL_API_KEY", "DEEPL_BASE_URL", "MICROSOFT_API_KEY", "MICROSOFT_BASE_URL", "GOOGLE_TRANSLATE_API_KEY"]:
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("MICROSOFT_REGION", "eastus")
@@ -47,6 +46,7 @@ def test_paid_http_contract(monkeypatch, provider, key, target, expected_host):
 
 
 def test_amazon_uses_sdk_and_closes_client(monkeypatch):
+    from services.translation_apis import Translator
     import boto3
     calls = []; closed = []
     client = SimpleNamespace(translate_text=lambda **kw: calls.append(kw) or {"TranslatedText": "hola"}, close=lambda: closed.append(True))
@@ -164,3 +164,13 @@ def test_secret_migration_failure_preserves_other_settings(monkeypatch, failure)
     assert os.environ["MICROSOFT_API_KEY"] == "other"
     assert "env.DEEPL_API_KEY" not in removed
     assert "env.MICROSOFT_API_KEY" in removed
+
+
+@pytest.mark.parametrize("provider", ["deepl", "microsoft"])
+@pytest.mark.parametrize("base", ["http://example.com", "//example.com", "https://"])
+def test_paid_provider_rejects_insecure_url_before_request(monkeypatch, provider, base):
+    from services.translation_apis import Translator
+    monkeypatch.setenv(provider.upper() + "_BASE_URL", base)
+    monkeypatch.setattr(httpx, "Client", lambda **kw: pytest.fail("Must reject before constructing HTTP client"))
+    with pytest.raises(ValueError, match="HTTPS"):
+        Translator(provider, "auto", "en", api_key="fixture").translate("hello")
