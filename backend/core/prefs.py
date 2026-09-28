@@ -163,7 +163,7 @@ def restore_env(data: dict) -> None:
             # the next start; never delete the only copy after a failed save.
             if saved or legacy:
                 os.environ.setdefault(key, str(saved or legacy))
-            logger.warning("Could not restore encrypted preference %s; other settings are unaffected", key)
+            logger.warning("Could not restore an encrypted preference; other settings are unaffected")
 
 
 
