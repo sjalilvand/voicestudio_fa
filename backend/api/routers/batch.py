@@ -947,11 +947,11 @@ async def enqueue_batch_job(
         raise HTTPException(409, "Configure the selected translation provider before adding this batch")
 
     if provider == "amazon":
-        from services.translation_apis import validate_amazon_configuration
+        from services.translation_apis import AmazonConfigurationError, validate_amazon_configuration
         try:
             await asyncio.to_thread(validate_amazon_configuration)
-        except ValueError as exc:
-            raise HTTPException(409, str(exc)) from None
+        except AmazonConfigurationError as exc:
+            raise HTTPException(409, exc.public_message) from None
 
     # Save the uploaded video
     batch_dir = os.path.join(DATA_DIR, "batch")
@@ -1054,11 +1054,11 @@ async def retry_batch_job(job_id: str):
     if not translation_engines.is_ready(provider):
         raise HTTPException(409, "Configure the selected translation provider before retrying")
     if provider == "amazon":
-        from services.translation_apis import validate_amazon_configuration
+        from services.translation_apis import AmazonConfigurationError, validate_amazon_configuration
         try:
             await asyncio.to_thread(validate_amazon_configuration)
-        except ValueError as exc:
-            raise HTTPException(409, str(exc)) from None
+        except AmazonConfigurationError as exc:
+            raise HTTPException(409, exc.public_message) from None
 
     if provider == "argos" and job.get("source_lang"):
         try:

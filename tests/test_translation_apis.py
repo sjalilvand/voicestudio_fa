@@ -114,6 +114,21 @@ def test_amazon_selection_validates_before_saving(monkeypatch):
     monkeypatch.setattr(translation_engines, "is_installed", lambda _: True)
     monkeypatch.setattr(translation_engines, "is_ready", lambda _: True)
     monkeypatch.setattr(engines.prefs, "set_", lambda *a: pytest.fail("Must not persist an invalid selection"))
-    monkeypatch.setattr(translation_apis, "validate_amazon_configuration", lambda: (_ for _ in ()).throw(ValueError("AWS credentials missing")))
+    monkeypatch.setattr(translation_apis, "validate_amazon_configuration", lambda: (_ for _ in ()).throw(translation_apis.AmazonConfigurationError("AWS credentials missing")))
     with pytest.raises(Exception) as exc: engines.select_translation_engine(engines.TranslationSelection(engine_id="amazon"))
     assert exc.value.status_code == 409
+
+
+@pytest.mark.parametrize("error_type", [ValueError, RuntimeError])
+def test_amazon_preflight_sanitizes_sdk_errors(monkeypatch, error_type):
+    import boto3
+    from services.translation_apis import AmazonConfigurationError, validate_amazon_configuration
+
+    def broken_session(**kwargs):
+        raise error_type("private profile path or credential data")
+
+    monkeypatch.setattr(boto3.session, "Session", broken_session)
+    with pytest.raises(AmazonConfigurationError) as error:
+        validate_amazon_configuration()
+    assert error.value.public_message == "AWS credentials could not be resolved. Check your AWS profile and sign-in."
+    assert "private" not in str(error.value)
