@@ -2987,7 +2987,8 @@
     },
     "liveUsage": "Utilisation en direct",
     "everyTwoSeconds": "Toutes les 2 s",
-    "appVram": "VRAM de l’appli"
+    "appVram": "VRAM de l’appli",
+    "voiceFirst": "Priorité à la qualité vocale"
   },
   "performanceProfile": {
     "auto": "Auto"

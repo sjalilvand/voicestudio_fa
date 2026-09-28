@@ -3232,6 +3232,7 @@
     },
     "liveUsage": "Aktuelle Auslastung",
     "everyTwoSeconds": "Alle 2 s",
-    "appVram": "App-VRAM"
+    "appVram": "App-VRAM",
+    "voiceFirst": "Sprachqualität zuerst"
   }
 }

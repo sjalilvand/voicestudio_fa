@@ -2987,7 +2987,8 @@
     },
     "liveUsage": "Текущая нагрузка",
     "everyTwoSeconds": "Каждые 2 с",
-    "appVram": "Видеопамять приложения"
+    "appVram": "Видеопамять приложения",
+    "voiceFirst": "Качество голоса в приоритете"
   },
   "performanceProfile": {
     "auto": "Авто"

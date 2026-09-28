@@ -8,6 +8,7 @@ import {
   SparklesIcon,
   WandSparklesIcon,
   InfoIcon,
+  ChevronRightIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useId, useState } from 'react';
@@ -332,7 +333,7 @@ export function PerformanceProfile({
           </PopoverTrigger>
           <PopoverContent
             side="right"
-            className="max-h-[min(42rem,80dvh)] w-72 space-y-3 overflow-y-auto p-3 text-xs"
+            className="max-h-[min(42rem,80dvh)] w-80 max-w-[calc(100vw-1rem)] space-y-3 overflow-y-auto p-4 text-xs"
           >
             <div>
               <p className="font-medium">
@@ -343,26 +344,10 @@ export function PerformanceProfile({
                       (plan.max_status === 'limited' ? 'reason.memory' : plan.max_status),
                   )}
               </p>
-              <p className="mt-1 text-muted-foreground">{t('performanceHardware.priority')}</p>
+              <p className="mt-1 text-muted-foreground">{t('performanceHardware.voiceFirst')}</p>
             </div>
-            <p className="text-muted-foreground tabular-nums">
-              {t('performanceHardware.specs', {
-                ram:
-                  plan.hardware.ram_gb?.toLocaleString(i18n.language, {
-                    maximumFractionDigits: 0,
-                  }) ?? '—',
-                cores: plan.hardware.cpu_threads,
-              })}
-              {plan.hardware.vram_gb != null &&
-                ' · ' +
-                  t('performanceHardware.vram', {
-                    memory: plan.hardware.vram_gb.toLocaleString(i18n.language, {
-                      maximumFractionDigits: 0,
-                    }),
-                  })}
-            </p>
             <LiveDeviceUsage open={hardwareOpen} />
-            <div className="space-y-2">
+            <div className="-mx-1">
               {(['tts', 'asr', 'translation', 'dictation', 'diarisation'] as const).map((name) => {
                 const entry = plan.families[name];
                 return (
@@ -370,19 +355,49 @@ export function PerformanceProfile({
                     key={name}
                     to="/settings/models/$family"
                     params={{ family: name }}
-                    className="flex items-baseline justify-between gap-3 rounded outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-ring"
+                    className="group flex min-h-7 items-center justify-between gap-3 rounded-md px-1 py-1 outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <span>{t('sidebarTools.' + name)}</span>
-                    <span className="text-end text-muted-foreground">
+                    <span className="flex items-center gap-1.5 text-end text-[11px] text-muted-foreground">
                       {t('performanceHardware.reason.' + entry.reason)}
+                      <ChevronRightIcon
+                        className="size-3 shrink-0 opacity-50 group-hover:opacity-100 rtl:rotate-180"
+                        aria-hidden="true"
+                      />
                     </span>
                   </Link>
                 );
               })}
             </div>
-            <p className="border-t pt-2 text-muted-foreground">
-              {t('performanceHardware.estimate')}
-            </p>
+            <details className="group/details border-t pt-1 text-muted-foreground">
+              <summary className="flex min-h-8 cursor-pointer list-none items-center justify-between gap-2 rounded outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+                {t('sidebarTools.details')}
+                <ChevronRightIcon
+                  className="size-3.5 shrink-0 group-open/details:rotate-90 rtl:rotate-180"
+                  aria-hidden="true"
+                />
+              </summary>
+              <div className="space-y-2 pt-1 leading-relaxed">
+                <p className="text-foreground/80 tabular-nums">
+                  {t('performanceHardware.specs', {
+                    ram:
+                      plan.hardware.ram_gb?.toLocaleString(i18n.language, {
+                        maximumFractionDigits: 0,
+                      }) ?? '—',
+                    cores: plan.hardware.cpu_threads,
+                  })}
+                  {plan.hardware.vram_gb != null &&
+                    ' · ' +
+                      t('performanceHardware.vram', {
+                        memory: plan.hardware.vram_gb.toLocaleString(i18n.language, {
+                          maximumFractionDigits: 0,
+                        }),
+                      })}
+                </p>
+                <p>{t('performanceHardware.priority')}</p>
+                <p>{t('performanceHardware.estimate')}</p>
+              </div>
+            </details>
           </PopoverContent>
         </Popover>
       )}

@@ -2987,7 +2987,8 @@
     },
     "liveUsage": "Penggunaan saat ini",
     "everyTwoSeconds": "Setiap 2 dtk",
-    "appVram": "VRAM aplikasi"
+    "appVram": "VRAM aplikasi",
+    "voiceFirst": "Utamakan kualitas suara"
   },
   "performanceProfile": {
     "auto": "Otomatis"

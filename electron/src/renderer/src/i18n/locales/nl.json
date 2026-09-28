@@ -3232,6 +3232,7 @@
     },
     "liveUsage": "Actueel gebruik",
     "everyTwoSeconds": "Elke 2 s",
-    "appVram": "App-VRAM"
+    "appVram": "App-VRAM",
+    "voiceFirst": "Spraakkwaliteit eerst"
   }
 }

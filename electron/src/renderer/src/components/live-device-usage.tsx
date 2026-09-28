@@ -59,7 +59,7 @@ export function LiveDeviceUsage({ open }: { open: boolean }) {
     <section
       aria-label={t('performanceHardware.liveUsage')}
       data-slot="live-device-usage"
-      className="space-y-2 border-y py-2"
+      className="space-y-2 rounded-lg bg-muted/40 p-3"
     >
       <div className="flex items-center justify-between gap-2 text-[11px]">
         <span className="font-medium">{t('performanceHardware.liveUsage')}</span>
@@ -83,11 +83,11 @@ export function LiveDeviceUsage({ open }: { open: boolean }) {
           </span>
         )}
       </div>
-      <dl className="grid grid-cols-2 gap-x-3 gap-y-2">
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
         {metrics.map(({ label, value, fill }) => (
           <div key={label} className="min-w-0 space-y-1">
-            <dt className="text-[10px] text-muted-foreground">{label}</dt>
-            <dd className="text-[11px] font-medium tabular-nums" title={value}>
+            <dt className="text-[11px] text-muted-foreground">{label}</dt>
+            <dd className="text-xs font-medium tabular-nums" title={value}>
               {value}
             </dd>
             <div className="h-0.5 overflow-hidden rounded-full bg-muted" aria-hidden="true">

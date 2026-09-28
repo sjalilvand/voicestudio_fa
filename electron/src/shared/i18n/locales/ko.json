@@ -3465,7 +3465,8 @@
     },
     "liveUsage": "실시간 사용량",
     "everyTwoSeconds": "2초마다",
-    "appVram": "앱 VRAM"
+    "appVram": "앱 VRAM",
+    "voiceFirst": "음성 품질 우선"
   },
   "performanceProfile": {
     "auto": "자동"

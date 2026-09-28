@@ -196,7 +196,15 @@ try {
   await live.getByText('37%', { exact: true }).waitFor();
   await live.getByText('18.5 / 32 GB', { exact: true }).waitFor();
   await live.getByText('6.2 / 8 GB', { exact: true }).waitFor();
-  await page.getByText('32 GB RAM · 16 CPU threads · 8 GB VRAM').waitFor();
+  const hardwareSpecs = page.getByText('32 GB RAM · 16 CPU threads · 8 GB VRAM');
+  assert.equal(await hardwareSpecs.isVisible(), false, 'Secondary explanation starts collapsed');
+  const details = page.locator('[data-slot=popover-content] summary');
+  await details.focus();
+  await details.press('Enter');
+  await hardwareSpecs.waitFor();
+  await details.press('Enter');
+  assert.equal(await hardwareSpecs.isVisible(), false, 'Details collapse with the keyboard');
+  await details.blur();
   await page.getByText('Memory limit', { exact: true }).first().waitFor();
   await footer.getByText('OmniVoice', { exact: true }).waitFor();
   await footer.getByText('Parakeet TDT v3', { exact: true }).waitFor();

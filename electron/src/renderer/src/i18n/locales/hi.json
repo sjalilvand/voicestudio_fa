@@ -3232,6 +3232,7 @@
     },
     "liveUsage": "वर्तमान उपयोग",
     "everyTwoSeconds": "हर 2 सेकंड",
-    "appVram": "ऐप की VRAM"
+    "appVram": "ऐप की VRAM",
+    "voiceFirst": "आवाज़ की गुणवत्ता पहले"
   }
 }

@@ -2987,7 +2987,8 @@
     },
     "liveUsage": "الاستخدام المباشر",
     "everyTwoSeconds": "كل ثانيتين",
-    "appVram": "ذاكرة GPU للتطبيق"
+    "appVram": "ذاكرة GPU للتطبيق",
+    "voiceFirst": "جودة الصوت أولاً"
   },
   "performanceProfile": {
     "auto": "تلقائي"

@@ -2987,7 +2987,8 @@
     },
     "liveUsage": "即時用量",
     "everyTwoSeconds": "每 2 秒更新",
-    "appVram": "應用程式顯示記憶體"
+    "appVram": "應用程式顯示記憶體",
+    "voiceFirst": "優先確保語音品質"
   },
   "performanceProfile": {
     "auto": "自動"

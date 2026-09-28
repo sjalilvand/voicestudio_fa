@@ -3234,6 +3234,7 @@
     },
     "liveUsage": "Utilizzo attuale",
     "everyTwoSeconds": "Ogni 2 s",
-    "appVram": "VRAM dell’app"
+    "appVram": "VRAM dell’app",
+    "voiceFirst": "Priorità alla qualità vocale"
   }
 }

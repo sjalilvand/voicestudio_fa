@@ -3232,6 +3232,7 @@
     },
     "liveUsage": "現在の使用状況",
     "everyTwoSeconds": "2秒ごと",
-    "appVram": "アプリのVRAM"
+    "appVram": "アプリのVRAM",
+    "voiceFirst": "音声品質を優先"
   }
 }

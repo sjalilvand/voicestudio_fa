@@ -33,7 +33,7 @@ def profile_plan(choice: str, overrides: dict, selections: dict) -> dict:
     from services.model_manager import resolve_omnivoice_checkpoint
     custom_checkpoint = resolve_omnivoice_checkpoint() != "k2-fsa/OmniVoice"
     if not custom_checkpoint and not any(os.environ.get(key) for key in ("OMNIVOICE_TTS_BACKEND", "OMNIVOICE_KITTENTTS_MODEL")) and current_tts in {
-        "kittentts", "omnivoice", "omnivoice-isolated", "omnivoice-subprocess",
+        "kittentts", "omnivoice", "omnivoice-subprocess",
     }:
         from api.routers.setup.models import KNOWN_MODELS, cache_is_complete, is_cached, _model_supported
         from core.device_caps import detect_host_caps

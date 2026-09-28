@@ -2987,7 +2987,8 @@
     },
     "liveUsage": "Uso em tempo real",
     "everyTwoSeconds": "A cada 2 s",
-    "appVram": "VRAM do app"
+    "appVram": "VRAM do app",
+    "voiceFirst": "Qualidade de voz em primeiro lugar"
   },
   "performanceProfile": {
     "auto": "Auto"

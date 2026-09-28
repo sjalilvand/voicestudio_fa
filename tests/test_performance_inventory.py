@@ -98,7 +98,16 @@ def test_env_pinned_tts_is_preserved(local_inventory, monkeypatch):
 
 
 @pytest.mark.parametrize("runtime", ["omnivoice-subprocess", "omnivoice-isolated"])
-def test_preserves_selected_omnivoice_isolation(local_inventory, runtime):
+def test_preserves_selected_omnivoice_isolation(local_inventory, runtime, monkeypatch):
+    from services import tts_backend
+    # The legacy isolated ID is not registered. Retain it without probing a
+    # backend class that the runtime cannot resolve.
+    available_class = tts_backend.get_backend_class("omnivoice")
+    def registered_class(engine):
+        if engine not in tts_backend._REGISTRY:
+            raise ValueError(f"Unknown TTS backend: {engine!r}")
+        return available_class
+    monkeypatch.setattr(tts_backend, "get_backend_class", registered_class)
     local_inventory["tts"] = {"engine": runtime, "model": "k2-fsa/OmniVoice"}
     assert inventory.profile_plan("max", {}, local_inventory)["families"]["tts"]["selection"]["engine"] == runtime
 

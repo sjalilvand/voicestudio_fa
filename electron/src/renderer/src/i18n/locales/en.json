@@ -3232,6 +3232,7 @@
     },
     "liveUsage": "Live usage",
     "everyTwoSeconds": "Every 2 s",
-    "appVram": "App VRAM"
+    "appVram": "App VRAM",
+    "voiceFirst": "Voice quality first"
   }
 }

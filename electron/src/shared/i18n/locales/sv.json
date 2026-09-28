@@ -2987,7 +2987,8 @@
     },
     "liveUsage": "Aktuell användning",
     "everyTwoSeconds": "Varannan sekund",
-    "appVram": "Appens VRAM"
+    "appVram": "Appens VRAM",
+    "voiceFirst": "Röstkvalitet först"
   },
   "performanceProfile": {
     "auto": "Auto"

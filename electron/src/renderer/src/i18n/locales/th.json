@@ -3232,6 +3232,7 @@
     },
     "liveUsage": "การใช้งานปัจจุบัน",
     "everyTwoSeconds": "ทุก 2 วินาที",
-    "appVram": "VRAM ของแอป"
+    "appVram": "VRAM ของแอป",
+    "voiceFirst": "ให้ความสำคัญกับคุณภาพเสียงก่อน"
   }
 }

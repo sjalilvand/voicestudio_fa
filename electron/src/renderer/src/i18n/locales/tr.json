@@ -3232,6 +3232,7 @@
     },
     "liveUsage": "Anlık kullanım",
     "everyTwoSeconds": "Her 2 sn",
-    "appVram": "Uygulama VRAM’i"
+    "appVram": "Uygulama VRAM’i",
+    "voiceFirst": "Önce ses kalitesi"
   }
 }

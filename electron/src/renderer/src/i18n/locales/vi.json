@@ -3232,6 +3232,7 @@
     },
     "liveUsage": "Mức sử dụng hiện tại",
     "everyTwoSeconds": "Mỗi 2 giây",
-    "appVram": "VRAM ứng dụng"
+    "appVram": "VRAM ứng dụng",
+    "voiceFirst": "Ưu tiên chất lượng giọng nói"
   }
 }
