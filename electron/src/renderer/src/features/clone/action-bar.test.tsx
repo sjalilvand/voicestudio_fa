@@ -18,6 +18,9 @@ const readiness = vi.hoisted(() => ({
 }));
 vi.mock('@/hooks/use-clone-readiness', () => ({ useCloneReadiness: () => readiness.blocker }));
 vi.mock('@/hooks/use-clone-demo', () => ({ useCloneDemo: () => false }));
+vi.mock('@/hooks/use-tts-languages', () => ({
+  useTtsLanguages: () => ({ names: ['English'], modelLabel: 'Test model', state: 'known' }),
+}));
 const generate = vi.fn(() => Promise.resolve());
 const cancel = vi.fn();
 const setCloneSetting = vi.fn();

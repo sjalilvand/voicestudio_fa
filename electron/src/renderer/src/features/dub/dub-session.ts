@@ -1397,9 +1397,6 @@ export async function generateDub(
   const finishActivity = beginAppActivity('synthesis');
   try {
     return await run('generating', async (signal) => {
-      if (!cachedTtsLanguagesSupported(queryClient, 'dub', [language, ...snapshot.segments.map((segment) => segment.target_lang || language)])) {
-        throw new Error(tr('languagePicker.chooseSupported'));
-      }
       let regenOnly = options.regenOnly;
       const agentEnabled = snapshot.quality === 'agent';
       const maxAgentPasses = 2;
@@ -1407,6 +1404,13 @@ export async function generateDub(
 
       while (true) {
         const current = dubSession.state;
+        const selected = regenOnly?.length ? new Set(regenOnly) : null;
+        const languages = current.segments
+          .filter((segment) => (!selected || selected.has(segment.id)) && segment.text.trim())
+          .map((segment) => segment.target_lang || language);
+        if (!cachedTtsLanguagesSupported(queryClient, 'dub', languages)) {
+          throw new Error(tr('languagePicker.chooseSupported'));
+        }
         patch({
           phase: 'generating',
           event: null,
