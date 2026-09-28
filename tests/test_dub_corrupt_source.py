@@ -10,12 +10,11 @@ from pathlib import Path
 
 import pytest
 
-from core import failure
-from services import dub_pipeline
-from services.ffmpeg_utils import raise_for_audio_extract_failure, validate_media_source
 
 
 def test_zeroed_header_is_rejected_without_invoking_ffmpeg(tmp_path):
+    from core import failure
+    from services.ffmpeg_utils import validate_media_source
     source = tmp_path / "original.mkv"
     source.write_bytes(b"\0" * 4096 + b"remaining data")
 
@@ -24,12 +23,15 @@ def test_zeroed_header_is_rejected_without_invoking_ffmpeg(tmp_path):
 
 
 def test_valid_media_header_is_left_for_ffmpeg_to_probe(tmp_path):
+    from services.ffmpeg_utils import validate_media_source
     source = tmp_path / "original.mkv"
     source.write_bytes(bytes.fromhex("1a45dfa3") + b"matroska payload")
     validate_media_source(str(source))
 
 
 def test_ffmpeg_unreadable_container_gets_the_same_guidance(tmp_path, monkeypatch):
+    from core import failure
+    from services.ffmpeg_utils import raise_for_audio_extract_failure
     source = tmp_path / "original.mkv"
     source.write_bytes(b"nonzero but damaged header")
     monkeypatch.setattr("services.ffmpeg_utils.has_audio_stream", lambda _: None)
@@ -42,6 +44,7 @@ def test_ffmpeg_unreadable_container_gets_the_same_guidance(tmp_path, monkeypatc
 
 
 def test_zeroed_source_emits_actionable_extract_failure(tmp_path, monkeypatch):
+    from services import dub_pipeline
     job_dir = tmp_path / "job"
     job_dir.mkdir()
     source = job_dir / "original.mkv"
@@ -64,6 +67,7 @@ def test_zeroed_source_emits_actionable_extract_failure(tmp_path, monkeypatch):
 
 
 def test_failed_copy_cleanup_never_removes_external_source(tmp_path, monkeypatch):
+    from services import dub_pipeline
     job_dir = tmp_path / "dub_jobs" / "job"
     job_dir.mkdir(parents=True)
     original = tmp_path / "original.mkv"
@@ -207,3 +211,55 @@ def test_failed_reingest_preserves_completed_audio(tmp_path, monkeypatch, fail_b
     asyncio.run(collect())
     assert {p.name: p.read_bytes() for p in job_dir.iterdir()} == {
         "audio.wav": b"completed audio", "audio_hq.wav": b"completed audio"}
+
+
+def test_cancelled_upload_waits_for_writer_before_cleanup(tmp_path, monkeypatch):
+    import threading
+    from fastapi import UploadFile
+    from api.routers import dub_core
+    job_dir = tmp_path / "job"
+    started, release = threading.Event(), threading.Event()
+    upload = UploadFile(file=io.BytesIO(b"test media"), filename="clip.wav", size=10)
+    monkeypatch.setattr(dub_core, "_safe_job_dir", lambda _: str(job_dir))
+    monkeypatch.setattr(dub_core.shutil, "disk_usage", lambda _: SimpleNamespace(free=1024**2))
+    def copy(source, target, length):
+        target.write(source.read(2))
+        started.set()
+        assert release.wait(5)
+        target.write(source.read())
+    monkeypatch.setattr(dub_core.shutil, "copyfileobj", copy)
+    async def run():
+        waiting = asyncio.Event()
+        shield = asyncio.shield
+        calls = 0
+        def observed(future):
+            nonlocal calls
+            calls += 1
+            if calls == 2: waiting.set()
+            return shield(future)
+        monkeypatch.setattr(asyncio, "shield", observed)
+        task = asyncio.create_task(dub_core.dub_upload(video=upload, job_id="job", input_type="audio", source_lang=None))
+        try:
+            assert await asyncio.to_thread(started.wait, 3)
+            task.cancel()
+            await asyncio.wait_for(waiting.wait(), 3)
+            assert not upload.file.closed
+            task.cancel()
+        finally:
+            release.set()
+        with pytest.raises(asyncio.CancelledError): await task
+    asyncio.run(run())
+    assert upload.file.closed
+    assert not job_dir.exists()
+
+
+def test_invalid_media_log_omits_source_path(tmp_path, monkeypatch, caplog):
+    from core import failure
+    from services import ffmpeg_utils
+    source = tmp_path / "private-recording.mkv"
+    monkeypatch.setattr(ffmpeg_utils, "has_audio_stream", lambda _: None)
+    with caplog.at_level("INFO"), pytest.raises(failure.InvalidMediaFileError):
+        ffmpeg_utils.raise_for_audio_extract_failure(
+            f"EBML header parsing failed: {source}", str(source))
+    assert str(source) not in caplog.text
+    assert "private-recording" not in caplog.text

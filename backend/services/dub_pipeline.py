@@ -1420,7 +1420,7 @@ async def ingest_pipeline(
                 else:
                     os.replace(extract_hq_path, audio_hq_path)
             except Exception as e_hq:  # noqa: BLE001 — quality upgrade, never fatal
-                logger.warning("HQ audio extraction errored (%s) — falling back", log_safe(e_hq))
+                logger.warning("HQ audio extraction errored (%s) — falling back", type(e_hq).__name__)
                 _discard_partial_audio(extract_hq_path)
                 audio_hq_path = None
         except asyncio.CancelledError:
@@ -1428,7 +1428,7 @@ async def ingest_pipeline(
             raise
         except Exception as e:
             _discard_partial_audio(extract_path, extract_hq_path)
-            logger.error("Extract failed for job %s: %s", log_safe(job_id), log_safe(e))
+            logger.error("Extract failed for job %s: %s", log_safe(job_id), type(e).__name__)
             if isinstance(e, failure.InvalidMediaFileError):
                 await asyncio.to_thread(_discard_invalid_source_copy, job_dir, video_path)
             yield prep_event("error", **failure.build_failure(e, stage="extract"))

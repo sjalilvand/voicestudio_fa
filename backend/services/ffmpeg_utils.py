@@ -728,8 +728,7 @@ def raise_for_audio_extract_failure(stderr, path: str) -> None:
     if already or is_no_audio_stream_stderr(stderr) or has_audio_stream(path) is False:
         text = stderr.decode("utf-8", errors="replace") if isinstance(stderr, bytes) else str(stderr or "")
         logger.info(
-            "Audio decode of %s failed because it has no audio stream: %s",
-            log_safe(os.path.basename(str(path))), log_safe(text[-500:]),
+            "Audio decode failed because the source has no audio stream"
         )
         raise NoAudioTrackError()
     text = stderr.decode("utf-8", errors="replace") if isinstance(stderr, bytes) else str(stderr or "")
@@ -740,8 +739,7 @@ def raise_for_audio_extract_failure(stderr, path: str) -> None:
         "invalid data found when processing input",
     )):
         logger.info(
-            "Audio decode of %s failed because its container is unreadable: %s",
-            log_safe(os.path.basename(str(path))), log_safe(text[-500:]),
+            "Audio decode failed because the source container is unreadable"
         )
         raise InvalidMediaFileError()
 

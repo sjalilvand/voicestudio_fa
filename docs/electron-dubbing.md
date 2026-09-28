@@ -337,3 +337,6 @@ directory remains unchanged.
 
 Extraction publishes each WAV only after FFmpeg succeeds, preserving completed
 audio if a later import fails validation or runs out of space.
+
+Cancelling an upload waits for its copy worker to stop before closing the input
+and clearing the reserved job, so the same upload can be retried safely.
