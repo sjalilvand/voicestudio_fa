@@ -334,3 +334,6 @@ or delete an existing source. Disk preflight checks the source copy size; smalle
 recordings do not require an arbitrary 1 GiB reserve. Failed or cancelled audio
 extraction removes its partial WAVs. The original user file outside the job
 directory remains unchanged.
+
+Extraction publishes each WAV only after FFmpeg succeeds, preserving completed
+audio if a later import fails validation or runs out of space.
