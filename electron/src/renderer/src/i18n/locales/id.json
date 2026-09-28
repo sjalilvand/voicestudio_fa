@@ -19,7 +19,8 @@
     "float": "float",
     "preset16": "Standar",
     "preset24": "Untuk penyuntingan",
-    "preset32": "Asli"
+    "preset32": "Asli",
+    "sizeUnknown": "Ukuran ditampilkan setelah audio dibuat."
   },
   "audioQuality": {
     "check": "Periksa audio",

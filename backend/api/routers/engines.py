@@ -86,6 +86,10 @@ def _family_payload(family: str, module):
         for backend in backends:
             engine_id = backend.get("id")
             if engine_id == active:
+                backend["output_sample_rate"] = tts_backend.output_sample_rate(active)
+                # TTSBackend's output contract is mono; unknown formats stay unknown.
+                backend["output_channels"] = 1 if backend["output_sample_rate"] else None
+            if engine_id == active:
                 backend["supported_language_names"] = tts_backend.language_options(active)
             if engine_id == active == "mlx-audio":
                 # Constructor resolves model preferences only; never loads weights.

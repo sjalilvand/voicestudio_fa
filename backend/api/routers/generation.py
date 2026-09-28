@@ -1362,10 +1362,14 @@ async def _finalize_generation(
     audio_filename = f"{audio_id}.wav"
     audio_path = os.path.join(OUTPUTS_DIR, audio_filename)
     def _save_take():
-        save_generation_wav(audio_path, audio_tensor, sample_rate, bits=wav_bits)
-        # Capture before creating the history row: concurrent retention cannot
-        # see or remove this take yet. Encoding and disk I/O stay off the loop.
-        return Path(audio_path).read_bytes() if include_wav_bytes else None
+        try:
+            save_generation_wav(audio_path, audio_tensor, sample_rate, bits=wav_bits)
+            # Capture before creating the history row: concurrent retention cannot
+            # see or remove this take yet. Encoding and disk I/O stay off the loop.
+            return Path(audio_path).read_bytes() if include_wav_bytes else None
+        except Exception:
+            Path(audio_path).unlink(missing_ok=True)
+            raise
 
     saving = asyncio.create_task(asyncio.to_thread(_save_take))
     try:

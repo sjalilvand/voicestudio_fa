@@ -19,7 +19,8 @@
     "float": "virgola mobile",
     "preset16": "Standard",
     "preset24": "Per il montaggio",
-    "preset32": "Originale"
+    "preset32": "Originale",
+    "sizeUnknown": "La dimensione viene mostrata dopo la generazione."
   },
   "audioQuality": {
     "check": "Controlla audio",

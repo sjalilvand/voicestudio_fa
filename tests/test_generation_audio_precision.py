@@ -140,3 +140,19 @@ def test_voxcpm_child_applies_seed_and_reports_float_format(monkeypatch):
     assert seen == [42, 32]
     assert frames[0]['audio_format'] == 'f32le'
     assert frames[0]['sample_rate'] == 48000
+
+
+def test_output_rate_metadata_never_loads_a_model(monkeypatch):
+    from services import tts_backend as tts
+    from types import SimpleNamespace
+    monkeypatch.setattr(tts, "_active_instance", None)
+    assert tts.output_sample_rate("voxcpm2") == 48000
+    assert tts.output_sample_rate("omnivoice") == 24000
+    assert tts.output_sample_rate("kittentts") == 24000
+    monkeypatch.setattr(tts, "get_backend_class", lambda _: pytest.fail("Must use live metadata"))
+    monkeypatch.setattr(tts, "_active_instance", SimpleNamespace(sample_rate=44100))
+    monkeypatch.setattr(tts, "_active_instance_id", "custom")
+    assert tts.output_sample_rate("custom") == 44100
+    monkeypatch.setattr(tts, "_active_instance", None)
+    monkeypatch.setattr(tts, "get_backend_class", lambda _: SimpleNamespace())
+    assert tts.output_sample_rate("unknown") is None

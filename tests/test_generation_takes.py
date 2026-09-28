@@ -450,6 +450,16 @@ def test_cancel_during_save_cleans_up_after_writer_stops(api, monkeypatch, write
     monkeypatch.setattr(gen, "save_generation_wav", slow_writer)
 
     async def run():
+        waiting = asyncio.Event()
+        original_shield = asyncio.shield
+        calls = 0
+        def observed_shield(future):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                waiting.set()
+            return original_shield(future)
+        monkeypatch.setattr(asyncio, "shield", observed_shield)
         task = asyncio.create_task(gen._finalize_generation(
             torch.zeros(1, 240), 24000, text="hello", history_mode="design",
             ref_audio_path=None, language="English", instruct=None,
@@ -459,7 +469,7 @@ def test_cancel_during_save_cleans_up_after_writer_stops(api, monkeypatch, write
         try:
             assert await asyncio.to_thread(started.wait, 3)
             task.cancel()
-            await asyncio.sleep(0)
+            await asyncio.wait_for(waiting.wait(), timeout=3)
             assert not task.done(), "cancellation must wait for the active writer"
             task.cancel()
         finally:
@@ -468,6 +478,35 @@ def test_cancel_during_save_cleans_up_after_writer_stops(api, monkeypatch, write
             await task
 
     asyncio.run(run())
+    assert not list(outdir.glob("*.wav"))
+    with sqlite3.connect(str(dbf)) as conn:
+        assert conn.execute("SELECT COUNT(*) FROM generation_history").fetchone()[0] == 0
+
+
+@pytest.mark.parametrize("failure", ["write", "read"])
+def test_failed_finalization_removes_unpublished_wav(api, monkeypatch, failure):
+    import asyncio
+    import time
+    import torch
+    from pathlib import Path
+
+    _client, dbf, outdir, gen = api
+    def writer(path, *args, **kwargs):
+        Path(path).write_bytes(b"partial")
+        if failure == "write":
+            raise OSError("write failed")
+    def read_fails(path):
+        raise OSError("read failed")
+    monkeypatch.setattr(gen, "save_generation_wav", writer)
+    if failure == "read":
+        monkeypatch.setattr(Path, "read_bytes", read_fails)
+    with pytest.raises(OSError, match=failure + " failed"):
+        asyncio.run(gen._finalize_generation(
+            torch.zeros(1, 240), 24000, text="hello", history_mode="design",
+            ref_audio_path=None, language="English", instruct=None,
+            resolved_profile_id=None, used_seed=42, start_time=time.time(),
+            already_marked=True, include_wav_bytes=True,
+        ))
     assert not list(outdir.glob("*.wav"))
     with sqlite3.connect(str(dbf)) as conn:
         assert conn.execute("SELECT COUNT(*) FROM generation_history").fetchone()[0] == 0

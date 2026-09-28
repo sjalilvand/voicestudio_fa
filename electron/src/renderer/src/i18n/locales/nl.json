@@ -19,7 +19,8 @@
     "float": "zwevendekomma",
     "preset16": "Standaard",
     "preset24": "Voor bewerking",
-    "preset32": "Origineel"
+    "preset32": "Origineel",
+    "sizeUnknown": "De grootte wordt na het genereren getoond."
   },
   "audioQuality": {
     "check": "Audio controleren",

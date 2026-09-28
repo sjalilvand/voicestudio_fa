@@ -52,6 +52,8 @@ export interface HistoryItem {
 
 // ── Engines (`GET /engines`) ───────────────────────────────────────────────
 export interface EngineBackend {
+  output_sample_rate?: number | null;
+  output_channels?: number | null;
   /** Lowercase picker names; null/absent means model-specific or unrestricted. */
   supported_language_names?: string[] | null;
   execution_evidence?: {

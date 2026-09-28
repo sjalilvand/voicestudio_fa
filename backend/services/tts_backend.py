@@ -1461,10 +1461,12 @@ class OmniVoiceBackend(TTSBackend):
         except Exception as e:
             return False, f"omnivoice package missing: {e}"
 
+    _DEFAULT_SAMPLE_RATE = 24000
+
     @property
     def sample_rate(self) -> int:
         if self._model is None:
-            return 24000  # canonical OmniVoice rate
+            return self._DEFAULT_SAMPLE_RATE  # canonical OmniVoice rate
         return getattr(self._model, "sampling_rate", 24000)
 
     @property
@@ -1831,9 +1833,11 @@ class VoxCPM2Backend(TTSBackend):
             return True, f"ready — {hint}"
         return True, "ready"
 
+    _DEFAULT_SAMPLE_RATE = 48000
+
     @property
     def sample_rate(self) -> int:
-        return 48000
+        return self._DEFAULT_SAMPLE_RATE
 
     @property
     def supported_languages(self) -> list[str]:
@@ -1980,9 +1984,11 @@ class MossTTSNanoBackend(TTSBackend):
             )
         return True, "ready"
 
+    _DEFAULT_SAMPLE_RATE = 48000
+
     @property
     def sample_rate(self) -> int:
-        return 48000  # native stereo 48 kHz
+        return self._DEFAULT_SAMPLE_RATE  # native stereo 48 kHz
 
     @property
     def supported_languages(self) -> list[str]:
@@ -2081,10 +2087,12 @@ class KittenTTSBackend(TTSBackend):
         except ImportError as e:
             return False, f"kittentts not installed: {e}"
 
+    _DEFAULT_SAMPLE_RATE = 24000
+
     @property
     def sample_rate(self) -> int:
         # KittenTTS emits 24 kHz mono per its ONNX model config.
-        return 24000
+        return self._DEFAULT_SAMPLE_RATE
 
     @property
     def supported_languages(self) -> list[str]:
@@ -3511,6 +3519,18 @@ def get_backend_class(backend_id: str) -> type[TTSBackend]:
     if backend_id not in _REGISTRY:
         raise ValueError(f"Unknown TTS backend: {backend_id!r}. Known: {list(_REGISTRY)}")
     return _effective_backend_class(backend_id, _REGISTRY[backend_id])
+
+
+def output_sample_rate(backend_id: str) -> Optional[int]:
+    """Read a live rate or an adapter's declared default without loading a model."""
+    try:
+        if _active_instance is not None and _active_instance_id == backend_id:
+            rate = _active_instance.sample_rate
+        else:
+            rate = getattr(get_backend_class(backend_id), "_DEFAULT_SAMPLE_RATE", None)
+        return rate if isinstance(rate, int) and not isinstance(rate, bool) and rate > 0 else None
+    except Exception:
+        return None  # Model-specific or unavailable metadata remains unknown.
 
 
 def language_options(backend_id: str) -> Optional[list[str]]:

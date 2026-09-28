@@ -19,7 +19,8 @@
     "float": "浮動小数点",
     "preset16": "標準",
     "preset24": "編集用",
-    "preset32": "オリジナル"
+    "preset32": "オリジナル",
+    "sizeUnknown": "生成後にサイズを表示します。"
   },
   "audioQuality": {
     "check": "音声を確認",

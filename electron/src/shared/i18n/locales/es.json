@@ -19,7 +19,8 @@
     "float": "flotante",
     "preset16": "Estándar",
     "preset24": "Para editar",
-    "preset32": "Original"
+    "preset32": "Original",
+    "sizeUnknown": "El tamaño se muestra después de generar el audio."
   },
   "audioQuality": {
     "check": "Revisar audio",
