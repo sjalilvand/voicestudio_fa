@@ -3523,12 +3523,19 @@ def language_options(backend_id: str) -> Optional[list[str]]:
 
     backend = None
     try:
+        # The native OmniVoice adapters use this exact vocabulary at inference.
+        if backend_id in {"omnivoice", "omnivoice-subprocess", "omnivoice-gguf"}:
+            return sorted(LANG_NAME_TO_ID)
         backend = get_backend_class(backend_id)()
+        if backend_id == "mlx-audio" and backend.model_identity() == backend.CURATED_MODELS.get("kokoro"):
+            return _installed_kokoro_language_options()
         declared = backend.supported_languages
         if not declared or "multi" in declared:
             return None
         codes = {backend._normalize_language_code(code) for code in declared}
-        return sorted(name for name in LANG_NAME_TO_ID
+        candidates = set(LANG_NAME_TO_ID) | {"mandarin", "arabic", "tagalog"}
+        candidates.update(name.lower() for name in backend.language_display_names.values())
+        return sorted(name for name in candidates
                       if backend._normalize_language_code(name) in codes)
     except Exception:  # Optional metadata must not take down discovery.
         logger.debug("Could not resolve language options for %s", backend_id, exc_info=True)
@@ -3545,6 +3552,33 @@ def language_options(backend_id: str) -> Optional[list[str]]:
                 logger.debug("Could not clean up language metadata instance", exc_info=True)
             finally:
                 atexit.unregister(shutdown)
+
+
+def _installed_kokoro_language_options() -> Optional[list[str]]:
+    """Read the installed model's literal tables without importing MLX or weights.
+
+    Unknown/new package layouts stay unknown rather than using a guessed list.
+    """
+    import ast
+    import importlib.metadata
+    from omnivoice.utils.lang_map import LANG_NAME_TO_ID
+
+    try:
+        distribution = importlib.metadata.distribution("mlx-audio")
+        path = distribution.locate_file("mlx_audio/tts/models/kokoro/pipeline.py")
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        tables = {}
+        for node in tree.body:
+            if isinstance(node, ast.Assign):
+                for target in node.targets:
+                    if isinstance(target, ast.Name) and target.id in {"ALIASES", "LANG_CODES"}:
+                        tables[target.id] = ast.literal_eval(node.value)
+        aliases, languages = tables["ALIASES"], tables["LANG_CODES"]
+        return sorted(name for name, code in LANG_NAME_TO_ID.items()
+                      if aliases.get(_KOKORO_ISO_BY_FULL_NAME.get(name, code), code) in languages)
+    except Exception:
+        logger.debug("Kokoro language metadata unavailable", exc_info=True)
+        return None
 
 
 

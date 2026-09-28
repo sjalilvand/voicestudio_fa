@@ -3115,5 +3115,18 @@
     "polish": "Erzeugtes Audio verfeinern",
     "basics": "1× ist normale Geschwindigkeit. Für natürliches Timing die Dauer leer lassen.",
     "hint": "Meist sind die Standardwerte passend. Die Vorgabe beeinflusst das Ergebnis; die anderen Regler ändern den Klangaufbau des Modells. Jeweils nur einen ändern."
+  },
+  "languagePicker": {
+    "auto": "Automatisch",
+    "unavailable": "Nicht unterstützt",
+    "unsupportedBy": "Von {{model}} nicht unterstützt",
+    "chooseSupported": "Unterstützte Sprache wählen",
+    "clearSearch": "Suche löschen",
+    "results": "{{enabled}} verfügbar · {{total}} Ergebnisse",
+    "loading": "Sprachen werden geprüft",
+    "unknown": "Sprachunterstützung unbekannt",
+    "error": "Sprachen konnten nicht geprüft werden",
+    "modelLanguages": "Sprachen dieses Modells",
+    "changeModel": "Modell wechseln"
   }
 }

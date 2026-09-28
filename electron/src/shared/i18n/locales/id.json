@@ -3115,5 +3115,18 @@
     "polish": "Sempurnakan audio yang dihasilkan",
     "basics": "1× adalah kecepatan normal. Kosongkan durasi untuk irama alami.",
     "hint": "Biasanya biarkan nilai bawaan. Panduan mengatur pengaruh instruksi; kontrol lain mengubah cara model membentuk suara. Ubah satu per satu."
+  },
+  "languagePicker": {
+    "auto": "Otomatis",
+    "unavailable": "Tidak didukung",
+    "unsupportedBy": "Tidak didukung oleh {{model}}",
+    "chooseSupported": "Pilih bahasa yang didukung",
+    "clearSearch": "Hapus pencarian",
+    "results": "{{enabled}} tersedia · {{total}} hasil",
+    "loading": "Memeriksa bahasa",
+    "unknown": "Dukungan bahasa tidak diketahui",
+    "error": "Tidak dapat memeriksa bahasa",
+    "modelLanguages": "Bahasa untuk model ini",
+    "changeModel": "Ganti model"
   }
 }

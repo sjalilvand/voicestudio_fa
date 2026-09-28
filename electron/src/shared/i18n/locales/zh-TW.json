@@ -3115,5 +3115,18 @@
     "polish": "潤飾生成音訊",
     "basics": "1× 為正常語速。時長留空可使用自然節奏。",
     "hint": "通常建議保留預設值。引導強度控制提示詞的影響，其他選項改變模型建構聲音的方式。每次只調整一項。"
+  },
+  "languagePicker": {
+    "auto": "自動",
+    "unavailable": "不支援",
+    "unsupportedBy": "{{model}} 不支援",
+    "chooseSupported": "請選擇支援的語言",
+    "clearSearch": "清除搜尋",
+    "results": "{{enabled}} 個可選 · {{total}} 個結果",
+    "loading": "正在檢查語言",
+    "unknown": "支援的語言未知",
+    "error": "無法檢查語言",
+    "modelLanguages": "此模型的語言",
+    "changeModel": "更換模型"
   }
 }

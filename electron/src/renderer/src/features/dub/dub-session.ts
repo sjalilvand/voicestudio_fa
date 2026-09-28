@@ -9,6 +9,9 @@ import { DUB_DRAFT_KEY, restoreDubDraft } from './dub-draft';
 import { Store } from '@tanstack/store';
 import { useStore } from '@tanstack/react-store';
 import { apiJson, ApiError } from '@/lib/api/client';
+import { queryClient } from '@/lib/query';
+import { cachedTtsLanguagesSupported } from '@/lib/language-options';
+import { tr } from '@/lib/i18n-text';
 import { describeDubTranslationError } from './translation-error';
 import { beginAppActivity } from '@/lib/app-activity';
 import { recordActionBreadcrumb } from '@/lib/report-breadcrumb';
@@ -1401,6 +1404,13 @@ export async function generateDub(
 
       while (true) {
         const current = dubSession.state;
+        const selected = regenOnly?.length ? new Set(regenOnly) : null;
+        const languages = current.segments
+          .filter((segment) => (!selected || selected.has(segment.id)) && segment.text.trim())
+          .map((segment) => segment.target_lang || language);
+        if (!cachedTtsLanguagesSupported(queryClient, 'dub', languages)) {
+          throw new Error(tr('languagePicker.chooseSupported'));
+        }
         patch({
           phase: 'generating',
           event: null,

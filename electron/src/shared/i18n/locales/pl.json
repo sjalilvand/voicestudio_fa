@@ -3115,5 +3115,18 @@
     "polish": "Dopracuj wygenerowany dźwięk",
     "basics": "1× to normalna prędkość. Pozostaw czas pusty, aby zachować naturalne tempo.",
     "hint": "Zwykle najlepiej pozostawić wartości domyślne. Sterowanie określa wpływ polecenia; pozostałe ustawienia zmieniają sposób budowania dźwięku. Zmieniaj jedno naraz."
+  },
+  "languagePicker": {
+    "auto": "Automatycznie",
+    "unavailable": "Nieobsługiwany",
+    "unsupportedBy": "Nieobsługiwany przez {{model}}",
+    "chooseSupported": "Wybierz obsługiwany język",
+    "clearSearch": "Wyczyść wyszukiwanie",
+    "results": "Dostępne: {{enabled}} · Wyniki: {{total}}",
+    "loading": "Sprawdzanie języków",
+    "unknown": "Obsługiwane języki nieznane",
+    "error": "Nie udało się sprawdzić języków",
+    "modelLanguages": "Języki tego modelu",
+    "changeModel": "Zmień model"
   }
 }

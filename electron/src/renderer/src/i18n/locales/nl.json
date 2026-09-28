@@ -3340,5 +3340,18 @@
     "polish": "Gegenereerde audio verfijnen",
     "basics": "1× is normale snelheid. Laat de duur leeg voor een natuurlijk ritme.",
     "hint": "Gebruik doorgaans de standaardwaarden. Sturing bepaalt de invloed van de instructie; de andere instellingen veranderen hoe het model geluid opbouwt. Wijzig één instelling tegelijk."
+  },
+  "languagePicker": {
+    "auto": "Automatisch",
+    "unavailable": "Niet ondersteund",
+    "unsupportedBy": "Niet ondersteund door {{model}}",
+    "chooseSupported": "Kies een ondersteunde taal",
+    "clearSearch": "Zoekopdracht wissen",
+    "results": "{{enabled}} beschikbaar · {{total}} resultaten",
+    "loading": "Talen controleren",
+    "unknown": "Taalondersteuning onbekend",
+    "error": "Talen konden niet worden gecontroleerd",
+    "modelLanguages": "Talen voor dit model",
+    "changeModel": "Model wijzigen"
   }
 }

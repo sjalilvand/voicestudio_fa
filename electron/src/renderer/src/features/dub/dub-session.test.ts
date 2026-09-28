@@ -750,3 +750,42 @@ it('cancelDub exposes cancel-in-flight state so removal stays disabled', async (
     phase: 'idle',
   }));
 });
+
+
+it.each([
+  { regenOnly: ['english'], allowed: true },
+  { regenOnly: ['japanese'], allowed: false },
+  { regenOnly: undefined, allowed: false },
+])('validates only requested dub regeneration languages: $regenOnly', async ({ regenOnly, allowed }) => {
+  const { queryClient } = await import('@/lib/query');
+  queryClient.setQueryData(['workers', 'target', 'dub'], { active: { remote: false } });
+  queryClient.setQueryData(['engines'], {
+    tts: { active: 'test', backends: [{ id: 'test', supported_language_names: ['English'] }] },
+  });
+  vi.mocked(apiJson).mockReset().mockResolvedValue({ task_id: 'regenerate' });
+  vi.mocked(consumeTaskStream).mockReset().mockImplementation(async (_path, emit) => {
+    emit({ type: 'done' });
+  });
+  dubSession.setState((current) => ({
+    ...current, jobId: 'language-regen', phase: 'editing', recovery: null, quality: 'fast',
+    segments: [
+      { id: 'english', start: 0, end: 1, text: 'Hello', text_original: 'Hello', target_lang: 'English' },
+      { id: 'japanese', start: 1, end: 2, text: 'Untouched cached speech', text_original: 'Untouched cached speech', target_lang: 'Japanese' },
+    ],
+  }));
+  try {
+    // The default target is irrelevant when each rendered segment overrides it.
+    await expect(generateDub('Japanese', 'ja', { regenOnly })).resolves.toBe(allowed);
+    if (allowed) {
+      const request = JSON.parse(vi.mocked(apiJson).mock.calls[0][1]!.body as string);
+      expect(request.regen_only).toEqual(['english']);
+      expect(request.segments).toHaveLength(2);
+    } else {
+      expect(apiJson).not.toHaveBeenCalled();
+    }
+  } finally {
+    queryClient.removeQueries({ queryKey: ['workers', 'target', 'dub'], exact: true });
+    queryClient.removeQueries({ queryKey: ['engines'], exact: true });
+    resetDubSession();
+  }
+});

@@ -3340,5 +3340,18 @@
     "polish": "Förfina genererat ljud",
     "basics": "1× är normal hastighet. Lämna längden tom för naturlig timing.",
     "hint": "Behåll vanligtvis standardvärdena. Vägledning styr instruktionens påverkan; övriga reglage ändrar hur modellen bygger ljudet. Ändra ett i taget."
+  },
+  "languagePicker": {
+    "auto": "Automatiskt",
+    "unavailable": "Stöds inte",
+    "unsupportedBy": "Stöds inte av {{model}}",
+    "chooseSupported": "Välj ett språk som stöds",
+    "clearSearch": "Rensa sökning",
+    "results": "{{enabled}} tillgängliga · {{total}} resultat",
+    "loading": "Kontrollerar språk",
+    "unknown": "Språkstöd okänt",
+    "error": "Kunde inte kontrollera språk",
+    "modelLanguages": "Språk för den här modellen",
+    "changeModel": "Byt modell"
   }
 }

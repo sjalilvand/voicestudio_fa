@@ -3115,5 +3115,18 @@
     "polish": "Aprimorar o áudio gerado",
     "basics": "1× é a velocidade normal. Deixe a duração vazia para um ritmo natural.",
     "hint": "Em geral, mantenha os valores padrão. A orientação ajusta a influência da instrução; os outros controles mudam como o modelo constrói o som. Altere um de cada vez."
+  },
+  "languagePicker": {
+    "auto": "Automático",
+    "unavailable": "Não suportado",
+    "unsupportedBy": "Não suportado por {{model}}",
+    "chooseSupported": "Escolha um idioma suportado",
+    "clearSearch": "Limpar pesquisa",
+    "results": "{{enabled}} disponíveis · {{total}} resultados",
+    "loading": "Verificando idiomas",
+    "unknown": "Suporte a idiomas desconhecido",
+    "error": "Não foi possível verificar os idiomas",
+    "modelLanguages": "Idiomas deste modelo",
+    "changeModel": "Alterar modelo"
   }
 }

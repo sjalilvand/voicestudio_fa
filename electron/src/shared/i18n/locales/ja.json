@@ -3115,5 +3115,18 @@
     "polish": "生成音声の仕上げ",
     "basics": "1×が通常速度です。自然な長さにするには時間を空欄にします。",
     "hint": "通常は既定値のままで構いません。ガイダンスはプロンプトの影響を、その他の設定はモデルの音の組み立て方を調整します。一度に一つずつ変更してください。"
+  },
+  "languagePicker": {
+    "auto": "自動",
+    "unavailable": "非対応",
+    "unsupportedBy": "{{model}} は非対応",
+    "chooseSupported": "対応言語を選択",
+    "clearSearch": "検索をクリア",
+    "results": "選択可能 {{enabled}} · 検索結果 {{total}}",
+    "loading": "言語を確認中",
+    "unknown": "対応言語は不明です",
+    "error": "言語を確認できませんでした",
+    "modelLanguages": "このモデルの言語",
+    "changeModel": "モデルを変更"
   }
 }

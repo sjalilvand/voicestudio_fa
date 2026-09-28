@@ -3115,5 +3115,18 @@
     "polish": "Pulir el audio generado",
     "basics": "1× es la velocidad normal. Deja la duración vacía para un ritmo natural.",
     "hint": "Normalmente conviene usar los valores predeterminados. La guía ajusta la influencia de la indicación; los demás controles cambian cómo el modelo construye el sonido. Cambia uno a la vez."
+  },
+  "languagePicker": {
+    "auto": "Automático",
+    "unavailable": "No compatible",
+    "unsupportedBy": "No compatible con {{model}}",
+    "chooseSupported": "Elige un idioma compatible",
+    "clearSearch": "Borrar búsqueda",
+    "results": "{{enabled}} disponibles · {{total}} resultados",
+    "loading": "Comprobando idiomas",
+    "unknown": "Compatibilidad de idiomas desconocida",
+    "error": "No se pudieron comprobar los idiomas",
+    "modelLanguages": "Idiomas de este modelo",
+    "changeModel": "Cambiar modelo"
   }
 }

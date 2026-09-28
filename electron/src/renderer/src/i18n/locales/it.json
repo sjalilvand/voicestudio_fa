@@ -3342,5 +3342,18 @@
     "polish": "Rifinisci l’audio generato",
     "basics": "1× è la velocità normale. Lascia vuota la durata per un ritmo naturale.",
     "hint": "Di solito vanno bene i valori predefiniti. La guida regola l’influenza del prompt; gli altri controlli cambiano come il modello costruisce il suono. Modificane uno alla volta."
+  },
+  "languagePicker": {
+    "auto": "Auto",
+    "unavailable": "Non supportata",
+    "unsupportedBy": "Non supportata da {{model}}",
+    "chooseSupported": "Scegli una lingua supportata",
+    "clearSearch": "Cancella ricerca",
+    "results": "{{enabled}} disponibili · {{total}} risultati",
+    "loading": "Verifica delle lingue",
+    "unknown": "Supporto lingue sconosciuto",
+    "error": "Impossibile verificare le lingue",
+    "modelLanguages": "Lingue di questo modello",
+    "changeModel": "Cambia modello"
   }
 }

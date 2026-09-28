@@ -3340,5 +3340,18 @@
     "polish": "Trau chuốt âm thanh đã tạo",
     "basics": "1× là tốc độ bình thường. Để trống thời lượng để có nhịp tự nhiên.",
     "hint": "Thường nên giữ giá trị mặc định. Độ dẫn hướng điều chỉnh ảnh hưởng của lời nhắc; các nút khác thay đổi cách mô hình tạo âm thanh. Mỗi lần chỉ đổi một mục."
+  },
+  "languagePicker": {
+    "auto": "Tự động",
+    "unavailable": "Không hỗ trợ",
+    "unsupportedBy": "{{model}} không hỗ trợ",
+    "chooseSupported": "Chọn ngôn ngữ được hỗ trợ",
+    "clearSearch": "Xóa tìm kiếm",
+    "results": "{{enabled}} khả dụng · {{total}} kết quả",
+    "loading": "Đang kiểm tra ngôn ngữ",
+    "unknown": "Chưa rõ ngôn ngữ được hỗ trợ",
+    "error": "Không thể kiểm tra ngôn ngữ",
+    "modelLanguages": "Ngôn ngữ của mô hình này",
+    "changeModel": "Đổi mô hình"
   }
 }

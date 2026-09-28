@@ -3115,5 +3115,18 @@
     "polish": "Peaufiner l’audio généré",
     "basics": "1× est la vitesse normale. Laissez la durée vide pour un rythme naturel.",
     "hint": "Gardez généralement les valeurs par défaut. Le guidage règle l’influence de la consigne ; les autres réglages modifient la construction du son. Changez un seul réglage à la fois."
+  },
+  "languagePicker": {
+    "auto": "Auto",
+    "unavailable": "Non pris en charge",
+    "unsupportedBy": "Non pris en charge par {{model}}",
+    "chooseSupported": "Choisir une langue prise en charge",
+    "clearSearch": "Effacer la recherche",
+    "results": "{{enabled}} disponibles · {{total}} résultats",
+    "loading": "Vérification des langues",
+    "unknown": "Langues prises en charge inconnues",
+    "error": "Impossible de vérifier les langues",
+    "modelLanguages": "Langues de ce modèle",
+    "changeModel": "Changer de modèle"
   }
 }

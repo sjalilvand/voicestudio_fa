@@ -46,7 +46,7 @@ import { useGenerateClone } from '@/hooks/use-generate';
 import { OutputPanel } from '@/features/clone/output-panel';
 import { QualityControls } from '@/features/clone/quality-controls';
 import { ProductionSettings } from '@/features/clone/action-bar';
-import { LanguagePicker } from '@/features/clone/language-picker';
+import { EngineLanguagePicker } from '@/features/clone/engine-language-picker';
 import { queryKeys } from '@/lib/query';
 import { cn } from '@/lib/utils';
 import { cloneSettingsStore } from '@/lib/store/clone-settings';
@@ -515,7 +515,7 @@ export function DesignPage() {
             <div className="glass-panel relative grid min-h-16 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 overflow-hidden rounded-xl border border-border/60 bg-muted/30 p-3 max-md:grid-cols-[1fr_auto]">
               <div className="min-w-0 justify-self-start">
                 <div className="flex items-center gap-1">
-                  <LanguagePicker />
+                  <EngineLanguagePicker operation="tts" />
                   <Button
                     variant={productionOpen ? 'secondary' : 'ghost'}
                     size="icon-sm"

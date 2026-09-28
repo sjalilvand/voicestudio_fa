@@ -3592,5 +3592,18 @@
     "polish": "Polish generated audio",
     "basics": "1× is normal speed. Leave duration blank for natural timing.",
     "hint": "Usually leave these at defaults. Guidance adjusts prompt influence; the other controls change how the model builds the sound. Change one at a time."
+  },
+  "languagePicker": {
+    "auto": "Auto",
+    "unavailable": "Not supported",
+    "unsupportedBy": "Not supported by {{model}}",
+    "chooseSupported": "Choose a supported language",
+    "clearSearch": "Clear search",
+    "results": "{{enabled}} available · {{total}} results",
+    "loading": "Checking languages",
+    "unknown": "Language support unknown",
+    "error": "Could not check languages",
+    "modelLanguages": "Languages for this model",
+    "changeModel": "Change model"
   }
 }

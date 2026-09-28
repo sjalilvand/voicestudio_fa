@@ -3344,5 +3344,18 @@
     "polish": "润色生成音频",
     "basics": "1× 为正常语速。时长留空可使用自然节奏。",
     "hint": "通常建议保留默认值。引导强度控制提示词的影响，其他选项改变模型构建声音的方式。每次只调整一项。"
+  },
+  "languagePicker": {
+    "auto": "自动",
+    "unavailable": "不支持",
+    "unsupportedBy": "{{model}} 不支持",
+    "chooseSupported": "请选择支持的语言",
+    "clearSearch": "清除搜索",
+    "results": "{{enabled}} 个可选 · {{total}} 个结果",
+    "loading": "正在检查语言",
+    "unknown": "支持的语言未知",
+    "error": "无法检查语言",
+    "modelLanguages": "此模型的语言",
+    "changeModel": "更换模型"
   }
 }
