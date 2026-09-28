@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { QualityControls } from './quality-controls';
 import { cloneSettingsStore, DEFAULT_CLONE_SETTINGS } from '@/lib/store/clone-settings';
 
-const engine = vi.hoisted(() => ({ id: 'omnivoice' }));
+const engine = vi.hoisted(() => ({ id: 'omnivoice', output_sample_rate: 24000 as number | null, output_channels: 1 as number | null }));
 vi.mock('@/hooks/use-engines', () => ({ useEngines: () => ({ activeTts: engine }) }));
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -27,6 +27,8 @@ beforeEach(() => {
   });
   cloneSettingsStore.setState(() => ({ ...DEFAULT_CLONE_SETTINGS }));
   engine.id = 'omnivoice';
+  engine.output_sample_rate = 24000;
+  engine.output_channels = 1;
 });
 afterEach(() => {
   cleanup();
@@ -62,7 +64,7 @@ it('changes export precision with the keyboard, updates size and keeps sampling 
 });
 
 it('hides unsupported sampling controls and disables quality changes while generating', async () => {
-  engine.id = 'kitten';
+  engine.id = 'kittentts';
   render(<QualityControls disabled />);
   expect(screen.queryByRole('slider', { name: 'cloneQuality.effort' })).toBeNull();
   expect(await screen.findByRole('slider')).toBeDisabled();
@@ -94,4 +96,18 @@ it('keeps detailed tuning collapsed until requested', () => {
   expect(screen.getByRole('switch')).not.toBeVisible();
   fireEvent.click(screen.getByText('voiceControls.options'));
   expect(screen.getByRole('switch', { name: 'cloneQuality.mastering' })).toBeVisible();
+});
+
+
+it('estimates from output metadata and leaves unknown model formats unspecified', () => {
+  engine.id = 'voxcpm2';
+  engine.output_sample_rate = 48000;
+  const view = render(<QualityControls />);
+  expect(screen.getByText('cloneQuality.size: 5.8')).toBeVisible();
+  engine.output_channels = 2;
+  view.rerender(<QualityControls />);
+  expect(screen.getByText('cloneQuality.size: 11.5')).toBeVisible();
+  engine.output_sample_rate = null;
+  view.rerender(<QualityControls />);
+  expect(screen.getByText('cloneQuality.sizeUnknown')).toBeVisible();
 });

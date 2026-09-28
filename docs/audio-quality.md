@@ -8,7 +8,8 @@ The compact slider sits below the script in Clone and Design. **More options**
 reveals voice refinement (sampling steps), volume balancing and format guidance.
 The three plain-language choices are **Standard**, **For editing**, and
 **Original**; the collapsed details explain the WAV formats. Size estimates use
-decimal MB per minute at 24 kHz mono and vary with the engine. **Voice controls** exposes
+decimal MB per minute from the active engine’s output metadata. For unknown
+model formats, the UI shows the actual size after generation instead of guessing. **Voice controls** exposes
 speed, duration and cleanup; technical model controls are collapsed under
 **Advanced model tuning** with plain-language names and guidance.
 
@@ -51,7 +52,8 @@ OmniVoice and VoxCPM2 subprocesses negotiate float32 transport; legacy PCM16
 responses remain supported without reinstalling engines. Float-capable responses
 have a bounded 128 MiB frame allowance, preserving the old PCM16 duration limit;
 other engines and requests retain their 64 MiB limit. Retention protects the take
-being generated even when starred history entries already fill the cap.
+being generated even when starred history entries already fill the cap. Cancelled
+or failed save/read operations remove unpublished WAVs after the writer finishes.
 
 ## Optional signal checks
 

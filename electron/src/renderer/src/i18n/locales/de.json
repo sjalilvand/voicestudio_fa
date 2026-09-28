@@ -19,7 +19,8 @@
     "float": "Gleitkomma",
     "preset16": "Standard",
     "preset24": "Zum Bearbeiten",
-    "preset32": "Original"
+    "preset32": "Original",
+    "sizeUnknown": "Die Größe wird nach der Erzeugung angezeigt."
   },
   "audioQuality": {
     "check": "Audio prüfen",

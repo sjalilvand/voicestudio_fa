@@ -15,6 +15,11 @@ export function QualityControls({ disabled = false }: { disabled?: boolean }) {
   const { activeTts } = useEngines();
   const id = useId();
   const bits = settings.wavBits;
+  const rate = activeTts?.output_sample_rate;
+  const channels = activeTts?.output_channels;
+  const estimatedSize = rate && rate > 0 && channels && channels > 0
+    ? ((rate * channels * 60 * bits) / 8 / 1000000).toFixed(1)
+    : null;
   const stepRange = samplingStepRange(activeTts?.id);
   const steps = effectiveSamplingSteps(settings.steps, activeTts?.id);
   return (
@@ -44,7 +49,7 @@ export function QualityControls({ disabled = false }: { disabled?: boolean }) {
             }
           />
           <p id={`${id}-size`} className="text-xs text-muted-foreground">
-            {t('cloneQuality.size', { size: ((24000 * 60 * bits) / 8 / 1000000).toFixed(1) })}
+            {estimatedSize ? t('cloneQuality.size', { size: estimatedSize }) : t('cloneQuality.sizeUnknown')}
           </p>
         </div>
       </div>

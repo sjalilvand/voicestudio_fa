@@ -19,7 +19,8 @@
     "float": "flyttal",
     "preset16": "Standard",
     "preset24": "För redigering",
-    "preset32": "Original"
+    "preset32": "Original",
+    "sizeUnknown": "Storleken visas efter genereringen."
   },
   "audioQuality": {
     "check": "Kontrollera ljud",

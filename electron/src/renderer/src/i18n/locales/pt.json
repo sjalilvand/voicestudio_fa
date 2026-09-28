@@ -19,7 +19,8 @@
     "float": "ponto flutuante",
     "preset16": "Padrão",
     "preset24": "Para editar",
-    "preset32": "Original"
+    "preset32": "Original",
+    "sizeUnknown": "O tamanho aparece após a geração."
   },
   "audioQuality": {
     "check": "Verificar áudio",

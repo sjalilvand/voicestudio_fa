@@ -68,25 +68,27 @@ def test_api_confines_paths_and_returns_analysis(tmp_path, monkeypatch):
     from fastapi.testclient import TestClient
     from api.routers import generation
 
-    monkeypatch.setattr(generation, 'OUTPUTS_DIR', str(tmp_path))
-    sf.write(tmp_path / '12345678.wav', np.zeros(16000), 8000)
+    outputs = tmp_path / 'outputs'
+    outputs.mkdir()
+    monkeypatch.setattr(generation, 'OUTPUTS_DIR', str(outputs))
+    sf.write(outputs / '12345678.wav', np.zeros(16000), 8000)
     app = FastAPI()
     app.include_router(generation.router)
-    with TestClient(app) as client:
-        response = client.get('/audio/12345678/quality')
-        assert response.status_code == 200
-        assert response.json()['warnings'][0]['kind'] == 'silence'
-        assert client.get('/audio/not-an-id/quality').status_code == 404
-        assert client.get('/audio/ffffffff/quality').status_code == 404
-        outside = tmp_path.parent / 'private.wav'
-        sf.write(outside, np.ones(800), 8000)
-        (tmp_path / 'deadbeef.wav').write_bytes(b'broken')
-        assert client.get('/audio/deadbeef/quality').status_code == 422
-        # Windows CI may not have the symlink privilege. Still exercise the
-        # resolved-path confinement there, without skipping the API checks.
-        import os
-        realpath = os.path.realpath
-        monkeypatch.setattr(os.path, 'realpath', lambda path, **kwargs:
-                            str(outside) if str(path).endswith('abcdef12.wav')
-                            else realpath(path, **kwargs))
-        assert client.get('/audio/abcdef12/quality').status_code == 404
+    client = TestClient(app)
+    response = client.get('/audio/12345678/quality')
+    assert response.status_code == 200
+    assert response.json()['warnings'][0]['kind'] == 'silence'
+    assert client.get('/audio/not-an-id/quality').status_code == 404
+    assert client.get('/audio/ffffffff/quality').status_code == 404
+    outside = tmp_path / 'private.wav'
+    sf.write(outside, np.ones(800), 8000)
+    (outputs / 'deadbeef.wav').write_bytes(b'broken')
+    assert client.get('/audio/deadbeef/quality').status_code == 422
+    # Windows CI may not have the symlink privilege. Still exercise the
+    # resolved-path confinement there, without skipping the API checks.
+    import os
+    realpath = os.path.realpath
+    monkeypatch.setattr(os.path, 'realpath', lambda path, **kwargs:
+                        str(outside) if str(path).endswith('abcdef12.wav')
+                        else realpath(path, **kwargs))
+    assert client.get('/audio/abcdef12/quality').status_code == 404

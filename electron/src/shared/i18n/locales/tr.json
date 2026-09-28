@@ -19,7 +19,8 @@
     "float": "kayan nokta",
     "preset16": "Standart",
     "preset24": "Düzenleme için",
-    "preset32": "Orijinal"
+    "preset32": "Orijinal",
+    "sizeUnknown": "Boyut, oluşturma tamamlandıktan sonra gösterilir."
   },
   "audioQuality": {
     "check": "Sesi kontrol et",

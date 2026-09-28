@@ -19,7 +19,8 @@
     "float": "float",
     "preset16": "Standard",
     "preset24": "For editing",
-    "preset32": "Original"
+    "preset32": "Original",
+    "sizeUnknown": "Size shown after generation."
   },
   "audioQuality": {
     "check": "Check audio",

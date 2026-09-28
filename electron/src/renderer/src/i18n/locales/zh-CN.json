@@ -19,7 +19,8 @@
     "float": "浮点",
     "preset16": "标准",
     "preset24": "用于编辑",
-    "preset32": "原始"
+    "preset32": "原始",
+    "sizeUnknown": "生成后显示文件大小。"
   },
   "audioQuality": {
     "check": "检查音频",

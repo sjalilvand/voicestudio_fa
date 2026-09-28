@@ -19,7 +19,8 @@
     "float": "zmiennoprzecinkowe",
     "preset16": "Standardowa",
     "preset24": "Do edycji",
-    "preset32": "Oryginalna"
+    "preset32": "Oryginalna",
+    "sizeUnknown": "Rozmiar pojawi się po wygenerowaniu."
   },
   "audioQuality": {
     "check": "Sprawdź dźwięk",
