@@ -890,6 +890,13 @@ async def dub_translate(req: TranslateRequest):
             )
             return JSONResponse(status_code=400, content={"error": friendly})
 
+        if provider == "amazon":
+            from services.translation_apis import validate_amazon_configuration
+            try:
+                await asyncio.to_thread(validate_amazon_configuration)
+            except ValueError as exc:
+                return JSONResponse(status_code=409, content={"error": str(exc)})
+
         src_arg = TRANSLATE_CODES.get(src_lang, src_lang) or "auto"
 
         _proxies = {"http": None, "https": None}

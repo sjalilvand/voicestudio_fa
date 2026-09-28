@@ -48,7 +48,10 @@ The Dubbing engine selector also offers Google Cloud Translation and Amazon
 Translate alongside DeepL, Microsoft, Google web translation, MyMemory, and
 offline engines. Configure Google Cloud's API key, Azure region, AWS profile and
 AWS region in **Settings > Credentials**. Amazon uses the standard AWS credential
-chain. DeepL Free keys ending in `:fx` automatically use the Free API; paid keys
+chain. Selecting Amazon or starting/retrying a translation checks the resolved
+AWS credentials and region before work starts; catalogue reads remain network-free.
+Identity-based LLM setups require explicit selection and never auto-activate from
+a model name alone. DeepL Free keys ending in `:fx` automatically use the Free API; paid keys
 use the Pro endpoint. DeepL/Microsoft/Google Cloud keys are encrypted, including
 migration of older plaintext translation-key preferences. The legacy compatible
 endpoint key uses the same encrypted storage. These paid requests

@@ -103,3 +103,9 @@ def test_generic_sdk_accepts_provider_environment_credentials(registry, monkeypa
     monkeypatch.setenv("OPENAI_API_KEY", "fixture")
     monkeypatch.delenv("LITELLM_API_KEY", raising=False)
     assert registry.configuration_error(registry.get_provider("sdk")) is None
+
+
+def test_model_only_sdk_never_auto_selects_but_can_be_probed(registry):
+    registry.save_overrides("sdk", model="openai/gpt-test")
+    assert registry.configuration_error(registry.get_provider("sdk")) is None
+    assert registry.active_provider_id() is None
