@@ -1,0 +1,119 @@
+"""A damaged source must fail with an actionable error before FFmpeg runs."""
+from __future__ import annotations
+
+import asyncio
+import errno
+import io
+import json
+from types import SimpleNamespace
+
+import pytest
+
+from core import failure
+from services import dub_pipeline
+from services.ffmpeg_utils import raise_for_audio_extract_failure, validate_media_source
+
+
+def test_zeroed_header_is_rejected_without_invoking_ffmpeg(tmp_path):
+    source = tmp_path / "original.mkv"
+    source.write_bytes(b"\0" * 4096 + b"remaining data")
+
+    with pytest.raises(failure.InvalidMediaFileError, match="damaged or incomplete"):
+        validate_media_source(str(source))
+
+
+def test_valid_media_header_is_left_for_ffmpeg_to_probe(tmp_path):
+    source = tmp_path / "original.mkv"
+    source.write_bytes(bytes.fromhex("1a45dfa3") + b"matroska payload")
+    validate_media_source(str(source))
+
+
+def test_ffmpeg_unreadable_container_gets_the_same_guidance(tmp_path, monkeypatch):
+    source = tmp_path / "original.mkv"
+    source.write_bytes(b"nonzero but damaged header")
+    monkeypatch.setattr("services.ffmpeg_utils.has_audio_stream", lambda _: None)
+
+    with pytest.raises(failure.InvalidMediaFileError):
+        raise_for_audio_extract_failure(
+            b"EBML header parsing failed\nError opening input: Invalid data found when processing input",
+            str(source),
+        )
+
+
+def test_zeroed_source_emits_actionable_extract_failure(tmp_path, monkeypatch):
+    job_dir = tmp_path / "job"
+    job_dir.mkdir()
+    source = job_dir / "original.mkv"
+    source.write_bytes(b"\0" * 4096 + b"remaining data")
+    monkeypatch.setattr(dub_pipeline, "find_ffmpeg", lambda: "ffmpeg")
+    monkeypatch.setattr(dub_pipeline, "DUB_DIR", str(tmp_path))
+
+    async def collect():
+        return [event async for event in dub_pipeline.ingest_pipeline(
+            "corrupt_source", str(job_dir), {"kind": "file", "path": str(source)}
+        )]
+
+    events = [json.loads(event.removeprefix("data: ")) for event in asyncio.run(collect())]
+    error = next(event for event in events if event["type"] == "error")
+    assert error["stage"] == "extract"
+    assert error["docs_topic"] == "INVALID_MEDIA_FILE"
+    assert "fresh copy" in error["hint"].lower()
+    assert "FFmpeg exited" not in error["reason"]
+    assert not source.exists(), "discard the failed job copy so retries do not fill the disk"
+
+
+def test_failed_copy_cleanup_never_removes_external_source(tmp_path, monkeypatch):
+    job_dir = tmp_path / "dub_jobs" / "job"
+    job_dir.mkdir(parents=True)
+    original = tmp_path / "original.mkv"
+    original.write_bytes(b"\0" * 4096)
+    monkeypatch.setattr(dub_pipeline, "DUB_DIR", str(job_dir.parent))
+
+    dub_pipeline._discard_invalid_source_copy(str(job_dir), str(original))
+
+    assert original.exists()
+
+
+def test_upload_disk_full_removes_partial_copy(tmp_path, monkeypatch):
+    from fastapi import HTTPException, UploadFile
+    from api.routers import dub_core
+
+    job_dir = tmp_path / "job"
+    monkeypatch.setattr(dub_core, "_safe_job_dir", lambda _: str(job_dir))
+    monkeypatch.setattr(dub_core.shutil, "disk_usage", lambda _: SimpleNamespace(free=10**12))
+
+    def interrupted_copy(source, target, length):
+        target.write(source.read(2))
+        raise OSError(errno.ENOSPC, "No space left on device")
+
+    monkeypatch.setattr(dub_core.shutil, "copyfileobj", interrupted_copy)
+    upload = UploadFile(file=io.BytesIO(b"test media"), filename="clip.mkv", size=10)
+
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(dub_core.dub_upload(
+            video=upload, job_id="job", input_type="video", source_lang=None,
+        ))
+
+    assert exc.value.status_code == 507
+    assert "disk space" in exc.value.detail["message"].lower()
+    assert exc.value.detail["docs_topic"] == "AUDIO_IO_FAILED"
+    assert not (job_dir / "original.mkv").exists()
+
+
+def test_upload_checks_free_space_before_copy(tmp_path, monkeypatch):
+    from fastapi import HTTPException, UploadFile
+    from api.routers import dub_core
+
+    job_dir = tmp_path / "job"
+    monkeypatch.setattr(dub_core, "_safe_job_dir", lambda _: str(job_dir))
+    monkeypatch.setattr(dub_core.shutil, "disk_usage", lambda _: SimpleNamespace(free=4))
+    upload = UploadFile(file=io.BytesIO(b"test media"), filename="clip.mkv", size=10)
+
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(dub_core.dub_upload(
+            video=upload, job_id="job", input_type="video", source_lang=None,
+        ))
+
+    assert exc.value.status_code == 507
+    assert exc.value.detail["code"] == "dub_upload_disk_full"
+    assert not (job_dir / "original.mkv").exists()

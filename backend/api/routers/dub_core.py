@@ -1,4 +1,5 @@
 import os
+import errno
 import uuid
 import asyncio
 import logging
@@ -673,6 +674,22 @@ _ingest_gen       = dub_pipeline.ingest_pipeline
 #: container so a mislabelled video can't slip past the video-skipping branch.
 _AUDIO_EXTS = {".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".opus", ".wma"}
 
+# Uploads need a second copy of the source plus extracted WAVs and work files.
+# Keep a modest reserve; the copy can still race other disk users, so ENOSPC
+# during the write is handled separately below.
+_DUB_UPLOAD_RESERVE_BYTES = 1024 * 1024 * 1024
+
+
+def _dub_upload_disk_error() -> HTTPException:
+    return HTTPException(
+        status_code=507,
+        detail={
+            "code": "dub_upload_disk_full",
+            "docs_topic": "AUDIO_IO_FAILED",
+            "message": "Not enough disk space to upload and prepare this media. Free space in Settings → Storage, then retry.",
+        },
+    )
+
 # Source-language choices exposed by the first-party dub UI, plus every
 # language code Whisper can write back after auto-detection. A restored job
 # may reuse that detected value as the next upload's override, so rejecting our
@@ -779,8 +796,37 @@ async def dub_upload(
         with open(video_path, "wb") as output:
             shutil.copyfileobj(video.file, output, length=1024 * 1024)
 
+    # A successful multipart parse only means the temporary upload fits. The
+    # durable job copy and extracted audio still need room on the data volume.
+    try:
+        if video.size is not None:
+            free = shutil.disk_usage(job_dir).free
+            if free < video.size + _DUB_UPLOAD_RESERVE_BYTES:
+                raise _dub_upload_disk_error()
+    except OSError:
+        pass  # The write below still gives the authoritative OS diagnosis.
+    except HTTPException:
+        await video.close()
+        try:
+            os.rmdir(job_dir)  # Only remove the fresh, empty job directory.
+        except OSError:
+            pass
+        raise
+
     try:
         await asyncio.to_thread(_stream_upload_to_disk)
+    except OSError as exc:
+        try:
+            os.unlink(video_path)
+        except OSError:
+            pass
+        try:
+            os.rmdir(job_dir)
+        except OSError:
+            pass
+        if exc.errno == errno.ENOSPC or getattr(exc, "winerror", None) == 112:
+            raise _dub_upload_disk_error() from exc
+        raise
     finally:
         await video.close()
 

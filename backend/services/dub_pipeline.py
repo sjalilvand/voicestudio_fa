@@ -51,6 +51,7 @@ from services.ffmpeg_utils import (
     find_ffprobe,
     raise_for_audio_extract_failure,
     require_audio_stream,
+    validate_media_source,
 )
 from services.srt_parser import spoken_cue_text
 from services.model_manager import get_best_device
@@ -87,6 +88,22 @@ def _media_process_error(tool: str, returncode: int, stderr: bytes, *, paths=())
     if len(detail) > 2000:
         tail = "…" + tail
     return f"{tool} exited with code {returncode}" + (f": {tail}" if tail else ". No diagnostic output.")
+
+
+def _discard_invalid_source_copy(job_dir: str, media_path: str) -> None:
+    """Free a failed ingest copy, never a source outside an app-owned job dir."""
+    job = os.path.realpath(job_dir)
+    media = os.path.realpath(media_path)
+    if (
+        os.path.normcase(os.path.dirname(job)) != os.path.normcase(os.path.realpath(DUB_DIR))
+        or os.path.normcase(os.path.dirname(media)) != os.path.normcase(job)
+        or not os.path.basename(media).startswith("original.")
+    ):
+        return
+    try:
+        os.unlink(media)
+    except OSError:
+        logger.warning("Could not discard invalid media copy for job %s", log_safe(os.path.basename(job)))
 
 
 # ── Module-level state ──────────────────────────────────────────────────────
@@ -1344,6 +1361,7 @@ async def ingest_pipeline(
 
         yield prep_event("extract_start")
         try:
+            await asyncio.to_thread(validate_media_source, video_path)
             # A video with no audio stream has nothing to transcribe or dub.
             # Name that instead of letting ffmpeg fail with exit 234 and a
             # stream dump ending in "Invalid argument".
@@ -1387,6 +1405,8 @@ async def ingest_pipeline(
             raise
         except Exception as e:
             logger.error("Extract failed for job %s: %s", log_safe(job_id), log_safe(e))
+            if isinstance(e, failure.InvalidMediaFileError):
+                await asyncio.to_thread(_discard_invalid_source_copy, job_dir, video_path)
             yield prep_event("error", **failure.build_failure(e, stage="extract"))
             return
 
