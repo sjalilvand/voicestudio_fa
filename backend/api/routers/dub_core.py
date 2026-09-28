@@ -674,12 +674,6 @@ _ingest_gen       = dub_pipeline.ingest_pipeline
 #: container so a mislabelled video can't slip past the video-skipping branch.
 _AUDIO_EXTS = {".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".opus", ".wma"}
 
-# Uploads need a second copy of the source plus extracted WAVs and work files.
-# Keep a modest reserve; the copy can still race other disk users, so ENOSPC
-# during the write is handled separately below.
-_DUB_UPLOAD_RESERVE_BYTES = 1024 * 1024 * 1024
-
-
 def _dub_upload_disk_error() -> HTTPException:
     return HTTPException(
         status_code=507,
@@ -784,7 +778,17 @@ async def dub_upload(
         )
 
     source_lang_override = _source_lang_override(source_lang)
-    os.makedirs(job_dir, exist_ok=True)
+    try:
+        # Atomic reservation prevents concurrent uploads from sharing a source.
+        os.makedirs(job_dir, exist_ok=False)
+    except FileExistsError:
+        await video.close()
+        raise HTTPException(status_code=409, detail="This job ID is already in use. Start a new upload.") from None
+    except OSError as exc:
+        await video.close()
+        if exc.errno == errno.ENOSPC or getattr(exc, "winerror", None) == 112:
+            raise _dub_upload_disk_error() from exc
+        raise
 
     video_path = os.path.join(job_dir, f"original{ext}")
 
@@ -797,11 +801,12 @@ async def dub_upload(
             shutil.copyfileobj(video.file, output, length=1024 * 1024)
 
     # A successful multipart parse only means the temporary upload fits. The
-    # durable job copy and extracted audio still need room on the data volume.
+    # durable copy needs room on the data volume. Later working space depends
+    # on duration and format; do not reject small inputs with a fixed reserve.
     try:
         if video.size is not None:
             free = shutil.disk_usage(job_dir).free
-            if free < video.size + _DUB_UPLOAD_RESERVE_BYTES:
+            if free < video.size:
                 raise _dub_upload_disk_error()
     except OSError:
         pass  # The write below still gives the authoritative OS diagnosis.
@@ -810,7 +815,7 @@ async def dub_upload(
         try:
             os.rmdir(job_dir)  # Only remove the fresh, empty job directory.
         except OSError:
-            pass
+            pass  # Best effort: keep the original upload error.
         raise
 
     try:
@@ -819,11 +824,11 @@ async def dub_upload(
         try:
             os.unlink(video_path)
         except OSError:
-            pass
+            pass  # Best effort: keep the original upload error.
         try:
             os.rmdir(job_dir)
         except OSError:
-            pass
+            pass  # Best effort: keep the original upload error.
         if exc.errno == errno.ENOSPC or getattr(exc, "winerror", None) == 112:
             raise _dub_upload_disk_error() from exc
         raise

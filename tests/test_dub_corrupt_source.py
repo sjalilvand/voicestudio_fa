@@ -117,3 +117,38 @@ def test_upload_checks_free_space_before_copy(tmp_path, monkeypatch):
     assert exc.value.status_code == 507
     assert exc.value.detail["code"] == "dub_upload_disk_full"
     assert not (job_dir / "original.mkv").exists()
+
+
+def test_duplicate_upload_cannot_touch_existing_job(tmp_path, monkeypatch):
+    from fastapi import HTTPException, UploadFile
+    from api.routers import dub_core
+    job_dir = tmp_path / "job"
+    job_dir.mkdir()
+    original = job_dir / "original.mkv"
+    original.write_bytes(b"completed source")
+    monkeypatch.setattr(dub_core, "_safe_job_dir", lambda _: str(job_dir))
+    monkeypatch.setattr(dub_core.shutil, "disk_usage", lambda _: SimpleNamespace(free=10**12))
+    def broken_copy(source, target, length):
+        target.write(b"partial")
+        raise OSError(errno.ENOSPC, "full")
+    monkeypatch.setattr(dub_core.shutil, "copyfileobj", broken_copy)
+    upload = UploadFile(file=io.BytesIO(b"replacement"), filename="clip.mkv", size=11)
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(dub_core.dub_upload(video=upload, job_id="job", input_type="video", source_lang=None))
+    assert original.read_bytes() == b"completed source"
+    assert error.value.status_code == 409
+
+
+def test_small_upload_does_not_require_one_gib_reserve(tmp_path, monkeypatch):
+    from fastapi import UploadFile
+    from api.routers import dub_core
+    job_dir = tmp_path / "job"
+    monkeypatch.setattr(dub_core, "_safe_job_dir", lambda _: str(job_dir))
+    monkeypatch.setattr(dub_core.shutil, "disk_usage", lambda _: SimpleNamespace(free=1024**2))
+    async def add_task(*args):
+        pass
+    monkeypatch.setattr(dub_core.task_manager, "add_task", add_task)
+    upload = UploadFile(file=io.BytesIO(b"test media"), filename="clip.wav", size=10)
+    response = asyncio.run(dub_core.dub_upload(video=upload, job_id="job", input_type="audio", source_lang=None))
+    assert response.status_code == 202
+    assert (job_dir / "original.wav").read_bytes() == b"test media"
