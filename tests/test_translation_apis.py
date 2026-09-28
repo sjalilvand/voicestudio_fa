@@ -132,3 +132,35 @@ def test_amazon_preflight_sanitizes_sdk_errors(monkeypatch, error_type):
         validate_amazon_configuration()
     assert error.value.public_message == "AWS credentials could not be resolved. Check your AWS profile and sign-in."
     assert "private" not in str(error.value)
+
+
+@pytest.mark.parametrize("failure", ["get", "set", "delete"])
+def test_secret_migration_failure_preserves_other_settings(monkeypatch, failure):
+    import os
+    from core import prefs
+    from services import settings_store
+
+    removed = []
+    def get_secret(key):
+        if key.endswith("DEEPL_API_KEY") and failure == "get":
+            raise OSError("store unavailable")
+        return None
+    def set_secret(key, value):
+        if key.endswith("DEEPL_API_KEY") and failure == "set":
+            raise OSError("disk full")
+    def delete(key):
+        if key == "env.DEEPL_API_KEY" and failure == "delete":
+            raise OSError("disk full")
+        removed.append(key)
+    monkeypatch.setattr(settings_store, "get_secret", get_secret)
+    monkeypatch.setattr(settings_store, "set_secret", set_secret)
+    monkeypatch.setattr(prefs, "delete", delete)
+    for key in ("DEEPL_API_KEY", "MICROSOFT_API_KEY", "BACKEND_PORT"):
+        monkeypatch.setenv(key, "")
+        monkeypatch.delenv(key)
+    prefs.restore_env({"env.DEEPL_API_KEY": "legacy", "env.MICROSOFT_API_KEY": "other", "env.BACKEND_PORT": "3999"})
+    assert os.environ["BACKEND_PORT"] == "3999"
+    assert os.environ["DEEPL_API_KEY"] == "legacy"
+    assert os.environ["MICROSOFT_API_KEY"] == "other"
+    assert "env.DEEPL_API_KEY" not in removed
+    assert "env.MICROSOFT_API_KEY" in removed

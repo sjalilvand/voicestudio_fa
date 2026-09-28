@@ -141,20 +141,30 @@ def restore_env(data: dict) -> None:
     _EXTERNALLY_PROVIDED = frozenset(os.environ.keys())
     from services.translation_apis import SECRET_ENV_KEYS
     from services import settings_store
-    for key in SECRET_ENV_KEYS:
-        legacy = data.get("env." + key)
-        saved = settings_store.get_secret("translation_env." + key)
-        if legacy and not saved:
-            settings_store.set_secret("translation_env." + key, str(legacy))
-            saved = str(legacy)
-        if legacy:
-            delete("env." + key)
-        if saved:
-            os.environ.setdefault(key, saved)
+    # Ordinary settings must restore even if the encrypted store is unavailable.
     for k, v in data.items():
-        if not k.startswith("env.") or not v:
+        if not k.startswith("env.") or not v or k[len("env."):] in SECRET_ENV_KEYS:
             continue
         os.environ.setdefault(k[len("env."):], str(v))
+    for key in SECRET_ENV_KEYS:
+        legacy = data.get("env." + key)
+        saved = None
+        try:
+            saved = settings_store.get_secret("translation_env." + key)
+            if legacy and not saved:
+                settings_store.set_secret("translation_env." + key, str(legacy))
+                saved = str(legacy)
+            if saved:
+                os.environ.setdefault(key, saved)
+            if legacy:
+                delete("env." + key)
+        except Exception:
+            # Keep legacy values usable for this launch and retry migration on
+            # the next start; never delete the only copy after a failed save.
+            if saved or legacy:
+                os.environ.setdefault(key, str(saved or legacy))
+            logger.warning("Could not restore encrypted preference %s; other settings are unaffected", key)
+
 
 
 def is_env_shadowed(key: str) -> bool:
