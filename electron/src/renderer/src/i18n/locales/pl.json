@@ -3233,6 +3233,9 @@
       "installed": "Tylko zainstalowane modele",
       "kept": "Zachowano Twój wybór",
       "unknown": "Sprawdzanie sprzętu niedostępne"
-    }
+    },
+    "liveUsage": "Bieżące użycie",
+    "everyTwoSeconds": "Co 2 s",
+    "appVram": "VRAM aplikacji"
   }
 }

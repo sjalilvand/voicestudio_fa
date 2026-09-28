@@ -443,6 +443,9 @@ def _activate_budgeted_profile(tier: str) -> dict:
         elif family == "diarisation":
             if diarization_runtime.selected_backend() != engine:
                 diarization_runtime.select_backend(engine)
+            if engine == diarization_runtime.SORTFORMER:
+                from services import model_manager
+                model_manager.unload_diarization_pipeline()
         activated[family] = selected
     # Audio hot paths read the applied result, without probing model inventory.
     prefs.update_mapping(_PERFORMANCE_PROFILE_KEY, {"resolved": state["effective"]})

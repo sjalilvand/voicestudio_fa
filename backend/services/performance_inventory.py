@@ -30,7 +30,8 @@ def profile_plan(choice: str, overrides: dict, selections: dict) -> dict:
         current[family] = Candidate(engine, model, 1, ram, vram if dedicated else 0)
 
     current_tts = selections["tts"]["engine"]
-    custom_checkpoint = os.environ.get("OMNIVOICE_MODEL", "k2-fsa/OmniVoice") != "k2-fsa/OmniVoice"
+    from services.model_manager import resolve_omnivoice_checkpoint
+    custom_checkpoint = resolve_omnivoice_checkpoint() != "k2-fsa/OmniVoice"
     if not custom_checkpoint and not any(os.environ.get(key) for key in ("OMNIVOICE_TTS_BACKEND", "OMNIVOICE_KITTENTTS_MODEL")) and current_tts in {
         "kittentts", "omnivoice", "omnivoice-isolated", "omnivoice-subprocess",
     }:
@@ -40,7 +41,8 @@ def profile_plan(choice: str, overrides: dict, selections: dict) -> dict:
 
         tts = []
         # Never replace a cloning engine with a preset-voice-only engine.
-        choices = [("omnivoice", "k2-fsa/OmniVoice", 4, 8, 6, "OmniVoice")]
+        omni_runtime = current_tts if current_tts.startswith("omnivoice") else "omnivoice"
+        choices = [(omni_runtime, "k2-fsa/OmniVoice", 4, 8, 6, "OmniVoice")]
         if current_tts == "kittentts":
             choices.append(("kittentts", "KittenML/kitten-tts-mini-0.8", 1, .5, 0, "KittenTTS"))
         for engine, repo, rank, ram, vram, label in choices:
@@ -100,7 +102,12 @@ def profile_plan(choice: str, overrides: dict, selections: dict) -> dict:
         ]
 
     translator = selections["translation"]["engine"]
-    if translator not in {"argos", "nllb"} and translation_engines.is_ready(translator):
+    if translator == "nllb" and translation_engines.is_ready(translator):
+        # A device-wide preset has no source/target language pair to validate.
+        # Argos' installed status cannot prove it replaces NLLB's coverage.
+        if "translation" in current:
+            fixed["translation"] = current["translation"]
+    elif translator not in {"argos", "nllb"} and translation_engines.is_ready(translator):
         if "translation" in current:
             fixed["translation"] = Candidate(translator, current["translation"].model, 1, 0)
     else:

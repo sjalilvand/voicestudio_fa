@@ -2984,7 +2984,10 @@
       "installed": "Modèles installés uniquement",
       "kept": "Votre choix conservé",
       "unknown": "Vérification du matériel indisponible"
-    }
+    },
+    "liveUsage": "Utilisation en direct",
+    "everyTwoSeconds": "Toutes les 2 s",
+    "appVram": "VRAM de l’appli"
   },
   "performanceProfile": {
     "auto": "Auto"

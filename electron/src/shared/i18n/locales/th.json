@@ -2984,7 +2984,10 @@
       "installed": "เฉพาะโมเดลที่ติดตั้ง",
       "kept": "คงตัวเลือกของคุณไว้",
       "unknown": "ตรวจสอบฮาร์ดแวร์ไม่ได้"
-    }
+    },
+    "liveUsage": "การใช้งานปัจจุบัน",
+    "everyTwoSeconds": "ทุก 2 วินาที",
+    "appVram": "VRAM ของแอป"
   },
   "performanceProfile": {
     "auto": "อัตโนมัติ"

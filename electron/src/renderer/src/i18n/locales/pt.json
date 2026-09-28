@@ -3231,6 +3231,9 @@
       "installed": "Apenas modelos instalados",
       "kept": "Sua escolha mantida",
       "unknown": "Verificação de hardware indisponível"
-    }
+    },
+    "liveUsage": "Uso em tempo real",
+    "everyTwoSeconds": "A cada 2 s",
+    "appVram": "VRAM do app"
   }
 }

@@ -2984,7 +2984,10 @@
       "installed": "Alleen geïnstalleerde modellen",
       "kept": "Je keuze behouden",
       "unknown": "Hardwarecontrole niet beschikbaar"
-    }
+    },
+    "liveUsage": "Actueel gebruik",
+    "everyTwoSeconds": "Elke 2 s",
+    "appVram": "App-VRAM"
   },
   "performanceProfile": {
     "auto": "Auto"

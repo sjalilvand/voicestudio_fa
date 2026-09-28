@@ -2984,7 +2984,10 @@
       "installed": "Yalnızca yüklü modeller",
       "kept": "Seçiminiz korundu",
       "unknown": "Donanım denetimi kullanılamıyor"
-    }
+    },
+    "liveUsage": "Anlık kullanım",
+    "everyTwoSeconds": "Her 2 sn",
+    "appVram": "Uygulama VRAM’i"
   },
   "performanceProfile": {
     "auto": "Otomatik"

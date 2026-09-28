@@ -4,7 +4,17 @@ from unittest.mock import Mock
 
 import pytest
 
-from services import performance_profiles as profiles, performance_inventory as inventory
+import importlib
+
+
+@pytest.fixture(autouse=True)
+def current_modules(monkeypatch):
+    # Other suites exercise cold imports by removing modules from sys.modules.
+    # Patch the same current modules that function-local runtime imports use.
+    global profiles, inventory
+    profiles = importlib.import_module("services.performance_profiles")
+    inventory = importlib.import_module("services.performance_inventory")
+    monkeypatch.setattr(importlib.import_module("services"), "performance_profiles", profiles)
 
 
 @pytest.fixture
@@ -85,6 +95,38 @@ def test_env_pinned_tts_is_preserved(local_inventory, monkeypatch):
     entry = inventory.profile_plan("max", {}, local_inventory)["families"]["tts"]
     assert entry["selection"]["engine"] == "kittentts"
     assert entry["reason"] == "kept"
+
+
+@pytest.mark.parametrize("runtime", ["omnivoice-subprocess", "omnivoice-isolated"])
+def test_preserves_selected_omnivoice_isolation(local_inventory, runtime):
+    local_inventory["tts"] = {"engine": runtime, "model": "k2-fsa/OmniVoice"}
+    assert inventory.profile_plan("max", {}, local_inventory)["families"]["tts"]["selection"]["engine"] == runtime
+
+
+def test_preserves_working_nllb_language_coverage(local_inventory, monkeypatch):
+    from services import translation_engines
+    local_inventory["translation"] = {"engine": "nllb", "model": "facebook/nllb-200-distilled-600M"}
+    monkeypatch.setattr(translation_engines, "is_ready", lambda engine: engine in {"argos", "nllb"})
+    entry = inventory.profile_plan("fast", {}, local_inventory)["families"]["translation"]
+    assert entry["reason"] == "kept"
+    assert entry["selection"]["engine"] == "nllb"
+
+
+def test_global_sortformer_switch_releases_pyannote(monkeypatch):
+    from core import prefs
+    from services import diarization_runtime, model_manager
+    monkeypatch.setattr(profiles, "profile_state", lambda tier: {
+        "effective": {"diarisation": "fast"}, "plan": {"families": {"diarisation": {
+            "selection": {"engine": diarization_runtime.SORTFORMER, "model": "sortformer"}, "reason": "fits",
+        }}},
+    })
+    monkeypatch.setattr(diarization_runtime, "selected_backend", lambda: diarization_runtime.PYANNOTE)
+    monkeypatch.setattr(diarization_runtime, "select_backend", Mock())
+    unload = Mock()
+    monkeypatch.setattr(model_manager, "unload_diarization_pipeline", unload)
+    monkeypatch.setattr(prefs, "update_mapping", Mock())
+    profiles.activate_performance_tier("fast")
+    unload.assert_called_once_with()
 
 
 def test_language_incompatible_dictation_is_not_a_fallback(monkeypatch):

@@ -2984,7 +2984,10 @@
       "installed": "النماذج المثبتة فقط",
       "kept": "تم الاحتفاظ باختيارك",
       "unknown": "فحص الجهاز غير متاح"
-    }
+    },
+    "liveUsage": "الاستخدام المباشر",
+    "everyTwoSeconds": "كل ثانيتين",
+    "appVram": "ذاكرة GPU للتطبيق"
   },
   "performanceProfile": {
     "auto": "تلقائي"

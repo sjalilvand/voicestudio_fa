@@ -2984,7 +2984,10 @@
       "installed": "僅限已安裝模型",
       "kept": "保留你的選擇",
       "unknown": "無法偵測硬體"
-    }
+    },
+    "liveUsage": "即時用量",
+    "everyTwoSeconds": "每 2 秒更新",
+    "appVram": "應用程式顯示記憶體"
   },
   "performanceProfile": {
     "auto": "自動"

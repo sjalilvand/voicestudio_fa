@@ -4,8 +4,16 @@ from unittest.mock import Mock
 import pytest
 from fastapi import HTTPException
 
-from api.routers import batch, settings
-from core import job_store, prefs
+import importlib
+
+
+@pytest.fixture(autouse=True)
+def current_modules():
+    global batch, settings, job_store, prefs
+    batch = importlib.import_module("api.routers.batch")
+    settings = importlib.import_module("api.routers.settings")
+    job_store = importlib.import_module("core.job_store")
+    prefs = importlib.import_module("core.prefs")
 
 
 @pytest.fixture

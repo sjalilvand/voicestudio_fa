@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const browser = await chromium.launch({ channel: 'msedge', headless: true });
+const browser = await chromium.launch({
+  ...(process.env.PLAYWRIGHT_BUNDLED === '1' ? {} : { channel: 'msedge' }),
+  headless: true,
+});
 const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
 const ui = process.env.VOICESTUDIO_UI_URL || 'http://localhost:3912';
 let changed = false;
@@ -16,6 +19,7 @@ const engineGate = new Promise((resolve) => {
   releaseEngines = resolve;
 });
 const writes = [];
+let telemetryReads = 0;
 const model = () =>
   currentTier === 'auto' ? 'Systran/faster-whisper-tiny' : changed ? 'test/medium' : 'test/small';
 const ttsEngine = () => (currentTier === 'auto' ? 'omnivoice' : 'kitten');
@@ -76,6 +80,19 @@ try {
       return route.fulfill({ json: profile() });
     }
     assert.equal(request.method(), 'GET', 'The smoke test must never mutate the live backend');
+    if (path.endsWith('/sysinfo')) {
+      telemetryReads += 1;
+      return route.fulfill({
+        json: {
+          cpu: telemetryReads === 1 ? 12 : 37,
+          gpu_utilization: 61,
+          ram: 18.5,
+          total_ram: 32,
+          vram: 6.2,
+          total_vram: 8,
+        },
+      });
+    }
     if (path.endsWith('/engines')) {
       if (changed) await engineGate;
       return route.fulfill({
@@ -172,7 +189,13 @@ try {
       document.querySelector('footer input[type=range]')?.getAttribute('aria-valuetext') === 'Auto',
   );
   await page.waitForFunction(() => !document.querySelector('footer input[type=range]')?.disabled);
+  assert.equal(telemetryReads, 0, 'Closed hardware panel does not poll');
   await footer.getByRole('button', { name: 'Quality · Adapted to your hardware' }).click();
+  const live = page.getByRole('region', { name: 'Live usage' });
+  await live.getByText('12%', { exact: true }).waitFor();
+  await live.getByText('37%', { exact: true }).waitFor();
+  await live.getByText('18.5 / 32 GB', { exact: true }).waitFor();
+  await live.getByText('6.2 / 8 GB', { exact: true }).waitFor();
   await page.getByText('32 GB RAM · 16 CPU threads · 8 GB VRAM').waitFor();
   await page.getByText('Memory limit', { exact: true }).first().waitFor();
   await footer.getByText('OmniVoice', { exact: true }).waitFor();
@@ -194,6 +217,11 @@ try {
         Math.min(panel.y, explanation.y),
     },
   });
+  await page.keyboard.press('Escape');
+  await live.waitFor({ state: 'hidden' });
+  const afterClose = telemetryReads;
+  await page.waitForTimeout(2_300);
+  assert.equal(telemetryReads, afterClose, 'Polling stops when the panel closes');
   console.log(
     'Slider: confirmed model feedback, loading, rollback, Auto selection and hardware explanation passed; all writes mocked.',
   );

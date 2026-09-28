@@ -2984,7 +2984,10 @@
       "installed": "केवल इंस्टॉल किए गए मॉडल",
       "kept": "आपकी पसंद बरकरार",
       "unknown": "हार्डवेयर जाँच उपलब्ध नहीं"
-    }
+    },
+    "liveUsage": "वर्तमान उपयोग",
+    "everyTwoSeconds": "हर 2 सेकंड",
+    "appVram": "ऐप की VRAM"
   },
   "performanceProfile": {
     "auto": "ऑटो"

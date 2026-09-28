@@ -3462,7 +3462,10 @@
       "installed": "Installed models only",
       "kept": "Kept your choice",
       "unknown": "Hardware check unavailable"
-    }
+    },
+    "liveUsage": "Live usage",
+    "everyTwoSeconds": "Every 2 s",
+    "appVram": "App VRAM"
   },
   "performanceProfile": {
     "auto": "Auto"

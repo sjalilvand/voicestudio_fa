@@ -20,6 +20,7 @@ import { engineFamilyState, useEngines } from '@/hooks/use-engines';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { useAppActivities } from '@/lib/app-activity';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/popover';
+import { LiveDeviceUsage } from '@/components/live-device-usage';
 import { cn } from '@/lib/utils';
 import {
   performanceTiers,
@@ -54,6 +55,7 @@ export function PerformanceProfile({
   const [failed, setFailed] = useState<PerformanceChoice | null>(null);
   const groupId = useId();
   const [draft, setDraft] = useState<number | null>(null);
+  const [hardwareOpen, setHardwareOpen] = useState(false);
   const busy =
     profile.isSaving ||
     backend.stage !== 'ready' ||
@@ -313,7 +315,7 @@ export function PerformanceProfile({
         </Slider.Root>
       </DirectionProvider>
       {plan && !family && (
-        <Popover>
+        <Popover open={hardwareOpen} onOpenChange={setHardwareOpen}>
           <PopoverTrigger
             render={
               <button
@@ -328,7 +330,10 @@ export function PerformanceProfile({
             </span>
             <InfoIcon className="size-3 shrink-0" aria-hidden="true" />
           </PopoverTrigger>
-          <PopoverContent side="right" className="w-72 space-y-3 p-3 text-xs">
+          <PopoverContent
+            side="right"
+            className="max-h-[min(42rem,80dvh)] w-72 space-y-3 overflow-y-auto p-3 text-xs"
+          >
             <div>
               <p className="font-medium">
                 {t('performanceProfile.max') +
@@ -356,6 +361,7 @@ export function PerformanceProfile({
                     }),
                   })}
             </p>
+            <LiveDeviceUsage open={hardwareOpen} />
             <div className="space-y-2">
               {(['tts', 'asr', 'translation', 'dictation', 'diarisation'] as const).map((name) => {
                 const entry = plan.families[name];

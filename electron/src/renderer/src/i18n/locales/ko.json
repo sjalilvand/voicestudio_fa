@@ -3229,6 +3229,9 @@
       "installed": "설치된 모델만 사용",
       "kept": "기존 선택 유지",
       "unknown": "하드웨어 확인 불가"
-    }
+    },
+    "liveUsage": "실시간 사용량",
+    "everyTwoSeconds": "2초마다",
+    "appVram": "앱 VRAM"
   }
 }

@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { chromium } from 'playwright';
 
-const browser = await chromium.launch({ channel: 'msedge', headless: true });
+const browser = await chromium.launch({
+  ...(process.env.PLAYWRIGHT_BUNDLED === '1' ? {} : { channel: 'msedge' }),
+  headless: true,
+});
 const ui = process.env.VOICESTUDIO_UI_URL || 'http://localhost:3912';
 try {
   for (const platform of ['win32', 'darwin', 'linux']) {

@@ -3233,6 +3233,9 @@
       "installed": "仅限已安装模型",
       "kept": "保留你的选择",
       "unknown": "无法检测硬件"
-    }
+    },
+    "liveUsage": "实时用量",
+    "everyTwoSeconds": "每 2 秒更新",
+    "appVram": "应用显存"
   }
 }

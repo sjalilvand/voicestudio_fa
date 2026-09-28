@@ -3229,6 +3229,9 @@
       "installed": "Nur installierte Modelle",
       "kept": "Auswahl beibehalten",
       "unknown": "Hardwareprüfung nicht verfügbar"
-    }
+    },
+    "liveUsage": "Aktuelle Auslastung",
+    "everyTwoSeconds": "Alle 2 s",
+    "appVram": "App-VRAM"
   }
 }

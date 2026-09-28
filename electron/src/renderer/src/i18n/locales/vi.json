@@ -3229,6 +3229,9 @@
       "installed": "Chỉ mô hình đã cài",
       "kept": "Giữ lựa chọn của bạn",
       "unknown": "Không thể kiểm tra phần cứng"
-    }
+    },
+    "liveUsage": "Mức sử dụng hiện tại",
+    "everyTwoSeconds": "Mỗi 2 giây",
+    "appVram": "VRAM ứng dụng"
   }
 }

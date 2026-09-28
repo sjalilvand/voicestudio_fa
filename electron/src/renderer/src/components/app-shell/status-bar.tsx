@@ -29,6 +29,7 @@ import { apiJson } from '@/lib/api/client';
 import { useTranslation } from 'react-i18next';
 import { useBackendStatus } from '@/hooks/use-backend-status';
 import { engineFamilyState, useEngines } from '@/hooks/use-engines';
+import { useDeviceUsage } from '@/hooks/use-device-usage';
 import { useDictationSelection } from '@/hooks/use-dictation-selection';
 import { cn } from '@/lib/utils';
 import { useAppActivities } from '@/lib/app-activity';
@@ -64,21 +65,6 @@ interface LoadedModelStatus {
   unloadable: boolean;
   engine_id?: string;
   is_active_engine?: boolean | null;
-}
-
-interface DeviceUsage {
-  cpu: number;
-  cpu_model: string;
-  cpu_physical_cores: number;
-  cpu_logical_cores: number;
-  cpu_frequency_ghz: number;
-  ram: number;
-  total_ram: number;
-  gpu_name: string;
-  gpu_utilization: number | null;
-  vram: number;
-  total_vram: number;
-  gpu_active: boolean;
 }
 
 function boundedPercent(value: number, total = 100) {
@@ -189,12 +175,7 @@ export function StatusBar({
   const [selectedDetail, setSelectedDetail] = useState<string | null>('tts');
   const activities = useAppActivities();
   const activityCount = Object.values(activities).reduce((total, count) => total + count, 0);
-  const deviceUsage = useQuery({
-    queryKey: ['sysinfo'],
-    enabled: status.stage === 'ready' && deviceOpen && !activeComputeTarget?.remote,
-    queryFn: ({ signal }) => apiJson<DeviceUsage>('/sysinfo', { signal }),
-    refetchInterval: deviceOpen ? 2_000 : false,
-  });
+  const deviceUsage = useDeviceUsage(deviceOpen && !activeComputeTarget?.remote);
   const { data, isLoading: enginesLoading, isError: enginesError } = useEngines();
   const selectedTtsFamily = engineFamilyState(data, 'tts');
   const selectedTts = selectedTtsFamily?.backends.find(

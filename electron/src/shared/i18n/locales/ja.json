@@ -2984,7 +2984,10 @@
       "installed": "インストール済みのみ",
       "kept": "選択を維持",
       "unknown": "ハードウェアを確認できません"
-    }
+    },
+    "liveUsage": "現在の使用状況",
+    "everyTwoSeconds": "2秒ごと",
+    "appVram": "アプリのVRAM"
   },
   "performanceProfile": {
     "auto": "自動"

@@ -2984,7 +2984,10 @@
       "installed": "Solo modelos instalados",
       "kept": "Se conserva tu elección",
       "unknown": "Comprobación de hardware no disponible"
-    }
+    },
+    "liveUsage": "Uso en tiempo real",
+    "everyTwoSeconds": "Cada 2 s",
+    "appVram": "VRAM de la app"
   },
   "performanceProfile": {
     "auto": "Auto"

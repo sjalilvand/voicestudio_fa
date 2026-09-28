@@ -2984,7 +2984,10 @@
       "installed": "Hanya model terpasang",
       "kept": "Pilihan Anda dipertahankan",
       "unknown": "Pemeriksaan perangkat tidak tersedia"
-    }
+    },
+    "liveUsage": "Penggunaan saat ini",
+    "everyTwoSeconds": "Setiap 2 dtk",
+    "appVram": "VRAM aplikasi"
   },
   "performanceProfile": {
     "auto": "Otomatis"

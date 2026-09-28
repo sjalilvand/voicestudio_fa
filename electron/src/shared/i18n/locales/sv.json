@@ -2984,7 +2984,10 @@
       "installed": "Endast installerade modeller",
       "kept": "Ditt val behålls",
       "unknown": "Maskinvarukontroll saknas"
-    }
+    },
+    "liveUsage": "Aktuell användning",
+    "everyTwoSeconds": "Varannan sekund",
+    "appVram": "Appens VRAM"
   },
   "performanceProfile": {
     "auto": "Auto"
