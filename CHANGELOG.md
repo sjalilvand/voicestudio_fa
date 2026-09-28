@@ -52,6 +52,7 @@ metadata and the backend fallback mirror it.
 
 ### Docs
 
+- Record audio-quality comparison evidence and a next-machine investigation handoff without claiming a generation fix (#2375)
 - New call agent guide covering setup, disclosure, recording consent and safeguards (#2306)
 - The Twilio guide and integration directory describe the guided setup and in-app integration pages (#2304)
 
