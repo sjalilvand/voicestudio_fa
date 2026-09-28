@@ -5,7 +5,10 @@ stay unchanged. Normal defaults remain 16-bit WAV, 16 sampling steps and
 broadcast mastering; model-specific limits still apply.
 
 The compact slider sits below the script in Clone and Design. **More options**
-reveals sampling steps, mastering and format guidance. **Voice controls** exposes
+reveals voice refinement (sampling steps), volume balancing and format guidance.
+The three plain-language choices are **Standard**, **For editing**, and
+**Original**; the collapsed details explain the WAV formats. Size estimates use
+decimal MB per minute at 24 kHz mono and vary with the engine. **Voice controls** exposes
 speed, duration and cleanup; technical model controls are collapsed under
 **Advanced model tuning** with plain-language names and guidance.
 
@@ -13,9 +16,9 @@ speed, duration and cleanup; technical model controls are collapsed under
 
 | WAV slider | Use | Approximate size per minute, 24 kHz mono |
 | --- | --- | ---: |
-| 16-bit PCM | Normal playback, smallest WAV, broad player support | 2.75 MiB |
-| 24-bit PCM | More precision for editing | 4.12 MiB |
-| 32-bit float | Highest supported export precision | 5.49 MiB |
+| Standard (16-bit PCM) | Normal playback, smallest WAV, broad player support | 2.9 MB |
+| For editing (24-bit PCM) | More precision for editing | 4.3 MB |
+| Original (32-bit float) | Highest supported export precision | 5.8 MB |
 
 These are uncompressed WAVs. Size scales with duration, sample rate and channel
 count; 48 kHz doubles these estimates. The finished take shows its actual size,
@@ -23,7 +26,7 @@ sample rate, channels and sample format. Export precision cannot add information
 that an engine has already discarded or improve voice identity by itself.
 The WAV slider does not change model weights, quantization or sample rate.
 
-**Sampling steps** controls model computation separately. More steps take longer,
+**Voice refinement** controls model computation separately. More steps take longer,
 without increasing WAV size or guaranteeing better speech. The slider appears
 only for adapters that forward this setting:
 
@@ -35,7 +38,7 @@ only for adapters that forward this setting:
 | Supertonic-3 | 5–12 steps, matching its adapter limits | 16/24/32-bit WAV |
 | Other TTS engines | Engine manages sampling; no ineffective slider | 16/24/32-bit WAV |
 
-**Broadcast mastering** adds the existing processing chain. Turning it off skips
+**Even out volume** adds the existing processing chain. Turning it off skips
 the app's added EQ, compression and normalization; engine postprocessing and
 the existing provenance watermark setting remain in effect. An engine that
 performs its own mastering continues to skip the app's mastering pre-stage.

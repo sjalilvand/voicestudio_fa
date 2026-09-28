@@ -26,13 +26,13 @@ export function QualityControls({ disabled = false }: { disabled?: boolean }) {
         <div className="min-w-0 flex-1 basis-56 space-y-2">
           <div className="flex flex-wrap justify-between gap-2 text-xs">
             <span id={`${id}-precision`}>{t('cloneQuality.title')}</span>
-            <output className="font-medium tabular-nums">{t(`cloneQuality.bits${bits}`)}</output>
+            <output className="font-medium">{t(`cloneQuality.preset${bits}`)}</output>
           </div>
           <Slider
             thumbProps={{
               'aria-labelledby': `${id}-precision`,
               'aria-describedby': `${id}-size`,
-              getAriaValueText: (_formatted, value) => t(`cloneQuality.bits${precisions[value]}`),
+              getAriaValueText: (_formatted, value) => t(`cloneQuality.preset${precisions[value]}`),
             }}
             min={0}
             max={2}
@@ -44,7 +44,7 @@ export function QualityControls({ disabled = false }: { disabled?: boolean }) {
             }
           />
           <p id={`${id}-size`} className="text-xs text-muted-foreground">
-            {t('cloneQuality.size', { size: ((24000 * 60 * bits) / 8 / 1048576).toFixed(2) })}
+            {t('cloneQuality.size', { size: ((24000 * 60 * bits) / 8 / 1000000).toFixed(1) })}
           </p>
         </div>
       </div>
@@ -56,8 +56,10 @@ export function QualityControls({ disabled = false }: { disabled?: boolean }) {
             aria-hidden="true"
           />
         </summary>
-        <div className="mt-3 space-y-4 pb-1">
-          <p className="text-xs text-muted-foreground">{t(`cloneQuality.hint${bits}`)}</p>
+        <div className="mt-3 grid gap-x-8 gap-y-4 pb-1 sm:grid-cols-2">
+          <p className="text-xs text-muted-foreground sm:col-span-2">
+            {t(`cloneQuality.bits${bits}`)} · {t(`cloneQuality.hint${bits}`)}
+          </p>
           {stepRange && (
             <div className="space-y-2">
               <div className="flex justify-between gap-2 text-xs">
@@ -83,7 +85,7 @@ export function QualityControls({ disabled = false }: { disabled?: boolean }) {
               </p>
             </div>
           )}
-          <div className="mt-4 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-start justify-between gap-3 text-xs">
             <span>
               {t('cloneQuality.mastering')}
               <span className="mt-1 block text-muted-foreground">
@@ -99,7 +101,7 @@ export function QualityControls({ disabled = false }: { disabled?: boolean }) {
               }
             />
           </div>
-          <p className="text-xs text-muted-foreground">{t('cloneQuality.nextTake')}</p>
+          <p className="text-xs text-muted-foreground sm:col-span-2">{t('cloneQuality.nextTake')}</p>
         </div>
       </details>
     </section>

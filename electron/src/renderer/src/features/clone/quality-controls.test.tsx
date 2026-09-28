@@ -36,18 +36,18 @@ afterEach(() => {
 it('changes export precision with the keyboard, updates size and keeps sampling independent', async () => {
   render(<QualityControls />);
   const precision = await screen.findByRole('slider', { name: 'cloneQuality.title' });
-  expect(precision).toHaveAttribute('aria-valuetext', 'cloneQuality.bits16');
-  expect(screen.getByText('cloneQuality.size: 2.75')).toBeInTheDocument();
+  expect(precision).toHaveAttribute('aria-valuetext', 'cloneQuality.preset16');
+  expect(screen.getByText('cloneQuality.size: 2.9')).toBeInTheDocument();
   await act(async () => {
     fireEvent.keyDown(precision, { key: 'ArrowRight' });
   });
   expect(cloneSettingsStore.state.wavBits).toBe(24);
-  expect(screen.getByText('cloneQuality.size: 4.12')).toBeInTheDocument();
+  expect(screen.getByText('cloneQuality.size: 4.3')).toBeInTheDocument();
   await act(async () => {
     fireEvent.keyDown(precision, { key: 'End' });
   });
   expect(cloneSettingsStore.state.wavBits).toBe(32);
-  expect(screen.getByText('cloneQuality.size: 5.49')).toBeInTheDocument();
+  expect(screen.getByText('cloneQuality.size: 5.8')).toBeInTheDocument();
   expect(cloneSettingsStore.state.steps).toBe(16);
   fireEvent.click(screen.getByText('voiceControls.options'));
   await act(async () => {
