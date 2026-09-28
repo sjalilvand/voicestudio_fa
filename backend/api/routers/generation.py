@@ -1359,10 +1359,13 @@ async def _finalize_generation(
     audio_id = str(uuid.uuid4())[:8]
     audio_filename = f"{audio_id}.wav"
     audio_path = os.path.join(OUTPUTS_DIR, audio_filename)
-    save_generation_wav(audio_path, audio_tensor, sample_rate, bits=wav_bits)
-    # Capture before retention (or a later request) can delete the saved take.
-    # No await separates writing and capturing this canonical encoded payload.
-    response_bytes = Path(audio_path).read_bytes() if include_wav_bytes else None
+    def _save_take():
+        save_generation_wav(audio_path, audio_tensor, sample_rate, bits=wav_bits)
+        # Capture before creating the history row: concurrent retention cannot
+        # see or remove this take yet. Encoding and disk I/O stay off the loop.
+        return Path(audio_path).read_bytes() if include_wav_bytes else None
+
+    response_bytes = await asyncio.to_thread(_save_take)
 
     audio_dur = round(audio_tensor.shape[-1] / sample_rate, 2)
 
