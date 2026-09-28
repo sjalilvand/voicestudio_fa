@@ -7,6 +7,9 @@ from types import SimpleNamespace
 
 def create_client(provider):
     from services import llm_providers as registry
+    error = registry.credential_transport_error(provider)
+    if error:
+        raise ValueError(error)
     if provider.transport == "openai":
         from openai import OpenAI
         return OpenAI(api_key=registry.resolve_api_key(provider),
@@ -26,6 +29,9 @@ def sdk_completion(provider, **kwargs):
     os.environ["LITELLM_TELEMETRY"] = "False"
     import litellm
     from services import llm_providers as registry
+    error = registry.credential_transport_error(provider)
+    if error:
+        raise ValueError(error)
     litellm.telemetry = False
     model = kwargs.pop("model")
     prefix = provider.sdk_provider

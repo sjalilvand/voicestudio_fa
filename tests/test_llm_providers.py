@@ -297,10 +297,10 @@ def test_migration_moves_prefs_into_custom_store_and_deletes_rows(lp, legacy_pre
     # …and rows the migration doesn't own keep persisting.
     assert data["env.HTTP_PROXY"] == "http://proxy:1"
     assert data["tts_backend"] == "omnivoice"
-    # The legacy endpoint keeps working, now via the store.
+    # Preserve migrated configuration, but require TLS for its remote secret.
     p = lp.get_provider("custom")
     assert lp.resolve_base_url(p) == "http://legacy:11434/v1"
-    assert lp.is_configured(p) is True
+    assert "HTTPS" in lp.configuration_error(p)
 
 
 def test_migration_runs_exactly_once_and_never_overwrites(lp, legacy_prefs):
@@ -539,3 +539,21 @@ def test_lmstudio_never_selects_an_opaque_embedding_id(lp, monkeypatch, model_ty
     monkeypatch.setattr(openai, 'OpenAI', fallback)
     assert lp.discover_model(lp.get_provider('lmstudio')) is None
     assert not calls
+
+
+@pytest.mark.parametrize("provider", ["anthropic", "groq", "custom"])
+def test_credentialed_remote_http_is_rejected_before_transport(lp, provider):
+    from services.llm_transport import create_client
+    p = lp.get_provider(provider)
+    lp.save_key(provider, "fixture-secret")
+    lp.save_overrides(provider, base_url="http://example.com/v1", model="chat")
+    assert "HTTPS" in lp.configuration_error(p)
+    with pytest.raises(ValueError, match="HTTPS"):
+        create_client(p)
+
+
+@pytest.mark.parametrize("url", ["http://localhost:1234/v1", "http://127.0.0.1:1234/v1", "http://[::1]:1234/v1", "https://example.com/v1"])
+def test_credentialed_loopback_or_https_remains_supported(lp, url):
+    lp.save_key("custom", "fixture-secret")
+    lp.save_overrides("custom", base_url=url, model="chat")
+    assert lp.configuration_error(lp.get_provider("custom")) is None

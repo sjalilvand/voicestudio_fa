@@ -57,6 +57,7 @@ migration of older plaintext translation-key preferences. The legacy compatible
 endpoint key uses the same encrypted storage. These paid requests
 require HTTPS, have bounded connection/read timeouts, and do not follow credential-bearing redirects.
 Connect also checks that the project/account stayed unchanged during verification.
+Credentialed LLM endpoints require HTTPS outside loopback; local HTTP servers remain supported.
 
 Provider protocol references: [LiteLLM](https://docs.litellm.ai/docs/providers),
 [Codex](https://developers.openai.com/codex/noninteractive/),
