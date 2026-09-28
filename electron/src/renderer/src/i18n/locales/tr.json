@@ -2712,7 +2712,8 @@
     "fast": "Hızlı",
     "balanced": "Dengeli",
     "quality": "Kalite",
-    "hint": "OmniVoice örnekleme ve Faster-Whisper / NLLB kod çözme için geçerlidir. Diğer motorlar mevcut ayarlarını korur."
+    "hint": "OmniVoice örnekleme ve Faster-Whisper / NLLB kod çözme için geçerlidir. Diğer motorlar mevcut ayarlarını korur.",
+    "auto": "Otomatik"
   },
   "recording": {
     "input_device": "Giriş aygıtı",
@@ -3244,5 +3245,41 @@
     "polish": "Üretilen sesi iyileştir",
     "basics": "1× normal hızdır. Doğal zamanlama için süreyi boş bırakın.",
     "hint": "Genellikle varsayılanları koruyun. Yönlendirme istemin etkisini ayarlar; diğer kontroller modelin sesi oluşturma şeklini değiştirir. Her seferinde birini değiştirin."
+  },
+  "sidebarTools": {
+    "simple": "Basit",
+    "details": "Ayrıntılar",
+    "title": "Araç ayarları",
+    "help": "Ayarlamak veya modelini değiştirmek için bir araç seçin.",
+    "tts": "Metinden sese",
+    "asr": "Sesten metne",
+    "llm": "Yazma yardımı",
+    "translation": "Çeviri",
+    "dictation": "Sesle yazma",
+    "diarisation": "Konuşmacıları tanıma",
+    "onDemand": "Kullanırken yüklenir",
+    "checkSetup": "Kurulumu kontrol et",
+    "wait": "Bunu değiştirmeden önce mevcut işin bitmesini bekleyin.",
+    "speedHelp": "Daha yüksek kalite daha uzun sürebilir. Dengeli ile başlayın."
+  },
+  "performanceHardware": {
+    "fits": "Donanımınıza uygun",
+    "adjusted": "Donanımınıza uyarlandı",
+    "unknown": "Donanım denetimi kullanılamıyor",
+    "priority": "Önce ses kalitesi. Diğer araçlar kalan belleği paylaşır.",
+    "specs": "{{ram}} GB RAM · {{cores}} CPU iş parçacığı",
+    "vram": "{{memory}} GB VRAM",
+    "estimate": "Sistem için pay ayrılmış tahmin. Dili destekleyen yüklü modeller kullanılır; gerektiğinde yüklenir.",
+    "reason": {
+      "fits": "Uygun",
+      "memory": "Bellek sınırı",
+      "installed": "Yalnızca yüklü modeller",
+      "kept": "Seçiminiz korundu",
+      "unknown": "Donanım denetimi kullanılamıyor"
+    },
+    "liveUsage": "Anlık kullanım",
+    "everyTwoSeconds": "Her 2 sn",
+    "appVram": "Uygulama VRAM’i",
+    "voiceFirst": "Önce ses kalitesi"
   }
 }
