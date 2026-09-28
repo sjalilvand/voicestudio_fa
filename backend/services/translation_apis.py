@@ -1,6 +1,7 @@
 """Paid translation APIs with explicit credentials and bounded requests."""
 import html
 import os
+from urllib.parse import urlsplit
 
 PAID_PROVIDERS = {"deepl", "microsoft", "google-cloud", "amazon"}
 SECRET_ENV_KEYS = {"DEEPL_API_KEY", "MICROSOFT_API_KEY", "GOOGLE_TRANSLATE_API_KEY", "TRANSLATE_API_KEY"}
@@ -83,6 +84,9 @@ class Translator:
             raise ValueError("Unknown translation API")
         if not key:
             raise ValueError("Translation API key is missing")
+        endpoint = urlsplit(url)
+        if endpoint.scheme != "https" or not endpoint.hostname:
+            raise ValueError("Translation API endpoints must use HTTPS with a valid host")
         # No redirects: provider keys must remain at the configured endpoint.
         with httpx.Client(timeout=httpx.Timeout(30, connect=5), follow_redirects=False) as client:
             response = client.post(url, headers=headers, params=params, json=payload)

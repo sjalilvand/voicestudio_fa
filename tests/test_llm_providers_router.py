@@ -442,3 +442,17 @@ def test_models_disables_sdk_retries(settings_mod, monkeypatch):
     captured = _fake_openai(monkeypatch, models=["a"])
     settings_mod.list_llm_provider_models("groq")
     assert captured and captured[-1].get("max_retries") == 0
+
+
+def test_connect_rejects_account_changed_during_probe(settings_mod, monkeypatch):
+    from core import prefs
+    from services import llm_providers
+    prefs.set_("llm_backend", "off")
+    account = ["verified-project"]
+    monkeypatch.setattr(llm_providers, "resolve_account_id", lambda p: account[0])
+    def probe(pid):
+        account[0] = "unverified-project"
+        return {"ok": True}
+    monkeypatch.setattr(settings_mod, "test_llm_provider", probe)
+    assert settings_mod.connect_llm_provider("ollama") == {"ok": False, "kind": "config"}
+    assert prefs.get("llm_backend") == "off"

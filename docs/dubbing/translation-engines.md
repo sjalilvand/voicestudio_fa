@@ -215,8 +215,8 @@ The non-LLM online engines need a key, set as an environment variable before
 launching the backend (or in **Settings → Credentials**):
 
 - **DeepL:** `DEEPL_API_KEY` (optionally `DEEPL_BASE_URL` for a self-hosted /
-  pro endpoint).
-- **Microsoft Translator:** `MICROSOFT_API_KEY` (optionally `MICROSOFT_BASE_URL`).
+  pro HTTPS endpoint).
+- **Microsoft Translator:** `MICROSOFT_API_KEY` (optionally `MICROSOFT_BASE_URL`, which must use HTTPS).
 
 ## Editing workspace
 
