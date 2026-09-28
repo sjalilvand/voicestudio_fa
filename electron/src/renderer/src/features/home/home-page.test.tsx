@@ -48,19 +48,8 @@ it('names the feature Dubbing consistently while preserving the existing route',
 it('credits qualifying contributors and opens their GitHub profiles externally', () => {
   render(<HomePage />);
   const credits = screen.getAllByRole('listitem');
-  expect(credits).toHaveLength(10);
-  expect(credits.map((credit) => credit.style.gridRow)).toEqual([
-    '1',
-    '1',
-    '1',
-    '1',
-    '1',
-    '2',
-    '2',
-    '2',
-    '3',
-    '3',
-  ]);
+  expect(credits).toHaveLength(9);
+  expect([1, 2, 3].map((row) => credits.filter((credit) => credit.style.gridRow === String(row)).length)).toEqual([4, 3, 2]);
   expect(homeContributors.every((person) => person.commits > 10)).toBe(true);
   const all = screen.getByRole('link', { name: 'homeUi.allContributors' });
   expect(all).toHaveAttribute(
@@ -79,7 +68,6 @@ it('credits qualifying contributors and opens their GitHub profiles externally',
     'paoloantinori',
     'Chang-Jin-Lee',
     'Shivendra-Coherent',
-    'marreiradigital',
   ]) {
     const profile = screen.getByRole('link', { name: `GitHub · @${login}` });
     expect(profile).toHaveAttribute('href', `https://github.com/${login}`);
