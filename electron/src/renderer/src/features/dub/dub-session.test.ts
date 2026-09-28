@@ -756,7 +756,8 @@ it.each([
   { regenOnly: ['english'], allowed: true },
   { regenOnly: ['japanese'], allowed: false },
   { regenOnly: undefined, allowed: false },
-])('validates only requested dub regeneration languages: $regenOnly', async ({ regenOnly, allowed }) => {
+  { regenOnly: ['japanese'], allowed: true, silent: true },
+])('validates only requested dub regeneration languages: $regenOnly', async ({ regenOnly, allowed, silent }) => {
   const { queryClient } = await import('@/lib/query');
   queryClient.setQueryData(['workers', 'target', 'dub'], { active: { remote: false } });
   queryClient.setQueryData(['engines'], {
@@ -770,7 +771,7 @@ it.each([
     ...current, jobId: 'language-regen', phase: 'editing', recovery: null, quality: 'fast',
     segments: [
       { id: 'english', start: 0, end: 1, text: 'Hello', text_original: 'Hello', target_lang: 'English' },
-      { id: 'japanese', start: 1, end: 2, text: 'Untouched cached speech', text_original: 'Untouched cached speech', target_lang: 'Japanese' },
+      { id: 'japanese', start: 1, end: silent ? 1.01 : 2, text: 'Untouched cached speech', text_original: 'Untouched cached speech', target_lang: 'Japanese' },
     ],
   }));
   try {
@@ -778,7 +779,7 @@ it.each([
     await expect(generateDub('Japanese', 'ja', { regenOnly })).resolves.toBe(allowed);
     if (allowed) {
       const request = JSON.parse(vi.mocked(apiJson).mock.calls[0][1]!.body as string);
-      expect(request.regen_only).toEqual(['english']);
+      expect(request.regen_only).toEqual(regenOnly);
       expect(request.segments).toHaveLength(2);
     } else {
       expect(apiJson).not.toHaveBeenCalled();

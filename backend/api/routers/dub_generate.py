@@ -53,7 +53,7 @@ def _validate_render_languages(backend, req, seg_ids, regen_only):
         return  # Remote workers validate against their own model metadata.
     for index, segment in enumerate(req.segments):
         sid = seg_ids[index] if index < len(seg_ids) else f"seg_{index}"
-        if not segment.text.strip() or (regen_only is not None and sid not in regen_only):
+        if segment.end - segment.start <= 0.05 or not segment.text.strip() or (regen_only is not None and sid not in regen_only):
             continue
         check(segment.target_lang or req.language)
 

@@ -505,3 +505,16 @@ def test_promoted_regeneration_validates_languages_before_any_tts(patched_genera
     with pytest.raises(ValueError, match="does not support Japanese"):
         run(_body(segments, language="Japanese", regen_only=["0"]))
     assert model.calls == [], "validate the promoted set before replacing any cached audio"
+
+
+def test_silent_short_segment_skips_language_validation(patched_generate, monkeypatch):
+    run, model, job, job_dir = patched_generate
+    def check_language(self, language):
+        if language == "Japanese":
+            raise ValueError("Unsupported language")
+    monkeypatch.setattr(_FakeBackend, "_check_language", check_language, raising=False)
+    run(_body([
+        {"start": 0, "end": 0.05, "text": "Silent", "target_lang": "Japanese"},
+        {"start": 1, "end": 2, "text": "Spoken", "target_lang": "English"},
+    ], language="English"))
+    assert model.calls == ["Spoken"]
