@@ -120,8 +120,13 @@ def test_sdk_rejects_effective_remote_http_url(registry, monkeypatch, env):
     monkeypatch.setenv("OPENAI_BASE_URL" if env == "OPENAI_API_BASE" else "OPENAI_API_BASE", "")
     import httpx
     monkeypatch.setattr(httpx.HTTPTransport, "handle_request", lambda *a, **kw: pytest.fail("Credentialed network request escaped validation"))
-    with pytest.raises(Exception):
+    with pytest.raises(Exception) as error:
         sdk_completion(registry.get_provider("sdk"), model="openai/test", messages=[{"role": "user", "content": "hi"}])
+    e = error.value
+    while e.__cause__ or e.__context__:
+        e = e.__cause__ or e.__context__
+    assert isinstance(e, ValueError)
+    assert "HTTPS" in str(e)
 
 
 def test_anthropic_does_not_follow_credentialed_redirect(registry):
@@ -143,8 +148,14 @@ def test_anthropic_does_not_follow_credentialed_redirect(registry):
     try:
         registry.save_key("anthropic", "fixture-secret")
         registry.save_overrides("anthropic", base_url=f"http://127.0.0.1:{server.server_port}")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception) as error:
             sdk_completion(registry.get_provider("anthropic"), model="claude-test", messages=[{"role": "user", "content": "hi"}], timeout=2)
+        e = error.value
+        while e.__cause__ or e.__context__:
+            e = e.__cause__ or e.__context__
+        import httpx
+        assert isinstance(e, httpx.HTTPStatusError)
+        assert e.response.status_code == 307
         assert seen == ["/v1/messages"]
     finally:
         server.shutdown(); server.server_close(); thread.join(timeout=2)

@@ -456,3 +456,11 @@ def test_connect_rejects_account_changed_during_probe(settings_mod, monkeypatch)
     monkeypatch.setattr(settings_mod, "test_llm_provider", probe)
     assert settings_mod.connect_llm_provider("ollama") == {"ok": False, "kind": "config"}
     assert prefs.get("llm_backend") == "off"
+
+
+def test_unknown_provider_is_not_reported_as_environment_pin(settings_mod, monkeypatch):
+    from fastapi import HTTPException
+    monkeypatch.setenv("LLM_DEFAULT_PROVIDER", "ollama")
+    with pytest.raises(HTTPException) as error:
+        settings_mod.connect_llm_provider("missing-provider")
+    assert error.value.status_code == 404
