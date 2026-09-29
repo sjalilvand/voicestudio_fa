@@ -165,7 +165,7 @@ def test_anthropic_does_not_follow_credentialed_redirect(registry):
 def test_sdk_pool_keeps_loopback_direct_and_does_not_persist_cookies(monkeypatch, proxy_enabled):
     from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
     from threading import Thread
-    from services.llm_transport import _sdk_http_client
+    from services.llm_transport import _sdk_http_client_for_env
     seen = []
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args): pass
@@ -182,7 +182,7 @@ def test_sdk_pool_keeps_loopback_direct_and_does_not_persist_cookies(monkeypatch
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     thread = Thread(target=server.serve_forever, daemon=True); thread.start()
     try:
-        with _sdk_http_client.__wrapped__() as client:
+        with _sdk_http_client_for_env.__wrapped__(()) as client:
             for _ in range(2):
                 assert client.get(f"http://127.0.0.1:{server.server_port}/", timeout=2).status_code == 200
             assert not list(client.cookies.jar)
@@ -195,7 +195,7 @@ def test_sdk_remote_https_still_uses_environment_proxy(monkeypatch):
     import httpx
     from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
     from threading import Thread
-    from services.llm_transport import _sdk_http_client
+    from services.llm_transport import _sdk_http_client_for_env
     seen = []
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args): pass
@@ -211,9 +211,23 @@ def test_sdk_remote_https_still_uses_environment_proxy(monkeypatch):
     monkeypatch.setenv("NO_PROXY", "")
     monkeypatch.setenv("no_proxy", "")
     try:
-        with _sdk_http_client.__wrapped__() as client:
+        with _sdk_http_client_for_env.__wrapped__(()) as client:
             with pytest.raises(httpx.ProxyError, match="502"):
                 client.get("https://provider.invalid/", timeout=2)
         assert seen == ["provider.invalid:443"]
     finally:
         server.shutdown(); server.server_close(); thread.join(timeout=2)
+
+
+def test_sdk_pool_refreshes_after_proxy_change_without_closing_active_streams(monkeypatch):
+    from services.llm_transport import _sdk_http_client
+    monkeypatch.setenv("HTTPS_PROXY", "http://127.0.0.1:8011")
+    monkeypatch.setenv("https_proxy", "http://127.0.0.1:8011")
+    first = _sdk_http_client()
+    assert _sdk_http_client() is first
+    monkeypatch.setenv("HTTPS_PROXY", "http://127.0.0.1:8012")
+    monkeypatch.setenv("https_proxy", "http://127.0.0.1:8012")
+    second = _sdk_http_client()
+    assert second is not first
+    assert not first.is_closed
+    assert not second.is_closed

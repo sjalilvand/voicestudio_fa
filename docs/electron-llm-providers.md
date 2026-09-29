@@ -153,3 +153,5 @@ Anthropic, Bedrock, and Vertex requests.
 The shared HTTP client bypasses environment proxies for loopback requests so local
 prompts stay local, preserves proxy settings for remote HTTPS providers, and never
 stores response cookies between provider requests.
+Changing proxy settings refreshes the pool for subsequent requests while existing
+streams keep their original connections until they finish.
