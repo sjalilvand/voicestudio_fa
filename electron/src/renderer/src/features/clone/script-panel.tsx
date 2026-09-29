@@ -139,7 +139,7 @@ export function ScriptPanel({
   }, [insertOpen]);
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col">
+    <section className="flex min-h-64 flex-1 flex-col">
       <div className="flex min-h-0 flex-1 flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
           <SectionLabel>

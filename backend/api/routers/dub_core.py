@@ -1,4 +1,5 @@
 import os
+import errno
 import uuid
 import asyncio
 import logging
@@ -673,6 +674,16 @@ _ingest_gen       = dub_pipeline.ingest_pipeline
 #: container so a mislabelled video can't slip past the video-skipping branch.
 _AUDIO_EXTS = {".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".opus", ".wma"}
 
+def _dub_upload_disk_error() -> HTTPException:
+    return HTTPException(
+        status_code=507,
+        detail={
+            "code": "dub_upload_disk_full",
+            "docs_topic": "AUDIO_IO_FAILED",
+            "message": "Not enough disk space to upload and prepare this media. Free space in Settings → Storage, then retry.",
+        },
+    )
+
 # Source-language choices exposed by the first-party dub UI, plus every
 # language code Whisper can write back after auto-detection. A restored job
 # may reuse that detected value as the next upload's override, so rejecting our
@@ -767,7 +778,17 @@ async def dub_upload(
         )
 
     source_lang_override = _source_lang_override(source_lang)
-    os.makedirs(job_dir, exist_ok=True)
+    try:
+        # Atomic reservation prevents concurrent uploads from sharing a source.
+        os.makedirs(job_dir, exist_ok=False)
+    except FileExistsError:
+        await video.close()
+        raise HTTPException(status_code=409, detail="This job ID is already in use. Start a new upload.") from None
+    except OSError as exc:
+        await video.close()
+        if exc.errno == errno.ENOSPC or getattr(exc, "winerror", None) == 112:
+            raise _dub_upload_disk_error() from exc
+        raise
 
     video_path = os.path.join(job_dir, f"original{ext}")
 
@@ -779,8 +800,58 @@ async def dub_upload(
         with open(video_path, "wb") as output:
             shutil.copyfileobj(video.file, output, length=1024 * 1024)
 
+    # A successful multipart parse only means the temporary upload fits. The
+    # durable copy needs room on the data volume. Later working space depends
+    # on duration and format; do not reject small inputs with a fixed reserve.
     try:
-        await asyncio.to_thread(_stream_upload_to_disk)
+        if video.size is not None:
+            free = shutil.disk_usage(job_dir).free
+            if free < video.size:
+                raise _dub_upload_disk_error()
+    except OSError:
+        pass  # The write below still gives the authoritative OS diagnosis.
+    except HTTPException:
+        await video.close()
+        try:
+            os.rmdir(job_dir)  # Only remove the fresh, empty job directory.
+        except OSError:
+            pass  # Best effort: keep the original upload error.
+        raise
+
+    def _discard_upload():
+        try:
+            os.unlink(video_path)
+        except OSError:
+            pass  # Best effort: keep the original upload error.
+        try:
+            os.rmdir(job_dir)
+        except OSError:
+            pass  # Best effort: only remove our empty reserved directory.
+
+    copying = asyncio.create_task(asyncio.to_thread(_stream_upload_to_disk))
+    try:
+        await asyncio.shield(copying)
+    except asyncio.CancelledError:
+        # A cancelled await cannot stop a file-copy thread. Keep its input open
+        # until it stops, then remove only this reserved upload's partial copy.
+        while not copying.done():
+            try:
+                await asyncio.shield(copying)
+            except asyncio.CancelledError:
+                continue
+            except Exception:
+                break
+        try:
+            copying.result()
+        except Exception:
+            pass  # Preserve the caller's cancellation if the copy also failed.
+        _discard_upload()
+        raise
+    except OSError as exc:
+        _discard_upload()
+        if exc.errno == errno.ENOSPC or getattr(exc, "winerror", None) == 112:
+            raise _dub_upload_disk_error() from exc
+        raise
     finally:
         await video.close()
 

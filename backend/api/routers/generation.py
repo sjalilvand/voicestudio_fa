@@ -14,7 +14,8 @@ import weakref
 from core.render_trace import timed as _render_timed
 import threading
 import traceback
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Literal
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
@@ -27,6 +28,8 @@ from services.model_manager import (
     get_model, _gpu_pool, run_on_gpu_pool_guarded, GpuJobTimeoutError,
     GpuPoolBusyError,
 )
+from services.generation_audio import save_generation_wav
+# Compatibility export used by archetype previews and the gallery renderer.
 from services.audio_io import _safe_torchaudio_save
 from services.binary_preflight import InvalidBinaryError
 from core import event_bus
@@ -45,6 +48,22 @@ _ogg_cache: OrderedDict[tuple[str, int, int, int], bytes] = OrderedDict()
 _ogg_cache_bytes = 0
 _ogg_state_lock = threading.Lock()
 _ogg_encode_locks = weakref.WeakValueDictionary()
+
+
+@router.get('/audio/{audio_id}/quality')
+def generated_audio_quality(audio_id: str):
+    """Analyze a generated WAV locally, off the async event loop."""
+    from services.audio_quality import analyze_audio
+
+    if not re.fullmatch(r'[0-9a-f]{8}', audio_id):
+        raise HTTPException(status_code=404, detail='Audio file not found')
+    path = _safe_output_path(f'{audio_id}.wav')
+    if path is None or not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail='Audio file not found')
+    try:
+        return analyze_audio(path)
+    except (OSError, RuntimeError, ValueError):
+        raise HTTPException(status_code=422, detail='Audio analysis unavailable') from None
 
 
 def _ogg_cache_key(path: str) -> tuple[str, int, int, int]:
@@ -1052,6 +1071,7 @@ def _run_backend_inference(
         native_proxy = bool(
             getattr(backend, "supports_native_omnivoice_controls", False)
         )
+        forwards_seed = native_proxy or getattr(backend, "supports_generation_seed", False)
         if native_proxy:
             gen_kwargs.update({
                 key: value for key, value in {
@@ -1077,7 +1097,7 @@ def _run_backend_inference(
                 # Per-span duration is left to the engine; an explicit overall
                 # `duration` can't be meaningfully split across spans.
                 span_kwargs = dict(gen_kwargs)
-                if native_proxy and first_span and used_seed is not None:
+                if forwards_seed and first_span and used_seed is not None:
                     span_kwargs["seed"] = used_seed
                 first_span = False
                 return trace_call("synthesis", backend.generate, span_text, duration=None, **span_kwargs)
@@ -1098,7 +1118,7 @@ def _run_backend_inference(
                     if used_seed is not None:
                         torch.manual_seed(used_seed + i)
                     chunk_kwargs = dict(gen_kwargs)
-                    if native_proxy and used_seed is not None:
+                    if forwards_seed and used_seed is not None:
                         chunk_kwargs["seed"] = used_seed + i
                     parts.append(trace_call("synthesis", backend.generate,
                         chunk_text, duration=None, **chunk_kwargs
@@ -1108,7 +1128,7 @@ def _run_backend_inference(
                                                      texts=text_chunks,
                                                      sink=dropped_sink)
             else:
-                if native_proxy and used_seed is not None:
+                if forwards_seed and used_seed is not None:
                     gen_kwargs["seed"] = used_seed
                 audio_out = trace_call("synthesis", backend.generate, text, duration=duration, **gen_kwargs)
 
@@ -1302,7 +1322,7 @@ def _persist_profile_ref_text(profile_id: str, ref_text: str) -> None:
 async def _finalize_generation(
     audio_tensor, sample_rate, *, text, history_mode, ref_audio_path,
     language, instruct, resolved_profile_id, used_seed, start_time,
-    already_marked=False,
+    already_marked=False, wav_bits=16, include_wav_bytes=False,
 ):
     """Shared tail of a successful generation: watermark → save WAV →
     history row (self-healing) → retention prune → event emit.
@@ -1338,10 +1358,48 @@ async def _finalize_generation(
         )
     gen_time = round(time.time() - start_time, 2)
 
-    audio_id = str(uuid.uuid4())[:8]
-    audio_filename = f"{audio_id}.wav"
-    audio_path = os.path.join(OUTPUTS_DIR, audio_filename)
-    _safe_torchaudio_save(audio_path, audio_tensor, sample_rate)
+    for _ in range(16):
+        audio_id = str(uuid.uuid4())[:8]
+        audio_filename = f"{audio_id}.wav"
+        audio_path = os.path.join(OUTPUTS_DIR, audio_filename)
+        try:
+            reservation = os.open(audio_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        except FileExistsError:
+            continue
+        os.close(reservation)
+        break
+    else:
+        raise OSError("Could not reserve a unique recording filename")
+    def _save_take():
+        try:
+            save_generation_wav(audio_path, audio_tensor, sample_rate, bits=wav_bits)
+            # Capture before creating the history row: concurrent retention cannot
+            # see or remove this take yet. Encoding and disk I/O stay off the loop.
+            return Path(audio_path).read_bytes() if include_wav_bytes else None
+        except Exception:
+            Path(audio_path).unlink(missing_ok=True)
+            raise
+
+    saving = asyncio.create_task(asyncio.to_thread(_save_take))
+    try:
+        response_bytes = await asyncio.shield(saving)
+    except asyncio.CancelledError:
+        # Cancelling an await cannot stop its writer thread. Wait for that
+        # thread before removing the unpublished take, including repeated
+        # cancellation from disconnect/shutdown, so it cannot recreate the WAV.
+        while not saving.done():
+            try:
+                await asyncio.shield(saving)
+            except asyncio.CancelledError:
+                continue
+            except Exception:
+                break
+        try:
+            saving.result()
+        except Exception:
+            pass  # Preserve cancellation if the interrupted write also failed.
+        Path(audio_path).unlink(missing_ok=True)
+        raise
 
     audio_dur = round(audio_tensor.shape[-1] / sample_rate, 2)
 
@@ -1372,7 +1430,7 @@ async def _finalize_generation(
     # unbounded forever. Best-effort — a prune failure must never affect
     # the generation that just succeeded.
     try:
-        _prune_history_over_cap()
+        _prune_history_over_cap(keep_id=audio_id)
     except Exception as e:  # noqa: BLE001
         logger.warning("history retention prune failed (non-fatal): %s", e)
     event_bus.emit("generation_history", {"action": "created", "id": audio_id})
@@ -1401,6 +1459,7 @@ async def _finalize_generation(
         "filename": audio_filename,
         "duration": audio_dur,
         "gen_time": gen_time,
+        **({"_wav_bytes": response_bytes} if include_wav_bytes else {}),
     }
 
 
@@ -1575,6 +1634,7 @@ async def generate_speech(
     profile_id: Optional[str] = Form(None),
     seed: Optional[int] = Form(None),
     effect_preset: str = Form("broadcast"),
+    wav_bits: Literal["16", "24", "32"] = Form("16"),
     engine: Optional[str] = Form(None),
     # Wave 1.2 — unlimited-length generation: long text is split at sentence
     # boundaries and crossfaded. 0 disables chunking (whole text to engine).
@@ -1985,6 +2045,7 @@ async def generate_speech(
         "max_chunk_chars": max_chunk_chars,
         "crossfade_ms": crossfade_ms,
         "effect_preset": effect_preset,
+        "wav_bits": int(wav_bits),
         # The requesting user's provenance preference, not the GPU owner's.
         "watermark": bool(_watermark_enabled()),
     }
@@ -2020,7 +2081,7 @@ async def generate_speech(
             on_state=on_state,
         )
         if getattr(waveform, "ndim", 2) == 1:
-            # `_safe_torchaudio_save` and the local paths deal in
+            # The canonical WAV writer and local paths deal in
             # (channels, samples); a mono artifact reads back flat.
             waveform = waveform.unsqueeze(0)
         return waveform, sample_rate
@@ -2108,7 +2169,7 @@ async def generate_speech(
                     audio_tensor, sample_rate, text=text, history_mode=history_mode,
                     ref_audio_path=ref_audio_path, language=language,
                     instruct=instruct, resolved_profile_id=resolved_profile_id,
-                    used_seed=used_seed, start_time=start_time, already_marked=True,
+                    used_seed=used_seed, start_time=start_time, already_marked=True, wav_bits=int(wav_bits),
                 )
                 # #1330's dropped-chunk warning has no remote carrier yet: the
                 # gateway hands back audio, not the worker's render metadata.
@@ -2229,10 +2290,13 @@ async def generate_speech(
                                 "layer_penalty_factor": layer_penalty_factor,
                                 "position_temperature": position_temperature,
                                 "class_temperature": class_temperature,
-                                "seed": used_seed + i if used_seed is not None else None,
                             }.items() if value is not None
                         } if getattr(
                             _backend, "supports_native_omnivoice_controls", False
+                        ) else {}),
+                        **({"seed": used_seed + i} if used_seed is not None and (
+                            getattr(_backend, "supports_native_omnivoice_controls", False)
+                            or getattr(_backend, "supports_generation_seed", False)
                         ) else {}),
                     )
                     sr = _backend.sample_rate
@@ -2427,7 +2491,7 @@ async def generate_speech(
                     audio_tensor, sample_rate, text=text, history_mode=history_mode,
                     ref_audio_path=ref_audio_path, language=language,
                     instruct=instruct, resolved_profile_id=resolved_profile_id,
-                    used_seed=used_seed, start_time=start_time,
+                    used_seed=used_seed, start_time=start_time, wav_bits=int(wav_bits),
                 )
                 # #1330: before `done`, say what the take is missing. Its own
                 # frame rather than a `done` field so a consumer that only
@@ -2582,17 +2646,15 @@ async def generate_speech(
             audio_tensor, sample_rate, text=text, history_mode=history_mode,
             ref_audio_path=ref_audio_path, language=language, instruct=instruct,
             resolved_profile_id=resolved_profile_id, used_seed=used_seed,
-            start_time=start_time, already_marked=_already_marked,
+            start_time=start_time, already_marked=_already_marked, wav_bits=int(wav_bits), include_wav_bytes=True,
         )
         audio_id = _meta["id"]
         audio_filename = _meta["filename"]
         audio_dur = _meta["duration"]
         gen_time = _meta["gen_time"]
 
-        buffer = io.BytesIO()
-        _safe_torchaudio_save(buffer, audio_tensor, sample_rate, format="wav")
-        buffer.seek(0)
-        wav_bytes = buffer.read()
+        # Playback, history, and downloads share the exact same encoded take.
+        wav_bytes = _meta.pop("_wav_bytes")
 
         async def _stream_wav():
             chunk_size = 16384
@@ -2788,10 +2850,11 @@ def _history_cap() -> int:
     return max(0, cap)
 
 
-def _prune_history_over_cap() -> int:
+def _prune_history_over_cap(*, keep_id: str | None = None) -> int:
     """Retention: keep the newest ``_history_cap()`` takes; delete the oldest
     UNstarred rows over the cap plus their WAVs (via the unreferenced guard).
     Starred takes are never pruned — even when they alone exceed the cap.
+    The currently generated take is retained until a later generation.
     Returns the number of rows pruned."""
     cap = _history_cap()
     if cap <= 0:
@@ -2803,8 +2866,9 @@ def _prune_history_over_cap() -> int:
             return 0
         victims = conn.execute(
             "SELECT id, audio_path FROM generation_history "
-            "WHERE COALESCE(starred, 0)=0 ORDER BY created_at ASC LIMIT ?",
-            (excess,),
+            "WHERE COALESCE(starred, 0)=0 AND (? IS NULL OR id != ?) "
+            "ORDER BY created_at ASC LIMIT ?",
+            (keep_id, keep_id, excess),
         ).fetchall()
         if not victims:
             return 0

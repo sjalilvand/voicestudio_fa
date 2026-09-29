@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { UpdateState } from '../../../../preload/index.d';
+import { apiJson } from '@/lib/api/client';
 
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
@@ -88,5 +89,37 @@ describe('SystemNotifications desktop updates', () => {
     expect(trigger).toHaveClass('app-no-drag');
     fireEvent.click(trigger);
     expect(await screen.findByText('modelSettings.unavailable')).toBeVisible();
+  });
+
+  test('opens Storage from a low-disk warning', async () => {
+    mocks.state = {
+      status: 'idle',
+      currentVersion: '0.5.2',
+      channel: 'stable',
+      progress: 0,
+    } as UpdateState;
+    vi.mocked(apiJson).mockResolvedValueOnce({
+      notifications: [
+        {
+          id: 'disk-low',
+          level: 'warn',
+          title: 'Low disk space (1.8 GB free)',
+          message: 'VoiceStudio needs disk space for models, audio, and temp files.',
+          action: { type: 'settings-tab', target: 'storage' },
+        },
+      ],
+    });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <SystemNotifications enabled />
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Low disk space/ }));
+    const warning = (await screen.findByText('Low disk space (1.8 GB free)')).closest('button');
+    expect(warning).toBeEnabled();
+    expect(warning).toHaveTextContent('settings.storage');
+    fireEvent.click(warning!);
+    await waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith({ to: '/settings/storage' }));
   });
 });

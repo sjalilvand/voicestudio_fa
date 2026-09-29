@@ -688,14 +688,38 @@ def require_audio_stream(path: str) -> None:
         raise NoAudioTrackError()
 
 
+def validate_media_source(path: str) -> None:
+    """Reject obviously incomplete media before expensive probe/extract work.
+
+    A file with a zeroed first block cannot have a usable container header.
+    Read at most 4 KiB, regardless of video size. Other formats are left to
+    FFmpeg, which remains the authority on whether their content can decode.
+    """
+    from core.failure import InvalidMediaFileError
+
+    if not os.path.isfile(path):
+        return  # Preserve the OS/FFmpeg missing-file diagnosis.
+    with open(path, "rb") as source:
+        header = source.read(4096)
+    if not header or not any(header):
+        raise InvalidMediaFileError()
+
+
 def raise_for_audio_extract_failure(stderr, path: str) -> None:
     """After a failed audio decode, raise ``NoAudioTrackError`` when the cause
-    was a missing audio stream (ffmpeg's own wording, or a positive probe).
+    was a missing audio stream, or ``InvalidMediaFileError`` when the input
+    container could not be read.
 
     Returns normally for every other failure so the caller keeps its own
     diagnosis; the raw stderr stays in the log, never in the user message.
     """
-    from core.failure import NO_AUDIO_TRACK_MESSAGE, NoAudioTrackError, is_no_audio_stream_stderr
+    from core.failure import (
+        INVALID_MEDIA_FILE_MESSAGE,
+        NO_AUDIO_TRACK_MESSAGE,
+        InvalidMediaFileError,
+        NoAudioTrackError,
+        is_no_audio_stream_stderr,
+    )
 
     # An engine may already have raised NoAudioTrackError (via the ASR decoder's
     # stderr check) and the caller passes its text back here: keep that answer
@@ -704,10 +728,20 @@ def raise_for_audio_extract_failure(stderr, path: str) -> None:
     if already or is_no_audio_stream_stderr(stderr) or has_audio_stream(path) is False:
         text = stderr.decode("utf-8", errors="replace") if isinstance(stderr, bytes) else str(stderr or "")
         logger.info(
-            "Audio decode of %s failed because it has no audio stream: %s",
-            log_safe(os.path.basename(str(path))), log_safe(text[-500:]),
+            "Audio decode failed because the source has no audio stream"
         )
         raise NoAudioTrackError()
+    text = stderr.decode("utf-8", errors="replace") if isinstance(stderr, bytes) else str(stderr or "")
+    low = text.lower()
+    if INVALID_MEDIA_FILE_MESSAGE.lower() in low or any(marker in low for marker in (
+        "ebml header parsing failed",
+        "moov atom not found",
+        "invalid data found when processing input",
+    )):
+        logger.info(
+            "Audio decode failed because the source container is unreadable"
+        )
+        raise InvalidMediaFileError()
 
 
 # Windows CreateProcess rejects command lines over 32,767 chars with

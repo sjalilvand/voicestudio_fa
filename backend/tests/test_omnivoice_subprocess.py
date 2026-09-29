@@ -136,7 +136,7 @@ def test_reference_asr_hang_is_killed_and_next_request_recovers(monkeypatch, tmp
         "sys.modules['services.tts_backend'] = types.SimpleNamespace(reference_duration_s=lambda _: 1)\n"
         "sys.modules['services.asr_backend'] = types.SimpleNamespace(transcribe_reference=transcribe)\n"
         "child._load_model = lambda _: types.SimpleNamespace(generate=lambda **kw: [None], sampling_rate=24000)\n"
-        "child._tensor_to_pcm_b64 = lambda *_: ('AAA=', 24000, 1)\n"
+        "child._tensor_to_pcm_b64 = lambda *args: ('AAAAAA==' if args[-1] == 'f32le' else 'AAA=', 24000, 1)\n"
         "sys.exit(child.main())\n"
     )
     _use_stub(monkeypatch, script)

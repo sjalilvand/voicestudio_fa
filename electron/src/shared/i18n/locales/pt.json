@@ -1,4 +1,118 @@
 {
+  "cloneQuality": {
+    "title": "Qualidade do áudio",
+    "precision": "Precisão WAV",
+    "size": "Cerca de {{size}} MB por minuto; varia conforme o motor.",
+    "hint16": "Bom para ouvir e compartilhar.",
+    "hint24": "Mais precisão para edição e mixagem.",
+    "hint32": "Mantém toda a precisão. Arquivos maiores, sem melhorar a voz.",
+    "effort": "Refinamento da voz",
+    "effortHint": "Mais etapas levam mais tempo; a voz pode não melhorar.",
+    "mastering": "Equilibrar volume",
+    "masteringHint": "Torna o som mais equilibrado e uniforme.",
+    "nextTake": "Para a próxima gravação.",
+    "bits16": "PCM de 16 bits",
+    "bits24": "PCM de 24 bits",
+    "bits32": "Ponto flutuante de 32 bits",
+    "fileInfo": "{{size}} MiB · {{rate}} kHz · {{channels}} canais · {{bits}} bits {{encoding}}",
+    "fileSize": "{{size}} MiB",
+    "float": "ponto flutuante",
+    "preset16": "Padrão",
+    "preset24": "Para editar",
+    "preset32": "Original",
+    "sizeUnknown": "O tamanho aparece após a geração."
+  },
+  "audioQuality": {
+    "check": "Verificar áudio",
+    "failed": "Análise de áudio indisponível.",
+    "advisory": "Apenas indicativo: pausas e variações de volume podem ser intencionais. O áudio não é alterado.",
+    "truncated": "A análise ou a lista de avisos está limitada.",
+    "clear": "Nenhum problema detectado na parte analisada.",
+    "empty": "Áudio vazio",
+    "silence": "Possível silêncio",
+    "quiet": "Volume incomumente baixo",
+    "loud": "Volume incomumente alto",
+    "clipping": "Possível saturação",
+    "invalid": "Amostras de áudio inválidas"
+  },
+  "agentWorkspace": {
+    "repair": "Reparar um problema",
+    "setup": "Configurar meu estúdio",
+    "new_chat": "Nova conversa",
+    "harness": "Ambiente do agente",
+    "mode": "Modo de execução",
+    "plan": "Planejar",
+    "autopilot": "Piloto automático",
+    "features": "Recursos",
+    "source": "Permitir reparos no código-fonte",
+    "conversation": "Conversa",
+    "welcome": "Seu estúdio local, com um agente ao seu lado. Comece com uma tarefa ou escolha uma configuração.",
+    "starter": "Ajude-me com {{feature}}. Analise o aplicativo, escolha uma configuração prática e peça apenas os dados essenciais que faltam.",
+    "you": "Você",
+    "placeholder": "Peça para criar, configurar ou reparar algo…",
+    "send": "Enviar",
+    "autopilot_hint": "O piloto automático executa as ações solicitadas. Enter envia; Shift+Enter adiciona uma linha.",
+    "plan_hint": "Planejar analisa o estado do aplicativo sem alterá-lo.",
+    "no_harness": "Instale e entre no Codex, Claude Code, OpenCode ou Pi para conectar um agente."
+  },
+  "repairAgent": {
+    "title": "Pergunte ao VoiceStudio Agent",
+    "notInstalled": "Não instalado",
+    "noSource": "Abra um check-out de origem VoiceStudio gravável para permitir que um agente o repare.",
+    "noneFound": "Instale Codex, Claude Code, OpenCode ou Pi para usar o reparo local.",
+    "ready": "Pronto",
+    "placeholder": "O que deu errado? Adicione etapas, erros visíveis ou o comportamento esperado.",
+    "prReady": "Correção concluída. Revise as alterações e proponha um PR quando os testes direcionados forem aprovados.",
+    "diagnose": "Diagnosticar",
+    "fix": "Corrigir",
+    "chooseDefault": "Escolha o agente que o VoiceStudio usará automaticamente se esta tela falhar.",
+    "useAutomatically": "Usar {{agent}} automaticamente",
+    "captured": "{{count}} linhas de log com problemas capturadas",
+    "contextNotice": "O agente selecionado recebe este relatório, a tela atual, os logs recentes do aplicativo e do backend e os diagnósticos do sistema.",
+    "complete": "Completo"
+  },
+  "siteBrowser": {
+    "return_studio": "Voltar ao estúdio",
+    "preview": "Prévia rápida do site oficial, aqui no VoiceStudio",
+    "open_in": "Abrir no navegador",
+    "back": "Voltar",
+    "forward": "Avançar",
+    "reload": "Recarregar",
+    "stop": "Parar carregamento",
+    "address": "Endereço do site",
+    "default_browser": "Navegador padrão",
+    "failed": "Não foi possível concluir a ação. Verifique o endereço e a conexão ou abra a página no seu navegador."
+  },
+  "sidebarTools": {
+    "simple": "Simples",
+    "details": "Detalhes",
+    "title": "Configurações das ferramentas",
+    "help": "Escolha uma ferramenta para configurá-la ou trocar seu modelo.",
+    "tts": "Texto para fala",
+    "asr": "Fala para texto",
+    "llm": "Ajuda na escrita",
+    "translation": "Tradução",
+    "dictation": "Digitação por voz",
+    "diarisation": "Identificar falantes",
+    "onDemand": "Carrega ao usar",
+    "checkSetup": "Verificar configuração",
+    "wait": "Aguarde o trabalho atual terminar antes de alterar esta opção.",
+    "speedHelp": "Uma qualidade maior pode levar mais tempo. Comece com Equilibrado."
+  },
+  "homeUi": {
+    "subtitle": "Sua alternativa ao ElevenLabs, de código aberto e totalmente local — clone e crie vozes, duble vídeos, dite, transcreva e crie audiolivros em 646 idiomas.",
+    "brand_by": "{{brand}} por",
+    "all": "Todos",
+    "allContributors": "Todos os colaboradores",
+    "title": "VoiceStudio.sh Código aberto",
+    "design": "Crie uma voz a partir de uma descrição.",
+    "dub": "Traduza e duble áudio ou vídeo.",
+    "stories": "Crie cenas com várias vozes.",
+    "audiobook": "Crie audiolivros com capítulos.",
+    "transcribe": "Transforme gravações em texto.",
+    "collapseFooter": "Recolher rodapé",
+    "expandFooter": "Expandir rodapé"
+  },
   "longformPersistence": {
     "storage_unavailable_title": "Não foi possível carregar os projetos",
     "storage_unavailable_body": "O VoiceStudio não conseguiu ler o armazenamento local de projetos. Os seus dados não foram alterados. Tente novamente para abri-los com segurança.",
@@ -94,7 +208,12 @@
     "llmp_test": "Testar",
     "llmp_active_badge": "ativo",
     "llmp_test_ok": "ok — {{model}} · {{ms}} ms",
-    "llmp_err_config": "Falta a chave de API ou a URL base — preencha e salve.",
+    "llmp_active_env_pin": "A seleção do LLM é fixada por LLM_DEFAULT_PROVIDER ou OMNIVOICE_LLM_BACKEND.",
+    "llmp_connect": "Conectar e ativar",
+    "llmp_setup_hint": "Escolha um provedor, inicie seu servidor ou adicione a chave de API e conecte. O VoiceStudio verifica uma resposta do modelo antes de ativar os recursos LLM.",
+    "llmp_disable": "Desativar LLM",
+    "llmp_optional_key": "Chave de API (opcional)",
+    "llmp_err_config": "Complete as configurações do provedor: URL base, modelo e qualquer chave de API ou ID de conta necessário.",
     "llmp_err_auth": "Chave rejeitada (401/403) — verifique sua chave de API.",
     "llmp_err_not_found": "Não encontrado (404) — verifique o nome do modelo e o caminho da URL base.",
     "llmp_err_rate_limit": "Limite de requisições (429) — a chave funciona; tente novamente em instantes.",
@@ -364,7 +483,10 @@
     "reduce_motion_desc": "Para as animações de fundo e as transições. A definição do sistema continua a ser respeitada; esta acrescenta-se.",
     "perf_torch_compile": "Desativar torch.compile",
     "perf_torch_compile_note": "Usa execução direta para evitar erros de memória do Triton.",
-    "perf_torch_compile_hint": "Usa execução direta para evitar erros de memória do Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>"
+    "perf_torch_compile_hint": "Usa execução direta para evitar erros de memória do Triton. <issueLink>#65</issueLink> · <crashLink>#2135</crashLink>",
+    "llmp_cli_help": "Usa a CLI instalada e sua sessão pelo mesmo executor do reparo com agente. Deixe Modelo vazio para usar o padrão da CLI. As respostas podem ser mais lentas; os custos seguem sua conta da CLI.",
+    "llmp_sdk_help": "Provedores nativos usam LiteLLM. Para outros, insira provider/model. Bedrock usa chave de API ou perfil AWS; Vertex usa o ID da conta como projeto e credenciais do Google. A URL base é opcional.",
+    "llmp_cli_auth": "O acesso à conta CLI foi recusado. Verifique o login, a assinatura e o modelo selecionado."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -594,7 +716,7 @@
     "cleaning": "Limpeza…",
     "using_profile": "Usando perfil: {{name}}",
     "clear": "claro",
-    "production_overrides": "Substituições de produção",
+    "production_overrides": "Controles de voz",
     "denoise": "Denoise",
     "postprocess": "Pós-processamento",
     "duration": "Duração",
@@ -782,7 +904,9 @@
     "group_huggingface": "Abraçando o rosto",
     "group_translate": "Tradução (LLM / Cinematográfica)",
     "group_deepl": "Ponto final personalizado do DeepL",
-    "group_microsoft": "Ponto final personalizado do Microsoft Translator"
+    "group_microsoft": "Ponto final personalizado do Microsoft Translator",
+    "region": "Região",
+    "aws_profile": "Perfil AWS"
   },
   "engines": {
     "banners_on": "Banners de palco ativados",
@@ -1611,7 +1735,7 @@
   "donate": {
     "title": "Suporte",
     "desc": "Se você gosta deste projeto, considere fazer uma doação para apoiar nosso desenvolvimento.",
-    "hero_title": "Suporte VoiceStudio",
+    "hero_title": "Doe para o projeto VoiceStudio",
     "hero_desc": "VoiceStudio é gratuito, de código aberto e roda inteiramente em seu hardware. Se isso agrega valor ao seu fluxo de trabalho, considere apoiar a equipe principal.",
     "github_desc": "Recorrente ou único — diretamente pelo GitHub.",
     "coffee_desc": "Compre um café para a equipe. Nenhuma conta é necessária.",
@@ -1848,7 +1972,7 @@
     "trim_zoomIn": "Aumentar/diminuir zoom",
     "trim_fitAll": "Ajustar tudo / Ajustar seleção",
     "trim_confirm": "Confirmar corte",
-    "dub": "Duplicar",
+    "dub": "Dublar",
     "dub_generate": "Gerar dublagem",
     "dub_sidebar": "Alternar barra lateral"
   },
@@ -1991,7 +2115,7 @@
     "locked": "Bloqueado",
     "clone_label": "Clonar",
     "design_label": "Projeto",
-    "dub_label": "Duplicar",
+    "dub_label": "Dublar",
     "save_label": "Salvar",
     "lock_identity": "Bloquear identidade de voz",
     "in_folder": "em {{folder}}",
@@ -2360,6 +2484,7 @@
     "tab_license": "Licença Comercial",
     "toggle_label": "Suporte ou licença comercial",
     "other_ways": "Outras maneiras de ajudar",
+    "star_short": "Dar estrela",
     "star_github": "Estrela no GitHub",
     "join_discord": "Junte-se à discórdia"
   },
@@ -2767,6 +2892,7 @@
     "website_desc": "Mais sobre o projeto e o criador.",
     "follow_title": "Siga no X",
     "follow_desc": "Notas de versão, novos motores e, de vez em quando, uma espreitadela ao que vem a seguir. Prático se preferir não estar num servidor de chat.",
+    "support_follow_title": "Apoie o projeto seguindo-nos no X",
     "follow_cta": "Seguir no X"
   },
   "permissions": {
@@ -2954,21 +3080,8 @@
     "step_translate": "Traduzir",
     "step_convert": "Converter"
   },
-  "sidebarTools": {
-    "simple": "Simples",
-    "details": "Detalhes",
-    "title": "Configurações das ferramentas",
-    "help": "Escolha uma ferramenta para configurá-la ou trocar seu modelo.",
-    "tts": "Texto para fala",
-    "asr": "Fala para texto",
-    "llm": "Ajuda na escrita",
-    "translation": "Tradução",
-    "dictation": "Digitação por voz",
-    "diarisation": "Identificar falantes",
-    "onDemand": "Carrega ao usar",
-    "checkSetup": "Verificar configuração",
-    "wait": "Aguarde o trabalho atual terminar antes de alterar esta opção.",
-    "speedHelp": "Uma qualidade maior pode levar mais tempo. Comece com Equilibrado."
+  "performanceProfile": {
+    "auto": "Auto"
   },
   "performanceHardware": {
     "fits": "Compatível com seu hardware",
@@ -2990,7 +3103,31 @@
     "appVram": "VRAM do app",
     "voiceFirst": "Qualidade de voz em primeiro lugar"
   },
-  "performanceProfile": {
-    "auto": "Auto"
+  "voiceControls": {
+    "title": "Controles de voz",
+    "options": "Mais opções",
+    "advanced": "Ajustes avançados do modelo",
+    "guidance": "Influência da instrução",
+    "timing": "Momento do refinamento",
+    "order": "Variação da ordem de amostragem",
+    "variation": "Variação do som",
+    "balance": "Equilíbrio entre estrutura e detalhe",
+    "denoise": "Limpar ruído da referência",
+    "polish": "Aprimorar o áudio gerado",
+    "basics": "1× é a velocidade normal. Deixe a duração vazia para um ritmo natural.",
+    "hint": "Em geral, mantenha os valores padrão. A orientação ajusta a influência da instrução; os outros controles mudam como o modelo constrói o som. Altere um de cada vez."
+  },
+  "languagePicker": {
+    "auto": "Automático",
+    "unavailable": "Não suportado",
+    "unsupportedBy": "Não suportado por {{model}}",
+    "chooseSupported": "Escolha um idioma suportado",
+    "clearSearch": "Limpar pesquisa",
+    "results": "{{enabled}} disponíveis · {{total}} resultados",
+    "loading": "Verificando idiomas",
+    "unknown": "Suporte a idiomas desconhecido",
+    "error": "Não foi possível verificar os idiomas",
+    "modelLanguages": "Idiomas deste modelo",
+    "changeModel": "Alterar modelo"
   }
 }

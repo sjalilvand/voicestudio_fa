@@ -31,6 +31,7 @@ import hashlib
 import json
 import logging
 import os
+import uuid
 import re
 import shutil
 import subprocess
@@ -51,6 +52,7 @@ from services.ffmpeg_utils import (
     find_ffprobe,
     raise_for_audio_extract_failure,
     require_audio_stream,
+    validate_media_source,
 )
 from services.srt_parser import spoken_cue_text
 from services.model_manager import get_best_device
@@ -87,6 +89,35 @@ def _media_process_error(tool: str, returncode: int, stderr: bytes, *, paths=())
     if len(detail) > 2000:
         tail = "…" + tail
     return f"{tool} exited with code {returncode}" + (f": {tail}" if tail else ". No diagnostic output.")
+
+
+def _discard_partial_audio(*paths: str | None) -> None:
+    """Remove only the extraction outputs owned by the failed stage."""
+    for path in paths:
+        if path is None:
+            continue
+        try:
+            os.unlink(path)
+        except FileNotFoundError:
+            pass  # The failed process may not have created an output yet.
+        except OSError:
+            logger.warning("Could not remove partial extraction output")
+
+
+def _discard_invalid_source_copy(job_dir: str, media_path: str) -> None:
+    """Free a failed ingest copy, never a source outside an app-owned job dir."""
+    job = os.path.realpath(job_dir)
+    media = os.path.realpath(media_path)
+    if (
+        os.path.normcase(os.path.dirname(job)) != os.path.normcase(os.path.realpath(DUB_DIR))
+        or os.path.normcase(os.path.dirname(media)) != os.path.normcase(job)
+        or not os.path.basename(media).startswith("original.")
+    ):
+        return
+    try:
+        os.unlink(media)
+    except OSError:
+        logger.warning("Could not discard invalid media copy for job %s", log_safe(os.path.basename(job)))
 
 
 # ── Module-level state ──────────────────────────────────────────────────────
@@ -1339,18 +1370,23 @@ async def ingest_pipeline(
             filename = filename_hint or os.path.basename(video_path)
 
         audio_path = os.path.join(job_dir, "audio.wav")
+        audio_hq_path = os.path.join(job_dir, "audio_hq.wav")
+        attempt = uuid.uuid4().hex
+        extract_path = os.path.join(job_dir, f"audio-{attempt}.partial.wav")
+        extract_hq_path = os.path.join(job_dir, f"audio-hq-{attempt}.partial.wav")
         ffmpeg = find_ffmpeg()
         run_proc = run_proc_factory(job_id)
 
         yield prep_event("extract_start")
         try:
+            await asyncio.to_thread(validate_media_source, video_path)
             # A video with no audio stream has nothing to transcribe or dub.
             # Name that instead of letting ffmpeg fail with exit 234 and a
             # stream dump ending in "Invalid argument".
             await asyncio.to_thread(require_audio_stream, video_path)
             p, _, stderr = await run_proc([
                 ffmpeg, "-i", video_path, "-vn", "-acodec", "pcm_s16le",
-                "-ar", "16000", "-ac", "1", audio_path, "-y",
+                "-ar", "16000", "-ac", "1", extract_path, "-y",
             ])
             if p.returncode != 0:
                 # The probe can be undetermined (no ffprobe); recognize the
@@ -1358,6 +1394,7 @@ async def ingest_pipeline(
                 await asyncio.to_thread(raise_for_audio_extract_failure, stderr, video_path)
                 msg = _media_process_error("FFmpeg", p.returncode, stderr, paths=(video_path, audio_path, job_dir))
                 raise Exception(msg)
+            os.replace(extract_path, audio_path)
             # Second, FULL-QUALITY extraction for source separation. audio.wav
             # is deliberately 16 kHz mono — that's what ASR wants — but Demucs
             # used to separate that same file, so the music bed inherited mono
@@ -1368,25 +1405,32 @@ async def ingest_pipeline(
             # stereo original costs about the same and returns a true-stereo,
             # full-band bed. Best-effort: on failure Demucs falls back to the
             # ASR file, which is exactly the old behavior.
-            audio_hq_path = os.path.join(job_dir, "audio_hq.wav")
             try:
                 p_hq, _, stderr_hq = await run_proc([
                     ffmpeg, "-i", video_path, "-vn", "-acodec", "pcm_s16le",
-                    "-ar", "44100", "-ac", "2", audio_hq_path, "-y",
+                    "-ar", "44100", "-ac", "2", extract_hq_path, "-y",
                 ])
-                if p_hq.returncode != 0 or not os.path.exists(audio_hq_path):
+                if p_hq.returncode != 0 or not os.path.exists(extract_hq_path):
                     logger.warning(
                         "HQ audio extraction failed (rc=%s) — separation falls "
                         "back to the 16k mono ASR file", p_hq.returncode,
                     )
+                    _discard_partial_audio(extract_hq_path)
                     audio_hq_path = None
+                else:
+                    os.replace(extract_hq_path, audio_hq_path)
             except Exception as e_hq:  # noqa: BLE001 — quality upgrade, never fatal
-                logger.warning("HQ audio extraction errored (%s) — falling back", log_safe(e_hq))
+                logger.warning("HQ audio extraction errored (%s) — falling back", type(e_hq).__name__)
+                _discard_partial_audio(extract_hq_path)
                 audio_hq_path = None
         except asyncio.CancelledError:
+            _discard_partial_audio(extract_path, extract_hq_path)
             raise
         except Exception as e:
-            logger.error("Extract failed for job %s: %s", log_safe(job_id), log_safe(e))
+            _discard_partial_audio(extract_path, extract_hq_path)
+            logger.error("Extract failed for job %s: %s", log_safe(job_id), type(e).__name__)
+            if isinstance(e, failure.InvalidMediaFileError):
+                await asyncio.to_thread(_discard_invalid_source_copy, job_dir, video_path)
             yield prep_event("error", **failure.build_failure(e, stage="extract"))
             return
 

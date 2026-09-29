@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import '@/i18n';
-import { ActionBar } from './action-bar';
+import { ActionBar, ProductionSettings } from './action-bar';
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ to, children, className }: { to: string; children: ReactNode; className?: string }) => (
@@ -18,6 +18,9 @@ const readiness = vi.hoisted(() => ({
 }));
 vi.mock('@/hooks/use-clone-readiness', () => ({ useCloneReadiness: () => readiness.blocker }));
 vi.mock('@/hooks/use-clone-demo', () => ({ useCloneDemo: () => false }));
+vi.mock('@/hooks/use-tts-languages', () => ({
+  useTtsLanguages: () => ({ names: ['English'], modelLabel: 'Test model', state: 'known' }),
+}));
 const generate = vi.fn(() => Promise.resolve());
 const cancel = vi.fn();
 const setCloneSetting = vi.fn();
@@ -112,7 +115,7 @@ describe('ActionBar', () => {
     const view = render(<ActionBar />);
     expect(screen.getAllByRole('alert')).toHaveLength(1);
     expect(screen.getByRole('alert')).toHaveTextContent('LibsndfileError');
-    expect(view.container.querySelector('details')).not.toBeInTheDocument();
+    expect(screen.getByRole('alert').querySelector('details')).not.toBeInTheDocument();
     expect(view.container.querySelector('pre')).not.toBeInTheDocument();
   });
   it('keeps synthesis available while the latest take is playing', () => {
@@ -123,16 +126,15 @@ describe('ActionBar', () => {
     expect(generate).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('button', { name: 'Stop playback' })).not.toBeInTheDocument();
   });
-  it('renders the production overrides with their current values', () => {
-    render(<ActionBar />);
-    // Base UI exposes the slider root as a labelled group (the thumb input is
-    // only materialised with layout, which jsdom lacks).
-    expect(screen.getByRole('group', { name: 'Steps' })).toBeInTheDocument();
-    expect(screen.getByRole('group', { name: 'CFG' })).toBeInTheDocument();
-    expect(screen.getByText('32')).toBeInTheDocument();
-    expect(screen.getByRole('switch', { name: 'Postprocess' })).toBeChecked();
+  it('keeps everyday controls clear and advanced tuning collapsed', () => {
+    const { container } = render(<ProductionSettings />);
+    expect(screen.getByRole('switch', { name: 'Polish generated audio' })).toBeChecked();
     expect(screen.getByText('1.0×')).toBeInTheDocument();
-
+    expect(screen.getByText(/1× is normal speed/)).toBeVisible();
+    expect(container.querySelector('details')).not.toHaveAttribute('open');
+    fireEvent.click(screen.getByText('Advanced model tuning'));
+    expect(screen.getByText('Prompt guidance')).toBeVisible();
+    expect(screen.getByText('Sound variation')).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Reset to defaults' }));
     expect(resetOverrides).toHaveBeenCalled();
   });

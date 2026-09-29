@@ -46,8 +46,10 @@ export function SetupGate({ children }: { children: ReactNode }) {
   const [needed, setNeeded] = useState<boolean | null>(null);
   const [setupInProgress, setSetupInProgress] = useState(setupWasStarted);
   const [step, setStep] = useState(0);
-  const [advanced, setAdvanced] = useState(false);
-  const [dictationSetup, setDictationSetup] = useState(false);
+  const [setupAdvanced, setSetupAdvanced] = useState(false);
+  const [dictationSetup, setDictationSetup] = useState(true);
+  const advanced = step === 3 ? dictationSetup : setupAdvanced;
+  const setAdvanced = step === 3 ? setDictationSetup : setSetupAdvanced;
   const [family, setFamily] = useState<ModelFamily>('tts');
   const [consentRequired, setConsentRequired] = useState(true);
   const [enteringStudio, setEnteringStudio] = useState(false);
@@ -216,7 +218,7 @@ export function SetupGate({ children }: { children: ReactNode }) {
                   >
                     {t('demo.dictation_title')} · {t('firstrun.chip_optional')}
                   </Button>
-                  {(dictationSetup || advanced) && (
+                  {dictationSetup && (
                     <>
                       <PermissionsSettings />
                       <ShortcutSettings />

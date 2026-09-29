@@ -22,16 +22,55 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it('shows Integrations, Become a Sponsor, then the Pro shortcut', () => {
+it('places follow and donate links immediately before the Pro shortcut', () => {
   render(<SponsorFooter />);
   const buttons = screen.getByRole('contentinfo').querySelectorAll('button');
-  expect(Array.from(buttons, (button) => button.textContent)).toEqual([
-    'integrationCatalog.title',
-    'sponsorSlot.footer_brand',
-    '',
-  ]);
-  expect(buttons[2]).toHaveAccessibleName('supportPlans.title');
+  expect(buttons).toHaveLength(5);
+  expect(buttons[2]).toHaveAccessibleName('contact.follow_cta');
+  expect(buttons[3]).toHaveAccessibleName('donate.title');
+  expect(buttons[4]).toHaveAccessibleName('homeUi.collapseFooter');
+  expect(screen.queryByRole('link', { name: 'support.star_github' })).not.toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'contact.website' })).toHaveAttribute(
+    'href',
+    'https://voicestudio.sh',
+  );
   expect(screen.queryByRole('img')).toBeNull();
+});
+
+it.each(['idebpalash', 'voicestudiosh'])('opens @%s in the external browser', async (handle) => {
+  render(<SponsorFooter />);
+  fireEvent.click(screen.getByRole('button', { name: 'contact.follow_cta' }));
+  expect(await screen.findByText('Palash')).toBeVisible();
+  expect(screen.getByText('VoiceStudio')).toBeVisible();
+  const link = screen.getByRole('link', { name: `contact.follow_cta · @${handle}` });
+  expect(link).toHaveAttribute('href', `https://x.com/${handle}`);
+  fireEvent.click(link);
+  await waitFor(() => expect(mock.open).toHaveBeenCalledWith(`https://x.com/${handle}`));
+});
+
+it('opens compact support links from the heart and links to the full page', async () => {
+  render(<SponsorFooter />);
+  fireEvent.click(screen.getByRole('button', { name: 'donate.title' }));
+  expect(await screen.findByRole('link', { name: 'Ko-fi' })).toHaveAttribute(
+    'href',
+    'https://ko-fi.com/debpalash',
+  );
+  expect(screen.getByRole('link', { name: 'PayPal' })).toHaveAttribute(
+    'href',
+    'https://paypal.me/palashCoder',
+  );
+  expect(screen.getByRole('link', { name: 'support.star_github' })).toHaveAttribute(
+    'href',
+    'https://github.com/debpalash/VoiceStudio',
+  );
+  expect(screen.getByRole('link', { name: 'support.join_discord' })).toHaveAttribute(
+    'href',
+    'https://discord.gg/bzQavDfVV9',
+  );
+  fireEvent.click(screen.getByRole('link', { name: 'Ko-fi' }));
+  await waitFor(() => expect(mock.open).toHaveBeenCalledWith('https://ko-fi.com/debpalash'));
+  fireEvent.click(screen.getAllByRole('button', { name: 'donate.title' })[1]);
+  expect(mock.navigate).toHaveBeenCalledWith({ to: '/settings/support' });
 });
 
 it('opens Integrations from the first button', () => {
@@ -57,10 +96,17 @@ it('shows sourced audience details on sponsor focus', async () => {
   expect(screen.getByText('sponsorSlot.footer_stats_note')).toBeVisible();
 });
 
-it('opens the Pro comparison from the right-hand X', () => {
+it('collapses and restores the footer without navigating to Pro', () => {
   render(<SponsorFooter />);
-  fireEvent.click(screen.getByRole('button', { name: 'supportPlans.title' }));
-  expect(mock.navigate).toHaveBeenCalledWith({ to: '/pro' });
+  fireEvent.click(screen.getByRole('button', { name: 'homeUi.collapseFooter' }));
+  expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument();
+  expect(mock.navigate).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'homeUi.expandFooter' }));
+  expect(screen.getByRole('contentinfo')).toBeVisible();
+  expect(screen.getByRole('button', { name: 'homeUi.collapseFooter' })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
 });
 
 it('keeps the email fallback available from the booking form', async () => {

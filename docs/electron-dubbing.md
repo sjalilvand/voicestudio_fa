@@ -304,6 +304,18 @@ Video watermark exports and visual-context keyframes resolve FFmpeg through the
 app’s shared media-tool resolver, including its bundled binary. They do not
 require a separate system FFmpeg installation.
 
+### Unreadable source file
+
+If preparation says the media file is damaged or incomplete, VoiceStudio could
+not read its container header or FFmpeg rejected the input data. Check that the
+original file plays with sound in a media player. A file can have its expected
+size while its beginning is filled with zeros after an interrupted download or
+copy. Wait for the transfer to finish, ensure the storage drive has enough free
+space, and download or copy a fresh file before uploading again. Repeatedly
+uploading the same damaged file cannot restore its missing header.
+Uploads also check that the data drive has room for the source copy. If the drive fills during a copy, VoiceStudio removes the partial job
+file and asks you to free space in Settings → Storage before retrying.
+
 A dub that has segments offers **Create Story**, which carries its speakers and
 lines into the Stories editor: one character per speaker, one line per segment,
 each character keeping its saved Cast voice. Auto-clone voices are matched by
@@ -316,3 +328,15 @@ The dub itself is not changed. Loading replaces the current Stories script, cast
 pending import and previous render output, and asks first when there is something
 to replace; it is unavailable until saved profiles load or while a Stories or
 Audiobook render is running.
+
+Upload job IDs are reserved before writing, so a duplicate upload cannot replace
+or delete an existing source. Disk preflight checks the source copy size; smaller
+recordings do not require an arbitrary 1 GiB reserve. Failed or cancelled audio
+extraction removes its partial WAVs. The original user file outside the job
+directory remains unchanged.
+
+Extraction publishes each WAV only after FFmpeg succeeds, preserving completed
+audio if a later import fails validation or runs out of space.
+
+Cancelling an upload waits for its copy worker to stop before closing the input
+and clearing the reserved job, so the same upload can be retried safely.

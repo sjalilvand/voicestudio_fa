@@ -303,6 +303,7 @@ def test_llm_auto_selects_openai_compat_when_configured(monkeypatch):
     monkeypatch.delenv("OMNIVOICE_LLM_BACKEND", raising=False)
     monkeypatch.setenv("TRANSLATE_BASE_URL", "http://localhost:11434/v1")
     monkeypatch.setenv("TRANSLATE_API_KEY", "local")
+    monkeypatch.setenv("TRANSLATE_MODEL", "fixture-model")
     # is_available itself also needs the openai pkg to import — that's fine;
     # translator.py already depends on it in this repo.
     try:

@@ -559,7 +559,7 @@ function RecentTakes({ scrollRef }: RecentTakesProps) {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-2 px-3 pt-2 pb-1">
+      <div className="flex flex-wrap items-center justify-between gap-1 px-2 pt-2 pb-1">
         <ToggleGroup
           value={[filter]}
           onValueChange={(value) => {
@@ -593,11 +593,13 @@ function RecentTakes({ scrollRef }: RecentTakesProps) {
           <Button
             variant="ghost"
             size="xs"
-            className="text-muted-foreground hover:text-destructive"
+            className="shrink-0 text-muted-foreground hover:text-destructive"
+            aria-label={t('clone.history_clear')}
+            title={t('clone.history_clear')}
             onClick={() => setConfirmClear(true)}
           >
             <Trash2Icon data-icon="inline-start" />
-            {t('clone.history_clear')}
+            <span className="sr-only">{t('clone.history_clear')}</span>
           </Button>
         ) : null}
       </div>

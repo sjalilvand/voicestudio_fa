@@ -67,7 +67,7 @@ const SLIDERS: SliderSpec[] = [
   },
   {
     key: 'cfg',
-    labelKey: 'clone.cfg',
+    labelKey: 'voiceControls.guidance',
     icon: FocusIcon,
     min: 1,
     max: 4,
@@ -84,7 +84,7 @@ const SLIDERS: SliderSpec[] = [
   },
   {
     key: 'tShift',
-    labelKey: 'clone.tshift',
+    labelKey: 'voiceControls.timing',
     icon: TimerIcon,
     min: 0,
     max: 1,
@@ -92,7 +92,7 @@ const SLIDERS: SliderSpec[] = [
   },
   {
     key: 'posTemp',
-    labelKey: 'clone.pos_temp',
+    labelKey: 'voiceControls.order',
     icon: ThermometerIcon,
     min: 0,
     max: 10,
@@ -100,7 +100,7 @@ const SLIDERS: SliderSpec[] = [
   },
   {
     key: 'classTemp',
-    labelKey: 'clone.class_temp',
+    labelKey: 'voiceControls.variation',
     icon: ShuffleIcon,
     min: 0,
     max: 2,
@@ -108,7 +108,7 @@ const SLIDERS: SliderSpec[] = [
   },
   {
     key: 'layerPenalty',
-    labelKey: 'clone.layer_pen',
+    labelKey: 'voiceControls.balance',
     icon: LayersIcon,
     min: 0,
     max: 10,
@@ -132,9 +132,8 @@ function SliderRow({ spec, value }: SliderRowProps) {
   const labelId = useId();
   const Icon = spec.icon;
   return (
-    <div className="flex min-w-0 flex-col gap-2 rounded-lg bg-muted/40 p-3">
+    <div className="flex min-w-0 flex-col gap-2 px-1 py-3">
       <div className="flex items-center justify-between gap-2">
-        {/* Base UI names the thumb's <input> from the root's aria-labelledby. */}
         <span
           id={labelId}
           className="inline-flex items-center gap-1.5 text-[length:var(--text-label)] font-medium"
@@ -148,7 +147,7 @@ function SliderRow({ spec, value }: SliderRowProps) {
         </output>
       </div>
       <Slider
-        aria-labelledby={labelId}
+        thumbProps={{ 'aria-labelledby': labelId }}
         min={spec.min}
         max={spec.max}
         step={spec.step}
@@ -173,7 +172,7 @@ function SwitchRow({ settingKey, labelKey, icon: Icon, checked }: SwitchRowProps
   const { t } = useTranslation();
   const id = useId();
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2.5">
+    <div className="flex items-center justify-between gap-3 px-1 py-2.5">
       <Label htmlFor={id} className="gap-1.5 text-[length:var(--text-label)]">
         <Icon className="size-3.5 text-muted-foreground" aria-hidden="true" />
         {t(labelKey)}
@@ -196,11 +195,12 @@ function Overrides({ settings }: OverridesProps) {
   const durationId = useId();
   return (
     <div className="flex flex-col gap-3 pt-3">
+      <p className="px-1 text-xs text-muted-foreground">{t('voiceControls.basics')}</p>
       <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,200px),1fr))] gap-2">
-        {SLIDERS.map((spec) => (
+        {SLIDERS.filter((spec) => spec.key === 'speed').map((spec) => (
           <SliderRow key={spec.key} spec={spec} value={settings[spec.key]} />
         ))}
-        <div className="flex min-w-0 flex-col gap-2 rounded-lg bg-muted/40 p-3">
+        <div className="flex min-w-0 flex-col gap-2 px-1 py-3">
           <Label htmlFor={durationId} className="gap-1.5 text-[length:var(--text-label)]">
             <ClockIcon className="size-3.5 text-muted-foreground" aria-hidden="true" />
             {t('clone.duration')}
@@ -218,17 +218,32 @@ function Overrides({ settings }: OverridesProps) {
       <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,200px),1fr))] gap-2">
         <SwitchRow
           settingKey="denoise"
-          labelKey="clone.denoise"
+          labelKey="voiceControls.denoise"
           icon={AudioLinesIcon}
           checked={settings.denoise}
         />
         <SwitchRow
           settingKey="postprocess"
-          labelKey="clone.postprocess"
+          labelKey="voiceControls.polish"
           icon={SparklesIcon}
           checked={settings.postprocess}
         />
       </div>
+      <details className="group border-t border-border/50 pt-3">
+        <summary className="flex cursor-pointer list-none items-center justify-between text-xs text-muted-foreground hover:text-foreground [&::-webkit-details-marker]:hidden">
+          {t('voiceControls.advanced')}
+          <ChevronDownIcon
+            className="size-3.5 transition-transform group-open:rotate-180"
+            aria-hidden="true"
+          />
+        </summary>
+        <p className="mt-3 text-xs text-muted-foreground">{t('voiceControls.hint')}</p>
+        <div className="mt-2 grid gap-2">
+          {SLIDERS.filter((spec) => spec.key !== 'speed' && spec.key !== 'steps').map((spec) => (
+            <SliderRow key={spec.key} spec={spec} value={settings[spec.key]} />
+          ))}
+        </div>
+      </details>
       <div className="flex justify-end">
         <Button variant="ghost" size="xs" onClick={() => resetOverrides()}>
           <RotateCcwIcon data-icon="inline-start" />

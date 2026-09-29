@@ -52,6 +52,8 @@ export interface HistoryItem {
 
 // ── Engines (`GET /engines`) ───────────────────────────────────────────────
 export interface EngineBackend {
+  output_sample_rate?: number | null;
+  output_channels?: number | null;
   /** Lowercase picker names; null/absent means model-specific or unrestricted. */
   supported_language_names?: string[] | null;
   execution_evidence?: {
@@ -124,6 +126,8 @@ export interface SystemInfo {
 /** Everything the clone form sends. Names are the UI names; `toGenerateForm`
  *  in generate.ts maps them to the multipart field names. */
 export interface CloneGenerateInput {
+  wavBits?: 16 | 24 | 32;
+  effectPreset?: 'broadcast' | 'raw';
   seed?: number;
   text: string;
   /** Display-name language ("English"). "Auto" is omitted on the wire. */

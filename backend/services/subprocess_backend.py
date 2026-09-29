@@ -788,8 +788,8 @@ class SubprocessBackend(TTSBackend):
         """Synthesize one utterance through the sidecar.
 
         Returns a tensor of shape (1, n_samples) at the sidecar-reported
-        sample rate. Decodes the int16 PCM the sidecar returns into float32
-        in [-1, 1].
+        sample rate. Negotiates float32 with capable sidecars and accepts
+        legacy int16 frames from existing installations.
         """
         self._check_language(kw.get("language"))
         # On-pool callers (every HTTP/dub/batch generate, dispatched via
@@ -838,6 +838,8 @@ class SubprocessBackend(TTSBackend):
                 for k, v in kw.items():
                     if _is_jsonable(v):
                         msg[k] = v
+                if getattr(self, "supports_float_transport", False):
+                    msg["audio_format"] = "f32le"
                 deadline_s = self._effective_recv_timeout_s(text)
                 started_at = time.monotonic()
                 try:
@@ -905,7 +907,15 @@ class SubprocessBackend(TTSBackend):
                 )
             pcm_b64 = reply.get("audio_pcm_b64", "")
             pcm = base64.b64decode(pcm_b64)
-            arr = np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0
+            audio_format = reply.get("audio_format", "s16le")
+            if audio_format == "f32le":
+                arr = np.frombuffer(pcm, dtype="<f4")
+            elif audio_format == "s16le":
+                arr = np.frombuffer(pcm, dtype="<i2").astype(np.float32) / 32768.0
+            else:
+                raise RuntimeError(f"Unsupported sidecar audio format: {audio_format!r}")
+            if not np.isfinite(arr).all():
+                raise RuntimeError("Sidecar returned non-finite audio samples")
             tensor = torch.from_numpy(arr.copy()).unsqueeze(0)
             return tensor
         finally:
@@ -946,7 +956,10 @@ class SubprocessBackend(TTSBackend):
         if header is None:
             return None
         (n,) = struct.unpack("!I", header)
-        if n > MAX_FRAME_BYTES:
+        # Float samples occupy twice the PCM16 payload. Keep the previous
+        # maximum audio duration while retaining a bounded allocation guard.
+        response_limit = MAX_FRAME_BYTES * (2 if getattr(self, "supports_float_transport", False) else 1)
+        if n > response_limit:
             # T-02-01 — refuse to allocate before the body even arrives.
             raise IOError(f"frame too large: {n}")
         body = _read_exact(stdout, n)

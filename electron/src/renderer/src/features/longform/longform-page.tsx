@@ -271,6 +271,7 @@ export function LongformPage({ mode }: { mode: Mode }) {
                 {t('clone.language')}
               </h2>
               <EngineLanguagePicker
+                operation={ttsOperation}
                 value={draft.language}
                 options={['Auto', ...LANG_CODES.map((l) => l.label)]}
                 disabled={locked}

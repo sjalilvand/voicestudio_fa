@@ -289,10 +289,12 @@ async def _run_batch_pipeline(job_id: str, job: dict):
         find_ffmpeg,
         raise_for_audio_extract_failure,
         require_audio_stream,
+        validate_media_source,
     )
     ffmpeg = find_ffmpeg()
 
     def _extract():
+        validate_media_source(video_path)
         # A video with no audio stream has nothing to dub: say so rather than
         # fail with ffmpeg's bare "returned non-zero exit status 234".
         require_audio_stream(video_path)
@@ -946,6 +948,13 @@ async def enqueue_batch_job(
     if not translation_engines.is_ready(provider):
         raise HTTPException(409, "Configure the selected translation provider before adding this batch")
 
+    if provider == "amazon":
+        from services.translation_apis import AmazonConfigurationError, validate_amazon_configuration
+        try:
+            await asyncio.to_thread(validate_amazon_configuration)
+        except AmazonConfigurationError as exc:
+            raise HTTPException(409, exc.public_message) from None
+
     # Save the uploaded video
     batch_dir = os.path.join(DATA_DIR, "batch")
     os.makedirs(batch_dir, exist_ok=True)
@@ -1046,6 +1055,13 @@ async def retry_batch_job(job_id: str):
     provider = job.get("translation_provider") or "argos"
     if not translation_engines.is_ready(provider):
         raise HTTPException(409, "Configure the selected translation provider before retrying")
+    if provider == "amazon":
+        from services.translation_apis import AmazonConfigurationError, validate_amazon_configuration
+        try:
+            await asyncio.to_thread(validate_amazon_configuration)
+        except AmazonConfigurationError as exc:
+            raise HTTPException(409, exc.public_message) from None
+
     if provider == "argos" and job.get("source_lang"):
         try:
             status = await asyncio.to_thread(

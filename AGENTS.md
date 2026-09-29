@@ -36,7 +36,7 @@ Binding for every AI agent (Claude, Codex, Cursor, review bots, …). CLAUDE.md 
 ## Change rules (see CLAUDE.md for full text)
 - Root-cause the class, not the instance; fail-before/pass-after regression test; smallest correct change.
 - Default behavior identical on macOS/Windows/Linux; platform-only features go behind explicit opt-in. Divergent default = P0.
-- Local-first: no new required network calls; any HF download gated on installed-ness or explicit user action; all synthetic audio through the `mark_synthetic` chokepoint.
+- Local-first: no new required network calls; any HF download gated on installed-ness or explicit user action; all synthetic audio through the `mark_synthetic` chokepoint. Owner-approved exception (2026-09-28): the public GitHub star count may refresh automatically every 20 minutes, without credentials/referrer or user content; offline use remains unaffected.
 - Every user-facing string via i18n, present in ALL 21 `electron/src/shared/i18n/locales/*.json` with real translations.
 - Docs-sync in the same PR. CHANGELOG Unreleased: quiet one-liners ending `(#N)` + `— thanks @user!` for community work, under a short `**Highlights**` list.
 - Tagged release announcements lead with the biggest user-visible change; redesigns need real UI screenshots and migrations need installer links and steps. Verify all contributor credits from the tag comparison and included PRs; list authors and bug reporters separately (see `docs/RELEASING.md`).

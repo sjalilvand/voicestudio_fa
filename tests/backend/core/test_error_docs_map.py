@@ -46,6 +46,7 @@ def test_all_keys_match_taxonomy():
         "GPU_ARCH_UNSUPPORTED",
         "WINDOWS_APP_CONTROL_BLOCKED",
         "AUDIO_IO_FAILED",
+        "INVALID_MEDIA_FILE",
 
         "DIARIZATION_MODEL_MISSING",
         "DIARIZATION_LOAD_FAILED",

@@ -65,7 +65,9 @@ def _family_payload(family: str, module):
     if family == "asr":
         model = asr_backend._offline_asr_repo(active)
     elif family == "llm" and active != "off":
-        model = llm_backend.get_active_llm_backend().model_name
+        from services import llm_providers
+        provider = llm_providers.active_provider()
+        model = llm_providers.configured_model(provider) if provider else None
     elif family == "tts":
         if active in {"omnivoice", "omnivoice-subprocess"}:
             from services.model_manager import resolve_omnivoice_checkpoint
@@ -85,6 +87,10 @@ def _family_payload(family: str, module):
 
         for backend in backends:
             engine_id = backend.get("id")
+            if engine_id == active:
+                backend["output_sample_rate"] = tts_backend.output_sample_rate(active)
+                # TTSBackend's output contract is mono; unknown formats stay unknown.
+                backend["output_channels"] = 1 if backend["output_sample_rate"] else None
             if engine_id == active:
                 backend["supported_language_names"] = tts_backend.language_options(active)
             if engine_id == active == "mlx-audio":
@@ -343,6 +349,12 @@ def select_translation_engine(request: TranslationSelection):
         raise HTTPException(409, "Install this translation engine before selecting it")
     if not translation_engines.is_ready(request.engine_id):
         raise HTTPException(409, "Configure this translation provider before selecting it")
+    if request.engine_id == "amazon":
+        from services.translation_apis import AmazonConfigurationError, validate_amazon_configuration
+        try:
+            validate_amazon_configuration()
+        except AmazonConfigurationError as exc:
+            raise HTTPException(409, exc.public_message) from None
     prefs.set_("translation_backend", request.engine_id)
     return {"active": request.engine_id}
 

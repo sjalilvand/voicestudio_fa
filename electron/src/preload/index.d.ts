@@ -152,6 +152,9 @@ export interface RepairAgentInfo {
   version: string;
 }
 export interface RepairAgentRunRequest {
+  workspace?: 'app' | 'source';
+  features?: import('../shared/agent-workspace').AgentFeature[];
+  history?: import('../shared/agent-workspace').AgentChatMessage[];
   agent: RepairAgentId;
   mode: 'diagnose' | 'fix';
   report: string;
@@ -274,6 +277,7 @@ export interface UninstallTarget {
 }
 
 export interface VoiceStudioBridge {
+  browser: import('../shared/site-browser').SiteBrowserBridge;
   pro: {
     status(): Promise<{ active: boolean; configured: boolean; error?: 'offline' | 'invalid' | 'storage' }>;
     activate(key: string): Promise<{ active: boolean; configured: boolean; error?: 'offline' | 'invalid' | 'storage' }>;

@@ -87,6 +87,7 @@ import {
   type MediaPlayerInstance,
 } from '@/components/media-player';
 import { LanguagePicker, MultiLanguagePicker } from '@/features/clone/language-picker';
+import { EngineLanguagePicker } from '@/features/clone/engine-language-picker';
 import { useTranslationEngines } from '@/features/settings/translation-settings';
 import { agentFitSkillsReady, useLlmSkills } from '@/features/settings/llm-skills';
 import { useModelCatalogue } from '@/features/settings/model-catalogue-query';
@@ -2196,7 +2197,8 @@ export function DubPage() {
                       </Menu.Positioner>
                     </Menu.Portal>
                   </Menu.Root>
-                  <LanguagePicker
+                  <EngineLanguagePicker
+                    operation="dub"
                     value={t('dub.set_lang')}
                     options={targetOptions}
                     disabled={busy || Boolean(session.recovery)}

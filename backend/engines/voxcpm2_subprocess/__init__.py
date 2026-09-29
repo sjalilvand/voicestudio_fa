@@ -38,6 +38,8 @@ def own_venv_python() -> "Path | None":
 
 class VoxCPM2SubprocessBackend(SubprocessBackend):
     """VoxCPM2 in a killable sidecar running the engine's own venv."""
+    supports_float_transport = True
+    supports_generation_seed = True
 
     id = "voxcpm2"
     display_name = "VoxCPM2 (30 langs, studio 48 kHz, voice design)"

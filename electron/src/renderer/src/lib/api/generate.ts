@@ -137,6 +137,8 @@ export function toGenerateForm(input: CloneGenerateInput): FormData {
   // Auto must be explicit: omission inherits the saved profile's default.
   if (input.language) form.append('language', input.language);
   form.append('num_step', String(input.steps));
+  form.append('wav_bits', String(input.wavBits ?? 16));
+  form.append('effect_preset', input.effectPreset ?? 'broadcast');
   form.append('guidance_scale', String(input.cfg));
   form.append('speed', String(input.speed));
   form.append('denoise', String(input.denoise));

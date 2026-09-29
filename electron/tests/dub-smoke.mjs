@@ -389,7 +389,7 @@ try {
     .click();
   await page.getByRole('button', { name: 'Stretch Video', exact: true }).click();
   await page.getByRole('button', { name: 'Consistent', exact: true }).click();
-  await page.locator('summary').filter({ hasText: 'Production overrides' }).click();
+  await page.locator('summary').filter({ hasText: 'Voice controls' }).click();
   await page.getByRole('slider', { name: 'Steps', exact: true }).press('End');
   await page.getByRole('slider', { name: 'CFG', exact: true }).press('Home');
   await page.getByRole('slider', { name: 'Speed', exact: true }).press('Home');

@@ -99,6 +99,16 @@ it('requires passing preflight and installed models before completion', async ()
   );
   fireEvent.click(screen.getByRole('button', { name: 'setup.continue_ok' }));
   await screen.findByText('setup.ready_desc');
+  expect(screen.getByRole('button', { name: 'dub.advanced' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  expect(screen.getByRole('button', { name: /demo.dictation_title/ })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
+  expect(screen.getByText('Shortcuts')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'dub.advanced' }));
   expect(screen.queryByText('Shortcuts')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /demo.dictation_title/ }));
   expect(screen.getByText('Shortcuts')).toBeInTheDocument();

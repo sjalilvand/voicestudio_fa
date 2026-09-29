@@ -818,7 +818,8 @@ class TaskExecutor:
         """
         import io  # noqa: PLC0415
 
-        import soundfile as sf  # noqa: PLC0415
+        from services.audio_io import _safe_soundfile_write  # noqa: PLC0415
+        from services.generation_audio import WAV_SUBTYPES  # noqa: PLC0415
 
         sample_rate = int(
             params.get("sample_rate") or getattr(backend, "sample_rate", 0) or 24_000
@@ -833,7 +834,12 @@ class TaskExecutor:
             array = array.squeeze()
 
         buffer = io.BytesIO()
-        sf.write(buffer, array, sample_rate, format="WAV")
+        # Preserve the requested precision before the control plane receives
+        # the waveform; upcasting a PCM16 transport cannot restore lost detail.
+        bits = int(params.get("wav_bits", 16))
+        if bits not in WAV_SUBTYPES:
+            raise ValueError("WAV precision must be 16, 24, or 32 bits")
+        _safe_soundfile_write(buffer, array, sample_rate, format="WAV", subtype=WAV_SUBTYPES[bits])
         payload = buffer.getvalue()
         duration = float(len(array)) / sample_rate if sample_rate else 0.0
         return payload, {

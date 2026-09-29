@@ -439,3 +439,21 @@ def test_the_quoted_stderr_is_scrubbed_and_bounded(echo_backend):
     text = echo_backend._stderr_tail_text()
     assert "alice" not in text and "hf_aaaa" not in text
     assert len(text) <= 801
+
+
+def test_float_transport_retains_pcm16_duration_budget(monkeypatch):
+    import json
+    import services.subprocess_backend as protocol
+    monkeypatch.setitem(EchoBackend._recv.__globals__, "MAX_FRAME_BYTES", 128)
+    backend = EchoBackend()
+    backend.supports_float_transport = True
+    frame = json.dumps({"op": "audio", "audio_format": "f32le", "audio_pcm_b64": "A" * 100}).encode()
+    assert 128 < len(frame) < 256
+    try:
+        backend._proc = _MockProc(struct.pack("!I", len(frame)) + frame)
+        assert backend._recv()["audio_format"] == "f32le"
+        backend._proc = _MockProc(struct.pack("!I", 257))
+        with pytest.raises(IOError, match="frame too large"):
+            backend._recv()
+    finally:
+        backend._proc = None

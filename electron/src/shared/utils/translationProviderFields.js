@@ -1,5 +1,29 @@
 export const PROVIDER_FIELDS = [
   {
+    key: 'GOOGLE_TRANSLATE_API_KEY',
+    labelKey: 'settings.llmp_api_key',
+    labelPrefix: 'Google Cloud',
+    helpKey: 'settings.llmp_api_key',
+    isPassword: true,
+  },
+  {
+    key: 'MICROSOFT_REGION',
+    labelKey: 'credentials.region',
+    labelPrefix: 'Microsoft Azure',
+    helpKey: 'credentials.region',
+  },
+  {
+    key: 'AWS_PROFILE',
+    labelKey: 'credentials.aws_profile',
+    helpKey: 'credentials.aws_profile',
+  },
+  {
+    key: 'AWS_REGION',
+    labelKey: 'credentials.region',
+    labelPrefix: 'AWS',
+    helpKey: 'credentials.region',
+  },
+  {
     key: 'DEEPL_API_KEY',
     labelKey: 'credentials.deepl_key',
     placeholder: 'DeepL API key',

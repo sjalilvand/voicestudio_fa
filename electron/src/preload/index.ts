@@ -19,6 +19,17 @@ function subscribe<T>(channel: string, cb: (payload: T) => void): () => void {
 }
 
 const bridge: VoiceStudioBridge = {
+  browser: {
+    open: (url) => ipcRenderer.invoke('site-browser:open', url),
+    close: () => ipcRenderer.invoke('site-browser:close'),
+    state: () => ipcRenderer.invoke('site-browser:state'),
+    navigate: (url) => ipcRenderer.invoke('site-browser:navigate', url),
+    command: (action) => ipcRenderer.invoke('site-browser:command', action),
+    bounds: (rect) => ipcRenderer.invoke('site-browser:bounds', rect),
+    installed: () => ipcRenderer.invoke('site-browser:installed'),
+    openExternal: (id) => ipcRenderer.invoke('site-browser:openExternal', id),
+    onState: (callback) => subscribe('site-browser:changed', callback),
+  },
   pro: {
     status: () => ipcRenderer.invoke('pro:status'),
     activate: (key) => ipcRenderer.invoke('pro:activate', key),

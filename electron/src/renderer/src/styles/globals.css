@@ -4,6 +4,8 @@
 @import './t3-theme.css';
 
 @source '../../../shared/components/SearchableSelect.jsx';
+@source '../../../shared/components/VirtualSearchableSelect.tsx';
+@source '../../../shared/components/LanguageFlag.jsx';
 @source '../../../shared/components/VoiceSelector.jsx';
 
 @custom-variant dark (&:is(.dark, .dark *));
@@ -520,7 +522,8 @@
 .brand-sidebar .text-muted-foreground {
   color: var(--sidebar-muted-foreground);
 }
-.brand-sidebar:has(#sidebar-engine-details:not([data-detail-level='simple'])) [data-slot='workspace-navigation'] {
+.brand-sidebar:has(#sidebar-engine-details:not([data-detail-level='simple']))
+  [data-slot='workspace-navigation'] {
   max-height: 32vh;
 }
 @media (max-height: 680px) {
@@ -657,5 +660,7 @@ html[data-theme-id='heritage'] {
   outline-offset: 3px;
 }
 @media (prefers-reduced-motion: reduce) {
-  [data-slot='switch'].app-switch { transition: none; }
+  [data-slot='switch'].app-switch {
+    transition: none;
+  }
 }

@@ -1461,10 +1461,12 @@ class OmniVoiceBackend(TTSBackend):
         except Exception as e:
             return False, f"omnivoice package missing: {e}"
 
+    _DEFAULT_SAMPLE_RATE = 24000
+
     @property
     def sample_rate(self) -> int:
         if self._model is None:
-            return 24000  # canonical OmniVoice rate
+            return self._DEFAULT_SAMPLE_RATE  # canonical OmniVoice rate
         return getattr(self._model, "sampling_rate", 24000)
 
     @property
@@ -1831,9 +1833,11 @@ class VoxCPM2Backend(TTSBackend):
             return True, f"ready — {hint}"
         return True, "ready"
 
+    _DEFAULT_SAMPLE_RATE = 48000
+
     @property
     def sample_rate(self) -> int:
-        return 48000
+        return self._DEFAULT_SAMPLE_RATE
 
     @property
     def supported_languages(self) -> list[str]:
@@ -1980,9 +1984,11 @@ class MossTTSNanoBackend(TTSBackend):
             )
         return True, "ready"
 
+    _DEFAULT_SAMPLE_RATE = 48000
+
     @property
     def sample_rate(self) -> int:
-        return 48000  # native stereo 48 kHz
+        return self._DEFAULT_SAMPLE_RATE  # native stereo 48 kHz
 
     @property
     def supported_languages(self) -> list[str]:
@@ -2081,10 +2087,12 @@ class KittenTTSBackend(TTSBackend):
         except ImportError as e:
             return False, f"kittentts not installed: {e}"
 
+    _DEFAULT_SAMPLE_RATE = 24000
+
     @property
     def sample_rate(self) -> int:
         # KittenTTS emits 24 kHz mono per its ONNX model config.
-        return 24000
+        return self._DEFAULT_SAMPLE_RATE
 
     @property
     def supported_languages(self) -> list[str]:
@@ -3513,6 +3521,18 @@ def get_backend_class(backend_id: str) -> type[TTSBackend]:
     return _effective_backend_class(backend_id, _REGISTRY[backend_id])
 
 
+def output_sample_rate(backend_id: str) -> Optional[int]:
+    """Read a live rate or an adapter's declared default without loading a model."""
+    try:
+        if _active_instance is not None and _active_instance_id == backend_id:
+            rate = _active_instance.sample_rate
+        else:
+            rate = getattr(get_backend_class(backend_id), "_DEFAULT_SAMPLE_RATE", None)
+        return rate if isinstance(rate, int) and not isinstance(rate, bool) and rate > 0 else None
+    except Exception:
+        return None  # Model-specific or unavailable metadata remains unknown.
+
+
 def language_options(backend_id: str) -> Optional[list[str]]:
     """Picker names for a finite engine; None leaves unknown/model-specific sets open.
 
@@ -3523,12 +3543,19 @@ def language_options(backend_id: str) -> Optional[list[str]]:
 
     backend = None
     try:
+        # The native OmniVoice adapters use this exact vocabulary at inference.
+        if backend_id in {"omnivoice", "omnivoice-subprocess", "omnivoice-gguf"}:
+            return sorted(LANG_NAME_TO_ID)
         backend = get_backend_class(backend_id)()
+        if backend_id == "mlx-audio" and backend.model_identity() == backend.CURATED_MODELS.get("kokoro"):
+            return _installed_kokoro_language_options()
         declared = backend.supported_languages
         if not declared or "multi" in declared:
             return None
         codes = {backend._normalize_language_code(code) for code in declared}
-        return sorted(name for name in LANG_NAME_TO_ID
+        candidates = set(LANG_NAME_TO_ID) | {"mandarin", "arabic", "tagalog"}
+        candidates.update(name.lower() for name in backend.language_display_names.values())
+        return sorted(name for name in candidates
                       if backend._normalize_language_code(name) in codes)
     except Exception:  # Optional metadata must not take down discovery.
         logger.debug("Could not resolve language options for %s", backend_id, exc_info=True)
@@ -3545,6 +3572,33 @@ def language_options(backend_id: str) -> Optional[list[str]]:
                 logger.debug("Could not clean up language metadata instance", exc_info=True)
             finally:
                 atexit.unregister(shutdown)
+
+
+def _installed_kokoro_language_options() -> Optional[list[str]]:
+    """Read the installed model's literal tables without importing MLX or weights.
+
+    Unknown/new package layouts stay unknown rather than using a guessed list.
+    """
+    import ast
+    from importlib import metadata
+    from omnivoice.utils.lang_map import LANG_NAME_TO_ID
+
+    try:
+        distribution = metadata.distribution("mlx-audio")
+        path = distribution.locate_file("mlx_audio/tts/models/kokoro/pipeline.py")
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        tables = {}
+        for node in tree.body:
+            if isinstance(node, ast.Assign):
+                for target in node.targets:
+                    if isinstance(target, ast.Name) and target.id in {"ALIASES", "LANG_CODES"}:
+                        tables[target.id] = ast.literal_eval(node.value)
+        aliases, languages = tables["ALIASES"], tables["LANG_CODES"]
+        return sorted(name for name, code in LANG_NAME_TO_ID.items()
+                      if aliases.get(_KOKORO_ISO_BY_FULL_NAME.get(name, code), code) in languages)
+    except Exception:
+        logger.debug("Kokoro language metadata unavailable", exc_info=True)
+        return None
 
 
 

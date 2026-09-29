@@ -32,6 +32,7 @@ export function AppShell() {
                 on Settings too, so the app never swaps its left column. */}
             <WorkspaceSidebar />
             <SettingsWorkspace
+              data-slot="workspace-content"
               role={pathname === '/settings/openapi' ? 'main' : undefined}
               className="@container relative flex min-w-0 flex-1 flex-col overflow-hidden"
             >
@@ -45,7 +46,10 @@ export function AppShell() {
           <BackendGate repairDock={<RepairAgentDock />}>
             <CommandPalette />
             <WorkspaceSidebar />
-            <main className="@container relative flex min-w-0 flex-1 flex-col overflow-hidden">
+            <main
+              data-slot="workspace-content"
+              className="@container relative flex min-w-0 flex-1 flex-col overflow-hidden"
+            >
               <div className="min-h-0 flex-1 overflow-hidden">
                 <Outlet />
               </div>

@@ -19,11 +19,50 @@ def test_finite_language_options_without_loading_models(engine, allowed, rejecte
 
 
 def test_open_ended_engine_keeps_all_language_options(tts):
-    assert tts.language_options('omnivoice') is None
+    from omnivoice.utils.lang_map import LANG_NAME_TO_ID
+    assert tts.language_options('omnivoice') == sorted(LANG_NAME_TO_ID)
+
+
+def test_installed_kokoro_tables_are_read_without_importing_model(tmp_path, monkeypatch, tts):
+    import importlib.metadata
+    from types import SimpleNamespace
+    table = tmp_path / 'pipeline.py'
+    table.write_text("raise RuntimeError('must not import')\nALIASES = {'en': 'a', 'ja': 'j'}\nLANG_CODES = {'a': 'English', 'j': 'Japanese'}\n")
+    monkeypatch.setattr(importlib.metadata, 'distribution', lambda _: SimpleNamespace(locate_file=lambda _: table))
+    assert tts._installed_kokoro_language_options() == ['english', 'japanese']
+
+
+def test_unknown_kokoro_metadata_does_not_claim_all_languages(tmp_path, monkeypatch, tts):
+    import importlib.metadata
+    from types import SimpleNamespace
+    table = tmp_path / 'pipeline.py'
+    table.write_text("ALIASES = get_aliases()\n")
+    monkeypatch.setattr(importlib.metadata, 'distribution', lambda _: SimpleNamespace(locate_file=lambda _: table))
+    assert tts._installed_kokoro_language_options() is None
 
 
 def test_unknown_engine_does_not_break_inventory(tts):
     assert tts.language_options('third-party-unknown') is None
+
+
+def test_renderer_code_catalog_matches_backend_vocabulary():
+    import json
+    from pathlib import Path
+    from omnivoice.utils.lang_map import LANG_NAME_TO_ID
+    path = Path(__file__).resolve().parents[1] / 'electron/src/shared/language-codes.json'
+    assert json.loads(path.read_text(encoding='utf-8')) == LANG_NAME_TO_ID
+
+
+def test_flag_search_regions_match_the_rendered_flags():
+    import json
+    import re
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1] / 'electron/src/shared'
+    source = (root / 'components/LanguageFlag.jsx').read_text(encoding='utf-8')
+    body = source.split('export const LANGUAGE_FLAGS = {')[1].split('};')[0]
+    expected = {key.strip("'\""): region.replace('_', '-')
+                for key, region in re.findall(r"\s+([\w'\"-]+): ([A-Z_]+),", body)}
+    assert json.loads((root / 'language-regions.json').read_text(encoding='utf-8')) == expected
 
 
 def test_active_engine_inventory_carries_language_choices(monkeypatch, tts):

@@ -156,7 +156,7 @@ def _at_engine_rate(wav, sample_rate: int):
     return torchaudio.functional.resample(tensor, sample_rate, VOXCPM2_SAMPLE_RATE)
 
 
-def _to_pcm_b64(wav) -> tuple[str, int]:
+def _to_pcm_b64(wav, audio_format="s16le") -> tuple[str, int]:
     """A float waveform in [-1, 1] (numpy or torch) as base64 int16 PCM."""
     import numpy as np  # noqa: PLC0415
 
@@ -166,7 +166,10 @@ def _to_pcm_b64(wav) -> tuple[str, int]:
     if arr.ndim > 1:
         raise ValueError(f"expected mono audio (1-D after squeeze), got shape {arr.shape}")
     arr = np.clip(arr, -1.0, 1.0)
-    pcm = (arr * 32767.0).astype(np.int16).tobytes()
+    if audio_format not in ("s16le", "f32le"):
+        raise ValueError("Unsupported audio transport format")
+    pcm = (arr.astype("<f4").tobytes() if audio_format == "f32le"
+           else (arr * 32767.0).astype("<i2").tobytes())
     return base64.b64encode(pcm).decode("ascii"), int(arr.shape[-1])
 
 
@@ -215,12 +218,18 @@ def _handle_synthesize(msg: dict, stdout) -> None:
             "ref_audio must be a local file path; URLs are not accepted (local-first)."
         )
     model = _load_model(stdout)
+    if msg.get("seed") is not None:
+        import torch  # noqa: PLC0415
+
+        torch.manual_seed(int(msg["seed"]))
     options = {key: value for key, value in msg.items() if key != "text"}
     wav = model.generate(**generation_kwargs(text, **options))
-    pcm_b64, n_samples = _to_pcm_b64(_at_engine_rate(wav, _sample_rate(model)))
+    audio_format = msg.get("audio_format", "s16le")
+    pcm_b64, n_samples = _to_pcm_b64(_at_engine_rate(wav, _sample_rate(model)), audio_format)
     _send(stdout, {
         "op": "audio",
         "audio_pcm_b64": pcm_b64,
+        "audio_format": audio_format,
         "sample_rate": VOXCPM2_SAMPLE_RATE,
         "n_samples": n_samples,
     })
