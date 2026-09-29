@@ -625,12 +625,12 @@ def set_active_llm_provider(body: _LLMActiveBody):
 
 def _validate_llm_activation(provider_id: str) -> None:
     from services import llm_providers
-    pin = llm_providers._active_env_pin()
-    if (pin and pin != provider_id) or os.environ.get("OMNIVOICE_LLM_BACKEND") not in (None, "", "openai-compat"):
-        raise HTTPException(status_code=409, detail="LLM selection is pinned by the environment.")
     p = llm_providers.get_provider(provider_id)
     if p is None:
         raise HTTPException(status_code=404, detail="Unknown LLM provider.")
+    pin = llm_providers._active_env_pin()
+    if (pin and pin != provider_id) or os.environ.get("OMNIVOICE_LLM_BACKEND") not in (None, "", "openai-compat"):
+        raise HTTPException(status_code=409, detail="LLM selection is pinned by the environment.")
     error = llm_providers.configuration_error(p)
     if error:
         raise HTTPException(status_code=400, detail=error)
