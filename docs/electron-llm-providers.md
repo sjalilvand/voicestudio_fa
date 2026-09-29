@@ -150,3 +150,5 @@ LM Studio automatic discovery accepts only loaded `llm`/`vlm` entries from its n
 SDK transport validates the final request URL, including environment-derived
 OpenAI endpoints, and disables redirects for OpenAI-compatible and native
 Anthropic, Bedrock, and Vertex requests.
+The shared HTTP client ignores environment proxies so loopback prompts stay local,
+and never stores response cookies between provider requests.

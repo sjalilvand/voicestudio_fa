@@ -4,7 +4,16 @@ from __future__ import annotations
 import os
 import atexit
 from functools import lru_cache
+from http.cookiejar import CookieJar, DefaultCookiePolicy
 from types import SimpleNamespace
+
+
+class _NoCookies(DefaultCookiePolicy):
+    def set_ok(self, cookie, request):
+        return False
+
+    def return_ok(self, cookie, request):
+        return False
 
 
 def _check_sdk_request(request):
@@ -28,7 +37,12 @@ def _sdk_http_client():
     # A shared thread-safe pool also keeps streaming responses alive after
     # completion() returns. It carries no provider credentials of its own.
     import httpx
-    client = httpx.Client(follow_redirects=False, event_hooks={"request": [_check_sdk_request]})
+    client = httpx.Client(
+        follow_redirects=False,
+        trust_env=False,
+        cookies=CookieJar(policy=_NoCookies()),
+        event_hooks={"request": [_check_sdk_request]},
+    )
     atexit.register(client.close)
     return client
 

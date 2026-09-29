@@ -159,3 +159,33 @@ def test_anthropic_does_not_follow_credentialed_redirect(registry):
         assert seen == ["/v1/messages"]
     finally:
         server.shutdown(); server.server_close(); thread.join(timeout=2)
+
+
+@pytest.mark.parametrize("proxy_enabled", [False, True])
+def test_sdk_pool_keeps_loopback_direct_and_does_not_persist_cookies(monkeypatch, proxy_enabled):
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+    from threading import Thread
+    from services.llm_transport import _sdk_http_client
+    seen = []
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *args): pass
+        def do_GET(self):
+            seen.append(self.headers.get("Cookie"))
+            self.send_response(200)
+            self.send_header("Set-Cookie", "session=private; Path=/")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+    for key in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"):
+        monkeypatch.setenv(key, "http://127.0.0.1:1" if proxy_enabled else "")
+    monkeypatch.setenv("NO_PROXY", "")
+    monkeypatch.setenv("no_proxy", "")
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = Thread(target=server.serve_forever, daemon=True); thread.start()
+    try:
+        with _sdk_http_client.__wrapped__() as client:
+            for _ in range(2):
+                assert client.get(f"http://127.0.0.1:{server.server_port}/", timeout=2).status_code == 200
+            assert not list(client.cookies.jar)
+            assert seen == [None, None]
+    finally:
+        server.shutdown(); server.server_close(); thread.join(timeout=2)
