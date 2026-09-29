@@ -34,8 +34,17 @@ def _check_sdk_request(request):
         raise ValueError("SDK provider requests require HTTPS outside localhost")
 
 
-@lru_cache(maxsize=1)
 def _sdk_http_client():
+    # Settings can update proxies without restarting the backend. Retire the
+    # previous pool without closing responses still being streamed from it.
+    keys = ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY",
+            "http_proxy", "https_proxy", "all_proxy", "no_proxy",
+            "SSL_CERT_FILE", "SSL_CERT_DIR", "REQUEST_METHOD")
+    return _sdk_http_client_for_env(tuple(os.environ.get(key) for key in keys))
+
+
+@lru_cache(maxsize=1)
+def _sdk_http_client_for_env(network_env):
     # A shared thread-safe pool also keeps streaming responses alive after
     # completion() returns. It carries no provider credentials of its own.
     import httpx
