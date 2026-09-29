@@ -127,6 +127,7 @@ export function VoiceStudioAgent() {
       setOpen(true);
       if (!request?.report) return;
       setFeatures(['repair']);
+      setSource(!request.report.trimStart().startsWith('ACTION_REQUEST:'));
       setDraft(request.report);
       if (request.autoFix) setPending(request);
     };
@@ -148,7 +149,7 @@ export function VoiceStudioAgent() {
     } catch {
       return;
     }
-    void send(pending.report!, 'fix', false);
+    void send(pending.report!, 'fix', !pending.report!.trimStart().startsWith('ACTION_REQUEST:'));
   }, [pending, selectedAgent, running]);
 
   useEffect(() => {

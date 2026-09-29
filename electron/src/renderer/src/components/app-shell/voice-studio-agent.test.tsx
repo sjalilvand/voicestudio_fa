@@ -116,3 +116,17 @@ it('requires an attached checkout only for explicitly selected source repair', a
     ),
   );
 });
+
+
+it.each([
+  ['Renderer crashed unexpectedly', 'source'],
+  ['ACTION_REQUEST: Restart the backend', 'app'],
+])('routes automatic repair to the appropriate workspace: %s', async (report, workspace) => {
+  const { DEFAULT_REPAIR_AGENT_KEY, openRepairAgent } = await import('@/lib/repair-agent-events');
+  localStorage.setItem(DEFAULT_REPAIR_AGENT_KEY, 'codex');
+  render(<VoiceStudioAgent />);
+  act(() => openRepairAgent(report, true));
+  await waitFor(() => expect(mocks.repair.start).toHaveBeenCalledWith(
+    expect.objectContaining({ workspace, report }),
+  ));
+});

@@ -61,7 +61,7 @@
     "noSource": "Abra una caja fuente VoiceStudio grabable para permitir que un agente la repare.",
     "noneFound": "Instale Codex, Claude Code, OpenCode o Pi para utilizar la reparación local.",
     "ready": "Listo",
-    "placeholder": "?Qu? sali? mal? A?ade los pasos, los errores visibles o el comportamiento esperado.",
+    "placeholder": "¿Qué salió mal? Añade los pasos, los errores visibles o el comportamiento esperado.",
     "prReady": "Reparación completada. Revise los cambios y proponga un PR cuando pasen las pruebas específicas.",
     "diagnose": "Diagnosticar",
     "fix": "Corregir",

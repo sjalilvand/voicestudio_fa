@@ -2859,7 +2859,7 @@
     "noSource": "Mở bản mã nguồn VoiceStudio có quyền ghi để trợ lý có thể sửa lỗi.",
     "noneFound": "Cài đặt Codex, Claude Code, OpenCode hoặc Pi để sử dụng tính năng sửa chữa cục bộ.",
     "ready": "Sẵn sàng",
-    "placeholder": "?i?u g? ?? x?y ra? Th?m c?c b??c, l?i hi?n th? ho?c h?nh vi mong ??i.",
+    "placeholder": "Điều gì đã xảy ra? Thêm các bước, lỗi hiển thị hoặc hành vi mong đợi.",
     "prReady": "Sửa xong. Xem xét các thay đổi và đề xuất PR khi các bài kiểm tra mục tiêu vượt qua.",
     "diagnose": "Chẩn đoán",
     "fix": "Sửa chữa",

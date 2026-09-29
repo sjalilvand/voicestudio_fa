@@ -61,7 +61,7 @@
     "noSource": "Otwórz zapisywalną kasę źródłową VoiceStudio, aby agent mógł ją naprawić.",
     "noneFound": "Zainstaluj Codex, Claude Code, OpenCode lub Pi, aby skorzystać z naprawy lokalnej.",
     "ready": "Gotowy",
-    "placeholder": "Co posz?o nie tak? Dodaj kroki, widoczne b??dy lub oczekiwane dzia?anie.",
+    "placeholder": "Co poszło nie tak? Dodaj kroki, widoczne błędy lub oczekiwane działanie.",
     "prReady": "Naprawa zakończona. Przejrzyj zmiany i zaproponuj PR, gdy testy docelowe przejdą pomyślnie.",
     "diagnose": "Diagnozuj",
     "fix": "Napraw",

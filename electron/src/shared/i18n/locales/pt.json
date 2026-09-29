@@ -61,7 +61,7 @@
     "noSource": "Abra um check-out de origem VoiceStudio gravável para permitir que um agente o repare.",
     "noneFound": "Instale Codex, Claude Code, OpenCode ou Pi para usar o reparo local.",
     "ready": "Pronto",
-    "placeholder": "O que deu errado? Adicione etapas, erros vis?veis ou o comportamento esperado.",
+    "placeholder": "O que deu errado? Adicione etapas, erros visíveis ou o comportamento esperado.",
     "prReady": "Correção concluída. Revise as alterações e proponha um PR quando os testes direcionados forem aprovados.",
     "diagnose": "Diagnosticar",
     "fix": "Corrigir",

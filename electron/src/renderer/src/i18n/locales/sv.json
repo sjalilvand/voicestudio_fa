@@ -2859,7 +2859,7 @@
     "noSource": "Öppna en skrivbar VoiceStudio källcheck för att låta en agent reparera den.",
     "noneFound": "Installera Codex, Claude Code, OpenCode eller Pi för att använda lokal reparation.",
     "ready": "Redo",
-    "placeholder": "Vad gick fel? L?gg till steg, synliga fel eller f?rv?ntat beteende.",
+    "placeholder": "Vad gick fel? Lägg till steg, synliga fel eller förväntat beteende.",
     "prReady": "Fixning klar. Se över ändringarna och föreslå en PR när de målinriktade testerna passerar.",
     "diagnose": "Diagnostisera",
     "fix": "Reparera",

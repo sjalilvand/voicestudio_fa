@@ -61,7 +61,7 @@
     "noSource": "Öffnen Sie eine beschreibbare VoiceStudio-Quelle zum Auschecken, damit ein Agent sie reparieren kann.",
     "noneFound": "Installieren Sie Codex, Claude Code, OpenCode oder Pi, um die lokale Reparatur zu verwenden.",
     "ready": "Bereit",
-    "placeholder": "Was ist schiefgelaufen? Erg?nze Schritte, sichtbare Fehler oder das erwartete Verhalten.",
+    "placeholder": "Was ist schiefgelaufen? Ergänze Schritte, sichtbare Fehler oder das erwartete Verhalten.",
     "prReady": "Fix abgeschlossen. Überprüfen Sie die Änderungen und schlagen Sie eine PR vor, wenn die gezielten Tests erfolgreich sind.",
     "diagnose": "Diagnose",
     "fix": "Reparieren",

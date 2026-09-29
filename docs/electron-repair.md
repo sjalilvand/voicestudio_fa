@@ -120,3 +120,6 @@ Use `samples/audiobook-agent-smoke.txt`, an original four-paragraph narration fi
 paragraph breaks. Choose **Audiobook**, paste the text, and request a short preview with an
 existing saved voice. Verify the returned project and audio instead of starting a full book.
 This sample does not contain text from the copyrighted book supplied as a URL.
+
+Automatic renderer-crash repair uses the source workspace and requests a checkout
+when needed. Explicit app action requests continue to use the app workspace.

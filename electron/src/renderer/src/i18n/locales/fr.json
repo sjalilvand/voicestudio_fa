@@ -2861,7 +2861,7 @@
     "noSource": "Ouvrez une extraction de source VoiceStudio inscriptible pour permettre à un agent de la réparer.",
     "noneFound": "Installez Codex, Claude Code, OpenCode ou Pi pour utiliser la réparation locale.",
     "ready": "Prêt",
-    "placeholder": "Que s?est-il pass? ? Ajoutez les ?tapes, les erreurs visibles ou le comportement attendu.",
+    "placeholder": "Que s’est-il passé ? Ajoutez les étapes, les erreurs visibles ou le comportement attendu.",
     "prReady": "Correction terminée. Examinez les changements et proposez un PR lorsque les tests ciblés réussissent.",
     "diagnose": "Diagnostiquer",
     "fix": "Réparer",
