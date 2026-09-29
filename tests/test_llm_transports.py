@@ -189,3 +189,31 @@ def test_sdk_pool_keeps_loopback_direct_and_does_not_persist_cookies(monkeypatch
             assert seen == [None, None]
     finally:
         server.shutdown(); server.server_close(); thread.join(timeout=2)
+
+
+def test_sdk_remote_https_still_uses_environment_proxy(monkeypatch):
+    import httpx
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+    from threading import Thread
+    from services.llm_transport import _sdk_http_client
+    seen = []
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *args): pass
+        def do_CONNECT(self):
+            seen.append(self.path)
+            self.send_response(502)
+            self.end_headers()
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = Thread(target=server.serve_forever, daemon=True); thread.start()
+    proxy = f"http://127.0.0.1:{server.server_port}"
+    for key in ("HTTPS_PROXY", "https_proxy", "ALL_PROXY", "all_proxy"):
+        monkeypatch.setenv(key, proxy)
+    monkeypatch.setenv("NO_PROXY", "")
+    monkeypatch.setenv("no_proxy", "")
+    try:
+        with _sdk_http_client.__wrapped__() as client:
+            with pytest.raises(httpx.ProxyError, match="502"):
+                client.get("https://provider.invalid/", timeout=2)
+        assert seen == ["provider.invalid:443"]
+    finally:
+        server.shutdown(); server.server_close(); thread.join(timeout=2)

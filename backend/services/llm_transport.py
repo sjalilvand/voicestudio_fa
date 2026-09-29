@@ -16,19 +16,21 @@ class _NoCookies(DefaultCookiePolicy):
         return False
 
 
+def _is_loopback(host):
+    from ipaddress import ip_address
+    if host.lower() == "localhost":
+        return True
+    try:
+        return ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
 def _check_sdk_request(request):
     """Validate the effective URL after SDK environment/provider resolution."""
-    from ipaddress import ip_address
     if request.url.scheme == "https":
         return
-    host = request.url.host.lower()
-    loopback = host == "localhost"
-    if not loopback:
-        try:
-            loopback = ip_address(host).is_loopback
-        except ValueError:
-            pass  # A non-IP host other than localhost is remote.
-    if request.url.scheme != "http" or not loopback:
+    if request.url.scheme != "http" or not _is_loopback(request.url.host):
         raise ValueError("SDK provider requests require HTTPS outside localhost")
 
 
@@ -37,9 +39,16 @@ def _sdk_http_client():
     # A shared thread-safe pool also keeps streaming responses alive after
     # completion() returns. It carries no provider credentials of its own.
     import httpx
-    client = httpx.Client(
+    class DirectLoopbackClient(httpx.Client):
+        def _transport_for_url(self, url):
+            # Route every loopback address directly, including 127/8 and ::1.
+            # Preserve HTTPX's environment proxy/NO_PROXY routing elsewhere.
+            if _is_loopback(url.host):
+                return self._transport
+            return super()._transport_for_url(url)
+
+    client = DirectLoopbackClient(
         follow_redirects=False,
-        trust_env=False,
         cookies=CookieJar(policy=_NoCookies()),
         event_hooks={"request": [_check_sdk_request]},
     )
