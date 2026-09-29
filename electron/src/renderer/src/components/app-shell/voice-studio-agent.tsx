@@ -127,7 +127,9 @@ export function VoiceStudioAgent() {
       setOpen(true);
       if (!request?.report) return;
       setFeatures(['repair']);
-      setSource(!request.report.trimStart().startsWith('ACTION_REQUEST:'));
+      const needsSource = !request.report.trimStart().startsWith('ACTION_REQUEST:');
+      setSource(needsSource);
+      if (needsSource) setDetails(true);
       setDraft(request.report);
       if (request.autoFix) setPending(request);
     };
@@ -166,6 +168,10 @@ export function VoiceStudioAgent() {
   async function send(text = conversation.draft, nextMode = mode, useSource = source) {
     if (!bridge || !selectedAgent?.available || submitting.current || running || !text.trim())
       return;
+    if (useSource && !workspace.available) {
+      setDetails(true);
+      return;
+    }
     submitting.current = true;
     setError('');
     const history = conversationHistory();

@@ -124,9 +124,33 @@ it.each([
 ])('routes automatic repair to the appropriate workspace: %s', async (report, workspace) => {
   const { DEFAULT_REPAIR_AGENT_KEY, openRepairAgent } = await import('@/lib/repair-agent-events');
   localStorage.setItem(DEFAULT_REPAIR_AGENT_KEY, 'codex');
+  mocks.repair.getState.mockResolvedValue({
+    status: 'idle', output: '', workspaceAvailable: workspace === 'source',
+  });
   render(<VoiceStudioAgent />);
   act(() => openRepairAgent(report, true));
   await waitFor(() => expect(mocks.repair.start).toHaveBeenCalledWith(
     expect.objectContaining({ workspace, report }),
+  ));
+});
+
+
+it('keeps crash repair ready for Send until a source checkout is attached', async () => {
+  const { DEFAULT_REPAIR_AGENT_KEY, openRepairAgent } = await import('@/lib/repair-agent-events');
+  localStorage.setItem(DEFAULT_REPAIR_AGENT_KEY, 'codex');
+  render(<VoiceStudioAgent />);
+  act(() => openRepairAgent('Renderer crashed unexpectedly', true));
+  const choose = await screen.findByRole('button', { name: 'settings.models_dir_choose' });
+  expect(screen.getByRole('textbox')).toHaveValue('Renderer crashed unexpectedly');
+  expect(screen.getByRole('button', { name: 'agentWorkspace.send' })).toBeDisabled();
+  fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter' });
+  expect(mocks.repair.start).not.toHaveBeenCalled();
+  mocks.repair.chooseWorkspace.mockResolvedValue({ workspaceAvailable: true, workspacePath: '/source' });
+  fireEvent.click(choose);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'agentWorkspace.send' })).toBeEnabled());
+  expect(mocks.repair.start).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'agentWorkspace.send' }));
+  await waitFor(() => expect(mocks.repair.start).toHaveBeenCalledWith(
+    expect.objectContaining({ workspace: 'source', report: 'Renderer crashed unexpectedly' }),
   ));
 });
