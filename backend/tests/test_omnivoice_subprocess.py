@@ -185,6 +185,8 @@ def test_sidecar_synthesis_encodes_a_reference_once_per_sidecar(monkeypatch, tmp
     monkeypatch.setattr(sidecar, "_tensor_to_pcm_b64", lambda *a, **k: ("AAA=", 24_000, 1))
     monkeypatch.setattr(sidecar, "_send", lambda *_a, **_k: None)
     monkeypatch.setattr(tts_backend, "reference_duration_s", lambda _p: 73.0)
+    # A disk hit would skip create_voice_clone_prompt and falsify the count.
+    monkeypatch.setenv("OMNIVOICE_PROMPT_DISK_CACHE", "0")
     tts_backend.clear_clone_prompt_cache()
     try:
         for line in ("one", "two", "three"):
@@ -248,6 +250,8 @@ def test_sidecar_short_reference_without_transcript_is_encoded_once(monkeypatch,
     monkeypatch.setattr(sidecar, "_send", lambda *_a, **_k: None)
     monkeypatch.setattr(tts_backend, "reference_duration_s", lambda _p: 5.0)
     monkeypatch.setattr(asr_backend, "transcribe_reference", lambda *_a, **_k: None)
+    # A disk hit would skip create_voice_clone_prompt and falsify the count.
+    monkeypatch.setenv("OMNIVOICE_PROMPT_DISK_CACHE", "0")
     tts_backend.clear_clone_prompt_cache()
     try:
         for line in ("one", "two", "three"):
