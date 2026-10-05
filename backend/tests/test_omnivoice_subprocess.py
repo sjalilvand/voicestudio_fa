@@ -196,6 +196,31 @@ def test_sidecar_synthesis_encodes_a_reference_once_per_sidecar(monkeypatch, tmp
     assert all("voice_clone_prompt" in kw and "ref_audio" not in kw for kw in generated)
 
 
+def test_sidecar_asks_for_the_reference_recognizer_to_be_released(monkeypatch, tmp_path):
+    """Ranking a long reference loads a recognizer beside the TTS model; the
+    sidecar must have it unloaded before synthesis (8 GB unified memory)."""
+    from engines.omnivoice_subprocess import main as sidecar
+    from services import tts_backend
+
+    ref = tmp_path / "long.wav"
+    ref.write_bytes(b"RIFF")
+    seen = {}
+
+    def fake_generate(_model, **kw):
+        seen.update(kw)
+        return [None]
+
+    monkeypatch.setattr(sidecar, "_load_model", lambda _stdout: type("M", (), {"sampling_rate": 24_000})())
+    monkeypatch.setattr(sidecar, "_tensor_to_pcm_b64", lambda *a, **k: ("AAA=", 24_000, 1))
+    monkeypatch.setattr(sidecar, "_send", lambda *_a, **_k: None)
+    monkeypatch.setattr(tts_backend, "reference_duration_s", lambda _p: 73.0)
+    monkeypatch.setattr(tts_backend, "generate_with_cached_ref", fake_generate)
+
+    sidecar._handle_synthesize({"text": "hi", "ref_audio": str(ref)}, None)
+
+    assert seen["release_reference_asr"] is True
+
+
 def test_sidecar_short_reference_without_transcript_is_encoded_once(monkeypatch, tmp_path):
     """A short reference whose transcript cannot be resolved must not reload
     the model's own ASR on every line: it takes the cached-prompt path too."""

@@ -30,6 +30,7 @@ import logging
 import os
 import re
 import contextlib
+import contextvars
 import threading
 import time
 import weakref
@@ -3378,9 +3379,40 @@ def _installed_reference_fallbacks(
     return fallbacks
 
 
+# Set only by ``release_reference_asr_after``: the backends a multi-window
+# reference pass used, to unload once at the end instead of once per window.
+_deferred_reference_release: contextvars.ContextVar[list | None] = contextvars.ContextVar(
+    "deferred_reference_release", default=None
+)
+
+
+@contextlib.contextmanager
+def release_reference_asr_after():
+    """Unload every ASR a reference pass used when the block exits.
+
+    For serialized sidecar use only (like ``transcribe_reference(release_after=)``):
+    ranking a long reference transcribes several windows, and releasing after
+    each one would reload the recognizer per window. Inside the block every
+    ``transcribe_reference`` call defers its release to the end of the block,
+    so the recognizer is gone before the much larger synthesis model runs.
+    """
+    used: list[ASRBackend] = []
+    token = _deferred_reference_release.set(used)
+    try:
+        yield
+    finally:
+        _deferred_reference_release.reset(token)
+        for backend in {id(b): b for b in used}.values():
+            _release_reference_backend(backend)
+
+
 def _transcribe_reference_candidates(
     candidates: list[ASRBackend], audio_path: str, *, release_after: bool = False,
 ) -> str:
+    deferred = _deferred_reference_release.get()
+    if deferred is not None:
+        deferred.extend(candidates)  # unloaded once, by release_reference_asr_after
+        return _try_reference_candidates(candidates, audio_path, release_after=True)
     # Sidecars serialize ASR and TTS; release even preloaded candidates skipped
     # after the first success before loading the much larger synthesis model.
     with contextlib.ExitStack() as releases:

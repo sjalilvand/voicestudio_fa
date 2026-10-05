@@ -381,6 +381,33 @@ def test_diagnostics_never_log_the_spoken_reference_text(monkeypatch, tmp_path, 
     assert f"ref_text_chars={len(spoken)}" in err
 
 
+def test_release_reference_asr_after_unloads_once_at_block_exit():
+    """Ranking a long reference transcribes several windows: the recognizer is
+    unloaded once when the pass ends, not once per window and not never."""
+    from services import asr_backend
+
+    class Backend:
+        id = "fake"
+
+        def __init__(self):
+            self.calls = 0
+            self.unloads = 0
+
+        def transcribe(self, _path, word_timestamps=False):
+            self.calls += 1
+            return {"text": "some words"}
+
+        def unload(self):
+            self.unloads += 1
+
+    backend = Backend()
+    with asr_backend.release_reference_asr_after():
+        for _ in range(5):
+            assert asr_backend._transcribe_reference_candidates([backend], "w.wav") == "some words"
+        assert backend.unloads == 0  # still resident between windows
+    assert (backend.calls, backend.unloads) == (5, 1)
+
+
 def test_diag_never_raises(monkeypatch):
     from omnivoice.models import omnivoice as ov
 

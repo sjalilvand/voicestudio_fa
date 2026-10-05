@@ -318,7 +318,8 @@ def _handle_synthesize(msg: dict, stdout) -> None:
         from services.tts_backend import generate_with_cached_ref  # noqa: PLC0415
 
         audios = generate_with_cached_ref(
-            model, text=text, ref_audio=ref_audio, ref_text=None, **gen_kw
+            model, text=text, ref_audio=ref_audio, ref_text=None,
+            release_reference_asr=True, **gen_kw,
         )
     else:
         audios = model.generate(

@@ -23,6 +23,7 @@ import inspect
 import logging
 import os
 import re
+import contextlib
 import threading
 import time
 from abc import ABC, abstractmethod
@@ -1508,19 +1509,32 @@ def generate_with_cached_ref(model, *, ref_audio, ref_text, **gen_kw):
     # it is restored first if an offload left it in RAM (#2618).
     with engine_in_use(OmniVoiceBackend(model=model)), tts_inference():
         cache_ref = bool(gen_kw.pop("cache_ref", True))
+        # Serialized sidecars only: unload the reference recognizer as soon as
+        # the prompt (or inline passage) exists, before the synthesis model
+        # runs. Popped for the same reason as cache_ref.
+        release_asr = bool(gen_kw.pop("release_reference_asr", False))
+        if release_asr:
+            from services.asr_backend import release_reference_asr_after
+
+            def release_scope():
+                return release_reference_asr_after()
+        else:
+            release_scope = contextlib.nullcontext
         # Stays in gen_kw too: the model needs it on the inline branch, and it is inert
         # on the prompt branch (that prompt is already encoded).
         preprocess_prompt = bool(gen_kw.get("preprocess_prompt", True))
-        prompt = (
-            _get_clone_prompt(model, ref_audio, ref_text, preprocess_prompt, store=cache_ref)
-            if ref_audio else None
-        )
+        with release_scope():
+            prompt = (
+                _get_clone_prompt(model, ref_audio, ref_text, preprocess_prompt, store=cache_ref)
+                if ref_audio else None
+            )
         if prompt is not None:
             try:
                 return model.generate(voice_clone_prompt=prompt, **gen_kw)
             except Exception as e:  # noqa: BLE001 — fall back to the inline ref
                 logger.warning("voice_clone_prompt generate failed; retrying inline ref: %s", e)
-        inline_audio, inline_text, passage = omnivoice_inline_reference(ref_audio, ref_text)
+        with release_scope():
+            inline_audio, inline_text, passage = omnivoice_inline_reference(ref_audio, ref_text)
         try:
             return model.generate(ref_audio=inline_audio, ref_text=inline_text, **gen_kw)
         finally:
