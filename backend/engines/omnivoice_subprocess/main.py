@@ -306,9 +306,24 @@ def _handle_synthesize(msg: dict, stdout) -> None:
 
         torch.manual_seed(int(seed))
 
-    audios = model.generate(
-        text=text, ref_audio=ref_audio, ref_text=ref_text, **gen_kw
-    )
+    # One reference encode per sidecar lifetime, not per request: a long
+    # reference otherwise reloads the passage-selection Whisper on every
+    # line, and on 8 GB Macs that phase alone can outlast the recv deadline.
+    # Any reference still without a transcript takes this path, whatever its
+    # length: when resolution found no words, plain generate() would load the
+    # model's own ASR and (now) release it again on every line.
+    untranscribed = isinstance(ref_audio, str) and not (ref_text or "").strip()
+    if untranscribed:
+        _ensure_backend_on_path()
+        from services.tts_backend import generate_with_cached_ref  # noqa: PLC0415
+
+        audios = generate_with_cached_ref(
+            model, text=text, ref_audio=ref_audio, ref_text=None, **gen_kw
+        )
+    else:
+        audios = model.generate(
+            text=text, ref_audio=ref_audio, ref_text=ref_text, **gen_kw
+        )
     audio = audios[0] if isinstance(audios, (list, tuple)) else audios
     sample_rate = int(getattr(model, "sampling_rate", OMNIVOICE_SAMPLE_RATE))
 

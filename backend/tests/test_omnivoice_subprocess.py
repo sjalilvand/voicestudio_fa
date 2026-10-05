@@ -133,7 +133,7 @@ def test_reference_asr_hang_is_killed_and_next_request_recovers(monkeypatch, tmp
         "        while True: time.sleep(0.1)\n"
         "    return 'Reference words.'\n"
         "sys.modules['omnivoice.utils.audio'] = types.SimpleNamespace(CLONE_REF_TEXT_MAX_SECONDS=20)\n"
-        "sys.modules['services.tts_backend'] = types.SimpleNamespace(reference_duration_s=lambda _: 1)\n"
+        "sys.modules['services.tts_backend'] = types.SimpleNamespace(reference_duration_s=lambda _: 1, generate_with_cached_ref=lambda model, **kw: model.generate(**kw))\n"
         "sys.modules['services.asr_backend'] = types.SimpleNamespace(transcribe_reference=transcribe)\n"
         "child._load_model = lambda _: types.SimpleNamespace(generate=lambda **kw: [None], sampling_rate=24000)\n"
         "child._tensor_to_pcm_b64 = lambda *args: ('AAAAAA==' if args[-1] == 'f32le' else 'AAA=', 24000, 1)\n"
@@ -154,6 +154,84 @@ def test_reference_asr_hang_is_killed_and_next_request_recovers(monkeypatch, tmp
         assert backend.generate("hello", ref_audio="okay.wav").shape[-1] == 1
     finally:
         backend.shutdown()
+
+
+def test_sidecar_synthesis_encodes_a_reference_once_per_sidecar(monkeypatch, tmp_path):
+    """Repeat requests reuse the cached clone prompt instead of re-selecting.
+
+    Without it a long reference reloads the passage-selection Whisper on
+    every line, and that phase alone can outlast the recv deadline.
+    """
+    from engines.omnivoice_subprocess import main as sidecar
+    from services import tts_backend
+
+    ref = tmp_path / "voice.wav"
+    ref.write_bytes(b"RIFF")
+    encodes, generated = [], []
+
+    class Model:
+        sampling_rate = 24_000
+
+        def create_voice_clone_prompt(self, ref_audio, ref_text=None, preprocess_prompt=True):
+            encodes.append(ref_audio)
+            return object()
+
+        def generate(self, **kw):
+            generated.append(kw)
+            return [None]
+
+    model = Model()
+    monkeypatch.setattr(sidecar, "_load_model", lambda _stdout: model)
+    monkeypatch.setattr(sidecar, "_tensor_to_pcm_b64", lambda *a, **k: ("AAA=", 24_000, 1))
+    monkeypatch.setattr(sidecar, "_send", lambda *_a, **_k: None)
+    monkeypatch.setattr(tts_backend, "reference_duration_s", lambda _p: 73.0)
+    tts_backend.clear_clone_prompt_cache()
+    try:
+        for line in ("one", "two", "three"):
+            sidecar._handle_synthesize({"text": line, "ref_audio": str(ref)}, None)
+    finally:
+        tts_backend.clear_clone_prompt_cache()
+
+    assert len(encodes) == 1
+    assert all("voice_clone_prompt" in kw and "ref_audio" not in kw for kw in generated)
+
+
+def test_sidecar_short_reference_without_transcript_is_encoded_once(monkeypatch, tmp_path):
+    """A short reference whose transcript cannot be resolved must not reload
+    the model's own ASR on every line: it takes the cached-prompt path too."""
+    from engines.omnivoice_subprocess import main as sidecar
+    from services import asr_backend, tts_backend
+
+    ref = tmp_path / "short.wav"
+    ref.write_bytes(b"RIFF")
+    encodes, generated = [], []
+
+    class Model:
+        sampling_rate = 24_000
+
+        def create_voice_clone_prompt(self, ref_audio, ref_text=None, preprocess_prompt=True):
+            encodes.append(ref_audio)
+            return object()
+
+        def generate(self, **kw):
+            generated.append(kw)
+            return [None]
+
+    model = Model()
+    monkeypatch.setattr(sidecar, "_load_model", lambda _stdout: model)
+    monkeypatch.setattr(sidecar, "_tensor_to_pcm_b64", lambda *a, **k: ("AAA=", 24_000, 1))
+    monkeypatch.setattr(sidecar, "_send", lambda *_a, **_k: None)
+    monkeypatch.setattr(tts_backend, "reference_duration_s", lambda _p: 5.0)
+    monkeypatch.setattr(asr_backend, "transcribe_reference", lambda *_a, **_k: None)
+    tts_backend.clear_clone_prompt_cache()
+    try:
+        for line in ("one", "two", "three"):
+            sidecar._handle_synthesize({"text": line, "ref_audio": str(ref)}, None)
+    finally:
+        tts_backend.clear_clone_prompt_cache()
+
+    assert len(encodes) == 1
+    assert all("voice_clone_prompt" in kw and "ref_audio" not in kw for kw in generated)
 
 
 # ── registry + isolation ───────────────────────────────────────────────────

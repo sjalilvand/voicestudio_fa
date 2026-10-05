@@ -1,4 +1,5 @@
 """Transcript-free cloning must never implicitly download a second ASR (#2116)."""
+import sys
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -270,3 +271,118 @@ def test_catalogue_ct2_reference_is_reused_without_transformers_asr(monkeypatch,
     unloaded.assert_called_once()
     lookup.assert_not_called()
     model.load_asr_model.assert_not_called()
+
+
+@pytest.mark.parametrize("seconds", [1, 21])
+def test_implicit_asr_is_released_before_synthesis(monkeypatch, tmp_path, seconds):
+    """An implicitly loaded Whisper must not stay resident next to the TTS weights."""
+    model = _model()
+    monkeypatch.setattr("huggingface_hub.snapshot_download", Mock(return_value=str(tmp_path)))
+    model.load_asr_model = Mock(side_effect=lambda **_: setattr(model, "_asr_pipe", object()))
+    model.create_voice_clone_prompt(
+        (torch.full((1, seconds * 24_000), 0.1), 24_000),
+        preprocess_prompt=False,
+    )
+    model.load_asr_model.assert_called_once()
+    assert model._asr_pipe is None
+
+
+def test_implicit_asr_is_released_when_cloning_fails(monkeypatch, tmp_path):
+    model = _model()
+    model.transcribe = lambda _: ""  # no speech in any window
+    monkeypatch.setattr("huggingface_hub.snapshot_download", Mock(return_value=str(tmp_path)))
+    model.load_asr_model = Mock(side_effect=lambda **_: setattr(model, "_asr_pipe", object()))
+    with pytest.raises(ValueError):
+        model.create_voice_clone_prompt(
+            (torch.full((1, 21 * 24_000), 0.1), 24_000),
+            preprocess_prompt=False,
+        )
+    assert model._asr_pipe is None
+
+
+def test_explicitly_loaded_asr_stays_resident():
+    model = _model()
+    explicit = object()
+    model._asr_pipe = explicit
+    model.create_voice_clone_prompt(
+        (torch.full((1, 24_000), 0.1), 24_000),
+        preprocess_prompt=False,
+    )
+    assert model._asr_pipe is explicit
+
+
+# MPS stays float32: a float16 Whisper on MPS transcribes reference windows as
+# "!" / "В!", and that mismatched transcript makes the clone babble.
+@pytest.mark.parametrize(("device", "dtype"), [
+    ("mps", torch.float32), ("cuda:0", torch.float16), ("cpu", torch.float32),
+])
+def test_reference_asr_precision_per_device(monkeypatch, device, dtype):
+    from omnivoice.models.omnivoice import OmniVoice
+    model = OmniVoice.__new__(OmniVoice)
+    monkeypatch.setattr(OmniVoice, "device", property(lambda _self: device))
+    seen = {}
+
+    def fake_pipeline(task, **kwargs):
+        seen.update(kwargs)
+        return object()
+
+    # transformers' lazy module may serve `from transformers import pipeline`
+    # from the submodule or from a value it cached on itself on first access;
+    # patch both so the result does not depend on test order.
+    import transformers
+
+    monkeypatch.setattr("transformers.pipelines.pipeline", fake_pipeline)
+    monkeypatch.setattr(transformers, "pipeline", fake_pipeline, raising=False)
+    model.load_asr_model(model_name="local-whisper")
+    assert seen["dtype"] is dtype
+
+
+def test_release_is_reported_before_synthesis(monkeypatch, tmp_path, capsys):
+    """With diagnostics on, the `[diag]` trail shows the recognizer leaving memory."""
+    monkeypatch.setenv("OMNIVOICE_DIAG", "1")
+    model = _model()
+    monkeypatch.setattr("huggingface_hub.snapshot_download", Mock(return_value=str(tmp_path)))
+    model.load_asr_model = Mock(side_effect=lambda **_: setattr(model, "_asr_pipe", object()))
+    model.create_voice_clone_prompt(
+        (torch.full((1, 21 * 24_000), 0.1), 24_000),
+        preprocess_prompt=False,
+    )
+    assert model._asr_pipe is None  # the release itself, not just its log line
+    assert "[diag] ASR released before synthesis" in capsys.readouterr().err
+
+
+def test_diagnostics_are_silent_unless_enabled(monkeypatch, tmp_path, capsys):
+    monkeypatch.delenv("OMNIVOICE_DIAG", raising=False)
+    model = _model()
+    monkeypatch.setattr("huggingface_hub.snapshot_download", Mock(return_value=str(tmp_path)))
+    model.load_asr_model = Mock(side_effect=lambda **_: setattr(model, "_asr_pipe", object()))
+    model.create_voice_clone_prompt(
+        (torch.full((1, 21 * 24_000), 0.1), 24_000),
+        preprocess_prompt=False,
+    )
+    assert "[diag]" not in capsys.readouterr().err
+
+
+def test_diagnostics_never_log_the_spoken_reference_text(monkeypatch, tmp_path, capsys):
+    """The sidecar's stderr reaches backend logs and crash dialogs, so the
+    reference transcript (the user's speech) must never appear in it."""
+    monkeypatch.setenv("OMNIVOICE_DIAG", "1")
+    model = _model()
+    spoken = "private words nobody should read"
+    monkeypatch.setattr("huggingface_hub.snapshot_download", Mock(return_value=str(tmp_path)))
+    model.create_voice_clone_prompt(
+        (torch.full((1, 5 * 24_000), 0.1), 24_000),
+        ref_text=spoken,
+        preprocess_prompt=False,
+    )
+    err = capsys.readouterr().err
+    assert "reference passage" in err
+    assert spoken not in err
+    assert f"ref_text_chars={len(spoken)}" in err
+
+
+def test_diag_never_raises(monkeypatch):
+    from omnivoice.models import omnivoice as ov
+
+    monkeypatch.setitem(sys.modules, "psutil", None)  # import fails inside _diag
+    ov._diag("anything")
