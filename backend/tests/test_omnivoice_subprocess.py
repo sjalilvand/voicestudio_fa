@@ -285,6 +285,49 @@ def test_sidecar_short_reference_without_transcript_is_encoded_once(monkeypatch,
         tts_backend.clear_clone_prompt_cache()
 
 
+def test_sidecar_keeps_retrying_a_recognizer_that_errors(monkeypatch, tmp_path):
+    """Only a recognition that completed without words may be remembered: an
+    error is transient, so the recognizer is tried again on the next line."""
+    from engines.omnivoice_subprocess import main as sidecar
+    from services import asr_backend, tts_backend
+
+    ref = tmp_path / "flaky.wav"
+    ref.write_bytes(b"RIFF")
+    encodes, asr_calls = [], []
+
+    class Model:
+        sampling_rate = 24_000
+
+        def create_voice_clone_prompt(self, ref_audio, ref_text=None, preprocess_prompt=True):
+            encodes.append(ref_audio)
+            return object()
+
+        def generate(self, **kw):
+            return [None]
+
+    def failing_transcribe(*_a, **_k):
+        asr_calls.append(1)
+        raise RuntimeError("recognizer crashed")
+
+    model = Model()
+    monkeypatch.setattr(sidecar, "_load_model", lambda _stdout: model)
+    monkeypatch.setattr(sidecar, "_tensor_to_pcm_b64", lambda *a, **k: ("AAA=", 24_000, 1))
+    monkeypatch.setattr(sidecar, "_send", lambda *_a, **_k: None)
+    monkeypatch.setattr(tts_backend, "reference_duration_s", lambda _p: 5.0)
+    monkeypatch.setattr(tts_backend, "_reference_asr_identity", lambda: "installed-none")
+    monkeypatch.setattr(asr_backend, "transcribe_reference", failing_transcribe)
+    monkeypatch.setenv("OMNIVOICE_PROMPT_DISK_CACHE", "0")
+    tts_backend.clear_clone_prompt_cache()
+    try:
+        for line in ("one", "two", "three"):
+            sidecar._handle_synthesize({"text": line, "ref_audio": str(ref)}, None)
+    finally:
+        tts_backend.clear_clone_prompt_cache()
+
+    assert len(asr_calls) == 6  # sidecar pre-pass + prompt build, on every line
+    assert len(encodes) == 1    # the prompt itself is still reused
+
+
 # ── registry + isolation ───────────────────────────────────────────────────
 
 

@@ -1380,6 +1380,9 @@ def _get_clone_prompt(
     # persist the transcript. Incomplete reference conditioning can destabilize
     # the reference/target boundary and introduce words in the generated prefix.
     unresolved_key = None
+    # True only when recognition ran to completion and found no words. A raised
+    # error is not that: the same recognizers may well succeed on the next try.
+    recognition_found_nothing = False
     from omnivoice.utils.audio import CLONE_REF_TEXT_MAX_SECONDS
 
     duration = reference_duration_s(ref_audio)
@@ -1432,6 +1435,7 @@ def _get_clone_prompt(
                 from services.asr_backend import transcribe_reference
 
                 ref_text = transcribe_reference(ref_audio)
+                recognition_found_nothing = not ref_text
             except Exception as e:  # noqa: BLE001 — model fallback remains available
                 logger.warning("reference transcript resolution failed: %s", e)
             if ref_text and unresolved_key is not None:
@@ -1446,7 +1450,10 @@ def _get_clone_prompt(
         if cacheable:
             # Retried under the current recognizers and still no transcript:
             # the cached prompt stands, and is now trusted for this chain.
-            retried_with = _reference_asr_identity() if key == unresolved_key else ""
+            retried_with = (
+                _reference_asr_identity()
+                if key == unresolved_key and recognition_found_nothing else ""
+            )
             with _prompt_cache_lock:
                 hit = _prompt_cache.get(key)
                 if hit is not None:
@@ -1522,7 +1529,10 @@ def _get_clone_prompt(
             return prompt
         # Remember which recognizers could not transcribe this reference, so a
         # later request only skips them while the selection is unchanged.
-        built_with = _reference_asr_identity() if key == unresolved_key else ""
+        built_with = (
+            _reference_asr_identity()
+            if key == unresolved_key and recognition_found_nothing else ""
+        )
         with _prompt_cache_lock:
             _prompt_cache[key] = prompt
             _prompt_cache.move_to_end(key)
