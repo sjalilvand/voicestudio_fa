@@ -254,20 +254,35 @@ def test_sidecar_short_reference_without_transcript_is_encoded_once(monkeypatch,
         asr_backend, "transcribe_reference",
         lambda *_a, **_k: asr_calls.append(1),  # returns None: no words found
     )
+    recognizers = ["installed-none"]
+    monkeypatch.setattr(tts_backend, "_reference_asr_identity", lambda: recognizers[0])
     # A disk hit would skip create_voice_clone_prompt and falsify the count.
     monkeypatch.setenv("OMNIVOICE_PROMPT_DISK_CACHE", "0")
     tts_backend.clear_clone_prompt_cache()
+
+    def speak(line):
+        sidecar._handle_synthesize({"text": line, "ref_audio": str(ref)}, None)
+
     try:
         for line in ("one", "two", "three"):
-            sidecar._handle_synthesize({"text": line, "ref_audio": str(ref)}, None)
+            speak(line)
+        assert len(encodes) == 1
+        assert all("voice_clone_prompt" in kw and "ref_audio" not in kw for kw in generated)
+        # Only the first request tries the recognizer (sidecar pre-pass + prompt
+        # build); once the prompt is cached, later lines never load it again.
+        assert len(asr_calls) == 2
+
+        # The user installs or selects another recognizer: it gets its turn
+        # (the stale prompt is not trusted), and when it also finds no words
+        # the cached prompt is reused and trusted again for the new chain.
+        recognizers[0] = "newly-selected"
+        speak("four")
+        assert len(asr_calls) == 4
+        assert len(encodes) == 1
+        speak("five")
+        assert len(asr_calls) == 4
     finally:
         tts_backend.clear_clone_prompt_cache()
-
-    assert len(encodes) == 1
-    assert all("voice_clone_prompt" in kw and "ref_audio" not in kw for kw in generated)
-    # Only the first request tries the recognizer (sidecar pre-pass + prompt
-    # build); once the prompt is cached, later lines never load it again.
-    assert len(asr_calls) == 2
 
 
 # ── registry + isolation ───────────────────────────────────────────────────
