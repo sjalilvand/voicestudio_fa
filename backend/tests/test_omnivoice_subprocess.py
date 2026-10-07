@@ -133,7 +133,7 @@ def test_reference_asr_hang_is_killed_and_next_request_recovers(monkeypatch, tmp
         "        while True: time.sleep(0.1)\n"
         "    return 'Reference words.'\n"
         "sys.modules['omnivoice.utils.audio'] = types.SimpleNamespace(CLONE_REF_TEXT_MAX_SECONDS=20)\n"
-        "sys.modules['services.tts_backend'] = types.SimpleNamespace(reference_duration_s=lambda _: 1, generate_with_cached_ref=lambda model, **kw: model.generate(**kw))\n"
+        "sys.modules['services.tts_backend'] = types.SimpleNamespace(reference_duration_s=lambda _: 1, has_unresolved_clone_prompt=lambda *a, **k: False, generate_with_cached_ref=lambda model, **kw: model.generate(**kw))\n"
         "sys.modules['services.asr_backend'] = types.SimpleNamespace(transcribe_reference=transcribe)\n"
         "child._load_model = lambda _: types.SimpleNamespace(generate=lambda **kw: [None], sampling_rate=24000)\n"
         "child._tensor_to_pcm_b64 = lambda *args: ('AAAAAA==' if args[-1] == 'f32le' else 'AAA=', 24000, 1)\n"
@@ -249,7 +249,11 @@ def test_sidecar_short_reference_without_transcript_is_encoded_once(monkeypatch,
     monkeypatch.setattr(sidecar, "_tensor_to_pcm_b64", lambda *a, **k: ("AAA=", 24_000, 1))
     monkeypatch.setattr(sidecar, "_send", lambda *_a, **_k: None)
     monkeypatch.setattr(tts_backend, "reference_duration_s", lambda _p: 5.0)
-    monkeypatch.setattr(asr_backend, "transcribe_reference", lambda *_a, **_k: None)
+    asr_calls = []
+    monkeypatch.setattr(
+        asr_backend, "transcribe_reference",
+        lambda *_a, **_k: asr_calls.append(1),  # returns None: no words found
+    )
     # A disk hit would skip create_voice_clone_prompt and falsify the count.
     monkeypatch.setenv("OMNIVOICE_PROMPT_DISK_CACHE", "0")
     tts_backend.clear_clone_prompt_cache()
@@ -261,6 +265,9 @@ def test_sidecar_short_reference_without_transcript_is_encoded_once(monkeypatch,
 
     assert len(encodes) == 1
     assert all("voice_clone_prompt" in kw and "ref_audio" not in kw for kw in generated)
+    # Only the first request tries the recognizer (sidecar pre-pass + prompt
+    # build); once the prompt is cached, later lines never load it again.
+    assert len(asr_calls) == 2
 
 
 # ── registry + isolation ───────────────────────────────────────────────────

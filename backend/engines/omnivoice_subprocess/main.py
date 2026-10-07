@@ -285,10 +285,15 @@ def _handle_synthesize(msg: dict, stdout) -> None:
         # deadline as TTS, rather than holding the API's GPU worker forever.
         _ensure_backend_on_path()
         from omnivoice.utils.audio import CLONE_REF_TEXT_MAX_SECONDS
-        from services.tts_backend import reference_duration_s
+        from services.tts_backend import (
+            has_unresolved_clone_prompt,
+            reference_duration_s,
+        )
 
         duration = reference_duration_s(ref_audio)
-        if duration is None or duration <= CLONE_REF_TEXT_MAX_SECONDS:
+        if (duration is None or duration <= CLONE_REF_TEXT_MAX_SECONDS) and not (
+            has_unresolved_clone_prompt(ref_audio, msg.get("preprocess_prompt", True))
+        ):
             from services.asr_backend import transcribe_reference
 
             ref_text = None

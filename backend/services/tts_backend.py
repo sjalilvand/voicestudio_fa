@@ -1313,6 +1313,21 @@ def _speech_score(text: str) -> int:
     return len(re.sub(r"[^\w]+", "", text or "", flags=re.UNICODE))
 
 
+def has_unresolved_clone_prompt(ref_audio: str, preprocess_prompt: bool = True) -> bool:
+    """True when a transcript-free prompt for ``ref_audio`` is already cached.
+
+    That only happens after an earlier request found no installed-recognizer
+    words and let the model transcribe it, so a serialized sidecar can skip
+    loading the recognizer again for the same reference.
+    """
+    try:
+        key = _clone_prompt_key(ref_audio, None, preprocess_prompt)
+    except Exception:  # noqa: BLE001 — an unreadable reference is simply "not cached"
+        return False
+    with _prompt_cache_lock:
+        return key in _prompt_cache
+
+
 def _get_clone_prompt(
     model, ref_audio: str, ref_text, preprocess_prompt: bool = True, *,
     store: bool = True,
@@ -1375,6 +1390,15 @@ def _get_clone_prompt(
                 )
             except Exception:
                 pass
+            if unresolved_key is not None and cacheable:
+                # An earlier request found no installed-recognizer words and
+                # cached the model-transcribed prompt under this key: reuse it
+                # instead of loading the recognizer again just to fail again.
+                with _prompt_cache_lock:
+                    hit = _prompt_cache.get(unresolved_key)
+                    if hit is not None:
+                        _prompt_cache.move_to_end(unresolved_key)
+                        return hit
             try:
                 from services.asr_backend import transcribe_reference
 

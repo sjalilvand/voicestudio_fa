@@ -1098,7 +1098,11 @@ class OmniVoice(PreTrainedModel):
                 # Re-read the passage so the transcript covers exactly its audio.
                 # A trim that leaves no words must not turn a usable passage
                 # into a "no speech" failure: keep the untrimmed one then.
-                trimmed_text = self.transcribe((trimmed, self.sampling_rate))
+                try:
+                    trimmed_text = self.transcribe((trimmed, self.sampling_rate))
+                except Exception:  # noqa: BLE001 — the untrimmed passage is still valid
+                    logger.warning("Trimmed-passage transcription failed; keeping the untrimmed passage")
+                    trimmed_text = ""
                 if speech_score(trimmed_text, trimmed) > 0:
                     ref_wav, ref_text = trimmed, trimmed_text
             if speech_score(ref_text, ref_wav) == 0:

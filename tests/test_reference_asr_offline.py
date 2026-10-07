@@ -273,11 +273,20 @@ def test_catalogue_ct2_reference_is_reused_without_transformers_asr(monkeypatch,
     model.load_asr_model.assert_not_called()
 
 
+def _asr_snapshot(tmp_path):
+    """A Whisper snapshot that passes ``_has_asr_weights`` (empty dirs do not)."""
+    snapshot = tmp_path / "cached-whisper"
+    snapshot.mkdir()
+    for name in ("config.json", "preprocessor_config.json", "tokenizer.json", "model.safetensors"):
+        (snapshot / name).write_text("{}")
+    return str(snapshot)
+
+
 @pytest.mark.parametrize("seconds", [1, 21])
 def test_implicit_asr_is_released_before_synthesis(monkeypatch, tmp_path, seconds):
     """An implicitly loaded Whisper must not stay resident next to the TTS weights."""
     model = _model()
-    monkeypatch.setattr("huggingface_hub.snapshot_download", Mock(return_value=str(tmp_path)))
+    monkeypatch.setattr("huggingface_hub.snapshot_download", Mock(return_value=_asr_snapshot(tmp_path)))
     model.load_asr_model = Mock(side_effect=lambda **_: setattr(model, "_asr_pipe", object()))
     model.create_voice_clone_prompt(
         (torch.full((1, seconds * 24_000), 0.1), 24_000),
@@ -290,13 +299,14 @@ def test_implicit_asr_is_released_before_synthesis(monkeypatch, tmp_path, second
 def test_implicit_asr_is_released_when_cloning_fails(monkeypatch, tmp_path):
     model = _model()
     model.transcribe = lambda _: ""  # no speech in any window
-    monkeypatch.setattr("huggingface_hub.snapshot_download", Mock(return_value=str(tmp_path)))
+    monkeypatch.setattr("huggingface_hub.snapshot_download", Mock(return_value=_asr_snapshot(tmp_path)))
     model.load_asr_model = Mock(side_effect=lambda **_: setattr(model, "_asr_pipe", object()))
     with pytest.raises(ValueError):
         model.create_voice_clone_prompt(
             (torch.full((1, 21 * 24_000), 0.1), 24_000),
             preprocess_prompt=False,
         )
+    model.load_asr_model.assert_called_once()  # it really was loaded, then released
     assert model._asr_pipe is None
 
 
@@ -341,7 +351,7 @@ def test_release_is_reported_before_synthesis(monkeypatch, tmp_path, capsys):
     """With diagnostics on, the `[diag]` trail shows the recognizer leaving memory."""
     monkeypatch.setenv("OMNIVOICE_DIAG", "1")
     model = _model()
-    monkeypatch.setattr("huggingface_hub.snapshot_download", Mock(return_value=str(tmp_path)))
+    monkeypatch.setattr("huggingface_hub.snapshot_download", Mock(return_value=_asr_snapshot(tmp_path)))
     model.load_asr_model = Mock(side_effect=lambda **_: setattr(model, "_asr_pipe", object()))
     model.create_voice_clone_prompt(
         (torch.full((1, 21 * 24_000), 0.1), 24_000),
@@ -354,7 +364,7 @@ def test_release_is_reported_before_synthesis(monkeypatch, tmp_path, capsys):
 def test_diagnostics_are_silent_unless_enabled(monkeypatch, tmp_path, capsys):
     monkeypatch.delenv("OMNIVOICE_DIAG", raising=False)
     model = _model()
-    monkeypatch.setattr("huggingface_hub.snapshot_download", Mock(return_value=str(tmp_path)))
+    monkeypatch.setattr("huggingface_hub.snapshot_download", Mock(return_value=_asr_snapshot(tmp_path)))
     model.load_asr_model = Mock(side_effect=lambda **_: setattr(model, "_asr_pipe", object()))
     model.create_voice_clone_prompt(
         (torch.full((1, 21 * 24_000), 0.1), 24_000),
@@ -369,7 +379,7 @@ def test_diagnostics_never_log_the_spoken_reference_text(monkeypatch, tmp_path, 
     monkeypatch.setenv("OMNIVOICE_DIAG", "1")
     model = _model()
     spoken = "private words nobody should read"
-    monkeypatch.setattr("huggingface_hub.snapshot_download", Mock(return_value=str(tmp_path)))
+    monkeypatch.setattr("huggingface_hub.snapshot_download", Mock(return_value=_asr_snapshot(tmp_path)))
     model.create_voice_clone_prompt(
         (torch.full((1, 5 * 24_000), 0.1), 24_000),
         ref_text=spoken,
@@ -406,6 +416,36 @@ def test_release_reference_asr_after_unloads_once_at_block_exit():
             assert asr_backend._transcribe_reference_candidates([backend], "w.wav") == "some words"
         assert backend.unloads == 0  # still resident between windows
     assert (backend.calls, backend.unloads) == (5, 1)
+
+
+def test_reference_pass_reuses_one_recognizer_across_windows(monkeypatch):
+    """get_active_asr_backend builds a fresh recognizer per call; a deferred
+    pass must not hold one per window (several large models at once)."""
+    from services import asr_backend as ab
+
+    built = []
+
+    def make_backend(**_kw):
+        backend = SimpleNamespace(
+            id="fresh", unload=Mock(), transcribe=Mock(return_value={"text": "words"}),
+        )
+        built.append(backend)
+        return backend
+
+    monkeypatch.setattr(ab, "_ref_audio_fingerprint", lambda _: None)
+    monkeypatch.setattr(ab, "active_backend_id", lambda: "faster-whisper")
+    monkeypatch.setattr(
+        ab, "asr_model_missing_error",
+        lambda **kw: "missing" if kw.get("purpose") == "dictation" else None,
+    )
+    monkeypatch.setattr(ab, "load_active_asr_backend", make_backend)
+    monkeypatch.setattr(ab, "_installed_reference_fallbacks", lambda _: [])
+    with ab.release_reference_asr_after():
+        for window in range(5):
+            assert ab.transcribe_reference(f"window-{window}.wav") == "words"
+        assert not built[0].unload.called  # still resident between windows
+    assert len(built) == 1
+    built[0].unload.assert_called_once()
 
 
 def test_diag_never_raises(monkeypatch):
