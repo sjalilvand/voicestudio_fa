@@ -251,6 +251,67 @@ class WorkflowTests(unittest.TestCase):
         self.assert_code("receipt_invalid", self.commit, p)
         self.assertEqual(path.read_text(), '{"schema_version": 99}')
 
+    def test_receipt_paths_reject_untrusted_names(self):
+        for value in ("../outside", "/tmp/file", "a" * 63, "a" * 65,
+                      "A" * 64, "a" * 63 + "\n", "a" * 63 + "/", None, 12):
+            for group in ("receipts", "evidence", "installed"):
+                self.assert_code("receipt_invalid", self.service._record_path, group, value)
+        self.assert_code("receipt_invalid", self.service._record_path, "../escape", "a" * 64)
+
+    def test_record_paths_preserve_existing_digest_filenames(self):
+        p = self.prepare()
+        for group in ("receipts", "evidence", "installed"):
+            self.assertEqual(self.service._record_path(group, p["plan_digest"]),
+                             self.service.store / group / f"{p['plan_digest']}.json")
+
+    def test_symlinked_receipt_directory_cannot_escape_store(self):
+        p = self.prepare()
+        self.service.store.mkdir()
+        outside = self.root / "outside"; outside.mkdir()
+        try:
+            (self.service.store / "receipts").symlink_to(outside, target_is_directory=True)
+        except (NotImplementedError, OSError):
+            self.skipTest("Host does not permit symlink creation")
+        self.assert_code("receipt_invalid", self.commit, p)
+        self.assert_code("receipt_invalid", self.service.export, p["plan_digest"])
+        self.assert_code("receipt_invalid", self.service.remove, p["plan_digest"])
+        self.assertEqual(list(outside.iterdir()), [])
+        self.assertEqual(self.calls, [])
+
+    def test_configured_store_root_can_be_relocated_by_symlink(self):
+        actual = self.root / "relocated-store"; actual.mkdir()
+        try:
+            self.service.store.symlink_to(actual, target_is_directory=True)
+        except (NotImplementedError, OSError):
+            self.skipTest("Host does not permit symlink creation")
+        p = self.prepare(); receipt = self.commit(p)
+        self.assertEqual(self.service.export(p["plan_digest"])["receipt"], receipt)
+        self.assertTrue((actual / "receipts" / f"{p['plan_digest']}.json").is_file())
+
+    def test_archive_symlink_escape_preserves_acknowledgement(self):
+        p = self.prepare(); self.commit(p)
+        outside = self.root / "outside-evidence"; outside.mkdir()
+        try:
+            (self.service.store / "evidence").symlink_to(outside, target_is_directory=True)
+        except (NotImplementedError, OSError):
+            self.skipTest("Host does not permit symlink creation")
+        self.assert_code("receipt_invalid", self.service.remove, p["plan_digest"])
+        self.assertEqual(list(outside.iterdir()), [])
+        self.assertEqual(self.service.export(p["plan_digest"])["receipt"]["plan_digest"], p["plan_digest"])
+
+    def test_symlinked_receipt_file_cannot_read_or_remove_outside(self):
+        p = self.prepare(); self.commit(p)
+        receipt = self.service.store / "receipts" / f"{p['plan_digest']}.json"
+        outside = self.root / "outside.json"; outside.write_bytes(receipt.read_bytes())
+        receipt.unlink()
+        try:
+            receipt.symlink_to(outside)
+        except (NotImplementedError, OSError):
+            self.skipTest("Host does not permit symlink creation")
+        self.assert_code("receipt_invalid", self.service.export, p["plan_digest"])
+        self.assert_code("receipt_invalid", self.service.remove, p["plan_digest"])
+        self.assertTrue(outside.is_file())
+
     def test_minimal_receipt_no_actor_or_tracking_fields(self):
         receipt = self.commit(self.prepare())
         for key in ("name", "email", "ip", "actor", "device_id", "token", "audio", "prompt"):

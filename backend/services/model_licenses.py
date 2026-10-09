@@ -23,6 +23,8 @@ from pathlib import Path, PurePosixPath
 from typing import Callable
 from urllib.parse import urlparse
 
+from core.path_security import UnsafePath, resolve_within
+
 REGISTRY_PATH = Path(__file__).resolve().parents[1] / "config" / "model_licenses.json"
 _SHA = re.compile(r"[0-9a-f]{40}\Z")
 _DIGEST = re.compile(r"[0-9a-f]{64}\Z")
@@ -303,6 +305,7 @@ def _atomic_json(path: Path, value: dict) -> None:
         try:
             os.unlink(temporary)
         except OSError:
+            # Preserve the original write failure if temporary cleanup also fails.
             pass
         raise
 
@@ -325,6 +328,24 @@ class ReviewedInstalls:
         self._plans: dict[str, tuple[float, dict]] = {}
         self._lock = threading.RLock()
         self._running: set[str] = set()
+
+    def _record_path(self, group: str, plan_digest: str) -> Path:
+        """Build a bounded record path without interpolating request text.
+
+        Numeric reconstruction retains existing digest filenames while making
+        the restricted filename alphabet explicit at the filesystem boundary.
+        Containment also rejects receipt directories/files symlinked outside the
+        configured local store, including export and removal paths.
+        """
+        if (group not in {"receipts", "evidence", "installed"}
+                or not isinstance(plan_digest, str) or len(plan_digest) != 64
+                or not _DIGEST.fullmatch(plan_digest)):
+            raise ModelTermsError("receipt_invalid")
+        filename = f"{int(plan_digest, 16):064x}.json"
+        try:
+            return resolve_within(self.store, f"{group}/{filename}")
+        except UnsafePath as exc:
+            raise ModelTermsError("receipt_invalid") from exc
 
     def prepare(self, repo_id: str, target: str = "local") -> dict:
         plan = build_plan(self.registry_loader(), self.catalog_loader(), repo_id,
@@ -361,7 +382,7 @@ class ReviewedInstalls:
             expected = sorted(doc["id"] for doc in plan["documents"])
             if acknowledged is not True or sorted(document_ids) != expected:
                 raise ModelTermsError("terms_required")
-            path = self.store / "receipts" / f"{plan_digest}.json"
+            path = self._record_path("receipts", plan_digest)
             if path.exists():
                 return self._receipt(plan_digest)["receipt"]
             receipt = {"schema_version": 1, "receipt_id": uuid.uuid4().hex,
@@ -375,9 +396,7 @@ class ReviewedInstalls:
             return receipt
 
     def _receipt(self, plan_digest: str) -> dict:
-        if not _DIGEST.fullmatch(plan_digest):
-            raise ModelTermsError("receipt_invalid")
-        value = read_json(self.store / "receipts" / f"{plan_digest}.json")
+        value = read_json(self._record_path("receipts", plan_digest))
         receipt, plan = value.get("receipt", {}), value.get("plan", {})
         keys = {"schema_version", "receipt_id", "recorded_at", "app_version", "action",
                 "repo_id", "target", "registry_digest", "plan_digest", "terms_digest", "prompt_digest"}
@@ -407,9 +426,9 @@ class ReviewedInstalls:
             if plan_digest in self._running:
                 raise ModelTermsError("install_in_progress")
             archived = self._receipt(plan_digest)["plan"]
-            _atomic_json(self.store / "evidence" / f"{plan_digest}.json",
+            _atomic_json(self._record_path("evidence", plan_digest),
                          {"schema_version": 1, "plan": archived})
-            (self.store / "receipts" / f"{plan_digest}.json").unlink()
+            (self._record_path("receipts", plan_digest)).unlink()
             # Keep archived/installed evidence and all model files. This removes only the
             # local acknowledgement, never an upstream agreement or obligations.
 
@@ -442,7 +461,7 @@ class ReviewedInstalls:
                 self._receipt(plan_digest)
             installed = {"schema_version": 1, "plan_digest": plan_digest,
                          "receipt_id": receipt["receipt_id"], "plan": saved["plan"]}
-            _atomic_json(self.store / "installed" / f"{plan_digest}.json", installed)
+            _atomic_json(self._record_path("installed", plan_digest), installed)
             return {"status": "verified", "plan_digest": plan_digest,
                     "receipt_id": receipt["receipt_id"], "enforcement": "reviewed_install_only",
                     "activation": "not_integrated"}
@@ -468,7 +487,7 @@ class ReviewedInstalls:
         """
         with self._lock:
             value = self._receipt(plan_digest)
-            installed = read_json(self.store / "installed" / f"{plan_digest}.json")
+            installed = read_json(self._record_path("installed", plan_digest))
             if (installed.get("schema_version") != 1
                     or installed.get("plan_digest") != plan_digest
                     or installed.get("receipt_id") != value["receipt"]["receipt_id"]
