@@ -9,6 +9,7 @@ import copy
 import hashlib
 import importlib.util
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -337,6 +338,24 @@ class WorkflowTests(unittest.TestCase):
 
 
 class ProductionTests(unittest.TestCase):
+    def test_api_fixture_survives_service_module_purge(self):
+        # Other suites clear services.* after test collection. Reproduce that
+        # lifecycle in a child so this regression cannot pollute other tests.
+        code = (
+            "import sys, unittest; sys.path.insert(0, 'tests'); "
+            "import test_model_license_workflow as test; import services; "
+            "sys.modules.pop('services.model_licenses'); "
+            "delattr(services, 'model_licenses'); "
+            "suite = unittest.TestSuite(test.ApiTests(name) for name in ["
+            "'test_api_blocked_production_rows_never_transfer', "
+            "'test_api_boolean_not_coerced_and_unissued_plan_denied']); "
+            "result = unittest.TextTestRunner(verbosity=2).run(suite); "
+            "sys.exit(not result.wasSuccessful())"
+        )
+        result = subprocess.run([sys.executable, "-c", code], cwd=ROOT,
+                                capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_production_rows_never_use_synthetic_positive_fixtures(self):
         registry = ml.load_registry()
         self.assertEqual(len(registry["models"]), 56)
@@ -418,6 +437,10 @@ class ApiTests(unittest.TestCase):
         from core.browser_guard import BrowserGuardMiddleware
         from api.routers import model_licenses as routes
         self.routes = routes
+        # Keep fixture exceptions identical to the mounted router's imports,
+        # even when another suite purges services.* after this test is collected.
+        self.service = routes.ReviewedInstalls(self.root / "receipts-store", lambda: self.registry,
+                                             lambda: self.catalog, lambda: self.source, "test-build")
         self.app = FastAPI()
         self.app.include_router(routes.router)
         self.app.add_middleware(BrowserGuardMiddleware)
