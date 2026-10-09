@@ -1,6 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScaleIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ExternalLink } from '@/components/external-link';
 import {
@@ -12,8 +11,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { apiJson } from '@/lib/api/client';
+import { ModelLicenseIcon } from './model-license-icon';
 import {
   canAcknowledgeModelPlan,
+  modelLicenseStatus,
   modelLicenseStatusKey,
   modelLicenseUrl,
   type ModelLicenseInfo,
@@ -166,7 +167,7 @@ export function ModelLicense({
         onClick={() => setOpen(true)}
         aria-label={`${t('modelLicense.title')}: ${label}`}
       >
-        <ScaleIcon aria-hidden="true" />
+        <ModelLicenseIcon status={modelLicenseStatus(info?.commercial_inference)} />
         <span className="min-w-0 whitespace-normal [overflow-wrap:anywhere]">
           {t('modelLicense.title')}: {t(modelLicenseStatusKey(info?.commercial_inference))}
         </span>

@@ -64,11 +64,17 @@ export interface ModelReviewPlan {
   enforcement: 'reviewed_install_only';
 }
 
-/** Unknown/future statuses never acquire a permissive badge. */
+export type ModelLicenseStatus = 'restricted' | 'permission' | 'unknown';
+
+/** Unknown/future statuses collapse to `unknown`, never to a permissive state. */
+export function modelLicenseStatus(value?: string): ModelLicenseStatus {
+  if (value === 'restricted') return 'restricted';
+  if (value === 'separate_permission_required') return 'permission';
+  return 'unknown';
+}
+
 export function modelLicenseStatusKey(value?: string): string {
-  if (value === 'restricted') return 'modelLicense.restricted';
-  if (value === 'separate_permission_required') return 'modelLicense.permission';
-  return 'modelLicense.unknown';
+  return `modelLicense.${modelLicenseStatus(value)}`;
 }
 
 /** Upstream data is inert text; external navigation accepts HTTPS only. */
