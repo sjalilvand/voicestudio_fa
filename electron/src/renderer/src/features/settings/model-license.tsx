@@ -165,7 +165,7 @@ export function ModelLicense({
         variant="outline"
         className="h-auto min-h-7 max-w-full text-start"
         onClick={() => setOpen(true)}
-        aria-label={`${t('modelLicense.title')}: ${label}`}
+        aria-label={`${t('modelLicense.title')}: ${t(modelLicenseStatusKey(info?.commercial_inference))}; ${label}`}
       >
         <ModelLicenseIcon status={modelLicenseStatus(info?.commercial_inference)} />
         <span className="min-w-0 whitespace-normal [overflow-wrap:anywhere]">

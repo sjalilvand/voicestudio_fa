@@ -1,5 +1,6 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
+import { within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import en from '@/i18n/locales/en.json';
 import type { ModelLicenseInfo, ModelReviewPlan } from './model-license-contract';
@@ -113,6 +114,23 @@ afterEach(async () => {
 });
 
 describe('versioned model notices', () => {
+  it.each([
+    ['restricted', en.modelLicense.restricted],
+    ['separate_permission_required', en.modelLicense.permission],
+    ['unknown', en.modelLicense.unknown],
+    ['permitted', en.modelLicense.unknown],
+  ])(
+    'includes the visible localized status and model in the %s trigger name',
+    async (status, statusLabel) => {
+      await render({ ...info, commercial_inference: status });
+      const visibleLabel = `${en.modelLicense.title}: ${statusLabel}`;
+      const trigger = within(host).getByRole('button', { name: `${visibleLabel}; Test model` });
+      expect(trigger.textContent).toBe(visibleLabel);
+      expect(trigger.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+      expect(trigger.querySelector('svg')?.getAttribute('focusable')).toBe('false');
+    },
+  );
+
   it('shows separate unknown scopes and pinned evidence without downloading on open', async () => {
     await render();
     await open();
