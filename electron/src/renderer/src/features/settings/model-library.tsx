@@ -41,6 +41,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { SettingsSection, SettingsRow } from './settings-layout';
 import { familyIcons, type ModelFamily } from './model-family';
 import { useModelCatalogue, type CatalogueModel } from './model-catalogue-query';
+import { ModelLicense } from './model-license';
 import { resolvePerformanceModelPack } from './performance-model-packs';
 import { modelDiskShortfall } from './model-disk-space';
 import { fmtBytes } from '@shared/components/settings/models/format';
@@ -940,6 +941,12 @@ export function ModelLibrary({
             {t('firstrun.chip_recommended')}
           </span>
         )}
+        <ModelLicense
+          repoId={model.repo_id}
+          label={model.label}
+          info={model.license_info}
+          target={installTarget}
+        />
         {!activeAsrModel &&
           (activeEngineModel || activeDictationModel || activeDiarisationModel) && (
             <span className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-xs text-primary">
@@ -1347,3 +1354,4 @@ export function ModelLibrary({
     </>
   );
 }
+

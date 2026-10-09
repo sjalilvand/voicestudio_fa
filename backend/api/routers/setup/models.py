@@ -635,6 +635,11 @@ def model_access_status(repo_id: str = Query(...)):
     }
 
 
+def _model_license_info(repo_id: str) -> dict:
+    from services.model_licenses import safe_disclosure
+    return safe_disclosure(repo_id)
+
+
 @router.get("/models")
 def list_models():
     """Catalogue every known model + its on-disk install state.
@@ -701,6 +706,7 @@ def list_models():
             # Curated "best for your system" pick (curated_on in models.yaml) —
             # drives the recommended badge in the wizard and Settings model store.
             "curated": _model_curated(m, host_tags),
+            "license_info": _model_license_info(m["repo_id"]),
         })
     response = {
         "target": target_key,
@@ -855,3 +861,4 @@ def recommendations():
         "total_gb": round(sum(e["size_gb"] for e in entries), 2),
         "all_installed": all_installed,
     }
+
