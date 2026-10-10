@@ -3484,6 +3484,17 @@
     "categoryHint": "Gebaseerd op de opgegeven licentietekst, niet gecontroleerd door VoiceStudio. Geen juridisch advies.",
     "reviewed": "Gecontroleerd",
     "notReviewed": "Niet gecontroleerd",
-    "label": "Licentie"
+    "label": "Licentie",
+    "requiredTitle": "Licentie-acceptatie vereist",
+    "requiredError": "Dit model kan pas worden gebruikt als je de licentie accepteert.",
+    "acceptTitle": "Accepteer de modellicentie om het te gebruiken",
+    "acceptNotice": "VoiceStudio is niet de eigenaar of licentiegever van dit model en kan je geen toegang of rechten verlenen. De licentie van de rechthebbende bepaalt hoe je het model en de audio die het maakt mag gebruiken. Zorg voor gebruik dat je toestemming hebt, bijvoorbeeld alleen niet-commercieel gebruik, of een aparte licentie van de rechthebbende voor commercieel gebruik.",
+    "acceptConfirm": "Ik heb de licentie gelezen en bevestig dat ik de rechten heb die ze voor mijn gebruik vereist. Ik begrijp dat VoiceStudio geen modelrechten verleent.",
+    "accept": "Licentie accepteren",
+    "acceptChanged": "De licentievoorwaarden zijn gewijzigd. Bekijk de nieuwe voorwaarden en accepteer opnieuw.",
+    "acceptFailed": "De acceptatie kon niet worden opgeslagen. Probeer het opnieuw.",
+    "acceptedState": "Je hebt deze licentie geaccepteerd. Als je de acceptatie intrekt, is het model geblokkeerd tot je opnieuw accepteert.",
+    "revoke": "Acceptatie intrekken",
+    "acceptNeeded": "Accepteer licentie om te gebruiken"
   }
 }

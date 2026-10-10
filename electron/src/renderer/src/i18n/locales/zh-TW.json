@@ -3484,6 +3484,17 @@
     "categoryHint": "依據聲明的授權文字，未經 VoiceStudio 核實。不構成法律建議。",
     "reviewed": "已審查",
     "notReviewed": "未審查",
-    "label": "授權"
+    "label": "授權",
+    "requiredTitle": "需要接受授權",
+    "requiredError": "接受授權之前無法使用此模型。",
+    "acceptTitle": "接受模型授權後即可使用",
+    "acceptNotice": "VoiceStudio 不是此模型的擁有者或授權方，無法授予你存取權或任何權利。你可以如何使用此模型及其產生的音訊，由權利人的授權決定。使用前請確認你已取得許可，例如僅限非商業用途，或已從權利人取得用於商業用途的個別授權。",
+    "acceptConfirm": "我已閱讀授權，並確認我擁有其要求、適用於我的用途的權利。我了解 VoiceStudio 不授予任何模型權利。",
+    "accept": "接受授權",
+    "acceptChanged": "授權條款已變更。請檢視更新後的條款並重新接受。",
+    "acceptFailed": "無法儲存接受紀錄。請再試一次。",
+    "acceptedState": "你已接受此授權。如果撤回接受，模型將被封鎖，直到你再次接受。",
+    "revoke": "撤回接受",
+    "acceptNeeded": "接受授權後使用"
   }
 }

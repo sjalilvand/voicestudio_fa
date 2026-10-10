@@ -3484,6 +3484,17 @@
     "categoryHint": "Baserat på den angivna licenstexten, inte verifierat av VoiceStudio. Inte juridisk rådgivning.",
     "reviewed": "Granskad",
     "notReviewed": "Inte granskad",
-    "label": "Licens"
+    "label": "Licens",
+    "requiredTitle": "Licensgodkännande krävs",
+    "requiredError": "Den här modellen kan inte användas förrän du godkänner dess licens.",
+    "acceptTitle": "Godkänn modellens licens för att använda den",
+    "acceptNotice": "VoiceStudio är inte ägare eller licensgivare för den här modellen och kan inte ge dig åtkomst eller rättigheter till den. Rättighetsinnehavarens licens avgör hur du får använda modellen och ljudet den skapar. Se till att du har tillstånd innan du använder den, till exempel endast icke-kommersiell användning, eller en separat licens från rättighetsinnehavaren för kommersiell användning.",
+    "acceptConfirm": "Jag har läst licensen och bekräftar att jag har de rättigheter den kräver för min användning. Jag förstår att VoiceStudio inte ger några rättigheter till modellen.",
+    "accept": "Godkänn licens",
+    "acceptChanged": "Licensvillkoren har ändrats. Granska de nya villkoren och godkänn igen.",
+    "acceptFailed": "Godkännandet kunde inte sparas. Försök igen.",
+    "acceptedState": "Du har godkänt den här licensen. Om du drar tillbaka godkännandet blockeras modellen tills du godkänner igen.",
+    "revoke": "Dra tillbaka godkännande",
+    "acceptNeeded": "Godkänn licensen för att använda"
   }
 }

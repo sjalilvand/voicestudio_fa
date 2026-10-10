@@ -3484,6 +3484,17 @@
     "categoryHint": "Beyan edilen lisans metnine dayanır, VoiceStudio tarafından doğrulanmamıştır. Hukuki tavsiye değildir.",
     "reviewed": "İncelendi",
     "notReviewed": "İncelenmedi",
-    "label": "Lisans"
+    "label": "Lisans",
+    "requiredTitle": "Lisans onayı gerekli",
+    "requiredError": "Bu model, lisansını kabul edene kadar kullanılamaz.",
+    "acceptTitle": "Kullanmak için model lisansını kabul edin",
+    "acceptNotice": "VoiceStudio bu modelin sahibi veya lisans vereni değildir ve size modele erişim ya da hak veremez. Modeli ve ürettiği sesi nasıl kullanabileceğinizi hak sahibinin lisansı belirler. Kullanmadan önce izniniz olduğundan emin olun; örneğin yalnızca ticari olmayan kullanım ya da ticari kullanım için hak sahibinden ayrı bir lisans.",
+    "acceptConfirm": "Lisansı okudum ve kullanımım için gerektirdiği haklara sahip olduğumu onaylıyorum. VoiceStudio'nun hiçbir model hakkı vermediğini anlıyorum.",
+    "accept": "Lisansı kabul et",
+    "acceptChanged": "Lisans koşulları değişti. Güncellenen koşulları inceleyip yeniden kabul edin.",
+    "acceptFailed": "Onay kaydedilemedi. Tekrar deneyin.",
+    "acceptedState": "Bu lisansı kabul ettiniz. Onayı geri çekerseniz, yeniden kabul edene kadar model engellenir.",
+    "revoke": "Onayı geri çek",
+    "acceptNeeded": "Kullanmak için lisansı kabul et"
   }
 }

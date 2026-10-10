@@ -3484,6 +3484,17 @@
     "categoryHint": "Based on the declared licence text, not verified by VoiceStudio. Not legal advice.",
     "reviewed": "Reviewed",
     "notReviewed": "Not reviewed",
-    "label": "Licence"
+    "label": "Licence",
+    "requiredTitle": "Licence acceptance needed",
+    "requiredError": "This model can't be used until you accept its licence.",
+    "acceptTitle": "Accept the model licence to use it",
+    "acceptNotice": "VoiceStudio is not the owner or licensor of this model and cannot grant you access or rights to it. The rights holder's licence decides how you may use the model and the audio it produces. Before using it, make sure you have permission, for example non-commercial use only, or a separate licence from the rights holder for commercial use.",
+    "acceptConfirm": "I have read the licence and confirm I have the rights it requires for my use. I understand VoiceStudio grants no model rights.",
+    "accept": "Accept licence",
+    "acceptChanged": "The licence terms changed. Review the updated terms and accept again.",
+    "acceptFailed": "The acceptance could not be saved. Try again.",
+    "acceptedState": "You accepted this licence. If you withdraw acceptance, the model is blocked until you accept again.",
+    "revoke": "Withdraw acceptance",
+    "acceptNeeded": "Accept licence to use"
   }
 }

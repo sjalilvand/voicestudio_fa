@@ -12,12 +12,14 @@ import {
 } from '@/components/ui/dialog';
 import { apiJson } from '@/lib/api/client';
 import { ModelLicenseIcon } from './model-license-icon';
+import { ModelLicenceAccepted, ModelLicenceAcceptanceForm } from './model-licence-acceptance';
 import {
   canAcknowledgeModelPlan,
   modelLicenseCategory,
   modelLicenseCategoryKey,
   modelLicenseStatusKey,
   modelLicenseUrl,
+  type ModelLicenceAcceptance,
   type ModelLicenseInfo,
   type ModelReviewPlan,
 } from './model-license-contract';
@@ -37,11 +39,13 @@ export function ModelLicense({
   repoId,
   label,
   info,
+  acceptance,
   target,
 }: {
   repoId: string;
   label: string;
   info?: ModelLicenseInfo;
+  acceptance?: ModelLicenceAcceptance;
   target: string;
 }) {
   const { t } = useTranslation();
@@ -189,6 +193,12 @@ export function ModelLicense({
             </DialogTitle>
             <DialogDescription>{t('modelLicense.disclaimer')}</DialogDescription>
           </DialogHeader>
+          {acceptance?.required &&
+            (acceptance.accepted ? (
+              <ModelLicenceAccepted repoId={repoId} />
+            ) : (
+              <ModelLicenceAcceptanceForm models={[acceptance]} />
+            ))}
           <p className="text-xs text-muted-foreground">{t('modelLicense.preview')}</p>
           <p className="text-xs [overflow-wrap:anywhere]">
             {repoId} · {t('common.backend')}: {target}

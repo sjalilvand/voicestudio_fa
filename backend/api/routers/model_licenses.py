@@ -1,4 +1,4 @@
-"""Opt-in model-notice review API. Existing installers are not enforced here."""
+"""Model-notice API: licence acceptance (enforced on use) and the opt-in reviewed install."""
 from __future__ import annotations
 
 import logging
@@ -20,6 +20,18 @@ class PrepareRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     repo_id: str = Field(min_length=3, max_length=200)
     target: str = Field(default="local", max_length=200)
+
+
+class AcceptRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    repo_id: str = Field(min_length=3, max_length=200, pattern=r"^[A-Za-z0-9][\w.-]*/[\w.-]+$")
+    fingerprint: str = Field(pattern=r"^v1:[a-f0-9]{64}$")
+    accepted: StrictBool
+
+
+class RevokeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    repo_id: str = Field(min_length=3, max_length=200, pattern=r"^[A-Za-z0-9][\w.-]*/[\w.-]+$")
 
 
 class CommitRequest(BaseModel):
@@ -132,3 +144,29 @@ def verify_model_install(plan_digest: str) -> dict:
         raise _fail(exc) from exc
     except Exception as exc:
         raise HTTPException(status_code=409, detail={"code": "installed_evidence_unavailable"}) from exc
+
+
+@router.get("/models/licenses/acceptance/{repo_id:path}",
+            dependencies=[Depends(reject_cross_site_get)])
+def get_model_licence_acceptance(repo_id: str) -> dict:
+    from services import model_acceptance
+    return model_acceptance.status(repo_id)
+
+
+@router.post("/models/licenses/accept")
+def accept_model_licence(body: AcceptRequest) -> dict:
+    """Record that the user confirmed they hold the rights these exact terms require."""
+    from services import model_acceptance
+    if body.accepted is not True:
+        raise HTTPException(status_code=400, detail={"code": "acceptance_required"})
+    try:
+        return model_acceptance.accept(body.repo_id, body.fingerprint)
+    except ValueError as exc:
+        # The terms changed since the user saw them: show the new terms first.
+        raise HTTPException(status_code=409, detail={"code": "terms_changed"}) from exc
+
+
+@router.post("/models/licenses/revoke")
+def revoke_model_licence(body: RevokeRequest) -> dict:
+    from services import model_acceptance
+    return model_acceptance.revoke(body.repo_id)

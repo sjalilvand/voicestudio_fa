@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiJson } from '@/lib/api/client';
 import { useBackendStatus } from '@/hooks/use-backend-status';
 import { isBackendReachable } from '@shared/utils/backendStage';
-import type { ModelLicenseInfo } from './model-license-contract';
+import type { ModelLicenseInfo, ModelLicenceAcceptance } from './model-license-contract';
 
 export interface CatalogueModel {
   repo_id: string;
@@ -26,6 +26,7 @@ export interface CatalogueModel {
   failure_topic?: string;
   /** Versioned disclosure; absence is unverified, never a permission grant. */
   license_info?: ModelLicenseInfo;
+  license_acceptance?: ModelLicenceAcceptance;
 }
 
 export interface ModelCatalogueResponse {
@@ -48,4 +49,3 @@ export function useModelCatalogue() {
       query.state.data?.target && query.state.data.target !== 'local' ? 5_000 : false,
   });
 }
-

@@ -14,6 +14,10 @@ import {
   isSameOriginApi,
 } from '@shared/api/authSession';
 import { joinApiPath } from '../../../../shared/web-api-routing';
+import {
+  MODEL_LICENCE_REQUIRED_EVENT,
+  modelLicenceRequirements,
+} from '@/features/settings/model-license-contract';
 export { joinApiPath } from '../../../../shared/web-api-routing';
 
 type ApiBaseWindow = Window & { __OMNIVOICE_API_BASE__?: string };
@@ -123,7 +127,14 @@ export async function errorFromResponse(res: Response): Promise<ApiError> {
       // Plain-text body.
     }
   }
+  const licence = modelLicenceRequirements(payload);
+  if (licence && typeof window !== 'undefined') {
+    // Any feature can hit a model whose licence is not yet accepted; one
+    // app-level dialog handles them all.
+    window.dispatchEvent(new CustomEvent(MODEL_LICENCE_REQUIRED_EVENT, { detail: licence }));
+  }
   const detail =
+    (licence && tr('modelLicense.requiredError')) ||
     generationFailureMessage(payload, tr) ||
     (payload && 'detail' in payload
       ? detailToString(payload.detail)

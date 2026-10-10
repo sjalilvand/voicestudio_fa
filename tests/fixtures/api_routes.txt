@@ -134,6 +134,7 @@ GET /model/status
 GET /models
 GET /models/access/status
 GET /models/install/status
+GET /models/licenses/acceptance/{repo_id:path}
 GET /models/licenses/receipts/{plan_digest}
 GET /openapi.json
 GET /personalities
@@ -272,6 +273,8 @@ POST /models/install
 POST /models/install/cancel
 POST /models/install/commit
 POST /models/install/prepare
+POST /models/licenses/accept
+POST /models/licenses/revoke
 POST /models/licenses/verify/{plan_digest}
 POST /personas/export/{profile_id}
 POST /personas/import

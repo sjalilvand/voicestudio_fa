@@ -3484,6 +3484,17 @@
     "categoryHint": "Dựa trên văn bản giấy phép được công bố, VoiceStudio chưa xác minh. Không phải tư vấn pháp lý.",
     "reviewed": "Đã xem xét",
     "notReviewed": "Chưa xem xét",
-    "label": "Giấy phép"
+    "label": "Giấy phép",
+    "requiredTitle": "Cần chấp nhận giấy phép",
+    "requiredError": "Không thể dùng mô hình này cho đến khi bạn chấp nhận giấy phép của nó.",
+    "acceptTitle": "Chấp nhận giấy phép mô hình để sử dụng",
+    "acceptNotice": "VoiceStudio không phải chủ sở hữu hay bên cấp phép của mô hình này và không thể cấp cho bạn quyền truy cập hoặc quyền đối với mô hình. Giấy phép của chủ sở hữu quyền quyết định cách bạn được dùng mô hình và âm thanh nó tạo ra. Trước khi dùng, hãy đảm bảo bạn được phép, ví dụ chỉ dùng phi thương mại, hoặc có giấy phép riêng từ chủ sở hữu quyền cho mục đích thương mại.",
+    "acceptConfirm": "Tôi đã đọc giấy phép và xác nhận có các quyền mà giấy phép yêu cầu cho mục đích sử dụng của tôi. Tôi hiểu rằng VoiceStudio không cấp bất kỳ quyền nào đối với mô hình.",
+    "accept": "Chấp nhận giấy phép",
+    "acceptChanged": "Điều khoản giấy phép đã thay đổi. Hãy xem điều khoản mới và chấp nhận lại.",
+    "acceptFailed": "Không thể lưu việc chấp nhận. Hãy thử lại.",
+    "acceptedState": "Bạn đã chấp nhận giấy phép này. Nếu rút lại chấp nhận, mô hình sẽ bị chặn cho đến khi bạn chấp nhận lại.",
+    "revoke": "Rút lại chấp nhận",
+    "acceptNeeded": "Chấp nhận giấy phép để sử dụng"
   }
 }

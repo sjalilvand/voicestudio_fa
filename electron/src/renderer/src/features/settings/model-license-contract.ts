@@ -33,6 +33,44 @@ export interface ModelLicenseInfo {
   variants?: ModelLicenseVariant[];
 }
 
+/** Use-time licence acceptance; only commercial-category models skip it. */
+export interface ModelLicenceAcceptance {
+  repo_id: string;
+  license?: string | null;
+  category: string;
+  required: boolean;
+  accepted: boolean;
+  fingerprint: string;
+}
+
+/** A gated model listed by the backend's `model_licence_required` error. */
+export type ModelLicenceRequirement = Pick<
+  ModelLicenceAcceptance,
+  'repo_id' | 'license' | 'category' | 'fingerprint'
+>;
+
+export const MODEL_LICENCE_REQUIRED = 'model_licence_required';
+export const MODEL_LICENCE_REQUIRED_EVENT = 'ov:model-licence-required';
+
+/** The gated models from an API error payload, or null when it is another error. */
+export function modelLicenceRequirements(payload: unknown): ModelLicenceRequirement[] | null {
+  const detail =
+    payload && typeof payload === 'object' && 'detail' in payload
+      ? (payload as { detail: unknown }).detail
+      : payload;
+  if (!detail || typeof detail !== 'object') return null;
+  const { code, models } = detail as { code?: unknown; models?: unknown };
+  if (code !== MODEL_LICENCE_REQUIRED || !Array.isArray(models)) return null;
+  const valid = models.filter(
+    (m): m is ModelLicenceRequirement =>
+      !!m &&
+      typeof m === 'object' &&
+      typeof (m as ModelLicenceRequirement).repo_id === 'string' &&
+      typeof (m as ModelLicenceRequirement).fingerprint === 'string',
+  );
+  return valid.length ? valid : null;
+}
+
 export interface ModelReviewDocument {
   id: string;
   title: string;

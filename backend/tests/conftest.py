@@ -77,6 +77,17 @@ def supports_symlinks() -> bool:
         shutil.rmtree(probe_dir, ignore_errors=True)
 
 
+@pytest.fixture(autouse=True)
+def _model_licences_accepted_by_default():
+    """Gated model licences read as accepted; mirrors tests/conftest.py, where
+    the enforcement tests live and opt back in with ``model_licence_gate``."""
+    from services import model_acceptance as _ma
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(_ma, "ensure_accepted", lambda repo_ids: None)
+        yield
+
+
 @pytest.fixture(scope="session")
 def symlinks_supported() -> bool:
     """Bool fixture over :func:`supports_symlinks` for guarding the

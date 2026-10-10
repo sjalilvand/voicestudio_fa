@@ -3484,6 +3484,17 @@
     "categoryHint": "依据声明的许可文本，未经 VoiceStudio 核实。不构成法律建议。",
     "reviewed": "已审核",
     "notReviewed": "未审核",
-    "label": "许可"
+    "label": "许可",
+    "requiredTitle": "需要接受许可",
+    "requiredError": "接受许可之前无法使用此模型。",
+    "acceptTitle": "接受模型许可后即可使用",
+    "acceptNotice": "VoiceStudio 不是此模型的所有者或许可方，无法授予你访问权或任何权利。你可以如何使用该模型及其生成的音频，由权利人的许可决定。使用前请确认你已获得许可，例如仅限非商业用途，或已从权利人处获得用于商业用途的单独许可。",
+    "acceptConfirm": "我已阅读许可，并确认我拥有其要求的、适用于我的用途的权利。我理解 VoiceStudio 不授予任何模型权利。",
+    "accept": "接受许可",
+    "acceptChanged": "许可条款已更改。请查看更新后的条款并重新接受。",
+    "acceptFailed": "无法保存接受记录。请重试。",
+    "acceptedState": "你已接受此许可。如果撤回接受，模型将被阻止，直到你再次接受。",
+    "revoke": "撤回接受",
+    "acceptNeeded": "接受许可后使用"
   }
 }

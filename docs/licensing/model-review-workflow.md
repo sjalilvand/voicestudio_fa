@@ -1,9 +1,37 @@
 # Model notices and reviewed-file preview
 
-This is an additive, local-first review foundation. **No production model is
-currently review-ready.** It does not enforce the normal installation or
-generation paths and is not commercial, redistribution, copyright or voice-rights
-clearance. Existing models and engine preferences are preserved.
+This is a local-first notice and review foundation. **No production model is
+currently review-ready.** Licence acceptance (below) is enforced when a model is
+used; installation paths are unchanged. Nothing here is commercial,
+redistribution, copyright or voice-rights clearance. Existing models and engine
+preferences are preserved.
+
+## Licence acceptance before use
+
+VoiceStudio is not the owner or licensor of any model and cannot grant model
+access or rights. Every model whose licence category is not **Commercial use
+allowed** (MIT, Apache-2.0, BSD, ISC, CC0, CC-BY) must be accepted before it can
+be used, including models that are already downloaded. That covers
+non-commercial, conditional and unidentified licences, so the default OmniVoice
+model needs one acceptance. Accepting confirms that you have the rights the
+model's licence requires for your use, for example non-commercial use only or a
+separate licence from the rights holder for commercial use.
+
+- Until accepted, the model card shows **Accept licence to use** and every
+  feature that would load the model (generation, transcription, dictation,
+  dubbing, translation, batch, workflows, API) stops with an acceptance dialog
+  instead of loading it. Nothing is reinstalled.
+- Acceptance is stored locally per model and bound to a fingerprint of the
+  recorded terms. If those terms change in a later registry, you are asked
+  again. **Withdraw acceptance** in the licence dialog blocks the model again.
+- An earlier Supertonic-3 licence acceptance carries over.
+- API and headless users get HTTP 403 with
+  `{"code": "model_licence_required", "models": [...]}` listing each model's
+  `repo_id` and terms `fingerprint`. Accept after reviewing the terms with
+  `POST /models/licenses/accept` and body
+  `{"repo_id": "...", "fingerprint": "...", "accepted": true}`;
+  `GET /models/licenses/acceptance/{repo_id}` reports the state and
+  `POST /models/licenses/revoke` withdraws it.
 
 ## In Model Manager
 

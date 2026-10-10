@@ -640,6 +640,11 @@ def _model_license_info(repo_id: str) -> dict:
     return safe_disclosure(repo_id)
 
 
+def _model_licence_acceptance(repo_id: str) -> dict:
+    from services import model_acceptance
+    return model_acceptance.status(repo_id)
+
+
 @router.get("/models")
 def list_models():
     """Catalogue every known model + its on-disk install state.
@@ -707,6 +712,7 @@ def list_models():
             # drives the recommended badge in the wizard and Settings model store.
             "curated": _model_curated(m, host_tags),
             "license_info": _model_license_info(m["repo_id"]),
+            "license_acceptance": _model_licence_acceptance(m["repo_id"]),
         })
     response = {
         "target": target_key,

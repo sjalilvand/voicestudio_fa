@@ -3486,6 +3486,17 @@
     "categoryHint": "Com base no texto de licença declarado, não verificado pelo VoiceStudio. Não é aconselhamento jurídico.",
     "reviewed": "Revisado",
     "notReviewed": "Não revisado",
-    "label": "Licença"
+    "label": "Licença",
+    "requiredTitle": "Aceitação da licença necessária",
+    "requiredError": "Este modelo não pode ser usado até você aceitar a licença dele.",
+    "acceptTitle": "Aceite a licença do modelo para usá-lo",
+    "acceptNotice": "O VoiceStudio não é o proprietário nem o licenciante deste modelo e não pode conceder acesso ou direitos sobre ele. A licença do titular dos direitos define como você pode usar o modelo e o áudio que ele produz. Antes de usá-lo, verifique se você tem permissão, por exemplo apenas uso não comercial, ou uma licença separada do titular dos direitos para uso comercial.",
+    "acceptConfirm": "Li a licença e confirmo que tenho os direitos que ela exige para o meu uso. Entendo que o VoiceStudio não concede direitos sobre o modelo.",
+    "accept": "Aceitar licença",
+    "acceptChanged": "Os termos da licença mudaram. Revise os termos atualizados e aceite novamente.",
+    "acceptFailed": "Não foi possível salvar a aceitação. Tente novamente.",
+    "acceptedState": "Você aceitou esta licença. Se retirar a aceitação, o modelo ficará bloqueado até você aceitar novamente.",
+    "revoke": "Retirar aceitação",
+    "acceptNeeded": "Aceite a licença para usar"
   }
 }

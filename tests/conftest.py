@@ -131,6 +131,32 @@ def _settings_files_restore(snapshot: dict) -> None:
         os.replace(tmp, path)
 
 
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "model_licence_gate: run with real model-licence acceptance (default: accepted)",
+    )
+
+
+@pytest.fixture(autouse=True)
+def _model_licences_accepted_by_default(request):
+    """Gated model licences read as accepted unless a test opts in with
+    ``@pytest.mark.model_licence_gate``.
+
+    Enforcement has its own tests (test_model_acceptance, test_tts_model_licence_gate);
+    every other engine test would otherwise depend on acceptance state that a
+    fresh test data dir never has. Mirrored in backend/tests/conftest.py.
+    """
+    if request.node.get_closest_marker("model_licence_gate"):
+        yield
+        return
+    from services import model_acceptance as _ma
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(_ma, "ensure_accepted", lambda repo_ids: None)
+        yield
+
+
 @pytest.fixture(scope="module", autouse=True)
 def _isolate_persisted_settings_per_module():
     snapshot = _settings_files_snapshot()

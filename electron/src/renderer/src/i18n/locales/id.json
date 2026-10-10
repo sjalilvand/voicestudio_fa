@@ -3484,6 +3484,17 @@
     "categoryHint": "Berdasarkan teks lisensi yang dinyatakan, tidak diverifikasi oleh VoiceStudio. Bukan nasihat hukum.",
     "reviewed": "Ditinjau",
     "notReviewed": "Belum ditinjau",
-    "label": "Lisensi"
+    "label": "Lisensi",
+    "requiredTitle": "Penerimaan lisensi diperlukan",
+    "requiredError": "Model ini tidak dapat digunakan sampai Anda menerima lisensinya.",
+    "acceptTitle": "Terima lisensi model untuk menggunakannya",
+    "acceptNotice": "VoiceStudio bukan pemilik atau pemberi lisensi model ini dan tidak dapat memberi Anda akses atau hak atasnya. Lisensi pemegang hak menentukan cara Anda boleh menggunakan model dan audio yang dihasilkannya. Sebelum menggunakannya, pastikan Anda memiliki izin, misalnya hanya penggunaan nonkomersial, atau lisensi terpisah dari pemegang hak untuk penggunaan komersial.",
+    "acceptConfirm": "Saya telah membaca lisensi dan menyatakan bahwa saya memiliki hak yang disyaratkan untuk penggunaan saya. Saya memahami bahwa VoiceStudio tidak memberikan hak apa pun atas model.",
+    "accept": "Terima lisensi",
+    "acceptChanged": "Ketentuan lisensi berubah. Tinjau ketentuan terbaru dan terima lagi.",
+    "acceptFailed": "Penerimaan tidak dapat disimpan. Coba lagi.",
+    "acceptedState": "Anda telah menerima lisensi ini. Jika Anda menarik penerimaan, model akan diblokir sampai Anda menerimanya lagi.",
+    "revoke": "Tarik penerimaan",
+    "acceptNeeded": "Terima lisensi untuk menggunakan"
   }
 }
