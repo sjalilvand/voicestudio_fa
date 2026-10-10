@@ -120,12 +120,13 @@ describe('versioned model notices', () => {
     ['unknown', en.modelLicense.unknown],
     ['permitted', en.modelLicense.unknown],
   ])(
-    'includes the visible localized status and model in the %s trigger name',
+    'shows an icon-only %s trigger named by the localized status and model',
     async (status, statusLabel) => {
       await render({ ...info, commercial_inference: status });
       const visibleLabel = `${en.modelLicense.title}: ${statusLabel}`;
       const trigger = within(host).getByRole('button', { name: `${visibleLabel}; Test model` });
-      expect(trigger.textContent).toBe(visibleLabel);
+      expect(trigger.textContent).toBe('');
+      expect(trigger.getAttribute('title')).toBe(visibleLabel);
       expect(trigger.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
       expect(trigger.querySelector('svg')?.getAttribute('focusable')).toBe('false');
     },

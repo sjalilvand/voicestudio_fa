@@ -161,16 +161,13 @@ export function ModelLicense({
     <>
       <Button
         ref={trigger}
-        size="sm"
+        size="icon-sm"
         variant="outline"
-        className="h-auto min-h-7 max-w-full text-start"
         onClick={() => setOpen(true)}
+        title={`${t('modelLicense.title')}: ${t(modelLicenseStatusKey(info?.commercial_inference))}`}
         aria-label={`${t('modelLicense.title')}: ${t(modelLicenseStatusKey(info?.commercial_inference))}; ${label}`}
       >
         <ModelLicenseIcon status={modelLicenseStatus(info?.commercial_inference)} />
-        <span className="min-w-0 whitespace-normal [overflow-wrap:anywhere]">
-          {t('modelLicense.title')}: {t(modelLicenseStatusKey(info?.commercial_inference))}
-        </span>
       </Button>
       <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
         <DialogContent
