@@ -21,21 +21,35 @@ separate licence from the rights holder for commercial use.
   feature that would load the model (generation, transcription, dictation,
   dubbing, translation, batch, workflows, API) stops with an acceptance dialog
   instead of loading it. Nothing is reinstalled.
-- Acceptance is stored locally per model and bound to a fingerprint of the
-  recorded terms. If those terms change in a later registry, you are asked
-  again. **Withdraw acceptance** in the licence dialog blocks the model again.
+- Acceptance is recorded locally and separately for each model: when you
+  accepted or withdrew, the fingerprint of the exact terms you were shown, and
+  the app version. The last 20 actions are kept as history, shown under
+  **Technical details** in the licence dialog.
+- The fingerprint covers everything the dialog shows about the terms: the
+  licence, rights holder, category, commercial, output, redistribution and
+  voice fields, notes, variant terms, links, evidence and model versions, and
+  the hashes of stored licence documents. If any of these change in a later
+  app update, the model is blocked again and the dialog says which parts
+  changed. A re-check that changes nothing (only the checked date) does not ask
+  again. **Withdraw acceptance** blocks the model until you accept again.
+- When a feature needs several unaccepted models at once (OmniVoice and its
+  tokenizer, for example), the dialog shows each model's full licence and asks
+  for a separate confirmation for each one.
 - An earlier Supertonic-3 licence acceptance carries over.
 - API and headless users get HTTP 403 with
   `{"code": "model_licence_required", "models": [...]}` listing each model's
   `repo_id` and terms `fingerprint`. Accept after reviewing the terms with
   `POST /models/licenses/accept` and body
   `{"repo_id": "...", "fingerprint": "...", "accepted": true}`;
-  `GET /models/licenses/acceptance/{repo_id}` reports the state and
-  `POST /models/licenses/revoke` withdraws it.
+  `GET /models/licenses/acceptance/{repo_id}` reports the state
+  (`not_required`, `accepted`, `not_accepted`, `withdrawn` or `terms_updated`),
+  `GET /models/licenses/details/{repo_id}` adds the full disclosure and history,
+  and `POST /models/licenses/revoke` withdraws it. Accepting and withdrawing
+  need admin on a shared server.
 
 ## In Model Manager
 
-Each model card has a coloured **Model terms** icon. Its shape and colour show
+Each model card has a **Licence:** button with a coloured icon. Its shape and colour show
 the category of the *declared* licence, with the licence name, category and
 review state in its tooltip and accessible name:
 
@@ -51,13 +65,27 @@ The category summarises the declared text only; it is not a review result, and
 "Not reviewed" stays visible until the record is cleared. New licence ids must be
 mapped in `backend/services/model_licenses.py` (CI fails otherwise).
 
-Clicking the icon opens the legal projection of
-the existing catalogue, including the recorded source credit, declared model
-terms, evidence revision, runtime revision, evidence date and registry digest.
-Model use, commercial outputs, redistribution and voice/recording consent are
-separate assessments. File/language variants appear separately where recorded.
-Unmapped or conflicting licence data falls back to the unknown category, never
-to commercial. A licence
+Clicking it opens the licence dialog, on a solid background, in this order:
+
+1. **Summary**: the licence category in plain words, the declared licence, the
+   review state and your acceptance state (accepted with date and terms
+   fingerprint, withdrawn, terms updated with what changed, or not accepted).
+2. **What this licence allows**: commercial use of the model, commercial use
+   of generated audio, sharing the model files, and voice and recording consent
+   (always your responsibility), each with a status.
+3. **Source**: the rights holder and links to the licence and the model page.
+4. Collapsed sections: **Files and variants** (files with their own terms;
+   the most restrictive applies), **Recorded notes**, **Technical details**
+   (model and evidence versions, evidence date, terms fingerprint, registry
+   version and acceptance history; long hashes are shortened with a copy
+   button) and **Verified install (preview)**.
+5. A footer that stays visible: the notice that VoiceStudio is not the licensor
+   and cannot grant access, a confirmation checkbox, and **Accept licence** or
+   **Withdraw acceptance**.
+
+The dialog that opens when another feature needs an unaccepted model shows the
+same full view for every model involved. Unmapped or conflicting licence data
+falls back to the unknown category, never to commercial. A licence
 label alone does not establish the rights of a complete workflow.
 
 Pinned evidence links and the current upstream page are distinct. Opening an

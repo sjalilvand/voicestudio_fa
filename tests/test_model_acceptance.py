@@ -61,7 +61,7 @@ def test_only_commercial_category_models_skip_acceptance(store, repo_id, require
 def test_accept_binds_to_the_exact_terms_shown(store):
     state = ma.status("k2-fsa/OmniVoice")
     with pytest.raises(ValueError, match="terms_changed"):
-        ma.accept("k2-fsa/OmniVoice", "v1:" + "0" * 64)
+        ma.accept("k2-fsa/OmniVoice", "v2:" + "0" * 64)
     assert ma.accept("k2-fsa/OmniVoice", state["fingerprint"])["accepted"] is True
     ma.ensure_accepted(["k2-fsa/OmniVoice"])
 
@@ -86,7 +86,7 @@ def test_error_lists_every_unaccepted_model_with_structured_detail(store):
     detail = err.value.detail()
     assert detail["code"] == "model_licence_required"
     assert {m["repo_id"] for m in detail["models"]} == {"k2-fsa/OmniVoice", "eustlb/higgs-audio-v2-tokenizer"}
-    assert all(m["fingerprint"].startswith("v1:") for m in detail["models"])
+    assert all(m["fingerprint"].startswith("v2:") for m in detail["models"])
 
 
 def test_engine_identity_selects_the_concrete_model(store):
@@ -150,3 +150,65 @@ def test_legacy_engine_toggle_syncs_the_new_record(store):
     ma.sync_from_engine("supertonic3", False)
     assert ma.status("Supertone/supertonic-3")["accepted"] is False
     ma.sync_from_engine("pockettts", True)  # unrelated engines are untouched
+
+
+def _info_with(monkeypatch, **changes):
+    original = ma._disclosure
+    monkeypatch.setattr(ma, "_disclosure", lambda r: {**original(r), **changes})
+
+
+def test_accept_and_withdraw_store_time_hash_and_history(store):
+    fp = ma.status("k2-fsa/OmniVoice")["fingerprint"]
+    ma.accept("k2-fsa/OmniVoice", fp)
+    ma.revoke("k2-fsa/OmniVoice")
+    ma.accept("k2-fsa/OmniVoice", fp)
+    details = ma.details("k2-fsa/OmniVoice")
+    state = details["acceptance"]
+    assert state["state"] == "accepted"
+    assert state["accepted_at"] and state["last_action"]["fingerprint"] == fp
+    assert [h["action"] for h in details["history"]] == ["accepted", "withdrawn", "accepted"]
+    assert all(h["at"].endswith("+00:00") and h["fingerprint"].startswith("v2:") for h in details["history"])
+    assert details["info"]["license"] == state["license"]
+
+
+def test_withdrawn_is_reported_as_withdrawn(store):
+    ma.accept("k2-fsa/OmniVoice", ma.status("k2-fsa/OmniVoice")["fingerprint"])
+    assert ma.revoke("k2-fsa/OmniVoice")["state"] == "withdrawn"
+
+
+@pytest.mark.parametrize("field", ["notes", "credit", "evidence_url", "runtime_revision"])
+def test_any_visible_terms_change_asks_again_and_names_it(store, monkeypatch, field):
+    ma.accept("k2-fsa/OmniVoice", ma.status("k2-fsa/OmniVoice")["fingerprint"])
+    _info_with(monkeypatch, **{field: "updated by a later registry"})
+    state = ma.status("k2-fsa/OmniVoice")
+    assert state["state"] == "terms_updated" and state["accepted"] is False
+    assert state["changed_fields"] == [field]
+    assert state["accepted_at"]
+
+
+def test_licence_document_change_asks_again(store, monkeypatch):
+    ma.accept("k2-fsa/OmniVoice", ma.status("k2-fsa/OmniVoice")["fingerprint"])
+    monkeypatch.setattr(ma, "_documents", lambda repo_id: [["terms", "f" * 64]])
+    assert ma.status("k2-fsa/OmniVoice")["changed_fields"] == ["documents"]
+
+
+def test_a_recheck_date_alone_does_not_ask_again(store, monkeypatch):
+    ma.accept("k2-fsa/OmniVoice", ma.status("k2-fsa/OmniVoice")["fingerprint"])
+    _info_with(monkeypatch, evidence_checked_at="2099-01-01")
+    assert ma.status("k2-fsa/OmniVoice")["state"] == "accepted"
+
+
+def test_earlier_plain_string_records_still_read(store):
+    store[ma._key("k2-fsa/OmniVoice")] = "v1:" + "a" * 64
+    state = ma.status("k2-fsa/OmniVoice")
+    assert state["state"] == "terms_updated" and state["changed_fields"] == []
+    store[ma._key("k2-fsa/OmniVoice")] = "revoked"
+    assert ma.status("k2-fsa/OmniVoice")["state"] == "withdrawn"
+
+
+def test_history_is_bounded(store):
+    fp = ma.status("k2-fsa/OmniVoice")["fingerprint"]
+    for _ in range(15):
+        ma.accept("k2-fsa/OmniVoice", fp)
+        ma.revoke("k2-fsa/OmniVoice")
+    assert len(ma.details("k2-fsa/OmniVoice")["history"]) == 20

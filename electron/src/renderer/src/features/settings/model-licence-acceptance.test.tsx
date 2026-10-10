@@ -24,15 +24,21 @@ vi.mock('@/lib/api/client', () => {
 });
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => key.split('.').reduce((value: any, part) => value?.[part], en) ?? key,
+    t: (key: string, options?: Record<string, unknown>) => {
+      const value = key.split('.').reduce((acc: any, part) => acc?.[part], en);
+      if (typeof value !== 'string') return (options?.defaultValue as string) ?? key;
+      return value.replace(/\{\{(\w+)\}\}/g, (_, name) => String(options?.[name] ?? ''));
+    },
+    i18n: { language: 'en' },
   }),
 }));
+vi.mock('@/components/external-link', () => ({
+  ExternalLink: ({ href, children }: { href: string; children: React.ReactNode }) => (
+    <a href={href}>{children}</a>
+  ),
+}));
 import { ApiError } from '@/lib/api/client';
-import {
-  ModelLicenceAccepted,
-  ModelLicenceAcceptanceForm,
-  ModelLicenceGate,
-} from './model-licence-acceptance';
+import { LicenceAcceptanceFooter, ModelLicenceGate, type AcceptableModel } from './model-licence-acceptance';
 
 const gated: ModelLicenceRequirement = {
   repo_id: 'test/noncommercial',
@@ -51,12 +57,6 @@ async function render(node: React.ReactNode) {
   await act(async () =>
     root.render(<QueryClientProvider client={client}>{node}</QueryClientProvider>),
   );
-}
-async function confirmAndAccept() {
-  await act(async () =>
-    (document.querySelector('input[type="checkbox"]') as HTMLInputElement).click(),
-  );
-  await act(async () => button(en.modelLicense.accept)!.click());
 }
 
 beforeEach(() => {
@@ -83,41 +83,59 @@ describe('model licence acceptance', () => {
     expect(modelLicenceRequirements('nope')).toBeNull();
   });
 
-  it('states VoiceStudio is not the licensor and needs explicit confirmation', async () => {
-    await render(<ModelLicenceAcceptanceForm models={[gated]} />);
+  const pending = (repo: string, label = repo): AcceptableModel => ({
+    repo_id: repo,
+    label,
+    fingerprint: `v2:${repo.length.toString(16).padStart(64, '0')}`,
+    required: true,
+    accepted: false,
+  });
+  const boxes = () => Array.from(document.querySelectorAll('input[type="checkbox"]')) as HTMLInputElement[];
+
+  it('states VoiceStudio is not the licensor and needs a ticked box per model', async () => {
+    await render(<LicenceAcceptanceFooter models={[pending('a/one', 'One'), pending('b/two', 'Two')]} onClose={() => {}} />);
     expect(text()).toContain(en.modelLicense.acceptNotice);
-    expect(text()).toContain('CC-BY-NC-4.0');
-    expect(button(en.modelLicense.accept)!.disabled).toBe(true);
+    expect(boxes().map((box) => box.closest('label')?.textContent)).toEqual([
+      en.modelLicense.acceptCheckbox.replace('{{model}}', 'One'),
+      en.modelLicense.acceptCheckbox.replace('{{model}}', 'Two'),
+    ]);
+    const acceptAll = button(en.modelLicense.acceptAll.replace('{{count}}', '2'))!;
+    expect(acceptAll.disabled).toBe(true);
+    await act(async () => boxes()[0].click());
+    expect(acceptAll.disabled).toBe(true); // one box is not enough
+    await act(async () => boxes()[1].click());
+    expect(acceptAll.disabled).toBe(false);
   });
 
-  it('accepts the exact fingerprint shown', async () => {
+  it('records each model separately with the fingerprint it showed', async () => {
     const onAccepted = vi.fn();
     mock.api.mockResolvedValue({ accepted: true });
-    await render(<ModelLicenceAcceptanceForm models={[gated]} onAccepted={onAccepted} />);
-    await confirmAndAccept();
-    expect(mock.api).toHaveBeenCalledWith('/models/licenses/accept', {
-      method: 'POST',
-      body: JSON.stringify({
-        repo_id: gated.repo_id,
-        fingerprint: gated.fingerprint,
-        accepted: true,
-      }),
-    });
-    expect(onAccepted).toHaveBeenCalled();
+    const models = [pending('a/one', 'One'), pending('bb/two', 'Two')];
+    await render(<LicenceAcceptanceFooter models={models} onAccepted={onAccepted} onClose={() => {}} />);
+    for (const box of boxes()) await act(async () => box.click());
+    await act(async () => button(en.modelLicense.acceptAll.replace('{{count}}', '2'))!.click());
+    expect(mock.api.mock.calls.map(([path, init]) => [path, JSON.parse(init.body)])).toEqual(
+      models.map((m) => ['/models/licenses/accept', { repo_id: m.repo_id, fingerprint: m.fingerprint, accepted: true }]),
+    );
+    expect(onAccepted).toHaveBeenCalledOnce();
   });
 
   it('asks to review again when the terms changed', async () => {
     const onAccepted = vi.fn();
     mock.api.mockRejectedValue(new ApiError(409, 'x', { detail: { code: 'terms_changed' } }));
-    await render(<ModelLicenceAcceptanceForm models={[gated]} onAccepted={onAccepted} />);
-    await confirmAndAccept();
+    await render(<LicenceAcceptanceFooter models={[pending('a/one')]} onAccepted={onAccepted} onClose={() => {}} />);
+    await act(async () => boxes()[0].click());
+    await act(async () => button(en.modelLicense.accept)!.click());
     expect(text()).toContain(en.modelLicense.acceptChanged);
     expect(onAccepted).not.toHaveBeenCalled();
   });
 
   it('can withdraw an acceptance', async () => {
     mock.api.mockResolvedValue({ accepted: false });
-    await render(<ModelLicenceAccepted repoId={gated.repo_id} />);
+    await render(
+      <LicenceAcceptanceFooter models={[{ ...pending(gated.repo_id), accepted: true }]} onClose={() => {}} />,
+    );
+    expect(boxes()).toHaveLength(0);
     await act(async () => button(en.modelLicense.revoke)!.click());
     expect(mock.api).toHaveBeenCalledWith('/models/licenses/revoke', {
       method: 'POST',
@@ -125,13 +143,42 @@ describe('model licence acceptance', () => {
     });
   });
 
-  it('opens the app-level dialog when any request reports an unaccepted licence', async () => {
+  it('shows the full licence of every blocked model when another page reports it', async () => {
+    const second = { ...gated, repo_id: 'test/tokenizer', license: 'NOASSERTION', category: 'unknown' };
+    mock.api.mockImplementation(async (path: string) => {
+      const repo = path.replace('/models/licenses/details/', '');
+      const model = repo === gated.repo_id ? gated : second;
+      return {
+        repo_id: repo,
+        info: {
+          registry_version: 'synthetic',
+          registry_digest: 'd'.repeat(64),
+          license: model.license,
+          credit: `Holder of ${repo}`,
+          license_category: model.category,
+          review_status: 'unreviewed',
+          commercial_inference: 'unknown',
+          commercial_outputs: 'unknown',
+          component_closure: 'incomplete',
+          readiness: 'not_verified',
+          blockers: [],
+          enforcement: 'disclosure_only',
+          evidence_url: `https://example.invalid/${repo}`,
+        },
+        acceptance: { ...model, required: true, accepted: false, state: 'not_accepted' },
+        history: [],
+      };
+    });
     await render(<ModelLicenceGate />);
     expect(text()).not.toContain(en.modelLicense.requiredTitle);
     await act(async () => {
-      window.dispatchEvent(new CustomEvent(MODEL_LICENCE_REQUIRED_EVENT, { detail: [gated] }));
+      window.dispatchEvent(new CustomEvent(MODEL_LICENCE_REQUIRED_EVENT, { detail: [gated, second] }));
     });
+    await vi.waitFor(() => expect(text()).toContain('Holder of test/tokenizer'));
     expect(text()).toContain(en.modelLicense.requiredTitle);
-    expect(text()).toContain(gated.repo_id);
+    expect(text()).toContain('Holder of test/noncommercial');
+    expect(text()).toContain(en.modelLicense.sectionAllows);
+    expect(document.querySelector('a[href="https://example.invalid/test/tokenizer"]')).not.toBeNull();
+    expect(boxes()).toHaveLength(2);
   });
 });

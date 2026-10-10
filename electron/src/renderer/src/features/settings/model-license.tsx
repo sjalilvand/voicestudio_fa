@@ -6,18 +6,23 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { apiJson } from '@/lib/api/client';
+import { cn } from '@/lib/utils';
 import { ModelLicenseIcon } from './model-license-icon';
-import { ModelLicenceAccepted, ModelLicenceAcceptanceForm } from './model-licence-acceptance';
+import { LicenceAcceptanceFooter, toAcceptable } from './model-licence-acceptance';
+import {
+  LICENCE_DIALOG_SURFACE,
+  LicenceSection,
+  ModelLicenceView,
+  useModelLicenceDetails,
+} from './model-licence-view';
 import {
   canAcknowledgeModelPlan,
   modelLicenseCategory,
   modelLicenseCategoryKey,
-  modelLicenseStatusKey,
   modelLicenseUrl,
   type ModelLicenceAcceptance,
   type ModelLicenseInfo,
@@ -156,16 +161,130 @@ export function ModelLicense({
     }
   };
 
+  const details = useModelLicenceDetails(repoId, open);
+  const currentInfo = details.data?.info ?? info;
+  const currentAcceptance = details.data?.acceptance ?? acceptance;
   const sourceLink = (url: string | null | undefined, text: string) => {
     const href = modelLicenseUrl(url);
     return href ? <ExternalLink href={href}>{text}</ExternalLink> : null;
   };
-  const category = t(modelLicenseCategoryKey(info?.license_category));
+  const category = t(modelLicenseCategoryKey(currentInfo?.license_category));
   const review = t(
-    info?.review_status === 'cleared' ? 'modelLicense.reviewed' : 'modelLicense.notReviewed',
+    currentInfo?.review_status === 'cleared' ? 'modelLicense.reviewed' : 'modelLicense.notReviewed',
   );
-  const summary = `${info?.license || t('common.unknown')} · ${category} · ${review}`;
-  const blockers = [...new Set([...(info?.blockers ?? []), ...(plan?.blockers ?? [])])];
+  const summary = `${currentInfo?.license || t('common.unknown')} · ${category} · ${review}`;
+  const blockers = [...new Set([...(currentInfo?.blockers ?? []), ...(plan?.blockers ?? [])])];
+
+  // Opt-in reviewed install, kept intact but out of the way.
+  const verifiedInstall = (
+    <LicenceSection title={t('modelLicense.sectionVerified')} defaultOpen={!!plan}>
+      <p className="max-w-prose">{t('modelLicense.preview')}</p>
+      <p className="max-w-prose text-muted-foreground">{t('modelLicense.disclaimer')}</p>
+      <p className="break-all text-xs text-muted-foreground">
+        {repoId} · {t('common.backend')}: {target}
+      </p>
+      {blockers.length > 0 && (
+        <div className="rounded-lg border border-warning/30 bg-warning/5 p-3">
+          <h4 className="font-medium">{t('modelLicense.unresolved')}</h4>
+          <ul className="list-disc space-y-1 ps-5">
+            {blockers.map((blocker) => (
+              <li key={blocker}>{t(blockerKeys[blocker] ?? 'modelLicense.unknown')}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {plan && (
+        <div className="space-y-3">
+          <p>
+            {t('modelLicense.downloadSource')}: <span className="break-all">{plan.source}</span>
+          </p>
+          <h4 className="font-medium">{t('modelLicense.components')}</h4>
+          {plan.components.map((component) => (
+            <details key={component.id} className="rounded-lg border border-border/60 p-3">
+              <summary className="cursor-pointer rounded break-all focus-visible:ring-2 focus-visible:ring-ring">
+                {component.id}
+              </summary>
+              <p>
+                {component.credit} · {component.license}
+              </p>
+              <p className="break-all font-mono text-xs">{component.revision || t('common.unknown')}</p>
+              <ul className="space-y-1 text-xs">
+                {component.artifacts.map((artifact) => (
+                  <li key={artifact.path} className="break-all">
+                    {artifact.path} · SHA-256: <span className="font-mono">{artifact.sha256}</span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ))}
+          <h4 className="font-medium">{t('modelLicense.documents')}</h4>
+          {plan.documents.map((document) => (
+            <details key={document.id} className="rounded-lg border border-border/60 p-3">
+              <summary className="cursor-pointer rounded focus-visible:ring-2 focus-visible:ring-ring">
+                {document.title}
+              </summary>
+              <p className="break-all font-mono text-xs">SHA-256: {document.sha256}</p>
+              <pre className="my-2 max-h-80 overflow-y-auto whitespace-pre-wrap break-words rounded bg-muted/40 p-2 font-sans text-sm leading-relaxed">
+                {document.text}
+              </pre>
+              {sourceLink(document.source_url, t('modelLicense.readLicence'))}
+            </details>
+          ))}
+          <p role="status">{t(ready ? 'modelLicense.ready' : 'modelLicense.blocked')}</p>
+          {ready && (
+            <>
+              <p>{plan.acknowledgement.text}</p>
+              <p className="break-all text-xs text-muted-foreground">
+                {plan.acknowledgement.prompt_id} · {plan.acknowledgement.prompt_version} ·{' '}
+                {plan.plan_digest}
+              </p>
+              <label
+                htmlFor={acknowledgementId}
+                className="flex items-start gap-2 rounded-lg border border-border p-3"
+              >
+                <input
+                  id={acknowledgementId}
+                  type="checkbox"
+                  checked={acknowledged}
+                  disabled={busy === 'commit'}
+                  onChange={(event) => setAcknowledged(event.currentTarget.checked)}
+                  className="mt-0.5 size-4 shrink-0 accent-primary focus-visible:ring-2 focus-visible:ring-ring"
+                />
+                <span>{t('modelLicense.acknowledge')}</span>
+              </label>
+            </>
+          )}
+        </div>
+      )}
+      {failed && (
+        <p role="alert" className="text-destructive">
+          {t('modelLicense.failed')}
+        </p>
+      )}
+      {completed && <p role="status">{t('modelLicense.downloaded')}</p>}
+      {busy && <p role="status">{t('common.loading')}</p>}
+      <div className="flex justify-end">
+        {completed ? null : ready ? (
+          <Button
+            className="h-auto min-h-8"
+            disabled={Boolean(busy) || !acknowledged}
+            onClick={() => void commit()}
+          >
+            <span className="whitespace-normal">{t('modelLicense.commit')}</span>
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            className="h-auto min-h-8"
+            disabled={Boolean(busy) || target !== 'local' || !currentInfo}
+            onClick={() => void prepare()}
+          >
+            <span className="whitespace-normal">{t('modelLicense.prepare')}</span>
+          </Button>
+        )}
+      </div>
+    </LicenceSection>
+  );
 
   return (
     <>
@@ -179,229 +298,42 @@ export function ModelLicense({
         aria-label={`${t('modelLicense.label')}: ${summary}; ${label}`}
       >
         <span aria-hidden="true">{t('modelLicense.label')}:</span>
-        <ModelLicenseIcon category={modelLicenseCategory(info?.license_category)} />
+        <ModelLicenseIcon category={modelLicenseCategory(currentInfo?.license_category)} />
       </Button>
       <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
         <DialogContent
           showCloseButton={false}
           finalFocus={trigger}
-          className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl"
+          className={cn(
+            'flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl',
+            LICENCE_DIALOG_SURFACE,
+          )}
         >
-          <DialogHeader>
+          <DialogHeader className="border-b border-border p-4">
             <DialogTitle>
-              {t('modelLicense.title')} · {label}
+              {t('modelLicense.label')} · {label}
             </DialogTitle>
-            <DialogDescription>{t('modelLicense.disclaimer')}</DialogDescription>
+            <DialogDescription className="break-all">{repoId}</DialogDescription>
           </DialogHeader>
-          {acceptance?.required &&
-            (acceptance.accepted ? (
-              <ModelLicenceAccepted repoId={repoId} />
-            ) : (
-              <ModelLicenceAcceptanceForm models={[acceptance]} />
-            ))}
-          <p className="text-xs text-muted-foreground">{t('modelLicense.preview')}</p>
-          <p className="text-xs [overflow-wrap:anywhere]">
-            {repoId} · {t('common.backend')}: {target}
-          </p>
-          <dl className="grid min-w-0 gap-2 text-sm [overflow-wrap:anywhere]">
-            <div>
-              <dt className="font-medium">{t('modelLicense.category')}</dt>
-              <dd className="flex items-center gap-1.5">
-                <ModelLicenseIcon category={modelLicenseCategory(info?.license_category)} />
-                {category} · {review}
-              </dd>
-              <dd className="text-xs text-muted-foreground">{t('modelLicense.categoryHint')}</dd>
-            </div>
-            <div>
-              <dt className="font-medium">{t('modelLicense.commercial')}</dt>
-              <dd>{t(modelLicenseStatusKey(info?.commercial_inference))}</dd>
-            </div>
-            <div>
-              <dt className="font-medium">{t('modelLicense.outputs')}</dt>
-              <dd>{t(modelLicenseStatusKey(info?.commercial_outputs))}</dd>
-            </div>
-            <div>
-              <dt className="font-medium">{t('modelLicense.redistribution')}</dt>
-              <dd>{t('modelLicense.unknown')}</dd>
-            </div>
-            <div>
-              <dt className="font-medium">{t('modelLicense.voice')}</dt>
-              <dd>{t('modelLicense.unknown')}</dd>
-            </div>
-            <div>
-              <dt className="font-medium">{t('modelLicense.vendor')}</dt>
-              <dd>{info?.credit || t('common.unknown')}</dd>
-            </div>
-            <div>
-              <dt className="font-medium">{t('modelLicense.terms')}</dt>
-              <dd>{info?.license || t('common.unknown')}</dd>
-            </div>
-            <div>
-              <dt className="font-medium">{t('modelLicense.runtime')}</dt>
-              <dd>{info?.runtime_revision || t('common.unknown')}</dd>
-            </div>
-            <div>
-              <dt className="font-medium">{t('modelLicense.evidenceRevision')}</dt>
-              <dd>{info?.evidence_revision || t('common.unknown')}</dd>
-            </div>
-            <div>
-              <dt className="font-medium">{t('modelLicense.checked')}</dt>
-              <dd>{info?.evidence_checked_at || t('common.unknown')}</dd>
-            </div>
-          </dl>
-          <div className="flex flex-wrap gap-2">
-            {sourceLink(info?.evidence_url, t('modelLicense.evidence'))}
-            {sourceLink(info?.source_url, t('modelLicense.source'))}
-          </div>
-          <p className="text-xs text-muted-foreground">{t('modelLicense.external')}</p>
-          {info?.notes && (
-            <section className="rounded-lg border border-border/60 p-3 text-sm [overflow-wrap:anywhere]">
-              <h3 className="font-medium">{t('modelLicense.notes')}</h3>
-              <p>{info.notes}</p>
-            </section>
-          )}
-          {info?.variants?.map((variant) => (
-            <section
-              key={variant.id}
-              className="rounded-lg border border-border/60 p-3 text-sm [overflow-wrap:anywhere]"
-            >
-              <h3 className="font-medium">{variant.label}</h3>
-              <p className="flex items-center gap-1.5">
-                <ModelLicenseIcon category={modelLicenseCategory(variant.license_category)} />
-                {t(modelLicenseCategoryKey(variant.license_category))}
+          <div className="min-h-0 flex-1 overflow-y-auto p-4">
+            <ModelLicenceView
+              details={details.data}
+              infoFallback={info}
+              extra={verifiedInstall}
+            />
+            {details.isError && (
+              <p role="alert" className="mt-3 text-sm text-destructive">
+                {t('modelLicense.detailsFailed')}
               </p>
-              <p>
-                {t('modelLicense.commercial')}:{' '}
-                {t(modelLicenseStatusKey(variant.commercial_inference))}
-              </p>
-              <p>
-                {t('modelLicense.outputs')}: {t(modelLicenseStatusKey(variant.commercial_outputs))}
-              </p>
-              <p className="text-xs text-muted-foreground">{t('modelLicense.notes')}</p>
-              {variant.observations?.output_terms && <p>{variant.observations.output_terms}</p>}
-              {variant.observations?.license_status && <p>{variant.observations.license_status}</p>}
-              {variant.blockers.map((blocker) => (
-                <p key={blocker}>{t(blockerKeys[blocker] ?? 'modelLicense.unknown')}</p>
-              ))}
-              {sourceLink(variant.evidence_url, t('modelLicense.evidence'))}
-            </section>
-          ))}
-          {blockers.length > 0 && (
-            <section className="rounded-lg border border-warning/30 bg-warning/5 p-3 text-sm">
-              <h3 className="font-medium">{t('modelLicense.unresolved')}</h3>
-              <ul className="list-disc space-y-1 ps-5">
-                {blockers.map((blocker) => (
-                  <li key={blocker}>{t(blockerKeys[blocker] ?? 'modelLicense.unknown')}</li>
-                ))}
-              </ul>
-            </section>
-          )}
-          {plan && (
-            <section className="space-y-3 text-sm [overflow-wrap:anywhere]">
-              <p>
-                {t('modelLicense.downloadSource')}: {plan.source}
-              </p>
-              <h3 className="font-medium">{t('modelLicense.components')}</h3>
-              {plan.components.map((component) => (
-                <details key={component.id} className="rounded-lg border border-border/60 p-3">
-                  <summary className="cursor-pointer rounded focus-visible:ring-2 focus-visible:ring-ring">
-                    {component.id}
-                  </summary>
-                  <p>
-                    {component.credit} · {component.license}
-                  </p>
-                  <p>{component.revision || t('common.unknown')}</p>
-                  <ul className="space-y-1">
-                    {component.artifacts.map((artifact) => (
-                      <li key={artifact.path}>
-                        {artifact.path} · SHA-256: {artifact.sha256}
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              ))}
-              <h3 className="font-medium">{t('modelLicense.documents')}</h3>
-              {plan.documents.map((document) => (
-                <details key={document.id} className="rounded-lg border border-border/60 p-3">
-                  <summary className="cursor-pointer rounded focus-visible:ring-2 focus-visible:ring-ring">
-                    {document.title}
-                  </summary>
-                  <p className="text-xs">SHA-256: {document.sha256}</p>
-                  <pre className="my-2 whitespace-pre-wrap break-words font-sans text-xs">
-                    {document.text}
-                  </pre>
-                  {sourceLink(document.source_url, t('modelLicense.evidence'))}
-                </details>
-              ))}
-              <p role="status">{t(ready ? 'modelLicense.ready' : 'modelLicense.blocked')}</p>
-              {ready && (
-                <>
-                  <p>{plan.acknowledgement.text}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {plan.acknowledgement.prompt_id} · {plan.acknowledgement.prompt_version} ·{' '}
-                    {plan.plan_digest}
-                  </p>
-                  <label
-                    htmlFor={acknowledgementId}
-                    className="flex items-start gap-2 rounded-lg border border-border p-3"
-                  >
-                    <input
-                      id={acknowledgementId}
-                      type="checkbox"
-                      checked={acknowledged}
-                      disabled={busy === 'commit'}
-                      onChange={(event) => setAcknowledged(event.currentTarget.checked)}
-                      className="mt-0.5 size-4 shrink-0 accent-primary focus-visible:ring-2 focus-visible:ring-ring"
-                    />
-                    <span>{t('modelLicense.acknowledge')}</span>
-                  </label>
-                </>
-              )}
-            </section>
-          )}
-          {info && (
-            <p className="text-xs text-muted-foreground [overflow-wrap:anywhere]">
-              {t('modelLicense.registry')}: {info.registry_version} · {info.registry_digest}
-            </p>
-          )}
-          {failed && (
-            <p role="alert" className="text-sm text-destructive">
-              {t('modelLicense.failed')}
-            </p>
-          )}
-          {completed && (
-            <p role="status" className="text-sm">
-              {t('modelLicense.downloaded')}
-            </p>
-          )}
-          {busy && (
-            <p role="status" className="text-sm">
-              {t('common.loading')}
-            </p>
-          )}
-          <DialogFooter>
-            <Button variant="ghost" disabled={busy === 'commit'} onClick={close}>
-              {t('common.close')}
-            </Button>
-            {completed ? null : ready ? (
-              <Button
-                className="h-auto min-h-8"
-                disabled={Boolean(busy) || !acknowledged}
-                onClick={() => void commit()}
-              >
-                <span className="whitespace-normal">{t('modelLicense.commit')}</span>
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                className="h-auto min-h-8"
-                disabled={Boolean(busy) || target !== 'local' || !info}
-                onClick={() => void prepare()}
-              >
-                <span className="whitespace-normal">{t('modelLicense.prepare')}</span>
-              </Button>
             )}
-          </DialogFooter>
+          </div>
+          <LicenceAcceptanceFooter
+            models={
+              currentAcceptance ? [toAcceptable(label, currentAcceptance)] : []
+            }
+            onClose={close}
+            closeDisabled={busy === 'commit'}
+          />
         </DialogContent>
       </Dialog>
     </>

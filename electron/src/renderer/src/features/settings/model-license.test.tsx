@@ -10,11 +10,21 @@ import {
   modelLicenseUrl,
 } from './model-license-contract';
 
-const mock = vi.hoisted(() => ({ api: vi.fn() }));
-vi.mock('@/lib/api/client', () => ({ apiJson: mock.api }));
+const mock = vi.hoisted(() => ({ api: vi.fn(), details: vi.fn() }));
+// Licence details have their own read; the reviewed-install calls stay on `api`.
+vi.mock('@/lib/api/client', () => ({
+  apiJson: (path: string, init?: unknown) =>
+    path.startsWith('/models/licenses/details/') ? mock.details(path) : mock.api(path, init),
+  ApiError: class ApiError extends Error {},
+}));
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => key.split('.').reduce((value: any, part) => value?.[part], en) ?? key,
+    t: (key: string, options?: Record<string, unknown>) => {
+      const value = key.split('.').reduce((acc: any, part) => acc?.[part], en);
+      if (typeof value !== 'string') return (options?.defaultValue as string) ?? key;
+      return value.replace(/\{\{(\w+)\}\}/g, (_, name) => String(options?.[name] ?? ''));
+    },
+    i18n: { language: 'en' },
   }),
 }));
 vi.mock('@/components/external-link', () => ({
@@ -22,6 +32,7 @@ vi.mock('@/components/external-link', () => ({
     <a href={href}>{children}</a>
   ),
 }));
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ModelLicense } from './model-license';
 
 // Deliberately invented identities and document bytes for UI tests only.
@@ -84,6 +95,7 @@ function syntheticPlan(): ModelReviewPlan {
   };
 }
 let host: HTMLDivElement;
+let queryClient: QueryClient;
 let root: Root;
 const text = () => document.body.textContent ?? '';
 const button = (name: string) =>
@@ -94,7 +106,9 @@ async function click(element: HTMLElement) {
 async function render(licenseInfo = info, target = 'local') {
   await act(async () =>
     root.render(
-      <ModelLicense repoId="test/model" label="Test model" info={licenseInfo} target={target} />,
+      <QueryClientProvider client={queryClient}>
+        <ModelLicense repoId="test/model" label="Test model" info={licenseInfo} target={target} />
+      </QueryClientProvider>,
     ),
   );
 }
@@ -107,6 +121,9 @@ beforeEach(() => {
   document.body.append(host);
   root = createRoot(host);
   mock.api.mockReset();
+  mock.details.mockReset();
+  mock.details.mockRejectedValue(new Error('details unavailable in this test'));
+  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 });
 afterEach(async () => {
   await act(async () => root.unmount());
@@ -145,18 +162,110 @@ describe('versioned model notices', () => {
     },
   );
 
-  it('shows separate unknown scopes and pinned evidence without downloading on open', async () => {
+  it('leads with the summary and what the licence allows, with details collapsed', async () => {
     await render();
     await open();
-    expect(text()).toContain(en.modelLicense.commercial);
-    expect(text()).toContain(en.modelLicense.outputs);
-    expect(text()).toContain(en.modelLicense.voice);
-    expect(text()).toContain(en.modelLicense.redistribution);
-    expect(document.querySelector('a[href="https://example.invalid/pinned"]')).not.toBeNull();
+    const dialog = document.querySelector('[role="dialog"]')!;
+    const body = dialog.textContent ?? '';
+    // Summary first, then permissions, then sources.
+    const order = [
+      en.modelLicense.categoryUnknown,
+      en.modelLicense.sectionAllows,
+      en.modelLicense.sectionSource,
+      en.modelLicense.sectionTechnical,
+    ].map((part) => body.indexOf(part));
+    expect(order.every((index) => index >= 0)).toBe(true);
+    expect([...order].sort((x, y) => x - y)).toEqual(order);
+    for (const row of ['permModel', 'permOutputs', 'permRedistribution', 'permVoice'] as const) {
+      expect(body).toContain(en.modelLicense[row]);
+    }
+    expect(body).toContain(en.modelLicense.chipYours);
+    expect(document.querySelector('a[href="https://example.invalid/pinned"]')?.textContent).toBe(
+      en.modelLicense.readLicence,
+    );
+    // Technical evidence and the reviewed-install preview start collapsed.
+    const sections = Array.from(dialog.querySelectorAll('details')).filter((d) =>
+      [en.modelLicense.sectionTechnical, en.modelLicense.sectionVerified].includes(
+        d.querySelector('summary')?.textContent ?? '',
+      ),
+    );
+    expect(sections).toHaveLength(2);
+    expect(sections.every((section) => !section.open)).toBe(true);
+    // Full hashes are not printed inline.
+    expect(body).not.toContain('a'.repeat(40));
     expect(mock.api).not.toHaveBeenCalled();
     await click(button(en.common.close));
     await vi.waitFor(() => expect(document.querySelector('[role="dialog"]')).toBeNull());
     expect(document.activeElement).toBe(document.querySelector('button'));
+  });
+
+  const fingerprint = `v2:${'c'.repeat(64)}`;
+  const details = (acceptance: Record<string, unknown>, history: unknown[] = []) => ({
+    repo_id: 'test/model',
+    info: { ...info, license_category: 'noncommercial' },
+    acceptance: {
+      repo_id: 'test/model',
+      license: info.license,
+      category: 'noncommercial',
+      required: true,
+      fingerprint,
+      ...acceptance,
+    },
+    history,
+  });
+
+  it('records acceptance through one checkbox and shows the stored time and hash', async () => {
+    const acceptedAt = '2026-10-10T09:00:00+00:00';
+    mock.details.mockResolvedValue(details({ accepted: false, state: 'not_accepted' }));
+    mock.api.mockResolvedValue({ accepted: true });
+    await render();
+    await open();
+    await vi.waitFor(() => expect(text()).toContain(en.modelLicense.stateNotAccepted));
+    const accept = button(en.modelLicense.accept);
+    expect(accept.disabled).toBe(true);
+    const box = document.querySelector('[role="dialog"] input[type="checkbox"]') as HTMLInputElement;
+    expect(box.closest('label')?.textContent).toBe(
+      en.modelLicense.acceptCheckbox.replace('{{model}}', 'Test model'),
+    );
+    mock.details.mockResolvedValue(
+      details(
+        { accepted: true, state: 'accepted', accepted_at: acceptedAt, last_action: { action: 'accepted', at: acceptedAt, fingerprint } },
+        [{ action: 'accepted', at: acceptedAt, fingerprint, app_version: '0.5.7' }],
+      ),
+    );
+    await click(box);
+    await click(accept);
+    expect(mock.api).toHaveBeenCalledWith('/models/licenses/accept', {
+      method: 'POST',
+      body: JSON.stringify({ repo_id: 'test/model', fingerprint, accepted: true }),
+    });
+    await vi.waitFor(() => expect(text()).toContain('Accepted Oct 10, 2026'));
+    expect(text()).toContain('v2:cccccc…cccc');
+    expect(text()).toContain(en.modelLicense.history);
+    expect(button(en.modelLicense.revoke)).toBeDefined();
+  });
+
+  it.each([
+    ['withdrawn', { accepted: false, state: 'withdrawn', last_action: { action: 'withdrawn', at: '2026-10-11T08:00:00+00:00', fingerprint } }, 'Acceptance withdrawn Oct 11, 2026'],
+    [
+      'terms_updated',
+      { accepted: false, state: 'terms_updated', accepted_at: '2026-10-10T09:00:00+00:00', changed_fields: ['notes', 'documents'] },
+      'The licence terms changed after you accepted them on Oct 10, 2026',
+    ],
+  ])('explains the %s state and asks again', async (_state, acceptance, message) => {
+    mock.details.mockResolvedValue(details(acceptance));
+    await render();
+    await open();
+    await vi.waitFor(() => expect(text()).toContain(message));
+    if (_state === 'terms_updated') {
+      expect(text()).toContain(
+        en.modelLicense.changedFields.replace(
+          '{{fields}}',
+          `${en.modelLicense.field.notes}, ${en.modelLicense.field.documents}`,
+        ),
+      );
+    }
+    expect(button(en.modelLicense.accept)).toBeDefined();
   });
 
   it('never offers acknowledgement for a real-style incomplete plan', async () => {

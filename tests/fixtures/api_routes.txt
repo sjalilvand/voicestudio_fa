@@ -135,6 +135,7 @@ GET /models
 GET /models/access/status
 GET /models/install/status
 GET /models/licenses/acceptance/{repo_id:path}
+GET /models/licenses/details/{repo_id:path}
 GET /models/licenses/receipts/{plan_digest}
 GET /openapi.json
 GET /personalities

@@ -26,7 +26,7 @@ class PrepareRequest(BaseModel):
 class AcceptRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     repo_id: str = Field(min_length=3, max_length=200, pattern=r"^[A-Za-z0-9][\w.-]*/[\w.-]+$")
-    fingerprint: str = Field(pattern=r"^v1:[a-f0-9]{64}$")
+    fingerprint: str = Field(pattern=r"^v2:[a-f0-9]{64}$")
     accepted: StrictBool
 
 
@@ -152,6 +152,14 @@ def verify_model_install(plan_digest: str) -> dict:
 def get_model_licence_acceptance(repo_id: str) -> dict:
     from services import model_acceptance
     return model_acceptance.status(repo_id)
+
+
+@router.get("/models/licenses/details/{repo_id:path}",
+            dependencies=[Depends(reject_cross_site_get)])
+def get_model_licence_details(repo_id: str) -> dict:
+    """Licence disclosure, acceptance state and acceptance history for one model."""
+    from services import model_acceptance
+    return model_acceptance.details(repo_id)
 
 
 @router.post("/models/licenses/accept", dependencies=[Depends(require_admin)])

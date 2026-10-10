@@ -34,13 +34,42 @@ export interface ModelLicenseInfo {
 }
 
 /** Use-time licence acceptance; only commercial-category models skip it. */
+export interface ModelLicenceHistoryEntry {
+  action: 'accepted' | 'withdrawn';
+  /** UTC ISO timestamp; null for records written before timestamps existed. */
+  at: string | null;
+  fingerprint: string | null;
+  app_version?: string | null;
+}
+
+export type ModelLicenceState =
+  | 'not_required'
+  | 'accepted'
+  | 'not_accepted'
+  | 'withdrawn'
+  | 'terms_updated';
+
 export interface ModelLicenceAcceptance {
   repo_id: string;
   license?: string | null;
   category: string;
   required: boolean;
   accepted: boolean;
+  /** Absent on older backends: derive from `accepted`. */
+  state?: ModelLicenceState;
   fingerprint: string;
+  last_action?: ModelLicenceHistoryEntry | null;
+  accepted_at?: string | null;
+  /** Term fields that changed since the last acceptance (`terms_updated`). */
+  changed_fields?: string[];
+}
+
+/** `GET /models/licenses/details/{repo_id}`. */
+export interface ModelLicenceDetails {
+  repo_id: string;
+  info: ModelLicenseInfo;
+  acceptance: ModelLicenceAcceptance;
+  history: ModelLicenceHistoryEntry[];
 }
 
 /** A gated model listed by the backend's `model_licence_required` error. */
