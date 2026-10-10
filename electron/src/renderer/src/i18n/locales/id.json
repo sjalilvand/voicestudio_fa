@@ -3483,6 +3483,7 @@
     "categoryUnknown": "Lisensi tidak teridentifikasi",
     "categoryHint": "Berdasarkan teks lisensi yang dinyatakan, tidak diverifikasi oleh VoiceStudio. Bukan nasihat hukum.",
     "reviewed": "Ditinjau",
-    "notReviewed": "Belum ditinjau"
+    "notReviewed": "Belum ditinjau",
+    "label": "Lisensi"
   }
 }

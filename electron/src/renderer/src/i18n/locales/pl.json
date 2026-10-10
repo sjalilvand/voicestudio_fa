@@ -3487,6 +3487,7 @@
     "categoryUnknown": "Nie rozpoznano licencji",
     "categoryHint": "Na podstawie zadeklarowanego tekstu licencji, niezweryfikowane przez VoiceStudio. To nie jest porada prawna.",
     "reviewed": "Sprawdzono",
-    "notReviewed": "Nie sprawdzono"
+    "notReviewed": "Nie sprawdzono",
+    "label": "Licencja"
   }
 }

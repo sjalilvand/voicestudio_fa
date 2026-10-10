@@ -3483,6 +3483,7 @@
     "categoryUnknown": "라이선스 확인 불가",
     "categoryHint": "선언된 라이선스 문구를 기준으로 하며 VoiceStudio가 검증하지 않았습니다. 법률 자문이 아닙니다.",
     "reviewed": "검토됨",
-    "notReviewed": "검토되지 않음"
+    "notReviewed": "검토되지 않음",
+    "label": "라이선스"
   }
 }

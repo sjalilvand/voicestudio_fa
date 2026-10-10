@@ -3483,6 +3483,7 @@
     "categoryUnknown": "Lisans belirlenemedi",
     "categoryHint": "Beyan edilen lisans metnine dayanır, VoiceStudio tarafından doğrulanmamıştır. Hukuki tavsiye değildir.",
     "reviewed": "İncelendi",
-    "notReviewed": "İncelenmedi"
+    "notReviewed": "İncelenmedi",
+    "label": "Lisans"
   }
 }

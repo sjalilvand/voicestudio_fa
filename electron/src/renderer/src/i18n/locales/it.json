@@ -3485,6 +3485,7 @@
     "categoryUnknown": "Licenza non identificata",
     "categoryHint": "Basato sul testo di licenza dichiarato, non verificato da VoiceStudio. Non costituisce consulenza legale.",
     "reviewed": "Verificato",
-    "notReviewed": "Non verificato"
+    "notReviewed": "Non verificato",
+    "label": "Licenza"
   }
 }

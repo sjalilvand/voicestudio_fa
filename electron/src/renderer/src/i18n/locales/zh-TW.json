@@ -3483,6 +3483,7 @@
     "categoryUnknown": "無法辨識授權",
     "categoryHint": "依據聲明的授權文字，未經 VoiceStudio 核實。不構成法律建議。",
     "reviewed": "已審查",
-    "notReviewed": "未審查"
+    "notReviewed": "未審查",
+    "label": "授權"
   }
 }

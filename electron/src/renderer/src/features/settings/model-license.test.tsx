@@ -127,14 +127,14 @@ describe('versioned model notices', () => {
     [undefined, 'unreviewed', en.modelLicense.categoryUnknown, en.modelLicense.notReviewed],
     ['permitted', 'unreviewed', en.modelLicense.categoryUnknown, en.modelLicense.notReviewed],
   ])(
-    'shows an icon-only %s/%s trigger named by licence, category and review state',
+    'shows a Licence: icon %s/%s trigger named by licence, category and review state',
     async (category, review, categoryLabel, reviewLabel) => {
       await render({ ...info, license_category: category, review_status: review });
       const summary = `${info.license} · ${categoryLabel} · ${reviewLabel}`;
       const trigger = within(host).getByRole('button', {
-        name: `${en.modelLicense.title}: ${summary}; Test model`,
+        name: `${en.modelLicense.label}: ${summary}; Test model`,
       });
-      expect(trigger.textContent).toBe('');
+      expect(trigger.textContent).toBe(`${en.modelLicense.label}:`);
       expect(trigger.getAttribute('title')).toBe(summary);
       const svg = trigger.querySelector('svg')!;
       expect(svg.getAttribute('aria-hidden')).toBe('true');

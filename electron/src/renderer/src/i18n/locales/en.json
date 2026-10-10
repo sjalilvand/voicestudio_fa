@@ -3476,13 +3476,14 @@
     "downloadSource": "Download source",
     "checked": "Evidence checked",
     "notes": "Recorded observations, not verified for this selection",
-    "category": "License category",
+    "category": "Licence category",
     "categoryCommercial": "Commercial use allowed",
     "categoryConditions": "Commercial use with conditions",
     "categoryNoncommercial": "Personal and research use only",
-    "categoryUnknown": "License not identified",
-    "categoryHint": "Based on the declared license text, not verified by VoiceStudio. Not legal advice.",
+    "categoryUnknown": "Licence not identified",
+    "categoryHint": "Based on the declared licence text, not verified by VoiceStudio. Not legal advice.",
     "reviewed": "Reviewed",
-    "notReviewed": "Not reviewed"
+    "notReviewed": "Not reviewed",
+    "label": "Licence"
   }
 }

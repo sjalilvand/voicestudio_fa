@@ -3483,6 +3483,7 @@
     "categoryUnknown": "Licensen kunde inte identifieras",
     "categoryHint": "Baserat på den angivna licenstexten, inte verifierat av VoiceStudio. Inte juridisk rådgivning.",
     "reviewed": "Granskad",
-    "notReviewed": "Inte granskad"
+    "notReviewed": "Inte granskad",
+    "label": "Licens"
   }
 }

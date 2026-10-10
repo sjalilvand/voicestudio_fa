@@ -3483,6 +3483,7 @@
     "categoryUnknown": "Không xác định được giấy phép",
     "categoryHint": "Dựa trên văn bản giấy phép được công bố, VoiceStudio chưa xác minh. Không phải tư vấn pháp lý.",
     "reviewed": "Đã xem xét",
-    "notReviewed": "Chưa xem xét"
+    "notReviewed": "Chưa xem xét",
+    "label": "Giấy phép"
   }
 }

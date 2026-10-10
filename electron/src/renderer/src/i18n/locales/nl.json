@@ -3483,6 +3483,7 @@
     "categoryUnknown": "Licentie niet vastgesteld",
     "categoryHint": "Gebaseerd op de opgegeven licentietekst, niet gecontroleerd door VoiceStudio. Geen juridisch advies.",
     "reviewed": "Gecontroleerd",
-    "notReviewed": "Niet gecontroleerd"
+    "notReviewed": "Niet gecontroleerd",
+    "label": "Licentie"
   }
 }

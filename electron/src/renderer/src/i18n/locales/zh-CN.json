@@ -3483,6 +3483,7 @@
     "categoryUnknown": "无法识别许可",
     "categoryHint": "依据声明的许可文本，未经 VoiceStudio 核实。不构成法律建议。",
     "reviewed": "已审核",
-    "notReviewed": "未审核"
+    "notReviewed": "未审核",
+    "label": "许可"
   }
 }

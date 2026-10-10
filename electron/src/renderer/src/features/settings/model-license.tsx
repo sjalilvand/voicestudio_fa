@@ -167,12 +167,14 @@ export function ModelLicense({
     <>
       <Button
         ref={trigger}
-        size="icon-sm"
+        size="sm"
         variant="outline"
+        className="gap-1.5"
         onClick={() => setOpen(true)}
         title={summary}
-        aria-label={`${t('modelLicense.title')}: ${summary}; ${label}`}
+        aria-label={`${t('modelLicense.label')}: ${summary}; ${label}`}
       >
+        <span aria-hidden="true">{t('modelLicense.label')}:</span>
         <ModelLicenseIcon category={modelLicenseCategory(info?.license_category)} />
       </Button>
       <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>

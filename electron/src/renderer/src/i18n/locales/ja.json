@@ -3483,6 +3483,7 @@
     "categoryUnknown": "ライセンス不明",
     "categoryHint": "申告されたライセンス文に基づく表示で、VoiceStudio は検証していません。法的助言ではありません。",
     "reviewed": "確認済み",
-    "notReviewed": "未確認"
+    "notReviewed": "未確認",
+    "label": "ライセンス"
   }
 }
