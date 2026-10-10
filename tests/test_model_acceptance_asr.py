@@ -304,3 +304,14 @@ def test_routers_surface_the_typed_licence_error(rel):
         node.id for node in ast.walk(tree) if isinstance(node, ast.Name)
     } | {node.attr for node in ast.walk(tree) if isinstance(node, ast.Attribute)}
     assert "ModelLicenceNotAccepted" in names, f"{rel} swallows the licence error"
+
+
+@pytest.mark.parametrize("name", [
+    "/models/whisper", "./whisper", "../whisper", "~/whisper", r"C:\models\whisper", r"models\whisper", "D:/models/w",
+])
+def test_local_model_paths_are_recognised_by_syntax_not_the_filesystem(name):
+    assert ab._licence_repo(name) is None
+
+
+def test_org_name_is_a_registry_identity():
+    assert ab._licence_repo("someone/unreviewed-ct2") == "someone/unreviewed-ct2"

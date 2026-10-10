@@ -3094,11 +3094,16 @@ _MOONSHINE_REPOS = {
 _HF_CACHE_DIR = re.compile(r"models--([^/\\]+?)--([^/\\]+)")
 
 
+_DRIVE_PATH = re.compile(r"[A-Za-z]:")
+
+
 def _licence_repo(name: str | None, *, faster_whisper: bool = False) -> str | None:
     """HF repo id for a backend model name, alias, or installed snapshot path.
 
     A local directory outside the HF cache has no registry identity (it is a
-    user-provided asset) and yields None.
+    user-provided asset) and yields None. Local paths are recognised by syntax
+    (absolute, ``./``, ``../``, ``~``, drive letters), never by probing the
+    filesystem with a user-provided name.
     """
     name = str(name or "").strip()
     if not name:
@@ -3106,7 +3111,7 @@ def _licence_repo(name: str | None, *, faster_whisper: bool = False) -> str | No
     cached = _HF_CACHE_DIR.search(name)
     if cached:
         return f"{cached.group(1)}/{cached.group(2)}"
-    if os.path.isabs(name) or os.path.isdir(name):
+    if os.path.isabs(name) or name.startswith((".", "~")) or "\\" in name or _DRIVE_PATH.match(name):
         return None
     if name.lower() in _MOONSHINE_REPOS:
         return _MOONSHINE_REPOS[name.lower()]
