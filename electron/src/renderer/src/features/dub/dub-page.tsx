@@ -19,6 +19,7 @@ import { DubTranslationPanel } from './dub-translation-panel';
 import { argosPackInstall, argosPackStatus, buildArgosPackRequest } from './argos-packs';
 import { dubSourceLanguage } from './source-language';
 import { DubTimeline } from './dub-timeline';
+import { TranscriptIssueNavigation } from './transcript-issue-navigation';
 import { PasteTranslation } from './paste-translation';
 import { GlossaryPanel } from './glossary-panel';
 import { SegmentFindBar } from './segment-find-bar';
@@ -304,6 +305,15 @@ export function DubPage() {
     getItemKey: (index) => session.segments[index]?.id ?? index,
     scrollMargin: segmentScrollMargin,
   });
+  const selectTranscriptSegment = (id: string) => {
+    const index = session.segments.findIndex((segment) => segment.id === id);
+    if (index < 0) return;
+    setSelectedSegmentId(id);
+    // CSS smooth scrolling can interrupt distant jumps as virtual rows are measured.
+    requestAnimationFrame(() =>
+      segmentVirtualizer.scrollToIndex(index, { align: 'center', behavior: 'instant' }),
+    );
+  };
   useLayoutEffect(() => {
     const list = segmentList.current;
     if (!list) return;
@@ -1595,6 +1605,12 @@ export function DubPage() {
                       </Button>
                     )}
                   </div>
+                  <TranscriptIssueNavigation
+                    segments={session.segments}
+                    selectedId={selectedSegmentId}
+                    disabled={busy || Boolean(session.recovery)}
+                    onSelect={selectTranscriptSegment}
+                  />
                 </div>
               )}
               {session.segments.length > 0 && (
@@ -1759,16 +1775,7 @@ export function DubPage() {
                   peaks={timelineOnsets.peaks}
                   previewingId={previewingSegmentId}
                   selectedId={selectedSegmentId}
-                  onSelect={(id) => {
-                    setSelectedSegmentId(id);
-                    const index = session.segments.findIndex((segment) => segment.id === id);
-                    if (index >= 0)
-                      requestAnimationFrame(() =>
-                        segmentVirtualizer.scrollToIndex(index, {
-                          align: 'center',
-                        }),
-                      );
-                  }}
+                  onSelect={selectTranscriptSegment}
                   onPreviewSegment={(segment) => void previewDubSegment(segment)}
                 />
               )}
@@ -1794,6 +1801,7 @@ export function DubPage() {
                       >
                         <article
                           data-dub-row-id={segment.id}
+                          aria-current={selectedSegmentId === segment.id ? 'true' : undefined}
                           onFocusCapture={() => setSelectedSegmentId(segment.id)}
                           className={cn(
                             'group/segment relative isolate grid grid-cols-[3.25rem_minmax(0,1fr)] gap-x-2 px-2 py-3.5 transition-[background-color,box-shadow] after:pointer-events-none after:absolute after:right-2 after:bottom-0 after:left-[4.25rem] after:h-px after:bg-gradient-to-r after:from-border/65 after:via-border/35 after:to-transparent after:transition-opacity hover:bg-muted/[0.12] hover:after:opacity-100 focus-within:bg-muted/[0.16] focus-within:after:from-primary/45',
