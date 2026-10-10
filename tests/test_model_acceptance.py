@@ -1,6 +1,7 @@
 """Per-model licence acceptance: gated categories, fingerprints, legacy carry-over."""
 from __future__ import annotations
 
+import importlib
 import sys
 from pathlib import Path
 
@@ -12,6 +13,24 @@ from services import model_acceptance as ma
 from services import settings_store
 
 pytestmark = pytest.mark.model_licence_gate  # real enforcement, see conftest
+
+_MODULES = {
+    "ma": "services.model_acceptance",
+    "settings_store": "services.settings_store",
+}
+
+
+@pytest.fixture(autouse=True)
+def _current_backend_modules():
+    """Rebind to the modules the code under test resolves right now.
+
+    Other suites replace backend modules in ``sys.modules`` (see
+    tests/backend_module_state.py); a collection-time import can then be a twin
+    of what the app code uses, so an exception class or a patched settings
+    store would belong to a different copy.
+    """
+    for attr, name in _MODULES.items():
+        globals()[attr] = importlib.import_module(name)
 
 
 @pytest.fixture

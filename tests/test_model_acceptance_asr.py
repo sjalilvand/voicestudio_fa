@@ -7,6 +7,7 @@ is never blocked by it, and an accepted model proceeds. Offline, no ML deps.
 from __future__ import annotations
 
 import ast
+import importlib
 import sys
 from pathlib import Path
 
@@ -20,6 +21,25 @@ from services import settings_store
 
 # Real acceptance state: tests/conftest.py otherwise reads every model as accepted.
 pytestmark = pytest.mark.model_licence_gate
+
+_MODULES = {
+    "ab": "services.asr_backend",
+    "ma": "services.model_acceptance",
+    "settings_store": "services.settings_store",
+}
+
+
+@pytest.fixture(autouse=True)
+def _current_backend_modules():
+    """Rebind to the modules the code under test resolves right now.
+
+    Other suites replace backend modules in ``sys.modules`` (see
+    tests/backend_module_state.py); a collection-time import can then be a twin
+    of what the app code uses, so an exception class or a patched settings
+    store would belong to a different copy.
+    """
+    for attr, name in _MODULES.items():
+        globals()[attr] = importlib.import_module(name)
 
 GATED_MLX = "mlx-community/whisper-large-v3-turbo"        # unknown → gated
 COMMERCIAL_MLX = "mlx-community/whisper-large-v3-mlx"      # MIT → open
