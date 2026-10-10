@@ -20,7 +20,10 @@ _REPO_ID = re.compile(r"[A-Za-z0-9][\w.-]*/[\w.-]+")
 _PROGRAM_REPOS = {"0xShug0/audio.cpp", "zackees/ffmpeg_bins"}
 # A local checkout subdirectory and an SDK alias also match org/model syntax.
 _LOCAL_MODEL_PATHS = {"pretrained_models/Fun-CosyVoice3-0.5B"}
-_MODEL_ALIASES = {"moonshine/base": "UsefulSensors/moonshine-base"}
+_MODEL_ALIASES = {
+    "moonshine/base": "UsefulSensors/moonshine-base",
+    "moonshine/tiny": "UsefulSensors/moonshine-tiny",
+}
 
 
 def source_model_ids(root):

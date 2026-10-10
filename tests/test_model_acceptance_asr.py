@@ -261,19 +261,12 @@ def test_native_sortformer_refuses_before_touching_the_model(store, monkeypatch)
 
 
 # ── NLLB translation and router propagation ─────────────────────────────────
-# The routers import torch/soundfile at module level, so their wiring is
-# checked structurally: the gate precedes the weights load, and every broad
-# ``except Exception`` on these paths lets the typed error through.
+# NLLB, capture_ws, openai_compat and dub_core are exercised behaviourally in
+# test_model_licence_entrypoint_gates.py; the remaining routers are only
+# checked structurally here (they import torch/soundfile at module level).
 
 def _source(rel: str) -> str:
     return (ROOT / "backend" / rel).read_text(encoding="utf-8")
-
-
-def test_nllb_gate_precedes_the_weights_load():
-    src = _source("api/routers/dub_translate.py")
-    gate = src.index("ensure_accepted([_NLLB_REPO_ID])")
-    assert gate < src.index("_load_nllb_component(AutoTokenizer)")
-    assert "except ModelLicenceNotAccepted:\n        raise\n    except Exception as e:" in src
 
 
 def test_nllb_is_gated_in_the_registry(store):
@@ -281,12 +274,9 @@ def test_nllb_is_gated_in_the_registry(store):
 
 
 @pytest.mark.parametrize("rel", [
-    "api/routers/dub_core.py",
     "api/routers/dub_export.py",
     "api/routers/capture.py",
-    "api/routers/openai_compat.py",
     "api/routers/batch.py",
-    "api/routers/capture_ws.py",
 ])
 def test_routers_surface_the_typed_licence_error(rel):
     tree = ast.parse(_source(rel))

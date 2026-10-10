@@ -54,10 +54,13 @@ export const MODEL_LICENCE_REQUIRED_EVENT = 'ov:model-licence-required';
 
 /** The gated models from an API error payload, or null when it is another error. */
 export function modelLicenceRequirements(payload: unknown): ModelLicenceRequirement[] | null {
-  const detail =
+  // `{detail: {...}}` is the HTTP envelope; a WebSocket/SSE frame carries the
+  // fields at top level next to a plain-string `detail`.
+  const inner =
     payload && typeof payload === 'object' && 'detail' in payload
       ? (payload as { detail: unknown }).detail
-      : payload;
+      : undefined;
+  const detail = inner && typeof inner === 'object' ? inner : payload;
   if (!detail || typeof detail !== 'object') return null;
   const { code, models } = detail as { code?: unknown; models?: unknown };
   if (code !== MODEL_LICENCE_REQUIRED || !Array.isArray(models)) return null;
@@ -69,6 +72,20 @@ export function modelLicenceRequirements(payload: unknown): ModelLicenceRequirem
       typeof (m as ModelLicenceRequirement).fingerprint === 'string',
   );
   return valid.length ? valid : null;
+}
+
+/**
+ * Open the app-level licence dialog when `payload` is a `model_licence_required`
+ * error (HTTP body, WebSocket frame, SSE event or job record). Returns whether
+ * it was one, so callers can keep their own error display additive.
+ */
+export function announceModelLicenceRequired(payload: unknown): boolean {
+  const licence = modelLicenceRequirements(payload);
+  if (!licence) return false;
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(MODEL_LICENCE_REQUIRED_EVENT, { detail: licence }));
+  }
+  return true;
 }
 
 export interface ModelReviewDocument {

@@ -91,3 +91,43 @@ def test_unreadable_settings_fail_closed(monkeypatch):
     monkeypatch.setattr(settings_store, "get_text", boom)
     monkeypatch.setattr(settings_store, "get_license_accepted", boom)
     assert ma.status("k2-fsa/OmniVoice")["accepted"] is False
+
+
+def test_unreadable_registry_fails_closed(store, monkeypatch):
+    def boom():
+        raise OSError("registry missing")
+    monkeypatch.setattr(ma, "_registry", boom)
+    with pytest.raises(ma.ModelLicenceNotAccepted) as err:
+        ma.ensure_engine_accepted("omnivoice")
+    assert err.value.reason == "registry_unreadable"
+    assert "unreadable" in str(err.value)
+
+
+def test_local_model_folder_is_not_a_registry_model(store):
+    ma.ensure_engine_accepted("mlx-audio", "/Users/me/models/kokoro")
+    assert ma.repos_for_engine("mlx-audio", "~/models/kokoro") == []
+
+
+def test_unreadable_store_is_not_treated_as_absent(store, monkeypatch):
+    """A revoked Supertonic-3 must not fall back to its legacy acceptance."""
+    store["supertonic3_license_accepted"] = "1"
+    def boom(*_a, **_k):
+        raise OSError("db locked")
+    monkeypatch.setattr(settings_store, "get_text", boom)
+    assert ma.status("Supertone/supertonic-3")["accepted"] is False
+
+
+def test_new_acceptance_syncs_the_supertonic_engine_flag(store):
+    fp = ma.status("Supertone/supertonic-3")["fingerprint"]
+    ma.accept("Supertone/supertonic-3", fp)
+    assert store["supertonic3_license_accepted"] == "1"
+    ma.revoke("Supertone/supertonic-3")
+    assert store["supertonic3_license_accepted"] == "0"
+
+
+def test_legacy_engine_toggle_syncs_the_new_record(store):
+    ma.sync_from_engine("supertonic3", True)
+    assert ma.status("Supertone/supertonic-3")["accepted"] is True
+    ma.sync_from_engine("supertonic3", False)
+    assert ma.status("Supertone/supertonic-3")["accepted"] is False
+    ma.sync_from_engine("pockettts", True)  # unrelated engines are untouched

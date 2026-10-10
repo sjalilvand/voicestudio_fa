@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "checked_at": "2026-10-03",
-  "scope": "Model-source disclosures joined to models.yaml. Ordinary installs and SDK first-use remain unenforced. The additive reviewed-install API fails closed on incomplete evidence. A local acknowledgement is not upstream assent or commercial permission.",
+  "scope": "Model-source disclosures joined to models.yaml. Using a model whose licence category is not commercial requires the user's local licence acceptance; ordinary installs and SDK auxiliary downloads are unchanged. The additive reviewed-install API fails closed on incomplete evidence. A local acknowledgement is not upstream assent or commercial permission.",
   "models": [
     {
       "id": "k2-fsa/OmniVoice",

@@ -16,6 +16,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 import threading
 from pathlib import Path
 from typing import Iterable
@@ -30,6 +31,7 @@ _KEY_PREFIX = "model_licence_accepted:"
 # They count once, so users who already accepted are not asked twice.
 _LEGACY_ENGINE_ACCEPTANCE = {"supertone/supertonic-3": "supertonic3"}
 
+_REPO = re.compile(r"[A-Za-z0-9][\w.-]*/[\w.-]+\Z")
 _cache_lock = threading.Lock()
 _cache: tuple[float, dict] | None = None
 
@@ -37,12 +39,16 @@ _cache: tuple[float, dict] | None = None
 class ModelLicenceNotAccepted(RuntimeError):
     """Raised before a gated model is loaded or used without acceptance."""
 
-    def __init__(self, models: list[dict]):
+    def __init__(self, models: list[dict], reason: str | None = None):
         self.models = models
         names = ", ".join(m["repo_id"] for m in models)
         super().__init__(
-            f"Licence not accepted for {names}. Review and accept it in Model Manager."
+            f"Licence not accepted for {names}. Review and accept it in Model Catalogue."
+            if models
+            else "Model licence records are unreadable, so models cannot be verified. "
+            "Reinstall or update VoiceStudio."
         )
+        self.reason = reason
 
     def detail(self) -> dict:
         return {"code": ERROR_CODE, "message": str(self), "models": self.models}
@@ -87,14 +93,18 @@ def _key(repo_id: str) -> str:
     return _KEY_PREFIX + repo_id.casefold()
 
 
+_UNREADABLE = "unreadable"
+
+
 def _stored(repo_id: str) -> str | None:
+    """Stored value, ``None`` when absent, ``_UNREADABLE`` when the read failed."""
     from services import settings_store
 
     try:
         return settings_store.get_text(_key(repo_id))
     except Exception:  # noqa: BLE001 — unreadable settings fail closed
         logger.warning("model licence acceptance unreadable", exc_info=True)
-        return None
+        return _UNREADABLE
 
 
 def _legacy_accepted(repo_id: str) -> bool:
@@ -109,15 +119,41 @@ def _legacy_accepted(repo_id: str) -> bool:
         return False
 
 
+def _sync_legacy(repo_id: str, accepted: bool) -> None:
+    """Engines with their own gate (Supertonic-3) read the per-engine flag, so the
+    two records must never disagree."""
+    engine = _LEGACY_ENGINE_ACCEPTANCE.get(repo_id.casefold())
+    if engine is None:
+        return
+    from services import settings_store
+
+    settings_store.set_license_accepted(engine, accepted)
+
+
+def sync_from_engine(engine_id: str, accepted: bool) -> None:
+    """Called by the legacy per-engine toggle so it updates this record too."""
+    for repo_id, engine in _LEGACY_ENGINE_ACCEPTANCE.items():
+        if engine != engine_id:
+            continue
+        registered = next(
+            (r["id"] for r in _registry()["models"] if r["id"].casefold() == repo_id), None
+        )
+        if registered is None:
+            continue
+        if accepted:
+            accept(registered, status(registered)["fingerprint"])
+        else:
+            revoke(registered)
+
+
 def status(repo_id: str) -> dict:
     """``{repo_id, category, required, accepted, fingerprint}`` for one model."""
     info = _disclosure(repo_id)
     category = info.get("license_category") or "unknown"
     required = category != "commercial"
     current = fingerprint(info)
-    accepted = not required or _stored(repo_id) == current or (
-        _stored(repo_id) is None and _legacy_accepted(repo_id)
-    )
+    stored = _stored(repo_id)  # one read; an unreadable store never counts as absent
+    accepted = not required or stored == current or (stored is None and _legacy_accepted(repo_id))
     return {
         "repo_id": repo_id,
         "license": info.get("license"),
@@ -136,6 +172,7 @@ def accept(repo_id: str, expected_fingerprint: str) -> dict:
     from services import settings_store
 
     settings_store.set_text(_key(repo_id), current["fingerprint"])
+    _sync_legacy(repo_id, True)
     return status(repo_id)
 
 
@@ -144,6 +181,7 @@ def revoke(repo_id: str) -> dict:
 
     # An explicit non-fingerprint value also overrides any legacy acceptance.
     settings_store.set_text(_key(repo_id), "revoked")
+    _sync_legacy(repo_id, False)
     return status(repo_id)
 
 
@@ -165,14 +203,19 @@ def repos_for_engine(engine_id: str, identity: str | None = None) -> list[str]:
     (for example mlx-audio's selected repo). Without one, every registry model
     recorded for the engine applies: the engine ships them all.
     """
-    try:
-        rows = _registry()["models"]
-    except Exception:  # noqa: BLE001
-        rows = []
-    if identity and "/" in identity:
+    if identity and _REPO.fullmatch(identity):
         return [identity]
+    if identity:
+        # A local model folder is not a registry model (ASR treats it the same way).
+        return []
+    rows = _registry()["models"]  # unreadable registry: let the caller fail closed
     return [row["id"] for row in rows if engine_id in (row.get("engines") or [])]
 
 
 def ensure_engine_accepted(engine_id: str, identity: str | None = None) -> None:
-    ensure_accepted(repos_for_engine(engine_id, identity))
+    try:
+        repos = repos_for_engine(engine_id, identity)
+    except Exception as exc:  # noqa: BLE001 — an unreadable registry must not open the gate
+        logger.warning("model licence registry unreadable", exc_info=True)
+        raise ModelLicenceNotAccepted([], reason="registry_unreadable") from exc
+    ensure_accepted(repos)

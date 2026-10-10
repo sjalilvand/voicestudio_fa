@@ -751,7 +751,7 @@ class TaskExecutor:
                     error_class=ErrorClass.CAPABILITY,
                     code="MODEL_LICENCE_REQUIRED",
                     message=f"Engine '{engine_id}' needs its model licence accepted on this worker.",
-                    hint="Accept it in Model Manager on the worker machine, or route this task elsewhere.",
+                    hint="Accept it in Model Catalogue on the worker machine, or route this task elsewhere.",
                 )
             ) from exc
         except Exception as exc:

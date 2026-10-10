@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Response
+from api.dependencies import require_admin
 from core.browser_guard import reject_cross_site_get
 from pydantic import BaseModel, ConfigDict, Field, StrictBool
 
@@ -153,7 +154,7 @@ def get_model_licence_acceptance(repo_id: str) -> dict:
     return model_acceptance.status(repo_id)
 
 
-@router.post("/models/licenses/accept")
+@router.post("/models/licenses/accept", dependencies=[Depends(require_admin)])
 def accept_model_licence(body: AcceptRequest) -> dict:
     """Record that the user confirmed they hold the rights these exact terms require."""
     from services import model_acceptance
@@ -166,7 +167,7 @@ def accept_model_licence(body: AcceptRequest) -> dict:
         raise HTTPException(status_code=409, detail={"code": "terms_changed"}) from exc
 
 
-@router.post("/models/licenses/revoke")
+@router.post("/models/licenses/revoke", dependencies=[Depends(require_admin)])
 def revoke_model_licence(body: RevokeRequest) -> dict:
     from services import model_acceptance
     return model_acceptance.revoke(body.repo_id)

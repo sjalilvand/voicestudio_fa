@@ -15,7 +15,7 @@ import {
 } from '@shared/api/authSession';
 import { joinApiPath } from '../../../../shared/web-api-routing';
 import {
-  MODEL_LICENCE_REQUIRED_EVENT,
+  announceModelLicenceRequired,
   modelLicenceRequirements,
 } from '@/features/settings/model-license-contract';
 export { joinApiPath } from '../../../../shared/web-api-routing';
@@ -127,12 +127,9 @@ export async function errorFromResponse(res: Response): Promise<ApiError> {
       // Plain-text body.
     }
   }
-  const licence = modelLicenceRequirements(payload);
-  if (licence && typeof window !== 'undefined') {
-    // Any feature can hit a model whose licence is not yet accepted; one
-    // app-level dialog handles them all.
-    window.dispatchEvent(new CustomEvent(MODEL_LICENCE_REQUIRED_EVENT, { detail: licence }));
-  }
+  // Any feature can hit a model whose licence is not yet accepted; one
+  // app-level dialog handles them all.
+  const licence = announceModelLicenceRequired(payload) ? modelLicenceRequirements(payload) : null;
   const detail =
     (licence && tr('modelLicense.requiredError')) ||
     generationFailureMessage(payload, tr) ||

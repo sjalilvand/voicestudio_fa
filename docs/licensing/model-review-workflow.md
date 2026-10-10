@@ -139,14 +139,16 @@ be substituted into the production registry.
 
 ## Boundaries still to complete
 
-These existing paths remain **unenforced** by this preview:
+Licence acceptance is enforced when a model is used (see above). These existing
+paths remain **unchanged** by the reviewed-install preview, so its exact-file
+evidence is not applied to them:
 
 - Ordinary `/models/install`, recommendations, model packs, repair and cache
   resume; engine installation and sidecar bootstraps
-- Preload, first-use, batch and CLI/headless paths; direct SDK auxiliary and
-  fallback downloads, including PocketTTS non-cloning weights and selected
-  voice embeddings
-- Remote workers, imported models, user overrides and other dynamic assets
+- Direct SDK auxiliary and fallback downloads, including PocketTTS non-cloning
+  weights and selected voice embeddings
+- Dynamic assets with no registry record (WhisperX alignment and VAD, FunASR
+  VAD, Argos packs, TTS plugins, user overrides and imported models)
 
 Provider-specific agreements/access, user-selected variant/voice resolution,
 private commercial-policy decisions, model activation and full executable
