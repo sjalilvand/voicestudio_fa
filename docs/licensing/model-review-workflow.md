@@ -7,12 +7,29 @@ clearance. Existing models and engine preferences are preserved.
 
 ## In Model Manager
 
-Each model card has a **Model terms** button. It opens the legal projection of
+Each model card has a coloured **Model terms** icon. Its shape and colour show
+the category of the *declared* licence, with the licence name, category and
+review state in its tooltip and accessible name:
+
+| Icon | Category | Declared licences |
+|---|---|---|
+| Green briefcase | Commercial use allowed | MIT, Apache-2.0, BSD, ISC, CC0, CC-BY |
+| Amber briefcase with `!` | Commercial use with conditions | OpenRAIL, CC-BY-SA, GPL family, Llama community licences |
+| Red struck-through briefcase | Personal and research use only | Any `-NC` licence or a recorded non-commercial restriction |
+| Grey question mark | License not identified | `NOASSERTION`, `other`, or any licence id nobody has mapped |
+
+A record takes its most restrictive part, including restricted file variants.
+The category summarises the declared text only; it is not a review result, and
+"Not reviewed" stays visible until the record is cleared. New licence ids must be
+mapped in `backend/services/model_licenses.py` (CI fails otherwise).
+
+Clicking the icon opens the legal projection of
 the existing catalogue, including the recorded source credit, declared model
 terms, evidence revision, runtime revision, evidence date and registry digest.
 Model use, commercial outputs, redistribution and voice/recording consent are
 separate assessments. File/language variants appear separately where recorded.
-Unknown or conflicting evidence never produces a permissive badge. A licence
+Unmapped or conflicting licence data falls back to the unknown category, never
+to commercial. A licence
 label alone does not establish the rights of a complete workflow.
 
 Pinned evidence links and the current upstream page are distinct. Opening an

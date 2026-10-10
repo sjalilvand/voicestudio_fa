@@ -3475,6 +3475,14 @@
     "downloaded": "Bestanden zijn geverifieerd in een aparte controlecache. Ze zijn niet geactiveerd voor normaal gebruik.",
     "downloadSource": "Downloadbron",
     "checked": "Bewijs gecontroleerd",
-    "notes": "Vastgelegde waarnemingen, niet geverifieerd voor deze selectie"
+    "notes": "Vastgelegde waarnemingen, niet geverifieerd voor deze selectie",
+    "category": "Licentiecategorie",
+    "categoryCommercial": "Commercieel gebruik toegestaan",
+    "categoryConditions": "Commercieel gebruik onder voorwaarden",
+    "categoryNoncommercial": "Alleen persoonlijk en onderzoeksgebruik",
+    "categoryUnknown": "Licentie niet vastgesteld",
+    "categoryHint": "Gebaseerd op de opgegeven licentietekst, niet gecontroleerd door VoiceStudio. Geen juridisch advies.",
+    "reviewed": "Gecontroleerd",
+    "notReviewed": "Niet gecontroleerd"
   }
 }

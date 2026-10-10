@@ -3477,6 +3477,14 @@
     "downloaded": "Arquivos verificados em um cache de revisão separado. Eles não estão ativados para uso normal.",
     "downloadSource": "Fonte do download",
     "checked": "Evidências verificadas",
-    "notes": "Observações registradas, não verificadas para esta seleção"
+    "notes": "Observações registradas, não verificadas para esta seleção",
+    "category": "Categoria da licença",
+    "categoryCommercial": "Uso comercial permitido",
+    "categoryConditions": "Uso comercial com condições",
+    "categoryNoncommercial": "Apenas uso pessoal e de pesquisa",
+    "categoryUnknown": "Licença não identificada",
+    "categoryHint": "Com base no texto de licença declarado, não verificado pelo VoiceStudio. Não é aconselhamento jurídico.",
+    "reviewed": "Revisado",
+    "notReviewed": "Não revisado"
   }
 }

@@ -3475,6 +3475,14 @@
     "downloaded": "文件已在单独的审查缓存中验证，尚未启用以供正常使用。",
     "downloadSource": "下载来源",
     "checked": "证据检查日期",
-    "notes": "记录的观察结果，尚未针对此选择验证"
+    "notes": "记录的观察结果，尚未针对此选择验证",
+    "category": "许可类别",
+    "categoryCommercial": "允许商业使用",
+    "categoryConditions": "有条件的商业使用",
+    "categoryNoncommercial": "仅限个人和研究使用",
+    "categoryUnknown": "无法识别许可",
+    "categoryHint": "依据声明的许可文本，未经 VoiceStudio 核实。不构成法律建议。",
+    "reviewed": "已审核",
+    "notReviewed": "未审核"
   }
 }

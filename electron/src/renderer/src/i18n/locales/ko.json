@@ -3475,6 +3475,14 @@
     "downloaded": "파일이 별도의 검토용 캐시에 검증되었습니다. 일반 사용을 위해 활성화되지는 않았습니다.",
     "downloadSource": "다운로드 출처",
     "checked": "증거 확인일",
-    "notes": "기록된 관찰 내용이며 이 선택에 대해서는 검증되지 않음"
+    "notes": "기록된 관찰 내용이며 이 선택에 대해서는 검증되지 않음",
+    "category": "라이선스 범주",
+    "categoryCommercial": "상업적 사용 허용",
+    "categoryConditions": "조건부 상업적 사용",
+    "categoryNoncommercial": "개인 및 연구 용도 전용",
+    "categoryUnknown": "라이선스 확인 불가",
+    "categoryHint": "선언된 라이선스 문구를 기준으로 하며 VoiceStudio가 검증하지 않았습니다. 법률 자문이 아닙니다.",
+    "reviewed": "검토됨",
+    "notReviewed": "검토되지 않음"
   }
 }

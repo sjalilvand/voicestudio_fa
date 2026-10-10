@@ -3477,6 +3477,14 @@
     "downloaded": "Les fichiers ont été vérifiés dans un cache d'examen distinct. Ils ne sont pas activés pour une utilisation normale.",
     "downloadSource": "Source du téléchargement",
     "checked": "Éléments probants examinés",
-    "notes": "Observations consignées, non vérifiées pour cette sélection"
+    "notes": "Observations consignées, non vérifiées pour cette sélection",
+    "category": "Catégorie de licence",
+    "categoryCommercial": "Usage commercial autorisé",
+    "categoryConditions": "Usage commercial sous conditions",
+    "categoryNoncommercial": "Usage personnel et recherche uniquement",
+    "categoryUnknown": "Licence non identifiée",
+    "categoryHint": "D'après le texte de licence déclaré, non vérifié par VoiceStudio. Ceci n'est pas un avis juridique.",
+    "reviewed": "Vérifié",
+    "notReviewed": "Non vérifié"
   }
 }

@@ -3475,6 +3475,14 @@
     "downloaded": "Các tệp đã được xác minh trong bộ nhớ đệm rà soát riêng. Chúng chưa được kích hoạt để sử dụng thông thường.",
     "downloadSource": "Nguồn tải xuống",
     "checked": "Ngày kiểm tra bằng chứng",
-    "notes": "Nhận xét đã ghi, chưa được xác minh cho lựa chọn này"
+    "notes": "Nhận xét đã ghi, chưa được xác minh cho lựa chọn này",
+    "category": "Loại giấy phép",
+    "categoryCommercial": "Cho phép sử dụng thương mại",
+    "categoryConditions": "Sử dụng thương mại có điều kiện",
+    "categoryNoncommercial": "Chỉ dùng cá nhân và nghiên cứu",
+    "categoryUnknown": "Không xác định được giấy phép",
+    "categoryHint": "Dựa trên văn bản giấy phép được công bố, VoiceStudio chưa xác minh. Không phải tư vấn pháp lý.",
+    "reviewed": "Đã xem xét",
+    "notReviewed": "Chưa xem xét"
   }
 }

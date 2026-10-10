@@ -115,20 +115,33 @@ afterEach(async () => {
 
 describe('versioned model notices', () => {
   it.each([
-    ['restricted', en.modelLicense.restricted],
-    ['separate_permission_required', en.modelLicense.permission],
-    ['unknown', en.modelLicense.unknown],
-    ['permitted', en.modelLicense.unknown],
+    ['commercial', 'unreviewed', en.modelLicense.categoryCommercial, en.modelLicense.notReviewed],
+    ['conditions', 'unreviewed', en.modelLicense.categoryConditions, en.modelLicense.notReviewed],
+    [
+      'noncommercial',
+      'noncommercial',
+      en.modelLicense.categoryNoncommercial,
+      en.modelLicense.notReviewed,
+    ],
+    ['commercial', 'cleared', en.modelLicense.categoryCommercial, en.modelLicense.reviewed],
+    [undefined, 'unreviewed', en.modelLicense.categoryUnknown, en.modelLicense.notReviewed],
+    ['permitted', 'unreviewed', en.modelLicense.categoryUnknown, en.modelLicense.notReviewed],
   ])(
-    'shows an icon-only %s trigger named by the localized status and model',
-    async (status, statusLabel) => {
-      await render({ ...info, commercial_inference: status });
-      const visibleLabel = `${en.modelLicense.title}: ${statusLabel}`;
-      const trigger = within(host).getByRole('button', { name: `${visibleLabel}; Test model` });
+    'shows an icon-only %s/%s trigger named by licence, category and review state',
+    async (category, review, categoryLabel, reviewLabel) => {
+      await render({ ...info, license_category: category, review_status: review });
+      const summary = `${info.license} · ${categoryLabel} · ${reviewLabel}`;
+      const trigger = within(host).getByRole('button', {
+        name: `${en.modelLicense.title}: ${summary}; Test model`,
+      });
       expect(trigger.textContent).toBe('');
-      expect(trigger.getAttribute('title')).toBe(visibleLabel);
-      expect(trigger.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
-      expect(trigger.querySelector('svg')?.getAttribute('focusable')).toBe('false');
+      expect(trigger.getAttribute('title')).toBe(summary);
+      const svg = trigger.querySelector('svg')!;
+      expect(svg.getAttribute('aria-hidden')).toBe('true');
+      expect(svg.getAttribute('focusable')).toBe('false');
+      expect(svg.getAttribute('data-license-category')).toBe(
+        category === 'permitted' || !category ? 'unknown' : category,
+      );
     },
   );
 

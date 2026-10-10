@@ -3475,6 +3475,14 @@
     "downloaded": "ファイルは専用の審査用キャッシュで検証されました。通常の使用向けには有効化されていません。",
     "downloadSource": "ダウンロード元",
     "checked": "証拠の確認日",
-    "notes": "記録された所見（この選択については未検証）"
+    "notes": "記録された所見（この選択については未検証）",
+    "category": "ライセンス区分",
+    "categoryCommercial": "商用利用可",
+    "categoryConditions": "条件付きで商用利用可",
+    "categoryNoncommercial": "個人・研究用途のみ",
+    "categoryUnknown": "ライセンス不明",
+    "categoryHint": "申告されたライセンス文に基づく表示で、VoiceStudio は検証していません。法的助言ではありません。",
+    "reviewed": "確認済み",
+    "notReviewed": "未確認"
   }
 }

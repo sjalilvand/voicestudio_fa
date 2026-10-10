@@ -147,13 +147,90 @@ def record_blockers(record: dict) -> list[str]:
     return blockers
 
 
+# Declared-licence categories for display only: they summarise what the declared
+# licence text says, never what this app has verified (see review_status).
+# Order is restrictiveness; a record takes its most restrictive part.
+CATEGORIES = ("commercial", "conditions", "unknown", "noncommercial")
+_COMMERCIAL_LICENSES = frozenset({
+    "mit", "apache-2.0", "bsd-2-clause", "bsd-3-clause", "isc", "cc0-1.0",
+    "cc-by-3.0", "cc-by-4.0", "unlicense",
+})
+_CONDITIONS_LICENSES = frozenset({
+    "openrail", "openrail++", "openrail-m", "creativeml-openrail-m",
+    "bigscience-openrail-m", "cc-by-sa-3.0", "cc-by-sa-4.0",
+    "gpl-3.0", "agpl-3.0", "lgpl-3.0",
+})
+# Deliberately unknown: no assertion, or bespoke terms nobody has categorised.
+_UNKNOWN_LICENSES = frozenset({"noassertion", "other", "unknown", "higgs audio 2"})
+_LLAMA = re.compile(r"(meta[ -])?llama[ -]?\d+(\.\d+)?\Z")
+_NONCOMMERCIAL = re.compile(r"(^|-)nc(-|\b)|non-?commercial")
+_LICENSE_SPLIT = re.compile(r"\s+(?:and|or|with)\s+|[;,+]")
+
+
+def license_token_category(token: str) -> str | None:
+    """Category of one SPDX-like licence id; None means nobody has mapped it."""
+    token = re.sub(r"\(.*?\)", "", token).strip().casefold()
+    if _NONCOMMERCIAL.search(token):
+        return "noncommercial"
+    if token in _COMMERCIAL_LICENSES:
+        return "commercial"
+    if token in _CONDITIONS_LICENSES or _LLAMA.fullmatch(token):
+        return "conditions"
+    if token in _UNKNOWN_LICENSES:
+        return "unknown"
+    return None
+
+
+def license_tokens(value: object) -> list[str]:
+    if not isinstance(value, str):
+        return []
+    return [t for t in (p.strip() for p in _LICENSE_SPLIT.split(value.casefold())) if t]
+
+
+def _status_category(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    if value == "restricted" or value.startswith("noncommercial"):
+        return "noncommercial"
+    if value == "separate_permission_required":
+        return "conditions"
+    return None
+
+
+def license_category(record: dict, inherited: str | None = None) -> str:
+    """Most restrictive declared category; unmapped or missing terms are unknown."""
+    found = [] if inherited is None else [inherited]
+    tokens = license_tokens(record.get("license"))
+    found += [license_token_category(t) or "unknown" for t in tokens]
+    observations = record.get("observations") if isinstance(record.get("observations"), dict) else {}
+    found += [license_token_category(t) or "unknown" for t in license_tokens(observations.get("license"))]
+    for value in (record.get("commercial_inference"), observations.get("commercial_inference")):
+        status = _status_category(value)
+        if status:
+            found.append(status)
+    if not found:
+        return "unknown"
+    return max(found, key=CATEGORIES.index)
+
+
+def _variants(row: dict, parent: str) -> list[dict]:
+    variants = copy.deepcopy(row.get("variants", []))
+    for variant in variants:
+        variant["license_category"] = license_category(variant, inherited=parent)
+    return variants
+
+
 def disclosure(repo_id: str, registry: dict | None = None) -> dict:
     registry = registry if registry is not None else load_registry()
     row = next((r for r in registry["models"] if r["id"] == repo_id), None)
     if row is None:
         return {"readiness": "not_verified", "blockers": ["record_missing"],
                 "commercial_inference": "unknown", "commercial_outputs": "unknown",
-                "enforcement": "disclosure_only"}
+                "license_category": "unknown", "enforcement": "disclosure_only"}
+    own = license_category(row)
+    variants = _variants(row, own)
+    # A repo that ships a restricted variant is as restricted as that variant.
+    category = max([own, *(v["license_category"] for v in variants)], key=CATEGORIES.index)
     return {
         "registry_version": registry["registry_version"],
         "registry_digest": digest(registry),
@@ -168,7 +245,8 @@ def disclosure(repo_id: str, registry: dict | None = None) -> dict:
         "component_closure": row.get("component_closure", "incomplete"),
         "readiness": "not_verified" if record_blockers(row) else "reviewable",
         "blockers": record_blockers(row), "enforcement": "disclosure_only",
-        "variants": copy.deepcopy(row.get("variants", [])),
+        "license_category": category,
+        "variants": variants,
         "evidence_checked_at": registry.get("checked_at"),
         "evidence_sha256": None,
         "redistribution": "unknown",
@@ -183,7 +261,7 @@ def safe_disclosure(repo_id: str) -> dict:
     except (ModelTermsError, KeyError, TypeError, ValueError):
         return {"readiness": "not_verified", "blockers": ["registry_invalid"],
                 "commercial_inference": "unknown", "commercial_outputs": "unknown",
-                "enforcement": "disclosure_only"}
+                "license_category": "unknown", "enforcement": "disclosure_only"}
 
 
 def _component(row: dict) -> tuple[dict, list[dict]]:

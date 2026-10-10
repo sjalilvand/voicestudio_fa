@@ -3475,6 +3475,14 @@
     "downloaded": "檔案已在獨立的審查快取中驗證，尚未啟用供一般使用。",
     "downloadSource": "下載來源",
     "checked": "證據檢查日期",
-    "notes": "記錄的觀察結果，尚未針對此選擇驗證"
+    "notes": "記錄的觀察結果，尚未針對此選擇驗證",
+    "category": "授權類別",
+    "categoryCommercial": "允許商業使用",
+    "categoryConditions": "附條件的商業使用",
+    "categoryNoncommercial": "僅限個人與研究使用",
+    "categoryUnknown": "無法辨識授權",
+    "categoryHint": "依據聲明的授權文字，未經 VoiceStudio 核實。不構成法律建議。",
+    "reviewed": "已審查",
+    "notReviewed": "未審查"
   }
 }

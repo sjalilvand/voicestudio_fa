@@ -5,6 +5,7 @@ export interface ModelLicenseVariant {
   commercial_inference: string;
   commercial_outputs: string;
   review_status: string;
+  license_category?: string;
   blockers: string[];
   evidence_url?: string | null;
   observations?: { output_terms?: string; license_status?: string };
@@ -26,6 +27,7 @@ export interface ModelLicenseInfo {
   commercial_outputs: string;
   component_closure: string;
   readiness: string;
+  license_category?: string;
   blockers: string[];
   enforcement: 'disclosure_only';
   variants?: ModelLicenseVariant[];
@@ -68,13 +70,28 @@ export type ModelLicenseStatus = 'restricted' | 'permission' | 'unknown';
 
 /** Unknown/future statuses collapse to `unknown`, never to a permissive state. */
 export function modelLicenseStatus(value?: string): ModelLicenseStatus {
-  if (value === 'restricted') return 'restricted';
+  if (value === 'restricted' || value?.startsWith('noncommercial')) return 'restricted';
   if (value === 'separate_permission_required') return 'permission';
   return 'unknown';
 }
 
 export function modelLicenseStatusKey(value?: string): string {
   return `modelLicense.${modelLicenseStatus(value)}`;
+}
+
+/** What the declared licence says; never what VoiceStudio has verified. */
+export type ModelLicenseCategory = 'commercial' | 'conditions' | 'noncommercial' | 'unknown';
+
+const categories: readonly string[] = ['commercial', 'conditions', 'noncommercial'];
+
+/** Missing, older-backend or future categories collapse to `unknown`. */
+export function modelLicenseCategory(value?: string): ModelLicenseCategory {
+  return value && categories.includes(value) ? (value as ModelLicenseCategory) : 'unknown';
+}
+
+export function modelLicenseCategoryKey(value?: string): string {
+  const category = modelLicenseCategory(value);
+  return `modelLicense.category${category[0].toUpperCase()}${category.slice(1)}`;
 }
 
 /** Upstream data is inert text; external navigation accepts HTTPS only. */

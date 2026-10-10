@@ -3475,6 +3475,14 @@
     "downloaded": "Die Dateien wurden in einem separaten Prüf-Cache verifiziert. Sie sind nicht für die normale Nutzung aktiviert.",
     "downloadSource": "Downloadquelle",
     "checked": "Belege geprüft",
-    "notes": "Erfasste Beobachtungen, für diese Auswahl nicht geprüft"
+    "notes": "Erfasste Beobachtungen, für diese Auswahl nicht geprüft",
+    "category": "Lizenzkategorie",
+    "categoryCommercial": "Kommerzielle Nutzung erlaubt",
+    "categoryConditions": "Kommerzielle Nutzung unter Bedingungen",
+    "categoryNoncommercial": "Nur für private und Forschungszwecke",
+    "categoryUnknown": "Lizenz nicht ermittelt",
+    "categoryHint": "Basiert auf dem angegebenen Lizenztext, nicht von VoiceStudio geprüft. Keine Rechtsberatung.",
+    "reviewed": "Geprüft",
+    "notReviewed": "Nicht geprüft"
   }
 }

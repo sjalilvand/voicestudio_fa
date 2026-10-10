@@ -3475,6 +3475,14 @@
     "downloaded": "Dosyalar ayrı bir inceleme önbelleğinde doğrulandı. Normal kullanım için etkinleştirilmedi.",
     "downloadSource": "İndirme kaynağı",
     "checked": "Kanıtların kontrol tarihi",
-    "notes": "Kaydedilmiş gözlemler, bu seçim için doğrulanmadı"
+    "notes": "Kaydedilmiş gözlemler, bu seçim için doğrulanmadı",
+    "category": "Lisans kategorisi",
+    "categoryCommercial": "Ticari kullanıma izin verilir",
+    "categoryConditions": "Koşullu ticari kullanım",
+    "categoryNoncommercial": "Yalnızca kişisel ve araştırma amaçlı kullanım",
+    "categoryUnknown": "Lisans belirlenemedi",
+    "categoryHint": "Beyan edilen lisans metnine dayanır, VoiceStudio tarafından doğrulanmamıştır. Hukuki tavsiye değildir.",
+    "reviewed": "İncelendi",
+    "notReviewed": "İncelenmedi"
   }
 }

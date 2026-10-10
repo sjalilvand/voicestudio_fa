@@ -3479,6 +3479,14 @@
     "downloaded": "Pliki zweryfikowano w osobnej pamięci podręcznej przeglądu. Nie są aktywowane do zwykłego użycia.",
     "downloadSource": "Źródło pobierania",
     "checked": "Dowody sprawdzone",
-    "notes": "Zapisane obserwacje, niezweryfikowane dla tego wyboru"
+    "notes": "Zapisane obserwacje, niezweryfikowane dla tego wyboru",
+    "category": "Kategoria licencji",
+    "categoryCommercial": "Użycie komercyjne dozwolone",
+    "categoryConditions": "Użycie komercyjne pod warunkami",
+    "categoryNoncommercial": "Tylko użytek osobisty i badawczy",
+    "categoryUnknown": "Nie rozpoznano licencji",
+    "categoryHint": "Na podstawie zadeklarowanego tekstu licencji, niezweryfikowane przez VoiceStudio. To nie jest porada prawna.",
+    "reviewed": "Sprawdzono",
+    "notReviewed": "Nie sprawdzono"
   }
 }

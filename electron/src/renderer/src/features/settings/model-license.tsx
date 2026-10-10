@@ -14,7 +14,8 @@ import { apiJson } from '@/lib/api/client';
 import { ModelLicenseIcon } from './model-license-icon';
 import {
   canAcknowledgeModelPlan,
-  modelLicenseStatus,
+  modelLicenseCategory,
+  modelLicenseCategoryKey,
   modelLicenseStatusKey,
   modelLicenseUrl,
   type ModelLicenseInfo,
@@ -155,6 +156,11 @@ export function ModelLicense({
     const href = modelLicenseUrl(url);
     return href ? <ExternalLink href={href}>{text}</ExternalLink> : null;
   };
+  const category = t(modelLicenseCategoryKey(info?.license_category));
+  const review = t(
+    info?.review_status === 'cleared' ? 'modelLicense.reviewed' : 'modelLicense.notReviewed',
+  );
+  const summary = `${info?.license || t('common.unknown')} · ${category} · ${review}`;
   const blockers = [...new Set([...(info?.blockers ?? []), ...(plan?.blockers ?? [])])];
 
   return (
@@ -164,10 +170,10 @@ export function ModelLicense({
         size="icon-sm"
         variant="outline"
         onClick={() => setOpen(true)}
-        title={`${t('modelLicense.title')}: ${t(modelLicenseStatusKey(info?.commercial_inference))}`}
-        aria-label={`${t('modelLicense.title')}: ${t(modelLicenseStatusKey(info?.commercial_inference))}; ${label}`}
+        title={summary}
+        aria-label={`${t('modelLicense.title')}: ${summary}; ${label}`}
       >
-        <ModelLicenseIcon status={modelLicenseStatus(info?.commercial_inference)} />
+        <ModelLicenseIcon category={modelLicenseCategory(info?.license_category)} />
       </Button>
       <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
         <DialogContent
@@ -186,6 +192,14 @@ export function ModelLicense({
             {repoId} · {t('common.backend')}: {target}
           </p>
           <dl className="grid min-w-0 gap-2 text-sm [overflow-wrap:anywhere]">
+            <div>
+              <dt className="font-medium">{t('modelLicense.category')}</dt>
+              <dd className="flex items-center gap-1.5">
+                <ModelLicenseIcon category={modelLicenseCategory(info?.license_category)} />
+                {category} · {review}
+              </dd>
+              <dd className="text-xs text-muted-foreground">{t('modelLicense.categoryHint')}</dd>
+            </div>
             <div>
               <dt className="font-medium">{t('modelLicense.commercial')}</dt>
               <dd>{t(modelLicenseStatusKey(info?.commercial_inference))}</dd>
@@ -240,6 +254,10 @@ export function ModelLicense({
               className="rounded-lg border border-border/60 p-3 text-sm [overflow-wrap:anywhere]"
             >
               <h3 className="font-medium">{variant.label}</h3>
+              <p className="flex items-center gap-1.5">
+                <ModelLicenseIcon category={modelLicenseCategory(variant.license_category)} />
+                {t(modelLicenseCategoryKey(variant.license_category))}
+              </p>
               <p>
                 {t('modelLicense.commercial')}:{' '}
                 {t(modelLicenseStatusKey(variant.commercial_inference))}

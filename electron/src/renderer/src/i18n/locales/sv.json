@@ -3475,6 +3475,14 @@
     "downloaded": "Filerna har verifierats i en separat granskningscache. De är inte aktiverade för vanlig användning.",
     "downloadSource": "Nedladdningskälla",
     "checked": "Underlag granskat",
-    "notes": "Registrerade observationer, inte verifierade för detta val"
+    "notes": "Registrerade observationer, inte verifierade för detta val",
+    "category": "Licenskategori",
+    "categoryCommercial": "Kommersiell användning tillåten",
+    "categoryConditions": "Kommersiell användning med villkor",
+    "categoryNoncommercial": "Endast personlig användning och forskning",
+    "categoryUnknown": "Licensen kunde inte identifieras",
+    "categoryHint": "Baserat på den angivna licenstexten, inte verifierat av VoiceStudio. Inte juridisk rådgivning.",
+    "reviewed": "Granskad",
+    "notReviewed": "Inte granskad"
   }
 }

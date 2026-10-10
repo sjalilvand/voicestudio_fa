@@ -3475,6 +3475,14 @@
     "downloaded": "Berkas diverifikasi dalam cache peninjauan terpisah. Berkas belum diaktifkan untuk penggunaan biasa.",
     "downloadSource": "Sumber unduhan",
     "checked": "Bukti diperiksa",
-    "notes": "Pengamatan tercatat, belum diverifikasi untuk pilihan ini"
+    "notes": "Pengamatan tercatat, belum diverifikasi untuk pilihan ini",
+    "category": "Kategori lisensi",
+    "categoryCommercial": "Penggunaan komersial diizinkan",
+    "categoryConditions": "Penggunaan komersial dengan syarat",
+    "categoryNoncommercial": "Hanya untuk penggunaan pribadi dan riset",
+    "categoryUnknown": "Lisensi tidak teridentifikasi",
+    "categoryHint": "Berdasarkan teks lisensi yang dinyatakan, tidak diverifikasi oleh VoiceStudio. Bukan nasihat hukum.",
+    "reviewed": "Ditinjau",
+    "notReviewed": "Belum ditinjau"
   }
 }

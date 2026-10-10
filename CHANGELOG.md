@@ -11,6 +11,7 @@ metadata and the backend fallback mirror it.
 **Highlights**
 
 - Add model-source notices and an optional exact-file review preview; ordinary downloads remain unchanged. (#2689)
+- Model cards show a coloured icon for each model's licence category: commercial, with conditions, personal/research only, or unknown. (#2689)
 
 ## [0.5.7] — 2026-10-07
 

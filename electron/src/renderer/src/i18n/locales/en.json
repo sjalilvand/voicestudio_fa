@@ -3475,6 +3475,14 @@
     "downloaded": "Files verified in a separate reviewed cache. They are not activated for normal use.",
     "downloadSource": "Download source",
     "checked": "Evidence checked",
-    "notes": "Recorded observations, not verified for this selection"
+    "notes": "Recorded observations, not verified for this selection",
+    "category": "License category",
+    "categoryCommercial": "Commercial use allowed",
+    "categoryConditions": "Commercial use with conditions",
+    "categoryNoncommercial": "Personal and research use only",
+    "categoryUnknown": "License not identified",
+    "categoryHint": "Based on the declared license text, not verified by VoiceStudio. Not legal advice.",
+    "reviewed": "Reviewed",
+    "notReviewed": "Not reviewed"
   }
 }
