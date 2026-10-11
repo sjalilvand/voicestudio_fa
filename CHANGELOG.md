@@ -24,6 +24,7 @@ metadata and the backend fallback mirror it.
 
 ### Removed
 
+- Remove licence activation from the open-source Pro page. (#2762)
 - Remote compute devices, remote workers and GPU sharing moved to VoiceStudio Pro and are no longer included in the open-source app.
 
 ## [0.5.7] — 2026-10-07
