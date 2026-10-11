@@ -17,7 +17,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
-- MLX-Audio preserves supported voice settings and reports model failures instead of silently retrying with a default voice (#2739)
+- MLX-Audio preserves supported voice settings and reports model failures instead of silently retrying with a default voice (#2739) — thanks @BichengWang!
 
 ## [0.5.7] — 2026-10-07
 
