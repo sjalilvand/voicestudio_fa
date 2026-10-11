@@ -75,7 +75,7 @@ into an isolated venv on demand.
 
    ```bash
    cd MOSS-TTS
-   uv venv .venv
+   uv venv --python 3.11 .venv
    uv pip install -e ".[torch-runtime]" "torchcodec===0.8.1"      --extra-index-url https://download.pytorch.org/whl/cu128      --index-strategy unsafe-best-match
    ```
 
@@ -86,9 +86,17 @@ into an isolated venv on demand.
    `==0.8.1` also admits the CUDA build, which needs additional NVIDIA NPP
    libraries even when decoding reference audio on the CPU.
 
-   On a **non-CUDA / CPU host** (e.g. Apple Silicon), install plain
-   `torch`/`torchaudio`/`transformers==5.0.0`/`torchcodec===0.8.1` into the venv instead of the
-   `+cu128` extra (the auto-bootstrap below only targets CUDA hosts).
+   On a **non-CUDA / CPU host** (e.g. Apple Silicon), install the base
+   editable package with the compatible PyTorch pair instead of the
+   `+cu128` extra (the auto-bootstrap below only targets CUDA hosts):
+
+   ```bash
+   uv pip install -e . "torch==2.9.1" "torchaudio==2.9.1" "transformers==5.0.0" "torchcodec===0.8.1" --extra-index-url https://download.pytorch.org/whl/cpu --index-strategy unsafe-best-match
+   ```
+
+   [TorchCodec 0.8 requires PyTorch 2.9](https://github.com/meta-pytorch/torchcodec#compatibility-with-torch-versions).
+   Do not leave `torch` or `torchaudio` unpinned: a newer PyTorch can make
+   this decoder fail to load.
 
 3. The ~16 GB weights download from HuggingFace on first synthesize. The
    parent forwards `HF_HOME` / `HF_HUB_CACHE` to the sidecar so the cache is
@@ -153,7 +161,7 @@ You haven't pointed VoiceStudio at a MOSS-TTS clone yet. Follow **Install**.
 ### `uv pip install -e failed ... '[torch-runtime]' extra (cu128) cannot resolve`
 
 You're on a non-CUDA host. The upstream `torch-runtime` extra is CUDA-only;
-set up the venv manually with plain `torch`/`transformers==5.0.0` (step 2).
+set up the venv manually with the pinned CPU command in step 2.
 
 ### `Could not load libtorchcodec` or `libnppicc.so.12` during voice cloning
 
