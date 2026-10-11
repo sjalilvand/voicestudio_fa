@@ -129,7 +129,7 @@ export function LicenceAcceptanceFooter({
   return (
     <div
       data-licence-acceptance
-      className="max-h-[45dvh] shrink-0 space-y-4 overflow-y-auto border-t border-border bg-[linear-gradient(180deg,hsl(var(--muted)/0.42),hsl(var(--popover))_4.5rem)] p-4"
+      className="max-h-[45dvh] shrink-0 space-y-4 overflow-y-auto border-t border-border bg-[linear-gradient(180deg,color-mix(in_srgb,var(--muted)_42%,transparent),var(--popover)_4.5rem)] p-4"
     >
       {pending.length > 0 && (
         <>
@@ -142,8 +142,7 @@ export function LicenceAcceptanceFooter({
               const checkedModel = !!checked[model.repo_id];
               return (
                 <li key={model.repo_id}>
-                  <label
-                    htmlFor={id}
+                  <div
                     className={cn(
                       'group flex cursor-pointer items-start gap-3 rounded-lg border bg-background/75 p-3 text-sm shadow-sm transition-[border-color,background-color] motion-reduce:transition-none',
                       checkedModel
@@ -151,27 +150,27 @@ export function LicenceAcceptanceFooter({
                         : 'border-border hover:border-foreground/25',
                     )}
                   >
-                    <input
-                      id={id}
-                      type="checkbox"
-                      checked={!!checked[model.repo_id]}
-                      disabled={busy}
-                      onChange={(event) => {
-                        const value = event.currentTarget.checked;
-                        setChecked((prev) => ({ ...prev, [model.repo_id]: value }));
-                      }}
-                      className="mt-0.5 size-4 shrink-0 accent-primary focus-visible:ring-2 focus-visible:ring-ring"
-                    />
                     <span className="min-w-0 flex-1 space-y-1">
                       <span className="flex items-start gap-2 font-medium text-foreground">
                         <ModelLicenseIcon category={modelLicenseCategory(model.category)} className="mt-0.5 size-4 shrink-0" />
                         <span className="break-all">{model.label}</span>
                       </span>
-                      <span className="block leading-relaxed text-muted-foreground">
-                        {t('modelLicense.acceptCheckbox', { model: model.label })}
-                      </span>
+                      <label htmlFor={id} className="flex cursor-pointer items-start gap-3 leading-relaxed text-muted-foreground">
+                        <input
+                          id={id}
+                          type="checkbox"
+                          checked={!!checked[model.repo_id]}
+                          disabled={busy}
+                          onChange={(event) => {
+                            const value = event.currentTarget.checked;
+                            setChecked((prev) => ({ ...prev, [model.repo_id]: value }));
+                          }}
+                          className="mt-0.5 size-4 shrink-0 accent-primary focus-visible:ring-2 focus-visible:ring-ring"
+                        />
+                        <span>{t('modelLicense.acceptCheckbox', { model: model.label })}</span>
+                      </label>
                     </span>
-                  </label>
+                  </div>
                 </li>
               );
             })}
