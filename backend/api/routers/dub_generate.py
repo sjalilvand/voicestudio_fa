@@ -39,7 +39,6 @@ from services.incremental import segment_fingerprint, fit_fingerprint
 from services.fit_planner import FitParams, plan_fit
 from services.watermark import mark_synthetic
 from services.speaker_clone import auto_profile_id
-from services.segment_bundle import extract_segment_wavs
 from api.routers.dub_core import _get_job, _safe_lang_or_400, _save_job
 from services.dub_pipeline import (
     _dub_jobs_lock,
@@ -497,8 +496,8 @@ async def dub_generate(job_id: str, req: DubRequest):
     admitted_rev = source_segments_revision(job)
 
     # ── Engine resolution (issue #312 class) ────────────────────────────────
-    # Every rendered segment clones either source speech or a saved profile, so
-    # Every rendered segment requires a cloning-capable local engine.
+    # Every rendered segment clones either source speech or a saved profile,
+    # so every segment requires a cloning-capable local engine.
     try:
         engine_id, backend = await _resolve_dub_execution()
     except ValueError as e:

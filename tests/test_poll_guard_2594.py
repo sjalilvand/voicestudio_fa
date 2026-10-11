@@ -36,13 +36,12 @@ def PollGuard():
 
 def test_status_poll_routes_and_admin_gate_never_use_the_worker_pool():
     from api import dependencies
-    from api.routers import system, workers
+    from api.routers import system
 
     for fn in (
         dependencies.require_admin,
         system.model_status,
         system.loaded_models,
-        workers.get_target,
     ):
         assert inspect.iscoroutinefunction(fn), (
             f"{fn.__name__} is sync: it would queue behind every blocked sync route"
@@ -119,11 +118,10 @@ def test_polls_answer_while_the_shared_pool_is_saturated(monkeypatch, tmp_path):
     httpx = pytest.importorskip("httpx")
     import anyio.to_thread
     from fastapi import FastAPI
-    from api.routers import system, workers
+    from api.routers import system
 
     app = FastAPI()
     app.include_router(system.router)
-    app.include_router(workers.router)
     release = threading.Event()
 
     @app.get("/_block")

@@ -320,7 +320,7 @@ async def _run_batch_pipeline_leased(job_id: str, job: dict, lease: voice_leases
     _set_progress(job, "transcribe", 0)
 
     from services.asr_backend import load_active_asr_backend
-    from services.model_manager import _gpu_pool, _cpu_pool, run_on_gpu_pool_guarded
+    from services.model_manager import _gpu_pool, run_on_gpu_pool_guarded
     from services.segmentation import (
         segment_transcript, assign_speakers_heuristic,
     )

@@ -1,5 +1,4 @@
 import os
-import io
 import re
 import uuid
 import time
@@ -26,7 +25,7 @@ from core.config import OUTPUTS_DIR, VOICES_DIR
 from core.path_security import contained_join
 import functools
 from services.model_manager import (
-    get_model, _gpu_pool, run_on_gpu_pool_guarded, GpuJobTimeoutError,
+    get_model, run_on_gpu_pool_guarded, GpuJobTimeoutError,
     GpuPoolBusyError,
 )
 from services.generation_audio import save_generation_wav

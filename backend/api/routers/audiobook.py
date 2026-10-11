@@ -26,7 +26,6 @@ import json
 import logging
 import os
 import re
-import shutil
 import uuid
 
 from collections.abc import Awaitable, Callable
@@ -904,6 +903,14 @@ async def _run_chapter(chapter, *, default_voice, language, opts, voice_map,
     from services import gpu_gateway
     from services.model_manager import generate_timeout_s
     from services.tts_backend import get_backend_class
+
+    # Resolve and pin every take before rendering starts.  The former routing
+    # setup did this even for local jobs; keeping it explicit prevents a
+    # concurrent re-lock/sweep from deleting a take before the local resolver
+    # first reads it.
+    for span in chapter.spans:
+        profile_id = _map_span_voice(span.voice_id, default_voice, voice_map)
+        voice_leases.hold(lease, _resolve_voice(profile_id).get("ref_audio"))
 
     synth, sr, resolve, engine_id = await _prepare_synth(
         default_voice, language=language, opts=opts, voice_map=voice_map,
