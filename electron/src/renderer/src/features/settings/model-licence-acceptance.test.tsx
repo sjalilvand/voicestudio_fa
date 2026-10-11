@@ -108,6 +108,11 @@ describe('model licence acceptance', () => {
         element.getAttribute('data-license-category'),
       ),
     ).toEqual(['commercial', 'noncommercial']);
+    expect(
+      Array.from(document.querySelectorAll('[data-model-label]')).map((element) =>
+        element.getAttribute('data-model-label'),
+      ),
+    ).toEqual(['One', 'Two']);
     expect(boxes().map((box) => box.closest('label')?.textContent)).toEqual([
       en.modelLicense.acceptCheckbox.replace('{{model}}', 'One'),
       en.modelLicense.acceptCheckbox.replace('{{model}}', 'Two'),
