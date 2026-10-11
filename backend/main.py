@@ -13,6 +13,7 @@ if _backend_dir not in sys.path:
 # native crash inside torch/CUDA leaves a named frame in backend_err.log
 # instead of a silently vanished process. See core/crash_diagnostics.py.
 from core.crash_diagnostics import enable_fault_handler  # noqa: E402
+from core.app_config import PRODUCT_NAME  # noqa: E402
 
 enable_fault_handler()
 
@@ -1319,7 +1320,7 @@ async def lifespan(app: FastAPI):
 from core.version import APP_VERSION  # single source of truth (pyproject metadata)
 
 app = FastAPI(
-    title="VoiceStudio API",
+    title=f"{PRODUCT_NAME} API",
     version=APP_VERSION,
     lifespan=lifespan,
     docs_url=None,       # Disabled — replaced by Scalar at /docs

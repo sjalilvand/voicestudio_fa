@@ -17,6 +17,9 @@ metadata and the backend fallback mirror it.
 
 ### Changed
 
+- App identity and backend, browser and Electron development ports now come from one validated configuration file. (#2759)
+- Keep synthesis controls anchored at the bottom when the latest take appears. (#2759)
+- Using a Gallery design voice opens its workspace immediately and defers model loading until audio is requested. (#2759)
 - Existing local projects, settings and data are unaffected; legacy worker database records are retained and ignored.
 
 ### Removed
