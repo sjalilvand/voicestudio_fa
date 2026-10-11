@@ -140,18 +140,16 @@ COPY alembic.ini ./
 # Copy the pre-built React frontend from the builder stage
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
-# Expose the single unified API and UI port
-EXPOSE 3900
-
 # Image-level health probe (compose files define their own; this covers plain
 # `docker run`). Generous start period: first boot creates the venv-less
 # schema + may pull model metadata before /health answers.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=5 \
-  CMD curl -fsS http://127.0.0.1:3900/health || exit 1
+  CMD ["python3", "-c", "import os, urllib.request; from core.app_config import DEFAULT_BACKEND_PORT; port = int(os.environ.get('OMNIVOICE_PORT', DEFAULT_BACKEND_PORT)); urllib.request.urlopen(f'http://127.0.0.1:{port}/health', timeout=4)"]
 
 # Mount points for persistent data (sqlite db, user voices, huggingface cache)
 VOLUME ["/app/omnivoice_data"]
 
-# Bind to 0.0.0.0 for external access. `python3 -m` keeps runtime imports on
-# the same interpreter whose torch flavor the build guard validated (#1274).
-ENTRYPOINT ["python3", "-m", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "3900"]
+# Bind to 0.0.0.0 for external access. The backend entrypoint reads the
+# manifest default (or OMNIVOICE_PORT) using the guarded Python interpreter.
+ENV OMNIVOICE_BIND_HOST=0.0.0.0
+ENTRYPOINT ["python3", "backend/main.py"]
