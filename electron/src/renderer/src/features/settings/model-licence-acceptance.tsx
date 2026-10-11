@@ -144,7 +144,6 @@ export function LicenceAcceptanceFooter({
                 <li key={model.repo_id}>
                   <label
                     htmlFor={id}
-                    data-model-label={model.label}
                     className={cn(
                       'group flex cursor-pointer items-start gap-3 rounded-lg border bg-background/75 p-3 text-sm shadow-sm transition-[border-color,background-color] motion-reduce:transition-none',
                       checkedModel
@@ -155,7 +154,7 @@ export function LicenceAcceptanceFooter({
                     <span className="min-w-0 flex-1 space-y-1">
                       <span aria-hidden="true" className="flex items-start gap-2 font-medium text-foreground">
                         <ModelLicenseIcon category={modelLicenseCategory(model.category)} className="mt-0.5 size-4 shrink-0" />
-                        <span className="break-all after:content-[attr(data-model-label)]" />
+                        <span data-model-label={model.label} className="break-all after:content-[attr(data-model-label)]" />
                       </span>
                       <span className="flex items-start gap-3 leading-relaxed text-muted-foreground">
                         <input
