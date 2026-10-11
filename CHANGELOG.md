@@ -17,6 +17,7 @@ metadata and the backend fallback mirror it.
 
 ### Changed
 
+- App identity and backend, browser and Electron development ports now come from one validated configuration file. (#2759)
 - Existing local projects, settings and data are unaffected; legacy worker database records are retained and ignored.
 
 ### Removed
