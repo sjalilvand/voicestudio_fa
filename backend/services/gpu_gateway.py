@@ -30,6 +30,12 @@ class LocalCall:
     prepare: Optional[Callable[[], Any]] = None
 
 
+def _model_load_timeout() -> float:
+    from services.model_manager import _model_load_timeout as resolve  # noqa: PLC0415
+
+    return float(resolve())
+
+
 async def prewarm(
     *,
     backend=None,
@@ -40,12 +46,10 @@ async def prewarm(
     """Make a local engine ready under the model-load budget."""
     if backend is None:
         return
-    from services.model_manager import MODEL_LOAD_TIMEOUT
-
     call = LocalCall(
         backend.ensure_ready,
         what=f"TTS engine '{engine or getattr(backend, 'engine_id', '') or 'model'}' model load",
-        timeout=timeout if timeout is not None else MODEL_LOAD_TIMEOUT,
+        timeout=timeout if timeout is not None else _model_load_timeout(),
     )
     try:
         await _run_local(call, executor=executor)
