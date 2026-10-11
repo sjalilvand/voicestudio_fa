@@ -142,7 +142,9 @@ export function LicenceAcceptanceFooter({
               const checkedModel = !!checked[model.repo_id];
               return (
                 <li key={model.repo_id}>
-                  <div
+                  <label
+                    htmlFor={id}
+                    data-model-label={model.label}
                     className={cn(
                       'group flex cursor-pointer items-start gap-3 rounded-lg border bg-background/75 p-3 text-sm shadow-sm transition-[border-color,background-color] motion-reduce:transition-none',
                       checkedModel
@@ -151,11 +153,11 @@ export function LicenceAcceptanceFooter({
                     )}
                   >
                     <span className="min-w-0 flex-1 space-y-1">
-                      <span className="flex items-start gap-2 font-medium text-foreground">
+                      <span aria-hidden="true" className="flex items-start gap-2 font-medium text-foreground">
                         <ModelLicenseIcon category={modelLicenseCategory(model.category)} className="mt-0.5 size-4 shrink-0" />
-                        <span className="break-all">{model.label}</span>
+                        <span className="break-all after:content-[attr(data-model-label)]" />
                       </span>
-                      <label htmlFor={id} className="flex cursor-pointer items-start gap-3 leading-relaxed text-muted-foreground">
+                      <span className="flex items-start gap-3 leading-relaxed text-muted-foreground">
                         <input
                           id={id}
                           type="checkbox"
@@ -168,9 +170,9 @@ export function LicenceAcceptanceFooter({
                           className="mt-0.5 size-4 shrink-0 accent-primary focus-visible:ring-2 focus-visible:ring-ring"
                         />
                         <span>{t('modelLicense.acceptCheckbox', { model: model.label })}</span>
-                      </label>
+                      </span>
                     </span>
-                  </div>
+                  </label>
                 </li>
               );
             })}
