@@ -17,6 +17,7 @@ WORKDIR /app
 # so `bun install` caches independently of source edits.
 COPY package.json bun.lock ./
 COPY electron/package.json ./electron/
+COPY config/ ./config/
 
 RUN bun install --frozen-lockfile
 
@@ -130,6 +131,7 @@ RUN if [ "$GPU_FLAVOR" = "cuda" ]; then \
 # Copy application source
 COPY backend/ ./backend/
 COPY omnivoice/ ./omnivoice/
+COPY config/ ./config/
 # Alembic config so schema migrations run natively on existing volumes
 # (without it the backend fell back to the additive-column self-heal —
 # functional, but the real migration chain is the first-class path).
