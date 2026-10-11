@@ -67,6 +67,82 @@ def _sharded_snapshot(path, *, codec=False):
     return shards
 
 
+def _snapshot_with_cached_tree(cache, repo, revision, *, codec=False):
+    """Cache a real Hub tree whose optional README has not been downloaded."""
+    from huggingface_hub._tree_cache import TreeCacheEntry, write_tree_cache
+
+    storage = cache / ("models--" + repo.replace("/", "--"))
+    path = storage / "snapshots" / revision
+    _sharded_snapshot(path, codec=codec)
+    entries = {
+        file.name: TreeCacheEntry(size=file.stat().st_size, blob_id="a" * 40)
+        for file in path.iterdir()
+    }
+    entries["README.md"] = TreeCacheEntry(size=1, blob_id="b" * 40)
+    write_tree_cache(str(storage), revision, entries)
+    return path
+
+
+@pytest.mark.parametrize("codec", [False, True])
+def test_cached_tree_missing_optional_file_stays_offline(sidecar, monkeypatch, tmp_path, codec):
+    """The Hub's incomplete-snapshot error can still describe a loadable cache."""
+    import huggingface_hub
+    from huggingface_hub import constants
+    from huggingface_hub.errors import IncompleteSnapshotError
+
+    monkeypatch.setattr(constants, "HF_HUB_CACHE", str(tmp_path))
+    repo, revision = (
+        (sidecar._CODEC_REPO, sidecar._CODEC_REVISION) if codec
+        else (sidecar._DEFAULT_REPO, sidecar._DEFAULT_REVISION)
+    )
+    path = _snapshot_with_cached_tree(tmp_path, repo, revision, codec=codec)
+    with pytest.raises(IncompleteSnapshotError) as error:
+        huggingface_hub.snapshot_download(repo, revision=revision, local_files_only=True)
+    assert error.value.snapshot_path == str(path)
+
+    download = Mock(wraps=huggingface_hub.snapshot_download)
+    monkeypatch.setattr(huggingface_hub, "snapshot_download", download)
+
+    assert sidecar._snapshot_path(repo, revision) == str(path)
+    download.assert_called_once_with(repo, revision=revision, local_files_only=True)
+
+
+@pytest.mark.parametrize("codec,name", [
+    (False, "model-00002-of-00002.safetensors"),
+    (False, "tokenizer.json"),
+    (False, "processor_config.json"),
+    (False, "tts_robust_normalizer_single_script.py"),
+    (True, "model-00002-of-00002.safetensors"),
+    (True, "config.json"),
+    (True, "modeling_moss_audio_tokenizer.py"),
+])
+def test_cached_tree_missing_loading_file_resumes_pinned_download(
+    sidecar, monkeypatch, tmp_path, codec, name,
+):
+    """An exception's snapshot path must pass the same loading-file checks."""
+    import huggingface_hub
+    from huggingface_hub import constants
+    from huggingface_hub.errors import IncompleteSnapshotError
+
+    monkeypatch.setattr(constants, "HF_HUB_CACHE", str(tmp_path))
+    repo, revision = (
+        (sidecar._CODEC_REPO, sidecar._CODEC_REVISION) if codec
+        else (sidecar._DEFAULT_REPO, sidecar._DEFAULT_REVISION)
+    )
+    path = _snapshot_with_cached_tree(tmp_path, repo, revision, codec=codec)
+    (path / name).unlink()
+    with pytest.raises(IncompleteSnapshotError) as error:
+        huggingface_hub.snapshot_download(repo, revision=revision, local_files_only=True)
+    downloaded = str(tmp_path / "downloaded")
+    download = Mock(side_effect=[error.value, downloaded])
+    monkeypatch.setattr(huggingface_hub, "snapshot_download", download)
+
+    assert sidecar._snapshot_path(repo, revision) == downloaded
+    assert download.call_args_list == [
+        call(repo, revision=revision, local_files_only=True), call(repo, revision=revision),
+    ]
+
+
 def test_legacy_cached_model_and_codec_load_without_hub_requests(sidecar, monkeypatch, tmp_path):
     """Exercise the real Hub cache resolver without a cached repository tree."""
     from huggingface_hub import HfApi, constants

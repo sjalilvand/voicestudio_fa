@@ -17,7 +17,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
-- MOSS-TTS-v1.5 loads its model and audio codec at separate pinned revisions and uses a CPU reference-audio decoder with compatible PyTorch pins. (#2702) — thanks @BichengWang and @davidamoline!
+- MOSS-TTS-v1.5 loads separately pinned model and codec snapshots, reuses loadable caches offline, and pairs its CPU reference-audio decoder with compatible PyTorch pins. (#2702) — thanks @BichengWang and @davidamoline!
 
 ## [0.5.7] — 2026-10-07
 

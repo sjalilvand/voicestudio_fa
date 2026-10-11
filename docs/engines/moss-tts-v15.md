@@ -48,7 +48,8 @@ snapshots: `OpenMOSS-Team/MOSS-TTS-v1.5` at
 `OpenMOSS-Team/MOSS-Audio-Tokenizer` at
 `3cd226ba2947efa357ef453bcad111b6eafba782`. Existing cached files are reused;
 missing weight shards, tokenizer assets or model-code dependencies resume the
-same pinned download on the next synthesis. Complete snapshots work offline.
+same pinned download on the next synthesis. Snapshots with all loading files
+work offline even when optional files such as `README.md` are absent.
 
 For a managed installation created with the older decoder recipe, run
 **Model Catalogue → MOSS-TTS-v1.5 → Install** once to apply the update. The

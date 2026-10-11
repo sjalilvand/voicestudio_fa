@@ -203,13 +203,14 @@ def _snapshot_path(repo: str, revision: str) -> str:
     # complete cached loading files and weights first, including older caches.
     try:
         cached = snapshot_download(repo, revision=revision, local_files_only=True)
-    except LocalEntryNotFoundError:
-        pass
-    else:
-        if _snapshot_has_weights(cached) and _snapshot_has_loading_files(
-            cached, processor=repo != _CODEC_REPO,
-        ):
-            return cached
+    except LocalEntryNotFoundError as error:
+        # IncompleteSnapshotError may flag only missing non-loading files.
+        # Older Hub versions raise errors without a snapshot_path attribute.
+        cached = getattr(error, "snapshot_path", None)
+    if cached and _snapshot_has_weights(cached) and _snapshot_has_loading_files(
+        cached, processor=repo != _CODEC_REPO,
+    ):
+        return cached
     return snapshot_download(repo, revision=revision)
 
 
