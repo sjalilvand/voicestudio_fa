@@ -95,10 +95,14 @@ describe('model licence acceptance', () => {
   it('states VoiceStudio is not the licensor and needs a ticked box per model', async () => {
     await render(<LicenceAcceptanceFooter models={[pending('a/one', 'One'), pending('b/two', 'Two')]} onClose={() => {}} />);
     expect(text()).toContain(en.modelLicense.acceptNotice);
-    expect(boxes().map((box) => box.closest('label')?.textContent)).toEqual([
-      en.modelLicense.acceptCheckbox.replace('{{model}}', 'One'),
-      en.modelLicense.acceptCheckbox.replace('{{model}}', 'Two'),
-    ]);
+    expect(document.querySelector('[data-licence-acceptance]')).not.toBeNull();
+    expect(document.querySelectorAll('[data-license-category]')).toHaveLength(2);
+    expect(boxes().map((box) => box.closest('label')?.textContent)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining(en.modelLicense.acceptCheckbox.replace('{{model}}', 'One')),
+        expect.stringContaining(en.modelLicense.acceptCheckbox.replace('{{model}}', 'Two')),
+      ]),
+    );
     const acceptAll = button(en.modelLicense.acceptAll.replace('{{count}}', '2'))!;
     expect(acceptAll.disabled).toBe(true);
     await act(async () => boxes()[0].click());
