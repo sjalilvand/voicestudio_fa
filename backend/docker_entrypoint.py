@@ -10,7 +10,7 @@ from pathlib import Path
 
 from services.network_share import backend_port
 
-_PID_ONE_ENVIRON = Path("/proc/1/environ")
+_PORT_FILE = Path("/run/voicestudio/backend-port")
 _DEFAULT_DOCKER_HOST = "0.0.0.0"  # nosec B104: containers must accept published traffic.
 
 
@@ -40,23 +40,17 @@ def uvicorn_arguments(arguments: Sequence[str], port: int | None = None) -> list
     return [*resolved, *supplied]
 
 
-def serving_port(environ_file: Path = _PID_ONE_ENVIRON) -> int:
-    """Read the effective port inherited by the container's serving process."""
+def serving_port(port_file: Path = _PORT_FILE) -> int:
+    """Read the effective port recorded by the container entrypoint."""
     try:
-        entries = environ_file.read_bytes().split(b"\0")
-        raw = next(
-            entry.partition(b"=")[2]
-            for entry in entries
-            if entry.startswith(b"OMNIVOICE_PORT=")
-        )
-        return int(raw)
-    except (OSError, StopIteration, ValueError):
+        return int(port_file.read_text(encoding="ascii"))
+    except (OSError, ValueError):
         return backend_port()
 
 
-def healthcheck(environ_file: Path = _PID_ONE_ENVIRON) -> None:
+def healthcheck(port_file: Path = _PORT_FILE) -> None:
     """Probe the exact loopback port used by the serving container process."""
-    connection = HTTPConnection("127.0.0.1", serving_port(environ_file), timeout=4)
+    connection = HTTPConnection("127.0.0.1", serving_port(port_file), timeout=4)
     try:
         connection.request("GET", "/health")
         response = connection.getresponse()
@@ -74,6 +68,8 @@ def main() -> None:
         return
     port = effective_port(supplied)
     os.environ["OMNIVOICE_PORT"] = str(port)
+    _PORT_FILE.parent.mkdir(mode=0o755, parents=True, exist_ok=True)
+    _PORT_FILE.write_text(str(port), encoding="ascii")
     os.execv(sys.executable, [sys.executable, *uvicorn_arguments(supplied, port)])
 
 
