@@ -912,12 +912,27 @@ async def _deferred_startup(app: FastAPI) -> None:
         os._exit(1)
 
 
-async def _reconcile_profile_in_background() -> None:
-    """Reapply the saved performance profile off the startup critical path."""
+# Same lifecycle markers as Phase A: cancelling the task cannot stop the thread
+# already importing engine runtimes, so shutdown waits (bounded) for it rather
+# than let interpreter teardown race a native import (#1000 class).
+_profile_reconcile_started = threading.Event()
+_profile_reconcile_finished = threading.Event()
+
+
+def _reconcile_profile_blocking():
+    _profile_reconcile_started.set()
     try:
         from services.performance_profiles import reconcile_active_profile
 
-        recovered = await asyncio.to_thread(reconcile_active_profile)
+        return reconcile_active_profile()
+    finally:
+        _profile_reconcile_finished.set()
+
+
+async def _reconcile_profile_in_background() -> None:
+    """Reapply the saved performance profile off the startup critical path."""
+    try:
+        recovered = await asyncio.to_thread(_reconcile_profile_blocking)
         if recovered:
             logger.info("Startup performance selections reconciled: %s", recovered)
     except asyncio.CancelledError:
@@ -1007,6 +1022,12 @@ async def _phase_b(app: FastAPI) -> None:
     # so it runs in the background instead of holding /health at 503. The model
     # warm-ups below await it, so they still load the reconciled selections.
     app.state.profile_reconcile_task = asyncio.create_task(_reconcile_profile_in_background())
+    if _EAGER:
+        # Eager boots (pytest, OMNIVOICE_EAGER_INIT=1) promise the classic
+        # synchronous startup: callers read engines the moment the lifespan
+        # opens, and a reconcile importing runtimes beside them races those
+        # imports. The deferral is for the served app.
+        await _await_profile_reconcile(app)
     app.state.idle_task = asyncio.create_task(idle_worker())
     app.state.worker_task = asyncio.create_task(task_manager.worker())
     # Warm the TTS model in the background so first /generate is instant.
@@ -1231,6 +1252,8 @@ async def lifespan(app: FastAPI):
     # before Phase A began pays nothing.
     if _phase_a_started.is_set() and not _phase_a_finished.is_set():
         await asyncio.to_thread(_phase_a_finished.wait, 20.0)
+    if _profile_reconcile_started.is_set() and not _profile_reconcile_finished.is_set():
+        await asyncio.to_thread(_profile_reconcile_finished.wait, 20.0)
     try:
         from services.telephony import gateway as telephony_gateway
         await telephony_gateway.stop()
