@@ -186,6 +186,7 @@ def test_voice_list_marks_name_addressable_profiles(client, profiles):
     profiles(self_pid, pid=self_pid)  # named after its own id: still addressable
     case_target = profiles(f"Case {profiles.stem}")
     case_variant = profiles(case_target.upper())  # differs from an id by case: still by name
+    whitespace_variant = profiles(f" {unique} ")  # differs from another id by whitespace: still by name
     voices = {v["voice_id"]: v for v in client.get("/v1/audio/voices").json()["voices"]}
     assert voices[unique]["addressable_by_name"] is True
     assert voices[unique]["name"] == f"Solo {profiles.stem}"
@@ -194,4 +195,5 @@ def test_voice_list_marks_name_addressable_profiles(client, profiles):
     assert voices[reserved]["addressable_by_name"] is False
     assert voices[self_pid]["addressable_by_name"] is True
     assert voices[case_variant]["addressable_by_name"] is True
+    assert voices[whitespace_variant]["addressable_by_name"] is True
     assert "addressable_by_name" not in voices["nova"]  # the alias entry itself
