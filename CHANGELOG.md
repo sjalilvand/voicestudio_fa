@@ -22,6 +22,10 @@ metadata and the backend fallback mirror it.
 - Using a Gallery design voice opens its workspace immediately and defers model loading until audio is requested. (#2759)
 - Existing local projects, settings and data are unaffected; legacy worker database records are retained and ignored.
 
+### Fixed
+
+- First-run setup installs into the runtime folder you choose even when that folder already exists but is empty, such as one just created in the folder picker. (#2766)
+
 ### Removed
 
 - Remove licence activation from the open-source Pro page. (#2762)
