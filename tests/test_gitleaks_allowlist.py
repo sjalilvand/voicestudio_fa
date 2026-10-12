@@ -45,3 +45,37 @@ def test_dub_storage_key_allowlist_does_not_hide_similar_credentials():
         "secret-omnivoice.dubSplit.v1",
     ):
         assert not any(re.fullmatch(regex, value) for regex in regexes)
+
+
+_FINGERPRINT = re.compile(r"^([0-9a-f]{40}):([^:]+):([a-z0-9-]+):([0-9]+)$")
+
+
+def _ignored_fingerprints():
+    text = (ROOT / ".gitleaksignore").read_text(encoding="utf-8")
+    return [ln.strip() for ln in text.splitlines() if ln.strip() and not ln.startswith("#")]
+
+
+def test_gitleaks_ignores_only_commit_pinned_posthog_findings():
+    """An ignore entry names one finding in one commit, never a path or a rule."""
+    import subprocess
+
+    entries = _ignored_fingerprints()
+    assert entries
+    shallow = subprocess.run(
+        ["git", "rev-parse", "--is-shallow-repository"],
+        cwd=ROOT, capture_output=True, text=True,
+    ).stdout.strip() == "true"
+    for entry in entries:
+        match = _FINGERPRINT.fullmatch(entry)
+        assert match, f"not a commit-pinned fingerprint: {entry}"
+        commit, path, _rule, line = match.groups()
+        if shallow:
+            continue
+        shown = subprocess.run(
+            ["git", "show", f"{commit}:{path}"], cwd=ROOT, capture_output=True, text=True,
+        )
+        if shown.returncode != 0:
+            continue  # the commit is outside this clone's history
+        source_line = shown.stdout.splitlines()[int(line) - 1]
+        # Only the public, write-only PostHog project token may be skipped.
+        assert re.search(r"phc_[A-Za-z0-9]{20,}", source_line), entry
