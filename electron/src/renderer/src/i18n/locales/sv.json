@@ -3381,6 +3381,7 @@
     "notReviewed": "Inte granskad",
     "label": "Licens",
     "requiredTitle": "Licensgodkännande krävs",
+    "acceptedTitle": "Licenserna har godkänts",
     "requiredError": "Den här modellen kan inte användas förrän du godkänner dess licens.",
     "acceptTitle": "Godkänn modellens licens för att använda den",
     "acceptNotice": "VoiceStudio är inte ägare eller licensgivare för den här modellen och kan inte ge dig åtkomst eller rättigheter till den. Rättighetsinnehavarens licens avgör hur du får använda modellen och ljudet den skapar. Se till att du har tillstånd innan du använder den, till exempel endast icke-kommersiell användning, eller en separat licens från rättighetsinnehavaren för kommersiell användning.",
@@ -3454,8 +3455,8 @@
     "acceptCheckbox": "Jag har läst licensen för {{model}} och bekräftar att jag har de rättigheter den kräver för min användning.",
     "acceptAll": "Godkänn {{count}} licenser",
     "revokeFor": "Dra tillbaka godkännandet för {{model}}",
-    "gateIntro": "Detta kan inte köras förrän du godkänner licensen för varje modell nedan. Granska var och en och markera sedan dess ruta.",
-    "retryHint": "Licenserna har godkänts. Kör åtgärden igen för att fortsätta.",
+    "gateIntro": "Godkänn licensen för varje modell nedan innan du använder den. Granska var och en och markera sedan dess ruta.",
+    "retryHint": "Licenserna har godkänts. Om något väntade på dem, starta det igen.",
     "detailsFailed": "Licensinformationen kunde inte läsas in. Stäng dialogrutan och försök igen."
   }
 }
