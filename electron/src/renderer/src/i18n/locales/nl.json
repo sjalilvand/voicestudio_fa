@@ -3381,6 +3381,7 @@
     "notReviewed": "Niet gecontroleerd",
     "label": "Licentie",
     "requiredTitle": "Licentie-acceptatie vereist",
+    "acceptedTitle": "Licenties geaccepteerd",
     "requiredError": "Dit model kan pas worden gebruikt als je de licentie accepteert.",
     "acceptTitle": "Accepteer de modellicentie om het te gebruiken",
     "acceptNotice": "VoiceStudio is niet de eigenaar of licentiegever van dit model en kan je geen toegang of rechten verlenen. De licentie van de rechthebbende bepaalt hoe je het model en de audio die het maakt mag gebruiken. Zorg voor gebruik dat je toestemming hebt, bijvoorbeeld alleen niet-commercieel gebruik, of een aparte licentie van de rechthebbende voor commercieel gebruik.",
@@ -3454,8 +3455,8 @@
     "acceptCheckbox": "Ik heb de licentie van {{model}} gelezen en bevestig dat ik de rechten heb die ze voor mijn gebruik vereist.",
     "acceptAll": "{{count}} licenties accepteren",
     "revokeFor": "Acceptatie voor {{model}} intrekken",
-    "gateIntro": "Dit kan pas worden uitgevoerd als je de licentie van elk model hieronder accepteert. Bekijk ze een voor een en vink dan het bijbehorende vakje aan.",
-    "retryHint": "Licenties geaccepteerd. Voer de actie opnieuw uit om door te gaan.",
+    "gateIntro": "Accepteer de licentie van elk model hieronder voordat je het gebruikt. Bekijk ze een voor een en vink dan het bijbehorende vakje aan.",
+    "retryHint": "Licenties geaccepteerd. Als iets hierop wachtte, start het dan opnieuw.",
     "detailsFailed": "De licentiegegevens konden niet worden geladen. Sluit dit venster en probeer het opnieuw."
   }
 }

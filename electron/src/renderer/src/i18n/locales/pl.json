@@ -3385,6 +3385,7 @@
     "notReviewed": "Nie sprawdzono",
     "label": "Licencja",
     "requiredTitle": "Wymagana akceptacja licencji",
+    "acceptedTitle": "Licencje zaakceptowane",
     "requiredError": "Tego modelu nie można używać, dopóki nie zaakceptujesz jego licencji.",
     "acceptTitle": "Zaakceptuj licencję modelu, aby go używać",
     "acceptNotice": "VoiceStudio nie jest właścicielem ani licencjodawcą tego modelu i nie może przyznać Ci dostępu ani praw do niego. To licencja właściciela praw określa, jak możesz używać modelu i tworzonego przez niego dźwięku. Przed użyciem upewnij się, że masz pozwolenie, na przykład tylko na użytek niekomercyjny lub osobną licencję od właściciela praw na użytek komercyjny.",
@@ -3458,8 +3459,8 @@
     "acceptCheckbox": "Przeczytałem(-am) licencję {{model}} i potwierdzam, że mam prawa, których wymaga ona dla mojego zastosowania.",
     "acceptAll": "Zaakceptuj licencje ({{count}})",
     "revokeFor": "Wycofaj akceptację dla {{model}}",
-    "gateIntro": "Nie można tego uruchomić, dopóki nie zaakceptujesz licencji każdego z poniższych modeli. Przejrzyj każdą z nich, a następnie zaznacz jej pole.",
-    "retryHint": "Licencje zaakceptowane. Uruchom akcję ponownie, aby kontynuować.",
+    "gateIntro": "Zaakceptuj licencję każdego z poniższych modeli, zanim go użyjesz. Przejrzyj każdą z nich, a następnie zaznacz jej pole.",
+    "retryHint": "Licencje zaakceptowane. Jeśli coś na nie czekało, uruchom to ponownie.",
     "detailsFailed": "Nie udało się wczytać szczegółów licencji. Zamknij to okno i spróbuj ponownie."
   }
 }

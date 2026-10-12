@@ -3381,6 +3381,7 @@
     "notReviewed": "Nicht geprüft",
     "label": "Lizenz",
     "requiredTitle": "Lizenzannahme erforderlich",
+    "acceptedTitle": "Lizenzen akzeptiert",
     "requiredError": "Dieses Modell kann erst verwendet werden, wenn du seine Lizenz akzeptierst.",
     "acceptTitle": "Modelllizenz akzeptieren, um es zu verwenden",
     "acceptNotice": "VoiceStudio ist weder Eigentümer noch Lizenzgeber dieses Modells und kann dir keinen Zugang und keine Rechte daran gewähren. Die Lizenz des Rechteinhabers bestimmt, wie du das Modell und das damit erzeugte Audio nutzen darfst. Stelle vor der Nutzung sicher, dass du die Erlaubnis hast, zum Beispiel nur nichtkommerzielle Nutzung oder eine separate Lizenz des Rechteinhabers für kommerzielle Nutzung.",
@@ -3454,8 +3455,8 @@
     "acceptCheckbox": "Ich habe die Lizenz von {{model}} gelesen und bestätige, dass ich die Rechte habe, die sie für meine Nutzung verlangt.",
     "acceptAll": "{{count}} Lizenzen akzeptieren",
     "revokeFor": "Annahme für {{model}} zurückziehen",
-    "gateIntro": "Dies kann erst ausgeführt werden, wenn du die Lizenz jedes unten aufgeführten Modells akzeptierst. Prüfe jede einzelne und setze dann das jeweilige Häkchen.",
-    "retryHint": "Lizenzen akzeptiert. Führe die Aktion erneut aus, um fortzufahren.",
+    "gateIntro": "Akzeptiere die Lizenz jedes unten aufgeführten Modells, bevor du es verwendest. Prüfe jede einzelne und setze dann das jeweilige Häkchen.",
+    "retryHint": "Lizenzen akzeptiert. Falls etwas darauf gewartet hat, starte es erneut.",
     "detailsFailed": "Die Lizenzdetails konnten nicht geladen werden. Schließe diesen Dialog und versuche es erneut."
   }
 }
