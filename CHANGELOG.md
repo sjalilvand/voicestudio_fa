@@ -24,7 +24,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
-- First-run setup installs into the runtime folder you choose even when that folder already exists but is empty, such as one just created in the folder picker. (#2766)
+- First-run setup installs into the runtime folder you choose even when that folder already exists but is empty, such as one just created in the folder picker. (#2766) — thanks @emreisik95!
 
 ### Removed
 
