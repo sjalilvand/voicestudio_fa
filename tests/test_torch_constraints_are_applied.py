@@ -118,7 +118,7 @@ def test_docker_install_and_runtime_use_the_guarded_python():
     assert '--python "$(command -v python3)"' in install
     assert "--system" not in install
     assert "EXPOSE 3900" in text
-    assert "from services.network_share import backend_port" in text
+    assert 'CMD ["python3", "backend/docker_entrypoint.py", "--health-check"]' in text
     assert 'ENTRYPOINT ["python3", "backend/docker_entrypoint.py"]' in text
 
 

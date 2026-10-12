@@ -147,7 +147,7 @@ EXPOSE 3900
 # `docker run`). Generous start period: first boot creates the venv-less
 # schema + may pull model metadata before /health answers.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=5 \
-  CMD ["python3", "-c", "import urllib.request; from services.network_share import backend_port; urllib.request.urlopen(f'http://127.0.0.1:{backend_port()}/health', timeout=4)"]
+  CMD ["python3", "backend/docker_entrypoint.py", "--health-check"]
 
 # Mount points for persistent data (sqlite db, user voices, huggingface cache)
 VOLUME ["/app/omnivoice_data"]

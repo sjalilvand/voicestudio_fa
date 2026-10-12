@@ -5,8 +5,13 @@ from __future__ import annotations
 import os
 import sys
 from collections.abc import Sequence
+from pathlib import Path
+from urllib.request import urlopen
 
 from services.network_share import backend_port
+
+_PORT_FILE = Path("/tmp/voicestudio-backend-port")
+_DEFAULT_DOCKER_HOST = "0.0.0.0"  # nosec B104: containers must accept published traffic.
 
 
 def _has_option(arguments: Sequence[str], option: str) -> bool:
@@ -14,20 +19,46 @@ def _has_option(arguments: Sequence[str], option: str) -> bool:
     return any(argument == option or argument.startswith(f"{option}=") for argument in arguments)
 
 
-def uvicorn_arguments(arguments: Sequence[str]) -> list[str]:
+def effective_port(arguments: Sequence[str]) -> int:
+    """Resolve an explicit Uvicorn port before falling back to app configuration."""
+    for index, argument in enumerate(arguments):
+        if argument.startswith("--port="):
+            return int(argument.partition("=")[2])
+        if argument == "--port" and index + 1 < len(arguments):
+            return int(arguments[index + 1])
+    return backend_port()
+
+
+def uvicorn_arguments(arguments: Sequence[str], port: int | None = None) -> list[str]:
     """Build Uvicorn arguments without overriding explicit container options."""
     supplied = list(arguments)
     resolved = ["-m", "uvicorn", "backend.main:app"]
     if not _has_option(supplied, "--host"):
-        resolved.extend(["--host", os.environ.get("OMNIVOICE_BIND_HOST", "0.0.0.0")])
+        resolved.extend(["--host", os.environ.get("OMNIVOICE_BIND_HOST", _DEFAULT_DOCKER_HOST)])
     if not _has_option(supplied, "--port"):
-        resolved.extend(["--port", str(backend_port())])
+        resolved.extend(["--port", str(port if port is not None else effective_port(supplied))])
     return [*resolved, *supplied]
+
+
+def healthcheck(port_file: Path = _PORT_FILE) -> None:
+    """Probe the exact port recorded by the serving entrypoint."""
+    try:
+        port = int(port_file.read_text(encoding="ascii"))
+    except (OSError, ValueError):
+        port = backend_port()
+    urlopen(f"http://127.0.0.1:{port}/health", timeout=4).close()
 
 
 def main() -> None:
     """Replace this process with Uvicorn so container signals reach the server."""
-    os.execv(sys.executable, [sys.executable, *uvicorn_arguments(sys.argv[1:])])
+    supplied = sys.argv[1:]
+    if supplied == ["--health-check"]:
+        healthcheck()
+        return
+    port = effective_port(supplied)
+    os.environ["OMNIVOICE_PORT"] = str(port)
+    _PORT_FILE.write_text(str(port), encoding="ascii")
+    os.execv(sys.executable, [sys.executable, *uvicorn_arguments(supplied, port)])
 
 
 if __name__ == "__main__":
