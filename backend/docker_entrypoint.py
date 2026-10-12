@@ -10,7 +10,7 @@ from pathlib import Path
 
 from services.network_share import backend_port
 
-_PORT_FILE = Path("/run/voicestudio/backend-port")
+_PROC_ROOT = Path("/proc")
 _DEFAULT_DOCKER_HOST = "0.0.0.0"  # nosec B104: containers must accept published traffic.
 
 
@@ -40,17 +40,25 @@ def uvicorn_arguments(arguments: Sequence[str], port: int | None = None) -> list
     return [*resolved, *supplied]
 
 
-def serving_port(port_file: Path = _PORT_FILE) -> int:
-    """Read the effective port recorded by the container entrypoint."""
-    try:
-        return int(port_file.read_text(encoding="ascii"))
-    except (OSError, ValueError):
-        return backend_port()
+def serving_port(proc_root: Path = _PROC_ROOT) -> int:
+    """Discover the live Uvicorn port without requiring writable container state."""
+    for command_file in proc_root.glob("[0-9]*/cmdline"):
+        try:
+            arguments = [
+                value.decode("utf-8", errors="replace")
+                for value in command_file.read_bytes().split(b"\0")
+                if value
+            ]
+        except OSError:
+            continue
+        if "uvicorn" in arguments and "backend.main:app" in arguments:
+            return effective_port(arguments)
+    return backend_port()
 
 
-def healthcheck(port_file: Path = _PORT_FILE) -> None:
+def healthcheck(proc_root: Path = _PROC_ROOT) -> None:
     """Probe the exact loopback port used by the serving container process."""
-    connection = HTTPConnection("127.0.0.1", serving_port(port_file), timeout=4)
+    connection = HTTPConnection("127.0.0.1", serving_port(proc_root), timeout=4)
     try:
         connection.request("GET", "/health")
         response = connection.getresponse()
@@ -68,8 +76,6 @@ def main() -> None:
         return
     port = effective_port(supplied)
     os.environ["OMNIVOICE_PORT"] = str(port)
-    _PORT_FILE.parent.mkdir(mode=0o755, parents=True, exist_ok=True)
-    _PORT_FILE.write_text(str(port), encoding="ascii")
     os.execv(sys.executable, [sys.executable, *uvicorn_arguments(supplied, port)])
 
 

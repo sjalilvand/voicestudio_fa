@@ -27,6 +27,9 @@ def test_docker_entrypoint_preserves_explicit_uvicorn_options(monkeypatch, tmp_p
     assert arguments == ["-m", "uvicorn", "backend.main:app", *supplied]
     assert docker_entrypoint.effective_port(supplied) == 8080
 
-    port_file = tmp_path / "backend-port"
-    port_file.write_text("8080", encoding="ascii")
-    assert docker_entrypoint.serving_port(port_file) == 8080
+    proc_root = tmp_path / "proc"
+    process = proc_root / "23"
+    process.mkdir(parents=True)
+    command = [b"python3", b"-m", b"uvicorn", b"backend.main:app", b"--port", b"8080"]
+    (process / "cmdline").write_bytes(b"\0".join(command) + b"\0")
+    assert docker_entrypoint.serving_port(proc_root) == 8080
