@@ -5,12 +5,12 @@ from __future__ import annotations
 import os
 import sys
 from collections.abc import Sequence
+from http.client import HTTPConnection
 from pathlib import Path
-from urllib.request import urlopen
 
 from services.network_share import backend_port
 
-_PORT_FILE = Path("/tmp/voicestudio-backend-port")
+_PID_ONE_ENVIRON = Path("/proc/1/environ")
 _DEFAULT_DOCKER_HOST = "0.0.0.0"  # nosec B104: containers must accept published traffic.
 
 
@@ -40,13 +40,30 @@ def uvicorn_arguments(arguments: Sequence[str], port: int | None = None) -> list
     return [*resolved, *supplied]
 
 
-def healthcheck(port_file: Path = _PORT_FILE) -> None:
-    """Probe the exact port recorded by the serving entrypoint."""
+def serving_port(environ_file: Path = _PID_ONE_ENVIRON) -> int:
+    """Read the effective port inherited by the container's serving process."""
     try:
-        port = int(port_file.read_text(encoding="ascii"))
-    except (OSError, ValueError):
-        port = backend_port()
-    urlopen(f"http://127.0.0.1:{port}/health", timeout=4).close()
+        entries = environ_file.read_bytes().split(b"\0")
+        raw = next(
+            entry.partition(b"=")[2]
+            for entry in entries
+            if entry.startswith(b"OMNIVOICE_PORT=")
+        )
+        return int(raw)
+    except (OSError, StopIteration, ValueError):
+        return backend_port()
+
+
+def healthcheck(environ_file: Path = _PID_ONE_ENVIRON) -> None:
+    """Probe the exact loopback port used by the serving container process."""
+    connection = HTTPConnection("127.0.0.1", serving_port(environ_file), timeout=4)
+    try:
+        connection.request("GET", "/health")
+        response = connection.getresponse()
+        if response.status >= 400:
+            raise RuntimeError(f"backend health check returned HTTP {response.status}")
+    finally:
+        connection.close()
 
 
 def main() -> None:
@@ -57,7 +74,6 @@ def main() -> None:
         return
     port = effective_port(supplied)
     os.environ["OMNIVOICE_PORT"] = str(port)
-    _PORT_FILE.write_text(str(port), encoding="ascii")
     os.execv(sys.executable, [sys.executable, *uvicorn_arguments(supplied, port)])
 
 

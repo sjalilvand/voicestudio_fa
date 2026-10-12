@@ -27,14 +27,6 @@ def test_docker_entrypoint_preserves_explicit_uvicorn_options(monkeypatch, tmp_p
     assert arguments == ["-m", "uvicorn", "backend.main:app", *supplied]
     assert docker_entrypoint.effective_port(supplied) == 8080
 
-    port_file = tmp_path / "backend-port"
-    port_file.write_text("8080", encoding="ascii")
-    response = type("Response", (), {"close": lambda self: None})()
-    opened = []
-    monkeypatch.setattr(
-        docker_entrypoint,
-        "urlopen",
-        lambda url, timeout: opened.append((url, timeout)) or response,
-    )
-    docker_entrypoint.healthcheck(port_file)
-    assert opened == [("http://127.0.0.1:8080/health", 4)]
+    environ_file = tmp_path / "environ"
+    environ_file.write_bytes(b"PATH=/usr/bin\0OMNIVOICE_PORT=8080\0")
+    assert docker_entrypoint.serving_port(environ_file) == 8080
