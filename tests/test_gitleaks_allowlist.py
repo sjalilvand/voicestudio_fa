@@ -1,4 +1,5 @@
 """The secret-scan allowlist must remain exact and value-scoped."""
+import hashlib
 from pathlib import Path
 import re
 import tomllib
@@ -47,6 +48,9 @@ def test_dub_storage_key_allowlist_does_not_hide_similar_credentials():
         assert not any(re.fullmatch(regex, value) for regex in regexes)
 
 
+# SHA-256 of each retired PostHog project token that history still holds (the
+# value itself may only appear in the two canonical analytics files).
+_RETIRED_TOKEN_SHA256 = {"cf19c9566b83f7375f591f5fbf776b9c344025805d12c16bd21333f70a708f72"}
 _FINGERPRINT = re.compile(r"^([0-9a-f]{40}):([^:]+):([a-z0-9-]+):([0-9]+)$")
 
 
@@ -74,8 +78,9 @@ def test_gitleaks_ignores_only_commit_pinned_posthog_findings():
         shown = subprocess.run(
             ["git", "show", f"{commit}:{path}"], cwd=ROOT, capture_output=True, text=True,
         )
-        if shown.returncode != 0:
-            continue  # the commit is outside this clone's history
+        assert shown.returncode == 0, f"cannot read the pinned commit and path: {entry}"
         source_line = shown.stdout.splitlines()[int(line) - 1]
-        # Only the public, write-only PostHog project token may be skipped.
-        assert re.search(r"phc_[A-Za-z0-9]{20,}", source_line), entry
+        # Only the retired public PostHog project token may be skipped.
+        token = re.search(r"phc_[A-Za-z0-9]{20,}", source_line)
+        assert token, entry
+        assert hashlib.sha256(token.group(0).encode()).hexdigest() in _RETIRED_TOKEN_SHA256, entry
