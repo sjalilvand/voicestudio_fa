@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   runtimeConfig: null as { root: string; owned: boolean } | null,
   existingProject: false,
   existingRoot: false,
+  rootEntries: ['.python'] as string[],
   dependencies: vi.fn(async (_project?: string) => true),
   ready: vi.fn(async () => false),
   compatible: vi.fn(async () => false),
@@ -43,6 +44,13 @@ vi.mock('node:fs', async (importOriginal) => {
           ? mocks.existingProject
           : mocks.existingRoot
         : original.existsSync(path),
+    readdirSync: ((path: Parameters<typeof original.readdirSync>[0], ...rest: unknown[]) => {
+      if (!String(path).includes('selected'))
+        return (original.readdirSync as (...args: unknown[]) => unknown)(path, ...rest);
+      if (!mocks.existingRoot)
+        throw Object.assign(new Error(`ENOENT: ${String(path)}`), { code: 'ENOENT' });
+      return mocks.existingProject ? [...mocks.rootEntries, 'project'] : mocks.rootEntries;
+    }) as typeof original.readdirSync,
   };
 });
 vi.mock('node:fs/promises', () => ({ rm: mocks.rm }));
@@ -79,6 +87,7 @@ afterEach(() => {
   mocks.runtimeConfig = null;
   mocks.existingProject = false;
   mocks.existingRoot = false;
+  mocks.rootEntries = ['.python'];
   mocks.dependencies.mockResolvedValue(true);
   mocks.ready.mockResolvedValue(false);
   mocks.compatible.mockResolvedValue(false);
@@ -541,6 +550,34 @@ it('installs into a newly selected custom destination that does not yet exist', 
   expect(mocks.runtimeConfig).toEqual({ root: selected, owned: true });
   await supervisor.shutdown();
 });
+
+it.each([[[] as string[]], [['.DS_Store', 'desktop.ini']]])(
+  'installs into a selected destination that exists but holds no files (%j)',
+  async (entries) => {
+    // The folder picker lets users create the destination ("New Folder"), so an
+    // empty selected root is new, not another installation to preserve.
+    const { resolve, join } = await import('node:path');
+    const selected = resolve('/selected/VoiceStudio');
+    mocks.runtimeConfig = { root: selected, owned: false };
+    mocks.existingRoot = true;
+    mocks.rootEntries = entries;
+    mocks.install.mockRejectedValue(new Error('offline'));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('no backend');
+      }),
+    );
+    vi.stubEnv('OMNIVOICE_BACKEND_CMD', '');
+    vi.stubEnv('VOICESTUDIO_SKIP_BACKEND', '');
+    const supervisor = new BackendSupervisor();
+    await supervisor.start();
+    await supervisor.setupRuntime();
+    expect(mocks.install.mock.calls[0][1]).toBe(join(selected, 'project'));
+    expect(mocks.runtimeConfig).toEqual({ root: selected, owned: true });
+    await supervisor.shutdown();
+  },
+);
 
 it('reuses a healthy default runtime after explicit setup leaves an unowned environment', async () => {
   const { resolve, join } = await import('node:path');

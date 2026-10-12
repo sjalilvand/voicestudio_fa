@@ -21,6 +21,7 @@ import {
   constants,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   rmSync,
   statSync,
@@ -358,6 +359,22 @@ function selectedRuntimeRoot(parent: string): string {
   return basename(selected).toLocaleLowerCase('en-US') === 'voicestudio'
     ? selected
     : join(selected, 'VoiceStudio');
+}
+
+/** File-manager metadata a new folder can hold; it is not another installation's data. */
+const FOLDER_METADATA = new Set(['.ds_store', '.localized', 'desktop.ini', 'thumbs.db']);
+
+/**
+ * Whether a selected runtime root holds files Electron must not take over. The
+ * folder picker can create the destination, so an existing empty folder is a
+ * new destination rather than another installation.
+ */
+function holdsUnownedFiles(root: string): boolean {
+  try {
+    return readdirSync(root).some((name) => !FOLDER_METADATA.has(name.toLocaleLowerCase('en-US')));
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code !== 'ENOENT';
+  }
 }
 
 /** The web UI build packaged with this app version (served to LAN devices). */
@@ -821,7 +838,7 @@ export class BackendSupervisor extends EventEmitter<{
         !configured.owned &&
         samePath(configured.root, runtimeRoot) &&
         !samePath(runtimeRoot, defaultRuntimeRoot()) &&
-        existsSync(runtimeRoot)
+        holdsUnownedFiles(runtimeRoot)
       ) {
         // An explicit setup action may create a new runtime, but must never
         // take ownership of (or repair in place) another installation's files.
