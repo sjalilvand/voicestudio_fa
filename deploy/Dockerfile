@@ -140,16 +140,19 @@ COPY alembic.ini ./
 # Copy the pre-built React frontend from the builder stage
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
+# Stable container interface for `docker run -P` and published-image consumers.
+EXPOSE 3900
+
 # Image-level health probe (compose files define their own; this covers plain
 # `docker run`). Generous start period: first boot creates the venv-less
 # schema + may pull model metadata before /health answers.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=5 \
-  CMD ["python3", "-c", "import os, urllib.request; from core.app_config import DEFAULT_BACKEND_PORT; port = int(os.environ.get('OMNIVOICE_PORT', DEFAULT_BACKEND_PORT)); urllib.request.urlopen(f'http://127.0.0.1:{port}/health', timeout=4)"]
+  CMD ["python3", "-c", "import urllib.request; from services.network_share import backend_port; urllib.request.urlopen(f'http://127.0.0.1:{backend_port()}/health', timeout=4)"]
 
 # Mount points for persistent data (sqlite db, user voices, huggingface cache)
 VOLUME ["/app/omnivoice_data"]
 
-# Bind to 0.0.0.0 for external access. The backend entrypoint reads the
-# manifest default (or OMNIVOICE_PORT) using the guarded Python interpreter.
+# Bind to 0.0.0.0 for external access. The entrypoint reads the manifest default
+# (or OMNIVOICE_PORT) and forwards any explicit Uvicorn options after the image.
 ENV OMNIVOICE_BIND_HOST=0.0.0.0
-ENTRYPOINT ["python3", "backend/main.py"]
+ENTRYPOINT ["python3", "backend/docker_entrypoint.py"]
