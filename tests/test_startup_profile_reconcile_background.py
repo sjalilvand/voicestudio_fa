@@ -1,0 +1,63 @@
+"""Profile reconciliation probes every engine runtime (argostranslate alone is
+8-54 s to import), so it must not hold /health at 503 during startup."""
+import asyncio
+import inspect
+import threading
+from types import SimpleNamespace
+
+import main
+from services import performance_profiles
+
+
+def test_phase_b_does_not_reconcile_inline():
+    assert "reconcile_active_profile" not in inspect.getsource(main._phase_b)
+    assert "_reconcile_profile_in_background" in inspect.getsource(main._phase_b)
+
+
+def test_warmups_wait_for_reconcile_in_background(monkeypatch):
+    release = threading.Event()
+    finished = []
+
+    def slow_reconcile():
+        release.wait(5)
+        finished.append(True)
+        return {"asr": {}}
+
+    monkeypatch.setattr(performance_profiles, "reconcile_active_profile", slow_reconcile)
+
+    async def scenario():
+        app = SimpleNamespace(state=SimpleNamespace())
+        app.state.profile_reconcile_task = asyncio.create_task(
+            main._reconcile_profile_in_background()
+        )
+        waiter = asyncio.create_task(main._await_profile_reconcile(app))
+        await asyncio.sleep(0.05)
+        # The caller (startup) got control back while reconcile is still running.
+        assert not app.state.profile_reconcile_task.done()
+        assert not waiter.done()
+        release.set()
+        await waiter
+        assert finished == [True]
+
+    asyncio.run(scenario())
+
+
+def test_reconcile_failure_is_non_fatal_and_does_not_block_warmups(monkeypatch):
+    def broken():
+        raise RuntimeError("probe exploded")
+
+    monkeypatch.setattr(performance_profiles, "reconcile_active_profile", broken)
+
+    async def scenario():
+        app = SimpleNamespace(state=SimpleNamespace())
+        app.state.profile_reconcile_task = asyncio.create_task(
+            main._reconcile_profile_in_background()
+        )
+        await main._await_profile_reconcile(app)
+        assert app.state.profile_reconcile_task.exception() is None
+
+    asyncio.run(scenario())
+
+
+def test_await_without_a_task_returns_immediately():
+    asyncio.run(main._await_profile_reconcile(SimpleNamespace(state=SimpleNamespace())))
