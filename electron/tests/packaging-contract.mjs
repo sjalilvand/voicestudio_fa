@@ -31,15 +31,25 @@ const artifactCandidates =
       ? ['release/win-arm64-unpacked', 'release/win-unpacked']
       : ['release/win-unpacked']
     : process.platform === 'darwin'
-      ? artifactArch === 'arm64'
-        ? [
-            `release/mac-arm64/${PRODUCT_NAME}.app/Contents`,
-            `release/mac/${PRODUCT_NAME}.app/Contents`,
-          ]
-        : [
-            `release/mac/${PRODUCT_NAME}.app/Contents`,
-            `release/mac-x64/${PRODUCT_NAME}.app/Contents`,
-          ]
+      ? DISTRIBUTION_TARGET === 'mac-app-store'
+        ? artifactArch === 'arm64'
+          ? [
+              `release/mas-arm64/${PRODUCT_NAME}.app/Contents`,
+              `release/mas/${PRODUCT_NAME}.app/Contents`,
+            ]
+          : [
+              `release/mas/${PRODUCT_NAME}.app/Contents`,
+              `release/mas-x64/${PRODUCT_NAME}.app/Contents`,
+            ]
+        : artifactArch === 'arm64'
+          ? [
+              `release/mac-arm64/${PRODUCT_NAME}.app/Contents`,
+              `release/mac/${PRODUCT_NAME}.app/Contents`,
+            ]
+          : [
+              `release/mac/${PRODUCT_NAME}.app/Contents`,
+              `release/mac-x64/${PRODUCT_NAME}.app/Contents`,
+            ]
       : artifactArch === 'arm64'
         ? ['release/linux-arm64-unpacked', 'release/linux-unpacked']
         : ['release/linux-unpacked'];
