@@ -4,6 +4,28 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 
+
+@pytest.mark.parametrize("workflow_name", ["electron-build.yml", "electron-release.yml"])
+def test_electron_packaging_workflows_publish_store_provenance(workflow_name):
+    import yaml
+
+    workflow = yaml.load(
+        (ROOT / ".github/workflows" / workflow_name).read_text(), Loader=yaml.BaseLoader
+    )
+    package = workflow["jobs"]["package"]
+    build_step = next(
+        step
+        for step in package["steps"]
+        if step.get("name") == "Package without publishing"
+    )
+    assert "create_store_artifact_manifest.mjs" in build_step["run"]
+    upload_step = next(
+        step
+        for step in package["steps"]
+        if step.get("name") == "Save installers and updater metadata for review"
+    )
+    assert "electron/release/store-artifact-manifest-*.json" in upload_step["with"]["path"]
+
 @pytest.mark.parametrize("tag,allowed", [("", False), ("v0.5.4", False), ("v0.5.3", True)])
 def test_release_downloads_legacy_feeds_only_from_final_tauri_tag(tmp_path, tag, allowed):
     import os

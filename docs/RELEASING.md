@@ -3,6 +3,11 @@
 Electron is the only maintained desktop distribution. Tauri ended at v0.5.3;
 its signed updater feeds and installers are immutable compatibility assets.
 
+Shared store inputs and platform handoffs are defined in
+[`STORE-PUBLISHING.md`](STORE-PUBLISHING.md). Microsoft Store, Snap Store and
+Mac App Store are not maintained release channels until each has completed its
+first verified production publication.
+
 ## Credentials
 
 Electron publication uses these GitHub Actions secrets:
@@ -84,6 +89,7 @@ its feed is checked only when it was published), validates packaged startup and 
 updates a draft, and uploads:
 
 - Electron installers and platform-specific `electron-stable-*.yml` feeds
+- per-platform `store-artifact-manifest-*.json` provenance records
 - `SHA256SUMS.txt`
 - authored CHANGELOG release notes
 - immutable copies of the final Tauri updater feeds for old clients
