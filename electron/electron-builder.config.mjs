@@ -24,6 +24,53 @@ if (!/^electron-stable-(?:win32|darwin|linux)-(?:x64|arm64)$/.test(updateChannel
 }
 const updateUrl = 'https://github.com/debpalash/VoiceStudio/releases/latest/download';
 
+export function distributionPackaging(target = DISTRIBUTION_TARGET) {
+  if (target === 'snap-store') {
+    return {
+      linuxTargets: ['snap'],
+      snapcraft: {
+        // Core 22 uses electron-builder's reproducible Electron snap template;
+        // strict confinement is explicit so a future default cannot weaken it.
+        base: 'core22',
+        core22: {
+          confinement: 'strict',
+          grade: 'stable',
+          title: PRODUCT_NAME,
+          summary: 'Local voice cloning, voice design, dubbing and dictation.',
+          allowNativeWayland: true,
+          plugs: [
+            { 'browser-support': { interface: 'browser-support', 'allow-sandbox': true } },
+            'desktop',
+            'desktop-legacy',
+            'home',
+            'x11',
+            'wayland',
+            'unity7',
+            'network',
+            'network-bind',
+            'gsettings',
+            'audio-playback',
+            'audio-record',
+            'pulseaudio',
+            'opengl',
+          ],
+        },
+      },
+      publish: { provider: 'snapStore' },
+    };
+  }
+  return {
+    linuxTargets: ['AppImage', 'deb'],
+    publish: {
+      provider: 'generic',
+      url: updateUrl,
+      channel: updateChannel,
+    },
+  };
+}
+
+const packaging = distributionPackaging();
+
 const defaultRustTarget =
   {
     'win32-x64': 'x86_64-pc-windows-msvc',
@@ -141,12 +188,9 @@ export default {
     artifactName: `${artifactPrefix}-\${version}-linux-x64.\${ext}`,
     icon: 'build/icons/icon.png',
     syncDesktopName: true,
-    target: ['AppImage', 'deb'],
+    target: packaging.linuxTargets,
     category: 'Audio',
   },
-  publish: {
-    provider: 'generic',
-    url: updateUrl,
-    channel: updateChannel,
-  },
+  ...(packaging.snapcraft ? { snapcraft: packaging.snapcraft } : {}),
+  publish: packaging.publish,
 };
