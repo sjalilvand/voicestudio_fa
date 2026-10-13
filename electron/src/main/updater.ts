@@ -276,6 +276,7 @@ export class DesktopUpdater {
     )
       return this.snapshot();
     if (this.checkInFlight) return this.checkInFlight;
+    const previousState = this.snapshot();
     this.patch({
       status: 'checking',
       progress: 0,
@@ -302,8 +303,10 @@ export class DesktopUpdater {
           this.patch({ status: 'idle', lastCheckedAt: Date.now() });
         }
       } catch (error) {
-        if (quiet) this.patch({ status: 'idle', error: undefined });
-        else
+        if (quiet) {
+          this.state = previousState;
+          this.emit();
+        } else
           this.patch({
             status: 'error',
             error: error instanceof Error ? error.message : String(error),

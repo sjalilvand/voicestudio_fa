@@ -172,6 +172,20 @@ describe('DesktopUpdater', () => {
     expect(mocks.autoUpdater.checkForUpdates).toHaveBeenCalledOnce();
   });
 
+  test('preserves an available update when quiet Store feed discovery fails', async () => {
+    const feedFetcher = vi.fn(async () => new Response('unavailable', { status: 503 }));
+    const updater = new DesktopUpdater('microsoft-store', feedFetcher);
+    emit('update-available', { version: '0.5.7', releaseNotes: 'Ready' });
+
+    await updater.check(true);
+
+    expect(updater.snapshot()).toMatchObject({
+      status: 'available',
+      availableVersion: '0.5.7',
+      notes: 'Ready',
+    });
+  });
+
   test('reports transfer size, speed and eta while coalescing duplicate actions', async () => {
     const updater = new DesktopUpdater();
     let finishCheck!: () => void;
