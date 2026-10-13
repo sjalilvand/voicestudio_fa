@@ -15,9 +15,13 @@ const here = dirname(fileURLToPath(import.meta.url));
 const { version } = JSON.parse(readFileSync(resolve(here, '../package.json'), 'utf-8'));
 const storeMetadata = JSON.parse(readFileSync(resolve(here, '../store/metadata.json'), 'utf-8'));
 const storeIdentity = storeMetadata.identity;
-const artifactPrefix = `${PRODUCT_NAME.replace(/[^A-Za-z0-9]+/g, '-')}-${
-  DISTRIBUTION_TARGET === 'microsoft-store' ? 'MicrosoftStore' : 'Electron'
-}`;
+const isMacAppStore = DISTRIBUTION_TARGET === 'mac-app-store';
+const artifactLabel =
+  {
+    'microsoft-store': 'MicrosoftStore',
+    'mac-app-store': 'MacAppStore',
+  }[DISTRIBUTION_TARGET] ?? 'Electron';
+const artifactPrefix = `${PRODUCT_NAME.replace(/[^A-Za-z0-9]+/g, '-')}-${artifactLabel}`;
 // Stable is the only Electron update feed: there is no `preview` release to
 // point at. Packaging rehearsals from main are stamped stable too; they are
 // review artifacts and are never published.
@@ -98,13 +102,15 @@ const bundledUvResources =
   uvSource && existsSync(uvSource) && statSync(uvSource).size > 0
     ? [{ from: uvSource, to: `tools/uv${uvExtension}` }]
     : [];
-const notarizeMac = Boolean(
-  process.env.CSC_LINK &&
-  process.env.CSC_KEY_PASSWORD &&
-  process.env.APPLE_ID &&
-  process.env.APPLE_APP_SPECIFIC_PASSWORD &&
-  process.env.APPLE_TEAM_ID,
-);
+const notarizeMac =
+  !isMacAppStore &&
+  Boolean(
+    process.env.CSC_LINK &&
+    process.env.CSC_KEY_PASSWORD &&
+    process.env.APPLE_ID &&
+    process.env.APPLE_APP_SPECIFIC_PASSWORD &&
+    process.env.APPLE_TEAM_ID,
+  );
 
 /** @type {import('electron-builder').Configuration} */
 export default {
@@ -181,7 +187,7 @@ export default {
     entitlementsInherit: 'build/entitlements.mac.plist',
     // Keep unsigned artifact rehearsals at their existing signing defaults;
     // a Developer ID certificate and Apple credentials enable both together.
-    hardenedRuntime: notarizeMac,
+    hardenedRuntime: isMacAppStore ? false : notarizeMac,
     notarize: notarizeMac,
     extendInfo: {
       NSMicrophoneUsageDescription: readFileSync(resolve(here, 'build/Info.plist'), 'utf8')
@@ -189,8 +195,15 @@ export default {
         .replaceAll('__APP_PRODUCT_NAME__', PRODUCT_NAME),
     },
     // The CLI matrix selects one architecture per runner and updater feed.
-    target: ['dmg', 'zip'],
+    target: isMacAppStore ? ['mas'] : ['dmg', 'zip'],
     category: 'public.app-category.productivity',
+  },
+  mas: {
+    entitlements: 'build/entitlements.mas.plist',
+    entitlementsInherit: 'build/entitlements.mas.inherit.plist',
+    ...(process.env.VOICESTUDIO_MAS_PROVISIONING_PROFILE
+      ? { provisioningProfile: process.env.VOICESTUDIO_MAS_PROVISIONING_PROFILE }
+      : {}),
   },
   linux: {
     // Linux targets rewrite ${arch} to x86_64/amd64; feeds use Node's x64.

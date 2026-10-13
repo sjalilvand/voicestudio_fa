@@ -5,7 +5,7 @@ import {
   distributionProfile,
   resolveDistributionTarget,
 } from '../../../config/distributions.mjs';
-import { applicationUpdatesSupported } from './distribution';
+import { applicationUpdatesSupported, runtimeSetupSupported } from './distribution';
 
 describe('distribution contract', () => {
   test('accepts only the four maintained distribution identities', () => {
@@ -36,5 +36,12 @@ describe('distribution contract', () => {
     expect(applicationUpdatesSupported(true, 'snap-store', false)).toBe(false);
     expect(applicationUpdatesSupported(true, 'mac-app-store', false)).toBe(false);
     expect(applicationUpdatesSupported(false, 'direct', false)).toBe(false);
+  });
+
+  test('bundled-only distributions cannot invoke runtime setup downloads', () => {
+    expect(runtimeSetupSupported('direct')).toBe(true);
+    expect(runtimeSetupSupported('microsoft-store')).toBe(true);
+    expect(runtimeSetupSupported('snap-store')).toBe(true);
+    expect(runtimeSetupSupported('mac-app-store')).toBe(false);
   });
 });

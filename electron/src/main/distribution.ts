@@ -21,3 +21,7 @@ export function applicationUpdatesSupported(
     !disabledByEnvironment
   );
 }
+
+export function runtimeSetupSupported(target: DistributionTarget = CURRENT_DISTRIBUTION): boolean {
+  return DISTRIBUTION_PROFILES[target].runtimeCode === 'user-initiated-download';
+}

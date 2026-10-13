@@ -52,6 +52,12 @@ The Microsoft Store packaging and submission handoff is implemented in
 `.github/workflows/microsoft-store.yml`; operating steps and pending owner work
 are in [`store/microsoft-store.md`](store/microsoft-store.md).
 
+The Mac App Store sandbox target and private packaging workflow are scaffolded
+in `electron/electron-builder.config.mjs` and `.github/workflows/mac-app-store.yml`.
+The workflow remains blocked by the bundled-runtime compliance gate and never
+submits to App Store Connect. Current blockers and owner actions are in the
+[`Mac App Store runbook`](../store/mac-app-store.md).
+
 ## Artifact and release contract
 
 Packaging workflows write `store-artifact-manifest-<platform>-<arch>.json`

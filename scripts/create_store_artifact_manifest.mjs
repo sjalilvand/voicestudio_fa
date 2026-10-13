@@ -34,7 +34,11 @@ function sha256File(path) {
 
 function releaseArtifact(name, distribution) {
   const installerPrefix =
-    distribution === "microsoft-store" ? "VoiceStudio-MicrosoftStore-" : "VoiceStudio-Electron-";
+    {
+      direct: "VoiceStudio-Electron-",
+      "microsoft-store": "VoiceStudio-MicrosoftStore-",
+      "mac-app-store": "VoiceStudio-MacAppStore-",
+    }[distribution] ?? "VoiceStudio-Electron-";
   return name.startsWith(installerPrefix) || /^electron-stable-.*\.yml$/.test(name);
 }
 

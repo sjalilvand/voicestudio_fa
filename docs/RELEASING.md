@@ -23,12 +23,25 @@ Store installer without changing direct-download artifacts. Staging its
 immutable versioned URL requires owner approval; Partner Center submission and
 publication remain manual owner actions.
 
+Mac App Store preparation uses the manual, private `mac-app-store.yml` workflow
+and the [`Mac App Store runbook`](../store/mac-app-store.md). The workflow cannot
+build while the bundled-runtime compliance gate is unresolved and never uploads
+to App Store Connect. MAS packages use App Store updates; direct macOS packages
+keep the existing application updater and Developer ID notarization path.
+
 ## Credentials
 
 Electron publication uses these GitHub Actions secrets:
 
 - `ELECTRON_MACOS_CSC_LINK` and `ELECTRON_MACOS_CSC_KEY_PASSWORD` for the
   Developer ID Application `.p12` certificate and its password.
+- `ELECTRON_MAC_APP_STORE_CSC_LINK`,
+  `ELECTRON_MAC_APP_STORE_CSC_KEY_PASSWORD`,
+  `ELECTRON_MAC_APP_STORE_INSTALLER_LINK`,
+  `ELECTRON_MAC_APP_STORE_INSTALLER_KEY_PASSWORD` and
+  `ELECTRON_MAC_APP_STORE_PROVISIONING_PROFILE` for private MAS packaging.
+  These are separate from Developer ID credentials and do not authorize upload
+  or publication.
 - `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD` (not the Apple ID login password)
   and `APPLE_TEAM_ID` for macOS notarization and stapling.
 - `ELECTRON_WINDOWS_CSC_LINK` and `ELECTRON_WINDOWS_CSC_KEY_PASSWORD` for

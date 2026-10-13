@@ -21,6 +21,12 @@ const distribution = resolveDistributionTarget(
 );
 const profile = distributionProfile(distribution);
 
+export function bundledOnlyRuntimeBlockers(components) {
+  return components.filter(
+    (component) => component.delivery === "runtime-download" && component.status !== "not-bundled",
+  );
+}
+
 assert.equal(metadata.schemaVersion, 1);
 assert.equal(metadata.identity.productName, PRODUCT_NAME);
 assert.equal(metadata.identity.applicationId, APP_ID);
@@ -49,11 +55,7 @@ for (const component of compliance.components) {
   assert(allowedStatuses.has(component.status), `Invalid status for ${component.id}`);
 }
 if (profile.runtimeCode === "bundled-only") {
-  const unresolvedRuntime = compliance.components.filter(
-    (component) =>
-      component.delivery === "runtime-download" &&
-      !["approved", "not-bundled"].includes(component.status),
-  );
+  const unresolvedRuntime = bundledOnlyRuntimeBlockers(compliance.components);
   assert.equal(
     unresolvedRuntime.length,
     0,
