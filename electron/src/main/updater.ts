@@ -55,20 +55,38 @@ export async function resolveUpdateFeedUrl(
   if (!response.ok) throw new Error(`Store update feed lookup failed (${response.status})`);
   const releases: unknown = await response.json();
   if (!Array.isArray(releases)) throw new Error('Store update feed lookup returned invalid data');
-  const release = releases.find((value) => {
-    if (!value || typeof value !== 'object') return false;
-    const item = value as Record<string, unknown>;
-    return (
-      typeof item.tag_name === 'string' &&
-      Array.isArray(item.assets) &&
-      item.assets.some(
-        (asset) =>
-          asset &&
-          typeof asset === 'object' &&
-          (asset as Record<string, unknown>).name === manifest,
-      )
-    );
-  }) as Record<string, unknown> | undefined;
+  const matchingReleases = releases.flatMap(
+    (
+      value,
+    ): Array<{
+      release: Record<string, unknown>;
+      version: [number, number, number];
+    }> => {
+      if (!value || typeof value !== 'object') return [];
+      const item = value as Record<string, unknown>;
+      const version =
+        typeof item.tag_name === 'string' ? item.tag_name.match(/^v(\d+)\.(\d+)\.(\d+)$/) : null;
+      const publishesManifest =
+        Array.isArray(item.assets) &&
+        item.assets.some(
+          (asset) =>
+            asset &&
+            typeof asset === 'object' &&
+            (asset as Record<string, unknown>).name === manifest,
+        );
+      return version && publishesManifest
+        ? [{ release: item, version: [Number(version[1]), Number(version[2]), Number(version[3])] }]
+        : [];
+    },
+  );
+  matchingReleases.sort((left, right) => {
+    for (let index = 0; index < left.version.length; index += 1) {
+      const difference = right.version[index] - left.version[index];
+      if (difference) return difference;
+    }
+    return 0;
+  });
+  const release = matchingReleases[0]?.release;
   if (!release) throw new Error(`No Microsoft Store update feed publishes ${manifest}`);
   return `https://github.com/debpalash/VoiceStudio/releases/download/${encodeURIComponent(
     release.tag_name as string,
@@ -251,9 +269,22 @@ export class DesktopUpdater {
   }
 
   async check(quiet = false): Promise<UpdateState> {
-    if (!this.updatesSupported() || ['downloading', 'downloaded'].includes(this.state.status))
+    if (
+      !this.updatesSupported() ||
+      this.downloadInFlight ||
+      ['downloading', 'downloaded'].includes(this.state.status)
+    )
       return this.snapshot();
     if (this.checkInFlight) return this.checkInFlight;
+    this.patch({
+      status: 'checking',
+      progress: 0,
+      transferredBytes: undefined,
+      totalBytes: undefined,
+      bytesPerSecond: undefined,
+      etaSeconds: undefined,
+      error: undefined,
+    });
     const operation = (async () => {
       try {
         const feedUrl =
@@ -267,6 +298,9 @@ export class DesktopUpdater {
             : STABLE_FEED;
         this.configureFeed(feedUrl);
         await autoUpdater.checkForUpdates();
+        if (this.state.status === 'checking') {
+          this.patch({ status: 'idle', lastCheckedAt: Date.now() });
+        }
       } catch (error) {
         if (quiet) this.patch({ status: 'idle', error: undefined });
         else
@@ -286,7 +320,8 @@ export class DesktopUpdater {
   }
 
   async download(): Promise<UpdateState> {
-    if (!this.updatesSupported() || this.state.status !== 'available') return this.snapshot();
+    if (!this.updatesSupported() || this.checkInFlight || this.state.status !== 'available')
+      return this.snapshot();
     if (this.downloadInFlight) return this.downloadInFlight;
     const operation = (async () => {
       this.patch({

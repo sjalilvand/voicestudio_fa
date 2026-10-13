@@ -131,6 +131,7 @@ describe('DesktopUpdater', () => {
       async () =>
         new Response(
           JSON.stringify([
+            { tag_name: 'v0.5.6', assets: [{ name: manifest }] },
             { tag_name: 'v0.5.8', assets: [{ name: 'unrelated.txt' }] },
             { tag_name: 'v0.5.7', assets: [{ name: manifest }] },
           ]),
@@ -146,6 +147,29 @@ describe('DesktopUpdater', () => {
       url: 'https://github.com/debpalash/VoiceStudio/releases/download/v0.5.7',
       channel,
     });
+  });
+
+  test('prevents downloads from racing Store feed discovery', async () => {
+    const manifest = feedManifestName(process.platform, process.arch, 'microsoft-store');
+    let finishFeedLookup!: (response: Response) => void;
+    const feedFetcher = vi.fn(
+      () => new Promise<Response>((resolve) => (finishFeedLookup = resolve)),
+    );
+    const updater = new DesktopUpdater('microsoft-store', feedFetcher);
+    emit('update-available', { version: '0.5.7', releaseNotes: null });
+
+    const check = updater.check();
+    expect(updater.snapshot().status).toBe('checking');
+    await updater.download();
+    expect(mocks.autoUpdater.downloadUpdate).not.toHaveBeenCalled();
+
+    finishFeedLookup(
+      new Response(JSON.stringify([{ tag_name: 'v0.5.7', assets: [{ name: manifest }] }]), {
+        status: 200,
+      }),
+    );
+    await check;
+    expect(mocks.autoUpdater.checkForUpdates).toHaveBeenCalledOnce();
   });
 
   test('reports transfer size, speed and eta while coalescing duplicate actions', async () => {
