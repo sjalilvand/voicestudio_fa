@@ -14,7 +14,7 @@ metadata and the backend fallback mirror it.
 
 ### Removed
 
-- The unused licence-key client and its Lemon Squeezy network call are gone from the open-source app (#PR)
+- The unused licence-key client and its Lemon Squeezy network call are gone from the open-source app (#2812)
 
 ## [0.5.7] — 2026-10-13
 
