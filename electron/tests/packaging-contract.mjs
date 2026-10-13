@@ -65,6 +65,11 @@ assert.match(electronPackage.author?.email ?? '', /@/, 'Linux package declares a
 assert.equal(config.productName, PRODUCT_NAME, 'Builder uses the central product name');
 assert.equal(config.appId, APP_ID, 'Builder uses the central application ID');
 assert.equal(
+  config.artifactName,
+  `${PRODUCT_NAME}-${DISTRIBUTION_TARGET === 'mac-app-store' ? 'MacAppStore' : 'Electron'}-\${version}-\${os}-\${arch}.\${ext}`,
+  'Mac App Store packaging is distinct without renaming direct artifacts',
+);
+assert.equal(
   config.extraMetadata.voicestudioDistribution,
   DISTRIBUTION_TARGET,
   'Package records its immutable distribution identity',
@@ -89,6 +94,36 @@ for (const entitlementFile of [config.mac.entitlements, config.mac.entitlementsI
   const entitlements = readFileSync(resolve(root, entitlementFile), 'utf8');
   assert.match(entitlements, /<key>com\.apple\.security\.device\.audio-input<\/key>\s*<true\s*\/>/);
   assert.match(entitlements, /<key>com\.apple\.security\.cs\.allow-jit<\/key>\s*<true\s*\/>/);
+}
+if (DISTRIBUTION_TARGET === 'mac-app-store') {
+  assert.deepEqual(config.mac.target, ['mas'], 'Mac App Store builds only the MAS package');
+  assert.equal(config.mac.notarize, false, 'Apple handles Mac App Store notarization');
+  assert.equal(config.mac.hardenedRuntime, false, 'MAS uses App Sandbox instead of Developer ID');
+  assert.equal(config.mas.entitlements, 'build/entitlements.mas.plist');
+  assert.equal(config.mas.entitlementsInherit, 'build/entitlements.mas.inherit.plist');
+  const appEntitlements = readFileSync(resolve(root, config.mas.entitlements), 'utf8');
+  for (const key of [
+    'com.apple.security.app-sandbox',
+    'com.apple.security.cs.allow-jit',
+    'com.apple.security.device.audio-input',
+    'com.apple.security.files.user-selected.read-write',
+    'com.apple.security.network.client',
+    'com.apple.security.network.server',
+  ]) {
+    assert.match(
+      appEntitlements,
+      new RegExp(`<key>${key.replaceAll('.', '\\.')}</key>\\s*<true\\s*/>`),
+    );
+  }
+  const inheritedEntitlements = readFileSync(resolve(root, config.mas.entitlementsInherit), 'utf8');
+  for (const key of ['com.apple.security.app-sandbox', 'com.apple.security.inherit']) {
+    assert.match(
+      inheritedEntitlements,
+      new RegExp(`<key>${key.replaceAll('.', '\\.')}</key>\\s*<true\\s*/>`),
+    );
+  }
+} else {
+  assert.deepEqual(config.mac.target, ['dmg', 'zip'], 'Direct macOS artifacts stay unchanged');
 }
 const project = readFileSync(resolve(root, '../pyproject.toml'), 'utf8');
 const readme = project.match(/^readme\s*=\s*"([^"]+)"/m)?.[1];
