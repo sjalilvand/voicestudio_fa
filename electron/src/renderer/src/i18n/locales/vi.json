@@ -3381,6 +3381,7 @@
     "notReviewed": "Chưa xem xét",
     "label": "Giấy phép",
     "requiredTitle": "Cần chấp nhận giấy phép",
+    "acceptedTitle": "Đã chấp nhận giấy phép",
     "requiredError": "Không thể dùng mô hình này cho đến khi bạn chấp nhận giấy phép của nó.",
     "acceptTitle": "Chấp nhận giấy phép mô hình để sử dụng",
     "acceptNotice": "VoiceStudio không phải chủ sở hữu hay bên cấp phép của mô hình này và không thể cấp cho bạn quyền truy cập hoặc quyền đối với mô hình. Giấy phép của chủ sở hữu quyền quyết định cách bạn được dùng mô hình và âm thanh nó tạo ra. Trước khi dùng, hãy đảm bảo bạn được phép, ví dụ chỉ dùng phi thương mại, hoặc có giấy phép riêng từ chủ sở hữu quyền cho mục đích thương mại.",
@@ -3454,8 +3455,8 @@
     "acceptCheckbox": "Tôi đã đọc giấy phép của {{model}} và xác nhận có các quyền mà giấy phép yêu cầu cho mục đích sử dụng của tôi.",
     "acceptAll": "Chấp nhận {{count}} giấy phép",
     "revokeFor": "Rút lại chấp nhận cho {{model}}",
-    "gateIntro": "Không thể chạy thao tác này cho đến khi bạn chấp nhận giấy phép của từng mô hình bên dưới. Hãy xem từng giấy phép rồi đánh dấu ô tương ứng.",
-    "retryHint": "Đã chấp nhận giấy phép. Hãy chạy lại thao tác để tiếp tục.",
+    "gateIntro": "Hãy chấp nhận giấy phép của từng mô hình bên dưới trước khi sử dụng. Hãy xem từng giấy phép rồi đánh dấu ô tương ứng.",
+    "retryHint": "Đã chấp nhận giấy phép. Nếu có thao tác đang chờ, hãy chạy lại.",
     "detailsFailed": "Không thể tải chi tiết giấy phép. Hãy đóng hộp thoại này và thử lại."
   }
 }
