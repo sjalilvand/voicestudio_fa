@@ -1,0 +1,40 @@
+import { describe, expect, test } from 'vitest';
+
+import {
+  DISTRIBUTION_TARGETS,
+  distributionProfile,
+  resolveDistributionTarget,
+} from '../../../config/distributions.mjs';
+import { applicationUpdatesSupported } from './distribution';
+
+describe('distribution contract', () => {
+  test('accepts only the four maintained distribution identities', () => {
+    expect(DISTRIBUTION_TARGETS).toEqual([
+      'direct',
+      'microsoft-store',
+      'snap-store',
+      'mac-app-store',
+    ]);
+    expect(resolveDistributionTarget(undefined)).toBe('direct');
+    expect(resolveDistributionTarget(' snap-store ')).toBe('snap-store');
+    expect(() => resolveDistributionTarget('unknown')).toThrow(
+      'Unsupported VoiceStudio distribution',
+    );
+  });
+
+  test('records update ownership without treating Microsoft EXE listings as managed packages', () => {
+    expect(distributionProfile('direct').applicationUpdates).toBe('application');
+    expect(distributionProfile('microsoft-store').applicationUpdates).toBe('application');
+    expect(distributionProfile('snap-store').applicationUpdates).toBe('store');
+    expect(distributionProfile('mac-app-store').applicationUpdates).toBe('store');
+  });
+
+  test('store ownership cannot be bypassed by a runtime environment variable', () => {
+    expect(applicationUpdatesSupported(true, 'direct', false)).toBe(true);
+    expect(applicationUpdatesSupported(true, 'direct', true)).toBe(false);
+    expect(applicationUpdatesSupported(true, 'microsoft-store', false)).toBe(true);
+    expect(applicationUpdatesSupported(true, 'snap-store', false)).toBe(false);
+    expect(applicationUpdatesSupported(true, 'mac-app-store', false)).toBe(false);
+    expect(applicationUpdatesSupported(false, 'direct', false)).toBe(false);
+  });
+});

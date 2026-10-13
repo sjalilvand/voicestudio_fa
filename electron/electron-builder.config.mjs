@@ -9,6 +9,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { packageNativeHelper } from './native-helper-build.mjs';
 import { APP_ID, PRODUCT_NAME } from '../config/app-config.mjs';
+import { DISTRIBUTION_PROFILE, DISTRIBUTION_TARGET } from '../config/distributions.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const { version } = JSON.parse(readFileSync(resolve(here, '../package.json'), 'utf-8'));
@@ -56,7 +57,13 @@ const notarizeMac = Boolean(
 export default {
   appId: APP_ID,
   productName: PRODUCT_NAME,
-  extraMetadata: { version, productName: PRODUCT_NAME, desktopName: PRODUCT_NAME },
+  extraMetadata: {
+    version,
+    productName: PRODUCT_NAME,
+    desktopName: PRODUCT_NAME,
+    voicestudioDistribution: DISTRIBUTION_TARGET,
+    voicestudioUpdateOwner: DISTRIBUTION_PROFILE.applicationUpdates,
+  },
   directories: { output: 'release', buildResources: 'build' },
   artifactName: `${artifactPrefix}-\${version}-\${os}-\${arch}.\${ext}`,
   // The default FUSE2 runtime cannot start on distros without libfuse.so.2.

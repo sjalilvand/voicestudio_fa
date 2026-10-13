@@ -241,6 +241,29 @@ describe('DesktopUpdater', () => {
     }
   });
 
+  test.each(['snap-store', 'mac-app-store'] as const)(
+    'defers updates to the %s even when the updater environment override is absent',
+    async (distribution) => {
+      const updater = new DesktopUpdater(distribution);
+      expect(updater.snapshot()).toMatchObject({ status: 'unsupported' });
+      await updater.check();
+      await updater.download();
+      updater.install();
+      expect(mocks.autoUpdater.setFeedURL).not.toHaveBeenCalled();
+      expect(mocks.autoUpdater.checkForUpdates).not.toHaveBeenCalled();
+      expect(mocks.autoUpdater.downloadUpdate).not.toHaveBeenCalled();
+      expect(mocks.autoUpdater.quitAndInstall).not.toHaveBeenCalled();
+    },
+  );
+
+  test('retains application-owned updates for the Microsoft Store EXE package', async () => {
+    const updater = new DesktopUpdater('microsoft-store');
+    expect(updater.snapshot()).toMatchObject({ status: 'idle' });
+    expect(mocks.autoUpdater.setFeedURL).toHaveBeenCalledOnce();
+    await updater.check();
+    expect(mocks.autoUpdater.checkForUpdates).toHaveBeenCalledOnce();
+  });
+
   test('loads and validates native release history without trusting GitHub response fields', async () => {
     const fetcher = vi.fn().mockResolvedValue(
       new Response(
