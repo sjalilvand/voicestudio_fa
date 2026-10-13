@@ -37,6 +37,44 @@ export function feedManifestName(
   return `${feedChannelName(platform, arch, distribution)}${suffix}.yml`;
 }
 
+export async function resolveUpdateFeedUrl(
+  distribution: DistributionTarget,
+  platform: NodeJS.Platform = process.platform,
+  arch: string = process.arch,
+  fetcher: typeof fetch = fetch,
+): Promise<string> {
+  if (distribution !== 'microsoft-store') return STABLE_FEED;
+  const manifest = feedManifestName(platform, arch, distribution);
+  const response = await fetcher(RELEASES_API, {
+    headers: {
+      Accept: 'application/vnd.github+json',
+      'User-Agent': 'VoiceStudio',
+    },
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!response.ok) throw new Error(`Store update feed lookup failed (${response.status})`);
+  const releases: unknown = await response.json();
+  if (!Array.isArray(releases)) throw new Error('Store update feed lookup returned invalid data');
+  const release = releases.find((value) => {
+    if (!value || typeof value !== 'object') return false;
+    const item = value as Record<string, unknown>;
+    return (
+      typeof item.tag_name === 'string' &&
+      Array.isArray(item.assets) &&
+      item.assets.some(
+        (asset) =>
+          asset &&
+          typeof asset === 'object' &&
+          (asset as Record<string, unknown>).name === manifest,
+      )
+    );
+  }) as Record<string, unknown> | undefined;
+  if (!release) throw new Error(`No Microsoft Store update feed publishes ${manifest}`);
+  return `https://github.com/debpalash/VoiceStudio/releases/download/${encodeURIComponent(
+    release.tag_name as string,
+  )}`;
+}
+
 export const UPDATE_CHANNELS = {
   getState: 'updates:getState',
   check: 'updates:check',
@@ -113,7 +151,10 @@ export class DesktopUpdater {
   private checkInFlight: Promise<UpdateState> | null = null;
   private downloadInFlight: Promise<UpdateState> | null = null;
 
-  constructor(private readonly distribution: DistributionTarget = CURRENT_DISTRIBUTION) {
+  constructor(
+    private readonly distribution: DistributionTarget = CURRENT_DISTRIBUTION,
+    private readonly feedFetcher: typeof fetch = fetch,
+  ) {
     const supported = this.updatesSupported();
     this.state = {
       status: supported ? 'idle' : 'unsupported',
@@ -197,7 +238,7 @@ export class DesktopUpdater {
     autoUpdater.on('error', (error) =>
       this.patch({ status: 'error', error: error.message || String(error) }),
     );
-    this.configureFeed();
+    if (this.distribution !== 'microsoft-store') this.configureFeed(STABLE_FEED);
   }
 
   snapshot(): UpdateState {
@@ -215,7 +256,16 @@ export class DesktopUpdater {
     if (this.checkInFlight) return this.checkInFlight;
     const operation = (async () => {
       try {
-        this.configureFeed();
+        const feedUrl =
+          this.distribution === 'microsoft-store'
+            ? await resolveUpdateFeedUrl(
+                this.distribution,
+                process.platform,
+                process.arch,
+                this.feedFetcher,
+              )
+            : STABLE_FEED;
+        this.configureFeed(feedUrl);
         await autoUpdater.checkForUpdates();
       } catch (error) {
         if (quiet) this.patch({ status: 'idle', error: undefined });
@@ -282,7 +332,7 @@ export class DesktopUpdater {
     autoUpdater.quitAndInstall(false, true);
   }
 
-  private configureFeed(): void {
+  private configureFeed(url: string): void {
     if (!this.updatesSupported()) return;
     autoUpdater.allowPrerelease = false;
     const feedChannel = feedChannelName(process.platform, process.arch, this.distribution);
@@ -293,7 +343,7 @@ export class DesktopUpdater {
     // Explicit, so a build packaged with another feed URL still follows Stable.
     autoUpdater.setFeedURL({
       provider: 'generic',
-      url: STABLE_FEED,
+      url,
       channel: feedChannel,
     });
   }

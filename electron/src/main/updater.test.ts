@@ -64,6 +64,7 @@ import {
   feedManifestName,
   listDesktopReleases,
   registerUpdateIpc,
+  resolveUpdateFeedUrl,
   UPDATE_CHANNELS,
 } from './updater';
 
@@ -123,13 +124,26 @@ describe('DesktopUpdater', () => {
     });
   });
 
-  test('keeps Microsoft Store updates on a separate feed', () => {
-    new DesktopUpdater('microsoft-store');
+  test('keeps Microsoft Store updates on the newest release containing its feed', async () => {
     const channel = `electron-microsoft-store-stable-${process.platform}-${process.arch}`;
+    const manifest = feedManifestName(process.platform, process.arch, 'microsoft-store');
+    const feedFetcher = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify([
+            { tag_name: 'v0.5.8', assets: [{ name: 'unrelated.txt' }] },
+            { tag_name: 'v0.5.7', assets: [{ name: manifest }] },
+          ]),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+    );
+    const updater = new DesktopUpdater('microsoft-store', feedFetcher);
+    expect(mocks.autoUpdater.setFeedURL).not.toHaveBeenCalled();
+    await updater.check();
     expect(mocks.autoUpdater.channel).toBe(channel);
     expect(mocks.autoUpdater.setFeedURL).toHaveBeenLastCalledWith({
       provider: 'generic',
-      url: 'https://github.com/debpalash/VoiceStudio/releases/latest/download',
+      url: 'https://github.com/debpalash/VoiceStudio/releases/download/v0.5.7',
       channel,
     });
   });
@@ -268,10 +282,18 @@ describe('DesktopUpdater', () => {
   );
 
   test('retains application-owned updates for the Microsoft Store EXE package', async () => {
-    const updater = new DesktopUpdater('microsoft-store');
+    const manifest = feedManifestName(process.platform, process.arch, 'microsoft-store');
+    const feedFetcher = vi.fn(
+      async () =>
+        new Response(JSON.stringify([{ tag_name: 'v0.5.7', assets: [{ name: manifest }] }]), {
+          status: 200,
+        }),
+    );
+    const updater = new DesktopUpdater('microsoft-store', feedFetcher);
     expect(updater.snapshot()).toMatchObject({ status: 'idle' });
-    expect(mocks.autoUpdater.setFeedURL).toHaveBeenCalledOnce();
+    expect(mocks.autoUpdater.setFeedURL).not.toHaveBeenCalled();
     await updater.check();
+    expect(mocks.autoUpdater.setFeedURL).toHaveBeenCalledOnce();
     expect(mocks.autoUpdater.checkForUpdates).toHaveBeenCalledOnce();
   });
 
@@ -318,6 +340,16 @@ describe('update feed selection', () => {
     expect(feedManifestName('linux', 'x64')).toBe('electron-stable-linux-x64-linux.yml');
     expect(feedManifestName('win32', 'x64', 'microsoft-store')).toBe(
       'electron-microsoft-store-stable-win32-x64.yml',
+    );
+  });
+
+  test('rejects Store feed discovery when no release contains its manifest', async () => {
+    const fetcher = vi.fn(
+      async () =>
+        new Response(JSON.stringify([{ tag_name: 'v0.5.8', assets: [] }]), { status: 200 }),
+    );
+    await expect(resolveUpdateFeedUrl('microsoft-store', 'win32', 'x64', fetcher)).rejects.toThrow(
+      'No Microsoft Store update feed publishes',
     );
   });
 });

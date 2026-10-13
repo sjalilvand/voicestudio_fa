@@ -73,7 +73,9 @@ Scope:
    `VOICESTUDIO_DISTRIBUTION=microsoft-store` without affecting direct builds.
 3. Keep VoiceStudio's in-app updater enabled for this EXE distribution on the
    dedicated `electron-microsoft-store-stable-*` feed; never publish Store
-   packages through the direct-download `electron-stable-*` feed.
+   packages through the direct-download `electron-stable-*` feed. Store builds
+   select the newest GitHub release containing their dedicated feed, so a newer
+   direct-only release cannot hide the last published Store update.
 4. Validate silent install/uninstall behavior, upgrade from the previous direct
    release, clean install, first-run setup and application launch.
 5. Produce required icon and screenshot derivatives from `store/assets.json`;
