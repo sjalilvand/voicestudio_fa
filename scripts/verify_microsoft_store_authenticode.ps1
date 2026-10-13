@@ -36,7 +36,12 @@ $records = foreach ($file in $files) {
 }
 
 $installerSubject = $records[0].subject
-if ($installerSubject -notmatch [regex]::Escape($ExpectedPublisher)) {
+$organizationMatch = [regex]::Match($installerSubject, '(?:^|,\s*)O=(?<organization>(?:\\.|[^,])*)(?:,|$)')
+if (-not $organizationMatch.Success) {
+  throw "Installer signer '$installerSubject' does not contain an organization (O) attribute"
+}
+$installerOrganization = $organizationMatch.Groups['organization'].Value
+if ($installerOrganization -cne $ExpectedPublisher) {
   throw "Installer signer '$installerSubject' does not match '$ExpectedPublisher'"
 }
 

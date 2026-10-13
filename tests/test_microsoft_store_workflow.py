@@ -39,12 +39,29 @@ def test_staging_is_owner_gated_immutable_and_does_not_submit_listing():
     assert 'test "$DISPATCH_ACTOR" = "$OWNER" && test "$RERUN_ACTOR" = "$OWNER"' in guard["run"]
     stage = workflow["jobs"]["stage"]
     assert stage["if"] == "inputs.stage_package_urls == true"
+    stage_guard = next(
+        step for step in stage["steps"] if step.get("name") == "Revalidate publication authority"
+    )
+    assert 'test "$DISPATCH_ACTOR" = "$OWNER" && test "$RERUN_ACTOR" = "$OWNER"' in stage_guard["run"]
+    assert 'git rev-parse "$RELEASE_TAG^{commit}"' in stage_guard["run"]
     stage_script = stage["steps"][-1]["run"]
     assert "Refusing to replace immutable Store package" in stage_script
     assert "--clobber" not in stage_script
     source = WORKFLOW.read_text()
     assert "store-submission-api" not in source
     assert "Partner Center submission remains owner-gated" in source
+
+
+def test_checkouts_do_not_persist_github_credentials():
+    workflow = load_workflow()
+    checkouts = [
+        step
+        for job in workflow["jobs"].values()
+        for step in job.get("steps", [])
+        if str(step.get("uses", "")).startswith("actions/checkout@")
+    ]
+    assert checkouts
+    assert all(step.get("with", {}).get("persist-credentials") == "false" for step in checkouts)
 
 
 def test_store_package_records_authenticode_and_provenance_evidence():
