@@ -3,9 +3,9 @@
 Status: implementation complete; Partner Center identity, signed CI validation
 and certification remain pending.
 
-Branch: `feat/microsoft-store`  
-Base: `feat/store-publishing-foundation` at `e8224990`  
-Final commit: branch head recorded in the merged pull request
+- Branch: `feat/microsoft-store`
+- Base: `feat/store-publishing-foundation` at `e8224990`
+- Final commit: branch head recorded in the merged pull request
 
 ## Package contract
 
