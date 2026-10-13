@@ -39,7 +39,16 @@ function releaseArtifact(name, distribution) {
       "microsoft-store": "VoiceStudio-MicrosoftStore-",
       "mac-app-store": "VoiceStudio-MacAppStore-",
     }[distribution] ?? "VoiceStudio-Electron-";
-  return name.startsWith(installerPrefix) || /^electron-stable-.*\.yml$/.test(name);
+  const updatePrefix =
+    distribution === "microsoft-store"
+      ? "electron-microsoft-store-stable-"
+      : distribution === "direct"
+        ? "electron-stable-"
+        : null;
+  return (
+    name.startsWith(installerPrefix) ||
+    (updatePrefix !== null && name.startsWith(updatePrefix) && name.endsWith(".yml"))
+  );
 }
 
 export function createArtifactManifest({
@@ -91,8 +100,7 @@ export function createArtifactManifest({
 
 export function resolveSourceCommit(explicitCommit, cwd = root) {
   return (
-    explicitCommit ||
-    execFileSync("git", ["rev-parse", "HEAD"], { cwd, encoding: "utf8" }).trim()
+    explicitCommit || execFileSync("git", ["rev-parse", "HEAD"], { cwd, encoding: "utf8" }).trim()
   );
 }
 

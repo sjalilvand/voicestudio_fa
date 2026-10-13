@@ -66,11 +66,17 @@ def test_checkouts_do_not_persist_github_credentials():
 
 def test_store_package_records_authenticode_and_provenance_evidence():
     workflow = load_workflow()
-    names = [step.get("name") for step in workflow["jobs"]["package"]["steps"]]
+    package = workflow["jobs"]["package"]
+    assert package["env"]["VOICESTUDIO_UPDATE_CHANNEL"] == (
+        "electron-microsoft-store-stable-win32-${{ matrix.arch }}"
+    )
+    names = [step.get("name") for step in package["steps"]]
     assert "Verify Authenticode signatures" in names
     assert "Validate clean silent install, launch and uninstall" in names
     assert "Validate upgrade from the previous direct release" in names
     assert "Record artifact provenance" in names
+    upload = next(step for step in package["steps"] if step.get("name") == "Save validated Store package")
+    assert "electron-microsoft-store-stable-win32-${{ matrix.arch }}.yml" in upload["with"]["path"]
     handoff = workflow["jobs"]["handoff"]
     assert any(step.get("name") == "Create Partner Center handoff" for step in handoff["steps"])
     assert any(step.get("name") == "Add canonical listing assets" for step in handoff["steps"])

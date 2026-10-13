@@ -40,7 +40,7 @@ test('keeps Microsoft Store artifacts separate from direct installers', async ()
   const dir = mkdtempSync(join(tmpdir(), 'voicestudio-microsoft-store-manifest-'));
   writeFileSync(join(dir, 'VoiceStudio-MicrosoftStore-0.5.7-win-x64.exe'), 'store');
   writeFileSync(join(dir, 'VoiceStudio-Electron-0.5.7-win-x64.exe'), 'direct');
-  writeFileSync(join(dir, 'electron-stable-win32-x64.yml'), 'version: 0.5.7\n');
+  writeFileSync(join(dir, 'electron-microsoft-store-stable-win32-x64.yml'), 'version: 0.5.7\n');
   const output = join(dir, 'store-artifact-manifest-win32-x64.json');
 
   await createArtifactManifest({
@@ -58,7 +58,10 @@ test('keeps Microsoft Store artifacts separate from direct installers', async ()
   const manifest = JSON.parse(readFileSync(output, 'utf8'));
   assert.deepEqual(
     manifest.artifacts.map((item) => item.file),
-    ['VoiceStudio-MicrosoftStore-0.5.7-win-x64.exe', 'electron-stable-win32-x64.yml'],
+    [
+      'VoiceStudio-MicrosoftStore-0.5.7-win-x64.exe',
+      'electron-microsoft-store-stable-win32-x64.yml',
+    ],
   );
   assert.deepEqual(manifest.signingVerification, {
     status: 'valid',

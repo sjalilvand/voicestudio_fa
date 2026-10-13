@@ -71,7 +71,9 @@ Scope:
    reserve the product identity with the owner.
 2. Add a Microsoft Store packaging/submission workflow that sets
    `VOICESTUDIO_DISTRIBUTION=microsoft-store` without affecting direct builds.
-3. Keep VoiceStudio's in-app updater enabled for this EXE distribution.
+3. Keep VoiceStudio's in-app updater enabled for this EXE distribution on the
+   dedicated `electron-microsoft-store-stable-*` feed; never publish Store
+   packages through the direct-download `electron-stable-*` feed.
 4. Validate silent install/uninstall behavior, upgrade from the previous direct
    release, clean install, first-run setup and application launch.
 5. Produce required icon and screenshot derivatives from `store/assets.json`;

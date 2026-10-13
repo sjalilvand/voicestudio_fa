@@ -27,7 +27,9 @@ const artifactPrefix = `${PRODUCT_NAME.replace(/[^A-Za-z0-9]+/g, '-')}-${artifac
 // review artifacts and are never published.
 const updateChannel =
   process.env.VOICESTUDIO_UPDATE_CHANNEL || `electron-stable-${process.platform}-${process.arch}`;
-if (!/^electron-stable-(?:win32|darwin|linux)-(?:x64|arm64)$/.test(updateChannel)) {
+if (
+  !/^electron-(?:microsoft-store-)?stable-(?:win32|darwin|linux)-(?:x64|arm64)$/.test(updateChannel)
+) {
   throw new Error(`Unsupported Electron update channel: ${updateChannel}`);
 }
 const updateUrl = 'https://github.com/debpalash/VoiceStudio/releases/latest/download';

@@ -123,6 +123,17 @@ describe('DesktopUpdater', () => {
     });
   });
 
+  test('keeps Microsoft Store updates on a separate feed', () => {
+    new DesktopUpdater('microsoft-store');
+    const channel = `electron-microsoft-store-stable-${process.platform}-${process.arch}`;
+    expect(mocks.autoUpdater.channel).toBe(channel);
+    expect(mocks.autoUpdater.setFeedURL).toHaveBeenLastCalledWith({
+      provider: 'generic',
+      url: 'https://github.com/debpalash/VoiceStudio/releases/latest/download',
+      channel,
+    });
+  });
+
   test('reports transfer size, speed and eta while coalescing duplicate actions', async () => {
     const updater = new DesktopUpdater();
     let finishCheck!: () => void;
@@ -305,6 +316,9 @@ describe('update feed selection', () => {
     expect(feedManifestName('win32', 'x64')).toBe('electron-stable-win32-x64.yml');
     expect(feedManifestName('darwin', 'arm64')).toBe('electron-stable-darwin-arm64-mac.yml');
     expect(feedManifestName('linux', 'x64')).toBe('electron-stable-linux-x64-linux.yml');
+    expect(feedManifestName('win32', 'x64', 'microsoft-store')).toBe(
+      'electron-microsoft-store-stable-win32-x64.yml',
+    );
   });
 });
 

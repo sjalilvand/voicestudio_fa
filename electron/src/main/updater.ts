@@ -21,16 +21,20 @@ const RELEASES_API = 'https://api.github.com/repos/debpalash/VoiceStudio/release
 function feedChannelName(
   platform: NodeJS.Platform = process.platform,
   arch: string = process.arch,
+  distribution: DistributionTarget = CURRENT_DISTRIBUTION,
 ): string {
-  return `electron-stable-${platform}-${arch}`;
+  const prefix =
+    distribution === 'microsoft-store' ? 'electron-microsoft-store-stable' : 'electron-stable';
+  return `${prefix}-${platform}-${arch}`;
 }
 
 export function feedManifestName(
   platform: NodeJS.Platform = process.platform,
   arch: string = process.arch,
+  distribution: DistributionTarget = CURRENT_DISTRIBUTION,
 ): string {
   const suffix = platform === 'darwin' ? '-mac' : platform === 'linux' ? '-linux' : '';
-  return `${feedChannelName(platform, arch)}${suffix}.yml`;
+  return `${feedChannelName(platform, arch, distribution)}${suffix}.yml`;
 }
 
 export const UPDATE_CHANNELS = {
@@ -281,7 +285,7 @@ export class DesktopUpdater {
   private configureFeed(): void {
     if (!this.updatesSupported()) return;
     autoUpdater.allowPrerelease = false;
-    const feedChannel = feedChannelName();
+    const feedChannel = feedChannelName(process.platform, process.arch, this.distribution);
     autoUpdater.channel = feedChannel;
     // electron-updater's channel setter silently enables downgrades; keep the
     // app monotonic.

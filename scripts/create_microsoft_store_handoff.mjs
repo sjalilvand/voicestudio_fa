@@ -55,6 +55,7 @@ export function createMicrosoftStoreHandoff({
       assert(arch, `Cannot determine architecture for ${file}`);
       const manifestFile = `store-artifact-manifest-win32-${arch}.json`;
       const evidenceFile = `authenticode-win32-${arch}.json`;
+      const updateManifestFile = `electron-microsoft-store-stable-win32-${arch}.yml`;
       const manifestPath = resolve(releaseDir, manifestFile);
       const evidencePath = resolve(releaseDir, evidenceFile);
       assert(existsSync(manifestPath), `Missing provenance manifest: ${manifestFile}`);
@@ -72,6 +73,15 @@ export function createMicrosoftStoreHandoff({
       assert(artifact, `${manifestFile} does not describe ${file}`);
       assert.equal(artifact.bytes, statSync(path).size, `${file} size differs from provenance`);
       assert.equal(artifact.sha256, digest, `${file} digest differs from provenance`);
+      const updateArtifact = manifest.artifacts?.find((item) => item.file === updateManifestFile);
+      assert(updateArtifact, `${manifestFile} does not describe ${updateManifestFile}`);
+      const updateManifestPath = resolve(releaseDir, updateManifestFile);
+      assert(existsSync(updateManifestPath), `Missing update manifest: ${updateManifestFile}`);
+      assert.equal(
+        updateArtifact.sha256,
+        sha256(updateManifestPath),
+        `${updateManifestFile} digest differs from provenance`,
+      );
       return {
         architecture: arch,
         type: "exe",
@@ -82,6 +92,7 @@ export function createMicrosoftStoreHandoff({
         installerParameters: "/S",
         provenance: manifestFile,
         authenticodeEvidence: evidenceFile,
+        updateManifest: updateManifestFile,
       };
     });
 

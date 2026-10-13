@@ -11,7 +11,10 @@ test('creates a Partner Center handoff only from validated signed packages', () 
   const file = 'VoiceStudio-MicrosoftStore-0.5.7-win-x64.exe';
   const packagePath = join(dir, file);
   writeFileSync(packagePath, 'signed installer fixture');
+  const updateManifest = 'electron-microsoft-store-stable-win32-x64.yml';
+  writeFileSync(join(dir, updateManifest), 'version: 0.5.7\n');
   const digest = '78406fc74fb60fb5a9babc70740938a6d95da5ca2cd0b5ec143f43dc57865604';
+  const updateDigest = 'e9d1c3d8921489039e65fb6319a0d178d7dd9ffd2b75f08d42e76f76d56307c9';
   writeFileSync(
     join(dir, 'store-artifact-manifest-win32-x64.json'),
     JSON.stringify({
@@ -20,7 +23,10 @@ test('creates a Partner Center handoff only from validated signed packages', () 
         status: 'valid',
         evidence: 'authenticode-win32-x64.json',
       },
-      artifacts: [{ file, bytes: 24, sha256: digest }],
+      artifacts: [
+        { file, bytes: 24, sha256: digest },
+        { file: updateManifest, bytes: 15, sha256: updateDigest },
+      ],
     }),
   );
   writeFileSync(join(dir, 'authenticode-win32-x64.json'), '{}');
@@ -37,6 +43,7 @@ test('creates a Partner Center handoff only from validated signed packages', () 
   assert.equal(handoff.lifecycle, 'validated');
   assert.equal(handoff.ownerApprovalRequiredForSubmission, true);
   assert.equal(handoff.packages[0].installerParameters, '/S');
+  assert.equal(handoff.packages[0].updateManifest, updateManifest);
   assert.equal(
     handoff.packages[0].url,
     'https://github.com/debpalash/VoiceStudio/releases/download/v0.5.7/' + file,
