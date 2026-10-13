@@ -8,6 +8,13 @@ Shared store inputs and platform handoffs are defined in
 Mac App Store are not maintained release channels until each has completed its
 first verified production publication.
 
+Microsoft Store EXE preparation uses the owner-dispatched
+`microsoft-store.yml` workflow and the
+[`Microsoft Store runbook`](store/microsoft-store.md). It builds a distinct
+Store installer without changing direct-download artifacts. Staging its
+immutable versioned URL requires owner approval; Partner Center submission and
+publication remain manual owner actions.
+
 ## Credentials
 
 Electron publication uses these GitHub Actions secrets:
@@ -115,14 +122,14 @@ release tags are never built from a tag push, and `:latest` only ever tracks
 
 After publication, verify each maintained channel:
 
-| Channel | Workflow | Verification |
-|---|---|---|
-| GitHub Release | `electron-release.yml` | Linux x64, Windows x64 (+ ARM64 when its leg passed), macOS arm64 and x64 installers, updater feeds, checksums, CHANGELOG notes, retained v0.5.3 Tauri feeds |
-| GHCR CUDA | `docker.yml` (release published) | `:X.Y.Z`, `:X.Y`, `:stable` manifests |
-| GHCR ROCm | `docker.yml` (release published) | `:X.Y.Z-rocm`, `:X.Y-rocm`, `:stable-rocm` manifests |
-| Docker Hub | `docker.yml` (release published) | Matching CUDA/ROCm tags |
-| Docker Hub overview | `docker.yml` | Read the `Update Docker Hub description` step log; the step may continue after a 403 |
-| Rolling containers | `docker.yml` on `main` pushes only | `:latest`, `:main`, and `:rocm` timestamps move; a release never moves them |
+| Channel             | Workflow                           | Verification                                                                                                                                                 |
+| ------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| GitHub Release      | `electron-release.yml`             | Linux x64, Windows x64 (+ ARM64 when its leg passed), macOS arm64 and x64 installers, updater feeds, checksums, CHANGELOG notes, retained v0.5.3 Tauri feeds |
+| GHCR CUDA           | `docker.yml` (release published)   | `:X.Y.Z`, `:X.Y`, `:stable` manifests                                                                                                                        |
+| GHCR ROCm           | `docker.yml` (release published)   | `:X.Y.Z-rocm`, `:X.Y-rocm`, `:stable-rocm` manifests                                                                                                         |
+| Docker Hub          | `docker.yml` (release published)   | Matching CUDA/ROCm tags                                                                                                                                      |
+| Docker Hub overview | `docker.yml`                       | Read the `Update Docker Hub description` step log; the step may continue after a 403                                                                         |
+| Rolling containers  | `docker.yml` on `main` pushes only | `:latest`, `:main`, and `:rocm` timestamps move; a release never moves them                                                                                  |
 
 A missing channel is a release bug. There are no RC tags and no preview update
 channel; previews are builds from `main` (the `electron-build.yml` artifacts or
