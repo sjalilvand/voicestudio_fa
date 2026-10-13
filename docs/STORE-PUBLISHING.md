@@ -4,6 +4,9 @@ The shared publishing foundation keeps identity, disclosures, distribution
 policy, assets and artifact provenance consistent across stores. It does not
 publish or reserve listings.
 
+The execution sequence and platform-worker acceptance criteria are in
+[`STORE-PUBLISHING-HANDOVER.md`](STORE-PUBLISHING-HANDOVER.md).
+
 ## Canonical inputs
 
 - `store/metadata.json`: product identity, listing copy, requirements,
