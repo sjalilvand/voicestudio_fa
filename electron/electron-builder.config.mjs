@@ -13,6 +13,7 @@ import { DISTRIBUTION_PROFILE, DISTRIBUTION_TARGET } from '../config/distributio
 
 const here = dirname(fileURLToPath(import.meta.url));
 const { version } = JSON.parse(readFileSync(resolve(here, '../package.json'), 'utf-8'));
+const storeMetadata = JSON.parse(readFileSync(resolve(here, '../store/metadata.json'), 'utf-8'));
 const artifactPrefix = `${PRODUCT_NAME.replace(/[^A-Za-z0-9]+/g, '-')}-Electron`;
 // Stable is the only Electron update feed: there is no `preview` release to
 // point at. Packaging rehearsals from main are stamped stable too; they are
@@ -28,6 +29,7 @@ export function distributionPackaging(target = DISTRIBUTION_TARGET) {
   if (target === 'snap-store') {
     return {
       linuxTargets: ['snap'],
+      linuxExecutableName: 'voicestudio',
       snapcraft: {
         // Core 22 uses electron-builder's reproducible Electron snap template;
         // strict confinement is explicit so a future default cannot weaken it.
@@ -36,7 +38,8 @@ export function distributionPackaging(target = DISTRIBUTION_TARGET) {
           confinement: 'strict',
           grade: 'stable',
           title: PRODUCT_NAME,
-          summary: 'Local voice cloning, voice design, dubbing and dictation.',
+          summary: storeMetadata.listing.shortDescription,
+          description: storeMetadata.listing.description,
           allowNativeWayland: true,
           plugs: [
             { 'browser-support': { interface: 'browser-support', 'allow-sandbox': true } },
@@ -189,6 +192,9 @@ export default {
     icon: 'build/icons/icon.png',
     syncDesktopName: true,
     target: packaging.linuxTargets,
+    ...(packaging.linuxExecutableName
+      ? { executableName: packaging.linuxExecutableName }
+      : {}),
     category: 'Audio',
   },
   ...(packaging.snapcraft ? { snapcraft: packaging.snapcraft } : {}),
