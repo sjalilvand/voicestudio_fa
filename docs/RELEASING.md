@@ -8,6 +8,14 @@ Shared store inputs and platform handoffs are defined in
 Mac App Store are not maintained release channels until each has completed its
 first verified production publication.
 
+Snap Store packaging is rehearsed separately through
+`.github/workflows/snap-store.yml`; it is build-only until the owner reserves
+the package name and supplies scoped credentials. Follow the
+[`Snap Store runbook`](store-publishing/snap-store.md) for confinement checks,
+candidate verification, evidence and rollback. Do not add a Snap to the
+maintained-channel table below until its stable listing is independently
+install-verified.
+
 ## Credentials
 
 Electron publication uses these GitHub Actions secrets:

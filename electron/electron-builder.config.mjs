@@ -13,6 +13,7 @@ import { DISTRIBUTION_PROFILE, DISTRIBUTION_TARGET } from '../config/distributio
 
 const here = dirname(fileURLToPath(import.meta.url));
 const { version } = JSON.parse(readFileSync(resolve(here, '../package.json'), 'utf-8'));
+const storeMetadata = JSON.parse(readFileSync(resolve(here, '../store/metadata.json'), 'utf-8'));
 const artifactPrefix = `${PRODUCT_NAME.replace(/[^A-Za-z0-9]+/g, '-')}-Electron`;
 // Stable is the only Electron update feed: there is no `preview` release to
 // point at. Packaging rehearsals from main are stamped stable too; they are
@@ -23,6 +24,55 @@ if (!/^electron-stable-(?:win32|darwin|linux)-(?:x64|arm64)$/.test(updateChannel
   throw new Error(`Unsupported Electron update channel: ${updateChannel}`);
 }
 const updateUrl = 'https://github.com/debpalash/VoiceStudio/releases/latest/download';
+
+export function distributionPackaging(target = DISTRIBUTION_TARGET) {
+  if (target === 'snap-store') {
+    return {
+      linuxTargets: ['snap'],
+      linuxExecutableName: 'voicestudio',
+      snapcraft: {
+        // Core 22 uses electron-builder's reproducible Electron snap template;
+        // strict confinement is explicit so a future default cannot weaken it.
+        base: 'core22',
+        core22: {
+          confinement: 'strict',
+          grade: 'stable',
+          title: PRODUCT_NAME,
+          summary: storeMetadata.listing.shortDescription,
+          description: storeMetadata.listing.description,
+          allowNativeWayland: true,
+          plugs: [
+            { 'browser-support': { interface: 'browser-support', 'allow-sandbox': true } },
+            'desktop',
+            'desktop-legacy',
+            'home',
+            'x11',
+            'wayland',
+            'unity7',
+            'network',
+            'network-bind',
+            'gsettings',
+            'audio-playback',
+            'audio-record',
+            'pulseaudio',
+            'opengl',
+          ],
+        },
+      },
+      publish: { provider: 'snapStore' },
+    };
+  }
+  return {
+    linuxTargets: ['AppImage', 'deb'],
+    publish: {
+      provider: 'generic',
+      url: updateUrl,
+      channel: updateChannel,
+    },
+  };
+}
+
+const packaging = distributionPackaging();
 
 const defaultRustTarget =
   {
@@ -141,12 +191,12 @@ export default {
     artifactName: `${artifactPrefix}-\${version}-linux-x64.\${ext}`,
     icon: 'build/icons/icon.png',
     syncDesktopName: true,
-    target: ['AppImage', 'deb'],
+    target: packaging.linuxTargets,
+    ...(packaging.linuxExecutableName
+      ? { executableName: packaging.linuxExecutableName }
+      : {}),
     category: 'Audio',
   },
-  publish: {
-    provider: 'generic',
-    url: updateUrl,
-    channel: updateChannel,
-  },
+  ...(packaging.snapcraft ? { snapcraft: packaging.snapcraft } : {}),
+  publish: packaging.publish,
 };
