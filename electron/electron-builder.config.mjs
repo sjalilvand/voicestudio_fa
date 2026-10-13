@@ -13,7 +13,12 @@ import { DISTRIBUTION_PROFILE, DISTRIBUTION_TARGET } from '../config/distributio
 
 const here = dirname(fileURLToPath(import.meta.url));
 const { version } = JSON.parse(readFileSync(resolve(here, '../package.json'), 'utf-8'));
-const artifactPrefix = `${PRODUCT_NAME.replace(/[^A-Za-z0-9]+/g, '-')}-Electron`;
+const { identity: storeIdentity } = JSON.parse(
+  readFileSync(resolve(here, '../store/metadata.json'), 'utf-8'),
+);
+const artifactPrefix = `${PRODUCT_NAME.replace(/[^A-Za-z0-9]+/g, '-')}-${
+  DISTRIBUTION_TARGET === 'microsoft-store' ? 'MicrosoftStore' : 'Electron'
+}`;
 // Stable is the only Electron update feed: there is no `preview` release to
 // point at. Packaging rehearsals from main are stamped stable too; they are
 // review artifacts and are never published.
@@ -63,6 +68,9 @@ export default {
     desktopName: PRODUCT_NAME,
     voicestudioDistribution: DISTRIBUTION_TARGET,
     voicestudioUpdateOwner: DISTRIBUTION_PROFILE.applicationUpdates,
+    ...(DISTRIBUTION_TARGET === 'microsoft-store'
+      ? { author: { name: storeIdentity.publisherLegalName, email: 'hi@voicestudio.sh' } }
+      : {}),
   },
   directories: { output: 'release', buildResources: 'build' },
   artifactName: `${artifactPrefix}-\${version}-\${os}-\${arch}.\${ext}`,
