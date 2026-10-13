@@ -8,6 +8,14 @@ metadata and the backend fallback mirror it.
 
 ## [Unreleased]
 
+**Highlights**
+
+- Dubbing works again with the crash-isolated Faster-Whisper engine (#2786)
+
+### Fixed
+
+- Dub no longer stops with "Transcription produced no segments" when the speech-to-text engine is Faster-Whisper (crash-isolated subprocess) (#2786)
+
 ## [0.5.7] — 2026-10-13
 
 **VoiceStudio now runs on PCs without a GPU and recovers instead of giving up.** Voice cloning uses the speech-to-text model you installed from Model Catalogue, GPU-less computers get the small CPU PyTorch build, and slow or busy backends are no longer reported as failed.
