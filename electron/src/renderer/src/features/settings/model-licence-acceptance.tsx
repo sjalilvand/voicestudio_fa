@@ -272,7 +272,9 @@ export function ModelLicenceGate() {
               <ModelLicenseIcon category="conditions" className="size-5" />
             </span>
             <div className="min-w-0 space-y-1">
-              <DialogTitle className="text-lg tracking-[-0.01em]">{t('modelLicense.requiredTitle')}</DialogTitle>
+              <DialogTitle className="text-lg tracking-[-0.01em]">
+                {t(done ? 'modelLicense.acceptedTitle' : 'modelLicense.requiredTitle')}
+              </DialogTitle>
               <DialogDescription className="max-w-prose leading-relaxed">{t('modelLicense.gateIntro')}</DialogDescription>
             </div>
           </div>

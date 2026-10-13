@@ -3381,6 +3381,7 @@
     "notReviewed": "Not reviewed",
     "label": "Licence",
     "requiredTitle": "Licence acceptance needed",
+    "acceptedTitle": "Licences accepted",
     "requiredError": "This model can't be used until you accept its licence.",
     "acceptTitle": "Accept the model licence to use it",
     "acceptNotice": "VoiceStudio is not the owner or licensor of this model and cannot grant you access or rights to it. The rights holder's licence decides how you may use the model and the audio it produces. Before using it, make sure you have permission, for example non-commercial use only, or a separate licence from the rights holder for commercial use.",
@@ -3454,8 +3455,8 @@
     "acceptCheckbox": "I have read the {{model}} licence and confirm I have the rights it requires for my use.",
     "acceptAll": "Accept {{count}} licences",
     "revokeFor": "Withdraw acceptance for {{model}}",
-    "gateIntro": "This can't run until you accept the licence of each model below. Review each one, then tick its box.",
-    "retryHint": "Licences accepted. Run the action again to continue.",
+    "gateIntro": "Accept the licence of each model below before using it. Review each one, then tick its box.",
+    "retryHint": "Licences accepted. If something was waiting for them, start it again.",
     "detailsFailed": "The licence details could not be loaded. Close this dialog and try again."
   }
 }

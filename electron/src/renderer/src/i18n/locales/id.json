@@ -3381,6 +3381,7 @@
     "notReviewed": "Belum ditinjau",
     "label": "Lisensi",
     "requiredTitle": "Penerimaan lisensi diperlukan",
+    "acceptedTitle": "Lisensi diterima",
     "requiredError": "Model ini tidak dapat digunakan sampai Anda menerima lisensinya.",
     "acceptTitle": "Terima lisensi model untuk menggunakannya",
     "acceptNotice": "VoiceStudio bukan pemilik atau pemberi lisensi model ini dan tidak dapat memberi Anda akses atau hak atasnya. Lisensi pemegang hak menentukan cara Anda boleh menggunakan model dan audio yang dihasilkannya. Sebelum menggunakannya, pastikan Anda memiliki izin, misalnya hanya penggunaan nonkomersial, atau lisensi terpisah dari pemegang hak untuk penggunaan komersial.",
@@ -3454,8 +3455,8 @@
     "acceptCheckbox": "Saya telah membaca lisensi {{model}} dan menyatakan bahwa saya memiliki hak yang disyaratkan untuk penggunaan saya.",
     "acceptAll": "Terima {{count}} lisensi",
     "revokeFor": "Tarik penerimaan untuk {{model}}",
-    "gateIntro": "Ini tidak dapat dijalankan sampai Anda menerima lisensi setiap model di bawah. Tinjau masing-masing, lalu centang kotaknya.",
-    "retryHint": "Lisensi diterima. Jalankan tindakan lagi untuk melanjutkan.",
+    "gateIntro": "Terima lisensi setiap model di bawah sebelum menggunakannya. Tinjau masing-masing, lalu centang kotaknya.",
+    "retryHint": "Lisensi diterima. Jika ada tindakan yang menunggunya, jalankan lagi.",
     "detailsFailed": "Detail lisensi tidak dapat dimuat. Tutup dialog ini dan coba lagi."
   }
 }

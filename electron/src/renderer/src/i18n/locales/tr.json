@@ -3381,6 +3381,7 @@
     "notReviewed": "İncelenmedi",
     "label": "Lisans",
     "requiredTitle": "Lisans onayı gerekli",
+    "acceptedTitle": "Lisanslar kabul edildi",
     "requiredError": "Bu model, lisansını kabul edene kadar kullanılamaz.",
     "acceptTitle": "Kullanmak için model lisansını kabul edin",
     "acceptNotice": "VoiceStudio bu modelin sahibi veya lisans vereni değildir ve size modele erişim ya da hak veremez. Modeli ve ürettiği sesi nasıl kullanabileceğinizi hak sahibinin lisansı belirler. Kullanmadan önce izniniz olduğundan emin olun; örneğin yalnızca ticari olmayan kullanım ya da ticari kullanım için hak sahibinden ayrı bir lisans.",
@@ -3454,8 +3455,8 @@
     "acceptCheckbox": "{{model}} lisansını okudum ve kullanımım için gerektirdiği haklara sahip olduğumu onaylıyorum.",
     "acceptAll": "{{count}} lisansı kabul et",
     "revokeFor": "{{model}} için onayı geri çek",
-    "gateIntro": "Aşağıdaki her modelin lisansını kabul edene kadar bu işlem çalıştırılamaz. Her birini inceleyin, ardından kutusunu işaretleyin.",
-    "retryHint": "Lisanslar kabul edildi. Devam etmek için işlemi yeniden çalıştırın.",
+    "gateIntro": "Kullanmadan önce aşağıdaki her modelin lisansını kabul edin. Her birini inceleyin, ardından kutusunu işaretleyin.",
+    "retryHint": "Lisanslar kabul edildi. Bunu bekleyen bir işlem varsa yeniden başlatın.",
     "detailsFailed": "Lisans ayrıntıları yüklenemedi. Bu pencereyi kapatıp yeniden deneyin."
   }
 }

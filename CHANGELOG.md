@@ -8,16 +8,7 @@ metadata and the backend fallback mirror it.
 
 ## [Unreleased]
 
-**Highlights**
-
-- The app opens in seconds instead of 35–45 s: engine checks no longer hold up startup.
-
-### Changed
-
-- Startup no longer waits on engine inventory checks: the app is usable in seconds instead of 35–45 s, and saved speed/quality selections are reapplied in the background.
-- Source (`bun dev`) launches skip the repeated dependency import check until the lockfile, project metadata or installed packages change.
-
-## [0.5.7] — 2026-10-12
+## [0.5.7] — 2026-10-13
 
 **VoiceStudio now runs on PCs without a GPU and recovers instead of giving up.** Voice cloning uses the speech-to-text model you installed from Model Catalogue, GPU-less computers get the small CPU PyTorch build, and slow or busy backends are no longer reported as failed.
 
@@ -163,6 +154,9 @@ This release also adds a GPU acceleration panel with honest Radeon reporting, th
 
 ### Fixed
 
+- A fresh install no longer logs settings errors before its database is created (#2776)
+- The model licence dialog says when licences are accepted and no longer assumes an action is waiting (#2776)
+- First-run model packs name each model, so two dictation engines no longer both read Dictation (#2776)
 - Bundled hydra-core, Mako, multidict and rustls are updated past published security advisories; installed CosyVoice asks for one repair and keeps its downloaded model (#2772)
 - On Windows, updating the app no longer stops at "EPERM: operation not permitted, rename" when antivirus briefly holds the new runtime files (#2669) — thanks @javalovelinux-cmd!
 - MCP speech tools wait through model loading and progress-extended CPU renders instead of timing out before the backend (#2609) — thanks @JopsTaku!
