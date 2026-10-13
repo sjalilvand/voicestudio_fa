@@ -89,6 +89,13 @@ export function createArtifactManifest({
   return manifest;
 }
 
+export function resolveSourceCommit(explicitCommit, cwd = root) {
+  return (
+    explicitCommit ||
+    execFileSync("git", ["rev-parse", "HEAD"], { cwd, encoding: "utf8" }).trim()
+  );
+}
+
 function option(name, fallback) {
   const prefix = `--${name}=`;
   return process.argv.find((value) => value.startsWith(prefix))?.slice(prefix.length) ?? fallback;
@@ -103,9 +110,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     root,
     option("output", `electron/release/store-artifact-manifest-${platform}-${arch}.json`),
   );
-  const commit =
-    option("commit", process.env.GITHUB_SHA) ||
-    execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
+  const commit = resolveSourceCommit(option("commit", ""));
   createArtifactManifest({
     releaseDir,
     output,

@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 
 import {
   DISTRIBUTION_TARGETS,
@@ -15,11 +15,21 @@ describe('distribution contract', () => {
       'snap-store',
       'mac-app-store',
     ]);
-    expect(resolveDistributionTarget(undefined)).toBe('direct');
+    expect(resolveDistributionTarget('')).toBe('direct');
     expect(resolveDistributionTarget(' snap-store ')).toBe('snap-store');
     expect(() => resolveDistributionTarget('unknown')).toThrow(
       'Unsupported VoiceStudio distribution',
     );
+  });
+
+  test('uses the build environment only when no target is passed', () => {
+    vi.stubEnv('VOICESTUDIO_DISTRIBUTION', 'snap-store');
+    try {
+      expect(resolveDistributionTarget()).toBe('snap-store');
+      expect(resolveDistributionTarget('direct')).toBe('direct');
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   test('records update ownership without treating Microsoft EXE listings as managed packages', () => {

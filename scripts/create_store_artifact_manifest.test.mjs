@@ -1,14 +1,17 @@
 import assert from "node:assert/strict";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 
-import { createArtifactManifest } from "./create_store_artifact_manifest.mjs";
+import {
+  createArtifactManifest,
+  resolveSourceCommit,
+} from "./create_store_artifact_manifest.mjs";
 
 test("records only Mac App Store artifacts and their signing evidence", () => {
-  const directory = join(tmpdir(), `voicestudio-mas-manifest-${process.pid}-${Date.now()}`);
-  mkdirSync(directory);
+  const directory = mkdtempSync(join(tmpdir(), "voicestudio-mas-manifest-"));
   try {
     const pkg = "VoiceStudio-MacAppStore-0.5.6-mac-arm64.pkg";
     writeFileSync(join(directory, pkg), "signed package");
@@ -38,4 +41,10 @@ test("records only Mac App Store artifacts and their signing evidence", () => {
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
+});
+
+test("records the checked-out commit unless an explicit commit is provided", () => {
+  const head = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+  assert.equal(resolveSourceCommit(""), head);
+  assert.equal(resolveSourceCommit("f".repeat(40)), "f".repeat(40));
 });
