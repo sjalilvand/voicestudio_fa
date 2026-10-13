@@ -34,6 +34,9 @@ to weaken the shared policy.
 | Linux   | `snap-store`      | New confined Snap        | Snap Store    | Confinement interfaces, writable paths, runtime installation and store review                         |
 | macOS   | `mac-app-store`   | New sandboxed MAS app    | Mac App Store | Entitlements, sandbox file access, bundled executable/runtime licensing and StoreKit receipt behavior |
 
+The Linux implementation and evidence checklist live in the
+[`Snap Store runbook`](store-publishing/snap-store.md).
+
 Build order should be Windows, Linux, then macOS. Windows reuses the current
 signed installer and updater contract; Linux introduces confinement; macOS has
 the largest architecture change because downloaded executable code is not part
