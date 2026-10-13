@@ -65,6 +65,11 @@ assert.match(electronPackage.author?.email ?? '', /@/, 'Linux package declares a
 assert.equal(config.productName, PRODUCT_NAME, 'Builder uses the central product name');
 assert.equal(config.appId, APP_ID, 'Builder uses the central application ID');
 assert.equal(
+  config.artifactName,
+  `${PRODUCT_NAME}-${DISTRIBUTION_TARGET === 'microsoft-store' ? 'MicrosoftStore' : 'Electron'}-\${version}-\${os}-\${arch}.\${ext}`,
+  'Store packaging is distinct without renaming direct-download artifacts',
+);
+assert.equal(
   config.extraMetadata.voicestudioDistribution,
   DISTRIBUTION_TARGET,
   'Package records its immutable distribution identity',
@@ -74,6 +79,19 @@ assert.equal(
   DISTRIBUTION_PROFILE.applicationUpdates,
   'Package records who owns application updates',
 );
+if (DISTRIBUTION_TARGET === 'microsoft-store') {
+  assert.equal(
+    config.extraMetadata.author.name,
+    'Yupcha Softwares Private Limited',
+    'Microsoft Store uninstall metadata uses the legal publisher',
+  );
+} else {
+  assert.equal(
+    config.extraMetadata.author,
+    undefined,
+    'Direct package author metadata is unchanged',
+  );
+}
 assert.equal(
   config.extraMetadata.desktopName,
   PRODUCT_NAME,

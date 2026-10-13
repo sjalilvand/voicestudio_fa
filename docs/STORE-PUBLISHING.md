@@ -28,11 +28,11 @@ to weaken the shared policy.
 
 ## Platform handoffs
 
-| Worker  | Target            | Starting package         | Update owner  | First blocking work                                                                                   |
-| ------- | ----------------- | ------------------------ | ------------- | ----------------------------------------------------------------------------------------------------- |
-| Windows | `microsoft-store` | Existing signed NSIS EXE | VoiceStudio   | Partner Center identity, listing, certification and install/update test                               |
-| Linux   | `snap-store`      | New confined Snap        | Snap Store    | Confinement interfaces, writable paths, runtime installation and store review                         |
-| macOS   | `mac-app-store`   | New sandboxed MAS app    | Mac App Store | Entitlements, sandbox file access, bundled executable/runtime licensing and StoreKit receipt behavior |
+| Worker  | Target            | Starting package         | Update owner  | First blocking work                                                                                           |
+| ------- | ----------------- | ------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------- |
+| Windows | `microsoft-store` | Existing signed NSIS EXE | VoiceStudio   | Run the signed package workflow, reserve Partner Center identity, submit privately and complete certification |
+| Linux   | `snap-store`      | New confined Snap        | Snap Store    | Confinement interfaces, writable paths, runtime installation and store review                                 |
+| macOS   | `mac-app-store`   | New sandboxed MAS app    | Mac App Store | Entitlements, sandbox file access, bundled executable/runtime licensing and StoreKit receipt behavior         |
 
 The Linux implementation and evidence checklist live in the
 [`Snap Store runbook`](store-publishing/snap-store.md).
@@ -47,6 +47,10 @@ assets and submission runbook. Changes to shared identity, privacy,
 capabilities or compliance records must update the canonical files rather than
 being copied into a platform-only document. Electron remains the only UI and
 desktop shell; no Tauri path may be restored.
+
+The Microsoft Store packaging and submission handoff is implemented in
+`.github/workflows/microsoft-store.yml`; operating steps and pending owner work
+are in [`store/microsoft-store.md`](store/microsoft-store.md).
 
 ## Artifact and release contract
 

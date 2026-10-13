@@ -98,8 +98,12 @@ const hashes = await fileHashes(artifactPath, platform === 'linux');
 assert.equal(hashes.sha512, fileSha, 'Update metadata SHA-512 matches artifact bytes');
 
 const osToken = platform === 'win32' ? 'win' : platform === 'darwin' ? 'mac' : 'linux';
+const artifactBrand =
+  process.env.VOICESTUDIO_DISTRIBUTION === 'microsoft-store'
+    ? 'VoiceStudio-MicrosoftStore'
+    : 'VoiceStudio-Electron';
 assert(
-  fileUrl.startsWith(`VoiceStudio-Electron-${expectedVersion}-${osToken}-${arch}.`),
+  fileUrl.startsWith(`${artifactBrand}-${expectedVersion}-${osToken}-${arch}.`),
   'Update artifact preserves the branded version/platform/architecture name',
 );
 
