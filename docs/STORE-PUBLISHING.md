@@ -45,6 +45,12 @@ capabilities or compliance records must update the canonical files rather than
 being copied into a platform-only document. Electron remains the only UI and
 desktop shell; no Tauri path may be restored.
 
+The Mac App Store sandbox target and private packaging workflow are scaffolded
+in `electron/electron-builder.config.mjs` and `.github/workflows/mac-app-store.yml`.
+The workflow remains blocked by the bundled-runtime compliance gate and never
+submits to App Store Connect. Current blockers and owner actions are in the
+[`Mac App Store runbook`](../store/mac-app-store.md).
+
 ## Artifact and release contract
 
 Packaging workflows write `store-artifact-manifest-<platform>-<arch>.json`
