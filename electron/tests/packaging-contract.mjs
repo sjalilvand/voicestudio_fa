@@ -58,7 +58,7 @@ const artifactExecutable = resolve(
     ? `${PRODUCT_NAME}.exe`
     : process.platform === 'darwin'
       ? `MacOS/${PRODUCT_NAME}`
-      : 'voicestudio-electron',
+      : (config.linux.executableName ?? 'voicestudio-electron'),
 );
 const electronPackage = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'));
 assert.match(electronPackage.author?.email ?? '', /@/, 'Linux package declares a maintainer email');
