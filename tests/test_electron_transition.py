@@ -26,6 +26,29 @@ def test_electron_packaging_workflows_publish_store_provenance(workflow_name):
     )
     assert "electron/release/store-artifact-manifest-*.json" in upload_step["with"]["path"]
 
+
+def test_snap_store_rehearsal_is_strict_build_only_and_records_provenance():
+    import yaml
+
+    workflow = yaml.load(
+        (ROOT / ".github/workflows/snap-store.yml").read_text(), Loader=yaml.BaseLoader
+    )
+    assert workflow["permissions"] == {"contents": "read"}
+    assert set(workflow["on"]) == {"workflow_dispatch"}
+    package = workflow["jobs"]["package"]
+    assert package["env"]["VOICESTUDIO_DISTRIBUTION"] == "snap-store"
+    command = next(
+        step["run"]
+        for step in package["steps"]
+        if step.get("name") == "Package without publishing"
+    )
+    assert "--linux snap --x64 --publish never" in command
+    assert "--distribution=snap-store --platform=linux --arch=x64" in command
+    assert "applicationUpdates !== 'store'" in command
+    serialized = (ROOT / ".github/workflows/snap-store.yml").read_text()
+    assert "SNAPCRAFT_STORE_CREDENTIALS" not in serialized
+    assert "snapcraft upload" not in serialized
+
 @pytest.mark.parametrize("tag,allowed", [("", False), ("v0.5.4", False), ("v0.5.3", True)])
 def test_release_downloads_legacy_feeds_only_from_final_tauri_tag(tmp_path, tag, allowed):
     import os
