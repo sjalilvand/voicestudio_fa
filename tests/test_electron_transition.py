@@ -43,6 +43,7 @@ def test_snap_store_rehearsal_is_strict_build_only_and_records_provenance():
         if step.get("name") == "Package without publishing"
     )
     assert "--linux snap --x64 --publish never" in command
+    assert "verify_snap_artifact.mjs" in command
     assert "--distribution=snap-store --platform=linux --arch=x64" in command
     assert "applicationUpdates !== 'store'" in command
     serialized = (ROOT / ".github/workflows/snap-store.yml").read_text()

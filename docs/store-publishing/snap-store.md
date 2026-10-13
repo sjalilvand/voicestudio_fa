@@ -61,6 +61,7 @@ bun run check:electron
 cd electron
 bun x electron-builder --config electron-builder.config.mjs --linux snap --x64 --publish never
 node tests/packaging-contract.mjs --artifact
+node ../scripts/verify_snap_artifact.mjs
 node ../scripts/create_store_artifact_manifest.mjs --distribution=snap-store --platform=linux --arch=x64
 node ../scripts/create_snap_store_assets.mjs
 ```
@@ -68,6 +69,7 @@ node ../scripts/create_snap_store_assets.mjs
 Inspect these workflow artifacts before installing:
 
 - `VoiceStudio-Electron-<version>-linux-x64.snap`
+- `VoiceStudio-Electron-<version>-snap-verification.json`
 - `store-artifact-manifest-linux-x64.json`
 - `snap-store-assets/icon.png`, five screenshots and `listing-assets.json`
 
