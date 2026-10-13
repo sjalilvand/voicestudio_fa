@@ -32,8 +32,14 @@ function sha256File(path) {
   return hash.digest("hex");
 }
 
-function releaseArtifact(name) {
-  return /^VoiceStudio-Electron-/.test(name) || /^electron-stable-.*\.yml$/.test(name);
+function releaseArtifact(name, distribution) {
+  const installerPrefix =
+    {
+      direct: "VoiceStudio-Electron-",
+      "microsoft-store": "VoiceStudio-MicrosoftStore-",
+      "mac-app-store": "VoiceStudio-MacAppStore-",
+    }[distribution] ?? "VoiceStudio-Electron-";
+  return name.startsWith(installerPrefix) || /^electron-stable-.*\.yml$/.test(name);
 }
 
 export function createArtifactManifest({
@@ -45,11 +51,12 @@ export function createArtifactManifest({
   version,
   commit,
   generatedAt = new Date().toISOString(),
+  signingVerification = { status: "not-run" },
 }) {
   const target = resolveDistributionTarget(distribution);
   const profile = distributionProfile(target);
   const artifacts = readdirSync(releaseDir, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && releaseArtifact(entry.name))
+    .filter((entry) => entry.isFile() && releaseArtifact(entry.name, target))
     .map((entry) => {
       const path = resolve(releaseDir, entry.name);
       return {
@@ -75,7 +82,7 @@ export function createArtifactManifest({
       signingPolicy: profile.signing,
     },
     complianceManifestSha256: sha256File(compliancePath),
-    signingVerification: "not-run",
+    signingVerification,
     artifacts,
   };
   writeFileSync(output, `${JSON.stringify(manifest, null, 2)}\n`);
@@ -107,6 +114,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     arch,
     version: packageJson.version,
     commit,
+    signingVerification: option("signing-evidence", "")
+      ? { status: "valid", evidence: option("signing-evidence", "") }
+      : { status: "not-run" },
   });
   console.log(`Wrote ${basename(output)}`);
 }
