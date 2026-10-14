@@ -16,6 +16,10 @@ metadata and the backend fallback mirror it.
 
 - The unused licence-key client and its Lemon Squeezy network call are gone from the open-source app (#2812)
 
+### Fixed
+
+- Cloning from a long reference no longer picks a near-silent passage that speech-to-text filled with a repeated phrase (#2836) — thanks @kynjal26!
+
 ## [0.5.7] — 2026-10-13
 
 **VoiceStudio now runs on PCs without a GPU and recovers instead of giving up.** Voice cloning uses the speech-to-text model you installed from Model Catalogue, GPU-less computers get the small CPU PyTorch build, and slow or busy backends are no longer reported as failed.

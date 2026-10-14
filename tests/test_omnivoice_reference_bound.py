@@ -297,3 +297,64 @@ def test_auto_select_no_speech_within_transcript_limit_still_offers_transcript()
 
     with pytest.raises(ValueError, match=r"\[clone_ref_no_speech\].*matching transcript"):
         model.create_voice_clone_prompt((audio, 100), ref_text=None)
+
+
+_REAL_SPEECH = (
+    "Bonjour à tous, aujourd'hui je vais vous montrer comment préparer une tarte "
+    "aux pommes avec une pâte brisée maison, des pommes bien mûres et un peu de "
+    "cannelle pour relever le goût."
+)
+_LOOP = "Thank you. " * 148
+
+
+def test_auto_select_skips_a_whisper_repetition_loop_on_a_silent_window(monkeypatch):
+    # #2836: Whisper loops "Thank you." over a near-silent window; the loop is
+    # longer than any real passage and used to win the selection.
+    model = _model(reject_tokenization=False)
+    model.sampling_rate = 100
+    model._asr_pipe = object()
+    model.transcribe = lambda candidate: (
+        _REAL_SPEECH if float(candidate[0].abs().mean()) > 0.01 else _LOOP
+    )
+    monkeypatch.setattr(
+        "omnivoice.models.omnivoice.remove_silence_safe",
+        lambda audio, *_args, **_kwargs: audio,
+    )
+    audio = torch.full((1, 30 * 100), 0.05)
+    audio[:, 15 * 100 :] = 0.001
+
+    prompt = model.create_voice_clone_prompt((audio, 100), ref_text=None)
+
+    assert prompt.ref_text == _REAL_SPEECH
+
+
+@pytest.mark.parametrize("speech", [_REAL_SPEECH, "今日はとても良い天気ですね。公園を散歩しましょう。"])
+def test_auto_select_keeps_real_speech_against_a_shorter_window(monkeypatch, speech):
+    model = _model(reject_tokenization=False)
+    model.sampling_rate = 100
+    model._asr_pipe = object()
+    model.transcribe = lambda candidate: (
+        speech if float(candidate[0].abs().mean()) > 0.01 else "Wow."
+    )
+    monkeypatch.setattr(
+        "omnivoice.models.omnivoice.remove_silence_safe",
+        lambda audio, *_args, **_kwargs: audio,
+    )
+    audio = torch.full((1, 30 * 100), 0.001)
+    audio[:, 15 * 100 :] = 0.05
+
+    prompt = model.create_voice_clone_prompt((audio, 100), ref_text=None)
+
+    # add_punctuation may append a final mark (。) to an unpunctuated CJK end.
+    assert prompt.ref_text.startswith(speech)
+
+
+def test_auto_select_with_only_repetition_loops_reports_no_speech():
+    model = _model(reject_tokenization=True)
+    model.sampling_rate = 100
+    model._asr_pipe = object()
+    model.transcribe = lambda _candidate: _LOOP
+    audio = torch.full((1, 30 * 100), 0.001)
+
+    with pytest.raises(ValueError, match=r"\[clone_ref_no_speech\]"):
+        model.create_voice_clone_prompt((audio, 100), ref_text=None)
