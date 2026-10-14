@@ -52,7 +52,7 @@ import { useProfiles } from '@/hooks/use-profiles';
 import { apiJson, apiPath, describeError } from '@/lib/api/client';
 import { saveExport } from '@/lib/export-history';
 import { EngineLanguagePicker } from '@/features/clone/engine-language-picker';
-import { LANG_CODES } from '@shared/utils/languages';
+import { outputLanguageOptions } from './output-languages';
 import {
   editLongform,
   dismissLongformError,
@@ -273,7 +273,7 @@ export function LongformPage({ mode }: { mode: Mode }) {
               <EngineLanguagePicker
                 operation={ttsOperation}
                 value={draft.language}
-                options={['Auto', ...LANG_CODES.map((l) => l.label)]}
+                options={outputLanguageOptions(draft.language)}
                 disabled={locked}
                 onValueChange={(language) => set({ language })}
               />
