@@ -2,6 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import metadata from '../../store/metadata.json' with { type: 'json' };
+import {
+  validateTemplateArchiveEntries,
+  verifySnapRuntimePayload,
+} from '../snap-template-payload.mjs';
 import { verifySnapMetadata } from '../../scripts/verify_snap_artifact.mjs';
 
 const snapYaml = `base: core22
@@ -60,7 +64,37 @@ test('rejects weakened confinement, missing capabilities and broad removable acc
   const expected = { ...metadata, version: '0.5.7' };
   assert.throws(() => verifySnapMetadata(snapYaml.replace('strict', 'classic'), expected));
   assert.throws(() => verifySnapMetadata(snapYaml.replace('      - audio-record\n', ''), expected));
-  assert.throws(() =>
-    verifySnapMetadata(`${snapYaml}      - removable-media\n`, expected),
+  assert.throws(() => verifySnapMetadata(`${snapYaml}      - removable-media\n`, expected));
+});
+
+const runtimeListing = `
+squashfs-root/desktop-init.sh
+squashfs-root/desktop-common.sh
+squashfs-root/desktop-gnome-specific.sh
+squashfs-root/usr/lib/x86_64-linux-gnu/libnss3.so
+`;
+
+test('requires an expanded desktop runtime in the Snap payload', () => {
+  assert.doesNotThrow(() => verifySnapRuntimePayload(runtimeListing));
+  assert.throws(
+    () => verifySnapRuntimePayload(runtimeListing.replace('squashfs-root/desktop-init.sh\n', '')),
+    /desktop-init\.sh/,
+  );
+  assert.throws(
+    () =>
+      verifySnapRuntimePayload(
+        `${runtimeListing}squashfs-root/snap-template-electron-4.0-2-amd64.tar\n`,
+      ),
+    /unexpanded desktop runtime/,
+  );
+});
+
+test('rejects unsafe or incomplete nested template archives', () => {
+  const entries = `./\n${runtimeListing.replaceAll('squashfs-root/', './')}`;
+  assert.doesNotThrow(() => validateTemplateArchiveEntries(entries));
+  assert.throws(() => validateTemplateArchiveEntries(`${entries}../escape\n`), /Unsafe/);
+  assert.throws(
+    () => validateTemplateArchiveEntries(entries.replace('./desktop-init.sh\n', '')),
+    /desktop-init\.sh/,
   );
 });
