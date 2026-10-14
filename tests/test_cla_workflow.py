@@ -97,6 +97,7 @@ def test_signatures_never_go_to_main():
 
 
 def test_privileged_workflows_never_run_pull_request_code():
+    """Allow privileged checkouts to use only the trusted event base commit."""
     for path in sorted(_WORKFLOWS.glob("*.y*ml")):
         workflow = _load(path)
         if not _triggers(workflow) & _PRIVILEGED_TRIGGERS:

@@ -150,6 +150,7 @@ def test_shipped_hash_list_is_digests_only():
 
 
 def test_workflow_uses_trusted_target_orchestration_and_privileged_status():
+    """Pin identity policy execution to the pull request's trusted base commit."""
     wf = yaml.load(WORKFLOW.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
     assert set(wf["on"]) == {"pull_request_target"}
     assert "edited" in wf["on"]["pull_request_target"]["types"]
