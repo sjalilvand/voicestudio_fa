@@ -1,8 +1,13 @@
 import assert from 'node:assert/strict';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { existsSync, mkdtempSync, mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { resolve } from 'node:path';
 import test from 'node:test';
 
 import metadata from '../../store/metadata.json' with { type: 'json' };
 import {
+  repairSnapTemplatePayload,
   validateTemplateArchiveEntries,
   verifySnapRuntimePayload,
 } from '../snap-template-payload.mjs';
@@ -98,3 +103,51 @@ test('rejects unsafe or incomplete nested template archives', () => {
     /desktop-init\.sh/,
   );
 });
+
+const hasSquashfsTools =
+  spawnSync('mksquashfs', ['-version']).error === undefined &&
+  spawnSync('unsquashfs', ['-version']).error === undefined;
+
+test(
+  'expands a nested desktop template into a runnable Snap payload',
+  { skip: hasSquashfsTools ? false : 'squashfs-tools is not installed' },
+  () => {
+    const workDir = mkdtempSync(resolve(tmpdir(), 'voicestudio-snap-repair-test-'));
+    const source = resolve(workDir, 'source');
+    const template = resolve(workDir, 'template');
+    const artifact = resolve(workDir, 'VoiceStudio.snap');
+    const repaired = resolve(workDir, 'repaired');
+    try {
+      mkdirSync(source);
+      mkdirSync(template);
+      for (const script of ['desktop-init.sh', 'desktop-common.sh', 'desktop-gnome-specific.sh']) {
+        writeFileSync(resolve(template, script), '#!/bin/sh\n');
+      }
+      const runtimeLibrary = resolve(template, 'usr/lib/x86_64-linux-gnu/libnss3.so');
+      mkdirSync(resolve(runtimeLibrary, '..'), { recursive: true });
+      writeFileSync(runtimeLibrary, 'fixture');
+      const nestedArchive = resolve(source, 'snap-template-electron-4.0-2-amd64.tar');
+      execFileSync('tar', ['-cf', nestedArchive, '-C', template, '.']);
+      execFileSync('mksquashfs', [
+        source,
+        artifact,
+        '-noappend',
+        '-all-root',
+        '-processors',
+        '1',
+        '-quiet',
+      ]);
+
+      assert.equal(repairSnapTemplatePayload(artifact), true);
+      execFileSync('unsquashfs', ['-quiet', '-d', repaired, artifact]);
+
+      assert.equal(existsSync(resolve(repaired, 'snap-template-electron-4.0-2-amd64.tar')), false);
+      for (const path of ['desktop-init.sh', 'desktop-common.sh', 'desktop-gnome-specific.sh']) {
+        assert.equal(statSync(resolve(repaired, path)).mode & 0o111, 0o111);
+      }
+      assert.equal(existsSync(resolve(repaired, 'usr/lib/x86_64-linux-gnu/libnss3.so')), true);
+    } finally {
+      rmSync(workDir, { recursive: true, force: true });
+    }
+  },
+);
