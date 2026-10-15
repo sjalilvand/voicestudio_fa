@@ -204,3 +204,33 @@ def test_shutdown_waits_for_queued_reconcile_without_cancelling_it(monkeypatch):
             release_executor.set()
 
     asyncio.run(scenario())
+
+
+def test_shutdown_cancellation_stops_reconcile_dependent_warmups(monkeypatch):
+    entered = threading.Event()
+    release = threading.Event()
+
+    def reconcile():
+        entered.set()
+        release.wait(5)
+        return {}
+
+    monkeypatch.setattr(importlib.import_module("services.performance_profiles"),
+                        "reconcile_active_profile", reconcile)
+
+    async def scenario():
+        app = SimpleNamespace(state=SimpleNamespace())
+        main._start_profile_reconcile(app)
+        try:
+            assert await asyncio.to_thread(entered.wait, 2)
+            warmup = asyncio.create_task(main._await_profile_reconcile(app))
+            shutdown = asyncio.create_task(main._wait_for_profile_reconcile_thread(app))
+            await asyncio.sleep(0.05)
+            assert warmup.cancelled()
+            assert not shutdown.done()
+            release.set()
+            await asyncio.wait_for(shutdown, 2)
+        finally:
+            release.set()
+
+    asyncio.run(scenario())

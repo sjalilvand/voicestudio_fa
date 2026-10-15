@@ -959,6 +959,8 @@ async def _await_profile_reconcile(app: FastAPI) -> None:
     task = getattr(app.state, "profile_reconcile_task", None)
     if task is not None:
         await asyncio.wait({task})
+        if task.cancelled():
+            raise asyncio.CancelledError
 
 
 async def _phase_b(app: FastAPI) -> None:
