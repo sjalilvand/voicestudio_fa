@@ -153,8 +153,8 @@ async function nativeConnectivity() {
   client.mount();
   return {
     client,
-    push: (stage: 'ready' | 'unresponsive' | 'crashed') =>
-      push({ ...status.FALLBACK_BACKEND_STATUS, stage }),
+    push: (stage: 'ready' | 'unresponsive' | 'crashed', remote = false) =>
+      push({ ...status.FALLBACK_BACKEND_STATUS, stage, remote }),
     stop: () => {
       onlineManager.setOnline(true);
       client.unmount();
@@ -215,5 +215,50 @@ it('keeps browser connectivity handling without a native supervisor', async () =
   } finally {
     client.unmount();
     client.clear();
+  }
+});
+
+it.each(['ready', 'unresponsive'] as const)(
+  'queues disconnected remote saves while the supervisor reports %s',
+  async (stage) => {
+    const native = await nativeConnectivity();
+    try {
+      native.push(stage, true);
+      window.dispatchEvent(new Event('offline'));
+      const save = vi.fn().mockResolvedValue({ id: 'remote-profile' });
+      const mutation = native.client.getMutationCache().build(native.client, {
+        mutationFn: save,
+        gcTime: 0,
+      });
+      const pending = mutation.execute({ name: 'Remote voice' });
+      await waitFor(() => expect(mutation.state.isPaused).toBe(true));
+      expect(save).not.toHaveBeenCalled();
+      native.push('ready', true);
+      expect(onlineManager.isOnline()).toBe(false);
+      native.push('crashed', true);
+      window.dispatchEvent(new Event('online'));
+      expect(onlineManager.isOnline()).toBe(false);
+      expect(save).not.toHaveBeenCalled();
+      native.push('ready', true);
+      await expect(pending).resolves.toEqual({ id: 'remote-profile' });
+      expect(save).toHaveBeenCalledOnce();
+    } finally {
+      native.stop();
+    }
+  },
+);
+
+it('keeps remote startup offline but allows switching to a local backend', async () => {
+  vi.stubGlobal('navigator', { onLine: false });
+  const native = await nativeConnectivity();
+  try {
+    native.push('ready', true);
+    expect(onlineManager.isOnline()).toBe(false);
+    native.push('ready');
+    expect(onlineManager.isOnline()).toBe(true);
+    native.push('ready', true);
+    expect(onlineManager.isOnline()).toBe(false);
+  } finally {
+    native.stop();
   }
 });

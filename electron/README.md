@@ -9,7 +9,8 @@ and remote-backend connections require configuration; local generation stays on 
 Once setup and the required models are installed, saving cloned voice profiles
 works without internet access. Desktop API requests follow the supervisor's
 backend readiness rather than the browser's internet connectivity; they still
-pause during startup or a backend failure.
+pause during startup or a backend failure. Remote backend requests also wait
+for network connectivity before resuming queued operations.
 
 ## Stack
 
