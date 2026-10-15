@@ -1,0 +1,139 @@
+import { CloudDisabledError, type CloudActivity } from './cloud-activity';
+import type { CloudSwitchStore } from './cloud-switches';
+import type { startLoopback as StartLoopback } from './loopback';
+import { InvalidGrantError, TransientAuthError, createPkce, type OidcClient, type TokenResponse } from './oidc';
+import type { RefreshTokenStore } from './token-store';
+
+export type SessionNotice = 'signed_out_expired' | 'sign_in_failed' | 'offline' | null;
+export interface SessionState { signedIn: boolean; signingIn: boolean; notice: SessionNotice }
+export interface AccessToken { access_token: string; expires_at: number }
+
+export interface SessionDeps {
+  oidc: OidcClient;
+  store: RefreshTokenStore;
+  activity: CloudActivity;
+  switches: CloudSwitchStore;
+  openExternal: (url: string) => Promise<void>;
+  startLoopback: typeof StartLoopback;
+  signedInPage: string;
+  now?: () => number;
+}
+
+export const backoffDelay = (attempt: number): number => Math.min(300_000, 1000 * 2 ** attempt);
+
+const REFRESH_MARGIN_MS = 60_000;
+
+export class AccountSession {
+  private access: AccessToken | null = null;
+  private inflight: Promise<AccessToken | null> | null = null;
+  private closeLoopback: (() => void) | null = null;
+  private signingIn = false;
+  private notice: SessionNotice = null;
+  private readonly listeners = new Set<(s: SessionState) => void>();
+  private readonly now: () => number;
+
+  constructor(private readonly deps: SessionDeps) {
+    this.now = deps.now ?? Date.now;
+    deps.activity.onStop(() => this.closeLoopback?.());
+    deps.switches.subscribe((next, prev) => {
+      if (prev.accountEnabled && !next.accountEnabled) void this.turnedOff();
+    });
+  }
+
+  state(): SessionState {
+    return { signedIn: this.deps.store.load() !== null, signingIn: this.signingIn, notice: this.notice };
+  }
+
+  onChange(cb: (s: SessionState) => void): () => void {
+    this.listeners.add(cb);
+    return () => this.listeners.delete(cb);
+  }
+
+  async signIn(): Promise<void> {
+    if (!this.deps.switches.get().accountEnabled) throw new CloudDisabledError();
+    if (this.signingIn) return;
+    const pkce = createPkce();
+    this.signingIn = true;
+    this.notice = null;
+    this.emit();
+    try {
+      const endpoints = await this.deps.oidc.discover();
+      const lb = await this.deps.startLoopback({ expectedState: pkce.state, signedInPage: this.deps.signedInPage });
+      this.closeLoopback = lb.close;
+      await this.deps.openExternal(this.deps.oidc.authorizeUrl(endpoints, lb.redirectUri, pkce));
+      const code = await lb.code;
+      if (!this.deps.switches.get().accountEnabled) throw new CloudDisabledError();
+      this.accept(await this.deps.oidc.exchangeCode(code, lb.redirectUri, pkce.verifier));
+    } catch (error) {
+      if (!(error instanceof CloudDisabledError)) this.notice = 'sign_in_failed';
+      throw error;
+    } finally {
+      this.closeLoopback?.();
+      this.closeLoopback = null;
+      this.signingIn = false;
+      this.emit();
+    }
+  }
+
+  cancelSignIn(): void {
+    this.closeLoopback?.();
+  }
+
+  async signOut(): Promise<void> {
+    const refresh = this.deps.store.load();
+    this.endSession(null);
+    if (refresh) await this.deps.oidc.revoke(refresh).catch(() => {});
+  }
+
+  /** Single-flight; null means signed out or switched off. */
+  getAccessToken(): Promise<AccessToken | null> {
+    if (!this.deps.switches.get().accountEnabled) return Promise.resolve(null);
+    if (this.access && this.access.expires_at - this.now() >= REFRESH_MARGIN_MS)
+      return Promise.resolve(this.access);
+    this.inflight ??= this.refresh().finally(() => (this.inflight = null));
+    return this.inflight;
+  }
+
+  invalidateAccessToken(): void {
+    this.access = null;
+  }
+
+  endSession(notice: SessionNotice): void {
+    this.access = null;
+    this.deps.store.clear();
+    this.notice = notice;
+    this.emit();
+  }
+
+  private async refresh(): Promise<AccessToken | null> {
+    const refresh = this.deps.store.load();
+    if (!refresh) return null;
+    try {
+      this.accept(await this.deps.oidc.refresh(refresh));
+      if (this.notice === 'offline') { this.notice = null; this.emit(); }
+      return this.access;
+    } catch (error) {
+      if (error instanceof InvalidGrantError) { this.endSession('signed_out_expired'); return null; }
+      if (error instanceof CloudDisabledError) return null;
+      if (error instanceof TransientAuthError) { this.notice = 'offline'; this.emit(); }
+      throw error;
+    }
+  }
+
+  private accept(tokens: TokenResponse): void {
+    this.deps.store.save(tokens.refresh_token);
+    this.access = { access_token: tokens.access_token, expires_at: this.now() + tokens.expires_in * 1000 };
+  }
+
+  private async turnedOff(): Promise<void> {
+    const refresh = this.deps.store.load();
+    this.deps.activity.stopAll();
+    this.endSession(null);
+    if (refresh) await this.deps.oidc.revoke(refresh).catch(() => {});
+  }
+
+  private emit(): void {
+    const s = this.state();
+    for (const cb of this.listeners) cb(s);
+  }
+}
