@@ -42,7 +42,13 @@ let current: BackendStatus = nativeBackend
 // Every renderer query targets the local backend. Holding React Query offline
 // until the native supervisor is ready prevents a startup/crash fan-out of
 // doomed requests, then resumes active queries automatically on readiness.
-if (nativeBackend) onlineManager.setOnline(false);
+if (nativeBackend) {
+  // Browser online/offline events describe internet connectivity, not whether
+  // our backend can answer. Let only supervisor status drive native requests;
+  // otherwise losing Wi-Fi pauses local saves and reconnecting bypasses startup.
+  onlineManager.setEventListener(() => undefined);
+  onlineManager.setOnline(false);
+}
 let revision = 0;
 const listeners = new Set<() => void>();
 let bridgeUnsubscribe: (() => void) | null = null;
