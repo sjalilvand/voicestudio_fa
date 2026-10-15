@@ -1,4 +1,7 @@
 {
+  "snapLauncher": {
+    "permissionRequired": "VoiceStudio 需要權限才能啟動介面。請在終端機中執行以下指令，然後重新開啟 VoiceStudio："
+  },
   "cloneQuality": {
     "title": "音訊品質",
     "precision": "WAV 精度",

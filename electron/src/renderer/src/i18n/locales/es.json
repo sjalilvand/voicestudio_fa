@@ -1,4 +1,7 @@
 {
+  "snapLauncher": {
+    "permissionRequired": "VoiceStudio necesita permiso para iniciar su interfaz. Ejecuta este comando en una terminal y vuelve a abrir VoiceStudio:"
+  },
   "cloneQuality": {
     "title": "Calidad de audio",
     "precision": "Precisión WAV",

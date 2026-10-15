@@ -18,6 +18,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- Snap launches explain missing sandbox permissions instead of crashing before startup (#2889)
 - Snap packages expand the Electron desktop runtime so they launch after installation (#2858)
 
 ## [0.5.7] — 2026-10-13

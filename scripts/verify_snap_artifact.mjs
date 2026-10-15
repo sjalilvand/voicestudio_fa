@@ -96,6 +96,11 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   });
   const listing = execFileSync("unsquashfs", ["-ll", artifact], { encoding: "utf8" });
   verifySnapRuntimePayload(listing);
+  const launcher = execFileSync("unsquashfs", ["-cat", artifact, "command.sh"], { encoding: "utf8" });
+  if (!launcher.includes("# VoiceStudio Snap sandbox preflight") ||
+      !launcher.includes("snapctl is-connected browser-support")) {
+    throw new Error("Snap launcher is missing its sandbox permission preflight");
+  }
   for (const path of ["resources/native/voicestudio-desktop-bridge", "resources/tools/uv"]) {
     if (!listing.includes(path)) throw new Error(`Snap payload is missing ${path}`);
   }

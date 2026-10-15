@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, rmSync, statSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import test from 'node:test';
@@ -108,8 +108,8 @@ const hasSquashfsTools =
   spawnSync('mksquashfs', ['-version']).error === undefined &&
   spawnSync('unsquashfs', ['-version']).error === undefined;
 
-test(
-  'expands a nested desktop template into a runnable Snap payload',
+for (const nested of [true, false]) test(
+  `adds a preflight to a ${nested ? 'nested' : 'expanded'} Snap payload`,
   { skip: hasSquashfsTools ? false : 'squashfs-tools is not installed' },
   () => {
     const workDir = mkdtempSync(resolve(tmpdir(), 'voicestudio-snap-repair-test-'));
@@ -120,6 +120,7 @@ test(
     try {
       mkdirSync(source);
       mkdirSync(template);
+      writeFileSync(resolve(source, 'command.sh'), '#!/bin/sh\nexit 0\n');
       for (const script of ['desktop-init.sh', 'desktop-common.sh', 'desktop-gnome-specific.sh']) {
         writeFileSync(resolve(template, script), '#!/bin/sh\n');
       }
@@ -127,7 +128,8 @@ test(
       mkdirSync(resolve(runtimeLibrary, '..'), { recursive: true });
       writeFileSync(runtimeLibrary, 'fixture');
       const nestedArchive = resolve(source, 'snap-template-electron-4.0-2-amd64.tar');
-      execFileSync('tar', ['-cf', nestedArchive, '-C', template, '.']);
+      if (nested) execFileSync('tar', ['-cf', nestedArchive, '-C', template, '.']);
+      else execFileSync('cp', ['-a', `${template}/.`, source]);
       execFileSync('mksquashfs', [
         source,
         artifact,
@@ -146,6 +148,9 @@ test(
         assert.equal(statSync(resolve(repaired, path)).mode & 0o111, 0o111);
       }
       assert.equal(existsSync(resolve(repaired, 'usr/lib/x86_64-linux-gnu/libnss3.so')), true);
+      assert.match(readFileSync(resolve(repaired, 'command.sh'), 'utf8'), /snapctl is-connected browser-support/);
+      assert.equal(statSync(resolve(repaired, 'command.sh')).mode & 0o111, 0o111);
+      assert.equal(repairSnapTemplatePayload(artifact), false);
     } finally {
       rmSync(workDir, { recursive: true, force: true });
     }
