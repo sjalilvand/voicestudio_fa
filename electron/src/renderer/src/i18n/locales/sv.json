@@ -1,7 +1,4 @@
 {
-  "snapLauncher": {
-    "permissionRequired": "VoiceStudio behöver behörighet för att starta gränssnittet. Kör det här kommandot i en terminal och öppna sedan VoiceStudio igen:"
-  },
   "cloneQuality": {
     "title": "Ljudkvalitet",
     "precision": "WAV-precision",
