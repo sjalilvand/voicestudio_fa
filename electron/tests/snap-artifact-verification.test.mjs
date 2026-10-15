@@ -126,7 +126,7 @@ for (const nested of [true, false]) test(
     try {
       mkdirSync(source);
       mkdirSync(template);
-      writeFileSync(resolve(source, 'command.sh'), '#!/bin/sh\nexec \"$SNAP/voicestudio\" \"$@\"\n');
+      writeFileSync(resolve(source, 'command.sh'), '#!/bin/sh\nexec \"$SNAP/desktop-init.sh\" \"$SNAP/desktop-common.sh\" \"$SNAP/desktop-gnome-specific.sh\" \"$SNAP/voicestudio\" \"$@\"\n');
       for (const script of ['desktop-init.sh', 'desktop-common.sh', 'desktop-gnome-specific.sh']) {
         writeFileSync(resolve(template, script), '#!/bin/sh\n');
       }

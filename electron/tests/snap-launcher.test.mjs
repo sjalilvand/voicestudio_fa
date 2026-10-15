@@ -50,3 +50,18 @@ test('comments cannot satisfy or bypass validation of the executed command', () 
   assert.equal(configureSnapLauncher(configured), configured);
   assert.throws(() => verifySnapLauncher(`#!/bin/sh\n${comment}`), /launcher/);
 });
+
+test('rejects missing, repeated or reordered desktop initialization scripts', () => {
+  const init = '"$SNAP/desktop-init.sh" ';
+  const common = '"$SNAP/desktop-common.sh" ';
+  const invalid = [
+    command.replace(init, ''),
+    command.replace(common, ''),
+    command.replace(init, init + init),
+    command.replace(init + common, common + init),
+  ];
+  for (const launcher of invalid) {
+    assert.throws(() => configureSnapLauncher(launcher), /launcher/);
+    assert.throws(() => verifySnapLauncher(launcher), /launcher/);
+  }
+});
