@@ -42,7 +42,8 @@ test('rejects unexpected launch templates instead of silently shipping a broken 
 
 test('comments cannot satisfy or bypass validation of the executed command', () => {
   const comment = '# "$SNAP/voicestudio" --no-sandbox "$@"\n';
-  const commented = command.replace('\n', `\n${comment}`);
+  const [shebang, ...lines] = command.split('\n');
+  const commented = [shebang, comment.trimEnd(), ...lines].join('\n');
   assert.throws(() => verifySnapLauncher(commented), /launcher/);
   const configured = configureSnapLauncher(commented);
   assert.match(configured, /^exec .*"\$SNAP\/voicestudio" --no-sandbox "\$@"$/m);
