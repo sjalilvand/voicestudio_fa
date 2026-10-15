@@ -81,6 +81,7 @@ export function LongformPage({ mode }: { mode: Mode }) {
     mode === 'audiobook' ? draft.script : draft.lines.map((line) => line.text).join('\n');
   const names = useMemo(() => parseCastNames(text), [text]);
   const stats = useMemo(() => scriptStats(text), [text]);
+  const languageOptions = useMemo(() => outputLanguageOptions(draft.language), [draft.language]);
   const { data: profiles = [] } = useProfiles();
   const [importing, setImporting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -273,7 +274,7 @@ export function LongformPage({ mode }: { mode: Mode }) {
               <EngineLanguagePicker
                 operation={ttsOperation}
                 value={draft.language}
-                options={outputLanguageOptions(draft.language)}
+                options={languageOptions}
                 disabled={locked}
                 onValueChange={(language) => set({ language })}
               />
