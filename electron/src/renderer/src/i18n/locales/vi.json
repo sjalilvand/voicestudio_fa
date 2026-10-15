@@ -2276,6 +2276,25 @@
     "no": "Không, cảm ơn",
     "dismiss": "Đóng (phân tích vẫn tắt)"
   },
+  "account": {
+    "title": "Tài khoản VoiceStudio",
+    "setup_body": "Không bắt buộc. Đăng nhập vào tài khoản VoiceStudio miễn phí để đồng bộ cài đặt giữa các thiết bị của bạn. Mọi thứ vẫn hoạt động khi không có tài khoản, và không có gì được gửi đi trừ khi bạn bật tính năng này. Bạn có thể thay đổi bất cứ lúc nào trong Cài đặt → Tài khoản.",
+    "use_yes": "Bật tính năng tài khoản",
+    "use_no": "Giữ mọi thứ trên máy",
+    "features": "Tính năng tài khoản",
+    "features_desc": "Khi tắt, ứng dụng không bao giờ liên lạc với VoiceStudio Cloud.",
+    "sync": "Đồng bộ đám mây",
+    "sync_desc": "Tắt sẽ dừng ngay mọi hoạt động đồng bộ. Không có gì trên thiết bị này bị xóa.",
+    "sign_in": "Đăng nhập",
+    "continue_in_browser": "Tiếp tục trong trình duyệt…",
+    "cancel": "Hủy",
+    "sign_out": "Đăng xuất",
+    "signed_in_as": "Đã đăng nhập với tên {{name}}",
+    "signed_out_expired": "Bạn đã bị đăng xuất. Hãy đăng nhập để tiếp tục đồng bộ.",
+    "sign_in_failed": "Đăng nhập đã bị hủy hoặc thất bại",
+    "offline": "Ngoại tuyến: các thay đổi sẽ được đồng bộ sau",
+    "not_remembered": "Chuỗi khóa của hệ thống không khả dụng, vì vậy bạn sẽ cần đăng nhập lại sau khi VoiceStudio khởi động lại."
+  },
   "firstrun": {
     "stage_models": "Mô hình & engine",
     "chip_required": "bắt buộc",

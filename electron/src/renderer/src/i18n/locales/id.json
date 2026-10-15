@@ -2276,6 +2276,25 @@
     "no": "Tidak, terima kasih",
     "dismiss": "Tutup (analitik tetap mati)"
   },
+  "account": {
+    "title": "Akun VoiceStudio",
+    "setup_body": "Opsional. Masuk ke akun VoiceStudio gratis untuk menyinkronkan pengaturan antarperangkat. Semuanya tetap berfungsi tanpa akun, dan tidak ada yang dikirim kecuali Anda mengaktifkannya. Anda dapat mengubahnya kapan saja di Pengaturan → Akun.",
+    "use_yes": "Aktifkan fitur akun",
+    "use_no": "Simpan semuanya secara lokal",
+    "features": "Fitur akun",
+    "features_desc": "Nonaktif berarti aplikasi tidak pernah menghubungi VoiceStudio Cloud.",
+    "sync": "Sinkronisasi cloud",
+    "sync_desc": "Menonaktifkannya langsung menghentikan semua sinkronisasi. Tidak ada yang dihapus dari perangkat ini.",
+    "sign_in": "Masuk",
+    "continue_in_browser": "Lanjutkan di browser Anda…",
+    "cancel": "Batal",
+    "sign_out": "Keluar",
+    "signed_in_as": "Masuk sebagai {{name}}",
+    "signed_out_expired": "Anda telah keluar. Masuk untuk terus menyinkronkan.",
+    "sign_in_failed": "Proses masuk dibatalkan atau gagal",
+    "offline": "Offline: perubahan akan disinkronkan nanti",
+    "not_remembered": "Keyring sistem Anda tidak tersedia, jadi Anda perlu masuk lagi setelah VoiceStudio dimulai ulang."
+  },
   "firstrun": {
     "stage_models": "Model & mesin",
     "chip_required": "wajib",

@@ -2276,6 +2276,25 @@
     "no": "不用了，謝謝",
     "dismiss": "關閉（分析保持關閉）"
   },
+  "account": {
+    "title": "VoiceStudio 帳戶",
+    "setup_body": "選用。登入免費的 VoiceStudio 帳戶，即可在你的裝置之間同步設定。沒有帳戶也能使用所有功能，除非你開啟此項，否則不會傳送任何內容。你可以隨時在 設定 → 帳戶 中變更。",
+    "use_yes": "開啟帳戶功能",
+    "use_no": "全部保留在本機",
+    "features": "帳戶功能",
+    "features_desc": "關閉後，應用程式絕不會連線 VoiceStudio Cloud。",
+    "sync": "雲端同步",
+    "sync_desc": "關閉後會立即停止所有同步。此裝置上的內容不會被刪除。",
+    "sign_in": "登入",
+    "continue_in_browser": "請在瀏覽器中繼續…",
+    "cancel": "取消",
+    "sign_out": "登出",
+    "signed_in_as": "已登入為 {{name}}",
+    "signed_out_expired": "你已登出。請登入以繼續同步。",
+    "sign_in_failed": "登入已取消或失敗",
+    "offline": "離線：變更將稍後同步",
+    "not_remembered": "系統鑰匙圈無法使用，因此 VoiceStudio 重新啟動後你需要重新登入。"
+  },
   "firstrun": {
     "stage_models": "模型與引擎",
     "chip_required": "必需",

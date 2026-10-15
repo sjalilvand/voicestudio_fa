@@ -2276,6 +2276,25 @@
     "no": "Nej tack",
     "dismiss": "Stäng (analys förblir av)"
   },
+  "account": {
+    "title": "VoiceStudio-konto",
+    "setup_body": "Valfritt. Logga in på ett kostnadsfritt VoiceStudio-konto för att synka inställningar mellan dina enheter. Allt fungerar utan konto, och inget skickas om du inte slår på det här. Du kan ändra det när som helst under Inställningar → Konto.",
+    "use_yes": "Slå på kontofunktioner",
+    "use_no": "Behåll allt lokalt",
+    "features": "Kontofunktioner",
+    "features_desc": "Av betyder att appen aldrig kontaktar VoiceStudio Cloud.",
+    "sync": "Molnsynkning",
+    "sync_desc": "Av stoppar all synkning direkt. Inget på den här enheten raderas.",
+    "sign_in": "Logga in",
+    "continue_in_browser": "Fortsätt i webbläsaren…",
+    "cancel": "Avbryt",
+    "sign_out": "Logga ut",
+    "signed_in_as": "Inloggad som {{name}}",
+    "signed_out_expired": "Du loggades ut. Logga in för att fortsätta synka.",
+    "sign_in_failed": "Inloggningen avbröts eller misslyckades",
+    "offline": "Offline: ändringar synkas senare",
+    "not_remembered": "Systemets nyckelring är inte tillgänglig, så du behöver logga in igen när VoiceStudio har startats om."
+  },
   "firstrun": {
     "stage_models": "Modeller & motorer",
     "chip_required": "krävs",

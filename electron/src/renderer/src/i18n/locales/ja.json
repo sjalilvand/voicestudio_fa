@@ -2276,6 +2276,25 @@
     "no": "いいえ",
     "dismiss": "閉じる（アナリティクスはオフのまま）"
   },
+  "account": {
+    "title": "VoiceStudio アカウント",
+    "setup_body": "任意です。無料の VoiceStudio アカウントにサインインすると、デバイス間で設定を同期できます。アカウントがなくてもすべての機能が使え、オンにしない限り何も送信されません。設定 → アカウント でいつでも変更できます。",
+    "use_yes": "アカウント機能をオンにする",
+    "use_no": "すべてローカルに保つ",
+    "features": "アカウント機能",
+    "features_desc": "オフの場合、アプリは VoiceStudio Cloud に一切接続しません。",
+    "sync": "クラウド同期",
+    "sync_desc": "オフにするとすべての同期がすぐに停止します。このデバイス上のデータは削除されません。",
+    "sign_in": "サインイン",
+    "continue_in_browser": "ブラウザで続行してください…",
+    "cancel": "キャンセル",
+    "sign_out": "サインアウト",
+    "signed_in_as": "{{name}} としてサインイン中",
+    "signed_out_expired": "サインアウトされました。同期を続けるにはサインインしてください。",
+    "sign_in_failed": "サインインがキャンセルされたか、失敗しました",
+    "offline": "オフライン：変更は後で同期されます",
+    "not_remembered": "システムのキーリングを利用できないため、VoiceStudio の再起動後にもう一度サインインする必要があります。"
+  },
   "firstrun": {
     "stage_models": "モデルとエンジン",
     "chip_required": "必須",

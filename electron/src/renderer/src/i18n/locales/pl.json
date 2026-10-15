@@ -2280,6 +2280,25 @@
     "no": "Nie, dziękuję",
     "dismiss": "Zamknij (analityka pozostaje wyłączona)"
   },
+  "account": {
+    "title": "Konto VoiceStudio",
+    "setup_body": "Opcjonalne. Zaloguj się do bezpłatnego konta VoiceStudio, aby synchronizować ustawienia między urządzeniami. Wszystko działa bez niego i nic nie jest wysyłane, dopóki tego nie włączysz. Możesz to zmienić w dowolnej chwili w Ustawienia → Konto.",
+    "use_yes": "Włącz funkcje konta",
+    "use_no": "Zachowaj wszystko lokalnie",
+    "features": "Funkcje konta",
+    "features_desc": "Wyłączone oznacza, że aplikacja nigdy nie łączy się z VoiceStudio Cloud.",
+    "sync": "Synchronizacja w chmurze",
+    "sync_desc": "Wyłączenie natychmiast zatrzymuje całą synchronizację. Nic na tym urządzeniu nie zostanie usunięte.",
+    "sign_in": "Zaloguj się",
+    "continue_in_browser": "Kontynuuj w przeglądarce…",
+    "cancel": "Anuluj",
+    "sign_out": "Wyloguj się",
+    "signed_in_as": "Zalogowano jako {{name}}",
+    "signed_out_expired": "Wylogowano cię. Zaloguj się, aby dalej synchronizować.",
+    "sign_in_failed": "Logowanie zostało anulowane lub nie powiodło się",
+    "offline": "Offline: zmiany zostaną zsynchronizowane później",
+    "not_remembered": "Systemowy pęk kluczy jest niedostępny, więc po ponownym uruchomieniu VoiceStudio trzeba będzie zalogować się ponownie."
+  },
   "firstrun": {
     "stage_models": "Modele i silniki",
     "chip_required": "wymagany",

@@ -2278,6 +2278,25 @@
     "no": "Non merci",
     "dismiss": "Fermer (l'analyse reste désactivée)"
   },
+  "account": {
+    "title": "Compte VoiceStudio",
+    "setup_body": "Facultatif. Connectez-vous à un compte VoiceStudio gratuit pour synchroniser vos réglages entre vos appareils. Tout fonctionne sans compte, et rien n’est envoyé tant que vous n’activez pas cette option. Vous pouvez la modifier à tout moment dans Réglages → Compte.",
+    "use_yes": "Activer les fonctions du compte",
+    "use_no": "Tout garder en local",
+    "features": "Fonctions du compte",
+    "features_desc": "Désactivé, l’app ne contacte jamais VoiceStudio Cloud.",
+    "sync": "Synchronisation cloud",
+    "sync_desc": "La désactiver arrête immédiatement toute synchronisation. Rien n’est supprimé sur cet appareil.",
+    "sign_in": "Se connecter",
+    "continue_in_browser": "Continuez dans votre navigateur…",
+    "cancel": "Annuler",
+    "sign_out": "Se déconnecter",
+    "signed_in_as": "Connecté en tant que {{name}}",
+    "signed_out_expired": "Vous avez été déconnecté. Connectez-vous pour continuer la synchronisation.",
+    "sign_in_failed": "La connexion a été annulée ou a échoué",
+    "offline": "Hors ligne : les modifications seront synchronisées plus tard",
+    "not_remembered": "Le trousseau du système est indisponible : vous devrez vous reconnecter après le redémarrage de VoiceStudio."
+  },
   "firstrun": {
     "stage_models": "Modèles et moteurs",
     "chip_required": "requis",

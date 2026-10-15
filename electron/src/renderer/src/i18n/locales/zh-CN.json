@@ -2276,6 +2276,25 @@
     "no": "不用了，谢谢",
     "dismiss": "关闭（保持分析关闭）"
   },
+  "account": {
+    "title": "VoiceStudio 账户",
+    "setup_body": "可选。登录免费的 VoiceStudio 账户，即可在你的设备之间同步设置。没有账户也能使用全部功能，除非你开启此项，否则不会发送任何内容。你可以随时在 设置 → 账户 中更改。",
+    "use_yes": "开启账户功能",
+    "use_no": "全部保留在本地",
+    "features": "账户功能",
+    "features_desc": "关闭后，应用绝不会连接 VoiceStudio Cloud。",
+    "sync": "云同步",
+    "sync_desc": "关闭后会立即停止所有同步。此设备上的内容不会被删除。",
+    "sign_in": "登录",
+    "continue_in_browser": "请在浏览器中继续…",
+    "cancel": "取消",
+    "sign_out": "退出登录",
+    "signed_in_as": "已登录为 {{name}}",
+    "signed_out_expired": "你已退出登录。请登录以继续同步。",
+    "sign_in_failed": "登录已取消或失败",
+    "offline": "离线：更改将稍后同步",
+    "not_remembered": "系统密钥环不可用，因此 VoiceStudio 重启后你需要重新登录。"
+  },
   "firstrun": {
     "stage_models": "模型与引擎",
     "chip_required": "必需",

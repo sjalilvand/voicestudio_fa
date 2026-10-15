@@ -2278,6 +2278,25 @@
     "no": "Não, obrigado",
     "dismiss": "Dispensar (a análise continua desativada)"
   },
+  "account": {
+    "title": "Conta VoiceStudio",
+    "setup_body": "Opcional. Entre numa conta VoiceStudio gratuita para sincronizar as configurações entre os seus dispositivos. Tudo funciona sem ela, e nada é enviado a menos que ative esta opção. Pode alterar isto a qualquer momento em Configurações → Conta.",
+    "use_yes": "Ativar funções da conta",
+    "use_no": "Manter tudo local",
+    "features": "Funções da conta",
+    "features_desc": "Desativado significa que a app nunca contacta o VoiceStudio Cloud.",
+    "sync": "Sincronização na nuvem",
+    "sync_desc": "Desativar interrompe imediatamente toda a sincronização. Nada é apagado neste dispositivo.",
+    "sign_in": "Entrar",
+    "continue_in_browser": "Continue no seu navegador…",
+    "cancel": "Cancelar",
+    "sign_out": "Sair",
+    "signed_in_as": "Sessão iniciada como {{name}}",
+    "signed_out_expired": "A sua sessão terminou. Entre novamente para continuar a sincronizar.",
+    "sign_in_failed": "O início de sessão foi cancelado ou falhou",
+    "offline": "Offline: as alterações serão sincronizadas mais tarde",
+    "not_remembered": "O chaveiro do sistema não está disponível, por isso terá de entrar novamente depois de o VoiceStudio reiniciar."
+  },
   "firstrun": {
     "stage_models": "Modelos e motores",
     "chip_required": "obrigatório",

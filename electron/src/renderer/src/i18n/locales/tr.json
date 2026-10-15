@@ -2276,6 +2276,25 @@
     "no": "Hayır, teşekkürler",
     "dismiss": "Kapat (analitik kapalı kalır)"
   },
+  "account": {
+    "title": "VoiceStudio hesabı",
+    "setup_body": "İsteğe bağlı. Ayarlarını cihazların arasında eşitlemek için ücretsiz bir VoiceStudio hesabıyla oturum aç. Hesap olmadan da her şey çalışır ve bunu açmadığın sürece hiçbir şey gönderilmez. Bunu istediğin zaman Ayarlar → Hesap bölümünden değiştirebilirsin.",
+    "use_yes": "Hesap özelliklerini aç",
+    "use_no": "Her şeyi yerelde tut",
+    "features": "Hesap özellikleri",
+    "features_desc": "Kapalıyken uygulama VoiceStudio Cloud ile hiç iletişim kurmaz.",
+    "sync": "Bulut eşitleme",
+    "sync_desc": "Kapatmak tüm eşitlemeyi hemen durdurur. Bu cihazdaki hiçbir şey silinmez.",
+    "sign_in": "Oturum aç",
+    "continue_in_browser": "Tarayıcında devam et…",
+    "cancel": "İptal",
+    "sign_out": "Oturumu kapat",
+    "signed_in_as": "{{name}} olarak oturum açıldı",
+    "signed_out_expired": "Oturumun kapatıldı. Eşitlemeye devam etmek için oturum aç.",
+    "sign_in_failed": "Oturum açma iptal edildi veya başarısız oldu",
+    "offline": "Çevrimdışı: değişiklikler daha sonra eşitlenecek",
+    "not_remembered": "Sistem anahtarlığın kullanılamıyor; bu nedenle VoiceStudio yeniden başladıktan sonra tekrar oturum açman gerekecek."
+  },
   "firstrun": {
     "stage_models": "Modeller ve motorlar",
     "chip_required": "gerekli",

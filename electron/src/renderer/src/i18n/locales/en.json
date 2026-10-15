@@ -2333,6 +2333,25 @@
     "no": "No thanks",
     "dismiss": "Dismiss (keeps analytics off)"
   },
+  "account": {
+    "title": "VoiceStudio account",
+    "setup_body": "Optional. Sign in to a free VoiceStudio account to sync settings between your devices. Everything works without one, and nothing is sent unless you turn this on. You can change this anytime in Settings → Account.",
+    "use_yes": "Turn on account features",
+    "use_no": "Keep everything local",
+    "features": "Account features",
+    "features_desc": "Off means the app never contacts VoiceStudio Cloud.",
+    "sync": "Cloud sync",
+    "sync_desc": "Off stops all syncing at once. Nothing on this device is deleted.",
+    "sign_in": "Sign in",
+    "continue_in_browser": "Continue in your browser…",
+    "cancel": "Cancel",
+    "sign_out": "Sign out",
+    "signed_in_as": "Signed in as {{name}}",
+    "signed_out_expired": "You were signed out. Sign in to keep syncing.",
+    "sign_in_failed": "Sign-in was cancelled or failed",
+    "offline": "Offline: changes will sync later",
+    "not_remembered": "Your system keyring is unavailable, so you will need to sign in again after VoiceStudio restarts."
+  },
   "firstrun": {
     "stage_models": "Models & engines",
     "chip_required": "required",

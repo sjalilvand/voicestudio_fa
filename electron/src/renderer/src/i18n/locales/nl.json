@@ -2276,6 +2276,25 @@
     "no": "Nee, bedankt",
     "dismiss": "Sluiten (analytics blijft uit)"
   },
+  "account": {
+    "title": "VoiceStudio-account",
+    "setup_body": "Optioneel. Meld je aan bij een gratis VoiceStudio-account om instellingen tussen je apparaten te synchroniseren. Alles werkt ook zonder, en er wordt niets verzonden tenzij je dit inschakelt. Je kunt dit altijd wijzigen via Instellingen → Account.",
+    "use_yes": "Accountfuncties inschakelen",
+    "use_no": "Alles lokaal houden",
+    "features": "Accountfuncties",
+    "features_desc": "Uit betekent dat de app nooit contact opneemt met VoiceStudio Cloud.",
+    "sync": "Cloudsynchronisatie",
+    "sync_desc": "Uitzetten stopt meteen alle synchronisatie. Er wordt niets van dit apparaat verwijderd.",
+    "sign_in": "Aanmelden",
+    "continue_in_browser": "Ga verder in je browser…",
+    "cancel": "Annuleren",
+    "sign_out": "Afmelden",
+    "signed_in_as": "Aangemeld als {{name}}",
+    "signed_out_expired": "Je bent afgemeld. Meld je aan om te blijven synchroniseren.",
+    "sign_in_failed": "Aanmelden is geannuleerd of mislukt",
+    "offline": "Offline: wijzigingen worden later gesynchroniseerd",
+    "not_remembered": "De sleutelhanger van je systeem is niet beschikbaar, dus je moet je opnieuw aanmelden nadat VoiceStudio opnieuw is gestart."
+  },
   "firstrun": {
     "stage_models": "Modellen & engines",
     "chip_required": "vereist",

@@ -2276,6 +2276,25 @@
     "no": "Nein, danke",
     "dismiss": "Schließen (Analytik bleibt aus)"
   },
+  "account": {
+    "title": "VoiceStudio-Konto",
+    "setup_body": "Optional. Melde dich bei einem kostenlosen VoiceStudio-Konto an, um Einstellungen zwischen deinen Geräten zu synchronisieren. Alles funktioniert auch ohne, und nichts wird gesendet, solange du dies nicht einschaltest. Du kannst das jederzeit unter Einstellungen → Konto ändern.",
+    "use_yes": "Kontofunktionen einschalten",
+    "use_no": "Alles lokal behalten",
+    "features": "Kontofunktionen",
+    "features_desc": "Aus bedeutet: Die App kontaktiert VoiceStudio Cloud nie.",
+    "sync": "Cloud-Synchronisierung",
+    "sync_desc": "Aus stoppt sofort jede Synchronisierung. Auf diesem Gerät wird nichts gelöscht.",
+    "sign_in": "Anmelden",
+    "continue_in_browser": "Weiter in deinem Browser …",
+    "cancel": "Abbrechen",
+    "sign_out": "Abmelden",
+    "signed_in_as": "Angemeldet als {{name}}",
+    "signed_out_expired": "Du wurdest abgemeldet. Melde dich an, um weiter zu synchronisieren.",
+    "sign_in_failed": "Die Anmeldung wurde abgebrochen oder ist fehlgeschlagen",
+    "offline": "Offline: Änderungen werden später synchronisiert",
+    "not_remembered": "Dein System-Schlüsselbund ist nicht verfügbar, daher musst du dich nach einem Neustart von VoiceStudio erneut anmelden."
+  },
   "firstrun": {
     "stage_models": "Modelle & Engines",
     "chip_required": "erforderlich",
