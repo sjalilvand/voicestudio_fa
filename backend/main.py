@@ -948,7 +948,7 @@ async def _wait_for_profile_reconcile_thread(app: FastAPI) -> None:
         task.cancel()
         await asyncio.gather(task, return_exceptions=True)
     worker = getattr(app.state, "profile_reconcile_worker", None)
-    if worker is not None:
+    if worker is not None and not worker.done():
         # asyncio.wait neither cancels the executor future on timeout nor
         # needs a free executor thread to enforce the shutdown deadline.
         await asyncio.wait({worker}, timeout=20.0)
@@ -958,7 +958,8 @@ async def _await_profile_reconcile(app: FastAPI) -> None:
     """Let model warm-ups wait for reconciliation without inheriting its failure."""
     task = getattr(app.state, "profile_reconcile_task", None)
     if task is not None:
-        await asyncio.wait({task})
+        if not task.done():
+            await asyncio.wait({task})
         if task.cancelled():
             raise asyncio.CancelledError
 

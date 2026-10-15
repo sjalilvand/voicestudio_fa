@@ -234,3 +234,21 @@ def test_shutdown_cancellation_stops_reconcile_dependent_warmups(monkeypatch):
             release.set()
 
     asyncio.run(scenario())
+
+
+def test_completed_reconcile_handles_from_closed_loop_do_not_break_shutdown():
+    loop = asyncio.new_event_loop()
+
+    async def complete():
+        return None
+
+    task = loop.create_task(complete())
+    loop.run_until_complete(task)
+    worker = loop.create_future()
+    worker.set_result(None)
+    loop.close()
+    app = SimpleNamespace(state=SimpleNamespace(
+        profile_reconcile_task=task, profile_reconcile_worker=worker,
+    ))
+    asyncio.run(main._wait_for_profile_reconcile_thread(app))
+    asyncio.run(main._await_profile_reconcile(app))
