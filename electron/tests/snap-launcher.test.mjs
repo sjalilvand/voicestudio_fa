@@ -39,3 +39,13 @@ test('rejects unexpected launch templates instead of silently shipping a broken 
   const configured = configureSnapLauncher(command);
   assert.throws(() => verifySnapLauncher(`snapctl is-connected browser-support\n${configured}`), /launcher/);
 });
+
+test('comments cannot satisfy or bypass validation of the executed command', () => {
+  const comment = '# "$SNAP/voicestudio" --no-sandbox "$@"\n';
+  const commented = command.replace('\n', `\n${comment}`);
+  assert.throws(() => verifySnapLauncher(commented), /launcher/);
+  const configured = configureSnapLauncher(commented);
+  assert.match(configured, /^exec .*"\$SNAP\/voicestudio" --no-sandbox "\$@"$/m);
+  assert.equal(configureSnapLauncher(configured), configured);
+  assert.throws(() => verifySnapLauncher(`#!/bin/sh\n${comment}`), /launcher/);
+});
