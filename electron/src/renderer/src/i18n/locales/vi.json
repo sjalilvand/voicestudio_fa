@@ -1,4 +1,7 @@
 {
+  "snapLauncher": {
+    "permissionRequired": "VoiceStudio cần quyền để khởi động giao diện. Chạy lệnh này trong terminal, rồi mở lại VoiceStudio:"
+  },
   "cloneQuality": {
     "title": "Chất lượng âm thanh",
     "precision": "Độ chính xác WAV",

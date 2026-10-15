@@ -25,7 +25,7 @@ The Snap requests only interfaces needed by maintained desktop behaviour:
 
 | Interface | Purpose | Connection expectation |
 | --- | --- | --- |
-| `browser-support` | Chromium sandbox inside strict confinement | Automatic with `allow-sandbox: true` |
+| `browser-support` | Chromium sandbox inside strict confinement | Manual with `allow-sandbox: true` unless the Store grants auto-connect |
 | `desktop`, `desktop-legacy`, `x11`, `wayland`, `unity7`, `gsettings` | Desktop integration | Automatic on supported desktops |
 | `network` | User-started runtime and model downloads | Automatic |
 | `network-bind` | Local backend and opt-in LAN sharing | Automatic |
@@ -82,10 +82,32 @@ copy or image sources in the Snap dashboard.
 
 ## Confinement validation
 
-Install the rehearsal locally with `sudo snap install --dangerous <file>.snap`.
+Install the rehearsal locally, then connect the sandbox and recording interfaces:
+
+```bash
+sudo snap install --dangerous <file>.snap
+sudo snap connect voicestudio:browser-support
+sudo snap connect voicestudio:audio-record
+snap connections voicestudio
+snap run voicestudio
+```
+
+`browser-support` with `allow-sandbox: true` does not auto-connect by default.
+An unconnected plug can abort Electron before application code runs with
+`No usable sandbox!`. Connecting it permits Chromium's sandbox inside strict
+Snap confinement; do not change the host's user-namespace policy, chmod the
+read-only Snap payload, or add `--no-sandbox` to work around this failure.
+See Canonical's [browser-support interface documentation](https://snapcraft.io/docs/reference/interfaces/browser-support-interface/).
+
 Record `snap connections voicestudio` and relevant denials from the system log.
-Connect `audio-record` manually while testing until an auto-connect request is
-approved.
+Confirm `browser-support` has the `:browser-support` slot before launching.
+The Snap launcher checks this connection before starting Electron. If it is
+missing or cannot be checked, it exits with a localized terminal message and
+the connection command instead of letting Chromium crash. A dialog also appears
+when `zenity` is available; otherwise launch from a terminal to read the command.
+The check applies only to Snap packages and never runs sudo automatically.
+Local sideload testing requires these manual connections even when Store
+auto-connect approval is available for Store installations.
 
 Complete every item on a clean supported host:
 
@@ -111,6 +133,13 @@ and add narrowly scoped Snapcraft credentials as a repository secret. Upload
 the validated artifact without releasing it, record the assigned revision, then
 release that exact revision to `candidate`. Stable promotion requires a separate
 owner approval after independent install, refresh and rollback verification.
+
+Before promoting to stable, obtain Store approval to auto-connect
+`browser-support` with `allow-sandbox: true` and `audio-record`. Record the
+approval evidence and verify a fresh Store installation starts and records
+without manual interface commands. Declaring the plugs in the package alone
+does not grant auto-connect; this requires a Store assertion. Keep Chromium's
+sandbox enabled while requesting approval.
 
 For each submitted revision retain:
 

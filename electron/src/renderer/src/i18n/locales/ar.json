@@ -1,4 +1,7 @@
 {
+  "snapLauncher": {
+    "permissionRequired": "يحتاج VoiceStudio إلى إذن لبدء واجهته. شغّل هذا الأمر في الطرفية، ثم افتح VoiceStudio مجددًا:"
+  },
   "cloneQuality": {
     "title": "جودة الصوت",
     "precision": "دقة WAV",
