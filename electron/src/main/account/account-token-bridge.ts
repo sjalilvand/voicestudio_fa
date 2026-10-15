@@ -21,7 +21,11 @@ export async function startAccountTokenBridge(deps: {
       res.end(JSON.stringify(data));
     };
     const supplied = Buffer.from(req.headers.authorization || '');
-    if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected) || req.headers.origin)
+    if (
+      supplied.length !== expected.length ||
+      !timingSafeEqual(supplied, expected) ||
+      req.headers.origin
+    )
       return send(403, { error: 'Forbidden' });
     if (req.method !== 'GET' || req.url !== '/token') return send(404, { error: 'Not found' });
     if (!deps.isSyncAllowed() || deps.isRemoteBackend()) return send(200, { signed_in: false });

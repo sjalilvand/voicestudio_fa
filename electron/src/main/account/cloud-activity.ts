@@ -19,7 +19,11 @@ export class CloudActivity {
   private readonly fetchImpl: FetchImpl;
 
   constructor(
-    private readonly opts: { isAllowed: () => boolean; origins: Set<string>; fetchImpl?: FetchImpl },
+    private readonly opts: {
+      isAllowed: () => boolean;
+      origins: Set<string>;
+      fetchImpl?: FetchImpl;
+    },
   ) {
     this.fetchImpl = opts.fetchImpl ?? fetch;
   }
@@ -37,7 +41,10 @@ export class CloudActivity {
       throw new Error('Refusing a request outside the VoiceStudio Cloud origin');
     const controller = new AbortController();
     this.controllers.add(controller);
-    const timeout = setTimeout(() => controller.abort(new Error('timeout')), opts.timeoutMs ?? 30_000);
+    const timeout = setTimeout(
+      () => controller.abort(new Error('timeout')),
+      opts.timeoutMs ?? 30_000,
+    );
     try {
       return await this.fetchImpl(url, { ...init, redirect: 'error', signal: controller.signal });
     } finally {
@@ -66,7 +73,7 @@ export class CloudActivity {
     this.controllers.clear();
     for (const t of this.timers) clearTimeout(t);
     this.timers.clear();
-    for (const hook of [...this.stopHooks]) hook();
+    for (const hook of this.stopHooks) hook();
     this.finalAvailable = true;
   }
 }

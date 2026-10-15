@@ -1,6 +1,5 @@
 import { expect, it } from 'vitest';
 
-
 import { extraSettingsFor } from './settings-page';
 
 it('lists Settings → Account only when the build offers cloud accounts', () => {

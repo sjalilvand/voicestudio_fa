@@ -3,7 +3,10 @@ import { LoopbackError, startLoopback } from './loopback';
 
 const page = 'https://app.voicestudio.sh/app/desktop-signed-in';
 const hit = (uri: string, query: string) =>
-  fetch(uri + query, { redirect: 'manual' }).then((r) => ({ status: r.status, location: r.headers.get('location') }));
+  fetch(uri + query, { redirect: 'manual' }).then((r) => ({
+    status: r.status,
+    location: r.headers.get('location'),
+  }));
 
 it('binds only 127.0.0.1 on a random port', async () => {
   const lb = await startLoopback({ expectedState: 's', signedInPage: page });
@@ -22,7 +25,9 @@ it('refuses a wrong state and keeps waiting for the right one', async () => {
 
 it('answers 404 off the callback path', async () => {
   const lb = await startLoopback({ expectedState: 's', signedInPage: page });
-  expect((await hit(lb.redirectUri.replace('/callback', '/other'), '?state=s&code=c')).status).toBe(404);
+  expect((await hit(lb.redirectUri.replace('/callback', '/other'), '?state=s&code=c')).status).toBe(
+    404,
+  );
   lb.close();
   await lb.code.catch(() => {});
 });

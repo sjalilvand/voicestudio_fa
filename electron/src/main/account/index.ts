@@ -17,19 +17,32 @@ export async function startAccount(opts: {
   isRemoteBackend: () => boolean;
 }): Promise<() => void> {
   const available = cloudAccountsAvailable(app.isPackaged);
-  const env = resolveCloudEnvironment({ packaged: app.isPackaged, requested: process.env.VOICESTUDIO_CLOUD_ENV });
+  const env = resolveCloudEnvironment({
+    packaged: app.isPackaged,
+    requested: process.env.VOICESTUDIO_CLOUD_ENV,
+  });
   const switches = new CloudSwitchStore(join(app.getPath('userData'), 'cloud-switches.json'));
   const allowed = () => available && switches.get().accountEnabled;
   const activity = new CloudActivity({ isAllowed: allowed, origins: cloudOrigins(env) });
   const store = new RefreshTokenStore(join(app.getPath('userData'), 'account.json'), safeStorage);
   const oidc = new OidcClient(env, activity);
   const session = new AccountSession({
-    oidc, store, activity, switches, startLoopback,
+    oidc,
+    store,
+    activity,
+    switches,
+    startLoopback,
     openExternal: (url) => shell.openExternal(url),
     signedInPage: env.signedInPage,
   });
   const api = new AccountApi(env, session, activity);
-  const ctl = new AccountController({ available, switches, session, api, remembered: store.persistent });
+  const ctl = new AccountController({
+    available,
+    switches,
+    session,
+    api,
+    remembered: store.persistent,
+  });
   const closeIpc = registerAccountIpc(ctl, session, opts.getMainWindow);
   const bridge = await startAccountTokenBridge({
     getToken: () => session.getAccessToken(),

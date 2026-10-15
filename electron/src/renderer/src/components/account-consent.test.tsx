@@ -8,20 +8,32 @@ vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => k
 import { AccountConsent } from './account-consent';
 
 const base = {
-  available: true, accountEnabled: false, syncEnabled: false, prompted: false, remembered: true,
-  signedIn: false, signingIn: false, notice: null, profile: null,
+  available: true,
+  accountEnabled: false,
+  syncEnabled: false,
+  prompted: false,
+  remembered: true,
+  signedIn: false,
+  signingIn: false,
+  notice: null,
+  profile: null,
 };
 function bridgeWith(state: Partial<typeof base>) {
   const account = {
     get: vi.fn(async () => ({ ...base, ...state })),
     onState: vi.fn(() => () => {}),
     setSwitches: vi.fn(async (p: object) => ({ ...base, ...state, ...p, prompted: true })),
-    signIn: vi.fn(), cancelSignIn: vi.fn(), signOut: vi.fn(),
+    signIn: vi.fn(),
+    cancelSignIn: vi.fn(),
+    signOut: vi.fn(),
   };
   mock.bridge = { account };
   return account;
 }
-afterEach(() => { cleanup(); mock.bridge = null; });
+afterEach(() => {
+  cleanup();
+  mock.bridge = null;
+});
 
 it('asks with two equal Yes/No buttons when unprompted', async () => {
   bridgeWith({});

@@ -22,7 +22,11 @@ it('round-trips through safeStorage and never writes the token in clear', () => 
 
 it('basic_text on Linux keeps the token in memory only', () => {
   const p = path();
-  const store = new RefreshTokenStore(p, fakeSafe({ getSelectedStorageBackend: () => 'basic_text' }), 'linux');
+  const store = new RefreshTokenStore(
+    p,
+    fakeSafe({ getSelectedStorageBackend: () => 'basic_text' }),
+    'linux',
+  );
   store.save('t');
   expect(store.persistent).toBe(false);
   expect(existsSync(p)).toBe(false);
@@ -30,7 +34,11 @@ it('basic_text on Linux keeps the token in memory only', () => {
 });
 
 it('no encryption available keeps it in memory only', () => {
-  const store = new RefreshTokenStore(path(), fakeSafe({ isEncryptionAvailable: () => false }), 'win32');
+  const store = new RefreshTokenStore(
+    path(),
+    fakeSafe({ isEncryptionAvailable: () => false }),
+    'win32',
+  );
   expect(store.persistent).toBe(false);
 });
 
@@ -39,7 +47,11 @@ it('a corrupt or undecryptable file loads as signed out', () => {
   writeFileSync(p, '{"v":1,"token":"@@@');
   expect(new RefreshTokenStore(p, fakeSafe(), 'darwin').load()).toBeNull();
   writeFileSync(p, JSON.stringify({ v: 1, token: 'AAAA' }));
-  const throwing = fakeSafe({ decryptString: () => { throw new Error('keychain changed'); } });
+  const throwing = fakeSafe({
+    decryptString: () => {
+      throw new Error('keychain changed');
+    },
+  });
   expect(new RefreshTokenStore(p, throwing, 'darwin').load()).toBeNull();
 });
 

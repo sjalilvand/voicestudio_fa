@@ -6,12 +6,22 @@ function ctl(over: Partial<ConstructorParameters<typeof AccountController>[0]> =
   const switches = { accountEnabled: true, syncEnabled: false, prompted: true };
   return new AccountController({
     available: true,
-    switches: { get: () => ({ ...switches }), set: vi.fn((p) => Object.assign(switches, p)) } as never,
+    switches: {
+      get: () => ({ ...switches }),
+      set: vi.fn((p) => Object.assign(switches, p)),
+    } as never,
     session: {
       state: () => ({ signedIn: true, signingIn: false, notice: null }),
       getAccessToken: async () => ({ access_token: TOKEN, expires_at: 1 }),
     } as never,
-    api: { get: async () => ({ email: 'ana@example.com', displayName: 'Ana', avatarUrl: null, organizations: [] }) } as never,
+    api: {
+      get: async () => ({
+        email: 'ana@example.com',
+        displayName: 'Ana',
+        avatarUrl: null,
+        organizations: [],
+      }),
+    } as never,
     remembered: true,
     ...over,
   });
@@ -20,9 +30,17 @@ function ctl(over: Partial<ConstructorParameters<typeof AccountController>[0]> =
 it('the public state never carries a token', async () => {
   const s = await ctl().publicState();
   expect(JSON.stringify(s)).not.toContain(TOKEN);
-  expect(Object.keys(s).sort()).toEqual(
-    ['accountEnabled', 'available', 'notice', 'profile', 'prompted', 'remembered', 'signedIn', 'signingIn', 'syncEnabled'],
-  );
+  expect(Object.keys(s).sort()).toEqual([
+    'accountEnabled',
+    'available',
+    'notice',
+    'profile',
+    'prompted',
+    'remembered',
+    'signedIn',
+    'signingIn',
+    'syncEnabled',
+  ]);
 });
 
 it('an unavailable build reports off and makes no account call', async () => {

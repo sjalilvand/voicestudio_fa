@@ -32,13 +32,17 @@ export async function startLoopback(opts: {
       return;
     }
     const code = url.searchParams.get('code');
-    const result = url.searchParams.has('error') || !code ? { error: new LoopbackError('denied') } : { code };
+    const result =
+      url.searchParams.has('error') || !code ? { error: new LoopbackError('denied') } : { code };
     // Claim the one callback now; tear the listener down only once the 302 is out.
     done = true;
     res.on('finish', () => finish(result, true));
     res.writeHead(302, { location: opts.signedInPage, connection: 'close' }).end();
   });
-  const timer = setTimeout(() => finish({ error: new LoopbackError('timeout') }), opts.timeoutMs ?? 300_000);
+  const timer = setTimeout(
+    () => finish({ error: new LoopbackError('timeout') }),
+    opts.timeoutMs ?? 300_000,
+  );
   let settled = false;
   function finish(result: { code?: string; error?: LoopbackError }, claimed = false) {
     if (settled || (done && !claimed)) return;

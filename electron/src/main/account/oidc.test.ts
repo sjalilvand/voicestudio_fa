@@ -70,25 +70,32 @@ it('rejects a token response without offline_access', async () => {
       ? json(discovery)
       : json({ access_token: 'a', refresh_token: 'r', expires_in: 300, scope: 'openid' }),
   );
-  await expect(client(fetchImpl).exchangeCode('c', 'http://127.0.0.1:1/callback', 'v')).rejects.toThrow(
-    /offline_access/,
-  );
+  await expect(
+    client(fetchImpl).exchangeCode('c', 'http://127.0.0.1:1/callback', 'v'),
+  ).rejects.toThrow(/offline_access/);
 });
 
 it('maps refresh errors: invalid_grant vs transient', async () => {
   const respond = (r: Response) =>
     vi.fn(async (u: string) => (u.endsWith('openid-configuration') ? json(discovery) : r));
-  await expect(client(respond(json({ error: 'invalid_grant' }, 400))).refresh('r')).rejects.toBeInstanceOf(
-    InvalidGrantError,
+  await expect(
+    client(respond(json({ error: 'invalid_grant' }, 400))).refresh('r'),
+  ).rejects.toBeInstanceOf(InvalidGrantError);
+  await expect(client(respond(json({}, 503))).refresh('r')).rejects.toBeInstanceOf(
+    TransientAuthError,
   );
-  await expect(client(respond(json({}, 503))).refresh('r')).rejects.toBeInstanceOf(TransientAuthError);
 });
 
 it('sends form-encoded refresh with the public client id and no secret', async () => {
   const fetchImpl = vi.fn<FetchImpl>(async (u: string) =>
     u.endsWith('openid-configuration')
       ? json(discovery)
-      : json({ access_token: 'a', refresh_token: 'r2', expires_in: 300, scope: 'openid offline_access' }),
+      : json({
+          access_token: 'a',
+          refresh_token: 'r2',
+          expires_in: 300,
+          scope: 'openid offline_access',
+        }),
   );
   await client(fetchImpl).refresh('r1');
   const body = new URLSearchParams(String(fetchImpl.mock.calls[1][1]!.body));

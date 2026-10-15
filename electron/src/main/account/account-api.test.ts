@@ -5,9 +5,15 @@ import { cloudOrigins, resolveCloudEnvironment } from './cloud-config';
 
 const env = resolveCloudEnvironment({ packaged: true });
 const account = {
-  user_id: 'Us3nM8qWe2RtY6uI', email: 'ana@example.com', email_verified: true, display_name: 'Ana',
-  avatar_url: null, personal_organization_id: 'Or5tG7hJ9kL1zX3c',
-  organizations: [{ id: 'Or5tG7hJ9kL1zX3c', slug: 'ana', display_name: 'Ana', role: 'owner', kind: 'personal' }],
+  user_id: 'Us3nM8qWe2RtY6uI',
+  email: 'ana@example.com',
+  email_verified: true,
+  display_name: 'Ana',
+  avatar_url: null,
+  personal_organization_id: 'Or5tG7hJ9kL1zX3c',
+  organizations: [
+    { id: 'Or5tG7hJ9kL1zX3c', slug: 'ana', display_name: 'Ana', role: 'owner', kind: 'personal' },
+  ],
 };
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status });
 function setup(responses: Response[]) {
@@ -17,18 +23,28 @@ function setup(responses: Response[]) {
     invalidateAccessToken: vi.fn(),
     endSession: vi.fn(),
   };
-  const activity = new CloudActivity({ isAllowed: () => true, origins: cloudOrigins(env), fetchImpl });
+  const activity = new CloudActivity({
+    isAllowed: () => true,
+    origins: cloudOrigins(env),
+    fetchImpl,
+  });
   return { api: new AccountApi(env, session as never, activity), fetchImpl, session };
 }
 
 it('maps the account to the renderer-safe profile', async () => {
   const { api, fetchImpl } = setup([json(account)]);
   expect(await api.get()).toEqual({
-    email: 'ana@example.com', displayName: 'Ana', avatarUrl: null,
-    organizations: [{ id: 'Or5tG7hJ9kL1zX3c', slug: 'ana', displayName: 'Ana', role: 'owner', kind: 'personal' }],
+    email: 'ana@example.com',
+    displayName: 'Ana',
+    avatarUrl: null,
+    organizations: [
+      { id: 'Or5tG7hJ9kL1zX3c', slug: 'ana', displayName: 'Ana', role: 'owner', kind: 'personal' },
+    ],
   });
   expect(fetchImpl.mock.calls[0][0]).toBe('https://appapi.voicestudio.sh/v1/account');
-  expect((fetchImpl.mock.calls[0][1] as RequestInit).headers).toMatchObject({ authorization: 'Bearer tok' });
+  expect((fetchImpl.mock.calls[0][1] as RequestInit).headers).toMatchObject({
+    authorization: 'Bearer tok',
+  });
 });
 
 it('refreshes once on 401, then signs out on a second 401', async () => {
@@ -41,7 +57,9 @@ it('refreshes once on 401, then signs out on a second 401', async () => {
 it('PATCH reuses its Idempotency-Key when retrying after 401', async () => {
   const { api, fetchImpl } = setup([json({}, 401), json(account)]);
   await api.patch({ display_name: 'Ana B' });
-  const keys = fetchImpl.mock.calls.map((c) => ((c[1] as RequestInit).headers as Record<string, string>)['idempotency-key']);
+  const keys = fetchImpl.mock.calls.map(
+    (c) => ((c[1] as RequestInit).headers as Record<string, string>)['idempotency-key'],
+  );
   expect(keys[0]).toMatch(/^[0-9a-f]{32}$/);
   expect(keys[1]).toBe(keys[0]);
 });

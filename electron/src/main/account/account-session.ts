@@ -1,12 +1,25 @@
 import { CloudDisabledError, type CloudActivity } from './cloud-activity';
 import type { CloudSwitchStore } from './cloud-switches';
 import type { startLoopback as StartLoopback } from './loopback';
-import { InvalidGrantError, TransientAuthError, createPkce, type OidcClient, type TokenResponse } from './oidc';
+import {
+  InvalidGrantError,
+  TransientAuthError,
+  createPkce,
+  type OidcClient,
+  type TokenResponse,
+} from './oidc';
 import type { RefreshTokenStore } from './token-store';
 
 export type SessionNotice = 'signed_out_expired' | 'sign_in_failed' | 'offline' | null;
-export interface SessionState { signedIn: boolean; signingIn: boolean; notice: SessionNotice }
-export interface AccessToken { access_token: string; expires_at: number }
+export interface SessionState {
+  signedIn: boolean;
+  signingIn: boolean;
+  notice: SessionNotice;
+}
+export interface AccessToken {
+  access_token: string;
+  expires_at: number;
+}
 
 export interface SessionDeps {
   oidc: OidcClient;
@@ -41,7 +54,11 @@ export class AccountSession {
   }
 
   state(): SessionState {
-    return { signedIn: this.deps.store.load() !== null, signingIn: this.signingIn, notice: this.notice };
+    return {
+      signedIn: this.deps.store.load() !== null,
+      signingIn: this.signingIn,
+      notice: this.notice,
+    };
   }
 
   onChange(cb: (s: SessionState) => void): () => void {
@@ -58,7 +75,10 @@ export class AccountSession {
     this.emit();
     try {
       const endpoints = await this.deps.oidc.discover();
-      const lb = await this.deps.startLoopback({ expectedState: pkce.state, signedInPage: this.deps.signedInPage });
+      const lb = await this.deps.startLoopback({
+        expectedState: pkce.state,
+        signedInPage: this.deps.signedInPage,
+      });
       this.closeLoopback = lb.close;
       await this.deps.openExternal(this.deps.oidc.authorizeUrl(endpoints, lb.redirectUri, pkce));
       const code = await lb.code;
@@ -110,19 +130,31 @@ export class AccountSession {
     if (!refresh) return null;
     try {
       this.accept(await this.deps.oidc.refresh(refresh));
-      if (this.notice === 'offline') { this.notice = null; this.emit(); }
+      if (this.notice === 'offline') {
+        this.notice = null;
+        this.emit();
+      }
       return this.access;
     } catch (error) {
-      if (error instanceof InvalidGrantError) { this.endSession('signed_out_expired'); return null; }
+      if (error instanceof InvalidGrantError) {
+        this.endSession('signed_out_expired');
+        return null;
+      }
       if (error instanceof CloudDisabledError) return null;
-      if (error instanceof TransientAuthError) { this.notice = 'offline'; this.emit(); }
+      if (error instanceof TransientAuthError) {
+        this.notice = 'offline';
+        this.emit();
+      }
       throw error;
     }
   }
 
   private accept(tokens: TokenResponse): void {
     this.deps.store.save(tokens.refresh_token);
-    this.access = { access_token: tokens.access_token, expires_at: this.now() + tokens.expires_in * 1000 };
+    this.access = {
+      access_token: tokens.access_token,
+      expires_at: this.now() + tokens.expires_in * 1000,
+    };
   }
 
   private async turnedOff(): Promise<void> {

@@ -8,7 +8,11 @@ import { CloudSwitchStore } from './cloud-switches';
 import { InvalidGrantError, TransientAuthError } from './oidc';
 import { RefreshTokenStore } from './token-store';
 
-const memorySafe = { isEncryptionAvailable: () => false, encryptString: Buffer.from, decryptString: String } as never;
+const memorySafe = {
+  isEncryptionAvailable: () => false,
+  encryptString: Buffer.from,
+  decryptString: String,
+} as never;
 
 function harness(over: Partial<Record<string, unknown>> = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'vs-session-'));
@@ -21,28 +25,51 @@ function harness(over: Partial<Record<string, unknown>> = {}) {
     fetchImpl: vi.fn(),
   });
   const tokens = (refresh: string) => ({
-    access_token: `a-${refresh}`, refresh_token: refresh, expires_in: 300, scope: 'openid offline_access',
+    access_token: `a-${refresh}`,
+    refresh_token: refresh,
+    expires_in: 300,
+    scope: 'openid offline_access',
   });
   const oidc = {
-    discover: vi.fn(async () => ({ authorization_endpoint: 'https://voicestudio.sh/auth', token_endpoint: '', revocation_endpoint: '' })),
+    discover: vi.fn(async () => ({
+      authorization_endpoint: 'https://voicestudio.sh/auth',
+      token_endpoint: '',
+      revocation_endpoint: '',
+    })),
     authorizeUrl: vi.fn(() => 'https://voicestudio.sh/auth?x'),
     exchangeCode: vi.fn(async () => tokens('r1')),
     refresh: vi.fn(async () => tokens('r2')),
     revoke: vi.fn(async () => {}),
   };
   let resolveCode!: (c: string) => void;
-  const loopback = { redirectUri: 'http://127.0.0.1:1/callback', code: new Promise<string>((r) => (resolveCode = r)), close: vi.fn() };
+  const loopback = {
+    redirectUri: 'http://127.0.0.1:1/callback',
+    code: new Promise<string>((r) => (resolveCode = r)),
+    close: vi.fn(),
+  };
   let t = 0;
   const openExternal = vi.fn(async () => {});
   const session = new AccountSession({
-    oidc: oidc as never, store, activity, switches,
+    oidc: oidc as never,
+    store,
+    activity,
+    switches,
     openExternal,
     startLoopback: vi.fn(async () => loopback) as never,
     signedInPage: 'https://app.voicestudio.sh/app/desktop-signed-in',
     now: () => t,
     ...over,
   });
-  return { session, oidc, store, switches, loopback, openExternal, resolveCode, advance: (ms: number) => (t += ms) };
+  return {
+    session,
+    oidc,
+    store,
+    switches,
+    loopback,
+    openExternal,
+    resolveCode,
+    advance: (ms: number) => (t += ms),
+  };
 }
 
 it('signs in through the browser and stores the refresh token', async () => {
@@ -78,7 +105,11 @@ it('turning account off mid sign-in closes the listener and stores nothing', asy
 it('concurrent getAccessToken calls share one refresh, and the token rotates', async () => {
   const h = harness();
   h.store.save('r1');
-  const [a, b, c] = await Promise.all([h.session.getAccessToken(), h.session.getAccessToken(), h.session.getAccessToken()]);
+  const [a, b, c] = await Promise.all([
+    h.session.getAccessToken(),
+    h.session.getAccessToken(),
+    h.session.getAccessToken(),
+  ]);
   expect(h.oidc.refresh).toHaveBeenCalledOnce();
   expect(a).toEqual(b);
   expect(c?.access_token).toBe('a-r2');

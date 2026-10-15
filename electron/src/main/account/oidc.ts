@@ -64,7 +64,11 @@ export class OidcClient {
     return endpoints;
   }
 
-  authorizeUrl(e: OidcEndpoints, redirectUri: string, p: { state: string; challenge: string }): string {
+  authorizeUrl(
+    e: OidcEndpoints,
+    redirectUri: string,
+    p: { state: string; challenge: string },
+  ): string {
     const url = new URL(e.authorization_endpoint);
     url.search = new URLSearchParams({
       client_id: this.env.clientId,
@@ -101,7 +105,11 @@ export class OidcClient {
     const { revocation_endpoint } = await this.discover();
     await this.activity.fetch(
       revocation_endpoint,
-      this.form({ client_id: this.env.clientId, token: refreshToken, token_type_hint: 'refresh_token' }),
+      this.form({
+        client_id: this.env.clientId,
+        token: refreshToken,
+        token_type_hint: 'refresh_token',
+      }),
       { final: true, timeoutMs: 5_000 },
     );
   }
@@ -123,10 +131,16 @@ export class OidcClient {
       if ((error as Error).name === 'CloudDisabledError') throw error;
       throw new TransientAuthError();
     }
-    const body = (await res.json().catch(() => ({}))) as Partial<TokenResponse> & { error?: string };
+    const body = (await res.json().catch(() => ({}))) as Partial<TokenResponse> & {
+      error?: string;
+    };
     if (res.status === 400 && body.error === 'invalid_grant') throw new InvalidGrantError();
     if (!res.ok) throw new TransientAuthError(res.status);
-    if (!String(body.scope ?? '').split(' ').includes('offline_access'))
+    if (
+      !String(body.scope ?? '')
+        .split(' ')
+        .includes('offline_access')
+    )
       throw new Error('Token response lacks offline_access');
     return body as TokenResponse;
   }

@@ -7,14 +7,26 @@ export interface AccountProfile {
   email: string | null;
   displayName: string | null;
   avatarUrl: string | null;
-  organizations: Array<{ id: string; slug: string; displayName: string; role: string; kind: string }>;
+  organizations: Array<{
+    id: string;
+    slug: string;
+    displayName: string;
+    role: string;
+    kind: string;
+  }>;
 }
 
 interface RawAccount {
   email?: string | null;
   display_name?: string | null;
   avatar_url?: string | null;
-  organizations?: Array<{ id: string; slug: string; display_name: string; role: string; kind: string }>;
+  organizations?: Array<{
+    id: string;
+    slug: string;
+    display_name: string;
+    role: string;
+    kind: string;
+  }>;
 }
 
 const toProfile = (a: RawAccount): AccountProfile => ({
@@ -22,7 +34,11 @@ const toProfile = (a: RawAccount): AccountProfile => ({
   displayName: a.display_name ?? null,
   avatarUrl: a.avatar_url ?? null,
   organizations: (a.organizations ?? []).map((o) => ({
-    id: o.id, slug: o.slug, displayName: o.display_name, role: o.role, kind: o.kind,
+    id: o.id,
+    slug: o.slug,
+    displayName: o.display_name,
+    role: o.role,
+    kind: o.kind,
   })),
 });
 
@@ -37,11 +53,18 @@ export class AccountApi {
     return this.call({ method: 'GET' });
   }
 
-  patch(changes: { display_name?: string; theme?: 'system' | 'light' | 'dark'; language?: string }) {
+  patch(changes: {
+    display_name?: string;
+    theme?: 'system' | 'light' | 'dark';
+    language?: string;
+  }) {
     return this.call({
       method: 'PATCH',
       body: JSON.stringify(changes),
-      headers: { 'content-type': 'application/json', 'idempotency-key': randomBytes(16).toString('hex') },
+      headers: {
+        'content-type': 'application/json',
+        'idempotency-key': randomBytes(16).toString('hex'),
+      },
     });
   }
 

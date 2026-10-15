@@ -33,17 +33,24 @@ export class AccountController {
 
   async publicState(refreshProfile = false): Promise<AccountPublicState> {
     const { available, switches, session, remembered } = this.parts;
-    const sw: CloudSwitches = available ? switches.get() : { accountEnabled: false, syncEnabled: false, prompted: true };
-    const s = available && sw.accountEnabled ? session.state() : { signedIn: false, signingIn: false, notice: null };
+    const sw: CloudSwitches = available
+      ? switches.get()
+      : { accountEnabled: false, syncEnabled: false, prompted: true };
+    const s =
+      available && sw.accountEnabled
+        ? session.state()
+        : { signedIn: false, signingIn: false, notice: null };
     if (!s.signedIn) this.profile = null;
-    else if (refreshProfile || !this.profile) this.profile = await this.parts.api.get().catch(() => this.profile);
+    else if (refreshProfile || !this.profile)
+      this.profile = await this.parts.api.get().catch(() => this.profile);
     return { available, ...sw, remembered, ...s, profile: this.profile };
   }
 
   async setSwitches(raw: unknown): Promise<AccountPublicState> {
     const p = raw as Partial<CloudSwitches>;
     for (const key of ['accountEnabled', 'syncEnabled'] as const)
-      if (p?.[key] !== undefined && typeof p[key] !== 'boolean') throw new Error('Invalid switches');
+      if (p?.[key] !== undefined && typeof p[key] !== 'boolean')
+        throw new Error('Invalid switches');
     if (this.parts.available)
       this.parts.switches.set({
         ...(p.accountEnabled !== undefined ? { accountEnabled: p.accountEnabled } : {}),
@@ -72,7 +79,8 @@ export function registerAccountIpc(
   }
   const broadcast = async () => {
     const s = await ctl.publicState();
-    for (const win of BrowserWindow.getAllWindows()) sendToLiveWindow(win, ACCOUNT_CHANNELS.state, s);
+    for (const win of BrowserWindow.getAllWindows())
+      sendToLiveWindow(win, ACCOUNT_CHANNELS.state, s);
   };
   const unsubscribe = session.onChange(() => void broadcast());
   ipcMain.handle(ACCOUNT_CHANNELS.get, (e) => (trusted(e), ctl.publicState(true)));

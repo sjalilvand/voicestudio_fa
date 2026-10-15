@@ -8,9 +8,15 @@ export function useAccount() {
   useEffect(() => {
     if (!account) return;
     let live = true;
-    void account.get().then((s) => live && setState(s)).catch(() => {});
+    void account
+      .get()
+      .then((s) => live && setState(s))
+      .catch(() => {});
     const off = account.onState((s) => live && setState(s));
-    return () => { live = false; off(); };
+    return () => {
+      live = false;
+      off();
+    };
   }, [account]);
   return {
     supported: Boolean(account),
