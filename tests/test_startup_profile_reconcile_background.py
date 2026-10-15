@@ -15,7 +15,7 @@ _REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def test_phase_b_does_not_reconcile_inline():
     assert "reconcile_active_profile" not in inspect.getsource(main._phase_b)
-    assert "_reconcile_profile_in_background" in inspect.getsource(main._phase_b)
+    assert "_start_profile_reconcile(app)" in inspect.getsource(main._phase_b)
 
 
 def test_warmups_wait_for_reconcile_in_background(monkeypatch):
@@ -31,9 +31,7 @@ def test_warmups_wait_for_reconcile_in_background(monkeypatch):
 
     async def scenario():
         app = SimpleNamespace(state=SimpleNamespace())
-        app.state.profile_reconcile_task = asyncio.create_task(
-            main._reconcile_profile_in_background()
-        )
+        main._start_profile_reconcile(app)
         waiter = asyncio.create_task(main._await_profile_reconcile(app))
         await asyncio.sleep(0.05)
         # The caller (startup) got control back while reconcile is still running.
@@ -54,11 +52,10 @@ def test_reconcile_failure_is_non_fatal_and_does_not_block_warmups(monkeypatch):
 
     async def scenario():
         app = SimpleNamespace(state=SimpleNamespace())
-        app.state.profile_reconcile_task = asyncio.create_task(
-            main._reconcile_profile_in_background()
-        )
+        main._start_profile_reconcile(app)
         await main._await_profile_reconcile(app)
         assert app.state.profile_reconcile_task.exception() is None
+        assert app.state.profile_reconcile_events[1].is_set()
 
     asyncio.run(scenario())
 
@@ -105,4 +102,50 @@ def test_eager_boots_keep_the_classic_synchronous_startup():
 
 def test_shutdown_waits_for_a_running_reconcile_thread():
     source = inspect.getsource(main.lifespan)
-    assert "_profile_reconcile_finished.wait" in source
+    assert "_wait_for_profile_reconcile_thread(app)" in source
+
+
+def test_each_boot_waits_for_its_own_reconcile_after_task_cancellation(monkeypatch):
+    """A completed first boot must not suppress the second worker's shutdown wait."""
+    releases = [threading.Event(), threading.Event()]
+    boot = iter(range(2))
+
+    def reconcile():
+        releases[next(boot)].wait(5)
+        return {}
+
+    monkeypatch.setattr(importlib.import_module("services.performance_profiles"),
+                        "reconcile_active_profile", reconcile)
+
+    async def scenario():
+        app = SimpleNamespace(state=SimpleNamespace())
+        previous = None
+        for release in releases:
+            main._start_profile_reconcile(app)
+            started, finished = app.state.profile_reconcile_events
+            assert (started, finished) != previous
+            previous = (started, finished)
+            try:
+                assert await asyncio.to_thread(started.wait, 2)
+                task = app.state.profile_reconcile_task
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+                waiter = asyncio.create_task(main._wait_for_profile_reconcile_thread(app))
+                await asyncio.sleep(0.05)
+                assert not waiter.done()
+                assert not finished.is_set()
+                release.set()
+                await asyncio.wait_for(waiter, 2)
+                assert finished.is_set()
+            finally:
+                release.set()
+
+    asyncio.run(scenario())
+
+
+def test_shutdown_before_reconcile_scheduled_returns_immediately():
+    app = SimpleNamespace(state=SimpleNamespace())
+    asyncio.run(main._wait_for_profile_reconcile_thread(app))

@@ -915,30 +915,48 @@ async def _deferred_startup(app: FastAPI) -> None:
 # Same lifecycle markers as Phase A: cancelling the task cannot stop the thread
 # already importing engine runtimes, so shutdown waits (bounded) for it rather
 # than let interpreter teardown race a native import (#1000 class).
-_profile_reconcile_started = threading.Event()
-_profile_reconcile_finished = threading.Event()
-
-
-def _reconcile_profile_blocking():
-    _profile_reconcile_started.set()
+def _reconcile_profile_blocking(started: threading.Event, finished: threading.Event):
+    started.set()
     try:
         from services.performance_profiles import reconcile_active_profile
 
         return reconcile_active_profile()
     finally:
-        _profile_reconcile_finished.set()
+        finished.set()
 
 
-async def _reconcile_profile_in_background() -> None:
+async def _reconcile_profile_in_background(
+    started: threading.Event, finished: threading.Event,
+) -> None:
     """Reapply the saved performance profile off the startup critical path."""
     try:
-        recovered = await asyncio.to_thread(_reconcile_profile_blocking)
+        recovered = await asyncio.to_thread(_reconcile_profile_blocking, started, finished)
         if recovered:
             logger.info("Startup performance selections reconciled: %s", recovered)
     except asyncio.CancelledError:
         raise
     except Exception:
         logger.exception("Performance-profile reconciliation failed (non-fatal).")
+
+
+def _start_profile_reconcile(app: FastAPI) -> None:
+    """Schedule reconciliation with markers owned by this lifespan."""
+    # Each worker captures its own markers: a prior lifespan completing late
+    # cannot mark this boot's worker finished (#2861).
+    events = (threading.Event(), threading.Event())
+    app.state.profile_reconcile_events = events
+    app.state.profile_reconcile_task = asyncio.create_task(
+        _reconcile_profile_in_background(*events)
+    )
+
+
+async def _wait_for_profile_reconcile_thread(app: FastAPI) -> None:
+    """Bound shutdown waiting on this boot's worker, even if its task was cancelled."""
+    events = getattr(app.state, "profile_reconcile_events", None)
+    if events is not None:
+        started, finished = events
+        if started.is_set() and not finished.is_set():
+            await asyncio.to_thread(finished.wait, 20.0)
 
 
 async def _await_profile_reconcile(app: FastAPI) -> None:
@@ -1021,7 +1039,7 @@ async def _phase_b(app: FastAPI) -> None:
     # on a cold disk), and nothing the first screen shows depends on the result,
     # so it runs in the background instead of holding /health at 503. The model
     # warm-ups below await it, so they still load the reconciled selections.
-    app.state.profile_reconcile_task = asyncio.create_task(_reconcile_profile_in_background())
+    _start_profile_reconcile(app)
     if _EAGER:
         # Eager boots (pytest, OMNIVOICE_EAGER_INIT=1) promise the classic
         # synchronous startup: callers read engines the moment the lifespan
@@ -1252,8 +1270,7 @@ async def lifespan(app: FastAPI):
     # before Phase A began pays nothing.
     if _phase_a_started.is_set() and not _phase_a_finished.is_set():
         await asyncio.to_thread(_phase_a_finished.wait, 20.0)
-    if _profile_reconcile_started.is_set() and not _profile_reconcile_finished.is_set():
-        await asyncio.to_thread(_profile_reconcile_finished.wait, 20.0)
+    await _wait_for_profile_reconcile_thread(app)
     try:
         from services.telephony import gateway as telephony_gateway
         await telephony_gateway.stop()
