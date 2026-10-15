@@ -22,10 +22,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
-<<<<<<< HEAD
-=======
 - Tools → Convert includes saved Voice Design profiles and clones with locked reference audio in the target voice picker (#2899)
->>>>>>> origin/main
 
 - Snap packages follow Canonical’s strict-confinement approach to launch without manual Chromium sandbox setup (#2893) — thanks @velixio!
 - Snap launches explain missing sandbox permissions instead of crashing before startup (#2889)
