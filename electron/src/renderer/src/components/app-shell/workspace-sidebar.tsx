@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { PanelLeftIcon, PanelLeftOpenIcon, SettingsIcon } from 'lucide-react';
 import { brandIcon, brandArtwork } from '@/lib/brand';
-import { isMac } from '@/components/bridge';
+import { appVersion, isMac } from '@/components/bridge';
 import { cn } from '@/lib/utils';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { usePaneResize } from '@/hooks/use-pane-resize';
@@ -19,6 +19,7 @@ export function WorkspaceSidebar() {
   const backend = useBackendStatus();
   const { t } = useTranslation();
   const mac = isMac();
+  const versionLabel = t('app.version', { version: appVersion() });
   const { libraryOpen, libraryTab } = useWorkspace();
   // One source of truth for "rail or full sidebar": the header toggle and the
   // sidebar's own buttons used to keep separate copies of this state.
@@ -127,11 +128,16 @@ export function WorkspaceSidebar() {
           >
             <Link
               to="/"
-              aria-label={t('app.name')}
+              aria-label={`${t('app.name')} ${versionLabel}`}
               className="flex min-w-0 flex-1 items-center gap-2 rounded outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <img src={brandIcon} alt="" className="size-6 shrink-0" />
-              <span className="truncate text-base font-semibold">{t('app.name')}</span>
+              <span className="flex min-w-0 flex-col leading-tight">
+                <span className="truncate text-base font-semibold">{t('app.name')}</span>
+                <span className="text-[11px] leading-none text-muted-foreground tabular-nums">
+                  {versionLabel}
+                </span>
+              </span>
             </Link>
             <Button
               variant="ghost"
