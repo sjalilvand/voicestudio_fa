@@ -143,6 +143,10 @@ from services.hf_auth import apply_process_token_policy as _apply_hf_token_polic
 
 _apply_hf_token_policy()
 
+# Importing it removes Electron's account-bridge capability from os.environ, so
+# engine and tool subprocesses never inherit it.
+import services.cloud_account  # noqa: E402,F401
+
 # ── cuDNN 8 library preload ─────────────────────────────────────────────
 # Moved into _phase_a_build (`native_preload` step, early-bind refactor): the
 # native dlopen/LoadLibrary belongs to the deferred heavy phase, and its one
