@@ -1,4 +1,4 @@
-"""The native helper must dispatch Carbon events on both maintained Mac runners."""
+"""The native helper must dispatch Carbon events on the macOS backend smoke runner."""
 import shutil
 import subprocess
 import sys

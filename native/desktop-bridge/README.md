@@ -49,4 +49,5 @@ starve registration changes or shutdown.
 `cargo run --locked --manifest-path native/desktop-bridge/Cargo.toml --example macos-shortcut-pump-smoke`
 posts an application hotkey event and verifies dispatch through the production
 pump. It sends no OS keystrokes, changes no global shortcut registration and
-requires no Accessibility permission. CI runs it on both maintained Mac runners.
+requires no Accessibility permission. CI runs it in the Apple Silicon backend smoke job; it can also be run
+manually on an Intel Mac without installing the Python backend.
