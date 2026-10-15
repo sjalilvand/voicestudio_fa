@@ -165,6 +165,32 @@ def test_spell_out_handles_precomposed_unicode_letters():
     assert spell_out("piñata") == "p i ñ a t a"
 
 
+def test_spell_out_keeps_devanagari_vowel_sign_with_its_base():
+    # Devanagari vowel signs are category Mc (spacing combining mark) and
+    # report unicodedata.combining() == 0, so a check on combining() alone
+    # would split the base consonant from its vowel sign. The category
+    # check (Mn/Mc/Me) keeps the pair together.
+    assert spell_out("का") == "का"  # k + aa vowel sign
+    # हिंदी = ह (Lo) + ि (Mc) + ं (Mn) + द (Lo) + ी (Mc)
+    # → two graphemes: हिं and दी
+    assert spell_out("हिंदी") == "हिं दी"
+
+
+def test_spell_out_long_combining_run_is_linear_time():
+    # Guard the O(n) implementation. A pathological run of combining marks
+    # must not blow up the way repeated ``units[-1] += ch`` would.
+    import time
+
+    payload = "a" + "े" * 5000  # 5000 Devanagari vowel signs after one base
+    t0 = time.perf_counter()
+    out = spell_out(payload)
+    elapsed = time.perf_counter() - t0
+    assert elapsed < 1.0, f"spell_out took {elapsed:.2f}s for 5000 marks"
+    # All 5000 marks attach to the same leading base; one grapheme, one
+    # spelled-out unit.
+    assert out == payload
+
+
 def test_redos_safe_on_adversarial_input():
     # Many bracket-like fragments must not blow up (linear-time guarantee).
     import time

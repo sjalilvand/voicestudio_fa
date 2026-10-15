@@ -158,21 +158,30 @@ def _grapheme_units(text: str) -> list[str]:
     1. NFC-normalize first so common decomposed sequences (Latin diacritics,
        precomposed vs. conjoining-jamo Hangul) collapse to a single code
        point.
-    2. Walk the NFC text; any ``unicodedata.combining`` code point is
-       appended to the previous unit instead of starting a new one. This
-       keeps a base character with any trailing marks even when a caller
-       passes text that was already combined by the OS keyboard.
+    2. Walk the NFC text; any code point whose Unicode general category is
+       ``Mn`` (non-spacing mark), ``Mc`` (spacing combining mark — used by
+       Indic scripts such as Devanagari vowel signs), or ``Me`` (enclosing
+       mark) is appended to the previous unit instead of starting a new
+       one. ``unicodedata.combining`` alone misses ``Mc`` (it reports 0
+       for spacing combining marks), so checking the category is the
+       portable signal.
+
+    The unit buffer is a list of single-character strings, not a single
+    string that we keep growing with ``+=``: ``str += str`` copies the
+    whole left-hand side each time, so a long run of trailing combining
+    marks (pathological but reachable through user input or imports)
+    would be O(n²). Joining once at the end is O(n).
     """
     if not text:
         return []
     normalized = unicodedata.normalize("NFC", text)
-    units: list[str] = []
+    units: list[list[str]] = []
     for ch in normalized:
-        if units and unicodedata.combining(ch):
-            units[-1] += ch
+        if units and unicodedata.category(ch) in ("Mn", "Mc", "Me"):
+            units[-1].append(ch)
         else:
-            units.append(ch)
-    return units
+            units.append([ch])
+    return ["".join(unit) for unit in units]
 
 
 def spell_out(word: str) -> str:
