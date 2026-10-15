@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest';
-import { CloudActivity, CloudDisabledError } from './cloud-activity';
+import { CloudActivity, CloudDisabledError, type FetchImpl } from './cloud-activity';
 
 const origins = new Set(['https://voicestudio.sh']);
 
@@ -22,10 +22,10 @@ it('refuses origins outside the configured environment', async () => {
 it('stopAll aborts in-flight requests, cancels timers and runs stop hooks', async () => {
   let seen: AbortSignal | undefined;
   const fetchImpl = vi.fn(
-    (_url: string, init: RequestInit) =>
+    (_url: string, init?: RequestInit) =>
       new Promise<Response>((_resolve, reject) => {
-        seen = init.signal!;
-        init.signal!.addEventListener('abort', () => reject(init.signal!.reason));
+        seen = init!.signal!;
+        seen.addEventListener('abort', () => reject(seen!.reason));
       }),
   );
   const activity = new CloudActivity({ isAllowed: () => true, origins, fetchImpl });
@@ -58,7 +58,7 @@ it('allows exactly one final call after stopAll (the revocation)', async () => {
 });
 
 it('never follows redirects', async () => {
-  const fetchImpl = vi.fn(async () => new Response('{}'));
+  const fetchImpl = vi.fn<FetchImpl>(async () => new Response('{}'));
   const activity = new CloudActivity({ isAllowed: () => true, origins, fetchImpl });
   await activity.fetch('https://voicestudio.sh/x');
   expect(fetchImpl.mock.calls[0][1]).toMatchObject({ redirect: 'error' });

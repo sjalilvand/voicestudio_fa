@@ -2,6 +2,8 @@
  * The only door to VoiceStudio Cloud. Every request and timer goes through here,
  * so turning a switch off can stop all of them at once (owner rule 2026-10-16).
  */
+export type FetchImpl = (url: string, init?: RequestInit) => Promise<Response>;
+
 export class CloudDisabledError extends Error {
   constructor() {
     super('VoiceStudio Cloud is switched off');
@@ -14,10 +16,10 @@ export class CloudActivity {
   private readonly timers = new Set<NodeJS.Timeout>();
   private readonly stopHooks = new Set<() => void>();
   private finalAvailable = false;
-  private readonly fetchImpl: typeof fetch;
+  private readonly fetchImpl: FetchImpl;
 
   constructor(
-    private readonly opts: { isAllowed: () => boolean; origins: Set<string>; fetchImpl?: typeof fetch },
+    private readonly opts: { isAllowed: () => boolean; origins: Set<string>; fetchImpl?: FetchImpl },
   ) {
     this.fetchImpl = opts.fetchImpl ?? fetch;
   }

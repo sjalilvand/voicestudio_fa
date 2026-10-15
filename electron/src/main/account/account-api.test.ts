@@ -1,6 +1,6 @@
 import { expect, it, vi } from 'vitest';
 import { AccountApi } from './account-api';
-import { CloudActivity } from './cloud-activity';
+import { CloudActivity, type FetchImpl } from './cloud-activity';
 import { cloudOrigins, resolveCloudEnvironment } from './cloud-config';
 
 const env = resolveCloudEnvironment({ packaged: true });
@@ -11,7 +11,7 @@ const account = {
 };
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status });
 function setup(responses: Response[]) {
-  const fetchImpl = vi.fn(async () => responses.shift()!);
+  const fetchImpl = vi.fn<FetchImpl>(async () => responses.shift()!);
   const session = {
     getAccessToken: vi.fn(async () => ({ access_token: 'tok', expires_at: 9e15 })),
     invalidateAccessToken: vi.fn(),

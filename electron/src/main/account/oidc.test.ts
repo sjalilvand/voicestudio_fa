@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { expect, it, vi } from 'vitest';
-import { CloudActivity } from './cloud-activity';
+import { CloudActivity, type FetchImpl } from './cloud-activity';
 import { cloudOrigins, resolveCloudEnvironment } from './cloud-config';
 import { InvalidGrantError, OidcClient, TransientAuthError, base64url, createPkce } from './oidc';
 
@@ -13,7 +13,7 @@ const discovery = {
 };
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
-const client = (fetchImpl: typeof fetch, now = () => 0) =>
+const client = (fetchImpl: FetchImpl, now = () => 0) =>
   new OidcClient(
     env,
     new CloudActivity({ isAllowed: () => true, origins: cloudOrigins(env), fetchImpl }),
@@ -85,7 +85,7 @@ it('maps refresh errors: invalid_grant vs transient', async () => {
 });
 
 it('sends form-encoded refresh with the public client id and no secret', async () => {
-  const fetchImpl = vi.fn(async (u: string, _init?: RequestInit) =>
+  const fetchImpl = vi.fn<FetchImpl>(async (u: string) =>
     u.endsWith('openid-configuration')
       ? json(discovery)
       : json({ access_token: 'a', refresh_token: 'r2', expires_in: 300, scope: 'openid offline_access' }),
