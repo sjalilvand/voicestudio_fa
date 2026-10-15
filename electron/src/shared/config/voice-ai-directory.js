@@ -15,7 +15,7 @@ import mcpLogo from '../assets/integrations/mcp.png';
 import claudeLogo from '../assets/integrations/claude.svg';
 import cursorLogo from '../assets/integrations/cursor.svg';
 import openaiLogo from '../assets/integrations/openai.svg';
-import voiceStudioLogo from '../../../public/favicon.svg';
+import voiceStudioLogo from '../assets/integrations/voicestudio.svg';
 
 export const VOICE_AI_DIRECTORY = [
   {

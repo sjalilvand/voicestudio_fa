@@ -15,7 +15,7 @@ The compact footer’s Integrations button opens the directory. Each visible det
 | Claude Code | [Guide](https://docs.anthropic.com/en/docs/claude-code) | Simple Icons 15.0.0 Claude mark (CC0), Claude orange |
 | Cursor | [Website](https://cursor.com) | Official site icon (`cursor.com/marketing-static/favicon.svg`) |
 | Codex CLI | [Repository](https://github.com/openai/codex) | Simple Icons 15.0.0 OpenAI mark (CC0) on a black tile |
-| VoiceStudio API | [Repository](https://github.com/debpalash/VoiceStudio) | VoiceStudio app icon (`electron/public/favicon.svg`) |
+| VoiceStudio API | [Repository](https://github.com/debpalash/VoiceStudio) | VoiceStudio app icon (`voicestudio.svg`, a copy of `electron/public/favicon.svg`) |
 
 ## Connect coding agents
 

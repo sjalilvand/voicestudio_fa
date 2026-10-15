@@ -135,32 +135,34 @@ export function EngineNotice({
   const fix = async () => {
     setFixing(true);
     try {
+      // Readiness also blocks when the selected engine is available but the
+      // model chosen for it is not downloaded. Download that model first,
+      // keeping the user's engine choice; a recommended model alone would not
+      // unblock that engine.
+      const engines = await apiJson<EnginesResponse>('/engines');
+      const active = engines.tts?.backends?.find((backend) => backend.id === engines.tts.active);
+      const selectedModel = active?.available ? engines.tts.active_model : null;
+      if (selectedModel) {
+        const catalogue = await apiJson<ModelCatalogueResponse>('/models');
+        const entry = catalogue.models?.find((model) => model.repo_id === selectedModel);
+        if (entry && (!entry.installed || entry.incomplete)) {
+          await startInstall(selectedModel);
+          return;
+        }
+      }
       const recommendation = await apiJson<ModelRecommendations>('/setup/recommendations');
       const missing = recommendation.models.find(
         (item) => item.required && item.role.toLowerCase() === 'tts' && !item.installed,
       );
-      if (!missing) {
-        // Readiness also blocks when the selected engine is available but the
-        // model chosen for it is not downloaded. Download that model rather
-        // than switching engines behind the user's back.
-        const engines = await apiJson<EnginesResponse>('/engines');
-        const selectedModel = engines.tts?.active_model;
-        if (selectedModel) {
-          const catalogue = await apiJson<ModelCatalogueResponse>('/models');
-          const entry = catalogue.models?.find((model) => model.repo_id === selectedModel);
-          if (entry && (!entry.installed || entry.incomplete)) {
-            await startInstall(selectedModel);
-            return;
-          }
-        }
-        if (!(await activateAvailableEngine(engines))) {
-          repair(
-            'The required model is installed, but no compatible engine is ready. Diagnose the live engine state and complete supported app-level recovery.',
-          );
-        }
+      if (missing) {
+        await startInstall(missing.repo_id);
         return;
       }
-      await startInstall(missing.repo_id);
+      if (!(await activateAvailableEngine(engines))) {
+        repair(
+          'The required model is installed, but no compatible engine is ready. Diagnose the live engine state and complete supported app-level recovery.',
+        );
+      }
     } catch (error) {
       setInstall(null);
       installSeen.current = false;
