@@ -12,6 +12,10 @@ metadata and the backend fallback mirror it.
 
 - The open-source app no longer contains a licence-key client
 
+### Changed
+
+- The expanded sidebar shows the installed app version beneath VoiceStudio (#2894)
+
 ### Removed
 
 - The unused licence-key client and its Lemon Squeezy network call are gone from the open-source app (#2812)
