@@ -132,6 +132,8 @@ Website requests begin only after clicking. Remote pages use a sandboxed Electro
 The Dubbing workspace keeps its existing `/dub` route and saved project format; the name change affects visible feature labels only.
 
 Backend embedders that restart the application lifespan in one Python process
-receive fresh performance-profile reconciliation markers on every boot. Shutdown
+receive a fresh performance-profile reconciliation worker handle on every boot. Shutdown
 waits up to 20 seconds for that boot's running reconciliation thread, including
 when its asyncio task was cancelled; a completed earlier boot cannot bypass the wait.
+Work not yet submitted is cancelled, and queued executor work remains tracked
+without requiring another executor thread to enforce the shutdown deadline.

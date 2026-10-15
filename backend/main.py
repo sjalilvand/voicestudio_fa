@@ -912,25 +912,21 @@ async def _deferred_startup(app: FastAPI) -> None:
         os._exit(1)
 
 
-# Same lifecycle markers as Phase A: cancelling the task cannot stop the thread
-# already importing engine runtimes, so shutdown waits (bounded) for it rather
-# than let interpreter teardown race a native import (#1000 class).
-def _reconcile_profile_blocking(started: threading.Event, finished: threading.Event):
-    started.set()
-    try:
-        from services.performance_profiles import reconcile_active_profile
+def _reconcile_profile_blocking():
+    from services.performance_profiles import reconcile_active_profile
 
-        return reconcile_active_profile()
-    finally:
-        finished.set()
+    return reconcile_active_profile()
 
 
-async def _reconcile_profile_in_background(
-    started: threading.Event, finished: threading.Event,
-) -> None:
+async def _reconcile_profile_in_background(app: FastAPI) -> None:
     """Reapply the saved performance profile off the startup critical path."""
     try:
-        recovered = await asyncio.to_thread(_reconcile_profile_blocking, started, finished)
+        # Store only successfully submitted work. Shielding keeps cancellation
+        # of the asyncio wrapper from cancelling queued executor work, so the
+        # shutdown wait can track its actual completion (#2861).
+        worker = asyncio.get_running_loop().run_in_executor(None, _reconcile_profile_blocking)
+        app.state.profile_reconcile_worker = worker
+        recovered = await asyncio.shield(worker)
         if recovered:
             logger.info("Startup performance selections reconciled: %s", recovered)
     except asyncio.CancelledError:
@@ -940,23 +936,22 @@ async def _reconcile_profile_in_background(
 
 
 def _start_profile_reconcile(app: FastAPI) -> None:
-    """Schedule reconciliation with markers owned by this lifespan."""
-    # Each worker captures its own markers: a prior lifespan completing late
-    # cannot mark this boot's worker finished (#2861).
-    events = (threading.Event(), threading.Event())
-    app.state.profile_reconcile_events = events
-    app.state.profile_reconcile_task = asyncio.create_task(
-        _reconcile_profile_in_background(*events)
-    )
+    """Schedule reconciliation with a worker handle owned by this lifespan."""
+    app.state.profile_reconcile_worker = None
+    app.state.profile_reconcile_task = asyncio.create_task(_reconcile_profile_in_background(app))
 
 
 async def _wait_for_profile_reconcile_thread(app: FastAPI) -> None:
-    """Bound shutdown waiting on this boot's worker, even if its task was cancelled."""
-    events = getattr(app.state, "profile_reconcile_events", None)
-    if events is not None:
-        started, finished = events
-        if started.is_set() and not finished.is_set():
-            await asyncio.to_thread(finished.wait, 20.0)
+    """Stop new submissions and bound waiting for this boot's executor work."""
+    task = getattr(app.state, "profile_reconcile_task", None)
+    if task is not None and not task.done():
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+    worker = getattr(app.state, "profile_reconcile_worker", None)
+    if worker is not None:
+        # asyncio.wait neither cancels the executor future on timeout nor
+        # needs a free executor thread to enforce the shutdown deadline.
+        await asyncio.wait({worker}, timeout=20.0)
 
 
 async def _await_profile_reconcile(app: FastAPI) -> None:
