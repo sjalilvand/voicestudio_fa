@@ -1,0 +1,70 @@
+/**
+ * The only door to VoiceStudio Cloud. Every request and timer goes through here,
+ * so turning a switch off can stop all of them at once (owner rule 2026-10-16).
+ */
+export class CloudDisabledError extends Error {
+  constructor() {
+    super('VoiceStudio Cloud is switched off');
+    this.name = 'CloudDisabledError';
+  }
+}
+
+export class CloudActivity {
+  private readonly controllers = new Set<AbortController>();
+  private readonly timers = new Set<NodeJS.Timeout>();
+  private readonly stopHooks = new Set<() => void>();
+  private finalAvailable = false;
+  private readonly fetchImpl: typeof fetch;
+
+  constructor(
+    private readonly opts: { isAllowed: () => boolean; origins: Set<string>; fetchImpl?: typeof fetch },
+  ) {
+    this.fetchImpl = opts.fetchImpl ?? fetch;
+  }
+
+  async fetch(
+    url: string,
+    init: RequestInit = {},
+    opts: { final?: boolean; timeoutMs?: number } = {},
+  ): Promise<Response> {
+    if (!this.opts.isAllowed()) {
+      if (!(opts.final && this.finalAvailable)) throw new CloudDisabledError();
+      this.finalAvailable = false;
+    }
+    if (!this.opts.origins.has(new URL(url).origin))
+      throw new Error('Refusing a request outside the VoiceStudio Cloud origin');
+    const controller = new AbortController();
+    this.controllers.add(controller);
+    const timeout = setTimeout(() => controller.abort(new Error('timeout')), opts.timeoutMs ?? 30_000);
+    try {
+      return await this.fetchImpl(url, { ...init, redirect: 'error', signal: controller.signal });
+    } finally {
+      clearTimeout(timeout);
+      this.controllers.delete(controller);
+    }
+  }
+
+  setTimeout(fn: () => void, ms: number): void {
+    if (!this.opts.isAllowed()) return;
+    const timer = setTimeout(() => {
+      this.timers.delete(timer);
+      if (this.opts.isAllowed()) fn();
+    }, ms);
+    this.timers.add(timer);
+  }
+
+  onStop(fn: () => void): () => void {
+    this.stopHooks.add(fn);
+    return () => this.stopHooks.delete(fn);
+  }
+
+  /** Abort everything now. One `final` request (the revocation) stays possible. */
+  stopAll(): void {
+    for (const c of this.controllers) c.abort(new CloudDisabledError());
+    this.controllers.clear();
+    for (const t of this.timers) clearTimeout(t);
+    this.timers.clear();
+    for (const hook of [...this.stopHooks]) hook();
+    this.finalAvailable = true;
+  }
+}
