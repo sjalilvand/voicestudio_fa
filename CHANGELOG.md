@@ -23,6 +23,7 @@ metadata and the backend fallback mirror it.
 ### Fixed
 
 - Tools → Convert includes saved Voice Design profiles and clones with locked reference audio in the target voice picker (#2899)
+- Preview voice buttons no longer freeze or stick on a warning: loading can be cancelled, errors retry on click, and repeat clicks share one render (#2915)
 
 - Snap packages follow Canonical’s strict-confinement approach to launch without manual Chromium sandbox setup (#2893) — thanks @velixio!
 - Snap launches explain missing sandbox permissions instead of crashing before startup (#2889)
