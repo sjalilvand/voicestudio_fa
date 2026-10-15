@@ -1,7 +1,4 @@
 {
-  "snapLauncher": {
-    "permissionRequired": "VoiceStudio arayüzünü başlatmak için izin gerekiyor. Bu komutu terminalde çalıştırın, ardından VoiceStudio’yu yeniden açın:"
-  },
   "cloneQuality": {
     "title": "Ses kalitesi",
     "precision": "WAV hassasiyeti",

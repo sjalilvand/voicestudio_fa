@@ -1,7 +1,4 @@
 {
-  "snapLauncher": {
-    "permissionRequired": "VoiceStudio の画面を起動するには権限が必要です。ターミナルで次のコマンドを実行してから、VoiceStudio を開き直してください："
-  },
   "cloneQuality": {
     "title": "音声品質",
     "precision": "WAV精度",

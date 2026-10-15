@@ -1,7 +1,4 @@
 {
-  "snapLauncher": {
-    "permissionRequired": "अपना इंटरफ़ेस शुरू करने के लिए VoiceStudio को अनुमति चाहिए। टर्मिनल में यह कमांड चलाएँ, फिर VoiceStudio दोबारा खोलें:"
-  },
   "cloneQuality": {
     "title": "ऑडियो गुणवत्ता",
     "precision": "WAV परिशुद्धता",
