@@ -202,3 +202,39 @@ it('offers the same automatic recovery on compact synthesis surfaces', async () 
     }),
   );
 });
+
+it('downloads the model chosen for an available engine instead of reporting success', async () => {
+  const selected = 'mlx-community/Llama-OuteTTS-1.0-1B-4bit';
+  mock.api.mockImplementation((path: string) => {
+    if (path === '/setup/recommendations')
+      return Promise.resolve({
+        target: 'local',
+        models: [{ repo_id: 'k2-fsa/OmniVoice', role: 'TTS', required: true, installed: true }],
+      });
+    if (path === '/engines')
+      return Promise.resolve({
+        tts: {
+          active: 'mlx-audio',
+          active_model: selected,
+          backends: [{ id: 'mlx-audio', available: true, routing_status: 'accelerated' }],
+        },
+      });
+    if (path === '/models')
+      return Promise.resolve({
+        models: [{ repo_id: selected, installed: false, incomplete: false }],
+      });
+    return Promise.resolve({});
+  });
+  renderNotice();
+
+  fireEvent.click(screen.getByRole('button', { name: 'repairAgent.fix' }));
+
+  await waitFor(() =>
+    expect(mock.api).toHaveBeenCalledWith('/models/install', {
+      method: 'POST',
+      body: JSON.stringify({ repo_id: selected }),
+    }),
+  );
+  expect(mock.api.mock.calls.some(([path]) => path === '/engines/select')).toBe(false);
+  expect(screen.getByRole('button')).toHaveTextContent('modelMaintenance.downloading');
+});
