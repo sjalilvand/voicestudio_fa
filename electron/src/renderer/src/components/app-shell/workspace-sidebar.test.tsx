@@ -17,7 +17,11 @@ vi.mock('@tanstack/react-router', () => ({
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, values?: { version?: string }) =>
-      key === 'app.version' ? `v${values?.version}` : key,
+      key === 'app.version_dev'
+        ? `v${values?.version} · Dev`
+        : key === 'app.version'
+          ? `v${values?.version}`
+          : key,
   }),
 }));
 vi.mock('@/lib/store/workspace', () => ({
@@ -47,7 +51,7 @@ vi.mock('./use-workspace-sidebar', () => ({
     setOpen: sidebar.setOpen,
   }),
 }));
-import { WorkspaceSidebar } from './workspace-sidebar';
+import { versionTranslationKey, WorkspaceSidebar } from './workspace-sidebar';
 
 beforeEach(() => {
   sidebar.compact = false;
@@ -82,7 +86,12 @@ it('places the navigation above the voice library in the expanded sidebar', () =
 
 it('shows the app version beneath the brand name in the expanded sidebar', () => {
   render(<WorkspaceSidebar />);
-  const brand = screen.getByRole('link', { name: 'app.name v0.5.7' });
+  const brand = screen.getByRole('link', { name: 'app.name v0.5.7 · Dev' });
   expect(brand).toHaveTextContent('app.name');
-  expect(brand).toHaveTextContent('v0.5.7');
+  expect(brand).toHaveTextContent('v0.5.7 · Dev');
+});
+
+it('uses the plain version label outside development builds', () => {
+  expect(versionTranslationKey(true)).toBe('app.version_dev');
+  expect(versionTranslationKey(false)).toBe('app.version');
 });

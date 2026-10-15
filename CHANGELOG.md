@@ -14,7 +14,7 @@ metadata and the backend fallback mirror it.
 
 ### Changed
 
-- The expanded sidebar shows the installed app version beneath VoiceStudio (#2894)
+- The expanded sidebar shows the installed app version beneath VoiceStudio and clearly marks development builds (#2894)
 
 ### Removed
 

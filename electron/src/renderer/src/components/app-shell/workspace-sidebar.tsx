@@ -15,11 +15,17 @@ import { SystemNotifications } from './system-notifications';
 import { useBackendStatus } from '@/hooks/use-backend-status';
 import { isBackendReachable } from '@shared/utils/backendStage';
 
+export function versionTranslationKey(development: boolean) {
+  return development ? ('app.version_dev' as const) : ('app.version' as const);
+}
+
 export function WorkspaceSidebar() {
   const backend = useBackendStatus();
   const { t } = useTranslation();
   const mac = isMac();
-  const versionLabel = t('app.version', { version: appVersion() });
+  const versionLabel = t(versionTranslationKey(import.meta.env.DEV), {
+    version: appVersion(),
+  });
   const { libraryOpen, libraryTab } = useWorkspace();
   // One source of truth for "rail or full sidebar": the header toggle and the
   // sidebar's own buttons used to keep separate copies of this state.
