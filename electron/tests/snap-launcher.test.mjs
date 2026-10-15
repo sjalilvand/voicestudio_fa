@@ -50,7 +50,7 @@ test('packaging is idempotent and rejects invalid launchers', () => {
   assert.throws(() => addSnapSandboxPreflight('exit 0'), /shebang/);
 });
 
- test('terminal instructions remain available without a dialog tool', () => {
+test('terminal instructions remain available without a dialog tool', () => {
   const result = launch(1, 'en', [], false);
   assert.equal(result.status, 1);
   assert.match(result.stderr, /sudo snap connect voicestudio:browser-support/);
