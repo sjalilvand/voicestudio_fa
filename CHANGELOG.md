@@ -35,6 +35,10 @@ metadata and the backend fallback mirror it.
 - Snap launches explain missing sandbox permissions instead of crashing before startup (#2889)
 - Snap packages expand the Electron desktop runtime so they launch after installation (#2858)
 
+### CI
+
+- Tagged releases upload to the Snap Store candidate channel automatically; stable stays a manual promote (#2932)
+
 ## [0.5.7] — 2026-10-13
 
 **VoiceStudio now runs on PCs without a GPU and recovers instead of giving up.** Voice cloning uses the speech-to-text model you installed from Model Catalogue, GPU-less computers get the small CPU PyTorch build, and slow or busy backends are no longer reported as failed.
