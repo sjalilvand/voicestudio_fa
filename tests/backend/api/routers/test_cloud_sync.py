@@ -126,20 +126,55 @@ def test_renderer_mirror_round_trip_and_announces_the_change(api):
     try:
         keys = client.get("/api/cloud-sync/local/keys").json()["keys"]
         assert "voicestudio.theme.v2" in keys
-        put = client.put("/api/cloud-sync/local", json={"key": "voicestudio.theme.v2", "value": "dark", "raw": True})
+        put = client.put("/api/cloud-sync/local", json={"key": "voicestudio.theme.v2", "value": {"mode": "dark"}})
         assert put.status_code == 200
     finally:
         unhook()
     assert seen == [("local", "voicestudio.theme.v2")]
-    assert SyncStore().get_local("voicestudio.theme.v2") == "dark"
+    assert SyncStore().get_local("voicestudio.theme.v2") == {"mode": "dark"}
     seq = SyncStore().local_seq()
-    SyncStore().set_local("voicestudio.theme.v2", "light", origin="sync")
+    SyncStore().set_local("voicestudio.theme.v2", {"mode": "light"}, origin="sync")
     pulled = client.get(f"/api/cloud-sync/local?since={seq}").json()
-    assert pulled["values"] == [{"key": "voicestudio.theme.v2", "value": "light", "raw": True}]
+    assert pulled["values"] == [{"key": "voicestudio.theme.v2", "value": {"mode": "light"}, "raw": False}]
     assert pulled["seq"] == seq + 1
 
 
 def test_the_mirror_refuses_keys_that_never_sync(api):
     client, _ = api
-    response = client.put("/api/cloud-sync/local", json={"key": "voicestudio.workspace-layout", "value": 1, "raw": False})
+    response = client.put("/api/cloud-sync/local", json={"key": "voicestudio.workspace-layout", "value": 1})
     assert response.status_code == 400
+
+
+def test_an_unchanged_value_is_not_announced(api):
+    client, _ = api
+    client.put("/api/cloud-sync/local", json={"key": "voicestudio.locale", "value": "de"})
+    seen = []
+    unhook = change_hooks.subscribe(lambda source, key: seen.append(key))
+    try:
+        body = client.put("/api/cloud-sync/local", json={"key": "voicestudio.locale", "value": "de"}).json()
+    finally:
+        unhook()
+    assert seen == [] and body["applied"] is False
+
+
+def test_a_renderer_snapshot_never_overwrites_a_pulled_value_it_has_not_applied(api):
+    client, _ = api
+    SyncStore().set_local("voicestudio.locale", "de", origin="sync")  # pulled before the window opened
+    stale = client.put("/api/cloud-sync/local", json={"key": "voicestudio.locale", "value": "en", "seen_seq": 0}).json()
+    assert stale["applied"] is False
+    assert SyncStore().get_local("voicestudio.locale") == "de"
+    seq = SyncStore().local_seq()
+    fresh = client.put("/api/cloud-sync/local", json={"key": "voicestudio.locale", "value": "fr", "seen_seq": seq}).json()
+    assert fresh["applied"] is True
+    assert SyncStore().get_local("voicestudio.locale") == "fr"
+
+
+def test_the_storage_format_of_each_key_comes_from_the_allowlist(api):
+    client, _ = api
+    listing = client.get("/api/cloud-sync/local/keys").json()
+    assert "voicestudio.locale" in listing["raw"] and "voicestudio.review-mode.v1" in listing["raw"]
+    assert "voicestudio.appearance" not in listing["raw"]
+    seq = SyncStore().local_seq()
+    SyncStore().set_local("voicestudio.review-mode.v1", "off", origin="sync")  # this device never wrote it
+    pulled = client.get(f"/api/cloud-sync/local?since={seq}").json()["values"]
+    assert pulled == [{"key": "voicestudio.review-mode.v1", "value": "off", "raw": True}]

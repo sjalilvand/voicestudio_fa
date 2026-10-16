@@ -229,6 +229,14 @@ class SyncStore:
             row = conn.execute("SELECT value_json FROM cloud_sync_local WHERE key=?", (key,)).fetchone()
         return json.loads(row[0]) if row and row[0] is not None else None
 
+    def local_row(self, key: str) -> Optional[tuple[Any, int, str]]:
+        """``(value, seq, origin)`` of a mirrored key, or None."""
+        with core_db.db_conn() as conn:
+            row = conn.execute("SELECT value_json, seq, origin FROM cloud_sync_local WHERE key=?", (key,)).fetchone()
+        if not row:
+            return None
+        return (json.loads(row[0]) if row[0] is not None else None, row[1], row[2])
+
     def local_meta(self, key: str) -> dict:
         with core_db.db_conn() as conn:
             row = conn.execute("SELECT meta_json FROM cloud_sync_local WHERE key=?", (key,)).fetchone()

@@ -319,6 +319,11 @@ RENDERER_KEYS: tuple[str, ...] = tuple(
     sorted({key for item in ITEMS for kind, key in item.sources if kind == "local"})
 )
 
+#: Renderer keys stored as plain strings; every other renderer key holds JSON.
+RAW_KEYS: frozenset[str] = frozenset({
+    "voicestudio.locale", "voicestudio.review-mode.v1", "voicestudio.transcription.mode", SHORTCUT_KEY,
+})
+
 #: Collections a ``choices`` toggle enables (sync-collections.md device-preferences).
 CHOICE_COLLECTIONS = {"settings": ("settings",), "shortcuts": ("shortcuts",), "favorites": ("favorites",)}
 

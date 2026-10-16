@@ -8,7 +8,7 @@ requires both the admin gate and a loopback (desktop) caller.
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, Field
@@ -17,6 +17,7 @@ from api.dependencies import require_admin, require_desktop
 from core import change_hooks
 from services.cloud_sync import allowlist
 from services.cloud_sync.client import CloudOff, SyncApiError
+from services.cloud_sync.merge import canonical
 from services.cloud_sync.service import CHOICE_KEYS, get_service
 from services.cloud_sync.store import SyncStore
 
@@ -38,7 +39,8 @@ class ChoicesBody(BaseModel):
 class LocalValue(BaseModel):
     key: str
     value: Any = None
-    raw: bool = False
+    #: The newest mirror ``seq`` the renderer has applied: a pulled value newer than it is never overwritten.
+    seen_seq: Optional[int] = None
 
 
 def _choices(body: ChoicesBody) -> dict[str, bool]:
@@ -121,7 +123,7 @@ async def use_choices_of(device_id: str = Path(pattern=_DEVICE_ID)) -> dict:
 # ── renderer localStorage mirror ───────────────────────────────────────
 @router.get("/local/keys")
 async def local_keys() -> dict:
-    return {"keys": list(allowlist.RENDERER_KEYS)}
+    return {"keys": list(allowlist.RENDERER_KEYS), "raw": sorted(allowlist.RAW_KEYS & set(allowlist.RENDERER_KEYS))}
 
 
 @router.put("/local")
@@ -129,17 +131,23 @@ async def put_local(body: LocalValue) -> dict:
     if body.key not in allowlist.RENDERER_KEYS:
         raise HTTPException(status_code=400, detail="not_synced")
     store = SyncStore()
-    meta = {**store.local_meta(body.key), "raw": bool(body.raw)}
-    seq = store.set_local(body.key, body.value, origin="renderer", meta=meta)
+    current = store.local_row(body.key)
+    if current is not None:
+        value, seq, origin = current
+        if origin == "sync" and body.seen_seq is not None and seq > body.seen_seq:
+            return {"seq": seq, "applied": False}  # the renderer applies the pulled value first
+        if canonical(value) == canonical(body.value):
+            return {"seq": seq, "applied": False}  # unchanged: nothing to sync
+    seq = store.set_local(body.key, body.value, origin="renderer")
     change_hooks.notify("local", body.key)
-    return {"seq": seq}
+    return {"seq": seq, "applied": True}
 
 
 @router.get("/local")
 async def pulled_local(since: int = Query(0, ge=0)) -> dict:
     store = SyncStore()
     values = [
-        {"key": key, "value": value, "raw": bool(store.local_meta(key).get("raw"))}
+        {"key": key, "value": value, "raw": key in allowlist.RAW_KEYS}
         for _seq, key, value in store.local_since(since)
     ]
     return {"seq": store.local_seq(), "values": values}
