@@ -14,6 +14,7 @@ metadata and the backend fallback mirror it.
 
 ### Added
 
+- Groundwork for an optional VoiceStudio account and settings sync, hidden in release builds until VoiceStudio Cloud launches: off by default, and account features and cloud sync can be switched off at setup or any time (#2931)
 - GitHub Sponsors is now the lead way to support VoiceStudio — on the Support page, the footer support menu, the repository Sponsor button, and SPONSORS.md (#2918)
 
 ### Changed
