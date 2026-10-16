@@ -59,7 +59,7 @@ export class AccountController {
     const profile = this.profile
       ? {
           ...this.profile,
-          avatarUrl: await this.parts.api.avatar(this.profile.avatarUrl).catch(() => null),
+          avatarUrl: await this.parts.api.avatar(this.profile).catch(() => null),
         }
       : null;
     return { available, ...sw, remembered, ...s, profile, plan: s.signedIn ? this.plan : null };

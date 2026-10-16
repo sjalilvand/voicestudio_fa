@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
+import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { AccountApi } from './account-api';
+import { AvatarCache } from './avatar-cache';
 import { CloudActivity, type FetchImpl } from './cloud-activity';
 import { cloudOrigins, resolveCloudEnvironment } from './cloud-config';
 
@@ -37,6 +41,7 @@ it('maps the account to the renderer-safe profile', async () => {
     email: 'ana@example.com',
     displayName: 'Ana',
     avatarUrl: null,
+    avatarArtifactId: null,
     personalOrganizationId: 'Or5tG7hJ9kL1zX3c',
     organizations: [
       { id: 'Or5tG7hJ9kL1zX3c', slug: 'ana', displayName: 'Ana', role: 'owner', kind: 'personal' },
@@ -74,7 +79,9 @@ it('returns null without a request when signed out', async () => {
 
 describe('profile photo', () => {
   const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3]);
-  function photoApi(response: () => Response) {
+  const asData = `data:image/png;base64,${Buffer.from(png).toString('base64')}`;
+  const cachePath = () => join(mkdtempSync(join(tmpdir(), 'vs-avatar-')), 'account-avatar.json');
+  function photoApi(response: () => Response, path = cachePath()) {
     const fetchImpl = vi.fn<FetchImpl>(async () => response());
     const session = {
       getAccessToken: vi.fn(),
@@ -86,42 +93,55 @@ describe('profile photo', () => {
       origins: cloudOrigins(env),
       fetchImpl,
     });
-    return { api: new AccountApi(env, session as never, activity), fetchImpl };
+    const cache = new AvatarCache(path);
+    return { api: new AccountApi(env, session as never, activity, cache), fetchImpl, cache, path };
   }
   const image = () => new Response(png, { headers: { 'content-type': 'image/png' } });
+  const URL_A = 'https://app-s3.voicestudio.sh/avatars/a?X-Amz-Signature=one';
 
-  it('downloads the photo once as a data URL the renderer can show', async () => {
-    const { api, fetchImpl } = photoApi(image);
-    const first = await api.avatar(
-      'https://app-s3.voicestudio.sh/avatars/u1.png?X-Amz-Signature=a',
+  it('downloads the photo once per avatar_artifact_id, even across restarts', async () => {
+    const first = photoApi(image);
+    expect(await first.api.avatar({ avatarArtifactId: 'Ar1', avatarUrl: URL_A })).toBe(asData);
+    expect(await first.api.avatar({ avatarArtifactId: 'Ar1', avatarUrl: URL_A + 'x' })).toBe(
+      asData,
     );
-    const again = await api.avatar(
-      'https://app-s3.voicestudio.sh/avatars/u1.png?X-Amz-Signature=b',
-    );
-    expect(first).toBe(`data:image/png;base64,${Buffer.from(png).toString('base64')}`);
-    expect(again).toBe(first);
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    const restarted = photoApi(image, first.path);
+    expect(await restarted.api.avatar({ avatarArtifactId: 'Ar1', avatarUrl: URL_A })).toBe(asData);
+    expect(first.fetchImpl).toHaveBeenCalledTimes(1);
+    expect(restarted.fetchImpl).not.toHaveBeenCalled();
   });
 
-  it('refuses anything that is not a small image', async () => {
+  it('a new avatar_artifact_id downloads again; a cleared one drops the photo', async () => {
+    const { api, fetchImpl, path } = photoApi(image);
+    await api.avatar({ avatarArtifactId: 'Ar1', avatarUrl: URL_A });
+    await api.avatar({ avatarArtifactId: 'Ar2', avatarUrl: URL_A });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(await api.avatar({ avatarArtifactId: null, avatarUrl: null })).toBeNull();
+    expect(existsSync(path)).toBe(false);
+  });
+
+  it('never stores the download link, only the picture', async () => {
+    const { api, path } = photoApi(image);
+    await api.avatar({ avatarArtifactId: 'Ar1', avatarUrl: URL_A });
+    const stored = readFileSync(path, 'utf8');
+    expect(stored).not.toContain('X-Amz-Signature');
+    expect(stored).not.toContain('app-s3');
+  });
+
+  it('refuses anything that is not a small raster image over https', async () => {
+    const photo = (response: () => Response, url = 'https://x.example/a') =>
+      photoApi(response).api.avatar({ avatarArtifactId: 'Ar1', avatarUrl: url });
     expect(
-      await photoApi(
-        () => new Response('<svg/>', { headers: { 'content-type': 'image/svg+xml' } }),
-      ).api.avatar('https://x.example/a'),
+      await photo(() => new Response('<svg/>', { headers: { 'content-type': 'image/svg+xml' } })),
     ).toBeNull();
     expect(
-      await photoApi(
-        () => new Response('hi', { headers: { 'content-type': 'text/html' } }),
-      ).api.avatar('https://x.example/a'),
+      await photo(() => new Response('hi', { headers: { 'content-type': 'text/html' } })),
     ).toBeNull();
     const big = new Uint8Array(2 * 1024 * 1024 + 1);
     expect(
-      await photoApi(
-        () => new Response(big, { headers: { 'content-type': 'image/jpeg' } }),
-      ).api.avatar('https://x.example/a'),
+      await photo(() => new Response(big, { headers: { 'content-type': 'image/jpeg' } })),
     ).toBeNull();
-    expect(await photoApi(image).api.avatar('http://x.example/a.png')).toBeNull();
-    expect(await photoApi(image).api.avatar(null)).toBeNull();
+    expect(await photo(image, 'http://x.example/a.png')).toBeNull();
   });
 });
 

@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
@@ -140,4 +140,28 @@ it('signing out tells the backend to stop syncing', async () => {
     '/api/cloud-sync/start',
     '/api/cloud-sync/stop',
   ]);
+});
+
+it('signing out deletes the cached profile photo', async () => {
+  h.dir = signedInDir();
+  const photo = join(h.dir, 'account-avatar.json');
+  writeFileSync(
+    photo,
+    JSON.stringify({ v: 1, artifactId: 'Ar1', dataUrl: 'data:image/png;base64,AA' }),
+  );
+  const close = await startAccount(opts);
+  await h.handlers.get('account:sign-out')!({});
+  close();
+  expect(existsSync(photo)).toBe(false);
+});
+
+it('a cached photo does not outlive account features being off', async () => {
+  h.dir = mkdtempSync(join(tmpdir(), 'vs-account-'));
+  const photo = join(h.dir, 'account-avatar.json');
+  writeFileSync(
+    photo,
+    JSON.stringify({ v: 1, artifactId: 'Ar1', dataUrl: 'data:image/png;base64,AA' }),
+  );
+  (await startAccount(opts))();
+  expect(existsSync(photo)).toBe(false);
 });

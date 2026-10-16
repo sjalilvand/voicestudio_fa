@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { app, safeStorage, shell, type BrowserWindow } from 'electron';
 import { AccountApi } from './account-api';
+import { AvatarCache } from './avatar-cache';
 import { AccountController, registerAccountIpc } from './account-ipc';
 import { AccountSession } from './account-session';
 import { startAccountTokenBridge } from './account-token-bridge';
@@ -57,7 +58,16 @@ async function wireAccount(opts: StartOptions): Promise<() => void> {
     openExternal: (url) => shell.openExternal(url),
     signedInPage: env.signedInPage,
   });
-  const api = new AccountApi(env, session, activity);
+  // The profile picture lives only while signed in with account features on.
+  const avatars = new AvatarCache(join(app.getPath('userData'), 'account-avatar.json'));
+  if (!switches.get().accountEnabled || !session.state().signedIn) avatars.clear();
+  const unwatchPhoto = session.onChange((s) => {
+    if (!s.signedIn) avatars.clear();
+  });
+  const unwatchPhotoSwitch = switches.subscribe((s) => {
+    if (!s.accountEnabled) avatars.clear();
+  });
+  const api = new AccountApi(env, session, activity, avatars);
   const ctl = new AccountController({
     available,
     switches,
@@ -68,6 +78,8 @@ async function wireAccount(opts: StartOptions): Promise<() => void> {
   const closeIpc = registerAccountIpc(ctl, session, opts.getMainWindow);
   if (!available)
     return () => {
+      unwatchPhoto();
+      unwatchPhotoSwitch();
       closeIpc();
       activity.stopAll();
     };
@@ -103,6 +115,8 @@ async function wireAccount(opts: StartOptions): Promise<() => void> {
     VOICESTUDIO_ACCOUNT_BRIDGE_TOKEN: bridge.token,
   });
   return () => {
+    unwatchPhoto();
+    unwatchPhotoSwitch();
     unwatchSwitches();
     unwatchSession();
     closeIpc();

@@ -1,12 +1,15 @@
 import { randomBytes } from 'node:crypto';
 import type { AccountSession } from './account-session';
 import type { CloudActivity } from './cloud-activity';
+import type { AvatarCache } from './avatar-cache';
 import type { CloudEnvironment } from './cloud-config';
 
 export interface AccountProfile {
   email: string | null;
   displayName: string | null;
   avatarUrl: string | null;
+  /** Identifies the picture; the cache is keyed by it (the URL always expires). */
+  avatarArtifactId: string | null;
   personalOrganizationId: string | null;
   organizations: Array<{
     id: string;
@@ -21,6 +24,7 @@ interface RawAccount {
   email?: string | null;
   display_name?: string | null;
   avatar_url?: string | null;
+  avatar_artifact_id?: string | null;
   personal_organization_id?: string | null;
   organizations?: Array<{
     id: string;
@@ -35,6 +39,7 @@ const toProfile = (a: RawAccount): AccountProfile => ({
   email: a.email ?? null,
   displayName: a.display_name ?? null,
   avatarUrl: a.avatar_url ?? null,
+  avatarArtifactId: a.avatar_artifact_id || null,
   personalOrganizationId: a.personal_organization_id ?? null,
   organizations: (a.organizations ?? []).map((o) => ({
     id: o.id,
@@ -69,13 +74,11 @@ const AVATAR_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gi
 const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
 
 export class AccountApi {
-  /** Photo by its link without the short-lived signature, so a fresh signature reuses it. */
-  private avatars = new Map<string, string>();
-
   constructor(
     private readonly env: CloudEnvironment,
     private readonly session: AccountSession,
     private readonly activity: CloudActivity,
+    private readonly avatars?: AvatarCache,
   ) {}
 
   async get(): Promise<AccountProfile | null> {
@@ -107,31 +110,43 @@ export class AccountApi {
 
   /**
    * The profile photo as a `data:` URL for the renderer (its CSP allows no remote
-   * images). Downloaded through the Cloud gate, so switching off stops it; only
-   * small raster images, never SVG; failures simply show initials.
+   * images). Cached by `avatar_artifact_id`: downloaded once, and again only when
+   * that ID changes; a cleared ID drops it. Downloaded through the Cloud gate, so
+   * switching off stops it; only small raster images, never SVG; failures simply
+   * show initials. The download link is never stored or logged.
    */
-  async avatar(url: string | null): Promise<string | null> {
+  async avatar(profile: {
+    avatarArtifactId: string | null;
+    avatarUrl: string | null;
+  }): Promise<string | null> {
+    const artifactId = profile.avatarArtifactId;
+    if (!artifactId) {
+      this.avatars?.clear();
+      return null;
+    }
+    const cached = this.avatars?.get(artifactId);
+    if (cached) return cached;
     let target: URL;
     try {
-      if (!url) return null;
-      target = new URL(url);
+      if (!profile.avatarUrl) return null;
+      target = new URL(profile.avatarUrl);
     } catch {
       return null;
     }
     if (target.protocol !== 'https:') return null;
-    const key = target.origin + target.pathname;
-    const cached = this.avatars.get(key);
-    if (cached) return cached;
     try {
-      const res = await this.activity.fetch(url, {}, { serverIssued: true, timeoutMs: 10_000 });
+      const res = await this.activity.fetch(
+        target.toString(),
+        {},
+        { serverIssued: true, timeoutMs: 10_000 },
+      );
       const type = (res.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
       if (!res.ok || !AVATAR_TYPES.has(type)) return null;
       if (Number(res.headers.get('content-length') ?? 0) > AVATAR_MAX_BYTES) return null;
       const bytes = Buffer.from(await res.arrayBuffer());
       if (bytes.length === 0 || bytes.length > AVATAR_MAX_BYTES) return null;
       const dataUrl = `data:${type};base64,${bytes.toString('base64')}`;
-      this.avatars.clear(); // one person's photo at a time
-      this.avatars.set(key, dataUrl);
+      this.avatars?.set(artifactId, dataUrl);
       return dataUrl;
     } catch {
       return null;
