@@ -27,16 +27,25 @@ def test_electron_packaging_workflows_publish_store_provenance(workflow_name):
     assert "electron/release/store-artifact-manifest-*.json" in upload_step["with"]["path"]
 
 
-def test_snap_store_rehearsal_is_strict_build_only_and_records_provenance():
+def test_snap_store_workflow_builds_strict_snap_and_uploads_only_tags_to_candidate():
     import yaml
 
-    workflow = yaml.load(
-        (ROOT / ".github/workflows/snap-store.yml").read_text(), Loader=yaml.BaseLoader
-    )
+    serialized = (ROOT / ".github/workflows/snap-store.yml").read_text()
+    workflow = yaml.load(serialized, Loader=yaml.BaseLoader)
     assert workflow["permissions"] == {"contents": "read"}
-    assert set(workflow["on"]) == {"workflow_dispatch"}
-    package = workflow["jobs"]["package"]
+    assert set(workflow["on"]) == {"push", "workflow_dispatch"}
+    assert workflow["on"]["push"] == {"tags": ["v*"]}
+    assert workflow["env"]["SNAP_NAME"] == "voicestudio"
+    assert "linuxExecutableName: 'voicestudio'" in (
+        ROOT / "electron/electron-builder.config.mjs"
+    ).read_text()
+
+    jobs = workflow["jobs"]
+    package = jobs["package"]
     assert package["env"]["VOICESTUDIO_DISTRIBUTION"] == "snap-store"
+    assert "environment" not in package and "secrets." not in yaml.dump(package)
+    tag_guard = next(s for s in package["steps"] if s.get("name") == "Match the tag to the app version")
+    assert '"v$version"' in tag_guard["run"]
     command = next(
         step["run"]
         for step in package["steps"]
@@ -46,9 +55,21 @@ def test_snap_store_rehearsal_is_strict_build_only_and_records_provenance():
     assert "verify_snap_artifact.mjs" in command
     assert "--distribution=snap-store --platform=linux --arch=x64" in command
     assert "applicationUpdates !== 'store'" in command
-    serialized = (ROOT / ".github/workflows/snap-store.yml").read_text()
-    assert "SNAPCRAFT_STORE_CREDENTIALS" not in serialized
-    assert "snapcraft upload" not in serialized
+
+    upload, promote = jobs["upload"], jobs["promote"]
+    assert upload["needs"] == "package"
+    assert upload["if"].startswith("github.ref_type == 'tag' &&")
+    assert upload["environment"] == promote["environment"] == "snap-store"
+    upload_run = "\n".join(s.get("run", "") for s in upload["steps"])
+    assert "set -o pipefail" in upload_run
+    assert "snapcraft upload --release=candidate " in upload_run
+    promote_run = "\n".join(s.get("run", "") for s in promote["steps"])
+    assert 'snapcraft release "$SNAP_NAME" "$REVISION" stable' in promote_run
+    # Stable is reachable only through the explicit promote dispatch.
+    assert "--release=stable" not in serialized and "candidate,stable" not in serialized
+    assert "stable" not in upload_run
+    # Credentials appear only in the environment-protected store jobs.
+    assert serialized.count("secrets.SNAPCRAFT_STORE_CREDENTIALS") == 2
 
 @pytest.mark.parametrize("tag,allowed", [("", False), ("v0.5.4", False), ("v0.5.3", True)])
 def test_release_downloads_legacy_feeds_only_from_final_tauri_tag(tmp_path, tag, allowed):
