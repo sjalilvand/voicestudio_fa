@@ -221,12 +221,50 @@ def _wav_float_to_pcm_b64(wav, sample_rate: int) -> tuple[str, int, int]:
     return base64.b64encode(pcm).decode("ascii"), int(sample_rate), int(arr.shape[0])
 
 
+# Language names and codes published by the Supertonic-3 upstream README.
+# Keep this stdlib-only: sidecar startup must not import the SDK or Torch.
+_LANGUAGE_NAME_TO_CODE = {
+    "arabic": "ar",
+    "bulgarian": "bg",
+    "croatian": "hr",
+    "czech": "cs",
+    "danish": "da",
+    "dutch": "nl",
+    "english": "en",
+    "estonian": "et",
+    "finnish": "fi",
+    "french": "fr",
+    "german": "de",
+    "greek": "el",
+    "hindi": "hi",
+    "hungarian": "hu",
+    "indonesian": "id",
+    "italian": "it",
+    "japanese": "ja",
+    "korean": "ko",
+    "latvian": "lv",
+    "lithuanian": "lt",
+    "polish": "pl",
+    "portuguese": "pt",
+    "romanian": "ro",
+    "russian": "ru",
+    "slovak": "sk",
+    "slovenian": "sl",
+    "spanish": "es",
+    "swedish": "sv",
+    "turkish": "tr",
+    "ukrainian": "uk",
+    "vietnamese": "vi",
+}
+
+
 def _normalize_lang(raw) -> str | None:
     """Map OmniVoice's language sentinel to the SDK's language codes.
 
     The SDK accepts ISO-639-1 codes plus ``"na"`` (language-agnostic for
     Supertonic-3). The parent sends either a raw 2-letter code, the
-    string ``"auto"`` (OmniVoice's sentinel), or ``None``. All three
+    UI language name, string ``"auto"`` (OmniVoice's sentinel), or
+    ``None``. All three
     of ``"auto"``, ``""``, ``None`` map to ``"na"`` so the SDK's
     multilingual fallback engages cleanly.
     """
@@ -237,7 +275,12 @@ def _normalize_lang(raw) -> str | None:
     s = raw.strip().lower()
     if not s or s == "auto":
         return "na"
-    return s[:2]
+    if s in _LANGUAGE_NAME_TO_CODE:
+        return _LANGUAGE_NAME_TO_CODE[s]
+    # Preserve ISO language codes and existing regional-tag behavior, while
+    # leaving unknown names intact for SDK validation rather than silently
+    # turning e.g. an unknown "English..." value into a valid English request.
+    return s.split("-", 1)[0].split("_", 1)[0]
 
 
 def _handle_synthesize(msg: dict, stdout) -> None:
