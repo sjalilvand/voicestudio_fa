@@ -83,17 +83,20 @@ async function wireAccount(opts: StartOptions): Promise<() => void> {
     if (opts.isRemoteBackend() || !opts.notifyBackend) return;
     void opts.notifyBackend(path).catch(() => {});
   };
-  const syncing = (s: { accountEnabled: boolean; syncEnabled: boolean }) =>
-    s.accountEnabled && s.syncEnabled;
-  const unwatchSwitches = switches.subscribe((next, prev) => {
-    if (syncing(next) !== syncing(prev))
-      tell(syncing(next) ? '/api/cloud-sync/start' : '/api/cloud-sync/stop');
-  });
-  let wasSignedIn = session.state().signedIn;
-  const unwatchSession = session.onChange((s) => {
-    if (s.signedIn && !wasSignedIn && syncing(switches.get())) tell('/api/cloud-sync/start');
-    wasSignedIn = s.signedIn;
-  });
+  // Sync should run only while signed in with both switches on; tell the backend when that flips
+  // (switch changes, sign-in, sign-out or an expired session), never in between.
+  const shouldSync = () => {
+    const s = switches.get();
+    return s.accountEnabled && s.syncEnabled && session.state().signedIn;
+  };
+  let syncing = shouldSync();
+  const reconcile = () => {
+    const next = shouldSync();
+    if (next !== syncing) tell(next ? '/api/cloud-sync/start' : '/api/cloud-sync/stop');
+    syncing = next;
+  };
+  const unwatchSwitches = switches.subscribe(() => reconcile());
+  const unwatchSession = session.onChange(() => reconcile());
   // Only the managed backend's spawn env carries the capability; see setBackendOnlyEnv.
   setBackendOnlyEnv({
     VOICESTUDIO_ACCOUNT_BRIDGE_URL: bridge.url,

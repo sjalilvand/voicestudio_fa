@@ -3,36 +3,44 @@
  * to a synced localStorage key is mirrored to the backend, and pulled values
  * are written back without echoing.
  *
+ * Each key's storage format comes from the backend allowlist: `rawKeys` hold
+ * plain strings, every other key holds JSON.
+ *
  * The wrapper patches Storage.prototype and checks the instance: assigning
  * `localStorage.setItem = …` would store an item named "setItem" instead.
  */
-type Post = (key: string, value: unknown, raw: boolean) => Promise<void>;
-
-function decode(raw: string | null): [unknown, boolean] {
-  if (raw === null) return [null, false];
-  try {
-    return [JSON.parse(raw), false];
-  } catch {
-    return [raw, true];
-  }
-}
+type Post = (key: string, value: unknown) => Promise<void>;
+const UNPARSABLE = Symbol('unparsable');
 
 export function installSyncedStorage(opts: {
   storage: Storage;
   keys: readonly string[];
+  rawKeys?: readonly string[];
   post: Post;
 }) {
   const { storage, post } = opts;
   const keys = new Set(opts.keys);
+  const rawKeys = new Set(opts.rawKeys ?? []);
   const proto = Storage.prototype;
   const originalSet = proto.setItem;
   const originalRemove = proto.removeItem;
   let applying = false;
 
-  const announce = (key: string, raw: string | null) => {
+  const decode = (key: string, stored: string | null): unknown => {
+    if (stored === null) return null;
+    if (rawKeys.has(key)) return stored;
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return UNPARSABLE;
+    }
+  };
+
+  const announce = (key: string, stored: string | null) => {
     if (applying || !keys.has(key)) return;
-    const [value, isRaw] = decode(raw);
-    post(key, value, isRaw).catch(() => {});
+    const value = decode(key, stored);
+    if (value === UNPARSABLE) return; // never sync a value this app could not read back
+    post(key, value).catch(() => {});
   };
 
   proto.setItem = function setItem(this: Storage, key: string, value: string) {
@@ -46,23 +54,23 @@ export function installSyncedStorage(opts: {
 
   return {
     /** Write a pulled value; stores listening for `storage` events re-read it. */
-    apply(key: string, value: unknown, raw: boolean) {
+    apply(key: string, value: unknown) {
       if (!keys.has(key)) return;
       applying = true;
       try {
         if (value === null || value === undefined) storage.removeItem(key);
-        else storage.setItem(key, raw && typeof value === 'string' ? value : JSON.stringify(value));
+        else storage.setItem(key, rawKeys.has(key) ? String(value) : JSON.stringify(value));
       } finally {
         applying = false;
       }
       window.dispatchEvent(new StorageEvent('storage', { key, newValue: storage.getItem(key) }));
     },
     /** Current values of every synced key, for the first mirror after start-up. */
-    snapshot(): Array<[string, unknown, boolean]> {
-      const out: Array<[string, unknown, boolean]> = [];
+    snapshot(): Array<[string, unknown]> {
+      const out: Array<[string, unknown]> = [];
       for (const key of keys) {
-        const raw = storage.getItem(key);
-        if (raw !== null) out.push([key, ...decode(raw)]);
+        const value = decode(key, storage.getItem(key));
+        if (value !== null && value !== UNPARSABLE) out.push([key, value]);
       }
       return out;
     },

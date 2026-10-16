@@ -1,4 +1,4 @@
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
@@ -7,6 +7,7 @@ const h = vi.hoisted(() => ({
   packaged: false,
   dir: '',
   safeThrows: false,
+  keyring: false,
   setBackendOnlyEnv: vi.fn(),
   handlers: new Map<string, (...a: unknown[]) => unknown>(),
 }));
@@ -20,7 +21,7 @@ vi.mock('electron', () => ({
   safeStorage: {
     isEncryptionAvailable: () => {
       if (h.safeThrows) throw new Error('keychain locked');
-      return false;
+      return h.keyring;
     },
     encryptString: (s: string) => Buffer.from(s),
     decryptString: (b: Buffer) => b.toString(),
@@ -47,7 +48,9 @@ const opts = {
 afterEach(() => {
   h.packaged = false;
   h.safeThrows = false;
+  h.keyring = false;
   h.setBackendOnlyEnv.mockClear();
+  vi.unstubAllGlobals();
 });
 
 it('hands the bridge to the backend spawn only, never to process.env', async () => {
@@ -79,8 +82,28 @@ it('a startup failure degrades to no account features instead of blocking app st
   close();
 });
 
+/** A signed-in install: the keyring holds a refresh token from an earlier sign-in. */
+function signedInDir(): string {
+  const dir = mkdtempSync(join(tmpdir(), 'vs-account-'));
+  writeFileSync(
+    join(dir, 'account.json'),
+    JSON.stringify({ v: 1, token: Buffer.from('rt').toString('base64') }),
+  );
+  // Account features already on (a token with them off is cleared at start-up).
+  writeFileSync(
+    join(dir, 'cloud-switches.json'),
+    JSON.stringify({ accountEnabled: true, syncEnabled: false, prompted: true }),
+  );
+  h.keyring = true;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => Promise.reject(new Error('offline'))),
+  );
+  return dir;
+}
+
 it('tells the local backend to stop when sync goes off and to start when it comes back on', async () => {
-  h.dir = mkdtempSync(join(tmpdir(), 'vs-account-'));
+  h.dir = signedInDir();
   opts.notifyBackend.mockClear();
   const close = await startAccount(opts);
   const set = h.handlers.get('account:set-switches')!;
@@ -104,4 +127,17 @@ it('never calls a remote backend about sync', async () => {
   await h.handlers.get('account:set-switches')!({}, { accountEnabled: true, syncEnabled: true });
   close();
   expect(notifyBackend).not.toHaveBeenCalled();
+});
+
+it('signing out tells the backend to stop syncing', async () => {
+  h.dir = signedInDir();
+  opts.notifyBackend.mockClear();
+  const close = await startAccount(opts);
+  await h.handlers.get('account:set-switches')!({}, { accountEnabled: true, syncEnabled: true });
+  await h.handlers.get('account:sign-out')!({});
+  close();
+  expect(opts.notifyBackend.mock.calls.map((c) => c[0])).toEqual([
+    '/api/cloud-sync/start',
+    '/api/cloud-sync/stop',
+  ]);
 });
