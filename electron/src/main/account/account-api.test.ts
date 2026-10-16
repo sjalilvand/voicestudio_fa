@@ -124,3 +124,35 @@ describe('profile photo', () => {
     expect(await photoApi(image).api.avatar(null)).toBeNull();
   });
 });
+
+it('reads the plan, storage and what the plan includes for an Organization', async () => {
+  const entitlements = {
+    organization_id: 'Or5tG7hJ9kL1zX3c',
+    plan: { code: 'pro', name: 'Pro', source: 'subscription' },
+    values: [
+      { key: 'storage.bytes', type: 'bytes', value: 1073741824, sources: [] },
+      { key: 'sync.settings', type: 'flag', value: 1, sources: [] },
+      { key: 'pro.desktop', type: 'flag', value: 0, sources: [] },
+    ],
+    storage: { limit_bytes: 1073741824, used_bytes: 734003, reserved_bytes: 0 },
+    grants: [], products: [], can_manage: true, resolved_at: '2026-10-16T09:00:00Z',
+  };
+  const { api, fetchImpl } = setup([json(entitlements)]);
+  expect(await api.entitlements('Or5tG7hJ9kL1zX3c')).toEqual({
+    planCode: 'pro',
+    planName: 'Pro',
+    storageUsedBytes: 734003,
+    storageLimitBytes: 1073741824,
+    settingsSync: true,
+    proDesktop: false,
+  });
+  expect(fetchImpl.mock.calls[0][0]).toBe(
+    'https://appapi.voicestudio.sh/v1/account/organizations/Or5tG7hJ9kL1zX3c/entitlements',
+  );
+});
+
+it('refuses an Organization ID that could change the request path', async () => {
+  const { api, fetchImpl } = setup([]);
+  expect(await api.entitlements('../admin')).toBeNull();
+  expect(fetchImpl).not.toHaveBeenCalled();
+});

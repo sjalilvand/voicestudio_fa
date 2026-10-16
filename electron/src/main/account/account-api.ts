@@ -45,6 +45,26 @@ const toProfile = (a: RawAccount): AccountProfile => ({
   })),
 });
 
+/** The plan of an Organization, as the account screen shows it (entitlements API). */
+export interface AccountPlan {
+  planCode: string;
+  planName: string;
+  storageUsedBytes: number;
+  storageLimitBytes: number;
+  /** `sync.settings`: settings, shortcuts and favorites sync. */
+  settingsSync: boolean;
+  /** `pro.desktop`: VoiceStudio Pro features. */
+  proDesktop: boolean;
+}
+
+interface RawEntitlements {
+  plan?: { code?: string; name?: string };
+  values?: Array<{ key?: string; value?: number }>;
+  storage?: { limit_bytes?: number; used_bytes?: number };
+}
+
+const ORGANIZATION_ID = /^[A-Za-z0-9]{1,64}$/;
+
 const AVATAR_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
 const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
 
@@ -58,8 +78,27 @@ export class AccountApi {
     private readonly activity: CloudActivity,
   ) {}
 
-  get(): Promise<AccountProfile | null> {
-    return this.call({ method: 'GET' });
+  async get(): Promise<AccountProfile | null> {
+    const raw = await this.call(this.env.accountApi, { method: 'GET' });
+    return raw ? toProfile(raw as RawAccount) : null;
+  }
+
+  /** Plan, storage and what the plan includes; null when signed out or unavailable. */
+  async entitlements(organizationId: string): Promise<AccountPlan | null> {
+    if (!ORGANIZATION_ID.test(organizationId)) return null;
+    const raw = (await this.call(`${this.env.accountApi}/organizations/${organizationId}/entitlements`, {
+      method: 'GET',
+    })) as RawEntitlements | null;
+    if (!raw) return null;
+    const flag = (key: string) => (raw.values ?? []).some((v) => v.key === key && Number(v.value) > 0);
+    return {
+      planCode: String(raw.plan?.code ?? ''),
+      planName: String(raw.plan?.name ?? raw.plan?.code ?? ''),
+      storageUsedBytes: Number(raw.storage?.used_bytes ?? 0),
+      storageLimitBytes: Number(raw.storage?.limit_bytes ?? 0),
+      settingsSync: flag('sync.settings'),
+      proDesktop: flag('pro.desktop'),
+    };
   }
 
   /**
@@ -95,12 +134,12 @@ export class AccountApi {
     }
   }
 
-  patch(changes: {
+  async patch(changes: {
     display_name?: string;
     theme?: 'system' | 'light' | 'dark';
     language?: string;
-  }) {
-    return this.call({
+  }): Promise<AccountProfile | null> {
+    const raw = await this.call(this.env.accountApi, {
       method: 'PATCH',
       body: JSON.stringify(changes),
       headers: {
@@ -108,13 +147,17 @@ export class AccountApi {
         'idempotency-key': randomBytes(16).toString('hex'),
       },
     });
+    return raw ? toProfile(raw as RawAccount) : null;
   }
 
-  private async call(init: { method: string; body?: string; headers?: Record<string, string> }) {
+  private async call(
+    url: string,
+    init: { method: string; body?: string; headers?: Record<string, string> },
+  ): Promise<unknown> {
     for (let attempt = 0; attempt < 2; attempt++) {
       const token = await this.session.getAccessToken();
       if (!token) return null;
-      const res = await this.activity.fetch(this.env.accountApi, {
+      const res = await this.activity.fetch(url, {
         ...init,
         headers: { ...init.headers, authorization: `Bearer ${token.access_token}` },
       });
@@ -123,7 +166,7 @@ export class AccountApi {
         continue;
       }
       if (!res.ok) throw new Error(`Account request failed (${res.status})`);
-      return toProfile((await res.json()) as RawAccount);
+      return await res.json();
     }
     this.session.endSession('signed_out_expired');
     return null;

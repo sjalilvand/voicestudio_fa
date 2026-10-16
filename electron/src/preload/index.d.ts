@@ -306,6 +306,15 @@ export interface AccountPublicState {
       kind: string;
     }>;
   } | null;
+  /** The personal Organization's plan and storage (entitlements); null when signed out. */
+  plan: {
+    planCode: string;
+    planName: string;
+    storageUsedBytes: number;
+    storageLimitBytes: number;
+    settingsSync: boolean;
+    proDesktop: boolean;
+  } | null;
 }
 
 export interface VoiceStudioBridge {

@@ -1,7 +1,7 @@
 import { BrowserWindow, ipcMain } from 'electron';
 import { assertTrustedMainFrame } from '../ipc';
 import { sendToLiveWindow } from '../window-safety';
-import type { AccountApi, AccountProfile } from './account-api';
+import type { AccountApi, AccountPlan, AccountProfile } from './account-api';
 import type { AccountPublicState } from '../../preload/index.d';
 import type { AccountSession } from './account-session';
 import type { CloudSwitchStore, CloudSwitches } from './cloud-switches';
@@ -20,6 +20,7 @@ export type { AccountPublicState };
 
 export class AccountController {
   private profile: AccountProfile | null = null;
+  private plan: AccountPlan | null = null;
 
   constructor(
     private readonly parts: {
@@ -46,9 +47,14 @@ export class AccountController {
       available && sw.accountEnabled
         ? session.state()
         : { signedIn: false, signingIn: false, notice: null };
-    if (!s.signedIn) this.profile = null;
-    else if (refreshProfile || !this.profile)
+    if (!s.signedIn) {
+      this.profile = null;
+      this.plan = null;
+    } else if (refreshProfile || !this.profile) {
       this.profile = await this.parts.api.get().catch(() => this.profile);
+      const org = this.profile?.personalOrganizationId;
+      if (org) this.plan = await this.parts.api.entitlements(org).catch(() => this.plan);
+    }
     // The renderer never sees the signed photo link: main downloads it and hands over a data URL.
     const profile = this.profile
       ? {
@@ -56,7 +62,7 @@ export class AccountController {
           avatarUrl: await this.parts.api.avatar(this.profile.avatarUrl).catch(() => null),
         }
       : null;
-    return { available, ...sw, remembered, ...s, profile };
+    return { available, ...sw, remembered, ...s, profile, plan: s.signedIn ? this.plan : null };
   }
 
   async setSwitches(raw: unknown): Promise<AccountPublicState> {
