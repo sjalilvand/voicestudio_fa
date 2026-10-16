@@ -68,6 +68,10 @@ _prefetched_unused = False
 _generator_failed_at: Optional[float] = None
 _GENERATOR_RETRY_SECONDS = 600.0
 
+
+class _GeneratorLoadDeferred(RuntimeError):
+    """The generator load failed recently and its retry is deferred."""
+
 # 16-bit message: "OM" in ASCII = 0x4F 0x4D = 0100_1111 0100_1101
 # This is our signature — every VoiceStudio-generated audio carries it.
 OMNI_MESSAGE = [0, 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1]
@@ -204,7 +208,7 @@ def _get_generator(mark_prefetched: bool = False):
                 _generator_failed_at is not None
                 and _last_used - _generator_failed_at < _GENERATOR_RETRY_SECONDS
             ):
-                raise RuntimeError(
+                raise _GeneratorLoadDeferred(
                     "AudioSeal generator load failed recently; retry deferred"
                 )
             from audioseal import AudioSeal
@@ -534,6 +538,9 @@ def embed_watermark(
 
         return watermarked
 
+    except _GeneratorLoadDeferred as e:
+        logger.warning("Watermark embedding skipped (passing through original): %s", e)
+        return waveform
     except Exception as e:
         logger.warning("Watermark embedding failed (passing through original): %s", e, exc_info=True)
         return waveform

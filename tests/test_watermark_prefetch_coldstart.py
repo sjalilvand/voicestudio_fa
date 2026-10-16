@@ -516,7 +516,7 @@ def test_prefetched_model_gets_one_extra_idle_window(monkeypatch, watermark):
     assert real_release(900, now=far_future) is True
 
 
-def test_failed_generator_load_is_not_retried_on_every_embed(monkeypatch, watermark):
+def test_failed_generator_load_is_not_retried_on_every_embed(monkeypatch, watermark, caplog):
     """A host that cannot fetch the AudioSeal checkpoint paid the network
     timeout (~3 min) on EVERY render, though the audio passed through
     unmarked each time (#2929 comment). One failed load must be remembered
@@ -538,8 +538,11 @@ def test_failed_generator_load_is_not_retried_on_every_embed(monkeypatch, waterm
 
     audio = _torch.zeros(1, 2400)
     assert watermark.embed_watermark(audio, 24000) is audio
+    caplog.clear()
     assert watermark.embed_watermark(audio, 24000) is audio
     assert len(calls) == 1
+    # An expected skip during the cooldown logs without a traceback.
+    assert caplog.records and not any(r.exc_info for r in caplog.records)
 
     # Once the cooldown has elapsed the load is attempted again.
     watermark._generator_failed_at -= watermark._GENERATOR_RETRY_SECONDS + 1
