@@ -49,3 +49,11 @@ it('refuses connections once closed', async () => {
   await lb.code.catch(() => {});
   await expect(hit(lb.redirectUri, '?code=c&state=s')).rejects.toBeTruthy();
 });
+
+it('a state with the same length but different bytes is refused, not a crash', async () => {
+  const lb = await startLoopback({ expectedState: 'a'.repeat(43), signedInPage: page });
+  const multibyte = encodeURIComponent('é'.repeat(43));
+  expect((await hit(lb.redirectUri, `?code=x&state=${multibyte}`)).status).toBe(400);
+  expect((await hit(lb.redirectUri, `?code=real&state=${'a'.repeat(43)}`)).status).toBe(302);
+  await expect(lb.code).resolves.toBe('real');
+});

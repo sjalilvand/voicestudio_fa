@@ -9,8 +9,12 @@ export class LoopbackError extends Error {
   }
 }
 
-const sameState = (a: string, b: string) =>
-  a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
+function sameState(supplied: string, expected: string): boolean {
+  // Compare bytes, not UTF-16 lengths: timingSafeEqual throws on a byte-length mismatch.
+  const a = Buffer.from(supplied);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 
 /** RFC 8252 loopback receiver: one /callback within the timeout, then gone. */
 export async function startLoopback(opts: {
