@@ -380,9 +380,12 @@ hard rules from the first prompt.
   - **VoiceStudio Cloud account features, only after the user turns them on**
     (first-run setup or Settings → Account; off by default, skipping = off):
     browser sign-in against `voicestudio.sh/identity` and the account API at
-    `appapi.voicestudio.sh`, made only from Electron main
-    (`electron/src/main/account/`). Turning account features off stops every
-    request at once and sends one best-effort token revocation. Hidden in
+    `appapi.voicestudio.sh` from Electron main (`electron/src/main/account/`),
+    and, only after the user also turns cloud sync on, settings sync with
+    `appapi.voicestudio.sh/v1/sync` from the backend
+    (`backend/services/cloud_sync/`), which can call only with a token main
+    hands out. Turning either off stops every request at once; switching
+    account features off sends one best-effort token revocation. Hidden in
     packaged builds until VoiceStudio Cloud launches.
   - Bug reports as prefilled GitHub Issue URLs opened in the user's browser.
   - PostHog analytics only after a yes at the first-run consent prompt
