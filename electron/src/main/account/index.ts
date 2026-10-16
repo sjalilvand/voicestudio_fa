@@ -15,6 +15,8 @@ import { setBackendOnlyEnv } from '../backend';
 interface StartOptions {
   getMainWindow: () => BrowserWindow | null;
   isRemoteBackend: () => boolean;
+  /** POST to the local backend (never a remote one); errors are the caller's to swallow. */
+  notifyBackend?: (path: '/api/cloud-sync/start' | '/api/cloud-sync/stop') => Promise<void>;
 }
 
 const BRIDGE_ENV_OFF = {
@@ -73,6 +75,24 @@ async function wireAccount(opts: StartOptions): Promise<() => void> {
     getToken: () => session.getAccessToken(),
     isSyncAllowed: () => switches.get().syncEnabled,
     isRemoteBackend: opts.isRemoteBackend,
+    context: async () => ({ organization_id: await ctl.organizationId(), sync_api: env.syncApi }),
+    invalidate: () => session.invalidateAccessToken(),
+  });
+  // The backend runs the sync engine: tell it at once when sync turns on or off.
+  const tell = (path: '/api/cloud-sync/start' | '/api/cloud-sync/stop') => {
+    if (opts.isRemoteBackend() || !opts.notifyBackend) return;
+    void opts.notifyBackend(path).catch(() => {});
+  };
+  const syncing = (s: { accountEnabled: boolean; syncEnabled: boolean }) =>
+    s.accountEnabled && s.syncEnabled;
+  const unwatchSwitches = switches.subscribe((next, prev) => {
+    if (syncing(next) !== syncing(prev))
+      tell(syncing(next) ? '/api/cloud-sync/start' : '/api/cloud-sync/stop');
+  });
+  let wasSignedIn = session.state().signedIn;
+  const unwatchSession = session.onChange((s) => {
+    if (s.signedIn && !wasSignedIn && syncing(switches.get())) tell('/api/cloud-sync/start');
+    wasSignedIn = s.signedIn;
   });
   // Only the managed backend's spawn env carries the capability; see setBackendOnlyEnv.
   setBackendOnlyEnv({
@@ -80,6 +100,8 @@ async function wireAccount(opts: StartOptions): Promise<() => void> {
     VOICESTUDIO_ACCOUNT_BRIDGE_TOKEN: bridge.token,
   });
   return () => {
+    unwatchSwitches();
+    unwatchSession();
     closeIpc();
     activity.stopAll();
     bridge.close();

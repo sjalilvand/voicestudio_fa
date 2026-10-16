@@ -7,6 +7,11 @@ async function bridge(over: Partial<Parameters<typeof startAccountTokenBridge>[0
     getToken: vi.fn(async () => token),
     isSyncAllowed: () => true,
     isRemoteBackend: () => false,
+    context: async () => ({
+      organization_id: 'Or5tG7hJ9kL1zX3c',
+      sync_api: 'https://appapi.voicestudio.sh/v1/sync',
+    }),
+    invalidate: vi.fn(),
     ...over,
   });
 }
@@ -20,6 +25,8 @@ it('hands the backend an access token when sync is on and local', async () => {
     signed_in: true,
     access_token: 'acc',
     expires_at: 123,
+    organization_id: 'Or5tG7hJ9kL1zX3c',
+    sync_api: 'https://appapi.voicestudio.sh/v1/sync',
   });
   b.close();
 });
@@ -58,5 +65,17 @@ it('a transient refresh failure reads as temporarily signed out, not an error pa
   const res = await get(b);
   expect(res.status).toBe(503);
   expect(await res.json()).toEqual({ signed_in: false, retry: true });
+  b.close();
+});
+
+it('fresh=1 drops the rejected token before handing out a new one', async () => {
+  const order: string[] = [];
+  const b = await bridge({
+    invalidate: () => order.push('invalidate'),
+    getToken: vi.fn(async () => (order.push('get'), token)),
+  });
+  await fetch(`${b.url}/token?fresh=1`, { headers: { authorization: `Bearer ${b.token}` } });
+  expect(order).toEqual(['invalidate', 'get']);
+  expect((await fetch(`${b.url}/other`, { headers: { authorization: `Bearer ${b.token}` } })).status).toBe(404);
   b.close();
 });

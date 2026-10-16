@@ -37,6 +37,7 @@ it('maps the account to the renderer-safe profile', async () => {
     email: 'ana@example.com',
     displayName: 'Ana',
     avatarUrl: null,
+    personalOrganizationId: 'Or5tG7hJ9kL1zX3c',
     organizations: [
       { id: 'Or5tG7hJ9kL1zX3c', slug: 'ana', displayName: 'Ana', role: 'owner', kind: 'personal' },
     ],

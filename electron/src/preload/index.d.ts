@@ -297,6 +297,7 @@ export interface AccountPublicState {
     email: string | null;
     displayName: string | null;
     avatarUrl: string | null;
+    personalOrganizationId: string | null;
     organizations: Array<{
       id: string;
       slug: string;

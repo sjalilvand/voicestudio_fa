@@ -12,6 +12,10 @@ export async function startAccountTokenBridge(deps: {
   getToken: () => Promise<AccessToken | null>;
   isSyncAllowed: () => boolean;
   isRemoteBackend: () => boolean;
+  /** Where the backend syncs: the personal Organization and the sync API base. */
+  context: () => Promise<{ organization_id: string | null; sync_api: string }>;
+  /** The backend saw a 401: drop the cached access token so the next one is fresh. */
+  invalidate: () => void;
 }): Promise<{ url: string; token: string; close(): void }> {
   const token = randomBytes(32).toString('hex');
   const expected = Buffer.from('Bearer ' + token);
@@ -27,11 +31,15 @@ export async function startAccountTokenBridge(deps: {
       req.headers.origin
     )
       return send(403, { error: 'Forbidden' });
-    if (req.method !== 'GET' || req.url !== '/token') return send(404, { error: 'Not found' });
+    const fresh = req.url === '/token?fresh=1';
+    if (req.method !== 'GET' || (req.url !== '/token' && !fresh))
+      return send(404, { error: 'Not found' });
     if (!deps.isSyncAllowed() || deps.isRemoteBackend()) return send(200, { signed_in: false });
     try {
+      if (fresh) deps.invalidate();
       const access = await deps.getToken();
-      return send(200, access ? { signed_in: true, ...access } : { signed_in: false });
+      if (!access) return send(200, { signed_in: false });
+      return send(200, { signed_in: true, ...access, ...(await deps.context()) });
     } catch {
       return send(503, { signed_in: false, retry: true });
     }

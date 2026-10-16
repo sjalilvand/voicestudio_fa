@@ -269,6 +269,14 @@ if (process.env.VOICESTUDIO_ALLOW_MULTIPLE_INSTANCES !== '1' && !app.requestSing
       closeAccount = await startAccount({
         getMainWindow: () => mainWindow,
         isRemoteBackend: () => backend.connection.remote,
+        notifyBackend: async (path) => {
+          if (backend.connection.remote) return;
+          await fetch(`${backend.baseUrl}${path}`, {
+            method: 'POST',
+            headers: backend.requestHeaders(),
+            signal: AbortSignal.timeout(5000),
+          });
+        },
       });
       closeRepairAgents = await registerRepairAgents(
         backend,

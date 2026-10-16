@@ -7,6 +7,7 @@ export interface AccountProfile {
   email: string | null;
   displayName: string | null;
   avatarUrl: string | null;
+  personalOrganizationId: string | null;
   organizations: Array<{
     id: string;
     slug: string;
@@ -20,6 +21,7 @@ interface RawAccount {
   email?: string | null;
   display_name?: string | null;
   avatar_url?: string | null;
+  personal_organization_id?: string | null;
   organizations?: Array<{
     id: string;
     slug: string;
@@ -33,6 +35,7 @@ const toProfile = (a: RawAccount): AccountProfile => ({
   email: a.email ?? null,
   displayName: a.display_name ?? null,
   avatarUrl: a.avatar_url ?? null,
+  personalOrganizationId: a.personal_organization_id ?? null,
   organizations: (a.organizations ?? []).map((o) => ({
     id: o.id,
     slug: o.slug,

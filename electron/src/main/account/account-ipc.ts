@@ -31,6 +31,12 @@ export class AccountController {
     },
   ) {}
 
+  /** The Organization sync uses: the personal one (fetched once if not cached yet). */
+  async organizationId(): Promise<string | null> {
+    if (!this.profile) this.profile = await this.parts.api.get().catch(() => null);
+    return this.profile?.personalOrganizationId ?? null;
+  }
+
   async publicState(refreshProfile = false): Promise<AccountPublicState> {
     const { available, switches, session, remembered } = this.parts;
     const sw: CloudSwitches = available
