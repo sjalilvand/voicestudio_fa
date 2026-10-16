@@ -17,7 +17,11 @@ function decode(raw: string | null): [unknown, boolean] {
   }
 }
 
-export function installSyncedStorage(opts: { storage: Storage; keys: readonly string[]; post: Post }) {
+export function installSyncedStorage(opts: {
+  storage: Storage;
+  keys: readonly string[];
+  post: Post;
+}) {
   const { storage, post } = opts;
   const keys = new Set(opts.keys);
   const proto = Storage.prototype;

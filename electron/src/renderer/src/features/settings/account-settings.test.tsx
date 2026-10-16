@@ -5,6 +5,8 @@ const mock = vi.hoisted(() => ({ bridge: null as unknown }));
 vi.mock('@/components/bridge', () => ({ getBridge: () => mock.bridge }));
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 
+vi.mock('./cloud-sync-panel', () => ({ CloudSyncPanel: () => <div>sync-panel</div> }));
+
 import { AccountSettings } from './account-settings';
 
 const base = {
@@ -105,4 +107,12 @@ it('sync can always be turned off, even while signed out', async () => {
   expect(sync).not.toHaveAttribute('aria-disabled', 'true');
   fireEvent.click(sync);
   expect(account.setSwitches).toHaveBeenCalledWith({ syncEnabled: false });
+});
+
+it('shows what to sync only when signed in with sync on', async () => {
+  const { push } = setup({ signedIn: true, syncEnabled: false });
+  await screen.findByRole('switch', { name: 'account.sync' });
+  expect(screen.queryByText('sync-panel')).toBeNull();
+  push({ signedIn: true, syncEnabled: true });
+  expect(await screen.findByText('sync-panel')).toBeInTheDocument();
 });

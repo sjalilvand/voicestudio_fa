@@ -76,6 +76,8 @@ it('fresh=1 drops the rejected token before handing out a new one', async () => 
   });
   await fetch(`${b.url}/token?fresh=1`, { headers: { authorization: `Bearer ${b.token}` } });
   expect(order).toEqual(['invalidate', 'get']);
-  expect((await fetch(`${b.url}/other`, { headers: { authorization: `Bearer ${b.token}` } })).status).toBe(404);
+  expect(
+    (await fetch(`${b.url}/other`, { headers: { authorization: `Bearer ${b.token}` } })).status,
+  ).toBe(404);
   b.close();
 });

@@ -47,7 +47,11 @@ it('applies a pulled value without echoing it and tells the app through a storag
   expect(post).not.toHaveBeenCalled();
   expect(localStorage.getItem('voicestudio.clone.settings.v1')).toBe('{"steps":24}');
   expect(localStorage.getItem('voicestudio.theme.v2')).toBeNull();
-  expect(seen).toEqual(['voicestudio.theme.v2', 'voicestudio.clone.settings.v1', 'voicestudio.theme.v2']);
+  expect(seen).toEqual([
+    'voicestudio.theme.v2',
+    'voicestudio.clone.settings.v1',
+    'voicestudio.theme.v2',
+  ]);
 });
 
 it('reads the current values of every synced key for the first mirror', () => {

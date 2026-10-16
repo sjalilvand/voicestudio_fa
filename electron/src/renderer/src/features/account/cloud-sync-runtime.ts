@@ -10,7 +10,9 @@ const SHORTCUT_KEY = 'voicestudio.shortcut.dictation';
 type Api = <T>(path: string, init?: RequestInit) => Promise<T>;
 interface Capture {
   getShortcut(): Promise<{ accelerator: string; active: boolean; error?: string }>;
-  setShortcut(accelerator: string): Promise<{ accelerator: string; active: boolean; error?: string }>;
+  setShortcut(
+    accelerator: string,
+  ): Promise<{ accelerator: string; active: boolean; error?: string }>;
 }
 
 /**
@@ -25,7 +27,9 @@ export async function startCloudSyncRuntime(deps: {
   const { api, capture } = deps;
   const { keys } = await api<{ keys: string[] }>('/api/cloud-sync/local/keys');
   const post = (key: string, value: unknown, raw: boolean) =>
-    api('/api/cloud-sync/local', { method: 'PUT', body: JSON.stringify({ key, value, raw }) }).then(() => {});
+    api('/api/cloud-sync/local', { method: 'PUT', body: JSON.stringify({ key, value, raw }) }).then(
+      () => {},
+    );
   const synced = installSyncedStorage({
     storage: localStorage,
     keys: keys.filter((key) => key !== SHORTCUT_KEY),
@@ -51,9 +55,10 @@ export async function startCloudSyncRuntime(deps: {
 
   const tick = async () => {
     if (stopped) return;
-    const pulled = await api<{ seq: number; values: Array<{ key: string; value: unknown; raw: boolean }> }>(
-      `/api/cloud-sync/local?since=${seq}`,
-    ).catch(() => null);
+    const pulled = await api<{
+      seq: number;
+      values: Array<{ key: string; value: unknown; raw: boolean }>;
+    }>(`/api/cloud-sync/local?since=${seq}`).catch(() => null);
     if (!pulled || stopped) return;
     seq = pulled.seq;
     for (const { key, value, raw } of pulled.values) {
@@ -100,7 +105,9 @@ export async function startCloudSyncRuntime(deps: {
 /** Mounted once in the app shell; does nothing unless signed in with sync on. */
 export function CloudSyncRuntime() {
   const { state } = useAccount();
-  const active = Boolean(state?.available && state.signedIn && state.accountEnabled && state.syncEnabled);
+  const active = Boolean(
+    state?.available && state.signedIn && state.accountEnabled && state.syncEnabled,
+  );
   useEffect(() => {
     if (!active) return;
     let stop: (() => void) | undefined;

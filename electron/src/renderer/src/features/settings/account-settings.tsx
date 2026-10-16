@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useAccount } from '../account/use-account';
+import { CloudSyncPanel } from './cloud-sync-panel';
 import { SettingsRow, SettingsSection } from './settings-layout';
 
 export function AccountSettings() {
@@ -67,6 +68,7 @@ export function AccountSettings() {
           {!state.remembered && (
             <p className="text-sm text-muted-foreground">{t('account.not_remembered')}</p>
           )}
+          {state.signedIn && state.syncEnabled && <CloudSyncPanel />}
         </>
       )}
     </SettingsSection>

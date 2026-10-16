@@ -27,7 +27,9 @@ vi.mock('electron', () => ({
   },
   shell: { openExternal: vi.fn() },
   ipcMain: {
-    handle: vi.fn((channel: string, fn: (...a: unknown[]) => unknown) => h.handlers.set(channel, fn)),
+    handle: vi.fn((channel: string, fn: (...a: unknown[]) => unknown) =>
+      h.handlers.set(channel, fn),
+    ),
     removeHandler: vi.fn(),
   },
   BrowserWindow: { getAllWindows: () => [] },
