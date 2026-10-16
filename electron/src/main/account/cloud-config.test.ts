@@ -31,3 +31,13 @@ it('accounts are available in developer builds and hidden in packaged builds wit
   expect(cloudAccountsAvailable(false)).toBe(true);
   expect(cloudAccountsAvailable(true)).toBe(false);
 });
+
+it('the development server signs in through the dashboard host (vssaas f9ae9d4)', () => {
+  const dev = resolveCloudEnvironment({ packaged: false, requested: 'dev' });
+  expect(dev.issuer).toBe('https://dev-app.voicestudio.sh/identity/realms/vssaas');
+  expect(dev.signedInPage).toBe('https://dev-app.voicestudio.sh/app/desktop-signed-in');
+  expect([...cloudOrigins(dev)].sort()).toEqual([
+    'https://dev-app.voicestudio.sh',
+    'https://dev-appapi.voicestudio.sh',
+  ]);
+});

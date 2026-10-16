@@ -20,7 +20,7 @@ const ENVIRONMENTS: Record<CloudEnvName, Omit<CloudEnvironment, 'name' | 'client
     signedInPage: 'https://app.voicestudio.sh/app/desktop-signed-in',
   },
   dev: {
-    issuer: 'https://dev.voicestudio.sh/identity/realms/vssaas',
+    issuer: 'https://dev-app.voicestudio.sh/identity/realms/vssaas',
     accountApi: 'https://dev-appapi.voicestudio.sh/v1/account',
     syncApi: 'https://dev-appapi.voicestudio.sh/v1/sync',
     signedInPage: 'https://dev-app.voicestudio.sh/app/desktop-signed-in',
