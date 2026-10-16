@@ -521,7 +521,7 @@ export function SettingsPage() {
         <header
           className={cn(
             'workspace-titlebar flex shrink-0 items-center gap-2 px-5 text-sm',
-            !isMac() && 'native-controls-right',
+            isMac() ? 'account-corner-safe' : 'native-controls-right',
           )}
         >
           <span className="text-muted-foreground">{t('nav.settings')}</span>

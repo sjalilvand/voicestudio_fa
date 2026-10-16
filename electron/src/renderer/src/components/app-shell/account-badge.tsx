@@ -30,11 +30,17 @@ function Avatar({ name, url, size }: { name: string; url: string | null; size: s
 }
 
 /**
- * Always-visible "signed in" badge in the main sidebar: the profile photo (or
+ * Always-visible "signed in" badge (shown in the window's top-right corner): the profile photo (or
  * initials) and name, linking to Settings → Account. Nothing shows unless the
  * user turned account features on and is signed in.
  */
-export function AccountBadge({ compact = false }: { compact?: boolean }) {
+export function AccountBadge({
+  compact = false,
+  className,
+}: {
+  compact?: boolean;
+  className?: string;
+}) {
   const { t } = useTranslation();
   const { state } = useAccount();
   if (!state?.available || !state.accountEnabled) return null;
@@ -49,6 +55,7 @@ export function AccountBadge({ compact = false }: { compact?: boolean }) {
         className={cn(
           'workspace-nav-item flex min-w-0 items-center gap-2 rounded-md text-sm text-muted-foreground outline-none hover:bg-[var(--sidebar-row-hover)] focus-visible:ring-2 focus-visible:ring-ring',
           compact ? 'size-8 justify-center' : 'px-2 py-1.5',
+          className,
         )}
       >
         <UserRoundIcon className="size-4 shrink-0" aria-hidden="true" />
@@ -69,6 +76,7 @@ export function AccountBadge({ compact = false }: { compact?: boolean }) {
       className={cn(
         'workspace-nav-item flex min-w-0 items-center gap-2 rounded-md outline-none hover:bg-[var(--sidebar-row-hover)] focus-visible:ring-2 focus-visible:ring-ring',
         compact ? 'size-8 justify-center' : 'px-2 py-1.5',
+        className,
       )}
     >
       <span className="relative shrink-0">
@@ -79,7 +87,7 @@ export function AccountBadge({ compact = false }: { compact?: boolean }) {
           className="absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full border-2 border-sidebar bg-success"
         />
       </span>
-      {!compact && <span className="min-w-0 truncate text-sm font-medium">{name}</span>}
+      {!compact && <span className="min-w-0 max-w-40 truncate text-sm font-medium">{name}</span>}
     </Link>
   );
 }

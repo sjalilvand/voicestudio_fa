@@ -11,7 +11,6 @@ import { useWorkspaceSidebarState } from './use-workspace-sidebar';
 import { VoicesSidebar } from '@/features/clone/voices-sidebar';
 import { WorkspaceNavigation } from './workspace-menu';
 import { StatusBar } from './status-bar';
-import { AccountBadge } from './account-badge';
 import { SystemNotifications } from './system-notifications';
 import { useBackendStatus } from '@/hooks/use-backend-status';
 import { isBackendReachable } from '@shared/utils/backendStage';
@@ -91,9 +90,6 @@ export function WorkspaceSidebar() {
               mac ? 'grid grid-cols-2 items-center gap-1 px-1' : 'flex flex-col items-center gap-1',
             )}
           >
-            <div className={cn('flex justify-center empty:hidden', mac && 'col-span-2')}>
-              <AccountBadge compact />
-            </div>
             <Link
               to="/settings"
               aria-label={t('nav.settings')}
@@ -170,10 +166,6 @@ export function WorkspaceSidebar() {
           </div>
           <VoicesSidebar key={libraryTab} initialTab={libraryTab} />
           <div className="flex min-w-0 shrink-0 flex-col border-t border-border/50">
-            {/* Signed in to VoiceStudio Cloud: always visible, only when the user turned it on. */}
-            <div className="px-2 pt-2 empty:hidden">
-              <AccountBadge />
-            </div>
             <StatusBar
               footerLeading={
                 mac ? (

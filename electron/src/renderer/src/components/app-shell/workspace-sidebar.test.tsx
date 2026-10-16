@@ -42,9 +42,7 @@ vi.mock('./workspace-menu', () => ({
 }));
 vi.mock('./status-bar', () => ({ StatusBar: () => <div data-testid="status" /> }));
 vi.mock('./system-notifications', () => ({ SystemNotifications: () => null }));
-vi.mock('./account-badge', () => ({
-  AccountBadge: ({ compact }: { compact?: boolean }) => <div data-testid={compact ? 'badge-compact' : 'badge'} />,
-}));
+
 vi.mock('./use-workspace-sidebar', () => ({
   useWorkspaceSidebarState: () => ({
     compact: sidebar.compact,
@@ -99,11 +97,3 @@ it('uses the plain version label outside development builds', () => {
   expect(versionTranslationKey(false)).toBe('app.version');
 });
 
-it('keeps the signed-in badge visible in the expanded sidebar and on the compact rail', () => {
-  const { unmount } = render(<WorkspaceSidebar />);
-  expect(screen.getByTestId('badge')).toBeInTheDocument();
-  unmount();
-  sidebar.compact = true;
-  render(<WorkspaceSidebar />);
-  expect(screen.getByTestId('badge-compact')).toBeInTheDocument();
-});

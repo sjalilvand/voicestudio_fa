@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { useBackendStatus } from '@/hooks/use-backend-status';
 import { isBackendReachable } from '@shared/utils/backendStage';
 import { SystemNotifications } from './system-notifications';
+import { AccountCorner } from './account-corner';
 
 export function AppShell() {
   const backend = useBackendStatus();
@@ -60,8 +61,9 @@ export function AppShell() {
           </BackendGate>
         )}
       </div>
-      {/* Native drag-region hit testing follows document order. Keep this
-          no-drag control after every workspace titlebar, outside BackendGate. */}
+      {/* Native drag-region hit testing follows document order. Keep these
+          no-drag controls after every workspace titlebar, outside BackendGate. */}
+      <AccountCorner beside={!isMac() ? 'controls' : macWorkspace ? 'bell' : 'edge'} />
       {macWorkspace && (
         <div
           data-slot="macos-system-notifications"

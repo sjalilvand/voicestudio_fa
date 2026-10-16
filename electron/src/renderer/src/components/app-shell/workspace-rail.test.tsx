@@ -13,7 +13,6 @@ const layout = vi.hoisted(() => ({
   },
   setWorkspace: vi.fn(),
 }));
-vi.mock('./account-badge', () => ({ AccountBadge: () => null }));
 vi.mock('@tanstack/react-router', () => ({
   useRouterState: ({ select }: any) => select({ location: { pathname: '/projects' } }),
   Link: ({ to, children, ...props }: any) => (
