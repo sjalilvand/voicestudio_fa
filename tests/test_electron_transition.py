@@ -46,6 +46,16 @@ def test_snap_store_workflow_builds_strict_snap_and_uploads_only_tags_to_candida
     assert "environment" not in package and "secrets." not in yaml.dump(package)
     tag_guard = next(s for s in package["steps"] if s.get("name") == "Match the tag to the app version")
     assert '"v$version"' in tag_guard["run"]
+    import os
+    import subprocess
+
+    for tag, ok in [("v0.5.8", True), ("v0.6.0-rc.1", False), ("v0.5", False)]:
+        result = subprocess.run(
+            ["bash", "-e", "-c", tag_guard["run"]],
+            cwd=ROOT, capture_output=True, text=True,
+            env=dict(os.environ, GITHUB_REF_NAME=tag),
+        )
+        assert ("is not a final" not in result.stdout) == ok, (tag, result.stdout)
     command = next(
         step["run"]
         for step in package["steps"]

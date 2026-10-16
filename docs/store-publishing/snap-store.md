@@ -149,7 +149,7 @@ One-time setup, by the owner:
      --expires=<date> credentials.txt
    ```
 
-Pushing a `v*` tag then builds the Snap, checks the tag matches `package.json`,
+Pushing a final `vX.Y.Z` tag then builds the Snap, checks the tag matches `package.json`,
 uploads it and releases it to `candidate`. The workflow uploads first and checks
 the newest `v*` tag just before releasing, so an older tag's revision is
 uploaded without moving `candidate`. The run
