@@ -2299,7 +2299,8 @@
     "signed_out_expired": "サインアウトされました。同期を続けるにはサインインしてください。",
     "sign_in_failed": "サインインがキャンセルされたか、失敗しました",
     "offline": "オフライン：変更は後で同期されます",
-    "not_remembered": "システムのキーリングを利用できないため、VoiceStudio の再起動後にもう一度サインインする必要があります。"
+    "not_remembered": "システムのキーリングを利用できないため、VoiceStudio の再起動後にもう一度サインインする必要があります。",
+    "badge_sign_in_again": "もう一度サインイン"
   },
   "cloudsync": {
     "unavailable": "現在、同期を利用できません。",

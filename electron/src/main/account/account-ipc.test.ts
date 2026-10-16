@@ -28,6 +28,7 @@ function ctl(over: Partial<ConstructorParameters<typeof AccountController>[0]> =
         avatarUrl: null,
         organizations: [],
       }),
+      avatar: async () => null,
     } as never,
     remembered: true,
     ...over,
@@ -70,4 +71,22 @@ it('setSwitches validates input and always marks the prompt as answered', async 
   await expect(c.setSwitches({ accountEnabled: 'yes' } as never)).rejects.toThrow(/Invalid/);
   const s = await c.setSwitches({ accountEnabled: false });
   expect(s.prompted).toBe(true);
+});
+
+it('the renderer gets the photo as a data URL, never the signed download link', async () => {
+  const c = ctl({
+    api: {
+      get: async () => ({
+        email: 'ana@example.com',
+        displayName: 'Ana',
+        avatarUrl: 'https://app-s3.voicestudio.sh/a.png?X-Amz-Signature=secret',
+        personalOrganizationId: 'Or1',
+        organizations: [],
+      }),
+      avatar: async () => 'data:image/png;base64,AAAA',
+    } as never,
+  });
+  const s = await c.publicState(true);
+  expect(s.profile?.avatarUrl).toBe('data:image/png;base64,AAAA');
+  expect(JSON.stringify(s)).not.toContain('X-Amz-Signature');
 });

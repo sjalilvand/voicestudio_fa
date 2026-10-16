@@ -45,7 +45,13 @@ const toProfile = (a: RawAccount): AccountProfile => ({
   })),
 });
 
+const AVATAR_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
+const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
+
 export class AccountApi {
+  /** Photo by its link without the short-lived signature, so a fresh signature reuses it. */
+  private avatars = new Map<string, string>();
+
   constructor(
     private readonly env: CloudEnvironment,
     private readonly session: AccountSession,
@@ -54,6 +60,39 @@ export class AccountApi {
 
   get(): Promise<AccountProfile | null> {
     return this.call({ method: 'GET' });
+  }
+
+  /**
+   * The profile photo as a `data:` URL for the renderer (its CSP allows no remote
+   * images). Downloaded through the Cloud gate, so switching off stops it; only
+   * small raster images, never SVG; failures simply show initials.
+   */
+  async avatar(url: string | null): Promise<string | null> {
+    let target: URL;
+    try {
+      if (!url) return null;
+      target = new URL(url);
+    } catch {
+      return null;
+    }
+    if (target.protocol !== 'https:') return null;
+    const key = target.origin + target.pathname;
+    const cached = this.avatars.get(key);
+    if (cached) return cached;
+    try {
+      const res = await this.activity.fetch(url, {}, { serverIssued: true, timeoutMs: 10_000 });
+      const type = (res.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
+      if (!res.ok || !AVATAR_TYPES.has(type)) return null;
+      if (Number(res.headers.get('content-length') ?? 0) > AVATAR_MAX_BYTES) return null;
+      const bytes = Buffer.from(await res.arrayBuffer());
+      if (bytes.length === 0 || bytes.length > AVATAR_MAX_BYTES) return null;
+      const dataUrl = `data:${type};base64,${bytes.toString('base64')}`;
+      this.avatars.clear(); // one person's photo at a time
+      this.avatars.set(key, dataUrl);
+      return dataUrl;
+    } catch {
+      return null;
+    }
   }
 
   patch(changes: {

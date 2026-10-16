@@ -2299,7 +2299,8 @@
     "signed_out_expired": "Oturumun kapatıldı. Eşitlemeye devam etmek için oturum aç.",
     "sign_in_failed": "Oturum açma iptal edildi veya başarısız oldu",
     "offline": "Çevrimdışı: değişiklikler daha sonra eşitlenecek",
-    "not_remembered": "Sistem anahtarlığın kullanılamıyor; bu nedenle VoiceStudio yeniden başladıktan sonra tekrar oturum açman gerekecek."
+    "not_remembered": "Sistem anahtarlığın kullanılamıyor; bu nedenle VoiceStudio yeniden başladıktan sonra tekrar oturum açman gerekecek.",
+    "badge_sign_in_again": "Yeniden oturum aç"
   },
   "cloudsync": {
     "unavailable": "Eşitleme şu anda kullanılamıyor.",

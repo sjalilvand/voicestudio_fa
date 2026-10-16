@@ -2299,7 +2299,8 @@
     "signed_out_expired": "Bạn đã bị đăng xuất. Hãy đăng nhập để tiếp tục đồng bộ.",
     "sign_in_failed": "Đăng nhập đã bị hủy hoặc thất bại",
     "offline": "Ngoại tuyến: các thay đổi sẽ được đồng bộ sau",
-    "not_remembered": "Chuỗi khóa của hệ thống không khả dụng, vì vậy bạn sẽ cần đăng nhập lại sau khi VoiceStudio khởi động lại."
+    "not_remembered": "Chuỗi khóa của hệ thống không khả dụng, vì vậy bạn sẽ cần đăng nhập lại sau khi VoiceStudio khởi động lại.",
+    "badge_sign_in_again": "Đăng nhập lại"
   },
   "cloudsync": {
     "unavailable": "Đồng bộ hiện không khả dụng.",

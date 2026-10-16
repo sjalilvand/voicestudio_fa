@@ -2301,7 +2301,8 @@
     "signed_out_expired": "Sei stato disconnesso. Accedi per continuare a sincronizzare.",
     "sign_in_failed": "L’accesso è stato annullato o non è riuscito",
     "offline": "Offline: le modifiche verranno sincronizzate più tardi",
-    "not_remembered": "Il portachiavi di sistema non è disponibile, quindi dovrai accedere di nuovo dopo il riavvio di VoiceStudio."
+    "not_remembered": "Il portachiavi di sistema non è disponibile, quindi dovrai accedere di nuovo dopo il riavvio di VoiceStudio.",
+    "badge_sign_in_again": "Accedi di nuovo"
   },
   "cloudsync": {
     "unavailable": "La sincronizzazione non è disponibile al momento.",

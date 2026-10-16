@@ -31,13 +31,18 @@ export class CloudActivity {
   async fetch(
     url: string,
     init: RequestInit = {},
-    opts: { final?: boolean; timeoutMs?: number } = {},
+    /** `serverIssued`: a link the account API handed out (the profile photo), HTTPS only. */
+    opts: { final?: boolean; timeoutMs?: number; serverIssued?: boolean } = {},
   ): Promise<Response> {
     if (!this.opts.isAllowed()) {
       if (!(opts.final && this.finalAvailable)) throw new CloudDisabledError();
       this.finalAvailable = false;
     }
-    if (!this.opts.origins.has(new URL(url).origin))
+    const target = new URL(url);
+    if (opts.serverIssued) {
+      if (target.protocol !== 'https:')
+        throw new Error('Refusing a server-issued link that is not https');
+    } else if (!this.opts.origins.has(target.origin))
       throw new Error('Refusing a request outside the VoiceStudio Cloud origin');
     const controller = new AbortController();
     this.controllers.add(controller);

@@ -2299,7 +2299,8 @@
     "signed_out_expired": "Du loggades ut. Logga in för att fortsätta synka.",
     "sign_in_failed": "Inloggningen avbröts eller misslyckades",
     "offline": "Offline: ändringar synkas senare",
-    "not_remembered": "Systemets nyckelring är inte tillgänglig, så du behöver logga in igen när VoiceStudio har startats om."
+    "not_remembered": "Systemets nyckelring är inte tillgänglig, så du behöver logga in igen när VoiceStudio har startats om.",
+    "badge_sign_in_again": "Logga in igen"
   },
   "cloudsync": {
     "unavailable": "Synkning är inte tillgänglig just nu.",

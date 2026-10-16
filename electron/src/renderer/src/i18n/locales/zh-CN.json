@@ -2299,7 +2299,8 @@
     "signed_out_expired": "你已退出登录。请登录以继续同步。",
     "sign_in_failed": "登录已取消或失败",
     "offline": "离线：更改将稍后同步",
-    "not_remembered": "系统密钥环不可用，因此 VoiceStudio 重启后你需要重新登录。"
+    "not_remembered": "系统密钥环不可用，因此 VoiceStudio 重启后你需要重新登录。",
+    "badge_sign_in_again": "重新登录"
   },
   "cloudsync": {
     "unavailable": "同步当前不可用。",

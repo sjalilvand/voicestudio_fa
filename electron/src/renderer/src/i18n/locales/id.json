@@ -2299,7 +2299,8 @@
     "signed_out_expired": "Anda telah keluar. Masuk untuk terus menyinkronkan.",
     "sign_in_failed": "Proses masuk dibatalkan atau gagal",
     "offline": "Offline: perubahan akan disinkronkan nanti",
-    "not_remembered": "Keyring sistem Anda tidak tersedia, jadi Anda perlu masuk lagi setelah VoiceStudio dimulai ulang."
+    "not_remembered": "Keyring sistem Anda tidak tersedia, jadi Anda perlu masuk lagi setelah VoiceStudio dimulai ulang.",
+    "badge_sign_in_again": "Masuk lagi"
   },
   "cloudsync": {
     "unavailable": "Sinkronisasi tidak tersedia saat ini.",

@@ -2299,7 +2299,8 @@
     "signed_out_expired": "Du wurdest abgemeldet. Melde dich an, um weiter zu synchronisieren.",
     "sign_in_failed": "Die Anmeldung wurde abgebrochen oder ist fehlgeschlagen",
     "offline": "Offline: Änderungen werden später synchronisiert",
-    "not_remembered": "Dein System-Schlüsselbund ist nicht verfügbar, daher musst du dich nach einem Neustart von VoiceStudio erneut anmelden."
+    "not_remembered": "Dein System-Schlüsselbund ist nicht verfügbar, daher musst du dich nach einem Neustart von VoiceStudio erneut anmelden.",
+    "badge_sign_in_again": "Erneut anmelden"
   },
   "cloudsync": {
     "unavailable": "Die Synchronisierung ist gerade nicht verfügbar.",

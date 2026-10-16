@@ -1,4 +1,4 @@
-import { expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { AccountApi } from './account-api';
 import { CloudActivity, type FetchImpl } from './cloud-activity';
 import { cloudOrigins, resolveCloudEnvironment } from './cloud-config';
@@ -70,4 +70,57 @@ it('returns null without a request when signed out', async () => {
   session.getAccessToken.mockResolvedValueOnce(null as never);
   expect(await api.get()).toBeNull();
   expect(fetchImpl).not.toHaveBeenCalled();
+});
+
+describe('profile photo', () => {
+  const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3]);
+  function photoApi(response: () => Response) {
+    const fetchImpl = vi.fn<FetchImpl>(async () => response());
+    const session = {
+      getAccessToken: vi.fn(),
+      invalidateAccessToken: vi.fn(),
+      endSession: vi.fn(),
+    };
+    const activity = new CloudActivity({
+      isAllowed: () => true,
+      origins: cloudOrigins(env),
+      fetchImpl,
+    });
+    return { api: new AccountApi(env, session as never, activity), fetchImpl };
+  }
+  const image = () => new Response(png, { headers: { 'content-type': 'image/png' } });
+
+  it('downloads the photo once as a data URL the renderer can show', async () => {
+    const { api, fetchImpl } = photoApi(image);
+    const first = await api.avatar(
+      'https://app-s3.voicestudio.sh/avatars/u1.png?X-Amz-Signature=a',
+    );
+    const again = await api.avatar(
+      'https://app-s3.voicestudio.sh/avatars/u1.png?X-Amz-Signature=b',
+    );
+    expect(first).toBe(`data:image/png;base64,${Buffer.from(png).toString('base64')}`);
+    expect(again).toBe(first);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses anything that is not a small image', async () => {
+    expect(
+      await photoApi(
+        () => new Response('<svg/>', { headers: { 'content-type': 'image/svg+xml' } }),
+      ).api.avatar('https://x.example/a'),
+    ).toBeNull();
+    expect(
+      await photoApi(
+        () => new Response('hi', { headers: { 'content-type': 'text/html' } }),
+      ).api.avatar('https://x.example/a'),
+    ).toBeNull();
+    const big = new Uint8Array(2 * 1024 * 1024 + 1);
+    expect(
+      await photoApi(
+        () => new Response(big, { headers: { 'content-type': 'image/jpeg' } }),
+      ).api.avatar('https://x.example/a'),
+    ).toBeNull();
+    expect(await photoApi(image).api.avatar('http://x.example/a.png')).toBeNull();
+    expect(await photoApi(image).api.avatar(null)).toBeNull();
+  });
 });

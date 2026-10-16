@@ -49,7 +49,14 @@ export class AccountController {
     if (!s.signedIn) this.profile = null;
     else if (refreshProfile || !this.profile)
       this.profile = await this.parts.api.get().catch(() => this.profile);
-    return { available, ...sw, remembered, ...s, profile: this.profile };
+    // The renderer never sees the signed photo link: main downloads it and hands over a data URL.
+    const profile = this.profile
+      ? {
+          ...this.profile,
+          avatarUrl: await this.parts.api.avatar(this.profile.avatarUrl).catch(() => null),
+        }
+      : null;
+    return { available, ...sw, remembered, ...s, profile };
   }
 
   async setSwitches(raw: unknown): Promise<AccountPublicState> {

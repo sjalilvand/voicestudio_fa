@@ -2301,7 +2301,8 @@
     "signed_out_expired": "Vous avez été déconnecté. Connectez-vous pour continuer la synchronisation.",
     "sign_in_failed": "La connexion a été annulée ou a échoué",
     "offline": "Hors ligne : les modifications seront synchronisées plus tard",
-    "not_remembered": "Le trousseau du système est indisponible : vous devrez vous reconnecter après le redémarrage de VoiceStudio."
+    "not_remembered": "Le trousseau du système est indisponible : vous devrez vous reconnecter après le redémarrage de VoiceStudio.",
+    "badge_sign_in_again": "Se reconnecter"
   },
   "cloudsync": {
     "unavailable": "La synchronisation n’est pas disponible pour le moment.",

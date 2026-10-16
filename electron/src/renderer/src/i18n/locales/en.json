@@ -2356,7 +2356,8 @@
     "signed_out_expired": "You were signed out. Sign in to keep syncing.",
     "sign_in_failed": "Sign-in was cancelled or failed",
     "offline": "Offline: changes will sync later",
-    "not_remembered": "Your system keyring is unavailable, so you will need to sign in again after VoiceStudio restarts."
+    "not_remembered": "Your system keyring is unavailable, so you will need to sign in again after VoiceStudio restarts.",
+    "badge_sign_in_again": "Sign in again"
   },
   "cloudsync": {
     "unavailable": "Sync is not available right now.",

@@ -2303,7 +2303,8 @@
     "signed_out_expired": "Wylogowano cię. Zaloguj się, aby dalej synchronizować.",
     "sign_in_failed": "Logowanie zostało anulowane lub nie powiodło się",
     "offline": "Offline: zmiany zostaną zsynchronizowane później",
-    "not_remembered": "Systemowy pęk kluczy jest niedostępny, więc po ponownym uruchomieniu VoiceStudio trzeba będzie zalogować się ponownie."
+    "not_remembered": "Systemowy pęk kluczy jest niedostępny, więc po ponownym uruchomieniu VoiceStudio trzeba będzie zalogować się ponownie.",
+    "badge_sign_in_again": "Zaloguj się ponownie"
   },
   "cloudsync": {
     "unavailable": "Synchronizacja jest teraz niedostępna.",

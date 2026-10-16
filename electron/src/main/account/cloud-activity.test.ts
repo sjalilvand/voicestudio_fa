@@ -63,3 +63,19 @@ it('never follows redirects', async () => {
   await activity.fetch('https://voicestudio.sh/x');
   expect(fetchImpl.mock.calls[0][1]).toMatchObject({ redirect: 'error' });
 });
+
+it('a server-issued HTTPS link (the profile photo) may leave the API origin, nothing else may', async () => {
+  const fetchImpl = vi.fn<FetchImpl>(async () => new Response('x'));
+  let allowed = true;
+  const activity = new CloudActivity({ isAllowed: () => allowed, origins, fetchImpl });
+  await activity.fetch('https://app-s3.voicestudio.sh/a.png?sig=1', {}, { serverIssued: true });
+  await expect(
+    activity.fetch('http://app-s3.voicestudio.sh/a.png', {}, { serverIssued: true }),
+  ).rejects.toThrow(/https/);
+  await expect(activity.fetch('https://app-s3.voicestudio.sh/a.png')).rejects.toThrow(/origin/);
+  allowed = false;
+  await expect(
+    activity.fetch('https://app-s3.voicestudio.sh/a.png', {}, { serverIssued: true }),
+  ).rejects.toBeInstanceOf(CloudDisabledError);
+  expect(fetchImpl).toHaveBeenCalledTimes(1);
+});

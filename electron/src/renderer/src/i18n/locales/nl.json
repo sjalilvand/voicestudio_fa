@@ -2299,7 +2299,8 @@
     "signed_out_expired": "Je bent afgemeld. Meld je aan om te blijven synchroniseren.",
     "sign_in_failed": "Aanmelden is geannuleerd of mislukt",
     "offline": "Offline: wijzigingen worden later gesynchroniseerd",
-    "not_remembered": "De sleutelhanger van je systeem is niet beschikbaar, dus je moet je opnieuw aanmelden nadat VoiceStudio opnieuw is gestart."
+    "not_remembered": "De sleutelhanger van je systeem is niet beschikbaar, dus je moet je opnieuw aanmelden nadat VoiceStudio opnieuw is gestart.",
+    "badge_sign_in_again": "Opnieuw aanmelden"
   },
   "cloudsync": {
     "unavailable": "Synchronisatie is nu niet beschikbaar.",

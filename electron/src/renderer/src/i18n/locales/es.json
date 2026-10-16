@@ -2301,7 +2301,8 @@
     "signed_out_expired": "Se ha cerrado tu sesión. Inicia sesión para seguir sincronizando.",
     "sign_in_failed": "El inicio de sesión se canceló o falló",
     "offline": "Sin conexión: los cambios se sincronizarán más tarde",
-    "not_remembered": "El llavero del sistema no está disponible, así que tendrás que volver a iniciar sesión cuando VoiceStudio se reinicie."
+    "not_remembered": "El llavero del sistema no está disponible, así que tendrás que volver a iniciar sesión cuando VoiceStudio se reinicie.",
+    "badge_sign_in_again": "Volver a iniciar sesión"
   },
   "cloudsync": {
     "unavailable": "La sincronización no está disponible ahora.",
