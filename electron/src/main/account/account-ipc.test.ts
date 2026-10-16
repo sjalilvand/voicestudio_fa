@@ -1,4 +1,11 @@
 import { expect, it, vi } from 'vitest';
+
+// account-ipc imports ../ipc, whose module graph reads Electron state at load.
+vi.mock('electron', () => ({
+  ipcMain: { handle: vi.fn(), removeHandler: vi.fn() },
+  BrowserWindow: { getAllWindows: () => [] },
+}));
+vi.mock('../ipc', () => ({ assertTrustedMainFrame: vi.fn() }));
 import { AccountController } from './account-ipc';
 
 const TOKEN = 'eyJ-super-secret-token';
