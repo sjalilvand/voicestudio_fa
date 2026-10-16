@@ -62,10 +62,8 @@ def test_snap_store_workflow_builds_strict_snap_and_uploads_only_tags_to_candida
     assert upload["environment"] == promote["environment"] == "snap-store"
     upload_run = "\n".join(s.get("run", "") for s in upload["steps"])
     assert "set -o pipefail" in upload_run
-    assert "release=(--release=candidate)" in upload_run
-    assert 'snapcraft upload "${release[@]}" "$snap"' in upload_run
-    assert '"$GITHUB_REF_NAME" != "$newest"' in upload_run
     assert "concurrency" not in upload
+    assert upload_run.index("snapcraft upload") < upload_run.index("newest=$(newest_tag)")
     assert upload_run.index("set -o pipefail") < upload_run.index("git ls-remote")
     assert 'if [ -z "$newest" ]' in upload_run
     promote_run = "\n".join(s.get("run", "") for s in promote["steps"])
@@ -76,6 +74,59 @@ def test_snap_store_workflow_builds_strict_snap_and_uploads_only_tags_to_candida
     assert "stable" not in upload_run
     # Credentials appear only in the environment-protected store jobs.
     assert serialized.count("secrets.SNAPCRAFT_STORE_CREDENTIALS") == 2
+
+@pytest.mark.parametrize(
+    "tag,newest,released",
+    [("v0.5.8", "v0.5.8", True), ("v0.5.8", "v0.5.10", False), ("v0.5.8", "", None)],
+)
+def test_snap_upload_releases_candidate_only_for_the_newest_tag(tmp_path, tag, newest, released):
+    """An older tag's build must never move candidate back (checked after upload)."""
+    import os
+    import subprocess
+    import yaml
+
+    workflow = yaml.load(
+        (ROOT / ".github/workflows/snap-store.yml").read_text(), Loader=yaml.BaseLoader
+    )
+    step = next(s for s in workflow["jobs"]["upload"]["steps"] if s.get("name") == "Upload to candidate")
+    (tmp_path / "artifact").mkdir()
+    (tmp_path / "artifact" / "VoiceStudio-Electron-0.5.8-linux-x64.snap").write_text("")
+    log = tmp_path / "calls"
+    tags = "".join(f"abc\trefs/tags/{t}\n" for t in ["v0.5.7", newest] if t)
+    stubs = {
+        "sudo": "exit 0",
+        "git": f"printf '{tags}'" if newest else "exit 0",
+        "snapcraft": 'echo "snapcraft $*" >> "$LOG"; '
+        'case "$1" in upload) echo "Revision 42 created for \'voicestudio\'";; esac',
+    }
+    for name, body in stubs.items():
+        stub = tmp_path / name
+        stub.write_text("#!/bin/bash\n" + body + "\n")
+        stub.chmod(0o755)
+    env = dict(
+        os.environ,
+        PATH=f"{tmp_path}{os.pathsep}{os.environ['PATH']}",
+        LOG=str(log),
+        SNAP_NAME="voicestudio",
+        SNAPCRAFT_STORE_CREDENTIALS="x",
+        GITHUB_REF_NAME=tag,
+        GITHUB_REPOSITORY="o/r",
+        GITHUB_SHA="0" * 40,
+        GITHUB_STEP_SUMMARY=str(tmp_path / "summary"),
+    )
+    result = subprocess.run(
+        ["bash", "-e", "-c", step["run"]], cwd=tmp_path, env=env, capture_output=True, text=True
+    )
+    calls = log.read_text().splitlines()
+    assert calls[0].startswith("snapcraft upload artifact/")
+    assert "--release" not in calls[0]
+    if released is None:
+        assert result.returncode != 0 and len(calls) == 1
+        return
+    assert result.returncode == 0, result.stderr
+    assert calls[1:] == (["snapcraft release voicestudio 42 candidate"] if released else [])
+    assert "Store revision: 42" in (tmp_path / "summary").read_text()
+
 
 @pytest.mark.parametrize("tag,allowed", [("", False), ("v0.5.4", False), ("v0.5.3", True)])
 def test_release_downloads_legacy_feeds_only_from_final_tauri_tag(tmp_path, tag, allowed):
