@@ -168,7 +168,7 @@ interface ProbeResult {
  * Run a short probe without blocking the main process: a synchronous
  * `which`/`--version` per CLI froze every window for up to seconds each.
  */
-function probe(executable: string, args: string[]): Promise<ProbeResult> {
+export function probe(executable: string, args: string[]): Promise<ProbeResult> {
   return new Promise((resolveProbe) => {
     try {
       const child = execFile(
@@ -177,7 +177,7 @@ function probe(executable: string, args: string[]): Promise<ProbeResult> {
         {
           encoding: 'utf8',
           timeout: PROBE_TIMEOUT_MS,
-          env: envWithToolPath(),
+          env: agentChildEnv({}),
           windowsHide: true,
         },
         (error, stdout, stderr) =>

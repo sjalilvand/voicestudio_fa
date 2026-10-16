@@ -10,12 +10,32 @@ import { CloudSwitchStore } from './cloud-switches';
 import { startLoopback } from './loopback';
 import { OidcClient } from './oidc';
 import { RefreshTokenStore } from './token-store';
+import { setBackendOnlyEnv } from '../backend';
 
-/** Wires VoiceStudio Cloud sign-in. Must run before the backend starts (bridge env). */
-export async function startAccount(opts: {
+interface StartOptions {
   getMainWindow: () => BrowserWindow | null;
   isRemoteBackend: () => boolean;
-}): Promise<() => void> {
+}
+
+const BRIDGE_ENV_OFF = {
+  VOICESTUDIO_ACCOUNT_BRIDGE_URL: undefined,
+  VOICESTUDIO_ACCOUNT_BRIDGE_TOKEN: undefined,
+};
+
+/**
+ * Wires VoiceStudio Cloud sign-in. Must run before the backend starts (bridge env).
+ * Never throws: an optional feature must not stop the local app from starting.
+ */
+export async function startAccount(opts: StartOptions): Promise<() => void> {
+  try {
+    return await wireAccount(opts);
+  } catch (error) {
+    console.error('[account] disabled for this run:', (error as Error).name);
+    return () => {};
+  }
+}
+
+async function wireAccount(opts: StartOptions): Promise<() => void> {
   const available = cloudAccountsAvailable(app.isPackaged);
   const env = resolveCloudEnvironment({
     packaged: app.isPackaged,
@@ -44,18 +64,25 @@ export async function startAccount(opts: {
     remembered: store.persistent,
   });
   const closeIpc = registerAccountIpc(ctl, session, opts.getMainWindow);
+  if (!available)
+    return () => {
+      closeIpc();
+      activity.stopAll();
+    };
   const bridge = await startAccountTokenBridge({
     getToken: () => session.getAccessToken(),
-    isSyncAllowed: () => available && switches.get().syncEnabled,
+    isSyncAllowed: () => switches.get().syncEnabled,
     isRemoteBackend: opts.isRemoteBackend,
   });
-  process.env.VOICESTUDIO_ACCOUNT_BRIDGE_URL = bridge.url;
-  process.env.VOICESTUDIO_ACCOUNT_BRIDGE_TOKEN = bridge.token;
+  // Only the managed backend's spawn env carries the capability; see setBackendOnlyEnv.
+  setBackendOnlyEnv({
+    VOICESTUDIO_ACCOUNT_BRIDGE_URL: bridge.url,
+    VOICESTUDIO_ACCOUNT_BRIDGE_TOKEN: bridge.token,
+  });
   return () => {
     closeIpc();
     activity.stopAll();
     bridge.close();
-    delete process.env.VOICESTUDIO_ACCOUNT_BRIDGE_URL;
-    delete process.env.VOICESTUDIO_ACCOUNT_BRIDGE_TOKEN;
+    setBackendOnlyEnv(BRIDGE_ENV_OFF);
   };
 }
