@@ -129,6 +129,13 @@ class SyncStore:
                 self._put_item(conn, org, item)
             conn.execute("UPDATE cloud_sync_state SET cursor=? WHERE organization_id=?", (int(cursor), org))
 
+    def forget_item(self, org: str, collection: str, item_id: str) -> None:
+        with core_db.db_conn() as conn:
+            conn.execute(
+                "DELETE FROM cloud_sync_items WHERE organization_id=? AND collection=? AND item_id=?",
+                (org, collection, item_id),
+            )
+
     def forget_items(self, org: str, collection: Optional[str] = None) -> None:
         with core_db.db_conn() as conn:
             if collection:
