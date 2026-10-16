@@ -135,24 +135,30 @@ do not switch to classic confinement merely to pass the test.
 
 ## Submission and evidence
 
-One-time setup: the owner creates a GitHub environment named `snap-store`
-(optionally with required reviewers) and stores upload credentials in it as
-`SNAPCRAFT_STORE_CREDENTIALS`:
+One-time setup, by the owner:
 
-```bash
-snapcraft export-login --snaps=voicestudio \
-  --acls=package_access,package_push,package_update,package_release \
-  --expires=<date> credentials.txt
-```
+1. Register the name and confirm the Snapcraft account controls it:
+   `snapcraft register voicestudio`, then `snapcraft status voicestudio`.
+2. Create a GitHub environment named `snap-store` (optionally with required
+   reviewers) and store upload credentials in it as
+   `SNAPCRAFT_STORE_CREDENTIALS`:
+
+   ```bash
+   snapcraft export-login --snaps=voicestudio \
+     --acls=package_access,package_push,package_update,package_release \
+     --expires=<date> credentials.txt
+   ```
 
 Pushing a `v*` tag then builds the Snap, checks the tag matches `package.json`,
-uploads it and releases it to `candidate`. The run summary records the Store
-revision. A tag build can be retried by dispatching the workflow from the tag
+uploads it and releases it to `candidate`. Uploads run one at a time; a tag
+older than the newest `v*` tag is uploaded without moving `candidate`. The run
+summary records the Store revision and channel. A tag build can be retried by dispatching the workflow from the tag
 with `upload` enabled.
 
 Stable promotion requires a separate owner approval after independent install,
-refresh and rollback verification: dispatch the workflow with
-`promote_revision` set to the verified candidate revision.
+refresh and rollback verification: the repository owner dispatches the
+workflow with `promote_revision` set to the verified candidate revision. The
+job refuses any other triggering account.
 
 Before promoting to stable, obtain Store auto-connect approval for
 `audio-record` and verify recording on a fresh Store installation. The

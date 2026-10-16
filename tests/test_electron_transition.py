@@ -62,9 +62,13 @@ def test_snap_store_workflow_builds_strict_snap_and_uploads_only_tags_to_candida
     assert upload["environment"] == promote["environment"] == "snap-store"
     upload_run = "\n".join(s.get("run", "") for s in upload["steps"])
     assert "set -o pipefail" in upload_run
-    assert "snapcraft upload --release=candidate " in upload_run
+    assert "release=(--release=candidate)" in upload_run
+    assert 'snapcraft upload "${release[@]}" "$snap"' in upload_run
+    assert '"$GITHUB_REF_NAME" != "$newest"' in upload_run
+    assert upload["concurrency"] == {"group": "snap-store-upload", "cancel-in-progress": "false"}
     promote_run = "\n".join(s.get("run", "") for s in promote["steps"])
     assert 'snapcraft release "$SNAP_NAME" "$REVISION" stable' in promote_run
+    assert '"$GITHUB_TRIGGERING_ACTOR" != "$GITHUB_REPOSITORY_OWNER"' in promote["steps"][0]["run"]
     # Stable is reachable only through the explicit promote dispatch.
     assert "--release=stable" not in serialized and "candidate,stable" not in serialized
     assert "stable" not in upload_run
