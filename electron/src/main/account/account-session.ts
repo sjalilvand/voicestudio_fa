@@ -49,6 +49,9 @@ export class AccountSession {
 
   constructor(private readonly deps: SessionDeps) {
     this.now = deps.now ?? Date.now;
+    // Off means signed out: never keep a credential the user cannot see (e.g. after a
+    // corrupt switches file reset to off).
+    if (!deps.switches.get().accountEnabled) deps.store.clear();
     deps.activity.onStop(() => this.closeLoopback?.());
     deps.switches.subscribe((next, prev) => {
       if (prev.accountEnabled && !next.accountEnabled) void this.turnedOff();

@@ -218,3 +218,20 @@ it('switching off while the code exchange is in flight stores nothing', async ()
   expect(h.store.load()).toBeNull();
   expect(h.session.state().signedIn).toBe(false);
 });
+
+it('a leftover token is cleared at startup when account features are off', () => {
+  const h = harness();
+  h.store.save('r-left-over');
+  h.switches.set({ accountEnabled: false });
+  h.store.save('r-left-over'); // e.g. a corrupt switches file reset to off
+  new AccountSession({
+    oidc: h.oidc as never,
+    store: h.store,
+    activity: new CloudActivity({ isAllowed: () => false, origins: new Set(), fetchImpl: vi.fn() }),
+    switches: h.switches,
+    openExternal: vi.fn(),
+    startLoopback: vi.fn() as never,
+    signedInPage: 'https://app.voicestudio.sh/app/desktop-signed-in',
+  });
+  expect(h.store.load()).toBeNull();
+});

@@ -98,3 +98,11 @@ it('a switch change that fails to save re-reads the real state instead of stayin
   await vi.waitFor(() => expect(screen.queryByRole('switch', { name: 'account.sync' })).toBeNull());
   expect(account.get).toHaveBeenCalledTimes(2);
 });
+
+it('sync can always be turned off, even while signed out', async () => {
+  const { account } = setup({ syncEnabled: true, signedIn: false });
+  const sync = await screen.findByRole('switch', { name: 'account.sync' });
+  expect(sync).not.toHaveAttribute('aria-disabled', 'true');
+  fireEvent.click(sync);
+  expect(account.setSwitches).toHaveBeenCalledWith({ syncEnabled: false });
+});

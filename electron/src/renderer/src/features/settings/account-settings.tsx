@@ -54,7 +54,8 @@ export function AccountSettings() {
             <Switch
               aria-label={t('account.sync')}
               checked={state.syncEnabled}
-              disabled={!state.signedIn}
+              // Turning sync off is always allowed; turning it on needs a session.
+              disabled={!state.signedIn && !state.syncEnabled}
               onCheckedChange={(on) => void setSwitches({ syncEnabled: on })}
             />
           </SettingsRow>
