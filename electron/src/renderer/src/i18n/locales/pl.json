@@ -2304,7 +2304,15 @@
     "sign_in_failed": "Logowanie zostało anulowane lub nie powiodło się",
     "offline": "Offline: zmiany zostaną zsynchronizowane później",
     "not_remembered": "Systemowy pęk kluczy jest niedostępny, więc po ponownym uruchomieniu VoiceStudio trzeba będzie zalogować się ponownie.",
-    "badge_sign_in_again": "Zaloguj się ponownie"
+    "menu_settings": "Ustawienia konta",
+    "plan": "Plan",
+    "storage": "Miejsce w chmurze",
+    "storage_used": "Użyto {{used}} z {{limit}}",
+    "features_title": "Twój plan obejmuje",
+    "feature_settings_sync": "Synchronizacja ustawień między urządzeniami",
+    "feature_pro": "Funkcje VoiceStudio Pro",
+    "included": "W planie",
+    "not_included": "Poza twoim planem"
   },
   "cloudsync": {
     "unavailable": "Synchronizacja jest teraz niedostępna.",

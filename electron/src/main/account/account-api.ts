@@ -86,11 +86,15 @@ export class AccountApi {
   /** Plan, storage and what the plan includes; null when signed out or unavailable. */
   async entitlements(organizationId: string): Promise<AccountPlan | null> {
     if (!ORGANIZATION_ID.test(organizationId)) return null;
-    const raw = (await this.call(`${this.env.accountApi}/organizations/${organizationId}/entitlements`, {
-      method: 'GET',
-    })) as RawEntitlements | null;
+    const raw = (await this.call(
+      `${this.env.accountApi}/organizations/${organizationId}/entitlements`,
+      {
+        method: 'GET',
+      },
+    )) as RawEntitlements | null;
     if (!raw) return null;
-    const flag = (key: string) => (raw.values ?? []).some((v) => v.key === key && Number(v.value) > 0);
+    const flag = (key: string) =>
+      (raw.values ?? []).some((v) => v.key === key && Number(v.value) > 0);
     return {
       planCode: String(raw.plan?.code ?? ''),
       planName: String(raw.plan?.name ?? raw.plan?.code ?? ''),

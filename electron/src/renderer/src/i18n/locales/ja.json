@@ -2300,7 +2300,15 @@
     "sign_in_failed": "サインインがキャンセルされたか、失敗しました",
     "offline": "オフライン：変更は後で同期されます",
     "not_remembered": "システムのキーリングを利用できないため、VoiceStudio の再起動後にもう一度サインインする必要があります。",
-    "badge_sign_in_again": "もう一度サインイン"
+    "menu_settings": "アカウント設定",
+    "plan": "プラン",
+    "storage": "クラウドストレージ",
+    "storage_used": "{{limit}} 中 {{used}} を使用",
+    "features_title": "プランに含まれるもの",
+    "feature_settings_sync": "デバイス間での設定の同期",
+    "feature_pro": "VoiceStudio Pro の機能",
+    "included": "含まれます",
+    "not_included": "プランに含まれません"
   },
   "cloudsync": {
     "unavailable": "現在、同期を利用できません。",

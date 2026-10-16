@@ -2300,7 +2300,15 @@
     "sign_in_failed": "Đăng nhập đã bị hủy hoặc thất bại",
     "offline": "Ngoại tuyến: các thay đổi sẽ được đồng bộ sau",
     "not_remembered": "Chuỗi khóa của hệ thống không khả dụng, vì vậy bạn sẽ cần đăng nhập lại sau khi VoiceStudio khởi động lại.",
-    "badge_sign_in_again": "Đăng nhập lại"
+    "menu_settings": "Cài đặt tài khoản",
+    "plan": "Gói",
+    "storage": "Bộ nhớ đám mây",
+    "storage_used": "Đã dùng {{used}} / {{limit}}",
+    "features_title": "Gói của bạn bao gồm",
+    "feature_settings_sync": "Đồng bộ cài đặt giữa các thiết bị",
+    "feature_pro": "Tính năng VoiceStudio Pro",
+    "included": "Có",
+    "not_included": "Không có trong gói của bạn"
   },
   "cloudsync": {
     "unavailable": "Đồng bộ hiện không khả dụng.",

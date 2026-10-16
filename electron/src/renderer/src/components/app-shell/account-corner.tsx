@@ -1,44 +1,40 @@
 import { useLayoutEffect, useRef } from 'react';
 import { isMac } from '@/components/bridge';
 import { cn } from '@/lib/utils';
-import { AccountBadge } from './account-badge';
+import { AccountMenu } from './account-menu';
+import { SystemNotifications } from './system-notifications';
 
-const SPACE_VAR = '--account-badge-space';
+const SPACE_VAR = '--corner-space';
 
 /**
- * The signed-in badge in the window's top-right corner, on every page.
+ * The window's top-right corner, on every page: the account control (photo and
+ * name, or Sign in) with the notifications bell to its right.
  *
  * Windows/Linux draw their window buttons over the right 148px (titleBarOverlay),
- * macOS has the notifications bell there; the badge sits just left of them.
- * While it shows, `--account-badge-space` widens every page title bar's
- * right padding (globals.css) so it never covers a page's own buttons.
+ * so the corner sits just left of them; on macOS it sits at the edge. While it
+ * shows, `--corner-space` widens every page title bar's right padding
+ * (globals.css), so it never covers a page's own buttons.
  */
-const RIGHT = {
-  controls: 'right-[148px]', // Windows/Linux: left of the window buttons
-  bell: 'right-[3.25rem]', // macOS workspaces: left of the notifications bell
-  edge: 'right-3.5', // macOS Settings: nothing else in the corner
-} as const;
-
-export function AccountCorner({ beside }: { beside?: keyof typeof RIGHT }) {
+export function AccountCorner({ notificationsEnabled }: { notificationsEnabled: boolean }) {
   const host = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const root = document.documentElement;
     const node = host.current;
     const measure = () => {
-      const badge = node?.firstElementChild as HTMLElement | null;
-      if (badge) root.style.setProperty(SPACE_VAR, `${Math.ceil(badge.offsetWidth) + 8}px`);
+      if (node && node.childElementCount > 0)
+        root.style.setProperty(SPACE_VAR, `${Math.ceil(node.offsetWidth) + 8}px`);
       else root.style.removeProperty(SPACE_VAR);
     };
     measure();
-    const observer =
+    const resize =
       node && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
-    if (node && observer) observer.observe(node);
-    const mutations =
+    if (node && resize) resize.observe(node);
+    const children =
       node && typeof MutationObserver !== 'undefined' ? new MutationObserver(measure) : null;
-    if (node && mutations) mutations.observe(node, { childList: true });
+    if (node && children) children.observe(node, { childList: true, subtree: true });
     return () => {
-      observer?.disconnect();
-      mutations?.disconnect();
+      resize?.disconnect();
+      children?.disconnect();
       root.style.removeProperty(SPACE_VAR);
     };
   }, []);
@@ -47,11 +43,12 @@ export function AccountCorner({ beside }: { beside?: keyof typeof RIGHT }) {
       ref={host}
       data-slot="account-corner"
       className={cn(
-        'app-no-drag fixed top-2.5 z-50 flex items-center',
-        RIGHT[beside ?? (isMac() ? 'bell' : 'controls')],
+        'app-no-drag fixed top-2.5 z-50 flex items-center gap-1.5',
+        isMac() ? 'right-3.5' : 'right-[148px]',
       )}
     >
-      <AccountBadge className="h-8 rounded-full border border-border/60 bg-background/80 py-1 pr-3 pl-1 shadow-xs backdrop-blur-xl" />
+      <AccountMenu />
+      <SystemNotifications enabled={notificationsEnabled} titlebar />
     </div>
   );
 }

@@ -2304,7 +2304,15 @@
     "sign_in_failed": "Вход был отменён или не удался",
     "offline": "Нет сети: изменения синхронизируются позже",
     "not_remembered": "Системная связка ключей недоступна, поэтому после перезапуска VoiceStudio придётся войти снова.",
-    "badge_sign_in_again": "Войти снова"
+    "menu_settings": "Настройки аккаунта",
+    "plan": "Тариф",
+    "storage": "Облачное хранилище",
+    "storage_used": "Занято {{used}} из {{limit}}",
+    "features_title": "В ваш тариф входит",
+    "feature_settings_sync": "Синхронизация настроек между устройствами",
+    "feature_pro": "Функции VoiceStudio Pro",
+    "included": "Входит",
+    "not_included": "Не входит в ваш тариф"
   },
   "cloudsync": {
     "unavailable": "Синхронизация сейчас недоступна.",

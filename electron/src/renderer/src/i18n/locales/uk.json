@@ -2304,7 +2304,15 @@
     "sign_in_failed": "Вхід скасовано або не вдався",
     "offline": "Немає мережі: зміни синхронізуються пізніше",
     "not_remembered": "Системна в’язка ключів недоступна, тому після перезапуску VoiceStudio доведеться ввійти знову.",
-    "badge_sign_in_again": "Увійти знову"
+    "menu_settings": "Налаштування облікового запису",
+    "plan": "Тариф",
+    "storage": "Хмарне сховище",
+    "storage_used": "Зайнято {{used}} з {{limit}}",
+    "features_title": "Ваш тариф містить",
+    "feature_settings_sync": "Синхронізація налаштувань між пристроями",
+    "feature_pro": "Функції VoiceStudio Pro",
+    "included": "Входить",
+    "not_included": "Не входить у ваш тариф"
   },
   "cloudsync": {
     "unavailable": "Синхронізація зараз недоступна.",

@@ -2300,7 +2300,15 @@
     "sign_in_failed": "Aanmelden is geannuleerd of mislukt",
     "offline": "Offline: wijzigingen worden later gesynchroniseerd",
     "not_remembered": "De sleutelhanger van je systeem is niet beschikbaar, dus je moet je opnieuw aanmelden nadat VoiceStudio opnieuw is gestart.",
-    "badge_sign_in_again": "Opnieuw aanmelden"
+    "menu_settings": "Accountinstellingen",
+    "plan": "Abonnement",
+    "storage": "Cloudopslag",
+    "storage_used": "{{used}} van {{limit}} gebruikt",
+    "features_title": "Je abonnement bevat",
+    "feature_settings_sync": "Instellingen synchroniseren tussen apparaten",
+    "feature_pro": "VoiceStudio Pro-functies",
+    "included": "Inbegrepen",
+    "not_included": "Niet in je abonnement"
   },
   "cloudsync": {
     "unavailable": "Synchronisatie is nu niet beschikbaar.",

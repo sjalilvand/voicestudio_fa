@@ -2308,7 +2308,15 @@
     "sign_in_failed": "أُلغي تسجيل الدخول أو فشل",
     "offline": "غير متصل: ستُزامن التغييرات لاحقًا",
     "not_remembered": "سلسلة مفاتيح النظام غير متاحة، لذا ستحتاج إلى تسجيل الدخول مجددًا بعد إعادة تشغيل VoiceStudio.",
-    "badge_sign_in_again": "تسجيل الدخول مجددًا"
+    "menu_settings": "إعدادات الحساب",
+    "plan": "الخطة",
+    "storage": "التخزين السحابي",
+    "storage_used": "تم استخدام {{used}} من {{limit}}",
+    "features_title": "تتضمن خطتك",
+    "feature_settings_sync": "مزامنة الإعدادات بين الأجهزة",
+    "feature_pro": "ميزات VoiceStudio Pro",
+    "included": "مضمّن",
+    "not_included": "غير مضمّن في خطتك"
   },
   "cloudsync": {
     "unavailable": "المزامنة غير متاحة الآن.",

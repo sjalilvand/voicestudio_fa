@@ -2302,7 +2302,15 @@
     "sign_in_failed": "La connexion a été annulée ou a échoué",
     "offline": "Hors ligne : les modifications seront synchronisées plus tard",
     "not_remembered": "Le trousseau du système est indisponible : vous devrez vous reconnecter après le redémarrage de VoiceStudio.",
-    "badge_sign_in_again": "Se reconnecter"
+    "menu_settings": "Réglages du compte",
+    "plan": "Offre",
+    "storage": "Stockage cloud",
+    "storage_used": "{{used}} sur {{limit}} utilisés",
+    "features_title": "Votre offre comprend",
+    "feature_settings_sync": "Synchronisation des réglages entre appareils",
+    "feature_pro": "Fonctions de VoiceStudio Pro",
+    "included": "Inclus",
+    "not_included": "Hors de votre offre"
   },
   "cloudsync": {
     "unavailable": "La synchronisation n’est pas disponible pour le moment.",

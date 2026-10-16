@@ -3,7 +3,12 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 const mock = vi.hoisted(() => ({ bridge: null as unknown }));
 vi.mock('@/components/bridge', () => ({ getBridge: () => mock.bridge }));
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, vars?: Record<string, unknown>) =>
+      vars ? `${key} ${JSON.stringify(vars)}` : key,
+  }),
+}));
 
 vi.mock('./cloud-sync-panel', () => ({ CloudSyncPanel: () => <div>sync-panel</div> }));
 
@@ -115,4 +120,45 @@ it('shows what to sync only when signed in with sync on', async () => {
   expect(screen.queryByText('sync-panel')).toBeNull();
   push({ signedIn: true, syncEnabled: true });
   expect(await screen.findByText('sync-panel')).toBeInTheDocument();
+});
+
+it('signed in, shows the account: name, email, plan, storage and what the plan includes', async () => {
+  setup({
+    signedIn: true,
+    profile: {
+      email: 'ana@example.com',
+      displayName: 'Ana Lima',
+      avatarUrl: null,
+      organizations: [],
+    },
+    plan: {
+      planCode: 'free',
+      planName: 'Free',
+      storageUsedBytes: 2 * 1024 * 1024,
+      storageLimitBytes: 10 * 1024 * 1024,
+      settingsSync: true,
+      proDesktop: false,
+    },
+  } as never);
+  expect(await screen.findByText('Ana Lima')).toBeInTheDocument();
+  expect(screen.getByText('ana@example.com')).toBeInTheDocument();
+  expect(screen.getByText('Free')).toBeInTheDocument();
+  expect(screen.getByText(/account\.storage_used/)).toHaveTextContent('2.0 MB');
+  expect(screen.getByText(/account\.storage_used/)).toHaveTextContent('10.0 MB');
+  expect(screen.getByText('account.feature_settings_sync').closest('li')).toHaveTextContent(
+    'account.included',
+  );
+  expect(screen.getByText('account.feature_pro').closest('li')).toHaveTextContent(
+    'account.not_included',
+  );
+});
+
+it('without plan details yet, still shows who is signed in', async () => {
+  setup({
+    signedIn: true,
+    profile: { email: 'ana@example.com', displayName: null, avatarUrl: null, organizations: [] },
+    plan: null,
+  } as never);
+  expect(await screen.findByText('ana@example.com')).toBeInTheDocument();
+  expect(screen.queryByText('account.plan')).toBeNull();
 });

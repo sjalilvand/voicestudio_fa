@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useAccount } from '../account/use-account';
+import { AccountDetails } from './account-details';
 import { CloudSyncPanel } from './cloud-sync-panel';
 import { SettingsRow, SettingsSection } from './settings-layout';
 
@@ -47,6 +48,7 @@ export function AccountSettings() {
               </Button>
             )}
           </SettingsRow>
+          <AccountDetails state={state} />
           <SettingsRow
             id="account-sync"
             title={t('account.sync')}

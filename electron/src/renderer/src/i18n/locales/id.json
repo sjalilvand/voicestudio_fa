@@ -2300,7 +2300,15 @@
     "sign_in_failed": "Proses masuk dibatalkan atau gagal",
     "offline": "Offline: perubahan akan disinkronkan nanti",
     "not_remembered": "Keyring sistem Anda tidak tersedia, jadi Anda perlu masuk lagi setelah VoiceStudio dimulai ulang.",
-    "badge_sign_in_again": "Masuk lagi"
+    "menu_settings": "Pengaturan akun",
+    "plan": "Paket",
+    "storage": "Penyimpanan cloud",
+    "storage_used": "{{used}} dari {{limit}} terpakai",
+    "features_title": "Paket Anda mencakup",
+    "feature_settings_sync": "Sinkronisasi pengaturan antarperangkat",
+    "feature_pro": "Fitur VoiceStudio Pro",
+    "included": "Termasuk",
+    "not_included": "Tidak ada di paket Anda"
   },
   "cloudsync": {
     "unavailable": "Sinkronisasi tidak tersedia saat ini.",

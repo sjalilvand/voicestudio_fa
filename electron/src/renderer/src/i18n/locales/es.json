@@ -2302,7 +2302,15 @@
     "sign_in_failed": "El inicio de sesión se canceló o falló",
     "offline": "Sin conexión: los cambios se sincronizarán más tarde",
     "not_remembered": "El llavero del sistema no está disponible, así que tendrás que volver a iniciar sesión cuando VoiceStudio se reinicie.",
-    "badge_sign_in_again": "Volver a iniciar sesión"
+    "menu_settings": "Ajustes de la cuenta",
+    "plan": "Plan",
+    "storage": "Almacenamiento en la nube",
+    "storage_used": "{{used}} de {{limit}} usados",
+    "features_title": "Tu plan incluye",
+    "feature_settings_sync": "Sincronizar ajustes entre dispositivos",
+    "feature_pro": "Funciones de VoiceStudio Pro",
+    "included": "Incluido",
+    "not_included": "No incluido en tu plan"
   },
   "cloudsync": {
     "unavailable": "La sincronización no está disponible ahora.",

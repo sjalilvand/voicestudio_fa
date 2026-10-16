@@ -2300,7 +2300,15 @@
     "sign_in_failed": "साइन-इन रद्द हुआ या विफल रहा",
     "offline": "ऑफ़लाइन: बदलाव बाद में सिंक होंगे",
     "not_remembered": "आपके सिस्टम की कीरिंग उपलब्ध नहीं है, इसलिए VoiceStudio के दोबारा शुरू होने के बाद आपको फिर से साइन इन करना होगा।",
-    "badge_sign_in_again": "फिर से साइन इन करें"
+    "menu_settings": "खाता सेटिंग",
+    "plan": "प्लान",
+    "storage": "क्लाउड स्टोरेज",
+    "storage_used": "{{limit}} में से {{used}} इस्तेमाल",
+    "features_title": "आपके प्लान में शामिल है",
+    "feature_settings_sync": "डिवाइसों के बीच सेटिंग सिंक",
+    "feature_pro": "VoiceStudio Pro सुविधाएँ",
+    "included": "शामिल",
+    "not_included": "आपके प्लान में नहीं"
   },
   "cloudsync": {
     "unavailable": "सिंक अभी उपलब्ध नहीं है।",

@@ -2302,7 +2302,15 @@
     "sign_in_failed": "L’accesso è stato annullato o non è riuscito",
     "offline": "Offline: le modifiche verranno sincronizzate più tardi",
     "not_remembered": "Il portachiavi di sistema non è disponibile, quindi dovrai accedere di nuovo dopo il riavvio di VoiceStudio.",
-    "badge_sign_in_again": "Accedi di nuovo"
+    "menu_settings": "Impostazioni account",
+    "plan": "Piano",
+    "storage": "Spazio cloud",
+    "storage_used": "{{used}} di {{limit}} usati",
+    "features_title": "Il tuo piano include",
+    "feature_settings_sync": "Sincronizzazione delle impostazioni tra dispositivi",
+    "feature_pro": "Funzioni di VoiceStudio Pro",
+    "included": "Incluso",
+    "not_included": "Non incluso nel tuo piano"
   },
   "cloudsync": {
     "unavailable": "La sincronizzazione non è disponibile al momento.",

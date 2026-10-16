@@ -2300,7 +2300,15 @@
     "sign_in_failed": "登入已取消或失敗",
     "offline": "離線：變更將稍後同步",
     "not_remembered": "系統鑰匙圈無法使用，因此 VoiceStudio 重新啟動後你需要重新登入。",
-    "badge_sign_in_again": "重新登入"
+    "menu_settings": "帳戶設定",
+    "plan": "方案",
+    "storage": "雲端儲存空間",
+    "storage_used": "已用 {{used}} / {{limit}}",
+    "features_title": "你的方案包含",
+    "feature_settings_sync": "在裝置之間同步設定",
+    "feature_pro": "VoiceStudio Pro 功能",
+    "included": "已包含",
+    "not_included": "不在你的方案中"
   },
   "cloudsync": {
     "unavailable": "同步目前無法使用。",

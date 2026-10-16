@@ -135,7 +135,10 @@ it('reads the plan, storage and what the plan includes for an Organization', asy
       { key: 'pro.desktop', type: 'flag', value: 0, sources: [] },
     ],
     storage: { limit_bytes: 1073741824, used_bytes: 734003, reserved_bytes: 0 },
-    grants: [], products: [], can_manage: true, resolved_at: '2026-10-16T09:00:00Z',
+    grants: [],
+    products: [],
+    can_manage: true,
+    resolved_at: '2026-10-16T09:00:00Z',
   };
   const { api, fetchImpl } = setup([json(entitlements)]);
   expect(await api.entitlements('Or5tG7hJ9kL1zX3c')).toEqual({

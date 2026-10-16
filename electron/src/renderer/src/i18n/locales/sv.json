@@ -2300,7 +2300,15 @@
     "sign_in_failed": "Inloggningen avbröts eller misslyckades",
     "offline": "Offline: ändringar synkas senare",
     "not_remembered": "Systemets nyckelring är inte tillgänglig, så du behöver logga in igen när VoiceStudio har startats om.",
-    "badge_sign_in_again": "Logga in igen"
+    "menu_settings": "Kontoinställningar",
+    "plan": "Abonnemang",
+    "storage": "Molnlagring",
+    "storage_used": "{{used}} av {{limit}} används",
+    "features_title": "Ditt abonnemang innehåller",
+    "feature_settings_sync": "Synkning av inställningar mellan enheter",
+    "feature_pro": "VoiceStudio Pro-funktioner",
+    "included": "Ingår",
+    "not_included": "Ingår inte i ditt abonnemang"
   },
   "cloudsync": {
     "unavailable": "Synkning är inte tillgänglig just nu.",

@@ -2300,7 +2300,15 @@
     "sign_in_failed": "Oturum açma iptal edildi veya başarısız oldu",
     "offline": "Çevrimdışı: değişiklikler daha sonra eşitlenecek",
     "not_remembered": "Sistem anahtarlığın kullanılamıyor; bu nedenle VoiceStudio yeniden başladıktan sonra tekrar oturum açman gerekecek.",
-    "badge_sign_in_again": "Yeniden oturum aç"
+    "menu_settings": "Hesap ayarları",
+    "plan": "Plan",
+    "storage": "Bulut depolama",
+    "storage_used": "{{limit}} alanın {{used}} kadarı kullanılıyor",
+    "features_title": "Planınızda neler var",
+    "feature_settings_sync": "Ayarları cihazlar arasında eşitleme",
+    "feature_pro": "VoiceStudio Pro özellikleri",
+    "included": "Dahil",
+    "not_included": "Planınızda yok"
   },
   "cloudsync": {
     "unavailable": "Eşitleme şu anda kullanılamıyor.",

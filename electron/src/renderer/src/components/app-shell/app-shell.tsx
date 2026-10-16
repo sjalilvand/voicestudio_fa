@@ -8,7 +8,6 @@ import { isMac } from '../bridge';
 import { cn } from '@/lib/utils';
 import { useBackendStatus } from '@/hooks/use-backend-status';
 import { isBackendReachable } from '@shared/utils/backendStage';
-import { SystemNotifications } from './system-notifications';
 import { AccountCorner } from './account-corner';
 
 export function AppShell() {
@@ -63,15 +62,8 @@ export function AppShell() {
       </div>
       {/* Native drag-region hit testing follows document order. Keep these
           no-drag controls after every workspace titlebar, outside BackendGate. */}
-      <AccountCorner beside={!isMac() ? 'controls' : macWorkspace ? 'bell' : 'edge'} />
-      {macWorkspace && (
-        <div
-          data-slot="macos-system-notifications"
-          className="app-no-drag fixed top-3.5 right-3.5 z-50"
-        >
-          <SystemNotifications enabled={isBackendReachable(backend.stage)} titlebar />
-        </div>
-      )}
+      {/* Top-right corner on every page and platform: account, then the notifications bell. */}
+      <AccountCorner notificationsEnabled={isBackendReachable(backend.stage)} />
     </div>
   );
 }

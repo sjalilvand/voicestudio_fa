@@ -2300,7 +2300,15 @@
     "sign_in_failed": "Die Anmeldung wurde abgebrochen oder ist fehlgeschlagen",
     "offline": "Offline: Änderungen werden später synchronisiert",
     "not_remembered": "Dein System-Schlüsselbund ist nicht verfügbar, daher musst du dich nach einem Neustart von VoiceStudio erneut anmelden.",
-    "badge_sign_in_again": "Erneut anmelden"
+    "menu_settings": "Kontoeinstellungen",
+    "plan": "Tarif",
+    "storage": "Cloud-Speicher",
+    "storage_used": "{{used}} von {{limit}} belegt",
+    "features_title": "Dein Tarif enthält",
+    "feature_settings_sync": "Einstellungen zwischen Geräten synchronisieren",
+    "feature_pro": "VoiceStudio-Pro-Funktionen",
+    "included": "Enthalten",
+    "not_included": "Nicht in deinem Tarif"
   },
   "cloudsync": {
     "unavailable": "Die Synchronisierung ist gerade nicht verfügbar.",

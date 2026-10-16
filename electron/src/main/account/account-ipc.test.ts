@@ -43,8 +43,8 @@ it('the public state never carries a token', async () => {
     'accountEnabled',
     'available',
     'notice',
-      'plan',
-      'profile',
+    'plan',
+    'profile',
     'prompted',
     'remembered',
     'signedIn',
@@ -95,9 +95,22 @@ it('the renderer gets the photo as a data URL, never the signed download link', 
 });
 
 it('signed in, the state carries the plan and storage; signed out it carries none', async () => {
-  const plan = { planCode: 'free', planName: 'Free', storageUsedBytes: 10, storageLimitBytes: 10485760, settingsSync: true, proDesktop: false };
+  const plan = {
+    planCode: 'free',
+    planName: 'Free',
+    storageUsedBytes: 10,
+    storageLimitBytes: 10485760,
+    settingsSync: true,
+    proDesktop: false,
+  };
   const api = {
-    get: async () => ({ email: 'ana@example.com', displayName: 'Ana', avatarUrl: null, personalOrganizationId: 'Or1', organizations: [] }),
+    get: async () => ({
+      email: 'ana@example.com',
+      displayName: 'Ana',
+      avatarUrl: null,
+      personalOrganizationId: 'Or1',
+      organizations: [],
+    }),
     avatar: async () => null,
     entitlements: vi.fn(async () => plan),
   };
@@ -105,7 +118,10 @@ it('signed in, the state carries the plan and storage; signed out it carries non
   expect(api.entitlements).toHaveBeenCalledWith('Or1');
   const signedOut = ctl({
     api: api as never,
-    session: { state: () => ({ signedIn: false, signingIn: false, notice: null }), getAccessToken: async () => null } as never,
+    session: {
+      state: () => ({ signedIn: false, signingIn: false, notice: null }),
+      getAccessToken: async () => null,
+    } as never,
   });
   expect((await signedOut.publicState(true)).plan).toBeNull();
 });

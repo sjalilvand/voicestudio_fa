@@ -2357,7 +2357,15 @@
     "sign_in_failed": "Sign-in was cancelled or failed",
     "offline": "Offline: changes will sync later",
     "not_remembered": "Your system keyring is unavailable, so you will need to sign in again after VoiceStudio restarts.",
-    "badge_sign_in_again": "Sign in again"
+    "menu_settings": "Account settings",
+    "plan": "Plan",
+    "storage": "Cloud storage",
+    "storage_used": "{{used}} of {{limit}} used",
+    "features_title": "Your plan includes",
+    "feature_settings_sync": "Settings sync between devices",
+    "feature_pro": "VoiceStudio Pro features",
+    "included": "Included",
+    "not_included": "Not on your plan"
   },
   "cloudsync": {
     "unavailable": "Sync is not available right now.",
