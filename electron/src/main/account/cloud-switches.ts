@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 /** Owner rule 2026-10-16: off by default; skipping setup means off; sync implies account. */
@@ -40,11 +40,18 @@ export class CloudSwitchStore {
   set(patch: Partial<CloudSwitches>): CloudSwitches {
     const prev = this.value;
     this.value = normalize({ ...prev, ...patch });
-    mkdirSync(dirname(this.path), { recursive: true, mode: 0o700 });
     const temporary = `${this.path}.${process.pid}.tmp`;
-    writeFileSync(temporary, JSON.stringify(this.value), { encoding: 'utf8', mode: 0o600 });
-    renameSync(temporary, this.path);
-    for (const cb of this.listeners) cb(this.get(), { ...prev });
+    try {
+      mkdirSync(dirname(this.path), { recursive: true, mode: 0o700 });
+      writeFileSync(temporary, JSON.stringify(this.value), { encoding: 'utf8', mode: 0o600 });
+      renameSync(temporary, this.path);
+    } catch (error) {
+      rmSync(temporary, { force: true });
+      throw error;
+    } finally {
+      // "Off" must take effect now even when it cannot be saved (disk full).
+      for (const cb of this.listeners) cb(this.get(), { ...prev });
+    }
     return this.get();
   }
 

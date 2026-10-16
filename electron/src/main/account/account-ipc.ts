@@ -89,9 +89,11 @@ export function registerAccountIpc(
   ipcMain.handle(ACCOUNT_CHANNELS.signOut, async (e) => (trusted(e), await session.signOut()));
   ipcMain.handle(ACCOUNT_CHANNELS.setSwitches, async (e, raw) => {
     trusted(e);
-    const s = await ctl.setSwitches(raw);
-    void broadcast();
-    return s;
+    try {
+      return await ctl.setSwitches(raw);
+    } finally {
+      void broadcast();
+    }
   });
   ipcMain.handle(ACCOUNT_CHANNELS.updateProfile, (e, raw) => (trusted(e), ctl.updateProfile(raw)));
   return () => {

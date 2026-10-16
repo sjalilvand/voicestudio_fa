@@ -21,8 +21,15 @@ export function useAccount() {
   return {
     supported: Boolean(account),
     state,
-    setSwitches: async (p: { accountEnabled?: boolean; syncEnabled?: boolean }) =>
-      account && setState(await account.setSwitches(p)),
+    setSwitches: async (p: { accountEnabled?: boolean; syncEnabled?: boolean }) => {
+      if (!account) return;
+      try {
+        setState(await account.setSwitches(p));
+      } catch {
+        // Main applies the change for this run even when saving fails; show what is real.
+        setState(await account.get().catch(() => undefined));
+      }
+    },
     signIn: () => account?.signIn(),
     cancelSignIn: () => account?.cancelSignIn(),
     signOut: () => account?.signOut(),

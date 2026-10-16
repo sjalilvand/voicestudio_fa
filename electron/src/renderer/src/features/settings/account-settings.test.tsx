@@ -89,3 +89,12 @@ it('renders nothing when the build has accounts unavailable', async () => {
   await act(async () => {});
   expect(screen.queryByRole('switch')).toBeNull();
 });
+
+it('a switch change that fails to save re-reads the real state instead of staying stale', async () => {
+  const { account } = setup({});
+  account.setSwitches.mockRejectedValueOnce(new Error('ENOSPC'));
+  account.get.mockResolvedValueOnce({ ...base, accountEnabled: false });
+  fireEvent.click(await screen.findByRole('switch', { name: 'account.features' }));
+  await vi.waitFor(() => expect(screen.queryByRole('switch', { name: 'account.sync' })).toBeNull());
+  expect(account.get).toHaveBeenCalledTimes(2);
+});
