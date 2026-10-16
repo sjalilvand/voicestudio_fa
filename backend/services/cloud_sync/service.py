@@ -179,12 +179,16 @@ class CloudSyncService:
         self._stream_up = False
 
     # ── turning sync on and off, choices ───────────────────────────────
-    async def turn_on(self, choices: dict) -> dict:
+    async def turn_on(self, choices: dict, new_device: bool = False) -> dict:
+        """Turn sync on here; ``new_device`` after "This device was removed from sync"."""
         info = await self._info()
         if not info:
             raise CloudOff()
         org = info["organization_id"]
         state = self.store.state(org)
+        if new_device and state:
+            await self.stop()
+            state = self.store.save_state(org, device_id=None)
         self._open(info, state.device_id if state else None)
         device_id = state.device_id if state else None
         if not device_id:

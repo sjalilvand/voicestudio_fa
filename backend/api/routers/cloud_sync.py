@@ -32,6 +32,7 @@ _DEVICE_ID = r"^[A-Za-z0-9]{16}$"
 class ChoicesBody(BaseModel):
     choices: dict[str, bool] = Field(default_factory=dict)
     remove_from_cloud: list[str] = Field(default_factory=list)
+    new_device: bool = False
 
 
 class LocalValue(BaseModel):
@@ -63,7 +64,7 @@ async def status() -> dict:
 
 @router.post("/on")
 async def turn_on(body: ChoicesBody) -> dict:
-    return await _guarded(get_service().turn_on(_choices(body)))
+    return await _guarded(get_service().turn_on(_choices(body), new_device=body.new_device))
 
 
 @router.post("/off")

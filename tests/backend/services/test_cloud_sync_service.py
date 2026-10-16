@@ -130,3 +130,18 @@ def test_also_remove_from_the_cloud_deletes_that_collection_after_switching_it_o
 
     asyncio.run(body())
     assert server.items[("favorites", "gallery")]["deleted"] is True
+
+
+def test_setting_up_again_after_removal_registers_a_new_device(setup):
+    service, server, _, _ = setup
+
+    async def body():
+        await service.turn_on({"settings": True})
+        first = SyncStore().state(ORG).device_id
+        await service.turn_on({"settings": True}, new_device=True)
+        await service.stop()
+        return first
+
+    first = asyncio.run(body())
+    assert [c[0] for c in server.calls].count("register_device") == 2
+    assert SyncStore().state(ORG).device_id != first

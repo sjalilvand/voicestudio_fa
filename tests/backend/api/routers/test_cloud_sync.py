@@ -32,7 +32,7 @@ class StubService:
 
     running = False
 
-    async def turn_on(self, choices):
+    async def turn_on(self, choices, new_device=False):
         return self._record("turn_on", choices)
 
     async def turn_off(self):
