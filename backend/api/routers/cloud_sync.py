@@ -80,8 +80,8 @@ async def set_choices(body: ChoicesBody) -> dict:
 
 @router.post("/run")
 async def run_now() -> dict:
-    """Window focus or "Sync now"."""
-    get_service().trigger()
+    """Window focus or "Sync now": also starts sync if it could not start earlier."""
+    await get_service().nudge()
     return {"ok": True}
 
 

@@ -160,3 +160,140 @@ def test_turning_sync_on_gives_every_voice_a_sync_id(setup):
     with sqlite3.connect(core_db.DB_PATH) as conn:
         sync_id = conn.execute("SELECT sync_id FROM voice_profiles WHERE id='ab12cd34'").fetchone()[0]
     assert sync_id and len(sync_id) == 16
+
+
+# ── review findings (final review, 2026-10-16) ─────────────────────────
+
+
+def test_an_unexpected_error_in_a_round_does_not_end_sync(setup):
+    service, server, _, _ = setup
+
+    async def body():
+        await service.turn_on({"settings": True})
+        await until(lambda: service.engine is not None)
+        original = service.engine.run_once
+        calls = []
+
+        async def flaky():
+            calls.append(1)
+            if len(calls) == 1:
+                raise RuntimeError("database is locked")
+            await original()
+
+        service.engine.run_once = flaky
+        service.trigger()
+        await until(lambda: len(calls) >= 1)
+        service.trigger()
+        await until(lambda: len(calls) >= 2)
+        assert service.running
+        await service.stop()
+
+    asyncio.run(body())
+
+
+def test_a_change_during_a_round_still_gets_its_own_round(setup):
+    service, server, _, _ = setup
+
+    async def body():
+        await service.turn_on({"settings": True})
+        await until(lambda: service.engine is not None and service.engine.status.last_sync_at is not None)
+        rounds = []
+        original = service.engine.run_once
+
+        async def slow():
+            rounds.append(1)
+            if len(rounds) == 1:
+                service.trigger()  # arrives while this round runs
+                await asyncio.sleep(0.02)
+            await original()
+
+        service.engine.run_once = slow
+        service.trigger()
+        await until(lambda: len(rounds) >= 2)
+        await service.stop()
+
+    asyncio.run(body())
+
+
+def test_a_write_from_a_worker_thread_schedules_a_round(setup, monkeypatch):
+    from services.cloud_sync import service as service_module
+
+    monkeypatch.setattr(service_module, "DEBOUNCE_SECONDS", 0.01)
+    service, server, _, _ = setup
+
+    async def body():
+        await service.turn_on({"settings": True})
+        await until(lambda: server.values("device-preferences", SyncStore().state(ORG).device_id) is not None)
+        await asyncio.to_thread(prefs.set_, "generation_history_cap", 77)  # e.g. a sync def route
+        await until(lambda: server.values("settings", "history") == {"generationHistoryCap": 77})
+        await service.stop()
+
+    asyncio.run(body())
+
+
+def test_turning_off_while_turning_on_wins(setup):
+    service, server, _, _ = setup
+    gate = asyncio.Event()
+    original = server.register_device
+
+    async def slow_register(*args):
+        await gate.wait()
+        return await original(*args)
+
+    server.register_device = slow_register
+
+    async def body():
+        on = asyncio.create_task(service.turn_on({"settings": True}))
+        await asyncio.sleep(0.01)
+        off = asyncio.create_task(service.turn_off())
+        await asyncio.sleep(0.01)
+        gate.set()
+        await asyncio.gather(on, off, return_exceptions=True)
+        assert not service.running
+        assert SyncStore().state(ORG).enabled is False
+
+    asyncio.run(body())
+
+
+def test_a_double_turn_on_registers_one_device(setup):
+    service, server, _, _ = setup
+
+    async def body():
+        await asyncio.gather(service.turn_on({"settings": True}), service.turn_on({"settings": True}))
+        await service.stop()
+
+    asyncio.run(body())
+    assert [c[0] for c in server.calls].count("register_device") == 1
+
+
+def test_a_nudge_starts_sync_when_it_could_not_start_at_boot(setup):
+    service, server, session, _ = setup
+
+    async def body():
+        await service.turn_on({"settings": True})
+        await service.stop()
+        session["value"] = None  # offline at boot
+        assert await service.start() is False
+        session["value"] = dict(INFO)
+        await service.nudge()
+        assert service.running
+        await service.stop()
+
+    asyncio.run(body())
+
+
+def test_signing_in_to_another_account_restarts_on_its_organization(setup):
+    service, server, session, _ = setup
+    other = {**INFO, "organization_id": "OrOther000000001"}
+
+    async def body():
+        await service.turn_on({"settings": True})
+        assert service.organization_id == ORG
+        SyncStore().save_state(other["organization_id"], device_id="DvOther000000001", enabled=True,
+                               choices={"settings": True})
+        session["value"] = other
+        assert await service.start() is True
+        assert service.organization_id == "OrOther000000001"
+        await service.stop()
+
+    asyncio.run(body())

@@ -51,6 +51,9 @@ class StubService:
     def trigger(self):
         self.calls.append(("trigger",))
 
+    async def nudge(self):
+        self.calls.append(("nudge",))
+
     async def confirm_deletes(self):
         return self._record("confirm_deletes")
 

@@ -16,7 +16,7 @@ from core.version import APP_VERSION
 from services import cloud_account
 from services.cloud_sync import allowlist
 from services.cloud_sync.client import CloudOff, SyncApiError, SyncClient
-from services.cloud_sync.engine import DEVICE_PREFERENCES, SyncEngine, _values
+from services.cloud_sync.engine import DEVICE_PREFERENCES, SyncEngine, _safe_values as _values
 from services.cloud_sync.events import POLL_SECONDS, EventStream
 from services.cloud_sync.record_ids import ensure_sync_ids
 from services.cloud_sync.store import SyncStore, new_idempotency_key
@@ -63,6 +63,10 @@ class CloudSyncService:
         self._stream_up = False
         self.collections: list[dict] = []
         self.usage: dict = {}
+        self._view_at = 0.0
+        #: Serializes start/stop/turn_on/turn_off/choices, so "off" can never be undone by a slower "on".
+        self._lock = asyncio.Lock()
+        self._event_loop: Optional[asyncio.AbstractEventLoop] = None
 
     @staticmethod
     def _default_client(info: dict) -> SyncClient:
@@ -81,15 +85,29 @@ class CloudSyncService:
 
     async def start(self) -> bool:
         """Start the loop if sync is on here and main hands out a token."""
-        if self.running:
-            return True
+        async with self._lock:
+            return await self._start()
+
+    async def nudge(self) -> None:
+        """Window focus or "Sync now": start if sync could not start earlier, else run a round."""
+        async with self._lock:
+            if not self.running:
+                await self._start()
+        self.trigger()
+
+    async def _start(self) -> bool:
         info = await self._info()
         if not info:
             return False
+        if self.running:
+            if info["organization_id"] == self.organization_id:
+                return True
+            await self._stop()  # signed in to another account: its own Organization and device
         state = self.store.state(info["organization_id"])
         if not state or not state.enabled or not state.device_id:
             self.organization_id = info["organization_id"]
             return False
+        self._event_loop = asyncio.get_running_loop()
         self._open(info, state.device_id)
         self._loop_task = asyncio.create_task(self._loop(), name="cloud-sync-loop")
         if self._stream_enabled:
@@ -107,6 +125,10 @@ class CloudSyncService:
 
     async def stop(self) -> None:
         """Stop everything now. Local data and the device registration are kept."""
+        async with self._lock:
+            await self._stop()
+
+    async def _stop(self) -> None:
         for task in (self._loop_task, self._stream_task):
             if task and not task.done():
                 task.cancel()
@@ -131,26 +153,53 @@ class CloudSyncService:
 
     # ── triggers ───────────────────────────────────────────────────────
     def schedule(self) -> None:
-        """A local change: run a round 1.5 s after the last one."""
+        """A local change: run a round 1.5 s after the last one (callable from any thread)."""
+        loop = self._event_loop
+        if loop is None or loop.is_closed():
+            return
         try:
-            loop = asyncio.get_running_loop()
+            running = asyncio.get_running_loop()
         except RuntimeError:
-            return  # a write outside the event loop; the next trigger picks it up
+            running = None
+        if running is loop:
+            self._debounce_now()
+        else:
+            loop.call_soon_threadsafe(self._debounce_now)  # a sync route in a worker thread
+
+    def _debounce_now(self) -> None:
         if self._debounce:
             self._debounce.cancel()
-        self._debounce = loop.call_later(DEBOUNCE_SECONDS, self._wake.set)
+        self._debounce = asyncio.get_running_loop().call_later(DEBOUNCE_SECONDS, self._wake.set)
 
     def trigger(self) -> None:
-        self._wake.set()
+        loop = self._event_loop
+        try:
+            running = asyncio.get_running_loop()
+        except RuntimeError:
+            running = None
+        if loop is not None and running is not loop and not loop.is_closed():
+            loop.call_soon_threadsafe(self._wake.set)
+        else:
+            self._wake.set()
 
     async def _loop(self) -> None:
+        failures = 0
         while True:
             if self.engine is None:
                 return
-            await self.engine.run_once()
-            if self.engine.status.stopped:
+            self._wake.clear()  # before the round: a wake-up during it is kept
+            try:
+                await self.engine.run_once()
+                failures = 0
+            except asyncio.CancelledError:
+                raise
+            except Exception:  # noqa: BLE001 — one bad round must not end sync for good
+                failures += 1
+                logger.exception("cloud sync round failed")
+                await asyncio.sleep(min(60.0, 2.0 ** failures))
+                continue
+            if self.engine is None or self.engine.status.stopped:
                 return
-            self._wake.clear()
             timeout = None if self._stream_up else POLL_SECONDS
             try:
                 await asyncio.wait_for(self._wake.wait(), timeout=timeout)
@@ -182,13 +231,17 @@ class CloudSyncService:
     # ── turning sync on and off, choices ───────────────────────────────
     async def turn_on(self, choices: dict, new_device: bool = False) -> dict:
         """Turn sync on here; ``new_device`` after "This device was removed from sync"."""
+        async with self._lock:
+            return await self._turn_on(choices, new_device)
+
+    async def _turn_on(self, choices: dict, new_device: bool) -> dict:
         info = await self._info()
         if not info:
             raise CloudOff()
         org = info["organization_id"]
         state = self.store.state(org)
         if new_device and state:
-            await self.stop()
+            await self._stop()
             state = self.store.save_state(org, device_id=None)
         self._open(info, state.device_id if state else None)
         device_id = state.device_id if state else None
@@ -199,24 +252,29 @@ class CloudSyncService:
             self.client.device_id = device_id
         # Records get their sync_id the first time sync is turned on (S2 prep).
         await asyncio.to_thread(ensure_sync_ids)
-        # Turning sync (back) on: full pull and merge before any push (seeded first sync).
+        # Turning sync (back) on: full pull (cursor 0) and merge before any push (seeded first sync).
         self.store.save_state(org, device_id=device_id, enabled=True, choices=clean_choices(choices),
-                              last_full_sync_at=None)
+                              last_full_sync_at=None, cursor=0)
         await self.engine.publish_choices()
-        await self.stop()
-        await self.start()
+        await self._stop()
+        await self._start()
         self.trigger()
         return self.view()
 
     async def turn_off(self) -> dict:
-        info = await self._info()
-        org = (info or {}).get("organization_id") or self.organization_id
-        await self.stop()
-        if org and self.store.state(org):
-            self.store.save_state(org, enabled=False)
-        return self.view()
+        async with self._lock:
+            info = await self._info()
+            org = (info or {}).get("organization_id") or self.organization_id
+            await self._stop()
+            if org and self.store.state(org):
+                self.store.save_state(org, enabled=False)
+            return self.view()
 
     async def set_choices(self, choices: dict, remove_from_cloud: list[str]) -> dict:
+        async with self._lock:
+            return await self._set_choices(choices, remove_from_cloud)
+
+    async def _set_choices(self, choices: dict, remove_from_cloud: list[str]) -> dict:
         if not self.engine or not self.organization_id:
             raise CloudOff()
         org = self.organization_id
@@ -227,9 +285,11 @@ class CloudSyncService:
                 for base in self.store.items(org, collection):
                     if not base.deleted:
                         self.store.queue(org, collection, base.item_id, "delete")
-        newly_on = previous and any(clean_choices(choices)[k] and not previous.choices.get(k) for k in CHOICE_KEYS)
+        newly_on = {k for k in CHOICE_KEYS if clean_choices(choices)[k] and not (previous and previous.choices.get(k))}
         if newly_on:
             self.store.save_state(org, last_full_sync_at=None)  # merge local items of the new toggles first
+            self.engine.collections_chosen(
+                {c for name in newly_on for c in allowlist.CHOICE_COLLECTIONS.get(name, ())})
         await self.engine.publish_choices()
         if remove_from_cloud:
             self.engine.confirm_deletes()  # the UI already asked, showing the count and size
@@ -249,7 +309,8 @@ class CloudSyncService:
             raise CloudOff()
         base = self.store.item(self.organization_id, DEVICE_PREFERENCES, device_id)
         values = _values(base) or {}
-        return await self.set_choices(values.get("choices") or {}, [])
+        choices = values.get("choices") if isinstance(values.get("choices"), dict) else {}
+        return await self.set_choices(choices, [])
 
     # ── reads for the UI ───────────────────────────────────────────────
     async def refresh_server_view(self) -> None:
