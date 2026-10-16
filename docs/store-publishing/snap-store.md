@@ -150,8 +150,8 @@ One-time setup, by the owner:
    ```
 
 Pushing a `v*` tag then builds the Snap, checks the tag matches `package.json`,
-uploads it and releases it to `candidate`. Uploads run one at a time; a tag
-older than the newest `v*` tag is uploaded without moving `candidate`. The run
+uploads it and releases it to `candidate`. A tag older than the newest `v*`
+tag is uploaded without moving `candidate`. The run
 summary records the Store revision and channel. A tag build can be retried by dispatching the workflow from the tag
 with `upload` enabled.
 
