@@ -2308,7 +2308,8 @@
     "feature_settings_sync": "Synkning av inställningar mellan enheter",
     "feature_pro": "VoiceStudio Pro-funktioner",
     "included": "Ingår",
-    "not_included": "Ingår inte i ditt abonnemang"
+    "not_included": "Ingår inte i ditt abonnemang",
+    "plan_ends": "till {{date}}"
   },
   "cloudsync": {
     "unavailable": "Synkning är inte tillgänglig just nu.",

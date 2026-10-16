@@ -2308,7 +2308,8 @@
     "feature_settings_sync": "Sinkronisasi pengaturan antarperangkat",
     "feature_pro": "Fitur VoiceStudio Pro",
     "included": "Termasuk",
-    "not_included": "Tidak ada di paket Anda"
+    "not_included": "Tidak ada di paket Anda",
+    "plan_ends": "hingga {{date}}"
   },
   "cloudsync": {
     "unavailable": "Sinkronisasi tidak tersedia saat ini.",

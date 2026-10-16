@@ -2365,7 +2365,8 @@
     "feature_settings_sync": "Settings sync between devices",
     "feature_pro": "VoiceStudio Pro features",
     "included": "Included",
-    "not_included": "Not on your plan"
+    "not_included": "Not on your plan",
+    "plan_ends": "until {{date}}"
   },
   "cloudsync": {
     "unavailable": "Sync is not available right now.",

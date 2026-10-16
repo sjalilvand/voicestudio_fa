@@ -2308,7 +2308,8 @@
     "feature_settings_sync": "ซิงค์การตั้งค่าระหว่างอุปกรณ์",
     "feature_pro": "ฟีเจอร์ VoiceStudio Pro",
     "included": "รวมอยู่",
-    "not_included": "ไม่รวมในแพ็กเกจของคุณ"
+    "not_included": "ไม่รวมในแพ็กเกจของคุณ",
+    "plan_ends": "ถึง {{date}}"
   },
   "cloudsync": {
     "unavailable": "การซิงค์ไม่พร้อมใช้งานในขณะนี้",

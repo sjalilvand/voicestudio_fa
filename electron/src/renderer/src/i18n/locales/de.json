@@ -2308,7 +2308,8 @@
     "feature_settings_sync": "Einstellungen zwischen Geräten synchronisieren",
     "feature_pro": "VoiceStudio-Pro-Funktionen",
     "included": "Enthalten",
-    "not_included": "Nicht in deinem Tarif"
+    "not_included": "Nicht in deinem Tarif",
+    "plan_ends": "bis {{date}}"
   },
   "cloudsync": {
     "unavailable": "Die Synchronisierung ist gerade nicht verfügbar.",

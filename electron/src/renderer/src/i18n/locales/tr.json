@@ -2308,7 +2308,8 @@
     "feature_settings_sync": "Ayarları cihazlar arasında eşitleme",
     "feature_pro": "VoiceStudio Pro özellikleri",
     "included": "Dahil",
-    "not_included": "Planınızda yok"
+    "not_included": "Planınızda yok",
+    "plan_ends": "{{date}} tarihine kadar"
   },
   "cloudsync": {
     "unavailable": "Eşitleme şu anda kullanılamıyor.",

@@ -2308,7 +2308,8 @@
     "feature_settings_sync": "在裝置之間同步設定",
     "feature_pro": "VoiceStudio Pro 功能",
     "included": "已包含",
-    "not_included": "不在你的方案中"
+    "not_included": "不在你的方案中",
+    "plan_ends": "至 {{date}}"
   },
   "cloudsync": {
     "unavailable": "同步目前無法使用。",

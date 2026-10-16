@@ -43,6 +43,7 @@ it('maps the account to the renderer-safe profile', async () => {
     avatarUrl: null,
     avatarArtifactId: null,
     personalOrganizationId: 'Or5tG7hJ9kL1zX3c',
+    summary: null,
     organizations: [
       { id: 'Or5tG7hJ9kL1zX3c', slug: 'ana', displayName: 'Ana', role: 'owner', kind: 'personal' },
     ],
@@ -178,4 +179,37 @@ it('refuses an Organization ID that could change the request path', async () => 
   const { api, fetchImpl } = setup([]);
   expect(await api.entitlements('../admin')).toBeNull();
   expect(fetchImpl).not.toHaveBeenCalled();
+});
+
+it('reads the plan and storage summary that /v1/account now carries', async () => {
+  const { api } = setup([
+    json({
+      ...account,
+      plan: { code: 'pro', name: 'Pro', origin: 'subscription', ends_at: '2027-10-16T00:00:00Z' },
+      storage: { limit_bytes: 1073741824, used_bytes: 734003, reserved_bytes: 0 },
+    }),
+  ]);
+  expect((await api.get())?.summary).toEqual({
+    planCode: 'pro',
+    planName: 'Pro',
+    planEndsAt: '2027-10-16T00:00:00Z',
+    storageUsedBytes: 734003,
+    storageLimitBytes: 1073741824,
+  });
+});
+
+it('without a display name or verified email, the personal workspace name is shown', async () => {
+  const { api } = setup([json({ ...account, display_name: undefined, email: undefined })]);
+  const profile = await api.get();
+  expect(profile?.displayName).toBe('Ana');
+  expect(profile?.summary).toBeNull();
+});
+
+it('logs a failed account call by status and path only', async () => {
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  const { api } = setup([json({ error: { code: 'forbidden' } }, 403)]);
+  await expect(api.get()).rejects.toThrow();
+  expect(warn).toHaveBeenCalledWith('[account] GET /v1/account -> 403');
+  expect(JSON.stringify(warn.mock.calls)).not.toMatch(/Bearer|tok/);
+  warn.mockRestore();
 });

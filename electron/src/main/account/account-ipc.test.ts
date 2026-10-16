@@ -114,7 +114,10 @@ it('signed in, the state carries the plan and storage; signed out it carries non
     avatar: async () => null,
     entitlements: vi.fn(async () => plan),
   };
-  expect((await ctl({ api: api as never }).publicState(true)).plan).toEqual(plan);
+  expect((await ctl({ api: api as never }).publicState(true)).plan).toEqual({
+    ...plan,
+    planEndsAt: null,
+  });
   expect(api.entitlements).toHaveBeenCalledWith('Or1');
   const signedOut = ctl({
     api: api as never,
@@ -124,4 +127,56 @@ it('signed in, the state carries the plan and storage; signed out it carries non
     } as never,
   });
   expect((await signedOut.publicState(true)).plan).toBeNull();
+});
+
+it('the plan comes from the account summary, with plan features when entitlements answer', async () => {
+  const summary = {
+    planCode: 'free',
+    planName: 'Free',
+    planEndsAt: null,
+    storageUsedBytes: 5,
+    storageLimitBytes: 10,
+  };
+  const profile = {
+    email: 'a@b.c',
+    displayName: 'Ana',
+    avatarUrl: null,
+    avatarArtifactId: null,
+    personalOrganizationId: 'Or1',
+    organizations: [],
+    summary,
+  };
+  const offline = ctl({
+    api: {
+      get: async () => profile,
+      avatar: async () => null,
+      entitlements: async () => {
+        throw new Error('503');
+      },
+    } as never,
+  });
+  expect((await offline.publicState(true)).plan).toEqual({
+    ...summary,
+    settingsSync: null,
+    proDesktop: null,
+  });
+  const full = ctl({
+    api: {
+      get: async () => profile,
+      avatar: async () => null,
+      entitlements: async () => ({
+        planCode: 'free',
+        planName: 'Free',
+        storageUsedBytes: 6,
+        storageLimitBytes: 10,
+        settingsSync: true,
+        proDesktop: false,
+      }),
+    } as never,
+  });
+  expect((await full.publicState(true)).plan).toEqual({
+    ...summary,
+    settingsSync: true,
+    proDesktop: false,
+  });
 });

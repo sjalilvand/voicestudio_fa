@@ -2308,7 +2308,8 @@
     "feature_settings_sync": "デバイス間での設定の同期",
     "feature_pro": "VoiceStudio Pro の機能",
     "included": "含まれます",
-    "not_included": "プランに含まれません"
+    "not_included": "プランに含まれません",
+    "plan_ends": "{{date}} まで"
   },
   "cloudsync": {
     "unavailable": "現在、同期を利用できません。",

@@ -162,3 +162,26 @@ it('without plan details yet, still shows who is signed in', async () => {
   expect(await screen.findByText('ana@example.com')).toBeInTheDocument();
   expect(screen.queryByText('account.plan')).toBeNull();
 });
+
+it('shows when the plan ends, and hides what it includes while that is unknown', async () => {
+  setup({
+    signedIn: true,
+    profile: {
+      email: 'ana@example.com',
+      displayName: 'Ana Lima',
+      avatarUrl: null,
+      organizations: [],
+    },
+    plan: {
+      planCode: 'pro',
+      planName: 'Pro',
+      planEndsAt: '2027-10-16T00:00:00Z',
+      storageUsedBytes: 0,
+      storageLimitBytes: 1073741824,
+      settingsSync: null,
+      proDesktop: null,
+    },
+  } as never);
+  expect(await screen.findByText(/account\.plan_ends/)).toBeInTheDocument();
+  expect(screen.queryByText('account.features_title')).toBeNull();
+});

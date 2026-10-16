@@ -2308,7 +2308,8 @@
     "feature_settings_sync": "डिवाइसों के बीच सेटिंग सिंक",
     "feature_pro": "VoiceStudio Pro सुविधाएँ",
     "included": "शामिल",
-    "not_included": "आपके प्लान में नहीं"
+    "not_included": "आपके प्लान में नहीं",
+    "plan_ends": "{{date}} तक"
   },
   "cloudsync": {
     "unavailable": "सिंक अभी उपलब्ध नहीं है।",

@@ -11,6 +11,14 @@ export interface AccountProfile {
   /** Identifies the picture; the cache is keyed by it (the URL always expires). */
   avatarArtifactId: string | null;
   personalOrganizationId: string | null;
+  /** The personal Organization's plan and storage, when /v1/account includes them. */
+  summary: {
+    planCode: string;
+    planName: string;
+    planEndsAt: string | null;
+    storageUsedBytes: number;
+    storageLimitBytes: number;
+  } | null;
   organizations: Array<{
     id: string;
     slug: string;
@@ -26,6 +34,8 @@ interface RawAccount {
   avatar_url?: string | null;
   avatar_artifact_id?: string | null;
   personal_organization_id?: string | null;
+  plan?: { code?: string; name?: string; ends_at?: string | null } | null;
+  storage?: { limit_bytes?: number; used_bytes?: number } | null;
   organizations?: Array<{
     id: string;
     slug: string;
@@ -35,20 +45,37 @@ interface RawAccount {
   }>;
 }
 
-const toProfile = (a: RawAccount): AccountProfile => ({
-  email: a.email ?? null,
-  displayName: a.display_name ?? null,
-  avatarUrl: a.avatar_url ?? null,
-  avatarArtifactId: a.avatar_artifact_id || null,
-  personalOrganizationId: a.personal_organization_id ?? null,
-  organizations: (a.organizations ?? []).map((o) => ({
+function toProfile(a: RawAccount): AccountProfile {
+  const organizations = (a.organizations ?? []).map((o) => ({
     id: o.id,
     slug: o.slug,
     displayName: o.display_name,
     role: o.role,
     kind: o.kind,
-  })),
-});
+  }));
+  const personal =
+    organizations.find((o) => o.id === a.personal_organization_id) ??
+    organizations.find((o) => o.kind === 'personal');
+  return {
+    email: a.email || null,
+    // The server leaves out an empty name and an unverified email; the personal
+    // workspace is named after the person, so it stands in.
+    displayName: a.display_name || (!a.email && personal?.displayName) || null,
+    avatarUrl: a.avatar_url ?? null,
+    avatarArtifactId: a.avatar_artifact_id || null,
+    personalOrganizationId: a.personal_organization_id ?? null,
+    organizations,
+    summary: a.plan
+      ? {
+          planCode: String(a.plan.code ?? ''),
+          planName: String(a.plan.name || a.plan.code || ''),
+          planEndsAt: a.plan.ends_at ?? null,
+          storageUsedBytes: Number(a.storage?.used_bytes ?? 0),
+          storageLimitBytes: Number(a.storage?.limit_bytes ?? 0),
+        }
+      : null,
+  };
+}
 
 /** The plan of an Organization, as the account screen shows it (entitlements API). */
 export interface AccountPlan {
@@ -184,7 +211,11 @@ export class AccountApi {
         if (attempt === 0) this.session.invalidateAccessToken();
         continue;
       }
-      if (!res.ok) throw new Error(`Account request failed (${res.status})`);
+      if (!res.ok) {
+        // Status and path only: never the token, never a query string.
+        console.warn(`[account] ${init.method} ${new URL(url).pathname} -> ${res.status}`);
+        throw new Error(`Account request failed (${res.status})`);
+      }
       return await res.json();
     }
     this.session.endSession('signed_out_expired');

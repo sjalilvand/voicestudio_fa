@@ -2308,7 +2308,8 @@
     "feature_settings_sync": "Đồng bộ cài đặt giữa các thiết bị",
     "feature_pro": "Tính năng VoiceStudio Pro",
     "included": "Có",
-    "not_included": "Không có trong gói của bạn"
+    "not_included": "Không có trong gói của bạn",
+    "plan_ends": "đến {{date}}"
   },
   "cloudsync": {
     "unavailable": "Đồng bộ hiện không khả dụng.",

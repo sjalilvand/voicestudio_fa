@@ -29,12 +29,13 @@ export function AccountDetails({ state }: { state: AccountPublicState }) {
     plan && plan.storageLimitBytes > 0
       ? Math.min(100, (plan.storageUsedBytes / plan.storageLimitBytes) * 100)
       : 0;
-  const features = plan
-    ? [
-        { key: 'account.feature_settings_sync', on: plan.settingsSync },
-        { key: 'account.feature_pro', on: plan.proDesktop },
-      ]
-    : [];
+  const features =
+    plan && plan.settingsSync !== null && plan.proDesktop !== null
+      ? [
+          { key: 'account.feature_settings_sync', on: plan.settingsSync },
+          { key: 'account.feature_pro', on: plan.proDesktop },
+        ]
+      : [];
   return (
     <div className="space-y-4 rounded-lg border border-border/60 p-4">
       <div className="flex items-center gap-3">
@@ -58,7 +59,14 @@ export function AccountDetails({ state }: { state: AccountPublicState }) {
       {plan && (
         <dl className="grid gap-3 text-sm sm:grid-cols-[8rem_1fr]">
           <dt className="text-muted-foreground">{t('account.plan')}</dt>
-          <dd className="font-medium">{plan.planName}</dd>
+          <dd>
+            <span className="font-medium">{plan.planName}</span>
+            {plan.planEndsAt && (
+              <span className="ml-2 text-muted-foreground">
+                {t('account.plan_ends', { date: new Date(plan.planEndsAt).toLocaleDateString() })}
+              </span>
+            )}
+          </dd>
           <dt className="text-muted-foreground">{t('account.storage')}</dt>
           <dd className="space-y-1.5">
             <Progress value={share} aria-label={t('account.storage')} />
@@ -69,24 +77,28 @@ export function AccountDetails({ state }: { state: AccountPublicState }) {
               })}
             </span>
           </dd>
-          <dt className="text-muted-foreground">{t('account.features_title')}</dt>
-          <dd>
-            <ul className="space-y-1">
-              {features.map((feature) => (
-                <li key={feature.key} className="flex items-center gap-2">
-                  {feature.on ? (
-                    <CheckIcon className="size-4 text-success" aria-hidden="true" />
-                  ) : (
-                    <MinusIcon className="size-4 text-muted-foreground" aria-hidden="true" />
-                  )}
-                  <span>{t(feature.key)}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {t(feature.on ? 'account.included' : 'account.not_included')}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </dd>
+          {features.length > 0 && (
+            <>
+              <dt className="text-muted-foreground">{t('account.features_title')}</dt>
+              <dd>
+                <ul className="space-y-1">
+                  {features.map((feature) => (
+                    <li key={feature.key} className="flex items-center gap-2">
+                      {feature.on ? (
+                        <CheckIcon className="size-4 text-success" aria-hidden="true" />
+                      ) : (
+                        <MinusIcon className="size-4 text-muted-foreground" aria-hidden="true" />
+                      )}
+                      <span>{t(feature.key)}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {t(feature.on ? 'account.included' : 'account.not_included')}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </dd>
+            </>
+          )}
         </dl>
       )}
     </div>

@@ -2312,7 +2312,8 @@
     "feature_settings_sync": "Синхронізація налаштувань між пристроями",
     "feature_pro": "Функції VoiceStudio Pro",
     "included": "Входить",
-    "not_included": "Не входить у ваш тариф"
+    "not_included": "Не входить у ваш тариф",
+    "plan_ends": "до {{date}}"
   },
   "cloudsync": {
     "unavailable": "Синхронізація зараз недоступна.",

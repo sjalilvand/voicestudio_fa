@@ -2316,7 +2316,8 @@
     "feature_settings_sync": "مزامنة الإعدادات بين الأجهزة",
     "feature_pro": "ميزات VoiceStudio Pro",
     "included": "مضمّن",
-    "not_included": "غير مضمّن في خطتك"
+    "not_included": "غير مضمّن في خطتك",
+    "plan_ends": "حتى {{date}}"
   },
   "cloudsync": {
     "unavailable": "المزامنة غير متاحة الآن.",

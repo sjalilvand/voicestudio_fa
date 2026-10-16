@@ -2310,7 +2310,8 @@
     "feature_settings_sync": "Sincronização de configurações entre dispositivos",
     "feature_pro": "Funções do VoiceStudio Pro",
     "included": "Incluído",
-    "not_included": "Não incluído no seu plano"
+    "not_included": "Não incluído no seu plano",
+    "plan_ends": "até {{date}}"
   },
   "cloudsync": {
     "unavailable": "A sincronização não está disponível agora.",

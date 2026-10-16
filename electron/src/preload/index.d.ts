@@ -310,10 +310,13 @@ export interface AccountPublicState {
   plan: {
     planCode: string;
     planName: string;
+    /** When the plan ends (a yearly plan or a grant); null for no end. */
+    planEndsAt: string | null;
     storageUsedBytes: number;
     storageLimitBytes: number;
-    settingsSync: boolean;
-    proDesktop: boolean;
+    /** What the plan includes; null when the entitlements could not be read. */
+    settingsSync: boolean | null;
+    proDesktop: boolean | null;
   } | null;
 }
 

@@ -18,9 +18,15 @@ export const ACCOUNT_CHANNELS = {
 
 export type { AccountPublicState };
 
+type PlanState = Omit<AccountPlan, 'settingsSync' | 'proDesktop'> & {
+  planEndsAt: string | null;
+  settingsSync: boolean | null;
+  proDesktop: boolean | null;
+};
+
 export class AccountController {
   private profile: AccountProfile | null = null;
-  private plan: AccountPlan | null = null;
+  private plan: PlanState | null = null;
 
   constructor(
     private readonly parts: {
@@ -53,7 +59,16 @@ export class AccountController {
     } else if (refreshProfile || !this.profile) {
       this.profile = await this.parts.api.get().catch(() => this.profile);
       const org = this.profile?.personalOrganizationId;
-      if (org) this.plan = await this.parts.api.entitlements(org).catch(() => this.plan);
+      const full = org ? await this.parts.api.entitlements(org).catch(() => null) : null;
+      const summary = this.profile?.summary;
+      // Plan and storage from /v1/account; what the plan includes from entitlements (null: unknown).
+      if (summary)
+        this.plan = {
+          ...summary,
+          settingsSync: full?.settingsSync ?? null,
+          proDesktop: full?.proDesktop ?? null,
+        };
+      else if (full) this.plan = { ...full, planEndsAt: null };
     }
     // The renderer never sees the signed photo link: main downloads it and hands over a data URL.
     const profile = this.profile

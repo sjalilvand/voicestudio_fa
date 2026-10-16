@@ -2310,7 +2310,8 @@
     "feature_settings_sync": "Synchronisation des réglages entre appareils",
     "feature_pro": "Fonctions de VoiceStudio Pro",
     "included": "Inclus",
-    "not_included": "Hors de votre offre"
+    "not_included": "Hors de votre offre",
+    "plan_ends": "jusqu’au {{date}}"
   },
   "cloudsync": {
     "unavailable": "La synchronisation n’est pas disponible pour le moment.",
