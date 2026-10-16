@@ -2,10 +2,16 @@
 
 vssaas desktop-app-guide §6-7. One round at a time; every request goes
 through the client, which raises ``CloudOff`` when the user switched sync off.
+
+S1 items are singletons (settings groups, the shortcut map, the favorites
+map): a cloud tombstone or an item the server no longer has never wipes the
+local values; only the merge base is forgotten. Value keys this version does
+not manage are carried over from the base on every write.
 """
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -29,7 +35,7 @@ BATCH_THRESHOLD = 10
 BATCH_MAX = 100
 MASS_DELETE_COUNT = 20
 MASS_DELETE_SHARE = 0.25
-_FATAL = {"device_revoked", "account_suspended"}
+_FATAL = {"device_revoked", "account_suspended", "membership_removed"}
 
 DEFAULT_CHOICES = {
     "settings": True, "shortcuts": True, "favorites": True, "voices": False, "voice_consent": False,
@@ -41,15 +47,34 @@ def _now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+class _Malformed(ValueError):
+    pass
+
+
 def _values(item: Optional[dict | BaseItem]) -> Optional[dict]:
-    """The ``values`` of a server item or base; ``None`` for a tombstone or nothing."""
+    """The ``values`` of a server item or base; ``None`` for a tombstone or nothing.
+
+    Raises ``_Malformed`` when the content is not ``{"values": {...}}``.
+    """
     if item is None:
         return None
     if isinstance(item, BaseItem):
-        return None if item.deleted or item.content is None else dict(item.content.get("values") or {})
-    if item.get("deleted") or item.get("content") is None:
+        deleted, content = item.deleted, item.content
+    else:
+        deleted, content = bool(item.get("deleted")), item.get("content")
+    if deleted or content is None:
         return None
-    return dict(item["content"].get("values") or {})
+    values = content.get("values") if isinstance(content, dict) else None
+    if not isinstance(values, dict):
+        raise _Malformed("content has no values object")
+    return dict(values)
+
+
+def _safe_values(item: Optional[dict | BaseItem]) -> Optional[dict]:
+    try:
+        return _values(item)
+    except _Malformed:
+        return None
 
 
 @dataclass
@@ -84,6 +109,9 @@ class SyncEngine:
         self._on_local_change = on_local_change
         #: Collections just switched off with "Also remove from the cloud": their deletes still go out.
         self.draining: set[str] = set()
+        state = store.state(organization_id)
+        if state:
+            self.status.needs_update = set(state.needs_update)
 
     # ── wiring ─────────────────────────────────────────────────────────
     def attach_hooks(self) -> Callable[[], None]:
@@ -102,6 +130,14 @@ class SyncEngine:
     def confirm_deletes(self) -> None:
         self._deletes_confirmed = True
         self.status.pending_mass_delete = None
+
+    def collections_chosen(self, collections: set[str]) -> None:
+        """Toggles switched on: pull what the cloud already has, and drop stale removals."""
+        self.store.drop_deletes(self.org, collections)
+        self.draining -= set(collections)
+        state = self.store.state(self.org)
+        if state:
+            self.store.save_state(self.org, full_pull=sorted(set(state.full_pull) | set(collections)))
 
     def chosen(self) -> set[str]:
         state = self.store.state(self.org)
@@ -128,9 +164,11 @@ class SyncEngine:
                 return
             first = state.last_full_sync_at is None
             try:
+                self._release_supported()
                 if first:
                     self._seed_local_items()
                 await self._pull()
+                await self._pull_chosen_later()
                 await self._push()
                 if first:
                     self.store.save_state(self.org, last_full_sync_at=_now())
@@ -158,6 +196,26 @@ class SyncEngine:
             except httpx.HTTPError:
                 self.status.offline = True
 
+    # ── schema versions ────────────────────────────────────────────────
+    def _release_supported(self) -> None:
+        """Collections skipped for a newer schema that this version now understands: pull them again."""
+        state = self.store.state(self.org)
+        if not state or not state.needs_update:
+            return
+        ready = {c for c, version in state.needs_update.items() if int(version) <= SUPPORTED.get(c, 1)}
+        if ready:
+            remaining = {c: v for c, v in state.needs_update.items() if c not in ready}
+            self.store.save_state(self.org, needs_update=remaining, full_pull=sorted(set(state.full_pull) | ready))
+            self.status.needs_update -= ready
+
+    def _mark_needs_update(self, collection: str, version: int) -> None:
+        self.status.needs_update.add(collection)
+        state = self.store.state(self.org)
+        if state:
+            seen = dict(state.needs_update)
+            seen[collection] = max(int(seen.get(collection, 0)), version)
+            self.store.save_state(self.org, needs_update=seen)
+
     # ── pull ───────────────────────────────────────────────────────────
     def _seed_local_items(self) -> None:
         """First sync (or sync turned back on): queue local items that differ from the base."""
@@ -169,32 +227,49 @@ class SyncEngine:
             base = self.store.item(self.org, item.collection, item.item_id)
             if not local and base is None:
                 continue
-            if base is None or canonical(local) != canonical(_values(base) or {}):
+            if base is None or canonical(local) != canonical(_safe_values(base) or {}):
                 self.store.queue(self.org, item.collection, item.item_id, "put")
+
+    async def _pages(self, since: int, collections: list[str]):
+        cursor = since
+        while True:
+            page = await self.client.changes(since=cursor, collections=collections, limit=self.page_size)
+            cursor = int(page.get("cursor") or cursor)
+            yield page.get("changes") or [], cursor
+            if not page.get("has_more"):
+                return
 
     async def _pull(self, *, resync: bool = False) -> set[tuple[str, str]]:
         state = self.store.state(self.org)
-        cursor = 0 if resync else (state.cursor if state else 0)
+        since = 0 if resync else (state.cursor if state else 0)
         seen: set[tuple[str, str]] = set()
-        collections = sorted(self.chosen())
-        while True:
-            try:
-                page = await self.client.changes(since=cursor, collections=collections, limit=self.page_size)
-            except SyncApiError as error:
-                if error.code == "sync_cursor_expired" and not resync:
-                    await self._full_resync()
-                    return seen
-                raise
-            applied = []
-            for remote in page.get("changes") or []:
-                seen.add((remote["collection"], remote["item_id"]))
-                if self._apply_remote(remote):
-                    applied.append(remote)
-            cursor = int(page.get("cursor") or cursor)
-            self.store.save_page(self.org, applied, cursor)
-            self.status.offline = False
-            if not page.get("has_more"):
+        try:
+            async for changes, cursor in self._pages(since, sorted(self.chosen())):
+                applied = []
+                for remote in changes:
+                    seen.add((remote["collection"], remote["item_id"]))
+                    if self._apply_remote(remote):
+                        applied.append(remote)
+                self.store.save_page(self.org, applied, cursor)
+                self.status.offline = False
+        except SyncApiError as error:
+            if error.code == "sync_cursor_expired" and not resync:
+                await self._full_resync()
                 return seen
+            raise
+        return seen
+
+    async def _pull_chosen_later(self) -> None:
+        """Pull everything of collections chosen after earlier pulls filtered them out."""
+        state = self.store.state(self.org)
+        wanted = sorted(set(state.full_pull) & self.chosen()) if state else []
+        if not wanted:
+            if state and state.full_pull:
+                self.store.save_state(self.org, full_pull=[])
+            return
+        async for changes, _cursor in self._pages(0, wanted):
+            self.store.save_items(self.org, [r for r in changes if self._apply_remote(r)])
+        self.store.save_state(self.org, full_pull=[])
 
     async def _full_resync(self) -> None:
         self.store.save_state(self.org, cursor=0)
@@ -204,14 +279,24 @@ class SyncEngine:
                 if (base.collection, base.item_id) in seen:
                     continue
                 definition = allowlist.item(base.collection, base.item_id)
-                if self.store.outbox_row(self.org, base.collection, base.item_id):
-                    # Changed here since the last sync: push it as a new item.
-                    self.store.forget_item(self.org, base.collection, base.item_id)
-                    continue
-                if definition is not None:
+                # Gone from the server. A singleton keeps its local values; a changed
+                # one is pushed as a new item (no base means If-Match 0).
+                if definition is not None and not definition.singleton and not self.store.outbox_row(
+                        self.org, base.collection, base.item_id):
                     with change_hooks.from_sync():
-                        definition.write({})  # deleted elsewhere
+                        definition.write({})  # a record deleted elsewhere (S2+)
                 self.store.forget_item(self.org, base.collection, base.item_id)
+
+    def _local_with_unknown(self, definition: allowlist.Item, base: Optional[BaseItem],
+                            local: Optional[dict]) -> Optional[dict]:
+        """Local values plus the value keys this version does not manage, kept from the base."""
+        if local is None:
+            return None
+        managed = definition.managed
+        if managed is None:
+            return local
+        kept = {k: v for k, v in (_safe_values(base) or {}).items() if k not in managed}
+        return {**kept, **local}
 
     def _apply_remote(self, remote: dict) -> bool:
         """Apply one pulled item; ``True`` means it becomes the new merge base."""
@@ -219,21 +304,30 @@ class SyncEngine:
         base = self.store.item(self.org, collection, item_id)
         if base and base.revision >= int(remote["revision"]):
             return False  # already have it, or our own echo
-        if int(remote.get("schema_version") or 1) > SUPPORTED.get(collection, 1):
-            self.status.needs_update.add(collection)
+        version = int(remote.get("schema_version") or 1)
+        if version > SUPPORTED.get(collection, 1):
+            self._mark_needs_update(collection, version)
+            return False
+        try:
+            remote_values = _values(remote)
+        except _Malformed:
+            logger.warning("cloud sync skipped a malformed %s/%s", collection, item_id)
             return False
         definition = allowlist.item(collection, item_id)
         if definition is None:
             return True  # another device's preferences, or a group this version does not know
-        remote_values = _values(remote)
         row = self.store.outbox_row(self.org, collection, item_id)
         if row is None:
-            self._write(definition, remote_values)
-            return True
-        local = None if row.op == "delete" else definition.read()
-        merged = merge_item(_values(base), local, remote_values)
+            if remote_values is not None or not definition.singleton:
+                self._write(definition, remote_values)
+            return True  # a tombstone of a singleton only becomes the new base
+        local = None if row.op == "delete" else self._local_with_unknown(definition, base, definition.read())
+        merged = merge_item(_safe_values(base), local, remote_values)
         self._note_conflicts(collection, item_id, merged.conflicts)
-        self._write(definition, merged.values)
+        if merged.values is not None:
+            self._write(definition, merged.values)
+        elif not definition.singleton:
+            self._write(definition, None)
         if merged.values is None:
             if remote_values is None:
                 self.store.drop_outbox(row.id)
@@ -261,7 +355,10 @@ class SyncEngine:
         if row.collection == DEVICE_PREFERENCES:
             return {"choices": self.full_choices()}
         definition = allowlist.item(row.collection, row.item_id)
-        return definition.read() if definition else None
+        if definition is None:
+            return None
+        base = self.store.item(self.org, row.collection, row.item_id)
+        return self._local_with_unknown(definition, base, definition.read())
 
     def _guard_mass_delete(self, rows: list[OutboxRow]) -> list[OutboxRow]:
         deletes = [r for r in rows if r.op == "delete"]
@@ -271,7 +368,7 @@ class SyncEngine:
         for row in deletes:
             by_collection[row.collection] = by_collection.get(row.collection, 0) + 1
         too_many = len(deletes) > MASS_DELETE_COUNT or any(
-            count > MASS_DELETE_SHARE * max(1, len(self.store.items(self.org, c)))
+            count > 1 and count > MASS_DELETE_SHARE * max(1, len(self.store.items(self.org, c)))
             for c, count in by_collection.items()
         )
         if not too_many:
@@ -283,9 +380,11 @@ class SyncEngine:
         if self.status.stopped or self.status.read_only:
             return
         chosen = self.chosen()
+        confirmed = self._deletes_confirmed
         rows = [r for r in self.store.outbox(self.org)
                 if (r.collection in chosen or (r.collection in self.draining and r.op == "delete"))
-                and r.collection not in self.status.paused]
+                and r.collection not in self.status.paused
+                and r.collection not in self.status.needs_update]  # never overwrite a newer schema
         rows = self._guard_mass_delete(rows)
         skip: set[str] = set()
         if len(rows) > BATCH_THRESHOLD and await self._push_batch(rows[:BATCH_MAX]):
@@ -296,7 +395,8 @@ class SyncEngine:
             outcome = await self._push_row(row)
             if outcome == "skip_collection":
                 skip.add(row.collection)
-        self._deletes_confirmed = False
+        if confirmed:
+            self._deletes_confirmed = False
 
     def _operation(self, row: OutboxRow) -> Optional[dict]:
         base = self.store.item(self.org, row.collection, row.item_id)
@@ -305,24 +405,30 @@ class SyncEngine:
             if base is None or base.deleted:
                 return None
             return {"op": "delete", "collection": row.collection, "item_id": row.item_id, "if_match": if_match}
-        content = dict(base.content) if base and base.content else {}
+        content = dict(base.content) if base and isinstance(base.content, dict) else {}
         content["values"] = self._local_values(row) or {}
         return {"op": "put", "collection": row.collection, "item_id": row.item_id, "if_match": if_match,
                 "schema_version": SUPPORTED.get(row.collection, 1), "content": content, "blobs": []}
+
+    @staticmethod
+    def _batch_key(rows: list[OutboxRow]) -> str:
+        """One key per batch, derived from its rows' keys (a row's own key never covers a batch)."""
+        joined = "\n".join(f"{r.id}:{r.idempotency_key}" for r in rows)
+        return hashlib.sha256(joined.encode()).hexdigest()
 
     async def _push_batch(self, rows: list[OutboxRow]) -> bool:
         operations, used = [], []
         for row in rows:
             op = self._operation(row)
             if op is None:
-                self.store.drop_outbox(row.id)
+                self.store.drop_outbox(row.id, gen=row.gen)
                 continue
             operations.append(op)
             used.append(row)
         if not operations:
             return True
         try:
-            result = await self.client.batch(operations, used[0].idempotency_key)
+            result = await self.client.batch(operations, self._batch_key(used))
         except SyncApiError as error:
             if error.status >= 500 or error.code in _FATAL:
                 self._fatal_or_offline(error)
@@ -330,14 +436,14 @@ class SyncEngine:
             return False  # a conflict or limit in one operation: fall back to one by one
         for row, item in zip(used, result.get("results") or []):
             self.store.save_item(self.org, item)
-            self.store.drop_outbox(row.id)
+            self.store.drop_outbox(row.id, gen=row.gen)
         self.status.offline = False
         return True
 
     async def _push_row(self, row: OutboxRow, attempt: int = 0) -> str:
         op = self._operation(row)
         if op is None:
-            self.store.drop_outbox(row.id)
+            self.store.drop_outbox(row.id, gen=row.gen)
             return "done"
         try:
             if op["op"] == "put":
@@ -349,7 +455,8 @@ class SyncEngine:
         except SyncApiError as error:
             return await self._push_failed(row, error, attempt)
         self.store.save_item(self.org, result)
-        self.store.drop_outbox(row.id)
+        # A change made while this request was in flight bumped the row: it stays queued.
+        self.store.drop_outbox(row.id, gen=row.gen)
         self.status.offline = False
         return "done"
 
@@ -364,6 +471,10 @@ class SyncEngine:
             if fresh is None:
                 return "done"
             return await self._push_row(fresh, attempt + 1)
+        if code == "idempotency_key_reused" and attempt < 1:
+            self.store.renew_key(row.id)
+            fresh = self.store.outbox_row(self.org, row.collection, row.item_id)
+            return await self._push_row(fresh, attempt + 1) if fresh else "done"
         if error.status == 429:
             if attempt >= 1:
                 raise _StopRound()
@@ -391,11 +502,14 @@ class SyncEngine:
     def _merge_after_conflict(self, row: OutboxRow, current: Optional[dict]) -> Optional[OutboxRow]:
         base = self.store.item(self.org, row.collection, row.item_id)
         local = self._local_values(row)
-        remote_values = _values(current)
-        merged = merge_item(_values(base), local, remote_values)
-        self._note_conflicts(row.collection, row.item_id, merged.conflicts)
         definition = allowlist.item(row.collection, row.item_id)
-        if definition is not None:
+        if current and int(current.get("schema_version") or 1) > SUPPORTED.get(row.collection, 1):
+            self._mark_needs_update(row.collection, int(current["schema_version"]))
+            return None  # a newer app wrote it: never overwrite with this version's shape
+        remote_values = _safe_values(current)
+        merged = merge_item(_safe_values(base), local, remote_values)
+        self._note_conflicts(row.collection, row.item_id, merged.conflicts)
+        if definition is not None and (merged.values is not None or not definition.singleton):
             self._write(definition, merged.values)
         if current:
             self.store.save_item(self.org, current)
@@ -404,9 +518,7 @@ class SyncEngine:
         if merged.values is None and (current is None or current.get("deleted")):
             self.store.drop_outbox(row.id)
             return None
-        self.store.renew_key(row.id)
-        fresh = self.store.queue(self.org, row.collection, row.item_id, "delete" if merged.values is None else "put")
-        return fresh
+        return self.store.queue(self.org, row.collection, row.item_id, "delete" if merged.values is None else "put")
 
     def _fatal_or_offline(self, error: SyncApiError) -> None:
         if error.code in _FATAL:

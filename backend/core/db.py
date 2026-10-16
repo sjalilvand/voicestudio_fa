@@ -302,7 +302,9 @@ _BASE_SCHEMA = """
         cursor INTEGER NOT NULL DEFAULT 0,
         enabled INTEGER NOT NULL DEFAULT 0,
         choices_json TEXT NOT NULL DEFAULT '{}',
-        last_full_sync_at TEXT
+        last_full_sync_at TEXT,
+        needs_update_json TEXT NOT NULL DEFAULT '{}',
+        full_pull_json TEXT NOT NULL DEFAULT '[]'
     );
     CREATE TABLE IF NOT EXISTS cloud_sync_items (
         organization_id TEXT NOT NULL,
@@ -323,7 +325,8 @@ _BASE_SCHEMA = """
         idempotency_key TEXT NOT NULL,
         queued_at TEXT NOT NULL,
         attempts INTEGER NOT NULL DEFAULT 0,
-        last_error TEXT
+        last_error TEXT,
+        gen INTEGER NOT NULL DEFAULT 0
     );
     CREATE UNIQUE INDEX IF NOT EXISTS cloud_sync_outbox_one_per_item
         ON cloud_sync_outbox (organization_id, collection, item_id);

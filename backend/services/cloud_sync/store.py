@@ -26,6 +26,10 @@ class State:
     enabled: bool = False
     choices: dict = field(default_factory=dict)
     last_full_sync_at: Optional[str] = None
+    #: Collections skipped for a newer ``schema_version``: {collection: version seen}.
+    needs_update: dict = field(default_factory=dict)
+    #: Collections to pull from ``since=0`` once (chosen later, or newly supported).
+    full_pull: list = field(default_factory=list)
 
 
 @dataclass
@@ -48,6 +52,7 @@ class OutboxRow:
     idempotency_key: str
     attempts: int
     last_error: Optional[str]
+    gen: int = 0
 
 
 def _base(row) -> BaseItem:
@@ -59,7 +64,7 @@ def _base(row) -> BaseItem:
 
 def _outbox(row) -> OutboxRow:
     return OutboxRow(row["id"], row["organization_id"], row["collection"], row["item_id"],
-                     row["op"], row["idempotency_key"], row["attempts"], row["last_error"])
+                     row["op"], row["idempotency_key"], row["attempts"], row["last_error"], row["gen"])
 
 
 class SyncStore:
@@ -72,7 +77,8 @@ class SyncStore:
         if not row:
             return None
         return State(org, row["device_id"], row["cursor"], bool(row["enabled"]),
-                     json.loads(row["choices_json"] or "{}"), row["last_full_sync_at"])
+                     json.loads(row["choices_json"] or "{}"), row["last_full_sync_at"],
+                     json.loads(row["needs_update_json"] or "{}"), json.loads(row["full_pull_json"] or "[]"))
 
     def save_state(self, org: str, **fields: Any) -> State:
         current = self.state(org) or State(org)
@@ -81,13 +87,16 @@ class SyncStore:
         with core_db.db_conn() as conn:
             conn.execute(
                 """INSERT INTO cloud_sync_state
-                   (organization_id, device_id, cursor, enabled, choices_json, last_full_sync_at)
-                   VALUES (?,?,?,?,?,?)
+                   (organization_id, device_id, cursor, enabled, choices_json, last_full_sync_at,
+                    needs_update_json, full_pull_json)
+                   VALUES (?,?,?,?,?,?,?,?)
                    ON CONFLICT(organization_id) DO UPDATE SET device_id=excluded.device_id,
                      cursor=excluded.cursor, enabled=excluded.enabled,
-                     choices_json=excluded.choices_json, last_full_sync_at=excluded.last_full_sync_at""",
+                     choices_json=excluded.choices_json, last_full_sync_at=excluded.last_full_sync_at,
+                     needs_update_json=excluded.needs_update_json, full_pull_json=excluded.full_pull_json""",
                 (org, current.device_id, current.cursor, int(current.enabled),
-                 json.dumps(current.choices), current.last_full_sync_at),
+                 json.dumps(current.choices), current.last_full_sync_at,
+                 json.dumps(current.needs_update), json.dumps(sorted(set(current.full_pull)))),
             )
         return current
 
@@ -122,6 +131,11 @@ class SyncStore:
         with core_db.db_conn() as conn:
             self._put_item(conn, org, item)
 
+    def save_items(self, org: str, items: Iterable[dict]) -> None:
+        with core_db.db_conn() as conn:
+            for item in items:
+                self._put_item(conn, org, item)
+
     def save_page(self, org: str, items: Iterable[dict], cursor: int) -> None:
         """The pulled bases and the cursor land in one transaction."""
         with core_db.db_conn() as conn:
@@ -145,12 +159,16 @@ class SyncStore:
 
     # ── outbox ─────────────────────────────────────────────────────────
     def queue(self, org: str, collection: str, item_id: str, op: str) -> OutboxRow:
-        """One row per item: a later change only updates the op; the key is kept."""
+        """One row per item. A later change is a new logical write: same row, new key and generation.
+
+        The key is reused only when the same write is retried (the row is untouched).
+        """
         with core_db.db_conn() as conn:
             conn.execute(
                 """INSERT INTO cloud_sync_outbox (organization_id, collection, item_id, op, idempotency_key, queued_at)
                    VALUES (?,?,?,?,?,?)
-                   ON CONFLICT(organization_id, collection, item_id) DO UPDATE SET op=excluded.op""",
+                   ON CONFLICT(organization_id, collection, item_id) DO UPDATE SET op=excluded.op,
+                     idempotency_key=excluded.idempotency_key, gen=cloud_sync_outbox.gen + 1""",
                 (org, collection, item_id, op, new_idempotency_key(), _now()),
             )
             row = conn.execute(
@@ -186,9 +204,20 @@ class SyncStore:
                 "UPDATE cloud_sync_outbox SET attempts=attempts+1, last_error=? WHERE id=?", (error, row_id)
             )
 
-    def drop_outbox(self, row_id: int) -> None:
+    def drop_outbox(self, row_id: int, gen: Optional[int] = None) -> bool:
+        """Remove a pushed row; with ``gen``, only if no newer change arrived meanwhile."""
         with core_db.db_conn() as conn:
-            conn.execute("DELETE FROM cloud_sync_outbox WHERE id=?", (row_id,))
+            if gen is None:
+                return conn.execute("DELETE FROM cloud_sync_outbox WHERE id=?", (row_id,)).rowcount > 0
+            return conn.execute("DELETE FROM cloud_sync_outbox WHERE id=? AND gen=?", (row_id, gen)).rowcount > 0
+
+    def drop_deletes(self, org: str, collections: Iterable[str]) -> None:
+        with core_db.db_conn() as conn:
+            for collection in collections:
+                conn.execute(
+                    "DELETE FROM cloud_sync_outbox WHERE organization_id=? AND collection=? AND op='delete'",
+                    (org, collection),
+                )
 
     # ── renderer mirror ────────────────────────────────────────────────
     def local_seq(self) -> int:

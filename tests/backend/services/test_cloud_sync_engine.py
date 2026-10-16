@@ -167,8 +167,9 @@ def test_expired_cursor_does_a_full_resync_keeping_local_edits(env):
     prefs.set_("generation_history_cap", 41)  # changed locally after the last sync
     run(engine.run_once())
     assert server.values("settings", "history") == {"generationHistoryCap": 41}  # pushed as new
-    assert SyncStore().get_local("voicestudio.review-mode.v1") is None  # deleted elsewhere: removed here
-    assert server.values("settings", "review") is None
+    # A settings group the server no longer has keeps its local values (never wiped).
+    assert SyncStore().get_local("voicestudio.review-mode.v1") is True
+    assert store.item(ORG, "settings", "review") is None  # only the merge base is forgotten
 
 
 def test_mass_delete_waits_for_confirmation(env):
@@ -302,3 +303,132 @@ def test_device_preferences_publishes_this_devices_choices(env):
     run(engine.publish_choices())
     run(engine.push())
     assert server.values("device-preferences", "DvLocal000000001")["choices"]["settings"] is True
+
+
+# ── review findings (final review, 2026-10-16) ─────────────────────────
+
+
+def test_a_malformed_remote_item_is_skipped_and_the_round_completes(env):
+    store, server, engine = env
+    server.put_remote("settings", "appearance", {"theme": "light"})
+    bad = server.put_remote("settings", "review", None)
+    server.items[("settings", "review")] = {**bad, "deleted": False, "content": {"values": "x"}}
+    server.put_remote("settings", "history", {"generationHistoryCap": 9})
+    run(engine.run_once())
+    assert theme() == "light"
+    assert prefs.get("generation_history_cap") == 9
+    assert store.state(ORG).cursor == server.head
+
+
+def test_a_remote_tombstone_never_wipes_local_settings(env):
+    store, server, engine = env
+    server.put_remote("settings", "appearance", {"theme": "dark"})
+    run(engine.run_once())
+    server.put_remote("settings", "appearance", None)  # another device removed it from the cloud
+    run(engine.run_once())
+    assert theme() == "dark"
+
+
+def test_full_resync_keeps_local_settings_the_server_no_longer_has(env):
+    store, server, engine = env
+    server.put_remote("settings", "appearance", {"theme": "dark"})
+    run(engine.run_once())
+    run(engine.run_once())
+    server.items.clear()
+    server.oldest_cursor = server.head + 1
+    server.head += 1
+    run(engine.run_once())
+    assert theme() == "dark"
+
+
+def test_value_keys_this_version_does_not_know_survive_a_push(env):
+    store, server, engine = env
+    server.put_remote("settings", "appearance", {"theme": "dark", "x_new": {"a": 1}})
+    run(engine.run_once())
+    store.set_local("voicestudio.theme.v2", "light", origin="renderer")
+    engine.local_changed("settings", "appearance")
+    run(engine.run_once())
+    assert server.values("settings", "appearance") == {"theme": "light", "x_new": {"a": 1}}
+
+
+def test_a_newer_schema_is_not_pushed_over_and_is_pulled_once_the_app_supports_it(env, monkeypatch):
+    from services.cloud_sync import engine as engine_module
+
+    store, server, engine = env
+    server.put_remote("settings", "appearance", {"theme": "light"}, schema_version=2)
+    run(engine.run_once())
+    store.set_local("voicestudio.theme.v2", "dark", origin="renderer")
+    engine.local_changed("settings", "appearance")
+    run(engine.run_once())
+    assert server.items[("settings", "appearance")]["schema_version"] == 2
+    assert not [c for c in server.calls if c[0] == "put" and c[2] == "appearance"]
+    monkeypatch.setitem(engine_module.SUPPORTED, "settings", 2)
+    fresh = SyncEngine(store, server, ORG, sleep=engine.sleep)
+    run(fresh.run_once())
+    assert store.item(ORG, "settings", "appearance").schema_version == 2
+
+
+def test_an_edit_made_while_its_push_is_in_flight_is_not_lost(env):
+    store, server, engine = env
+    prefs.set_("generation_history_cap", 40)
+    original = server.put_item
+
+    async def edit_during_put(*args, **kwargs):
+        result = await original(*args, **kwargs)
+        prefs.set_("generation_history_cap", 41)  # the user changes it again meanwhile
+        return result
+
+    server.put_item = edit_during_put
+    run(engine.push())
+    assert len(store.outbox(ORG)) == 1
+    server.put_item = original
+    run(engine.push())
+    assert server.values("settings", "history") == {"generationHistoryCap": 41}
+
+
+def test_a_reused_idempotency_key_is_renewed_and_the_write_retried(env):
+    store, server, engine = env
+    prefs.set_("generation_history_cap", 40)
+    server.fail_next = [SyncApiError(409, "idempotency_key_reused")]
+    run(engine.push())
+    assert server.values("settings", "history") == {"generationHistoryCap": 40}
+    assert len(set(server.keys_seen)) == 1
+
+
+def test_a_batch_uses_its_own_key_not_a_rows_key(env):
+    store, server, engine = env
+    for n in range(12):
+        store.save_item(ORG, server.put_remote("settings", f"group-{n}", {"a": n}))
+        store.queue(ORG, "settings", f"group-{n}", "delete")
+    row_keys = {r.idempotency_key for r in store.outbox(ORG)}
+    keys = []
+    original = server.batch
+
+    async def record(operations, key):
+        keys.append(key)
+        return await original(operations, key)
+
+    server.batch = record
+    engine.confirm_deletes()
+    run(engine.push())
+    assert keys and keys[0] not in row_keys
+
+
+def test_choosing_a_collection_later_pulls_what_the_cloud_already_has(env):
+    store, server, engine = env
+    store.save_state(ORG, choices={"settings": True, "favorites": False})
+    server.put_remote("favorites", "gallery", {"arch-z": {"added_at": "2026-10-16T09:00:00Z"}})
+    run(engine.run_once())
+    assert SyncStore().get_local("voicestudio.gallery.favorites.v1") is None
+    store.save_state(ORG, choices={"settings": True, "favorites": True})
+    engine.collections_chosen({"favorites"})
+    run(engine.run_once())
+    assert SyncStore().get_local("voicestudio.gallery.favorites.v1") == ["arch-z"]
+
+
+def test_choosing_a_collection_again_drops_its_pending_removals(env):
+    store, server, engine = env
+    store.save_item(ORG, server.put_remote("favorites", "gallery", {"arch-a": {"added_at": "2026-10-16T09:00:00Z"}}))
+    store.queue(ORG, "favorites", "gallery", "delete")
+    engine.collections_chosen({"favorites"})
+    assert [r for r in store.outbox(ORG) if r.op == "delete"] == []

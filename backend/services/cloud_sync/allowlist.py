@@ -142,6 +142,16 @@ class Item:
     writer: Optional[Callable[[dict], None]] = None
     extra_sources: tuple[Source, ...] = ()
     prefixes: tuple[Source, ...] = ()
+    #: Value keys this version reads and writes; others are kept as they came. ``None``: every key.
+    keys: Optional[frozenset[str]] = None
+    #: One fixed item (a settings group): a cloud tombstone never wipes the local values.
+    singleton: bool = True
+
+    @property
+    def managed(self) -> Optional[frozenset[str]]:
+        if self.keys is not None:
+            return self.keys
+        return frozenset(self.slots) if self.slots else None
 
     @property
     def sources(self) -> tuple[Source, ...]:
@@ -294,6 +304,7 @@ ITEMS: tuple[Item, ...] = (
         "settings", "llm", reader=_read_llm, writer=_write_llm,
         extra_sources=(("settings", _LLM_PROVIDER),),
         prefixes=(("settings", "llm.model."), ("settings", "llm.base_url."), ("settings", "llm_skill.")),
+        keys=frozenset({"provider", "model", "baseUrl", "skills"}),
     ),
     Item("shortcuts", "global", {"dictation.toggle": Local(SHORTCUT_KEY)}),
     Item("favorites", "gallery", reader=_read_favorites, writer=_write_favorites,

@@ -77,21 +77,30 @@ def test_fresh_install_schema_matches_the_migration(tmp_path):
         assert _columns(fresh, table) == _columns(migrated, table), table
 
 
-def test_outbox_keeps_one_row_per_item_and_its_idempotency_key(store):
+def test_outbox_keeps_one_row_per_item_and_a_new_change_gets_a_new_key(store):
     first = store.queue("Org1", "settings", "appearance", "put")
     again = store.queue("Org1", "settings", "appearance", "delete")
     rows = store.outbox("Org1")
     assert len(rows) == 1
-    assert again.idempotency_key == first.idempotency_key
+    # A new local change is a new logical write: same row, new key and generation.
+    assert again.idempotency_key != first.idempotency_key
+    assert again.gen == first.gen + 1
     assert rows[0].op == "delete"
     assert 16 <= len(first.idempotency_key) <= 128
+
+
+def test_dropping_a_row_that_changed_meanwhile_keeps_it(store):
+    row = store.queue("Org1", "settings", "appearance", "put")
+    store.queue("Org1", "settings", "appearance", "put")  # edited while the push was in flight
+    assert store.drop_outbox(row.id, gen=row.gen) is False
+    assert len(store.outbox("Org1")) == 1
 
 
 def test_a_renewed_key_differs_and_drop_removes_the_row(store):
     row = store.queue("Org1", "settings", "review", "put")
     renewed = store.renew_key(row.id)
     assert renewed != row.idempotency_key
-    store.drop_outbox(row.id)
+    store.drop_outbox(row.id)  # no generation: unconditional
     assert store.outbox("Org1") == []
 
 
