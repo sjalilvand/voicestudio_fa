@@ -2172,7 +2172,13 @@
     "consent_revoke": "Intrekken",
     "consent_revoke_confirm": "Verificatie van stemeigendom intrekken? De toestemmingsopname wordt verwijderd en agentfuncties kunnen deze stem niet langer gebruiken.",
     "consent_revoked": "Verificatie ingetrokken",
-    "test_text": "Hallo – dit is een test van deze stem."
+    "test_text": "Hallo – dit is een test van deze stem.",
+    "attest_explain": "Cloudsynchronisatie deelt een stem pas nadat je bevestigt dat je hem mag gebruiken.",
+    "attest_own_voice": "Dit is mijn stem",
+    "attest_permission": "Ik heb toestemming van de spreker",
+    "attested_own_voice": "Bevestigd: dit is mijn stem",
+    "attested_permission": "Bevestigd: ik heb toestemming van de spreker",
+    "attest_clear": "Bevestiging verwijderen"
   },
   "nav": {
     "home": "Start",

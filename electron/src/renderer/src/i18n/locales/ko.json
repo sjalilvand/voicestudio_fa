@@ -2172,7 +2172,13 @@
     "consent_revoke": "취소",
     "consent_revoke_confirm": "음성 소유권 확인을 취소하시겠습니까? 동의 녹음이 삭제되고 에이전트 기능에서 더 이상 이 음성을 사용할 수 없게 됩니다.",
     "consent_revoked": "인증이 취소되었습니다.",
-    "test_text": "안녕하세요. 이 목소리에 대한 테스트입니다."
+    "test_text": "안녕하세요. 이 목소리에 대한 테스트입니다.",
+    "attest_explain": "클라우드 동기화는 사용해도 된다는 확인을 받은 후에만 음성을 공유합니다.",
+    "attest_own_voice": "제 목소리입니다",
+    "attest_permission": "화자의 허락을 받았습니다",
+    "attested_own_voice": "확인됨: 제 목소리입니다",
+    "attested_permission": "확인됨: 화자의 허락을 받았습니다",
+    "attest_clear": "확인 삭제"
   },
   "nav": {
     "home": "홈",

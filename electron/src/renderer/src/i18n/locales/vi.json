@@ -2172,7 +2172,13 @@
     "consent_revoke": "Thu hồi",
     "consent_revoke_confirm": "Thu hồi xác minh quyền sở hữu giọng nói? Bản ghi sự đồng ý sẽ bị xóa và các tính năng của nhân viên hỗ trợ sẽ không thể sử dụng giọng nói này nữa.",
     "consent_revoked": "Đã thu hồi xác minh",
-    "test_text": "Xin chào - đây là bài kiểm tra giọng nói này."
+    "test_text": "Xin chào - đây là bài kiểm tra giọng nói này.",
+    "attest_explain": "Đồng bộ đám mây chỉ chia sẻ một giọng nói sau khi bạn xác nhận mình được phép dùng nó.",
+    "attest_own_voice": "Đây là giọng của tôi",
+    "attest_permission": "Tôi có sự cho phép của người nói",
+    "attested_own_voice": "Đã xác nhận: đây là giọng của tôi",
+    "attested_permission": "Đã xác nhận: tôi có sự cho phép của người nói",
+    "attest_clear": "Gỡ xác nhận"
   },
   "nav": {
     "home": "Trang chủ",

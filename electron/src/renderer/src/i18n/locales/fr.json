@@ -2174,7 +2174,13 @@
     "consent_revoke": "Révoquer",
     "consent_revoke_confirm": "Révoquer la vérification de la propriété vocale ? L'enregistrement du consentement sera supprimé et les fonctionnalités agents ne pourront plus utiliser cette voix.",
     "consent_revoked": "Vérification révoquée",
-    "test_text": "Bonjour, c'est un test de cette voix."
+    "test_text": "Bonjour, c'est un test de cette voix.",
+    "attest_explain": "La synchronisation cloud ne partage une voix qu’après votre confirmation que vous pouvez l’utiliser.",
+    "attest_own_voice": "C’est ma voix",
+    "attest_permission": "J’ai l’autorisation de la personne",
+    "attested_own_voice": "Confirmé : c’est ma voix",
+    "attested_permission": "Confirmé : j’ai l’autorisation de la personne",
+    "attest_clear": "Retirer la confirmation"
   },
   "nav": {
     "home": "Accueil",

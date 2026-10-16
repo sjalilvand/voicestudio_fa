@@ -2174,7 +2174,13 @@
     "consent_revoke": "Revogar",
     "consent_revoke_confirm": "Revogar a verificação de propriedade de voz? A gravação de consentimento será excluída e os recursos do agente não poderão mais usar esta voz.",
     "consent_revoked": "Verificação revogada",
-    "test_text": "Olá - este é um teste desta voz."
+    "test_text": "Olá - este é um teste desta voz.",
+    "attest_explain": "A sincronização na nuvem só partilha uma voz depois de confirmar que a pode usar.",
+    "attest_own_voice": "Esta é a minha voz",
+    "attest_permission": "Tenho a autorização da pessoa que fala",
+    "attested_own_voice": "Confirmado: esta é a minha voz",
+    "attested_permission": "Confirmado: tenho a autorização da pessoa que fala",
+    "attest_clear": "Remover confirmação"
   },
   "nav": {
     "home": "Início",

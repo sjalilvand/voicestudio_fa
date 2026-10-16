@@ -2172,7 +2172,13 @@
     "consent_revoke": "Cabut",
     "consent_revoke_confirm": "Cabut verifikasi kepemilikan suara? Rekaman persetujuan akan dihapus dan fitur agen tidak dapat lagi menggunakan suara ini.",
     "consent_revoked": "Verifikasi dicabut",
-    "test_text": "Halo - ini adalah ujian untuk suara ini."
+    "test_text": "Halo - ini adalah ujian untuk suara ini.",
+    "attest_explain": "Sinkronisasi cloud hanya membagikan suara setelah Anda mengonfirmasi bahwa Anda boleh menggunakannya.",
+    "attest_own_voice": "Ini suara saya",
+    "attest_permission": "Saya punya izin dari pembicara",
+    "attested_own_voice": "Dikonfirmasi: ini suara saya",
+    "attested_permission": "Dikonfirmasi: saya punya izin dari pembicara",
+    "attest_clear": "Hapus konfirmasi"
   },
   "nav": {
     "home": "Beranda",

@@ -2172,7 +2172,13 @@
     "consent_revoke": "İptal et",
     "consent_revoke_confirm": "Ses sahipliği doğrulaması iptal edilsin mi? İzin kaydı silinecek ve temsilci özellikleri artık bu sesi kullanamayacak.",
     "consent_revoked": "Doğrulama iptal edildi",
-    "test_text": "Merhaba — bu, bu sesin bir testidir."
+    "test_text": "Merhaba — bu, bu sesin bir testidir.",
+    "attest_explain": "Bulut eşitleme, bir sesi yalnızca onu kullanabileceğini onayladıktan sonra paylaşır.",
+    "attest_own_voice": "Bu benim sesim",
+    "attest_permission": "Konuşan kişinin iznine sahibim",
+    "attested_own_voice": "Onaylandı: bu benim sesim",
+    "attested_permission": "Onaylandı: konuşan kişinin iznine sahibim",
+    "attest_clear": "Onayı kaldır"
   },
   "nav": {
     "home": "Ana sayfa",

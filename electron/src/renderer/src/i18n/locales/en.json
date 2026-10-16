@@ -2248,7 +2248,13 @@
     "locked": "Locked",
     "locked_explain": "This voice is bit-reproducible. Every generation uses the same reference + seed.",
     "unlock": "Unlock",
-    "test_text": "Hello — this is a test of this voice."
+    "test_text": "Hello — this is a test of this voice.",
+    "attest_explain": "Cloud sync shares a voice only after you confirm you may use it.",
+    "attest_own_voice": "This is my voice",
+    "attest_permission": "I have the speaker’s permission",
+    "attested_own_voice": "Confirmed: this is my voice",
+    "attested_permission": "Confirmed: I have the speaker’s permission",
+    "attest_clear": "Remove confirmation"
   },
   "profiles": {
     "locked": "Voice locked! Identity is now consistent across all generations.",

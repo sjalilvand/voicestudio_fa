@@ -2172,7 +2172,13 @@
     "consent_revoke": "Widerrufen",
     "consent_revoke_confirm": "Bestätigung der Sprachinhaberschaft widerrufen? Die Einwilligungsaufzeichnung wird gelöscht und Agentenfunktionen können diese Stimme nicht mehr verwenden.",
     "consent_revoked": "Verifizierung widerrufen",
-    "test_text": "Hallo, dies ist ein Test dieser Stimme."
+    "test_text": "Hallo, dies ist ein Test dieser Stimme.",
+    "attest_explain": "Die Cloud-Synchronisierung teilt eine Stimme erst, wenn du bestätigst, dass du sie verwenden darfst.",
+    "attest_own_voice": "Das ist meine Stimme",
+    "attest_permission": "Ich habe die Erlaubnis der sprechenden Person",
+    "attested_own_voice": "Bestätigt: Das ist meine Stimme",
+    "attested_permission": "Bestätigt: Ich habe die Erlaubnis der sprechenden Person",
+    "attest_clear": "Bestätigung entfernen"
   },
   "nav": {
     "home": "Start",

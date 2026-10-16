@@ -2176,7 +2176,13 @@
     "consent_revoke": "Odwołaj",
     "consent_revoke_confirm": "Cofnąć weryfikację własności głosu? Nagranie zgody zostanie usunięte, a funkcje agenta nie będą już mogły używać tego głosu.",
     "consent_revoked": "Weryfikacja odwołana",
-    "test_text": "Witamy — to jest test tego głosu."
+    "test_text": "Witamy — to jest test tego głosu.",
+    "attest_explain": "Synchronizacja w chmurze udostępnia głos dopiero po potwierdzeniu, że możesz go używać.",
+    "attest_own_voice": "To mój głos",
+    "attest_permission": "Mam zgodę osoby mówiącej",
+    "attested_own_voice": "Potwierdzono: to mój głos",
+    "attested_permission": "Potwierdzono: mam zgodę osoby mówiącej",
+    "attest_clear": "Usuń potwierdzenie"
   },
   "nav": {
     "home": "Strona główna",

@@ -2172,7 +2172,13 @@
     "consent_revoke": "Återkalla",
     "consent_revoke_confirm": "Återkalla verifiering av röstägande? Samtyckesinspelningen kommer att raderas och agentfunktioner kommer inte längre att kunna använda denna röst.",
     "consent_revoked": "Verifieringen återkallad",
-    "test_text": "Hej – det här är ett test av denna röst."
+    "test_text": "Hej – det här är ett test av denna röst.",
+    "attest_explain": "Molnsynkning delar en röst först när du har bekräftat att du får använda den.",
+    "attest_own_voice": "Det här är min röst",
+    "attest_permission": "Jag har talarens tillstånd",
+    "attested_own_voice": "Bekräftat: det här är min röst",
+    "attested_permission": "Bekräftat: jag har talarens tillstånd",
+    "attest_clear": "Ta bort bekräftelse"
   },
   "nav": {
     "home": "Hem",

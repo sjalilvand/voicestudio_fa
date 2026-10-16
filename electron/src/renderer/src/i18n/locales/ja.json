@@ -2172,7 +2172,13 @@
     "consent_revoke": "取り消し",
     "consent_revoke_confirm": "音声所有権の確認を取り消しますか?同意の録音は削除され、エージェント機能はこの音声を使用できなくなります。",
     "consent_revoked": "検証が取り消されました",
-    "test_text": "こんにちは — これはこの音声のテストです。"
+    "test_text": "こんにちは — これはこの音声のテストです。",
+    "attest_explain": "クラウド同期は、使用してよいことを確認した後にのみボイスを共有します。",
+    "attest_own_voice": "これは自分の声です",
+    "attest_permission": "話者の許可を得ています",
+    "attested_own_voice": "確認済み：自分の声です",
+    "attested_permission": "確認済み：話者の許可を得ています",
+    "attest_clear": "確認を取り消す"
   },
   "nav": {
     "home": "ホーム",

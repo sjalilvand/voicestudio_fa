@@ -2172,7 +2172,13 @@
     "consent_revoke": "撤銷",
     "consent_revoke_confirm": "撤銷語音所有權驗證？同意錄音將被刪除，代理功能將無法再使用此語音。",
     "consent_revoked": "驗證已撤銷",
-    "test_text": "你好——這是對這個聲音的測試。"
+    "test_text": "你好——這是對這個聲音的測試。",
+    "attest_explain": "只有在你確認有權使用某個聲音後，雲端同步才會分享它。",
+    "attest_own_voice": "這是我的聲音",
+    "attest_permission": "我已取得說話者的許可",
+    "attested_own_voice": "已確認：這是我的聲音",
+    "attested_permission": "已確認：我已取得說話者的許可",
+    "attest_clear": "移除確認"
   },
   "nav": {
     "home": "首頁",
