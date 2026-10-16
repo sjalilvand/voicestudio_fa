@@ -18,6 +18,7 @@ from services.cloud_sync import allowlist
 from services.cloud_sync.client import CloudOff, SyncApiError, SyncClient
 from services.cloud_sync.engine import DEVICE_PREFERENCES, SyncEngine, _values
 from services.cloud_sync.events import POLL_SECONDS, EventStream
+from services.cloud_sync.record_ids import ensure_sync_ids
 from services.cloud_sync.store import SyncStore, new_idempotency_key
 
 logger = logging.getLogger("omnivoice.cloud_sync")
@@ -196,6 +197,8 @@ class CloudSyncService:
                                                        new_idempotency_key())
             device_id = device["id"]
             self.client.device_id = device_id
+        # Records get their sync_id the first time sync is turned on (S2 prep).
+        await asyncio.to_thread(ensure_sync_ids)
         # Turning sync (back) on: full pull and merge before any push (seeded first sync).
         self.store.save_state(org, device_id=device_id, enabled=True, choices=clean_choices(choices),
                               last_full_sync_at=None)

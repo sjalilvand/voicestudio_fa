@@ -57,7 +57,10 @@ _BASE_SCHEMA = """
         consent_recorded_at REAL DEFAULT NULL,
         kind TEXT DEFAULT 'clone',
         vd_states TEXT DEFAULT NULL,
-        created_at REAL
+        created_at REAL,
+        sync_id TEXT DEFAULT NULL,
+        consent_basis TEXT DEFAULT '',
+        consent_attested_at TEXT DEFAULT NULL
     );
     CREATE TABLE IF NOT EXISTS generation_history (
         id TEXT PRIMARY KEY,

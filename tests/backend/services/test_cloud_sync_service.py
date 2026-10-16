@@ -145,3 +145,18 @@ def test_setting_up_again_after_removal_registers_a_new_device(setup):
     first = asyncio.run(body())
     assert [c[0] for c in server.calls].count("register_device") == 2
     assert SyncStore().state(ORG).device_id != first
+
+
+def test_turning_sync_on_gives_every_voice_a_sync_id(setup):
+    service, _, _, _ = setup
+    with sqlite3.connect(core_db.DB_PATH) as conn:
+        conn.execute("INSERT INTO voice_profiles (id, name, created_at) VALUES ('ab12cd34', 'Mine', 1)")
+
+    async def body():
+        await service.turn_on({"settings": True})
+        await service.stop()
+
+    asyncio.run(body())
+    with sqlite3.connect(core_db.DB_PATH) as conn:
+        sync_id = conn.execute("SELECT sync_id FROM voice_profiles WHERE id='ab12cd34'").fetchone()[0]
+    assert sync_id and len(sync_id) == 16
