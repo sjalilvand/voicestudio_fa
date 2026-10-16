@@ -45,19 +45,24 @@ def test_bridge_env_is_removed_from_os_environ(monkeypatch):
     cloud_account._configure("", "")
 
 
-def test_returns_and_caches_the_token(bridge):
+def test_returns_the_token(bridge):
     calls, _ = bridge
-    assert cloud_account.access_token() == "acc"
     assert cloud_account.access_token() == "acc"
     assert calls == ["Bearer cap"]
 
 
-def test_invalidate_forces_a_new_ask(bridge):
-    calls, _ = bridge
-    cloud_account.access_token()
-    cloud_account.invalidate()
-    cloud_account.access_token()
-    assert len(calls) == 2
+def test_switching_off_takes_effect_on_the_very_next_call(bridge):
+    """No backend-side cache: main's answer is the switch, asked every time."""
+    _, answer = bridge
+    assert cloud_account.access_token() == "acc"
+    answer["body"] = {"signed_in": False}
+    assert cloud_account.access_token() is None
+
+
+def test_a_non_object_answer_is_no_token(bridge):
+    _, answer = bridge
+    answer["body"] = ["not", "an", "object"]
+    assert cloud_account.access_token() is None
 
 
 def test_signed_out_or_switched_off_is_none(bridge):
