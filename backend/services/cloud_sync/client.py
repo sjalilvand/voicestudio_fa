@@ -87,8 +87,11 @@ class SyncClient:
         return response.json() if response.content else {}
 
     # ── devices ────────────────────────────────────────────────────────
-    async def register_device(self, name: str, platform: str, app: str, app_version: str, key: str) -> dict:
+    async def register_device(self, name: str, platform: str, app: str, app_version: str, key: str,
+                              os_version: str = "") -> dict:
         body = {"name": name, "platform": platform, "app": app, "app_version": app_version}
+        if os_version:
+            body["os_version"] = os_version  # informational (devices-and-sessions)
         return (await self._call("POST", "/devices", json=body, device=False, key=key))["device"]
 
     async def list_devices(self) -> list[dict]:

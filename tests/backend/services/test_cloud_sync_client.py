@@ -48,10 +48,12 @@ def test_put_sends_if_match_idempotency_device_and_bearer():
 
 def test_device_registration_sends_no_device_header():
     client, seen = make(lambda r: httpx.Response(201, json={"device": {"id": "Dv1"}}), device=None)
-    device = run(client.register_device("Studio PC", "linux", "oss", "0.6.0", "k" * 32))
+    device = run(client.register_device("Studio PC", "linux", "oss", "0.6.0", "k" * 32, os_version="Linux 6.12"))
     assert device == {"id": "Dv1"}
     assert "x-sync-device" not in seen[0].headers
-    assert json.loads(seen[0].content) == {"name": "Studio PC", "platform": "linux", "app": "oss", "app_version": "0.6.0"}
+    assert json.loads(seen[0].content) == {
+        "name": "Studio PC", "platform": "linux", "app": "oss", "app_version": "0.6.0", "os_version": "Linux 6.12",
+    }
 
 
 def test_changes_query():

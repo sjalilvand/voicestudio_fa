@@ -160,3 +160,28 @@ it('reports a full cloud, offline state and conflicts', async () => {
   expect(screen.getByText('account.offline')).toBeInTheDocument();
   expect(screen.getByText(/cloudsync.conflict/)).toBeInTheDocument();
 });
+
+it('lists each device with its OS and last-seen date, and removes only other devices', async () => {
+  show({}, [
+    {
+      id: 'DvLocal000000001',
+      name: 'Studio PC',
+      platform: 'linux',
+      os_version: 'Linux 6.12',
+      current: true,
+      last_seen_at: '2026-10-16T09:00:00Z',
+    },
+    {
+      id: 'Lp0aB1cD2eF3gH4i',
+      name: 'MacBook',
+      platform: 'macos',
+      os_version: 'macOS 15.1',
+      current: false,
+      last_seen_at: '2026-10-15T22:14:03Z',
+    },
+  ]);
+  expect(await screen.findByText('MacBook')).toBeInTheDocument();
+  expect(screen.getByText(/macOS 15\.1/)).toBeInTheDocument();
+  expect(screen.getByText(/Linux 6\.12/)).toBeInTheDocument();
+  expect(screen.getAllByText('cloudsync.remove_device')).toHaveLength(1);
+});

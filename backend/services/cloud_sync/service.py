@@ -32,6 +32,19 @@ def _platform() -> str:
     return {"darwin": "macos", "windows": "windows"}.get(system, "linux")
 
 
+def _os_version() -> str:
+    """Short OS label shown in the Devices list: "macOS 15.1", "Windows 10.0.22631", "Linux 6.12"."""
+    system = platform.system()
+    if system == "Darwin":
+        label = f"macOS {platform.mac_ver()[0]}".strip()
+    elif system == "Windows":
+        label = f"Windows {platform.version()}".strip()
+    else:
+        label = f"{system or 'Linux'} {platform.release().split('-')[0]}".strip()
+    clean = "".join(ch for ch in label if ch.isprintable())
+    return (clean or "unknown")[:64]
+
+
 def _device_name() -> str:
     name = (socket.gethostname() or "VoiceStudio").split(".")[0].strip()
     return (name or "VoiceStudio")[:64]
@@ -247,7 +260,7 @@ class CloudSyncService:
         device_id = state.device_id if state else None
         if not device_id:
             device = await self.client.register_device(_device_name(), _platform(), self.app, APP_VERSION,
-                                                       new_idempotency_key())
+                                                       new_idempotency_key(), os_version=_os_version())
             device_id = device["id"]
             self.client.device_id = device_id
         # Records get their sync_id the first time sync is turned on (S2 prep).

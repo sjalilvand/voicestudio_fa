@@ -47,6 +47,7 @@ interface Device {
   id: string;
   name: string;
   platform: string;
+  os_version?: string;
   current?: boolean;
   last_seen_at?: string;
 }
@@ -277,22 +278,39 @@ export function CloudSyncPanel() {
       {(devices.data?.devices.length ?? 0) > 0 && (
         <div className="space-y-2">
           <p className="text-sm font-medium">{t('cloudsync.devices')}</p>
-          {devices.data!.devices.map((device) => (
-            <div key={device.id} className="flex items-center justify-between gap-2 text-sm">
-              <span>
-                <span>{device.name}</span>
-                {device.current || device.id === view.device_id ? (
-                  <span className="text-muted-foreground"> · {t('cloudsync.this_device')}</span>
-                ) : null}
-              </span>
-              <Button
-                variant="ghost"
-                onClick={() => void act(`/api/cloud-sync/devices/${device.id}/revoke`)}
-              >
-                {t('cloudsync.remove_device')}
-              </Button>
-            </div>
-          ))}
+          {devices.data!.devices.map((device) => {
+            const here = device.current || device.id === view.device_id;
+            const details = [
+              device.os_version || device.platform,
+              device.last_seen_at ? new Date(device.last_seen_at).toLocaleDateString() : null,
+            ].filter(Boolean);
+            return (
+              <div key={device.id} className="flex items-center justify-between gap-2 text-sm">
+                <span className="min-w-0">
+                  <span className="block truncate">
+                    {device.name}
+                    {here && (
+                      <span className="text-muted-foreground"> · {t('cloudsync.this_device')}</span>
+                    )}
+                  </span>
+                  {details.length > 0 && (
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {details.join(' · ')}
+                    </span>
+                  )}
+                </span>
+                {/* This device leaves sync by switching it off; Remove is for the others. */}
+                {!here && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => void act(`/api/cloud-sync/devices/${device.id}/revoke`)}
+                  >
+                    {t('cloudsync.remove_device')}
+                  </Button>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
       {failed && (

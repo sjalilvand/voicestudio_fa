@@ -43,7 +43,7 @@ class FakeSyncServer:
             raise self.fail_next.pop(0)
 
     # SyncClient interface
-    async def register_device(self, name, platform, app, app_version, key):
+    async def register_device(self, name, platform, app, app_version, key, os_version=""):
         self._guard("register_device", name)
         device = {"id": f"Dv{len(self.devices):014d}", "name": name, "platform": platform, "app": app}
         self.devices[device["id"]] = device

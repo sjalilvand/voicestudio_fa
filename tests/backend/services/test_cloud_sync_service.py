@@ -236,9 +236,9 @@ def test_turning_off_while_turning_on_wins(setup):
     gate = asyncio.Event()
     original = server.register_device
 
-    async def slow_register(*args):
+    async def slow_register(*args, **kwargs):
         await gate.wait()
-        return await original(*args)
+        return await original(*args, **kwargs)
 
     server.register_device = slow_register
 
@@ -297,3 +297,11 @@ def test_signing_in_to_another_account_restarts_on_its_organization(setup):
         await service.stop()
 
     asyncio.run(body())
+
+
+def test_os_version_is_short_single_line_text():
+    from services.cloud_sync.service import _os_version
+
+    value = _os_version()
+    assert 1 <= len(value) <= 64
+    assert "\n" not in value and "\r" not in value and "\x00" not in value
