@@ -49,13 +49,23 @@ def test_snap_store_workflow_builds_strict_snap_and_uploads_only_tags_to_candida
     import os
     import subprocess
 
-    for tag, ok in [("v0.5.8", True), ("v0.6.0-rc.1", False), ("v0.5", False)]:
+    import json
+
+    version = json.loads((ROOT / "package.json").read_text())["version"]
+    for tag, error in [
+        (f"v{version}", None),
+        (f"v{version}-rc.1", "is not a final"),
+        ("v0.5", "is not a final"),
+        ("v999.0.0", "does not match package.json"),
+    ]:
         result = subprocess.run(
             ["bash", "-e", "-c", tag_guard["run"]],
             cwd=ROOT, capture_output=True, text=True,
             env=dict(os.environ, GITHUB_REF_NAME=tag),
         )
-        assert ("is not a final" not in result.stdout) == ok, (tag, result.stdout)
+        assert (result.returncode == 0) == (error is None), (tag, result.stdout)
+        if error:
+            assert error in result.stdout, (tag, result.stdout)
     command = next(
         step["run"]
         for step in package["steps"]
