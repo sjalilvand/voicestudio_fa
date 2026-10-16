@@ -30,13 +30,14 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
-def access_token() -> Optional[str]:
-    """The current access token, or None when the app says no Cloud call may be made."""
+def _ask(fresh: bool = False) -> Optional[dict]:
+    """Main's answer, or None when no Cloud call may be made."""
     target = urlsplit(_url)
     if target.scheme != "http" or target.hostname != "127.0.0.1" or not _capability:
         return None
     request = urllib.request.Request(
-        _url + "/token", headers={"Authorization": "Bearer " + _capability}
+        _url + ("/token?fresh=1" if fresh else "/token"),
+        headers={"Authorization": "Bearer " + _capability},
     )
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
     try:
@@ -47,4 +48,31 @@ def access_token() -> Optional[str]:
     if not isinstance(body, dict) or not body.get("signed_in"):
         return None
     token = body.get("access_token")
-    return token if isinstance(token, str) and token else None
+    return body if isinstance(token, str) and token else None
+
+
+def access_token(fresh: bool = False) -> Optional[str]:
+    """The current access token, or None when the app says no Cloud call may be made.
+
+    ``fresh=True`` tells main the last token was rejected (401), so it refreshes.
+    """
+    body = _ask(fresh)
+    return body["access_token"] if body else None
+
+
+def _usable_endpoint(url: object) -> bool:
+    if not isinstance(url, str):
+        return False
+    parts = urlsplit(url)
+    return parts.scheme == "https" or (parts.scheme == "http" and parts.hostname == "127.0.0.1")
+
+
+def session() -> Optional[dict]:
+    """Token, Organization and sync endpoint for the engine; None means stay idle."""
+    body = _ask()
+    if not body or not isinstance(body.get("organization_id"), str) or not body["organization_id"]:
+        return None
+    if not _usable_endpoint(body.get("sync_api")):
+        return None
+    return {"access_token": body["access_token"], "organization_id": body["organization_id"],
+            "sync_api": body["sync_api"]}

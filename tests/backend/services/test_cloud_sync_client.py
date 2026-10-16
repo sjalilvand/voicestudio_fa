@@ -90,3 +90,23 @@ def test_no_token_means_no_request():
     with pytest.raises(CloudOff):
         run(client.usage())
     assert seen == []
+
+
+def test_a_rejected_token_is_replaced_once_then_the_call_retried():
+    answers = [httpx.Response(401, json={"error": {"code": "unauthenticated"}}), httpx.Response(200, json={"used_bytes": 1})]
+    asked = []
+
+    def token(fresh=False):
+        asked.append(fresh)
+        return "fresh" if fresh else "stale"
+
+    seen = []
+
+    def handler(request):
+        seen.append(request.headers["authorization"])
+        return answers.pop(0)
+
+    client = SyncClient(BASE, "Or1", token=token, device_id="Dv1", transport=httpx.MockTransport(handler))
+    assert run(client.usage()) == {"used_bytes": 1}
+    assert asked == [False, True]
+    assert seen == ["Bearer stale", "Bearer fresh"]

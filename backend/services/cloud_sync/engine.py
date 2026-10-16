@@ -82,6 +82,8 @@ class SyncEngine:
         self._lock = asyncio.Lock()
         self._deletes_confirmed = False
         self._on_local_change = on_local_change
+        #: Collections just switched off with "Also remove from the cloud": their deletes still go out.
+        self.draining: set[str] = set()
 
     # ── wiring ─────────────────────────────────────────────────────────
     def attach_hooks(self) -> Callable[[], None]:
@@ -282,7 +284,8 @@ class SyncEngine:
             return
         chosen = self.chosen()
         rows = [r for r in self.store.outbox(self.org)
-                if r.collection in chosen and r.collection not in self.status.paused]
+                if (r.collection in chosen or (r.collection in self.draining and r.op == "delete"))
+                and r.collection not in self.status.paused]
         rows = self._guard_mass_delete(rows)
         skip: set[str] = set()
         if len(rows) > BATCH_THRESHOLD and await self._push_batch(rows[:BATCH_MAX]):

@@ -11,7 +11,7 @@ from typing import Any, AsyncIterator, Callable, Optional
 
 import httpx
 
-TokenProvider = Callable[[], Optional[str]]
+TokenProvider = Callable[..., Optional[str]]  # token(fresh=False)
 
 
 class CloudOff(Exception):
@@ -61,8 +61,8 @@ class SyncClient:
         await self._http.aclose()
 
     async def _headers(self, *, device: bool = True, key: Optional[str] = None,
-                       if_match: Optional[int] = None) -> dict[str, str]:
-        token = await asyncio.to_thread(self._token)
+                       if_match: Optional[int] = None, fresh: bool = False) -> dict[str, str]:
+        token = await asyncio.to_thread(self._token, True) if fresh else await asyncio.to_thread(self._token)
         if not token:
             raise CloudOff()
         headers = {"Authorization": f"Bearer {token}"}
@@ -78,6 +78,10 @@ class SyncClient:
                     device: bool = True, key: Optional[str] = None, if_match: Optional[int] = None) -> Any:
         headers = await self._headers(device=device, key=key, if_match=if_match)
         response = await self._http.request(method, self.base + path, json=json, params=params, headers=headers)
+        if response.status_code == 401:
+            # Refresh once (main replaces the token), then retry the same request.
+            headers = await self._headers(device=device, key=key, if_match=if_match, fresh=True)
+            response = await self._http.request(method, self.base + path, json=json, params=params, headers=headers)
         if response.status_code >= 400:
             raise _error(response)
         return response.json() if response.content else {}
