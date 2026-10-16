@@ -38,6 +38,8 @@ const REFRESH_MARGIN_MS = 60_000;
 
 export class AccountSession {
   private access: AccessToken | null = null;
+  /** Bumped whenever a session ends, so a token request already in flight is discarded. */
+  private generation = 0;
   private inflight: Promise<AccessToken | null> | null = null;
   private closeLoopback: (() => void) | null = null;
   private signingIn = false;
@@ -70,6 +72,7 @@ export class AccountSession {
     if (!this.deps.switches.get().accountEnabled) throw new CloudDisabledError();
     if (this.signingIn) return;
     const pkce = createPkce();
+    const generation = this.generation;
     this.signingIn = true;
     this.notice = null;
     this.emit();
@@ -83,7 +86,8 @@ export class AccountSession {
       await this.deps.openExternal(this.deps.oidc.authorizeUrl(endpoints, lb.redirectUri, pkce));
       const code = await lb.code;
       if (!this.deps.switches.get().accountEnabled) throw new CloudDisabledError();
-      this.accept(await this.deps.oidc.exchangeCode(code, lb.redirectUri, pkce.verifier));
+      const tokens = await this.deps.oidc.exchangeCode(code, lb.redirectUri, pkce.verifier);
+      if (!this.accept(tokens, generation)) throw new CloudDisabledError();
     } catch (error) {
       if (!(error instanceof CloudDisabledError)) this.notice = 'sign_in_failed';
       throw error;
@@ -119,6 +123,7 @@ export class AccountSession {
   }
 
   endSession(notice: SessionNotice): void {
+    this.generation += 1;
     this.access = null;
     this.deps.store.clear();
     this.notice = notice;
@@ -126,10 +131,11 @@ export class AccountSession {
   }
 
   private async refresh(): Promise<AccessToken | null> {
+    const generation = this.generation;
     const refresh = this.deps.store.load();
     if (!refresh) return null;
     try {
-      this.accept(await this.deps.oidc.refresh(refresh));
+      if (!this.accept(await this.deps.oidc.refresh(refresh), generation)) return null;
       if (this.notice === 'offline') {
         this.notice = null;
         this.emit();
@@ -149,12 +155,15 @@ export class AccountSession {
     }
   }
 
-  private accept(tokens: TokenResponse): void {
+  /** Stores the tokens unless the session ended (sign-out or switch-off) since `generation`. */
+  private accept(tokens: TokenResponse, generation: number): boolean {
+    if (generation !== this.generation || !this.deps.switches.get().accountEnabled) return false;
     this.deps.store.save(tokens.refresh_token);
     this.access = {
       access_token: tokens.access_token,
       expires_at: this.now() + tokens.expires_in * 1000,
     };
+    return true;
   }
 
   private async turnedOff(): Promise<void> {

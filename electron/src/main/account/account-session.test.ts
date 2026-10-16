@@ -169,3 +169,52 @@ it('backoff doubles from 1 s and caps at 5 min', () => {
   expect([0, 1, 2, 3].map(backoffDelay)).toEqual([1000, 2000, 4000, 8000]);
   expect(backoffDelay(20)).toBe(300_000);
 });
+
+function deferred<T>() {
+  let resolve!: (v: T) => void;
+  const promise = new Promise<T>((r) => (resolve = r));
+  return { promise, resolve };
+}
+const late = (refresh: string) => ({
+  access_token: `a-${refresh}`, refresh_token: refresh, expires_in: 300, scope: 'openid offline_access',
+});
+
+it('sign-out during an in-flight refresh stays signed out', async () => {
+  const h = harness();
+  h.store.save('r1');
+  const pending = deferred<ReturnType<typeof late>>();
+  h.oidc.refresh.mockReturnValueOnce(pending.promise);
+  const token = h.session.getAccessToken();
+  await h.session.signOut();
+  pending.resolve(late('r2'));
+  expect(await token).toBeNull();
+  expect(h.store.load()).toBeNull();
+  expect(h.session.state().signedIn).toBe(false);
+});
+
+it('switching account features off during an in-flight refresh stores nothing', async () => {
+  const h = harness();
+  h.store.save('r1');
+  const pending = deferred<ReturnType<typeof late>>();
+  h.oidc.refresh.mockReturnValueOnce(pending.promise);
+  const token = h.session.getAccessToken();
+  h.switches.set({ accountEnabled: false });
+  pending.resolve(late('r2'));
+  expect(await token).toBeNull();
+  expect(h.store.load()).toBeNull();
+});
+
+it('switching off while the code exchange is in flight stores nothing', async () => {
+  const h = harness();
+  const pending = deferred<ReturnType<typeof late>>();
+  h.oidc.exchangeCode.mockReturnValueOnce(pending.promise);
+  const done = h.session.signIn().catch(() => {});
+  await vi.waitFor(() => expect(h.openExternal).toHaveBeenCalled());
+  h.resolveCode('code');
+  await vi.waitFor(() => expect(h.oidc.exchangeCode).toHaveBeenCalled());
+  h.switches.set({ accountEnabled: false });
+  pending.resolve(late('r9'));
+  await done;
+  expect(h.store.load()).toBeNull();
+  expect(h.session.state().signedIn).toBe(false);
+});
