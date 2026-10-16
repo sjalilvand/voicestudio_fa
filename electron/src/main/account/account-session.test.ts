@@ -176,7 +176,10 @@ function deferred<T>() {
   return { promise, resolve };
 }
 const late = (refresh: string) => ({
-  access_token: `a-${refresh}`, refresh_token: refresh, expires_in: 300, scope: 'openid offline_access',
+  access_token: `a-${refresh}`,
+  refresh_token: refresh,
+  expires_in: 300,
+  scope: 'openid offline_access',
 });
 
 it('sign-out during an in-flight refresh stays signed out', async () => {
