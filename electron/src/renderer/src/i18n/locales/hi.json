@@ -2309,7 +2309,9 @@
     "feature_pro": "VoiceStudio Pro सुविधाएँ",
     "included": "शामिल",
     "not_included": "आपके प्लान में नहीं",
-    "plan_ends": "{{date}} तक"
+    "plan_ends": "{{date}} तक",
+    "details_failed": "आपके खाते का विवरण लोड नहीं हो सका ({{reason}})।",
+    "retry": "फिर कोशिश करें"
   },
   "cloudsync": {
     "unavailable": "सिंक अभी उपलब्ध नहीं है।",

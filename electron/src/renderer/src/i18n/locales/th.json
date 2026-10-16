@@ -2309,7 +2309,9 @@
     "feature_pro": "ฟีเจอร์ VoiceStudio Pro",
     "included": "รวมอยู่",
     "not_included": "ไม่รวมในแพ็กเกจของคุณ",
-    "plan_ends": "ถึง {{date}}"
+    "plan_ends": "ถึง {{date}}",
+    "details_failed": "โหลดรายละเอียดบัญชีของคุณไม่ได้ ({{reason}})",
+    "retry": "ลองอีกครั้ง"
   },
   "cloudsync": {
     "unavailable": "การซิงค์ไม่พร้อมใช้งานในขณะนี้",

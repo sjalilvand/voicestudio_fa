@@ -1,5 +1,6 @@
 import { CheckIcon, MinusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import type { AccountPublicState } from '../../../../preload/index.d';
 
@@ -19,9 +20,27 @@ function initials(name: string): string {
 }
 
 /** Who is signed in, their plan and storage, and what the plan includes (Settings → Account). */
-export function AccountDetails({ state }: { state: AccountPublicState }) {
+export function AccountDetails({
+  state,
+  onRetry,
+}: {
+  state: AccountPublicState;
+  onRetry?: () => void;
+}) {
   const { t } = useTranslation();
   const profile = state.profile;
+  if (state.signedIn && !profile && state.profileError)
+    return (
+      <div
+        role="alert"
+        className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 p-4 text-sm"
+      >
+        <span>{t('account.details_failed', { reason: state.profileError })}</span>
+        <Button type="button" size="sm" variant="outline" onClick={onRetry}>
+          {t('account.retry')}
+        </Button>
+      </div>
+    );
   if (!state.signedIn || !profile) return null;
   const name = profile.displayName || profile.email || '';
   const plan = state.plan;

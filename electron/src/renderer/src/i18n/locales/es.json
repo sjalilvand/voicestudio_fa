@@ -2311,7 +2311,9 @@
     "feature_pro": "Funciones de VoiceStudio Pro",
     "included": "Incluido",
     "not_included": "No incluido en tu plan",
-    "plan_ends": "hasta el {{date}}"
+    "plan_ends": "hasta el {{date}}",
+    "details_failed": "No se pudieron cargar los datos de tu cuenta ({{reason}}).",
+    "retry": "Reintentar"
   },
   "cloudsync": {
     "unavailable": "La sincronización no está disponible ahora.",

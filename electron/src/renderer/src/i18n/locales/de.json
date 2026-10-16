@@ -2309,7 +2309,9 @@
     "feature_pro": "VoiceStudio-Pro-Funktionen",
     "included": "Enthalten",
     "not_included": "Nicht in deinem Tarif",
-    "plan_ends": "bis {{date}}"
+    "plan_ends": "bis {{date}}",
+    "details_failed": "Deine Kontodaten konnten nicht geladen werden ({{reason}}).",
+    "retry": "Erneut versuchen"
   },
   "cloudsync": {
     "unavailable": "Die Synchronisierung ist gerade nicht verfügbar.",

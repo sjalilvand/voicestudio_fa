@@ -27,6 +27,7 @@ type PlanState = Omit<AccountPlan, 'settingsSync' | 'proDesktop'> & {
 export class AccountController {
   private profile: AccountProfile | null = null;
   private plan: PlanState | null = null;
+  private profileError: string | null = null;
 
   constructor(
     private readonly parts: {
@@ -56,8 +57,16 @@ export class AccountController {
     if (!s.signedIn) {
       this.profile = null;
       this.plan = null;
+      this.profileError = null;
     } else if (refreshProfile || !this.profile) {
-      this.profile = await this.parts.api.get().catch(() => this.profile);
+      try {
+        this.profile = await this.parts.api.get();
+        this.profileError = null;
+      } catch (error) {
+        // Shown on the account screen (status only), so a missing name or plan is never silent.
+        const status = (error as { status?: number }).status;
+        this.profileError = status ? String(status) : 'offline';
+      }
       const org = this.profile?.personalOrganizationId;
       const full = org ? await this.parts.api.entitlements(org).catch(() => null) : null;
       const summary = this.profile?.summary;
@@ -77,7 +86,15 @@ export class AccountController {
           avatarUrl: await this.parts.api.avatar(this.profile).catch(() => null),
         }
       : null;
-    return { available, ...sw, remembered, ...s, profile, plan: s.signedIn ? this.plan : null };
+    return {
+      available,
+      ...sw,
+      remembered,
+      ...s,
+      profile,
+      plan: s.signedIn ? this.plan : null,
+      profileError: s.signedIn ? this.profileError : null,
+    };
   }
 
   async setSwitches(raw: unknown): Promise<AccountPublicState> {

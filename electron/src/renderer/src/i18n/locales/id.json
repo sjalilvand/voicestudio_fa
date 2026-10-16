@@ -2309,7 +2309,9 @@
     "feature_pro": "Fitur VoiceStudio Pro",
     "included": "Termasuk",
     "not_included": "Tidak ada di paket Anda",
-    "plan_ends": "hingga {{date}}"
+    "plan_ends": "hingga {{date}}",
+    "details_failed": "Detail akun Anda tidak dapat dimuat ({{reason}}).",
+    "retry": "Coba lagi"
   },
   "cloudsync": {
     "unavailable": "Sinkronisasi tidak tersedia saat ini.",

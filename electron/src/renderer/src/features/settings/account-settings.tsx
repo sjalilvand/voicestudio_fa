@@ -9,7 +9,7 @@ import { SettingsRow, SettingsSection } from './settings-layout';
 
 export function AccountSettings() {
   const { t } = useTranslation();
-  const { supported, state, setSwitches, signIn, cancelSignIn, signOut } = useAccount();
+  const { supported, state, setSwitches, signIn, cancelSignIn, signOut, refresh } = useAccount();
   if (!supported || !state?.available) return null;
   const who = state.profile?.displayName ?? state.profile?.email ?? '';
   return (
@@ -48,7 +48,7 @@ export function AccountSettings() {
               </Button>
             )}
           </SettingsRow>
-          <AccountDetails state={state} />
+          <AccountDetails state={state} onRetry={() => void refresh()} />
           <SettingsRow
             id="account-sync"
             title={t('account.sync')}

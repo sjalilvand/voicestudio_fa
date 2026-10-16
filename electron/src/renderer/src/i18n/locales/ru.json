@@ -2313,7 +2313,9 @@
     "feature_pro": "Функции VoiceStudio Pro",
     "included": "Входит",
     "not_included": "Не входит в ваш тариф",
-    "plan_ends": "до {{date}}"
+    "plan_ends": "до {{date}}",
+    "details_failed": "Не удалось загрузить данные аккаунта ({{reason}}).",
+    "retry": "Повторить"
   },
   "cloudsync": {
     "unavailable": "Синхронизация сейчас недоступна.",

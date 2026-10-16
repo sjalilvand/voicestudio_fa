@@ -45,6 +45,7 @@ it('the public state never carries a token', async () => {
     'notice',
     'plan',
     'profile',
+    'profileError',
     'prompted',
     'remembered',
     'signedIn',
@@ -179,4 +180,21 @@ it('the plan comes from the account summary, with plan features when entitlement
     settingsSync: true,
     proDesktop: false,
   });
+});
+
+it('when the account cannot be loaded, the state says why instead of showing nothing', async () => {
+  const failing = ctl({
+    api: {
+      get: async () => {
+        throw Object.assign(new Error('Account request failed (403)'), { status: 403 });
+      },
+      avatar: async () => null,
+      entitlements: async () => null,
+    } as never,
+  });
+  const s = await failing.publicState(true);
+  expect(s.profile).toBeNull();
+  expect(s.profileError).toBe('403');
+  const ok = await ctl().publicState(true);
+  expect(ok.profileError).toBeNull();
 });

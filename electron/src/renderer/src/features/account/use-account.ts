@@ -30,6 +30,11 @@ export function useAccount() {
         setState(await account.get().catch(() => undefined));
       }
     },
+    /** Ask main again (e.g. Retry after the account details failed to load). */
+    refresh: async () => {
+      if (!account) return;
+      setState(await account.get().catch(() => undefined));
+    },
     signIn: () => account?.signIn(),
     cancelSignIn: () => account?.cancelSignIn(),
     signOut: () => account?.signOut(),

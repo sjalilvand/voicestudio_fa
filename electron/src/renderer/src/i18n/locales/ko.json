@@ -2309,7 +2309,9 @@
     "feature_pro": "VoiceStudio Pro 기능",
     "included": "포함",
     "not_included": "요금제에 포함되지 않음",
-    "plan_ends": "{{date}}까지"
+    "plan_ends": "{{date}}까지",
+    "details_failed": "계정 정보를 불러오지 못했습니다({{reason}}).",
+    "retry": "다시 시도"
   },
   "cloudsync": {
     "unavailable": "지금은 동기화를 사용할 수 없습니다.",

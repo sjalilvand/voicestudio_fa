@@ -2309,7 +2309,9 @@
     "feature_pro": "Tính năng VoiceStudio Pro",
     "included": "Có",
     "not_included": "Không có trong gói của bạn",
-    "plan_ends": "đến {{date}}"
+    "plan_ends": "đến {{date}}",
+    "details_failed": "Không thể tải thông tin tài khoản của bạn ({{reason}}).",
+    "retry": "Thử lại"
   },
   "cloudsync": {
     "unavailable": "Đồng bộ hiện không khả dụng.",

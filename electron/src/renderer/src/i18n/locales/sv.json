@@ -2309,7 +2309,9 @@
     "feature_pro": "VoiceStudio Pro-funktioner",
     "included": "Ingår",
     "not_included": "Ingår inte i ditt abonnemang",
-    "plan_ends": "till {{date}}"
+    "plan_ends": "till {{date}}",
+    "details_failed": "Det gick inte att läsa in dina kontouppgifter ({{reason}}).",
+    "retry": "Försök igen"
   },
   "cloudsync": {
     "unavailable": "Synkning är inte tillgänglig just nu.",

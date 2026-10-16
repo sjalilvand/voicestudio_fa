@@ -2317,7 +2317,9 @@
     "feature_pro": "ميزات VoiceStudio Pro",
     "included": "مضمّن",
     "not_included": "غير مضمّن في خطتك",
-    "plan_ends": "حتى {{date}}"
+    "plan_ends": "حتى {{date}}",
+    "details_failed": "تعذّر تحميل تفاصيل حسابك ({{reason}}).",
+    "retry": "إعادة المحاولة"
   },
   "cloudsync": {
     "unavailable": "المزامنة غير متاحة الآن.",

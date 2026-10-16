@@ -2366,7 +2366,9 @@
     "feature_pro": "VoiceStudio Pro features",
     "included": "Included",
     "not_included": "Not on your plan",
-    "plan_ends": "until {{date}}"
+    "plan_ends": "until {{date}}",
+    "details_failed": "Couldn’t load your account details ({{reason}}).",
+    "retry": "Retry"
   },
   "cloudsync": {
     "unavailable": "Sync is not available right now.",

@@ -214,7 +214,9 @@ export class AccountApi {
       if (!res.ok) {
         // Status and path only: never the token, never a query string.
         console.warn(`[account] ${init.method} ${new URL(url).pathname} -> ${res.status}`);
-        throw new Error(`Account request failed (${res.status})`);
+        throw Object.assign(new Error(`Account request failed (${res.status})`), {
+          status: res.status,
+        });
       }
       return await res.json();
     }

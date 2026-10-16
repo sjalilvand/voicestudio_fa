@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 const mock = vi.hoisted(() => ({ bridge: null as unknown }));
@@ -184,4 +184,19 @@ it('shows when the plan ends, and hides what it includes while that is unknown',
   } as never);
   expect(await screen.findByText(/account\.plan_ends/)).toBeInTheDocument();
   expect(screen.queryByText('account.features_title')).toBeNull();
+});
+
+it('says when the account details could not be loaded, with the reason and a retry', async () => {
+  const { account } = setup({
+    signedIn: true,
+    profile: null,
+    plan: null,
+    profileError: '403',
+  } as never);
+  const alert = await screen.findByRole('alert');
+  expect(alert).toHaveTextContent('account.details_failed');
+  expect(alert).toHaveTextContent('403');
+  const calls = account.get.mock.calls.length;
+  fireEvent.click(screen.getByText('account.retry'));
+  await waitFor(() => expect(account.get.mock.calls.length).toBe(calls + 1));
 });

@@ -306,6 +306,8 @@ export interface AccountPublicState {
       kind: string;
     }>;
   } | null;
+  /** Why the account details could not be loaded (an HTTP status, or "offline"); null when fine. */
+  profileError: string | null;
   /** The personal Organization's plan and storage (entitlements); null when signed out. */
   plan: {
     planCode: string;

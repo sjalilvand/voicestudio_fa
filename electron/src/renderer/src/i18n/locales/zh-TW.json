@@ -2309,7 +2309,9 @@
     "feature_pro": "VoiceStudio Pro 功能",
     "included": "已包含",
     "not_included": "不在你的方案中",
-    "plan_ends": "至 {{date}}"
+    "plan_ends": "至 {{date}}",
+    "details_failed": "無法載入你的帳戶詳細資料（{{reason}}）。",
+    "retry": "重試"
   },
   "cloudsync": {
     "unavailable": "同步目前無法使用。",
