@@ -3,6 +3,7 @@ export const STAR_COUNT_URL = 'https://api.github.com/repos/debpalash/VoiceStudi
 export const STAR_COUNT_STUB = { stargazers_count: 1234 };
 
 const LOCAL_SCHEMES = new Set(['app:', 'file:', 'data:', 'blob:', 'devtools:']);
+const NETWORK_SCHEMES = new Set(['http:', 'https:', 'ws:', 'wss:']);
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]']);
 
 /** True when a request stays on this machine (local schemes or an exact loopback host). */
@@ -14,8 +15,5 @@ export function isAllowedRequest(url) {
     return false;
   }
   if (LOCAL_SCHEMES.has(parsed.protocol)) return true;
-  return (
-    (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
-    LOOPBACK_HOSTS.has(parsed.hostname)
-  );
+  return NETWORK_SCHEMES.has(parsed.protocol) && LOOPBACK_HOSTS.has(parsed.hostname);
 }

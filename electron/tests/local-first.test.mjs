@@ -11,6 +11,8 @@ const allowed = [
   'http://127.0.0.1:3900/health',
   'http://localhost:49306/api',
   'http://[::1]:1/',
+  'ws://127.0.0.1:41939/ws/events',
+  'ws://localhost:3900/ws/events',
 ];
 const rejected = [
   STAR_COUNT_URL,
