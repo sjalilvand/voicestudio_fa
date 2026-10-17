@@ -10,15 +10,17 @@ metadata and the backend fallback mirror it.
 
 **Highlights**
 
-- Preview iOS and Android companion apps for your own VoiceStudio
+- Preview iOS and Android apps that run VoiceStudio on your phone, offline
 
 ### Added
 
 - Preview iOS and Android companion apps: drive your own VoiceStudio from your phone (speak, voices and cloning, dubbing, dictation) after pairing by QR code; build from source for now ([guide](docs/mobile.md)) (#2965)
+- The phone apps run speech, dictation, voice cloning and dubbing on the phone itself, offline once you download the models; pairing a computer is optional ([guide](docs/mobile.md)) (#2969)
 
 ### CI
 
 - New `mobile` workflow builds and tests both phone apps; a contract test fails when their theme or API description drifts from the desktop app (#2965)
+- The `mobile` workflow builds the pinned on-device runtimes for both apps (#2969)
 
 ## [0.5.7] — 2026-10-17
 
