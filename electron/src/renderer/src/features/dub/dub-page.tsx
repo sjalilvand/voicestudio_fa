@@ -676,7 +676,7 @@ export function DubPage() {
       className="space-y-2"
       onSubmit={(event) => {
         event.preventDefault();
-        if (!busy && !session.recovery && isDubUrl(url)) {
+        if (!busy && !cancelling && !session.recovery && isDubUrl(url)) {
           setPreview('original');
           void ingestDubUrl(url, cookieFile, fetchSubs);
           setCookieFile(undefined);
@@ -693,7 +693,7 @@ export function DubPage() {
             aria-label={t('dub.paste_url')}
             placeholder={t('dub.paste_url')}
             autoFocus={linkMode}
-            disabled={busy || Boolean(session.recovery)}
+            disabled={busy || cancelling || Boolean(session.recovery)}
           />
         </div>
         {url && (
@@ -702,7 +702,7 @@ export function DubPage() {
             size="xs"
             variant="ghost"
             aria-label={t('common.clear')}
-            disabled={busy || Boolean(session.recovery)}
+            disabled={busy || cancelling || Boolean(session.recovery)}
             onClick={() => {
               setUrl('');
               setCookieFile(undefined);
@@ -724,7 +724,7 @@ export function DubPage() {
               aria-label={t('dub.pull_captions')}
               checked={fetchSubs}
               onCheckedChange={setFetchSubs}
-              disabled={busy || Boolean(session.recovery)}
+              disabled={busy || cancelling || Boolean(session.recovery)}
             />
           </div>
           <p className="text-xs text-muted-foreground">{t('dub.youtube_auth')}</p>
@@ -732,7 +732,7 @@ export function DubPage() {
             type="file"
             accept=".txt,text/plain"
             aria-label={t('dub.youtube_cookie_file')}
-            disabled={busy || Boolean(session.recovery)}
+            disabled={busy || cancelling || Boolean(session.recovery)}
             onChange={(event) => {
               const file = event.target.files?.[0];
               event.target.value = '';
@@ -766,7 +766,7 @@ export function DubPage() {
           type="submit"
           variant="outline"
           className="w-full"
-          disabled={busy || Boolean(session.recovery) || !isDubUrl(url)}
+          disabled={busy || cancelling || Boolean(session.recovery) || !isDubUrl(url)}
         >
           {t('dub.ingest')}
         </Button>
