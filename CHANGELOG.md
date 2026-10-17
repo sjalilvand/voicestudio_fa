@@ -26,6 +26,8 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- Dubbing can replace an uploaded source with a link without removing it first (#2944) — thanks @mvanhorn!
+
 - Open WebUI lists VoiceStudio voice profiles: each voice from `/v1/audio/voices` also carries the `id` field it reads (#2934) — thanks @chiarorosa!
 
 - Renders no longer wait out a network timeout each time the AudioSeal watermark checkpoint can't be fetched; a failed load is retried after 10 minutes (#2933) — thanks @chiarorosa!
