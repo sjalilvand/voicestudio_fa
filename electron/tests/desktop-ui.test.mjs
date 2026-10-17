@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { realpathSync } from 'node:fs';
 import { withApp } from './desktop-harness.mjs';
 import { ROUTES } from './fixtures/routes.mjs';
 
@@ -118,6 +119,62 @@ test('routes: every route renders', async (t) => {
       ...new Set(backend.requests.filter((r) => r.status === 404).map((r) => `${r.method} ${r.path}`)),
     ];
     assert.deepEqual(missing, [], 'Routes requested backend paths the fake backend lacks');
+  });
+});
+
+const insideProfile = (path, profile) => {
+  const norm = (value) => {
+    const real = realpathSync.native(value).normalize('NFC');
+    return process.platform === 'win32' ? real.toLowerCase() : real;
+  };
+  return norm(path).startsWith(norm(profile));
+};
+
+test('settings: theme and language survive restart, user data stays in the profile', async (t) => {
+  await withApp(t, {}, async (session) => {
+    const { page, profile } = session;
+    await page.evaluate(() => {
+      location.hash = '#/settings/appearance';
+    });
+    const dark = page.getByRole('group', { name: 'Dark', exact: true });
+    // Studio is the default palette, so pick the other one to make the change observable.
+    const original = dark.getByRole('button', { name: 'VoiceStudio Original', exact: true });
+    await original.click();
+    await original.and(page.locator('[aria-pressed="true"]')).waitFor();
+
+    await page.evaluate(() => {
+      location.hash = '#/settings/general';
+    });
+    await page.getByRole('combobox', { name: 'Language', exact: true }).click();
+    await page.getByRole('option', { name: 'Deutsch', exact: true }).click();
+    await page.waitForFunction(() => localStorage.getItem('voicestudio.locale') === 'de');
+
+    const paths = await session.app.evaluate(({ app }) => [
+      app.getPath('userData'),
+      app.getPath('sessionData'),
+    ]);
+    for (const path of paths) {
+      assert.equal(insideProfile(path, profile), true, `${path} is outside ${profile}`);
+    }
+
+    const restarted = await session.relaunch();
+    const saved = await restarted.page.evaluate(() => ({
+      locale: localStorage.getItem('voicestudio.locale'),
+      theme: JSON.parse(localStorage.getItem('voicestudio.theme.v2') || '{}'),
+    }));
+    assert.equal(saved.locale, 'de');
+    assert.equal(saved.theme.dark, 'signal');
+    await restarted.page.waitForFunction(() => document.documentElement.dataset.themeId === 'signal');
+  });
+});
+
+test('unclean exit: relaunch on the same profile starts normally', async (t) => {
+  await withApp(t, {}, async (session) => {
+    session.app.process().kill('SIGKILL');
+    const restarted = await session.relaunch();
+    await restarted.page.waitForFunction(() => Boolean(window.voicestudio?.files?.saveData));
+    const facts = await bridgeFacts(restarted.page);
+    assert.equal(facts.platform, process.platform);
   });
 });
 

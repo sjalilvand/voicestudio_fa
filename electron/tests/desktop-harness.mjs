@@ -61,9 +61,14 @@ async function launch({ profile, backendPort, proxyPort, seed }) {
   await context.tracing.start({ screenshots: true, snapshots: true });
   await context.route(STAR_COUNT_URL, (route) => route.fulfill({ json: STAR_COUNT_STUB }));
   if (seed) {
+    // Only fill gaps: this runs on every page load and must not undo what a test persisted.
     await context.addInitScript(() => {
-      localStorage.setItem('voicestudio.setup.complete.v1', '1');
-      localStorage.setItem('voicestudio.locale', 'en');
+      for (const [key, value] of [
+        ['voicestudio.setup.complete.v1', '1'],
+        ['voicestudio.locale', 'en'],
+      ]) {
+        if (localStorage.getItem(key) === null) localStorage.setItem(key, value);
+      }
     });
   }
   await app.evaluate(({ session }) => {
@@ -110,7 +115,8 @@ export async function withApp(t, options, body) {
   session.relaunch = async () => {
     const previous = live.at(-1);
     await collectGuards(previous);
-    await previous.app.close();
+    // Closing an app that was killed mid-test rejects; the process is gone either way.
+    await previous.app.close().catch(() => {});
     return start();
   };
   const violations = [];
