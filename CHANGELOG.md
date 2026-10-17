@@ -10,28 +10,34 @@ metadata and the backend fallback mirror it.
 
 **Highlights**
 
-- Add model-source notices and an optional exact-file review preview; ordinary downloads remain unchanged. (#2689)
-- Model cards show a coloured icon for each model's licence category: commercial, with conditions, personal/research only, or unknown. (#2689)
-- Models without a plainly commercial licence, including the default OmniVoice model, must have their licence accepted once before use; VoiceStudio is not the licensor and cannot grant model rights. (#2689)
-- The model licence dialog is clearer: a plain summary, what the licence allows, and collapsible details; acceptance records the date and exact terms, and changed terms ask again. (#2689)
+- The open-source app no longer contains a licence-key client
+
+### Added
+
+- GitHub Sponsors is now the lead way to support VoiceStudio — on the Support page, the footer support menu, the repository Sponsor button, and SPONSORS.md (#2918)
 
 ### Changed
 
-- App identity and backend, browser and Electron development ports now come from one validated configuration file. (#2759)
-- Keep synthesis controls anchored at the bottom when the latest take appears. (#2759)
-- Using a Gallery design voice opens its workspace immediately and defers model loading until audio is requested. (#2759)
-- Existing local projects, settings and data are unaffected; legacy worker database records are retained and ignored.
-
-### Fixed
-
-- First-run setup installs into the runtime folder you choose even when that folder already exists but is empty, such as one just created in the folder picker. (#2766) — thanks @emreisik95!
+- The expanded sidebar shows the installed app version beneath VoiceStudio and clearly marks development builds (#2894)
 
 ### Removed
 
-- Remove licence activation from the open-source Pro page. (#2762)
-- Remote compute devices, remote workers and GPU sharing moved to VoiceStudio Pro and are no longer included in the open-source app.
+- The unused licence-key client and its Lemon Squeezy network call are gone from the open-source app (#2812)
 
-## [0.5.7] — 2026-10-07
+### Fixed
+
+- First-run setup installs into the selected runtime folder when it already exists but is empty (#2766) — thanks @emreisik95!
+
+- "Text-to-speech is not ready" → Fix now downloads the model chosen for the selected engine instead of doing nothing and leaving the warning up (#2918)
+- Integrations show official logos for Cursor, Claude Code, Codex CLI, OpenAI Agents, Docker and the VoiceStudio API instead of a generic placeholder or a GitHub avatar (#2918)
+- Tools → Convert includes saved Voice Design profiles and clones with locked reference audio in the target voice picker (#2899)
+- Preview voice buttons no longer freeze or stick on a warning: loading can be cancelled, errors retry on click, and repeat clicks share one render (#2915)
+
+- Snap packages follow Canonical’s strict-confinement approach to launch without manual Chromium sandbox setup (#2893) — thanks @velixio!
+- Snap launches explain missing sandbox permissions instead of crashing before startup (#2889)
+- Snap packages expand the Electron desktop runtime so they launch after installation (#2858)
+
+## [0.5.7] — 2026-10-13
 
 **VoiceStudio now runs on PCs without a GPU and recovers instead of giving up.** Voice cloning uses the speech-to-text model you installed from Model Catalogue, GPU-less computers get the small CPU PyTorch build, and slow or busy backends are no longer reported as failed.
 
