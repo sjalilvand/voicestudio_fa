@@ -208,7 +208,7 @@ const readBody = (request) =>
  * `fixtures` is merged over the defaults; a value may be a function `(request, body) => json`.
  * Every request is appended to `requests` before its response is written.
  */
-export async function startHealthBackend({ fixtures = {} } = {}) {
+export async function startHealthBackend({ fixtures = {}, port = 0 } = {}) {
   const served = { ...DEFAULT_FIXTURES, ...fixtures };
   const requests = [];
   const sockets = new Set(); // upgraded sockets are invisible to closeAllConnections()
@@ -251,7 +251,7 @@ export async function startHealthBackend({ fixtures = {} } = {}) {
   });
   await new Promise((resolve, reject) => {
     server.once('error', reject);
-    server.listen(0, '127.0.0.1', resolve);
+    server.listen(port, '127.0.0.1', resolve);
   });
   const address = server.address();
   assert(address && typeof address !== 'string');

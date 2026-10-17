@@ -94,11 +94,15 @@ async function launch({ profile, backendPort, proxyPort, seed }) {
   if (seed) {
     // Only fill gaps: this runs on every page load and must not undo what a test persisted.
     await context.addInitScript(() => {
-      for (const [key, value] of [
-        ['voicestudio.setup.complete.v1', '1'],
-        ['voicestudio.locale', 'en'],
-      ]) {
-        if (localStorage.getItem(key) === null) localStorage.setItem(key, value);
+      try {
+        for (const [key, value] of [
+          ['voicestudio.setup.complete.v1', '1'],
+          ['voicestudio.locale', 'en'],
+        ]) {
+          if (localStorage.getItem(key) === null) localStorage.setItem(key, value);
+        }
+      } catch {
+        // Some documents (data: URLs, the blank-window fallback) have no storage access.
       }
     });
   }
@@ -242,8 +246,6 @@ async function saveArtifacts(name, started, profile) {
   mkdirSync(dir, { recursive: true });
   await started.page.screenshot({ path: join(dir, 'final.png') }).catch(() => {});
   await started.app.context().tracing.stop({ path: join(dir, 'trace.zip') });
-  const logs = await started.app.evaluate(({ app }) => app.getPath('logs')).catch(() => null);
-  if (logs && existsSync(logs)) cpSync(logs, join(dir, 'logs'), { recursive: true });
   const journal = join(profile, 'main-process-errors.json');
   if (existsSync(journal)) cpSync(journal, join(dir, 'main-process-errors.json'));
 }

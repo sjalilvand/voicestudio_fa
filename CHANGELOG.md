@@ -15,6 +15,7 @@ metadata and the backend fallback mirror it.
 ### CI
 
 - Desktop UI tests launch the real app on macOS, Windows and Linux for every pull request (#2954)
+- All offline UI smoke tests now run on every pull request, and new ones are picked up automatically (#2958)
 
 ### Fixed
 
