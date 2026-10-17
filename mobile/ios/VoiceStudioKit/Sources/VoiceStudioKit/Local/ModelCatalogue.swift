@@ -62,6 +62,11 @@ public struct PhoneModel: Codable, Identifiable, Sendable {
     public let licence: Licence
     public let config: [String: JSONValue]
     public func fits(ram: UInt64 = ProcessInfo.processInfo.physicalMemory) -> Bool { Double(ram) >= min_ram_gb * 1_000_000_000 }
+    public func selectingLanguage(_ language: String) throws -> PhoneModel {
+        guard capability == .tts, languages.contains(language) else { throw ClientError("mobile.local.configuration") }
+        var options = config; options["lang"] = .string(language)
+        return PhoneModel(id: id,capability: capability,runtime: runtime,repo: repo,revision: revision,files: files,total_bytes: total_bytes,languages: languages,min_ram_gb: min_ram_gb,licence: licence,config: options)
+    }
     public func path(role: String, root: URL) -> String { files.first { $0.role == role }.map { root.appendingPathComponent($0.path).path } ?? "" }
     public func option(_ key: String, fallback: String = "") -> String { config[key]?.string ?? fallback }
 }
@@ -98,7 +103,7 @@ public enum TaskLocation: String, Codable, Sendable { case phone, computer }
 public enum TaskRoute: Equatable, Sendable { case phone, computer, download, connect }
 public enum LocalRouting {
     public static func route(preference: TaskLocation?, installed: Bool, paired: Bool) -> TaskRoute {
-        if preference == .computer { return paired ? .computer : .connect }
+        if preference == .computer && paired { return .computer }
         if preference == .phone { return installed ? .phone : .download }
         return installed ? .phone : paired ? .computer : .download
     }

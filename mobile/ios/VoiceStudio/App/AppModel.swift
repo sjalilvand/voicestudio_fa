@@ -32,7 +32,7 @@ import BackgroundTasks
         mockMode = ProcessInfo.processInfo.arguments.contains("--ui-smoke")
         let d = UserDefaults.standard
         if mockMode {
-            d.removeObject(forKey: "run-on.speak"); d.removeObject(forKey: "run-on.dictate")
+            for task in ["speak", "dictate", "clone", "dub"] { d.removeObject(forKey: "run-on."+task) }
             d.removeObject(forKey: "consentAnswered"); d.removeObject(forKey: "activeHost")
             connection = ConnectionStore(defaults: d, vault: SmokeVault(), transport: SmokeTransport())
         } else { connection = ConnectionStore() }
@@ -49,6 +49,8 @@ import BackgroundTasks
             BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: BackgroundMonitor.identifier)
             self.error = nil; self.loading = false; self.notified.removeAll()
         }
+        phone.onDubFinished = { [weak self] request in await self?.notifyPhone(request) }
+
     }
     @ObservationIgnored private let translator = L10n()
     var l10n: L10n { var value = translator; value.locale = (language.isEmpty ? Locale.current.identifier : language).replacingOccurrences(of: "_", with: "-"); return value }
@@ -63,6 +65,16 @@ import BackgroundTasks
         catch is CancellationError {}
         catch let failure as ClientError { guard scope == hostState.scopeID || connectionChange else { return }; error = failure; await connection.handle(failure, connectionChange: connectionChange) }
         catch { if scope == hostState.scopeID { self.error = ClientError("mobile.errors.file") } }
+    }
+    func perform(onPhone: Bool,_ work: @escaping @MainActor () async throws -> Void) async {
+        if onPhone { await performPhone(work) } else { await perform(work) }
+    }
+    func performPhone(_ work: @escaping @MainActor () async throws -> Void) async {
+        activityCount += 1; busy = true
+        defer { activityCount -= 1; busy = activityCount > 0 }
+        do { try await work() }
+        catch is CancellationError {}
+        catch { self.error = error as? ClientError ?? ClientError("mobile.simple.error") }
     }
     func refresh() async throws {
         let scope = hostState.scopeID
@@ -112,6 +124,17 @@ import BackgroundTasks
         content.sound = .default
         do { try await center.add(UNNotificationRequest(identifier: id, content: content, trigger: nil)); notified.insert(id); UserDefaults.standard.set(true, forKey: id) }
         catch { self.error = ClientError("mobile.permissions.denied") }
+    }
+    private func notifyPhone(_ request: PhoneDubRequest) async {
+        let id = "phone-dub-"+request.id.uuidString
+        guard notifications, !UserDefaults.standard.bool(forKey: id), !Task.isCancelled else { return }
+        let status = await Self.authorizationStatus()
+        guard status == .authorized || status == .provisional else { return }
+        let content = UNMutableNotificationContent(); content.title = t("mobile.dub.done_notification",["title": request.title]); content.sound = .default
+        do {
+            try await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: id,content: content,trigger: nil))
+            UserDefaults.standard.set(true,forKey: id)
+        } catch { self.error = ClientError("mobile.permissions.denied") }
     }
     // UNNotificationSettings isn't Sendable; read it off the main actor and return only the status.
     nonisolated private static func authorizationStatus() async -> UNAuthorizationStatus {

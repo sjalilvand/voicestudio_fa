@@ -52,7 +52,7 @@ def prepare(output, info):
     permissions = {
         "CFBundleDisplayName": "mobile.ios.app_name",
         "NSCameraUsageDescription": "mobile.permissions.camera",
-        "NSMicrophoneUsageDescription": "mobile.permissions.microphone",
+        "NSMicrophoneUsageDescription": "mobile.permissions.microphone_phone",
         "NSLocalNetworkUsageDescription": "mobile.permissions.local_network",
     }
     for path in sorted(source.glob("*.json")):

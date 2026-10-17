@@ -46,12 +46,25 @@ public struct TranscriptUpdate: Sendable {
     public let isFinal: Bool
     public let finished: Bool
 }
+public struct SpeechSegment: Codable, Sendable, Equatable {
+    public let start: Double
+    public let end: Double
+    public let text: String
+    public init(start: Double,end: Double,text: String) { self.start = start; self.end = end; self.text = text }
+}
 public protocol LocalEngine: Sendable {
     func synthesize(model: PhoneModel, text: String, speaker: Int, speed: Float, progress: @escaping EngineProgressHandler) async throws -> LocalAudio
     func clone(model: PhoneModel, text: String, reference: PCMChunk, referenceText: String, progress: @escaping EngineProgressHandler) async throws -> LocalAudio
     func transcribe(model: PhoneModel, audio: PCMChunk, progress: @escaping EngineProgressHandler) async throws -> String
+    func transcribeSegments(model: PhoneModel, audio: PCMChunk, progress: @escaping EngineProgressHandler) async throws -> [SpeechSegment]
     func streamTranscribe(model: PhoneModel, chunks: AsyncThrowingStream<PCMChunk, any Error>, progress: @escaping EngineProgressHandler) async throws -> AsyncThrowingStream<TranscriptUpdate, any Error>
     func translate(model: PhoneModel, text: String, sourceLanguage: String, targetLanguage: String, progress: @escaping EngineProgressHandler) async throws -> String
+}
+public extension LocalEngine {
+    func transcribeSegments(model: PhoneModel,audio: PCMChunk,progress: @escaping EngineProgressHandler = { _ in }) async throws -> [SpeechSegment] {
+        let text = try await transcribe(model: model,audio: audio,progress: progress).trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.isEmpty ? [] : [SpeechSegment(start: 0,end: Double(audio.samples.count)/Double(audio.sampleRate),text: text)]
+    }
 }
 /// C allocations never escape the worker. Only the atomic cancellation flag crosses tasks.
 private final class NativeCancellation: @unchecked Sendable {
@@ -154,6 +167,20 @@ public actor NativeLocalEngine: LocalEngine {
             var output: UnsafeMutablePointer<CChar>?; defer { vs_text_free(output) }
             let rc = audio.samples.withUnsafeBufferPointer { vs_transcribe(&config.value, $0.baseAddress, Int32($0.count), Int32(audio.sampleRate), token.pointer, &output) }
             try Self.check(rc); return output.map { String(cString: $0) } ?? ""
+        }
+    }
+    public func transcribeSegments(model: PhoneModel,audio: PCMChunk,progress: @escaping EngineProgressHandler = { _ in }) async throws -> [SpeechSegment] {
+        try Self.validate(audio)
+        return try await execute(model,capability: .asr,progress: progress) { m,root,library,token in
+            let config = NativeConfiguration(model: m,root: root,library: library)
+            var output = VSSegments(); defer { vs_segments_free(&output) }
+            try audio.samples.withUnsafeBufferPointer { try Self.check(vs_transcribe_segments(&config.value,$0.baseAddress,Int32($0.count),Int32(audio.sampleRate),token.pointer,&output)) }
+            guard output.count == 0 || output.segments != nil else { throw ClientError("mobile.local.inference_error") }
+            return (0..<Int(output.count)).compactMap { index in
+                let segment = output.segments![index]
+                let text = segment.text.map { String(cString: $0).trimmingCharacters(in: .whitespacesAndNewlines) } ?? ""
+                return text.isEmpty ? nil : SpeechSegment(start: segment.start,end: segment.end,text: text)
+            }
         }
     }
     public func clone(model: PhoneModel, text: String, reference: PCMChunk, referenceText: String, progress: @escaping EngineProgressHandler = { _ in }) async throws -> LocalAudio {

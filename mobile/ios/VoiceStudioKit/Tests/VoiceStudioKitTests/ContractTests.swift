@@ -64,6 +64,8 @@ func catalogs() throws -> [String: Data] {
     let pattern = #""((?:mobile|common|privacy|player|themeAppearance)\.[a-zA-Z0-9_.]+)""#
     let regex = try NSRegularExpression(pattern: pattern)
     let dynamic: [String: [String]] = [
+        "mobile.simple.": ["tts", "asr", "asr-stream", "clone", "translate"],
+        "mobile.local.": [],
         "mobile.local.category_": ["commercial-ok", "non-commercial", "conditional", "unidentified"],
         "mobile.settings.mode_": ThemeMode.allCases.map(\.rawValue),
         "mobile.ios.dub_stages.": ["preparing", "transcribing", "translating", "rendering", "done", "failed", "cancelled"]

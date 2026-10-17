@@ -158,7 +158,8 @@ private actor RangeServer: HTTPTransport {
     #expect(LocalRouting.route(preference: nil, installed: false, paired: true) == .computer)
     #expect(LocalRouting.route(preference: nil, installed: true, paired: true) == .phone)
     #expect(LocalRouting.route(preference: .phone, installed: false, paired: true) == .download)
-    #expect(LocalRouting.route(preference: .computer, installed: true, paired: false) == .connect)
+    #expect(LocalRouting.route(preference: .computer, installed: true, paired: false) == .phone)
+    #expect(LocalRouting.route(preference: .computer, installed: false, paired: false) == .download)
 }
 @Test func localRedirectsStayWithinModelDeliveryOrigins() {
     for url in ["https://huggingface.co/resolve", "https://cdn-lfs.hf.co/model", "https://cas-bridge.xethub.hf.co/model", "https://hf-mirror.com/model"] { #expect(ModelRedirectDelegate.allowed(URL(string: url)!)) }

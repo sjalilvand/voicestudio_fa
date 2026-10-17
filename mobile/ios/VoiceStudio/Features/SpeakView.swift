@@ -5,11 +5,12 @@ struct VoicePicker: View {
     @Environment(AppModel.self) private var model
     @Binding var selection: String
     var dubbing = false
+    var compact = false
     var body: some View {
         ChoicePicker(label: model.t("mobile.speak.voice"), selection: $selection, options:
             (dubbing ? [SelectionOption(id: DubVoiceChoice.unselected, title: model.t("mobile.dub.choose_voice"), enabled: false)] : []) +
             [SelectionOption(id: "", title: model.t(DubVoiceChoice.defaultLabelKey))] +
-            model.profiles.map { SelectionOption(id: $0.id, title: $0.name, subtitle: model.languages.language($0.language)?.name) })
+            model.profiles.map { SelectionOption(id: $0.id, title: $0.name, subtitle: model.languages.language($0.language)?.name) }, compact: compact)
     }
 }
 struct SpeakView: View {
@@ -20,7 +21,10 @@ struct SpeakView: View {
     @State private var speakerID = "0"
     @State private var localProgress: EngineProgress?
     @State private var generation: Task<Void, Never>?
-    private var phoneModel: PhoneModel? { model.phone.candidates(.tts).first { $0.id == phoneModelID } ?? model.phone.preferred(.tts) }
+    @State private var phoneLanguage = "en"
+    private var phoneVoice: PhoneVoice? { model.phone.voices.first { "phone:"+$0.id.uuidString == speakerID } }
+    private var capability: ModelCapability { phoneVoice == nil ? .tts : .clone }
+    private var phoneModel: PhoneModel? { model.phone.candidates(capability).first { $0.id == phoneModelID } ?? model.phone.selectedModel("speak-"+capability.rawValue,capability) }
     private var localReady: Bool { phoneModel.map(model.phone.ready) ?? false }
     private var route: TaskRoute { LocalRouting.route(preference: preference, installed: localReady, paired: model.connection.client != nil) }
     @State private var text = ""
@@ -41,37 +45,46 @@ struct SpeakView: View {
             RunOnPicker(preference: $preference, task: "speak", installed: localReady).disabled(generating)
             if route == .download { LocalDownloadPrompt(item: phoneModel) }
             if route == .connect { NavigationLink(model.t("mobile.settings.connection")) { ConnectView() } }
+            ZStack(alignment: .topLeading) {
+            if text.isEmpty { Text(model.t("mobile.speak.placeholder")).foregroundStyle(theme.color("textMuted")).padding(Theme.compactInset).allowsHitTesting(false) }
             TextEditor(text: $text).frame(minHeight: VSTokens.textEditor.lineHeight * 6)
                 .scrollContentBackground(.hidden).padding(Theme.compactInset)
                 .background(theme.color("input"), in: RoundedRectangle(cornerRadius: VSTokens.radiusControl))
                 .accessibilityLabel(model.t("mobile.speak.placeholder")).accessibilityIdentifier("speak.text")
+            }
             if route != .computer {
-                Card {
-                    ChoicePicker(label: model.t("mobile.local.models"), selection: Binding(get: { phoneModel?.id ?? "" }, set: { phoneModelID = $0; speakerID = "0" }), options: model.phone.candidates(.tts).map { SelectionOption(id: $0.id, title: $0.id, enabled: $0.fits()) })
-                    ChoicePicker(label: model.t("mobile.speak.voice"), selection: $speakerID, options: (0..<Int(phoneModel?.config["num_speakers"]?.number ?? 1)).map { SelectionOption(id: String($0), title: model.t("mobile.local.preset_voice", ["number": String($0 + 1)])) })
+                HStack(spacing: VSTokens.spacingGap) {
+                    ChoicePicker(label: model.t("mobile.speak.voice"), selection: $speakerID, options: (0..<min(128,Int(phoneModel?.config["num_speakers"]?.number ?? 1))).map { SelectionOption(id: String($0), title: model.t("mobile.local.preset_voice", ["number": String($0 + 1)])) } + model.phone.voices.map { SelectionOption(id: "phone:"+$0.id.uuidString,title: $0.name) }, compact: true)
+                    ChoicePicker(label: model.t("mobile.local.models"), selection: Binding(get: { phoneModel?.id ?? "" }, set: { phoneModelID = $0; model.phone.chooseModel("speak-"+capability.rawValue,$0) }), options: model.phone.candidates(capability).map { SelectionOption(id: $0.id, title: $0.id, enabled: $0.fits()) }, compact: true)
+                    ChoicePicker(label: model.t("mobile.speak.language"), selection: $phoneLanguage, options: phoneVoice == nil ? (phoneModel?.languages ?? []).map { SelectionOption(id: $0, title: Locale(identifier: model.l10n.locale).localizedString(forLanguageCode: $0) ?? $0) } : [SelectionOption(id: "auto",title: model.t("mobile.ios.language_auto"))], compact: true)
+
                 }.disabled(generating)
             } else {
-            Card {
+            HStack(spacing: VSTokens.spacingGap) {
                 VoicePicker(selection: Binding(get: { selection.profileID }, set: {
                     selection.chooseProfile($0, profiles: model.profiles, inventory: model.inventory, catalog: model.languages)
-                }))
-                Divider().overlay(theme.color("border"))
-                ChoicePicker(label: model.t("mobile.speak.engine"), selection: $selection.engineID, options: engines).accessibilityIdentifier("speak.engine")
-                if let explanation = engines.first(where: { $0.id == selection.engineID })?.subtitle {
-                    Text(explanation).foregroundStyle(theme.color("textMuted"))
-                }
-                Divider().overlay(theme.color("border"))
+                }), compact: true)
+                ChoicePicker(label: model.t("mobile.speak.engine"), selection: $selection.engineID, options: engines, compact: true).accessibilityIdentifier("speak.engine")
                 ChoicePicker(label: model.t("mobile.speak.language"), selection: $selection.language,
-                             options: model.languages.languages.map { SelectionOption(id: $0.value, title: $0.name) }).accessibilityIdentifier("speak.language")
+                             options: model.languages.languages.map { SelectionOption(id: $0.value, title: $0.name) }, compact: true).accessibilityIdentifier("speak.language")
             }
             }
-            Button(model.t(generating ? "mobile.speak.generating" : "mobile.speak.generate")) {
+            Button(model.t(generating ? "mobile.speak.generating" : "mobile.speak.generate"), systemImage: "waveform") {
                 generation = Task {
                     generating = true; defer { generating = false; localProgress = nil }
-                    await model.perform {
+                    await model.perform(onPhone: route == .phone) {
                         if route == .phone {
                             guard let phoneModel, let engine = model.phone.engine else { throw ClientError("mobile.local.model_required") }
-                            let audio = try await engine.synthesize(model: phoneModel, text: text, speaker: Int(speakerID) ?? 0, speed: 1, progress: { value in await MainActor.run { localProgress = value } })
+                            let audio: LocalAudio
+                            let report: EngineProgressHandler = { value in await MainActor.run { localProgress = value } }
+                            if let voice = phoneVoice, let store = model.phone.voiceStore {
+                                let reference = try await store.reference(voice)
+                                audio = try await engine.clone(model: phoneModel,text: text,reference: reference,referenceText: voice.transcript,progress: report)
+                            } else {
+                                audio = try await engine.synthesize(model: phoneModel.selectingLanguage(phoneLanguage),text: text,speaker: Int(speakerID) ?? 0,speed: 1,progress: report)
+                            }
+                            _ = try await model.phone.generationStore?.save(text: text,audio: audio)
+                            await model.phone.refresh()
                             try await player.load(audio.markSynthetic(), extension: "wav")
                             return
                         }
@@ -81,7 +94,7 @@ struct SpeakView: View {
                     }
                 }
             }.buttonStyle(VSButtonStyle(kind: .primary))
-                .disabled(model.busy || generating || (route != .phone && route != .computer) || (route == .computer && !selection.canGenerate(in: model.inventory, profiles: model.profiles)) || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(model.busy || model.phone.activeDub != nil || generating || (route != .phone && route != .computer) || (route == .computer && !selection.canGenerate(in: model.inventory, profiles: model.profiles)) || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .accessibilityIdentifier("speak.generate")
             if generating {
                 if let value = localProgress { ProgressView(value: value.fraction).accessibilityLabel(model.t("mobile.ios.progress")) }
@@ -89,12 +102,24 @@ struct SpeakView: View {
             }
             if player.file != nil || player.playing { AudioPlayerView(player: player) }
             Text(model.t("mobile.speak.recent")).font(.custom("InterVariable", size: Theme.controlTypeSize, relativeTo: .headline))
-            if model.history.isEmpty && !model.loading { Text(model.t("mobile.speak.empty_recent")).foregroundStyle(theme.color("textMuted")) }
+            if route != .computer {
+                if model.phone.recent.isEmpty { EmptyState(key: "mobile.simple.empty_recent") }
+                ForEach(model.phone.recent) { item in
+                    HStack {
+                        Text(item.text).lineLimit(1).frame(maxWidth: .infinity,alignment: .leading)
+                        Button(model.t("common.play"),systemImage: "play.fill") { Task { await model.performPhone {
+                            guard let store = model.phone.generationStore else { throw ClientError("mobile.errors.file") }
+                            try await player.load(Data(contentsOf: await store.file(item)),extension: "wav"); player.play()
+                        } } }
+                        Button(model.t("common.delete"),systemImage: "trash",role: .destructive) { Task { await model.performPhone { try await model.phone.generationStore?.delete(item); await model.phone.refresh() } } }
+                    }.labelStyle(.iconOnly).buttonStyle(VSButtonStyle(kind: .tertiary))
+                }
+            } else if model.history.isEmpty && !model.loading { EmptyState(key: "mobile.simple.empty_recent") }
             else {
                 Card {
                     ForEach(model.history) { item in
                         HStack(spacing: VSTokens.spacingGap) {
-                            Text(item.text).frame(maxWidth: .infinity, alignment: .leading)
+                            Text(item.text).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
                             Button(model.t("common.play"), systemImage: "play.fill") { Task { await model.perform { let api = try model.api(); try await player.stream(request: api.historyAudioRequest(item.id), api: api) } } }
                                 .labelStyle(.iconOnly).buttonStyle(VSButtonStyle(kind: .tertiary))
                             Menu {
@@ -117,7 +142,19 @@ struct SpeakView: View {
             }
         }
         .onAppear { hostScope = model.hostState.scopeID; preference = model.phone.preference("speak") }
-        .task { await model.phone.refresh() }
+        .task { await model.phone.refresh(); reconcilePhone() }
+        .onChange(of: speakerID) { _, _ in reconcilePhone() }
+        .onChange(of: phoneModel?.id) { _, _ in reconcilePhone() }
+        .onChange(of: model.phone.voices) { _, _ in if speakerID.hasPrefix("phone:") && phoneVoice == nil { speakerID = "0" } }
         .onDisappear { generation?.cancel(); if hostScope != model.hostState.scopeID { player.clear() } else { player.pause() } }
     }
+    private func reconcilePhone() {
+        if phoneVoice != nil { phoneLanguage = "auto" }
+        else {
+            if !(phoneModel?.languages.contains(phoneLanguage) ?? false) { phoneLanguage = phoneModel?.languages.first ?? "en" }
+            let count = min(128,Int(phoneModel?.config["num_speakers"]?.number ?? 1))
+            if !(0..<max(1,count)).contains(Int(speakerID) ?? -1) { speakerID = "0" }
+        }
+    }
+
 }

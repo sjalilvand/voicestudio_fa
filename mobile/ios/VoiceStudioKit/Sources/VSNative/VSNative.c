@@ -1,6 +1,7 @@
 #include "VSNative.h"
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include <stdatomic.h>
 #include <dlfcn.h>
 #include <TargetConditionals.h>
@@ -19,6 +20,11 @@ float vs_progress(VSCancel *v) { return v ? atomic_load(&v->progress) : 0; }
 void vs_cancel_free(VSCancel *v) { free(v); }
 void vs_audio_free(VSAudio *a) { free(a->samples); memset(a, 0, sizeof(*a)); }
 void vs_text_free(char *text) { free(text); }
+void vs_segments_free(VSSegments *out) {
+    if (!out) return;
+    for(int32_t i=0;i<out->count;++i) free(out->segments[i].text);
+    free(out->segments); memset(out,0,sizeof(*out));
+}
 static int audio_copy(VSAudio *out, const float *samples, int n, int rate) {
     if (!samples || n <= 0 || rate <= 0) return -3;
     out->samples = malloc((size_t)n * sizeof(float));
@@ -67,7 +73,7 @@ int vs_synthesize(const VSConfig *c, const char *text, int32_t speaker, float sp
     if(a) p_SherpaOnnxDestroyOfflineTtsGeneratedAudio(a);
     p_SherpaOnnxDestroyOfflineTts(tts); sherpa_close(lib); return rc;
 }
-int vs_transcribe(const VSConfig *c, const float *samples, int32_t n, int32_t rate, VSCancel *cancel, char **text) {
+static int transcribe_impl(const VSConfig *c, const float *samples, int32_t n, int32_t rate, VSCancel *cancel, char **text, VSSegments *segments) {
     if(vs_cancelled(cancel)) return -4;
     void *lib=sherpa_open(c->library); if(!lib) return -1;
     RESOLVE(lib,SherpaOnnxCreateOfflineRecognizer); RESOLVE(lib,SherpaOnnxDestroyOfflineRecognizer);
@@ -78,6 +84,7 @@ int vs_transcribe(const VSConfig *c, const float *samples, int32_t n, int32_t ra
     SherpaOnnxOfflineRecognizerConfig cfg={0}; cfg.feat_config.sample_rate=16000; cfg.feat_config.feature_dim=80;
     cfg.model_config.num_threads=c->threads; cfg.model_config.provider="cpu"; cfg.model_config.tokens=c->tokens;
     cfg.model_config.whisper.encoder=c->encoder; cfg.model_config.whisper.decoder=c->decoder; cfg.model_config.whisper.language=c->language; cfg.model_config.whisper.task="transcribe"; cfg.model_config.whisper.tail_paddings=-1;
+    cfg.model_config.whisper.enable_token_timestamps=segments ? 1 : 0;
     cfg.decoding_method="greedy_search";
     const SherpaOnnxOfflineRecognizer *recognizer=p_SherpaOnnxCreateOfflineRecognizer(&cfg);
     if(!recognizer) { sherpa_close(lib); return -3; }
@@ -85,9 +92,9 @@ int vs_transcribe(const VSConfig *c, const float *samples, int32_t n, int32_t ra
     char *combined=calloc(1,1); size_t length=0;
     if(!combined || rate<=0) rc=-3;
     // Whisper's context is 30 seconds. Reuse its weights, with one bounded stream per window.
-    for(int64_t offset=0; rc==0 && offset<n; offset+=(int64_t)rate*30) {
+    for(int64_t offset=0; rc==0 && offset<n; offset+=(int64_t)rate*20) {
         if(vs_cancelled(cancel)) { rc=-4; break; }
-        int32_t count=(int32_t)((n-offset)<(int64_t)rate*30 ? (n-offset) : (int64_t)rate*30);
+        int32_t count=(int32_t)((n-offset)<(int64_t)rate*20 ? (n-offset) : (int64_t)rate*20);
         const SherpaOnnxOfflineStream *stream=p_SherpaOnnxCreateOfflineStream(recognizer);
         if(!stream) { rc=-3; break; }
         p_SherpaOnnxAcceptWaveformOffline(stream,rate,samples+offset,count);
@@ -95,6 +102,27 @@ int vs_transcribe(const VSConfig *c, const float *samples, int32_t n, int32_t ra
         const SherpaOnnxOfflineRecognizerResult *r=p_SherpaOnnxGetOfflineStreamResult(stream);
         if(r && r->text) {
             size_t size=strlen(r->text);
+            if(segments && size) {
+                double duration=(double)count/rate, start=0, end=duration, first=duration, last=-1;
+                if(r->timestamps) for(int32_t i=0;i<r->count;++i) {
+                    double t=r->timestamps[i];
+                    if(isfinite(t) && t>=0 && t<duration) { if(t<first) first=t; if(t>last) last=t; }
+                }
+                if(last>=0) {
+                    start=fmax(0,fmin(first,duration-.02));
+                    double tail=(r->durations && r->count>0 && isfinite(r->durations[r->count-1]) && r->durations[r->count-1]>0) ? r->durations[r->count-1] : .5;
+                    end=fmin(duration,fmax(start+.01,last+tail));
+                }
+                VSSegment *next_segments=realloc(segments->segments,(size_t)(segments->count+1)*sizeof(VSSegment));
+                if(!next_segments) rc=-3;
+                else {
+                    segments->segments=next_segments;
+                    VSSegment *segment=&segments->segments[segments->count];
+                    segment->start=(double)offset/rate+start; segment->end=(double)offset/rate+end;
+                    segment->text=strdup(r->text);
+                    if(!segment->text) rc=-3; else segments->count++;
+                }
+            }
             char *next=realloc(combined,length+size+2);
             if(!next) rc=-3;
             else {
@@ -110,6 +138,12 @@ int vs_transcribe(const VSConfig *c, const float *samples, int32_t n, int32_t ra
     if(rc==0) *text=combined; else free(combined);
     p_SherpaOnnxDestroyOfflineRecognizer(recognizer); sherpa_close(lib);
     return vs_cancelled(cancel) ? -4 : rc;
+}
+int vs_transcribe(const VSConfig *c,const float *samples,int32_t n,int32_t rate,VSCancel *cancel,char **text) {
+    return transcribe_impl(c,samples,n,rate,cancel,text,NULL);
+}
+int vs_transcribe_segments(const VSConfig *c,const float *samples,int32_t n,int32_t rate,VSCancel *cancel,VSSegments *segments) {
+    char *text=NULL; int rc=transcribe_impl(c,samples,n,rate,cancel,&text,segments); free(text); return rc;
 }
 struct VSStream { void *lib; const SherpaOnnxOnlineRecognizer *recognizer; const SherpaOnnxOnlineStream *stream; int32_t sample_rate; };
 VSStream *vs_stream_create(const VSConfig *c) {
@@ -161,6 +195,7 @@ void vs_stream_free(VSStream *s) {
 #else
 int vs_synthesize(const VSConfig *c,const char *t,int32_t s,float speed,VSCancel *v,VSAudio *a) { return -1; }
 int vs_transcribe(const VSConfig *c,const float *s,int32_t n,int32_t r,VSCancel *v,char **t) { return -1; }
+int vs_transcribe_segments(const VSConfig *c,const float *s,int32_t n,int32_t r,VSCancel *v,VSSegments *out) { return -1; }
 VSStream *vs_stream_create(const VSConfig *c) { return NULL; }
 int vs_stream_accept(VSStream *s,const float *a,int32_t n,int32_t r,int f,VSCancel *v,char **t,int *e) { return -1; }
 void vs_stream_free(VSStream *s) {}

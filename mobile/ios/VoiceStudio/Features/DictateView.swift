@@ -3,10 +3,13 @@ import VoiceStudioKit
 
 struct DictateView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.vsTheme) private var theme
     @State private var preference: TaskLocation?
     private var phoneModel: PhoneModel? { model.phone.preferred(.stream) }
     private var localReady: Bool { phoneModel.map(model.phone.ready) ?? false }
     private var route: TaskRoute { LocalRouting.route(preference: preference, installed: localReady, paired: model.connection.client != nil) }
+    @State private var holding = false
+    @State private var suppressTap = false
     @State private var text = ""
     @State private var transcript = DictationTranscript()
     @State private var previousText = ""
@@ -25,23 +28,35 @@ struct DictateView: View {
             if route == .download { LocalDownloadPrompt(item: phoneModel) }
             if route == .connect { NavigationLink(model.t("mobile.settings.connection")) { ConnectView() } }
             if checking { ProgressView(model.t("common.loading")) }
-            else if !ready { Text(model.t("mobile.dictate.not_ready", ["reason": reason])) }
-            Button(model.t(listening ? "common.stop" : "mobile.dictate.tap_to_start"), systemImage: listening ? "stop.fill" : "mic.fill") {
-                if listening { stop() } else { start() }
-            }.buttonStyle(VSButtonStyle(kind: .primary)).disabled(!ready || finalizing).accessibilityHint(model.t("mobile.dictate.hold_to_talk")).accessibilityIdentifier("dictate.record")
-            // The separate hold surface supports release-to-finish without competing with tap semantics.
-            Text(model.t("mobile.dictate.hold_to_talk")).frame(minHeight: 44).frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
-                .onLongPressGesture(minimumDuration: 0.2, pressing: { pressed in
-                    if pressed && ready && !listening { start() }
-                    else if !pressed && listening { stop() }
-                }, perform: {})
-                .accessibilityAddTraits(.isButton).accessibilityAction { if listening { stop() } else { start() } }
-            if listening { Text(model.t("mobile.dictate.listening")) }
-            Text(text).frame(maxWidth: .infinity, alignment: .leading)
+            else if !ready && route == .computer {
+                Text(model.t("mobile.simple.connection_error"))
+                Button(model.t("mobile.simple.retry")) { Task { await readiness() } }
+            }
+            Text(text).frame(maxWidth: .infinity, minHeight: 160, alignment: .bottomLeading)
                 .textSelection(.enabled).accessibilityLabel(model.t("mobile.ios.transcript"))
-            Button(model.t("mobile.dictate.copy"), systemImage: "doc.on.doc") { UIPasteboard.general.string = text }.disabled(text.isEmpty)
-            ShareLink(item: text) { Label(model.t("mobile.speak.share"), systemImage: "square.and.arrow.up") }.disabled(text.isEmpty)
+            Button {
+                guard !suppressTap else { return }
+                if listening { stop() } else { start() }
+            } label: {
+                Image(systemName: listening ? "stop.fill" : "mic.fill")
+                    .font(.largeTitle).frame(width: 112, height: 112)
+                    .foregroundStyle(theme.color("messageActionForeground"))
+                    .background(theme.color("messageAction"), in: Circle())
+            }.buttonStyle(.plain).frame(maxWidth: .infinity, minHeight: 144)
+                .disabled(!ready || finalizing || model.phone.activeDub != nil)
+                .accessibilityLabel(model.t(listening ? "common.stop" : "mobile.simple.microphone"))
+                .accessibilityIdentifier("dictate.record")
+                .onLongPressGesture(minimumDuration: 0.2, pressing: { pressed in
+                    if !pressed && holding {
+                        holding = false; if listening { stop() }
+                        Task { try? await Task.sleep(for: .milliseconds(150)); suppressTap = false }
+                    }
+                }, perform: { holding = true; suppressTap = true; if !listening && ready { start() } })
+            HStack {
+                Button(model.t("mobile.dictate.copy"), systemImage: "doc.on.doc") { UIPasteboard.general.string = text }
+                ShareLink(item: text) { Label(model.t("mobile.speak.share"), systemImage: "square.and.arrow.up") }
+            }.labelStyle(.iconOnly).buttonStyle(VSButtonStyle(kind: .tertiary)).disabled(text.isEmpty)
+
         }.navigationTitle(model.t("mobile.tabs.dictate"))
         .task { preference = model.phone.preference("dictate"); await model.phone.refresh(); await readiness() }
         .onChange(of: preference) { _, _ in Task { await readiness() } }

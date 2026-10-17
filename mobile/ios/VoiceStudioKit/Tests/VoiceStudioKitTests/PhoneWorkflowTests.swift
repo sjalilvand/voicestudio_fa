@@ -1,0 +1,224 @@
+import Foundation
+import Testing
+@testable import VoiceStudioKit
+
+private func fixtureRoot() throws -> URL {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent("phone-workflow-"+UUID().uuidString)
+    try PrivateFiles.directory(root); return root
+}
+private func fixtureModel(_ capability: ModelCapability) throws -> PhoneModel {
+    try ModelCatalogue.decode(Data(contentsOf: repository.appendingPathComponent("mobile/contract/models.json"))).models.first { $0.capability == capability }!
+}
+private struct FixtureDecoder: PhoneAudioDecoder {
+    var frames = 24000
+    func decode(source: URL,output: URL,maxSeconds: Double,progress: @escaping @Sendable (Double) async -> Void) async throws -> PCMFile {
+        try Task.checkCancellation()
+        try PCMFile.write(PCMChunk(samples: (0..<frames).map { Float(sin(Double($0)*0.1)*0.3) },sampleRate: 24000),to: output)
+        await progress(1); return PCMFile(output)
+    }
+}
+private actor FixtureEngine: LocalEngine {
+    var transcript = "A reference voice"
+    private(set) var transcriptions = 0
+    private(set) var translations = 0
+    private(set) var clones = 0
+    private var failClone = 0
+    func failOnClone(_ count: Int) { failClone = count }
+    func empty() { transcript = "" }
+    func synthesize(model: PhoneModel,text: String,speaker: Int,speed: Float,progress: @escaping EngineProgressHandler) async throws -> LocalAudio { LocalAudio(samples: Array(repeating: 0.25,count: 24000),sampleRate: 24000) }
+    func clone(model: PhoneModel,text: String,reference: PCMChunk,referenceText: String,progress: @escaping EngineProgressHandler) async throws -> LocalAudio {
+        clones += 1
+        if clones == failClone { throw CancellationError() }
+        #expect(reference.sampleRate == 24000); #expect(!referenceText.isEmpty)
+        return LocalAudio(samples: Array(repeating: 0.4,count: 12000),sampleRate: 24000)
+    }
+    func transcribe(model: PhoneModel,audio: PCMChunk,progress: @escaping EngineProgressHandler) async throws -> String { try Task.checkCancellation(); transcriptions += 1; return transcript }
+    func transcribeSegments(model: PhoneModel,audio: PCMChunk,progress: @escaping EngineProgressHandler) async throws -> [SpeechSegment] {
+        transcriptions += 1
+        return [SpeechSegment(start: 0.1,end: 0.35,text: "Hello"), SpeechSegment(start: 0.5,end: 0.85,text: "World")]
+    }
+    func streamTranscribe(model: PhoneModel,chunks: AsyncThrowingStream<PCMChunk,any Error>,progress: @escaping EngineProgressHandler) async throws -> AsyncThrowingStream<TranscriptUpdate,any Error> { AsyncThrowingStream { $0.finish() } }
+    func translate(model: PhoneModel,text: String,sourceLanguage: String,targetLanguage: String,progress: @escaping EngineProgressHandler) async throws -> String { translations += 1; return "Bonjour" }
+}
+@Test func phoneVoiceConsentTranscriptPersistenceRenameAndDelete() async throws {
+    let root = try fixtureRoot(); defer { try? FileManager.default.removeItem(at: root) }
+    let store = try PhoneVoiceStore(root: root), engine = FixtureEngine(), asr = try fixtureModel(.asr)
+    await #expect(throws: (any Error).self) { try await store.create(name: "Voice",source: root,consent: false,asr: asr,engine: engine,decoder: FixtureDecoder()) }
+    #expect(await engine.transcriptions == 0)
+    let voice = try await store.create(name: " Voice ",source: root,consent: true,asr: asr,engine: engine,decoder: FixtureDecoder())
+    #expect(voice.name == "Voice"); #expect(voice.transcript == "A reference voice"); #expect(voice.sampleRate == 24000)
+    #expect(try await store.reference(voice).samples.count == 24000)
+    #expect(try Data(contentsOf: await store.preview(voice)).range(of: Data("synthetic".utf8)) == nil)
+    let restored = try PhoneVoiceStore(root: root)
+    #expect(try await restored.list() == [voice])
+    try await restored.rename(voice,name: "Renamed")
+    #expect(try await restored.list().first?.name == "Renamed")
+    #expect(getxattr(root.path, "com.apple.metadata:com_apple_backup_excludeItem", nil, 0, 0, 0) > 0)
+    try await restored.delete(voice); #expect(try await restored.list().isEmpty)
+}
+@Test func phoneVoiceEmptyTranscriptAndCancellationNeverPublish() async throws {
+    let root = try fixtureRoot(); defer { try? FileManager.default.removeItem(at: root) }
+    let store = try PhoneVoiceStore(root: root), engine = FixtureEngine(), asr = try fixtureModel(.asr)
+    await engine.empty()
+    await #expect(throws: (any Error).self) { try await store.create(name: "Voice",source: root,consent: true,asr: asr,engine: engine,decoder: FixtureDecoder()) }
+    #expect(try await store.list().isEmpty)
+    let task = Task { try await store.create(name: "Voice",source: root,consent: true,asr: asr,engine: engine,decoder: FixtureDecoder()) }
+    task.cancel(); await #expect(throws: CancellationError.self) { try await task.value }
+    #expect(try await store.list().isEmpty)
+}
+@Test func phoneRecentAudioPersistsMarkedAndCanBeRemoved() async throws {
+    let root = try fixtureRoot(); defer { try? FileManager.default.removeItem(at: root) }
+    let store = try PhoneGenerationStore(root: root)
+    let item = try await store.save(text: "Hello",audio: LocalAudio(samples: [0.2,-0.2],sampleRate: 24000))
+    #expect(try Data(contentsOf: await store.file(item)).range(of: Data("VoiceStudio synthetic audio".utf8)) != nil)
+    let restored = try PhoneGenerationStore(root: root)
+    #expect(try await restored.list().first?.text == "Hello")
+    try await restored.delete(item); #expect(try await restored.list().isEmpty)
+}
+@Test func phoneAVExtractionResamplesAndRejectsLongReference() async throws {
+    let root = try fixtureRoot(); defer { try? FileManager.default.removeItem(at: root) }
+    let source = root.appendingPathComponent("source.wav")
+    try LocalAudio(samples: (0..<48000).map { Float(sin(Double($0)*0.1)*0.25) },sampleRate: 48000).markSynthetic().write(to: source)
+    let audio = try await AVPhoneAudioDecoder().decode(source: source,output: root.appendingPathComponent("reference.pcm"),maxSeconds: 30,progress: { _ in })
+    #expect(abs(try audio.frames - 24000) < 100)
+    #expect(try audio.read(start: 0,count: 2400).samples.contains { abs($0) > 0.1 })
+    await #expect(throws: (any Error).self) { try await AVPhoneAudioDecoder().decode(source: source,output: root.appendingPathComponent("long.pcm"),maxSeconds: 0.5,progress: { _ in }) }
+}
+@Test(.enabled(if: ProcessInfo.processInfo.environment["VOICESTUDIO_REAL_AUX"] == "1"))
+func realAuxiliaryPhoneVoiceCreationAndSpeak() async throws {
+    let root = try fixtureRoot(); defer { try? FileManager.default.removeItem(at: root) }
+    let env = ProcessInfo.processInfo.environment
+    let models = try ModelStore(root: repository.appendingPathComponent("mobile/ios/.cache/inference-models"))
+    let tts = try fixtureModel(.tts), asr = try fixtureModel(.asr), clone = try fixtureModel(.clone)
+    for model in [tts,asr,clone] { try await models.accept(model,fingerprint: model.licence.terms_fingerprint,appVersion: "inference-test",accepted: true) }
+    let engine = NativeLocalEngine(store: models,libraries: [.sherpa: try #require(env["SHERPA_ONNX_LIBRARY"]),.omni: try #require(env["OMNIVOICE_LIBRARY"])])
+    let reference = try await engine.synthesize(model: tts,text: "The quick brown fox jumps over the lazy dog.")
+    let source = root.appendingPathComponent("reference.wav"); try reference.markSynthetic().write(to: source)
+    let voices = try PhoneVoiceStore(root: root.appendingPathComponent("voices"))
+    let voice = try await voices.create(name: "Phone voice",source: source,consent: true,asr: asr,engine: engine,decoder: AVPhoneAudioDecoder())
+    #expect(voice.transcript.lowercased().contains("fox"))
+    let result = try await engine.clone(model: clone,text: "Hello world.",reference: voices.reference(voice),referenceText: voice.transcript)
+    #expect(result.samples.count > 1000); #expect(result.samples.contains { abs($0) > 0.001 })
+}
+
+@Test func phoneTimingPadsCompressesAndMixesWithoutDuplicateSegments() throws {
+    let root = try fixtureRoot(); defer { try? FileManager.default.removeItem(at: root) }
+    let short = LocalAudio(samples: [0.2,0.4],sampleRate: 24000)
+    #expect(try fitTiming(short,frames: 4).samples == [0.2,0.4,0,0])
+    let wave = LocalAudio(samples: (0..<48000).map { Float(sin(Double($0)*0.1)*0.25) },sampleRate: 24000)
+    let compressed = try fitTiming(wave,frames: 24000)
+    #expect(compressed.samples.count == 24000)
+    #expect(compressed.samples.allSatisfy { $0.isFinite })
+    let segment = root.appendingPathComponent("segment.pcm"); try PCMFile.write(PCMChunk(samples: [0.7,0.7],sampleRate: 24000),to: segment)
+    let output = root.appendingPathComponent("mix.pcm")
+    for _ in 0..<2 {
+        let mixed = try mixTimeline(to: output,frames: 4,segments: [(0,PCMFile(segment)),(1,PCMFile(segment))])
+        #expect(try mixed.read(start: 0,count: 4).samples == [0.7,1,0.7,0])
+        let wave = root.appendingPathComponent("marked.wav"); try mixed.markSynthetic(to: wave)
+        #expect(try Data(contentsOf: wave).range(of: Data("VoiceStudio synthetic audio".utf8)) != nil)
+    }
+}
+@Test func phoneDubCancellationResumesFromVerifiedSegmentsAndPersistsHistory() async throws {
+    let root = try fixtureRoot(); defer { try? FileManager.default.removeItem(at: root) }
+    let source = root.appendingPathComponent("original.wav"); try Data("fixture".utf8).write(to: source)
+    let models = try [fixtureModel(.asr),fixtureModel(.translate),fixtureModel(.clone)]
+    let store = try PhoneDubStore(root: root.appendingPathComponent("dubs")), engine = FixtureEngine()
+    let request = try await store.create(source: source,title: "Original.wav",targets: [PhoneDubTarget(code: "fr",name: "French"),PhoneDubTarget(code: "de",name: "German")],models: models,consent: true,audioOnly: true)
+    await engine.failOnClone(2)
+    let pipeline = PhoneDubPipeline(store: store,engine: engine,decoder: FixtureDecoder(),media: FixtureMedia())
+    await #expect(throws: CancellationError.self) { try await pipeline.run(id: request.id,models: models) }
+    let interrupted = try await store.checkpoint(request.id)
+    #expect(interrupted.nextFrame == 24000); #expect(interrupted.renders.count == 1)
+    #expect(interrupted.segments.allSatisfy { $0.translations["fr"] != nil })
+    let calls = await engine.transcriptions
+    let restored = try PhoneDubStore(root: root.appendingPathComponent("dubs"))
+    let result = try await PhoneDubPipeline(store: restored,engine: engine,decoder: FixtureDecoder(),media: FixtureMedia()).run(id: request.id,models: models)
+    #expect(result.done); #expect(result.outputs.map(\.language) == ["fr","de"])
+    #expect(await engine.clones == 5); #expect(await engine.translations == 4)
+    #expect(await engine.transcriptions == calls)
+    #expect(try await restored.list().first?.request.title == "Original.wav")
+    for output in result.outputs {
+        let url = try await restored.file(request.id,output.file)
+        #expect(try ModelHash.file(url) == output.hash)
+        #expect(try Data(contentsOf: url).range(of: Data("VoiceStudio synthetic audio".utf8)) != nil)
+    }
+    let clones = await engine.clones
+    _ = try await pipeline.run(id: request.id,models: models)
+    #expect(await engine.clones == clones)
+    let output = try await store.file(request.id,result.outputs[0].file)
+    try Data("corrupt".utf8).write(to: output)
+    await #expect(throws: (any Error).self) { try await pipeline.run(id: request.id,models: models) }
+    try await restored.delete(request.id); #expect(try await restored.list().isEmpty)
+}
+private struct FixtureMedia: PhoneDubMedia {
+    func finish(source: URL,markedWave: URL,output: URL,audioOnly: Bool,progress: @escaping @Sendable (Double) async -> Void) async throws -> URL {
+        let result = output.appendingPathExtension("wav")
+        try? FileManager.default.removeItem(at: result); try FileManager.default.copyItem(at: markedWave,to: result)
+        return result
+    }
+}
+@Test func phoneDubConsentPinsAndLicenceWithdrawalBlockBeforeInference() async throws {
+    let root = try fixtureRoot(); defer { try? FileManager.default.removeItem(at: root) }
+    let source = root.appendingPathComponent("source.wav"); try Data("fixture".utf8).write(to: source)
+    let models = try [fixtureModel(.asr),fixtureModel(.translate),fixtureModel(.clone)]
+    let store = try PhoneDubStore(root: root.appendingPathComponent("dubs")), engine = FixtureEngine()
+    await #expect(throws: (any Error).self) { try await store.create(source: source,title: "Source",targets: [PhoneDubTarget(code: "fr",name: "French")],models: models,consent: false) }
+    #expect(try await store.list().isEmpty)
+    let request = try await store.create(source: source,title: "Source",targets: [PhoneDubTarget(code: "fr",name: "French")],models: models,consent: true)
+    let blocked = PhoneDubPipeline(store: store,engine: engine,decoder: FixtureDecoder(),media: FixtureMedia(),authorize: { throw ClientError("mobile.local.licence_required") })
+    await #expect(throws: (any Error).self) { try await blocked.run(id: request.id,models: models) }
+    #expect(await engine.transcriptions == 0)
+    let pipeline = PhoneDubPipeline(store: store,engine: engine,decoder: FixtureDecoder(),media: FixtureMedia())
+    await #expect(throws: (any Error).self) { try await pipeline.run(id: request.id,models: Array(models.prefix(2))) }
+    #expect(await engine.transcriptions == 0)
+    try await store.acquire(request.id)
+    await #expect(throws: (any Error).self) { try await pipeline.run(id: request.id,models: models) }
+    await #expect(throws: (any Error).self) { try await store.delete(request.id) }
+    await store.release(request.id)
+    await #expect(throws: (any Error).self) { try await store.file(request.id,"../outside") }
+}
+@Test(.enabled(if: ProcessInfo.processInfo.environment["VOICESTUDIO_REAL_AUX"] == "1"))
+func realAuxiliaryPhoneDubOfflineAndResume() async throws {
+    let root = try fixtureRoot(); defer { try? FileManager.default.removeItem(at: root) }
+    let env = ProcessInfo.processInfo.environment
+    let models = try [fixtureModel(.asr),fixtureModel(.translate),fixtureModel(.clone)]
+    let tts = try fixtureModel(.tts)
+    let modelStore = try ModelStore(root: repository.appendingPathComponent("mobile/ios/.cache/inference-models"))
+    for model in models+[tts] { try await modelStore.accept(model,fingerprint: model.licence.terms_fingerprint,appVersion: "inference-test",accepted: true) }
+    let engine = NativeLocalEngine(store: modelStore,libraries: [.sherpa: try #require(env["SHERPA_ONNX_LIBRARY"]),.omni: try #require(env["OMNIVOICE_LIBRARY"]),.llama: try #require(env["LLAMA_LIBRARY"])])
+    let reference = try await engine.synthesize(model: tts,text: "Hello, how are you?")
+    let source = root.appendingPathComponent("source.wav"); try reference.markSynthetic().write(to: source)
+    let store = try PhoneDubStore(root: root.appendingPathComponent("dubs"))
+    let request = try await store.create(source: source,title: "Source.wav",targets: [PhoneDubTarget(code: "fr",name: "French")],models: models,consent: true,audioOnly: true)
+    let pipeline = PhoneDubPipeline(store: store,engine: engine,authorize: { for model in models { try await modelStore.checkPermission(model) } })
+    let result = try await pipeline.run(id: request.id,models: models)
+    #expect(result.done); #expect(result.outputs.count == 1)
+    let translated = result.segments.compactMap { $0.translations["fr"] }.joined(separator: " ").lowercased()
+    print("Phone dub native segments:", result.segments.map { $0.speech.text })
+    print("Phone dub native translation:", translated)
+    #expect(["bonjour", "salut", "comment", "vous", "merci"].contains { translated.contains($0) })
+    let wave = try await store.file(request.id,result.outputs[0].file)
+    let decoded = try await AVPhoneAudioDecoder().decode(source: wave,output: root.appendingPathComponent("result.pcm"),maxSeconds: 30,progress: { _ in })
+    #expect(try decoded.frames > 1000)
+    #expect(try decoded.read(start: 0,count: min(720000,decoded.frames)).samples.contains { abs($0) > 0.001 })
+    let resumed = try await pipeline.run(id: request.id,models: models)
+    #expect(resumed.done); #expect(resumed.outputs[0].hash == result.outputs[0].hash)
+}
+
+@Test func phoneMediaRejectsRemoteSourcesBeforeOpeningAssets() async throws {
+    let root = try fixtureRoot(); defer { try? FileManager.default.removeItem(at: root) }
+    let remote = URL(string: "https://example.invalid/media.wav")!
+    await #expect(throws: (any Error).self) { try await AVPhoneAudioDecoder().decode(source: remote,output: root.appendingPathComponent("out.pcm"),maxSeconds: 30,progress: { _ in }) }
+    await #expect(throws: (any Error).self) { try await AVPhoneDubMedia().finish(source: remote,markedWave: root.appendingPathComponent("marked.wav"),output: root.appendingPathComponent("out"),audioOnly: true,progress: { _ in }) }
+}
+
+@Test func phoneLibrariesRemoveUnpublishedWorkAfterInterruption() async throws {
+    let root = try fixtureRoot(); defer { try? FileManager.default.removeItem(at: root) }
+    for metadata in ["voice.json","request.json"] {
+        let library = root.appendingPathComponent(metadata)
+        let pending = library.appendingPathComponent(UUID().uuidString)
+        try PrivateFiles.directory(pending); try Data("partial".utf8).write(to: pending.appendingPathComponent("reference.pcm"))
+        if metadata == "voice.json" { _ = try PhoneVoiceStore(root: library) } else { _ = try PhoneDubStore(root: library) }
+        #expect(!FileManager.default.fileExists(atPath: pending.path))
+    }
+}

@@ -30,6 +30,16 @@ final class WifiState: @unchecked Sendable {
     @ObservationIgnored private var downloads: [String: Task<Void, Never>] = [:]
     @ObservationIgnored private let wifi = WifiState()
     private(set) var store: ModelStore?
+    private(set) var dubs: [PhoneDubRecord] = []
+    private(set) var dubStore: PhoneDubStore?
+    private(set) var activeDub: UUID?
+    private(set) var dubProgress: PhoneDubProgress?
+    @ObservationIgnored var onDubFinished: (@MainActor @Sendable (PhoneDubRequest) async -> Void)?
+    @ObservationIgnored private var dubTask: Task<Void,Never>?
+    private(set) var voices: [PhoneVoice] = []
+    private(set) var recent: [PhoneGeneration] = []
+    private(set) var voiceStore: PhoneVoiceStore?
+    private(set) var generationStore: PhoneGenerationStore?
     private(set) var engine: (any LocalEngine)?
     init(bundle: Bundle = .main) {
         allowMobileData = UserDefaults.standard.bool(forKey: "models.mobile-data")
@@ -40,6 +50,9 @@ final class WifiState: @unchecked Sendable {
             } else {
                 root = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true).appendingPathComponent("PhoneModels", isDirectory: true)
             }
+            dubStore = try PhoneDubStore(root: root.appendingPathComponent("dubs"))
+            voiceStore = try PhoneVoiceStore(root: root.appendingPathComponent("voices"))
+            generationStore = try PhoneGenerationStore(root: root.appendingPathComponent("recent"))
             let store = try ModelStore(root: root)
             self.store = store; engine = NativeLocalEngine(store: store)
             guard let url = bundle.url(forResource: "models", withExtension: "json", subdirectory: "Catalogs") else { throw ClientError("mobile.local.catalogue_error") }
@@ -51,6 +64,8 @@ final class WifiState: @unchecked Sendable {
         }
     }
     func refresh() async {
+        do { voices = try await voiceStore?.list() ?? []; recent = try await generationStore?.list() ?? []; dubs = try await dubStore?.list() ?? [] }
+        catch { self.error = error as? ClientError ?? ClientError("mobile.errors.file") }
         guard let store else { return }
         var downloaded = Set<String>(); var permitted = Set<String>(); var bytes: [String: Int64] = [:]
         for model in models {
@@ -94,6 +109,32 @@ final class WifiState: @unchecked Sendable {
             try await store.accept(model, fingerprint: model.licence.terms_fingerprint, appVersion: version, accepted: accepted)
             await refresh()
         } catch { self.error = error as? ClientError ?? ClientError("mobile.errors.file") }
+    }
+    var dubModels: [PhoneModel] { [selectedModel("dub-asr",.asr), selectedModel("dub-translate",.translate), selectedModel("dub",.clone)].compactMap { $0 } }
+    var dubReady: Bool { dubModels.count == 3 && dubModels.allSatisfy(ready) }
+    func startDub(_ id: UUID) {
+        guard dubTask == nil, let dubStore, let engine, let store else { return }
+        activeDub = id
+        dubTask = Task {
+            defer { activeDub = nil; dubProgress = nil; dubTask = nil }
+            do {
+                let request = try await dubStore.request(id)
+                let selected = models.filter { request.modelPins[$0.id] != nil }
+                let pipeline = PhoneDubPipeline(store: dubStore,engine: engine,authorize: {
+                    for item in selected { try await store.checkPermission(item) }
+                })
+                _ = try await pipeline.run(id: id,models: selected,report: { value in await MainActor.run { self.dubProgress = value } })
+                await onDubFinished?(request)
+            } catch is CancellationError {} catch { self.error = error as? ClientError ?? ClientError("mobile.simple.dub_failed") }
+            await refresh()
+        }
+    }
+    func cancelDub() { dubTask?.cancel() }
+    private var modelChoices: [String:String] = [:]
+    func chooseModel(_ task: String, _ id: String) { modelChoices[task] = id; UserDefaults.standard.set(id,forKey: "model."+task) }
+    func selectedModel(_ task: String, _ capability: ModelCapability) -> PhoneModel? {
+        let id = modelChoices[task] ?? UserDefaults.standard.string(forKey: "model."+task)
+        return candidates(capability).first { $0.id == id } ?? preferred(capability)
     }
     func preference(_ task: String) -> TaskLocation? { UserDefaults.standard.string(forKey: "run-on." + task).flatMap(TaskLocation.init(rawValue:)) }
     func choose(_ task: String, _ location: TaskLocation) { UserDefaults.standard.set(location.rawValue, forKey: "run-on." + task) }

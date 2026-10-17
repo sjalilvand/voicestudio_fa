@@ -73,6 +73,7 @@ struct Card<Content: View>: View {
 struct RootView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var scheme
+    @State private var recovery: String?
     var body: some View {
         let theme = Theme(palette: model.theme.palette(system: scheme == .dark ? .dark : .light), appearance: model.theme.appearance(system: scheme == .dark ? .dark : .light))
         Group {
@@ -100,29 +101,56 @@ struct RootView: View {
         .buttonStyle(VSButtonStyle()).textFieldStyle(VSFieldStyle())
         .background(theme.color("canvas"))
         .toolbarBackground(theme.color("chrome"), for: .navigationBar)
+        .sheet(isPresented: Binding(get: { recovery != nil },set: { if !$0 { recovery = nil } })) {
+            NavigationStack {
+                Group { if recovery == "models" { ModelsView() } else { ConnectView() } }
+                    .toolbar { Button(model.t("common.close")) { recovery = nil } }
+            }.environment(model).environment(\.vsTheme,theme)
+        }
         .safeAreaInset(edge: .top) {
-            if let error = model.error {
-                Card {
-                    Text(model.t(error.key, error.params)).foregroundStyle(theme.color("error"))
-                    HStack {
-                        Button(model.t("common.close"), systemImage: "xmark") { model.error = nil }
-                            .buttonStyle(VSButtonStyle(kind: .tertiary))
-                        if error.key == "mobile.permissions.denied" {
-                            Button(model.t("mobile.permissions.open_settings")) { if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) } }
+            if let error = model.error ?? model.phone.error {
+                HStack(spacing: VSTokens.spacingGap) {
+                    Text(model.t(shortError(error))).foregroundStyle(theme.color("error")).lineLimit(1)
+                        .frame(maxWidth: .infinity,alignment: .leading)
+                    if error.key.hasPrefix("mobile.local.") {
+                        Button(model.t("mobile.simple.download_models")) { model.error = nil; model.phone.error = nil; recovery = "models" }
+                    } else if error.key == "mobile.permissions.denied" {
+                        Button(model.t("mobile.permissions.open_settings")) {
+                            model.error = nil; model.phone.error = nil
+                            if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                        }
+                    } else if error.status == 401 || error.key.contains("offline") || error.key.contains("connection") {
+                        Button(model.t("mobile.simple.reconnect")) { model.error = nil; model.phone.error = nil; recovery = "connect" }
+                    } else {
+                        Button(model.t("mobile.simple.retry")) {
+                            model.error = nil; model.phone.error = nil
+                            Task { await model.phone.refresh(); if model.connection.client != nil { await model.perform { try await model.refresh() } } }
                         }
                     }
-                }.padding(Theme.compactInset).environment(\.vsTheme, theme).accessibilityElement(children: .contain)
+                }.padding(Theme.compactInset).background(theme.color("errorSurface"))
+                    .environment(\.vsTheme,theme).buttonStyle(VSButtonStyle(kind: .tertiary))
             }
+
         }
     }
+    private func shortError(_ error: ClientError) -> String {
+        if error.key.hasPrefix("mobile.simple.") { return error.key }
+        if error.key.hasPrefix("mobile.local.") { return "mobile.simple.models_error" }
+        if error.key.contains("offline") || error.key.contains("connection") { return "mobile.simple.connection_error" }
+        if error.key == "mobile.simple.no_speech" { return error.key }
+        if error.key.contains("file") || error.key.contains("media") { return "mobile.simple.media_failed" }
+        if error.key.contains("clone") { return "mobile.simple.clone_failed" }
+        if error.key.contains("dub") { return "mobile.simple.dub_failed" }
+        return "mobile.simple.error"
+    }
+
 }
 struct ConsentView: View {
     @Environment(AppModel.self) private var model
     var body: some View {
         Page {
             Text(model.t("privacy.analytics_title")).font(.custom("InterVariable", size: VSTokens.textEditor.size, relativeTo: .title))
-            Text(model.t("privacy.analytics_subtitle"))
-            Text(model.t("mobile.ios.privacy_local"))
+            InfoButton(title: model.t("mobile.simple.info"), detail: model.t("privacy.analytics_subtitle"))
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: VSTokens.spacingGap) { choice(true); choice(false) }
                 VStack(spacing: VSTokens.spacingGap) { choice(true); choice(false) }

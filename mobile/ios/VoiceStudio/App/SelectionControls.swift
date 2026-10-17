@@ -39,6 +39,8 @@ struct ChoicePicker: View {
     let label: String
     @Binding var selection: String
     let options: [SelectionOption]
+    var compact = false
+    var icon: String? = nil
     @State private var presenting = false
     @State private var query = ""
     private var filtered: [SelectionOption] {
@@ -46,7 +48,19 @@ struct ChoicePicker: View {
     }
     var body: some View {
         Button { query = ""; presenting = true } label: {
-            SelectionRow(label: label, value: options.first { $0.id == selection }?.title ?? model.t("common.unknown"))
+            if compact {
+                HStack(spacing: 4) {
+                    Text(options.first { $0.id == selection }?.title ?? label).lineLimit(1).truncationMode(.tail)
+                    Image(systemName: "chevron.down").accessibilityHidden(true)
+                }.frame(maxWidth: .infinity, minHeight: 44)
+                    .accessibilityElement(children: .ignore).accessibilityLabel(label)
+                    .accessibilityValue(options.first { $0.id == selection }?.title ?? label)
+            } else {
+                HStack {
+                if let icon { Image(systemName: icon).accessibilityHidden(true) }
+                SelectionRow(label: label, value: options.first { $0.id == selection }?.title ?? model.t("common.unknown"))
+                }
+            }
         }.buttonStyle(VSButtonStyle(kind: .tertiary))
         .sheet(isPresented: $presenting) {
             NavigationStack {
@@ -156,5 +170,38 @@ struct DeleteConfirmation: View {
                 .toolbar { Button(model.t("common.cancel")) { dismiss() }.buttonStyle(VSButtonStyle(kind: .tertiary)) }
         }.presentationBackground(theme.color("surfaceOverlay"))
             .presentationCornerRadius(VSTokens.radiusLg).presentationDetents([.medium, .large])
+    }
+}
+
+struct InfoButton: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.vsTheme) private var theme
+    let title: String
+    let detail: String
+    var row = false
+    @State private var showing = false
+    var body: some View {
+        Button { showing = true } label: {
+            if row { Label(title, systemImage: "info.circle") }
+            else { Image(systemName: "info.circle").accessibilityLabel(title) }
+        }.labelStyle(.titleAndIcon)
+            .buttonStyle(VSButtonStyle(kind: .tertiary))
+            .sheet(isPresented: $showing) {
+                NavigationStack {
+                    Page(backgroundRole: "surfaceOverlay") { Text(detail).textSelection(.enabled) }
+                        .navigationTitle(title).navigationBarTitleDisplayMode(.inline)
+                        .toolbar { Button(model.t("common.close")) { showing = false } }
+                }.presentationDetents([.medium, .large]).presentationBackground(theme.color("surfaceOverlay"))
+            }
+    }
+}
+struct EmptyState: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.vsTheme) private var theme
+    let key: String
+    var icon = "waveform"
+    var body: some View {
+        Label(model.t(key), systemImage: icon).foregroundStyle(theme.color("textMuted"))
+            .frame(maxWidth: .infinity, minHeight: 44)
     }
 }

@@ -1,8 +1,25 @@
 import SwiftUI
 import VoiceStudioKit
-import UniformTypeIdentifiers
 
 struct DubView: View {
+    @Environment(AppModel.self) private var model
+    @State private var preference: TaskLocation?
+    private var route: TaskRoute { LocalRouting.route(preference: preference,installed: model.phone.dubReady,paired: model.connection.client != nil) }
+    var body: some View {
+        VStack(spacing: 0) {
+            RunOnPicker(preference: $preference,task: "dub",installed: model.phone.dubReady)
+                .padding(.horizontal,Theme.compactInset).disabled(model.phone.activeDub != nil || model.busy)
+            if route == .computer { ComputerDubView() }
+            else { PhoneDubView(connect: route == .connect) }
+        }.task { preference = model.phone.preference("dub"); await model.phone.refresh() }
+    }
+}
+
+import SwiftUI
+import VoiceStudioKit
+import UniformTypeIdentifiers
+
+struct ComputerDubView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.vsTheme) private var theme
     @State private var upload = BackgroundUpload.shared
@@ -19,12 +36,13 @@ struct DubView: View {
     private var filteredLanguages: [MobileLanguage] { model.languages.search(languageQuery, includeAuto: false) }
     var body: some View {
         Page {
-            Text(model.t("mobile.dub.runs_on_host"))
             if model.connection.client == nil { NavigationLink(model.t("mobile.settings.connection")) { ConnectView() } }
             Card {
+                Label(model.t("mobile.simple.source"), systemImage: "doc")
                 Button(model.t("mobile.dub.pick_media"), systemImage: "doc.badge.plus") { importing = true }
                 if let selectedFile { SelectedFileRow(name: selectedFile.name) { self.selectedFile = nil } }
                 TextField(model.t("mobile.dub.paste_url"), text: $sourceURL).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled().accessibilityIdentifier("dub.source_url")
+                Label(model.t("mobile.simple.languages"), systemImage: "globe")
                 Button { selectingLanguages = true } label: {
                     SelectionRow(label: model.t("mobile.dub.target_languages"), value: ListFormatter.localizedString(byJoining: languages.filter { selected.contains($0.code) }.map(\.name)))
                 }.buttonStyle(VSButtonStyle(kind: .tertiary)).accessibilityIdentifier("dub.languages")
@@ -37,8 +55,9 @@ struct DubView: View {
                         }
                     }
                 }
+                Label(model.t("mobile.simple.voice"), systemImage: "person")
                 VoicePicker(selection: $profile, dubbing: true)
-                Button(model.t("mobile.dub.start")) { Task { await start() } }
+                Button(model.t("mobile.simple.dub"), systemImage: "film") { Task { await start() } }
                     .buttonStyle(VSButtonStyle(kind: .primary)).disabled(model.connection.client == nil || profile == DubVoiceChoice.unselected || model.busy || upload.pending != nil || selected.isEmpty || (selectedFile == nil && sourceURL.isEmpty) || model.dub.monitoring)
             }
             if let pending = upload.pending {
@@ -46,7 +65,6 @@ struct DubView: View {
                     if let name = pending.filename { Text(name).lineLimit(1).truncationMode(.middle) }
                     Text(model.t("mobile.dub.uploading", ["percent": String(Int(upload.fraction * 100))]))
                     ProgressView(value: upload.fraction).accessibilityLabel(model.t("mobile.ios.progress"))
-                    Text(model.t("mobile.ios.upload_pending"))
                     Button(model.t("mobile.ios.upload_cancel"), role: .destructive) { Task { await upload.cancel() } }
                 }
             }
@@ -65,7 +83,7 @@ struct DubView: View {
                     Text(cp.title).lineLimit(1).truncationMode(.middle)
                     Text(model.t("mobile.ios.dub_stages." + cp.stage.rawValue))
                     ProgressView(value: model.dub.progress).accessibilityLabel(model.t("mobile.ios.progress"))
-                    if cp.host != model.connection.active?.id { Text(model.t("mobile.ios.dub_resume_help")) }
+                    if cp.host != model.connection.active?.id { NavigationLink(model.t("mobile.simple.reconnect")) { ConnectView() } }
                     else if cp.stage == .done { Button(model.t("mobile.dub.download")) { Task { await download(cp.jobID, name: cp.title) } } }
                     else if cp.stage != .cancelled {
                         if !model.dub.monitoring { Button(model.t("mobile.ios.upload_resume")) { model.monitor() } }
@@ -74,7 +92,7 @@ struct DubView: View {
                 }
             }
             Text(model.t("mobile.dub.history"))
-            if model.dubHistory.isEmpty && !model.loading { Text(model.t("mobile.dub.empty_history")) }
+            if model.dubHistory.isEmpty && !model.loading { EmptyState(key: "mobile.simple.empty_dubs", icon: "film") }
             if !model.dubHistory.isEmpty {
                 Card {
                     ForEach(model.dubHistory) { item in
