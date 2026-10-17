@@ -1,46 +1,8 @@
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
+import { ROUTES as routes } from './fixtures/routes.mjs';
 
 const base = process.env.VOICESTUDIO_UI_URL || 'http://localhost:3912';
-const routes = [
-  '/',
-  '/clone',
-  '/design',
-  '/personas',
-  '/gallery',
-  '/transcriptions',
-  '/calls',
-  '/stories',
-  '/audiobook',
-  '/dub',
-  '/batch',
-  '/projects',
-  '/tools',
-  '/integrations',
-  '/pro',
-  '/settings',
-  '/settings/general',
-  '/settings/appearance',
-  '/settings/models',
-  ...['tts', 'asr', 'dictation', 'diarisation', 'translation', 'llm'].map(
-    (family) => `/settings/models/${family}`,
-  ),
-  '/settings/performance',
-  '/settings/pronunciation',
-  '/settings/media',
-  '/settings/network',
-  '/settings/sharing',
-  '/settings/credentials',
-  '/settings/permissions',
-  '/settings/privacy',
-  '/settings/storage',
-  '/settings/usage',
-  '/settings/logs',
-  '/settings/diagnostics',
-  '/settings/openapi',
-  '/settings/updates',
-  '/settings/support',
-];
 const viewports = [
   { width: 1440, height: 900 },
   { width: 640, height: 720 },
