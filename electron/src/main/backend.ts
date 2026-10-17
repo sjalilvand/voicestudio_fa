@@ -374,7 +374,9 @@ const FOLDER_METADATA = new Set(['.ds_store', '.localized', 'desktop.ini', 'thum
  */
 function holdsUnownedFiles(root: string): boolean {
   try {
-    return readdirSync(root).some((name) => !FOLDER_METADATA.has(name.toLocaleLowerCase('en-US')));
+    return readdirSync(root, { withFileTypes: true }).some(
+      (entry) => !entry.isFile() || !FOLDER_METADATA.has(entry.name.toLowerCase()),
+    );
   } catch (error) {
     return (error as NodeJS.ErrnoException).code !== 'ENOENT';
   }

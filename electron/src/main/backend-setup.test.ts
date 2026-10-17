@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   existingProject: false,
   existingRoot: false,
   rootEntries: ['.python'] as string[],
+  rootEntryIsFile: true,
   dependencies: vi.fn(async (_project?: string) => true),
   ready: vi.fn(async () => false),
   compatible: vi.fn(async () => false),
@@ -49,7 +50,10 @@ vi.mock('node:fs', async (importOriginal) => {
         return (original.readdirSync as (...args: unknown[]) => unknown)(path, ...rest);
       if (!mocks.existingRoot)
         throw Object.assign(new Error(`ENOENT: ${String(path)}`), { code: 'ENOENT' });
-      return mocks.existingProject ? [...mocks.rootEntries, 'project'] : mocks.rootEntries;
+      const names = mocks.existingProject ? [...mocks.rootEntries, 'project'] : mocks.rootEntries;
+      return (rest[0] as { withFileTypes?: boolean })?.withFileTypes
+        ? names.map((name) => ({ name, isFile: () => mocks.rootEntryIsFile }))
+        : names;
     }) as typeof original.readdirSync,
   };
 });
@@ -88,6 +92,7 @@ afterEach(() => {
   mocks.existingProject = false;
   mocks.existingRoot = false;
   mocks.rootEntries = ['.python'];
+  mocks.rootEntryIsFile = true;
   mocks.dependencies.mockResolvedValue(true);
   mocks.ready.mockResolvedValue(false);
   mocks.compatible.mockResolvedValue(false);
@@ -502,6 +507,43 @@ it.each([true, false])(
     const selected = resolve('/selected/VoiceStudio');
     mocks.runtimeConfig = { root: selected, owned: false };
     mocks.existingProject = projectExists;
+    mocks.existingRoot = true;
+    mocks.ready.mockResolvedValue(true);
+    mocks.dependencies.mockResolvedValue(false);
+    mocks.install.mockRejectedValue(new Error('offline'));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('no backend');
+      }),
+    );
+    vi.stubEnv('OMNIVOICE_BACKEND_CMD', '');
+    vi.stubEnv('VOICESTUDIO_SKIP_BACKEND', '');
+    const supervisor = new BackendSupervisor();
+    await supervisor.start();
+    expect(supervisor.status.stage).toBe('setup_required');
+    expect(
+      mocks.dependencies.mock.calls.every(([project]) => String(project).includes('selected')),
+    ).toBe(true);
+    expect(mocks.install).not.toHaveBeenCalled();
+    await supervisor.setupRuntime();
+    expect(mocks.install.mock.calls[0][1]).toBe(join('/private/voicestudio', 'runtime', 'project'));
+    expect(mocks.runtimeConfig?.root).not.toBe(selected);
+    expect(mocks.rm).not.toHaveBeenCalled();
+    expect(mocks.stage).not.toHaveBeenCalled();
+    await supervisor.shutdown();
+  },
+);
+
+it.each(['.DS_Store', 'desktop.ini'])(
+  'preserves a selected runtime containing a metadata-named directory (%s)',
+  async (name) => {
+    const { resolve, join } = await import('node:path');
+    const selected = resolve('/selected/VoiceStudio');
+    mocks.runtimeConfig = { root: selected, owned: false };
+    mocks.existingProject = false;
+    mocks.rootEntries = [name];
+    mocks.rootEntryIsFile = false;
     mocks.existingRoot = true;
     mocks.ready.mockResolvedValue(true);
     mocks.dependencies.mockResolvedValue(false);
