@@ -57,6 +57,8 @@ struct DictateView: View {
         let scope = model.hostState.scopeID
         listening = true; previousText = text; transcript = DictationTranscript()
         capturing = Task {
+            // Per session: a finished `receiving` from an earlier session must not count.
+            var receiverCreated = false
             do {
                 let api = try model.api()
                 let messages = try await stream.start(api: api)
@@ -73,11 +75,12 @@ struct DictateView: View {
                         }
                     } catch { audio.stop(); listening = false; finalizing = false; if !Task.isCancelled && scope == model.hostState.scopeID { model.error = error as? ClientError ?? ClientError("mobile.errors.dictation") } }
                 }
+                receiverCreated = true
                 let chunks = try await audio.start()
                 guard scope == model.hostState.scopeID, listening, !Task.isCancelled else { audio.stop(); try? await stream.finish(); return }
                 for try await chunk in chunks { try Task.checkCancellation(); try await stream.send(chunk) }
                 try await stream.finish()
-            } catch is CancellationError { if receiving == nil { finalizing = false } } catch {
+            } catch is CancellationError { if !receiverCreated { finalizing = false } } catch {
                 audio.stop(); listening = false; finalizing = false; await stream.close()
                 if scope == model.hostState.scopeID { model.error = error as? ClientError ?? ClientError("mobile.errors.audio") }
             }

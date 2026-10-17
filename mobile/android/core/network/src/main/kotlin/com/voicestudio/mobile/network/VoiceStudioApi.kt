@@ -109,10 +109,12 @@ class VoiceStudioApi(val address: PairingAddress, token: String? = null, private
     suspend fun translationEngine(): TranslationEngine {
         val engine = get<TranslationEngines>("/engines/translation").activeEngine()
         if(engine.category != "llm") return engine
-        // Desktop hosts restrict settings to loopback; server hosts may permit
-        // the paired administrator session. Unknown/forbidden metadata requires consent.
-        val route = kotlinx.coroutines.withTimeoutOrNull(4000) {
-            try {
+        // Desktop hosts restrict settings to loopback; server hosts may permit the
+        // paired administrator session. Only a confirmed absent/forbidden route means
+        // "unknown" (consent). A slow or failing host is transient: surface it as
+        // retryable so a durable job isn't rejected as "translation changed".
+        val lookup = kotlinx.coroutines.withTimeoutOrNull(4000) {
+            RouteLookup(try {
                 val skill = get<LlmSkills>("/api/settings/llm-skills").skills
                     .firstOrNull { it.id == "dub_translation" && it.ready && it.enabled }
                 val provider = skill?.provider?.let { id ->
@@ -120,9 +122,10 @@ class VoiceStudioApi(val address: PairingAddress, token: String? = null, private
                 }
                 provider?.let { LlmRoute(it.id, it.displayName, it.baseUrl) }
             } catch(cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
-            catch(error: ClientFailure) { if(error.status == 401) throw error; null }
-            catch(_: kotlinx.serialization.SerializationException) { null }
-        }
+            catch(error: ClientFailure) { if(error.status == 401 || error.isTransient()) throw error; null }
+            catch(_: kotlinx.serialization.SerializationException) { null })
+        } ?: throw ClientFailure("mobile.errors.timeout")
+        val route = lookup.route
         return engine.copy(llmRoute = route)
     }
     suspend fun history(): List<HistoryItem> = get("/history")
@@ -211,3 +214,9 @@ private class ProgressBody(val file: File, val progress: (Int) -> Unit) : Reques
         }
     }
 }
+
+private class RouteLookup(val route: LlmRoute?)
+
+/** Failures worth retrying: the host is slow, unreachable or temporarily overloaded. */
+fun ClientFailure.isTransient(): Boolean =
+    key == "mobile.connect.error_unreachable" || key == "mobile.errors.timeout" || (status ?: 0) in setOf(429, 500, 502, 503, 504)

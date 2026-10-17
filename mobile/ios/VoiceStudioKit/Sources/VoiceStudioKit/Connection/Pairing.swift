@@ -8,6 +8,10 @@ public struct ClientError: Error, Codable, Sendable, Equatable {
     public init(_ key: String, params: [String: String] = [:], status: Int? = nil) {
         self.key = key; self.params = params; self.status = status
     }
+    /// The host is slow, unreachable or temporarily overloaded; worth retrying.
+    public var isTransient: Bool {
+        key == "mobile.connect.error_unreachable" || key == "mobile.errors.timeout" || [429, 500, 502, 503, 504].contains(status ?? 0)
+    }
     public static let invalidURL = ClientError("mobile.connect.error_invalid_url")
 }
 

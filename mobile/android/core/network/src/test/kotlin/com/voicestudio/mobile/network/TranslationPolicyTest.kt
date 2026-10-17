@@ -108,5 +108,14 @@ class TranslationPolicyTest {
             assertEquals(4,server.requestCount)
         } finally {server.shutdown()}
     }
-
+    @Test fun transientLlmLookupFailureIsRetryableNotUnknown()=runBlocking {
+        val server=MockWebServer().apply {start()}
+        val api=VoiceStudioApi(PairingAddress.parse(server.url("/").toString()))
+        try {
+            server.enqueue(MockResponse().setBody("""{"active":"openai","engines":[{"id":"openai","category":"llm","configured_via":"OpenAI","installed":true,"ready":true}]}"""))
+            server.enqueue(MockResponse().setResponseCode(503))
+            val failure=runCatching {api.translationEngine()}.exceptionOrNull()
+            assertTrue("expected a retryable failure, got $failure",(failure as? ClientFailure)?.isTransient() == true)
+        } finally {server.shutdown()}
+    }
 }

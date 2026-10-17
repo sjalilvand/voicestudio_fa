@@ -164,8 +164,10 @@ public struct APIClient: Sendable {
                 return engine.resolved(provider: nil, name: nil, baseURL: endpoint.base_url)
             }
         } catch is CancellationError { throw CancellationError() }
-        catch let error as ClientError where error.status == 401 { throw error }
-        catch { /* Settings discovery is admin-only on desktop. Unknown means consent. */ }
+        catch let error as ClientError where error.status == 401 || error.isTransient { throw error }
+        // Settings discovery is admin-only on desktop: forbidden, missing or unreadable
+        // means unknown, which requires consent. Transient failures above are retried.
+        catch {}
         return engine.resolved(provider: nil, name: nil, baseURL: nil)
     }
     public func translate(_ job: String, segments: [Segment], language: String, provider: String) async throws -> Translation {
