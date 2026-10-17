@@ -34,6 +34,7 @@ import math
 import os
 import re
 import sys
+import zlib
 from dataclasses import dataclass, fields
 from functools import partial
 from typing import Any, List, Optional, Union
@@ -978,6 +979,19 @@ class OmniVoice(PreTrainedModel):
             candidates = list(ref_wav.split(max_samples, dim=-1))
 
             def speech_score(text):
+                # #2836: on a near-silent window Whisper loops a stock phrase
+                # ("Thank you. Thank you. ...") that outscores real speech on
+                # length alone. Whisper's own decoder treats text compressing
+                # better than 2.4:1 as a repetition hallucination; so do we.
+                encoded = (text or "").encode("utf-8")
+                if encoded and len(encoded) / len(zlib.compress(encoded)) > 2.4:
+                    return 0
+                # Short repetitive text can be real speech. Discount it against
+                # informative alternatives (including loops with trailing words),
+                # but keep it usable when no better passage exists.
+                words = re.findall(r"\w+", (text or "").casefold(), flags=re.UNICODE)
+                if len(words) >= 6 and len(set(words)) * 2 < len(words):
+                    return 1
                 return len(re.sub(r"[^\w]+", "", text or "", flags=re.UNICODE))
 
             transcribed = [
