@@ -291,6 +291,15 @@ test('dialogs: open and save round-trip through the main process', async (t) => 
   });
 });
 
+test('harness: seeding survives a document without storage access', async (t) => {
+  // The seed script runs on every document, including ones where localStorage throws
+  // (data: URLs, the blank-window fallback). It must not raise a page error there.
+  await withApp(t, {}, async ({ page }) => {
+    await page.goto('data:text/html,<p>no storage here</p>');
+    await page.getByText('no storage here').waitFor();
+  });
+});
+
 test('reload keeps the bridge working', async (t) => {
   await withApp(t, {}, async ({ page }) => {
     await page.reload();
