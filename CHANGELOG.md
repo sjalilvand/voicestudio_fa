@@ -26,6 +26,8 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- Renders no longer wait out a network timeout each time the AudioSeal watermark checkpoint can't be fetched; a failed load is retried after 10 minutes (#2933) — thanks @chiarorosa!
+
 - First-run setup installs into the selected runtime folder when it already exists but is empty (#2766) — thanks @emreisik95!
 
 - CPU and ROCm runtime setup avoids an unnecessary native CUDA probe that can crash before installation finishes (#2942)
