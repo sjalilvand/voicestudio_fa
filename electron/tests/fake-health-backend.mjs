@@ -23,6 +23,41 @@ const DEFAULT_FIXTURES = {
   '/projects': [],
   '/models/install/status': { jobs: [] },
   '/generate/budget': {},
+  '/setup/preflight': {
+    ok: true,
+    checks: [{ id: 'ram', label: 'Memory', status: 'pass', detail: 'Enough memory', fix: null }],
+  },
+  // Matches `/setup/status` above: every model is already installed.
+  '/setup/recommendations': {
+    device: { label: 'Fixture CPU' },
+    models: [
+      {
+        repo_id: 'k2-fsa/OmniVoice',
+        label: 'VoiceStudio TTS',
+        role: 'TTS',
+        size_gb: 2.4,
+        required: true,
+        installed: true,
+      },
+    ],
+    download_gb_remaining: 0,
+    total_gb: 2.4,
+    all_installed: true,
+  },
+  '/dictation/readiness': { ready: true },
+  // HEAD probe for the bundled dictation demo clip shown on the last setup step.
+  '/demo_audio/dictation/en_conversational.wav': {},
+  '/system/info': { translate_provider: 'unknown' },
+  '/watermark/status': { audioseal_available: true, invisible_enabled: true },
+  '/api/settings/history-retention': { cap: 200, default: 200 },
+  '/media-tools/status': {
+    tools: {
+      ffmpeg: { ok: true, version: 'fixture', origin: 'system' },
+      ffprobe: { ok: true, origin: 'system' },
+      ytdlp: { version: 'fixture', overlay_version: null },
+    },
+    ops: {},
+  },
 };
 
 const WEBSOCKET_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
