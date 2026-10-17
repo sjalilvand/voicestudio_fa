@@ -21,9 +21,13 @@ import com.voicestudio.mobile.data.DubWorker
 import com.voicestudio.mobile.network.*
 import kotlinx.coroutines.*
 import java.io.File
-import kotlinx.serialization.json.*
 
 @Composable fun DubScreen(vm:StudioViewModel) {
+    com.voicestudio.mobile.features.models.TaskLocation(vm,"dub",setOf("clone"),dependencies=setOf("asr","translate")) {location,model ->
+        if(location==com.voicestudio.mobile.local.RunLocation.COMPUTER) ComputerDubScreen(vm) else PhoneDubScreen(vm,model)
+    }
+}
+@Composable private fun ComputerDubScreen(vm:StudioViewModel) {
     val context=LocalContext.current
     val state by vm.state.collectAsState()
     val work=remember {WorkManager.getInstance(context)}
@@ -103,16 +107,18 @@ import kotlinx.serialization.json.*
     }
     Screen {
         ScreenTitle("mobile.tabs.dub")
-        Text(tr("mobile.dub.runs_on_host"))
+        StepHeading("mobile.simple.source",VSIcons.Download)
         if(copying || catalog==null) InlineLoading()
         Secondary("mobile.dub.pick_media",!copying) {picker.launch(arrayOf("video/*","audio/*"))}
         if(filePath!=null) {
             SelectedDubSource(sourceName ?: File(filePath!!).name) {File(filePath!!).delete();filePath=null;sourceName=null}
         }
         Field("mobile.dub.paste_url",link,{link=it})
+        StepHeading("mobile.simple.languages",Icons.Default.Edit)
         MultiPicker("mobile.dub.target_languages",targets,languages) {targets=it}
-        Group {Picker("mobile.speak.voice",voice,dubVoiceChoices(state.profiles,tr("mobile.speak.voice_default")),{voice=it})}
-        Action("mobile.dub.start",!state.busy&&!copying&&voice!=DubVoiceChoice.UNSELECTED&&languages.any {it.first in targets}&&(filePath!=null||link.isNotBlank())) {
+        StepHeading("mobile.simple.voice",Icons.Default.Person)
+        Group {Picker("mobile.speak.voice",voice,dubVoiceChoices(state.profiles,tr("mobile.simple.default_voice")),{voice=it})}
+        Action("mobile.simple.dub",!state.busy&&!copying&&voice!=DubVoiceChoice.UNSELECTED&&languages.any {it.first in targets}&&(filePath!=null||link.isNotBlank())) {
             val current = vm.api ?: return@Action
             val draftHost = state.hostUrl ?: return@Action
             val draftFile = filePath?.let(::File)
@@ -130,10 +136,12 @@ import kotlinx.serialization.json.*
         }
         works.filter {it.state != WorkInfo.State.FAILED || it.id in visibleFailures}.forEach {info ->
             val stage=info.displayStage()
-            val errorParams=remember(info.outputData) {runCatching {
-                Json.parseToJsonElement(info.outputData.getString("error_params") ?: "{}").jsonObject.mapValues {it.value.jsonPrimitive.content}
-            }.getOrDefault(emptyMap())}
-            Text(LocalL10n.current.t(stage,errorParams))
+            Group {Column(Modifier.fillMaxWidth().padding(VSTheme.inset),verticalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
+            val value=if(info.state==WorkInfo.State.SUCCEEDED) 100 else info.progress.getInt("percent",0)
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                Text(tr(if(stage.contains("stage_")) stage else shortErrorKey(stage)),Modifier.weight(1f),maxLines=1,overflow=TextOverflow.Ellipsis)
+                Text(tr("mobile.simple.percent",mapOf("percent" to value)))
+            }
             if(!info.state.isFinished) {
                 val progress=info.progress.getInt("percent",0)
                 if(progress>0) LinearProgressIndicator(progress={progress/100f}) else LinearProgressIndicator()
@@ -150,12 +158,13 @@ import kotlinx.serialization.json.*
             if(info.state==WorkInfo.State.SUCCEEDED&&job!=null) Secondary("mobile.dub.download",!state.busy) {
                 vm.run {shareFile(context,sharedDownload(context,vm.api!!,"/dub/download/${VoiceStudioApi.segment(job)}",if(inputType=="audio") "m4a" else "mkv"),"application/octet-stream")}
             }
+            }}
             HorizontalDivider()
         }
         Heading("mobile.dub.history")
         Secondary("common.refresh",!state.busy,vm::refresh)
         if(state.catalogLoading) InlineLoading()
-        else if(state.dubHistory.isEmpty()) Text(tr("mobile.dub.empty_history"))
+        else if(state.dubHistory.isEmpty()) EmptyState("mobile.simple.empty_dubs")
         if(state.dubHistory.isNotEmpty()) Group {
             state.dubHistory.forEachIndexed {index,item ->
                 val job=item.jobId.ifBlank {item.id}

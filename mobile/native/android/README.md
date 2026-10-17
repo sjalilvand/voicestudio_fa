@@ -51,5 +51,7 @@ Both ABIs compile on this host. Actual Android library loading, audio quality,
 microphone behavior and OmniVoice/llama model compatibility require maintainer
 instrumentation/device runs. `LocalInferenceTest` includes an unconditional
 model-free library-loading test and an explicitly enabled TTS/Whisper/streaming
-ASR smoke test; see `mobile/android/README.md`. No device commands are run by
+ASR smoke test, plus opt-in real voice-clone and dub pipeline tests.
+`PhoneDubInferenceTest` also exercises platform AAC/AVC muxing without model
+downloads; see `mobile/android/README.md`. No device commands are run by
 this build script.

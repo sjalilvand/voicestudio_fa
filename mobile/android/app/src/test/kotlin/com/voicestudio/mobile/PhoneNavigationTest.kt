@@ -37,15 +37,42 @@ class PhoneNavigationTest {
             assertFalse(vm.state.value.connected);assertNull(vm.api)
             fun tab(label: String) = compose.onAllNodesWithText(label).filter(hasClickAction()).onFirst()
             for(label in listOf("Speak","Voices","Dub","Dictate","Settings")) tab(label).assertExists()
-            compose.onNodeWithText("Run on").assertExists()
-            compose.onNodeWithText("This phone").assertExists()
-            tab("Dictate").performClick();compose.onNodeWithText("Tap to start").assertExists()
+            compose.onNodeWithText("Run on").assertDoesNotExist()
+            tab("Voices").performClick();compose.onNodeWithText("Clone a voice").assertExists()
+            tab("Dub").performClick();compose.onNodeWithText("1 Source").assertExists()
+            compose.onNodeWithText("Original speaker").assertExists()
+            compose.onNode(hasText("Dub") and SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.Role,androidx.compose.ui.semantics.Role.Button)).assertIsNotEnabled()
+            tab("Dictate").performClick();compose.onNodeWithContentDescription("Record").assertExists()
             tab("Settings").performClick();compose.onNodeWithText("Connect").assertExists()
             compose.onNodeWithText("Appearance").assertExists()
             compose.onNodeWithText("Models").performClick()
-            compose.onNodeWithText("Allow model downloads using mobile data").assertExists()
+            compose.onNodeWithText("Mobile data").assertExists()
             assertFalse(vm.phone.downloads.progress.value.values.any {it.running})
         } finally {vm.viewModelScope.cancel()}
+    }
+    @Test fun downloadedModelAboveDeviceRamShowsItsReasonInsteadOfGeneration()=runBlocking {
+        val app=ApplicationProvider.getApplicationContext<Application>()
+        val model=app.assets.open("models.json").bufferedReader().use {ModelCatalog.decode(it.readText()).models.first {it.capability=="tts"}}
+        val directory=java.io.File(app.noBackupFilesDir,"models/${model.id}").apply {mkdirs()}
+        // Sparse structural fixture: never passed to a native runtime. Installation
+        // metadata can survive an update that raises the catalogue RAM requirement.
+        model.files.forEach {file ->java.io.File(directory,file.path).apply {parentFile!!.mkdirs()}.let {java.io.RandomAccessFile(it,"rw").use {out ->out.setLength(file.size)}}}
+        java.io.File(directory,".verified").writeText(model.revision+model.files.joinToString {it.path+it.sha256+it.size})
+        val runtime=com.voicestudio.mobile.local.PhoneRuntime.get(app)
+        assertTrue("Sparse fixture must be structurally installed",runtime.downloads.installed(model))
+        runtime.licence.record(model,true)
+        val store=SessionStore(app,object:CredentialVault {override fun read(host:String):Secret?=null;override fun write(host:String,secret:Secret?) {}})
+        store.update {Preferences(consent=false,runLocations=mapOf("speak" to "phone"),phoneModels=mapOf("speak" to model.id))}
+        val vm=StudioViewModel(app,store)
+        try {
+            assertFalse(model.fits(vm.phone.ramBytes))
+            compose.setContent {StudioApp(vm)}
+            compose.waitUntil(15000) {shadowOf(Looper.getMainLooper()).idle();model.id in vm.phone.state.value.installed&&!vm.state.value.loading}
+            compose.onNodeWithText("Generate").assertDoesNotExist()
+            val l=com.voicestudio.mobile.l10n.L10n.load(app,"en")
+            compose.onNodeWithText(l.t("mobile.simple.ram",mapOf("ram" to model.minRamGb))).assertExists()
+            assertNull(vm.phone.state.value.progress)
+        } finally {vm.viewModelScope.cancel();directory.deleteRecursively()}
     }
     @Test fun shippedCatalogueHasEveryRuntimeAndExactLegalDisclosures() {
         val app=ApplicationProvider.getApplicationContext<Application>()

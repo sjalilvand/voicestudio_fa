@@ -1,6 +1,6 @@
 # VoiceStudio Android
 
-Native Kotlin / Jetpack Compose app with phone-first speech and dictation,
+Native Kotlin / Jetpack Compose app with phone-first speech, voice cloning, dubbing and dictation,
 plus an optional connection to a user-owned VoiceStudio computer. Installed
 models run offline. No cloud relay, analytics transmission, crash reporter or
 push service is used.
@@ -47,25 +47,37 @@ The version name/code are derived at configuration time from root `package.json`
 - `core/network`: typed REST responses and multipart operations, guarded OkHttp
   transport, private-address policy, cancellable requests and ticketed dictation.
 - `core/data`: DataStore preferences/saved hosts, AES-GCM/Android Keystore session
-  vault, durable WorkManager dub pipeline and local notifications.
+  vault, durable phone/computer WorkManager dub pipelines and local notifications.
 - `core/local`: typed catalogue, resumable verified downloads, local licence
-  receipts, per-model inference/deletion leases and the `LocalEngine` adapters.
+  receipts, shared inference/deletion leases, private voices, disk-backed dubbing
+  checkpoints, platform codecs and the `LocalEngine` adapters.
 - `core/l10n`: nested catalog lookup, interpolation, locale/plural fallback.
 - `features`: separate `connect`, `speak`, `voices`, `dub`, `dictate`, `settings`
   packages with shared native controls, playback, capture and permission helpers.
   The six feature packages share one Gradle module to avoid six identical build
-  configurations and cross-module UI plumbing in this companion-sized app.
+  configurations and cross-module UI plumbing.
 
 ## Screens and behavior
 
 All five tabs are reachable without pairing. Consent dismissal means No.
-Speak and Dictate offer This phone / My computer, remember the choice per task,
-and prefer an installed phone model; otherwise they use a paired computer or
-show an inline model download prompt. Settings opens Connect and Models.
-Voices and Dub explain their computer requirement when unpaired; their
-on-device feature flows are outside Phase A.
+Speak, Clone, Dictate and Dub remember their own Run on choice. An installed
+phone model is preferred; otherwise the paired computer is used or a model
+card offers Download. Dub requires ASR, translation and cloning models. Run on
+is a compact This phone / Computer control visible only when paired. Phone and
+computer voices remain separate, with a location badge in the combined list.
+Settings opens optional Connect and Models.
+
+Speak has a large editor with placeholder-only copy, three compact picker chips,
+Generate, a player and compact recent rows. Dictate has one central microphone
+control: tap starts/stops; hold records until release. Connect keeps URL/PIN
+under Enter address and the optional API key under More. Model licences open in
+a sheet with complete inert terms, a rights confirmation and Accept / Decline.
+Screens use short labels and icons; hints live behind one info action. Settings
+uses rows without explanatory paragraphs. Errors use short messages and a
+recovery action; the original structured error keys remain available to workers.
+
 Connect supports CameraX/ZXing QR scanning, manual URL/PIN/API-key entry, saved
-hosts, labels and last-seen timestamps. Public `/health` must carry the backend
+hosts and editable labels; last-seen timestamps are retained locally. Public `/health` must carry the backend
 marker and expected status/version; `/profiles` verifies consumption access.
 Master keys only enter the session exchange and are never persisted. Session
 and PIN ciphertext is stored using a Keystore AES-GCM key; DataStore contains
@@ -108,24 +120,24 @@ Media3 playback, an accessible seek/progress slider, system share/save, and
 recent history with star/delete. Voices has search, previews, rename/delete,
 permission-gated recording or file selection and explicit clone consent.
 
-Dub keeps a device document's `OpenableColumns.DISPLAY_NAME` separately from its
+Computer Dub keeps a device document's `OpenableColumns.DISPLAY_NAME` separately from its
 private cached path, shows that name, and sends it as the upload filename so host
 history retains it. Remove deselects the private copy and names the file for
 accessibility. History uses grouped title/metadata rows with compact, named save
 and share icons. Save opens the system document picker; Share opens the share
 sheet.
 
-Dub accepts device media or a link for the host to ingest, multiple target
+Computer Dub accepts device media or a link for the host to ingest, multiple target
 languages and an explicit voice choice: **Default voice (engine preset)** or a
-saved profile. There is no source-voice choice. Desktop source cloning uses
+saved profile. Computer Dub has no source-voice choice. Desktop source cloning uses
 `dub-session.ts:readTranscript` and `/dub/transcribe-stream/{job_id}` to prepare
 `cast_sources` / `speaker_clones`, then `applySpeakerCloneDefaults` assigns
 `auto:` profile IDs carried into `/dub/generate/{job_id}` by `segmentGenInputs`.
 The synchronous `/dub/transcribe/{job_id}` used by M1 returns no cast-reference
-metadata. Both mobile apps therefore use the honest preset/profile choice;
+metadata. The computer flow therefore uses the preset/profile choice;
 an empty `profile_id` explicitly means the engine preset, never source cloning.
 
-Before creating a job, Dub fetches `/engines/translation`, selects exactly its
+Before creating a computer job, Dub fetches `/engines/translation`, selects exactly its
 `active` ID, and requires positive `installed` and `ready` fields. Missing or
 unready engines direct the user to VoiceStudio Settings on the computer. An
 `online` engine names the service and requires confirmation for that job using
@@ -152,7 +164,8 @@ cancelling the worker. Downloads use the guarded client and a FileProvider share
 The worker requests a data-sync foreground service for long uploads. If Android
 refuses that start, work continues within WorkManager's normal execution limits;
 cancellation still stops it. The merged manifest declares `FOREGROUND_SERVICE`,
-`FOREGROUND_SERVICE_DATA_SYNC` and a `dataSync` WorkManager service. Notification
+`FOREGROUND_SERVICE_DATA_SYNC`, `FOREGROUND_SERVICE_MEDIA_PROCESSING` and a
+WorkManager service declaring both types. Notification
 permission is not required to upload/promote the service; it gates optional
 completion notifications. Security failures and initialization/input failures
 produce actionable Dub errors. Failed job receipts are shown once and acknowledged
@@ -161,7 +174,7 @@ jobs show a cancellation status instead of a failure. Successful job download
 actions remain available. Optional completion notifications are generated locally,
 without a push service.
 
-Dictate checks readiness and streams mono 16 kHz signed PCM over the host
+Computer Dictate checks readiness and streams mono 16 kHz signed PCM over the host
 WebSocket, using a one-use ticket for sessions. Tap/hold controls, partial/final
 transcripts, copy/share and lifecycle-based microphone cleanup are included.
 Sherpa utterance finals append without stopping capture. Only summary/legacy EOF
@@ -170,9 +183,8 @@ replaces the live transcript without duplication, and empty summaries preserve
 committed phrases. Unknown final kinds are ignored, matching desktop. Callbacks
 and cleanup are scoped to the recording generation, so an old stream ending
 cannot close the next session.
-Readiness names the missing ASR model and its size, with the desktop install
-location. API-key/trusted-network advice appears only after an authorization
-failure; a share PIN alone does not authorize dictation. Settings includes live appearance, per-appearance palettes,
+Readiness details, including the missing model and desktop install location,
+are behind its info action. A share PIN alone does not authorize dictation. Settings includes live appearance, per-appearance palettes,
 system/desktop languages, notification permission, privacy, version and licenses.
 
 ## Shared inputs
@@ -229,7 +241,7 @@ available offline in About.
 - `/generate` returns a WAV with `X-Audio-*` headers, not JSON. Playback streams
   its canonical `/audio/...` host file. The progress scrubber satisfies the
   waveform/progress option; no synthetic waveform is fabricated.
-- Dub is the host's ingest/prep → transcribe → translate → generate pipeline,
+- Computer Dub is the host's ingest/prep → transcribe → translate → generate pipeline,
   with `/jobs/{id}/events` replay and `/jobs/{id}` status. WorkManager retries
   transient transport/service failures and keeps completed stage checkpoints.
   The backend has no atomic idempotency key for starting generation; a process
@@ -251,8 +263,9 @@ paths, sizes, runtime/capability pairs and schema versions fail closed. No
 catalogue or model is fetched when a tab is opened. Model IDs and declared
 metadata are displayed from that bundle.
 
-Models shows languages, declared licence, model size, actual on-disk storage,
-Download / Cancel / Delete and the total space used. Models above the phone's
+Models cards show name, size, capability and one Download / Cancel / Delete
+action. Their licence action opens languages, declared terms and actual storage;
+Delete there can also remove partial downloads. The list shows total model storage. Models above the phone's
 physical RAM are disabled, using decimal GB (`min_ram_gb * 1,000,000,000`).
 Downloads start only from a user action, use Hugging Face with hf-mirror.com
 fallback, resume with HTTP Range, enforce Wi-Fi unless mobile data is explicitly
@@ -272,20 +285,70 @@ A changed fingerprint or withdrawal blocks use without deleting weights.
 
 `LocalEngine` exposes cancellable, progress-reporting TTS, reference cloning,
 offline transcription, streaming transcription and translation. Feature screens
-call only this interface. sherpa uses Kitten/Kokoro for TTS, Whisper in at most
+call only this interface. Timed ASR exposes speech windows with native Whisper
+token timestamps, retaining window bounds when the runtime provides no timing.
+sherpa uses Kitten/Kokoro for TTS, Whisper in at most
 20-second windows for offline ASR, and Zipformer with utterance endpoint resets
 for live dictation. Tap/hold capture releases on lifecycle stop and screen
 exit; normal Stop drains the recognizer for its final transcript. Generated
 speech supports local playback, scrubbing, sharing and Save. WAV exports pass
 `markSynthetic`, which writes a RIFF INFO synthetic-audio provenance marker.
 
-OmniVoice and llama are callable through the interface; no phone Voices or Dub
-flow is included. OmniVoice accepts mono float PCM at 24 kHz plus reference text
-and resolves the catalogue's tokenizer GGUF as its codec. Translation expands
-the pinned model's prompt, tokenizes it once, and uses a bounded 2048-token
-context and 512 generated-token limit with greedy sampling. Reference audio
-and translation segmentation/mixing are responsibilities of their feature
-callers. Native builds, checksums and cancellation boundaries are documented in
+Voices lists Phone and Computer badges. Phone cloning records or picks a local
+clip (up to 30 seconds), decodes it to 24 kHz mono with MediaExtractor/MediaCodec,
+uses the selected Whisper model for the reference transcript, and publishes its
+private reference audio, name and consent time atomically. Cancelled or failed
+creation removes the unpublished voice. Rename and Delete operate on its phone
+storage. The clone task remembers its own Run on choice; creating a phone voice
+requires ASR, while speaking with it requires an installed, accepted OmniVoice.
+Speak lists presets and phone voices in one picker, switches to the cloning
+model for a phone voice, and stores generated WAVs and compact recent rows
+privately. Exports are copied into the share provider's cache on an IO thread.
+Native inference is serialized across phone tasks to bound memory use. Kokoro
+receives the selected language; Kitten offers English. Cloning uses the runtime's
+automatic language detection and shows Auto in the language chip.
+
+Phone Dub accepts a local media file, target language chips and either Original
+speaker or a saved phone voice, with explicit recording/voice permission. More
+contains model choices and Audio only. It never fetches pasted Internet URLs;
+links remain in the computer flow because phone networking is restricted to
+explicit model downloads and the paired computer.
+
+The phone pipeline decodes with MediaExtractor/MediaCodec into disk-backed
+24 kHz mono PCM. It preserves timestamp gaps and pads to the container duration.
+Whisper transcribes in at most 20-second windows and supplies token timing for
+the speech bounds. Each window is a translation/synthesis segment; the catalogue
+prompt supplies automatic source-language detection. llama uses its bounded
+2048-token context and 512 generated-token limit with greedy sampling. Original
+speaker mode cuts up to eight seconds from that segment and transcribes that
+exact reference before OmniVoice cloning. A saved voice is snapshotted into the
+job instead. OmniVoice resolves the catalogue's tokenizer GGUF as its codec.
+
+Short synthesized segments are padded; longer ones use waveform overlap-add
+compression to fit their speech bounds. Segments are mixed on a silent timeline,
+replacing the original soundtrack. Music/stem separation and multi-speaker
+separation within one Whisper window are not performed. The original video
+track and orientation are copied with MediaMuxer; generated PCM is AAC-encoded
+for MP4. Audio-only inputs or Audio only export WAV. WAVs pass `markSynthetic`;
+MP4 also carries an `application/voicestudio.synthetic-audio` metadata track.
+Unsupported platform codecs produce an error; Audio only is available when
+creating a job. Inputs are bounded to four hours and twenty target languages;
+storage and declared model RAM are checked before processing.
+
+Jobs run as WorkManager foreground work with stage/percent/Cancel and no
+connectivity constraint. Android 15+ uses mediaProcessing; older devices use
+dataSync. Notification permission gates optional completion notices, and does
+not gate foreground processing. Android foreground execution limits still
+apply. Atomic checkpoints retain extracted PCM, timestamped segments,
+translations, exact reference text and hashes of fitted segment files. Process
+restart resumes existing work; cancelled/failed jobs expose Resume and Delete.
+Changed model/catalogue identities fail closed. Native loads always recheck
+licences and model hashes; UI and workers share model leases and licence state.
+A mix is rebuilt from completed segment files on resume, preventing duplicate
+audio. Completed jobs release their source and intermediate PCM, retaining
+private output/history with play (including video), share, save and delete.
+
+Native builds, checksums and cancellation boundaries are documented in
 [`../native/android/README.md`](../native/android/README.md).
 
 ## Verification
@@ -302,7 +365,7 @@ export HF_HUB_CACHE="$PWD/build/hf-empty"
 ./gradlew assembleDebugAndroidTest
 ```
 
-The current host run passed all four Gradle tasks: 103 JVM tests, zero failures
+The current host run passed all four Gradle tasks: 119 JVM tests, zero failures
 or skips, and zero lint errors. Debug app and instrumentation APKs build for
 arm64-v8a and x86_64; instrumentation is not executed here.
 
@@ -310,7 +373,11 @@ JVM checks cover existing M1 API/security, storage, worker, picker, protocol and
 Compose smoke regressions, plus local catalogue/routing, licence persistence and
 withdrawal, HTTP resume and restart, checksum rejection, mirror fallback,
 Wi-Fi/mobile-data policy, low storage, cancellation, deletion, synthetic WAV
-metadata, native cancellation control and microphone lifecycle cleanup. The
+metadata, native cancellation control and microphone lifecycle cleanup. Phone
+voice checks cover consent, reference/transcript persistence, cancellation,
+rename/delete, picker routing and streaming resampling. Phone dub checks cover
+multi-language output, timing/padding/mixing, provenance, checkpoint replay,
+corrupt render recovery, model/licence changes and foreground cancellation. The
 launch → consent → Settings → Connect → mock host → Speak → Play smoke preserves
 the computer flow. Tests use local mock servers and an empty HF cache.
 Robolectric's API 34 instrumented SDK is resolved by Gradle into app build
@@ -326,8 +393,17 @@ nonempty audible PCM, Whisper recognition of generated speech and a final
 Zipformer transcript. No CI workflow is changed by this Android role; the
 maintainer must wire/run it on the x86_64 emulator and physical devices.
 
+`cloneInferenceSmoke=true` adds real WAV decoding, Whisper reference creation
+and OmniVoice cloning, including persisted rename/delete. `dubInferenceSmoke=true`
+adds an audio dub through real Whisper, llama and OmniVoice. Both use explicit
+licence/download flags as above; they are off by default. All model smokes check
+the device's declared model RAM before loading. The unconditional
+`PhoneDubInferenceTest.platformCodecsMuxVideoAndSyntheticAudioWithOrientation`
+generates its own AVC fixture, encodes/muxes synthetic audio, and checks tracks,
+orientation, duration and decoding. No fixture/model binaries are committed.
+
 This environment builds instrumentation only. Native loading on ART, real model
-inference (including OmniVoice clone quality and llama translation), audible
-playback, microphone permissions, device RAM behavior and background/notification
-behavior require maintainer device/emulator verification. No adb or device
-commands are used here.
+inference/quality, audible playback, codec support, microphone permissions,
+large-font/TalkBack rendering, device RAM and background/notification behavior
+require maintainer device/emulator verification. No adb or device commands are
+used here. No CI workflow is modified by the Android implementation.

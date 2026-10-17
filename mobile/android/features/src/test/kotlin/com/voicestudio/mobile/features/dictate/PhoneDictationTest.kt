@@ -13,7 +13,7 @@ class PhoneDictationTest {
     private val model=PhoneModel("stream","asr-stream","sherpa-onnx","test/model","a".repeat(40),emptyList(),0,listOf("en"),2.0,
         ModelLicence("MIT","commercial-ok",false,"holder","holder","b".repeat(64)),JsonObject(emptyMap()))
     private open class Engine : LocalEngine {
-        override suspend fun synthesize(model: PhoneModel,text: String,speaker: Int,speed: Float,progress: (Float)->Unit): LocalAudio = error("unused")
+        override suspend fun synthesize(model: PhoneModel,text: String,speaker: Int,speed: Float,language: String?,progress: (Float)->Unit): LocalAudio = error("unused")
         override suspend fun clone(model: PhoneModel,text: String,reference: LocalAudio,referenceText: String,progress: (Float)->Unit): LocalAudio = error("unused")
         override suspend fun transcribe(model: PhoneModel,audio: LocalAudio,progress: (Float)->Unit): String = error("unused")
         override suspend fun translate(model: PhoneModel,text: String,targetLanguage: String,progress: (Float)->Unit): String = error("unused")

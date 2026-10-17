@@ -86,9 +86,21 @@ class MainActivity:ComponentActivity() {
                     state.error?.let {error ->
                         Surface(color=role("errorSurface"),shape=MaterialTheme.shapes.large,modifier=Modifier.fillMaxWidth().padding(VSTheme.inset)) {
                             Column(Modifier.padding(VSTheme.inset)) {
-                                Text(l.t(error.key,error.params),color=role("errorForeground"),modifier=Modifier.heightIn(max=VSTheme.touchTarget*4).verticalScroll(rememberScrollState()))
-                                TextButton(shape=MaterialTheme.shapes.small,onClick=vm::clearError) {Text(tr("common.close"))}
-                                if(error.key=="mobile.permissions.denied") TextButton(shape=MaterialTheme.shapes.small,onClick={vm.clearError();openSystemSettings(context)}) {Text(tr("mobile.permissions.open_settings"))}
+                                Text(tr(shortErrorKey(error.key)),color=role("errorForeground"),maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis,modifier=Modifier.fillMaxWidth())
+                                val models=error.key.split('.').take(2)==listOf("mobile","local")||error.key.contains("model")||error.key.contains("licence")
+                                val connection=error.key.split('.').take(2)==listOf("mobile","connect")||error.key=="mobile.errors.offline"
+                                val action=when {error.key=="mobile.permissions.denied" -> "mobile.permissions.open_settings";models -> "mobile.simple.download_models";connection -> "mobile.simple.reconnect";state.canRetry -> "mobile.simple.retry";else -> "common.close"}
+                                TextButton(shape=MaterialTheme.shapes.small,onClick={
+                                    when {error.key=="mobile.permissions.denied" -> {vm.clearError();openSystemSettings(context)}
+                                        models -> {
+                                            vm.clearError()
+                                            if(error.key.split('.').take(2)==listOf("mobile","local")||vm.api==null) nav.navigate("models")
+                                            else context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse(vm.api!!.address.baseUrl.toString())))
+                                        }
+                                        connection -> {vm.clearError();nav.navigate("connect")}
+                                        state.canRetry -> vm.retryError()
+                                        else -> vm.clearError()}
+                                }) {Text(tr(action))}
                             }
                         }
                     }
@@ -102,8 +114,8 @@ class MainActivity:ComponentActivity() {
                         composable("settings") {SettingsScreen(vm,BuildConfig.VERSION_NAME,onConnect={nav.navigate("connect")},onModels={nav.navigate("models")})}
                         composable("models") {com.voicestudio.mobile.features.models.ModelsScreen(vm)}
                         composable("speak") {SpeakScreen(vm)}
-                        composable("voices") {if(state.connected) VoicesScreen(vm) else Screen {ScreenTitle("mobile.tabs.voices");Text(tr("mobile.local.computer_feature"));Secondary("mobile.tabs.connect") {nav.navigate("connect")}}}
-                        composable("dub") {if(state.connected) DubScreen(vm) else Screen {ScreenTitle("mobile.tabs.dub");Text(tr("mobile.local.computer_feature"));Secondary("mobile.tabs.connect") {nav.navigate("connect")}}}
+                        composable("voices") {VoicesScreen(vm)}
+                        composable("dub") {DubScreen(vm)}
                         composable("dictate") {DictateScreen(vm)}
                     }
                     }

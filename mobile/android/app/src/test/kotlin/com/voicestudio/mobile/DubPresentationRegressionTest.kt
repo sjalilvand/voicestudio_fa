@@ -99,7 +99,7 @@ class DubPresentationRegressionTest {
                     awaitCancellation()
                 }) {VoiceStudioTheme {DubScreen(vm)}}
             }
-            compose.onNodeWithText("Dub").assertExists()
+            compose.onNode(hasText("Dub") and SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsProperties.Heading)).assertExists()
             compose.onNodeWithText("Loading…").assertExists()
             compose.onNodeWithText("Paste a link").assertExists()
         }

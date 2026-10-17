@@ -1,5 +1,6 @@
 package com.voicestudio.mobile.features.dictate
 
+import androidx.compose.material.icons.filled.*
 import android.Manifest
 import kotlinx.coroutines.launch
 import android.content.ClipData
@@ -52,29 +53,22 @@ import kotlinx.coroutines.CancellationException
         ScreenTitle("mobile.tabs.dictate")
         if(checking) {Text(tr("common.loading"));LinearProgressIndicator()}
         readinessError?.let {error ->
-            Text(LocalL10n.current.t(error.key,error.params),color=role("error"))
-            if(error.status in listOf(401,403) && error.key!="mobile.errors.model_licence_required") Text(tr("mobile.dictate.authorization"))
+            Text(tr(shortErrorKey(error.key)),color=role("error"),maxLines=1)
         }
         if(!checking && readinessError==null && !ready) {
             val (key,params)=(readiness ?: Readiness(false)).guidance()
-            Text(tr(key,params))
+            Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+                Text(tr("mobile.simple.models_error"),Modifier.weight(1f),maxLines=1)
+                Info("mobile.simple.info",key,params=params)
+            }
         }
-        Secondary("common.refresh",!checking) {scope.launch {check()}}
-        Action(if(active) "common.stop" else "mobile.dictate.tap_to_start",ready||active) {if(active) controller.finish() else start()}
-        val hold=tr("mobile.dictate.hold_to_talk")
-        Surface(modifier=Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget).semantics {
-            role=Role.Button;contentDescription=hold;onClick {if(active) controller.finish() else start();true}
-        }.pointerInput(ready) {
-            detectTapGestures(onPress={if(ready) {holding=true;holdStart();tryAwaitRelease();holding=false;controller.finish()}})
-        },shape=MaterialTheme.shapes.small,color=role("surface")) {
-            Text(hold,Modifier.padding(VSTheme.inset))
+        Secondary("mobile.simple.retry",!checking) {scope.launch {check()}}
+        Text(transcript,modifier=Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget*3).semantics {liveRegion=LiveRegionMode.Polite})
+        MicControl(active,ready,tap={holding=false;if(active) controller.finish() else start()},hold={holding=true;holdStart()},release={if(holding) {holding=false;controller.finish()}})
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center) {
+            IconAction("mobile.dictate.copy",VSIcons.Copy,transcript.isNotBlank()) {context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText(null,transcript))}
+            IconAction("mobile.speak.share",androidx.compose.material.icons.Icons.Default.Share,transcript.isNotBlank()) {shareText(context,transcript)}
         }
-        if(active) Text(tr("mobile.dictate.listening"))
-        Text(transcript,modifier=Modifier.semantics {liveRegion=LiveRegionMode.Polite})
-        Secondary("mobile.dictate.copy",transcript.isNotBlank()) {
-            (context.getSystemService(ClipboardManager::class.java)).setPrimaryClip(ClipData.newPlainText(null,transcript))
-        }
-        Secondary("mobile.speak.share",transcript.isNotBlank()) {shareText(context,transcript)}
     }
 }
 
@@ -83,7 +77,7 @@ import kotlinx.coroutines.CancellationException
         if(location==com.voicestudio.mobile.local.RunLocation.COMPUTER) ComputerDictateScreen(vm)
         else {
             val phone by vm.phone.state.collectAsState()
-            PhoneDictateScreen(vm,model,location==com.voicestudio.mobile.local.RunLocation.PHONE&&model?.let {phone.accepted(it)}==true)
+            PhoneDictateScreen(vm,model,location==com.voicestudio.mobile.local.RunLocation.PHONE&&model?.let {phone.canRun(it,vm.phone.ramBytes)}==true)
         }
     }
 }

@@ -175,7 +175,7 @@ class HostSwitchRegressionTest {
         }
         var shown by androidx.compose.runtime.mutableStateOf(true)
         val l=com.voicestudio.mobile.l10n.L10n.load(app,"en")
-        val copy=l.t("mobile.android.operation_failed")
+        val copy=l.t(com.voicestudio.mobile.features.shortErrorKey("mobile.android.operation_failed"))
         compose.setContent {
             CompositionLocalProvider(com.voicestudio.mobile.features.LocalL10n provides l) {
                 com.voicestudio.mobile.designsystem.VoiceStudioTheme {

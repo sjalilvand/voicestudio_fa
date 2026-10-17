@@ -61,16 +61,16 @@ fun Modifier.dismissKeyboardOnTap(): Modifier = composed {
         Column(content=content)
     }
 }
-@Composable fun Action(key: String, enabled: Boolean = true, onClick: () -> Unit) {
+@Composable fun Action(key: String, enabled: Boolean = true, icon: ImageVector = actionIcon(key), onClick: () -> Unit) {
     val dismiss=rememberKeyboardDismiss()
     val interaction=remember {MutableInteractionSource()}
     val pressed by interaction.collectIsPressedAsState()
-    Button(interactionSource=interaction, colors=ButtonDefaults.buttonColors(containerColor=role(if(pressed) "messageActionHover" else "messageAction"),contentColor=role("messageActionForeground")), onClick = {dismiss();onClick()}, enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = VSTheme.touchTarget), shape = MaterialTheme.shapes.small) { Text(tr(key)) }
+    Button(interactionSource=interaction, colors=ButtonDefaults.buttonColors(containerColor=role(if(pressed) "messageActionHover" else "messageAction"),contentColor=role("messageActionForeground")), onClick = {dismiss();onClick()}, enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = VSTheme.touchTarget*1.25f), shape = MaterialTheme.shapes.small) { Icon(icon,contentDescription=null); Spacer(Modifier.width(VSTheme.gap)); Text(tr(key)) }
 }
 @Composable fun Secondary(key: String, enabled: Boolean = true, onClick: () -> Unit) {
     val dismiss=rememberKeyboardDismiss()
     OutlinedButton(onClick={dismiss();onClick()}, enabled=enabled, modifier=Modifier.heightIn(min=VSTheme.touchTarget), shape=MaterialTheme.shapes.small,
-        border=BorderStroke(VSTheme.borderWidth,role("border")), colors=ButtonDefaults.outlinedButtonColors(containerColor=role("surface"),contentColor=role("text"))) { Text(tr(key)) }
+        border=BorderStroke(VSTheme.borderWidth,role("border")), colors=ButtonDefaults.outlinedButtonColors(containerColor=role("surface"),contentColor=role("text"))) { Icon(actionIcon(key),contentDescription=null);Spacer(Modifier.width(VSTheme.gap));Text(tr(key)) }
 }
 @Composable fun IconAction(key: String, icon: ImageVector, enabled: Boolean = true, params: Map<String,Any> = emptyMap(), onClick: () -> Unit) {
     val label=tr(key,params)
@@ -85,8 +85,8 @@ fun Modifier.dismissKeyboardOnTap(): Modifier = composed {
     val dismiss=rememberKeyboardDismiss()
     var focused by remember {mutableStateOf(false)}
     Column(Modifier.fillMaxWidth()) {
-    OutlinedTextField(value = value, onValueChange = change, label = { Text(tr(key)) }, modifier = Modifier.fillMaxWidth().onFocusChanged {focused=it.isFocused},
-        singleLine = !multiline, minLines = if(multiline) 4 else 1,
+    OutlinedTextField(value = value, onValueChange = change, label = if(multiline) null else {{ Text(tr(key)) }}, placeholder = if(multiline) {{ Text(tr(key)) }} else null, modifier = Modifier.fillMaxWidth().onFocusChanged {focused=it.isFocused},
+        singleLine = !multiline, minLines = if(multiline) 7 else 1,
         visualTransformation = if(secret) PasswordVisualTransformation() else VisualTransformation.None,
         // Multiline keeps Return for newlines; its explicit toolbar supplies Done.
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(autoCorrectEnabled = !secret, keyboardType = if(secret) KeyboardType.Password else KeyboardType.Text,
@@ -104,6 +104,7 @@ fun Modifier.dismissKeyboardOnTap(): Modifier = composed {
     val description=tr("mobile.android.selection",mapOf("label" to tr(label),"value" to value))
     Surface(onClick={dismiss();onClick()},enabled=enabled,color=role("surface"),shape=MaterialTheme.shapes.small,modifier=Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget).semantics {contentDescription=description}) {
         Row(Modifier.padding(VSTheme.inset),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
+            Icon(Icons.Default.Settings,contentDescription=null,tint=role("textMuted"))
             Text(tr(label),style=MaterialTheme.typography.labelLarge,maxLines=1,overflow=TextOverflow.Ellipsis)
             Text(value,Modifier.weight(1f),color=role("textMuted"),style=MaterialTheme.typography.labelLarge,textAlign=TextAlign.End,maxLines=1,overflow=TextOverflow.Ellipsis)
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight,contentDescription=null,tint=role("textMuted"))
@@ -111,12 +112,16 @@ fun Modifier.dismissKeyboardOnTap(): Modifier = composed {
     }
 }
 @Composable fun Picker(label: String, value: String, choices: List<Pair<String, String>>, change: (String) -> Unit) =
-    ChoicePicker(label,value,choices.map {Choice(it.first,it.second)},change)
+    ChoicePicker(label,value,choices.map {Choice(it.first,it.second)},change=change)
 
-@Composable fun ChoicePicker(label: String, value: String, choices: List<Choice>, change: (String) -> Unit) {
+@Composable fun ChoicePicker(label: String, value: String, choices: List<Choice>, compact: Boolean = false, change: (String) -> Unit) {
     var open by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
-    PickerRow(label,choices.firstOrNull {it.id==value}?.title ?: tr("mobile.android.choose"),choices.isNotEmpty()) {open=true}
+    if(compact) {
+        val valueLabel=choices.firstOrNull {it.id==value}?.title ?: tr(label)
+        val description=tr("mobile.android.selection",mapOf("label" to tr(label),"value" to valueLabel))
+        AssistChip(onClick={open=true},enabled=choices.isNotEmpty(),label={Text(valueLabel,maxLines=1,overflow=TextOverflow.Ellipsis)},modifier=Modifier.heightIn(min=VSTheme.touchTarget).semantics {contentDescription=description})
+    } else PickerRow(label,choices.firstOrNull {it.id==value}?.title ?: tr("mobile.android.choose"),choices.isNotEmpty()) {open=true}
     if(open) AlertDialog(modifier=Modifier.dismissKeyboardOnTap(),shape=MaterialTheme.shapes.large,onDismissRequest={open=false}, title={Text(tr(label))}, containerColor=role("surfaceOverlay"),
         text={ Column(verticalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
             Field("mobile.android.search", query, {query=it})
@@ -171,7 +176,8 @@ fun Modifier.dismissKeyboardOnTap(): Modifier = composed {
 @Composable fun Toggle(key: String, value: Boolean, change: (Boolean) -> Unit) {
     val label = tr(key)
     val dismiss=rememberKeyboardDismiss()
-    Row(Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget), horizontalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
+    Row(Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget).padding(horizontal=VSTheme.inset),verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
+        Icon(Icons.Default.Settings,contentDescription=null,tint=role("textMuted"))
         Text(label, Modifier.weight(1f))
         Switch(checked=value, onCheckedChange={dismiss();change(it)}, modifier=Modifier.semantics { contentDescription=label })
     }
@@ -185,4 +191,85 @@ fun languageName(code: String, locale: String): String = Locale.forLanguageTag(c
 @Composable fun InlineLoading() {
     Text(tr("common.loading"),color=role("textMuted"))
     LinearProgressIndicator(Modifier.fillMaxWidth())
+}
+
+@Composable fun StepHeading(key: String, icon: ImageVector) {
+    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
+        Icon(icon,contentDescription=null); Heading(key)
+    }
+}
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable fun Info(label: String, body: String, row: Boolean = false, params: Map<String,Any> = emptyMap()) {
+    var open by remember {mutableStateOf(false)}
+    if(row) SettingsLink(label) {open=true} else IconAction(label,Icons.Default.Info) {open=true}
+    if(open) ModalBottomSheet(onDismissRequest={open=false},containerColor=role("surfaceOverlay")) {
+        Text(tr(body,params),Modifier.padding(VSTheme.inset).verticalScroll(rememberScrollState()))
+    }
+}
+@Composable fun SettingsLink(label: String, value: String = "", onClick: ()->Unit) {
+    Surface(onClick=onClick,color=role("surface"),shape=MaterialTheme.shapes.small,modifier=Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget)) {
+        Row(Modifier.padding(VSTheme.inset),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
+            Icon(Icons.Default.Settings,contentDescription=null)
+            Text(tr(label),Modifier.weight(1f));if(value.isNotBlank()) Text(value,Modifier.weight(1f),color=role("textMuted"),maxLines=1,overflow=TextOverflow.Ellipsis,textAlign=TextAlign.End)
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight,contentDescription=null)
+        }
+    }
+}
+@Composable fun MicControl(active: Boolean, ready: Boolean, tap: ()->Unit, hold: ()->Unit, release: ()->Unit) {
+    val label=tr(if(active) "common.stop" else "mobile.simple.microphone")
+    val holdLabel=tr("mobile.dictate.hold_to_talk")
+    val currentTap by rememberUpdatedState(tap)
+    val currentHold by rememberUpdatedState(hold)
+    val currentRelease by rememberUpdatedState(release)
+    val usable by rememberUpdatedState(ready||active)
+    Box(Modifier.fillMaxWidth().padding(vertical=VSTheme.inset),contentAlignment=Alignment.Center) {
+        Surface(color=role("messageAction"),contentColor=role("messageActionForeground"),shape=androidx.compose.foundation.shape.CircleShape,
+            modifier=Modifier.size(112.dp).semantics {
+                contentDescription=label;role=Role.Button
+                if(!ready&&!active) disabled()
+                onClick {if(ready||active) tap();true}
+                onLongClick(label=holdLabel) {if(ready) hold();true}
+            }.pointerInput(ready) {
+                detectTapGestures(onTap={if(usable) currentTap()},onLongPress={if(ready) currentHold()},onPress={tryAwaitRelease();currentRelease()})
+            }) {Box(contentAlignment=Alignment.Center) {Icon(if(active) Icons.Default.Close else VSIcons.Mic,contentDescription=null,modifier=Modifier.size(48.dp))}}
+    }
+}
+
+fun actionIcon(key: String): ImageVector = when {
+    key.contains("scan_qr") -> VSIcons.Qr
+    key.contains("clone")||key.contains("pick") -> Icons.Default.Add
+    key.contains("cancel")||key.contains("abort")||key.contains("stop") -> Icons.Default.Close
+    key.contains("record") -> VSIcons.Mic
+    key.contains("delete") -> Icons.Default.Delete
+    key.contains("share") -> Icons.Default.Share
+    key.contains("download")||key.endsWith("save") -> VSIcons.Download
+    key.contains("more")||key.contains("address") -> Icons.Default.KeyboardArrowDown
+    key.contains("refresh")||key.contains("retry")||key.contains("resume") -> Icons.Default.Refresh
+    else -> Icons.Default.PlayArrow
+}
+fun shortErrorKey(key: String): String = when {
+    key.split('.').take(2)==listOf("mobile","simple") -> key
+    key.contains("licence") -> "mobile.simple.licence_error"
+    key.split('.').take(2)==listOf("mobile","local")||key.contains("model")||key.contains("licence") -> "mobile.simple.models_error"
+    key.split('.').take(2)==listOf("mobile","connect")||key=="mobile.errors.offline" -> "mobile.simple.connection_error"
+    else -> "mobile.simple.error"
+}
+@Composable fun EmptyState(key: String,icon: ImageVector = Icons.Default.Info) {
+    Row(Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
+        Icon(icon,contentDescription=null,tint=role("textMuted"));Text(tr(key),color=role("textMuted"))
+    }
+}
+
+@Composable fun ConsentCheck(key: String, checked: Boolean, change: (Boolean)->Unit) {
+    val label=tr(key)
+    Row(Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget),verticalAlignment=Alignment.CenterVertically) {
+        Checkbox(checked=checked,onCheckedChange=change,modifier=Modifier.semantics {contentDescription=label})
+        Text(label,Modifier.weight(1f))
+    }
+}
+@Composable fun LocationBadge(phone: Boolean) {
+    Surface(color=role("messageSurface"),shape=MaterialTheme.shapes.small) {
+        Text(tr(if(phone) "mobile.simple.phone" else "mobile.simple.computer"),style=MaterialTheme.typography.labelSmall,
+            color=role("textMuted"),modifier=Modifier.padding(horizontal=VSTheme.gap/2,vertical=VSTheme.gap/4))
+    }
 }

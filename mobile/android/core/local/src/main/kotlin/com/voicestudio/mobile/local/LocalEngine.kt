@@ -4,6 +4,8 @@ import com.k2fsa.sherpa.onnx.*
 import com.voicestudio.mobile.network.ClientFailure
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.ByteBuffer
@@ -11,11 +13,16 @@ import java.nio.ByteOrder
 
 /** PCM is mono float [-1,1]; reference cloning audio is explicitly 24 kHz. */
 data class LocalAudio(val samples: FloatArray, val sampleRate: Int)
+@kotlinx.serialization.Serializable data class SpeechSegment(val start: Double,val end: Double,val text: String)
 data class Transcript(val text: String, val final: Boolean, val progress: Float)
 interface LocalEngine {
-    suspend fun synthesize(model: PhoneModel, text: String, speaker: Int = 0, speed: Float = 1f, progress: (Float)->Unit = {}): LocalAudio
+    suspend fun synthesize(model: PhoneModel, text: String, speaker: Int = 0, speed: Float = 1f, language: String? = null, progress: (Float)->Unit = {}): LocalAudio
     suspend fun clone(model: PhoneModel, text: String, reference: LocalAudio, referenceText: String, progress: (Float)->Unit = {}): LocalAudio
     suspend fun transcribe(model: PhoneModel, audio: LocalAudio, progress: (Float)->Unit = {}): String
+    suspend fun transcribeSegments(model: PhoneModel, audio: LocalAudio, progress: (Float)->Unit = {}): List<SpeechSegment> {
+        val text=transcribe(model,audio,progress).trim()
+        return if(text.isEmpty()) emptyList() else listOf(SpeechSegment(0.0,audio.samples.size.toDouble()/audio.sampleRate,text))
+    }
     fun streamTranscribe(model: PhoneModel, audio: Flow<LocalAudio>): Flow<Transcript>
     suspend fun translate(model: PhoneModel, text: String, targetLanguage: String, progress: (Float)->Unit = {}): String
 }
@@ -35,28 +42,29 @@ internal object NativeBridge {
 }
 
 class PhoneLocalEngine(private val models: ModelDownloads): LocalEngine {
+    companion object {private val nativeLease=Mutex()}
     private suspend fun <T> execute(model: PhoneModel, capability: String, progress: (Float)->Unit, block: suspend (File,Job)->T): T =
         withContext(Dispatchers.Default) {
             if(model.capability != capability) throw ClientFailure("mobile.local.model_incompatible")
             try {
-                models.withModel(model) { directory ->
+                nativeLease.withLock {models.withModel(model) { directory ->
                     currentCoroutineContext().ensureActive();progress(0f)
                     val result=block(directory,currentCoroutineContext().job)
                     currentCoroutineContext().ensureActive();models.licence.requireAccepted(model);progress(1f);result
-                }
+                }}
             } catch(e:CancellationException) {throw e}
             catch(e:ClientFailure) {throw e}
             catch(e:LinkageError) {throw ClientFailure("mobile.local.runtime_failed")}
             catch(e:Exception) {throw ClientFailure("mobile.local.inference_failed")}
         }
-    override suspend fun synthesize(model: PhoneModel, text: String, speaker: Int, speed: Float, progress: (Float)->Unit): LocalAudio = execute(model,"tts",progress) {dir,job ->
-        require(text.isNotBlank() && text.length<=20000 && speed in .5f..2f)
+    override suspend fun synthesize(model: PhoneModel, text: String, speaker: Int, speed: Float, language: String?, progress: (Float)->Unit): LocalAudio = execute(model,"tts",progress) {dir,job ->
+        require(text.isNotBlank() && text.length<=20000 && speed in .5f..2f && (language==null||language in model.languages))
         val dataDir=dataDirectory(model,dir)
         val config=OfflineTtsModelConfig(numThreads=2,provider="cpu")
         when(model.option("model_type",model.option("type",if(model.id.contains("kitten")) "kitten" else "kokoro"))) {
             "kitten" -> config.kitten=OfflineTtsKittenModelConfig(model=model.role(dir,"model"),voices=model.role(dir,"voices"),tokens=model.role(dir,"tokens"),dataDir=dataDir)
             "kokoro" -> config.kokoro=OfflineTtsKokoroModelConfig(model=model.role(dir,"model"),voices=model.role(dir,"voices"),tokens=model.role(dir,"tokens"),dataDir=dataDir,
-                lexicon=model.files.filter {it.role=="lexicon"}.joinToString(",") {File(dir,it.path).absolutePath},lang=model.option("lang"),dictDir=model.role(dir,"dict"))
+                lexicon=model.files.filter {it.role=="lexicon"}.joinToString(",") {File(dir,it.path).absolutePath},lang=language ?: model.option("lang"),dictDir=model.role(dir,"dict"))
             else -> throw ClientFailure("mobile.local.model_incompatible")
         }
         val tts=OfflineTts(config=OfflineTtsConfig(model=config,maxNumSentences=1,ruleFsts=model.files.filter {it.role=="rule-fst"}.joinToString(",") {File(dir,it.path).absolutePath}))
@@ -69,24 +77,38 @@ class PhoneLocalEngine(private val models: ModelDownloads): LocalEngine {
             job.ensureActive();LocalAudio(audio.samples,audio.sampleRate)
         } finally {tts.release()}
     }
-    override suspend fun transcribe(model: PhoneModel, audio: LocalAudio, progress: (Float)->Unit): String = execute(model,"asr",progress) {dir,job ->
+    override suspend fun transcribe(model: PhoneModel, audio: LocalAudio, progress: (Float)->Unit): String =
+        transcribeSegments(model,audio,progress).joinToString(" ") {it.text}
+    override suspend fun transcribeSegments(model: PhoneModel, audio: LocalAudio, progress: (Float)->Unit): List<SpeechSegment> = execute(model,"asr",progress) {dir,job ->
         require(audio.sampleRate>0 && audio.samples.isNotEmpty())
         val recognizer=OfflineRecognizer(config=OfflineRecognizerConfig(
             featConfig=FeatureConfig(sampleRate=16000,featureDim=80),
-            modelConfig=OfflineModelConfig(whisper=OfflineWhisperModelConfig(encoder=model.role(dir,"encoder"),decoder=model.role(dir,"decoder"),language=model.option("language"),task="transcribe"),
+            modelConfig=OfflineModelConfig(whisper=OfflineWhisperModelConfig(encoder=model.role(dir,"encoder"),decoder=model.role(dir,"decoder"),language=model.option("language"),task="transcribe",enableTokenTimestamps=true),
                 tokens=model.role(dir,"tokens"),numThreads=2,provider="cpu")))
         try {
-            // Whisper has no native abort hook in this pinned AAR. Bound work to
-            // <= 20 s windows; release only after the in-flight decode returns.
-            val words=mutableListOf<String>();val window=audio.sampleRate*20
+            val segments=mutableListOf<SpeechSegment>();val window=audio.sampleRate*20
             for(start in audio.samples.indices step window) {
                 job.ensureActive();models.licence.requireAccepted(model)
+                val limit=minOf(start+window,audio.samples.size)
                 val stream=recognizer.createStream()
-                try {stream.acceptWaveform(audio.samples.copyOfRange(start,minOf(start+window,audio.samples.size)),audio.sampleRate);recognizer.decode(stream);words+=recognizer.getResult(stream).text}
-                finally {stream.release()}
-                progress(minOf(start+window,audio.samples.size).toFloat()/audio.samples.size)
+                try {
+                    stream.acceptWaveform(audio.samples.copyOfRange(start,limit),audio.sampleRate);recognizer.decode(stream)
+                    val result=recognizer.getResult(stream)
+                    val text=result.text.trim()
+                    if(text.isNotEmpty()) {
+                        val duration=(limit-start).toDouble()/audio.sampleRate
+                        val valid=result.timestamps.filter {it.isFinite()&&it>=0&&it<duration}
+                        val first=(valid.minOrNull()?.toDouble() ?: 0.0).coerceIn(0.0,(duration-.02).coerceAtLeast(0.0))
+                        val last=valid.maxOrNull()?.toDouble()
+                        val tail=result.durations.lastOrNull()?.takeIf {it.isFinite()&&it>0}?.toDouble() ?: .5
+                        val end=if(last==null) duration else (last+tail).coerceIn(minOf(first+.01,duration),duration)
+                        val offset=start.toDouble()/audio.sampleRate
+                        segments+=SpeechSegment(offset+first,offset+end,text)
+                    }
+                } finally {stream.release()}
+                progress(limit.toFloat()/audio.samples.size)
             }
-            words.filter {it.isNotBlank()}.joinToString(" ")
+            segments
         } finally {recognizer.release()}
     }
     override fun streamTranscribe(model: PhoneModel, audio: Flow<LocalAudio>): Flow<Transcript> = channelFlow {
@@ -113,7 +135,7 @@ class PhoneLocalEngine(private val models: ModelDownloads): LocalEngine {
         }
     }.flowOn(Dispatchers.Default)
     override suspend fun clone(model: PhoneModel, text: String, reference: LocalAudio, referenceText: String, progress: (Float)->Unit): LocalAudio = execute(model,"clone",progress) {dir,job ->
-        require(text.isNotBlank() && reference.sampleRate==24000 && reference.samples.isNotEmpty() && referenceText.isNotBlank())
+        require(text.isNotBlank() && text.length<=20000 && reference.sampleRate==24000 && reference.samples.size in 1..720000 && reference.samples.all {it.isFinite()} && referenceText.isNotBlank())
         NativeBridge.load()
         val codec=model.role(dir,"codec").ifEmpty {model.role(dir,"audio-tokenizer").ifEmpty {model.role(dir,"tokenizer")}}
         if(codec.isBlank()) throw ClientFailure("mobile.local.model_incompatible")
@@ -122,7 +144,7 @@ class PhoneLocalEngine(private val models: ModelDownloads): LocalEngine {
         LocalAudio(result ?: throw ClientFailure("mobile.local.inference_failed"),24000)
     }
     override suspend fun translate(model: PhoneModel, text: String, targetLanguage: String, progress: (Float)->Unit): String = execute(model,"translate",progress) {dir,job ->
-        require(text.isNotBlank() && targetLanguage.matches(Regex("[A-Za-z -]{2,80}")))
+        require(text.isNotBlank() && targetLanguage.length in 2..120 && targetLanguage.none {it.isISOControl()})
         NativeBridge.load()
         val template=model.option("prompt_template","Translate the following text into {{target_language}}. Return only the translation.\n{{text}}")
         val prompt=template.replace("\\n","\n").replace("{{target_language}}",targetLanguage).replace("{target_language}",targetLanguage).replace("{source_language}","auto").replace("{{text}}",text).replace("{text}",text)

@@ -1,5 +1,6 @@
 package com.voicestudio.mobile.features.dictate
 
+import androidx.compose.material.icons.filled.*
 import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -72,16 +73,11 @@ internal class PhoneDictation(private val engine: LocalEngine, private val scope
     Screen {
         ScreenTitle("mobile.tabs.dictate")
         if(!ready) model?.let {ModelCard(vm,it)}
-        Action(if(active) "common.stop" else "mobile.dictate.tap_to_start",ready||active) {if(active) controller.finish() else start()}
-        val label=tr("mobile.dictate.hold_to_talk")
-        Surface(modifier=Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget).semantics {
-            role=Role.Button;contentDescription=label;onClick {if(active) controller.finish() else if(ready) start();true}
-        }.pointerInput(ready,controller) {detectTapGestures(onPress={if(ready) {holding=true;holdStart();tryAwaitRelease();holding=false;controller.finish()}})},color=role("surface"),shape=MaterialTheme.shapes.small) {
-            Text(label,Modifier.padding(VSTheme.inset))
+        Text(text,modifier=Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget*3).semantics {liveRegion=LiveRegionMode.Polite})
+        MicControl(active,ready,tap={holding=false;if(active) controller.finish() else start()},hold={holding=true;holdStart()},release={if(holding) {holding=false;controller.finish()}})
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center) {
+            IconAction("mobile.dictate.copy",VSIcons.Copy,text.isNotBlank()) {context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText(null,text))}
+            IconAction("mobile.speak.share",androidx.compose.material.icons.Icons.Default.Share,text.isNotBlank()) {shareText(context,text)}
         }
-        if(active) Text(tr("mobile.dictate.listening"))
-        Text(text,modifier=Modifier.semantics {liveRegion=LiveRegionMode.Polite})
-        Secondary("mobile.dictate.copy",text.isNotBlank()) {context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText(null,text))}
-        Secondary("mobile.speak.share",text.isNotBlank()) {shareText(context,text)}
     }
 }

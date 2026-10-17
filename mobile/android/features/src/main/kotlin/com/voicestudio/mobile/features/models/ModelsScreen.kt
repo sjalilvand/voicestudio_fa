@@ -1,6 +1,11 @@
 package com.voicestudio.mobile.features.models
 
 import android.text.format.Formatter
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -20,11 +25,12 @@ import com.voicestudio.mobile.local.*
     Screen {
         ScreenTitle("mobile.local.models")
         Text(tr("mobile.local.storage_used",mapOf("size" to Formatter.formatFileSize(LocalContext.current,state.used))))
-        Toggle("mobile.local.allow_mobile",preferences.allowMobileModels) {allowed -> vm.preference {it.copy(allowMobileModels=allowed)}}
+        Toggle("mobile.simple.mobile_data",preferences.allowMobileModels) {allowed -> vm.preference {it.copy(allowMobileModels=allowed)}}
         if(state.loading) InlineLoading()
         state.models.forEach {model -> ModelCard(vm,model)}
     }
 }
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable fun ModelCard(vm: StudioViewModel, model: PhoneModel) {
     val state by vm.phone.state.collectAsState()
     val progress by vm.phone.downloads.progress.collectAsState()
@@ -39,31 +45,29 @@ import com.voicestudio.mobile.local.*
         Column(Modifier.fillMaxWidth().padding(VSTheme.inset),verticalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
             Text(model.id,style=MaterialTheme.typography.titleMedium)
             Text(Formatter.formatFileSize(context,model.totalBytes))
-            Text(tr("mobile.local.storage_used",mapOf("size" to Formatter.formatFileSize(context,state.storage[model.id] ?: 0))))
-            Text(tr("mobile.local.languages",mapOf("languages" to model.languages.joinToString(", "))))
-            Text(tr("mobile.local.licence_label",mapOf("licence" to model.licence.id,"category" to model.licence.category)))
-            if(!fits) Text(tr("mobile.local.ram_required",mapOf("ram" to model.minRamGb)),color=role("textMuted"))
-            if(installed) Text(tr("mobile.local.installed"))
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                Text(tr("mobile.simple.${model.capability}"),Modifier.weight(1f),style=MaterialTheme.typography.labelSmall)
+                TextButton(onClick={terms=true}) {Text(model.licence.id)}
+            }
+            if(!fits) Text(tr("mobile.simple.ram",mapOf("ram" to model.minRamGb)),color=role("textMuted"))
             progress[model.id]?.let {p ->
                 if(p.running) {
                     LinearProgressIndicator(progress={if(p.total>0) (p.received.toFloat()/p.total).coerceIn(0f,1f) else 0f},modifier=Modifier.fillMaxWidth())
                     Text(tr("mobile.local.transfer",mapOf("received" to Formatter.formatFileSize(context,p.received),"total" to Formatter.formatFileSize(context,p.total))))
                 }
-                p.error?.let {Text(tr(it),color=role("error"))}
+                p.error?.let {Text(tr(shortErrorKey(it)),color=role("error"),maxLines=1)}
             }
-            state.receipts[model.id]?.lastOrNull()?.let {receipt -> Text(tr(if(receipt.accepted&&receipt.fingerprint==model.licence.termsFingerprint) "mobile.local.accepted" else "mobile.local.not_accepted"))}
-            if(model.gated) Secondary("mobile.local.review_licence") {terms=true}
             if(downloading) Secondary("common.cancel") {vm.phone.cancelDownload(model)}
             else if(!installed) Secondary("mobile.local.download",fits) {
                 try {if(!vm.phone.licence.accepted(model)) terms=true else vm.phone.download(model,preferences.allowMobileModels)} catch(e:Exception) {vm.fail(e)}
-            }
-            // Delete also removes retained resume fragments after cancellation.
-            Secondary("common.delete",!downloading) {vm.phone.delete(model)}
+            } else Secondary("common.delete") {vm.phone.delete(model)}
         }
     }
-    if(terms) AlertDialog(shape=MaterialTheme.shapes.large,containerColor=role("surfaceOverlay"),onDismissRequest={terms=false},title={Text(tr("mobile.local.review_licence"))},text={
-        Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
+    if(terms) ModalBottomSheet(containerColor=role("surfaceOverlay"),onDismissRequest={terms=false}) {
+        Column(Modifier.fillMaxWidth().heightIn(max=(LocalConfiguration.current.screenHeightDp*.65f).dp).padding(VSTheme.inset).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
             Text(model.id)
+            Text(model.languages.joinToString(", "))
+            Text(tr("mobile.local.storage_used",mapOf("size" to Formatter.formatFileSize(context,state.storage[model.id] ?: 0))))
             Text(tr("mobile.local.licence_label",mapOf("licence" to model.licence.id,"category" to model.licence.category)))
             Text(model.licence.credit);Text(model.licence.rightsHolder)
             androidx.compose.foundation.text.selection.SelectionContainer {
@@ -75,37 +79,46 @@ import com.voicestudio.mobile.local.*
                 Text(tr("mobile.local.receipt",mapOf("action" to tr(if(receipt.accepted) "mobile.local.accepted" else "mobile.local.not_accepted"),"time" to java.text.DateFormat.getDateTimeInstance().format(java.util.Date(receipt.time)),"version" to receipt.appVersion,"fingerprint" to receipt.fingerprint)))
             }
             Text(tr("mobile.local.licensor_notice"))
-            Toggle("mobile.local.licence_confirm",checked) {checked=it}
+            if(!installed&&!downloading&&(state.storage[model.id] ?: 0)>0) Secondary("common.delete") {vm.phone.delete(model);terms=false}
+            ConsentCheck("mobile.local.licence_confirm",checked) {checked=it}
             Secondary("mobile.local.withdraw") {vm.phone.accept(model,false,model.licence.termsFingerprint);terms=false}
         }
-    },confirmButton={TextButton(enabled=checked,onClick={vm.phone.accept(model,true,model.licence.termsFingerprint);terms=false}) {Text(tr("mobile.local.accept_licence"))}},dismissButton={TextButton(onClick={terms=false}) {Text(tr("common.cancel"))}})
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly) {
+            TextButton(onClick={terms=false}) {Text(tr("mobile.simple.decline"))}
+            TextButton(enabled=checked,onClick={vm.phone.accept(model,true,model.licence.termsFingerprint);terms=false}) {Text(tr("mobile.simple.accept"))}
+        }
+    }
 }
 
-@Composable fun TaskLocation(vm: StudioViewModel, task: String, capabilities: Set<String>, content: @Composable (RunLocation,PhoneModel?)->Unit) {
+@Composable fun TaskLocation(vm: StudioViewModel, task: String, capabilities: Set<String>, dependencies: Set<String> = emptySet(), content: @Composable (RunLocation,PhoneModel?)->Unit) {
     val host by vm.state.collectAsState()
     val phone by vm.phone.state.collectAsState()
     val preferences by vm.preferences.collectAsState()
     var models by remember {mutableStateOf(false)}
     val choices=phone.models.filter {it.capability in capabilities}
     val selected=choices.firstOrNull {it.id==preferences.phoneModels[task]} ?: choices.firstOrNull {it.id in phone.installed&&it.fits(vm.phone.ramBytes)} ?: choices.firstOrNull()
-    val location=routeTask(preferences.runLocations[task],selected?.id in phone.installed,host.connected)
+    val ready=selected?.let {it.id in phone.installed&&it.fits(vm.phone.ramBytes)}==true&&dependencies.all {cap -> phone.models.any {it.capability==cap&&it.id in phone.installed&&it.fits(vm.phone.ramBytes)}}
+    val location=routeTask(preferences.runLocations[task],ready,host.connected)
     Column(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxWidth().heightIn(max=(LocalConfiguration.current.screenHeightDp*.45f).dp).verticalScroll(rememberScrollState()).padding(VSTheme.inset),verticalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
-            ChoicePicker("mobile.local.run_on",if(location==RunLocation.COMPUTER) "computer" else "phone",listOf(
-                Choice("phone",tr("mobile.local.this_phone")),Choice("computer",tr("mobile.local.my_computer"),enabled=host.connected,supporting=if(host.connected) null else tr("mobile.local.pair_settings")))) {value ->
-                vm.phone.cancelInference();vm.preference {it.copy(runLocations=it.runLocations+(task to value))}
-            }
-            if(location!=RunLocation.COMPUTER) {
-                ChoicePicker("mobile.local.model",selected?.id.orEmpty(),choices.map {Choice(it.id,it.id,enabled=it.fits(vm.phone.ramBytes),supporting=if(it.fits(vm.phone.ramBytes)) null else tr("mobile.local.ram_required",mapOf("ram" to it.minRamGb)))}) {id ->
-                    vm.phone.cancelInference();vm.preference {it.copy(phoneModels=it.phoneModels+(task to id))}
+        Row(Modifier.fillMaxWidth().padding(horizontal=VSTheme.inset),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
+            if(host.connected) {
+                if(LocalDensity.current.fontScale<=1.5f) Text(tr("mobile.local.run_on"),style=MaterialTheme.typography.labelSmall)
+                SingleChoiceSegmentedButtonRow(Modifier.weight(1f)) {
+                    listOf("phone" to "mobile.local.this_phone","computer" to "mobile.simple.computer").forEachIndexed {index,(id,key) ->
+                        SegmentedButton(selected=(location==RunLocation.COMPUTER)==(id=="computer"),onClick={vm.phone.cancelInference();vm.preference {it.copy(runLocations=it.runLocations+(task to id))}},shape=SegmentedButtonDefaults.itemShape(index,2)) {Text(tr(key),maxLines=1,overflow=TextOverflow.Ellipsis)}
+                    }
                 }
-                if(location==RunLocation.DOWNLOAD) {
-                    if(phone.loading) InlineLoading()
-                    selected?.let {Text(tr("mobile.local.inline_download",mapOf("size" to Formatter.formatFileSize(LocalContext.current,it.totalBytes))))}
-                }
-                Secondary("mobile.local.models") {models=!models}
-            }
+            } else Spacer(Modifier.weight(1f))
+            IconAction("mobile.local.models",Icons.Default.Settings) {models=!models}
         }
+        if(location!=RunLocation.COMPUTER&&task !in setOf("speak","dub")) TaskModelPicker(vm,task,capabilities,selected,compact=true)
         Box(Modifier.weight(1f)) {if(models) ModelsScreen(vm) else content(location,selected)}
     }
+}
+
+@Composable fun TaskModelPicker(vm: StudioViewModel, task: String, capabilities: Set<String>, selected: PhoneModel?, compact: Boolean = false) {
+    val phone by vm.phone.state.collectAsState()
+    ChoicePicker("mobile.local.model",selected?.id.orEmpty(),phone.models.filter {it.capability in capabilities}.map {
+        Choice(it.id,it.id,enabled=it.fits(vm.phone.ramBytes),supporting=if(it.fits(vm.phone.ramBytes)) null else tr("mobile.local.ram_required",mapOf("ram" to it.minRamGb)))
+    },compact=compact) {id -> vm.phone.cancelInference();vm.preference {it.copy(phoneModels=it.phoneModels+(task to id))}}
 }
