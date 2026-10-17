@@ -7,9 +7,11 @@ follows redirects and never logs a token.
 from __future__ import annotations
 
 import asyncio
+import re
 from typing import Any, AsyncIterator, Callable, Optional
 
 import httpx
+from urllib.parse import urlsplit
 
 TokenProvider = Callable[..., Optional[str]]  # token(fresh=False)
 
@@ -48,11 +50,30 @@ def _error(response: httpx.Response) -> SyncApiError:
     )
 
 
+_ORGANIZATION_ID = re.compile(r"^[A-Za-z0-9]{1,64}$")
+
+
+def _checked_base(base_url: str) -> str:
+    """The sync API base: HTTPS, or plain HTTP on loopback for local development only."""
+    parts = urlsplit(base_url)
+    secure = parts.scheme == "https" and bool(parts.hostname)
+    local = parts.scheme == "http" and parts.hostname == "127.0.0.1"
+    if not (secure or local) or parts.query or parts.fragment or parts.username or parts.password:
+        raise ValueError("refusing a sync endpoint that is not https (or loopback http)")
+    return base_url.rstrip("/")
+
+
+def _checked_organization(organization_id: str) -> str:
+    if not _ORGANIZATION_ID.fullmatch(organization_id or ""):
+        raise ValueError("refusing an Organization ID that is not Base62")
+    return organization_id
+
+
 class SyncClient:
     def __init__(self, base_url: str, organization_id: str, *, token: TokenProvider,
                  device_id: Optional[str] = None, transport: Optional[httpx.AsyncBaseTransport] = None,
                  timeout: float = 30.0) -> None:
-        self.base = f"{base_url.rstrip('/')}/organizations/{organization_id}"
+        self.base = f"{_checked_base(base_url)}/organizations/{_checked_organization(organization_id)}"
         self.device_id = device_id
         self._token = token
         self._http = httpx.AsyncClient(transport=transport, timeout=timeout, follow_redirects=False)

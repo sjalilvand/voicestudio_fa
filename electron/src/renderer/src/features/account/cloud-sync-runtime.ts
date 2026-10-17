@@ -31,7 +31,9 @@ export async function startCloudSyncRuntime(deps: {
   intervalMs?: number;
 }): Promise<() => void> {
   const { api, capture } = deps;
-  const listing = await api<{ keys: string[]; raw?: string[] }>('/api/cloud-sync/local/keys');
+  const listing = await api<{ keys: string[]; raw?: string[]; partial?: string[] }>(
+    '/api/cloud-sync/local/keys',
+  );
   const keys = listing.keys;
   let seq = 0;
   let stopped = false;
@@ -47,6 +49,7 @@ export async function startCloudSyncRuntime(deps: {
     storage: localStorage,
     keys: keys.filter((key) => key !== SHORTCUT_KEY),
     rawKeys: listing.raw ?? [],
+    partialKeys: listing.partial ?? [],
     post,
   });
   const shortcutSynced = Boolean(capture) && keys.includes(SHORTCUT_KEY);

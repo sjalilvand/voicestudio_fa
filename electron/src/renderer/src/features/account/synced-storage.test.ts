@@ -1,4 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
+import { onStorageKey } from '@/lib/storage-events';
 import { installSyncedStorage } from './synced-storage';
 
 const KEYS = ['voicestudio.theme.v2', 'voicestudio.clone.settings.v1', 'voicestudio.locale'];
@@ -42,15 +43,14 @@ it('ignores keys that never sync and still stores them', () => {
   expect(localStorage.getItem('voicestudio.workspace-layout')).toBe('x');
 });
 
-it('applies a pulled value without echoing it and tells the app through a storage event', () => {
+it('applies a pulled value without echoing it and tells the app it changed', () => {
   const { post, synced } = install();
   const seen: (string | null)[] = [];
-  const listener = (event: StorageEvent) => seen.push(event.key);
-  window.addEventListener('storage', listener);
+  const stops = KEYS.map((key) => onStorageKey(key, () => seen.push(key)));
   synced.apply('voicestudio.locale', 'de');
   synced.apply('voicestudio.clone.settings.v1', { steps: 24 });
   synced.apply('voicestudio.theme.v2', null);
-  window.removeEventListener('storage', listener);
+  stops.forEach((stop) => stop());
   expect(post).not.toHaveBeenCalled();
   expect(localStorage.getItem('voicestudio.locale')).toBe('de');
   expect(localStorage.getItem('voicestudio.clone.settings.v1')).toBe('{"steps":24}');
@@ -90,4 +90,28 @@ it('a failing post never breaks the write', () => {
   uninstall = synced.uninstall;
   expect(() => localStorage.setItem('voicestudio.locale', 'de')).not.toThrow();
   expect(localStorage.getItem('voicestudio.locale')).toBe('de');
+});
+
+it('a pulled value for a partly-synced key merges in and keeps device-local fields (the draft)', () => {
+  const post = vi.fn(async () => {});
+  const synced = installSyncedStorage({
+    storage: localStorage,
+    keys: KEYS,
+    rawKeys: RAW,
+    partialKeys: ['voicestudio.clone.settings.v1'],
+    post,
+  });
+  uninstall = synced.uninstall;
+  localStorage.setItem(
+    'voicestudio.clone.settings.v1',
+    JSON.stringify({ steps: 16, text: 'my draft', refText: 'ref', selectedProfileId: 'ab12cd34' }),
+  );
+  synced.apply('voicestudio.clone.settings.v1', { steps: 24, speed: 1.1 });
+  expect(JSON.parse(localStorage.getItem('voicestudio.clone.settings.v1')!)).toEqual({
+    steps: 24,
+    speed: 1.1,
+    text: 'my draft',
+    refText: 'ref',
+    selectedProfileId: 'ab12cd34',
+  });
 });

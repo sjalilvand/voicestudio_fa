@@ -238,3 +238,38 @@ it('a leftover token is cleared at startup when account features are off', () =>
   });
   expect(h.store.load()).toBeNull();
 });
+
+it('Cancel during discovery never opens the browser', async () => {
+  const h = harness();
+  const pending = deferred<{
+    authorization_endpoint: string;
+    token_endpoint: string;
+    revocation_endpoint: string;
+  }>();
+  h.oidc.discover.mockReturnValueOnce(pending.promise);
+  const done = h.session.signIn().catch(() => {});
+  h.session.cancelSignIn();
+  pending.resolve({
+    authorization_endpoint: 'https://voicestudio.sh/auth',
+    token_endpoint: '',
+    revocation_endpoint: '',
+  });
+  await done;
+  expect(h.openExternal).not.toHaveBeenCalled();
+  expect(h.session.state()).toMatchObject({ signingIn: false, notice: null });
+});
+
+it('Cancel during the code exchange stores nothing', async () => {
+  const h = harness();
+  const pending = deferred<ReturnType<typeof late>>();
+  h.oidc.exchangeCode.mockReturnValueOnce(pending.promise);
+  const done = h.session.signIn().catch(() => {});
+  await vi.waitFor(() => expect(h.openExternal).toHaveBeenCalled());
+  h.resolveCode('code');
+  await vi.waitFor(() => expect(h.oidc.exchangeCode).toHaveBeenCalled());
+  h.session.cancelSignIn();
+  pending.resolve(late('r-cancelled'));
+  await done;
+  expect(h.store.load()).toBeNull();
+  expect(h.session.state()).toMatchObject({ signedIn: false, notice: null });
+});

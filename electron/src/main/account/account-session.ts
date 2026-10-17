@@ -32,6 +32,13 @@ export interface SessionDeps {
   now?: () => number;
 }
 
+export class SignInCancelled extends Error {
+  constructor() {
+    super('Sign-in was cancelled');
+    this.name = 'SignInCancelled';
+  }
+}
+
 export const backoffDelay = (attempt: number): number => Math.min(300_000, 1000 * 2 ** attempt);
 
 const REFRESH_MARGIN_MS = 60_000;
@@ -43,6 +50,7 @@ export class AccountSession {
   private inflight: Promise<AccessToken | null> | null = null;
   private closeLoopback: (() => void) | null = null;
   private signingIn = false;
+  private attempt = 0;
   private notice: SessionNotice = null;
   private readonly listeners = new Set<(s: SessionState) => void>();
   private readonly now: () => number;
@@ -76,23 +84,36 @@ export class AccountSession {
     if (this.signingIn) return;
     const pkce = createPkce();
     const generation = this.generation;
+    const attempt = ++this.attempt;
+    // Cancel (or switching off) invalidates this attempt: checked after every awaited step.
+    const stillWanted = () => {
+      if (attempt !== this.attempt) throw new SignInCancelled();
+      if (!this.deps.switches.get().accountEnabled) throw new CloudDisabledError();
+    };
     this.signingIn = true;
     this.notice = null;
     this.emit();
     try {
       const endpoints = await this.deps.oidc.discover();
+      stillWanted();
       const lb = await this.deps.startLoopback({
         expectedState: pkce.state,
         signedInPage: this.deps.signedInPage,
       });
       this.closeLoopback = lb.close;
+      stillWanted();
       await this.deps.openExternal(this.deps.oidc.authorizeUrl(endpoints, lb.redirectUri, pkce));
       const code = await lb.code;
-      if (!this.deps.switches.get().accountEnabled) throw new CloudDisabledError();
+      stillWanted();
       const tokens = await this.deps.oidc.exchangeCode(code, lb.redirectUri, pkce.verifier);
+      stillWanted();
       if (!this.accept(tokens, generation)) throw new CloudDisabledError();
     } catch (error) {
-      if (!(error instanceof CloudDisabledError)) this.notice = 'sign_in_failed';
+      const cancelled =
+        error instanceof CloudDisabledError ||
+        error instanceof SignInCancelled ||
+        attempt !== this.attempt;
+      if (!cancelled) this.notice = 'sign_in_failed';
       throw error;
     } finally {
       this.closeLoopback?.();
@@ -103,6 +124,7 @@ export class AccountSession {
   }
 
   cancelSignIn(): void {
+    this.attempt += 1; // whatever step the attempt is on, its result is dropped
     this.closeLoopback?.();
   }
 

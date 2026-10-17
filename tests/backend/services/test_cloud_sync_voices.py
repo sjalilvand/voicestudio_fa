@@ -83,3 +83,16 @@ def test_a_recorded_own_voice_consent_counts_as_attested(client):
         "attested": True, "attested_at": "2025-10-01T10:00:00Z", "basis": "own_voice",
         "consent_text": "I confirm this is my voice.",
     }
+
+
+def test_replacing_the_reference_audio_clears_the_sync_consent(client):
+    """A new speaker needs a new confirmation: the old one must not carry over."""
+    from api.routers import profiles
+
+    client.post("/profiles/ab12cd34/attestation", json={"basis": "speaker_permission"})
+    with sqlite3.connect(core_db.DB_PATH) as conn:
+        current = conn.execute("SELECT ref_audio_path FROM voice_profiles WHERE id='ab12cd34'").fetchone()[0]
+        conn.execute(profiles._REPLACE_AUDIO_SQL, ("new.wav", "new text", None, None, None, None, "ab12cd34", current))
+    row = _row(core_db.DB_PATH)
+    assert (row["consent_basis"], row["consent_attested_at"]) == ("", None)
+    assert voice_sync_content(row) is None

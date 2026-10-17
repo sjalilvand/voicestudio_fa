@@ -24,6 +24,11 @@ from core import db as core_db
 from services import settings_store
 from services.cloud_sync.store import SyncStore
 
+__all__ = [
+    "ABSENT", "CHOICE_COLLECTIONS", "ITEMS", "Item", "PARTIAL_KEYS", "RAW_KEYS", "RENDERER_KEYS",
+    "item", "item_for", "items_in", "read_values", "write_values",
+]
+
 ABSENT: Any = object()
 Source = tuple[str, str]  # ("prefs" | "settings" | "local", key)
 
@@ -33,11 +38,15 @@ def _store() -> SyncStore:
 
 
 class Slot:
+    """Reads and writes one local value; see Pref, Setting, Local and LocalField."""
+
     source: Source
 
-    def read(self) -> Any: ...
+    def read(self) -> Any:
+        raise NotImplementedError
 
-    def write(self, value: Any) -> None: ...
+    def write(self, value: Any) -> None:
+        raise NotImplementedError
 
 
 @dataclass
@@ -323,6 +332,12 @@ RENDERER_KEYS: tuple[str, ...] = tuple(
 RAW_KEYS: frozenset[str] = frozenset({
     "voicestudio.locale", "voicestudio.review-mode.v1", "voicestudio.transcription.mode", SHORTCUT_KEY,
 })
+
+#: Renderer keys of which only some fields sync (LocalField): a pulled value merges
+#: into the local object, so device-local fields such as the clone draft stay.
+PARTIAL_KEYS: frozenset[str] = frozenset(
+    slot.key for item in ITEMS for slot in item.slots.values() if isinstance(slot, LocalField)
+)
 
 #: Collections a ``choices`` toggle enables (sync-collections.md device-preferences).
 CHOICE_COLLECTIONS = {"settings": ("settings",), "shortcuts": ("shortcuts",), "favorites": ("favorites",)}

@@ -178,3 +178,9 @@ def test_the_storage_format_of_each_key_comes_from_the_allowlist(api):
     SyncStore().set_local("voicestudio.review-mode.v1", "off", origin="sync")  # this device never wrote it
     pulled = client.get(f"/api/cloud-sync/local?since={seq}").json()["values"]
     assert pulled == [{"key": "voicestudio.review-mode.v1", "value": "off", "raw": True}]
+
+
+def test_keys_where_only_some_fields_sync_are_listed_as_partial(api):
+    client, _ = api
+    listing = client.get("/api/cloud-sync/local/keys").json()
+    assert set(listing["partial"]) == {"voicestudio.clone.settings.v1", "voicestudio.dictation-settings.v1"}

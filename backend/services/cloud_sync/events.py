@@ -106,10 +106,15 @@ class EventStream:
             if outcome == "now":
                 attempt = 0
                 continue
-            if outcome == "wait":
-                await self._sleep(TOO_MANY_STREAMS_WAIT)
-                continue
-            if outcome == "stalled":
+            if outcome in ("wait", "stalled"):
+                # No working stream: poll now (it marks the stream down, so the
+                # 60-second fallback keeps running) before reconnecting.
+                try:
+                    await self._poll()
+                except CloudOff:
+                    return
+                if outcome == "wait":
+                    await self._sleep(TOO_MANY_STREAMS_WAIT)
                 continue
             try:
                 await self._poll()

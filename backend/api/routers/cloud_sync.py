@@ -7,7 +7,6 @@ requires both the admin gate and a loopback (desktop) caller.
 """
 from __future__ import annotations
 
-import re
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
@@ -123,7 +122,11 @@ async def use_choices_of(device_id: str = Path(pattern=_DEVICE_ID)) -> dict:
 # ── renderer localStorage mirror ───────────────────────────────────────
 @router.get("/local/keys")
 async def local_keys() -> dict:
-    return {"keys": list(allowlist.RENDERER_KEYS), "raw": sorted(allowlist.RAW_KEYS & set(allowlist.RENDERER_KEYS))}
+    return {
+        "keys": list(allowlist.RENDERER_KEYS),
+        "raw": sorted(allowlist.RAW_KEYS & set(allowlist.RENDERER_KEYS)),
+        "partial": sorted(allowlist.PARTIAL_KEYS),
+    }
 
 
 @router.put("/local")

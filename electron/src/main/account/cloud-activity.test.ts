@@ -79,3 +79,33 @@ it('a server-issued HTTPS link (the profile photo) may leave the API origin, not
   ).rejects.toBeInstanceOf(CloudDisabledError);
   expect(fetchImpl).toHaveBeenCalledTimes(1);
 });
+
+it('switching off also stops a response body that is still downloading', async () => {
+  let push!: (chunk: string) => void;
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      push = (chunk) => controller.enqueue(new TextEncoder().encode(chunk));
+    },
+  });
+  const fetchImpl = vi.fn<FetchImpl>(async (_url, init) => {
+    init?.signal?.addEventListener('abort', () => body.cancel().catch(() => {}));
+    return new Response(body, { headers: { 'content-type': 'application/json' } });
+  });
+  const activity = new CloudActivity({ isAllowed: () => true, origins, fetchImpl });
+  const res = await activity.fetch('https://voicestudio.sh/token');
+  push('{"access_');
+  const reading = res.text();
+  activity.stopAll();
+  await expect(reading).rejects.toBeTruthy();
+});
+
+it('the timeout covers the whole response, not just its headers', async () => {
+  const body = new ReadableStream<Uint8Array>({ start() {} }); // never ends
+  const fetchImpl = vi.fn<FetchImpl>(async (_url, init) => {
+    init?.signal?.addEventListener('abort', () => body.cancel().catch(() => {}));
+    return new Response(body);
+  });
+  const activity = new CloudActivity({ isAllowed: () => true, origins, fetchImpl });
+  const res = await activity.fetch('https://voicestudio.sh/x', {}, { timeoutMs: 30 });
+  await expect(res.text()).rejects.toBeTruthy();
+});

@@ -132,3 +132,11 @@ def test_switched_off_or_fatal_errors_stop_without_reconnecting():
     stream, _, revoked, _, _ = make(script)
     asyncio.run(stream.run())
     assert revoked == ["device_revoked"] and len(script.last_ids) == 1
+
+
+def test_a_stalled_stream_or_too_many_streams_keeps_the_fallback_poll_going():
+    script = Script([["<stall>"], ["event: bye", 'data: {"reason":"too_many_streams"}', ""]])
+    stream, _, _, polls, sleeps = make(script, stall=0.05)
+    asyncio.run(stream.run())
+    assert len(polls) == 2  # once after the stall, once before waiting out too_many_streams
+    assert sleeps == [60]

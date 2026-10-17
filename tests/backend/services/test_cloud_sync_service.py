@@ -305,3 +305,19 @@ def test_os_version_is_short_single_line_text():
     value = _os_version()
     assert 1 <= len(value) <= 64
     assert "\n" not in value and "\r" not in value and "\x00" not in value
+
+
+def test_a_setting_changed_while_sync_was_stopped_is_pushed_when_it_starts_again(setup):
+    service, server, _, _ = setup
+    prefs.set_("generation_history_cap", 30)
+
+    async def body():
+        await service.turn_on({"settings": True})
+        await until(lambda: server.values("settings", "history") == {"generationHistoryCap": 30})
+        await service.stop()
+        prefs.set_("generation_history_cap", 31)  # no hooks while stopped
+        assert await service.start()
+        await until(lambda: server.values("settings", "history") == {"generationHistoryCap": 31})
+        await service.stop()
+
+    asyncio.run(body())

@@ -600,7 +600,7 @@ _REPLACE_AUDIO_SQL = (
     "language=COALESCE(?, language), personality=COALESCE(?, personality), "
     "locked_audio_path='', is_locked=0, seed=NULL, "
     "verified_own_voice=0, consent_text='', consent_audio_path='', "
-    "consent_recorded_at=NULL "
+    "consent_recorded_at=NULL, consent_basis='', consent_attested_at=NULL "
     "WHERE id=? AND COALESCE(kind, 'clone')='clone' AND ref_audio_path IS ?"
 )
 

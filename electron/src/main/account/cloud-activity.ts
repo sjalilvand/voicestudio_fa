@@ -50,12 +50,58 @@ export class CloudActivity {
       () => controller.abort(new Error('timeout')),
       opts.timeoutMs ?? 30_000,
     );
-    try {
-      return await this.fetchImpl(url, { ...init, redirect: 'error', signal: controller.signal });
-    } finally {
+    const release = () => {
       clearTimeout(timeout);
       this.controllers.delete(controller);
+    };
+    let res: Response;
+    try {
+      res = await this.fetchImpl(url, { ...init, redirect: 'error', signal: controller.signal });
+    } catch (error) {
+      release();
+      throw error;
     }
+    if (!res.body || [101, 204, 205, 304].includes(res.status)) {
+      release();
+      return res;
+    }
+    // The request stays tracked (and timed) until its body is read: switching off or
+    // the timeout also stops a response that is still downloading.
+    const reader = res.body.getReader();
+    const body = new ReadableStream<Uint8Array>({
+      start(stream) {
+        controller.signal.addEventListener(
+          'abort',
+          () => {
+            stream.error(controller.signal.reason);
+            reader.cancel(controller.signal.reason).catch(() => {});
+            release();
+          },
+          { once: true },
+        );
+      },
+      async pull(stream) {
+        try {
+          const { done, value } = await reader.read();
+          if (done) {
+            stream.close();
+            release();
+          } else stream.enqueue(value);
+        } catch (error) {
+          stream.error(error);
+          release();
+        }
+      },
+      cancel(reason) {
+        release();
+        return reader.cancel(reason);
+      },
+    });
+    return new Response(body, {
+      status: res.status,
+      statusText: res.statusText,
+      headers: res.headers,
+    });
   }
 
   setTimeout(fn: () => void, ms: number): void {

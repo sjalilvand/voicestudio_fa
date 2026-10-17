@@ -109,6 +109,9 @@ class SyncEngine:
         self._on_local_change = on_local_change
         #: Collections just switched off with "Also remove from the cloud": their deletes still go out.
         self.draining: set[str] = set()
+        #: Hooks only run while the engine does: the first round of each engine
+        #: compares local values with the bases, catching edits made while stopped.
+        self._seeded = False
         state = store.state(organization_id)
         if state:
             self.status.needs_update = set(state.needs_update)
@@ -165,8 +168,9 @@ class SyncEngine:
             first = state.last_full_sync_at is None
             try:
                 self._release_supported()
-                if first:
+                if first or not self._seeded:
                     self._seed_local_items()
+                    self._seeded = True
                 await self._pull()
                 await self._pull_chosen_later()
                 await self._push()
@@ -174,7 +178,7 @@ class SyncEngine:
                     self.store.save_state(self.org, last_full_sync_at=_now())
                 self.status.last_sync_at = _now()
             except (CloudOff, _StopRound):
-                pass
+                return  # switched off, or a refusal already recorded in status
             except SyncApiError as error:
                 self._fatal_or_offline(error)
             except httpx.HTTPError:
@@ -185,14 +189,14 @@ class SyncEngine:
             try:
                 await self._pull()
             except (CloudOff, _StopRound):
-                pass
+                return  # switched off, or a refusal already recorded in status
 
     async def push(self) -> None:
         async with self._lock:
             try:
                 await self._push()
             except (CloudOff, _StopRound):
-                pass
+                return  # switched off, or a refusal already recorded in status
             except httpx.HTTPError:
                 self.status.offline = True
 

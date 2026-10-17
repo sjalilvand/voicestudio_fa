@@ -112,3 +112,22 @@ def test_a_rejected_token_is_replaced_once_then_the_call_retried():
     assert run(client.usage()) == {"used_bytes": 1}
     assert asked == [False, True]
     assert seen == ["Bearer stale", "Bearer fresh"]
+
+
+@pytest.mark.parametrize(
+    "base,org",
+    [
+        ("http://evil.example/v1/sync", "Or1"),
+        ("file:///etc/passwd", "Or1"),
+        ("https://appapi.voicestudio.sh/v1/sync", "../admin"),
+        ("https://appapi.voicestudio.sh/v1/sync", "Or1/x"),
+    ],
+)
+def test_only_https_or_loopback_endpoints_and_base62_organizations(base, org):
+    with pytest.raises(ValueError):
+        SyncClient(base, org, token=lambda: "t")
+
+
+def test_local_development_endpoint_is_allowed():
+    client = SyncClient("http://127.0.0.1:8090/v1/sync", "Or5tG7hJ9kL1zX3c", token=lambda: "t")
+    assert client.base == "http://127.0.0.1:8090/v1/sync/organizations/Or5tG7hJ9kL1zX3c"

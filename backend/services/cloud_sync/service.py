@@ -217,7 +217,7 @@ class CloudSyncService:
             try:
                 await asyncio.wait_for(self._wake.wait(), timeout=timeout)
             except asyncio.TimeoutError:
-                pass
+                continue  # the 60-second poll while the event stream is down
 
     async def _stream(self) -> None:
         async def on_head(collections: list[str]) -> None:

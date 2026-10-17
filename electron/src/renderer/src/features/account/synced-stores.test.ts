@@ -38,3 +38,35 @@ it('generation defaults follow a pulled value instead of writing the old ones ba
   );
   expect(cloneSettingsStore.state.steps).toBe(before.steps === 24 ? 16 : 24);
 });
+
+it('theme and dictation follow a value applied by Cloud sync (not only native storage events)', async () => {
+  const { installSyncedStorage } = await import('./synced-storage');
+  const { useTheme } = await import('@/hooks/use-theme');
+  const { getAecEnabled } = await import('@/lib/store/dictation-settings');
+  const synced = installSyncedStorage({
+    storage: localStorage,
+    keys: [
+      'voicestudio.theme.v2',
+      'voicestudio.dictation-settings.v1',
+      'voicestudio.review-mode.v1',
+    ],
+    rawKeys: ['voicestudio.review-mode.v1'],
+    post: async () => {},
+  });
+  try {
+    const theme = renderHook(() => useTheme());
+    const review = renderHook(() => useReviewMode());
+    const before = theme.result.current.mode;
+    const next = before === 'dark' ? 'light' : 'dark';
+    act(() => {
+      synced.apply('voicestudio.theme.v2', { mode: next });
+      synced.apply('voicestudio.dictation-settings.v1', { aecEnabled: true });
+      synced.apply('voicestudio.review-mode.v1', 'off');
+    });
+    expect(theme.result.current.mode).toBe(next);
+    expect(getAecEnabled()).toBe(true);
+    expect(review.result.current).toBe('off');
+  } finally {
+    synced.uninstall();
+  }
+});
