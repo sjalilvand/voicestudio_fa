@@ -307,14 +307,15 @@ _REAL_SPEECH = (
 _LOOP = "Thank you. " * 148
 
 
-def test_auto_select_skips_a_whisper_repetition_loop_on_a_silent_window(monkeypatch):
+@pytest.mark.parametrize("loop", [_LOOP, "Thank you. " * 4])
+def test_auto_select_skips_a_whisper_repetition_loop_on_a_silent_window(monkeypatch, loop):
     # #2836: Whisper loops "Thank you." over a near-silent window; the loop is
     # longer than any real passage and used to win the selection.
     model = _model(reject_tokenization=False)
     model.sampling_rate = 100
     model._asr_pipe = object()
     model.transcribe = lambda candidate: (
-        _REAL_SPEECH if float(candidate[0].abs().mean()) > 0.01 else _LOOP
+        _REAL_SPEECH if float(candidate[0].abs().mean()) > 0.01 else loop
     )
     monkeypatch.setattr(
         "omnivoice.models.omnivoice.remove_silence_safe",
@@ -349,11 +350,12 @@ def test_auto_select_keeps_real_speech_against_a_shorter_window(monkeypatch, spe
     assert prompt.ref_text.startswith(speech)
 
 
-def test_auto_select_with_only_repetition_loops_reports_no_speech():
+@pytest.mark.parametrize("loop", [_LOOP, "Thank you. " * 4])
+def test_auto_select_with_only_repetition_loops_reports_no_speech(loop):
     model = _model(reject_tokenization=True)
     model.sampling_rate = 100
     model._asr_pipe = object()
-    model.transcribe = lambda _candidate: _LOOP
+    model.transcribe = lambda _candidate: loop
     audio = torch.full((1, 30 * 100), 0.001)
 
     with pytest.raises(ValueError, match=r"\[clone_ref_no_speech\]"):
