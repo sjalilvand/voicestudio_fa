@@ -22,6 +22,7 @@ class StudioViewModel @JvmOverloads constructor(application: Application, val st
     var api: VoiceStudioApi? = null
         private set
     private var operation: Job? = null
+    val phone = PhoneStudio(application,viewModelScope,::fail)
     init {
         viewModelScope.launch {
             val prefs = store.preferences.first()

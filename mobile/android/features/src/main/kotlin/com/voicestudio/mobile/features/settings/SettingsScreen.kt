@@ -15,7 +15,7 @@ import com.voicestudio.mobile.features.*
 import com.voicestudio.mobile.designsystem.*
 import com.voicestudio.mobile.l10n.L10n
 
-@Composable fun SettingsScreen(vm:StudioViewModel,version:String) {
+@Composable fun SettingsScreen(vm:StudioViewModel,version:String,onConnect:()->Unit = {},onModels:()->Unit = {}) {
     val prefs by vm.preferences.collectAsState()
     val state by vm.state.collectAsState()
     val context=LocalContext.current
@@ -24,6 +24,8 @@ import com.voicestudio.mobile.l10n.L10n
     val notification=permissionAction(Manifest.permission.POST_NOTIFICATIONS,"mobile.settings.notifications_help",vm::fail) {vm.preference {it.copy(notifications=true)}}
     Screen {
         ScreenTitle("mobile.tabs.settings")
+        Secondary("mobile.tabs.connect",onClick=onConnect)
+        Secondary("mobile.local.models",onClick=onModels)
         if(state.connected) {
             Heading("mobile.settings.connection")
             Text(prefs.activeUrl.orEmpty())
@@ -36,6 +38,7 @@ import com.voicestudio.mobile.l10n.L10n
                     Secondary("mobile.connect.forget",!state.busy) {vm.forget(host.url)}
                 }
             }
+        }
             Heading("mobile.settings.appearance")
             val palettes=paletteChoices(l)
             Group {
@@ -51,9 +54,8 @@ import com.voicestudio.mobile.l10n.L10n
             Heading("mobile.settings.notifications")
             Text(tr("mobile.settings.notifications_help"))
             Toggle("mobile.settings.notifications",prefs.notifications) {enabled -> if(enabled&&Build.VERSION.SDK_INT>=33) notification() else vm.preference {it.copy(notifications=enabled)}}
-        }
         Heading("mobile.settings.privacy")
-        Text(tr("mobile.settings.privacy_help"))
+        Text(tr("mobile.local.privacy"))
         Text(tr("mobile.android.analytics_local"))
         Toggle("consent.title",prefs.consent==true) {vm.consent(it)}
         Heading("mobile.settings.about")
@@ -63,7 +65,7 @@ import com.voicestudio.mobile.l10n.L10n
         if(state.connected) Secondary("mobile.android.model_licenses") {context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(vm.api!!.address.baseUrl.toString())))}
     }
     if(licenses) AlertDialog(shape=MaterialTheme.shapes.large,onDismissRequest={licenses=false},title={Text(tr("mobile.settings.licenses"))},text={
-        val content=remember {context.assets.open("licenses/OFL.txt").bufferedReader().use {it.readText()}+"\n\n"+context.assets.open("licenses/Apache-2.0.txt").bufferedReader().use {it.readText()}+"\n\n"+context.assets.open("licenses/VoiceStudio-AGPL-3.0.txt").bufferedReader().use {it.readText()}+"\n\n"+context.assets.open("licenses/NOTICE.txt").bufferedReader().use {it.readText()}}
+        val content=remember {context.assets.list("licenses").orEmpty().sorted().joinToString("\n\n") {name -> context.assets.open("licenses/$name").bufferedReader().use {it.readText()}}}
         Text(content,Modifier.verticalScroll(rememberScrollState()))
     },confirmButton={TextButton(shape=MaterialTheme.shapes.small,onClick={licenses=false}) {Text(tr("common.close"))}})
 }

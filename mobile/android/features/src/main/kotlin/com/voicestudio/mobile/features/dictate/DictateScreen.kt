@@ -20,7 +20,7 @@ import com.voicestudio.mobile.designsystem.*
 import com.voicestudio.mobile.network.*
 import kotlinx.coroutines.CancellationException
 
-@Composable fun DictateScreen(vm:StudioViewModel) {
+@Composable private fun ComputerDictateScreen(vm:StudioViewModel) {
     val context=LocalContext.current
     val scope=rememberCoroutineScope()
     val api=vm.api ?: return
@@ -75,5 +75,15 @@ import kotlinx.coroutines.CancellationException
             (context.getSystemService(ClipboardManager::class.java)).setPrimaryClip(ClipData.newPlainText(null,transcript))
         }
         Secondary("mobile.speak.share",transcript.isNotBlank()) {shareText(context,transcript)}
+    }
+}
+
+@Composable fun DictateScreen(vm: StudioViewModel) {
+    com.voicestudio.mobile.features.models.TaskLocation(vm,"dictate",setOf("asr-stream")) {location,model ->
+        if(location==com.voicestudio.mobile.local.RunLocation.COMPUTER) ComputerDictateScreen(vm)
+        else {
+            val phone by vm.phone.state.collectAsState()
+            PhoneDictateScreen(vm,model,location==com.voicestudio.mobile.local.RunLocation.PHONE&&model?.let {phone.accepted(it)}==true)
+        }
     }
 }

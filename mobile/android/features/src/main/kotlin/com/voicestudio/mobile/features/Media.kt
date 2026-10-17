@@ -127,3 +127,31 @@ val LocalHostPlayerFactory=staticCompositionLocalOf<(Context,VoiceStudioApi)->Pl
         }
     }
 }
+
+@Composable fun LocalAudioPlayer(file: File, failure: (Throwable)->Unit) {
+    val context=LocalContext.current
+    val player=remember(file) {ExoPlayer.Builder(context).build()}
+    var playing by remember(file) {mutableStateOf(false)}
+    var position by remember(file) {mutableLongStateOf(0)}
+    var duration by remember(file) {mutableLongStateOf(0)}
+    DisposableEffect(player) {
+        val listener=object: Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) {playing=isPlaying}
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {failure(ClientFailure("mobile.android.playback_failed"))}
+        }
+        player.addListener(listener);player.setMediaItem(MediaItem.fromUri(Uri.fromFile(file)));player.prepare()
+        onDispose {player.removeListener(listener);player.release()}
+    }
+    LaunchedEffect(player) {while(isActive) {position=player.currentPosition.coerceAtLeast(0);duration=player.duration.coerceAtLeast(0);delay(250)}}
+    Group {
+        Column(Modifier.fillMaxWidth().padding(VSTheme.inset)) {
+            Text(tr("player.generated_audio"))
+            IconAction(if(playing) "player.pause" else "player.play",if(playing) VSIcons.Pause else Icons.Default.PlayArrow) {
+                if(playing) player.pause() else {if(player.playbackState==Player.STATE_ENDED) player.seekTo(0);player.play()}
+            }
+            val seek=tr("player.seek")
+            Slider(value=if(duration>0) (position.toFloat()/duration).coerceIn(0f,1f) else 0f,onValueChange={player.seekTo((it*duration).toLong())},enabled=duration>0,modifier=Modifier.semantics {contentDescription=seek})
+            Text(tr("mobile.android.playback_time",mapOf("position" to formatDuration(position),"duration" to formatDuration(duration))))
+        }
+    }
+}

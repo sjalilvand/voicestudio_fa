@@ -1,16 +1,19 @@
-# VoiceStudio Android companion (M1)
+# VoiceStudio Android
 
-Native Kotlin / Jetpack Compose companion for a paired VoiceStudio host. No
-inference, cloud relay, analytics transmission, crash reporter or push service.
+Native Kotlin / Jetpack Compose app with phone-first speech and dictation,
+plus an optional connection to a user-owned VoiceStudio computer. Installed
+models run offline. No cloud relay, analytics transmission, crash reporter or
+push service is used.
 
 ## Prerequisites
 
 - JDK 21 (AGP does not support the machine's default JDK 27).
 - Android SDK platform 36 and build tools; minimum device API 29.
-- Internet for the first Gradle/dependency download; no NDK required.
-- A VoiceStudio host with Network sharing enabled, or a private server/Tailscale
-  URL. Engine installation, model license acceptance and host administration
-  remain on the host.
+- Internet for the first Gradle/dependency/native-source download; NDK
+  27.1.12297006 and SDK CMake 3.22.1.
+- Optional: a VoiceStudio computer with Network sharing enabled, or a private
+  server/Tailscale URL, for computer tasks. Phone model installation and
+  licence acceptance are available without a computer.
 
 From this directory:
 
@@ -23,11 +26,11 @@ printf 'sdk.dir=%s\n' "$ANDROID_HOME" > local.properties
 ./gradlew testDebugUnitTest
 ./gradlew lint
 ./gradlew assembleDebugAndroidTest
-./gradlew installDebug
-adb shell am start -n com.voicestudio.mobile/.MainActivity
 ```
 
-Windows: use `gradlew.bat` and equivalent JAVA_HOME / ANDROID_HOME settings.
+Windows: Gradle uses `gradlew.bat`; native preparation also needs Bash and
+Python 3, with equivalent JAVA_HOME / ANDROID_HOME settings. This host verifies
+the macOS build path.
 `local.properties`, build outputs and local IDE state are ignored. Gradle 8.13,
 AGP 8.12.0, Kotlin 2.2.21 and direct dependencies are pinned in the wrapper and
 `gradle/libs.versions.toml`. The wrapper was generated using installed Gradle
@@ -45,6 +48,8 @@ The version name/code are derived at configuration time from root `package.json`
   transport, private-address policy, cancellable requests and ticketed dictation.
 - `core/data`: DataStore preferences/saved hosts, AES-GCM/Android Keystore session
   vault, durable WorkManager dub pipeline and local notifications.
+- `core/local`: typed catalogue, resumable verified downloads, local licence
+  receipts, per-model inference/deletion leases and the `LocalEngine` adapters.
 - `core/l10n`: nested catalog lookup, interpolation, locale/plural fallback.
 - `features`: separate `connect`, `speak`, `voices`, `dub`, `dictate`, `settings`
   packages with shared native controls, playback, capture and permission helpers.
@@ -53,7 +58,12 @@ The version name/code are derived at configuration time from root `package.json`
 
 ## Screens and behavior
 
-Before pairing: consent (dismissal means No), Connect, and Settings About/Privacy.
+All five tabs are reachable without pairing. Consent dismissal means No.
+Speak and Dictate offer This phone / My computer, remember the choice per task,
+and prefer an installed phone model; otherwise they use a paired computer or
+show an inline model download prompt. Settings opens Connect and Models.
+Voices and Dub explain their computer requirement when unpaired; their
+on-device feature flows are outside Phase A.
 Connect supports CameraX/ZXing QR scanning, manual URL/PIN/API-key entry, saved
 hosts, labels and last-seen timestamps. Public `/health` must carry the backend
 marker and expected status/version; `/profiles` verifies consumption access.
@@ -225,55 +235,99 @@ available offline in About.
   The backend has no atomic idempotency key for starting generation; a process
   dying after host acceptance but before checkpoint persistence can repeat that
   stage. Remote jobs themselves continue on the host.
-- Model-license navigation opens the paired host UI, where model selection and
-  license acceptance live. The companion does not expose admin setup endpoints.
+- Models and their licence acceptance are managed on the phone for phone
+  tasks. The separate computer model-licences link opens the paired host UI.
+  Computer model setup remains on the host; no admin endpoint is exposed.
 - No blur or custom motion is used. Compose follows the system animation scale;
   all content scrolls, text scales, touch targets are at least 48 dp. Large font
   scales show labelled navigation icons without squeezed tab text. A visible
   text field or backend-provided name is used for each interactive choice.
 
+## On-device models and inference
+
+Gradle bundles the generated `mobile/contract/models.json` with the locale
+catalogues. Unknown fields are ignored; invalid revisions, checksums, file
+paths, sizes, runtime/capability pairs and schema versions fail closed. No
+catalogue or model is fetched when a tab is opened. Model IDs and declared
+metadata are displayed from that bundle.
+
+Models shows languages, declared licence, model size, actual on-disk storage,
+Download / Cancel / Delete and the total space used. Models above the phone's
+physical RAM are disabled, using decimal GB (`min_ram_gb * 1,000,000,000`).
+Downloads start only from a user action, use Hugging Face with hf-mirror.com
+fallback, resume with HTTP Range, enforce Wi-Fi unless mobile data is explicitly
+allowed, and reject low storage. A server ignoring Range restarts that file.
+Redirects stay HTTPS on Hugging Face/HF CDN or mirror hosts. The dedicated
+client never carries computer credentials. Incomplete files remain resumable;
+Delete removes them too. Every file must match size and SHA-256 before an
+installation marker is written; files are hashed again before a native load.
+
+Phone files and local licence receipts live under Android's `noBackupFilesDir`;
+they are app-private and excluded from cloud and device backups. Non-commercial,
+conditional, unknown and explicitly gated licences block download and load until
+accepted locally. The dialog displays the bundled complete inert `licence.terms`
+disclosure, attribution and fingerprint. Receipts store that fingerprint, app
+version and timestamp; the latest 20 accept/withdraw actions are retained.
+A changed fingerprint or withdrawal blocks use without deleting weights.
+
+`LocalEngine` exposes cancellable, progress-reporting TTS, reference cloning,
+offline transcription, streaming transcription and translation. Feature screens
+call only this interface. sherpa uses Kitten/Kokoro for TTS, Whisper in at most
+20-second windows for offline ASR, and Zipformer with utterance endpoint resets
+for live dictation. Tap/hold capture releases on lifecycle stop and screen
+exit; normal Stop drains the recognizer for its final transcript. Generated
+speech supports local playback, scrubbing, sharing and Save. WAV exports pass
+`markSynthetic`, which writes a RIFF INFO synthetic-audio provenance marker.
+
+OmniVoice and llama are callable through the interface; no phone Voices or Dub
+flow is included. OmniVoice accepts mono float PCM at 24 kHz plus reference text
+and resolves the catalogue's tokenizer GGUF as its codec. Translation expands
+the pinned model's prompt, tokenizes it once, and uses a bounded 2048-token
+context and 512 generated-token limit with greedy sampling. Reference audio
+and translation segmentation/mixing are responsibilities of their feature
+callers. Native builds, checksums and cancellation boundaries are documented in
+[`../native/android/README.md`](../native/android/README.md).
+
 ## Verification
 
-With JDK 21 and Android SDK 36:
-`./gradlew assembleDebug`, `./gradlew testDebugUnitTest` (81 tests, zero failures or skips), and `./gradlew lint` all passed. Tests used `HF_HUB_OFFLINE=1` with an
-empty HF cache; all API/WebSocket traffic was against local mock servers.
+Run from this directory with JDK 21 and the SDK environment above:
 
-JVM tests cover token parity for every palette/role, L10n interpolation, plural
-categories and fallback, every literal UI/error key, pairing and cleartext
-boundaries, mock-server health/PIN/session exchange/revoke/401, binary generation,
-upload/progress, origin isolation and cancellation. A Robolectric Compose smoke
-flow covers launch → consent → mock host pairing → generation → Play; its player
-is a test double, so it verifies the playback command rather than audible output.
+```sh
+mkdir -p build/hf-empty
+export HF_HUB_OFFLINE=1
+export HF_HUB_CACHE="$PWD/build/hf-empty"
+./gradlew assembleDebug
+./gradlew testDebugUnitTest
+./gradlew lint
+./gradlew assembleDebugAndroidTest
+```
 
-Regressions cover explicit translation providers, missing/unready
-engines, named-service consent and decline, consent on durable resume, changed
-providers, explicit preset/profile dub request bodies, scripted multi-phrase
-WebSocket transcripts and EOF/refined summaries, host switching/reconnection,
-player/form disposal, checkpoint isolation and old-host worker cancellation.
-AndroidX WorkManager's pinned test helper initializes its JVM scheduler.
-Additional tests exercise foreground-service refusal and cancellation, storage
-read/decode recovery, saved labels, script-based Chinese locales, per-locale
-catalog caching, once-only failure receipts, candidate connection isolation,
-PIN-only disconnect and stale dictation cleanup. A real file worker traverses
-promotion, multipart upload, prep, transcription, translation and generation
-against a mock host with notification permission denied, asserting the original
-filename and the manifest's service permissions/type. Its foreground updater is
-a test double; Android 15 service promotion still needs device verification.
-Tests also cover worker
-security failures, invalid job input, local/remote/unknown LLM routes and route
-changes, intrinsic picker width, no-match queries, document display names, Remove
-accessibility, compact history actions and first-frame controls while language
-loading is deliberately suspended.
+The current host run passed all four Gradle tasks: 103 JVM tests, zero failures
+or skips, and zero lint errors. Debug app and instrumentation APKs build for
+arm64-v8a and x86_64; instrumentation is not executed here.
 
-Device camera,
-microphone, audible playback, permission prompts, real-host inference, foreground
-upload survival and notification delivery still require emulator/device and host
-validation. Existing instrumentation covers ART interpolation, bundled language
-data, structured error copy/duration formatting, and Activity launch. No device
-commands or instrumented tests were run; the required build, JVM
-tests and lint run with JDK 21 and SDK 36.
+JVM checks cover existing M1 API/security, storage, worker, picker, protocol and
+Compose smoke regressions, plus local catalogue/routing, licence persistence and
+withdrawal, HTTP resume and restart, checksum rejection, mirror fallback,
+Wi-Fi/mobile-data policy, low storage, cancellation, deletion, synthetic WAV
+metadata, native cancellation control and microphone lifecycle cleanup. The
+launch → consent → Settings → Connect → mock host → Speak → Play smoke preserves
+the computer flow. Tests use local mock servers and an empty HF cache.
+Robolectric's API 34 instrumented SDK is resolved by Gradle into app build
+outputs and then used offline.
 
-Robolectric uses the API 34 instrumented SDK pinned in the version catalog.
-Gradle resolves it into its normal dependency cache and copies it into
-`app/build/robolectric-sdk`; the test runner then resolves SDK jars offline,
-without writing Robolectric locks or Maven downloads into the user home.
+`LocalInferenceTest.allPinnedNativeLibrariesLoadTogether` checks native symbol
+resolution on ART. The real model smoke is enabled only with instrumentation
+argument `localInferenceSmoke=true`. It uses a separate private cache and requires
+explicit prior review and `acceptModelLicencesForSmoke=true` for gated models.
+`downloadSmokeModels=true` explicitly provisions the three smallest TTS/offline
+ASR/streaming ASR selections; omit it on subsequent offline runs. It asserts
+nonempty audible PCM, Whisper recognition of generated speech and a final
+Zipformer transcript. No CI workflow is changed by this Android role; the
+maintainer must wire/run it on the x86_64 emulator and physical devices.
+
+This environment builds instrumentation only. Native loading on ART, real model
+inference (including OmniVoice clone quality and llama translation), audible
+playback, microphone permissions, device RAM behavior and background/notification
+behavior require maintainer device/emulator verification. No adb or device
+commands are used here.

@@ -61,6 +61,8 @@ class StudioSmokeTest {
             awaitCondition {!vm.state.value.loading}
             compose.onNodeWithText("No thanks").assertExists().performClick()
             awaitCondition {vm.preferences.value.consent==false}
+            compose.onNodeWithText("Settings").performClick()
+            compose.onNodeWithText("Connect").performScrollTo().performClick()
             compose.onNodeWithText("Server address").performTextInput(server.url("/").toString())
             compose.onAllNodesWithText("Connect").filter(hasClickAction()).onFirst().performScrollTo().performClick()
             awaitCondition {vm.state.value.connected&&engineRead.count==0L}

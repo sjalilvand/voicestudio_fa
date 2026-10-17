@@ -1,0 +1,161 @@
+package com.voicestudio.mobile.local
+
+import com.k2fsa.sherpa.onnx.*
+import com.voicestudio.mobile.network.ClientFailure
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
+import java.io.File
+import java.io.FileOutputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+
+/** PCM is mono float [-1,1]; reference cloning audio is explicitly 24 kHz. */
+data class LocalAudio(val samples: FloatArray, val sampleRate: Int)
+data class Transcript(val text: String, val final: Boolean, val progress: Float)
+interface LocalEngine {
+    suspend fun synthesize(model: PhoneModel, text: String, speaker: Int = 0, speed: Float = 1f, progress: (Float)->Unit = {}): LocalAudio
+    suspend fun clone(model: PhoneModel, text: String, reference: LocalAudio, referenceText: String, progress: (Float)->Unit = {}): LocalAudio
+    suspend fun transcribe(model: PhoneModel, audio: LocalAudio, progress: (Float)->Unit = {}): String
+    fun streamTranscribe(model: PhoneModel, audio: Flow<LocalAudio>): Flow<Transcript>
+    suspend fun translate(model: PhoneModel, text: String, targetLanguage: String, progress: (Float)->Unit = {}): String
+}
+/** JNI callbacks never surface native diagnostic text or user audio to logs. */
+@androidx.annotation.Keep
+class NativeControl(private val job: Job, private val report: (Float)->Unit, private val allowed: ()->Boolean) {
+    fun cancelled(): Boolean = !job.isActive || !allowed()
+    fun progress(value: Float) {if(!cancelled()) report(value)}
+}
+@androidx.annotation.Keep
+internal object NativeBridge {
+    fun load() {System.loadLibrary("vs_omni");System.loadLibrary("vs_llama")}
+    external fun omniAbi(): Int
+    external fun llamaDevices(): Int
+    external fun cloneAudio(model: String, codec: String, text: String, referenceText: String, reference: FloatArray, control: NativeControl): FloatArray?
+    external fun translateText(model: String, prompt: String, formatted: Boolean, control: NativeControl): ByteArray?
+}
+
+class PhoneLocalEngine(private val models: ModelDownloads): LocalEngine {
+    private suspend fun <T> execute(model: PhoneModel, capability: String, progress: (Float)->Unit, block: suspend (File,Job)->T): T =
+        withContext(Dispatchers.Default) {
+            if(model.capability != capability) throw ClientFailure("mobile.local.model_incompatible")
+            try {
+                models.withModel(model) { directory ->
+                    currentCoroutineContext().ensureActive();progress(0f)
+                    val result=block(directory,currentCoroutineContext().job)
+                    currentCoroutineContext().ensureActive();models.licence.requireAccepted(model);progress(1f);result
+                }
+            } catch(e:CancellationException) {throw e}
+            catch(e:ClientFailure) {throw e}
+            catch(e:LinkageError) {throw ClientFailure("mobile.local.runtime_failed")}
+            catch(e:Exception) {throw ClientFailure("mobile.local.inference_failed")}
+        }
+    override suspend fun synthesize(model: PhoneModel, text: String, speaker: Int, speed: Float, progress: (Float)->Unit): LocalAudio = execute(model,"tts",progress) {dir,job ->
+        require(text.isNotBlank() && text.length<=20000 && speed in .5f..2f)
+        val dataDir=dataDirectory(model,dir)
+        val config=OfflineTtsModelConfig(numThreads=2,provider="cpu")
+        when(model.option("model_type",model.option("type",if(model.id.contains("kitten")) "kitten" else "kokoro"))) {
+            "kitten" -> config.kitten=OfflineTtsKittenModelConfig(model=model.role(dir,"model"),voices=model.role(dir,"voices"),tokens=model.role(dir,"tokens"),dataDir=dataDir)
+            "kokoro" -> config.kokoro=OfflineTtsKokoroModelConfig(model=model.role(dir,"model"),voices=model.role(dir,"voices"),tokens=model.role(dir,"tokens"),dataDir=dataDir,
+                lexicon=model.files.filter {it.role=="lexicon"}.joinToString(",") {File(dir,it.path).absolutePath},lang=model.option("lang"),dictDir=model.role(dir,"dict"))
+            else -> throw ClientFailure("mobile.local.model_incompatible")
+        }
+        val tts=OfflineTts(config=OfflineTtsConfig(model=config,maxNumSentences=1,ruleFsts=model.files.filter {it.role=="rule-fst"}.joinToString(",") {File(dir,it.path).absolutePath}))
+        try {
+            if(speaker !in 0 until tts.numSpeakers()) throw ClientFailure("mobile.local.model_incompatible")
+            var chunks=0
+            val audio=tts.generateWithCallback(text,speaker,speed) {
+                if(!job.isActive||!models.licence.accepted(model)) 0 else {chunks++;progress((chunks.toFloat()/(chunks+1)).coerceAtMost(.95f));1}
+            }
+            job.ensureActive();LocalAudio(audio.samples,audio.sampleRate)
+        } finally {tts.release()}
+    }
+    override suspend fun transcribe(model: PhoneModel, audio: LocalAudio, progress: (Float)->Unit): String = execute(model,"asr",progress) {dir,job ->
+        require(audio.sampleRate>0 && audio.samples.isNotEmpty())
+        val recognizer=OfflineRecognizer(config=OfflineRecognizerConfig(
+            featConfig=FeatureConfig(sampleRate=16000,featureDim=80),
+            modelConfig=OfflineModelConfig(whisper=OfflineWhisperModelConfig(encoder=model.role(dir,"encoder"),decoder=model.role(dir,"decoder"),language=model.option("language"),task="transcribe"),
+                tokens=model.role(dir,"tokens"),numThreads=2,provider="cpu")))
+        try {
+            // Whisper has no native abort hook in this pinned AAR. Bound work to
+            // <= 20 s windows; release only after the in-flight decode returns.
+            val words=mutableListOf<String>();val window=audio.sampleRate*20
+            for(start in audio.samples.indices step window) {
+                job.ensureActive();models.licence.requireAccepted(model)
+                val stream=recognizer.createStream()
+                try {stream.acceptWaveform(audio.samples.copyOfRange(start,minOf(start+window,audio.samples.size)),audio.sampleRate);recognizer.decode(stream);words+=recognizer.getResult(stream).text}
+                finally {stream.release()}
+                progress(minOf(start+window,audio.samples.size).toFloat()/audio.samples.size)
+            }
+            words.filter {it.isNotBlank()}.joinToString(" ")
+        } finally {recognizer.release()}
+    }
+    override fun streamTranscribe(model: PhoneModel, audio: Flow<LocalAudio>): Flow<Transcript> = channelFlow {
+        execute(model,"asr-stream",{}) {dir,job ->
+            val recognizer=OnlineRecognizer(config=OnlineRecognizerConfig(featConfig=FeatureConfig(sampleRate=16000,featureDim=80),
+                modelConfig=OnlineModelConfig(transducer=OnlineTransducerModelConfig(encoder=model.role(dir,"encoder"),decoder=model.role(dir,"decoder"),joiner=model.role(dir,"joiner")),
+                    tokens=model.role(dir,"tokens"),numThreads=2,provider="cpu"),enableEndpoint=true))
+            val stream=recognizer.createStream()
+            var committed=""
+            try {
+                audio.collect { chunk ->
+                    job.ensureActive();models.licence.requireAccepted(model)
+                    stream.acceptWaveform(chunk.samples,chunk.sampleRate)
+                    while(recognizer.isReady(stream)) {job.ensureActive();recognizer.decode(stream)}
+                    val text=recognizer.getResult(stream).text
+                    val endpoint=recognizer.isEndpoint(stream)
+                    send(Transcript(listOf(committed,text).filter {it.isNotBlank()}.joinToString(" "),endpoint,0f))
+                    if(endpoint) {committed=listOf(committed,text).filter {it.isNotBlank()}.joinToString(" ");recognizer.reset(stream)}
+                }
+                stream.acceptWaveform(FloatArray(8000),16000);stream.inputFinished()
+                while(recognizer.isReady(stream)) {job.ensureActive();recognizer.decode(stream)}
+                send(Transcript(listOf(committed,recognizer.getResult(stream).text).filter {it.isNotBlank()}.joinToString(" "),true,1f))
+            } finally {stream.release();recognizer.release()}
+        }
+    }.flowOn(Dispatchers.Default)
+    override suspend fun clone(model: PhoneModel, text: String, reference: LocalAudio, referenceText: String, progress: (Float)->Unit): LocalAudio = execute(model,"clone",progress) {dir,job ->
+        require(text.isNotBlank() && reference.sampleRate==24000 && reference.samples.isNotEmpty() && referenceText.isNotBlank())
+        NativeBridge.load()
+        val codec=model.role(dir,"codec").ifEmpty {model.role(dir,"audio-tokenizer").ifEmpty {model.role(dir,"tokenizer")}}
+        if(codec.isBlank()) throw ClientFailure("mobile.local.model_incompatible")
+        val result=NativeBridge.cloneAudio(model.role(dir,"model"),codec,text,referenceText,reference.samples,NativeControl(job,progress) {models.licence.accepted(model)})
+        job.ensureActive();models.licence.requireAccepted(model)
+        LocalAudio(result ?: throw ClientFailure("mobile.local.inference_failed"),24000)
+    }
+    override suspend fun translate(model: PhoneModel, text: String, targetLanguage: String, progress: (Float)->Unit): String = execute(model,"translate",progress) {dir,job ->
+        require(text.isNotBlank() && targetLanguage.matches(Regex("[A-Za-z -]{2,80}")))
+        NativeBridge.load()
+        val template=model.option("prompt_template","Translate the following text into {{target_language}}. Return only the translation.\n{{text}}")
+        val prompt=template.replace("\\n","\n").replace("{{target_language}}",targetLanguage).replace("{target_language}",targetLanguage).replace("{source_language}","auto").replace("{{text}}",text).replace("{text}",text)
+        val result=NativeBridge.translateText(model.role(dir,"model"),prompt,model.option("prompt_template").contains("<|im_start|>"),NativeControl(job,progress) {models.licence.accepted(model)})
+        job.ensureActive();models.licence.requireAccepted(model)
+        result?.toString(Charsets.UTF_8) ?: throw ClientFailure("mobile.local.inference_failed")
+    }
+    private fun dataDirectory(model: PhoneModel, directory: File): String {
+        val path=model.option("data_dir").ifEmpty {model.files.firstOrNull {"espeak-ng-data/" in it.path}?.path?.substringBefore("espeak-ng-data/")?.plus("espeak-ng-data").orEmpty()}
+        if(path.isBlank()) return ""
+        val result=File(directory,path).canonicalFile
+        if(!result.path.startsWith(directory.canonicalPath+File.separator)) throw ClientFailure("mobile.local.model_incompatible")
+        return result.path
+    }
+}
+/** Every local synthetic export passes this marker (RIFF INFO provenance). */
+fun markSynthetic(audio: LocalAudio, file: File) {
+    require(audio.sampleRate>0 && audio.samples.isNotEmpty())
+    val marker="VoiceStudio synthetic audio\u0000".toByteArray(Charsets.US_ASCII)
+    val padded=marker.size+(marker.size%2)
+    val dataBytes=audio.samples.size*2
+    val buffer=ByteBuffer.allocate(12+24+8+dataBytes+8+4+8+padded).order(ByteOrder.LITTLE_ENDIAN)
+    fun tag(value: String) {buffer.put(value.toByteArray(Charsets.US_ASCII))}
+    tag("RIFF");buffer.putInt(buffer.capacity()-8);tag("WAVE");tag("fmt ");buffer.putInt(16);buffer.putShort(1);buffer.putShort(1)
+    buffer.putInt(audio.sampleRate);buffer.putInt(audio.sampleRate*2);buffer.putShort(2);buffer.putShort(16)
+    tag("data");buffer.putInt(dataBytes);audio.samples.forEach {buffer.putShort((it.coerceIn(-1f,1f)*32767).toInt().toShort())}
+    tag("LIST");buffer.putInt(4+8+padded);tag("INFO");tag("ICMT");buffer.putInt(marker.size);buffer.put(marker);if(marker.size%2!=0) buffer.put(0)
+    file.parentFile!!.mkdirs();FileOutputStream(file).use {it.write(buffer.array());it.fd.sync()}
+}
+
+/** Model-free device test: all native dependencies must resolve on ART. */
+suspend fun verifyNativeRuntimes(): Map<String,Int> = withContext(Dispatchers.IO) {
+    System.loadLibrary("sherpa-onnx-jni")
+    NativeBridge.load()
+    mapOf("sherpa-onnx" to 1,"omnivoice.cpp" to NativeBridge.omniAbi(),"llama.cpp" to NativeBridge.llamaDevices())
+}

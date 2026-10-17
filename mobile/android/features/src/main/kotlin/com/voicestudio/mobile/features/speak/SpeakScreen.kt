@@ -16,7 +16,7 @@ import com.voicestudio.mobile.features.*
 import java.io.File
 import kotlinx.coroutines.*
 
-@Composable fun SpeakScreen(vm:StudioViewModel) {
+@Composable private fun ComputerSpeakScreen(vm:StudioViewModel) {
     val state by vm.state.collectAsState()
     val context=LocalContext.current
     val scope=rememberCoroutineScope()
@@ -76,6 +76,45 @@ import kotlinx.coroutines.*
                     IconAction("common.delete",Icons.Default.Delete,!state.busy) {vm.deleteHistory(item)}
                 }
                 HorizontalDivider()
+            }
+        }
+    }
+}
+
+@Composable fun SpeakScreen(vm: StudioViewModel) {
+    com.voicestudio.mobile.features.models.TaskLocation(vm,"speak",setOf("tts")) {location,model ->
+        if(location==com.voicestudio.mobile.local.RunLocation.COMPUTER) ComputerSpeakScreen(vm)
+        else {
+            val phone by vm.phone.state.collectAsState()
+            val context=LocalContext.current
+            val scope=rememberCoroutineScope()
+            var text by rememberSaveable {mutableStateOf("")}
+            var speaker by rememberSaveable(model?.id) {mutableStateOf("0")}
+            val save=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("audio/wav")) {uri ->
+                val source=phone.audio
+                if(uri!=null&&source!=null) scope.launch {
+                    try {withContext(Dispatchers.IO) {context.contentResolver.openOutputStream(uri)!!.use {out -> source.inputStream().use {it.copyTo(out)}}}}
+                    catch(e:Exception) {vm.fail(e)}
+                }
+            }
+            DisposableEffect(Unit) {onDispose {vm.phone.cancelInference()}}
+            Screen {
+                ScreenTitle("mobile.tabs.speak")
+                Field("mobile.speak.placeholder",text,{text=it},multiline=true)
+                val speakers=model?.option("num_speakers",model.option("speaker_count","1"))?.toIntOrNull()?.coerceIn(1,128) ?: 1
+                Picker("mobile.speak.voice",speaker,(0 until speakers).map {it.toString() to tr("mobile.local.preset_voice",mapOf("number" to it+1))}) {speaker=it}
+                model?.let {Text(tr("mobile.local.languages",mapOf("languages" to it.languages.joinToString(", "))))}
+                if(location==com.voicestudio.mobile.local.RunLocation.DOWNLOAD||model?.let {phone.accepted(it)}==false) model?.let {com.voicestudio.mobile.features.models.ModelCard(vm,it)}
+                else Action("mobile.speak.generate",text.isNotBlank()&&model!=null&&phone.progress==null) {vm.phone.speak(model!!,text,speaker.toInt())}
+                phone.progress?.let {p ->
+                    LinearProgressIndicator(progress={p},modifier=Modifier.fillMaxWidth())
+                    Secondary("common.cancel") {vm.phone.cancelInference()}
+                }
+                phone.audio?.let {file ->
+                    LocalAudioPlayer(file,vm::fail)
+                    Secondary("mobile.speak.share") {shareFile(context,file,"audio/wav")}
+                    Secondary("common.save") {save.launch(file.name)}
+                }
             }
         }
     }

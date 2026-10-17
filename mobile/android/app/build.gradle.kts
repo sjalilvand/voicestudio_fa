@@ -9,9 +9,11 @@ val appVersion = (JsonSlurper().parse(repository.resolve("package.json")) as Map
 android {
     namespace = "com.voicestudio.mobile"
     compileSdk = 36
+    ndkVersion = "27.1.12297006"
     defaultConfig {
         applicationId = "com.voicestudio.mobile"
         minSdk = 29
+        ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
         targetSdk = 36
         versionCode = appVersion.split(".").take(3).map { it.toInt() }.let { it[0]*1000000+it[1]*1000+it[2] }
         versionName = appVersion
@@ -20,6 +22,8 @@ android {
     buildFeatures { compose = true; buildConfig = true }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     testOptions { unitTests.isIncludeAndroidResources = true }
+    sourceSets["main"].assets.srcDir(rootDir.resolve("../native/android/build/assets"))
+    sourceSets["main"].jniLibs.srcDir(rootDir.resolve("../native/android/build/jniLibs"))
     sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/catalogs"))
     sourceSets["main"].res.srcDir(layout.buildDirectory.dir("generated/catalogResources"))
 }
@@ -30,7 +34,7 @@ val bundleCatalogs by tasks.registering {
     inputs.dir(catalogs)
     inputs.file(repository.resolve("electron/src/shared/languages.json"))
     inputs.file(repository.resolve("LICENSE"))
-    inputs.files(fileTree(contracts) { include("strings*.en.json", "tokens.json", "openapi.json") })
+    inputs.files(fileTree(contracts) { include("strings*.en.json", "tokens.json", "openapi.json", "models.json") })
     outputs.dir(layout.buildDirectory.dir("generated/catalogs"))
     outputs.dir(layout.buildDirectory.dir("generated/catalogResources"))
     doLast {
@@ -43,6 +47,7 @@ val bundleCatalogs by tasks.registering {
         repository.resolve("LICENSE").copyTo(assets.resolve("licenses/VoiceStudio-AGPL-3.0.txt"), overwrite=true)
         catalogs.listFiles()!!.filter { it.extension == "json" }.forEach { it.copyTo(out.resolve(it.name), overwrite = true) }
         contracts.listFiles()!!.filter { it.name.startsWith("strings") && it.name.endsWith(".en.json") }.forEach { it.copyTo(assets.resolve(it.name), overwrite = true) }
+        contracts.resolve("models.json").copyTo(assets.resolve("models.json"), overwrite = true)
         contracts.resolve("tokens.json").copyTo(assets.resolve("tokens.json"), overwrite = true)
         val en = JsonSlurper().parse(catalogs.resolve("en.json")) as Map<*, *>
         val label = (en["app"] as Map<*, *>)["name"].toString()
@@ -52,6 +57,7 @@ val bundleCatalogs by tasks.registering {
 }
 tasks.named("preBuild") { dependsOn(bundleCatalogs) }
 dependencies {
+    implementation(files(rootDir.resolve("../native/android/build/downloads/sherpa.aar")).builtBy(":core:local:fetchRuntimes"))
     implementation(project(":features"))
     implementation(libs.activity)
     implementation(libs.lifecycle)
@@ -95,3 +101,12 @@ tasks.withType<Test>().configureEach {
     systemProperty("robolectric.offline", "true")
     systemProperty("robolectric.dependency.dir", layout.buildDirectory.dir("robolectric-sdk").get().asFile.absolutePath)
 }
+
+val buildNativeRuntimes by tasks.registering(Exec::class) {
+    val nativeRoot = rootDir.resolve("../native/android")
+    inputs.files(fileTree(nativeRoot) { include("*.cpp", "*.h", "*.json", "*.py", "*.sh", "CMakeLists.txt") }, nativeRoot.resolve("../pins.json"))
+    outputs.dir(nativeRoot.resolve("build/jniLibs"))
+    outputs.dir(nativeRoot.resolve("build/assets"))
+    commandLine("bash", nativeRoot.resolve("build.sh"))
+}
+tasks.named("preBuild") { dependsOn(buildNativeRuntimes) }

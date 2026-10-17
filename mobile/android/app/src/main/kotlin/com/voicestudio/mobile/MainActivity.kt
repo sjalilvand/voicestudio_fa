@@ -64,18 +64,14 @@ class MainActivity:ComponentActivity() {
     CompositionLocalProvider(LocalL10n provides l,LocalLayoutDirection provides direction) {
         VoiceStudioTheme(ThemePreferences(prefs.mode,prefs.lightPalette,prefs.darkPalette)) {
             key(state.connectionId) {
+            val initialRoute=remember {if(state.error?.key=="mobile.connect.error_session_expired") "connect" else "speak"}
             val nav=rememberNavController()
             val back by nav.currentBackStackEntryAsState()
-            val route=back?.destination?.route ?: "connect"
+            val route=back?.destination?.route ?: "speak"
             val dismissKeyboard=rememberKeyboardDismiss()
-            LaunchedEffect(state.connected,state.loading,back!=null) {
-                // Scaffold subcomposes its content after root effects are installed.
-                // A back-stack entry proves NavHost has actually installed the graph.
-                if(!state.loading&&back!=null) nav.navigate(if(state.connected) "speak" else "connect") {popUpTo(nav.graph.id) {inclusive=true};launchSingleTop=true}
-            }
             Scaffold(containerColor=role("canvas"),bottomBar={
                 NavigationBar(containerColor=role("chrome"),contentColor=role("toolbarForeground")) {
-                    val tabs=if(state.connected) listOf("speak","voices","dub","dictate","settings") else listOf("connect","settings")
+                    val tabs=listOf("speak","voices","dub","dictate","settings")
                     tabs.forEach {tab ->
                         val label=if(tab=="connect") l.t("mobile.tabs.connect") else l.t("mobile.tabs.$tab")
                         NavigationBarItem(selected=route==tab,onClick={dismissKeyboard();nav.navigate(tab) {popUpTo(nav.graph.startDestinationId) {saveState=true};launchSingleTop=true;restoreState=true}},
@@ -99,15 +95,16 @@ class MainActivity:ComponentActivity() {
                     if(state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                     Box(Modifier.weight(1f)) {
                     if(state.loading) Screen {Text(tr("common.loading"));LinearProgressIndicator()}
-                    else NavHost(navController=nav,startDestination="connect",
+                    else NavHost(navController=nav,startDestination=initialRoute,
                         enterTransition={androidx.compose.animation.EnterTransition.None}, exitTransition={androidx.compose.animation.ExitTransition.None},
                         popEnterTransition={androidx.compose.animation.EnterTransition.None}, popExitTransition={androidx.compose.animation.ExitTransition.None}) {
                         composable("connect") {ConnectScreen(vm)}
-                        composable("settings") {SettingsScreen(vm,BuildConfig.VERSION_NAME)}
-                        composable("speak") {if(state.connected) SpeakScreen(vm)}
-                        composable("voices") {if(state.connected) VoicesScreen(vm)}
-                        composable("dub") {if(state.connected) DubScreen(vm)}
-                        composable("dictate") {if(state.connected) DictateScreen(vm)}
+                        composable("settings") {SettingsScreen(vm,BuildConfig.VERSION_NAME,onConnect={nav.navigate("connect")},onModels={nav.navigate("models")})}
+                        composable("models") {com.voicestudio.mobile.features.models.ModelsScreen(vm)}
+                        composable("speak") {SpeakScreen(vm)}
+                        composable("voices") {if(state.connected) VoicesScreen(vm) else Screen {ScreenTitle("mobile.tabs.voices");Text(tr("mobile.local.computer_feature"));Secondary("mobile.tabs.connect") {nav.navigate("connect")}}}
+                        composable("dub") {if(state.connected) DubScreen(vm) else Screen {ScreenTitle("mobile.tabs.dub");Text(tr("mobile.local.computer_feature"));Secondary("mobile.tabs.connect") {nav.navigate("connect")}}}
+                        composable("dictate") {DictateScreen(vm)}
                     }
                     }
                     }

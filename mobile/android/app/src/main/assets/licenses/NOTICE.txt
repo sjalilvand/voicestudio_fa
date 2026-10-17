@@ -13,3 +13,12 @@ OkHttp/Okio: https://github.com/square/okhttp and https://github.com/square/okio
 ZXing: https://github.com/zxing/zxing
 Apache License 2.0: included in Apache-2.0.txt.
 No analytics, crash reporting or remote notification dependencies are present.
+
+sherpa-onnx 1.13.8: Copyright sherpa-onnx authors, Apache License 2.0.
+https://github.com/k2-fsa/sherpa-onnx
+The pinned AAR includes ONNX Runtime, Copyright Microsoft Corporation, MIT.
+ONNX Runtime licence is included in ONNX-Runtime-MIT.txt.
+OmniVoice and its GGML, and llama.cpp/GGML: MIT; their original notices
+are packaged as omnivoice-MIT.txt, omnivoice-ggml-MIT.txt and llama-MIT.txt.
+Native runtime versions and checksums: mobile/native/pins.json.
+Model licences and attribution are displayed separately in Models.
