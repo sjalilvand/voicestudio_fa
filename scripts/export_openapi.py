@@ -26,6 +26,7 @@ def build_schema() -> dict:
     return main.app.openapi()
 
 
+VERSION_PLACEHOLDER = "0.0.0"
 _METHOD_SUFFIX = re.compile(r"_(get|head|post|put|patch|delete|options)$")
 
 
@@ -36,6 +37,19 @@ def render(schema: dict) -> str:
         for method, op in methods.items():
             if isinstance(op, dict) and "operationId" in op:
                 op["operationId"] = _METHOD_SUFFIX.sub("", op["operationId"]) + "_" + method
+    # The app version leaks into info.version and field defaults. It differs by
+    # environment (installed package metadata) and changes every release, so
+    # it would make the contract churn; the apps read the version from /health.
+    version = schema.get("info", {}).get("version")
+
+    def neutral(node):
+        if isinstance(node, dict):
+            return {k: neutral(v) for k, v in node.items()}
+        if isinstance(node, list):
+            return [neutral(v) for v in node]
+        return VERSION_PLACEHOLDER if version and node == version else node
+
+    schema = neutral(schema)
     return json.dumps(schema, indent=1, sort_keys=True) + "\n"
 
 

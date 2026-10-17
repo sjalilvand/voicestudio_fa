@@ -47,3 +47,13 @@ def test_mobile_string_keys_are_namespaced():
     for path in CONTRACT.glob("strings*.en.json"):
         data = json.loads(path.read_text(encoding="utf-8"))
         assert list(data) == ["mobile"], f"{path.name}: new mobile keys belong under `mobile.`"
+
+
+def test_openapi_contract_is_version_neutral():
+    # The app version differs by environment and changes every release; a
+    # contract that embedded it would go stale on every version bump.
+    schema = {"info": {"version": "9.8.7"}, "components": {"x": {"default": "9.8.7"}}}
+    rendered = json.loads(export_openapi.render(schema))
+    assert "9.8.7" not in json.dumps(rendered)
+    committed = json.loads((CONTRACT / "openapi.json").read_text(encoding="utf-8"))
+    assert committed["info"]["version"] == export_openapi.VERSION_PLACEHOLDER

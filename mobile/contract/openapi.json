@@ -3776,7 +3776,7 @@
       "type": "string"
      },
      "service_version": {
-      "default": "0.5.6",
+      "default": "0.0.0",
       "title": "Service Version",
       "type": "string"
      },
@@ -5747,7 +5747,7 @@
  },
  "info": {
   "title": "VoiceStudio API",
-  "version": "0.5.6"
+  "version": "0.0.0"
  },
  "openapi": "3.1.0",
  "paths": {
