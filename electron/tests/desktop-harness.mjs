@@ -1,5 +1,13 @@
 import { _electron as electron } from 'playwright';
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import {
+  appendFileSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+} from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -196,11 +204,16 @@ export async function withApp(t, options, body) {
       assert.deepEqual(entries.length ? entries : [], [], 'Main process journaled errors');
     }
   } catch (error) {
+    // Written synchronously first: a hard crash during cleanup loses anything still buffered.
+    breadcrumb(t.name, `FAILED: ${error?.stack ?? error}`);
     await saveArtifacts(t.name, live.at(-1), profile).catch(() => {});
     throw error;
   } finally {
+    breadcrumb(t.name, 'closing app');
     for (const started of live) await started.app.close().catch(() => {});
+    breadcrumb(t.name, 'closing backend');
     await backend?.close();
+    breadcrumb(t.name, 'removing profile');
     // Windows keeps the profile locked briefly after exit; cleanup must never mask the real result.
     if (!given) {
       try {
@@ -209,6 +222,17 @@ export async function withApp(t, options, body) {
         // A leftover temp directory is harmless; a swallowed test failure is not.
       }
     }
+    breadcrumb(t.name, 'cleanup done');
+  }
+}
+
+/** Synchronous progress log in the artifact directory; survives a crash of this process. */
+function breadcrumb(name, message) {
+  try {
+    mkdirSync(ARTIFACT_DIR, { recursive: true });
+    appendFileSync(join(ARTIFACT_DIR, 'breadcrumbs.log'), `[${name}] ${message}\n`);
+  } catch {
+    // Diagnostics only.
   }
 }
 
