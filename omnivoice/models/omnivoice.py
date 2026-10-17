@@ -978,8 +978,6 @@ class OmniVoice(PreTrainedModel):
                     ) from exc
             candidates = list(ref_wav.split(max_samples, dim=-1))
 
-            strongest_power = max(activity_score(audio) / audio.numel() for audio in candidates)
-
             def speech_score(text, audio):
                 # Repetition is suspicious, not proof of silence: genuine speech
                 # can repeat, including in very quiet recordings (#2836).
@@ -1006,6 +1004,13 @@ class OmniVoice(PreTrainedModel):
                 (self.transcribe((candidate, self.sampling_rate)), candidate)
                 for candidate in candidates
             ]
+            # A loud non-speech window must not disqualify the only spoken
+            # passage merely because that passage repeats a phrase.
+            strongest_power = max(
+                (activity_score(audio) / audio.numel() for text, audio in transcribed
+                 if re.search(r"\w", text or "", flags=re.UNICODE)),
+                default=0.0,
+            )
             ref_text, ref_wav = max(
                 transcribed,
                 key=lambda item: (speech_score(item[0], item[1]), activity_score(item[1])),

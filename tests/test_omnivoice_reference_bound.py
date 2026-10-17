@@ -385,3 +385,15 @@ def test_auto_select_keeps_repeated_speech_over_quiet_short_text(monkeypatch, am
     audio = torch.cat([waveform, torch.full_like(waveform, amplitude / 100)], dim=-1)
     prompt = model.create_voice_clone_prompt((audio, 100), ref_text=None)
     assert prompt.ref_text == speech
+
+
+def test_auto_select_keeps_only_spoken_passage_beside_louder_non_speech(monkeypatch):
+    model = _model(reject_tokenization=False)
+    model.sampling_rate = 100
+    model._asr_pipe = object()
+    speech = "Testing one two. Testing one two. Testing one two."
+    model.transcribe = lambda candidate: speech if float(candidate[0].std()) > 0.0001 else ""
+    monkeypatch.setattr("omnivoice.models.omnivoice.remove_silence_safe", lambda audio, *_args, **_kwargs: audio)
+    waveform = torch.sin(torch.arange(1500) * 0.2).unsqueeze(0) * 0.001
+    audio = torch.cat([waveform, torch.full_like(waveform, 0.5)], dim=-1)
+    assert model.create_voice_clone_prompt((audio, 100), ref_text=None).ref_text == speech
