@@ -26,6 +26,8 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- MOSS-TTS-v1.5 loads its model and codec from separate pinned snapshots and repairs older audio-decoder installs (#2702) — thanks @BichengWang!
+
 - Dubbing accepts crash-isolated Faster-Whisper transcripts instead of reporting no segments (#2789) — thanks @vincentfranstyo!
 
 - "Text-to-speech is not ready" → Fix now downloads the model chosen for the selected engine instead of doing nothing and leaving the warning up (#2918)
