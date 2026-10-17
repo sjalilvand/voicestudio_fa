@@ -26,6 +26,8 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- First-run setup installs into the selected runtime folder when it already exists but is empty (#2766) — thanks @emreisik95!
+
 - CPU and ROCm runtime setup avoids an unnecessary native CUDA probe that can crash before installation finishes (#2942)
 
 - Supertonic-3 accepts full language names without selecting the wrong language or producing invalid language codes. (#2938) — thanks @P4tch4nk4!
