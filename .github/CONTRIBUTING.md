@@ -427,12 +427,14 @@ sign. To sign, post this as a new comment, on its own line:
 I have read the VoiceStudio CLA 1.0 and I hereby sign it.
 ```
 
-The signature covers your earlier and future contributions. The check turns
-green once every non-exempt human contributor has signed, including commit authors
-and co-authors. New contributors can sign first: post the same line on the
+The signature covers your earlier and future contributions. The CLA check
+identifies other required signers or cases needing manual review.
+New contributors can sign first: post the same line on the
 [signing issue (#2586)](https://github.com/debpalash/VoiceStudio/issues/2586)
 before opening a pull request, or on the pull request itself if you prefer. The
 same signature applies if a maintainer folds your pull request into another one.
+If a pull request contains `Supersedes #N`, its CLA check also covers the
+non-exempt human opener, commit authors and co-authors of pull request #N.
 Contributed before and have no open pull request? Post
 the same line on the [issue labelled `cla`](https://github.com/debpalash/VoiceStudio/issues?q=label%3Acla). If it lists a commit it cannot link to a GitHub
 account, either add that commit email to your account (Settings → Emails), or

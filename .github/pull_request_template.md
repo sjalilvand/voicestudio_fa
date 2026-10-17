@@ -3,7 +3,9 @@ First pull request? Unless exempt under the CLA checker’s policy, sign the
 Contributor License Agreement once, before or after
 opening it: https://github.com/debpalash/VoiceStudio/issues/2586
 Your signature covers your future contributions. Every other non-exempt human commit
-author and co-author must also sign before merge.
+author and co-author must also sign before merge. If this pull request contains
+`Supersedes #N`, that also includes the non-exempt human opener, commit authors
+and co-authors of pull request #N.
 -->
 
 ## Summary
