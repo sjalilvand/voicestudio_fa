@@ -1,5 +1,6 @@
 import { createServer, request as httpRequest, type IncomingHttpHeaders } from 'node:http';
 import { request as httpsRequest } from 'node:https';
+import { DEFAULT_ELECTRON_PROXY_PORT } from '../../../config/app-config.mjs';
 
 const STRIP_HEADERS = new Set([
   'authorization',
@@ -8,6 +9,7 @@ const STRIP_HEADERS = new Set([
   'forwarded',
   'host',
   'origin',
+  'x-voicestudio-desktop-origin',
   'proxy-authorization',
   'referer',
   'te',
@@ -31,6 +33,36 @@ export function proxyRequestHeaders(
   return headers;
 }
 
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
+const FOREIGN_FETCH_SITES = new Set(['cross-site', 'same-site']);
+
+function hostName(value: string | undefined): string {
+  if (!value) return '';
+  try {
+    return new URL(`http://${value}`).hostname.toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Whether a request reached the proxy from somewhere other than the renderer.
+ *
+ * The proxy injects main-owned credentials and strips Origin/Host, so the
+ * backend can no longer judge the caller: the proxy must refuse other
+ * websites (Origin, Sec-Fetch-Site) and DNS-rebound host names itself.
+ */
+export function proxyRequestRefused(
+  incoming: IncomingHttpHeaders,
+  allowedOrigins: readonly string[],
+): boolean {
+  if (!LOOPBACK_HOSTS.has(hostName(incoming.host))) return true;
+  const origin = incoming.origin;
+  if (origin !== undefined) return !allowedOrigins.includes(String(origin));
+  const site = String(incoming['sec-fetch-site'] ?? '').toLowerCase();
+  return FOREIGN_FETCH_SITES.has(site);
+}
+
 export interface DevBackendProxy {
   url: string;
   close: () => Promise<void>;
@@ -40,9 +72,16 @@ export interface DevBackendProxy {
 export async function startDevBackendProxy(
   getBaseUrl: () => string,
   getTrustedHeaders: () => Record<string, string>,
-  port = 3903,
+  port = DEFAULT_ELECTRON_PROXY_PORT,
+  allowedOrigins: readonly string[] = [],
 ): Promise<DevBackendProxy> {
   const server = createServer((incoming, response) => {
+    if (proxyRequestRefused(incoming.headers, allowedOrigins)) {
+      response.writeHead(403, { 'content-type': 'application/json' });
+      response.end('{"detail":"Request refused: it did not come from the VoiceStudio window"}');
+      incoming.resume();
+      return;
+    }
     let base: URL;
     let target: URL;
     try {

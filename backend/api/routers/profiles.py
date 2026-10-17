@@ -19,9 +19,11 @@ from core import event_bus, voice_leases
 from core.scrub import scrub_text
 from core.personalities import get_personalities
 from omnivoice.utils.voice_design import heal_design_instruct, sanitize_instruct
+from core.media_types import media_upload_suffix
 from core.path_security import UnsafePath, resolve_within
 from core.profile_images import MAX_IMAGE_BYTES, normalize_portrait
 from starlette.datastructures import UploadFile as StarletteUploadFile
+from core.path_security import upload_suffix
 
 router = APIRouter()
 logger = logging.getLogger("omnivoice.profiles")
@@ -191,7 +193,9 @@ async def create_profile(
     portrait_path = os.path.join(VOICES_DIR, f"{profile_id}.portrait.jpg")
 
     if kind == "clone":
-        ext = os.path.splitext(ref_audio.filename or ".wav")[1]
+        ext = media_upload_suffix(ref_audio.filename)
+        if ext is None:
+            raise HTTPException(status_code=415, detail="Choose an audio or video file.")
         audio_filename = f"{profile_id}{ext}"
         audio_path = os.path.join(VOICES_DIR, audio_filename)
         # Storage can be removed after startup; recover before persisting uploads.
@@ -833,7 +837,7 @@ async def _materialize_design_sample(profile_id: str, row) -> Optional[str]:
         return None
 
     from pathlib import Path
-    from api.routers.archetypes import _render_archetype_wav
+    from api.routers.archetypes import _render_once, _render_wav_atomic
 
     audio_filename = f"{profile_id}.wav"
     # CWE-22: resolve under VOICES_DIR via the shared basename + containment
@@ -841,19 +845,29 @@ async def _materialize_design_sample(profile_id: str, row) -> Optional[str]:
     audio_path = _voices_path(audio_filename)
     if audio_path is None:
         raise HTTPException(status_code=400, detail="invalid profile identifier")
-    try:
-        await _render_archetype_wav(
+
+    async def _materialize() -> None:
+        # Atomic + validated: a concurrent or interrupted request must never
+        # serve (or persist) a half-written sample. Shared via _render_once, so
+        # repeat clicks join one render and a dropped request still finishes it.
+        await _render_wav_atomic(
             {
                 "language": row["language"] or "Auto",
                 "sample_script": row["ref_text"] or "",
                 "instruct": row["instruct"] or "",
             },
             Path(audio_path),
+            prefix=f".{profile_id}-",
         )
+        with db_conn() as conn:
+            conn.execute(
+                "UPDATE voice_profiles SET ref_audio_path=? WHERE id=?",
+                (audio_filename, profile_id),
+            )
+
+    try:
+        await _render_once(audio_path, _materialize)
     except Exception as e:
-        with __import__("contextlib").suppress(OSError):
-            if os.path.exists(audio_path):
-                os.remove(audio_path)
         raise HTTPException(
             status_code=503,
             detail=(
@@ -861,12 +875,6 @@ async def _materialize_design_sample(profile_id: str, row) -> Optional[str]:
                 "preview sample can't be rendered. Finish setup / download a "
                 f"model, then try again. ({e})"
             ),
-        )
-
-    with db_conn() as conn:
-        conn.execute(
-            "UPDATE voice_profiles SET ref_audio_path=? WHERE id=?",
-            (audio_filename, profile_id),
         )
     return audio_filename
 
@@ -1045,8 +1053,8 @@ async def record_consent(
     if not row:
         raise HTTPException(status_code=404, detail="Profile not found")
 
-    ext = os.path.splitext(consent_audio.filename or "")[1]
-    if not _CONSENT_EXT_RE.match(ext):
+    ext = upload_suffix(consent_audio.filename)
+    if not ext or not _CONSENT_EXT_RE.fullmatch(ext):
         ext = ".wav"
     audio_filename = f"{profile_id}_consent{ext}"
     audio_path = _voices_path(audio_filename)

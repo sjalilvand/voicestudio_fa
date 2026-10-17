@@ -25,16 +25,17 @@ from pydantic import BaseModel
 from core.config import DATA_DIR
 from core import failure, voice_leases
 from core.logging_utils import log_safe
-from core.path_security import portable_filename
+from core.media_types import media_upload_suffix
+from core.path_security import contained_join, portable_filename
 from core.file_cleanup import FileCleanupError, unlink_if_present
 from services.dub_batching import (
     BATCH_WIDTH_ENV,
     batch_timeout_s as _batch_timeout_s,
     native_batch_width as _native_batch_width,
 )
-from services import gpu_gateway
-from services.segment_bundle import extract_segment_wavs, remove_segment_wavs
-from services.tts_backend import active_backend_id, resolve_generation_backend
+from services.tts_backend import (
+    active_backend_id, ensure_active_engine_licence, resolve_generation_backend,
+)
 
 router = APIRouter()
 logger = logging.getLogger("omnivoice.batch")
@@ -136,6 +137,10 @@ async def _worker():
             # Lets the client show its localized message for a known class
             # (e.g. NO_AUDIO_TRACK) while `error` keeps the English reason.
             job["docs_topic"] = failed["docs_topic"] or None
+            from services.model_acceptance import ModelLicenceNotAccepted
+            if isinstance(e, ModelLicenceNotAccepted):
+                # Typed, like argos_packs: the client offers acceptance (#2689).
+                job["setup_required"] = {"kind": e.detail()["code"], **e.detail()}
             job["finished_at"] = time.time()
             logger.error("Batch job %s failed: %s", job_id, e, exc_info=True)
         finally:
@@ -161,52 +166,15 @@ def _set_progress(job, stage, percent=0, **extra):
 # entire file in process memory before writing it back out.
 _UPLOAD_CHUNK_BYTES = 1024 * 1024
 
-_REMOTE_BATCH_OPERATION = "batch_segments"
-
-
 async def _resolve_batch_execution(voice: dict):
-    """Resolve Batch's TTS target without loading local weights remotely."""
+    """Resolve the local TTS backend for a batch job."""
+    ensure_active_engine_licence()
     engine_id = active_backend_id()
-    decision = gpu_gateway.decide("batch")
-    if decision.remote:
-        await gpu_gateway.preflight(
-            engine_id,
-            decision,
-            operation=_REMOTE_BATCH_OPERATION,
-        )
-        return engine_id, decision, None
     backend = await resolve_generation_backend(
         require_cloning=voice["requires_cloning"],
         cloning_purpose="this batch job's pinned voice",
     )
-    return engine_id, decision, backend
-
-
-def _decode_remote_batch(
-    result: gpu_gateway.RemoteResult,
-    batch_dir: str,
-    expected: set[int],
-) -> tuple[dict[int, str], int]:
-    """Validate and unpack one worker result before accepting remote success."""
-    import soundfile as sf
-
-    target = os.path.join(batch_dir, ".remote", result.task_id)
-    paths = extract_segment_wavs(result.path or "", target)
-    try:
-        if set(paths) != expected:
-            missing = sorted(expected - set(paths))
-            extra = sorted(set(paths) - expected)
-            raise ValueError(
-                f"segment bundle mismatch (missing={missing}, extra={extra})"
-            )
-        rates = {int(sf.info(path).samplerate) for path in paths.values()}
-        if len(rates) != 1 or next(iter(rates), 0) <= 0:
-            raise ValueError("segment bundle has inconsistent sample rates")
-        return paths, rates.pop()
-    except BaseException:
-        remove_segment_wavs(paths)
-        raise
-
+    return engine_id, backend
 
 async def _save_upload(upload: UploadFile, destination: str) -> None:
     try:
@@ -269,8 +237,8 @@ def _batch_voice(voice_id: str | None) -> dict:
     relative = row["locked_audio_path"] if row["is_locked"] else row["ref_audio_path"]
     if not relative:
         raise ValueError("That saved voice has no reference audio")
-    ref_audio = os.path.join(VOICES_DIR, relative)
-    if not os.path.isfile(ref_audio):
+    ref_audio = contained_join(VOICES_DIR, relative)
+    if not ref_audio or not os.path.isfile(ref_audio):
         raise ValueError("That saved voice's reference audio is missing")
     resolved.update({
         "ref_audio": ref_audio,
@@ -305,6 +273,7 @@ async def _run_batch_pipeline_leased(job_id: str, job: dict, lease: voice_leases
     from services.ffmpeg_utils import (
         bed_mix_filter,
         find_ffmpeg,
+        local_inputs_only,
         raise_for_audio_extract_failure,
         require_audio_stream,
         validate_media_source,
@@ -318,9 +287,9 @@ async def _run_batch_pipeline_leased(job_id: str, job: dict, lease: voice_leases
         require_audio_stream(video_path)
         try:
             subprocess.run(
-                [ffmpeg, "-y", "-i", video_path,
+                local_inputs_only([ffmpeg, "-y", "-i", video_path,
                  "-vn", "-acodec", "pcm_s16le", "-ar", "22050", "-ac", "1",
-                 audio_path],
+                 audio_path]),
                 stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
                 timeout=300, check=True,
             )
@@ -329,7 +298,7 @@ async def _run_batch_pipeline_leased(job_id: str, job: dict, lease: voice_leases
             raise
         # Get duration
         result = subprocess.run(
-            [ffmpeg, "-i", audio_path],
+            local_inputs_only([ffmpeg, "-i", audio_path]),
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             timeout=30,
         )
@@ -351,7 +320,7 @@ async def _run_batch_pipeline_leased(job_id: str, job: dict, lease: voice_leases
     _set_progress(job, "transcribe", 0)
 
     from services.asr_backend import load_active_asr_backend
-    from services.model_manager import _gpu_pool, _cpu_pool, run_on_gpu_pool_guarded
+    from services.model_manager import _gpu_pool, run_on_gpu_pool_guarded
     from services.segmentation import (
         segment_transcript, assign_speakers_heuristic,
     )
@@ -400,24 +369,12 @@ async def _run_batch_pipeline_leased(job_id: str, job: dict, lease: voice_leases
     # already records a structured job failure via core.failure.build_failure.
     voice = _batch_voice(job.get("voice_id"))
     lease.hold(voice.get("ref_audio"))
-    engine_id, execution_target, backend = await _resolve_batch_execution(voice)
+    engine_id, backend = await _resolve_batch_execution(voice)
     sr = backend.sample_rate if backend is not None else 0
     from services.performance_profiles import tts_defaults
     _profile_defaults = tts_defaults(engine_id)
     _batch_num_step = _profile_defaults.get("num_step", 16)
     _batch_postprocess = _profile_defaults.get("postprocess_output", True)
-    batch_run = gpu_gateway.JobRun("batch")
-
-    async def _prepare_local_batch() -> gpu_gateway.LocalCall:
-        nonlocal backend, sr
-        if backend is None:
-            backend = await resolve_generation_backend(
-                require_cloning=voice["requires_cloning"],
-                cloning_purpose="this batch job's pinned voice",
-            )
-            sr = backend.sample_rate
-        return gpu_gateway.LocalCall(fn=lambda: None, what="Batch TTS fallback")
-
     # ── 3. Translate + Generate per language ───────────────────────────
     total_langs = len(langs)
     outputs = {}
@@ -511,89 +468,12 @@ async def _run_batch_pipeline_leased(job_id: str, job: dict, lease: voice_leases
         from services.audio_io import atomic_save_wav
         import torch
 
-        remote_segments: dict[int, str] = {}
         valid_rows = [
             (i, segment)
             for i, segment in enumerate(translated_segments)
             if segment.get("end", 0) - segment.get("start", 0) > 0.05
             and segment.get("text", "").strip()
         ]
-        if execution_target.remote and valid_rows:
-            remote_rows = [
-                {
-                    "index": i,
-                    "text": segment.get("text", "").strip(),
-                    "language": target_lang,
-                    "ref_text": voice["ref_text"],
-                    "instruct": voice["instruct"] or None,
-                    "duration": segment.get("end", 0) - segment.get("start", 0),
-                    "num_step": _batch_num_step,
-                    "postprocess_output": _batch_postprocess,
-                    "guidance_scale": 2.0,
-                    "speed": 1.0,
-                    "effect_preset": "batch",
-                    "seed": (
-                        voice["seed"] + i if voice["seed"] is not None else None
-                    ),
-                    # The assembled track receives one watermark below. Marking
-                    # each line here would double-process remote output.
-                    "watermark": False,
-                }
-                for i, segment in valid_rows
-            ]
-            expected = {row["index"] for row in remote_rows}
-
-            def _remote_state(state: dict) -> None:
-                fraction = max(0.0, min(1.0, float(state.get("progress") or 0.0)))
-                _set_progress(
-                    job,
-                    "generate",
-                    percent=int(((lang_idx + fraction) / total_langs) * 100),
-                    current_lang=target_lang,
-                    current_segment=min(len(remote_rows), round(fraction * len(remote_rows))),
-                    total_segments=len(remote_rows),
-                    execution_target=execution_target.label,
-                    execution_phase=state.get("phase"),
-                )
-
-            route_task = asyncio.create_task(
-                gpu_gateway.run(
-                    "batch",
-                    local=gpu_gateway.LocalCall(prepare=_prepare_local_batch),
-                    remote=gpu_gateway.RemoteCall(
-                        engine=engine_id,
-                        operation=_REMOTE_BATCH_OPERATION,
-                        params={
-                            "segments": remote_rows,
-                            "ref_audio": [voice["ref_audio"] for _ in remote_rows],
-                            "input_seconds": sum(
-                                float(row.get("duration") or 0.0) for row in remote_rows
-                            ),
-                        },
-                        idempotency_key=f"batch:{job_id}:{target_lang}",
-                        decode=lambda result: _decode_remote_batch(
-                            result, batch_dir, expected
-                        ),
-                    ),
-                    decision=execution_target,
-                    job=batch_run,
-                    on_state=_remote_state,
-                )
-            )
-            while not route_task.done():
-                await asyncio.wait({route_task}, timeout=0.25)
-                if job["status"] == "cancelled":
-                    route_task.cancel()
-                    try:
-                        await route_task
-                    except asyncio.CancelledError:
-                        pass
-                    return
-            routed = route_task.result()
-            if routed is not None:
-                remote_segments, sr = routed
-
-        # A remote-only empty transcript still needs a valid silent-track rate.
         sr = sr or 24_000
         total_samples = int(duration * sr)
         full_audio = torch.zeros(1, total_samples)
@@ -698,7 +578,6 @@ async def _run_batch_pipeline_leased(job_id: str, job: dict, lease: voice_leases
 
         for i, seg in enumerate(translated_segments):
             if job["status"] == "cancelled":
-                remove_segment_wavs(remote_segments)
                 return
 
             _set_progress(
@@ -760,44 +639,16 @@ async def _run_batch_pipeline_leased(job_id: str, job: dict, lease: voice_leases
                 # Budget is the shared length-scaled one (#1190): a long segment
                 # on CPU-class hardware no longer dies on the flat 300s.
                 from services.model_manager import generate_timeout_s
-                remote_path = remote_segments.pop(i, None)
-                if remote_path is not None:
-                    import soundfile as sf
-
-                    try:
-                        audio_array, remote_sr = sf.read(
-                            remote_path,
-                            dtype="float32",
-                            always_2d=True,
-                        )
-                        if int(remote_sr) != sr:
-                            raise ValueError(
-                                f"remote segment sample rate changed from {sr} to {remote_sr}"
-                            )
-                        audio_tensor = torch.from_numpy(audio_array.T).mean(
-                            dim=0,
-                            keepdim=True,
-                        )
-                    finally:
-                        remove_segment_wavs({i: remote_path})
+                if has_native_batch and i not in batched_audio:
+                    await _prefetch_batch(i)
+                if i in batched_audio:
+                    audio_tensor = batched_audio.pop(i)
                 else:
-                    if backend is None:
-                        await _prepare_local_batch()
-                        # This path means a validated remote bundle lost a row
-                        # after dispatch. Recover only that row; native batches
-                        # were not planned for this language.
-                        has_native_batch = False
-                    if has_native_batch and i not in batched_audio:
-                        await _prefetch_batch(i)
-                    if i in batched_audio:
-                        audio_tensor = batched_audio.pop(i)
-                    else:
-                        audio_tensor = await run_on_gpu_pool_guarded(
-                            _gen,
-                            what="Batch generate",
-                            timeout=generate_timeout_s(seg_text, engine=backend),
-                        )
-
+                    audio_tensor = await run_on_gpu_pool_guarded(
+                        _gen,
+                        what="Batch generate",
+                        timeout=generate_timeout_s(seg_text, engine=backend),
+                    )
                 # Fit to slot
                 target_samples_seg = int(seg_duration * sr)
                 current_samples = audio_tensor.shape[-1]
@@ -844,7 +695,6 @@ async def _run_batch_pipeline_leased(job_id: str, job: dict, lease: voice_leases
                     f"left silent: {e}"
                 )
 
-        remove_segment_wavs(remote_segments)
 
         # ── 3c. Save dubbed audio track ───────────────────────────────
         # Invisible provenance mark on the assembled track (#1169), tensor
@@ -884,26 +734,26 @@ async def _run_batch_pipeline_leased(job_id: str, job: dict, lease: voice_leases
             if bg:
                 # Mix dubbed audio with original background
                 subprocess.run(
-                    [ffmpeg, "-y",
+                    local_inputs_only([ffmpeg, "-y",
                      "-i", video_path,
                      "-i", track_path,
                      "-filter_complex",
                      bed_mix_filter("0:a", "1:a", out="out", duration="first"),
                      "-map", "0:v", "-map", "[out]",
                      "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
-                     "-shortest", output_path],
+                     "-shortest", output_path]),
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                     timeout=600, check=True,
                 )
             else:
                 # Replace audio entirely
                 subprocess.run(
-                    [ffmpeg, "-y",
+                    local_inputs_only([ffmpeg, "-y",
                      "-i", video_path,
                      "-i", track_path,
                      "-map", "0:v", "-map", "1:a",
                      "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
-                     "-shortest", output_path],
+                     "-shortest", output_path]),
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                     timeout=600, check=True,
                 )
@@ -937,6 +787,17 @@ async def enqueue_batch_job(
     lang_list = [l.strip() for l in langs.split(",") if l.strip()]
     if not lang_list:
         raise HTTPException(400, "At least one target language is required")
+    # Each code names per-language outputs (dubbed_{lang}.wav, output_{lang}.mp4).
+    from api.routers.dub_core import _safe_lang_or_400
+
+    for lang in lang_list:
+        _safe_lang_or_400(lang)
+
+    # Refuse a non-media upload before any environment check, so the answer
+    # does not depend on which models or engines happen to be installed.
+    ext = media_upload_suffix(video.filename, ".mp4")
+    if ext is None:
+        raise HTTPException(415, "Choose an audio or video file.")
 
     # Validate the snapshot before persisting a potentially large upload.
     # Resolve it again in the worker so deleting or editing a queued profile
@@ -977,10 +838,21 @@ async def enqueue_batch_job(
     # Save the uploaded video
     batch_dir = os.path.join(DATA_DIR, "batch")
     os.makedirs(batch_dir, exist_ok=True)
-    ext = os.path.splitext(video.filename or "video.mp4")[1] or ".mp4"
     video_path = os.path.join(batch_dir, f"{job_id}{ext}")
 
     await _save_upload(video, video_path)
+    from core.url_safety import is_manifest_file
+    try:
+        manifest = await asyncio.to_thread(is_manifest_file, video_path)
+    except OSError:
+        manifest = False  # The extract step reports the unreadable file.
+    if manifest:
+        # A playlist/manifest named like media: ffmpeg would follow its URLs.
+        try:
+            unlink_if_present(video_path)
+        except FileCleanupError:
+            logger.warning("Could not remove refused batch upload", exc_info=True)
+        raise failure.InvalidMediaFileError()
 
     job = {
         "id": job_id,

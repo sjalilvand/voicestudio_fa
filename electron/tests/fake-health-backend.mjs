@@ -17,27 +17,6 @@ export async function startHealthBackend() {
       '/batch/jobs': [],
       '/history': [],
       '/api/settings/performance-profile': { profile: 'balanced', engines: {} },
-      '/workers/target': {
-        target: 'local',
-        op: '',
-        active: { remote: false, label: 'Local device', reason: '' },
-        remote_operations: [],
-        targets: [
-          {
-            id: 'local',
-            label: 'Local device',
-            endpoint: '',
-            connected: true,
-            available: true,
-            detail: '',
-            is_local: true,
-            status: 'ready',
-            latency_ms: 0,
-            active_tasks: 0,
-            max_tasks: 1,
-          },
-        ],
-      },
       '/model/status': { status: 'not_loaded', message: '' },
       '/model/loaded': { models: [] },
       '/engines/translation': { active: null, engines: [] },
@@ -47,7 +26,10 @@ export async function startHealthBackend() {
       '/projects': [],
     };
     if (Object.hasOwn(fixtures, path)) {
-      response.writeHead(200, { 'content-type': 'application/json' });
+      response.writeHead(200, {
+        'content-type': 'application/json',
+        'x-omnivoice-backend': 'native-smoke',
+      });
       response.end(JSON.stringify(fixtures[path]));
       return;
     }

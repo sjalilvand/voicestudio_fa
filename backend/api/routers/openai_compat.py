@@ -49,6 +49,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from services.model_manager import _gpu_pool, run_on_gpu_pool_guarded
 from core.http_headers import content_disposition
+from core.path_security import contained_join, upload_suffix
 from services.audio_io import OPUS_CODEC_ARGS, OPUS_SAMPLE_RATE
 
 logger = logging.getLogger("omnivoice.openai_compat")
@@ -645,7 +646,12 @@ def _audio_chunks(audio: bytes):
 @router.post("/audio/speech")
 async def create_speech(req: SpeechRequest):
     """Generate audio from text. Compatible with OpenAI's POST /v1/audio/speech."""
-    backend = _resolve_engine(req.model)
+    from services.model_acceptance import ModelLicenceNotAccepted
+    try:
+        backend = _resolve_engine(req.model)
+    except ModelLicenceNotAccepted as exc:
+        # OpenAI's error shape; `detail` keeps the models for VoiceStudio clients.
+        raise OpenAIError(403, exc.detail(), param="model", code=exc.detail()["code"]) from exc
 
     # Compressed formats need ffmpeg: fail fast, before any model load or GPU
     # work, and never fall back to a body that doesn't match the format.
@@ -701,9 +707,9 @@ async def create_speech(req: SpeechRequest):
         if row:
             from core.config import VOICES_DIR
             if row["is_locked"] and row["locked_audio_path"]:
-                kw["ref_audio"] = os.path.join(VOICES_DIR, row["locked_audio_path"])
+                kw["ref_audio"] = contained_join(VOICES_DIR, row["locked_audio_path"])
             elif row["ref_audio_path"]:
-                kw["ref_audio"] = os.path.join(VOICES_DIR, row["ref_audio_path"])
+                kw["ref_audio"] = contained_join(VOICES_DIR, row["ref_audio_path"])
             if row["ref_text"]:
                 kw["ref_text"] = row["ref_text"]
             if row["instruct"] and not instruct:
@@ -960,6 +966,7 @@ async def _transcribe_request(
         asr_model_missing_error,
         load_active_asr_backend,
     )
+    from services.model_acceptance import ModelLicenceNotAccepted
 
     if response_format not in _TRANSCRIPT_FORMATS:
         raise OpenAIError(
@@ -998,7 +1005,8 @@ async def _transcribe_request(
         )
 
     # Write uploaded file to a temp location
-    suffix = os.path.splitext(file.filename or "audio.wav")[1] or ".wav"
+    # Content is probed by ffmpeg, so an unusable extension just gets ".wav".
+    suffix = upload_suffix(file.filename, ".wav") or ".wav"
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             content = await file.read()
@@ -1133,6 +1141,9 @@ async def _transcribe_request(
             status_code=409,
             detail={**e.payload, "message": asr_model_missing_detail(e.payload)},
         )
+    except ModelLicenceNotAccepted as e:
+        # The active engine's model licence needs acceptance in the app (#2689).
+        raise OpenAIError(403, e.detail(), param="model", code=e.detail()["code"]) from e
     except TimeoutError as e:
         # ASRTimeoutError (subclass): backend alive, ASR too heavy for compute.
         logger.warning("OpenAI transcription timed out: %s", e)
@@ -1318,6 +1329,11 @@ def list_voices():
             })
     except Exception:
         logger.warning("Voice profiles could not be loaded; returning built-in aliases only")
+
+    # OpenAI-compatible clients such as Open WebUI read each voice's `id`
+    # (#2679); `voice_id` stays for existing callers.
+    for voice in voices:
+        voice["id"] = voice["voice_id"]
 
     return {"voices": voices, "engines": backends}
 

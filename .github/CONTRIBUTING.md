@@ -17,7 +17,8 @@ Thanks for your interest in improving VoiceStudio! This guide covers everything 
 > once. GitHub cannot stop you opening a pull request first, so it is checked at
 > merge instead: an unsigned pull request cannot merge. You can sign now on the
 > [signing issue (#2586)](https://github.com/debpalash/VoiceStudio/issues/2586) and
-> the check then passes on every pull request you open. Details are in
+> your signature covers your future contributions. Every other human commit
+> author and co-author must also sign before the check passes. Details are in
 > [Contribution licensing](#contribution-licensing).
 
 ---
@@ -87,6 +88,10 @@ bun run dev:web     # maintained Electron renderer in a browser + backend
 |---------|-----|---|
 | **Backend** | `localhost:3900` | FastAPI server — TTS, ASR, diarization, dubbing pipeline |
 | **Frontend** | `localhost:3901` | Electron renderer served by Vite in a browser |
+
+Product builds read the app name, application ID, and the backend/web/Electron
+development ports from `config/app.json`. Change that manifest instead of
+copying new defaults into launchers or runtime modules.
 
 The backend runs through `scripts/dev-backend.mjs` (the `dev:api` script): the
 uvicorn command is unchanged, but if the backend **dies** (OOM kill, hard
@@ -387,8 +392,6 @@ hard rules from the first prompt.
     (`backend/core/analytics.py`, allowlisted content-free metadata).
   - The GitHub star count (no credentials or referrer, refreshed every 20
     minutes while shown).
-  - The Lemon Squeezy Pro licence check, only after the user enters a key
-    (`electron/src/main/pro-license.ts`).
 
   Adding to this list needs owner approval. Never log or persist secrets or
   absolute home paths.
@@ -420,11 +423,13 @@ sign. To sign, post this as a new comment, on its own line:
 I have read the VoiceStudio CLA 1.0 and I hereby sign it.
 ```
 
-The signature covers your earlier and future contributions, and the check
-turns green on its own. New contributors can sign first: post the same line on the
+The signature covers your earlier and future contributions. The check turns
+green once every required human contributor has signed, including commit authors
+and co-authors. New contributors can sign first: post the same line on the
 [signing issue (#2586)](https://github.com/debpalash/VoiceStudio/issues/2586)
-before opening a pull request, or on the pull request itself if you prefer. If a maintainer folds your pull request into another
-one, you sign once there too. Contributed before and have no open pull request? Post
+before opening a pull request, or on the pull request itself if you prefer. The
+same signature applies if a maintainer folds your pull request into another one.
+Contributed before and have no open pull request? Post
 the same line on the [issue labelled `cla`](https://github.com/debpalash/VoiceStudio/issues?q=label%3Acla). If it lists a commit it cannot link to a GitHub
 account, either add that commit email to your account (Settings → Emails), or
 rewrite the commits with an email that is on it (`git commit --amend

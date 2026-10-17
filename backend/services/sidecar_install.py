@@ -446,7 +446,10 @@ SPECS: dict[str, SidecarSpec] = {
         source_revision="934d6826b084c46a0d033402174d5f8ac4ed2519",
         source_required_path="pyproject.toml",
         venv_args=("--python", "3.11"),
-        install_args=("-e", "{checkout}[torch-runtime]"),
+        # == permits the +cu128 decoder, which requires NVIDIA NPP even
+        # for CPU reference-audio decoding. === excludes that local build.
+        install_args=("-e", "{checkout}[torch-runtime]", "torchcodec===0.8.1"),
+        install_revision="cpu-decoder-v1",
         uses_cuda_index=True,
         host_supported=_moss_host,
         docs_path="docs/engines/moss-tts-v15.md",
@@ -671,14 +674,13 @@ SPECS: dict[str, SidecarSpec] = {
         ),
         venv_args=("--python", "3.10"),
         install_args=("-r", _COSYVOICE_REQUIREMENTS, "{checkout}/third_party/PyWorld"),
-        install_revision="inference-imports-v2",
+        install_revision="security-floors-v3",
         torch_pins=("torch==2.7.0", "torchaudio==2.7.0"),
         weights_repo_id="FunAudioLLM/Fun-CosyVoice3-0.5B-2512",
         weights_revision="29e01c4e8d000f4bcd70751be16fa94bf3d85a18",
         weights_subdir="pretrained_models/Fun-CosyVoice3-0.5B",
         weights_config_names=("cosyvoice3.yaml",),
-        # Also a Model Catalogue download, used by the in-process engine and
-        # by remote workers that run it.
+        # Also a Model Catalogue download used by the in-process engine.
         weights_catalogue_download=True,
         weights_allow_patterns=(
             "cosyvoice3.yaml", "config.json", "configuration.json",
@@ -1771,6 +1773,7 @@ def _step_fetch_weights(spec: SidecarSpec, job: dict) -> None:
 
     from huggingface_hub import snapshot_download
     from services import endpoint_race
+    from services.hf_auth import token_for_endpoint
     from services.token_resolver import resolve as resolve_token
     from utils import hf_progress
 
@@ -1803,16 +1806,17 @@ def _step_fetch_weights(spec: SidecarSpec, job: dict) -> None:
         # discovery, so gated engine weights 401 for a user whose token lives
         # in VoiceStudio's settings rather than HF's own cache (#2163).
         _resolved = resolve_token()
+        endpoint = endpoint_race.effective_endpoint()
         kwargs: dict = {
             "repo_id": spec.weights_repo_id,
             "local_dir": str(wdir),
-            "token": _resolved.token if _resolved else None,
+            # Hugging Face hosts only — a mirror never receives the token.
+            "token": token_for_endpoint(endpoint, _resolved.token if _resolved else None),
         }
         if spec.weights_revision:
             kwargs["revision"] = spec.weights_revision
         if spec.weights_allow_patterns:
             kwargs["allow_patterns"] = list(spec.weights_allow_patterns)
-        endpoint = endpoint_race.effective_endpoint()
         if endpoint:
             kwargs["endpoint"] = endpoint
         tqdm_cls = hf_progress.tracked_tqdm_class()

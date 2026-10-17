@@ -13,6 +13,7 @@ if _backend_dir not in sys.path:
 # native crash inside torch/CUDA leaves a named frame in backend_err.log
 # instead of a silently vanished process. See core/crash_diagnostics.py.
 from core.crash_diagnostics import enable_fault_handler  # noqa: E402
+from core.app_config import PRODUCT_NAME  # noqa: E402
 
 enable_fault_handler()
 
@@ -135,6 +136,12 @@ try:
     _load_user_env()
 except ImportError:
     pass
+
+# A mirror in HF_ENDPOINT must never receive the Hugging Face token, here or in
+# engine processes that inherit this environment.
+from services.hf_auth import apply_process_token_policy as _apply_hf_token_policy  # noqa: E402
+
+_apply_hf_token_policy()
 
 # ── cuDNN 8 library preload ─────────────────────────────────────────────
 # Moved into _phase_a_build (`native_preload` step, early-bind refactor): the
@@ -734,7 +741,6 @@ def _phase_a_build_inner() -> None:
         voice_convert,  # Studio Convert: speech-to-speech via ASR → TTS
     )
     from api.routers import mcp_bindings as _mcp_bindings_router  # noqa: E402
-    from api.routers import workers as workers_router  # noqa: E402
     from api.routers import telephony_twilio as _telephony_twilio_router  # noqa: E402
     from api.routers import calls as _calls_router  # noqa: E402
     _router_modules.extend([
@@ -744,7 +750,7 @@ def _phase_a_build_inner() -> None:
         batch, watermark, events, capture, capture_ws, speech_platform, dictation,
         openai_compat, tts_stream, marketplace, personas, sonitranslate,
         audiobook, longform_jobs, pronunciation, settings_router,
-        media_tools_router, auth_router, _mcp_bindings_router, workers_router,
+        media_tools_router, auth_router, _mcp_bindings_router,
         _telephony_twilio_router, _calls_router,
     ])
     # Download-acceleration state, once, for triage-from-logs (FDL-03).
@@ -906,6 +912,58 @@ async def _deferred_startup(app: FastAPI) -> None:
         os._exit(1)
 
 
+def _reconcile_profile_blocking():
+    from services.performance_profiles import reconcile_active_profile
+
+    return reconcile_active_profile()
+
+
+async def _reconcile_profile_in_background(app: FastAPI) -> None:
+    """Reapply the saved performance profile off the startup critical path."""
+    try:
+        # Store only successfully submitted work. Shielding keeps cancellation
+        # of the asyncio wrapper from cancelling queued executor work, so the
+        # shutdown wait can track its actual completion (#2861).
+        worker = asyncio.get_running_loop().run_in_executor(None, _reconcile_profile_blocking)
+        app.state.profile_reconcile_worker = worker
+        recovered = await asyncio.shield(worker)
+        if recovered:
+            logger.info("Startup performance selections reconciled: %s", recovered)
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        logger.exception("Performance-profile reconciliation failed (non-fatal).")
+
+
+def _start_profile_reconcile(app: FastAPI) -> None:
+    """Schedule reconciliation with a worker handle owned by this lifespan."""
+    app.state.profile_reconcile_worker = None
+    app.state.profile_reconcile_task = asyncio.create_task(_reconcile_profile_in_background(app))
+
+
+async def _wait_for_profile_reconcile_thread(app: FastAPI) -> None:
+    """Stop new submissions and bound waiting for this boot's executor work."""
+    task = getattr(app.state, "profile_reconcile_task", None)
+    if task is not None and not task.done():
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+    worker = getattr(app.state, "profile_reconcile_worker", None)
+    if worker is not None and not worker.done():
+        # asyncio.wait neither cancels the executor future on timeout nor
+        # needs a free executor thread to enforce the shutdown deadline.
+        await asyncio.wait({worker}, timeout=20.0)
+
+
+async def _await_profile_reconcile(app: FastAPI) -> None:
+    """Let model warm-ups wait for reconciliation without inheriting its failure."""
+    task = getattr(app.state, "profile_reconcile_task", None)
+    if task is not None:
+        if not task.done():
+            await asyncio.wait({task})
+        if task.cancelled():
+            raise asyncio.CancelledError
+
+
 async def _phase_b(app: FastAPI) -> None:
     """The old lifespan startup body: DB init + background services. Handles
     land on app.state so the shutdown block (which may run after a startup
@@ -945,18 +1003,6 @@ async def _phase_b(app: FastAPI) -> None:
     record_startup_voices_root()
 
     _startup_progress.begin_step("services_start")
-    # Reapply an explicitly saved speed/quality profile after the local model
-    # inventory is available. Older builds saved the slider but could leave
-    # ASR/Dictation pointing at missing models even when compatible weights
-    # were already installed. This path is local-cache-only and download-free.
-    try:
-        from services.performance_profiles import reconcile_active_profile
-
-        recovered = reconcile_active_profile()
-        if recovered:
-            logger.info("Startup performance selections reconciled: %s", recovered)
-    except Exception:
-        logger.exception("Performance-profile reconciliation failed (non-fatal).")
     # Phase 1 Wave 3 — macOS Gatekeeper quarantine probe (#54). Informational
     # only; we never auto-run `xattr -cr`.
     try:
@@ -983,16 +1029,36 @@ async def _phase_b(app: FastAPI) -> None:
     model_loads_reset_shutdown()
     from services.model_manager import begin_watermark_pool_lifecycle
     begin_watermark_pool_lifecycle()
+    # Reapply an explicitly saved speed/quality profile after the local model
+    # inventory is available. Older builds saved the slider but could leave
+    # ASR/Dictation pointing at missing models even when compatible weights
+    # were already installed. This path is local-cache-only and download-free.
+    # The inventory probes import translation/ASR/TTS runtimes (tens of seconds
+    # on a cold disk), and nothing the first screen shows depends on the result,
+    # so it runs in the background instead of holding /health at 503. The model
+    # warm-ups below await it, so they still load the reconciled selections.
+    _start_profile_reconcile(app)
+    if _EAGER:
+        # Eager boots (pytest, OMNIVOICE_EAGER_INIT=1) promise the classic
+        # synchronous startup: callers read engines the moment the lifespan
+        # opens, and a reconcile importing runtimes beside them races those
+        # imports. The deferral is for the served app.
+        await _await_profile_reconcile(app)
     app.state.idle_task = asyncio.create_task(idle_worker())
     app.state.worker_task = asyncio.create_task(task_manager.worker())
     # Warm the TTS model in the background so first /generate is instant.
-    app.state.preload_task = asyncio.create_task(preload_model())
+    async def _preload_after_reconcile():
+        await _await_profile_reconcile(app)
+        await preload_model()
+
+    app.state.preload_task = asyncio.create_task(_preload_after_reconcile())
     # Dictation v2: capture ASR warms in the background BY DEFAULT (~30s
     # post-boot, skipped under 4 GB free RAM at warm time).
     app.state.capture_preload_task = None  # only assigned when it runs (#1000 class)
     if _env_flag("OMNIVOICE_PRELOAD_CAPTURE_ASR", default=True):
         async def _preload_capture_asr():
             await asyncio.sleep(_capture_preload_delay_s())
+            await _await_profile_reconcile(app)
             if not _capture_preload_ram_ok():
                 logger.info(
                     "Capture ASR preload skipped: <4GB free RAM; "
@@ -1080,20 +1146,6 @@ async def _phase_b(app: FastAPI) -> None:
     app.state.mcp_stop = mcp_stop
     if mcp_mounted:
         logger.info("MCP server mounted at /mcp")
-    # Remote GPU workers (opt-in). Starts nothing unless enabled.
-    try:
-        from worker import service as worker_service
-        await worker_service.start_if_enabled()
-    except Exception:
-        logger.exception("Remote worker startup failed (continuing without it)")
-
-    # The other side of the same feature: worker mode connects out.
-    try:
-        from worker import agent as worker_agent
-        await worker_agent.start_if_worker_mode()
-    except Exception:
-        logger.exception("Worker agent startup failed (continuing without it)")
-
     # Phone calls (opt-in): the separate loopback telephony listener resumes
     # only when the user left the Twilio integration enabled.
     try:
@@ -1216,19 +1268,7 @@ async def lifespan(app: FastAPI):
     # before Phase A began pays nothing.
     if _phase_a_started.is_set() and not _phase_a_finished.is_set():
         await asyncio.to_thread(_phase_a_finished.wait, 20.0)
-    # Stop accepting remote work early in shutdown: a worker that reconnects
-    # to a half-torn-down control plane is worse than one that simply finds it
-    # gone and backs off.
-    try:
-        from worker import agent as worker_agent
-        await worker_agent.stop()
-    except Exception:
-        logger.exception("Worker agent shutdown failed")
-    try:
-        from worker import service as worker_service
-        await worker_service.stop()
-    except Exception:
-        logger.exception("Remote worker shutdown failed")
+    await _wait_for_profile_reconcile_thread(app)
     try:
         from services.telephony import gateway as telephony_gateway
         await telephony_gateway.stop()
@@ -1281,6 +1321,7 @@ async def lifespan(app: FastAPI):
     await _cancel_and_await_tasks(
         getattr(app.state, "idle_task", None),
         getattr(app.state, "worker_task", None),
+        getattr(app.state, "profile_reconcile_task", None),
         getattr(app.state, "preload_task", None),
         getattr(app.state, "capture_preload_task", None),
         getattr(app.state, "watermark_preload_task", None),
@@ -1341,7 +1382,7 @@ async def lifespan(app: FastAPI):
 from core.version import APP_VERSION  # single source of truth (pyproject metadata)
 
 app = FastAPI(
-    title="VoiceStudio API",
+    title=f"{PRODUCT_NAME} API",
     version=APP_VERSION,
     lifespan=lifespan,
     docs_url=None,       # Disabled — replaced by Scalar at /docs
@@ -1434,7 +1475,13 @@ def _safe_validation_input(value):
     return value
 
 
-from core.failure import NoAudioTrackError, no_audio_track_detail  # noqa: E402
+from core.failure import (  # noqa: E402
+    InvalidMediaFileError,
+    NoAudioTrackError,
+    invalid_media_file_detail,
+    no_audio_track_detail,
+)
+from services.model_acceptance import ModelLicenceNotAccepted  # noqa: E402
 
 
 @app.exception_handler(NoAudioTrackError)
@@ -1447,6 +1494,28 @@ async def no_audio_track_handler(request: Request, exc: NoAudioTrackError):
     return JSONResponse(
         status_code=422,
         content={"detail": no_audio_track_detail()},
+        headers=_cors_headers_for(request),
+    )
+
+
+@app.exception_handler(ModelLicenceNotAccepted)
+async def model_licence_handler(request: Request, exc: ModelLicenceNotAccepted):
+    """403 with the models whose licence still needs acceptance, so the desktop
+    client can show the acceptance dialog instead of a generic failure."""
+    return JSONResponse(
+        status_code=403,
+        content={"detail": exc.detail()},
+        headers=_cors_headers_for(request),
+    )
+
+
+@app.exception_handler(InvalidMediaFileError)
+async def invalid_media_file_handler(request: Request, exc: InvalidMediaFileError):
+    """422 for an upload that is unreadable or not media at all (a playlist or
+    manifest named like a video), on every route that checks its input."""
+    return JSONResponse(
+        status_code=422,
+        content={"detail": invalid_media_file_detail()},
         headers=_cors_headers_for(request),
     )
 
@@ -1572,6 +1641,18 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 _SHELL_PATHS = {"/", "/index.html", "/favicon.ico", "/early-error-capture.js", "/health"}
 
+
+def _is_public_path(path: str) -> bool:
+    """HTTP paths every gate leaves reachable: the SPA shell and its assets,
+    so a remote UI can load and say what is wrong, and the credential
+    exchange, which validates the presented key itself."""
+    return (
+        path in _SHELL_PATHS
+        or path.startswith("/assets/")
+        or path.startswith("/favicon")
+        or path == "/api/auth/session"
+    )
+
 # Paths that answer while deferred startup is still running. The shutdown
 # signal must exist before the ordinary system router so a bounded Windows
 # process-tree stop cannot leave a false crash sentinel.
@@ -1648,13 +1729,7 @@ class NetworkAccessMiddleware:
         client = scope["client"][0] if scope.get("client") else None
         if is_local_host(client):
             return await self.app(scope, receive, send)
-        path = scope["path"]
-        if (
-            path in _SHELL_PATHS
-            or path.startswith("/assets/")
-            or path.startswith("/favicon")
-            or path == "/api/auth/session"
-        ):
+        if _is_public_path(scope["path"]):
             return await self.app(scope, receive, send)
         supplied = (
             request.headers.get("x-omnivoice-pin")
@@ -1749,13 +1824,7 @@ class BearerKeyMiddleware:
         key = remote_api_key() or ""
         if not key:
             return await self.app(scope, receive, send)
-        path = scope.get("path", "")
-        if scope["type"] == "http" and (
-            path in _SHELL_PATHS
-            or path.startswith("/assets/")
-            or path.startswith("/favicon")
-            or path == "/api/auth/session"
-        ):
+        if scope["type"] == "http" and _is_public_path(scope.get("path", "")):
             return await self.app(scope, receive, send)
 
         from starlette.requests import HTTPConnection
@@ -1830,6 +1899,13 @@ app.add_middleware(NetworkAccessMiddleware)
 # carried its own loopback guard; remote mode is exactly the case where a
 # keyed non-loopback client must reach them.
 app.add_middleware(BearerKeyMiddleware)
+
+# Applies whatever the auth configuration: refuses state-changing requests and
+# WebSocket handshakes that another website's page sends, and requests that
+# address this backend by an unrecognized host name (DNS rebinding). Just
+# inside CORS so preflights reach CORS and refusals keep their CORS headers.
+from core.browser_guard import BrowserGuardMiddleware
+app.add_middleware(BrowserGuardMiddleware, is_public_path=_is_public_path)
 
 app.add_middleware(
     CORSMiddleware,

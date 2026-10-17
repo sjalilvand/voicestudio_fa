@@ -1,4 +1,5 @@
 import os
+import re
 import errno
 import uuid
 import asyncio
@@ -10,7 +11,7 @@ from urllib.parse import urlsplit
 import soundfile as sf
 import torch
 from typing import Optional
-from fastapi import Request
+from fastapi import Request, Depends
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 
@@ -18,6 +19,9 @@ from core.db import db_conn
 from core.config import PREVIEW_DIR
 from core.tasks import task_manager
 from core.logging_utils import log_safe
+from core.media_types import AUDIO_EXTS, MEDIA_EXTS, media_extension, media_upload_suffix, unsupported_media_detail
+from core.url_safety import UnsafeURLError, check_public_url, is_manifest_head, is_manifest_file
+from core.failure import InvalidMediaFileError
 from core import event_bus
 from schemas.requests import CleanupSegmentsRequest, DubIngestUrlRequest, ParseSubtitleTextRequest
 from services.srt_parser import CUE_SOURCE_FIELDS, CUE_SOURCE_ID
@@ -29,7 +33,9 @@ from services.asr_backend import (
     run_transcribe_guarded,
 )
 from services.audio_io import _safe_soundfile_write
-from services.ffmpeg_utils import find_ffmpeg
+from services.diarization_runtime import ensure_selected_accepted as _ensure_diarisation_accepted
+from services.ffmpeg_utils import find_ffmpeg, local_inputs_only
+from services.model_acceptance import ModelLicenceNotAccepted
 from services.segmentation import (
     segment_transcript,
     assign_speakers_from_diarization,
@@ -42,6 +48,7 @@ from services.segmentation import (
 )
 from services.onset_align import snap_segment_starts
 from services import dub_pipeline
+from core.browser_guard import reject_cross_site_get
 
 router = APIRouter()
 logger = logging.getLogger("omnivoice.api")
@@ -54,9 +61,15 @@ def _cookie_transport_allowed(
 ) -> bool:
     """Credentials may cross HTTP only from a local UI to a loopback peer."""
     from api.dependencies import is_local_host
+    from core.auth import is_loopback
+    from core.csrf import DEFAULT_DESKTOP_ORIGINS
 
     if scheme == "https":
         return True
+    # Main asserts this exact origin after stripping renderer-supplied headers.
+    # Desktop identity never permits sending credentials to a remote HTTP peer.
+    if origin in DEFAULT_DESKTOP_ORIGINS:
+        return is_loopback(client_host)
     try:
         origin_host = urlsplit(origin or "").hostname or ""
     except ValueError:
@@ -129,6 +142,17 @@ _get_job           = dub_pipeline.get_job
 _save_job          = dub_pipeline.save_job
 replace_source_segments = dub_pipeline.replace_source_segments
 segments_revision = dub_pipeline.segments_revision
+
+# Language codes name per-track files (``dubbed_{lang}.wav``,
+# ``seg_{lang}_{id}.wav``) and export filenames, so every route that accepts
+# one must pass it through this check before it reaches a path.
+_SAFE_LANG = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
+
+
+def _safe_lang_or_400(lang: str | None) -> str | None:
+    if lang is not None and not _SAFE_LANG.fullmatch(lang):
+        raise HTTPException(status_code=400, detail="Invalid language code")
+    return lang
 
 # Pasted subtitle text is a transcript, not a media file: a feature-length
 # film's .srt is ~150 KB. 2 MB of characters is ~13x the worst realistic case
@@ -618,11 +642,19 @@ def delete_single_dub_history(history_id: str):
 
 @router.post("/preview/upload")
 async def preview_upload(video: UploadFile = File(...)):
-    ext = os.path.splitext(video.filename or "video.mp4")[1].lower()
+    ext = media_upload_suffix(video.filename, ".mp4")
+    if ext is None:
+        raise HTTPException(
+            status_code=415,
+            detail=unsupported_media_detail("video", MEDIA_EXTS, os.path.splitext(video.filename or "")[1]),
+        )
     safe_name = f"{uuid.uuid4().hex[:12]}"
     vid_path = os.path.join(PREVIEW_DIR, f"{safe_name}{ext}")
     wav_path = os.path.join(PREVIEW_DIR, f"{safe_name}.wav")
     payload = await video.read()
+    if is_manifest_head(payload[:512]):
+        # A playlist/manifest named like a video: ffmpeg would follow its URLs.
+        raise InvalidMediaFileError()
 
     def _write_and_extract() -> bool:
         with open(vid_path, "wb") as f:
@@ -630,11 +662,11 @@ async def preview_upload(video: UploadFile = File(...)):
         if ext in {".wav", ".mp3", ".m4a", ".aac"}:
             return False
         try:
-            ffmpeg_cmd = [
+            ffmpeg_cmd = local_inputs_only([
                 find_ffmpeg(), "-y", "-i", vid_path,
                 "-vn", "-acodec", "pcm_s16le", "-ar", "22050", "-ac", "1",
                 wav_path
-            ]
+            ])
             subprocess.run(
                 ffmpeg_cmd, check=True,
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -686,7 +718,7 @@ _ingest_gen       = dub_pipeline.ingest_pipeline
 #: Recognised audio extensions for audio-only dubbing (#119). When the client
 #: declares input_type=audio we refuse anything that isn't a known audio
 #: container so a mislabelled video can't slip past the video-skipping branch.
-_AUDIO_EXTS = {".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".opus", ".wma"}
+_AUDIO_EXTS = AUDIO_EXTS
 
 def _dub_upload_disk_error() -> HTTPException:
     return HTTPException(
@@ -785,7 +817,13 @@ async def dub_upload(
             detail="Invalid job_id. Must be alphanumeric + hyphens/underscores only, ≤64 chars. Generate a fresh job_id or omit it to auto-create one.",
         )
     ext = os.path.splitext(video.filename or "video.mp4")[1]
-    if input_type == "audio" and ext.lower() not in _AUDIO_EXTS:
+    if input_type == "video" and media_extension(video.filename, MEDIA_EXTS, ".mp4") is None:
+        raise HTTPException(
+            status_code=415,
+            detail=unsupported_media_detail("video", MEDIA_EXTS, ext),
+        )
+    ext = ext.lower()
+    if input_type == "audio" and ext not in _AUDIO_EXTS:
         raise HTTPException(
             status_code=400,
             detail=f"Audio-only dubbing needs an audio file ({', '.join(sorted(_AUDIO_EXTS))}); got '{ext or 'no extension'}'.",
@@ -869,6 +907,15 @@ async def dub_upload(
     finally:
         await video.close()
 
+    # Refuse a playlist/manifest named like media before any ffmpeg sees it.
+    try:
+        manifest = await asyncio.to_thread(is_manifest_file, video_path)
+    except OSError:
+        manifest = False  # The prep task reports the unreadable file.
+    if manifest:
+        _discard_upload()
+        raise InvalidMediaFileError()
+
     filename = video.filename or f"video{ext}"
     task_id = f"prep_{job_id}"
     await task_manager.add_task(
@@ -896,12 +943,10 @@ async def dub_ingest_url(req: DubIngestUrlRequest, request: Request):
     audio extract, Demucs, scene detect, thumbnail) happens in the background
     task and progress is streamed via /tasks/stream/{task_id}.
     """
-    url = (req.url or "").strip()
-    if not url or not (url.startswith("http://") or url.startswith("https://")):
-        raise HTTPException(
-            status_code=400,
-            detail="URL must start with http:// or https://. Paste a full video link (e.g. https://youtube.com/watch?v=…) or drop a local file instead.",
-        )
+    try:
+        url = await asyncio.to_thread(check_public_url, req.url or "")
+    except UnsafeURLError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
     source_lang_override = _source_lang_override(req.source_lang)
 
     try:
@@ -922,7 +967,7 @@ async def dub_ingest_url(req: DubIngestUrlRequest, request: Request):
     if req.cookie_file and not _cookie_transport_allowed(
         request.url.scheme,
         request.client.host if request.client else None,
-        request.headers.get("origin"),
+        request.headers.get("origin") or request.headers.get("x-voicestudio-desktop-origin"),
     ):
         raise HTTPException(
             status_code=403,
@@ -1049,6 +1094,19 @@ CLONE_SKIP_HEURISTIC_MSG = (
     "auto voice cloning skipped: speaker labels are gap-based estimates — "
     "set up diarization (Model Catalogue → Other weights → pyannote) for per-speaker clones"
 )
+
+
+def _diarization_pipeline_checked():
+    """``get_diarization_pipeline(return_error=True)`` behind licence acceptance.
+
+    An unaccepted selected model returns ``(None, detail)`` with the typed
+    ``model_licence_required`` detail instead of loading it (#2689).
+    """
+    try:
+        _ensure_diarisation_accepted()
+    except ModelLicenceNotAccepted as exc:
+        return None, exc.detail()
+    return get_diarization_pipeline(return_error=True)
 
 
 def _clamp_num_speakers(value) -> Optional[int]:
@@ -1179,7 +1237,7 @@ def _recover_from_phrase_embeddings(
         return None
 
 
-@router.get("/dub/transcribe-stream/{job_id}")
+@router.get("/dub/transcribe-stream/{job_id}", dependencies=[Depends(reject_cross_site_get)])
 async def dub_transcribe_stream(
     job_id: str,
     num_speakers: Optional[int] = None,
@@ -1345,6 +1403,11 @@ async def dub_transcribe_stream(
                             break
                         yield b": tts-load keepalive\n\n"
                     _model = _model_task.result()
+                except ModelLicenceNotAccepted:
+                    # Only a best-effort harvest of a preloaded ASR pipe; the TTS
+                    # model's licence is asked for when it is actually used.
+                    logger.info("transcribe preflight: TTS model licence not accepted; skipping preload")
+                    _model = None
                 except Exception as e:
                     logger.error(
                         "transcribe preflight: model load failed (job=%s): %s",
@@ -1461,6 +1524,10 @@ async def dub_transcribe_stream(
                             # (and download CTA) as the initial preflight.
                             preflight_error = asr_model_missing_detail(e.payload)
                             preflight_payload = e.payload
+                        except ModelLicenceNotAccepted as e:
+                            # Typed payload → the client's acceptance dialog (#2689).
+                            preflight_error = str(e)
+                            preflight_payload = e.detail()
                         except Exception as e:
                             logger.error("Transcription preflight ASR load failed")
                             from core.failure import build_failure
@@ -1849,6 +1916,9 @@ async def dub_transcribe_stream(
                         f"speaker count."
                     )
                 return resplit, {
+                    # A licence-blocked diarisation model carries its typed
+                    # payload (code + models) through to the client (#2689).
+                    **(err_sentinel if isinstance(err_sentinel, dict) else {}),
                     "detail": detail,
                     "error_class": error_class,
                     "docs_url": error_docs_map.lookup(error_class),
@@ -1867,7 +1937,7 @@ async def dub_transcribe_stream(
             err_sentinel = None
             if asr_speaker_turns:
                 if num_speakers:
-                    diar_pipe, err_sentinel = get_diarization_pipeline(return_error=True)
+                    diar_pipe, err_sentinel = _diarization_pipeline_checked()
                 if not diar_pipe:
                     return _use_turns(err_sentinel=err_sentinel)
                 logger.info(
@@ -1876,7 +1946,23 @@ async def dub_transcribe_stream(
                     num_speakers, len(asr_speaker_turns),
                 )
             else:
-                diar_pipe, err_sentinel = get_diarization_pipeline(return_error=True)
+                diar_pipe, err_sentinel = _diarization_pipeline_checked()
+            if not diar_pipe and isinstance(err_sentinel, dict):
+                # The selected diarisation model's licence is not accepted
+                # (#2689): no model ran; say so with the typed payload so the
+                # client can offer acceptance, and label by silence gaps.
+                return (
+                    assign_speakers_heuristic(all_segments, num_speakers),
+                    {
+                        **err_sentinel,
+                        "detail": err_sentinel["message"]
+                        + " Using silence gaps for now; rapid speaker turns may be merged."
+                        + _hint_suffix(),
+                        "error_class": "MODEL_LICENCE_REQUIRED",
+                        "docs_url": error_docs_map.lookup("MODEL_LICENCE_REQUIRED"),
+                    },
+                    "heuristic",
+                )
             if not diar_pipe:
                 # Phase 1 AUTH-01: ask the resolver (App → Env → HF-CLI),
                 # not just the env var. This is the #35 fix — users who
@@ -2397,7 +2483,13 @@ async def dub_transcribe(job_id: str, num_speakers: Optional[int] = None):
     # OMNIVOICE_PRELOAD_TTS_ASR — and when it is off, that branch raises "fallback
     # is not preloaded" anyway. Loading ~3 GB to reach a None attribute (and then
     # having offload_tts_for_asr free it) was pure cost.
-    _model = await get_model() if should_preload_tts_asr() else None
+    _model = None
+    if should_preload_tts_asr():
+        try:
+            _model = await get_model()
+        except ModelLicenceNotAccepted:
+            # Harvest-only preload; skip it rather than fail transcription.
+            logger.info("transcribe: TTS model licence not accepted; skipping preload")
 
     # TTS-only install: no ASR model on disk → typed 409 with a download CTA,
     # BEFORE any backend is constructed (the whisper backends auto-download
@@ -2417,6 +2509,9 @@ async def dub_transcribe(job_id: str, num_speakers: Optional[int] = None):
                 status_code=409,
                 detail={**missing, "message": asr_model_missing_detail(missing)},
             )
+    # Diarisation runs after ASR; refuse an unaccepted model before any work
+    # (ModelLicenceNotAccepted → typed 403, #2689).
+    await asyncio.to_thread(_ensure_diarisation_accepted)
 
     def _transcribe():
 
@@ -2555,7 +2650,7 @@ async def dub_transcribe(job_id: str, num_speakers: Optional[int] = None):
             "full_transcript": job.get("full_transcript", ""),
             "source_lang": source_lang,
         }
-    except HTTPException:
+    except (HTTPException, ModelLicenceNotAccepted):
         raise
     except asyncio.CancelledError:
         raise

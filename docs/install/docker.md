@@ -309,31 +309,6 @@ on the host. The backend inside the container binds to `0.0.0.0` so the
 host port mapping can forward — the host-side `127.0.0.1` binding is what
 enforces loopback-only.
 
-### Worker-only GPU container
-
-To lend a headless GPU to VoiceStudio running on another machine, generate a
-join code on that control plane and start one of the worker profiles:
-
-```bash
-# NVIDIA
-OMNIVOICE_WORKER_TOKEN='ovw_…' docker compose \
-  -f deploy/docker-compose.yml --profile worker-gpu up -d
-
-# AMD / ROCm
-OMNIVOICE_WORKER_TOKEN='ovw_…' docker compose \
-  -f deploy/docker-compose.yml --profile worker-rocm up -d
-```
-
-These profiles publish no HTTP port and require no browser UI. The join code
-must advertise a LAN or private-overlay address the container can reach, not
-the control plane's `127.0.0.1`. Enrollment state persists in a dedicated
-volume, so the container reconnects after a restart even though the join code
-is single-use. Container health becomes green only after the control plane
-accepts that registration; a missing or invalid token stays unhealthy instead
-of reporting the generic web backend as ready. See [Remote GPU
-workers](../remote-workers.md) for enrollment, approval, routing, and security
-details.
-
 ## LAN access
 
 <a id="lan-access"></a>
@@ -362,9 +337,16 @@ prebuilt image via `docker run -e` (the older `VITE_OMNIVOICE_API` is inlined at
 ```bash
 docker run -e OMNIVOICE_API_KEY="$OMNIVOICE_API_KEY" \
   -e OMNIVOICE_PUBLIC_API_BASE=https://api.your-host.example \
+  -e OMNIVOICE_ALLOWED_ORIGINS=https://ui.your-host.example \
   -p 0.0.0.0:3900:3900 \
   ghcr.io/debpalash/voicestudio:stable
 ```
+
+List the UI's origin in `OMNIVOICE_ALLOWED_ORIGINS` so the API accepts its
+requests. Video previews and download links send no `Origin`; the API accepts
+them when their `Referer` is that origin, so keep the browser's default
+referrer policy on the UI host (a proxy that sets `Referrer-Policy: no-referrer`
+breaks them).
 
 > `OMNIVOICE_PUBLIC_API_BASE` must be a plain `http(s)://…` URL; anything else
 > is ignored and the app falls back to same-origin. If you build from source you
@@ -420,6 +402,15 @@ as root, so files it adds there are root-owned on the host.
   to stay local) plus authentication. If you front
   the container with your own auth proxy on loopback, set `OMNIVOICE_SERVER_MODE=0`
   to re-enable the strict gate.
+- **"Request refused: VoiceStudio was addressed by an unrecognized host name":**
+  without an API key, the backend answers only to `localhost`, IP addresses and
+  configured names, so another website cannot rebind its domain onto it. Open
+  it by IP address, sign in with the API key, or add the name with
+  `-e OMNIVOICE_ALLOWED_HOSTS=nas.lan` (see
+  [API authentication](../api-auth.md#requests-from-other-websites-and-host-names)).
+- **URL import refused as a private network address:** imports fetch public
+  addresses only. To import from a media server on your network, set
+  `-e OMNIVOICE_ALLOW_PRIVATE_URL_IMPORTS=1`.
 - **Media-preview 404 in LAN mode:** see the [LAN access](#lan-access) section
   above — the `window.location.host` fix shipped in v0.3.
 - **GPU not detected (NVIDIA):** verify `docker run --rm --gpus all nvidia/cuda:12.8.0-base-ubuntu22.04 nvidia-smi` succeeds first.

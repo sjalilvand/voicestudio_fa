@@ -9,7 +9,9 @@ import {
   stageRuntimeSources,
   type RuntimeRegion,
 } from './runtime-project';
+import { runtimeSetupSupported } from './distribution';
 import { asciiSafePthFiles } from './pth-ascii';
+import { devProbeStamped, writeDevProbeStamp } from './dev-probe-stamp';
 import { CrashJournal } from './crash-journal';
 import { nativeFaultSummary } from '../shared/utils/crashReport';
 import { availableBackendPort } from './backend-port';
@@ -21,6 +23,7 @@ import {
   constants,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   rmSync,
   statSync,
@@ -30,6 +33,7 @@ import { rm } from 'node:fs/promises';
 import { cpus, homedir, totalmem } from 'node:os';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { app } from 'electron';
+import { APP_ORIGIN } from './protocol';
 import type {
   BackendConnection,
   BackendStage,
@@ -47,8 +51,8 @@ import {
 import { toolSearchDirs } from './tool-path';
 import { SetupProgressTracker, cleanProcessLine } from './setup-progress';
 import { scrubText } from '../shared/utils/scrub';
+import { DEFAULT_BACKEND_PORT } from '../../../config/app-config.mjs';
 
-const DEFAULT_PORT = 3900;
 const DEFAULT_BUDGET_S = 300;
 const READY_POLL_MS = 500;
 /** Allow another VoiceStudio shell to take ownership without showing a false crash. */
@@ -123,7 +127,7 @@ export type StatusListener = (status: BackendStatus) => void;
 
 export function resolvePort(): number {
   const raw = Number(process.env.OMNIVOICE_PORT);
-  return Number.isInteger(raw) && raw > 0 && raw < 65536 ? raw : DEFAULT_PORT;
+  return Number.isInteger(raw) && raw > 0 && raw < 65536 ? raw : DEFAULT_BACKEND_PORT;
 }
 
 /** Hosts at or below this are "low-spec": a cold backend import is disk/CPU-bound. */
@@ -360,6 +364,24 @@ function selectedRuntimeRoot(parent: string): string {
     : join(selected, 'VoiceStudio');
 }
 
+/** File-manager metadata a new folder can hold; it is not another installation's data. */
+const FOLDER_METADATA = new Set(['.ds_store', '.localized', 'desktop.ini', 'thumbs.db']);
+
+/**
+ * Whether a selected runtime root holds files Electron must not take over. The
+ * folder picker can create the destination, so an existing empty folder is a
+ * new destination rather than another installation.
+ */
+function holdsUnownedFiles(root: string): boolean {
+  try {
+    return readdirSync(root, { withFileTypes: true }).some(
+      (entry) => !entry.isFile() || !FOLDER_METADATA.has(entry.name.toLowerCase()),
+    );
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code !== 'ENOENT';
+  }
+}
+
 /** The web UI build packaged with this app version (served to LAN devices). */
 export function bundledWebUiPath(): string {
   return join(backendRoot(), 'frontend', 'dist');
@@ -402,7 +424,11 @@ export async function resolveSpawnPlan(
   // Name the import that failed (#2555): "incomplete" alone cannot tell a
   // setup that never ran from one that finished but cannot load a module.
   let failure = '';
+  if (devProbeStamped(root, python)) {
+    return { argv: [python, '-m', ...UVICORN_ARGS, ...portArg], cwd: root };
+  }
   if (await runtimeDependenciesReady(root, (detail) => (failure = detail))) {
+    writeDevProbeStamp(root, python);
     return { argv: [python, '-m', ...UVICORN_ARGS, ...portArg], cwd: root };
   }
   return {
@@ -599,7 +625,13 @@ export class BackendSupervisor extends EventEmitter<{
 
   requestHeaders(): Record<string, string> {
     const session = this.activeSession();
-    return session ? { Authorization: `Bearer ${session.token}` } : {};
+    // Both proxies discard the renderer's Origin. Assert our own identity so
+    // backend transport gates can recognize the desktop. Chromium forbids
+    // overriding Origin itself in net.fetch.
+    return {
+      'X-VoiceStudio-Desktop-Origin': APP_ORIGIN,
+      ...(session ? { Authorization: `Bearer ${session.token}` } : {}),
+    };
   }
 
   private activeSession(): RemoteSession | null {
@@ -780,6 +812,7 @@ export class BackendSupervisor extends EventEmitter<{
   /** Explicit first-run action. Installation never happens in start()/restart(). */
   async setupRuntime(): Promise<void> {
     if (
+      !runtimeSetupSupported() ||
       !app.isPackaged ||
       this.installation ||
       this.cleaningRuntime ||
@@ -821,7 +854,7 @@ export class BackendSupervisor extends EventEmitter<{
         !configured.owned &&
         samePath(configured.root, runtimeRoot) &&
         !samePath(runtimeRoot, defaultRuntimeRoot()) &&
-        existsSync(runtimeRoot)
+        holdsUnownedFiles(runtimeRoot)
       ) {
         // An explicit setup action may create a new runtime, but must never
         // take ownership of (or repair in place) another installation's files.
@@ -925,6 +958,7 @@ export class BackendSupervisor extends EventEmitter<{
   /** Remove only an Electron-owned Python project, then perform a fresh install. */
   async cleanSetupRuntime(): Promise<void> {
     if (
+      !runtimeSetupSupported() ||
       !app.isPackaged ||
       this.installation ||
       this.cleaningRuntime ||
@@ -1293,8 +1327,7 @@ export class BackendSupervisor extends EventEmitter<{
     // A native fault's last line is whatever followed the dump: the stdlib
     // frame that started the process, an extension-module list or an access
     // log line. Name the fault and where it happened instead (#2382, #2187).
-    const lastLine =
-      nativeFaultSummary(recorded?.logTail.join('\n') ?? '') || this.childLog.at(-1);
+    const lastLine = nativeFaultSummary(recorded?.logTail.join('\n') ?? '') || this.childLog.at(-1);
     const why = signal ? `signal ${signal}` : `exit code ${code}`;
     this.setStage('crashed', {
       message: `Backend exited unexpectedly (${why}).${lastLine ? ` Last output: ${lastLine}` : ''}`,
@@ -1312,11 +1345,15 @@ export class BackendSupervisor extends EventEmitter<{
         signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
         redirect: this.remoteUrl ? 'follow' : 'error',
       });
-      // Fallback ports were not explicitly chosen by the user. A generic
-      // health JSON must never redirect renderer content to another service.
+      // Every local backend this shell can spawn or attach to stamps the
+      // marker on every response (BackendMarkerMiddleware, #1385). A generic
+      // health JSON on a loopback port, configured or fallback, must never
+      // redirect renderer content to another service; an unmarked listener
+      // is left alone and the launch reports the port as in use instead.
+      // Remote backends were chosen explicitly and may predate the marker.
       const marked = Boolean(res.headers.get('x-omnivoice-backend'));
       if (identityOnly) return marked;
-      if (!this.remoteUrl && this.port !== this.configuredPort && !marked) {
+      if (!this.remoteUrl && !marked) {
         this.lastProbeOutcome = 'refused';
         return false;
       }
@@ -1334,7 +1371,8 @@ export class BackendSupervisor extends EventEmitter<{
       return healthy;
     } catch (error) {
       const name = (error as { name?: unknown } | null)?.name;
-      this.lastProbeOutcome = name === 'TimeoutError' || name === 'AbortError' ? 'timeout' : 'refused';
+      this.lastProbeOutcome =
+        name === 'TimeoutError' || name === 'AbortError' ? 'timeout' : 'refused';
       return false;
     }
   }
