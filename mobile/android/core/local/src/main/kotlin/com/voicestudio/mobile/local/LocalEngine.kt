@@ -71,9 +71,9 @@ class PhoneLocalEngine(private val models: ModelDownloads): LocalEngine {
         try {
             if(speaker !in 0 until tts.numSpeakers()) throw ClientFailure("mobile.local.model_incompatible")
             var chunks=0
-            val audio=tts.generateWithCallback(text,speaker,speed) {
+            val audio=tts.generateWithCallback(text,speaker,speed,NativeTtsCallback {
                 if(!job.isActive||!models.licence.accepted(model)) 0 else {chunks++;progress((chunks.toFloat()/(chunks+1)).coerceAtMost(.95f));1}
-            }
+            })
             job.ensureActive();LocalAudio(audio.samples,audio.sampleRate)
         } finally {tts.release()}
     }
@@ -118,9 +118,14 @@ class PhoneLocalEngine(private val models: ModelDownloads): LocalEngine {
                     tokens=model.role(dir,"tokens"),numThreads=2,provider="cpu"),enableEndpoint=true))
             val stream=recognizer.createStream()
             var committed=""
+            // sherpa ends the whole process if a stream's sample rate changes, so the
+            // first chunk fixes the rate and anything else is rejected here instead.
+            var rate=0
             try {
                 audio.collect { chunk ->
                     job.ensureActive();models.licence.requireAccepted(model)
+                    if(rate==0) rate=chunk.sampleRate
+                    if(chunk.sampleRate!=rate || rate<=0) throw ClientFailure("mobile.local.model_incompatible")
                     stream.acceptWaveform(chunk.samples,chunk.sampleRate)
                     while(recognizer.isReady(stream)) {job.ensureActive();recognizer.decode(stream)}
                     val text=recognizer.getResult(stream).text
@@ -128,7 +133,8 @@ class PhoneLocalEngine(private val models: ModelDownloads): LocalEngine {
                     send(Transcript(listOf(committed,text).filter {it.isNotBlank()}.joinToString(" "),endpoint,0f))
                     if(endpoint) {committed=listOf(committed,text).filter {it.isNotBlank()}.joinToString(" ");recognizer.reset(stream)}
                 }
-                stream.acceptWaveform(FloatArray(8000),16000);stream.inputFinished()
+                if(rate>0) stream.acceptWaveform(FloatArray(rate/2),rate)
+                stream.inputFinished()
                 while(recognizer.isReady(stream)) {job.ensureActive();recognizer.decode(stream)}
                 send(Transcript(listOf(committed,recognizer.getResult(stream).text).filter {it.isNotBlank()}.joinToString(" "),true,1f))
             } finally {stream.release();recognizer.release()}
@@ -180,4 +186,15 @@ suspend fun verifyNativeRuntimes(): Map<String,Int> = withContext(Dispatchers.IO
     System.loadLibrary("sherpa-onnx-jni")
     NativeBridge.load()
     mapOf("sherpa-onnx" to 1,"omnivoice.cpp" to NativeBridge.omniAbi(),"llama.cpp" to NativeBridge.llamaDevices())
+}
+
+/**
+ * sherpa-onnx's JNI looks the callback's method up by its exact signature,
+ * `invoke([F)Ljava/lang/Integer;`. A Kotlin lambda (compiled via invokedynamic and
+ * desugared by D8) exposes only the erased `invoke(Object)`, so the lookup throws
+ * NoSuchMethodError and the next JNI call aborts the process. A named class keeps
+ * the typed method. Pass every native callback through a class like this.
+ */
+internal class NativeTtsCallback(private val onChunk: () -> Int) : (FloatArray) -> Int {
+    override fun invoke(samples: FloatArray): Int = onChunk()
 }

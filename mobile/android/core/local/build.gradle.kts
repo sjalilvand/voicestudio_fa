@@ -7,7 +7,11 @@ android {
     namespace = "com.voicestudio.mobile.local"
     compileSdk = 36
     ndkVersion = "27.1.12297006"
-    defaultConfig { minSdk = 29 }
+    defaultConfig {
+        minSdk = 29
+        // Native code finds these classes and methods by name; keep them if the app is shrunk.
+        consumerProguardFiles("consumer-rules.pro")
+    }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
 }
 kotlin { jvmToolchain(21); compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
