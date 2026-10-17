@@ -14,6 +14,13 @@ import java.io.File
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk=[34])
 class ContractTest {
+    @Test fun localizationIsCachedPerLocaleForWorkerProgress() {
+        val context=ApplicationProvider.getApplicationContext<Context>()
+        val english=L10n.load(context,"en")
+        assertSame(english,L10n.load(context,"en"))
+        assertNotSame(english,L10n.load(context,"fr"))
+        assertSame(L10n.load(context,"zh-CN"),L10n.load(context,"zh-Hans-CN"))
+    }
     @Test fun licenceMessageListsEachModelAndActionOnlyOnce() {
         val l=L10n.load(ApplicationProvider.getApplicationContext<Context>(),"en")
         val error=com.voicestudio.mobile.network.BackendErrors.parse(403,"""{"detail":{"code":"model_licence_required","message":"Licence not accepted for org/model, org/other. Review and accept it in Model Catalogue.","models":[{"repo_id":"org/model","license":"Example licence"},{"repo_id":"org/other","license":"Other terms"},{"repo_id":"org/model","license":"Example licence"}]}}""")

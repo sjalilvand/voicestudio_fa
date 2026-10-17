@@ -77,4 +77,50 @@ class DictationProtocolTest {
             } finally {controller.close();scope.cancel();server.shutdown()}
         }
     }
+    @Test fun oldCaptureTerminationCannotCloseTheNextDictationSocket() = runBlocking {
+        val server=MockWebServer()
+        val sockets=java.util.concurrent.LinkedBlockingQueue<WebSocket>()
+        server.dispatcher=object:okhttp3.mockwebserver.Dispatcher() {
+            override fun dispatch(request:RecordedRequest)=if(request.path=="/dictation/readiness")
+                MockResponse().setBody("""{"ready":true}""")
+            else MockResponse().withWebSocketUpgrade(object:WebSocketListener() {
+                override fun onOpen(webSocket:WebSocket,response:Response) {sockets.add(webSocket)}
+                override fun onClosing(webSocket:WebSocket,code:Int,reason:String) {webSocket.close(code,null)}
+            })
+        };server.start()
+        val scope=CoroutineScope(SupervisorJob()+Dispatchers.Default)
+        val oldCaptureTerminating=CompletableDeferred<Unit>()
+        val releaseOldCapture=CompletableDeferred<Unit>()
+        val oldCaptureEnded=CompletableDeferred<Unit>()
+        val captures=java.util.concurrent.atomic.AtomicInteger()
+        val errors=java.util.concurrent.CopyOnWriteArrayList<Throwable>()
+        val controller=DictationController(VoiceStudioApi(PairingAddress.parse(server.url("/").toString())),scope,{errors.add(it)},
+            DictationAudioSource {keepRecording,_ ->
+                val first=captures.incrementAndGet()==1
+                try {while(keepRecording()) delay(5)}
+                finally {if(first) withContext(NonCancellable) {
+                    oldCaptureTerminating.complete(Unit);releaseOldCapture.await();oldCaptureEnded.complete(Unit)
+                }}
+            })
+        try {
+            controller.start()
+            withContext(Dispatchers.IO) {requireNotNull(sockets.poll(2,java.util.concurrent.TimeUnit.SECONDS))}
+            awaitCondition {captures.get()==1}
+            controller.close()
+            withTimeout(2000) {oldCaptureTerminating.await()}
+            controller.start()
+            val next=withContext(Dispatchers.IO) {requireNotNull(sockets.poll(2,java.util.concurrent.TimeUnit.SECONDS))}
+            awaitCondition {captures.get()==2}
+            next.send("""{"type":"partial","text":"Next session"}""")
+            awaitCondition {controller.text.value=="Next session"}
+            releaseOldCapture.complete(Unit)
+            withTimeout(2000) {oldCaptureEnded.await()}
+            // A message sent after the old capture exits must still reach the new stream.
+            next.send("""{"type":"partial","text":"Still recording"}""")
+            awaitCondition {controller.text.value=="Still recording"}
+            assertTrue(controller.active.value)
+            assertTrue(errors.toString(),errors.isEmpty())
+        } finally {releaseOldCapture.complete(Unit);controller.close();scope.cancel();server.shutdown()}
+    }
+
 }

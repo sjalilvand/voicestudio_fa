@@ -3,6 +3,8 @@ package com.voicestudio.mobile
 import android.app.Application
 import android.os.Looper
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.media3.common.Player
@@ -15,6 +17,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.voicestudio.mobile.data.*
 import com.voicestudio.mobile.features.StudioViewModel
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 import okhttp3.mockwebserver.*
 import org.junit.*
 import org.junit.Assert.*
@@ -125,4 +128,84 @@ class HostSwitchRegressionTest {
         assertNull(vm.state.value.audio)
     }
 
+    @Test fun reconnectPreservesTheSavedHostLabel() = runBlocking {
+        vm.connect(a.url("/").toString(),"","");awaitIdle()
+        val url=a.url("/").toString()
+        vm.store.label(url,"My studio")
+        val previous=vm.store.preferences.first().hosts.single()
+        vm.reconnect(previous);awaitIdle()
+        val updated=vm.store.preferences.first().hosts.single()
+        assertEquals("My studio",updated.label)
+        assertTrue(updated.lastSeen>=previous.lastSeen)
+    }
+    @Test fun failedCandidateConnectionLeavesActiveSessionAndWorkIntact() = runBlocking {
+        val host=a.url("/").toString()
+        vm.store.pair(com.voicestudio.mobile.network.PairingAddress.parse(host),Secret(token="active-session"))
+        vm.reconnect(SavedHost(host,"Desk",0));awaitIdle()
+        val active=vm.api
+        vm.store.checkpoint(host,"job",DubCheckpoint(renderTask="running"))
+        b.dispatcher=object:okhttp3.mockwebserver.Dispatcher() {
+            override fun dispatch(request:RecordedRequest)=if(request.path=="/health")
+                MockResponse().setHeader("x-omnivoice-backend","test").setBody("""{"status":"ok","version":"test"}""")
+                else MockResponse().setResponseCode(401).setBody("""{"detail":"API key required"}""")
+        }
+        vm.connect(b.url("/").toString(),"","");awaitIdle()
+        assertTrue(vm.state.value.connected)
+        assertEquals(host,vm.state.value.hostUrl)
+        assertSame(active,vm.api)
+        assertEquals("active-session",vm.store.vault.read(host)?.token)
+        assertEquals(host,vm.store.preferences.first().activeUrl)
+        assertEquals("running",vm.store.checkpoint(host,"job").renderTask)
+        while(true) {
+            val request=a.takeRequest(10,TimeUnit.MILLISECONDS) ?: break
+            assertNotEquals("DELETE",request.method)
+        }
+    }
+
+    @Test fun failedUploadReceiptIsShownOnceAcrossScreenAndStoreRecreation() = runBlocking {
+        vm.connect(a.url("/").toString(),"","");awaitIdle()
+        val app=ApplicationProvider.getApplicationContext<Application>()
+        val manager=WorkManager.getInstance(app)
+        val request=OneTimeWorkRequestBuilder<FailedReceiptWorker>().addTag(a.url("/").toString()).build()
+        withContext(Dispatchers.IO) {manager.enqueue(request).result.get()}
+        withTimeout(10000) {
+            while(withContext(Dispatchers.IO) {manager.getWorkInfoById(request.id).get()?.state}!=WorkInfo.State.FAILED) {
+                shadowOf(Looper.getMainLooper()).idle();delay(10)
+            }
+        }
+        var shown by androidx.compose.runtime.mutableStateOf(true)
+        val l=com.voicestudio.mobile.l10n.L10n.load(app,"en")
+        val copy=l.t("mobile.android.operation_failed")
+        compose.setContent {
+            CompositionLocalProvider(com.voicestudio.mobile.features.LocalL10n provides l) {
+                com.voicestudio.mobile.designsystem.VoiceStudioTheme {
+                    if(shown) com.voicestudio.mobile.features.dub.DubScreen(vm)
+                }
+            }
+        }
+        compose.waitUntil(5000) {compose.onAllNodesWithText(copy).fetchSemanticsNodes().isNotEmpty()}
+        compose.onNodeWithText(copy).assertExists()
+        compose.runOnIdle {shown=false};compose.waitForIdle()
+        // Recreate the view model/store as on a new launch; receipts must be durable.
+        vm.viewModelScope.cancel()
+        vm=StudioViewModel(app,SessionStore(app,vm.store.vault));awaitIdle()
+        compose.runOnIdle {shown=true};compose.waitForIdle()
+        compose.onNodeWithText(copy).assertDoesNotExist()
+    }
+
+    @Test fun pinOnlyDisconnectClearsLocalPairingWithoutRevocation() = runBlocking {
+        vm.connect(a.url("/").toString(),"123456","");awaitIdle()
+        while(a.takeRequest(10,TimeUnit.MILLISECONDS)!=null) { }
+        vm.disconnect();awaitIdle()
+        assertFalse(vm.state.value.connected)
+        assertNull(vm.store.preferences.first().activeUrl)
+        assertNull(vm.store.vault.read(a.url("/").toString()))
+        assertNull("No DELETE is sent for a PIN-only connection",a.takeRequest(50,TimeUnit.MILLISECONDS))
+        assertNull(vm.state.value.error)
+    }
+
+}
+
+class FailedReceiptWorker(context:android.content.Context,params:WorkerParameters):Worker(context,params) {
+    override fun doWork()=Result.failure(DubWorker.failureData(com.voicestudio.mobile.network.ClientFailure("mobile.android.operation_failed"),"failed-job"))
 }

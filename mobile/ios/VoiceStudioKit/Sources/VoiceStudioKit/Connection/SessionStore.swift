@@ -17,7 +17,7 @@ public actor KeychainVault: CredentialVault {
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         if status == errSecItemNotFound { return nil }
         guard status == errSecSuccess, let data = result as? Data else { throw ClientError("mobile.errors.keychain") }
-        return try JSONDecoder().decode(Credentials.self, from: data)
+        return try? JSONDecoder().decode(Credentials.self, from: data)
     }
     public func write(_ credentials: Credentials?, host: String) throws {
         let query = base(host)
@@ -76,7 +76,10 @@ public struct SavedHost: Codable, Identifiable, Sendable, Equatable {
         connecting = true; error = nil
         defer { if current == attempt { connecting = false } }
         do {
-            let old = try await vault.read(host: address.baseURL.absoluteString)
+            let old: Credentials?
+            do { old = try await vault.read(host: address.baseURL.absoluteString) }
+            catch is CancellationError { throw CancellationError() }
+            catch { old = nil } // Unreadable credentials must not prevent fresh pairing.
             var credentials = Credentials(pin: address.pin ?? old?.pin, session: old?.session)
             var candidate = APIClient(address: address, credentials: credentials, transport: transport)
             if !key.isEmpty {
@@ -88,7 +91,8 @@ public struct SavedHost: Codable, Identifiable, Sendable, Equatable {
             guard attempt == current else { throw CancellationError() }
             try await vault.write(credentials, host: address.baseURL.absoluteString)
             guard attempt == current else { throw CancellationError() }
-            let host = SavedHost(url: address.baseURL, label: label.isEmpty ? (address.baseURL.host ?? address.baseURL.absoluteString) : label)
+            let savedLabel = hosts.first { $0.url == address.baseURL }?.label
+            let host = SavedHost(url: address.baseURL, label: label.isEmpty ? (savedLabel ?? address.baseURL.host ?? address.baseURL.absoluteString) : label)
             hosts.removeAll { $0.id == host.id }; hosts.insert(host, at: 0)
             let changed = active?.id != host.id
             active = host; client = candidate
@@ -106,7 +110,9 @@ public struct SavedHost: Codable, Identifiable, Sendable, Equatable {
         do { _ = try await connect(address: PairingAddress(host.url.absoluteString), label: host.label) }
         catch { /* Connect remains reachable, with the actionable error retained. */ }
     }
-    public func handle(_ failure: ClientError) async {
+    public func handle(_ failure: ClientError, connectionChange: Bool = false) async {
+        // connect owns candidate-host failures. They cannot expire the active host.
+        guard !connectionChange else { return }
         error = failure
         if failure.status == 401, let host = active {
             let current = attempt

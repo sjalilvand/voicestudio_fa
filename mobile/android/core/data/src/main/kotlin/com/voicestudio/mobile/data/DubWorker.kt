@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -36,12 +37,21 @@ class DubWorker(context: Context, params: WorkerParameters) : CoroutineWorker(co
         val intent = launch?.let { android.app.PendingIntent.getActivity(applicationContext, 0, it, android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT) }
         return ForegroundInfo(id.hashCode(), NotificationCompat.Builder(applicationContext, "dub")
             .setSmallIcon(android.R.drawable.stat_sys_upload).setContentTitle(l.t("mobile.tabs.dub")).setContentText(text)
-            .setContentIntent(intent).setOngoing(!finished).setAutoCancel(finished).setProgress(if(finished) 0 else 100, percent, !finished && percent == 0).build())
+            .setContentIntent(intent).setOngoing(!finished).setAutoCancel(finished).setProgress(if(finished) 0 else 100, percent, !finished && percent == 0).build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+    }
+    private suspend fun promoteIfAllowed() {
+        val info = notification(false)
+        try { setForeground(info) }
+        catch(cancelled: CancellationException) { throw cancelled }
+        catch(_: IllegalStateException) {
+            // Android may refuse a foreground start. Keep the scheduled work
+            // running under WorkManager's normal execution limits.
+        }
     }
     private suspend fun report(key: String, value: Int = 0) {
         stage = key; percent = value
         setProgress(workDataOf("stage" to key, "percent" to value, "job" to inputData.getString("job")))
-        setForeground(notification(false))
+        promoteIfAllowed()
     }
     private suspend fun awaitTask(api: VoiceStudioApi, id: String) {
         var seq = 0
@@ -85,7 +95,7 @@ class DubWorker(context: Context, params: WorkerParameters) : CoroutineWorker(co
         var checkpoint = store.checkpoint(host, job)
         try {
             val translationAuthorization = authorizedTranslation(api, inputData)
-            setForeground(notification(false))
+            promoteIfAllowed()
             if(!checkpoint.uploaded) {
                 report("mobile.android.stage_upload")
                 val source = inputData.getString("file")

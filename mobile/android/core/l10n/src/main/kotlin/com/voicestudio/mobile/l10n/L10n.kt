@@ -1,13 +1,13 @@
 package com.voicestudio.mobile.l10n
 
 import android.content.Context
+import android.content.res.AssetManager
 import kotlinx.serialization.json.*
 import java.util.Locale
 
 class L10n(private val catalogs: Map<String, JsonObject>, val locale: String) {
     fun t(key: String, params: Map<String, Any> = emptyMap()): String {
-        val tag = locale.replace('_', '-')
-        val chain = listOf(tag, tag.substringBefore('-'), "en").distinct()
+        val chain = fallbackChain(locale)
         val count = (params["count"] as? Number)?.toDouble()
         fun pluralFor(language: String): String? = if (count != null) {
             // i18next v4/CLDR categories for the desktop's 21 supported locales.
@@ -44,20 +44,48 @@ class L10n(private val catalogs: Map<String, JsonObject>, val locale: String) {
         private fun merge(a: JsonObject, b: JsonObject): JsonObject = JsonObject(a.toMutableMap().apply {
             b.forEach { (key, value) -> this[key] = if(value is JsonObject && this[key] is JsonObject) merge(this[key] as JsonObject, value) else value }
         })
-        fun load(context: Context, locale: String = Locale.getDefault().toLanguageTag()): L10n {
-            val assets = context.assets
-            val catalogs = assets.list("locales").orEmpty().filter { it.endsWith(".json") }.associate { name ->
-                name.removeSuffix(".json") to assets.open("locales/$name").bufferedReader().use { Json.parseToJsonElement(it.readText()).jsonObject }
-            }.toMutableMap()
-            // Shared defaults first, this platform's additions last. Build assets
-            // can include the other platform's concurrently developed additions.
-            val additions = assets.list("").orEmpty().filter { it.startsWith("strings") && it.endsWith(".en.json") }
-                .sortedWith(compareBy<String> { when(it) { "strings.mobile.en.json" -> 0; "strings.android-additions.en.json" -> 2; else -> 1 } }.thenBy { it })
-            for(name in additions) {
-                val additional = assets.open(name).bufferedReader().use { Json.parseToJsonElement(it.readText()).jsonObject }
-                catalogs["en"] = merge(catalogs["en"] ?: JsonObject(emptyMap()), additional)
+        internal fun normalizeLocale(locale: String): String {
+            val parsed = Locale.forLanguageTag(locale.replace('_', '-'))
+            if(parsed.language == "zh") {
+                if(parsed.script == "Hans") return "zh-CN"
+                if(parsed.script == "Hant" || parsed.country in setOf("HK", "MO")) return "zh-TW"
             }
-            return L10n(catalogs, locale)
+            return parsed.toLanguageTag()
+        }
+        internal fun fallbackChain(locale: String): List<String> {
+            val tag = normalizeLocale(locale)
+            return listOf(tag, tag.substringBefore('-'), "en").distinct()
+        }
+        // One loader per bundled asset set; lookups and worker progress share it.
+        private val loaders = mutableMapOf<AssetManager, CatalogLoader>()
+        @Synchronized fun load(context: Context, locale: String = Locale.getDefault().toLanguageTag()): L10n {
+            val assets = context.assets
+            return loaders.getOrPut(assets) {
+                CatalogLoader(
+                    read = { name -> assets.open(name).bufferedReader().use { Json.parseToJsonElement(it.readText()).jsonObject } },
+                    additions = assets.list("").orEmpty().filter { it.startsWith("strings") && it.endsWith(".en.json") }
+                        .sortedWith(compareBy<String> { when(it) { "strings.mobile.en.json" -> 0; "strings.android-additions.en.json" -> 2; else -> 1 } }.thenBy { it })
+                )
+            }.load(locale)
+        }
+        internal class CatalogLoader(private val read: (String) -> JsonObject, private val additions: List<String>) {
+            private val parsed = mutableMapOf<String, JsonObject>()
+            private val locales = mutableMapOf<String, L10n>()
+            @Synchronized fun load(locale: String): L10n {
+                val tag = normalizeLocale(locale)
+                return locales.getOrPut(tag) {
+                    val catalogs = fallbackChain(tag).mapNotNull { candidate ->
+                        languages.firstOrNull { it.equals(candidate, true) }
+                    }.associateWith { language ->
+                        parsed.getOrPut(language) {
+                            var catalog = read("locales/$language.json")
+                            if(language == "en") for(name in additions) catalog = merge(catalog, read(name))
+                            catalog
+                        }
+                    }
+                    L10n(catalogs, tag)
+                }
+            }
         }
     }
 }

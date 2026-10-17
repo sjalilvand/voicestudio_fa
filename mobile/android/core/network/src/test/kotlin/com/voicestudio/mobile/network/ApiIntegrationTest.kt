@@ -19,6 +19,18 @@ class ApiIntegrationTest {
         server.enqueue(MockResponse().setBody("""{"status":"ok","version":"0.0.0"}"""))
         assertEquals("mobile.connect.error_not_voicestudio",failure {api.health()}.key)
     }
+    @Test fun pinOnlyDisconnectNeverCallsSessionRevocation()=runBlocking {
+        // A server would reject session deletion without an administrator session.
+        server.enqueue(MockResponse().setResponseCode(403))
+        api.revoke()
+        assertEquals(0,server.requestCount)
+        assertNull(api.sessionToken)
+        val authenticated=VoiceStudioApi(api.address,token="session")
+        server.enqueue(MockResponse().setResponseCode(204))
+        // The first queued response remains unused until a session exists.
+        assertEquals(403,failure {authenticated.revoke()}.status)
+        assertEquals(1,server.requestCount)
+    }
     @Test fun pinSessionExchangeAndRevoke()=runBlocking {
         server.enqueue(MockResponse().setResponseCode(201).setBody("""{"token":"session-secret","expires_at":1999999999,"expires_in":3600}"""))
         api.exchange("master-once")

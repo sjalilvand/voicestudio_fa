@@ -59,7 +59,7 @@ import BackgroundTasks
         defer { activityCount -= 1; busy = activityCount > 0 }
         do { if connectionChange { try await work() } else { try await hostState.run(work) } }
         catch is CancellationError {}
-        catch let failure as ClientError { guard scope == hostState.scopeID || connectionChange else { return }; error = failure; await connection.handle(failure) }
+        catch let failure as ClientError { guard scope == hostState.scopeID || connectionChange else { return }; error = failure; await connection.handle(failure, connectionChange: connectionChange) }
         catch { if scope == hostState.scopeID { self.error = ClientError("mobile.errors.file") } }
     }
     func refresh() async throws {
@@ -121,12 +121,12 @@ import BackgroundTasks
             if !notifications { self.error = ClientError("mobile.permissions.denied") }
         } catch { self.error = ClientError("mobile.permissions.denied") }
     }
-    func acceptUpload(_ receipt: UploadReceipt) {
-        guard receipt.pending.host == connection.active?.id else { return }
+    func acceptUpload() {
+        guard let host = connection.active?.id,
+              let receipt = BackgroundUpload.shared.takeReceipt(host: host) else { return }
         if let response = receipt.upload, dub.checkpoint?.jobID != response.job_id {
             do {
                 try dub.begin(response, api: api(), languages: receipt.pending.languages, profile: receipt.pending.profile)
-                BackgroundUpload.shared.clearReceipt()
                 monitor()
                 BackgroundMonitor.schedule()
             } catch { self.error = ClientError("mobile.errors.dub_failed") }

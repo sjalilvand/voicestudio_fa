@@ -60,7 +60,12 @@ marker and expected status/version; `/profiles` verifies consumption access.
 Master keys only enter the session exchange and are never persisted. Session
 and PIN ciphertext is stored using a Keystore AES-GCM key; DataStore contains
 only connection metadata/preferences and dub checkpoints. A 401 returns to
-pairing. Disconnect attempts revocation and clears local access even offline.
+pairing when it belongs to the active connection; a failed attempt on another
+host leaves the active session intact. Disconnect revokes an administrator
+session when one exists and clears local access even offline. PIN-only pairing
+has no session to revoke. Reconnecting retains a saved host's label and updates
+its last-seen timestamp. Unreadable preferences or malformed persisted JSON
+fall back to defaults rather than preventing launch.
 
 Connecting/reconnecting resets host data, the navigation tree and its saved
 forms, pending document targets, players and dictation controllers. Switching to
@@ -109,8 +114,13 @@ uploads, waits for prep, transcribes, translates each track, starts generation,
 and replays persisted job events while polling. Checkpoints resume existing host
 tasks after app process death or connectivity loss. Abort stops the host before
 cancelling the worker. Downloads use the guarded client and a FileProvider share.
-The foreground service is required for long Android uploads; optional completion
-notifications are generated locally, without a push service.
+The worker requests a data-sync foreground service for long uploads. If Android
+refuses that start, work continues within WorkManager's normal execution limits;
+cancellation still stops it. Failed job receipts are shown once and acknowledged
+in DataStore across screen recreation, app restarts and host switches. Cancelled
+jobs show a cancellation status instead of a failure. Successful job download
+actions remain available. Optional completion notifications are generated locally,
+without a push service.
 
 Dictate checks readiness and streams mono 16 kHz signed PCM over the host
 WebSocket, using a one-use ticket for sessions. Tap/hold controls, partial/final
@@ -118,7 +128,9 @@ transcripts, copy/share and lifecycle-based microphone cleanup are included.
 Sherpa utterance finals append without stopping capture. Only summary/legacy EOF
 finals or socket termination end a session; authoritative/refined summary text
 replaces the live transcript without duplication, and empty summaries preserve
-committed phrases. Unknown final kinds are ignored, matching desktop.
+committed phrases. Unknown final kinds are ignored, matching desktop. Callbacks
+and cleanup are scoped to the recording generation, so an old stream ending
+cannot close the next session.
 Readiness names the missing ASR model and its size, with the desktop install
 location. API-key/trusted-network advice appears only after an authorization
 failure; a share PIN alone does not authorize dictation. Settings includes live appearance, per-appearance palettes,
@@ -138,6 +150,9 @@ Gradle's `:app:bundleCatalogs` copies all Electron locale JSON files and
 `mobile/contract/strings*.en.json` into generated assets on every input change.
 It also bundles `electron/src/shared/languages.json` (the canonical display
 names, with Auto first) and generates the manifest label from English `app.name`.
+Only the selected locale's fallback chain is parsed, with catalogs and L10n
+instances cached per locale. Chinese script/region tags map to the bundled
+zh-CN (Hans) and zh-TW (Hant, HK, MO) catalogs before English fallback.
 No copied catalogs are checked in. New Android-only keys live in
 `mobile/contract/strings.android-additions.en.json`; untranslated mobile keys
 fall back to English until the maintainer integrates their translations.
@@ -190,8 +205,8 @@ available offline in About.
 
 ## Verification
 
-Round 3 verification (2026-10-17), with JDK 21 and Android SDK 36:
-`./gradlew assembleDebug`, `./gradlew testDebugUnitTest` (50 tests, zero failures
+With JDK 21 and Android SDK 36:
+`./gradlew assembleDebug`, `./gradlew testDebugUnitTest` (63 tests, zero failures
 or skips), and `./gradlew lint` all passed. Tests used `HF_HUB_OFFLINE=1` with an
 empty HF cache; all API/WebSocket traffic was against local mock servers.
 
@@ -202,19 +217,23 @@ upload/progress, origin isolation and cancellation. A Robolectric Compose smoke
 flow covers launch → consent → mock host pairing → generation → Play; its player
 is a test double, so it verifies the playback command rather than audible output.
 
-Round 3 regressions cover explicit translation providers, missing/unready
+Regressions cover explicit translation providers, missing/unready
 engines, named-service consent and decline, consent on durable resume, changed
 providers, explicit preset/profile dub request bodies, scripted multi-phrase
 WebSocket transcripts and EOF/refined summaries, host switching/reconnection,
 player/form disposal, checkpoint isolation and old-host worker cancellation.
 AndroidX WorkManager's pinned test helper initializes its JVM scheduler.
+Additional tests exercise foreground-service refusal and cancellation, storage
+read/decode recovery, saved labels, script-based Chinese locales, per-locale
+catalog caching, once-only failure receipts, candidate connection isolation,
+PIN-only disconnect and stale dictation cleanup.
 
 Device camera,
 microphone, audible playback, permission prompts, real-host inference, foreground
 upload survival and notification delivery still require emulator/device and host
 validation. Existing instrumentation covers ART interpolation, bundled language
 data, structured error copy/duration formatting, and Activity launch. No device
-commands or instrumented tests were run for Round 3; the required build, JVM
+commands or instrumented tests were run; the required build, JVM
 tests and lint run with JDK 21 and SDK 36.
 
 Robolectric uses the API 34 instrumented SDK pinned in the version catalog.

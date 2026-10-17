@@ -29,6 +29,15 @@ public final class DubUploadLedger: @unchecked Sendable {
     public func receipt() -> UploadReceipt? {
         lock.withLock { defaults.data(forKey: "uploadReceipt").flatMap { try? JSONDecoder().decode(UploadReceipt.self, from: $0) } }
     }
+    public func takeReceipt(host: String) -> UploadReceipt? {
+        lock.withLock {
+            guard let data = defaults.data(forKey: "uploadReceipt"),
+                  let receipt = try? JSONDecoder().decode(UploadReceipt.self, from: data),
+                  receipt.pending.host == host else { return nil }
+            defaults.removeObject(forKey: "uploadReceipt")
+            return receipt
+        }
+    }
     private func readPending() -> PendingUpload? {
         defaults.data(forKey: "pendingUpload").flatMap { try? JSONDecoder().decode(PendingUpload.self, from: $0) }
     }

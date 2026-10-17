@@ -99,7 +99,10 @@ public struct APIClient: Sendable {
         guard let session = try? JSONDecoder().decode(Session.self, from: reply.data), !session.token.isEmpty else { throw ClientError("mobile.errors.invalid_response") }
         return session
     }
-    public func revoke() async throws { _ = try await send(request("/api/auth/session", method: "DELETE")) }
+    public func revoke() async throws {
+        guard let session = credentials.session, !session.isEmpty else { return }
+        _ = try await send(request("/api/auth/session", method: "DELETE"))
+    }
     public func profiles() async throws -> [Profile] { try await decode([Profile].self, "/profiles") }
     public func engines() async throws -> EngineInventory { try await decode(EngineInventory.self, "/engines") }
     public func history() async throws -> [HistoryItem] { try await decode([HistoryItem].self, "/history") }

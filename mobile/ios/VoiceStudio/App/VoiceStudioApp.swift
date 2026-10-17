@@ -12,15 +12,15 @@ import VoiceStudioKit
                 .environment(\.locale, Locale(identifier: model.language.isEmpty ? Locale.current.identifier : model.language))
                 .preferredColorScheme(model.theme.mode == .system ? nil : (model.theme.mode == .light ? .light : .dark))
                 .task {
-                    BackgroundUpload.shared.onReceipt = { receipt in model.acceptUpload(receipt) }
+                    BackgroundUpload.shared.onReceipt = { model.acceptUpload() }
                     BackgroundMonitor.model = model
                     await model.connection.restore()
                     if model.connection.client != nil { await model.perform { try await model.refresh() }; model.monitor() }
-                    if let receipt = BackgroundUpload.shared.receipt { model.acceptUpload(receipt) }
+                    model.acceptUpload()
                 }
                 .onChange(of: phase) { _, phase in
                     if phase == .active {
-                        if let receipt = BackgroundUpload.shared.receipt { model.acceptUpload(receipt) }
+                        model.acceptUpload()
                         model.monitor()
                     } else if phase == .background { BackgroundMonitor.schedule() }
                 }

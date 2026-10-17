@@ -38,7 +38,9 @@ public struct L10n: Sendable {
         if let exact = catalogs.keys.first(where: { $0.caseInsensitiveCompare(locale) == .orderedSame }) { normalized = exact }
         else if locale.lowercased().hasPrefix("zh") {
             let parts = locale.lowercased().split(separator: "-")
-            normalized = parts.contains(where: { ["hant", "tw", "hk", "mo"].contains(String($0)) }) ? "zh-TW" : "zh-CN"
+            // An explicit script takes priority over a region (e.g. zh-Hans-HK).
+            normalized = parts.contains("hans") ? "zh-CN" :
+                (parts.contains(where: { ["hant", "tw", "hk", "mo"].contains(String($0)) }) ? "zh-TW" : "zh-CN")
         } else { normalized = locale }
         let language = normalized.split(separator: "-").first.map(String.init) ?? "en"
         let chain = [normalized, language, "en"]

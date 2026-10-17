@@ -99,7 +99,11 @@ class VoiceStudioApi(val address: PairingAddress, token: String? = null, private
                 .use { json.decodeFromString<Session>(it.body!!.string()).also { s -> sessionToken = s.token } }
         } catch (e: ClientFailure) { if(e.status == 401) throw ClientFailure("mobile.connect.error_api_key"); throw e }
     }
-    suspend fun revoke() { raw("/api/auth/session", "DELETE").close(); sessionToken = null }
+    suspend fun revoke() {
+        if(sessionToken == null) return
+        raw("/api/auth/session", "DELETE").close()
+        sessionToken = null
+    }
     suspend fun profiles(): List<Profile> = get("/profiles")
     suspend fun engines(): Engines = get("/engines")
     suspend fun translationEngine(): TranslationEngine = get<TranslationEngines>("/engines/translation").activeEngine()

@@ -6,6 +6,7 @@ import android.security.keystore.KeyProperties
 import android.util.Base64
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.datastore.core.DataStore
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -13,6 +14,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
 import java.security.KeyStore
+import java.io.IOException
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -62,13 +64,18 @@ class SecretVault(context: Context) : CredentialVault {
     }
 }
 
-class SessionStore(context: Context, val vault: CredentialVault = SecretVault(context.applicationContext)) {
-    private val store = context.applicationContext.dataStore
+class SessionStore(context: Context, val vault: CredentialVault = SecretVault(context.applicationContext),
+    private val store: DataStore<androidx.datastore.preferences.core.Preferences> = context.applicationContext.dataStore) {
     private val stateKey = stringPreferencesKey("preferences")
-    val preferences: Flow<Preferences> = store.data.map { data -> data[stateKey]?.let { StoreJson.decodeFromString<Preferences>(it) } ?: Preferences() }
+    private val readableData = store.data.catch { error ->
+        if(error is IOException) emit(emptyPreferences()) else throw error
+    }
+    private fun decodePreferences(data: androidx.datastore.preferences.core.Preferences): Preferences =
+        data[stateKey]?.let { runCatching { StoreJson.decodeFromString<Preferences>(it) }.getOrNull() } ?: Preferences()
+    val preferences: Flow<Preferences> = readableData.map(::decodePreferences)
     suspend fun update(transform: (Preferences) -> Preferences) {
         store.edit { data ->
-            val previous = data[stateKey]?.let { StoreJson.decodeFromString<Preferences>(it) } ?: Preferences()
+            val previous = decodePreferences(data)
             val next = transform(previous)
             if(previous.activeUrl != next.activeUrl) {
                 data.asMap().keys.filter { it.name.startsWith("dub.") }.forEach { data.remove(it) }
@@ -79,7 +86,12 @@ class SessionStore(context: Context, val vault: CredentialVault = SecretVault(co
     suspend fun pair(address: PairingAddress, secret: Secret) {
         val url = address.baseUrl.toString()
         withContext(Dispatchers.IO) {vault.write(url, secret)}
-        update { it.copy(activeUrl = url, hosts = listOf(SavedHost(url, address.baseUrl.host, System.currentTimeMillis())) + it.hosts.filterNot { h -> h.url == url }) }
+        update { previous ->
+            val saved = previous.hosts.firstOrNull { it.url == url }
+            val host = saved?.copy(lastSeen = System.currentTimeMillis())
+                ?: SavedHost(url, address.baseUrl.host, System.currentTimeMillis())
+            previous.copy(activeUrl = url, hosts = listOf(host) + previous.hosts.filterNot { it.url == url })
+        }
     }
     suspend fun disconnect() {
         val current = preferences.first()
@@ -92,10 +104,23 @@ class SessionStore(context: Context, val vault: CredentialVault = SecretVault(co
         val secret = vault.read(url)
         VoiceStudioApi(PairingAddress.parse(url, secret?.pin), secret?.token, expired)
     }
-    suspend fun checkpoint(host: String, job: String): DubCheckpoint = store.data.first()[stringPreferencesKey("dub.$host.$job")]?.let { StoreJson.decodeFromString(it) } ?: DubCheckpoint()
+    /** Receipt IDs survive host switches; acknowledged failures never reappear. */
+    suspend fun consumeDubFailure(id: java.util.UUID): Boolean {
+        val key = stringSetPreferencesKey("seenDubFailures")
+        var unseen = false
+        store.edit { data ->
+            val seen = data[key].orEmpty()
+            unseen = id.toString() !in seen
+            if(unseen) data[key] = seen + id.toString()
+        }
+        return unseen
+    }
+    suspend fun checkpoint(host: String, job: String): DubCheckpoint = readableData.first()[stringPreferencesKey("dub.$host.$job")]?.let {
+        runCatching { StoreJson.decodeFromString<DubCheckpoint>(it) }.getOrNull()
+    } ?: DubCheckpoint()
     suspend fun checkpoint(host: String, job: String, value: DubCheckpoint) {
         store.edit { data ->
-            val active = data[stateKey]?.let { StoreJson.decodeFromString<Preferences>(it) }?.activeUrl
+            val active = decodePreferences(data).activeUrl
             if(active == host) data[stringPreferencesKey("dub.$host.$job")] = StoreJson.encodeToString(value)
         }
     }

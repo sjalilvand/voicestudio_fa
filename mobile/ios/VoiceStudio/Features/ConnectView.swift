@@ -45,12 +45,13 @@ struct ConnectView: View {
     private func connect() async {
         guard !model.busy, BackgroundUpload.shared.pending == nil else { model.error = ClientError("mobile.errors.upload_active"); return }
         model.pauseMonitor()
+        defer { model.monitor() }
         let key = apiKey; apiKey = ""
         await model.perform(connectionChange: true) {
             _ = try await model.connection.connect(address: PairingAddress(url, pin: pin), key: key, label: label)
             pin = ""
-            try await model.refresh()
-            if let receipt = BackgroundUpload.shared.receipt { model.acceptUpload(receipt) }
+            await model.perform { try await model.refresh() }
+            model.acceptUpload()
             model.monitor()
         }
     }

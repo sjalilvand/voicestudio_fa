@@ -26,6 +26,15 @@ import kotlinx.serialization.json.*
     val workFlow=remember(host) {work.getWorkInfosByTagFlow(host)}
     val works by workFlow.collectAsState(emptyList())
     val scope=rememberCoroutineScope()
+    var visibleFailures by remember(host) {mutableStateOf(emptySet<java.util.UUID>())}
+    LaunchedEffect(works) {
+        for(info in works) if(info.state == WorkInfo.State.FAILED && info.id !in visibleFailures) {
+            try {
+                if(vm.store.consumeDubFailure(info.id)) visibleFailures = visibleFailures + info.id
+            } catch(cancelled: CancellationException) {throw cancelled}
+            catch(error: Exception) {vm.fail(error)}
+        }
+    }
     var link by rememberSaveable {mutableStateOf("")}
     var filePath by rememberSaveable {mutableStateOf<String?>(null)}
     var inputType by rememberSaveable {mutableStateOf("video")}
@@ -84,7 +93,7 @@ import kotlinx.serialization.json.*
                 if(engine.category == "online") pending=draft else enqueue(draft,false)
             }
         }
-        works.forEach {info ->
+        works.filter {it.state != WorkInfo.State.FAILED || it.id in visibleFailures}.forEach {info ->
             val stage=info.displayStage()
             val errorParams=remember(info.outputData) {runCatching {
                 Json.parseToJsonElement(info.outputData.getString("error_params") ?: "{}").jsonObject.mapValues {it.value.jsonPrimitive.content}
