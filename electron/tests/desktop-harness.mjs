@@ -78,11 +78,7 @@ async function launch({ profile, backendPort, proxyPort, seed }) {
   });
   const context = app.context();
   await context.tracing.start({ screenshots: true, snapshots: true });
-  const starServed = { count: 0 };
-  await context.route(STAR_COUNT_URL, (route) => {
-    starServed.count += 1;
-    return route.fulfill({ json: STAR_COUNT_STUB });
-  });
+  await context.route(STAR_COUNT_URL, (route) => route.fulfill({ json: STAR_COUNT_STUB }));
   if (seed) {
     // Only fill gaps: this runs on every page load and must not undo what a test persisted.
     await context.addInitScript(() => {
@@ -112,7 +108,7 @@ async function launch({ profile, backendPort, proxyPort, seed }) {
   });
   // The main-process guard predates the app; one reload also replays the first page's console.
   await page.reload();
-  return { app, page, errors, starServed };
+  return { app, page, errors };
 }
 
 /**
@@ -167,12 +163,8 @@ export async function withApp(t, options, body) {
     const seen = await started.app.evaluate(() => globalThis.__requestLog);
     // An empty log means the guard never ran (hook missing or replaced), not that all is well.
     if (!seen.some((url) => url.startsWith('app:'))) unobserved += 1;
-    // The star-count request is allowed only as often as the stub actually answered it.
-    let starBudget = started.starServed.count;
-    for (const url of seen) {
-      if (url === STAR_COUNT_URL && starBudget > 0) starBudget -= 1;
-      else if (!isAllowedRequest(url)) violations.push(url);
-    }
+    // The guard already left out the renderer's stubbed star-count request.
+    violations.push(...seen.filter((url) => !isAllowedRequest(url)));
   }
   try {
     await start();

@@ -5,6 +5,7 @@ import { once } from 'node:events';
 import { dirname, join } from 'node:path';
 import { withApp } from './desktop-harness.mjs';
 import { ROUTES } from './fixtures/routes.mjs';
+import { STAR_COUNT_URL } from './local-first.mjs';
 
 const bridgeFacts = (page) =>
   page.evaluate(() => ({
@@ -41,6 +42,21 @@ test('guard: a disallowed request is cancelled, not just recorded', async (t) =>
           () => 'sent',
           (error) => String(error),
         ),
+      );
+    }),
+    /Requests left the machine/,
+  );
+  assert.match(outcome, /ERR_BLOCKED_BY_CLIENT/);
+});
+
+test('guard: a main-process star-count request is not exempt', async (t) => {
+  // Only the renderer's star badge is stubbed by a Playwright route; main has no such stub.
+  let outcome;
+  await assert.rejects(
+    withApp(t, {}, async ({ app }) => {
+      outcome = await app.evaluate(
+        ({ net }, url) => net.fetch(url).then(() => 'sent', String),
+        STAR_COUNT_URL,
       );
     }),
     /Requests left the machine/,

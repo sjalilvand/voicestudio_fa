@@ -27,8 +27,14 @@ diagnostics.subscribe('http.client.request.start', ({ request }) =>
 
 app.whenReady().then(() => {
   session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
+    // The renderer's star badge is answered by a Playwright route before it can reach the
+    // network (even if a reload aborts it first), so it is neither a leak nor worth counting.
+    // The same URL from the main process has no stub, so it is judged like any other request.
+    if (details.url === STAR_COUNT_URL && details.webContentsId) {
+      callback({});
+      return;
+    }
     log.push(details.url);
-    // The star-count URL is answered by a Playwright route; the harness checks it was.
-    callback({ cancel: details.url !== STAR_COUNT_URL && !isAllowedRequest(details.url) });
+    callback({ cancel: !isAllowedRequest(details.url) });
   });
 });
