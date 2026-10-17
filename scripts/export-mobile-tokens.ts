@@ -132,7 +132,8 @@ function blockAfter(css: string, start: number): string {
   throw new Error('unbalanced CSS');
 }
 
-const tailwind = readFileSync(join(ROOT, 'electron/node_modules/tailwindcss/theme.css'), 'utf8');
+// Resolve like the renderer's build does, so hoisted or isolated installs both work.
+const tailwind = readFileSync(Bun.resolveSync('tailwindcss/theme.css', join(ROOT, 'electron')), 'utf8');
 const globals = readFileSync(join(STYLES, 'globals.css'), 'utf8');
 const t3 = readFileSync(join(STYLES, 't3-theme.css'), 'utf8');
 

@@ -34,10 +34,22 @@ def test_openapi_operation_ids_are_unique():
     assert len(ids) == len(set(ids))
 
 
-@pytest.mark.skipif(shutil.which("bun") is None, reason="bun is required for the token exporter")
+def _electron_deps_installed() -> bool:
+    if shutil.which("bun") is None:
+        return False
+    probe = subprocess.run(
+        ["bun", "--no-install", "-e", "Bun.resolveSync('tailwindcss/theme.css', process.argv[1])", str(ROOT / "electron")],
+        capture_output=True, timeout=60,
+    )
+    return probe.returncode == 0
+
+
+# ci.yml also runs `bun scripts/export-mobile-tokens.ts --check` after
+# `bun install`, so this skip can't hide drift on CI.
+@pytest.mark.skipif(not _electron_deps_installed(), reason="needs bun and installed Electron deps")
 def test_mobile_tokens_match_electron_theme():
     result = subprocess.run(
-        ["bun", "scripts/export-mobile-tokens.ts", "--check"],
+        ["bun", "--no-install", "scripts/export-mobile-tokens.ts", "--check"],
         cwd=ROOT, capture_output=True, text=True, timeout=120,
     )
     assert result.returncode == 0, result.stderr
