@@ -978,20 +978,28 @@ class OmniVoice(PreTrainedModel):
                     ) from exc
             candidates = list(ref_wav.split(max_samples, dim=-1))
 
-            def speech_score(text):
-                # #2836: on a near-silent window Whisper loops a stock phrase
-                # ("Thank you. Thank you. ...") that outscores real speech on
-                # length alone. Whisper's own decoder treats text compressing
-                # better than 2.4:1 as a repetition hallucination; so do we.
+            strongest_power = max(activity_score(audio) / audio.numel() for audio in candidates)
+
+            def speech_score(text, audio):
+                # Repetition is suspicious, not proof of silence: genuine speech
+                # can repeat, including in very quiet recordings (#2836).
                 encoded = (text or "").encode("utf-8")
-                if encoded and len(encoded) / len(zlib.compress(encoded)) > 2.4:
-                    return 0
-                # Short repetitive text can be real speech. Discount it against
-                # informative alternatives (including loops with trailing words),
-                # but keep it usable when no better passage exists.
                 words = re.findall(r"\w+", (text or "").casefold(), flags=re.UNICODE)
-                if len(words) >= 6 and len(set(words)) * 2 < len(words):
-                    return 1
+                repetitive = (
+                    bool(encoded) and len(encoded) / len(zlib.compress(encoded)) > 2.4
+                ) or (len(words) >= 6 and len(set(words)) * 2 < len(words))
+                if repetitive:
+                    power = activity_score(audio) / audio.numel()
+                    quieter_than_other_passages = power < strongest_power * 0.01
+                    # A quiet, effectively flat recording carries no varying
+                    # voice signal. Use original gain so normalization does not
+                    # make a low-level DC/noise floor appear to be loud speech.
+                    flat_noise_floor = (
+                        power / input_gain ** 2 < 1e-5
+                        and float(audio.double().var(unbiased=False)) < power * 0.01
+                    )
+                    if quieter_than_other_passages or flat_noise_floor:
+                        return 0
                 return len(re.sub(r"[^\w]+", "", text or "", flags=re.UNICODE))
 
             transcribed = [
@@ -1000,9 +1008,9 @@ class OmniVoice(PreTrainedModel):
             ]
             ref_text, ref_wav = max(
                 transcribed,
-                key=lambda item: (speech_score(item[0]), activity_score(item[1])),
+                key=lambda item: (speech_score(item[0], item[1]), activity_score(item[1])),
             )
-            if speech_score(ref_text) == 0:
+            if speech_score(ref_text, ref_wav) == 0:
                 # A transcript is only accepted up to CLONE_REF_TEXT_MAX_SECONDS.
                 transcript_hint = (
                     ", or supply a matching transcript"
