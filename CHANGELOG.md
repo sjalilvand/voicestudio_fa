@@ -36,7 +36,7 @@ metadata and the backend fallback mirror it.
 
 - CPU and ROCm runtime setup avoids an unnecessary native CUDA probe that can crash before installation finishes (#2942)
 
-- Supertonic-3 accepts full language names without selecting the wrong language or producing invalid language codes. (#2938) — thanks @P4tch4nk4!
+- Supertonic-3 accepts full language names without selecting the wrong language or producing invalid language codes. (#2939) — thanks @rudycelekli, @P4tch4nk4!
 
 - Local speech-recognition model paths beginning with a slash work on Windows without a model-licence error (#2930) — thanks @DeryFerd!
 
