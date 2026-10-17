@@ -65,6 +65,13 @@ bun scripts/export-mobile-tokens.ts        # theme tokens from the Electron them
 uv run python scripts/export_openapi.py    # mobile/contract/openapi.json from the backend
 ```
 
-`tests/test_mobile_contract.py` fails when either is stale. App text uses the
+`tests/test_mobile_contract.py` fails when either is stale.
+
+**Try the iPhone app without Xcode.** Each `mobile` workflow run uploads an
+unsigned build, `VoiceStudio-ios-unsigned` (kept 7 days). Download it from the
+run's Artifacts, then install it with a sideloading tool that signs it with your
+own Apple ID (for example Sideloadly). With a free Apple ID the install expires
+after 7 days; turn on Developer Mode on the iPhone (Settings → Privacy &
+Security) when iOS asks. App text uses the
 Electron locale catalogs (`mobile.*` keys). The `mobile` workflow builds and
 tests both apps.
