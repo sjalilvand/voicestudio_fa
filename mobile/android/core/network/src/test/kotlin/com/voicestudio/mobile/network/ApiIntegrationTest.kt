@@ -149,6 +149,13 @@ class ApiIntegrationTest {
         })
         try {withTimeout(5000) {opened.await()}} finally {socket.cancel()}
     }
+    @Test fun dubTranslationAlwaysCarriesExplicitProvider()=runBlocking {
+        server.enqueue(MockResponse().setBody("""{"translated":[{"id":"0","text":"Translated"}]}"""))
+        api.translate("job", "fr", "en", listOf(Segment(start=0.0,end=1.0,text="Original")),
+            TranslationEngine("argos",category="offline",installed=true,ready=true).authorize()!!)
+        val body=server.takeRequest().body.readUtf8()
+        assertTrue("Translation must never use the backend's implicit Google fallback",body.contains("\"provider\":\"argos\""))
+    }
     private suspend fun failure(block:suspend ()->Unit):ClientFailure {
         try {block();throw AssertionError("Expected ClientFailure")} catch(e:ClientFailure) {return e}
     }

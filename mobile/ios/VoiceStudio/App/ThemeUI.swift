@@ -83,6 +83,7 @@ struct RootView: View {
                     }
                     NavigationStack { SettingsView() }.tabItem { Label(model.t("mobile.tabs.settings"), systemImage: "gearshape") }
                 }
+                .id(model.hostState.scopeID)
                 .toolbarBackground(theme.color("chrome"), for: .tabBar)
                 .toolbarBackground(.visible, for: .tabBar)
             }

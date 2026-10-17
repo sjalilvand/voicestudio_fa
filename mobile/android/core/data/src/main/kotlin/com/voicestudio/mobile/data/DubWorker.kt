@@ -69,11 +69,22 @@ class DubWorker(context: Context, params: WorkerParameters) : CoroutineWorker(co
         val host = inputData.getString("host") ?: return Result.failure()
         val job = inputData.getString("job") ?: return Result.failure()
         if(store.preferences.first().activeUrl != host) return Result.failure()
+        return coroutineScope {
+            val pipeline = currentCoroutineContext().job
+            val watcher = launch {
+                store.preferences.first { it.activeUrl != host }
+                pipeline.cancel()
+            }
+            try { runPipeline(host, job) } finally { watcher.cancel() }
+        }
+    }
+    private suspend fun runPipeline(host: String, job: String): Result {
         val api = store.api(host)
         val codes = inputData.getStringArray("languages") ?: return Result.failure()
         val names = inputData.getStringArray("names") ?: return Result.failure()
-        var checkpoint = store.checkpoint(job)
+        var checkpoint = store.checkpoint(host, job)
         try {
+            val translationAuthorization = authorizedTranslation(api, inputData)
             setForeground(notification(false))
             if(!checkpoint.uploaded) {
                 report("mobile.android.stage_upload")
@@ -83,7 +94,7 @@ class DubWorker(context: Context, params: WorkerParameters) : CoroutineWorker(co
                     setProgressAsync(workDataOf("stage" to stage, "percent" to p, "job" to job))
                 } else api.ingest(inputData.getString("link") ?: return Result.failure(), job)
                 checkpoint = checkpoint.copy(uploaded = true, prepTask = result.taskId)
-                store.checkpoint(job, checkpoint)
+                store.checkpoint(host, job, checkpoint)
                 source?.let { File(it).delete() }
             }
             report("mobile.android.stage_prepare")
@@ -93,12 +104,12 @@ class DubWorker(context: Context, params: WorkerParameters) : CoroutineWorker(co
                 val transcript = api.transcribe(job)
                 if(transcript.segments.isEmpty()) throw ClientFailure("mobile.android.no_speech")
                 checkpoint = checkpoint.copy(segments = transcript.segments, source = transcript.sourceLang)
-                store.checkpoint(job, checkpoint)
+                store.checkpoint(host, job, checkpoint)
             }
             for(index in checkpoint.nextLanguage until codes.size) {
                 if(checkpoint.renderTask.isBlank()) {
                     report("mobile.android.stage_translate")
-                    val translation = api.translate(job, codes[index], checkpoint.source, checkpoint.segments)
+                    val translation = api.translate(job, codes[index], checkpoint.source, checkpoint.segments, translationAuthorization)
                     if(translation.translated.any { it.error != null } || translation.translated.size != checkpoint.segments.size)
                         throw ClientFailure("mobile.android.translation_failed")
                     val textById = translation.translated.associate { it.id.jsonPrimitive.content to it.text }
@@ -108,12 +119,12 @@ class DubWorker(context: Context, params: WorkerParameters) : CoroutineWorker(co
                     report("mobile.android.stage_render")
                     val task = api.startDub(job, codes[index], names[index], inputData.getString("voice").orEmpty(), segments)
                     checkpoint = checkpoint.copy(renderTask = task.taskId)
-                    store.checkpoint(job, checkpoint)
+                    store.checkpoint(host, job, checkpoint)
                 }
                 report("mobile.android.stage_render")
                 awaitTask(api, checkpoint.renderTask)
                 checkpoint = checkpoint.copy(nextLanguage = index + 1, renderTask = "")
-                store.checkpoint(job, checkpoint)
+                store.checkpoint(host, job, checkpoint)
             }
             val prefs = store.preferences.first()
             if(prefs.notifications) {
@@ -135,12 +146,21 @@ class DubWorker(context: Context, params: WorkerParameters) : CoroutineWorker(co
         fun failureData(error: ClientFailure, job: String): Data = workDataOf("error" to error.key,
             "error_params" to JsonObject(error.params.mapValues {JsonPrimitive(it.value)}).toString(), "job" to job)
         const val TAG = "voicestudio.dub"
-        fun enqueue(context: Context, host: String, file: File?, link: String?, type: String, languages: List<Pair<String, String>>, voice: String): UUID {
+        suspend fun authorizedTranslation(api: VoiceStudioApi, data: Data): TranslationAuthorization {
+            val engine = api.translationEngine()
+            if(engine.id != data.getString("translation_provider") || engine.category != data.getString("translation_category"))
+                throw ClientFailure("mobile.dub.translation_changed")
+            return engine.authorize(data.getBoolean("translation_confirmed", false))
+                ?: throw ClientFailure("mobile.dub.translation_setup")
+        }
+        fun enqueue(context: Context, host: String, file: File?, link: String?, type: String, languages: List<Pair<String, String>>, voice: String, translation: TranslationAuthorization): UUID {
+            DubVoiceChoice.validate(voice)
             val job = UUID.randomUUID().toString()
             val request = OneTimeWorkRequestBuilder<DubWorker>().setInputData(workDataOf(
                 "host" to host, "job" to job, "file" to file?.absolutePath, "link" to link, "type" to type,
                 "languages" to languages.map { it.first }.toTypedArray(), "names" to languages.map { it.second }.toTypedArray(),
-                "voice" to voice, "title" to (file?.name ?: link.orEmpty())))
+                "translation_provider" to translation.provider, "translation_category" to translation.category,
+                "translation_confirmed" to translation.onlineConfirmed, "voice" to voice, "title" to (file?.name ?: link.orEmpty())))
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS).addTag(TAG).addTag(host).build()
             WorkManager.getInstance(context).enqueue(request)

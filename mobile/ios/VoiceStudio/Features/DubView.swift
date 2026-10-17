@@ -10,7 +10,7 @@ struct DubView: View {
     @State private var selectedFile: URL?
     @State private var sourceURL = ""
     @State private var selected = Set<String>()
-    @State private var profile = ""
+    @State private var profile = DubVoiceChoice.unselected
     @State private var selectingLanguages = false
     @State private var languageQuery = ""
     @State private var shared: SharedFile?
@@ -34,9 +34,9 @@ struct DubView: View {
                         }
                     }
                 }
-                VoicePicker(selection: $profile, sourceDefault: true)
+                VoicePicker(selection: $profile, dubbing: true)
                 Button(model.t("mobile.dub.start")) { Task { await start() } }
-                    .buttonStyle(VSButtonStyle(kind: .primary)).disabled(model.busy || upload.pending != nil || selected.isEmpty || (selectedFile == nil && sourceURL.isEmpty) || model.dub.monitoring)
+                    .buttonStyle(VSButtonStyle(kind: .primary)).disabled(profile == DubVoiceChoice.unselected || model.busy || upload.pending != nil || selected.isEmpty || (selectedFile == nil && sourceURL.isEmpty) || model.dub.monitoring)
             }
             if upload.pending != nil {
                 Card {
@@ -44,6 +44,16 @@ struct DubView: View {
                     ProgressView(value: upload.fraction).accessibilityLabel(model.t("mobile.ios.progress"))
                     Text(model.t("mobile.ios.upload_pending"))
                     Button(model.t("mobile.ios.upload_cancel"), role: .destructive) { Task { await upload.cancel() } }
+                }
+            }
+            if let engine = model.dub.pendingTranslation {
+                Card {
+                    Text(model.t("mobile.dub.translation_online_body", ["service": engine.display_name]))
+                    // Both choices use the same native weight, size and style.
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: VSTokens.spacingGap) { translationChoice(true); translationChoice(false) }
+                        VStack(spacing: VSTokens.spacingGap) { translationChoice(true); translationChoice(false) }
+                    }
                 }
             }
             if let cp = model.dub.checkpoint {
@@ -105,8 +115,20 @@ struct DubView: View {
         .onChange(of: sourceURL) { _, value in if !value.isEmpty { selectedFile = nil } }
         .refreshable { await model.perform { model.dubHistory = try await model.api().dubHistory() }; model.monitor() }
     }
+    private func translationChoice(_ allowed: Bool) -> some View {
+        Button {
+            model.pauseMonitor()
+            model.dub.confirmTranslation(allowed)
+            if allowed { model.monitor() }
+        } label: {
+            Text(model.t(allowed ? "mobile.dub.translation_allow" : "mobile.dub.translation_decline"))
+                .frame(maxWidth: .infinity)
+        }.buttonStyle(VSButtonStyle(kind: .secondary))
+            .accessibilityIdentifier(allowed ? "dub.translation.allow" : "dub.translation.decline")
+    }
     private func start() async {
         await model.perform {
+            try DubVoiceChoice.validate(profile)
             let api = try model.api()
             let targets = languages.filter { selected.contains($0.code) }
             if let file = selectedFile {

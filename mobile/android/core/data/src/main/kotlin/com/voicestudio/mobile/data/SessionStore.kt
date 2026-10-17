@@ -67,7 +67,14 @@ class SessionStore(context: Context, val vault: CredentialVault = SecretVault(co
     private val stateKey = stringPreferencesKey("preferences")
     val preferences: Flow<Preferences> = store.data.map { data -> data[stateKey]?.let { StoreJson.decodeFromString<Preferences>(it) } ?: Preferences() }
     suspend fun update(transform: (Preferences) -> Preferences) {
-        store.edit { data -> data[stateKey] = StoreJson.encodeToString(transform(data[stateKey]?.let { StoreJson.decodeFromString<Preferences>(it) } ?: Preferences())) }
+        store.edit { data ->
+            val previous = data[stateKey]?.let { StoreJson.decodeFromString<Preferences>(it) } ?: Preferences()
+            val next = transform(previous)
+            if(previous.activeUrl != next.activeUrl) {
+                data.asMap().keys.filter { it.name.startsWith("dub.") }.forEach { data.remove(it) }
+            }
+            data[stateKey] = StoreJson.encodeToString(next)
+        }
     }
     suspend fun pair(address: PairingAddress, secret: Secret) {
         val url = address.baseUrl.toString()
@@ -85,6 +92,11 @@ class SessionStore(context: Context, val vault: CredentialVault = SecretVault(co
         val secret = vault.read(url)
         VoiceStudioApi(PairingAddress.parse(url, secret?.pin), secret?.token, expired)
     }
-    suspend fun checkpoint(job: String): DubCheckpoint = store.data.first()[stringPreferencesKey("dub.$job")]?.let { StoreJson.decodeFromString(it) } ?: DubCheckpoint()
-    suspend fun checkpoint(job: String, value: DubCheckpoint) { store.edit { it[stringPreferencesKey("dub.$job")] = StoreJson.encodeToString(value) } }
+    suspend fun checkpoint(host: String, job: String): DubCheckpoint = store.data.first()[stringPreferencesKey("dub.$host.$job")]?.let { StoreJson.decodeFromString(it) } ?: DubCheckpoint()
+    suspend fun checkpoint(host: String, job: String, value: DubCheckpoint) {
+        store.edit { data ->
+            val active = data[stateKey]?.let { StoreJson.decodeFromString<Preferences>(it) }?.activeUrl
+            if(active == host) data[stringPreferencesKey("dub.$host.$job")] = StoreJson.encodeToString(value)
+        }
+    }
 }

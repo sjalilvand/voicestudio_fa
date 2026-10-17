@@ -11,6 +11,7 @@ struct VoicesView: View {
     @State private var renamed: Profile?
     @State private var deleting: Profile?
     @State private var name = ""
+    @State private var hostScope: UUID?
     var body: some View {
         Page {
             Button(model.t("mobile.voices.new_clone"), systemImage: "plus") { creating = true }
@@ -59,7 +60,8 @@ struct VoicesView: View {
                 Task { await model.perform { try await model.api().deleteProfile(profile.id); model.profiles = try await model.api().profiles() } }
             }
         }
-        .onDisappear { player.pause() }
+        .onAppear { hostScope = model.hostState.scopeID }
+        .onDisappear { if hostScope != model.hostState.scopeID { player.clear() } else { player.pause() } }
     }
 }
 struct CloneView: View {

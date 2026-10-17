@@ -10,6 +10,12 @@ final class HostMediaLoader: NSObject, AVAssetResourceLoaderDelegate, @unchecked
     let api: APIClient
     private var work: [ObjectIdentifier: Task<Void, Never>] = [:] // delegate queue only
     init(request: URLRequest, api: APIClient) { self.request = request; self.api = api }
+    func cancel() {
+        queue.async {
+            for task in self.work.values { task.cancel() }
+            self.work.removeAll()
+        }
+    }
     func resourceLoader(_ resourceLoader: AVAssetResourceLoader, shouldWaitForLoadingOfRequestedResource loading: AVAssetResourceLoadingRequest) -> Bool {
         let id = ObjectIdentifier(loading)
         var request = request

@@ -4,10 +4,11 @@ import VoiceStudioKit
 struct VoicePicker: View {
     @Environment(AppModel.self) private var model
     @Binding var selection: String
-    var sourceDefault = false
+    var dubbing = false
     var body: some View {
         ChoicePicker(label: model.t("mobile.speak.voice"), selection: $selection, options:
-            [SelectionOption(id: "", title: model.t(sourceDefault ? "mobile.ios.voice_default" : "mobile.speak.voice_default"))] +
+            (dubbing ? [SelectionOption(id: DubVoiceChoice.unselected, title: model.t("mobile.dub.choose_voice"), enabled: false)] : []) +
+            [SelectionOption(id: "", title: model.t(DubVoiceChoice.defaultLabelKey))] +
             model.profiles.map { SelectionOption(id: $0.id, title: $0.name, subtitle: model.languages.language($0.language)?.name) })
     }
 }
@@ -19,6 +20,7 @@ struct SpeakView: View {
     @State private var player = AudioPlayer()
     @State private var generating = false
     @State private var deleting: HistoryItem?
+    @State private var hostScope: UUID?
     private var engines: [SelectionOption] {
         (model.inventory?.tts.backends ?? []).map {
             SelectionOption(id: $0.id, title: $0.display_name,
@@ -50,7 +52,7 @@ struct SpeakView: View {
                 Task {
                     generating = true; defer { generating = false }
                     await model.perform {
-                        let result = try await model.api().generate(text: text, profile: selection.profileID, engine: selection.engineID, language: selection.language)
+                        let result = try await model.hostState.generate(api: model.api(), text: text, profile: selection.profileID, engine: selection.engineID, language: selection.language)
                         try await player.load(result.audio, extension: "wav")
                         model.history = try await model.api().history()
                     }
@@ -87,6 +89,7 @@ struct SpeakView: View {
                 Task { await model.perform { try await model.api().deleteHistory(item.id); model.history = try await model.api().history() } }
             }
         }
-        .onDisappear { player.pause() }
+        .onAppear { hostScope = model.hostState.scopeID }
+        .onDisappear { if hostScope != model.hostState.scopeID { player.clear() } else { player.pause() } }
     }
 }

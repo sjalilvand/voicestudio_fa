@@ -62,6 +62,13 @@ and PIN ciphertext is stored using a Keystore AES-GCM key; DataStore contains
 only connection metadata/preferences and dub checkpoints. A 401 returns to
 pairing. Disconnect attempts revocation and clears local access even offline.
 
+Connecting/reconnecting resets host data, the navigation tree and its saved
+forms, pending document targets, players and dictation controllers. Switching to
+a different host or disconnecting cancels the old host's WorkManager jobs and
+clears dub checkpoints; checkpoint keys also include the host, and late writes
+from inactive hosts are rejected. Reconnecting to the same host retains durable
+job monitoring. Long jobs already running on the old computer continue there.
+
 All forms resize their scroll viewport for the keyboard. Background taps,
 primary/secondary actions and navigation dismiss focus; single-line fields have
 the native Done action. The multiline Speak editor keeps Return for newlines
@@ -79,7 +86,25 @@ recent history with star/delete. Voices has search, previews, rename/delete,
 permission-gated recording or file selection and explicit clone consent.
 
 Dub accepts device media or a link for the host to ingest, multiple target
-languages and a voice. WorkManager copies no credentials into job input. It
+languages and an explicit voice choice: **Default voice (engine preset)** or a
+saved profile. There is no source-voice choice. Desktop source cloning uses
+`dub-session.ts:readTranscript` and `/dub/transcribe-stream/{job_id}` to prepare
+`cast_sources` / `speaker_clones`, then `applySpeakerCloneDefaults` assigns
+`auto:` profile IDs carried into `/dub/generate/{job_id}` by `segmentGenInputs`.
+The synchronous `/dub/transcribe/{job_id}` used by M1 returns no cast-reference
+metadata. Both mobile apps therefore use the honest preset/profile choice;
+an empty `profile_id` explicitly means the engine preset, never source cloning.
+
+Before creating a job, Dub fetches `/engines/translation`, selects exactly its
+`active` ID, and requires positive `installed` and `ready` fields. Missing or
+unready engines direct the user to VoiceStudio Settings on the computer. An
+`online` engine names the service and requires confirmation for that job using
+equally styled Allow/Decline buttons; dismissal and decline start no upload or
+translation. Approval is scoped to a single durable job. The worker rechecks the
+active provider before starting/resuming and refuses changed providers; every
+`/dub/translate` body contains the explicit authorized `provider`. Existing jobs
+without provider metadata fail with recovery advice instead of using a fallback.
+WorkManager copies no credentials into job input. It
 uploads, waits for prep, transcribes, translates each track, starts generation,
 and replays persisted job events while polling. Checkpoints resume existing host
 tasks after app process death or connectivity loss. Abort stops the host before
@@ -90,6 +115,10 @@ notifications are generated locally, without a push service.
 Dictate checks readiness and streams mono 16 kHz signed PCM over the host
 WebSocket, using a one-use ticket for sessions. Tap/hold controls, partial/final
 transcripts, copy/share and lifecycle-based microphone cleanup are included.
+Sherpa utterance finals append without stopping capture. Only summary/legacy EOF
+finals or socket termination end a session; authoritative/refined summary text
+replaces the live transcript without duplication, and empty summaries preserve
+committed phrases. Unknown final kinds are ignored, matching desktop.
 Readiness names the missing ASR model and its size, with the desktop install
 location. API-key/trusted-network advice appears only after an authorization
 failure; a share PIN alone does not authorize dictation. Settings includes live appearance, per-appearance palettes,
@@ -161,6 +190,11 @@ available offline in About.
 
 ## Verification
 
+Round 3 verification (2026-10-17), with JDK 21 and Android SDK 36:
+`./gradlew assembleDebug`, `./gradlew testDebugUnitTest` (50 tests, zero failures
+or skips), and `./gradlew lint` all passed. Tests used `HF_HUB_OFFLINE=1` with an
+empty HF cache; all API/WebSocket traffic was against local mock servers.
+
 JVM tests cover token parity for every palette/role, L10n interpolation, plural
 categories and fallback, every literal UI/error key, pairing and cleartext
 boundaries, mock-server health/PIN/session exchange/revoke/401, binary generation,
@@ -168,12 +202,20 @@ upload/progress, origin isolation and cancellation. A Robolectric Compose smoke
 flow covers launch → consent → mock host pairing → generation → Play; its player
 is a test double, so it verifies the playback command rather than audible output.
 
+Round 3 regressions cover explicit translation providers, missing/unready
+engines, named-service consent and decline, consent on durable resume, changed
+providers, explicit preset/profile dub request bodies, scripted multi-phrase
+WebSocket transcripts and EOF/refined summaries, host switching/reconnection,
+player/form disposal, checkpoint isolation and old-host worker cancellation.
+AndroidX WorkManager's pinned test helper initializes its JVM scheduler.
+
 Device camera,
 microphone, audible playback, permission prompts, real-host inference, foreground
 upload survival and notification delivery still require emulator/device and host
-validation. Instrumentation exercises ART interpolation, bundled language data,
-structured error copy/duration formatting, and Activity launch on the attached
-Android 15 phone. It does not perform inference, record audio or alter settings.
+validation. Existing instrumentation covers ART interpolation, bundled language
+data, structured error copy/duration formatting, and Activity launch. No device
+commands or instrumented tests were run for Round 3; the required build, JVM
+tests and lint run with JDK 21 and SDK 36.
 
 Robolectric uses the API 34 instrumented SDK pinned in the version catalog.
 Gradle resolves it into its normal dependency cache and copies it into

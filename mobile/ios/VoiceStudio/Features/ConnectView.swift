@@ -29,7 +29,7 @@ struct ConnectView: View {
                     Text(host.label); Text(host.url.absoluteString)
                     Text(model.t("mobile.connect.last_seen", ["time": host.lastSeen.formatted()]))
                     Button(model.t("mobile.connect.connect")) { url = host.url.absoluteString; label = host.label; Task { await connect() } }
-                    Button(model.t("mobile.connect.forget"), role: .destructive) { Task { await model.perform { try await model.connection.forget(host) } } }
+                    Button(model.t("mobile.connect.forget"), role: .destructive) { Task { await model.perform(connectionChange: true) { try await model.connection.forget(host) } } }
                 }
             }
         }.navigationTitle(model.t("mobile.connect.title")).navigationBarTitleDisplayMode(.large)
@@ -46,7 +46,7 @@ struct ConnectView: View {
         guard !model.busy, BackgroundUpload.shared.pending == nil else { model.error = ClientError("mobile.errors.upload_active"); return }
         model.pauseMonitor()
         let key = apiKey; apiKey = ""
-        await model.perform {
+        await model.perform(connectionChange: true) {
             _ = try await model.connection.connect(address: PairingAddress(url, pin: pin), key: key, label: label)
             pin = ""
             try await model.refresh()

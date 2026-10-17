@@ -11,7 +11,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import java.io.File
 
- data class StudioState(val loading: Boolean = true, val connected: Boolean = false, val busy: Boolean = false,
+ data class StudioState(val connectionId: Long = 0, val hostUrl: String? = null, val loading: Boolean = true, val connected: Boolean = false, val busy: Boolean = false,
     val error: ClientFailure? = null, val profiles: List<Profile> = emptyList(), val engines: EngineFamily = EngineFamily(),
     val history: List<HistoryItem> = emptyList(), val dubHistory: List<DubHistory> = emptyList(), val audio: String? = null)
 
@@ -26,18 +26,39 @@ class StudioViewModel @JvmOverloads constructor(application: Application, val st
         viewModelScope.launch {
             val prefs = store.preferences.first()
             prefs.activeUrl?.let { host ->
-                api = store.api(host, ::expired)
-                mutable.update { it.copy(connected = true) }
+                api = sessionApi(host)
+                mutable.update { it.copy(connected = true, hostUrl = host) }
             }
             mutable.update { it.copy(loading = false) }
             if(api != null) refresh()
         }
     }
-    private fun expired() {
+    private suspend fun sessionApi(host: String): VoiceStudioApi {
+        lateinit var client: VoiceStudioApi
+        client = store.api(host) { expired(client) }
+        return client
+    }
+    private suspend fun stopHostWork(host: String?) {
+        if(host != null) withContext(Dispatchers.IO) {
+            WorkManager.getInstance(getApplication()).cancelAllWorkByTag(host).result.get()
+        }
+    }
+    private fun clearHostState(host: String? = null, profiles: List<Profile> = emptyList(), error: ClientFailure? = null) {
+        mutable.value = StudioState(connectionId = mutable.value.connectionId + 1, hostUrl = host,
+            loading = false, connected = host != null, busy = mutable.value.busy, profiles = profiles, error = error)
+    }
+    private fun expired(source: VoiceStudioApi) {
         viewModelScope.launch {
-            WorkManager.getInstance(getApplication()).cancelAllWorkByTag(DubWorker.TAG)
-            store.disconnect(); api = null
-            mutable.value = StudioState(loading = false, error = ClientFailure("mobile.connect.error_session_expired"))
+            // A delayed 401 from A must not disconnect a newly paired host B.
+            if(api !== source) return@launch
+            operation?.cancelAndJoin()
+            if(api !== source) return@launch
+            mutable.update { it.copy(busy = true) }
+            try {
+                stopHostWork(mutable.value.hostUrl)
+                store.disconnect(); api = null
+                clearHostState(error = ClientFailure("mobile.connect.error_session_expired"))
+            } finally { mutable.update { it.copy(busy = false) } }
         }
     }
     fun clearError() { mutable.update { it.copy(error = null) } }
@@ -47,11 +68,12 @@ class StudioViewModel @JvmOverloads constructor(application: Application, val st
     }
     fun run(block: suspend () -> Unit) {
         if(mutable.value.busy) return
-        operation = viewModelScope.launch {
+        operation = viewModelScope.launch(start = CoroutineStart.LAZY) {
             mutable.update { it.copy(busy = true, error = null) }
             try { block() } catch(e: CancellationException) { throw e } catch(e: Exception) { fail(e) }
-            finally { mutable.update { it.copy(busy = false) } }
+            finally { if(operation === currentCoroutineContext()[Job]) mutable.update { it.copy(busy = false) } }
         }
+        operation?.start()
     }
     fun cancel() { operation?.cancel() }
     fun consent(value: Boolean) { viewModelScope.launch { store.update { it.copy(consent = value) } } }
@@ -63,26 +85,30 @@ class StudioViewModel @JvmOverloads constructor(application: Application, val st
         if(key.isNotBlank()) candidate.exchange(key)
         // Health is public: a protected consumption endpoint must also succeed.
         val profiles = candidate.profiles()
+        if(mutable.value.hostUrl != address.baseUrl.toString()) stopHostWork(mutable.value.hostUrl)
         store.pair(address, Secret(candidate.sessionToken, address.pin))
-        api = store.api(address.baseUrl.toString(), ::expired)
-        mutable.update { it.copy(connected = true, profiles = profiles) }
+        api = sessionApi(address.baseUrl.toString())
+        clearHostState(address.baseUrl.toString(), profiles)
         reload()
     }
     fun reconnect(host: SavedHost) = run {
         val candidate = store.api(host.url)
         candidate.health(); val profiles = candidate.profiles()
         val secret = withContext(Dispatchers.IO) {store.vault.read(host.url)} ?: Secret()
+        if(mutable.value.hostUrl != host.url) stopHostWork(mutable.value.hostUrl)
         store.pair(candidate.address, secret)
-        api = store.api(host.url, ::expired)
-        mutable.update { it.copy(connected = true, profiles = profiles) }; reload()
+        api = sessionApi(host.url)
+        clearHostState(host.url, profiles); reload()
     }
     fun disconnect() = run {
-        // Always clear this phone even when the host is offline. The server's
-        // bounded session expires if the best-effort revoke could not reach it.
-        var revokeError: ClientFailure?=null
-        try {api?.revoke()} catch(e:ClientFailure) {if(e.status!=401) revokeError=ClientFailure("mobile.android.disconnected_offline")}
-        WorkManager.getInstance(getApplication()).cancelAllWorkByTag(DubWorker.TAG)
-        store.disconnect(); api = null; mutable.value = StudioState(loading = false,error=revokeError)
+        // Dispose host UI/capture and stop work immediately, including offline.
+        // Revocation is best effort; the host's bounded session also expires.
+        val current = api
+        stopHostWork(mutable.value.hostUrl)
+        store.disconnect(); api = null; clearHostState()
+        try { withTimeout(15000) { current?.revoke() } }
+        catch(e: TimeoutCancellationException) { fail(ClientFailure("mobile.android.disconnected_offline")) }
+        catch(e: ClientFailure) { if(e.status != 401) fail(ClientFailure("mobile.android.disconnected_offline")) }
     }
     private suspend fun reload() {
         val current = api ?: return
@@ -96,8 +122,10 @@ class StudioViewModel @JvmOverloads constructor(application: Application, val st
     fun generate(text: String, voice: String, engine: String, language: String) = run {
         val current = api ?: return@run
         val result = current.generate(text, voice, engine, language)
+        if(api !== current) return@run
         mutable.update { it.copy(audio = current.audioPath(result.audioPath)) }
-        mutable.update { it.copy(history = current.history()) }
+        val history = current.history()
+        if(api === current) mutable.update { it.copy(history = history) }
     }
     fun play(path: String) { mutable.update { it.copy(audio = path) } }
     fun star(item: HistoryItem) = run { api?.star(item.id, !item.isStarred); reload() }
@@ -105,5 +133,10 @@ class StudioViewModel @JvmOverloads constructor(application: Application, val st
     fun clone(name: String, file: File) = run { api?.clone(name, file); file.delete(); reload() }
     fun rename(id: String, name: String) = run { api?.rename(id, name); reload() }
     fun deleteProfile(id: String) = run { api?.deleteProfile(id); reload() }
-    fun forget(url: String) = run { store.forget(url) }
+    fun forget(url: String) = run {
+        if(mutable.value.hostUrl == url) {
+            stopHostWork(url); store.disconnect(); api = null; clearHostState()
+        }
+        store.forget(url)
+    }
 }

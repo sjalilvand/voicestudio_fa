@@ -61,6 +61,7 @@ public struct SavedHost: Codable, Identifiable, Sendable, Equatable {
     public private(set) var active: SavedHost?
     public private(set) var client: APIClient?
     public private(set) var connecting = false
+    @ObservationIgnored public var onHostChange: (@MainActor (String?) -> Void)?
     public private(set) var error: ClientError?
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let vault: any CredentialVault
@@ -89,7 +90,10 @@ public struct SavedHost: Codable, Identifiable, Sendable, Equatable {
             guard attempt == current else { throw CancellationError() }
             let host = SavedHost(url: address.baseURL, label: label.isEmpty ? (address.baseURL.host ?? address.baseURL.absoluteString) : label)
             hosts.removeAll { $0.id == host.id }; hosts.insert(host, at: 0)
-            active = host; client = candidate; persist(); defaults.set(host.id, forKey: "activeHost")
+            let changed = active?.id != host.id
+            active = host; client = candidate
+            if changed { onHostChange?(host.id) }
+            persist(); defaults.set(host.id, forKey: "activeHost")
             return candidate
         } catch let failure as ClientError {
             if failure.status == 401 { try? await vault.write(nil, host: address.baseURL.absoluteString) }
@@ -105,17 +109,21 @@ public struct SavedHost: Codable, Identifiable, Sendable, Equatable {
     public func handle(_ failure: ClientError) async {
         error = failure
         if failure.status == 401, let host = active {
+            let current = attempt
             try? await vault.write(nil, host: host.id)
-            attempt = UUID(); client = nil; active = nil; defaults.removeObject(forKey: "activeHost")
+            guard attempt == current, active?.id == host.id else { return }
+            attempt = UUID(); client = nil; active = nil; onHostChange?(nil); defaults.removeObject(forKey: "activeHost")
         }
     }
     public func disconnect() async throws {
         attempt = UUID()
-        var revokeError: (any Error)?
-        if let client { do { try await client.revoke() } catch { revokeError = error } }
-        if let active { try await vault.write(nil, host: active.id) }
-        client = nil; active = nil; error = nil; defaults.removeObject(forKey: "activeHost")
-        if let revokeError { throw revokeError }
+        let oldClient = client, oldHost = active?.id
+        client = nil; active = nil; error = nil; onHostChange?(nil)
+        defaults.removeObject(forKey: "activeHost")
+        var failure: (any Error)?
+        if let oldHost { do { try await vault.write(nil, host: oldHost) } catch { failure = error } }
+        if let oldClient { do { try await oldClient.revoke() } catch { if failure == nil { failure = error } } }
+        if let failure { throw failure }
     }
     public func forget(_ host: SavedHost) async throws {
         if active?.id == host.id { try await disconnect() }

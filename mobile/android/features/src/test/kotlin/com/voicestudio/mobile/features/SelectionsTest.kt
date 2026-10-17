@@ -46,6 +46,11 @@ class SelectionsTest {
         assertEquals("mobile.dictate.install_model",Readiness(false,MissingModel("asr_model_missing",missingRepoId="org/model")).guidance().first)
         assertEquals("mobile.dictate.setup",Readiness(false).guidance().first)
     }
+    @Test fun dubPickerHonestlyOffersDefaultPresetOrAnExistingClone() {
+        assertEquals(listOf("" to "Default voice (engine preset)", "clone-id" to "My clone"),
+            dubVoiceChoices(listOf(Profile("clone-id","My clone")),"Default voice (engine preset)"))
+        assertEquals(listOf("" to "Default voice (engine preset)"),dubVoiceChoices(emptyList(),"Default voice (engine preset)"))
+    }
     @Test fun playerUsesClockTime() {
         assertEquals("0:00",formatDuration(-1))
         assertEquals("0:01",formatDuration(1000))

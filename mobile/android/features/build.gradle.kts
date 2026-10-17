@@ -18,6 +18,7 @@ dependencies {
     implementation(libs.serialization)
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
+    testImplementation(libs.mockwebserver)
     
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

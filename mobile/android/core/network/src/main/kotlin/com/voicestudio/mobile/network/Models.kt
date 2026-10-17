@@ -38,7 +38,8 @@ data class Generation(val id: String, val audioPath: String, val duration: Doubl
     @SerialName("missing_repo_id") val missingRepoId: String? = null, val message: String? = null)
 @Serializable data class Readiness(val ready: Boolean, val missing: MissingModel? = null)
 @Serializable data class DictationEvent(val type: String, val text: String = "", val message: String? = null,
-    @SerialName("final_kind") val finalKind: String? = null)
+    @SerialName("final_kind") val finalKind: String? = null,
+    @SerialName("refined_text") val refinedText: String? = null)
 
 @Serializable data class JobEvent(val seq: Int, val payload: String)
 @Serializable data class JobEvents(val job: Job, val events: List<JobEvent>)

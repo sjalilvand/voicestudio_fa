@@ -20,6 +20,7 @@ actor MockHost: HTTPTransport {
         case "/dub/upload": return HTTPReply(data: data(#"{"job_id":"dub-1","task_id":"prep_dub-1","filename":"clip.mp4"}"#), status: 202)
         case "/jobs/prep_dub-1/events": return HTTPReply(data: data(#"{"job":{"id":"prep_dub-1","status":"done"},"events":[{"seq":1,"payload":"data: {\"type\":\"ready\"}\n\n"}]}"#))
         case "/dub/transcribe/dub-1": return HTTPReply(data: data(#"{"segments":[{"id":0,"start":0,"end":2,"text":"Source"}],"source_lang":"en"}"#))
+        case "/engines/translation": return HTTPReply(data: data(#"{"active":"argos","engines":[{"id":"argos","display_name":"Argos","category":"offline","installed":true,"ready":true}]}"#))
         case "/dub/translate": return HTTPReply(data: data(#"{"translated":[{"id":"0","text":"Translated"}]}"#))
         case "/dub/generate/dub-1": return HTTPReply(data: data(#"{"task_id":"render-1"}"#))
         case "/jobs/render-1/events": return HTTPReply(data: data(#"{"job":{"id":"render-1","status":"done"},"events":[{"seq":2,"payload":"data: {\"type\":\"done\"}\n\n"}]}"#))

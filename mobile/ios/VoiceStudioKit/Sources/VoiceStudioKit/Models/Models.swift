@@ -116,6 +116,9 @@ public struct Readiness: Decodable, Sendable {
     }
 }
 public struct DictationMessage: Decodable, Sendable {
+    public let final_kind: String?
+    public let refined_text: String?
+    public var isSessionFinal: Bool { type == "final" && (final_kind == nil || final_kind == "summary") }
     public let type: String
     public let text: String?
     public let message: String?

@@ -9,6 +9,7 @@ import UniformTypeIdentifiers
     private var player: AVPlayer?
     private var ticker: Task<Void, Never>?
     private var loader: HostMediaLoader?
+    private var revision = UUID()
     var file: URL?
     var duration: Double = 0
     var position: Double = 0
@@ -16,19 +17,26 @@ import UniformTypeIdentifiers
     var error: ClientError?
     var waveform: [Float] = []
     func load(_ data: Data, extension ext: String) async throws {
-        pause(); loader = nil
+        clear()
+        let revision = self.revision
+        try Task.checkCancellation()
         let path = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension(ext)
         try data.write(to: path, options: .atomic)
         if let old = file { try? FileManager.default.removeItem(at: old) }
         file = path
         let asset = AVURLAsset(url: path)
         let duration = try await asset.load(.duration).seconds
+        let waveform = try await Self.waveform(url: path)
+        try Task.checkCancellation()
+        guard revision == self.revision else { throw CancellationError() }
         self.duration = duration.isFinite ? duration : 0; position = 0
-        waveform = try await Self.waveform(url: path)
+        self.waveform = waveform
         player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
     }
     func stream(request: URLRequest, api: APIClient) async throws {
-        pause()
+        clear()
+        let revision = self.revision
+        try Task.checkCancellation()
         guard let hostURL = request.url else { throw ClientError.invalidURL }
         var components = URLComponents(url: hostURL, resolvingAgainstBaseURL: false)!
         components.scheme = "voicestudio-media"
@@ -40,12 +48,18 @@ import UniformTypeIdentifiers
         play()
         // Save/share uses a separate authenticated host request, never a credential-bearing URL.
         let reply = try await api.download(request)
+        defer { try? FileManager.default.removeItem(at: reply.file) }
+        try Task.checkCancellation()
+        guard revision == self.revision else { throw CancellationError() }
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("wav")
         try FileManager.default.moveItem(at: reply.file, to: url)
         if let old = file { try? FileManager.default.removeItem(at: old) }; file = url
         let saved = AVURLAsset(url: url)
-        let seconds = try await saved.load(.duration).seconds; duration = seconds.isFinite ? seconds : 0
-        waveform = try await Self.waveform(url: url)
+        let seconds = try await saved.load(.duration).seconds
+        let waveform = try await Self.waveform(url: url)
+        try Task.checkCancellation()
+        guard revision == self.revision else { throw CancellationError() }
+        duration = seconds.isFinite ? seconds : 0; self.waveform = waveform
     }
     func play() {
         guard let player else { return }
@@ -66,6 +80,11 @@ import UniformTypeIdentifiers
                 try? await Task.sleep(for: .milliseconds(100))
             }
         }
+    }
+    func clear() {
+        revision = UUID(); pause(); player = nil; loader?.cancel(); loader = nil
+        if let file { try? FileManager.default.removeItem(at: file) }
+        file = nil; duration = 0; position = 0; waveform = []; error = nil
     }
     func pause() { player?.pause(); playing = false; ticker?.cancel(); ticker = nil }
     func seek(_ seconds: Double) { player?.seek(to: CMTime(seconds: seconds, preferredTimescale: 600)); position = seconds }
@@ -141,6 +160,7 @@ struct AudioPlayerView: View {
         guard !recording, !starting else { return }
         starting = true; defer { starting = false }
         guard await AVAudioApplication.requestRecordPermission() else { throw ClientError("mobile.permissions.denied") }
+        try Task.checkCancellation()
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker]); try session.setActive(true)
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("wav")

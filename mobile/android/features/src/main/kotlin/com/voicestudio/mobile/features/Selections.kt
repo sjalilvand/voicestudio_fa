@@ -64,3 +64,7 @@ fun languageCode(name:String):String? {
 fun paletteChoices(l: L10n): List<Pair<String,String>> = VSTokens.palettes.map {
     it.id to if(it.id=="default") l.t("themeAppearance.default") else it.label
 }
+
+/** M1 offers an engine preset or an existing profile, never implicit source cloning. */
+fun dubVoiceChoices(profiles: List<Profile>, defaultLabel: String): List<Pair<String, String>> =
+    listOf("" to defaultLabel) + profiles.map { it.id to it.name }

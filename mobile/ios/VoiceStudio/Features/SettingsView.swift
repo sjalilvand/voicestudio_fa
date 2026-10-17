@@ -11,7 +11,7 @@ struct SettingsView: View {
                     Text(model.t("mobile.settings.connection"))
                     if let host = model.connection.active { Text(model.t("mobile.connect.connected_to", ["host": host.label])) }
                     NavigationLink(model.t("mobile.connect.saved_hosts")) { ConnectView() }.disabled(model.busy || BackgroundUpload.shared.pending != nil)
-                    Button(model.t("mobile.connect.disconnect"), role: .destructive) { Task { await model.perform { model.pauseMonitor(); await BackgroundUpload.shared.cancel(); try await model.connection.disconnect(); model.profiles = []; model.history = []; model.dubHistory = []; model.inventory = nil } } }.disabled(model.busy)
+                    Button(model.t("mobile.connect.disconnect"), role: .destructive) { Task { await model.perform(connectionChange: true) { model.pauseMonitor(); await BackgroundUpload.shared.cancel(); try await model.connection.disconnect(); model.profiles = []; model.history = []; model.dubHistory = []; model.inventory = nil } } }.disabled(model.busy)
                 }
                 Card {
                     Text(model.t("mobile.settings.appearance"))

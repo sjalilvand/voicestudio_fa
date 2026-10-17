@@ -22,8 +22,13 @@ public struct APIClient: Sendable {
         return r
     }
     public func send(_ request: URLRequest) async throws -> HTTPReply {
+        try Task.checkCancellation()
         guard let url = request.url, PairingAddress.sameOrigin(url, address.baseURL) else { throw ClientError.invalidURL }
-        do { return try Self.validate(try await transport.send(request), authenticated: credentials.session != nil) }
+        do {
+            let reply = try await transport.send(request)
+            try Task.checkCancellation()
+            return try Self.validate(reply, authenticated: credentials.session != nil)
+        }
         catch is CancellationError { throw CancellationError() }
         catch let e as ClientError { throw e }
         catch let e as URLError {
@@ -33,10 +38,12 @@ public struct APIClient: Sendable {
         catch { throw ClientError("mobile.errors.invalid_response") }
     }
     public func download(_ request: URLRequest) async throws -> DownloadReply {
+        try Task.checkCancellation()
         guard let url = request.url, PairingAddress.sameOrigin(url, address.baseURL) else { throw ClientError.invalidURL }
         do {
             let reply = try await transport.download(request)
             do {
+                try Task.checkCancellation()
                 let body: Data
                 if !(200...299).contains(reply.status) {
                     let reader = try FileHandle(forReadingFrom: reply.file)
@@ -134,9 +141,11 @@ public struct APIClient: Sendable {
     }
     public func events(_ task: String, after: Int) async throws -> JobEvents { try await decode(JobEvents.self, "/jobs/\(try Self.component(task))/events?after_seq=\(after)") }
     public func transcribe(_ job: String) async throws -> Transcript { try await decode(Transcript.self, "/dub/transcribe/\(try Self.component(job))", method: "POST") }
-    public func translate(_ job: String, segments: [Segment], language: String) async throws -> Translation {
-        struct Input: Encodable, Sendable { let job_id: String; let segments: [Segment]; let target_lang: String }
-        return try await json("/dub/translate", value: Input(job_id: job, segments: segments, target_lang: language), response: Translation.self)
+    public func translationEngines() async throws -> TranslationEngines { try await decode(TranslationEngines.self, "/engines/translation") }
+    public func translate(_ job: String, segments: [Segment], language: String, provider: String) async throws -> Translation {
+        guard !provider.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw ClientError("mobile.dub.translation_setup") }
+        struct Input: Encodable, Sendable { let job_id: String; let segments: [Segment]; let target_lang: String; let provider: String }
+        return try await json("/dub/translate", value: Input(job_id: job, segments: segments, target_lang: language, provider: provider), response: Translation.self)
     }
     public func render(_ job: String, segments: [Segment], language: String, languageName: String) async throws -> TaskReference {
         struct Input: Encodable, Sendable { let segments: [Segment]; let language_code: String; let language: String }

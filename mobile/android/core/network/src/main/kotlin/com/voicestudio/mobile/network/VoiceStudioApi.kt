@@ -102,6 +102,7 @@ class VoiceStudioApi(val address: PairingAddress, token: String? = null, private
     suspend fun revoke() { raw("/api/auth/session", "DELETE").close(); sessionToken = null }
     suspend fun profiles(): List<Profile> = get("/profiles")
     suspend fun engines(): Engines = get("/engines")
+    suspend fun translationEngine(): TranslationEngine = get<TranslationEngines>("/engines/translation").activeEngine()
     suspend fun history(): List<HistoryItem> = get("/history")
     suspend fun dubHistory(): List<DubHistory> = get("/dub/history")
     suspend fun readiness(): Readiness = get("/dictation/readiness")
@@ -141,13 +142,17 @@ class VoiceStudioApi(val address: PairingAddress, token: String? = null, private
     }
     suspend fun ingest(link: String, jobId: String): UploadResult = post("/dub/ingest-url", buildJsonObject { put("url", link); put("job_id", jobId) })
     suspend fun transcribe(jobId: String): Transcription = post("/dub/transcribe/${segment(jobId)}", buildJsonObject {})
-    suspend fun translate(jobId: String, target: String, source: String?, segments: List<Segment>): Translation = post("/dub/translate", buildJsonObject {
+    suspend fun translate(jobId: String, target: String, source: String?, segments: List<Segment>, authorization: TranslationAuthorization): Translation = post("/dub/translate", buildJsonObject {
+        if(authorization.provider.isBlank() || (authorization.category == "online" && !authorization.onlineConfirmed))
+            throw ClientFailure("mobile.dub.translation_setup")
+        put("provider", authorization.provider)
         put("job_id", jobId); put("target_lang", target); source?.let { put("source_lang", it) }
         putJsonArray("segments") { segments.forEachIndexed { i, s -> add(buildJsonObject {
             put("id", s.id?.jsonPrimitive?.content ?: i.toString()); put("text", s.text); put("start", s.start); put("end", s.end)
         }) } }
     })
     suspend fun startDub(jobId: String, code: String, language: String, voice: String, segments: List<Segment>): TaskResult = post("/dub/generate/${segment(jobId)}", buildJsonObject {
+        DubVoiceChoice.validate(voice)
         put("language_code", code); put("language", language)
         putJsonArray("segments") { segments.forEach { s -> add(buildJsonObject {
             put("start", s.start); put("end", s.end); put("text", s.text); put("profile_id", voice); put("target_lang", code)

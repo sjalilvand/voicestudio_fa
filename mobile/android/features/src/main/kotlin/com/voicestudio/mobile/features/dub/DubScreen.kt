@@ -11,6 +11,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.work.WorkManager
 import androidx.work.WorkInfo
 import com.voicestudio.mobile.features.*
+import com.voicestudio.mobile.designsystem.*
 import com.voicestudio.mobile.data.DubWorker
 import com.voicestudio.mobile.network.*
 import kotlinx.coroutines.*
@@ -20,26 +21,42 @@ import kotlinx.serialization.json.*
 @Composable fun DubScreen(vm:StudioViewModel) {
     val context=LocalContext.current
     val state by vm.state.collectAsState()
-    val prefs by vm.preferences.collectAsState()
     val work=remember {WorkManager.getInstance(context)}
-    val workFlow=remember(prefs.activeUrl) {work.getWorkInfosByTagFlow(prefs.activeUrl ?: DubWorker.TAG)}
+    val host=state.hostUrl ?: return
+    val workFlow=remember(host) {work.getWorkInfosByTagFlow(host)}
     val works by workFlow.collectAsState(emptyList())
     val scope=rememberCoroutineScope()
     var link by rememberSaveable {mutableStateOf("")}
     var filePath by rememberSaveable {mutableStateOf<String?>(null)}
     var inputType by rememberSaveable {mutableStateOf("video")}
     var targets by rememberSaveable {mutableStateOf(listOf<String>())}
-    var voice by rememberSaveable {mutableStateOf("")}
+    var voice by rememberSaveable {mutableStateOf(DubVoiceChoice.UNSELECTED)}
+    var pending by remember {mutableStateOf<PendingDub?>(null)}
     var copying by remember {mutableStateOf(false)}
     val catalog=remember {LanguageCatalog.load(context)}
     val languages=remember(catalog) {catalog.dubChoices()}
-    LaunchedEffect(state.profiles) {if(state.profiles.none {it.id==voice}) voice=state.profiles.firstOrNull()?.id.orEmpty()}
+    LaunchedEffect(state.profiles) {if(voice.isNotEmpty() && state.profiles.none {it.id==voice}) voice=DubVoiceChoice.UNSELECTED}
     val picker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) {uri ->
         if(uri!=null) scope.launch {
             copying=true
             try {filePath?.let {File(it).delete()};inputType=if(context.contentResolver.getType(uri)?.startsWith("audio/")==true) "audio" else "video";filePath=copyMedia(context,uri,if(inputType=="audio") "m4a" else "mp4").absolutePath}
             catch(e:Exception) {vm.fail(e)} finally {copying=false}
         }
+    }
+    fun enqueue(draft: PendingDub, confirmed: Boolean) {
+        val authorization = draft.engine.authorize(confirmed) ?: return
+        // The entire screen is disposed on a connection change. Also reject a
+        // click delivered while the old composition is being removed.
+        if(vm.state.value.hostUrl != draft.host) return
+        DubWorker.enqueue(context,draft.host,draft.file,draft.link,draft.type,draft.languages,draft.voice,authorization)
+        filePath=null;link=""
+    }
+    pending?.let {draft ->
+        AlertDialog(shape=MaterialTheme.shapes.large,containerColor=role("surfaceOverlay"),
+            onDismissRequest={pending=null},title={Text(tr("mobile.dub.translation_online_title"))},
+            text={Text(tr("mobile.dub.translation_online_body",mapOf("service" to draft.engine.displayName.ifBlank {draft.engine.id})))},
+            confirmButton={TextButton(shape=MaterialTheme.shapes.small,onClick={pending=null;try {enqueue(draft,true)} catch(e:Exception) {vm.fail(e)}}) {Text(tr("mobile.dub.translation_allow"))}},
+            dismissButton={TextButton(shape=MaterialTheme.shapes.small,onClick={pending=null}) {Text(tr("mobile.dub.translation_decline"))}})
     }
     Screen {
         ScreenTitle("mobile.tabs.dub")
@@ -51,12 +68,21 @@ import kotlinx.serialization.json.*
         }
         Field("mobile.dub.paste_url",link,{link=it})
         MultiPicker("mobile.dub.target_languages",targets,languages) {targets=it}
-        Group {Picker("mobile.speak.voice",voice,state.profiles.map {it.id to it.name},{voice=it})}
-        Action("mobile.dub.start",!copying&&voice.isNotBlank()&&targets.isNotEmpty()&&(filePath!=null||link.isNotBlank())) {
-            try {
-                DubWorker.enqueue(context,prefs.activeUrl!!,filePath?.let(::File),link.takeIf {filePath==null},inputType,languages.filter {it.first in targets},voice)
-                filePath=null;link=""
-            } catch(e:Exception) {vm.fail(e)}
+        Group {Picker("mobile.speak.voice",voice,dubVoiceChoices(state.profiles,tr("mobile.speak.voice_default")),{voice=it})}
+        Action("mobile.dub.start",!state.busy&&!copying&&voice!=DubVoiceChoice.UNSELECTED&&targets.isNotEmpty()&&(filePath!=null||link.isNotBlank())) {
+            val current = vm.api ?: return@Action
+            val draftHost = state.hostUrl ?: return@Action
+            val draftFile = filePath?.let(::File)
+            val draftLink = link.takeIf {draftFile==null}
+            val draftType = inputType
+            val draftLanguages = languages.filter {it.first in targets}
+            val draftVoice = voice
+            vm.run {
+                val engine = current.translationEngine()
+                if(vm.api !== current) return@run
+                val draft = PendingDub(draftHost,draftFile,draftLink,draftType,draftLanguages,draftVoice,engine)
+                if(engine.category == "online") pending=draft else enqueue(draft,false)
+            }
         }
         works.forEach {info ->
             val stage=info.displayStage()
@@ -100,3 +126,6 @@ fun WorkInfo.displayStage(): String = when(state) {
     WorkInfo.State.ENQUEUED -> if(runAttemptCount>0) "mobile.errors.offline" else progress.getString("stage") ?: "mobile.android.stage_prepare"
     else -> progress.getString("stage") ?: outputData.getString("stage") ?: "mobile.android.stage_prepare"
 }
+
+private data class PendingDub(val host: String, val file: File?, val link: String?, val type: String,
+    val languages: List<Pair<String,String>>, val voice: String, val engine: TranslationEngine)

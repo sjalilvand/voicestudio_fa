@@ -7,6 +7,7 @@ import VoiceStudioKit
     private var continuation: AsyncThrowingStream<Data, any Error>.Continuation?
     func start() async throws -> AsyncThrowingStream<Data, any Error> {
         guard await AVAudioApplication.requestRecordPermission() else { throw ClientError("mobile.permissions.denied") }
+        try Task.checkCancellation()
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.record, mode: .measurement); try session.setActive(true)
         let engine = AVAudioEngine()

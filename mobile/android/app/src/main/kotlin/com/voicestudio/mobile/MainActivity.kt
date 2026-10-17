@@ -63,6 +63,7 @@ class MainActivity:ComponentActivity() {
     val direction=if(Locale.forLanguageTag(locale).language=="ar") LayoutDirection.Rtl else LayoutDirection.Ltr
     CompositionLocalProvider(LocalL10n provides l,LocalLayoutDirection provides direction) {
         VoiceStudioTheme(ThemePreferences(prefs.mode,prefs.lightPalette,prefs.darkPalette)) {
+            key(state.connectionId) {
             val nav=rememberNavController()
             val back by nav.currentBackStackEntryAsState()
             val route=back?.destination?.route ?: "connect"
@@ -109,6 +110,7 @@ class MainActivity:ComponentActivity() {
                     }
                     }
                 }
+            }
             }
             if(!state.loading&&prefs.consent==null) AlertDialog(shape=MaterialTheme.shapes.large,onDismissRequest={vm.consent(false)},title={Text(tr("consent.title"))},
                 text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(VSTheme.gap)) {Text(tr("consent.body"));Text(tr("mobile.android.analytics_local"))}},

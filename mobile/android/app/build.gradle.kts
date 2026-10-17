@@ -72,6 +72,7 @@ dependencies {
     testImplementation(libs.mockito)
     testImplementation(libs.media)
     testImplementation(libs.coroutines.test)
+    testImplementation(libs.work.testing)
     androidTestImplementation(libs.test.runner)
     androidTestImplementation(libs.test.ext.junit)
     androidTestImplementation(libs.test.core)
