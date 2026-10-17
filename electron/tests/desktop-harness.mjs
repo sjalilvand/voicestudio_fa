@@ -38,7 +38,11 @@ export const freePort = () =>
     });
   });
 
-const slug = (name) => name.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase();
+const slug = (name) =>
+  name
+    .replace(/[^a-z0-9]+/gi, '-')
+    .replace(/^-|-$/g, '')
+    .toLowerCase();
 
 async function launch({ profile, backendPort, proxyPort, seed }) {
   // VS Code terminals export ELECTRON_RUN_AS_NODE=1, which makes Electron boot as plain Node.

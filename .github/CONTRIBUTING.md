@@ -286,6 +286,13 @@ uv run pytest tests/test_app_version.py -q
 # Electron desktop validation, from the repository root
 bun run check:electron
 
+# Desktop UI tests: launch the real (unpackaged) app against a fake backend.
+# CI runs these on macOS, Windows and Linux. On Linux without a display,
+# prefix the last command with `xvfb-run -a`. Failures leave a Playwright
+# trace and screenshot in electron/test-results/.
+bun run --cwd electron build
+bun run --cwd electron test:desktop-ui
+
 # Shared native helper, when changed
 cargo check --manifest-path native/desktop-bridge/Cargo.toml
 ```

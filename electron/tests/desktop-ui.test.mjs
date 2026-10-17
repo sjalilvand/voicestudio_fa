@@ -105,7 +105,9 @@ test('routes: every route renders', async (t) => {
       await page
         .waitForFunction((path) => location.hash.startsWith('#' + path), route, { timeout: 5000 })
         .catch(async () => {
-          assert.fail(`Route ${route} settled on hash "${await page.evaluate(() => location.hash)}"`);
+          assert.fail(
+            `Route ${route} settled on hash "${await page.evaluate(() => location.hash)}"`,
+          );
         });
       // A crashed route replaces the shell with the error boundary's alert.
       await page.locator('main, [role=alert]').first().waitFor();
@@ -117,7 +119,9 @@ test('routes: every route renders', async (t) => {
     }
     assert.deepEqual(crashed, [], 'Routes rendered the error boundary');
     const missing = [
-      ...new Set(backend.requests.filter((r) => r.status === 404).map((r) => `${r.method} ${r.path}`)),
+      ...new Set(
+        backend.requests.filter((r) => r.status === 404).map((r) => `${r.method} ${r.path}`),
+      ),
     ];
     assert.deepEqual(missing, [], 'Routes requested backend paths the fake backend lacks');
   });
@@ -165,7 +169,9 @@ test('settings: theme and language survive restart, user data stays in the profi
     }));
     assert.equal(saved.locale, 'de');
     assert.equal(saved.theme.dark, 'signal');
-    await restarted.page.waitForFunction(() => document.documentElement.dataset.themeId === 'signal');
+    await restarted.page.waitForFunction(
+      () => document.documentElement.dataset.themeId === 'signal',
+    );
   });
 });
 

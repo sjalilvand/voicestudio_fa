@@ -42,7 +42,11 @@ export const DEFAULT_FIXTURES = {
     selections: {
       tts: { engine: 'omnivoice', model: 'k2-fsa/OmniVoice' },
       asr: { engine: 'faster-whisper', model: 'deepdml/faster-whisper-large-v3-turbo-ct2' },
-      dictation: { engine: 'offline-transducer', model: 'sherpa-parakeet-tdt-v3', label: 'Fixture' },
+      dictation: {
+        engine: 'offline-transducer',
+        model: 'sherpa-parakeet-tdt-v3',
+        label: 'Fixture',
+      },
       diarisation: { engine: 'inactive', model: null },
       translation: { engine: 'nllb', model: 'facebook/nllb-200-distilled-600M' },
       llm: { engine: 'inactive', model: null },
@@ -134,7 +138,11 @@ export const DEFAULT_FIXTURES = {
     engines: [],
   },
   '/api/settings/hf-token/state': { active: null, sources: [] },
-  '/api/settings/perf/offload-after-generation': { enabled: false, env_pinned: false, device: 'cpu' },
+  '/api/settings/perf/offload-after-generation': {
+    enabled: false,
+    env_pinned: false,
+    device: 'cpu',
+  },
   '/api/settings/storage': { categories: [], volumes: [], warnings: [] },
   '/api/settings/storage/models-dir': {},
   '/demo_audio/demo/dubbing/manifest.json': {
@@ -215,7 +223,9 @@ export async function startHealthBackend({ fixtures = {} } = {}) {
         'content-type': 'application/json',
         'x-omnivoice-backend': 'native-smoke',
       });
-      response.end(JSON.stringify(typeof fixture === 'function' ? fixture(request, body) : fixture));
+      response.end(
+        JSON.stringify(typeof fixture === 'function' ? fixture(request, body) : fixture),
+      );
       return;
     }
     response.writeHead(404);
