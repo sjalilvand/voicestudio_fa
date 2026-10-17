@@ -76,6 +76,10 @@ async function launch({ profile, backendPort, proxyPort, seed }) {
     },
     timeout: 60000,
   });
+  const output = [];
+  for (const stream of [app.process().stdout, app.process().stderr]) {
+    stream?.on('data', (chunk) => output.push(String(chunk)));
+  }
   const context = app.context();
   await context.tracing.start({ screenshots: true, snapshots: true });
   await context.route(STAR_COUNT_URL, (route) => route.fulfill({ json: STAR_COUNT_STUB }));
@@ -96,7 +100,22 @@ async function launch({ profile, backendPort, proxyPort, seed }) {
     ipcMain.removeHandler('updates:listReleases');
     ipcMain.handle('updates:listReleases', () => []);
   });
-  const page = await app.firstWindow();
+  let page;
+  try {
+    page = await app.firstWindow();
+  } catch (error) {
+    // The app died before showing a window: its own output is the only evidence of why.
+    let journal = '(none)';
+    try {
+      journal = readFileSync(join(profile, 'main-process-errors.json'), 'utf8');
+    } catch {
+      // No journal was written.
+    }
+    throw new Error(
+      `${error.message}\n--- app output ---\n${output.join('').slice(-4000)}\n--- main-process-errors.json ---\n${journal}`,
+      { cause: error },
+    );
+  }
   const errors = [];
   page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
   page.on('console', (message) => {
