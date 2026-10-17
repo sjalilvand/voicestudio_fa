@@ -3674,7 +3674,7 @@
       "upload_resume": "恢复监控",
       "upload_failed": "上传失败。请重新连接到同一台主机，然后再次选择媒体。",
       "privacy_local": "分析偏好保存在此设备上。此版本不会发送任何分析数据。",
-      "transcript": "参考文本",
+      "transcript": "转录文本",
       "qr_unavailable": "相机不可用。请手动输入主机地址。",
       "language_system": "系统语言",
       "progress": "进度",
