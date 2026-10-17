@@ -111,7 +111,10 @@ async def devices() -> dict:
 
 @router.post("/devices/{device_id}/revoke")
 async def revoke(device_id: str = Path(pattern=_DEVICE_ID)) -> dict:
-    return {"device": await _guarded(get_service().revoke(device_id))}
+    try:
+        return {"device": await _guarded(get_service().revoke(device_id))}
+    except LookupError:
+        raise HTTPException(status_code=404, detail="device_not_found")
 
 
 @router.post("/use-choices-of/{device_id}")

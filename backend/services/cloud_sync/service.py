@@ -341,9 +341,17 @@ class CloudSyncService:
         return await self.client.list_devices()
 
     async def revoke(self, device_id: str) -> dict:
+        """Remove one of this account's devices, as the server lists them.
+
+        The request uses the server's own copy of the ID, never the caller's
+        text, so only a listed device can ever be addressed.
+        """
         if not self.client:
             raise CloudOff()
-        return await self.client.revoke_device(device_id, new_idempotency_key())
+        listed = next((d["id"] for d in await self.client.list_devices() if d.get("id") == device_id), None)
+        if listed is None:
+            raise LookupError("not one of this account's devices")
+        return await self.client.revoke_device(listed, new_idempotency_key())
 
     def other_devices_choices(self) -> list[dict]:
         if not self.organization_id:

@@ -321,3 +321,21 @@ def test_a_setting_changed_while_sync_was_stopped_is_pushed_when_it_starts_again
         await service.stop()
 
     asyncio.run(body())
+
+
+def test_only_a_device_the_server_lists_can_be_removed(setup):
+    service, server, _, _ = setup
+
+    async def body():
+        await service.turn_on({"settings": True})
+        other = await server.register_device("MacBook", "macos", "oss", "0.6.0", "k" * 32)
+        removed = await service.revoke(other["id"])
+        assert removed["id"] == other["id"]
+        calls = [c for c in server.calls if c[0] == "revoke_device"]
+        assert calls == [("revoke_device", other["id"])]
+        with pytest.raises(LookupError):
+            await service.revoke("DvNotListed00001")
+        assert [c for c in server.calls if c[0] == "revoke_device"] == calls  # nothing sent
+        await service.stop()
+
+    asyncio.run(body())
