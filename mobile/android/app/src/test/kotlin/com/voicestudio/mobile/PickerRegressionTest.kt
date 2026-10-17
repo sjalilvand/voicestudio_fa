@@ -42,7 +42,7 @@ class PickerRegressionTest {
         compose.onNodeWithText(title,useUnmergedTree=true).performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult) {it(layouts)}
         assertEquals(1,layouts.single().lineCount)
         assertTrue(layouts.single().isLineEllipsized(0))
-        compose.onNodeWithContentDescription("Engine: $title").assertExists()
+        compose.onNodeWithContentDescription(L10n.load(context,"en").t("mobile.android.selection",mapOf("label" to "Engine","value" to title))).assertExists()
         compose.onNodeWithText("Engine").performClick()
         layouts.clear()
         compose.onNode(hasText(title) and hasAnyAncestor(isDialog()),useUnmergedTree=true).performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult) {it(layouts)}

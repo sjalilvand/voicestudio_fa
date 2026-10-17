@@ -62,16 +62,17 @@ import UserNotifications
         guard monitorTask == nil, let api = connection.client, dub.checkpoint?.host == api.address.baseURL.absoluteString else { return }
         monitorTask = Task { [weak self] in
             guard let self else { return }
-            defer { monitorTask = nil }
+            defer { self.monitorTask = nil }
             do {
-                try await dub.monitor(api: api)
-                if let cp = dub.checkpoint, cp.stage == .done { await notify(cp, failed: false) }
-                dubHistory = try await api.dubHistory()
-            } catch is CancellationError {} catch let e as ClientError {
-                guard connection.active?.id == api.address.baseURL.absoluteString else { return }
-                error = e; await connection.handle(e)
-                if let cp = dub.checkpoint, e.key == "mobile.errors.dub_failed" { await notify(cp, failed: true) }
-            } catch { error = ClientError("mobile.errors.dub_failed") }
+                try await self.dub.monitor(api: api)
+                if let cp = self.dub.checkpoint, cp.stage == DubStage.done { await self.notify(cp, failed: false) }
+                self.dubHistory = try await api.dubHistory()
+            } catch is CancellationError {
+            } catch let failure as ClientError {
+                guard self.connection.active?.id == api.address.baseURL.absoluteString else { return }
+                self.error = failure; await self.connection.handle(failure)
+                if let cp = self.dub.checkpoint, failure.key == "mobile.errors.dub_failed" { await self.notify(cp, failed: true) }
+            } catch { self.error = ClientError("mobile.errors.dub_failed") }
         }
     }
     func pauseMonitor() { monitorTask?.cancel(); monitorTask = nil }
@@ -79,18 +80,22 @@ import UserNotifications
         let id = cp.host + cp.jobID + (failed ? "failed" : "done")
         guard notifications, !notified.contains(id), !UserDefaults.standard.bool(forKey: id) else { return }
         let center = UNUserNotificationCenter.current()
-        let settings = await center.notificationSettings()
-        guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else { return }
+        let status = await Self.authorizationStatus()
+        guard status == .authorized || status == .provisional else { return }
         let content = UNMutableNotificationContent()
         content.title = t(failed ? "mobile.dub.failed_notification" : "mobile.dub.done_notification", ["title": cp.title])
         content.sound = .default
         do { try await center.add(UNNotificationRequest(identifier: id, content: content, trigger: nil)); notified.insert(id); UserDefaults.standard.set(true, forKey: id) }
-        catch { error = ClientError("mobile.permissions.denied") }
+        catch { self.error = ClientError("mobile.permissions.denied") }
+    }
+    // UNNotificationSettings isn't Sendable; read it off the main actor and return only the status.
+    nonisolated private static func authorizationStatus() async -> UNAuthorizationStatus {
+        await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
     }
     func enableNotifications(_ enabled: Bool) async {
         if !enabled { notifications = false; return }
         do { notifications = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])
-            if !notifications { error = ClientError("mobile.permissions.denied") }
+            if !notifications { self.error = ClientError("mobile.permissions.denied") }
         } catch { self.error = ClientError("mobile.permissions.denied") }
     }
     func acceptUpload(_ receipt: UploadReceipt) {
