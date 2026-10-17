@@ -87,6 +87,20 @@ public struct DubHistoryItem: Codable, Identifiable, Sendable {
     public let id: String
     public let filename: String?
     public let job_id: String?
+    public let language: String?
+    public let language_code: String?
+    public let duration: Double?
+    public let created_at: Double?
+    public var title: String { filename?.nilIfBlank ?? id }
+    public func metadata(locale: Locale) -> String {
+        var parts = [String]()
+        if let language = language?.nilIfBlank ?? language_code?.nilIfBlank { parts.append(language) }
+        if let duration, duration.isFinite, duration > 0 { parts.append(PlaybackTime.format(duration)) }
+        if let created_at, created_at.isFinite {
+            parts.append(Date(timeIntervalSince1970: created_at).formatted(.dateTime.day().month(.abbreviated).year().locale(locale)))
+        }
+        return parts.isEmpty ? id : parts.joined(separator: " · ")
+    }
 }
 public struct Readiness: Decodable, Sendable {
     public let ready: Bool

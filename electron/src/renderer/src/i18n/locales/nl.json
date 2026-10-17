@@ -3542,7 +3542,18 @@
       "done_notification": "Nasynchronisatie klaar: {{title}}",
       "failed_notification": "Nasynchronisatie mislukt: {{title}}",
       "language_unavailable": "Voor deze taal is geen ondersteunde doelcode beschikbaar. Kies een andere doeltaal.",
-      "remove_language": "{{language}} verwijderen"
+      "remove_language": "{{language}} verwijderen",
+      "translation_setup": "Kies, installeer en configureer een vertaalengine op je computer in VoiceStudio → Instellingen en probeer het opnieuw.",
+      "translation_changed": "De vertaalengine op je computer is gewijzigd. Start deze nasynchronisatie opnieuw om de geselecteerde service te bekijken.",
+      "translation_online_title": "Online vertalen toestaan voor deze nasynchronisatie?",
+      "translation_online_body": "Je computer stuurt het transcript van deze nasynchronisatie ter vertaling naar {{service}}. Alleen voor deze taak toestaan?",
+      "translation_allow": "Toestaan voor deze taak",
+      "translation_decline": "Niet vertalen",
+      "choose_voice": "Kies een stem",
+      "remove_source": "Verwijderen",
+      "history_meta": "Nasynchronisatie in {{language}}, duur {{duration}}",
+      "download_file": "{{name}} downloaden",
+      "share_file": "{{name}} delen"
     },
     "dictate": {
       "hold_to_talk": "Ingedrukt houden om te praten",
@@ -3642,7 +3653,9 @@
       },
       "disconnected_offline": "Losgekoppeld op deze telefoon. De host kon het intrekken niet bevestigen; de sessie verloopt automatisch.",
       "remove_selection": "{{name}} verwijderen",
-      "more_actions": "Meer acties voor {{name}}"
+      "more_actions": "Meer acties voor {{name}}",
+      "dub_restart": "Nasynchronisatie kon niet starten. Selecteer de bron en begin opnieuw. Als dit blijft gebeuren, maak dan opnieuw verbinding met je VoiceStudio-host.",
+      "dub_foreground_failed": "Android kon de uploadservice op de achtergrond niet starten. Open VoiceStudio opnieuw en start de nasynchronisatie opnieuw. Als het blijft mislukken, werk de app bij of installeer hem opnieuw."
     },
     "keyboard": {
       "done": "Gereed"
@@ -3687,7 +3700,9 @@
       "more_actions": "Meer acties",
       "selected": "Geselecteerd",
       "not_selected": "Niet geselecteerd",
-      "delete_generation": "Deze generatie verwijderen? Dit kan niet ongedaan worden gemaakt."
+      "delete_generation": "Deze generatie verwijderen? Dit kan niet ongedaan worden gemaakt.",
+      "remove_file": "Verwijderen",
+      "no_matches": "Geen resultaten voor \"{{query}}\"."
     }
   }
 }

@@ -3544,7 +3544,18 @@
       "done_notification": "Doublage terminé : {{title}}",
       "failed_notification": "Échec du doublage : {{title}}",
       "language_unavailable": "Cette langue n'a pas de code cible pris en charge. Choisissez une autre langue cible.",
-      "remove_language": "Retirer {{language}}"
+      "remove_language": "Retirer {{language}}",
+      "translation_setup": "Choisissez, installez et configurez un moteur de traduction sur votre ordinateur dans VoiceStudio → Paramètres, puis réessayez.",
+      "translation_changed": "Le moteur de traduction a changé sur votre ordinateur. Relancez ce doublage pour vérifier le service sélectionné.",
+      "translation_online_title": "Autoriser la traduction en ligne pour ce doublage ?",
+      "translation_online_body": "Votre ordinateur enverra la transcription de ce doublage à {{service}} pour la traduire. Autoriser uniquement pour cette tâche ?",
+      "translation_allow": "Autoriser pour cette tâche",
+      "translation_decline": "Ne pas traduire",
+      "choose_voice": "Choisir une voix",
+      "remove_source": "Retirer",
+      "history_meta": "Doublage en {{language}}, durée {{duration}}",
+      "download_file": "Télécharger {{name}}",
+      "share_file": "Partager {{name}}"
     },
     "dictate": {
       "hold_to_talk": "Maintenir pour parler",
@@ -3644,7 +3655,9 @@
       },
       "disconnected_offline": "Déconnecté sur ce téléphone. L'hôte n'a pas pu confirmer la révocation ; sa session expirera automatiquement.",
       "remove_selection": "Retirer {{name}}",
-      "more_actions": "Plus d'actions pour {{name}}"
+      "more_actions": "Plus d'actions pour {{name}}",
+      "dub_restart": "Le doublage n'a pas pu démarrer. Sélectionnez la source et recommencez. Si le problème persiste, reconnectez-vous à votre hôte VoiceStudio.",
+      "dub_foreground_failed": "Android n'a pas pu démarrer le service d'envoi en arrière-plan. Rouvrez VoiceStudio et relancez le doublage. Si l'échec persiste, mettez à jour ou réinstallez l'application."
     },
     "keyboard": {
       "done": "OK"
@@ -3689,7 +3702,9 @@
       "more_actions": "Plus d'actions",
       "selected": "Sélectionné",
       "not_selected": "Non sélectionné",
-      "delete_generation": "Supprimer cette génération ? Cette action est irréversible."
+      "delete_generation": "Supprimer cette génération ? Cette action est irréversible.",
+      "remove_file": "Retirer",
+      "no_matches": "Aucun résultat pour \"{{query}}\"."
     }
   }
 }

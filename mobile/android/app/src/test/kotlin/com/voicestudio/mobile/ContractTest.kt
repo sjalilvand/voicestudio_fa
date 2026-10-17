@@ -35,7 +35,7 @@ class ContractTest {
     @Test fun everyLiteralUiAndErrorKeyExistsInBundledEnglish() {
         val l=L10n.load(ApplicationProvider.getApplicationContext<Context>(),"en")
         val root=File(requireNotNull(System.getProperty("androidRoot")))
-        val pattern=Regex("[\\\"]((?:mobile|common|consent|player)\\.[A-Za-z0-9_.]+)[\\\"]")
+        val pattern=Regex("[\\\"]((?:mobile|common|consent|player|projects)\\.[A-Za-z0-9_.]+)[\\\"]")
         val keys=root.walkTopDown().filter {it.extension=="kt"&&"/src/main/" in it.invariantSeparatorsPath}.flatMap {pattern.findAll(it.readText()).map {m->m.groupValues[1]}}.toSet()
         assertTrue(keys.size>60)
         val missing=keys.filterNot(l::has)

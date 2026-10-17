@@ -11,7 +11,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import java.io.File
 
- data class StudioState(val connectionId: Long = 0, val hostUrl: String? = null, val loading: Boolean = true, val connected: Boolean = false, val busy: Boolean = false,
+ data class StudioState(val connectionId: Long = 0, val hostUrl: String? = null, val loading: Boolean = true, val connected: Boolean = false, val busy: Boolean = false, val catalogLoading: Boolean = false,
     val error: ClientFailure? = null, val profiles: List<Profile> = emptyList(), val engines: EngineFamily = EngineFamily(),
     val history: List<HistoryItem> = emptyList(), val dubHistory: List<DubHistory> = emptyList(), val audio: String? = null)
 
@@ -45,7 +45,7 @@ class StudioViewModel @JvmOverloads constructor(application: Application, val st
     }
     private fun clearHostState(host: String? = null, profiles: List<Profile> = emptyList(), error: ClientFailure? = null) {
         mutable.value = StudioState(connectionId = mutable.value.connectionId + 1, hostUrl = host,
-            loading = false, connected = host != null, busy = mutable.value.busy, profiles = profiles, error = error)
+            loading = false, connected = host != null, busy = mutable.value.busy, catalogLoading = host != null, profiles = profiles, error = error)
     }
     private fun expired(source: VoiceStudioApi) {
         viewModelScope.launch {
@@ -112,12 +112,18 @@ class StudioViewModel @JvmOverloads constructor(application: Application, val st
     }
     private suspend fun reload() {
         val current = api ?: return
-        val profiles = current.profiles()
-        val engines = current.engines().tts
-        val history = current.history()
-        val dubs = current.dubHistory()
-        if(api === current) mutable.update { it.copy(profiles = profiles, engines = engines, history = history, dubHistory = dubs) }
+        mutable.update {it.copy(catalogLoading=true)}
+        try {
+            val profiles = current.profiles()
+            val engines = current.engines().tts
+            val history = current.history()
+            val dubs = current.dubHistory()
+            if(api === current) mutable.update { it.copy(profiles = profiles, engines = engines, history = history, dubHistory = dubs) }
+        } finally {
+            if(api === current) mutable.update {it.copy(catalogLoading=false)}
+        }
     }
+
     fun refresh() = run { reload() }
     fun generate(text: String, voice: String, engine: String, language: String) = run {
         val current = api ?: return@run

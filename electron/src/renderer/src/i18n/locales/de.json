@@ -3542,7 +3542,18 @@
       "done_notification": "Synchronisation fertig: {{title}}",
       "failed_notification": "Synchronisation fehlgeschlagen: {{title}}",
       "language_unavailable": "Für diese Sprache gibt es keinen unterstützten Zielcode. Wähle eine andere Zielsprache.",
-      "remove_language": "{{language}} entfernen"
+      "remove_language": "{{language}} entfernen",
+      "translation_setup": "Wähle in VoiceStudio → Einstellungen eine Übersetzungs-Engine auf deinem Computer aus, installiere und konfiguriere sie, und versuche es dann erneut.",
+      "translation_changed": "Die Übersetzungs-Engine auf deinem Computer hat sich geändert. Starte diese Synchronisation neu, um den gewählten Dienst zu prüfen.",
+      "translation_online_title": "Online-Übersetzung für diese Synchronisation erlauben?",
+      "translation_online_body": "Dein Computer sendet das Transkript dieser Synchronisation zur Übersetzung an {{service}}. Nur für diesen Auftrag erlauben?",
+      "translation_allow": "Für diesen Auftrag erlauben",
+      "translation_decline": "Nicht übersetzen",
+      "choose_voice": "Stimme auswählen",
+      "remove_source": "Entfernen",
+      "history_meta": "Synchronisation ({{language}}), Dauer {{duration}}",
+      "download_file": "{{name}} herunterladen",
+      "share_file": "{{name}} teilen"
     },
     "dictate": {
       "hold_to_talk": "Zum Sprechen halten",
@@ -3642,7 +3653,9 @@
       },
       "disconnected_offline": "Auf diesem Telefon getrennt. Der Host konnte den Widerruf nicht bestätigen; seine Sitzung läuft automatisch ab.",
       "remove_selection": "{{name}} entfernen",
-      "more_actions": "Weitere Aktionen für {{name}}"
+      "more_actions": "Weitere Aktionen für {{name}}",
+      "dub_restart": "Die Synchronisation konnte nicht gestartet werden. Wähle die Quelle aus und starte erneut. Falls das weiter passiert, verbinde dich erneut mit deinem VoiceStudio-Host.",
+      "dub_foreground_failed": "Android konnte den Upload-Dienst im Hintergrund nicht starten. Öffne VoiceStudio erneut und starte die Synchronisation neu. Falls es weiter fehlschlägt, aktualisiere die App oder installiere sie neu."
     },
     "keyboard": {
       "done": "Fertig"
@@ -3687,7 +3700,9 @@
       "more_actions": "Weitere Aktionen",
       "selected": "Ausgewählt",
       "not_selected": "Nicht ausgewählt",
-      "delete_generation": "Diese Generierung löschen? Das kann nicht rückgängig gemacht werden."
+      "delete_generation": "Diese Generierung löschen? Das kann nicht rückgängig gemacht werden.",
+      "remove_file": "Entfernen",
+      "no_matches": "Keine Treffer für \"{{query}}\"."
     }
   }
 }

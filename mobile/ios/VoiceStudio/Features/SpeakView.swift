@@ -34,7 +34,6 @@ struct SpeakView: View {
                 .scrollContentBackground(.hidden).padding(Theme.compactInset)
                 .background(theme.color("input"), in: RoundedRectangle(cornerRadius: VSTokens.radiusControl))
                 .accessibilityLabel(model.t("mobile.speak.placeholder")).accessibilityIdentifier("speak.text")
-            if model.loading { ProgressView(model.t("common.loading")).frame(minHeight: 44).accessibilityIdentifier("speak.loading") }
             Card {
                 VoicePicker(selection: Binding(get: { selection.profileID }, set: {
                     selection.chooseProfile($0, profiles: model.profiles, inventory: model.inventory, catalog: model.languages)
@@ -62,7 +61,7 @@ struct SpeakView: View {
                 .accessibilityIdentifier("speak.generate")
             if player.file != nil || player.playing { AudioPlayerView(player: player) }
             Text(model.t("mobile.speak.recent")).font(.custom("InterVariable", size: Theme.controlTypeSize, relativeTo: .headline))
-            if model.history.isEmpty { Text(model.t("mobile.speak.empty_recent")).foregroundStyle(theme.color("textMuted")) }
+            if model.history.isEmpty && !model.loading { Text(model.t("mobile.speak.empty_recent")).foregroundStyle(theme.color("textMuted")) }
             else {
                 Card {
                     ForEach(model.history) { item in

@@ -12,15 +12,17 @@ struct VoicesView: View {
     @State private var deleting: Profile?
     @State private var name = ""
     @State private var hostScope: UUID?
+    private var filtered: [Profile] { model.profiles.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) } }
     var body: some View {
         Page {
             Button(model.t("mobile.voices.new_clone"), systemImage: "plus") { creating = true }
-                .buttonStyle(VSButtonStyle(kind: .primary))
+                .buttonStyle(VSButtonStyle(kind: .primary)).accessibilityIdentifier("voices.create")
             if !model.profiles.isEmpty { SearchField(prompt: model.t("mobile.voices.search"), text: $query) }
-            if model.profiles.isEmpty { Text(model.t("mobile.voices.empty")).foregroundStyle(theme.color("textMuted")) }
-            else {
+            if model.profiles.isEmpty && !model.loading { Text(model.t("mobile.voices.empty")).foregroundStyle(theme.color("textMuted")) }
+            else if !model.profiles.isEmpty {
                 Card {
-                    ForEach(model.profiles.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }) { profile in
+                    if filtered.isEmpty { SearchEmptyState(query: query) }
+                    ForEach(filtered) { profile in
                         HStack(spacing: VSTokens.spacingGap) {
                             VStack(alignment: .leading, spacing: VSTokens.spacingGap) {
                                 Text(profile.name)
@@ -37,7 +39,7 @@ struct VoicesView: View {
                                 .labelStyle(.iconOnly).buttonStyle(VSButtonStyle(kind: .tertiary)).frame(minWidth: 44, minHeight: 44)
                                 .accessibilityIdentifier("voices.actions." + profile.id)
                         }
-                        if profile.id != model.profiles.last?.id { Divider().overlay(theme.color("border")) }
+                        if profile.id != filtered.last?.id { Divider().overlay(theme.color("border")) }
                     }
                 }
             }
@@ -70,7 +72,7 @@ struct CloneView: View {
     @State private var name = ""
     @State private var consent = false
     @State private var importing = false
-    @State private var audio: URL?
+    @State private var audio: SelectedMedia?
     @State private var recorder = Recorder()
     var body: some View {
         Page(backgroundRole: "surfaceOverlay") {
@@ -81,27 +83,27 @@ struct CloneView: View {
             if consent {
                 Button(model.t(recorder.recording ? "mobile.ios.record_stop" : "mobile.voices.record"), systemImage: recorder.recording ? "stop.fill" : "mic.fill") {
                     Task { await model.perform {
-                        if recorder.recording { recorder.stop(); audio = recorder.file }
+                        if recorder.recording { recorder.stop(); audio = recorder.file.map { SelectedMedia(url: $0) } }
                         else { try await recorder.start() }
                     } }
                 }.disabled(model.busy)
                 if recorder.recording { Text(model.t("mobile.voices.recording", ["seconds": String(recorder.seconds)])) }
                 Button(model.t("mobile.voices.pick_file")) { importing = true }.disabled(recorder.recording)
             }
-            if let audio { Text(model.t("mobile.ios.file_name", ["name": audio.lastPathComponent])) }
+            if let audio { SelectedFileRow(name: audio.name) { self.audio = nil } }
             Button(model.t("mobile.ios.clone_create")) {
                 Task { await model.perform {
                     guard let audio else { return }
-                    let access = audio.startAccessingSecurityScopedResource(); defer { if access { audio.stopAccessingSecurityScopedResource() } }
-                    let bytes = try Data(contentsOf: audio)
-                    _ = try await model.api().clone(name: name, filename: audio.lastPathComponent, audio: bytes)
+                    let access = audio.url.startAccessingSecurityScopedResource(); defer { if access { audio.url.stopAccessingSecurityScopedResource() } }
+                    let bytes = try Data(contentsOf: audio.url)
+                    _ = try await model.api().clone(name: name, filename: audio.name, audio: bytes)
                     model.profiles = try await model.api().profiles(); dismiss()
                 } }
             }.buttonStyle(VSButtonStyle(kind: .primary)).disabled(!consent || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || audio == nil || recorder.recording || model.busy)
         }.navigationTitle(model.t("mobile.voices.new_clone"))
         .toolbar { Button(model.t("common.cancel")) { recorder.stop(); dismiss() } }
         .fileImporter(isPresented: $importing, allowedContentTypes: [.audio]) { result in
-            switch result { case .success(let url): audio = url; case .failure: model.error = ClientError("mobile.errors.file") }
+            switch result { case .success(let url): audio = SelectedMedia(url: url); case .failure: model.error = ClientError("mobile.errors.file") }
         }
         .onDisappear { recorder.stop() }
     }

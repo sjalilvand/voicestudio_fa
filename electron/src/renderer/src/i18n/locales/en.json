@@ -3542,7 +3542,18 @@
       "done_notification": "Dub finished: {{title}}",
       "failed_notification": "Dub failed: {{title}}",
       "language_unavailable": "This language has no supported target code. Choose another target language.",
-      "remove_language": "Remove {{language}}"
+      "remove_language": "Remove {{language}}",
+      "translation_setup": "Choose, install, and configure a translation engine on your computer in VoiceStudio → Settings, then try again.",
+      "translation_changed": "The translation engine changed on your computer. Start this dub again to review the selected service.",
+      "translation_online_title": "Allow online translation for this dub?",
+      "translation_online_body": "Your computer will send this dub’s transcript to {{service}} for translation. Allow this only for this job?",
+      "translation_allow": "Allow for this job",
+      "translation_decline": "Do not translate",
+      "choose_voice": "Choose a voice",
+      "remove_source": "Remove",
+      "history_meta": "{{language}} dub, {{duration}} long",
+      "download_file": "Download {{name}}",
+      "share_file": "Share {{name}}"
     },
     "dictate": {
       "hold_to_talk": "Hold to talk",
@@ -3642,7 +3653,9 @@
       },
       "disconnected_offline": "Disconnected on this phone. The host could not confirm revocation; its session will expire automatically.",
       "remove_selection": "Remove {{name}}",
-      "more_actions": "More actions for {{name}}"
+      "more_actions": "More actions for {{name}}",
+      "dub_restart": "Dubbing could not start. Select the source and start again. If this keeps happening, reconnect to your VoiceStudio host.",
+      "dub_foreground_failed": "Android could not start the background upload service. Reopen VoiceStudio and start the dub again. If it still fails, update or reinstall the app."
     },
     "keyboard": {
       "done": "Done"
@@ -3687,7 +3700,9 @@
       "more_actions": "More actions",
       "selected": "Selected",
       "not_selected": "Not selected",
-      "delete_generation": "Delete this generation? This can't be undone."
+      "delete_generation": "Delete this generation? This can't be undone.",
+      "remove_file": "Remove",
+      "no_matches": "No matches for \"{{query}}\"."
     }
   }
 }

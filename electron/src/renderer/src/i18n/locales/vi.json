@@ -3542,7 +3542,18 @@
       "done_notification": "Đã lồng tiếng xong: {{title}}",
       "failed_notification": "Lồng tiếng thất bại: {{title}}",
       "language_unavailable": "Ngôn ngữ này không có mã đích được hỗ trợ. Hãy chọn ngôn ngữ đích khác.",
-      "remove_language": "Xóa {{language}}"
+      "remove_language": "Xóa {{language}}",
+      "translation_setup": "Hãy chọn, cài đặt và cấu hình engine dịch trên máy tính của bạn trong VoiceStudio → Cài đặt, rồi thử lại.",
+      "translation_changed": "Engine dịch trên máy tính của bạn đã thay đổi. Hãy bắt đầu lại bản lồng tiếng này để xem lại dịch vụ đã chọn.",
+      "translation_online_title": "Cho phép dịch trực tuyến cho bản lồng tiếng này?",
+      "translation_online_body": "Máy tính của bạn sẽ gửi bản ghi lời của bản lồng tiếng này đến {{service}} để dịch. Chỉ cho phép cho tác vụ này?",
+      "translation_allow": "Cho phép cho tác vụ này",
+      "translation_decline": "Không dịch",
+      "choose_voice": "Chọn giọng nói",
+      "remove_source": "Xóa",
+      "history_meta": "Lồng tiếng {{language}}, dài {{duration}}",
+      "download_file": "Tải xuống {{name}}",
+      "share_file": "Chia sẻ {{name}}"
     },
     "dictate": {
       "hold_to_talk": "Giữ để nói",
@@ -3642,7 +3653,9 @@
       },
       "disconnected_offline": "Đã ngắt kết nối trên điện thoại này. Máy chủ không thể xác nhận việc thu hồi; phiên sẽ tự hết hạn.",
       "remove_selection": "Xóa {{name}}",
-      "more_actions": "Thêm thao tác cho {{name}}"
+      "more_actions": "Thêm thao tác cho {{name}}",
+      "dub_restart": "Không thể bắt đầu lồng tiếng. Hãy chọn nguồn và bắt đầu lại. Nếu vẫn lặp lại, hãy kết nối lại với máy chủ VoiceStudio của bạn.",
+      "dub_foreground_failed": "Android không thể khởi động dịch vụ tải lên nền. Hãy mở lại VoiceStudio và bắt đầu lồng tiếng lại. Nếu vẫn lỗi, hãy cập nhật hoặc cài đặt lại ứng dụng."
     },
     "keyboard": {
       "done": "Xong"
@@ -3687,7 +3700,9 @@
       "more_actions": "Thêm thao tác",
       "selected": "Đã chọn",
       "not_selected": "Chưa chọn",
-      "delete_generation": "Xóa bản tạo này? Không thể hoàn tác thao tác này."
+      "delete_generation": "Xóa bản tạo này? Không thể hoàn tác thao tác này.",
+      "remove_file": "Xóa",
+      "no_matches": "Không có kết quả cho \"{{query}}\"."
     }
   }
 }

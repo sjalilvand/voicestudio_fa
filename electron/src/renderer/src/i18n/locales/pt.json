@@ -3544,7 +3544,18 @@
       "done_notification": "Dublagem concluída: {{title}}",
       "failed_notification": "Falha na dublagem: {{title}}",
       "language_unavailable": "Este idioma não tem um código de destino compatível. Escolha outro idioma de destino.",
-      "remove_language": "Remover {{language}}"
+      "remove_language": "Remover {{language}}",
+      "translation_setup": "Escolha, instale e configure um motor de tradução no seu computador em VoiceStudio → Configurações e tente novamente.",
+      "translation_changed": "O motor de tradução mudou no seu computador. Inicie esta dublagem novamente para revisar o serviço selecionado.",
+      "translation_online_title": "Permitir tradução on-line para esta dublagem?",
+      "translation_online_body": "Seu computador vai enviar a transcrição desta dublagem para {{service}} para tradução. Permitir apenas para esta tarefa?",
+      "translation_allow": "Permitir nesta tarefa",
+      "translation_decline": "Não traduzir",
+      "choose_voice": "Escolher uma voz",
+      "remove_source": "Remover",
+      "history_meta": "Dublagem em {{language}}, duração de {{duration}}",
+      "download_file": "Baixar {{name}}",
+      "share_file": "Compartilhar {{name}}"
     },
     "dictate": {
       "hold_to_talk": "Mantenha pressionado para falar",
@@ -3644,7 +3655,9 @@
       },
       "disconnected_offline": "Desligado neste telefone. O host não conseguiu confirmar a revogação; a sessão dele vai expirar automaticamente.",
       "remove_selection": "Remover {{name}}",
-      "more_actions": "Mais ações para {{name}}"
+      "more_actions": "Mais ações para {{name}}",
+      "dub_restart": "Não foi possível iniciar a dublagem. Selecione a origem e comece novamente. Se isso continuar, reconecte-se ao seu host do VoiceStudio.",
+      "dub_foreground_failed": "O Android não conseguiu iniciar o serviço de envio em segundo plano. Reabra o VoiceStudio e inicie a dublagem novamente. Se continuar falhando, atualize ou reinstale o app."
     },
     "keyboard": {
       "done": "Concluído"
@@ -3689,7 +3702,9 @@
       "more_actions": "Mais ações",
       "selected": "Selecionado",
       "not_selected": "Não selecionado",
-      "delete_generation": "Excluir esta geração? Esta ação não pode ser desfeita."
+      "delete_generation": "Excluir esta geração? Esta ação não pode ser desfeita.",
+      "remove_file": "Remover",
+      "no_matches": "Nenhum resultado para \"{{query}}\"."
     }
   }
 }

@@ -1,5 +1,4 @@
 import Foundation
-import VoiceStudioKit
 import Observation
 
 private final class UploadBuffer: @unchecked Sendable {
@@ -9,51 +8,61 @@ private final class UploadBuffer: @unchecked Sendable {
     func take(task: URLSessionTask) -> Data { lock.withLock { data.removeValue(forKey: ObjectIdentifier(task)) ?? Data() } }
 }
 
-@MainActor @Observable final class BackgroundUpload: NSObject, URLSessionDataDelegate, URLSessionTaskDelegate {
-    static let shared = BackgroundUpload()
-    var fraction: Double = 0
-    var pending: PendingUpload?
-    var receipt: UploadReceipt?
-    var eventsCompletion: (() -> Void)?
-    var onReceipt: (() -> Void)?
+@MainActor @Observable public final class BackgroundUpload: NSObject, URLSessionDataDelegate, URLSessionTaskDelegate {
+    public static let shared = BackgroundUpload()
+    public private(set) var fraction: Double = 0
+    public private(set) var pending: PendingUpload?
+    public private(set) var receipt: UploadReceipt?
+    public var eventsCompletion: (() -> Void)?
+    public var onReceipt: (() -> Void)?
     @ObservationIgnored private nonisolated let buffer = UploadBuffer()
-    @ObservationIgnored private nonisolated let persistence = DubUploadLedger()
+    @ObservationIgnored private nonisolated let persistence: DubUploadLedger
+    @ObservationIgnored private let stagingDirectory: URL?
     @ObservationIgnored private var session: URLSession!
     @ObservationIgnored private var foregroundSession: URLSession!
-    private override init() {
+    private override convenience init() {
+        let config = URLSessionConfiguration.background(withIdentifier: "com.voicestudio.mobile.upload")
+        config.isDiscretionary = false; config.sessionSendsLaunchEvents = true
+        self.init(configuration: config)
+    }
+    /// Configuration injection lets CLT checks exercise the real start/delegate
+    /// path with a loopback host; production always uses the background session.
+    init(configuration config: URLSessionConfiguration, defaults: UserDefaults = .standard, stagingDirectory: URL? = nil) {
+        persistence = DubUploadLedger(defaults: defaults)
+        self.stagingDirectory = stagingDirectory
         super.init()
         pending = persistence.pending()
         receipt = persistence.receipt()
-        let config = URLSessionConfiguration.background(withIdentifier: "com.voicestudio.mobile.upload")
-        config.isDiscretionary = false; config.sessionSendsLaunchEvents = true
         config.httpCookieStorage = nil; config.urlCredentialStorage = nil
         session = URLSession(configuration: config, delegate: self, delegateQueue: nil)
         let foreground = URLSessionConfiguration.ephemeral
         foreground.httpCookieStorage = nil; foreground.urlCredentialStorage = nil
         foregroundSession = URLSession(configuration: foreground, delegate: self, delegateQueue: nil)
     }
-    func start(source: URL, api: APIClient, languages: [DubLanguage], profile: String, audioOnly: Bool) async throws {
+    public func start(source: URL, api: APIClient, languages: [DubLanguage], profile: String, audioOnly: Bool, filename: String? = nil) async throws {
         try DubVoiceChoice.validate(profile)
-        guard pending == nil, !languages.isEmpty else { throw ClientError("mobile.errors.choose_language") }
+        guard pending == nil else { throw ClientError("mobile.errors.upload_active") }
+        guard !languages.isEmpty else { throw ClientError("mobile.errors.choose_language") }
         let id = UUID().uuidString
-        let directory = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+        let directory = try stagingDirectory ?? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
         let output = directory.appendingPathComponent("upload-\(id).multipart")
-        let type = try await Task.detached {
-            try Multipart.stageDub(source: source, output: output, jobID: id, audioOnly: audioOnly)
-        }.value
-        let meta = PendingUpload(host: api.address.baseURL.absoluteString, jobID: id, languages: languages, profile: profile, file: output)
+        let staging = Task.detached {
+            try Multipart.stageDub(source: source, output: output, jobID: id, audioOnly: audioOnly, filename: filename)
+        }
+        let type = try await withTaskCancellationHandler { try await staging.value } onCancel: { staging.cancel() }
+        let meta = PendingUpload(host: api.address.baseURL.absoluteString, jobID: id, languages: languages, profile: profile, file: output, filename: filename ?? source.lastPathComponent)
         do {
             try Task.checkCancellation()
             var request = try api.request("/dub/upload", method: "POST", contentType: type)
             request.httpBody = nil
             let task = session.uploadTask(with: request, fromFile: output)
             task.taskDescription = String(data: try JSONEncoder().encode(meta), encoding: .utf8)
-            pending = meta; fraction = 0; receipt = nil
             try persistence.begin(meta)
+            pending = meta; fraction = 0; receipt = nil
             task.resume()
         } catch { try? FileManager.default.removeItem(at: output); throw error }
     }
-    func scope(to host: String?) {
+    public func scope(to host: String?) {
         if let meta = pending, meta.host != host {
             pending = nil; fraction = 0
             persistence.discard(meta)
@@ -64,7 +73,7 @@ private final class UploadBuffer: @unchecked Sendable {
         }
         if receipt?.pending.host != host { clearReceipt() }
     }
-    func cancel() async {
+    public func cancel() async {
         guard let meta = pending else { return }
         persistence.discard(meta); pending = nil; fraction = 0
         await cancelTasks(for: meta)
@@ -82,20 +91,20 @@ private final class UploadBuffer: @unchecked Sendable {
             }
         }
     }
-    func clearReceipt() { receipt = nil; persistence.clearReceipt() }
-    func takeReceipt(host: String) -> UploadReceipt? {
+    public func clearReceipt() { receipt = nil; persistence.clearReceipt() }
+    public func takeReceipt(host: String) -> UploadReceipt? {
         guard let receipt = persistence.takeReceipt(host: host) else { return nil }
         self.receipt = nil
         return receipt
     }
-    nonisolated func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) { buffer.append(data, task: dataTask) }
-    nonisolated func urlSession(_ session: URLSession, task: URLSessionTask, didSendBodyData bytesSent: Int64, totalBytesSent: Int64, totalBytesExpectedToSend: Int64) {
+    nonisolated public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) { buffer.append(data, task: dataTask) }
+    nonisolated public func urlSession(_ session: URLSession, task: URLSessionTask, didSendBodyData bytesSent: Int64, totalBytesSent: Int64, totalBytesExpectedToSend: Int64) {
         let fraction = Double(totalBytesSent) / Double(max(1, totalBytesExpectedToSend))
         let jobID = task.taskDescription.flatMap { $0.data(using: .utf8) }.flatMap { try? JSONDecoder().decode(PendingUpload.self, from: $0).jobID }
         Task { @MainActor in if let jobID, self.pending?.jobID == jobID { self.fraction = min(1, fraction) } }
     }
-    nonisolated func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping @Sendable (URLRequest?) -> Void) { completionHandler(nil) }
-    nonisolated func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: (any Error)?) {
+    nonisolated public func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping @Sendable (URLRequest?) -> Void) { completionHandler(nil) }
+    nonisolated public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: (any Error)?) {
         let body = buffer.take(task: task)
         guard let description = task.taskDescription, let data = description.data(using: .utf8), let meta = try? JSONDecoder().decode(PendingUpload.self, from: data) else { return }
         let status = (task.response as? HTTPURLResponse)?.statusCode ?? 0
@@ -105,14 +114,16 @@ private final class UploadBuffer: @unchecked Sendable {
         let receipt: UploadReceipt
         switch result {
         case .retryInForeground:
-            guard let request = task.originalRequest else { return }
-            Task { @MainActor in
-                guard self.pending?.jobID == meta.jobID, self.persistence.pending()?.jobID == meta.jobID else { return }
-                let retry = self.foregroundSession.uploadTask(with: request, fromFile: meta.file)
-                retry.taskDescription = description
-                retry.resume()
+            if let request = task.originalRequest {
+                Task { @MainActor in
+                    guard self.pending?.jobID == meta.jobID, self.persistence.pending()?.jobID == meta.jobID else { return }
+                    let retry = self.foregroundSession.uploadTask(with: request, fromFile: meta.file)
+                    retry.taskDescription = description
+                    retry.resume()
+                }
+                return
             }
-            return
+            receipt = UploadReceipt(pending: meta, upload: nil, failure: ClientError("mobile.ios.upload_failed"))
         case .cancelled:
             persistence.discard(meta)
             try? FileManager.default.removeItem(at: meta.file)
@@ -134,7 +145,7 @@ private final class UploadBuffer: @unchecked Sendable {
             self.pending = nil; self.receipt = receipt; self.onReceipt?()
         }
     }
-    nonisolated func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
+    nonisolated public func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
         Task { @MainActor in self.eventsCompletion?(); self.eventsCompletion = nil }
     }
 }

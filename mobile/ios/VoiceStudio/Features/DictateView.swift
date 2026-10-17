@@ -21,7 +21,7 @@ struct DictateView: View {
             else if !ready { Text(model.t("mobile.dictate.not_ready", ["reason": reason])) }
             Button(model.t(listening ? "common.stop" : "mobile.dictate.tap_to_start"), systemImage: listening ? "stop.fill" : "mic.fill") {
                 if listening { stop() } else { start() }
-            }.buttonStyle(VSButtonStyle(kind: .primary)).disabled(!ready || finalizing).accessibilityHint(model.t("mobile.dictate.hold_to_talk"))
+            }.buttonStyle(VSButtonStyle(kind: .primary)).disabled(!ready || finalizing).accessibilityHint(model.t("mobile.dictate.hold_to_talk")).accessibilityIdentifier("dictate.record")
             // The separate hold surface supports release-to-finish without competing with tap semantics.
             Text(model.t("mobile.dictate.hold_to_talk")).frame(minHeight: 44).frame(maxWidth: .infinity)
                 .contentShape(Rectangle())

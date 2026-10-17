@@ -6,8 +6,10 @@ public struct PendingUpload: Codable, Sendable {
     public let languages: [DubLanguage]
     public let profile: String
     public let file: URL
-    public init(host: String, jobID: String, languages: [DubLanguage], profile: String, file: URL) {
+    public let filename: String?
+    public init(host: String, jobID: String, languages: [DubLanguage], profile: String, file: URL, filename: String? = nil) {
         self.host = host; self.jobID = jobID; self.languages = languages; self.profile = profile; self.file = file
+        self.filename = filename
     }
 }
 public struct UploadReceipt: Codable, Sendable {

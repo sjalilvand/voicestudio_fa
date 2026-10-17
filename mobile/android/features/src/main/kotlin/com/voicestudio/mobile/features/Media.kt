@@ -26,8 +26,15 @@ import com.voicestudio.mobile.network.*
 import kotlinx.coroutines.*
 import java.io.File
 
+/** Provider metadata is separate from the private, collision-free storage path. */
+fun mediaDisplayName(context: Context, uri: Uri): String? = context.contentResolver.query(
+    uri,arrayOf(android.provider.OpenableColumns.DISPLAY_NAME),null,null,null)?.use { cursor ->
+        val column=cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+        if(column>=0 && cursor.moveToFirst()) cursor.getString(column)?.takeIf {it.isNotBlank()} else null
+    }
+
 suspend fun copyMedia(context: Context, uri: Uri, extension: String): File = withContext(Dispatchers.IO) {
-    val original=context.contentResolver.query(uri,arrayOf(android.provider.OpenableColumns.DISPLAY_NAME),null,null,null)?.use { cursor -> if(cursor.moveToFirst()) cursor.getString(0) else null }
+    val original=mediaDisplayName(context,uri)
     val suffix=original?.substringAfterLast('.', "")?.lowercase()?.takeIf {Regex("[a-z0-9]{1,10}").matches(it)}
         ?: android.webkit.MimeTypeMap.getSingleton().getExtensionFromMimeType(context.contentResolver.getType(uri)) ?: extension
     val file=File(context.filesDir, "uploads/${java.util.UUID.randomUUID()}.$suffix").apply { parentFile!!.mkdirs() }

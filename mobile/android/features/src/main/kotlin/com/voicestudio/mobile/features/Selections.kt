@@ -1,6 +1,9 @@
 package com.voicestudio.mobile.features
 
 import android.content.Context
+import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.*
 import com.voicestudio.mobile.network.*
 import kotlinx.serialization.json.*
 import java.util.Locale
@@ -16,15 +19,19 @@ class LanguageCatalog(val names: List<String>) {
         return names.firstOrNull { it.equals(display, true) || it.equals("Standard $display",true) }
     }
     fun preferred(profile: Profile?): String = canonical(profile?.language) ?: "Auto"
-    fun dubChoices(): List<Pair<String, String>> = names.filterNot { it == "Auto" }.map { name ->
+    private val dubLanguages by lazy { names.filterNot { it == "Auto" }.map { name ->
         // The host accepts language names as well as ISO codes. Preserve names for
         // desktop's long-tail languages that Android's locale database cannot map.
         (languageCode(name) ?: name) to name
-    }.distinctBy { it.first }
+    }.distinctBy { it.first } }
+    fun dubChoices(): List<Pair<String, String>> = dubLanguages
     companion object {
-        fun load(context: Context) = LanguageCatalog(context.assets.open("languages.json").bufferedReader().use {
-            Json.parseToJsonElement(it.readText()).jsonArray.map { value -> value.jsonPrimitive.content }
-        })
+        private val loaded=mutableMapOf<android.content.res.AssetManager,LanguageCatalog>()
+        @Synchronized fun load(context: Context): LanguageCatalog = loaded.getOrPut(context.assets) {
+            LanguageCatalog(context.assets.open("languages.json").bufferedReader().use {
+                Json.parseToJsonElement(it.readText()).jsonArray.map { value -> value.jsonPrimitive.content }
+            }).also { it.dubChoices() }
+        }
     }
 }
 
@@ -54,11 +61,36 @@ fun Readiness.guidance(): Pair<String, Map<String, Any>> {
     return "mobile.dictate.setup" to emptyMap()
 }
 
-fun languageCode(name:String):String? {
-    return Locale.getAvailableLocales().filter {it.language.isNotBlank()}.firstOrNull {
-        it.getDisplayLanguage(Locale.ENGLISH).equals(name,true) || it.toLanguageTag().equals(name,true)
-    }?.language ?: when(name.lowercase()) {"chinese (simplified)","mandarin chinese","mandarin" -> "zh-CN";"chinese (traditional)" -> "zh-TW";else -> null}
+private val languageCodes: Map<String,String> by lazy {
+    buildMap {
+        Locale.getAvailableLocales().filter {it.language.isNotBlank()}.forEach {
+            putIfAbsent(it.getDisplayLanguage(Locale.ENGLISH).lowercase(Locale.ROOT),it.language)
+            putIfAbsent(it.toLanguageTag().lowercase(Locale.ROOT),it.language)
+        }
+    }
 }
+fun languageCode(name:String):String? = languageCodes[name.lowercase(Locale.ROOT)] ?: when(name.lowercase(Locale.ROOT)) {
+    "chinese (simplified)","mandarin chinese","mandarin" -> "zh-CN"
+    "chinese (traditional)" -> "zh-TW"
+    else -> null
+}
+
+/** Disk reads and locale mapping never block a tab's first frame. */
+val LocalLanguageCatalogLoader=staticCompositionLocalOf<suspend (Context)->LanguageCatalog> {
+    {context -> withContext(Dispatchers.IO) {LanguageCatalog.load(context)}}
+}
+@Composable fun rememberLanguageCatalog(failure: (Throwable)->Unit): LanguageCatalog? {
+    val context=LocalContext.current.applicationContext
+    val loader=LocalLanguageCatalogLoader.current
+    val fail by rememberUpdatedState(failure)
+    val catalog by produceState<LanguageCatalog?>(null,context,loader) {
+        try {value=loader(context)}
+        catch(cancelled: CancellationException) {throw cancelled}
+        catch(error: Exception) {fail(error)}
+    }
+    return catalog
+}
+
 
 
 fun paletteChoices(l: L10n): List<Pair<String,String>> = VSTokens.palettes.map {

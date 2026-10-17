@@ -19,9 +19,8 @@ struct SelectionRow: View {
                 VStack(alignment: .leading, spacing: VSTokens.spacingGap) { Text(label); current }
                 Spacer(minLength: 0)
             } else {
-                Text(label).fixedSize(horizontal: true, vertical: false).layoutPriority(1)
-                Spacer(minLength: VSTokens.spacingGap)
-                current
+                Text(label).lineLimit(1).fixedSize(horizontal: true, vertical: false).layoutPriority(1)
+                current.frame(maxWidth: .infinity, alignment: .trailing)
             }
             Image(systemName: "chevron.right").foregroundStyle(theme.color("iconMuted")).accessibilityHidden(true)
         }
@@ -42,6 +41,9 @@ struct ChoicePicker: View {
     let options: [SelectionOption]
     @State private var presenting = false
     @State private var query = ""
+    private var filtered: [SelectionOption] {
+        options.filter { query.isEmpty || $0.title.localizedCaseInsensitiveContains(query) || $0.id.localizedCaseInsensitiveContains(query) }
+    }
     var body: some View {
         Button { query = ""; presenting = true } label: {
             SelectionRow(label: label, value: options.first { $0.id == selection }?.title ?? model.t("common.unknown"))
@@ -59,7 +61,10 @@ struct ChoicePicker: View {
     private var choices: some View {
         List {
             SearchField(prompt: model.t("common.search"), text: $query).listRowBackground(theme.color("surfaceOverlay"))
-            ForEach(options.filter { query.isEmpty || $0.title.localizedCaseInsensitiveContains(query) || $0.id.localizedCaseInsensitiveContains(query) }) { option in
+            if filtered.isEmpty {
+                SearchEmptyState(query: query).listRowBackground(theme.color("surface"))
+            }
+            ForEach(filtered) { option in
                 Button {
                     selection = option.id; presenting = false
                 } label: {
@@ -79,6 +84,32 @@ struct ChoicePicker: View {
         }
         .scrollContentBackground(.hidden).background(theme.color("surfaceOverlay"))
         .keyboardAccessible()
+    }
+}
+
+struct SearchEmptyState: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.vsTheme) private var theme
+    let query: String
+    var body: some View {
+        Text(query.isEmpty ? model.t("common.no_matches") : model.t("mobile.ios.no_matches", ["query": query]))
+            .foregroundStyle(theme.color("textMuted"))
+            .accessibilityIdentifier("search.empty")
+    }
+}
+
+struct SelectedFileRow: View {
+    @Environment(AppModel.self) private var model
+    let name: String
+    let remove: () -> Void
+    var body: some View {
+        HStack(spacing: VSTokens.spacingGap) {
+            Text(name).lineLimit(1).truncationMode(.middle).frame(maxWidth: .infinity, alignment: .leading)
+            Button(model.t("mobile.ios.remove_file"), systemImage: "xmark", action: remove)
+                .buttonStyle(VSButtonStyle(kind: .tertiary))
+                .accessibilityLabel(model.t("common.remove", ["term": name]))
+                .accessibilityIdentifier("source.remove")
+        }
     }
 }
 

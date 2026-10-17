@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.unit.dp
 import com.voicestudio.mobile.designsystem.*
@@ -103,8 +104,8 @@ fun Modifier.dismissKeyboardOnTap(): Modifier = composed {
     val description=tr("mobile.android.selection",mapOf("label" to tr(label),"value" to value))
     Surface(onClick={dismiss();onClick()},enabled=enabled,color=role("surface"),shape=MaterialTheme.shapes.small,modifier=Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget).semantics {contentDescription=description}) {
         Row(Modifier.padding(VSTheme.inset),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
-            Text(tr(label),Modifier.weight(1f),style=MaterialTheme.typography.labelLarge)
-            Text(value,Modifier.weight(1f),color=role("textMuted"),style=MaterialTheme.typography.labelLarge,maxLines=1,overflow=TextOverflow.Ellipsis)
+            Text(tr(label),style=MaterialTheme.typography.labelLarge,maxLines=1,overflow=TextOverflow.Ellipsis)
+            Text(value,Modifier.weight(1f),color=role("textMuted"),style=MaterialTheme.typography.labelLarge,textAlign=TextAlign.End,maxLines=1,overflow=TextOverflow.Ellipsis)
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight,contentDescription=null,tint=role("textMuted"))
         }
     }
@@ -119,8 +120,10 @@ fun Modifier.dismissKeyboardOnTap(): Modifier = composed {
     if(open) AlertDialog(modifier=Modifier.dismissKeyboardOnTap(),shape=MaterialTheme.shapes.large,onDismissRequest={open=false}, title={Text(tr(label))}, containerColor=role("surfaceOverlay"),
         text={ Column(verticalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
             Field("mobile.android.search", query, {query=it})
+            val matches=choices.filter {it.title.contains(query,true)}
+            if(matches.isEmpty()) SearchEmpty(query)
             LazyColumn(Modifier.heightIn(max=(VSTokens.SPACING_GAP*20).dp)) {
-                items(choices.filter { it.title.contains(query,true) },key={it.id}) { choice ->
+                items(matches,key={it.id}) { choice ->
                     TextButton(shape=MaterialTheme.shapes.small,onClick={change(choice.id);open=false;query=""},enabled=choice.enabled,
                         modifier=Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget).semantics { selected = choice.id==value }) {
                         Column(Modifier.fillMaxWidth()) {
@@ -137,7 +140,7 @@ fun Modifier.dismissKeyboardOnTap(): Modifier = composed {
     var open by rememberSaveable {mutableStateOf(false)}
     var query by rememberSaveable {mutableStateOf("")}
     val dismiss=rememberKeyboardDismiss()
-    Group {PickerRow(label,selected.mapNotNull {id -> choices.firstOrNull {it.first==id}?.second}.joinToString().ifBlank {tr("mobile.android.choose")}) {open=true}}
+    Group {PickerRow(label,selected.mapNotNull {id -> choices.firstOrNull {it.first==id}?.second}.joinToString().ifBlank {tr("mobile.android.choose")},choices.isNotEmpty()) {open=true}}
     FlowRow(horizontalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
         choices.filter {it.first in selected}.forEach {(id,name) ->
             val remove=tr("mobile.android.remove_selection",mapOf("name" to name))
@@ -149,8 +152,10 @@ fun Modifier.dismissKeyboardOnTap(): Modifier = composed {
         Column(verticalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
             val dismissSearch=rememberKeyboardDismiss()
             Field("mobile.android.search",query,{query=it})
+            val matches=choices.filter {it.second.contains(query,true)}
+            if(matches.isEmpty()) SearchEmpty(query)
             LazyColumn(Modifier.heightIn(max=(VSTokens.SPACING_GAP*20).dp)) {
-                items(choices.filter {it.second.contains(query,true)},key={it.first}) {(id,name) ->
+                items(matches,key={it.first}) {(id,name) ->
                     Surface(onClick={dismissSearch();change(if(id in selected) selected-id else selected+id)},color=role("surfaceOverlay"),shape=MaterialTheme.shapes.small,
                         modifier=Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget).semantics {this.selected=id in selected}) {
                         Row(Modifier.padding(VSTheme.inset),verticalAlignment=Alignment.CenterVertically) {
@@ -172,3 +177,12 @@ fun Modifier.dismissKeyboardOnTap(): Modifier = composed {
     }
 }
 fun languageName(code: String, locale: String): String = Locale.forLanguageTag(code).getDisplayName(Locale.forLanguageTag(locale))
+
+/** Shared empty state for every searchable list. */
+@Composable fun SearchEmpty(query: String) {
+    Text(tr("projects.no_matches",mapOf("query" to query)),color=role("textMuted"),modifier=Modifier.semantics {liveRegion=LiveRegionMode.Polite})
+}
+@Composable fun InlineLoading() {
+    Text(tr("common.loading"),color=role("textMuted"))
+    LinearProgressIndicator(Modifier.fillMaxWidth())
+}

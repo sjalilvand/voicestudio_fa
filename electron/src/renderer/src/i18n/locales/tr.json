@@ -3542,7 +3542,18 @@
       "done_notification": "Dublaj bitti: {{title}}",
       "failed_notification": "Dublaj başarısız: {{title}}",
       "language_unavailable": "Bu dilin desteklenen bir hedef kodu yok. Başka bir hedef dil seçin.",
-      "remove_language": "{{language}} dilini kaldır"
+      "remove_language": "{{language}} dilini kaldır",
+      "translation_setup": "VoiceStudio → Ayarlar bölümünden bilgisayarınızda bir çeviri motoru seçin, kurun ve yapılandırın, ardından yeniden deneyin.",
+      "translation_changed": "Bilgisayarınızdaki çeviri motoru değişti. Seçilen hizmeti gözden geçirmek için bu dublajı yeniden başlatın.",
+      "translation_online_title": "Bu dublaj için çevrimiçi çeviriye izin verilsin mi?",
+      "translation_online_body": "Bilgisayarınız bu dublajın dökümünü çeviri için {{service}} hizmetine gönderecek. Yalnızca bu iş için izin verilsin mi?",
+      "translation_allow": "Bu iş için izin ver",
+      "translation_decline": "Çevirme",
+      "choose_voice": "Bir ses seçin",
+      "remove_source": "Kaldır",
+      "history_meta": "{{language}} dublajı, süre {{duration}}",
+      "download_file": "{{name}} dosyasını indir",
+      "share_file": "{{name}} dosyasını paylaş"
     },
     "dictate": {
       "hold_to_talk": "Konuşmak için basılı tutun",
@@ -3642,7 +3653,9 @@
       },
       "disconnected_offline": "Bu telefonda bağlantı kesildi. Ana makine iptali doğrulayamadı; oturumu otomatik olarak sona erecek.",
       "remove_selection": "{{name}} öğesini kaldır",
-      "more_actions": "{{name}} için diğer işlemler"
+      "more_actions": "{{name}} için diğer işlemler",
+      "dub_restart": "Dublaj başlatılamadı. Kaynağı seçip yeniden başlatın. Sorun sürerse VoiceStudio ana makinenize yeniden bağlanın.",
+      "dub_foreground_failed": "Android arka plan yükleme hizmetini başlatamadı. VoiceStudio'yu yeniden açıp dublajı tekrar başlatın. Yine başarısız olursa uygulamayı güncelleyin veya yeniden yükleyin."
     },
     "keyboard": {
       "done": "Tamam"
@@ -3687,7 +3700,9 @@
       "more_actions": "Diğer işlemler",
       "selected": "Seçili",
       "not_selected": "Seçili değil",
-      "delete_generation": "Bu çıktı silinsin mi? Bu işlem geri alınamaz."
+      "delete_generation": "Bu çıktı silinsin mi? Bu işlem geri alınamaz.",
+      "remove_file": "Kaldır",
+      "no_matches": "\"{{query}}\" için eşleşme yok."
     }
   }
 }

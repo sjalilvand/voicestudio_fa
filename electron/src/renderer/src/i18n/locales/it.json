@@ -3544,7 +3544,18 @@
       "done_notification": "Doppiaggio completato: {{title}}",
       "failed_notification": "Doppiaggio non riuscito: {{title}}",
       "language_unavailable": "Questa lingua non ha un codice di destinazione supportato. Scegli un'altra lingua di destinazione.",
-      "remove_language": "Rimuovi {{language}}"
+      "remove_language": "Rimuovi {{language}}",
+      "translation_setup": "Scegli, installa e configura un motore di traduzione sul tuo computer in VoiceStudio → Impostazioni, poi riprova.",
+      "translation_changed": "Il motore di traduzione sul tuo computer è cambiato. Riavvia questo doppiaggio per rivedere il servizio selezionato.",
+      "translation_online_title": "Consentire la traduzione online per questo doppiaggio?",
+      "translation_online_body": "Il tuo computer invierà la trascrizione di questo doppiaggio a {{service}} per tradurla. Consentirlo solo per questo lavoro?",
+      "translation_allow": "Consenti per questo lavoro",
+      "translation_decline": "Non tradurre",
+      "choose_voice": "Scegli una voce",
+      "remove_source": "Rimuovi",
+      "history_meta": "Doppiaggio in {{language}}, durata {{duration}}",
+      "download_file": "Scarica {{name}}",
+      "share_file": "Condividi {{name}}"
     },
     "dictate": {
       "hold_to_talk": "Tieni premuto per parlare",
@@ -3644,7 +3655,9 @@
       },
       "disconnected_offline": "Disconnesso su questo telefono. L'host non ha potuto confermare la revoca; la sua sessione scadrà automaticamente.",
       "remove_selection": "Rimuovi {{name}}",
-      "more_actions": "Altre azioni per {{name}}"
+      "more_actions": "Altre azioni per {{name}}",
+      "dub_restart": "Impossibile avviare il doppiaggio. Seleziona la sorgente e ricomincia. Se continua, riconnettiti al tuo host VoiceStudio.",
+      "dub_foreground_failed": "Android non è riuscito ad avviare il servizio di caricamento in background. Riapri VoiceStudio e riavvia il doppiaggio. Se continua a fallire, aggiorna o reinstalla l'app."
     },
     "keyboard": {
       "done": "Fine"
@@ -3689,7 +3702,9 @@
       "more_actions": "Altre azioni",
       "selected": "Selezionato",
       "not_selected": "Non selezionato",
-      "delete_generation": "Eliminare questa generazione? L'operazione non può essere annullata."
+      "delete_generation": "Eliminare questa generazione? L'operazione non può essere annullata.",
+      "remove_file": "Rimuovi",
+      "no_matches": "Nessun risultato per \"{{query}}\"."
     }
   }
 }

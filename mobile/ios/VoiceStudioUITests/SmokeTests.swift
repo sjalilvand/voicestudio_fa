@@ -1,6 +1,69 @@
 import XCTest
 
 final class SmokeTests: XCTestCase {
+    @MainActor func testEveryTabRendersWhileHostInventoryIsLoading() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-smoke", "--ui-delayed-inventory", "-AppleLanguages", "(en)"]
+        app.launch()
+        connect(app)
+        XCTAssertTrue(app.textViews["speak.text"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["page.loading"].firstMatch.exists)
+        app.tabBars.buttons["Dub"].tap()
+        XCTAssertTrue(app.textFields["dub.source_url"].waitForExistence(timeout: 0.5))
+        app.tabBars.buttons["Voices"].tap()
+        XCTAssertTrue(app.buttons["voices.create"].waitForExistence(timeout: 0.5))
+        app.tabBars.buttons["Dictate"].tap()
+        XCTAssertTrue(app.buttons["dictate.record"].waitForExistence(timeout: 0.5))
+        app.tabBars.buttons["Settings"].tap()
+        XCTAssertTrue(app.buttons["settings.language"].waitForExistence(timeout: 0.5))
+    }
+
+    @MainActor func testSearchEmptyStatesAndCompactDubHistory() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-smoke", "-AppleLanguages", "(en)"]
+        app.launch()
+        connect(app)
+        XCTAssertTrue(app.textViews["speak.text"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Voices"].tap()
+        let search = app.textFields["search.field"]
+        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        search.tap(); search.typeText("unmatched-voice")
+        XCTAssertTrue(app.staticTexts["search.empty"].exists)
+        XCTAssertEqual(app.staticTexts["search.empty"].label, "No matches for \"unmatched-voice\".")
+        dismissUsingDone(app)
+        app.tabBars.buttons["Speak"].tap()
+        app.buttons["speak.engine"].tap()
+        search.tap(); search.typeText("unmatched-engine")
+        XCTAssertTrue(app.staticTexts["search.empty"].exists)
+        dismissUsingDone(app)
+        app.buttons["Close"].tap()
+        app.tabBars.buttons["Dub"].tap()
+        app.buttons["dub.languages"].tap()
+        search.tap(); search.typeText("unmatched-language")
+        XCTAssertTrue(app.staticTexts["search.empty"].exists)
+        dismissUsingDone(app)
+        app.buttons["Confirm"].tap()
+        let download = app.buttons["dub.download.smoke-dub"]
+        for _ in 0..<4 { if download.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(download.exists)
+        XCTAssertTrue(app.buttons["dub.share.smoke-dub"].exists)
+        XCTAssertEqual(download.label, "Download: vs-dub-test.wav")
+        XCTAssertLessThanOrEqual(download.frame.width, download.frame.height * 1.5)
+        XCTAssertTrue(app.staticTexts["vs-dub-test.wav"].exists)
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "2:05")).firstMatch.exists)
+    }
+
+    @MainActor private func connect(_ app: XCUIApplication) {
+        XCTAssertTrue(app.buttons["consent.no"].waitForExistence(timeout: 10))
+        app.buttons["consent.no"].tap()
+        let address = app.textFields["connect.url"]
+        XCTAssertTrue(address.waitForExistence(timeout: 5))
+        address.tap(); address.typeText("http://127.0.0.1:3900")
+        dismissUsingDone(app)
+        app.swipeUp()
+        app.buttons["connect.submit"].tap()
+    }
+
     @MainActor func testConsentConnectGeneratePlay() throws {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-smoke", "-AppleLanguages", "(en)"]

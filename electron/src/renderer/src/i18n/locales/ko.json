@@ -3542,7 +3542,18 @@
       "done_notification": "더빙 완료: {{title}}",
       "failed_notification": "더빙 실패: {{title}}",
       "language_unavailable": "이 언어에는 지원되는 대상 코드가 없습니다. 다른 대상 언어를 선택하세요.",
-      "remove_language": "{{language}} 제거"
+      "remove_language": "{{language}} 제거",
+      "translation_setup": "컴퓨터의 VoiceStudio → 설정에서 번역 엔진을 선택해 설치하고 구성한 뒤 다시 시도하세요.",
+      "translation_changed": "컴퓨터의 번역 엔진이 변경되었습니다. 선택한 서비스를 확인하려면 이 더빙을 다시 시작하세요.",
+      "translation_online_title": "이 더빙에 온라인 번역을 허용할까요?",
+      "translation_online_body": "컴퓨터가 이 더빙의 대본을 번역하기 위해 {{service}}(으)로 전송합니다. 이 작업에만 허용할까요?",
+      "translation_allow": "이 작업에 허용",
+      "translation_decline": "번역 안 함",
+      "choose_voice": "음성 선택",
+      "remove_source": "제거",
+      "history_meta": "{{language}} 더빙, 길이 {{duration}}",
+      "download_file": "{{name}} 다운로드",
+      "share_file": "{{name}} 공유"
     },
     "dictate": {
       "hold_to_talk": "누르고 있는 동안 말하기",
@@ -3642,7 +3653,9 @@
       },
       "disconnected_offline": "이 휴대폰에서 연결이 해제되었습니다. 호스트가 해지를 확인하지 못했지만 세션은 자동으로 만료됩니다.",
       "remove_selection": "{{name}} 제거",
-      "more_actions": "{{name}}의 추가 작업"
+      "more_actions": "{{name}}의 추가 작업",
+      "dub_restart": "더빙을 시작할 수 없습니다. 소스를 선택하고 다시 시작하세요. 계속 발생하면 VoiceStudio 호스트에 다시 연결하세요.",
+      "dub_foreground_failed": "Android에서 백그라운드 업로드 서비스를 시작할 수 없습니다. VoiceStudio를 다시 열고 더빙을 다시 시작하세요. 계속 실패하면 앱을 업데이트하거나 다시 설치하세요."
     },
     "keyboard": {
       "done": "완료"
@@ -3687,7 +3700,9 @@
       "more_actions": "추가 작업",
       "selected": "선택됨",
       "not_selected": "선택 안 됨",
-      "delete_generation": "이 생성 항목을 삭제할까요? 이 작업은 되돌릴 수 없습니다."
+      "delete_generation": "이 생성 항목을 삭제할까요? 이 작업은 되돌릴 수 없습니다.",
+      "remove_file": "제거",
+      "no_matches": "\"{{query}}\"에 대한 결과가 없습니다."
     }
   }
 }

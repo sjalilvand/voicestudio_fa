@@ -1,12 +1,3 @@
 {
-  "mobile": {
-    "dub": {
-      "translation_setup": "Choose, install, and configure a translation engine on your computer in VoiceStudio → Settings, then try again.",
-      "translation_online_title": "Allow online translation for this dub?",
-      "translation_online_body": "Your computer will send this dub’s transcript to {{service}} for translation. Allow this only for this job?",
-      "translation_allow": "Allow for this job",
-      "translation_decline": "Do not translate",
-      "choose_voice": "Choose a voice"
-    }
-  }
+  "mobile": {}
 }

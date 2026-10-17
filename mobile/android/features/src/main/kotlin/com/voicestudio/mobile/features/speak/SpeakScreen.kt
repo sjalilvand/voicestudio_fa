@@ -24,7 +24,7 @@ import kotlinx.coroutines.*
     var voice by rememberSaveable {mutableStateOf("")}
     var engine by rememberSaveable {mutableStateOf("")}
     var language by rememberSaveable {mutableStateOf("Auto")}
-    val catalog=remember {LanguageCatalog.load(context)}
+    val catalog=rememberLanguageCatalog(vm::fail)
     val l=LocalL10n.current
     val profile=state.profiles.firstOrNull {it.id==voice}
     val engines=engineChoices(state.engines,profile) {l.t(it)}
@@ -37,19 +37,20 @@ import kotlinx.coroutines.*
         }
     }
     LaunchedEffect(state.profiles) {if(voice.isNotBlank() && profile==null) voice=""}
-    LaunchedEffect(voice,profile?.language) {language=catalog.preferred(profile)}
+    LaunchedEffect(voice,profile?.language,catalog) {language=catalog?.preferred(profile) ?: "Auto"}
     LaunchedEffect(engines,state.engines.active) {
         if(engines.none {it.id==engine && it.enabled}) engine=initialEngine(state.engines,engines)
     }
     Screen {
         ScreenTitle("mobile.tabs.speak")
         Field("mobile.speak.placeholder",text,{text=it},multiline=true)
+        if(catalog==null) InlineLoading()
         Group {
             Picker("mobile.speak.voice",voice,listOf("" to tr("mobile.speak.voice_default"))+state.profiles.map {it.id to it.name},{voice=it})
             HorizontalDivider()
             ChoicePicker("mobile.speak.engine",engine,engines,{engine=it})
             HorizontalDivider()
-            Picker("mobile.speak.language",language,catalog.names.map {it to it},{language=it})
+            Picker("mobile.speak.language",language,catalog?.names.orEmpty().map {it to it},{language=it})
         }
         Action(if(state.busy) "mobile.speak.generating" else "mobile.speak.generate",text.isNotBlank()&&engines.any {it.id==engine&&it.enabled}&&!state.busy) {
             vm.generate(text,voice,engine,language)
@@ -64,7 +65,8 @@ import kotlinx.coroutines.*
             Box(Modifier.weight(1f)) {Heading("mobile.speak.recent")}
             IconAction("common.refresh",Icons.Default.Refresh,!state.busy,onClick=vm::refresh)
         }
-        if(state.history.isEmpty()) Text(tr("mobile.speak.empty_recent"),color=role("textMuted"))
+        if(state.catalogLoading) InlineLoading()
+        else if(state.history.isEmpty()) Text(tr("mobile.speak.empty_recent"),color=role("textMuted"))
         if(state.history.isNotEmpty()) Group {
             state.history.forEach {item ->
                 Row(Modifier.fillMaxWidth().padding(VSTheme.inset),verticalAlignment=Alignment.CenterVertically) {

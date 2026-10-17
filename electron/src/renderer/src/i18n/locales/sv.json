@@ -3542,7 +3542,18 @@
       "done_notification": "Dubbningen klar: {{title}}",
       "failed_notification": "Dubbningen misslyckades: {{title}}",
       "language_unavailable": "Det här språket har ingen målkod som stöds. Välj ett annat målspråk.",
-      "remove_language": "Ta bort {{language}}"
+      "remove_language": "Ta bort {{language}}",
+      "translation_setup": "Välj, installera och konfigurera en översättningsmotor på din dator i VoiceStudio → Inställningar och försök sedan igen.",
+      "translation_changed": "Översättningsmotorn på din dator har ändrats. Starta den här dubbningen igen för att granska den valda tjänsten.",
+      "translation_online_title": "Tillåta onlineöversättning för den här dubbningen?",
+      "translation_online_body": "Din dator skickar transkriptet för den här dubbningen till {{service}} för översättning. Tillåt endast för det här jobbet?",
+      "translation_allow": "Tillåt för det här jobbet",
+      "translation_decline": "Översätt inte",
+      "choose_voice": "Välj en röst",
+      "remove_source": "Ta bort",
+      "history_meta": "Dubbning på {{language}}, längd {{duration}}",
+      "download_file": "Ladda ned {{name}}",
+      "share_file": "Dela {{name}}"
     },
     "dictate": {
       "hold_to_talk": "Håll för att tala",
@@ -3642,7 +3653,9 @@
       },
       "disconnected_offline": "Frånkopplad på den här telefonen. Värden kunde inte bekräfta återkallandet; sessionen går ut automatiskt.",
       "remove_selection": "Ta bort {{name}}",
-      "more_actions": "Fler åtgärder för {{name}}"
+      "more_actions": "Fler åtgärder för {{name}}",
+      "dub_restart": "Dubbningen kunde inte starta. Välj källan och starta igen. Om det fortsätter, anslut till din VoiceStudio-värd igen.",
+      "dub_foreground_failed": "Android kunde inte starta uppladdningstjänsten i bakgrunden. Öppna VoiceStudio igen och starta dubbningen på nytt. Om det fortfarande misslyckas, uppdatera eller installera om appen."
     },
     "keyboard": {
       "done": "Klar"
@@ -3687,7 +3700,9 @@
       "more_actions": "Fler åtgärder",
       "selected": "Vald",
       "not_selected": "Inte vald",
-      "delete_generation": "Ta bort den här genereringen? Det går inte att ångra."
+      "delete_generation": "Ta bort den här genereringen? Det går inte att ångra.",
+      "remove_file": "Ta bort",
+      "no_matches": "Inga träffar för \"{{query}}\"."
     }
   }
 }

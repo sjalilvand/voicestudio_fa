@@ -72,9 +72,12 @@ import java.io.File
             Box(Modifier.weight(1f)) {Field("mobile.voices.search",query,{query=it})}
             IconAction("common.refresh",Icons.Default.Refresh,!state.busy,onClick=vm::refresh)
         }
-        if(state.profiles.isEmpty()) Text(tr("mobile.voices.empty"),color=role("textMuted"))
+        val matches=state.profiles.filter {it.name.contains(query,true)}
+        if(query.isNotBlank() && matches.isEmpty()) SearchEmpty(query)
+        else if(state.catalogLoading) InlineLoading()
+        else if(state.profiles.isEmpty()) Text(tr("mobile.voices.empty"),color=role("textMuted"))
         Group {
-            state.profiles.filter {it.name.contains(query,true)}.forEach {profile ->
+            matches.forEach {profile ->
                 var menu by remember {mutableStateOf(false)}
                 Row(Modifier.fillMaxWidth().padding(VSTheme.inset),verticalAlignment=Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {

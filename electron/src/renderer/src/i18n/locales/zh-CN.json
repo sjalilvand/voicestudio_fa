@@ -3542,7 +3542,18 @@
       "done_notification": "配音完成：{{title}}",
       "failed_notification": "配音失败：{{title}}",
       "language_unavailable": "此语言没有受支持的目标代码。请选择其他目标语言。",
-      "remove_language": "移除 {{language}}"
+      "remove_language": "移除 {{language}}",
+      "translation_setup": "请在你电脑上的 VoiceStudio → 设置中选择、安装并配置翻译引擎，然后重试。",
+      "translation_changed": "你电脑上的翻译引擎已更改。请重新开始此配音，以确认所选服务。",
+      "translation_online_title": "允许此配音使用在线翻译吗？",
+      "translation_online_body": "你的电脑会将此配音的文字记录发送到 {{service}} 进行翻译。仅对此任务允许吗？",
+      "translation_allow": "仅此任务允许",
+      "translation_decline": "不翻译",
+      "choose_voice": "选择声音",
+      "remove_source": "移除",
+      "history_meta": "{{language}}配音，时长 {{duration}}",
+      "download_file": "下载 {{name}}",
+      "share_file": "分享 {{name}}"
     },
     "dictate": {
       "hold_to_talk": "按住说话",
@@ -3642,7 +3653,9 @@
       },
       "disconnected_offline": "已在这部手机上断开连接。主机无法确认撤销，其会话将自动过期。",
       "remove_selection": "移除 {{name}}",
-      "more_actions": "{{name}} 的更多操作"
+      "more_actions": "{{name}} 的更多操作",
+      "dub_restart": "无法开始配音。请选择来源后重新开始。如果问题持续出现，请重新连接你的 VoiceStudio 主机。",
+      "dub_foreground_failed": "Android 无法启动后台上传服务。请重新打开 VoiceStudio 并重新开始配音。如果仍然失败，请更新或重新安装应用。"
     },
     "keyboard": {
       "done": "完成"
@@ -3687,7 +3700,9 @@
       "more_actions": "更多操作",
       "selected": "已选择",
       "not_selected": "未选择",
-      "delete_generation": "要删除这条生成记录吗？此操作无法撤销。"
+      "delete_generation": "要删除这条生成记录吗？此操作无法撤销。",
+      "remove_file": "移除",
+      "no_matches": "没有与“{{query}}”匹配的结果。"
     }
   }
 }

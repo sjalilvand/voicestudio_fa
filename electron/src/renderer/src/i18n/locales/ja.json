@@ -3542,7 +3542,18 @@
       "done_notification": "ダビング完了: {{title}}",
       "failed_notification": "ダビング失敗: {{title}}",
       "language_unavailable": "この言語には対応するターゲットコードがありません。別のターゲット言語を選んでください。",
-      "remove_language": "{{language}} を削除"
+      "remove_language": "{{language}} を削除",
+      "translation_setup": "コンピューターの VoiceStudio → 設定で翻訳エンジンを選択してインストールし、設定してから、もう一度お試しください。",
+      "translation_changed": "コンピューターの翻訳エンジンが変更されました。選択したサービスを確認するには、このダビングをもう一度開始してください。",
+      "translation_online_title": "このダビングでオンライン翻訳を許可しますか？",
+      "translation_online_body": "コンピューターがこのダビングの文字起こしを翻訳のために {{service}} へ送信します。このジョブに限って許可しますか？",
+      "translation_allow": "このジョブで許可",
+      "translation_decline": "翻訳しない",
+      "choose_voice": "音声を選択",
+      "remove_source": "削除",
+      "history_meta": "{{language}}のダビング、長さ {{duration}}",
+      "download_file": "{{name}} をダウンロード",
+      "share_file": "{{name}} を共有"
     },
     "dictate": {
       "hold_to_talk": "押している間だけ話す",
@@ -3642,7 +3653,9 @@
       },
       "disconnected_offline": "このスマートフォンでは切断されました。ホストが取り消しを確認できませんでしたが、セッションは自動的に失効します。",
       "remove_selection": "{{name}} を削除",
-      "more_actions": "{{name}} のその他の操作"
+      "more_actions": "{{name}} のその他の操作",
+      "dub_restart": "ダビングを開始できませんでした。ソースを選択して、もう一度開始してください。繰り返し発生する場合は、VoiceStudio ホストに再接続してください。",
+      "dub_foreground_failed": "Android がバックグラウンドのアップロードサービスを開始できませんでした。VoiceStudio を開き直して、もう一度ダビングを開始してください。それでも失敗する場合は、アプリを更新または再インストールしてください。"
     },
     "keyboard": {
       "done": "完了"
@@ -3687,7 +3700,9 @@
       "more_actions": "その他の操作",
       "selected": "選択済み",
       "not_selected": "未選択",
-      "delete_generation": "この生成を削除しますか？この操作は元に戻せません。"
+      "delete_generation": "この生成を削除しますか？この操作は元に戻せません。",
+      "remove_file": "削除",
+      "no_matches": "「{{query}}」に一致する項目はありません。"
     }
   }
 }

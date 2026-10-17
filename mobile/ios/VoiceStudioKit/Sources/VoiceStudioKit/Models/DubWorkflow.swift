@@ -80,9 +80,9 @@ public struct DubCheckpoint: Codable, Sendable {
                     cp.stage = .translating; checkpoint = cp; save()
                 case .translating:
                     let language = cp.languages[cp.languageIndex]
-                    let engine = try await api.translationEngines().selected()
+                    let engine = try await api.translationEngineForJob()
                     try validate(revision)
-                    if engine.requiresConfirmation && cp.approvedOnlineProvider != engine.id {
+                    if engine.requiresConfirmation && cp.approvedOnlineProvider != engine.consentIdentity {
                         pendingTranslation = engine
                         return
                     }
@@ -116,7 +116,7 @@ public struct DubCheckpoint: Codable, Sendable {
     public func confirmTranslation(_ allowed: Bool) {
         guard let engine = pendingTranslation else { return }
         pendingTranslation = nil
-        if allowed { checkpoint?.approvedOnlineProvider = engine.id; save() }
+        if allowed { checkpoint?.approvedOnlineProvider = engine.consentIdentity; save() }
         else { checkpoint?.stage = .cancelled; save() }
     }
     public func clear() {

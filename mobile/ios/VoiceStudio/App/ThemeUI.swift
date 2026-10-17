@@ -41,12 +41,18 @@ struct VSFieldStyle: TextFieldStyle {
 }
 struct Page<Content: View>: View {
     @Environment(\.vsTheme) private var theme
+    @Environment(AppModel.self) private var model
     let content: Content
     let backgroundRole: String
     init(backgroundRole: String = "canvas", @ViewBuilder content: () -> Content) { self.backgroundRole = backgroundRole; self.content = content() }
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: VSTokens.spacingGap) { content }
+            VStack(alignment: .leading, spacing: VSTokens.spacingGap) {
+                if model.loading {
+                    ProgressView(model.t("common.loading")).frame(minHeight: 44).accessibilityIdentifier("page.loading")
+                }
+                content
+            }
                 .padding(Theme.compactInset).frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(theme.color(backgroundRole))

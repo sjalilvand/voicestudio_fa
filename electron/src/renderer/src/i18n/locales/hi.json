@@ -3542,7 +3542,18 @@
       "done_notification": "डबिंग पूरी हुई: {{title}}",
       "failed_notification": "डबिंग विफल रही: {{title}}",
       "language_unavailable": "इस भाषा का कोई समर्थित लक्ष्य कोड नहीं है। कोई दूसरी लक्ष्य भाषा चुनें।",
-      "remove_language": "{{language}} हटाएँ"
+      "remove_language": "{{language}} हटाएँ",
+      "translation_setup": "अपने कंप्यूटर पर VoiceStudio → सेटिंग्स में अनुवाद इंजन चुनें, इंस्टॉल और कॉन्फ़िगर करें, फिर दोबारा कोशिश करें।",
+      "translation_changed": "आपके कंप्यूटर पर अनुवाद इंजन बदल गया है। चुनी गई सेवा देखने के लिए यह डबिंग फिर से शुरू करें।",
+      "translation_online_title": "क्या इस डबिंग के लिए ऑनलाइन अनुवाद की अनुमति दें?",
+      "translation_online_body": "आपका कंप्यूटर इस डबिंग का ट्रांसक्रिप्ट अनुवाद के लिए {{service}} को भेजेगा। क्या सिर्फ़ इस जॉब के लिए अनुमति दें?",
+      "translation_allow": "इस जॉब के लिए अनुमति दें",
+      "translation_decline": "अनुवाद न करें",
+      "choose_voice": "आवाज़ चुनें",
+      "remove_source": "हटाएँ",
+      "history_meta": "{{language}} डबिंग, अवधि {{duration}}",
+      "download_file": "{{name}} डाउनलोड करें",
+      "share_file": "{{name}} शेयर करें"
     },
     "dictate": {
       "hold_to_talk": "बोलने के लिए दबाए रखें",
@@ -3642,7 +3653,9 @@
       },
       "disconnected_offline": "इस फ़ोन पर डिस्कनेक्ट हो गया। होस्ट रद्दीकरण की पुष्टि नहीं कर सका; उसका सत्र अपने आप समाप्त हो जाएगा।",
       "remove_selection": "{{name}} हटाएँ",
-      "more_actions": "{{name}} के लिए और कार्रवाइयाँ"
+      "more_actions": "{{name}} के लिए और कार्रवाइयाँ",
+      "dub_restart": "डबिंग शुरू नहीं हो सकी। स्रोत चुनें और फिर से शुरू करें। यह बार-बार हो तो अपने VoiceStudio होस्ट से दोबारा कनेक्ट करें।",
+      "dub_foreground_failed": "Android बैकग्राउंड अपलोड सेवा शुरू नहीं कर सका। VoiceStudio फिर से खोलें और डबिंग दोबारा शुरू करें। फिर भी विफल हो तो ऐप अपडेट या दोबारा इंस्टॉल करें।"
     },
     "keyboard": {
       "done": "पूरा हुआ"
@@ -3687,7 +3700,9 @@
       "more_actions": "और कार्रवाइयाँ",
       "selected": "चयनित",
       "not_selected": "चयनित नहीं",
-      "delete_generation": "यह जनरेशन हटाएँ? इसे वापस नहीं किया जा सकता।"
+      "delete_generation": "यह जनरेशन हटाएँ? इसे वापस नहीं किया जा सकता।",
+      "remove_file": "हटाएँ",
+      "no_matches": "\"{{query}}\" के लिए कोई परिणाम नहीं।"
     }
   }
 }

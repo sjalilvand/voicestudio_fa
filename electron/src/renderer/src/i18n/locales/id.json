@@ -3542,7 +3542,18 @@
       "done_notification": "Sulih suara selesai: {{title}}",
       "failed_notification": "Sulih suara gagal: {{title}}",
       "language_unavailable": "Bahasa ini tidak punya kode target yang didukung. Pilih bahasa target lain.",
-      "remove_language": "Hapus {{language}}"
+      "remove_language": "Hapus {{language}}",
+      "translation_setup": "Pilih, instal, dan atur mesin terjemahan di komputer Anda melalui VoiceStudio → Pengaturan, lalu coba lagi.",
+      "translation_changed": "Mesin terjemahan di komputer Anda berubah. Mulai sulih suara ini lagi untuk meninjau layanan yang dipilih.",
+      "translation_online_title": "Izinkan terjemahan online untuk sulih suara ini?",
+      "translation_online_body": "Komputer Anda akan mengirim transkrip sulih suara ini ke {{service}} untuk diterjemahkan. Izinkan hanya untuk tugas ini?",
+      "translation_allow": "Izinkan untuk tugas ini",
+      "translation_decline": "Jangan terjemahkan",
+      "choose_voice": "Pilih suara",
+      "remove_source": "Hapus",
+      "history_meta": "Sulih suara {{language}}, durasi {{duration}}",
+      "download_file": "Unduh {{name}}",
+      "share_file": "Bagikan {{name}}"
     },
     "dictate": {
       "hold_to_talk": "Tahan untuk bicara",
@@ -3642,7 +3653,9 @@
       },
       "disconnected_offline": "Terputus di ponsel ini. Host tidak dapat mengonfirmasi pencabutan; sesinya akan kedaluwarsa otomatis.",
       "remove_selection": "Hapus {{name}}",
-      "more_actions": "Tindakan lainnya untuk {{name}}"
+      "more_actions": "Tindakan lainnya untuk {{name}}",
+      "dub_restart": "Sulih suara tidak dapat dimulai. Pilih sumber lalu mulai lagi. Jika terus terjadi, hubungkan kembali ke host VoiceStudio Anda.",
+      "dub_foreground_failed": "Android tidak dapat memulai layanan unggah latar belakang. Buka VoiceStudio lagi lalu mulai sulih suara kembali. Jika masih gagal, perbarui atau instal ulang aplikasi."
     },
     "keyboard": {
       "done": "Selesai"
@@ -3687,7 +3700,9 @@
       "more_actions": "Tindakan lainnya",
       "selected": "Dipilih",
       "not_selected": "Tidak dipilih",
-      "delete_generation": "Hapus hasil ini? Tindakan ini tidak dapat dibatalkan."
+      "delete_generation": "Hapus hasil ini? Tindakan ini tidak dapat dibatalkan.",
+      "remove_file": "Hapus",
+      "no_matches": "Tidak ada hasil untuk \"{{query}}\"."
     }
   }
 }

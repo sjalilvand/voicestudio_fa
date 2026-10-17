@@ -75,16 +75,24 @@ public struct Multipart: Sendable {
     private func safe(_ s: String) -> String { s.replacingOccurrences(of: "\"", with: "_").replacingOccurrences(of: "\r", with: "_").replacingOccurrences(of: "\n", with: "_") }
 
     /// Bounded-memory multipart staging for background file uploads. The caller retains output until completion.
-    public static func stageDub(source: URL, output: URL, jobID: String, audioOnly: Bool) throws -> String {
+    public static func stageDub(source: URL, output: URL, jobID: String, audioOnly: Bool, filename: String? = nil) throws -> String {
         var form = Multipart()
         form.field("job_id", jobID); form.field("input_type", audioOnly ? "audio" : "video")
-        form.append("--\(form.boundary)\r\nContent-Disposition: form-data; name=\"video\"; filename=\"\(form.safe(source.lastPathComponent))\"\r\nContent-Type: application/octet-stream\r\n\r\n")
+        form.append("--\(form.boundary)\r\nContent-Disposition: form-data; name=\"video\"; filename=\"\(form.safe(filename ?? source.lastPathComponent))\"\r\nContent-Type: application/octet-stream\r\n\r\n")
+        let reader = try FileHandle(forReadingFrom: source)
+        defer { try? reader.close() }
         guard FileManager.default.createFile(atPath: output.path, contents: form.data) else { throw ClientError("mobile.errors.file") }
-        let writer = try FileHandle(forWritingTo: output), reader = try FileHandle(forReadingFrom: source)
-        defer { try? writer.close(); try? reader.close() }
+        var completed = false
+        defer { if !completed { try? FileManager.default.removeItem(at: output) } }
+        let writer = try FileHandle(forWritingTo: output)
+        defer { try? writer.close() }
         try writer.seekToEnd()
-        while let chunk = try reader.read(upToCount: 1_048_576), !chunk.isEmpty { try writer.write(contentsOf: chunk) }
+        while let chunk = try reader.read(upToCount: 1_048_576), !chunk.isEmpty {
+            try Task.checkCancellation()
+            try writer.write(contentsOf: chunk)
+        }
         try writer.write(contentsOf: Data("\r\n--\(form.boundary)--\r\n".utf8))
+        completed = true
         return form.contentType
     }
 }

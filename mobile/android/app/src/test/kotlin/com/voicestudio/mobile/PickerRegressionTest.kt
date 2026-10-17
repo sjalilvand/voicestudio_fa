@@ -88,4 +88,18 @@ class PickerRegressionTest {
         assertEquals(RoundedCornerShape(VSTokens.RADIUS_CONTROL.dp),control)
         assertEquals(RoundedCornerShape(VSTokens.RADIUS_LG.dp),card)
     }
+    @Test fun searchWithoutMatchesExplainsEmptyChoiceAndMultiChoiceLists() {
+        content {ChoicePicker("mobile.speak.voice","one",listOf(Choice("one","Sample voice"))) {}}
+        compose.onNodeWithText("Voice").performClick()
+        compose.onNodeWithText("Search").performTextInput("missing")
+        compose.onNodeWithText("No matches for \"missing\"").assertExists()
+    }
+    @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun pickerValueUsesSpaceLeftByIntrinsicLabel() {
+        content {Box(Modifier.width(360.dp)) {Picker("mobile.speak.voice","default",listOf("default" to "Default voice (engine preset)")) {}}}
+        val label=compose.onNodeWithText("Voice",useUnmergedTree=true).fetchSemanticsNode().boundsInRoot
+        val value=compose.onNodeWithText("Default voice (engine preset)",useUnmergedTree=true).fetchSemanticsNode().boundsInRoot
+        assertTrue("The value must get the unused label-column space: $label $value",value.width>label.width*2)
+    }
+
 }

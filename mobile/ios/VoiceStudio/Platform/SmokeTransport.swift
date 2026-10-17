@@ -13,9 +13,11 @@ struct SmokeTransport: HTTPTransport {
         switch path {
         case "/health": return reply(#"{"status":"ok","device":"cpu","version":"test"}"#, headers: ["x-omnivoice-backend": "test"])
         case "/profiles": return reply(#"[{"id":"smoke-profile","name":"Smoke voice","language":"english","kind":"clone"}]"#)
-        case "/history", "/dub/history": return reply("[]")
+        case "/history": return reply("[]")
+        case "/dub/history": return reply(#"[{"id":"smoke-dub","filename":"vs-dub-test.wav","language":"Spanish","duration":125,"created_at":1700000000}]"#)
+        case "/dictation/readiness": return reply(#"{"ready":true}"#)
         case "/engines":
-            try await Task.sleep(for: .seconds(1))
+            try await Task.sleep(for: .seconds(ProcessInfo.processInfo.arguments.contains("--ui-delayed-inventory") ? 8 : 1))
             return reply(#"{"tts":{"active":"kittentts","backends":[{"id":"kittentts","display_name":"KittenTTS","available":true,"supports_cloning":false,"supported_language_names":["English"]},{"id":"mlx-audio","display_name":"OuteTTS (MLX Audio, Apple Silicon)","available":true,"supports_cloning":false},{"id":"unavailable","display_name":"Unavailable engine","available":false,"reason":"Install on host","supports_cloning":true}]}}"#)
         case "/generate":
             return HTTPReply(data: Self.wav(), headers: ["content-type": "audio/wav", "x-audio-id": "smoke"])

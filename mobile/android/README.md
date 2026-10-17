@@ -81,14 +81,29 @@ and offers a visible Done toolbar while focused. Rename and picker dialogs use
 their own window's focus manager. Android retains its normal keyboard-first Back
 handling; reaching Generate only requires scrolling or Done.
 
-Picker rows reserve the label column and ellipsize values to one line. The full
-value remains in their accessibility description, and choice lists allow two
-lines per name. This applies to voice, engine, language, palette and dub targets.
+Picker labels take their intrinsic single-line width; values fill the remaining
+space, align to the trailing edge and ellipsize to one line. The full value
+remains in the accessibility description, and choice lists allow two lines per
+name. This applies to voice, engine, language, palette and dub targets. Every
+searchable list shows the query when no matches remain.
+
+Tabs render their content without navigation fades. Language catalogs and locale
+mapping load off the UI thread and are cached; Speak and Dub show inline loading
+indicators with their controls already visible. History/profile refreshes show
+inline progress rather than hiding the screen. Dictate keeps its controls visible
+while checking readiness.
 
 Speak has text, backend voice/engine/language pickers, generation, host-streamed
 Media3 playback, an accessible seek/progress slider, system share/save, and
 recent history with star/delete. Voices has search, previews, rename/delete,
 permission-gated recording or file selection and explicit clone consent.
+
+Dub keeps a device document's `OpenableColumns.DISPLAY_NAME` separately from its
+private cached path, shows that name, and sends it as the upload filename so host
+history retains it. Remove deselects the private copy and names the file for
+accessibility. History uses grouped title/metadata rows with compact, named save
+and share icons. Save opens the system document picker; Share opens the share
+sheet.
 
 Dub accepts device media or a link for the host to ingest, multiple target
 languages and an explicit voice choice: **Default voice (engine preset)** or a
@@ -105,8 +120,18 @@ Before creating a job, Dub fetches `/engines/translation`, selects exactly its
 unready engines direct the user to VoiceStudio Settings on the computer. An
 `online` engine names the service and requires confirmation for that job using
 equally styled Allow/Decline buttons; dismissal and decline start no upload or
-translation. Approval is scoped to a single durable job. The worker rechecks the
-active provider before starting/resuming and refuses changed providers; every
+translation. LLM engines also require that consent unless the resolved
+`dub_translation` skill and provider metadata positively identify a loopback
+endpoint on the host. `/api/settings/llm-skills` and `/api/settings/llm-providers`
+expose this metadata on authorized server hosts; desktop LAN hosts forbid these
+admin reads, so an unknown LLM route requires consent. The public translation
+inventory's `configured_via` names the service when available. Provider names and
+the provider's `local` flag alone do not prove locality: base URLs can be
+overridden. Only literal loopback IPs and `localhost` qualify, without any DNS or
+provider calls from the phone. Approval is scoped to a single durable job. The
+worker rechecks the active provider and a fingerprint of its resolved endpoint
+before starting/resuming and immediately before every translation request, and
+refuses changed routing; every
 `/dub/translate` body contains the explicit authorized `provider`. Existing jobs
 without provider metadata fail with recovery advice instead of using a fallback.
 WorkManager copies no credentials into job input. It
@@ -116,7 +141,11 @@ tasks after app process death or connectivity loss. Abort stops the host before
 cancelling the worker. Downloads use the guarded client and a FileProvider share.
 The worker requests a data-sync foreground service for long uploads. If Android
 refuses that start, work continues within WorkManager's normal execution limits;
-cancellation still stops it. Failed job receipts are shown once and acknowledged
+cancellation still stops it. The merged manifest declares `FOREGROUND_SERVICE`,
+`FOREGROUND_SERVICE_DATA_SYNC` and a `dataSync` WorkManager service. Notification
+permission is not required to upload/promote the service; it gates optional
+completion notifications. Security failures and initialization/input failures
+produce actionable Dub errors. Failed job receipts are shown once and acknowledged
 in DataStore across screen recreation, app restarts and host switches. Cancelled
 jobs show a cancellation status instead of a failure. Successful job download
 actions remain available. Optional completion notifications are generated locally,
@@ -206,8 +235,7 @@ available offline in About.
 ## Verification
 
 With JDK 21 and Android SDK 36:
-`./gradlew assembleDebug`, `./gradlew testDebugUnitTest` (63 tests, zero failures
-or skips), and `./gradlew lint` all passed. Tests used `HF_HUB_OFFLINE=1` with an
+`./gradlew assembleDebug`, `./gradlew testDebugUnitTest` (81 tests, zero failures or skips), and `./gradlew lint` all passed. Tests used `HF_HUB_OFFLINE=1` with an
 empty HF cache; all API/WebSocket traffic was against local mock servers.
 
 JVM tests cover token parity for every palette/role, L10n interpolation, plural
@@ -226,7 +254,16 @@ AndroidX WorkManager's pinned test helper initializes its JVM scheduler.
 Additional tests exercise foreground-service refusal and cancellation, storage
 read/decode recovery, saved labels, script-based Chinese locales, per-locale
 catalog caching, once-only failure receipts, candidate connection isolation,
-PIN-only disconnect and stale dictation cleanup.
+PIN-only disconnect and stale dictation cleanup. A real file worker traverses
+promotion, multipart upload, prep, transcription, translation and generation
+against a mock host with notification permission denied, asserting the original
+filename and the manifest's service permissions/type. Its foreground updater is
+a test double; Android 15 service promotion still needs device verification.
+Tests also cover worker
+security failures, invalid job input, local/remote/unknown LLM routes and route
+changes, intrinsic picker width, no-match queries, document display names, Remove
+accessibility, compact history actions and first-frame controls while language
+loading is deliberately suspended.
 
 Device camera,
 microphone, audible playback, permission prompts, real-host inference, foreground

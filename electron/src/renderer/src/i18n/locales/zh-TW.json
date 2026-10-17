@@ -3542,7 +3542,18 @@
       "done_notification": "配音完成：{{title}}",
       "failed_notification": "配音失敗：{{title}}",
       "language_unavailable": "此語言沒有支援的目標代碼。請選擇其他目標語言。",
-      "remove_language": "移除 {{language}}"
+      "remove_language": "移除 {{language}}",
+      "translation_setup": "請在你電腦上的 VoiceStudio → 設定中選擇、安裝並設定翻譯引擎，然後重試。",
+      "translation_changed": "你電腦上的翻譯引擎已變更。請重新開始此配音，以確認所選服務。",
+      "translation_online_title": "允許此配音使用線上翻譯嗎？",
+      "translation_online_body": "你的電腦會將此配音的逐字稿傳送到 {{service}} 進行翻譯。僅對此工作允許嗎？",
+      "translation_allow": "僅此工作允許",
+      "translation_decline": "不翻譯",
+      "choose_voice": "選擇聲音",
+      "remove_source": "移除",
+      "history_meta": "{{language}}配音，長度 {{duration}}",
+      "download_file": "下載 {{name}}",
+      "share_file": "分享 {{name}}"
     },
     "dictate": {
       "hold_to_talk": "按住說話",
@@ -3642,7 +3653,9 @@
       },
       "disconnected_offline": "已在這支手機上中斷連線。主機無法確認撤銷，其工作階段將自動過期。",
       "remove_selection": "移除 {{name}}",
-      "more_actions": "{{name}} 的更多操作"
+      "more_actions": "{{name}} 的更多操作",
+      "dub_restart": "無法開始配音。請選擇來源後重新開始。如果問題持續發生，請重新連線到你的 VoiceStudio 主機。",
+      "dub_foreground_failed": "Android 無法啟動背景上傳服務。請重新開啟 VoiceStudio 並重新開始配音。如果仍然失敗，請更新或重新安裝 App。"
     },
     "keyboard": {
       "done": "完成"
@@ -3687,7 +3700,9 @@
       "more_actions": "更多操作",
       "selected": "已選取",
       "not_selected": "未選取",
-      "delete_generation": "要刪除這筆產生紀錄嗎？此操作無法復原。"
+      "delete_generation": "要刪除這筆產生紀錄嗎？此操作無法復原。",
+      "remove_file": "移除",
+      "no_matches": "找不到符合「{{query}}」的結果。"
     }
   }
 }

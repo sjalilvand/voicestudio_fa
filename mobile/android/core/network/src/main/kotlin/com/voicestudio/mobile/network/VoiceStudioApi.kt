@@ -106,7 +106,25 @@ class VoiceStudioApi(val address: PairingAddress, token: String? = null, private
     }
     suspend fun profiles(): List<Profile> = get("/profiles")
     suspend fun engines(): Engines = get("/engines")
-    suspend fun translationEngine(): TranslationEngine = get<TranslationEngines>("/engines/translation").activeEngine()
+    suspend fun translationEngine(): TranslationEngine {
+        val engine = get<TranslationEngines>("/engines/translation").activeEngine()
+        if(engine.category != "llm") return engine
+        // Desktop hosts restrict settings to loopback; server hosts may permit
+        // the paired administrator session. Unknown/forbidden metadata requires consent.
+        val route = kotlinx.coroutines.withTimeoutOrNull(4000) {
+            try {
+                val skill = get<LlmSkills>("/api/settings/llm-skills").skills
+                    .firstOrNull { it.id == "dub_translation" && it.ready && it.enabled }
+                val provider = skill?.provider?.let { id ->
+                    get<LlmProviders>("/api/settings/llm-providers").providers.firstOrNull { it.id == id }
+                }
+                provider?.let { LlmRoute(it.id, it.displayName, it.baseUrl) }
+            } catch(cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch(error: ClientFailure) { if(error.status == 401) throw error; null }
+            catch(_: kotlinx.serialization.SerializationException) { null }
+        }
+        return engine.copy(llmRoute = route)
+    }
     suspend fun history(): List<HistoryItem> = get("/history")
     suspend fun dubHistory(): List<DubHistory> = get("/dub/history")
     suspend fun readiness(): Readiness = get("/dictation/readiness")
@@ -138,16 +156,16 @@ class VoiceStudioApi(val address: PairingAddress, token: String? = null, private
             Generation(id, path, r.header("X-Audio-Duration")?.toDoubleOrNull() ?: 0.0)
         }
     }
-    suspend fun upload(file: File, inputType: String, jobId: String, progress: (Int) -> Unit): UploadResult = withContext(Dispatchers.IO) {
+    suspend fun upload(file: File, inputType: String, jobId: String, filename: String = file.name, progress: (Int) -> Unit): UploadResult = withContext(Dispatchers.IO) {
         val body = MultipartBody.Builder().setType(MultipartBody.FORM).addFormDataPart("input_type", inputType)
             .addFormDataPart("job_id", jobId)
-            .addFormDataPart("video", file.name, ProgressBody(file, progress)).build()
+            .addFormDataPart("video", filename, ProgressBody(file, progress)).build()
         raw("/dub/upload", "POST", body).use { json.decodeFromString(it.body!!.string()) }
     }
     suspend fun ingest(link: String, jobId: String): UploadResult = post("/dub/ingest-url", buildJsonObject { put("url", link); put("job_id", jobId) })
     suspend fun transcribe(jobId: String): Transcription = post("/dub/transcribe/${segment(jobId)}", buildJsonObject {})
     suspend fun translate(jobId: String, target: String, source: String?, segments: List<Segment>, authorization: TranslationAuthorization): Translation = post("/dub/translate", buildJsonObject {
-        if(authorization.provider.isBlank() || (authorization.category == "online" && !authorization.onlineConfirmed))
+        if(authorization.provider.isBlank() || (authorization.requiresConsent && !authorization.onlineConfirmed))
             throw ClientFailure("mobile.dub.translation_setup")
         put("provider", authorization.provider)
         put("job_id", jobId); put("target_lang", target); source?.let { put("source_lang", it) }

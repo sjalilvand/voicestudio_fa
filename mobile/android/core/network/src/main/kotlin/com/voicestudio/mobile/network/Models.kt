@@ -32,7 +32,8 @@ data class Generation(val id: String, val audioPath: String, val duration: Doubl
 @Serializable data class Transcription(val segments: List<Segment>, @SerialName("source_lang") val sourceLang: String? = null)
 @Serializable data class TranslatedSegment(val id: JsonElement, val text: String, val error: String? = null)
 @Serializable data class Translation(val translated: List<TranslatedSegment>)
-@Serializable data class DubHistory(val id: String, @SerialName("job_id") val jobId: String = "", val filename: String = "")
+@Serializable data class DubHistory(val id: String, @SerialName("job_id") val jobId: String = "", val filename: String = "",
+    val language: String? = null, val duration: Double? = null)
 @Serializable data class RecommendedModel(val label: String = "", @SerialName("size_gb") val sizeGb: Double? = null)
 @Serializable data class MissingModel(val error: String = "", val recommended: RecommendedModel? = null,
     @SerialName("missing_repo_id") val missingRepoId: String? = null, val message: String? = null)

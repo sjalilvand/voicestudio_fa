@@ -7,10 +7,10 @@ import Testing
 private final class LoopbackHost {
     let process = Process()
     let port: Int
-    init() throws {
+    init(uploadStatus: Int = 202) throws {
         let pipe = Pipe()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = ["python3", "-u", "-c", Self.script]
+        process.arguments = ["python3", "-u", "-c", Self.script, String(uploadStatus)]
         process.standardOutput = pipe
         try process.run()
         var line = Data()
@@ -23,7 +23,8 @@ private final class LoopbackHost {
     deinit { if process.isRunning { process.terminate(); process.waitUntilExit() } }
     private static let script = #"""
 from http.server import BaseHTTPRequestHandler, HTTPServer
-import json
+import json, re, sys
+upload_status = int(sys.argv[1])
 class Host(BaseHTTPRequestHandler):
     def log_message(self, *args): pass
     def respond(self, body, code=200, headers={}):
@@ -54,7 +55,10 @@ class Host(BaseHTTPRequestHandler):
         if self.path == '/generate' and b'name="text"' in body:
             self.respond(b'RIFF-socket-wave',headers={'Content-Type':'audio/wav','X-Audio-Id':'socket'}); return
         if self.path == '/dub/upload' and b'name="video"' in body:
-            self.respond(b'{"job_id":"socket","task_id":"prep_socket","filename":"clip.mp4"}',202); return
+            if upload_status != 202:
+                self.respond(b'{"detail":"Upload refused: check available host storage, then retry."}', upload_status); return
+            filename = re.search(br'filename="([^"]+)"', body).group(1).decode('utf-8')
+            self.respond(json.dumps({'job_id':'socket','task_id':'prep_socket','filename':filename}).encode(),202); return
         self.respond(b'{}',422)
     def do_DELETE(self):
         self.respond(b'',204 if self.headers.get('Authorization') == 'Bearer session' else 401)
@@ -84,5 +88,42 @@ server.serve_forever()
     let noPIN = APIClient(address: try PairingAddress("http://127.0.0.1:\(host.port)"))
     do { _ = try await noPIN.health(); Issue.record("PIN should be required") }
     catch let error as ClientError { #expect(error.key == "mobile.connect.error_pin") }
+}
+
+@Test(arguments: [202, 401, 500]) @MainActor func uploadStartReachesMockHostAndReportsCompletion(_ status: Int) async throws {
+    let host = try LoopbackHost(uploadStatus: status)
+    let api = APIClient(address: try PairingAddress("http://127.0.0.1:\(host.port)/?pin=123456"),
+                        credentials: Credentials(session: "session"))
+    let directory = repository.appendingPathComponent("mobile/ios/.generated/upload-" + UUID().uuidString)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let uploader = BackgroundUpload(configuration: .ephemeral, defaults: UserDefaults(suiteName: UUID().uuidString)!, stagingDirectory: directory)
+    let file = directory.appendingPathComponent(UUID().uuidString + ".wav")
+    try data("RIFF-upload-file").write(to: file)
+    let selection = SelectedMedia(url: file, name: "vs-dub-test.wav")
+    try await uploader.start(source: selection.url, api: api, languages: [DubLanguage(code: "es", name: "Spanish")],
+                             profile: "", audioOnly: true, filename: selection.name)
+    let pending = try #require(uploader.pending)
+    #expect(pending.filename == selection.name)
+    #expect(pending.file.lastPathComponent != selection.name)
+    for _ in 0..<250 {
+        if uploader.receipt != nil { break }
+        try await Task.sleep(for: .milliseconds(20))
+    }
+    let receipt = try #require(uploader.takeReceipt(host: api.address.baseURL.absoluteString))
+    #expect(uploader.pending == nil)
+    #expect(!FileManager.default.fileExists(atPath: pending.file.path))
+    if status == 202 {
+        #expect(receipt.upload?.filename == "vs-dub-test.wav")
+        #expect(receipt.failure == nil)
+    } else {
+        let failure = try #require(receipt.failure)
+        #expect(failure.status == status)
+        let l10n = try L10n(catalogs: catalogs())
+        #expect(l10n.contains(failure.key))
+        #expect(l10n.t(failure.key, failure.params).count > 30)
+        #expect(receipt.upload == nil)
+    }
+    #expect(uploader.takeReceipt(host: api.address.baseURL.absoluteString) == nil)
 }
 #endif

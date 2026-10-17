@@ -3546,7 +3546,18 @@
       "done_notification": "Dubbing zakończony: {{title}}",
       "failed_notification": "Dubbing nie powiódł się: {{title}}",
       "language_unavailable": "Ten język nie ma obsługiwanego kodu docelowego. Wybierz inny język docelowy.",
-      "remove_language": "Usuń {{language}}"
+      "remove_language": "Usuń {{language}}",
+      "translation_setup": "Wybierz, zainstaluj i skonfiguruj silnik tłumaczenia na swoim komputerze w VoiceStudio → Ustawienia, a potem spróbuj ponownie.",
+      "translation_changed": "Silnik tłumaczenia na Twoim komputerze się zmienił. Uruchom ten dubbing ponownie, aby sprawdzić wybraną usługę.",
+      "translation_online_title": "Zezwolić na tłumaczenie online dla tego dubbingu?",
+      "translation_online_body": "Twój komputer wyśle transkrypcję tego dubbingu do {{service}} w celu przetłumaczenia. Zezwolić tylko dla tego zadania?",
+      "translation_allow": "Zezwól dla tego zadania",
+      "translation_decline": "Nie tłumacz",
+      "choose_voice": "Wybierz głos",
+      "remove_source": "Usuń",
+      "history_meta": "Dubbing: {{language}}, czas trwania {{duration}}",
+      "download_file": "Pobierz {{name}}",
+      "share_file": "Udostępnij {{name}}"
     },
     "dictate": {
       "hold_to_talk": "Przytrzymaj, aby mówić",
@@ -3646,7 +3657,9 @@
       },
       "disconnected_offline": "Rozłączono na tym telefonie. Host nie mógł potwierdzić unieważnienia; jego sesja wygaśnie automatycznie.",
       "remove_selection": "Usuń {{name}}",
-      "more_actions": "Więcej działań dla {{name}}"
+      "more_actions": "Więcej działań dla {{name}}",
+      "dub_restart": "Nie udało się rozpocząć dubbingu. Wybierz źródło i zacznij od nowa. Jeśli problem się powtarza, połącz się ponownie z hostem VoiceStudio.",
+      "dub_foreground_failed": "Android nie mógł uruchomić usługi przesyłania w tle. Otwórz VoiceStudio ponownie i zacznij dubbing od nowa. Jeśli nadal się nie udaje, zaktualizuj lub zainstaluj aplikację ponownie."
     },
     "keyboard": {
       "done": "Gotowe"
@@ -3691,7 +3704,9 @@
       "more_actions": "Więcej działań",
       "selected": "Wybrano",
       "not_selected": "Nie wybrano",
-      "delete_generation": "Usunąć tę generację? Tej operacji nie można cofnąć."
+      "delete_generation": "Usunąć tę generację? Tej operacji nie można cofnąć.",
+      "remove_file": "Usuń",
+      "no_matches": "Brak wyników dla \"{{query}}\"."
     }
   }
 }

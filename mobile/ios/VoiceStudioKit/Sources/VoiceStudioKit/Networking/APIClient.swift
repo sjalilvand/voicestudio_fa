@@ -145,6 +145,29 @@ public struct APIClient: Sendable {
     public func events(_ task: String, after: Int) async throws -> JobEvents { try await decode(JobEvents.self, "/jobs/\(try Self.component(task))/events?after_seq=\(after)") }
     public func transcribe(_ job: String) async throws -> Transcript { try await decode(Transcript.self, "/dub/transcribe/\(try Self.component(job))", method: "POST") }
     public func translationEngines() async throws -> TranslationEngines { try await decode(TranslationEngines.self, "/engines/translation") }
+    public func translationEngineForJob() async throws -> TranslationEngine {
+        let engine = try await translationEngines().selected()
+        guard engine.category == "llm" else { return engine }
+        do {
+            let skills = try await decode(LLMSkills.self, "/api/settings/llm-skills")
+            if let skill = skills.skills.first(where: { $0.id == "dub_translation" }), skill.ready == true,
+               let id = skill.provider {
+                let providers = try await decode(LLMProviders.self, "/api/settings/llm-providers")
+                let provider = providers.providers.first { $0.id == id }
+                return engine.resolved(provider: id, name: skill.provider_display_name ?? provider?.display_name,
+                                       baseURL: provider?.base_url, transport: provider?.transport)
+            }
+            // dub_translate.py falls back to TRANSLATE_* only when no ready
+            // skill client resolves. The inventory explicitly identifies this.
+            if engine.configured_via == "env" {
+                let endpoint = try await decode(LLMEndpoint.self, "/api/settings/llm-endpoint")
+                return engine.resolved(provider: nil, name: nil, baseURL: endpoint.base_url)
+            }
+        } catch is CancellationError { throw CancellationError() }
+        catch let error as ClientError where error.status == 401 { throw error }
+        catch { /* Settings discovery is admin-only on desktop. Unknown means consent. */ }
+        return engine.resolved(provider: nil, name: nil, baseURL: nil)
+    }
     public func translate(_ job: String, segments: [Segment], language: String, provider: String) async throws -> Translation {
         guard !provider.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw ClientError("mobile.dub.translation_setup") }
         struct Input: Encodable, Sendable { let job_id: String; let segments: [Segment]; let target_lang: String; let provider: String }

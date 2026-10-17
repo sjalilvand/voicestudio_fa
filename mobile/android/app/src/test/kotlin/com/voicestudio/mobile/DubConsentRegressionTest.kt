@@ -29,7 +29,10 @@ import org.robolectric.annotation.Config
 class DubConsentRegressionTest {
     @get:Rule val compose=createComposeRule()
     private val engineBody="""{"active":"deepl","engines":[{"id":"deepl","display_name":"DeepL","category":"online","installed":true,"ready":true}]}"""
-    @Test fun onlineServiceIsNamedAndDeclineNeverStartsDub() {
+    @Test fun onlineServiceIsNamedAndDeclineNeverStartsDub() = declineFlow(engineBody,"DeepL")
+    @Test fun remoteOrUnknownLlmIsNamedAndDeclineNeverStartsDub() = declineFlow(
+        """{"active":"openai","engines":[{"id":"openai","category":"llm","configured_via":"OpenAI","installed":true,"ready":true}]}""","OpenAI")
+    private fun declineFlow(engineResponse: String, service: String) {
         val app=ApplicationProvider.getApplicationContext<Application>()
         WorkManagerTestInitHelper.initializeTestWorkManager(app)
         val store=SessionStore(app,object:CredentialVault {
@@ -46,7 +49,8 @@ class DubConsentRegressionTest {
                     "/health" -> MockResponse().setHeader("x-omnivoice-backend","test").setBody("""{"status":"ok","version":"test"}""")
                     "/profiles","/history","/dub/history" -> MockResponse().setBody("[]")
                     "/engines" -> MockResponse().setBody("""{"tts":{"active":"test","backends":[]}}""")
-                    "/engines/translation" -> MockResponse().setBody(engineBody)
+                    "/engines/translation" -> MockResponse().setBody(engineResponse)
+                    "/api/settings/llm-skills" -> MockResponse().setResponseCode(403)
                     else -> MockResponse().setResponseCode(500)
                 }
             }
@@ -70,7 +74,7 @@ class DubConsentRegressionTest {
                 compose.onNodeWithText("Start dubbing").performScrollTo().performClick()
                 awaitIdle()
                 compose.onNodeWithText("Allow online translation for this dub?").assertExists()
-                compose.onNodeWithText("Your computer will send this dub’s transcript to DeepL for translation. Allow this only for this job?").assertExists()
+                compose.onNodeWithText("Your computer will send this dub’s transcript to $service for translation. Allow this only for this job?").assertExists()
                 assertFalse(paths.any {it.startsWith("/dub/translate") || it.startsWith("/dub/ingest-url")})
                 compose.onNodeWithText("Do not translate").performClick()
                 compose.onAllNodes(isDialog()).assertCountEquals(0)
@@ -98,4 +102,32 @@ class DubConsentRegressionTest {
             assertEquals(3,server.requestCount)
         } finally {server.shutdown()}
     }
+    @Test fun durableLlmConsentCannotFollowALocalEndpointToTheCloud()=runBlocking {
+        val server=MockWebServer().apply {start()}
+        val api=VoiceStudioApi(PairingAddress.parse(server.url("/").toString()))
+        fun response(endpoint: String) {
+            server.enqueue(MockResponse().setBody("""{"active":"openai","engines":[{"id":"openai","category":"llm","installed":true,"ready":true}]}"""))
+            server.enqueue(MockResponse().setBody("""{"skills":[{"id":"dub_translation","provider":"ollama","enabled":true,"ready":true}]}"""))
+            server.enqueue(MockResponse().setBody("""{"providers":[{"id":"ollama","display_name":"Ollama","base_url":"$endpoint"}]}"""))
+        }
+        try {
+            response("http://localhost:11434/v1")
+            val local=api.translationEngine().authorize()!!
+            val data=workDataOf("translation_provider" to "openai","translation_category" to "llm","translation_route" to local.routingIdentity)
+            response("http://localhost:11434/v1")
+            assertFalse(DubWorker.authorizedTranslation(api,data).onlineConfirmed)
+            response("https://cloud.example.test/v1")
+            try {DubWorker.authorizedTranslation(api,data);fail("Changed route requires review")} catch(error:ClientFailure) {assertEquals("mobile.dub.translation_changed",error.key)}
+            response("https://cloud.example.test/v1")
+            val cloud=api.translationEngine()
+            val unapproved=workDataOf("translation_provider" to "openai","translation_category" to "llm","translation_route" to cloud.routingIdentity)
+            response("https://cloud.example.test/v1")
+            try {DubWorker.authorizedTranslation(api,unapproved);fail("Remote LLM requires consent")} catch(error:ClientFailure) {assertEquals("mobile.dub.translation_setup",error.key)}
+            response("https://cloud.example.test/v1")
+            val approved=workDataOf("translation_provider" to "openai","translation_category" to "llm","translation_route" to cloud.routingIdentity,"translation_confirmed" to true)
+            assertTrue(DubWorker.authorizedTranslation(api,approved).onlineConfirmed)
+            assertEquals(18,server.requestCount)
+        } finally {server.shutdown()}
+    }
+
 }

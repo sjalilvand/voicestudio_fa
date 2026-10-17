@@ -3544,7 +3544,18 @@
       "done_notification": "Doblaje terminado: {{title}}",
       "failed_notification": "Doblaje fallido: {{title}}",
       "language_unavailable": "Este idioma no tiene un código de destino compatible. Elige otro idioma de destino.",
-      "remove_language": "Quitar {{language}}"
+      "remove_language": "Quitar {{language}}",
+      "translation_setup": "Elige, instala y configura un motor de traducción en tu ordenador desde VoiceStudio → Ajustes y vuelve a intentarlo.",
+      "translation_changed": "El motor de traducción cambió en tu ordenador. Inicia este doblaje de nuevo para revisar el servicio seleccionado.",
+      "translation_online_title": "¿Permitir la traducción en línea para este doblaje?",
+      "translation_online_body": "Tu ordenador enviará la transcripción de este doblaje a {{service}} para traducirla. ¿Permitirlo solo para este trabajo?",
+      "translation_allow": "Permitir en este trabajo",
+      "translation_decline": "No traducir",
+      "choose_voice": "Elegir una voz",
+      "remove_source": "Quitar",
+      "history_meta": "Doblaje a {{language}}, duración {{duration}}",
+      "download_file": "Descargar {{name}}",
+      "share_file": "Compartir {{name}}"
     },
     "dictate": {
       "hold_to_talk": "Mantén pulsado para hablar",
@@ -3644,7 +3655,9 @@
       },
       "disconnected_offline": "Desconectado en este teléfono. El host no pudo confirmar la revocación; su sesión caducará automáticamente.",
       "remove_selection": "Quitar {{name}}",
-      "more_actions": "Más acciones para {{name}}"
+      "more_actions": "Más acciones para {{name}}",
+      "dub_restart": "No se pudo iniciar el doblaje. Selecciona el origen y empieza de nuevo. Si sigue ocurriendo, vuelve a conectarte a tu host de VoiceStudio.",
+      "dub_foreground_failed": "Android no pudo iniciar el servicio de subida en segundo plano. Reabre VoiceStudio y empieza el doblaje de nuevo. Si sigue fallando, actualiza o reinstala la app."
     },
     "keyboard": {
       "done": "Hecho"
@@ -3689,7 +3702,9 @@
       "more_actions": "Más acciones",
       "selected": "Seleccionado",
       "not_selected": "No seleccionado",
-      "delete_generation": "¿Eliminar esta generación? Esta acción no se puede deshacer."
+      "delete_generation": "¿Eliminar esta generación? Esta acción no se puede deshacer.",
+      "remove_file": "Quitar",
+      "no_matches": "Sin resultados para \"{{query}}\"."
     }
   }
 }

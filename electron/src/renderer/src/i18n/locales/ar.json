@@ -3550,7 +3550,18 @@
       "done_notification": "اكتملت الدبلجة: {{title}}",
       "failed_notification": "فشلت الدبلجة: {{title}}",
       "language_unavailable": "ليس لهذه اللغة رمز مستهدف مدعوم. اختر لغة مستهدفة أخرى.",
-      "remove_language": "إزالة {{language}}"
+      "remove_language": "إزالة {{language}}",
+      "translation_setup": "اختر محرك ترجمة وثبّته واضبطه على حاسوبك في VoiceStudio ← الإعدادات، ثم حاول مرة أخرى.",
+      "translation_changed": "تغيّر محرك الترجمة على حاسوبك. ابدأ هذه الدبلجة من جديد لمراجعة الخدمة المحددة.",
+      "translation_online_title": "السماح بالترجمة عبر الإنترنت لهذه الدبلجة؟",
+      "translation_online_body": "سيرسل حاسوبك نص هذه الدبلجة إلى {{service}} للترجمة. هل تسمح بذلك لهذه المهمة فقط؟",
+      "translation_allow": "السماح لهذه المهمة",
+      "translation_decline": "عدم الترجمة",
+      "choose_voice": "اختر صوتًا",
+      "remove_source": "إزالة",
+      "history_meta": "دبلجة {{language}}، المدة {{duration}}",
+      "download_file": "تحميل {{name}}",
+      "share_file": "مشاركة {{name}}"
     },
     "dictate": {
       "hold_to_talk": "اضغط مطولًا للتحدث",
@@ -3650,7 +3661,9 @@
       },
       "disconnected_offline": "تم قطع الاتصال على هذا الهاتف. تعذّر على المضيف تأكيد الإلغاء؛ ستنتهي صلاحية جلسته تلقائيًا.",
       "remove_selection": "إزالة {{name}}",
-      "more_actions": "مزيد من الإجراءات لـ {{name}}"
+      "more_actions": "مزيد من الإجراءات لـ {{name}}",
+      "dub_restart": "تعذّر بدء الدبلجة. اختر المصدر وابدأ من جديد. إذا استمرت المشكلة، أعد الاتصال بمضيف VoiceStudio.",
+      "dub_foreground_failed": "تعذّر على Android بدء خدمة الرفع في الخلفية. أعد فتح VoiceStudio وابدأ الدبلجة من جديد. إذا استمر الفشل، حدّث التطبيق أو أعد تثبيته."
     },
     "keyboard": {
       "done": "تم"
@@ -3695,7 +3708,9 @@
       "more_actions": "مزيد من الإجراءات",
       "selected": "محدد",
       "not_selected": "غير محدد",
-      "delete_generation": "حذف هذا العمل المُنشأ؟ لا يمكن التراجع عن هذا الإجراء."
+      "delete_generation": "حذف هذا العمل المُنشأ؟ لا يمكن التراجع عن هذا الإجراء.",
+      "remove_file": "إزالة",
+      "no_matches": "لا نتائج لـ \"{{query}}\"."
     }
   }
 }

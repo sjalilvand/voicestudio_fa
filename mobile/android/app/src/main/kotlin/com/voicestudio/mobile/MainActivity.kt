@@ -99,7 +99,9 @@ class MainActivity:ComponentActivity() {
                     if(state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                     Box(Modifier.weight(1f)) {
                     if(state.loading) Screen {Text(tr("common.loading"));LinearProgressIndicator()}
-                    else NavHost(navController=nav,startDestination="connect") {
+                    else NavHost(navController=nav,startDestination="connect",
+                        enterTransition={androidx.compose.animation.EnterTransition.None}, exitTransition={androidx.compose.animation.ExitTransition.None},
+                        popEnterTransition={androidx.compose.animation.EnterTransition.None}, popExitTransition={androidx.compose.animation.ExitTransition.None}) {
                         composable("connect") {ConnectScreen(vm)}
                         composable("settings") {SettingsScreen(vm,BuildConfig.VERSION_NAME)}
                         composable("speak") {if(state.connected) SpeakScreen(vm)}
