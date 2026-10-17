@@ -26,6 +26,8 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- Local speech-recognition model paths beginning with a slash work on Windows without a model-licence error (#2930) — thanks @DeryFerd!
+
 - Long-reference cloning skips repeated speech-recognition hallucinations instead of choosing silent audio (#2838) — thanks @bercedev!
 
 - MOSS-TTS-v1.5 loads its model and codec from separate pinned snapshots and repairs older audio-decoder installs (#2702) — thanks @BichengWang!
