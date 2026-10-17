@@ -6,6 +6,10 @@ struct SettingsView: View {
     var body: some View {
         @Bindable var model = model
         Page {
+            Card {
+                NavigationLink(model.t("mobile.local.models")) { ModelsView() }
+                NavigationLink(model.t("mobile.settings.connection")) { ConnectView() }.accessibilityIdentifier("settings.connect")
+            }
             if model.connection.client != nil {
                 Card {
                     Text(model.t("mobile.settings.connection"))
@@ -13,6 +17,7 @@ struct SettingsView: View {
                     NavigationLink(model.t("mobile.connect.saved_hosts")) { ConnectView() }.disabled(model.busy || BackgroundUpload.shared.pending != nil)
                     Button(model.t("mobile.connect.disconnect"), role: .destructive) { Task { await model.perform(connectionChange: true) { model.pauseMonitor(); await BackgroundUpload.shared.cancel(); try await model.connection.disconnect(); model.profiles = []; model.history = []; model.dubHistory = []; model.inventory = nil } } }.disabled(model.busy)
                 }
+            }
                 Card {
                     Text(model.t("mobile.settings.appearance"))
                     ChoicePicker(label: model.t("mobile.settings.mode"), selection: Binding(get: { model.theme.mode.rawValue }, set: { model.theme.mode = ThemeMode(rawValue: $0) ?? .dark }), options: ThemeMode.allCases.map { SelectionOption(id: $0.rawValue, title: model.t("mobile.settings.mode_" + $0.rawValue)) })
@@ -31,10 +36,9 @@ struct SettingsView: View {
                     Toggle(model.t("mobile.settings.notifications"), isOn: Binding(get: { model.notifications }, set: { value in Task { await model.enableNotifications(value) } })).frame(minHeight: 44)
                     Text(model.t("mobile.settings.notifications_help"))
                 }
-            }
             Card {
                 Text(model.t("mobile.settings.privacy"))
-                Text(model.t("mobile.settings.privacy_help"))
+                Text(model.t("mobile.local.privacy"))
                 Toggle(model.t("privacy.analytics_title"), isOn: $model.analytics).frame(minHeight: 44)
                 Text(model.t("mobile.ios.privacy_local"))
             }
@@ -59,6 +63,11 @@ struct LicensesView: View {
         Page {
             Text(model.t("mobile.ios.licenses_app"))
             Text(model.t("mobile.ios.licenses_inter"))
+            ForEach((Bundle.main.urls(forResourcesWithExtension: "txt", subdirectory: "NativeLicences") ?? []).sorted { $0.lastPathComponent < $1.lastPathComponent }, id: \.self) { url in
+                DisclosureGroup(url.deletingPathExtension().lastPathComponent) {
+                    if let text = try? String(contentsOf: url, encoding: .utf8) { Text(text).textSelection(.enabled) }
+                }
+            }
             if let url = Bundle.main.url(forResource: "OFL", withExtension: "txt"), let text = try? String(contentsOf: url, encoding: .utf8) { Text(text).textSelection(.enabled) }
             if let url = Bundle.main.url(forResource: "AGPL-3.0", withExtension: "txt"), let text = try? String(contentsOf: url, encoding: .utf8) { Text(text).textSelection(.enabled) }
         }.navigationTitle(model.t("mobile.settings.licenses"))

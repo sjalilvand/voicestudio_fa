@@ -20,6 +20,7 @@ struct DubView: View {
     var body: some View {
         Page {
             Text(model.t("mobile.dub.runs_on_host"))
+            if model.connection.client == nil { NavigationLink(model.t("mobile.settings.connection")) { ConnectView() } }
             Card {
                 Button(model.t("mobile.dub.pick_media"), systemImage: "doc.badge.plus") { importing = true }
                 if let selectedFile { SelectedFileRow(name: selectedFile.name) { self.selectedFile = nil } }
@@ -38,7 +39,7 @@ struct DubView: View {
                 }
                 VoicePicker(selection: $profile, dubbing: true)
                 Button(model.t("mobile.dub.start")) { Task { await start() } }
-                    .buttonStyle(VSButtonStyle(kind: .primary)).disabled(profile == DubVoiceChoice.unselected || model.busy || upload.pending != nil || selected.isEmpty || (selectedFile == nil && sourceURL.isEmpty) || model.dub.monitoring)
+                    .buttonStyle(VSButtonStyle(kind: .primary)).disabled(model.connection.client == nil || profile == DubVoiceChoice.unselected || model.busy || upload.pending != nil || selected.isEmpty || (selectedFile == nil && sourceURL.isEmpty) || model.dub.monitoring)
             }
             if let pending = upload.pending {
                 Card {

@@ -6,6 +6,7 @@ import UserNotifications
 import BackgroundTasks
 
 @MainActor @Observable final class AppModel {
+    let phone = PhoneModels()
     let connection: ConnectionStore
     let hostState: HostState
     var dub: DubWorkflow { hostState.dub }
@@ -31,6 +32,7 @@ import BackgroundTasks
         mockMode = ProcessInfo.processInfo.arguments.contains("--ui-smoke")
         let d = UserDefaults.standard
         if mockMode {
+            d.removeObject(forKey: "run-on.speak"); d.removeObject(forKey: "run-on.dictate")
             d.removeObject(forKey: "consentAnswered"); d.removeObject(forKey: "activeHost")
             connection = ConnectionStore(defaults: d, vault: SmokeVault(), transport: SmokeTransport())
         } else { connection = ConnectionStore() }

@@ -1,3 +1,44 @@
 {
-  "mobile": {}
+  "mobile": {
+    "local": {
+      "models": "Models",
+      "storage_used": "Storage used: {{size}}",
+      "mobile_data": "Allow model downloads over mobile data",
+      "download": "Download",
+      "downloading": "Downloading model",
+      "installed": "Downloaded and verified",
+      "licence": "Model licence",
+      "withdraw": "Withdraw acceptance",
+      "accept": "Accept licence",
+      "acceptance_help": "Accept only if you have the rights required for your use. VoiceStudio does not own or license this model. Acceptance is saved on this phone and can be withdrawn at any time.",
+      "licence_terms": "Licence: {{licence}}\nCategory: {{category}}\nRights holder: {{holder}}\nCredit: {{credit}}",
+      "fingerprint": "Terms fingerprint: {{fingerprint}}",
+      "category_commercial-ok": "Commercial use allowed",
+      "category_non-commercial": "Personal and research use only",
+      "category_conditional": "Commercial use with conditions",
+      "category_unidentified": "Licence not identified",
+      "ram_required": "This model needs at least {{ram}} GB of RAM. Choose a smaller model or run it on your computer.",
+      "catalogue_error": "The model catalogue is missing or invalid. Reinstall the app, or use your paired computer.",
+      "licence_required": "Review and accept this model licence in Models before downloading or using it.",
+      "model_required": "Download a compatible model in Models to use this phone offline.",
+      "checksum": "Model verification failed. Delete this model in Models and download it again.",
+      "in_use": "This model is currently in use. Stop the task before deleting or replacing it.",
+      "wifi_required": "Connect to Wi-Fi, or allow mobile data in Models, then resume the download.",
+      "storage_required": "There is not enough free storage. Free space and resume the download.",
+      "download_error": "The model download failed. Check your connection and tap Download to resume.",
+      "runtime_missing": "A native runtime is missing from this app build. Reinstall the app or use your computer.",
+      "configuration": "This model configuration is not supported. Choose another model or use your computer.",
+      "inference_error": "The model could not finish. Stop other tasks, try again, or choose a smaller model.",
+      "run_on": "Run on",
+      "this_phone": "This phone",
+      "my_computer": "My computer",
+      "download_prompt": "Download {{model}} ({{size}}) to run on this phone.",
+      "preset_voice": "Preset voice {{number}}",
+      "model_details": "{{size}} \u00b7 {{languages}} \u00b7 Licence: {{licence}}",
+      "privacy": "On-device tasks send nothing anywhere. The app only downloads models you start and sends requests to your paired computer. Models stay in private storage and are excluded from backups.",
+      "computer_required": "Pair your computer in Settings to use this task.",
+      "phase_a_host": "This task currently runs on your paired computer.",
+      "decline": "Decline"
+    }
+  }
 }

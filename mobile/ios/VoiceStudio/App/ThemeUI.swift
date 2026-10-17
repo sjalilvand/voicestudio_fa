@@ -79,14 +79,10 @@ struct RootView: View {
             if !model.consentAnswered { ConsentView() }
             else {
                 TabView {
-                    if model.connection.client == nil {
-                        NavigationStack { ConnectView() }.tabItem { Label(model.t("mobile.tabs.connect"), systemImage: "link") }
-                    } else {
                         NavigationStack { SpeakView() }.tabItem { Label(model.t("mobile.tabs.speak"), systemImage: "waveform") }
                         NavigationStack { VoicesView() }.tabItem { Label(model.t("mobile.tabs.voices"), systemImage: "person.wave.2") }
                         NavigationStack { DubView() }.tabItem { Label(model.t("mobile.tabs.dub"), systemImage: "film") }
                         NavigationStack { DictateView() }.tabItem { Label(model.t("mobile.tabs.dictate"), systemImage: "mic") }
-                    }
                     NavigationStack { SettingsView() }.tabItem { Label(model.t("mobile.tabs.settings"), systemImage: "gearshape") }
                 }
                 .id(model.hostState.scopeID)
@@ -94,6 +90,7 @@ struct RootView: View {
                 .toolbarBackground(.visible, for: .tabBar)
             }
         }
+        .task { await model.phone.refresh() }
         .onAppear { NativeTheme.apply(theme) }
         .onChange(of: model.theme) { _, _ in NativeTheme.apply(theme) }
         .onChange(of: scheme) { _, _ in NativeTheme.apply(theme) }

@@ -15,6 +15,14 @@ struct VoicePicker: View {
 struct SpeakView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.vsTheme) private var theme
+    @State private var preference: TaskLocation?
+    @State private var phoneModelID = ""
+    @State private var speakerID = "0"
+    @State private var localProgress: EngineProgress?
+    @State private var generation: Task<Void, Never>?
+    private var phoneModel: PhoneModel? { model.phone.candidates(.tts).first { $0.id == phoneModelID } ?? model.phone.preferred(.tts) }
+    private var localReady: Bool { phoneModel.map(model.phone.ready) ?? false }
+    private var route: TaskRoute { LocalRouting.route(preference: preference, installed: localReady, paired: model.connection.client != nil) }
     @State private var text = ""
     @State private var selection = SpeechSelection()
     @State private var player = AudioPlayer()
@@ -30,10 +38,19 @@ struct SpeakView: View {
     }
     var body: some View {
         Page {
+            RunOnPicker(preference: $preference, task: "speak", installed: localReady).disabled(generating)
+            if route == .download { LocalDownloadPrompt(item: phoneModel) }
+            if route == .connect { NavigationLink(model.t("mobile.settings.connection")) { ConnectView() } }
             TextEditor(text: $text).frame(minHeight: VSTokens.textEditor.lineHeight * 6)
                 .scrollContentBackground(.hidden).padding(Theme.compactInset)
                 .background(theme.color("input"), in: RoundedRectangle(cornerRadius: VSTokens.radiusControl))
                 .accessibilityLabel(model.t("mobile.speak.placeholder")).accessibilityIdentifier("speak.text")
+            if route != .computer {
+                Card {
+                    ChoicePicker(label: model.t("mobile.local.models"), selection: Binding(get: { phoneModel?.id ?? "" }, set: { phoneModelID = $0; speakerID = "0" }), options: model.phone.candidates(.tts).map { SelectionOption(id: $0.id, title: $0.id, enabled: $0.fits()) })
+                    ChoicePicker(label: model.t("mobile.speak.voice"), selection: $speakerID, options: (0..<Int(phoneModel?.config["num_speakers"]?.number ?? 1)).map { SelectionOption(id: String($0), title: model.t("mobile.local.preset_voice", ["number": String($0 + 1)])) })
+                }.disabled(generating)
+            } else {
             Card {
                 VoicePicker(selection: Binding(get: { selection.profileID }, set: {
                     selection.chooseProfile($0, profiles: model.profiles, inventory: model.inventory, catalog: model.languages)
@@ -47,18 +64,29 @@ struct SpeakView: View {
                 ChoicePicker(label: model.t("mobile.speak.language"), selection: $selection.language,
                              options: model.languages.languages.map { SelectionOption(id: $0.value, title: $0.name) }).accessibilityIdentifier("speak.language")
             }
+            }
             Button(model.t(generating ? "mobile.speak.generating" : "mobile.speak.generate")) {
-                Task {
-                    generating = true; defer { generating = false }
+                generation = Task {
+                    generating = true; defer { generating = false; localProgress = nil }
                     await model.perform {
+                        if route == .phone {
+                            guard let phoneModel, let engine = model.phone.engine else { throw ClientError("mobile.local.model_required") }
+                            let audio = try await engine.synthesize(model: phoneModel, text: text, speaker: Int(speakerID) ?? 0, speed: 1, progress: { value in await MainActor.run { localProgress = value } })
+                            try await player.load(audio.markSynthetic(), extension: "wav")
+                            return
+                        }
                         let result = try await model.hostState.generate(api: model.api(), text: text, profile: selection.profileID, engine: selection.engineID, language: selection.language)
                         try await player.load(result.audio, extension: "wav")
                         model.history = try await model.api().history()
                     }
                 }
             }.buttonStyle(VSButtonStyle(kind: .primary))
-                .disabled(model.busy || !selection.canGenerate(in: model.inventory, profiles: model.profiles) || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(model.busy || generating || (route != .phone && route != .computer) || (route == .computer && !selection.canGenerate(in: model.inventory, profiles: model.profiles)) || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .accessibilityIdentifier("speak.generate")
+            if generating {
+                if let value = localProgress { ProgressView(value: value.fraction).accessibilityLabel(model.t("mobile.ios.progress")) }
+                Button(model.t("common.cancel")) { generation?.cancel() }
+            }
             if player.file != nil || player.playing { AudioPlayerView(player: player) }
             Text(model.t("mobile.speak.recent")).font(.custom("InterVariable", size: Theme.controlTypeSize, relativeTo: .headline))
             if model.history.isEmpty && !model.loading { Text(model.t("mobile.speak.empty_recent")).foregroundStyle(theme.color("textMuted")) }
@@ -82,13 +110,14 @@ struct SpeakView: View {
         }.navigationTitle(model.t("mobile.tabs.speak")).navigationBarTitleDisplayMode(.large)
         .onChange(of: model.inventory?.tts.active, initial: true) { _, _ in selection.reconcile(inventory: model.inventory, profiles: model.profiles) }
         .onChange(of: model.profiles.map(\.id)) { _, _ in selection.reconcile(inventory: model.inventory, profiles: model.profiles) }
-        .refreshable { await model.perform { try await model.refresh() }; selection.reconcile(inventory: model.inventory, profiles: model.profiles) }
+        .refreshable { if model.connection.client != nil { await model.perform { try await model.refresh() } }; await model.phone.refresh(); selection.reconcile(inventory: model.inventory, profiles: model.profiles) }
         .sheet(item: $deleting) { item in
             DeleteConfirmation(title: model.t("mobile.ios.delete_generation")) {
                 Task { await model.perform { try await model.api().deleteHistory(item.id); model.history = try await model.api().history() } }
             }
         }
-        .onAppear { hostScope = model.hostState.scopeID }
-        .onDisappear { if hostScope != model.hostState.scopeID { player.clear() } else { player.pause() } }
+        .onAppear { hostScope = model.hostState.scopeID; preference = model.phone.preference("speak") }
+        .task { await model.phone.refresh() }
+        .onDisappear { generation?.cancel(); if hostScope != model.hostState.scopeID { player.clear() } else { player.pause() } }
     }
 }

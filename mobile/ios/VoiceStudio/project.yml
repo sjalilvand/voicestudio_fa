@@ -31,6 +31,18 @@ targets:
         INFOPLIST_FILE: $(DERIVED_FILE_DIR)/VoiceStudio-Info.plist
     dependencies:
       - package: VoiceStudioKit
+      - framework: ../../native/ios/build/xcframeworks/sherpa-onnx.xcframework
+        embed: false
+      - framework: ../../native/ios/build/xcframeworks/onnxruntime.xcframework
+        embed: false
+      - framework: ../../native/ios/build/xcframeworks/llama.xcframework
+        embed: true
+      - framework: ../../native/ios/build/xcframeworks/OmniVoice.xcframework
+        embed: true
+      - sdk: libc++.tbd
+      - sdk: Accelerate.framework
+      - sdk: Metal.framework
+      - sdk: MetalKit.framework
     preBuildScripts:
       - name: Bundle catalogs and derive version
         script: |

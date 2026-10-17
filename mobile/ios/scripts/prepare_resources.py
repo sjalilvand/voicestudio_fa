@@ -28,6 +28,9 @@ def lookup(catalog, key):
 
 def prepare(output, info):
     output.mkdir(parents=True, exist_ok=True)
+    notices = ROOT / "mobile/native/ios/build/xcframeworks/Notices"
+    if notices.is_dir():
+        shutil.copytree(notices, output / "NativeLicences", dirs_exist_ok=True)
     catalogs = output / "Catalogs"
     catalogs.mkdir(exist_ok=True)
     source = ROOT / "electron/src/renderer/src/i18n/locales"
@@ -37,6 +40,10 @@ def prepare(output, info):
     if not codes:
         raise ValueError("Desktop LANG_CODES format changed")
     (catalogs / "language-codes.json").write_text(json.dumps(codes, ensure_ascii=True))
+    model_catalogue = ROOT / "mobile/contract/models.json"
+    if not model_catalogue.is_file():
+        raise ValueError("Generate mobile/contract/models.json before building the app")
+    shutil.copy2(model_catalogue, catalogs / "models.json")
     english = json.loads((source / "en.json").read_text())
     additions = sorted((ROOT / "mobile/contract").glob("strings*.en.json"))
     for path in additions:

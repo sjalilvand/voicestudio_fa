@@ -15,8 +15,12 @@ struct VoicesView: View {
     private var filtered: [Profile] { model.profiles.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) } }
     var body: some View {
         Page {
+            if model.connection.client == nil {
+                Text(model.t("mobile.local.phase_a_host"))
+                NavigationLink(model.t("mobile.settings.connection")) { ConnectView() }
+            }
             Button(model.t("mobile.voices.new_clone"), systemImage: "plus") { creating = true }
-                .buttonStyle(VSButtonStyle(kind: .primary)).accessibilityIdentifier("voices.create")
+                .buttonStyle(VSButtonStyle(kind: .primary)).disabled(model.connection.client == nil).accessibilityIdentifier("voices.create")
             if !model.profiles.isEmpty { SearchField(prompt: model.t("mobile.voices.search"), text: $query) }
             if model.profiles.isEmpty && !model.loading { Text(model.t("mobile.voices.empty")).foregroundStyle(theme.color("textMuted")) }
             else if !model.profiles.isEmpty {
@@ -45,7 +49,7 @@ struct VoicesView: View {
             }
             if player.file != nil { AudioPlayerView(player: player) }
         }.navigationTitle(model.t("mobile.tabs.voices")).navigationBarTitleDisplayMode(.large)
-        .refreshable { await model.perform { model.profiles = try await model.api().profiles() } }
+        .refreshable { if model.connection.client != nil { await model.perform { model.profiles = try await model.api().profiles() } } }
         .sheet(isPresented: $creating) { NavigationStack { CloneView() }.environment(model).presentationBackground(theme.color("surfaceOverlay")).presentationCornerRadius(VSTokens.radiusLg) }
         .sheet(item: $renamed) { profile in
             NavigationStack {
