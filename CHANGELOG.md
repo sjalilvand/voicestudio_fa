@@ -26,6 +26,8 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- Supertonic-3 accepts full language names without selecting the wrong language or producing invalid language codes. (#2938) — thanks @P4tch4nk4!
+
 - Local speech-recognition model paths beginning with a slash work on Windows without a model-licence error (#2930) — thanks @DeryFerd!
 
 - Long-reference cloning skips repeated speech-recognition hallucinations instead of choosing silent audio (#2838) — thanks @bercedev!
