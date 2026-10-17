@@ -16,7 +16,8 @@ Thanks for your interest in improving VoiceStudio! This guide covers everything 
 > **Before your first pull request:** unless exempt under the
 > [CLA checker’s policy](#contribution-licensing), sign the
 > [Contributor License Agreement](CLA-1.0.md) once. GitHub cannot stop you opening a pull request first, so it is checked at
-> merge instead: an unsigned pull request cannot merge. You can sign now on the
+> merge instead: an unsigned pull request cannot merge unless a maintainer applies
+> the `cla-override` label after manual review. You can sign now on the
 > [signing issue (#2586)](https://github.com/debpalash/VoiceStudio/issues/2586) and
 > your signature covers your future contributions. Every other non-exempt human commit
 > author and co-author must also sign before the check passes. Details are in
