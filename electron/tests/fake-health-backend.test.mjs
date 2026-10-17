@@ -15,6 +15,19 @@ test('defaults answer /health', async () => {
   }
 });
 
+test('port option binds that port', async () => {
+  const probe = await startHealthBackend();
+  const port = probe.port;
+  await probe.close();
+  const backend = await startHealthBackend({ port });
+  try {
+    assert.equal(backend.port, port);
+    assert.equal((await get(backend, '/health')).status, 200);
+  } finally {
+    await backend.close();
+  }
+});
+
 test('override replaces one fixture', async () => {
   const analytics = { available: true, prompted: false, opted_in: false };
   const backend = await startHealthBackend({
