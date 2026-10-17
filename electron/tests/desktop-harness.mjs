@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
-import { startHealthBackend } from './fake-health-backend.mjs';
+import { DEFAULT_FIXTURES, startHealthBackend } from './fake-health-backend.mjs';
 import { isAllowedRequest, STAR_COUNT_STUB, STAR_COUNT_URL } from './local-first.mjs';
 
 const workspaceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -101,7 +101,22 @@ async function launch({ profile, backendPort, proxyPort, seed }) {
 export async function withApp(t, options, body) {
   const { profile: given, fixtures, seed = true, backend: backendMode = 'up' } = options;
   const profile = given ?? makeProfile();
-  const backend = backendMode === 'up' ? await startHealthBackend({ fixtures }) : null;
+  // Like the real backend, report a data directory (inside the profile) for path authorization.
+  const dataDir = join(profile, 'data');
+  mkdirSync(dataDir, { recursive: true });
+  const backend =
+    backendMode === 'up'
+      ? await startHealthBackend({
+          fixtures: {
+            '/system/info': {
+              ...DEFAULT_FIXTURES['/system/info'],
+              app_version: 'desktop-ui-test',
+              data_dir: dataDir,
+            },
+            ...fixtures,
+          },
+        })
+      : null;
   const backendPort = backend ? backend.port : await freePort();
   const proxyPort = await freePort();
   const live = [];

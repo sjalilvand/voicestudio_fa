@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { realpathSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { withApp } from './desktop-harness.mjs';
 import { ROUTES } from './fixtures/routes.mjs';
 
@@ -175,6 +176,55 @@ test('unclean exit: relaunch on the same profile starts normally', async (t) => 
     await restarted.page.waitForFunction(() => Boolean(window.voicestudio?.files?.saveData));
     const facts = await bridgeFacts(restarted.page);
     assert.equal(facts.platform, process.platform);
+  });
+});
+
+test('dialogs: open and save round-trip through the main process', async (t) => {
+  await withApp(t, {}, async ({ app, page, profile }) => {
+    await page.waitForFunction(() => Boolean(window.voicestudio?.files?.saveData));
+    const stub = (method, result) =>
+      app.evaluate(
+        ({ dialog }, [name, value]) => {
+          dialog[name] = async () => value;
+        },
+        [method, result],
+      );
+
+    // Open: a chosen directory comes back authorized; a cancel comes back as null.
+    const models = join(profile, 'models');
+    await stub('showOpenDialog', { canceled: false, filePaths: [models] });
+    const picked = await page.evaluate(() => window.voicestudio.files.authorizeModelsDirectory());
+    assert.equal(picked.path.normalize('NFC').toLowerCase(), models.normalize('NFC').toLowerCase());
+    assert.match(picked.authorization, /^[a-f0-9]{64}$/);
+    await stub('showOpenDialog', { canceled: true, filePaths: [] });
+    assert.equal(
+      await page.evaluate(() => window.voicestudio.files.authorizeModelsDirectory()),
+      null,
+    );
+
+    // Save: the bytes land at the chosen path; a cancel writes nothing.
+    const output = join(profile, 'out', 'dialog-test.txt');
+    mkdirSync(dirname(output), { recursive: true });
+    await stub('showSaveDialog', { canceled: false, filePath: output });
+    const saved = await page.evaluate(() =>
+      window.voicestudio.files.saveData({
+        data: new TextEncoder().encode('VoiceStudio desktop test'),
+        suggestedName: 'dialog-test.txt',
+      }),
+    );
+    assert.deepEqual(saved, { canceled: false, path: output });
+    assert.equal(readFileSync(output, 'utf8'), 'VoiceStudio desktop test');
+
+    rmSync(output);
+    await stub('showSaveDialog', { canceled: true });
+    const cancelled = await page.evaluate(() =>
+      window.voicestudio.files.saveData({
+        data: new TextEncoder().encode('never written'),
+        suggestedName: 'dialog-test.txt',
+      }),
+    );
+    assert.deepEqual(cancelled, { canceled: true });
+    assert.equal(existsSync(output), false);
   });
 });
 

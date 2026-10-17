@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
 import assert from 'node:assert/strict';
 
-const DEFAULT_FIXTURES = {
+export const DEFAULT_FIXTURES = {
   '/health': { status: 'ok', version: 'native-smoke' },
   '/setup/status': { models_ready: true, missing: [] },
   '/api/settings/analytics': { available: false, prompted: true, opted_in: false },
