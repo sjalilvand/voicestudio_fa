@@ -56,7 +56,7 @@ test('/ws/events completes a WebSocket handshake and stays open', async () => {
           Connection: 'Upgrade',
           Upgrade: 'websocket',
           'Sec-WebSocket-Version': '13',
-          'Sec-WebSocket-Key': 'dGhlIHNhbXBsZSBub25jZQ==',
+          'Sec-WebSocket-Key': Buffer.from('the sample nonce').toString('base64'),
         },
       });
       request.once('upgrade', (response, socket) => {
