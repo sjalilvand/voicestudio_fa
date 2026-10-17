@@ -151,7 +151,7 @@ struct DubView: View {
             if let file = selectedFile {
                 let access = file.url.startAccessingSecurityScopedResource(); defer { if access { file.url.stopAccessingSecurityScopedResource() } }
                 let type = UTType(filenameExtension: file.url.pathExtension)
-                try await upload.start(source: file.url, api: api, languages: targets, profile: profile, audioOnly: type?.conforms(to: .audio) == true, filename: file.name)
+                try await upload.start(source: file.url, api: api, languages: targets, profile: profile, audioOnly: type?.conforms(to: .audio) == true, filename: file.uploadName)
                 selectedFile = nil
             } else {
                 let result = try await api.ingest(url: sourceURL, jobID: UUID().uuidString)

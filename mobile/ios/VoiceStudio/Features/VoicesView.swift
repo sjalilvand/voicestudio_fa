@@ -96,7 +96,7 @@ struct CloneView: View {
                     guard let audio else { return }
                     let access = audio.url.startAccessingSecurityScopedResource(); defer { if access { audio.url.stopAccessingSecurityScopedResource() } }
                     let bytes = try Data(contentsOf: audio.url)
-                    _ = try await model.api().clone(name: name, filename: audio.name, audio: bytes)
+                    _ = try await model.api().clone(name: name, filename: audio.uploadName, audio: bytes)
                     model.profiles = try await model.api().profiles(); dismiss()
                 } }
             }.buttonStyle(VSButtonStyle(kind: .primary)).disabled(!consent || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || audio == nil || recorder.recording || model.busy)

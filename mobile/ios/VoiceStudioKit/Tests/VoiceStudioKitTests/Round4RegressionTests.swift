@@ -208,3 +208,15 @@ private final class SocketSequence: @unchecked Sendable {
     await replacement.frame.release()
     for try await _ in currentMessages {}
 }
+
+@Test func uploadNameAddsTheFileTypeExtensionWhenMissing() throws {
+    let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: dir) }
+    let file = dir.appendingPathComponent("staged.wav")
+    try Data([0]).write(to: file)
+    #expect(SelectedMedia(url: file, name: "Interview").uploadName == "Interview.wav")
+    #expect(SelectedMedia(url: file, name: "Clip.WAV").uploadName == "Clip.WAV")
+    #expect(SelectedMedia(url: file, name: "Interview.final").uploadName == "Interview.final.wav")
+    #expect(SelectedMedia(url: file).uploadName == "staged.wav")
+}

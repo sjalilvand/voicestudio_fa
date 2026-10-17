@@ -110,7 +110,7 @@ class DubWorker(context: Context, params: WorkerParameters) : CoroutineWorker(co
         if(!checkpoint.uploaded) {
             report("mobile.android.stage_upload")
             val source = inputData.getString("file")
-            val result = if(source != null) api.upload(File(source), inputData.getString("type") ?: "video", job, inputData.getString("source_name") ?: File(source).name) { p ->
+            val result = if(source != null) api.upload(File(source), inputData.getString("type") ?: "video", job, uploadName(inputData.getString("source_name"), File(source))) { p ->
                 // Progress is throttled to integer percentages by the request body.
                 setProgressAsync(workDataOf("stage" to stage, "percent" to p, "job" to job))
             } else api.ingest(inputData.getString("link") ?: throw ClientFailure("mobile.android.dub_restart"), job)
@@ -187,4 +187,15 @@ class DubWorker(context: Context, params: WorkerParameters) : CoroutineWorker(co
             return request.id
         }
     }
+}
+
+/**
+ * The name shown to the user, with the cached copy's extension (derived from the
+ * MIME type) appended when it lacks a matching one: /dub/upload rejects names
+ * without a media extension, and document providers often omit it.
+ */
+internal fun uploadName(display: String?, cached: File): String {
+    val name = display?.trim()?.takeIf { it.isNotEmpty() } ?: return cached.name
+    val ext = cached.extension.lowercase()
+    return if(ext.isEmpty() || name.substringAfterLast('.', "").lowercase() == ext) name else "$name.$ext"
 }

@@ -38,7 +38,7 @@ struct DictateView: View {
         }.navigationTitle(model.t("mobile.tabs.dictate"))
         .task { await readiness() }
         .refreshable { await readiness() }
-        .onDisappear { capturing?.cancel(); receiving?.cancel(); audio.stop(); listening = false; Task { await stream.close() } }
+        .onDisappear { capturing?.cancel(); receiving?.cancel(); audio.stop(); listening = false; finalizing = false; Task { await stream.close() } }
     }
     private func readiness() async {
         let scope = model.hostState.scopeID
@@ -60,7 +60,8 @@ struct DictateView: View {
             do {
                 let api = try model.api()
                 let messages = try await stream.start(api: api)
-                guard scope == model.hostState.scopeID, listening, !Task.isCancelled else { await stream.close(); return }
+                // A stop during startup never creates `receiving`, so nothing else clears `finalizing`.
+                guard scope == model.hostState.scopeID, listening, !Task.isCancelled else { finalizing = false; await stream.close(); return }
                 receiving = Task {
                     do {
                         for try await message in messages {
@@ -76,7 +77,7 @@ struct DictateView: View {
                 guard scope == model.hostState.scopeID, listening, !Task.isCancelled else { audio.stop(); try? await stream.finish(); return }
                 for try await chunk in chunks { try Task.checkCancellation(); try await stream.send(chunk) }
                 try await stream.finish()
-            } catch is CancellationError {} catch {
+            } catch is CancellationError { if receiving == nil { finalizing = false } } catch {
                 audio.stop(); listening = false; finalizing = false; await stream.close()
                 if scope == model.hostState.scopeID { model.error = error as? ClientError ?? ClientError("mobile.errors.audio") }
             }
