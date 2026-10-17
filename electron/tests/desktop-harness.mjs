@@ -19,9 +19,18 @@ export const ALLOWED_CONSOLE_ERRORS = [];
 
 export function electronExecutable() {
   const dist = join(workspaceRoot, 'electron/node_modules/electron/dist');
-  if (process.platform === 'win32') return join(dist, 'electron.exe');
-  if (process.platform === 'darwin') return join(dist, 'Electron.app/Contents/MacOS/Electron');
-  return join(dist, 'electron');
+  const executable =
+    process.platform === 'win32'
+      ? join(dist, 'electron.exe')
+      : process.platform === 'darwin'
+        ? join(dist, 'Electron.app/Contents/MacOS/Electron')
+        : join(dist, 'electron');
+  if (!existsSync(executable)) {
+    throw new Error(
+      `Electron binary missing at ${executable}. Run: node electron/node_modules/electron/install.js`,
+    );
+  }
+  return executable;
 }
 
 /** Latin non-ASCII plus a space, so path-encoding bugs in user-data handling surface per OS. */
