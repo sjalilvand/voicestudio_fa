@@ -307,7 +307,7 @@ _REAL_SPEECH = (
 _LOOP = "Thank you. " * 148
 
 
-@pytest.mark.parametrize("loop", [_LOOP, "Thank you. " * 4])
+@pytest.mark.parametrize("loop", [_LOOP, "Thank you. " * 4, "Thank you. " * 4 + "Okay."])
 def test_auto_select_skips_a_whisper_repetition_loop_on_a_silent_window(monkeypatch, loop):
     # #2836: Whisper loops "Thank you." over a near-silent window; the loop is
     # longer than any real passage and used to win the selection.
@@ -315,7 +315,7 @@ def test_auto_select_skips_a_whisper_repetition_loop_on_a_silent_window(monkeypa
     model.sampling_rate = 100
     model._asr_pipe = object()
     model.transcribe = lambda candidate: (
-        _REAL_SPEECH if float(candidate[0].abs().mean()) > 0.01 else loop
+        "Hi there." if float(candidate[0].abs().mean()) > 0.01 else loop
     )
     monkeypatch.setattr(
         "omnivoice.models.omnivoice.remove_silence_safe",
@@ -326,7 +326,7 @@ def test_auto_select_skips_a_whisper_repetition_loop_on_a_silent_window(monkeypa
 
     prompt = model.create_voice_clone_prompt((audio, 100), ref_text=None)
 
-    assert prompt.ref_text == _REAL_SPEECH
+    assert prompt.ref_text == "Hi there."
 
 
 @pytest.mark.parametrize("speech", [_REAL_SPEECH, "今日はとても良い天気ですね。公園を散歩しましょう。"])
@@ -350,13 +350,23 @@ def test_auto_select_keeps_real_speech_against_a_shorter_window(monkeypatch, spe
     assert prompt.ref_text.startswith(speech)
 
 
-@pytest.mark.parametrize("loop", [_LOOP, "Thank you. " * 4])
-def test_auto_select_with_only_repetition_loops_reports_no_speech(loop):
+def test_auto_select_with_only_repetition_loops_reports_no_speech():
     model = _model(reject_tokenization=True)
     model.sampling_rate = 100
     model._asr_pipe = object()
-    model.transcribe = lambda _candidate: loop
+    model.transcribe = lambda _candidate: _LOOP
     audio = torch.full((1, 30 * 100), 0.001)
 
     with pytest.raises(ValueError, match=r"\[clone_ref_no_speech\]"):
         model.create_voice_clone_prompt((audio, 100), ref_text=None)
+
+
+def test_auto_select_preserves_short_genuine_repeated_speech(monkeypatch):
+    model = _model(reject_tokenization=False)
+    model.sampling_rate = 100
+    model._asr_pipe = object()
+    model.transcribe = lambda _candidate: "Testing one two. " * 3
+    monkeypatch.setattr("omnivoice.models.omnivoice.remove_silence_safe", lambda audio, *_args, **_kwargs: audio)
+    audio = torch.full((1, 30 * 100), 0.05)
+    prompt = model.create_voice_clone_prompt((audio, 100), ref_text=None)
+    assert prompt.ref_text == "Testing one two. Testing one two. Testing one two."

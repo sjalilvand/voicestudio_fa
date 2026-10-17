@@ -984,14 +984,14 @@ class OmniVoice(PreTrainedModel):
                 # length alone. Whisper's own decoder treats text compressing
                 # better than 2.4:1 as a repetition hallucination; so do we.
                 encoded = (text or "").encode("utf-8")
-                # Short loops do not compress enough to cross that threshold.
-                words = re.findall(r"\w+", (text or "").casefold(), flags=re.UNICODE)
-                for width in range(1, len(words) // 3 + 1):
-                    repeats, remainder = divmod(len(words), width)
-                    if remainder == 0 and words == words[:width] * repeats:
-                        return 0
                 if encoded and len(encoded) / len(zlib.compress(encoded)) > 2.4:
                     return 0
+                # Short repetitive text can be real speech. Discount it against
+                # informative alternatives (including loops with trailing words),
+                # but keep it usable when no better passage exists.
+                words = re.findall(r"\w+", (text or "").casefold(), flags=re.UNICODE)
+                if len(words) >= 6 and len(set(words)) * 2 < len(words):
+                    return 1
                 return len(re.sub(r"[^\w]+", "", text or "", flags=re.UNICODE))
 
             transcribed = [
