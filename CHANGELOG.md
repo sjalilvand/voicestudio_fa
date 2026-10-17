@@ -10,16 +10,15 @@ metadata and the backend fallback mirror it.
 
 **Highlights**
 
-- The real desktop app is now tested on macOS, Windows and Linux for every pull request.
+- Preview iOS and Android companion apps for your own VoiceStudio
+
+### Added
+
+- Preview iOS and Android companion apps: drive your own VoiceStudio from your phone (speak, voices and cloning, dubbing, dictation) after pairing by QR code; build from source for now ([guide](docs/mobile.md)) (#2965)
 
 ### CI
 
-- Desktop UI tests launch the real app on macOS, Windows and Linux for every pull request (#2954)
-- All offline UI smoke tests now run on every pull request, and new ones are picked up automatically (#2958)
-
-### Fixed
-
-- The donation goal no longer logs a blocked-request error from the app's own security policy (#2954)
+- New `mobile` workflow builds and tests both phone apps; a contract test fails when their theme or API description drifts from the desktop app (#2965)
 
 ## [0.5.7] — 2026-10-17
 
