@@ -94,12 +94,6 @@ async function launch({ profile, backendPort, proxyPort, seed }) {
       }
     });
   }
-  // The Updates page lists GitHub releases from the main process, which Playwright cannot
-  // route. Answer that one IPC call locally instead of exempting GitHub from the guard.
-  await app.evaluate(({ ipcMain }) => {
-    ipcMain.removeHandler('updates:listReleases');
-    ipcMain.handle('updates:listReleases', () => []);
-  });
   let page;
   try {
     page = await app.firstWindow();
