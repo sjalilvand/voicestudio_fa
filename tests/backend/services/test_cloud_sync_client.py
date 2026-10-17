@@ -131,3 +131,17 @@ def test_only_https_or_loopback_endpoints_and_base62_organizations(base, org):
 def test_local_development_endpoint_is_allowed():
     client = SyncClient("http://127.0.0.1:8090/v1/sync", "Or5tG7hJ9kL1zX3c", token=lambda: "t")
     assert client.base == "http://127.0.0.1:8090/v1/sync/organizations/Or5tG7hJ9kL1zX3c"
+
+
+@pytest.mark.parametrize("base", [
+    "https://appapi.voicestudio.sh/v1/sync",
+    "https://dev-appapi.voicestudio.sh/v1/sync",
+    "http://127.0.0.1:8090/v1/sync",
+])
+def test_the_known_sync_endpoints_are_accepted(base):
+    assert SyncClient(base, "Or1", token=lambda: "t").base.startswith(base + "/organizations/")
+
+
+def test_any_other_https_host_is_refused():
+    with pytest.raises(ValueError):
+        SyncClient("https://attacker.example/v1/sync", "Or1", token=lambda: "t")
