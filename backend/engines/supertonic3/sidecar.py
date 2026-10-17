@@ -63,6 +63,7 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import re
 import logging
 import os
 import struct
@@ -280,7 +281,10 @@ def _normalize_lang(raw) -> str | None:
     # Preserve ISO language codes and existing regional-tag behavior, while
     # leaving unknown names intact for SDK validation rather than silently
     # turning e.g. an unknown "English..." value into a valid English request.
-    return s.split("-", 1)[0].split("_", 1)[0]
+    regional = re.fullmatch(r"([a-z]{2})[-_]([a-z]{2}|[0-9]{3})", s)
+    if regional and regional.group(1) in _LANGUAGE_NAME_TO_CODE.values():
+        return regional.group(1)
+    return s
 
 
 def _handle_synthesize(msg: dict, stdout) -> None:

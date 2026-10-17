@@ -61,6 +61,8 @@ def test_language_codes_remain_accepted(sidecar, name, code):
     ('pt-BR', 'pt'), ('PT_pt', 'pt'), ('en-US', 'en'),
     ('  Portuguese  ', 'pt'), ('eStOnIaN', 'et'),
     ('Englishish', 'englishish'), ('Polishish', 'polishish'),
+    ('English-unknown', 'english-unknown'), ('en-unknown', 'en-unknown'),
+    ('zz-US', 'zz-us'), ('es-419', 'es'),
 ])
 def test_language_normalization_controls(sidecar, raw, expected):
     assert sidecar._normalize_lang(raw) == expected
