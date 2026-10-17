@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync } from 'node:fs';
+import { once } from 'node:events';
 import { dirname, join } from 'node:path';
 import { withApp } from './desktop-harness.mjs';
 import { ROUTES } from './fixtures/routes.mjs';
@@ -28,6 +29,43 @@ test('guard: a main-process request leaving the machine fails the run', async (t
       await app.evaluate(({ net }) => net.fetch('https://example.com/leak').catch(() => {}));
     }),
     /Requests left the machine/,
+  );
+});
+
+test('guard: a disallowed request is cancelled, not just recorded', async (t) => {
+  let outcome;
+  await assert.rejects(
+    withApp(t, {}, async ({ app }) => {
+      outcome = await app.evaluate(({ net }) =>
+        net.fetch('https://example.com/leak').then(
+          () => 'sent',
+          (error) => String(error),
+        ),
+      );
+    }),
+    /Requests left the machine/,
+  );
+  assert.match(outcome, /ERR_BLOCKED_BY_CLIENT/);
+});
+
+test('guard: a Node-level main-process request fails the run', async (t) => {
+  // Node's own fetch (undici) bypasses Chromium's session, so it needs its own hook.
+  await assert.rejects(
+    withApp(t, {}, async ({ app }) => {
+      await app.evaluate(() => fetch('http://leak.invalid/node-fetch').catch(() => {}));
+    }),
+    /Requests left the machine/,
+  );
+});
+
+test('guard: a run that observed no requests fails', async (t) => {
+  await assert.rejects(
+    withApp(t, {}, async ({ app }) => {
+      await app.evaluate(() => {
+        globalThis.__requestLog.length = 0;
+      });
+    }),
+    /observed no app requests/,
   );
 });
 
@@ -127,13 +165,13 @@ test('routes: every route renders', async (t) => {
   });
 });
 
-const insideProfile = (path, profile) => {
-  const norm = (value) => {
-    const real = realpathSync.native(value).normalize('NFC');
-    return process.platform === 'win32' ? real.toLowerCase() : real;
-  };
-  return norm(path).startsWith(norm(profile));
+// Symlink-resolved, NFC-normalised, case-folded on Windows: temp dirs are symlinks or 8.3 short
+// names on macOS and Windows runners, and the app reports the resolved form.
+const canonical = (path) => {
+  const real = realpathSync.native(path).normalize('NFC');
+  return process.platform === 'win32' ? real.toLowerCase() : real;
 };
+const insideProfile = (path, profile) => canonical(path).startsWith(canonical(profile));
 
 test('settings: theme and language survive restart, user data stays in the profile', async (t) => {
   await withApp(t, {}, async (session) => {
@@ -177,7 +215,10 @@ test('settings: theme and language survive restart, user data stays in the profi
 
 test('unclean exit: relaunch on the same profile starts normally', async (t) => {
   await withApp(t, {}, async (session) => {
-    session.app.process().kill('SIGKILL');
+    const child = session.app.process();
+    const exited = once(child, 'exit');
+    child.kill('SIGKILL');
+    await exited;
     const restarted = await session.relaunch();
     await restarted.page.waitForFunction(() => Boolean(window.voicestudio?.files?.saveData));
     const facts = await bridgeFacts(restarted.page);
@@ -200,7 +241,7 @@ test('dialogs: open and save round-trip through the main process', async (t) => 
     const models = join(profile, 'models');
     await stub('showOpenDialog', { canceled: false, filePaths: [models] });
     const picked = await page.evaluate(() => window.voicestudio.files.authorizeModelsDirectory());
-    assert.equal(picked.path.normalize('NFC').toLowerCase(), models.normalize('NFC').toLowerCase());
+    assert.equal(canonical(picked.path), canonical(models));
     assert.match(picked.authorization, /^[a-f0-9]{64}$/);
     await stub('showOpenDialog', { canceled: true, filePaths: [] });
     assert.equal(

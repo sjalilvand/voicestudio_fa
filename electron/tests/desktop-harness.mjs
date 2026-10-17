@@ -49,7 +49,13 @@ async function launch({ profile, backendPort, proxyPort, seed }) {
   const { ELECTRON_RUN_AS_NODE: _runAsNode, ...inherited } = process.env;
   const app = await electron.launch({
     executablePath: electronExecutable(),
-    args: [join(workspaceRoot, 'electron/out/main/index.js'), '--user-data-dir=' + profile],
+    args: [
+      // Preloaded into the main process before the app's own code, so no request precedes it.
+      '-r',
+      join(workspaceRoot, 'electron/tests/fixtures/request-guard.cjs'),
+      join(workspaceRoot, 'electron/out/main/index.js'),
+      '--user-data-dir=' + profile,
+    ],
     env: {
       ...inherited,
       ELECTRON_RENDERER_URL: '',
@@ -63,7 +69,11 @@ async function launch({ profile, backendPort, proxyPort, seed }) {
   });
   const context = app.context();
   await context.tracing.start({ screenshots: true, snapshots: true });
-  await context.route(STAR_COUNT_URL, (route) => route.fulfill({ json: STAR_COUNT_STUB }));
+  const starServed = { count: 0 };
+  await context.route(STAR_COUNT_URL, (route) => {
+    starServed.count += 1;
+    return route.fulfill({ json: STAR_COUNT_STUB });
+  });
   if (seed) {
     // Only fill gaps: this runs on every page load and must not undo what a test persisted.
     await context.addInitScript(() => {
@@ -75,12 +85,11 @@ async function launch({ profile, backendPort, proxyPort, seed }) {
       }
     });
   }
-  await app.evaluate(({ session }) => {
-    const seen = (globalThis.__requestLog = []);
-    session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
-      seen.push(details.url);
-      callback({});
-    });
+  // The Updates page lists GitHub releases from the main process, which Playwright cannot
+  // route. Answer that one IPC call locally instead of exempting GitHub from the guard.
+  await app.evaluate(({ ipcMain }) => {
+    ipcMain.removeHandler('updates:listReleases');
+    ipcMain.handle('updates:listReleases', () => []);
   });
   const page = await app.firstWindow();
   const errors = [];
@@ -92,9 +101,9 @@ async function launch({ profile, backendPort, proxyPort, seed }) {
       errors.push(`console: ${text}`);
     }
   });
-  // Requests made before the hooks existed are replayed by one reload.
+  // The main-process guard predates the app; one reload also replays the first page's console.
   await page.reload();
-  return { app, page, errors };
+  return { app, page, errors, starServed };
 }
 
 /**
@@ -140,10 +149,21 @@ export async function withApp(t, options, body) {
   };
   const violations = [];
   const errors = [];
+  let unobserved = 0;
   async function collectGuards(started) {
-    const seen = await started.app.evaluate(() => globalThis.__requestLog ?? []).catch(() => []);
-    violations.push(...seen.filter((url) => url !== STAR_COUNT_URL && !isAllowedRequest(url)));
     errors.push(...started.errors);
+    const child = started.app.process();
+    // A killed app cannot be asked for its log; every other read error must fail the run.
+    if (child.exitCode !== null || child.signalCode !== null) return;
+    const seen = await started.app.evaluate(() => globalThis.__requestLog);
+    // An empty log means the guard never ran (hook missing or replaced), not that all is well.
+    if (!seen.some((url) => url.startsWith('app:'))) unobserved += 1;
+    // The star-count request is allowed only as often as the stub actually answered it.
+    let starBudget = started.starServed.count;
+    for (const url of seen) {
+      if (url === STAR_COUNT_URL && starBudget > 0) starBudget -= 1;
+      else if (!isAllowedRequest(url)) violations.push(url);
+    }
   }
   try {
     await start();
@@ -151,6 +171,11 @@ export async function withApp(t, options, body) {
     await collectGuards(live.at(-1));
     assert.deepEqual(violations, [], 'Requests left the machine');
     assert.deepEqual(errors, [], 'Renderer reported errors');
+    assert.equal(
+      unobserved,
+      0,
+      'Request guard observed no app requests (hook missing or replaced)',
+    );
     const journal = join(profile, 'main-process-errors.json');
     if (existsSync(journal)) {
       const entries = JSON.parse(readFileSync(journal, 'utf8'));
@@ -162,7 +187,14 @@ export async function withApp(t, options, body) {
   } finally {
     for (const started of live) await started.app.close().catch(() => {});
     await backend?.close();
-    if (!given) rmSync(profile, { recursive: true, force: true });
+    // Windows keeps the profile locked briefly after exit; cleanup must never mask the real result.
+    if (!given) {
+      try {
+        rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+      } catch {
+        // A leftover temp directory is harmless; a swallowed test failure is not.
+      }
+    }
   }
 }
 
