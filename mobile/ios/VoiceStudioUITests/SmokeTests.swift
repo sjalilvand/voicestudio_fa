@@ -36,7 +36,7 @@ final class SmokeTests: XCTestCase {
         XCTAssertEqual(engine.value as? String, longName)
         XCTAssertEqual(engine.frame.height, rowHeight, accuracy: 1)
         app.buttons["speak.language"].tap()
-        let search = app.searchFields.firstMatch
+        let search = app.textFields["search.field"]
         XCTAssertTrue(search.waitForExistence(timeout: 5))
         search.tap(); search.typeText("Spanish")
         XCTAssertTrue(app.buttons["choice.option.spanish"].exists)
@@ -104,7 +104,7 @@ final class SmokeTests: XCTestCase {
             app.swipeUp()
         }
         language.tap()
-        let search = app.searchFields.firstMatch
+        let search = app.textFields["search.field"]
         XCTAssertTrue(search.waitForExistence(timeout: 5))
         search.tap(); search.typeText("English")
         dismissUsingDone(app)

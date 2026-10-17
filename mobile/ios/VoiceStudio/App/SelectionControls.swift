@@ -58,6 +58,7 @@ struct ChoicePicker: View {
     }
     private var choices: some View {
         List {
+            SearchField(prompt: model.t("common.search"), text: $query).listRowBackground(theme.color("surfaceOverlay"))
             ForEach(options.filter { query.isEmpty || $0.title.localizedCaseInsensitiveContains(query) || $0.id.localizedCaseInsensitiveContains(query) }) { option in
                 Button {
                     selection = option.id; presenting = false
@@ -77,8 +78,33 @@ struct ChoicePicker: View {
             }
         }
         .scrollContentBackground(.hidden).background(theme.color("surfaceOverlay"))
-        .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: Text(model.t("common.search")))
         .keyboardAccessible()
+    }
+}
+
+/// In-content search. The system `.searchable` bar never gets SwiftUI's keyboard
+/// toolbar (no Done) and hides sheet toolbar items while active, so every search
+/// in the app uses this plain field instead.
+struct SearchField: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.vsTheme) private var theme
+    let prompt: String
+    @Binding var text: String
+    var body: some View {
+        HStack(spacing: VSTokens.spacingGap) {
+            Image(systemName: "magnifyingglass").foregroundStyle(theme.color("textMuted")).accessibilityHidden(true)
+            TextField(prompt, text: $text)
+                .textInputAutocapitalization(.never).autocorrectionDisabled()
+                .submitLabel(.search)
+                .accessibilityIdentifier("search.field")
+            if !text.isEmpty {
+                Button { text = "" } label: { Image(systemName: "xmark.circle.fill") }
+                    .labelStyle(.iconOnly).foregroundStyle(theme.color("textMuted"))
+                    .frame(minWidth: 44, minHeight: 44).accessibilityLabel(model.t("common.clear"))
+            }
+        }
+        .padding(.horizontal, VSTokens.spacingGap).frame(minHeight: 44)
+        .background(theme.color("input"), in: RoundedRectangle(cornerRadius: VSTokens.radiusControl))
     }
 }
 

@@ -15,6 +15,7 @@ struct VoicesView: View {
         Page {
             Button(model.t("mobile.voices.new_clone"), systemImage: "plus") { creating = true }
                 .buttonStyle(VSButtonStyle(kind: .primary))
+            if !model.profiles.isEmpty { SearchField(prompt: model.t("mobile.voices.search"), text: $query) }
             if model.profiles.isEmpty { Text(model.t("mobile.voices.empty")).foregroundStyle(theme.color("textMuted")) }
             else {
                 Card {
@@ -41,7 +42,6 @@ struct VoicesView: View {
             }
             if player.file != nil { AudioPlayerView(player: player) }
         }.navigationTitle(model.t("mobile.tabs.voices")).navigationBarTitleDisplayMode(.large)
-        .searchable(text: $query, prompt: Text(model.t("mobile.voices.search")))
         .refreshable { await model.perform { model.profiles = try await model.api().profiles() } }
         .sheet(isPresented: $creating) { NavigationStack { CloneView() }.environment(model).presentationBackground(theme.color("surfaceOverlay")).presentationCornerRadius(VSTokens.radiusLg) }
         .sheet(item: $renamed) { profile in

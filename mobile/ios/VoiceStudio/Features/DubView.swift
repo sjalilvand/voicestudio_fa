@@ -73,7 +73,9 @@ struct DubView: View {
         .sheet(item: $shared) { file in ShareSheet(items: [file.url]).presentationCornerRadius(VSTokens.radiusLg) }
         .sheet(isPresented: $selectingLanguages) {
             NavigationStack {
-                List(model.languages.search(languageQuery, includeAuto: false)) { language in
+                List {
+                    SearchField(prompt: model.t("common.search"), text: $languageQuery).listRowBackground(theme.color("surfaceOverlay"))
+                    ForEach(model.languages.search(languageQuery, includeAuto: false)) { language in
                     Button {
                         if let code = language.code {
                             if selected.contains(code) { selected.remove(code) } else { selected.insert(code) }
@@ -92,9 +94,9 @@ struct DubView: View {
                         .accessibilityLabel(language.name)
                         .accessibilityValue(model.t(language.code.map { selected.contains($0) } == true ? "mobile.ios.selected" : "mobile.ios.not_selected"))
                         .listRowBackground(theme.color("surface"))
+                    }
                 }
                 .scrollContentBackground(.hidden).background(theme.color("surfaceOverlay"))
-                .searchable(text: $languageQuery, placement: .navigationBarDrawer(displayMode: .always), prompt: Text(model.t("common.search")))
                 .keyboardAccessible()
                 .navigationTitle(model.t("mobile.dub.target_languages"))
                 .toolbar { Button(model.t("common.confirm")) { selectingLanguages = false }.buttonStyle(VSButtonStyle(kind: .tertiary)) }

@@ -8,7 +8,7 @@ import UIKit
 }
 
 /// Keep SwiftUI's keyboard safe area: scrolling can always reveal the next field/action.
-/// Shared by pages and searchable picker sheets, including sheets opened from Settings.
+/// Shared by pages and picker sheets with search, including sheets opened from Settings.
 private struct KeyboardAccessible: ViewModifier {
     @Environment(AppModel.self) private var model
     func body(content: Content) -> some View {
