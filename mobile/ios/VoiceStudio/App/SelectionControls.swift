@@ -1,0 +1,103 @@
+import SwiftUI
+import VoiceStudioKit
+
+struct SelectionOption: Identifiable {
+    let id: String
+    let title: String
+    var subtitle: String? = nil
+    var enabled = true
+}
+
+struct SelectionRow: View {
+    @Environment(\.vsTheme) private var theme
+    @Environment(\.dynamicTypeSize) private var typeSize
+    let label: String
+    let value: String
+    var body: some View {
+        HStack(spacing: VSTokens.spacingGap) {
+            if typeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: VSTokens.spacingGap) { Text(label); current }
+                Spacer(minLength: 0)
+            } else {
+                Text(label).fixedSize(horizontal: true, vertical: false).layoutPriority(1)
+                Spacer(minLength: VSTokens.spacingGap)
+                current
+            }
+            Image(systemName: "chevron.right").foregroundStyle(theme.color("iconMuted")).accessibilityHidden(true)
+        }
+        .frame(minHeight: 44).contentShape(Rectangle())
+        .accessibilityElement(children: .ignore).accessibilityLabel(label).accessibilityValue(value)
+    }
+    private var current: some View {
+        Text(value).foregroundStyle(theme.color("textMuted"))
+            .lineLimit(1).truncationMode(.tail).multilineTextAlignment(.trailing)
+    }
+}
+
+struct ChoicePicker: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.vsTheme) private var theme
+    let label: String
+    @Binding var selection: String
+    let options: [SelectionOption]
+    @State private var presenting = false
+    @State private var query = ""
+    var body: some View {
+        Button { query = ""; presenting = true } label: {
+            SelectionRow(label: label, value: options.first { $0.id == selection }?.title ?? model.t("common.unknown"))
+        }.buttonStyle(VSButtonStyle(kind: .tertiary))
+        .sheet(isPresented: $presenting) {
+            NavigationStack {
+                choices
+                    .navigationTitle(label).navigationBarTitleDisplayMode(.inline)
+                    .toolbar { Button(model.t("common.close")) { presenting = false }.buttonStyle(VSButtonStyle(kind: .tertiary)) }
+            }
+            .presentationBackground(theme.color("surfaceOverlay"))
+            .presentationCornerRadius(VSTokens.radiusLg)
+        }
+    }
+    private var choices: some View {
+        List {
+            ForEach(options.filter { query.isEmpty || $0.title.localizedCaseInsensitiveContains(query) || $0.id.localizedCaseInsensitiveContains(query) }) { option in
+                Button {
+                    selection = option.id; presenting = false
+                } label: {
+                    HStack(spacing: VSTokens.spacingGap) {
+                        VStack(alignment: .leading, spacing: VSTokens.spacingGap) {
+                            Text(option.title).foregroundStyle(theme.color(option.enabled ? "text" : "textMuted"))
+                                .lineLimit(2).truncationMode(.tail)
+                            if let subtitle = option.subtitle { Text(subtitle).font(.custom("InterVariable", size: VSTokens.textLabel.size, relativeTo: .caption)).foregroundStyle(theme.color("textMuted")) }
+                        }
+                        Spacer(minLength: 0)
+                        if selection == option.id { Image(systemName: "checkmark").foregroundStyle(theme.color("messageAction")) }
+                    }.frame(minHeight: 44).contentShape(Rectangle())
+                }.buttonStyle(VSButtonStyle(kind: .tertiary)).disabled(!option.enabled)
+                    .accessibilityLabel(option.title).accessibilityValue(option.subtitle ?? "")
+                    .accessibilityIdentifier("choice.option." + option.id).listRowBackground(theme.color("surface"))
+            }
+        }
+        .scrollContentBackground(.hidden).background(theme.color("surfaceOverlay"))
+        .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: Text(model.t("common.search")))
+        .keyboardAccessible()
+    }
+}
+
+/// Destructive confirmations use the same token surfaces/shapes as every other sheet.
+struct DeleteConfirmation: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.vsTheme) private var theme
+    @Environment(\.dismiss) private var dismiss
+    let title: String
+    let onDelete: () -> Void
+    var body: some View {
+        NavigationStack {
+            Page(backgroundRole: "surfaceOverlay") {
+                Text(title)
+                Button(model.t("common.delete"), role: .destructive) { onDelete(); dismiss() }
+                    .buttonStyle(VSButtonStyle(kind: .secondary))
+            }.navigationTitle(model.t("common.delete")).navigationBarTitleDisplayMode(.inline)
+                .toolbar { Button(model.t("common.cancel")) { dismiss() }.buttonStyle(VSButtonStyle(kind: .tertiary)) }
+        }.presentationBackground(theme.color("surfaceOverlay"))
+            .presentationCornerRadius(VSTokens.radiusLg).presentationDetents([.medium, .large])
+    }
+}

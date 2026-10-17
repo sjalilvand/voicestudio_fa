@@ -1,0 +1,49 @@
+"""The mobile apps build against committed, generated contracts.
+
+Both fail when the source they were generated from changes without a
+regeneration in the same PR, so iOS and Android never drift from the backend
+API or the desktop theme.
+"""
+from __future__ import annotations
+
+import json
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parent.parent
+CONTRACT = ROOT / "mobile" / "contract"
+
+sys.path.insert(0, str(ROOT / "scripts"))
+import export_openapi  # noqa: E402
+
+
+def test_openapi_contract_matches_backend():
+    committed = (CONTRACT / "openapi.json").read_text(encoding="utf-8")
+    assert committed == export_openapi.render(export_openapi.build_schema()), (
+        "mobile/contract/openapi.json is stale; run `uv run python scripts/export_openapi.py`"
+    )
+
+
+def test_openapi_operation_ids_are_unique():
+    schema = json.loads((CONTRACT / "openapi.json").read_text(encoding="utf-8"))
+    ids = [op["operationId"] for ops in schema["paths"].values() for op in ops.values() if "operationId" in op]
+    assert len(ids) == len(set(ids))
+
+
+@pytest.mark.skipif(shutil.which("bun") is None, reason="bun is required for the token exporter")
+def test_mobile_tokens_match_electron_theme():
+    result = subprocess.run(
+        ["bun", "scripts/export-mobile-tokens.ts", "--check"],
+        cwd=ROOT, capture_output=True, text=True, timeout=120,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_mobile_string_keys_are_namespaced():
+    for path in CONTRACT.glob("strings*.en.json"):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        assert list(data) == ["mobile"], f"{path.name}: new mobile keys belong under `mobile.`"
