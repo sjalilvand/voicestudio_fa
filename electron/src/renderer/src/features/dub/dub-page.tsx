@@ -18,6 +18,15 @@ import { DubExportPanel } from './dub-export-panel';
 import { DubTimeline } from './dub-timeline';
 import { PasteTranslation } from './paste-translation';
 import { GlossaryPanel } from './glossary-panel';
+import { SegmentFindBar } from './segment-find-bar';
+import { HighlightedText } from './segment-highlight';
+import {
+  applyReplaceAll,
+  collectMatches,
+  nextMatchIndex,
+  replaceCurrentMatch,
+  textUpdates,
+} from './segment-find';
 import { CastingBoard } from './casting-board';
 import { DubbingDemo } from './dubbing-demo';
 import { CheckpointBanner, type CheckpointStage } from './checkpoint-banner';
@@ -136,6 +145,7 @@ import {
   dismissDubError,
   applyDubQc,
   applyDubTranslationRows,
+  replaceDubSegmentTexts,
   assignDubSpeakerProfile,
   dubSession,
   DUB_STOP_FAILED,
@@ -262,6 +272,9 @@ export function DubPage() {
   const [pasteTranslationOpen, setPasteTranslationOpen] = useState(false);
   const [glossaryOpen, setGlossaryOpen] = useState(false);
   const [glossaryCount, setGlossaryCount] = useState(0);
+  const [findQuery, setFindQuery] = useState('');
+  const [replaceText, setReplaceText] = useState('');
+  const [matchIndex, setMatchIndex] = useState(0);
   const [recoveringAsr, setRecoveringAsr] = useState(false);
   const [installingArgosPacks, setInstallingArgosPacks] = useState(false);
   const [translationAgents, setTranslationAgents] = useState<RepairAgentInfo[]>([]);
@@ -360,6 +373,44 @@ export function DubPage() {
     requestAnimationFrame(() => segmentVirtualizer.measure());
   }, [editingSegmentId, expandedSegmentId, segmentVirtualizer]);
   const code = translationTargetCode(target);
+  const findMatches = useMemo(
+    () => collectMatches(session.segments, findQuery),
+    [session.segments, findQuery],
+  );
+  const currentFindMatch = findMatches[matchIndex];
+  const canReplaceCurrent = currentFindMatch?.field === 'text';
+  const hasSpokenFindMatch = findMatches.some((match) => match.field === 'text');
+  useEffect(() => {
+    if (!findMatches.length) {
+      if (matchIndex !== 0) setMatchIndex(0);
+      return;
+    }
+    if (matchIndex >= findMatches.length) setMatchIndex(findMatches.length - 1);
+  }, [findMatches, matchIndex]);
+  const goToFindMatch = useCallback(
+    (index: number) => {
+      if (index < 0 || index >= findMatches.length) return;
+      const match = findMatches[index];
+      setMatchIndex(index);
+      setSelectedSegmentId(match.id);
+      const row = session.segments.findIndex((segment) => String(segment.id) === match.id);
+      if (row >= 0)
+        requestAnimationFrame(() =>
+          segmentVirtualizer.scrollToIndex(row, {
+            align: 'center',
+          }),
+        );
+    },
+    [findMatches, session.segments, segmentVirtualizer],
+  );
+  const applySpokenUpdates = useCallback(
+    (next: typeof session.segments) => {
+      const updates = textUpdates(session.segments, next);
+      if (!updates.length) return 0;
+      return replaceDubSegmentTexts(updates, code);
+    },
+    [code, session.segments],
+  );
   const batchTargets = multiLangTargets(target, code || '', session.multiTargets || []);
   const agentBatchReady = Boolean(
     session.agentCli &&
@@ -2278,6 +2329,44 @@ export function DubPage() {
                   </div>
                 </div>
               )}
+              {session.segments.length > 0 && (
+                <SegmentFindBar
+                  query={findQuery}
+                  replacement={replaceText}
+                  matchIndex={matchIndex}
+                  matchCount={findMatches.length}
+                  canReplace={canReplaceCurrent && !busy && !session.recovery}
+                  canReplaceAll={hasSpokenFindMatch && !busy && !session.recovery}
+                  disabled={busy || Boolean(session.recovery)}
+                  onQuery={(value) => {
+                    setFindQuery(value);
+                    setMatchIndex(0);
+                  }}
+                  onReplacement={setReplaceText}
+                  onPrev={() => goToFindMatch(nextMatchIndex(findMatches.length, matchIndex, -1))}
+                  onNext={() => goToFindMatch(nextMatchIndex(findMatches.length, matchIndex, 1))}
+                  onReplace={() => {
+                    if (!currentFindMatch || currentFindMatch.field !== 'text') return;
+                    const next = replaceCurrentMatch(
+                      session.segments,
+                      currentFindMatch,
+                      replaceText,
+                    );
+                    if (!applySpokenUpdates(next)) return;
+                    toast.success(t('segment.replace_done', { count: 1 }));
+                  }}
+                  onReplaceAll={() => {
+                    const { segments: next, count } = applyReplaceAll(
+                      session.segments,
+                      findQuery,
+                      replaceText,
+                    );
+                    if (!count || !applySpokenUpdates(next)) return;
+                    toast.success(t('segment.replace_done', { count }));
+                    setMatchIndex(0);
+                  }}
+                />
+              )}
               {showCheckpoint && checkpointStage && (
                 <CheckpointBanner
                   stage={checkpointStage}
@@ -2540,7 +2629,22 @@ export function DubPage() {
                                   title={segment.text_original}
                                   dir="auto"
                                 >
-                                  {segment.text_original}
+                                  <HighlightedText
+                                    text={segment.text_original}
+                                    query={findQuery}
+                                    activeStart={
+                                      currentFindMatch?.id === String(segment.id) &&
+                                      currentFindMatch.field === 'text_original'
+                                        ? currentFindMatch.start
+                                        : undefined
+                                    }
+                                    activeEnd={
+                                      currentFindMatch?.id === String(segment.id) &&
+                                      currentFindMatch.field === 'text_original'
+                                        ? currentFindMatch.end
+                                        : undefined
+                                    }
+                                  />
                                 </p>
                               ) : (
                                 <span className="min-w-0 flex-1" />
@@ -2778,9 +2882,24 @@ export function DubPage() {
                                   setEditingSegmentId(segment.id);
                                 }}
                               >
-                                <span className="line-clamp-2" dir="auto">
-                                  {segment.text}
-                                </span>
+                                <HighlightedText
+                                  className="line-clamp-2"
+                                  dir="auto"
+                                  text={segment.text}
+                                  query={findQuery}
+                                  activeStart={
+                                    currentFindMatch?.id === String(segment.id) &&
+                                    currentFindMatch.field === 'text'
+                                      ? currentFindMatch.start
+                                      : undefined
+                                  }
+                                  activeEnd={
+                                    currentFindMatch?.id === String(segment.id) &&
+                                    currentFindMatch.field === 'text'
+                                      ? currentFindMatch.end
+                                      : undefined
+                                  }
+                                />
                               </button>
                             )}
                             {segment.plan?.suggested_text && (
