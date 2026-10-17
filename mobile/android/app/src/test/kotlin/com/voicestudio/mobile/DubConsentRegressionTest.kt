@@ -102,6 +102,19 @@ class DubConsentRegressionTest {
             assertEquals(3,server.requestCount)
         } finally {server.shutdown()}
     }
+    @Test fun transientSettingsFailureRetriesTheDurableWorker()=runBlocking {
+        val server=MockWebServer().apply {start()}
+        val api=VoiceStudioApi(PairingAddress.parse(server.url("/").toString()))
+        try {
+            for(status in listOf(500,503)) {
+                server.enqueue(MockResponse().setBody("""{"active":"openai","engines":[{"id":"openai","category":"llm","installed":true,"ready":true}]}"""))
+                server.enqueue(MockResponse().setResponseCode(status))
+                val data=workDataOf("translation_provider" to "openai","translation_category" to "llm","translation_route" to "")
+                val error=runCatching {DubWorker.authorizedTranslation(api,data)}.exceptionOrNull()
+                assertTrue("HTTP $status must retry, got $error",error != null && DubWorker.isRetryable(error))
+            }
+        } finally {server.shutdown()}
+    }
     @Test fun durableLlmConsentCannotFollowALocalEndpointToTheCloud()=runBlocking {
         val server=MockWebServer().apply {start()}
         val api=VoiceStudioApi(PairingAddress.parse(server.url("/").toString()))

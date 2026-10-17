@@ -95,8 +95,7 @@ class DubWorker(context: Context, params: WorkerParameters) : CoroutineWorker(co
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (error: Exception) {
             val failure = error as? ClientFailure
-            val retryable = failure?.key in setOf("mobile.connect.error_unreachable", "mobile.errors.timeout") || (failure?.status ?: 0) in setOf(429, 502, 503, 504)
-            return if(retryable) Result.retry() else Result.failure(failureData(failure ?: ClientFailure("mobile.android.dub_restart"),job))
+            return if(isRetryable(error)) Result.retry() else Result.failure(failureData(failure ?: ClientFailure("mobile.android.dub_restart"),job))
         }
     }
     private suspend fun runPipeline(host: String, job: String): Result {
@@ -165,6 +164,8 @@ class DubWorker(context: Context, params: WorkerParameters) : CoroutineWorker(co
         fun failureData(error: ClientFailure, job: String): Data = workDataOf("error" to error.key,
             "error_params" to JsonObject(error.params.mapValues {JsonPrimitive(it.value)}).toString(), "job" to job)
         const val TAG = "voicestudio.dub"
+        /** One definition of "temporary" for every request the worker makes. */
+        fun isRetryable(error: Throwable): Boolean = (error as? ClientFailure)?.isTransient() == true
         suspend fun authorizedTranslation(api: VoiceStudioApi, data: Data): TranslationAuthorization {
             val engine = api.translationEngine()
             if(engine.id != data.getString("translation_provider") || engine.category != data.getString("translation_category") ||
