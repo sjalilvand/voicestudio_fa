@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { withApp } from './desktop-harness.mjs';
+import { ROUTES } from './fixtures/routes.mjs';
 
 const bridgeFacts = (page) =>
   page.evaluate(() => ({
@@ -87,6 +88,36 @@ test('backend down: app shows the connecting state without crashing', async (t) 
   await withApp(t, { backend: 'down' }, async ({ page }) => {
     await page.getByText('Connecting to the running engine…').waitFor();
     assert.equal(await page.evaluate(() => typeof window.voicestudio?.files?.saveData), 'function');
+  });
+});
+
+test('routes: every route renders', async (t) => {
+  await withApp(t, {}, async ({ page, backend }) => {
+    const crashed = [];
+    for (const route of ROUTES) {
+      await page.evaluate((path) => {
+        location.hash = '#' + path;
+      }, route);
+      // A route may redirect (e.g. /settings -> /settings/general), so accept any hash that
+      // still sits under the requested path.
+      await page
+        .waitForFunction((path) => location.hash.startsWith('#' + path), route, { timeout: 5000 })
+        .catch(async () => {
+          assert.fail(`Route ${route} settled on hash "${await page.evaluate(() => location.hash)}"`);
+        });
+      // A crashed route replaces the shell with the error boundary's alert.
+      await page.locator('main, [role=alert]').first().waitFor();
+      if (await page.getByText('This tab hit a snag.', { exact: true }).count()) {
+        crashed.push(route);
+        // The boundary outlives route changes; reload so later routes are judged on their own.
+        await page.reload();
+      }
+    }
+    assert.deepEqual(crashed, [], 'Routes rendered the error boundary');
+    const missing = [
+      ...new Set(backend.requests.filter((r) => r.status === 404).map((r) => `${r.method} ${r.path}`)),
+    ];
+    assert.deepEqual(missing, [], 'Routes requested backend paths the fake backend lacks');
   });
 });
 
