@@ -31,6 +31,7 @@ _SIGNATURE = (
 
 
 def _missing_feature_extractor(path):
+    """Reproduce Transformers' missing-processor diagnostic for either path style."""
     return (
         f"Can't load feature extractor for '{path}'. If you were trying to load "
         "it from 'https://huggingface.co/models', make sure you don't have a "
@@ -379,6 +380,7 @@ def test_signature_failure_link_repairs_and_retries(model_manager, monkeypatch, 
 
         @classmethod
         def from_pretrained(cls, *args, **kwargs):
+            """Fail once so the test observes a successful snapshot-link retry."""
             cls.attempts += 1
             if cls.attempts == 1:
                 raise OSError(signature)
@@ -465,6 +467,7 @@ def test_noop_repair_falls_through_to_resume_ladder(model_manager, monkeypatch, 
 
         @classmethod
         def from_pretrained(cls, *args, **kwargs):
+            """Fail once so the test observes the resume-repair load attempt."""
             cls.attempts += 1
             if cls.attempts == 1:
                 raise OSError(signature)
@@ -589,6 +592,7 @@ def test_incomplete_cache_predicate_does_not_overmatch():
     r"C:\cache\models--k2-fsa--OmniVoice\snapshots\revision\audio_tokenizer",
 ])
 def test_missing_feature_extractor_classification(path):
+    """Missing processor config needs resume repair, not corrupt-file replacement."""
     text = _missing_feature_extractor(path)
     assert failure.is_incomplete_cache_message(text)
     assert failure.classify(text) == "MODEL_CACHE_CORRUPT"
@@ -596,6 +600,7 @@ def test_missing_feature_extractor_classification(path):
 
 
 def test_real_missing_feature_extractor_config(tmp_path):
+    """Check the classifier against Transformers itself without network or weights."""
     from transformers.feature_extraction_utils import FeatureExtractionMixin
 
     tokenizer = tmp_path / "audio_tokenizer"
@@ -619,6 +624,7 @@ def test_real_missing_feature_extractor_config(tmp_path):
     "Can't load feature extractor: unsupported configuration",
 ])
 def test_feature_extractor_errors_do_not_overmatch(text):
+    """Import, permission and compatibility errors must not trigger cache repair."""
     assert not failure.is_incomplete_cache_message(text)
 
 
@@ -626,6 +632,7 @@ def test_feature_extractor_errors_do_not_overmatch(text):
 def test_missing_feature_extractor_offline_does_not_download(
     model_manager, monkeypatch, offline_flag,
 ):
+    """Each offline switch must prevent downloads and retain an actionable error."""
     import huggingface_hub
 
     monkeypatch.setenv(offline_flag, "1")
@@ -637,6 +644,7 @@ def test_missing_feature_extractor_offline_does_not_download(
     class MissingProcessor:
         @staticmethod
         def from_pretrained(*args, **kwargs):
+            """Keep the processor absent to exercise the offline recovery failure."""
             raise OSError(_FEATURE_EXTRACTOR_SIGNATURE)
 
     monkeypatch.setattr(model_manager, "_lazy_omnivoice", lambda: MissingProcessor)
