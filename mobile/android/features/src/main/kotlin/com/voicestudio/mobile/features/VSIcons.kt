@@ -11,6 +11,9 @@ object VSIcons {
     private fun symbol(name: String, data: String): ImageVector = ImageVector.Builder(name,24.dp,24.dp,24f,24f)
         .addPath(pathData=androidx.compose.ui.graphics.vector.PathParser().parsePathString(data).toNodes(),
             fill=SolidColor(Color(VSTheme.roles("default",true).getValue("text"))),pathFillType=androidx.compose.ui.graphics.PathFillType.EvenOdd).build()
+    val Wave by lazy {symbol("Wave","M3 10h2v4H3z M7 6h2v12H7z M11 2h2v20h-2z M15 6h2v12h-2z M19 10h2v4h-2z")}
+    val Computer by lazy {symbol("Computer","M2 3h20v14H2z M4 5v10h16V5z M11 17h2v3h5v2H6v-2h5z")}
+    val Folder by lazy {symbol("Folder","M2 4h8l2 2h10v15H2z M4 8v11h16V8z")}
     val Link by lazy {symbol("Link","M3.9 12a4 4 0 0 1 4-4h3V6h-3a6 6 0 0 0 0 12h3v-2h-3a4 4 0 0 1-4-4z M8 11h8v2H8z M13 6h3a6 6 0 0 1 0 12h-3v-2h3a4 4 0 0 0 0-8h-3z")}
     val Globe by lazy {symbol("Globe","M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M4.3 10h3a17 17 0 0 0 0 4h-3a8 8 0 0 1 0-4z M5.1 8a8 8 0 0 1 4-3.5A15 15 0 0 0 7.7 8z M5.1 16h2.6a15 15 0 0 0 1.4 3.5A8 8 0 0 1 5.1 16z M9.4 10h5.2a15 15 0 0 1 0 4H9.4a15 15 0 0 1 0-4z M9.8 8A13 13 0 0 1 12 4a13 13 0 0 1 2.2 4z M9.8 16h4.4A13 13 0 0 1 12 20a13 13 0 0 1-2.2-4z M16.3 8a15 15 0 0 0-1.4-3.5 8 8 0 0 1 4 3.5z M16.7 10h3a8 8 0 0 1 0 4h-3a17 17 0 0 0 0-4z M16.3 16h2.6a8 8 0 0 1-4 3.5 15 15 0 0 0 1.4-3.5z")}
     val Contrast by lazy {symbol("Contrast","M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M12 4v16a8 8 0 0 1 0-16z")}

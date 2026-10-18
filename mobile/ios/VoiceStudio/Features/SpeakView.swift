@@ -14,6 +14,8 @@ struct VoicePicker: View {
     }
 }
 struct SpeakView: View {
+    var initialPhoneVoiceID: String? = nil
+    var initialComputerVoiceID: String? = nil
     @Environment(AppModel.self) private var model
     @Environment(\.vsTheme) private var theme
     @State private var preference: TaskLocation?
@@ -141,7 +143,7 @@ struct SpeakView: View {
                 Task { await model.perform { try await model.api().deleteHistory(item.id); model.history = try await model.api().history() } }
             }
         }
-        .onAppear { hostScope = model.hostState.scopeID; preference = model.phone.preference("speak") }
+        .onAppear { hostScope = model.hostState.scopeID; preference = initialPhoneVoiceID == nil ? model.phone.preference("speak") : .phone; if let id = initialPhoneVoiceID { speakerID = "phone:" + id }; if let id = initialComputerVoiceID { preference = .computer; selection.chooseProfile(id, profiles: model.profiles, inventory: model.inventory, catalog: model.languages) } }
         .task { await model.phone.refresh(); reconcilePhone() }
         .onChange(of: speakerID) { _, _ in reconcilePhone() }
         .onChange(of: phoneModel?.id) { _, _ in reconcilePhone() }

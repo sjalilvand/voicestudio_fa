@@ -80,7 +80,7 @@ struct RootView: View {
             if !model.consentAnswered { ConsentView() }
             else {
                 TabView {
-                        NavigationStack { SpeakView() }.tabItem { Label(model.t("mobile.tabs.speak"), systemImage: "waveform") }
+                        NavigationStack { HomeView() }.tabItem { Label(model.t("nav.home"), systemImage: "house") }
                         NavigationStack { VoicesView() }.tabItem { Label(model.t("mobile.tabs.voices"), systemImage: "person.wave.2") }
                         NavigationStack { DubView() }.tabItem { Label(model.t("mobile.tabs.dub"), systemImage: "film") }
                         NavigationStack { DictateView() }.tabItem { Label(model.t("mobile.tabs.dictate"), systemImage: "mic") }
@@ -110,7 +110,7 @@ struct RootView: View {
         .safeAreaInset(edge: .top) {
             if let error = model.error ?? model.phone.error {
                 HStack(spacing: VSTokens.spacingGap) {
-                    Text(model.t(shortError(error))).foregroundStyle(theme.color("error")).lineLimit(1)
+                    ErrorNotice(error: error).foregroundStyle(theme.color("error"))
                         .frame(maxWidth: .infinity,alignment: .leading)
                     if error.key.hasPrefix("mobile.local.") {
                         Button(model.t("mobile.simple.download_models")) { model.error = nil; model.phone.error = nil; recovery = "models" }
@@ -133,17 +133,19 @@ struct RootView: View {
 
         }
     }
-    private func shortError(_ error: ClientError) -> String {
-        if error.key.hasPrefix("mobile.simple.") { return error.key }
-        if error.key.hasPrefix("mobile.local.") { return "mobile.simple.models_error" }
-        if error.key.contains("offline") || error.key.contains("connection") { return "mobile.simple.connection_error" }
-        if error.key == "mobile.simple.no_speech" { return error.key }
-        if error.key.contains("file") || error.key.contains("media") { return "mobile.simple.media_failed" }
-        if error.key.contains("clone") { return "mobile.simple.clone_failed" }
-        if error.key.contains("dub") { return "mobile.simple.dub_failed" }
-        return "mobile.simple.error"
-    }
 
+}
+struct ErrorNotice: View {
+    @Environment(AppModel.self) private var model
+    let error: ClientError
+    var titleKey: String?
+    var body: some View {
+        let message = ErrorPresentation(error,l10n: model.l10n,titleKey: titleKey)
+        VStack(alignment: .leading,spacing: 2) {
+            Text(message.title)
+            if let detail = message.detail { Text(detail).font(.footnote) }
+        }.fixedSize(horizontal: false,vertical: true)
+    }
 }
 struct ConsentView: View {
     @Environment(AppModel.self) private var model

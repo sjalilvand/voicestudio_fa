@@ -16,6 +16,7 @@ import com.voicestudio.mobile.l10n.L10n
 import com.voicestudio.mobile.local.*
 import com.voicestudio.mobile.network.ClientFailure
 import kotlinx.coroutines.*
+import kotlinx.serialization.encodeToString
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.first
 import java.io.File
@@ -74,8 +75,9 @@ class PhoneDubWorker(context: Context,params: WorkerParameters): CoroutineWorker
             throw e
         } catch(e:Exception) {
             val key=(e as? ClientFailure)?.key ?: "mobile.simple.dub_failed"
-            withContext(NonCancellable) {runCatching {val checkpoint=jobs.checkpoint(job);jobs.save(job,checkpoint.copy(stage=key))}}
-            return Result.failure(workDataOf("job" to job,"error" to key))
+            val params=(e as? ClientFailure)?.params.orEmpty().mapValues {it.value.toString()}
+            withContext(NonCancellable) {runCatching {val checkpoint=jobs.checkpoint(job);jobs.save(job,checkpoint.copy(stage=key,errorParams=params))}}
+            return Result.failure(workDataOf("job" to job,"error" to key,"error_params" to kotlinx.serialization.json.Json.encodeToString(params)))
         }
     }
     companion object {

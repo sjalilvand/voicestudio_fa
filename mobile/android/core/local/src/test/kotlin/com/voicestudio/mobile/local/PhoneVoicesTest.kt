@@ -51,6 +51,13 @@ class PhoneVoicesTest {
         try {store.create("Name",File("unused"),true,fixtureModel(),silent,decoder);fail()} catch(e:com.voicestudio.mobile.network.ClientFailure) {assertEquals("mobile.simple.no_speech",e.key)}
         assertTrue(store.list().isEmpty())
     }
+    @Test fun oneUnreadableVoiceDoesNotHideHealthyVoices()=runTest {
+        val root=File(temporary.root,"voices");val store=PhoneVoiceStore(root)
+        val voice=store.create("Healthy",File("unused"),true,fixtureModel(),FakeLocalEngine(),decoder)
+        File(root,"broken/voice.json").apply {parentFile!!.mkdirs();writeText("not json")}
+        File(root,"bad-metadata/voice.json").apply {parentFile!!.mkdirs();writeText(LocalJson.encodeToString(PhoneVoice.serializer(),voice.copy(name="")))}
+        assertEquals(listOf(voice),store.list())
+    }
     @Test fun pathsCannotEscapePrivateVoiceDirectory()=runTest {
         val store=PhoneVoiceStore(File(temporary.root,"voices"))
         try {store.reference(PhoneVoice("../escape","N","T",1,1));fail()} catch(_:IllegalArgumentException) {}

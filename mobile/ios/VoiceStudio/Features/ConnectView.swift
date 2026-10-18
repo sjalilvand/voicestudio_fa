@@ -23,8 +23,8 @@ struct ConnectView: View {
                     .buttonStyle(VSButtonStyle(kind: .secondary)).disabled(model.connection.connecting || model.busy || BackgroundUpload.shared.pending != nil || url.isEmpty).accessibilityIdentifier("connect.submit")
             }
             }
-            if model.connection.error != nil {
-                Text(model.t("mobile.simple.connection_error"))
+            if let error = model.connection.error {
+                ErrorNotice(error: error,titleKey: "mobile.simple.connection_error")
                 Button(model.t("mobile.simple.retry")) { Task { await connect() } }
             }
             if !model.connection.hosts.isEmpty { Text(model.t("mobile.connect.saved_hosts")) }

@@ -71,22 +71,25 @@ compact card offers Get with the total download size. Dub groups its ASR,
 translation and cloning dependencies in one card; each gated model has its own
 licence confirmation. The card also opens Models. Run on is a compact This phone / Computer control visible only when paired. Phone and
 computer voices remain separate, with a location badge in the combined list.
-Settings opens optional Connect and Models. Model choices use product names and
+Settings opens optional Connect and Models. Resuming a download counts only missing
+bytes plus a small reserve, skipping verified completed files. Model choices use product names and
 localized capabilities; licence details stay inside the acceptance sheet.
 
 Speak has a large editor with placeholder-only copy, three compact picker chips,
-Generate, a player and compact recent rows. Dictate keeps the microphone and
+Generate, a player and compact recent rows. Switching speech models resets any
+preset speaker outside the new model's range; Generate requires a valid speaker. Dictate keeps the microphone and
 copy/share controls above the tab bar while the transcript scrolls: tap
 starts/stops; hold records until release. Connect keeps URL/PIN
 under Enter address and the optional API key under More. Model licences open in
 a sheet with complete inert terms, a rights confirmation and Accept / Decline.
 Screens use short labels and icons; hints live behind one info action. Settings
 uses distinct row icons without explanatory paragraphs. Pickers mark the current
-selection, use normal text colors, and show palette color swatches. Errors use
-short messages and a recovery action; the original structured error keys remain available to workers.
+selection, use normal text colors, and show palette color swatches. Errors show a short title, the localized cause and recovery step, and a recovery action.
+Workers retain structured error keys and parameters across resumes.
 
 Connect supports CameraX/ZXing QR scanning, manual URL/PIN/API-key entry, saved
-hosts and editable labels; last-seen timestamps are retained locally. Public `/health` must carry the backend
+hosts and editable labels; a successful scan reveals the address, PIN and Connect action.
+Last-seen timestamps are retained locally. Public `/health` must carry the backend
 marker and expected status/version; `/profiles` verifies consumption access.
 Master keys only enter the session exchange and are never persisted. Session
 and PIN ciphertext is stored using a Keystore AES-GCM key; DataStore contains
@@ -282,7 +285,8 @@ allowed, and reject low storage. A server ignoring Range restarts that file.
 Redirects stay HTTPS on Hugging Face/HF CDN or mirror hosts. The dedicated
 client never carries computer credentials. Incomplete files remain resumable;
 Delete removes them too. Every file must match size and SHA-256 before an
-installation marker is written; files are hashed again before a native load.
+installation marker is written; native loads reuse verification while the file stamp
+(size, modification time and catalogue identity) is unchanged.
 
 Phone files and local licence receipts live under Android's `noBackupFilesDir`;
 they are app-private and excluded from cloud and device backups. Non-commercial,
@@ -351,11 +355,20 @@ not gate foreground processing. Android foreground execution limits still
 apply. Atomic checkpoints retain extracted PCM, timestamped segments,
 translations, exact reference text and hashes of fitted segment files. Process
 restart resumes existing work; cancelled/failed jobs expose Resume and Delete.
-Changed model/catalogue identities fail closed. Native loads always recheck
-licences and model hashes; UI and workers share model leases and licence state.
-A mix is rebuilt from completed segment files on resume, preventing duplicate
-audio. Completed jobs release their source and intermediate PCM, retaining
+Changed model/catalogue identities fail closed. Native loads always recheck licences. Model SHA-256 verification is cached per file
+using size, modification time and catalogue identity; changed stamps and native failures
+invalidate it. The cache is shared by UI and workers for the process lifetime; a fresh
+process verifies files on first load. Native inference owns its lease until native
+cleanup returns, including after cancellation. UI and workers share model leases and
+licence state.
+Whole-segment reference clips reuse their segment transcript; shortened clips fall
+back to it if ASR returns blank. The chosen transcript is checkpointed before cloning.
+A mix is rebuilt from completed segment files on resume, preventing duplicate audio. Completed jobs release their source and intermediate PCM, retaining
 private output/history with play (including video), share, save and delete.
+
+Recording auto-stops at 29 seconds to leave encoding headroom under the 30-second
+phone reference limit. Unreadable voice or dub records are skipped individually;
+installed-model state remains available.
 
 Native builds, checksums and cancellation boundaries are documented in
 [`../native/android/README.md`](../native/android/README.md).
@@ -374,21 +387,23 @@ export HF_HUB_CACHE="$PWD/build/hf-empty"
 ./gradlew assembleDebugAndroidTest
 ```
 
-The current host run passed all four Gradle tasks: 123 JVM tests, zero failures
-or skips, and zero lint errors. Debug app and instrumentation APKs build for
-arm64-v8a and x86_64; instrumentation is not executed here.
+Debug app and instrumentation APKs target arm64-v8a and x86_64. The JVM checks
+run without a device; instrumentation needs maintainer device/emulator execution.
 
 JVM checks cover existing M1 API/security, storage, worker, picker, protocol and
 Compose smoke regressions, plus generated logo/adaptive/splash resources, compact download prompts,
 separate queued licence sheets, picker marks/colors/swatches, Dictate control
 spacing, local catalogue/routing, licence persistence and
 withdrawal, HTTP resume and restart, checksum rejection, mirror fallback,
-Wi-Fi/mobile-data policy, low storage, cancellation, deletion, synthetic WAV
+Wi-Fi/mobile-data policy, remaining-byte resume storage, verification-stamp caching,
+cancellation leases, deletion, corrupt-record isolation, QR Connect visibility,
+model-switch speaker resets, actionable error details, synthetic WAV
 metadata, native cancellation control and microphone lifecycle cleanup. Phone
 voice checks cover consent, reference/transcript persistence, cancellation,
 rename/delete, picker routing and streaming resampling. Phone dub checks cover
 multi-language output, timing/padding/mixing, provenance, checkpoint replay,
-corrupt render recovery, model/licence changes and foreground cancellation. The
+corrupt render recovery, blank-reference transcript fallback, persisted error parameters,
+model/licence changes and foreground cancellation. The
 launch → consent → Settings → Connect → mock host → Speak → Play smoke preserves
 the computer flow. Tests use local mock servers and an empty HF cache.
 Robolectric's API 34 instrumented SDK is resolved by Gradle into app build
@@ -401,8 +416,9 @@ explicit prior review and `acceptModelLicencesForSmoke=true` for gated models.
 `downloadSmokeModels=true` explicitly provisions the three smallest TTS/offline
 ASR/streaming ASR selections; omit it on subsequent offline runs. It asserts
 nonempty audible PCM, Whisper recognition of generated speech and a final
-Zipformer transcript. No CI workflow is changed by this Android role; the
-maintainer must wire/run it on the x86_64 emulator and physical devices.
+Zipformer transcript. The `android-inference` job in `.github/workflows/mobile.yml`
+runs this smoke on an x86_64 emulator with explicit test-model provisioning;
+physical-device validation remains separate.
 
 `cloneInferenceSmoke=true` adds real WAV decoding, Whisper reference creation
 and OmniVoice cloning, including persisted rename/delete. `dubInferenceSmoke=true`
@@ -413,8 +429,26 @@ the device's declared model RAM before loading. The unconditional
 generates its own AVC fixture, encodes/muxes synthetic audio, and checks tracks,
 orientation, duration and decoding. No fixture/model binaries are committed.
 
-This environment builds instrumentation only. Native loading on ART, real model
-inference/quality, audible playback, codec support, microphone permissions,
-large-font/TalkBack rendering, device RAM and background/notification behavior
-require maintainer device/emulator verification. No adb or device commands are
-used here. No CI workflow is modified by the Android implementation.
+Local validation on 2026-10-18 builds the app and instrumentation APKs, passes all 136 JVM
+tests and lint, and runs the Android 14 emulator checks: app launch, localization
+and error handling on ART, loading all three native runtimes together, and AVC/AAC
+muxing with orientation and synthetic-audio metadata. An explicit full-model run
+also passes all eight instrumentation tests with zero skips: Kitten speech,
+Whisper/Zipformer recognition, persisted reference voices and OmniVoice cloning,
+and a complete Whisper → French translation → OmniVoice audio dub. The run takes
+about 20 minutes on the local ARM64 emulator, including model provisioning.
+Inference quality, audible playback, microphone permissions,
+large-font/TalkBack rendering, physical-device RAM and background/notification
+behavior require their separate model/device checks.
+
+## Electron-style mobile Home
+
+Home is the first workspace after consent, using Electron's bundled signal-field
+artwork, shared palette roles, Inter and card hierarchy. Speak, cloning, dubbing,
+dictation, models and computer pairing have working shortcut cards. Generated
+audio, saved voices and recent dubbing projects come from the actual phone
+libraries, with paired-computer entries alongside them. Audio opens its player,
+saved phone voices select the reference in Speak, and projects open their
+outputs and resume controls. Empty states are localized and downloads remain
+explicit. Home replaces Speak in the five-item navigation; Speak opens from Home.
+Desktop-only workspaces are not advertised as available mobile features.

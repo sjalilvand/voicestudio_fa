@@ -19,6 +19,7 @@ val nativeRoot = rootDir.resolve("../native/android")
 val fetchRuntimes by tasks.registering(Exec::class) {
     inputs.files(nativeRoot.resolve("fetch.py"), nativeRoot.resolve("source-checksums.json"), nativeRoot.resolve("../pins.json"))
     outputs.files(nativeRoot.resolve("build/downloads/sherpa.aar"), layout.buildDirectory.file("sherpa/classes.jar"))
+    outputs.dir(nativeRoot.resolve("build/sources"))
     commandLine("python3", nativeRoot.resolve("fetch.py"))
     doLast {
         copy { from(zipTree(nativeRoot.resolve("build/downloads/sherpa.aar"))); include("classes.jar"); into(layout.buildDirectory.dir("sherpa")) }

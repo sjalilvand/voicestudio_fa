@@ -163,7 +163,11 @@ private actor RangeServer: HTTPTransport {
 }
 @Test func localRedirectsStayWithinModelDeliveryOrigins() {
     for url in ["https://huggingface.co/resolve", "https://cdn-lfs.hf.co/model", "https://cas-bridge.xethub.hf.co/model", "https://hf-mirror.com/model"] { #expect(ModelRedirectDelegate.allowed(URL(string: url)!)) }
-    for url in ["http://huggingface.co/model", "https://huggingface.co.evil.test/model", "https://example.org/model", "https://user:password@huggingface.co/model"] { #expect(!ModelRedirectDelegate.allowed(URL(string: url)!)) }
+    for url in ["http://huggingface.co/model", "https://huggingface.co.evil.test/model", "https://example.org/model"] { #expect(!ModelRedirectDelegate.allowed(URL(string: url)!)) }
+    var credentials = URLComponents()
+    credentials.scheme = "https"; credentials.host = "huggingface.co"; credentials.path = "/model"
+    credentials.user = "user"; credentials.password = "password"
+    #expect(!ModelRedirectDelegate.allowed(credentials.url!))
 }
 @Test func localSyntheticAudioHasValidRiffSizeAndMark() throws {
     let bytes = try LocalAudio(samples: [0, 0.5, -0.5], sampleRate: 24000).markSynthetic()
@@ -222,6 +226,32 @@ func realSherpaSynthesizesAndTranscribesOffline() async throws {
     for await _ in events { observedProgress = true; generation.cancel(); break }
     #expect(observedProgress)
     await #expect(throws: CancellationError.self) { try await generation.value }
+    // Cancel a real recognizer while its progress callback is suspended. Native
+    // handles still exist here, so neither another model nor deletion may proceed.
+    let held = NativeWorkGate(), nextEntered = NativeWorkGate()
+    defer { held.finish.signal(); nextEntered.finish.signal() }
+    let (pendingChunks,pendingFeed) = AsyncThrowingStream<PCMChunk,any Error>.makeStream()
+    let pendingUpdates = try await engine.streamTranscribe(model: streaming,chunks: pendingChunks,progress: { value in
+        if value.stage == .running { held.run() }
+    })
+    let consumer = Task { for try await _ in pendingUpdates {} }
+    defer { consumer.cancel(); pendingFeed.finish() }
+    pendingFeed.yield(PCMChunk(samples: Array(audio.samples.prefix(4800)),sampleRate: audio.sampleRate))
+    let deadline = ContinuousClock.now + .seconds(10)
+    while held.count == 0 && ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(5)) }
+    try #require(held.count == 1)
+    consumer.cancel(); _ = await consumer.result
+    let next = Task { try await engine.execute(tts,capability: .tts,progress: { _ in }) { _,_,_,_ in nextEntered.run(); return true } }
+    defer { next.cancel() }
+    try await Task.sleep(for: .milliseconds(150))
+    #expect(nextEntered.count == 0)
+    await #expect(throws: (any Error).self) { try await store.delete(streaming) }
+    held.finish.signal()
+    while nextEntered.count == 0 && ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(5)) }
+    try #require(nextEntered.count == 1)
+    nextEntered.finish.signal()
+    #expect(try await next.value)
+
 }
 
 @Test(.enabled(if: ProcessInfo.processInfo.environment["VOICESTUDIO_REAL_NATIVE"] == "1"))
@@ -346,4 +376,127 @@ private struct LoopbackRangeTransport: HTTPTransport {
     var permissive = ModelDownloadQueue([try localFixture()])
     guard case .download = permissive.next(installed: [], accepted: []) else { Issue.record("Permissive model was gated"); return }
     #expect(permissive.next(installed: [], accepted: []) == nil)
+}
+
+private final class HashCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = 0
+    var count: Int { lock.withLock { value } }
+    func hash(_ url: URL) throws -> String { lock.withLock { value += 1 }; return try ModelHash.file(url) }
+}
+@Test func reviewVerificationCachesInstallAndInvalidatesOnChangesAndNativeFailure() async throws {
+    let root = try localDirectory(); defer { try? FileManager.default.removeItem(at: root) }
+    let counter = HashCounter(), model = try localFixture()
+    let store = try ModelStore(root: root,fileHash: { try counter.hash($0) },available: { _ in 100_000_000 })
+    try await store.download(model,wifi: { true },transport: RangeServer(bytes: Data("model".utf8)))
+    #expect(counter.count == 1)
+    let path = try await store.authorize(model)
+    _ = try await store.authorize(model)
+    #expect(counter.count == 1)
+    try FileManager.default.setAttributes([.modificationDate: Date().addingTimeInterval(10)],ofItemAtPath: path.appendingPathComponent("model.bin").path)
+    _ = try await store.authorize(model)
+    #expect(counter.count == 2)
+    let changed = try localFixture(fingerprint: String(repeating: "d",count: 64))
+    _ = try await store.authorize(changed)
+    #expect(counter.count == 3)
+    let engine = NativeLocalEngine(store: store,libraries: [.sherpa: "/missing-runtime"])
+    await #expect(throws: (any Error).self) { try await engine.synthesize(model: changed,text: "Hello") }
+    _ = try await store.authorize(changed)
+    #expect(counter.count == 4)
+    let oldDate = try path.appendingPathComponent("model.bin").resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate!
+    try Data("other".utf8).write(to: path.appendingPathComponent("model.bin"))
+    try FileManager.default.setAttributes([.modificationDate: oldDate.addingTimeInterval(10)],ofItemAtPath: path.appendingPathComponent("model.bin").path)
+    await #expect(throws: (any Error).self) { try await store.authorize(changed) }
+    #expect(counter.count == 5)
+}
+@Test func reviewResumeSkipsVerifiedCompletedFileForStorage() async throws {
+    let root = try localDirectory(); defer { try? FileManager.default.removeItem(at: root) }
+    let bytes = Data("model".utf8), base = try localFixture(bytes: bytes)
+    var json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(base)) as! [String: Any]
+    var files = json["files"] as! [[String: Any]]
+    var second = files[0]; second["path"] = "second.bin"; files.append(second)
+    json["files"] = files; json["total_bytes"] = bytes.count*2
+    let model = try ModelCatalogue.decode(JSONSerialization.data(withJSONObject: ["schema_version": 1,"models": [json]])).models[0]
+    let directory = root.appendingPathComponent(model.id); try PrivateFiles.directory(directory)
+    try bytes.write(to: directory.appendingPathComponent("model.bin"))
+    let store = try ModelStore(root: root,available: { _ in 16_777_216 + 5 }), host = RangeServer(bytes: bytes)
+    try await store.download(model,wifi: { true },transport: host)
+    #expect(await host.requests.count == 1)
+    #expect(await host.requests.first?.url?.lastPathComponent == "second.bin")
+    #expect(await store.installed(model))
+}
+@Test func reviewPCM16HandlesNonZeroDataStartIndex() throws {
+    let bytes = Data([99,99,0,128,255,127]).dropFirst(2)
+    #expect(bytes.startIndex == 2)
+    #expect(try PCMChunk(pcm16: bytes).samples == [-1,Float(32767)/32768])
+    #expect(throws: ClientError.self) { try PCMChunk(pcm16: bytes.dropFirst()) }
+}
+
+private final class NativeWorkGate: @unchecked Sendable {
+    let finish = DispatchSemaphore(value: 0)
+    private let lock = NSLock()
+    private var calls = 0
+    var count: Int { lock.withLock { calls } }
+    func run() { lock.withLock { calls += 1 }; finish.wait() }
+}
+@Test func reviewCancelledExecuteKeepsBothLeasesUntilWorkerCleanup() async throws {
+    let root = try localDirectory(); defer { try? FileManager.default.removeItem(at: root) }
+    let model = try localFixture(), store = try ModelStore(root: root,available: { _ in 100_000_000 })
+    try await store.download(model,wifi: { true },transport: RangeServer(bytes: Data("model".utf8)))
+    let engine = NativeLocalEngine(store: store), first = NativeWorkGate(), second = NativeWorkGate()
+    let work = Task { try await engine.execute(model,capability: .tts,progress: { _ in }) { _,_,_,_ in first.run(); return 1 } }
+    while first.count == 0 { try await Task.sleep(for: .milliseconds(5)) }
+    work.cancel()
+    let next = Task { try await engine.execute(model,capability: .tts,progress: { _ in }) { _,_,_,_ in second.run(); return 2 } }
+    try await Task.sleep(for: .milliseconds(150))
+    #expect(second.count == 0)
+    await #expect(throws: (any Error).self) { try await store.delete(model) }
+    first.finish.signal()
+    await #expect(throws: CancellationError.self) { try await work.value }
+    while second.count == 0 { try await Task.sleep(for: .milliseconds(5)) }
+    second.finish.signal()
+    #expect(try await next.value == 2)
+    try await store.delete(model)
+}
+
+@Test func reviewCompactErrorsRetainLocalizedRecoveryAndConnectionCause() throws {
+    let l10n = try L10n(locale: "en",catalogs: catalogs())
+    for key in ["wifi_required","storage_required","ram_required","licence_required","checksum_failed","runtime_failed","inference_failed"] {
+        let error = ClientError("mobile.local."+key,params: ["ram": "6"])
+        let presentation = ErrorPresentation(error,l10n: l10n)
+        #expect(presentation.title == l10n.t("mobile.simple.models_error"))
+        #expect(presentation.detail == l10n.t(error.key,error.params))
+        #expect(presentation.detail?.contains("{{") == false)
+    }
+    let active = ErrorPresentation(ClientError("sidebarTools.wait"),l10n: l10n)
+    #expect(active.detail == l10n.t("sidebarTools.wait"))
+    for key in ["mobile.connect.error_unreachable","mobile.connect.error_invalid_url","mobile.connect.error_api_key"] {
+        let presentation = ErrorPresentation(ClientError(key,params: ["host": "192.168.1.2"]),l10n: l10n,titleKey: "mobile.simple.connection_error")
+        #expect(presentation.detail == l10n.t(key,["host": "192.168.1.2"]))
+        #expect(presentation.detail?.contains("{{") == false)
+    }
+}
+
+@Test func reviewQueuedNativeWorkReverifiesAfterPriorNativeFailure() async throws {
+    let root = try localDirectory(); defer { try? FileManager.default.removeItem(at: root) }
+    let model = try localFixture(), store = try ModelStore(root: root,available: { _ in 100_000_000 })
+    try await store.download(model,wifi: { true },transport: RangeServer(bytes: Data("model".utf8)))
+    let path = try await store.authorize(model), held = NativeWorkGate(), engine = NativeLocalEngine(store: store)
+    defer { held.finish.signal() }
+    let first = Task { try await engine.execute(model,capability: .tts,progress: { _ in }) { _,_,_,_ -> Bool in
+        held.run(); throw ClientError("mobile.local.inference_failed")
+    } }
+    let deadline = ContinuousClock.now + .seconds(5)
+    while held.count == 0 && ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(5)) }
+    try #require(held.count == 1)
+    let queued = Task { try await engine.execute(model,capability: .tts,progress: { _ in }) { _,_,_,_ in true } }
+    defer { first.cancel(); queued.cancel() }
+    try await Task.sleep(for: .milliseconds(100))
+    let file = path.appendingPathComponent("model.bin")
+    let modified = try file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate!
+    try Data("other".utf8).write(to: file)
+    try FileManager.default.setAttributes([.modificationDate: modified],ofItemAtPath: file.path)
+    held.finish.signal()
+    await #expect(throws: ClientError.self) { try await first.value }
+    await #expect(throws: ClientError("mobile.local.checksum_failed")) { try await queued.value }
 }

@@ -33,6 +33,7 @@ val bundleCatalogs by tasks.registering {
     val catalogs = repository.resolve("electron/src/renderer/src/i18n/locales")
     val contracts = repository.resolve("mobile/contract")
     inputs.dir(catalogs)
+    inputs.file(repository.resolve("electron/public/signal-field.webp"))
     inputs.file(repository.resolve("electron/src/shared/languages.json"))
     inputs.file(repository.resolve("LICENSE"))
     inputs.files(fileTree(contracts) { include("strings*.en.json", "tokens.json", "openapi.json", "models.json") })
@@ -42,6 +43,7 @@ val bundleCatalogs by tasks.registering {
         val assets = layout.buildDirectory.dir("generated/catalogs").get().asFile
         assets.deleteRecursively()
         assets.mkdirs()
+        repository.resolve("electron/public/signal-field.webp").copyTo(assets.resolve("signal-field.webp"), overwrite=true)
         repository.resolve("electron/src/shared/languages.json").copyTo(assets.resolve("languages.json"), overwrite=true)
         val out = assets.resolve("locales").apply { mkdirs() }
         assets.resolve("licenses").mkdirs()
@@ -104,11 +106,13 @@ tasks.withType<Test>().configureEach {
 }
 
 val buildNativeRuntimes by tasks.registering(Exec::class) {
+    dependsOn(":core:local:fetchRuntimes")
     val nativeRoot = rootDir.resolve("../native/android")
     inputs.files(fileTree(nativeRoot) { include("*.cpp", "*.h", "*.json", "*.py", "*.sh", "CMakeLists.txt") }, nativeRoot.resolve("../pins.json"))
+    inputs.files(fileTree("src/main/assets/licenses") { include("native-*") })
     outputs.dir(nativeRoot.resolve("build/jniLibs"))
     outputs.dir(nativeRoot.resolve("build/assets"))
-    commandLine("bash", nativeRoot.resolve("build.sh"))
+    commandLine("bash", nativeRoot.resolve("build.sh"), "--skip-fetch")
 }
 tasks.named("preBuild") { dependsOn(buildNativeRuntimes) }
 

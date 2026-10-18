@@ -117,7 +117,7 @@ public actor PhoneDubStore {
     public func list() throws -> [PhoneDubRecord] {
         try FileManager.default.contentsOfDirectory(at: root,includingPropertiesForKeys: nil).compactMap { dir in
             guard let id = UUID(uuidString: dir.lastPathComponent), FileManager.default.fileExists(atPath: dir.appendingPathComponent("request.json").path) else { return nil }
-            return try PhoneDubRecord(request: request(id),checkpoint: checkpoint(id))
+            return try? PhoneDubRecord(request: request(id),checkpoint: checkpoint(id))
         }.sorted { $0.request.createdAt > $1.request.createdAt }
     }
     public func verifiedOutput(_ id: UUID,_ output: PhoneDubOutput) throws -> URL {
@@ -208,11 +208,16 @@ public struct PhoneDubPipeline: Sendable {
                 if request.referenceText != nil {
                     let pcm = PCMFile(try await store.file(id,"reference.pcm")); reference = try pcm.read(start: 0,count: pcm.frames)
                 } else { reference = try original.clip(start: segment.speech.start,end: min(segment.speech.end,segment.speech.start+8)) }
+                let savedText = (request.referenceText ?? segment.referenceText)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                 let referenceText: String
-                if let text = request.referenceText ?? segment.referenceText { referenceText = text }
+                if !savedText.isEmpty { referenceText = savedText }
                 else {
-                    referenceText = try await engine.transcribe(model: asr,audio: reference,progress: { _ in }).trimmingCharacters(in: .whitespacesAndNewlines)
+                    let recognized = try await engine.transcribe(model: asr,audio: reference,progress: { _ in }).trimmingCharacters(in: .whitespacesAndNewlines)
+                    // Quiet/short clips still have the segment's original ASR transcript.
+                    referenceText = recognized.isEmpty ? segment.speech.text.trimmingCharacters(in: .whitespacesAndNewlines) : recognized
                     guard !referenceText.isEmpty else { throw ClientError("mobile.simple.no_speech") }
+                }
+                if segment.referenceText != referenceText {
                     segment.referenceText = referenceText; cp.segments[index] = segment; try await save(cp)
                 }
                 let generated = try await engine.clone(model: clone,text: segment.translations[target.code]!,reference: reference,referenceText: referenceText,progress: { value in await report(PhoneDubProgress(stage: "mobile.android.stage_render",percent: progress+Int(value.fraction))) })

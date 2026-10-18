@@ -16,12 +16,12 @@ import com.voicestudio.mobile.features.*
 import java.io.File
 import kotlinx.coroutines.*
 
-@Composable private fun ComputerSpeakScreen(vm:StudioViewModel) {
+@Composable private fun ComputerSpeakScreen(vm:StudioViewModel, initialVoiceID: String? = null) {
     val state by vm.state.collectAsState()
     val context=LocalContext.current
     val scope=rememberCoroutineScope()
     var text by rememberSaveable {mutableStateOf("")}
-    var voice by rememberSaveable {mutableStateOf("")}
+    var voice by rememberSaveable(initialVoiceID) {mutableStateOf(initialVoiceID.orEmpty())}
     var engine by rememberSaveable {mutableStateOf("")}
     var language by rememberSaveable {mutableStateOf("Auto")}
     val catalog=rememberLanguageCatalog(vm::fail)
@@ -79,15 +79,15 @@ import kotlinx.coroutines.*
     }
 }
 
-@Composable fun SpeakScreen(vm: StudioViewModel) {
+@Composable fun SpeakScreen(vm: StudioViewModel, initialPhoneVoiceID: String? = null, initialComputerVoiceID: String? = null) {
     com.voicestudio.mobile.features.models.TaskLocation(vm,"speak",setOf("tts","clone")) {location,model ->
-        if(location==com.voicestudio.mobile.local.RunLocation.COMPUTER) ComputerSpeakScreen(vm)
+        if(location==com.voicestudio.mobile.local.RunLocation.COMPUTER) ComputerSpeakScreen(vm,initialComputerVoiceID)
         else {
             val phone by vm.phone.state.collectAsState()
             val context=LocalContext.current
             val scope=rememberCoroutineScope()
             var text by rememberSaveable {mutableStateOf("")}
-            var speaker by rememberSaveable {mutableStateOf("0")}
+            var speaker by rememberSaveable(initialPhoneVoiceID) {mutableStateOf(initialPhoneVoiceID?.let {"phone:"+it} ?: "0")}
             val voice=phone.voices.firstOrNull {"phone:"+it.id==speaker}
             val capability=if(voice==null) "tts" else "clone"
             val selected=model?.takeIf {it.capability==capability} ?: phone.models.firstOrNull {it.capability==capability&&it.id in phone.installed} ?: phone.models.firstOrNull {it.capability==capability}
@@ -104,6 +104,8 @@ import kotlinx.coroutines.*
                 ScreenTitle("mobile.tabs.speak")
                 Field("mobile.speak.placeholder",text,{text=it},multiline=true)
                 val speakers=selected?.option("num_speakers",selected.option("speaker_count","1"))?.toIntOrNull()?.coerceIn(1,128) ?: 1
+                val validSpeaker=voice!=null||speaker.toIntOrNull()?.let {it in 0 until speakers}==true
+                LaunchedEffect(selected?.id,speakers) {if(voice==null&&!validSpeaker) speaker="0"}
                 var language by rememberSaveable {mutableStateOf("en")}
                 LaunchedEffect(selected?.id,voice?.id) {language=if(voice!=null) "auto" else language.takeIf {it in selected?.languages.orEmpty()} ?: selected?.languages?.firstOrNull().orEmpty()}
                 val languageChoices=if(voice!=null) listOf(Choice("auto",tr("languagePicker.auto"))) else selected?.languages.orEmpty().map {Choice(it,languageName(it,LocalL10n.current.locale))}
@@ -113,7 +115,7 @@ import kotlinx.coroutines.*
                     Box(Modifier.weight(1f)) {ChoicePicker("mobile.speak.language",language,languageChoices,compact=true) {language=it}}
                 }
                 if(selected?.let {!phone.canRun(it,vm.phone.ramBytes)}!=false) selected?.let {com.voicestudio.mobile.features.models.MissingModelsCard(vm,"mobile.tabs.speak",listOf(it))}
-                else Action("mobile.speak.generate",text.isNotBlank()&&selected!=null&&phone.progress==null) {vm.phone.speak(selected!!,text,speaker.toIntOrNull() ?: 0,voice,language.takeUnless {it=="auto"})}
+                else Action("mobile.speak.generate",text.isNotBlank()&&selected!=null&&validSpeaker&&phone.progress==null) {vm.phone.speak(selected!!,text,speaker.toIntOrNull() ?: 0,voice,language.takeUnless {it=="auto"})}
                 phone.progress?.let {p ->
                     LinearProgressIndicator(progress={p},modifier=Modifier.fillMaxWidth())
                     Secondary("common.cancel") {vm.phone.cancelInference()}

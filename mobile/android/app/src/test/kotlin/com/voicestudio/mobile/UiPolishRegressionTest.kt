@@ -43,6 +43,7 @@ class UiPolishRegressionTest {
                 }
                 compose.onNodeWithContentDescription("Models").assertDoesNotExist()
             }
+            compose.onNodeWithTag("home.speak").performScrollTo().performClick()
             noIdentifiers()
             compose.onAllNodesWithText("Get").assertCountEquals(1)
             tab("Voices");noIdentifiers()

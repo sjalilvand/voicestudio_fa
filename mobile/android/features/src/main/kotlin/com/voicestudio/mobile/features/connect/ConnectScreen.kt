@@ -9,7 +9,9 @@ import com.voicestudio.mobile.network.PairingAddress
 import java.text.DateFormat
 import java.util.Date
 
-@Composable fun ConnectScreen(vm:StudioViewModel) {
+@Composable fun ConnectScreen(vm:StudioViewModel,
+    scanContent: @Composable ((String)->Unit, ()->Unit, (Throwable)->Unit)->Unit = { code,close,error -> QrScanner(code,close,error) }
+) {
     val state by vm.state.collectAsState()
     val prefs by vm.preferences.collectAsState()
     var url by rememberSaveable {mutableStateOf("")}
@@ -22,10 +24,10 @@ import java.util.Date
     Screen {
         ScreenTitle("mobile.connect.title")
         Action("mobile.connect.scan_qr",!state.busy,onClick=camera)
-        if(scanner) QrScanner(onCode={raw ->
-            try {val address=PairingAddress.parse(raw);url=address.baseUrl.toString();pin=address.pin.orEmpty();scanner=false}
+        if(scanner) scanContent({raw ->
+            try {val address=PairingAddress.parse(raw);url=address.baseUrl.toString();pin=address.pin.orEmpty();scanner=false;manual=true}
             catch(e:Exception) {scanner=false;vm.fail(e)}
-        },onClose={scanner=false},onError={scanner=false;vm.fail(it)})
+        },{scanner=false},{scanner=false;vm.fail(it)})
         Secondary("mobile.simple.address") {manual=!manual}
         if(manual) {
         Field("mobile.connect.url_label",url,{url=it})

@@ -146,7 +146,7 @@ struct CloneView: View {
         .fileImporter(isPresented: $importing,allowedContentTypes: [.audio]) { result in
             switch result { case .success(let url): audio = SelectedMedia(url: url); case .failure: model.error = ClientError("mobile.errors.file") }
         }
-        .onChange(of: recorder.seconds) { _, seconds in if seconds >= 30 && recorder.recording { recorder.stop(); audio = recorder.file.map { SelectedMedia(url: $0) } } }
+        .onChange(of: recorder.seconds) { _, seconds in if seconds >= 29 && recorder.recording { recorder.stop(); audio = recorder.file.map { SelectedMedia(url: $0) } } }
         .onChange(of: phase) { _, value in if value != .active { work?.cancel(); if value == .background { recordingTask?.cancel() }; if recorder.recording { recorder.stop(); audio = nil } } }
         .onDisappear { work?.cancel(); recordingTask?.cancel(); recorder.stop(); if let file = recorder.file { try? FileManager.default.removeItem(at: file) } }
     }

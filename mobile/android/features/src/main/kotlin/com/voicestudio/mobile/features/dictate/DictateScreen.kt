@@ -53,7 +53,7 @@ import kotlinx.coroutines.CancellationException
         ScreenTitle("mobile.tabs.dictate")
         if(checking) {Text(tr("common.loading"));LinearProgressIndicator()}
         readinessError?.let {error ->
-            Text(tr(shortErrorKey(error.key)),color=role("error"),maxLines=1)
+            ErrorMessage(error.key,error.params)
         }
         if(!checking && readinessError==null && !ready) {
             val (key,params)=(readiness ?: Readiness(false)).guidance()

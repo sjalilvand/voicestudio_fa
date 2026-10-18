@@ -263,6 +263,16 @@ fun shortErrorKey(key: String): String = when {
     key.split('.').take(2)==listOf("mobile","connect")||key=="mobile.errors.offline" -> "mobile.simple.connection_error"
     else -> "mobile.simple.error"
 }
+/** Keep the compact title while preserving the localized cause and recovery step. */
+@Composable fun ErrorMessage(key: String, params: Map<String,Any> = emptyMap(), modifier: Modifier = Modifier, color: Color = role("error")) {
+    val l=LocalL10n.current
+    val title=shortErrorKey(key)
+    Column(modifier,verticalArrangement=Arrangement.spacedBy(VSTheme.gap/2)) {
+        Text(l.t(title),color=color,style=MaterialTheme.typography.titleSmall)
+        if(key!=title&&l.has(key)) Text(l.t(key,params),color=color,style=MaterialTheme.typography.bodySmall)
+    }
+}
+
 @Composable fun EmptyState(key: String,icon: ImageVector = Icons.Default.Info) {
     Row(Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
         Icon(icon,contentDescription=null,tint=role("textMuted"));Text(tr(key),color=role("textMuted"))

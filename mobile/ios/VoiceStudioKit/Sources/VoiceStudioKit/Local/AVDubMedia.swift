@@ -1,6 +1,13 @@
 import Foundation
 @preconcurrency import AVFoundation
 
+private final class AudioReadFailure: @unchecked Sendable {
+    private let lock = NSLock()
+    private var failure: (any Error)?
+    var value: (any Error)? { lock.withLock { failure } }
+    func set(_ error: any Error) { lock.withLock { failure = error } }
+}
+
 /// AVAssetReader extracts directly to 24-kHz mono float PCM in bounded buffers.
 public struct AVPhoneAudioDecoder: PhoneAudioDecoder {
     public init() {}
@@ -22,7 +29,7 @@ public struct AVPhoneAudioDecoder: PhoneAudioDecoder {
             let handle = try FileHandle(forWritingTo: PrivateFiles.empty(output)); defer { try? handle.close(); reader.cancelReading() }
             guard reader.startReading() else { throw ClientError("mobile.simple.media_failed") }
             var count = 0
-            let totalFrames = Int((duration*24000).rounded())
+            let totalFrames = min(Int(maxSeconds*24000),Int((duration*24000).rounded()))
             func pad(_ frames: Int) throws {
                 var remaining = frames
                 while remaining > 0 { try Task.checkCancellation(); let size = min(8192,remaining); try handle.write(contentsOf: Data(count: size*4)); remaining -= size }
@@ -36,7 +43,7 @@ public struct AVPhoneAudioDecoder: PhoneAudioDecoder {
                 let timestamp = CMSampleBufferGetPresentationTimeStamp(buffer).seconds
                 guard timestamp.isFinite else { throw ClientError("mobile.simple.media_failed") }
                 let position = Int((timestamp*24000).rounded())
-                guard position <= totalFrames else { throw ClientError("mobile.simple.media_failed") }
+                if position >= totalFrames { continue }
                 if position > count { try pad(position-count); count = position }
                 let skip = max(0,count-position)
                 let frames = min(bytes.count/4-skip,totalFrames-count)
@@ -62,16 +69,16 @@ public struct AVPhoneAudioDecoder: PhoneAudioDecoder {
         var finished = false, total = 0
         while !finished {
             try Task.checkCancellation()
-            var conversionError: NSError?, readError: (any Error)?
+            var conversionError: NSError?
+            let readError = AudioReadFailure()
             let status = converter.convert(to: buffer,error: &conversionError) { count,status in
                 if input.framePosition >= input.length { status.pointee = .endOfStream; return nil }
                 guard let sourceBuffer = AVAudioPCMBuffer(pcmFormat: input.processingFormat,frameCapacity: count) else { status.pointee = .endOfStream; return nil }
                 do { try input.read(into: sourceBuffer,frameCount: count); status.pointee = .haveData; return sourceBuffer }
-                catch { readError = error; status.pointee = .endOfStream; return nil }
+                catch { readError.set(error); status.pointee = .endOfStream; return nil }
             }
-            guard status != .error, conversionError == nil, readError == nil, let channel = buffer.floatChannelData?[0] else { throw ClientError("mobile.simple.media_failed") }
-            let count = Int(buffer.frameLength); total += count
-            guard total <= Int(maxSeconds*24000)+1 else { throw ClientError("mobile.simple.audio_long") }
+            guard status != .error, conversionError == nil, readError.value == nil, let channel = buffer.floatChannelData?[0] else { throw ClientError("mobile.simple.media_failed") }
+            let count = min(Int(buffer.frameLength),max(0,Int(maxSeconds*24000)-total)); total += count
             if count > 0 {
                 let bytes = Data(bytes: channel,count: count*4)
                 try handle.write(contentsOf: bytes)
@@ -115,7 +122,9 @@ public struct AVPhoneDubMedia: PhoneDubMedia {
             let formats = try await videoTrack.load(.formatDescriptions)
             let videoInput = AVAssetWriterInput(mediaType: .video,outputSettings: nil,sourceFormatHint: formats.first)
             videoInput.transform = try await videoTrack.load(.preferredTransform)
-            let audioInput = AVAssetWriterInput(mediaType: .audio,outputSettings: [AVFormatIDKey: kAudioFormatMPEG4AAC,AVSampleRateKey: 24000,AVNumberOfChannelsKey: 1,AVEncoderBitRateKey: 96000])
+            // Let the platform select a supported bitrate for 24-kHz mono AAC.
+            // Forcing 96 kb/s can fail with "Cannot Encode Media" (-11861).
+            let audioInput = AVAssetWriterInput(mediaType: .audio,outputSettings: [AVFormatIDKey: kAudioFormatMPEG4AAC,AVSampleRateKey: 24000,AVNumberOfChannelsKey: 1])
             guard writer.canAdd(videoInput), writer.canAdd(audioInput) else { throw ClientError("mobile.simple.media_failed") }
             writer.add(videoInput); writer.add(audioInput)
             let provenance = AVMutableMetadataItem(); provenance.identifier = .commonIdentifierDescription; provenance.value = "VoiceStudio synthetic audio" as NSString

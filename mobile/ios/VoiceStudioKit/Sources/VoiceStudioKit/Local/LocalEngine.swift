@@ -8,8 +8,10 @@ public struct PCMChunk: Sendable {
     public init(pcm16: Data, sampleRate: Int = 16000) throws {
         guard pcm16.count.isMultiple(of: 2) else { throw ClientError("mobile.errors.audio") }
         self.sampleRate = sampleRate
-        samples = stride(from: 0, to: pcm16.count, by: 2).map { index in
-            Float(Int16(bitPattern: UInt16(pcm16[index]) | UInt16(pcm16[index + 1]) << 8)) / 32768
+        samples = pcm16.withUnsafeBytes { bytes in
+            stride(from: 0,to: bytes.count,by: 2).map { index in
+                Float(Int16(bitPattern: UInt16(bytes[index]) | UInt16(bytes[index + 1]) << 8)) / 32768
+            }
         }
     }
 }
@@ -83,7 +85,7 @@ actor NativeLease {
     }
 }
 /// C allocations never escape the worker. Only the atomic cancellation flag crosses tasks.
-private final class NativeCancellation: @unchecked Sendable {
+final class NativeCancellation: @unchecked Sendable {
     let pointer: OpaquePointer
     private let lock = NSLock()
     private var finished = false
@@ -137,39 +139,50 @@ public actor NativeLocalEngine: LocalEngine {
         guard let samples = value.samples, value.count > 0 else { throw ClientError("mobile.local.inference_failed") }
         return LocalAudio(samples: Array(UnsafeBufferPointer(start: samples, count: Int(value.count))), sampleRate: Int(value.sample_rate))
     }
-    private func execute<T: Sendable>(_ model: PhoneModel, capability: ModelCapability, progress: @escaping EngineProgressHandler,
-                                      body: @escaping @Sendable (PhoneModel, URL, String, NativeCancellation) throws -> T) async throws -> T {
+    func execute<T: Sendable>(_ model: PhoneModel, capability: ModelCapability, progress: @escaping EngineProgressHandler,
+                              body: @escaping @Sendable (PhoneModel, URL, String, NativeCancellation) throws -> T) async throws -> T {
         guard model.capability == capability else { throw ClientError("mobile.local.model_incompatible") }
-        let root = try await store.acquire(model)
-        do {
-            try await NativeLease.shared.acquire()
-        } catch { await store.release(model); throw error }
-        defer { Task { await NativeLease.shared.release() } }
-        do {
-            let token = try NativeCancellation()
-            let library = libraries[model.runtime] ?? ""
-            let work = Task.detached(priority: .userInitiated) { defer { token.finish() }; return try body(model, root, library, token) }
-            let result = try await withTaskCancellationHandler {
-                try await withThrowingTaskGroup(of: Void.self) { group in
-                    group.addTask {
-                        await progress(EngineProgress(stage: .loading, fraction: 0))
-                        while !token.done {
-                            try Task.checkCancellation()
-                            await progress(EngineProgress(stage: .running, fraction: Double(vs_progress(token.pointer))))
-                            try await Task.sleep(for: .milliseconds(100))
-                        }
-                    }
-                    defer { group.cancelAll() }
-                    let result = try await work.value
-                    try Task.checkCancellation()
-                    return result
-                }
-            } onCancel: { token.cancel(); work.cancel() }
-            try await store.checkPermission(model)
+        _ = try await store.acquire(model)
+        let token: NativeCancellation
+        do { token = try NativeCancellation() } catch { await store.release(model); throw error }
+        let library = libraries[model.runtime] ?? "", store = store
+        // The worker owns both leases. Awaiter cancellation cannot release memory in use by C.
+        let work = Task.detached(priority: .userInitiated) {
+            do { try await NativeLease.shared.acquire() }
+            catch { token.finish(); await store.release(model); throw error }
+            let result: Result<T, any Error>
+            do {
+                // Another queued load may have invalidated stamps or lost licence permission.
+                let root = try await store.authorize(model)
+                try Task.checkCancellation()
+                result = .success(try body(model,root,library,token))
+            }
+            catch { result = .failure(error) }
+            token.finish() // body has returned and all native defer cleanup has completed.
+            if case .failure(let error) = result, !(error is CancellationError) { await store.invalidateVerification(model) }
             await store.release(model)
-            await progress(EngineProgress(stage: .finished, fraction: 1))
-            return result
-        } catch { await store.release(model); throw error }
+            await NativeLease.shared.release()
+            return try result.get()
+        }
+        let result = try await withTaskCancellationHandler {
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                group.addTask {
+                    await progress(EngineProgress(stage: .loading,fraction: 0))
+                    while !token.done {
+                        try Task.checkCancellation()
+                        await progress(EngineProgress(stage: .running,fraction: Double(vs_progress(token.pointer))))
+                        try await Task.sleep(for: .milliseconds(100))
+                    }
+                }
+                defer { group.cancelAll() }
+                let result = try await work.value
+                try Task.checkCancellation()
+                return result
+            }
+        } onCancel: { token.cancel(); work.cancel() }
+        try await store.checkPermission(model)
+        await progress(EngineProgress(stage: .finished,fraction: 1))
+        return result
     }
     public func synthesize(model: PhoneModel, text: String, speaker: Int = 0, speed: Float = 1, progress: @escaping EngineProgressHandler = { _ in }) async throws -> LocalAudio {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, speaker >= 0, speaker <= Int(Int32.max), speed.isFinite, speed > 0, speed <= 4, speaker < Int(model.config["num_speakers"]?.number ?? 1) else { throw ClientError("mobile.local.model_incompatible") }
@@ -227,7 +240,7 @@ public actor NativeLocalEngine: LocalEngine {
     }
     public func streamTranscribe(model: PhoneModel, chunks: AsyncThrowingStream<PCMChunk, any Error>, progress: @escaping EngineProgressHandler = { _ in }) async throws -> AsyncThrowingStream<TranscriptUpdate, any Error> {
         guard model.capability == .stream else { throw ClientError("mobile.local.model_incompatible") }
-        let root = try await store.acquire(model)
+        _ = try await store.acquire(model)
         let token: NativeCancellation
         do { token = try NativeCancellation() } catch { await store.release(model); throw error }
         let library = libraries[model.runtime] ?? ""
@@ -237,8 +250,9 @@ public actor NativeLocalEngine: LocalEngine {
             do {
                 try await NativeLease.shared.acquire()
             } catch { continuation.finish(throwing: error); await store.release(model); return }
-            defer { Task { await NativeLease.shared.release() } }
             do {
+                let root = try await store.authorize(model)
+                try Task.checkCancellation()
                 await progress(EngineProgress(stage: .loading, fraction: 0))
                 let config = NativeConfiguration(model: model, root: root, library: library)
                 guard let stream = vs_stream_create(&config.value) else { throw ClientError("mobile.local.inference_failed") }
@@ -265,7 +279,12 @@ public actor NativeLocalEngine: LocalEngine {
                 try accept(PCMChunk(samples: [], sampleRate: 16000), finished: true)
                 await progress(EngineProgress(stage: .finished, fraction: 1))
                 continuation.finish()
-            } catch { continuation.finish(throwing: error) }
+            } catch {
+                if !(error is CancellationError) { await store.invalidateVerification(model) }
+                continuation.finish(throwing: error)
+            }
+            // The stream and recognizer have been freed by the inner scope's defer.
+            await NativeLease.shared.release()
             await store.release(model)
         }
         continuation.onTermination = { _ in token.cancel(); work.cancel() }

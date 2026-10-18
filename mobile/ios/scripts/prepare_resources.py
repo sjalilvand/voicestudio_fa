@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Copy authoritative catalogs; localize OS permission prompts; derive version from root."""
 import argparse
+import hashlib
 import json
 import pathlib
 import plistlib
@@ -22,6 +23,11 @@ def prepare_brand_assets(output):
         subprocess.run(["xcrun", "swiftc", "-module-cache-path", str(cache / "modules"), str(source), "-o", str(renderer)], check=True)
     subprocess.run([str(renderer), str(ROOT / "docs/logo.png"), str(ROOT / "mobile/contract/tokens.json"), str(output)], check=True)
 
+    artwork = output / "HomeArtwork.imageset"
+    artwork.mkdir(parents=True, exist_ok=True)
+    subprocess.run(["sips", "-s", "format", "png", str(ROOT / "electron/public/signal-field.webp"), "--out", str(artwork / "artwork.png")], check=True, stdout=subprocess.DEVNULL)
+    (artwork / "Contents.json").write_text(json.dumps({"images": [{"filename": "artwork.png", "idiom": "universal"}], "info": {"version": 1, "author": "xcode"}}))
+
 
 def merge(base, addition):
     for key, value in addition.items():
@@ -38,8 +44,30 @@ def lookup(catalog, key):
     return value if isinstance(value, str) else None
 
 
+def validate_native_notices(directory, pins):
+    manifest = json.loads((directory / "sources.json").read_text())
+    expected = {"sherpa-onnx", "omnivoice.cpp", "omnivoice-ggml", "llama.cpp", "llama-ggml",
+                "espeak-ng-for-piper", "piper-phonemize", "kaldi-native-fbank", "kissfft",
+                "kaldi-decoder", "kaldifst", "openfst", "simple-sentencepiece", "json", "hclust-cpp", "eigen", "onnxruntime"}
+    if {entry["name"] for entry in manifest} != expected:
+        raise ValueError("Native licence set is incomplete; run mobile/native/ios/prepare-notices.py")
+    for entry in manifest:
+        text = (directory / (entry["name"] + ".txt")).read_bytes()
+        if hashlib.sha256(text).hexdigest() != entry["notice_sha256"]:
+            raise ValueError("Native licence changed: " + entry["name"])
+        if entry["name"] in pins:
+            pin = pins[entry["name"]]["source"]
+            if entry["source"] != pin["repo"] + "/tree/" + pin["commit"]:
+                raise ValueError("Native licence pin drift: " + entry["name"])
+    if not (directory / "Corresponding-source.txt").is_file():
+        raise ValueError("Missing GPL corresponding sources")
+
+
 def prepare(output, info):
     output.mkdir(parents=True, exist_ok=True)
+    legal = IOS / "VoiceStudio/Resources/NativeLicences"
+    validate_native_notices(legal,json.loads((ROOT / "mobile/native/pins.json").read_text()))
+    shutil.copytree(legal,output / "NativeLicences",dirs_exist_ok=True)
     notices = ROOT / "mobile/native/ios/build/xcframeworks/Notices"
     if notices.is_dir():
         shutil.copytree(notices, output / "NativeLicences", dirs_exist_ok=True)

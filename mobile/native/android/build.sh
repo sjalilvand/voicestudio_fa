@@ -2,7 +2,7 @@
 set -euo pipefail
 root="$(cd "$(dirname "$0")" && pwd)"
 export GIT_CEILING_DIRECTORIES="$root/build/sources"
-python3 "$root/fetch.py"
+if [[ "${1:-}" != "--skip-fetch" ]]; then python3 "$root/fetch.py"; fi
 if [[ "${1:-}" == "--fetch-only" ]]; then exit 0; fi
 sdk="${ANDROID_HOME:-/opt/homebrew/share/android-commandlinetools}"
 ndk="$sdk/ndk/27.1.12297006"
@@ -26,9 +26,9 @@ for abi in arm64-v8a x86_64; do
     cp "$toolchain/sysroot/usr/lib/$([[ "$abi" == arm64-v8a ]] && echo aarch64-linux-android || echo x86_64-linux-android)/libc++_shared.so" "$root/build/jniLibs/$abi/"
 done
 
-mkdir -p "$root/build/assets/licenses"
-cp "$root/build/sources/omnivoice.cpp-$omni_commit/LICENSE" "$root/build/assets/licenses/omnivoice-MIT.txt"
-cp "$root/build/sources/omnivoice.cpp-$omni_commit/ggml/LICENSE" "$root/build/assets/licenses/omnivoice-ggml-MIT.txt"
-cp "$root/build/sources/llama.cpp-$llama_commit/LICENSE" "$root/build/assets/licenses/llama-MIT.txt"
+# Legal texts are checked in as app assets; retire copies from earlier builds.
+rm -f "$root/build/assets/licenses/omnivoice-MIT.txt" "$root/build/assets/licenses/omnivoice-ggml-MIT.txt" "$root/build/assets/licenses/llama-MIT.txt"
+mkdir -p "$root/build/assets"
+python3 "$root/verify-notices.py"
 
 python3 "$root/verify.py" "$ndk"

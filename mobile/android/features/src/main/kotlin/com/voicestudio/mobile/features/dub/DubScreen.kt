@@ -20,6 +20,7 @@ import com.voicestudio.mobile.designsystem.*
 import com.voicestudio.mobile.data.DubWorker
 import com.voicestudio.mobile.network.*
 import kotlinx.coroutines.*
+import kotlinx.serialization.decodeFromString
 import java.io.File
 
 @Composable fun DubScreen(vm:StudioViewModel) {
@@ -27,7 +28,7 @@ import java.io.File
         if(location==com.voicestudio.mobile.local.RunLocation.COMPUTER) ComputerDubScreen(vm) else PhoneDubScreen(vm,model)
     }
 }
-@Composable private fun ComputerDubScreen(vm:StudioViewModel) {
+@Composable fun ComputerDubScreen(vm:StudioViewModel) {
     val context=LocalContext.current
     val state by vm.state.collectAsState()
     val work=remember {WorkManager.getInstance(context)}
@@ -139,7 +140,10 @@ import java.io.File
             Group {Column(Modifier.fillMaxWidth().padding(VSTheme.inset),verticalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
             val value=if(info.state==WorkInfo.State.SUCCEEDED) 100 else info.progress.getInt("percent",0)
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                Text(tr(if(stage.contains("stage_")) stage else shortErrorKey(stage)),Modifier.weight(1f),maxLines=1,overflow=TextOverflow.Ellipsis)
+                if(info.state==WorkInfo.State.FAILED) {
+                    val params=runCatching {kotlinx.serialization.json.Json.decodeFromString<Map<String,String>>(info.outputData.getString("error_params") ?: "{}")}.getOrDefault(emptyMap())
+                    ErrorMessage(stage,params,Modifier.weight(1f))
+                } else Text(tr(stage),Modifier.weight(1f),maxLines=1,overflow=TextOverflow.Ellipsis)
                 Text(tr("mobile.simple.percent",mapOf("percent" to value)))
             }
             if(!info.state.isFinished) {

@@ -56,7 +56,7 @@ import com.voicestudio.mobile.local.*
                     LinearProgressIndicator(progress={if(p.total>0) (p.received.toFloat()/p.total).coerceIn(0f,1f) else 0f},modifier=Modifier.fillMaxWidth())
                     Text(tr("mobile.local.transfer",mapOf("received" to Formatter.formatFileSize(context,p.received),"total" to Formatter.formatFileSize(context,p.total))))
                 }
-                p.error?.let {Text(tr(shortErrorKey(it)),color=role("error"),maxLines=1)}
+                p.error?.let {ErrorMessage(it,mapOf("ram" to model.minRamGb))}
             }
             if(downloading) Secondary("common.cancel") {vm.phone.cancelDownload(model)}
             else if(!installed) Secondary("mobile.local.download",fits) {

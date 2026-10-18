@@ -61,6 +61,17 @@ targets:
         outputFiles:
           - $(DERIVED_FILE_DIR)/VoiceStudio-Info.plist
           - $(SRCROOT)/../.generated/Brand.xcassets
+  VoiceStudioKitTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: ../VoiceStudioKit/Tests/VoiceStudioKitTests
+    dependencies:
+      - target: VoiceStudio
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: 'YES'
+        OTHER_SWIFT_FLAGS: $(inherited) -Xcc -fmodule-map-file=$(SRCROOT)/../VoiceStudioKit/Sources/VSNative/include/module.modulemap
   VoiceStudioUITests:
     type: bundle.ui-testing
     platform: iOS
@@ -72,6 +83,13 @@ targets:
       base:
         GENERATE_INFOPLIST_FILE: 'YES'
 schemes:
+  VoiceStudioNative:
+    build:
+      targets:
+        VoiceStudio: all
+    test:
+      targets:
+        - VoiceStudioKitTests
   VoiceStudio:
     build:
       targets:

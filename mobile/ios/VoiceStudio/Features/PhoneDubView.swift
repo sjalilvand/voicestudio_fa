@@ -4,6 +4,9 @@ import UniformTypeIdentifiers
 import AVKit
 
 struct PhoneDubView: View {
+    var projectID: UUID? = nil
+    var libraryOnly = false
+    private var records: [PhoneDubRecord] { model.phone.dubs.filter { projectID == nil || $0.id == projectID } }
     @Environment(AppModel.self) private var model
     @Environment(\.vsTheme) private var theme
     var connect = false
@@ -24,6 +27,7 @@ struct PhoneDubView: View {
     private var ready: Bool { model.phone.dubReady && !connect }
     var body: some View {
         Page {
+            if projectID == nil && !libraryOnly {
             if connect { NavigationLink(model.t("mobile.simple.reconnect")) { ConnectView() } }
             Label(model.t("mobile.simple.source"),systemImage: "doc")
             Button(model.t("mobile.dub.pick_media"),systemImage: "doc.badge.plus") { importing = true }.disabled(copying)
@@ -57,7 +61,8 @@ struct PhoneDubView: View {
                 .disabled(!ready || !consent || source == nil || targets.isEmpty || model.busy || copying || model.phone.activeDub != nil)
                 .accessibilityIdentifier("dub.start")
             if copying { ProgressView().accessibilityLabel(model.t("mobile.ios.progress")) }
-            ForEach(model.phone.dubs.filter { !$0.checkpoint.done }) { record in
+            }
+            ForEach(records.filter { !$0.checkpoint.done }) { record in
                 Card {
                     Text(record.request.title).lineLimit(1)
                     let progress = model.phone.activeDub == record.id ? model.phone.dubProgress : nil
@@ -78,8 +83,8 @@ struct PhoneDubView: View {
                 }
             }
             Text(model.t("mobile.dub.history"))
-            if model.phone.dubs.allSatisfy({ $0.checkpoint.outputs.isEmpty }) { EmptyState(key: "mobile.simple.empty_dubs",icon: "film") }
-            ForEach(model.phone.dubs) { record in
+            if records.allSatisfy({ $0.checkpoint.outputs.isEmpty }) { EmptyState(key: "mobile.simple.empty_dubs",icon: "film") }
+            ForEach(records) { record in
                 ForEach(record.checkpoint.outputs) { output in
                     HStack {
                         VStack(alignment: .leading) { Text(record.request.title).lineLimit(1); Text(output.name).font(.caption).foregroundStyle(theme.color("textMuted")) }.frame(maxWidth: .infinity,alignment: .leading)
@@ -90,7 +95,7 @@ struct PhoneDubView: View {
                     }.labelStyle(.iconOnly).buttonStyle(VSButtonStyle(kind: .tertiary))
                 }
             }
-        }.navigationTitle(model.t("mobile.tabs.dub")).navigationBarTitleDisplayMode(.large)
+        }.navigationTitle(projectID != nil ? (records.first?.request.title ?? model.t("projects.title")) : model.t(libraryOnly ? "projects.title" : "mobile.tabs.dub")).navigationBarTitleDisplayMode(.large)
         .fileImporter(isPresented: $importing,allowedContentTypes: [.movie,.audio]) { result in
             switch result { case .success(let url): source = SelectedMedia(url: url); case .failure: model.error = ClientError("mobile.simple.media_failed") }
         }

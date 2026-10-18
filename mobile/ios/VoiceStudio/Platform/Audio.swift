@@ -165,7 +165,7 @@ struct AudioPlayerView: View {
         try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker]); try session.setActive(true)
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("wav")
         let recorder = try AVAudioRecorder(url: url, settings: [AVFormatIDKey: kAudioFormatLinearPCM, AVSampleRateKey: 24000, AVNumberOfChannelsKey: 1, AVLinearPCMBitDepthKey: 16])
-        guard recorder.record() else { throw ClientError("mobile.errors.audio") }
+        guard recorder.record(forDuration: 29) else { throw ClientError("mobile.errors.audio") }
         self.recorder = recorder; file = url; recording = true; seconds = 0
         timer = Task { [weak self] in while !Task.isCancelled { try? await Task.sleep(for: .seconds(1)); guard let self, recording else { return }; seconds += 1 } }
     }

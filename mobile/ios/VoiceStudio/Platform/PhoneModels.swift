@@ -50,13 +50,16 @@ final class WifiState: @unchecked Sendable {
             } else {
                 root = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true).appendingPathComponent("PhoneModels", isDirectory: true)
             }
-            dubStore = try PhoneDubStore(root: root.appendingPathComponent("dubs"))
-            voiceStore = try PhoneVoiceStore(root: root.appendingPathComponent("voices"))
-            generationStore = try PhoneGenerationStore(root: root.appendingPathComponent("recent"))
             let store = try ModelStore(root: root)
             self.store = store; engine = NativeLocalEngine(store: store)
             guard let url = bundle.url(forResource: "models", withExtension: "json", subdirectory: "Catalogs") else { throw ClientError("mobile.local.catalogue_failed") }
             models = try ModelCatalogue.decode(Data(contentsOf: url)).models
+            do { dubStore = try PhoneDubStore(root: root.appendingPathComponent("dubs")) }
+            catch { self.error = ClientError("mobile.errors.file") }
+            do { voiceStore = try PhoneVoiceStore(root: root.appendingPathComponent("voices")) }
+            catch { self.error = ClientError("mobile.errors.file") }
+            do { generationStore = try PhoneGenerationStore(root: root.appendingPathComponent("recent")) }
+            catch { self.error = ClientError("mobile.errors.file") }
         } catch {
             // Initialization remains usable for the paired-host flows; the Models page explains the failure.
 
@@ -64,8 +67,6 @@ final class WifiState: @unchecked Sendable {
         }
     }
     func refresh() async {
-        do { voices = try await voiceStore?.list() ?? []; recent = try await generationStore?.list() ?? []; dubs = try await dubStore?.list() ?? [] }
-        catch { self.error = error as? ClientError ?? ClientError("mobile.errors.file") }
         guard let store else { return }
         var downloaded = Set<String>(); var permitted = Set<String>(); var bytes: [String: Int64] = [:]
         for model in models {
@@ -74,6 +75,13 @@ final class WifiState: @unchecked Sendable {
             bytes[model.id] = await store.modelStorage(model)
         }
         installed = downloaded; accepted = permitted; modelBytes = bytes; used = await store.storageUsed()
+        do { voices = try await voiceStore?.list() ?? [] }
+        catch { self.error = ClientError("mobile.errors.file") }
+        do { recent = try await generationStore?.list() ?? [] }
+        catch { self.error = ClientError("mobile.errors.file") }
+        do { dubs = try await dubStore?.list() ?? [] }
+        catch { self.error = ClientError("mobile.errors.file") }
+
     }
     func ready(_ model: PhoneModel) -> Bool { installed.contains(model.id) && accepted.contains(model.id) && model.fits() }
     func candidates(_ capability: ModelCapability) -> [PhoneModel] { models.filter { $0.capability == capability } }

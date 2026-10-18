@@ -30,10 +30,13 @@ class PhoneVoiceStore(private val root: File) {
         root.listFiles().orEmpty().filter {it.isDirectory&&!it.name.startsWith('.')}.mapNotNull {dir ->
             val metadata=File(dir,"voice.json")
             if(!metadata.exists()) return@mapNotNull null
-            val voice=LocalJson.decodeFromString<PhoneVoice>(metadata.readText())
-            require(voice.id==dir.name&&voice.sampleRate==24000&&voice.transcript.isNotBlank()&&voice.name.isNotBlank())
-            require(File(dir,"reference.pcm").length() in 9600..2_880_000)
-            voice
+            try {
+                val voice=LocalJson.decodeFromString<PhoneVoice>(metadata.readText())
+                directory(voice.id)
+                require(voice.id==dir.name&&voice.sampleRate==24000&&voice.transcript.isNotBlank()&&voice.name.isNotBlank())
+                require(File(dir,"reference.pcm").length() in 9600..2_880_000)
+                voice
+            } catch(e:CancellationException) {throw e} catch(_:Exception) {null}
         }.sortedByDescending {it.createdAt}
     }}
     suspend fun create(name: String, source: File, consent: Boolean, asr: PhoneModel, engine: LocalEngine,

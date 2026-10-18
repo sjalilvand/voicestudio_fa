@@ -25,9 +25,24 @@ class ModelDownloads internal constructor(
     private val wifi: () -> Boolean, private val freeBytes: () -> Long,
     private val client: OkHttpClient = OkHttpClient.Builder().followRedirects(false).followSslRedirects(false).build(),
     private val endpoints: List<String> = listOf("https://huggingface.co", "https://hf-mirror.com"),
-    private val allowTestHttp: Boolean = false
+    private val allowTestHttp: Boolean = false,
+    private val digest: (File, ()->Unit)->String = ::sha256
 ) {
     constructor(root: File, licence: LicenceGate, ramBytes: Long, wifi: () -> Boolean) : this(root,licence,ramBytes,wifi,{root.apply {mkdirs()}.usableSpace})
+    private data class VerifiedStamp(val size: Long, val modified: Long, val catalogue: String)
+    private val verified=ConcurrentHashMap<File,VerifiedStamp>()
+    private fun stamp(file: File, catalogue: String)=VerifiedStamp(file.length(),file.lastModified(),catalogue)
+    private fun verifiedFile(file: File, expected: ModelFile, catalogue: String, check: ()->Unit): Boolean {
+        check()
+        if(!file.isFile||file.length()!=expected.size) {verified.remove(file);return false}
+        val before=stamp(file,catalogue)
+        if(verified[file]==before) return true
+        verified.remove(file)
+        if(digest(file,check)!=expected.sha256||stamp(file,catalogue)!=before) return false
+        verified[file]=before
+        return true
+    }
+    private fun invalidate(model: PhoneModel) {model.files.forEach {verified.remove(File(dir(model),it.path))}}
     private val locks=ConcurrentHashMap<String,Mutex>()
     private fun lock(model: PhoneModel)=locks.getOrPut(model.id) {Mutex()}
     private val mutable=MutableStateFlow<Map<String,DownloadProgress>>(emptyMap())
@@ -47,7 +62,12 @@ class ModelDownloads internal constructor(
             fit(model);licence.requireAccepted(model);networkAllowed(allowMobile)
             val job=currentCoroutineContext().job
             val directory=dir(model).apply {mkdirs()}
-            val needed=model.files.sumOf { f -> (f.size-File(directory,f.path+".part").length()).coerceAtLeast(0) }
+            val catalogue=modelPin(model).identity
+            val completedFiles=model.files.filter {verifiedFile(File(directory,it.path),it,catalogue) {job.ensureActive()}}.toSet()
+            val needed=model.files.filterNot {it in completedFiles}.sumOf { f ->
+                val partial=File(directory,f.path+".part").length().takeIf {it<=f.size} ?: 0L
+                f.size-partial
+            }
             if(freeBytes()<needed+16*1024*1024) throw ClientFailure("mobile.local.storage_required")
             mutable.update {it+(model.id to DownloadProgress(total=model.totalBytes,running=true))}
             try {
@@ -55,8 +75,8 @@ class ModelDownloads internal constructor(
                 model.files.forEach { f ->
                     currentCoroutineContext().ensureActive();licence.requireAccepted(model)
                     val target=File(directory,f.path).apply {parentFile!!.mkdirs()}
-                    if(target.isFile&&target.length()==f.size&&sha256(target) {job.ensureActive()}==f.sha256) {completed+=f.size;return@forEach}
-                    target.delete()
+                    if(f in completedFiles) {completed+=f.size;return@forEach}
+                    verified.remove(target);target.delete()
                     val part=File(directory,f.path+".part")
                     if(part.length()>f.size) part.delete()
                     var last: IOException?=null
@@ -68,9 +88,10 @@ class ModelDownloads internal constructor(
                     }
                     if(last!=null) throw ClientFailure("mobile.local.download_failed")
                     currentCoroutineContext().ensureActive()
-                    if(part.length()!=f.size||sha256(part) {job.ensureActive()}!=f.sha256) {part.delete();throw ClientFailure("mobile.local.checksum_failed")}
+                    if(part.length()!=f.size||digest(part) {job.ensureActive()}!=f.sha256) {part.delete();throw ClientFailure("mobile.local.checksum_failed")}
                     licence.requireAccepted(model)
                     if(!part.renameTo(target)) throw ClientFailure("mobile.local.storage_required")
+                    verified[target]=stamp(target,catalogue)
                     completed+=f.size
                 }
                 licence.requireAccepted(model)
@@ -132,18 +153,25 @@ class ModelDownloads internal constructor(
         throw IOException("Too many download redirects")
     }
     suspend fun delete(model: PhoneModel) = withContext(Dispatchers.IO) {lock(model).withLock {
+        invalidate(model)
         if(dir(model).exists()&&!dir(model).deleteRecursively()) throw ClientFailure("mobile.local.storage_required")
         mutable.update {it-model.id}
     }}
-    /** Same lease protects inference from deletion. Hash every file before use. */
+    /** Deletion and inference share a lease. Rehash only changed files or after a failed native use. */
     suspend fun <T> withModel(model: PhoneModel, use: suspend (File)->T): T = withContext(Dispatchers.IO) {lock(model).withLock {
         fit(model);licence.requireAccepted(model)
         if(!installed(model)) throw ClientFailure("mobile.local.model_required")
         val job=currentCoroutineContext().job
+        val catalogue=modelPin(model).identity
         model.files.forEach { f ->
             currentCoroutineContext().ensureActive()
-            if(sha256(File(dir(model),f.path)) {job.ensureActive()}!=f.sha256) {File(dir(model),".verified").delete();throw ClientFailure("mobile.local.checksum_failed")}
+            if(!verifiedFile(File(dir(model),f.path),f,catalogue) {job.ensureActive()}) {
+                invalidate(model);File(dir(model),".verified").delete();throw ClientFailure("mobile.local.checksum_failed")
+            }
         }
-        licence.requireAccepted(model);use(dir(model))
+        licence.requireAccepted(model)
+        try {use(dir(model))}
+        catch(e:CancellationException) {throw e}
+        catch(e:Throwable) {invalidate(model);throw e}
     }}
 }

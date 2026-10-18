@@ -182,7 +182,7 @@ struct LocalDownloadPrompt: View {
                 if let item = needed.first(where: { !$0.fits() }) {
                     Text(model.t("mobile.simple.ram", ["ram": String(item.min_ram_gb)])).font(.caption)
                 }
-            }.accessibilityIdentifier("models.prompt")
+            }.accessibilityElement(children: .contain).accessibilityIdentifier("models.prompt")
         }
     }
 }

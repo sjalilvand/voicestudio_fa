@@ -1,10 +1,62 @@
 import Foundation
 import Testing
+@preconcurrency import AVFoundation
 @testable import VoiceStudioKit
 
 private func fixtureRoot() throws -> URL {
     let root = FileManager.default.temporaryDirectory.appendingPathComponent("phone-workflow-"+UUID().uuidString)
     try PrivateFiles.directory(root); return root
+}
+
+@Test func phoneVideoMuxPreservesOrientationAndMarksPlayableAudio() async throws {
+    let root = try fixtureRoot(); defer { try? FileManager.default.removeItem(at: root) }
+    let source = root.appendingPathComponent("source.mp4")
+    let writer = try AVAssetWriter(outputURL: source, fileType: .mp4)
+    let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
+        AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: 64, AVVideoHeightKey: 64
+    ])
+    input.transform = CGAffineTransform(rotationAngle: .pi / 2)
+    let adapter = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input, sourcePixelBufferAttributes: [
+        kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+        kCVPixelBufferWidthKey as String: 64, kCVPixelBufferHeightKey as String: 64
+    ])
+    try #require(writer.canAdd(input)); writer.add(input)
+    try #require(writer.startWriting()); writer.startSession(atSourceTime: .zero)
+    defer { if writer.status == .writing { writer.cancelWriting() } }
+    for frame in 0..<30 {
+        let deadline = ContinuousClock.now + .seconds(10)
+        while !input.isReadyForMoreMediaData && ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        try #require(input.isReadyForMoreMediaData)
+        var buffer: CVPixelBuffer?
+        try #require(CVPixelBufferCreate(kCFAllocatorDefault, 64, 64, kCVPixelFormatType_32BGRA, nil, &buffer) == kCVReturnSuccess)
+        let pixels = try #require(buffer)
+        CVPixelBufferLockBaseAddress(pixels, [])
+        memset(CVPixelBufferGetBaseAddress(pixels), 0, CVPixelBufferGetDataSize(pixels))
+        CVPixelBufferUnlockBaseAddress(pixels, [])
+        try #require(adapter.append(pixels, withPresentationTime: CMTime(value: Int64(frame), timescale: 30)))
+    }
+    input.markAsFinished(); writer.endSession(atSourceTime: CMTime(seconds: 1, preferredTimescale: 30))
+    await writer.finishWriting(); try #require(writer.status == .completed)
+    let wave = root.appendingPathComponent("marked.wav")
+    try LocalAudio(samples: (0..<24000).map { Float(sin(Double($0) * 2 * .pi * 440 / 24000) * 0.3) }, sampleRate: 24000).markSynthetic().write(to: wave)
+    let result = try await AVPhoneDubMedia().finish(source: source, markedWave: wave, output: root.appendingPathComponent("dub"), audioOnly: false, progress: { _ in })
+    let asset = AVURLAsset(url: result)
+    let video = try #require(try await asset.loadTracks(withMediaType: .video).first)
+    #expect(try await asset.loadTracks(withMediaType: .audio).count == 1)
+    let transform = try await video.load(.preferredTransform)
+    #expect(abs(transform.b - 1) < 0.001 && abs(transform.c + 1) < 0.001)
+    #expect(abs(try await asset.load(.duration).seconds - 1) < 0.1)
+    let metadata = try await asset.load(.commonMetadata)
+    var marked = false
+    for item in metadata where item.commonKey == .commonKeyDescription {
+        if try await item.load(.stringValue) == "VoiceStudio synthetic audio" { marked = true }
+    }
+    #expect(marked)
+    let decoded = try await AVPhoneAudioDecoder().decode(source: result, output: root.appendingPathComponent("decoded.pcm"), maxSeconds: 5, progress: { _ in })
+    #expect(try decoded.frames >= 21600)
+    #expect(try decoded.read(start: 0, count: min(24000, decoded.frames)).samples.contains { abs($0) > 0.01 })
 }
 private func fixtureModel(_ capability: ModelCapability) throws -> PhoneModel {
     try ModelCatalogue.decode(Data(contentsOf: repository.appendingPathComponent("mobile/contract/models.json"))).models.first { $0.capability == capability }!
@@ -224,4 +276,49 @@ func realAuxiliaryPhoneDubOfflineAndResume() async throws {
         if metadata == "voice.json" { _ = try PhoneVoiceStore(root: library) } else { _ = try PhoneDubStore(root: library) }
         #expect(!FileManager.default.fileExists(atPath: pending.path))
     }
+}
+
+@Test func reviewBlankDubReferenceFallsBackAndRepairsSavedBlank() async throws {
+    let root = try fixtureRoot(); defer { try? FileManager.default.removeItem(at: root) }
+    let source = root.appendingPathComponent("source.wav"); try Data("fixture".utf8).write(to: source)
+    let models = try [fixtureModel(.asr),fixtureModel(.translate),fixtureModel(.clone)]
+    let store = try PhoneDubStore(root: root.appendingPathComponent("dubs")), engine = FixtureEngine()
+    await engine.empty(); await engine.failOnClone(2)
+    let request = try await store.create(source: source,title: "Source",targets: [PhoneDubTarget(code: "fr",name: "French")],models: models,consent: true,audioOnly: true)
+    let pipeline = PhoneDubPipeline(store: store,engine: engine,decoder: FixtureDecoder(),media: FixtureMedia())
+    await #expect(throws: CancellationError.self) { try await pipeline.run(id: request.id,models: models) }
+    var checkpoint = try await store.checkpoint(request.id)
+    #expect(checkpoint.segments.first?.referenceText == "Hello")
+    if checkpoint.segments.count > 1 { checkpoint.segments[1].referenceText = " \n"; try await store.save(request.id,checkpoint) }
+    let result = try await pipeline.run(id: request.id,models: models)
+    #expect(result.done)
+    #expect(result.segments.map(\.referenceText) == ["Hello","World"])
+}
+
+@Test func reviewCorruptRecordsDoNotHideHealthyLibraries() async throws {
+    let root = try fixtureRoot(); defer { try? FileManager.default.removeItem(at: root) }
+    let voicesRoot = root.appendingPathComponent("voices"), dubsRoot = root.appendingPathComponent("dubs")
+    let voices = try PhoneVoiceStore(root: voicesRoot), dubs = try PhoneDubStore(root: dubsRoot)
+    let recentRoot = root.appendingPathComponent("recent"), recent = try PhoneGenerationStore(root: recentRoot)
+    let voice = try await voices.create(name: "Voice",source: root,consent: true,asr: fixtureModel(.asr),engine: FixtureEngine(),decoder: FixtureDecoder())
+    let source = root.appendingPathComponent("source.wav"); try Data("fixture".utf8).write(to: source)
+    let request = try await dubs.create(source: source,title: "Source",targets: [PhoneDubTarget(code: "fr",name: "French")],models: [fixtureModel(.asr),fixtureModel(.translate),fixtureModel(.clone)],consent: true)
+    let generation = try await recent.save(text: "Hello",audio: LocalAudio(samples: [0.2],sampleRate: 24000))
+    for (directory,metadata) in [(voicesRoot,"voice.json"),(dubsRoot,"request.json")] {
+        let bad = directory.appendingPathComponent(UUID().uuidString); try PrivateFiles.directory(bad)
+        try Data("broken".utf8).write(to: bad.appendingPathComponent(metadata))
+    }
+    try Data("broken".utf8).write(to: recentRoot.appendingPathComponent("broken.json"))
+    #expect(try await voices.list() == [voice])
+    #expect(try await dubs.list().map(\.id) == [request.id])
+    #expect(try await recent.list().map(\.id) == [generation.id])
+}
+
+@Test func reviewReferenceDecodeCapsAcceptedDurationTolerance() async throws {
+    let root = try fixtureRoot(); defer { try? FileManager.default.removeItem(at: root) }
+    let source = root.appendingPathComponent("recorded.wav")
+    try LocalAudio(samples: Array(repeating: 0.2,count: 720120),sampleRate: 24000).markSynthetic().write(to: source)
+    let store = try PhoneVoiceStore(root: root.appendingPathComponent("voices"))
+    let voice = try await store.create(name: "Voice",source: source,consent: true,asr: fixtureModel(.asr),engine: FixtureEngine(),decoder: AVPhoneAudioDecoder())
+    #expect(try await store.reference(voice).samples.count == 720000)
 }

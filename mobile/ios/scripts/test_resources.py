@@ -68,6 +68,25 @@ class BrandResources(unittest.TestCase):
         self.assertEqual(info["NSMicrophoneUsageDescription"], expected)
         self.assertIn(json.dumps(expected), (self.root / "bundle/en.lproj/InfoPlist.strings").read_text())
 
+    def test_native_licences_are_bundled_without_xcode_artifacts(self):
+        legal = self.root / "bundle/NativeLicences"
+        entries = json.loads((legal / "sources.json").read_text())
+        names = {entry["name"] for entry in entries}
+        self.assertTrue({"espeak-ng-for-piper", "piper-phonemize", "kaldi-native-fbank",
+                         "kissfft", "kaldifst", "eigen", "llama.cpp", "llama-ggml",
+                         "omnivoice.cpp", "omnivoice-ggml"} <= names)
+        self.assertIn("GNU GENERAL PUBLIC LICENSE", (legal / "espeak-ng-for-piper.txt").read_text())
+        corresponding = (legal / "Corresponding-source.txt").read_text()
+        self.assertIn("ed530aa113046142eb5115cf2fc9157854d0ffe1", corresponding)
+        for entry in entries:
+            self.assertIn(entry["source"], corresponding)
+        pins = json.loads((resources.ROOT / "mobile/native/pins.json").read_text())
+        resources.validate_native_notices(legal,pins)
+        (legal / "llama.cpp.txt").write_text("broken")
+        with self.assertRaisesRegex(ValueError,"Native licence changed"):
+            resources.validate_native_notices(legal,pins)
+
+
 
 if __name__ == "__main__":
     unittest.main()

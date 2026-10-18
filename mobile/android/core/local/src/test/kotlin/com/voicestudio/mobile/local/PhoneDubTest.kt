@@ -74,7 +74,7 @@ class PhoneDubTest {
         val pipeline=PhoneDubPipeline(store,engine,decoder,media)
         try {pipeline.run(request.id,models);fail()} catch(_:CancellationException) {}
         val saved=store.checkpoint(request.id)
-        assertEquals("French translation",saved.segments.first().translations["fr"]);assertEquals("Reference transcript",saved.segments.first().referenceText)
+        assertEquals("French translation",saved.segments.first().translations["fr"]);assertEquals("First sentence",saved.segments.first().referenceText)
         assertFalse(saved.done)
         pipeline.run(request.id,models)
         assertEquals(2,engine.translated);assertEquals(2,engine.cloned);assertEquals(1,decodes);assertEquals(1,engine.transcribed)
@@ -113,6 +113,47 @@ class PhoneDubTest {
         try {PhoneDubPipeline(store,silent,decoder,media).run(request.id,models);fail()} catch(e:ClientFailure) {assertEquals("mobile.simple.no_speech",e.key)}
         store.file(request.id,"checkpoint.json").writeText("not json")
         try {store.checkpoint(request.id);fail()} catch(e:ClientFailure) {assertEquals("mobile.simple.checkpoint_failed",e.key)}
+    }
+    @Test fun unreadableDubDoesNotHideHealthyJobs()=runTest {
+        val store=store();val healthy=request(store);val broken=request(store)
+        store.file(broken.id,"checkpoint.json").writeText("broken")
+        assertEquals(listOf(healthy),store.list().map {it.request})
+    }
+    @Test fun blankReferenceTranscriptionFallsBackAndResumeUsesSavedText()=runTest {
+        val store=store();val request=request(store,targets.take(1))
+        val engine=object: Engine() {
+            var referenceCalls=0;var interrupt=true
+            override suspend fun transcribe(model: PhoneModel,audio: LocalAudio,progress: (Float)->Unit): String {referenceCalls++;return " "}
+            override suspend fun clone(model: PhoneModel,text: String,reference: LocalAudio,referenceText: String,progress: (Float)->Unit): LocalAudio {
+                assertEquals(if(cloned==0) "First sentence" else "Second sentence",referenceText)
+                if(interrupt) {interrupt=false;throw CancellationException("resume")}
+                return super.clone(model,text,reference,referenceText,progress)
+            }
+        }
+        val pipeline=PhoneDubPipeline(store,engine,decoder,media)
+        try {pipeline.run(request.id,models);fail()} catch(_:CancellationException) {}
+        assertEquals("First sentence",store.checkpoint(request.id).segments.first().referenceText)
+        assertTrue(pipeline.run(request.id,models).done)
+        assertEquals("Whole-segment clips already have exact transcripts",0,engine.referenceCalls)
+    }
+    @Test fun blankTranscriptionOfShortenedReferenceUsesSegmentText()=runTest {
+        val longDecoder=object: AudioDecoder {
+            override suspend fun decode(source: File,output: File,maxSeconds: Int,progress: (Float)->Unit): PcmFile {
+                writePcm(LocalAudio(FloatArray(24000*10) {.25f},24000),output);return PcmFile(output)
+            }
+        }
+        val engine=object: Engine() {
+            var referenceCalls=0
+            override suspend fun transcribeSegments(model: PhoneModel,audio: LocalAudio,progress: (Float)->Unit)=listOf(SpeechSegment(0.0,10.0,"Long sentence"))
+            override suspend fun transcribe(model: PhoneModel,audio: LocalAudio,progress: (Float)->Unit): String {referenceCalls++;return " "}
+            override suspend fun clone(model: PhoneModel,text: String,reference: LocalAudio,referenceText: String,progress: (Float)->Unit): LocalAudio {
+                assertEquals("Long sentence",referenceText);return super.clone(model,text,reference,referenceText,progress)
+            }
+        }
+        val store=store();val request=request(store,targets.take(1))
+        assertTrue(PhoneDubPipeline(store,engine,longDecoder,media).run(request.id,models).done)
+        assertEquals(1,engine.referenceCalls)
+        assertEquals("Long sentence",store.checkpoint(request.id).segments.single().referenceText)
     }
     @Test fun timingPadsSilenceAndCompressionPreservesPitch()=runTest {
         val padded=fitTiming(LocalAudio(floatArrayOf(.1f,.2f),24000),5)

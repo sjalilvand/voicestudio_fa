@@ -115,6 +115,7 @@ class HostSwitchRegressionTest {
         val player=mock(Player::class.java)
         `when`(player.duration).thenReturn(1000)
         compose.setContent {CompositionLocalProvider(LocalHostPlayerFactory provides {_,_->player}) {StudioApp(vm)}}
+        compose.onNodeWithTag("home.speak").performScrollTo().performClick()
         compose.onNodeWithText("Type what you want to hear…").performTextInput("Text for A")
         compose.onAllNodesWithContentDescription("Play").assertCountEquals(2)
         val oldConnection=vm.state.value.connectionId
@@ -122,6 +123,7 @@ class HostSwitchRegressionTest {
         compose.waitForIdle()
         assertTrue(vm.state.value.connectionId>oldConnection)
         verify(player).release()
+        compose.onNodeWithTag("home.speak").performScrollTo().performClick()
         compose.onNodeWithText("Generated audio").assertDoesNotExist()
         compose.onNodeWithText("Text for A").assertDoesNotExist()
         compose.onAllNodesWithContentDescription("Play").assertCountEquals(1)
@@ -183,7 +185,12 @@ class HostSwitchRegressionTest {
                 }
             }
         }
-        compose.waitUntil(5000) {compose.onAllNodesWithText(copy).fetchSemanticsNodes().isNotEmpty()}
+        // The receipt reaches the screen through a main-looper observer; drive the looper
+        // while waiting so a slow CI runner can't time out on an idle queue.
+        compose.waitUntil(20000) {
+            shadowOf(Looper.getMainLooper()).idle()
+            compose.onAllNodesWithText(copy).fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithText(copy).assertExists()
         compose.runOnIdle {shown=false};compose.waitForIdle()
         // Recreate the view model/store as on a new launch; receipts must be durable.

@@ -35,14 +35,15 @@ class PhoneStudio(context: Context, private val scope: CoroutineScope, private v
         } catch(e:CancellationException) {throw e} catch(e:Exception) {mutable.update {it.copy(loading=false)};failure(ClientFailure("mobile.local.catalogue_failed"))}
     }}
     suspend fun refresh() = withContext(Dispatchers.IO) {
-        val phoneVoices=voices.list()
-        val recent=history()
-        val phoneDubs=dubs.list()
         val installed=mutable.value.models.filter(downloads::installed).map {it.id}.toSet()
         val used=downloads.usedBytes()
         val storage=mutable.value.models.associate {it.id to downloads.usedBytes(it)}
         val receipts=mutable.value.models.associate {it.id to licence.history(it)}
-        mutable.update {it.copy(installed=installed,used=used,storage=storage,receipts=receipts,voices=phoneVoices,recent=recent,dubs=phoneDubs)}
+        mutable.update {it.copy(installed=installed,used=used,storage=storage,receipts=receipts)}
+        val phoneVoices=voices.list()
+        val recent=history()
+        val phoneDubs=dubs.list()
+        mutable.update {it.copy(voices=phoneVoices,recent=recent,dubs=phoneDubs)}
     }
     fun download(model: PhoneModel, allowMobile: Boolean) {
         if(jobs[model.id]?.isActive==true) return

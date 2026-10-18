@@ -9,7 +9,7 @@ public actor PhoneGenerationStore {
     private let root: URL
     public init(root: URL) throws { self.root = root; try PrivateFiles.directory(root) }
     public func list() throws -> [PhoneGeneration] {
-        try FileManager.default.contentsOfDirectory(at: root,includingPropertiesForKeys: nil).filter { $0.pathExtension == "json" }.map { try PrivateFiles.read(PhoneGeneration.self,from: $0) }.sorted { $0.createdAt > $1.createdAt }
+        try FileManager.default.contentsOfDirectory(at: root,includingPropertiesForKeys: nil).filter { $0.pathExtension == "json" }.compactMap { try? PrivateFiles.read(PhoneGeneration.self,from: PrivateFiles.child(root,$0.lastPathComponent)) }.sorted { $0.createdAt > $1.createdAt }
     }
     public func save(text: String, audio: LocalAudio) throws -> PhoneGeneration {
         let item = PhoneGeneration(id: UUID(),text: text,createdAt: Date())

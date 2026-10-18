@@ -21,6 +21,12 @@ metadata and the backend fallback mirror it.
 
 - Contributor guides and the pull request template explain how to sign the CLA before opening a first pull request (#2676)
 
+### Fixed
+
+- Phone apps open on an Electron-style Home dashboard with shared artwork, workspace shortcuts, recent audio, saved voices and resumable dubbing projects (#2969)
+
+- Phone video dubbing uses a supported AAC bitrate and preserves playable audio, rotation and synthetic-audio metadata (#2969)
+
 ### CI
 
 - Desktop request-guard self-tests stay deterministic when app requests arrive during cleanup (#2676)

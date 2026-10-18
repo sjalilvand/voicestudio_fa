@@ -45,12 +45,17 @@ class PhoneVoiceUiTest {
             compose.onNodeWithText("Voice name").performTextInput("New name")
             compose.onNodeWithText("Save").performClick()
             await {vm.phone.state.value.voices.any {it.name=="New name"}}
-            compose.onNode(hasText("Speak") and hasClickAction()).performClick()
+            compose.onNode(hasText("Home") and hasClickAction()).performClick()
+            compose.onNodeWithTag("home.speak").performScrollTo().performClick()
             compose.onNodeWithContentDescription(com.voicestudio.mobile.l10n.L10n.load(ApplicationProvider.getApplicationContext<Application>(),"en").let {l ->
                 l.t("mobile.android.selection",mapOf("label" to l.t("mobile.speak.voice"),"value" to l.t("mobile.local.preset_voice",mapOf("number" to 1))))}).performScrollTo().performClick()
             compose.onNodeWithText("Search").performTextInput("New name")
             compose.onNode(hasText("New name") and !hasSetTextAction()).performClick()
             compose.onNodeWithText("New name").assertExists()
+            compose.onNode(hasText("Home") and hasClickAction()).performClick()
+            compose.onNodeWithText("New name").performScrollTo().performClick()
+            compose.onNodeWithText("New name").assertExists()
+            org.junit.Assert.assertEquals("phone",vm.preferences.value.runLocations["speak"])
             compose.onNode(hasText("Voices") and hasClickAction()).performClick()
             compose.onNodeWithContentDescription("More actions for New name").performScrollTo().performClick()
             compose.onNodeWithText("Delete").performClick()

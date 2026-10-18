@@ -48,16 +48,24 @@ public actor ModelStore {
     private var acceptances: [String: [LicenceAcceptance]] = [:]
     private var active = Set<String>()
     private var leases: [String: Int] = [:]
+    private struct VerificationStamp: Equatable {
+        let size: Int64
+        let modified: Date
+        let identity: String
+    }
+    private var verified: [URL: VerificationStamp] = [:]
+    private let fileHash: @Sendable (URL) throws -> String
     private let ram: UInt64
     private let available: @Sendable (URL) throws -> Int64
     public init(root: URL, ram: UInt64 = ProcessInfo.processInfo.physicalMemory,
+                fileHash: @escaping @Sendable (URL) throws -> String = { try ModelHash.file($0) },
                 available: @escaping @Sendable (URL) throws -> Int64 = { url in
                     let values = try url.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey, .volumeAvailableCapacityKey])
                     if let capacity = values.volumeAvailableCapacityForImportantUsage, capacity > 0 { return capacity }
                     if let capacity = values.volumeAvailableCapacity, capacity > 0 { return Int64(capacity) }
                     return (try FileManager.default.attributesOfFileSystem(forPath: url.path)[.systemFreeSize] as? NSNumber)?.int64Value ?? 0
                 }) throws {
-        self.root = root; self.ram = ram; self.available = available
+        self.root = root; self.ram = ram; self.available = available; self.fileHash = fileHash
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         var excluded = root; var values = URLResourceValues(); values.isExcludedFromBackup = true; try excluded.setResourceValues(values)
         if FileManager.default.fileExists(atPath: root.appendingPathComponent("acceptance.json").path) {
@@ -84,12 +92,33 @@ public actor ModelStore {
         guard model.fits(ram: ram) else { throw ClientError("mobile.local.ram_required", params: ["ram": String(model.min_ram_gb)]) }
         guard allowed(model) else { throw ClientError("mobile.local.licence_required") }
         guard installed(model) else { throw ClientError("mobile.local.model_required") }
-        for f in model.files { guard try ModelHash.file(directory(model).appendingPathComponent(f.path)) == f.sha256 else { throw ClientError("mobile.local.checksum_failed") } }
+        let identity = try phoneModelPin(model)
+        for f in model.files { guard try verify(directory(model).appendingPathComponent(f.path), file: f, identity: identity) else { throw ClientError("mobile.local.checksum_failed") } }
         return directory(model)
     }
     public func acquire(_ model: PhoneModel) throws -> URL { let path = try authorize(model); leases[model.id, default: 0] += 1; return path }
     public func release(_ model: PhoneModel) { leases[model.id] = max(0, (leases[model.id] ?? 0) - 1) }
     public func checkPermission(_ model: PhoneModel) throws { guard allowed(model) else { throw ClientError("mobile.local.licence_required") } }
+    /// A native load failure forces a fresh hash before another use, even if metadata is unchanged.
+    public func invalidateVerification(_ model: PhoneModel) {
+        for file in model.files { verified.removeValue(forKey: directory(model).appendingPathComponent(file.path)) }
+    }
+    private func stamp(_ url: URL, identity: String) throws -> VerificationStamp {
+        let values = try FileManager.default.attributesOfItem(atPath: url.path)
+        guard values[.type] as? FileAttributeType == .typeRegular,
+              let size = values[.size] as? NSNumber, let modified = values[.modificationDate] as? Date else { throw ClientError("mobile.local.checksum_failed") }
+        return VerificationStamp(size: size.int64Value,modified: modified,identity: identity)
+    }
+    private func verify(_ url: URL, file: PhoneModel.File, identity: String) throws -> Bool {
+        guard FileManager.default.fileExists(atPath: url.path) else { return false }
+        let before = try stamp(url,identity: identity)
+        guard before.size == file.size else { verified.removeValue(forKey: url); return false }
+        if verified[url] == before { return true }
+        verified.removeValue(forKey: url)
+        guard try fileHash(url) == file.sha256, try stamp(url,identity: identity) == before else { return false }
+        verified[url] = before
+        return true
+    }
     public func storageUsed() -> Int64 { directoryStorage(root) }
     public func modelStorage(_ model: PhoneModel) -> Int64 { directoryStorage(directory(model)) }
     private func directoryStorage(_ directory: URL) -> Int64 {
@@ -103,6 +132,7 @@ public actor ModelStore {
     public func delete(_ model: PhoneModel) throws {
         guard !active.contains(model.id), leases[model.id, default: 0] == 0 else { throw ClientError("sidebarTools.wait") }
         let path = directory(model)
+        invalidateVerification(model)
         if FileManager.default.fileExists(atPath: path.path) { try FileManager.default.removeItem(at: path) }
     }
     /// Call only from a user action. Each range is persisted before the next request, including across relaunch.
@@ -116,11 +146,12 @@ public actor ModelStore {
         active.insert(model.id); defer { active.remove(model.id) }
         let transport = supplied ?? ModelDownloadTransport(policy: policy)
         try FileManager.default.createDirectory(at: directory(model), withIntermediateDirectories: true)
+        let identity = try phoneModelPin(model)
         var completed: Int64 = 0
         for f in model.files {
             try Task.checkCancellation(); try checkPermission(model)
             let destination = directory(model).appendingPathComponent(f.path)
-            if size(destination) == f.size, try ModelHash.file(destination) == f.sha256 { completed += f.size; continue }
+            if try verify(destination,file: f,identity: identity) { completed += f.size; continue }
             let part = partial(model, f)
             try FileManager.default.createDirectory(at: part.deletingLastPathComponent(), withIntermediateDirectories: true)
             if size(part) > f.size { try FileManager.default.removeItem(at: part) }
@@ -164,10 +195,13 @@ public actor ModelStore {
                 guard received else { throw lastFailure ?? ClientError("mobile.local.download_failed") }
                 await progress(Double(completed + size(part)) / Double(model.total_bytes))
             }
-            guard try ModelHash.file(part) == f.sha256 else { try? FileManager.default.removeItem(at: part); throw ClientError("mobile.local.checksum_failed") }
+            guard try verify(part,file: f,identity: identity) else { try? FileManager.default.removeItem(at: part); throw ClientError("mobile.local.checksum_failed") }
             try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
             if FileManager.default.fileExists(atPath: destination.path) { try FileManager.default.removeItem(at: destination) }
-            try FileManager.default.moveItem(at: part, to: destination); completed += f.size
+            try FileManager.default.moveItem(at: part, to: destination)
+            verified.removeValue(forKey: part)
+            verified[destination] = try stamp(destination,identity: identity)
+            completed += f.size
         }
         try Task.checkCancellation(); try checkPermission(model)
         try JSONEncoder().encode(Dictionary(uniqueKeysWithValues: model.files.map { ($0.path, $0.sha256) })).write(to: directory(model).appendingPathComponent("verified.json"), options: .atomic)

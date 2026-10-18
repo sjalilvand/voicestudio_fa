@@ -69,6 +69,7 @@ class PhoneNavigationTest {
             assertFalse(model.fits(vm.phone.ramBytes))
             compose.setContent {StudioApp(vm)}
             compose.waitUntil(15000) {shadowOf(Looper.getMainLooper()).idle();model.id in vm.phone.state.value.installed&&!vm.state.value.loading}
+            compose.onNodeWithTag("home.speak").performScrollTo().performClick()
             compose.onNodeWithText("Generate").assertDoesNotExist()
             val l=com.voicestudio.mobile.l10n.L10n.load(app,"en")
             compose.onNodeWithText(l.t("mobile.simple.ram",mapOf("ram" to model.minRamGb))).assertExists()

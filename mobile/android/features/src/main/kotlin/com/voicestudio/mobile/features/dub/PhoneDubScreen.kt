@@ -21,7 +21,12 @@ import com.voicestudio.mobile.local.*
 import kotlinx.coroutines.*
 import java.io.File
 
-@Composable internal fun PhoneDubScreen(vm: StudioViewModel,clone: PhoneModel?) {
+@Composable fun PhoneProjectScreen(vm: StudioViewModel, projectId: String? = null) {
+    val phone by vm.phone.state.collectAsState()
+    PhoneDubScreen(vm,phone.models.firstOrNull {it.capability=="clone"},projectId,libraryOnly=true)
+}
+
+@Composable internal fun PhoneDubScreen(vm: StudioViewModel,clone: PhoneModel?, projectId: String? = null, libraryOnly: Boolean = false) {
     val context=LocalContext.current
     val phone by vm.phone.state.collectAsState()
     val prefs by vm.preferences.collectAsState()
@@ -67,7 +72,8 @@ import java.io.File
         }
     }
     Screen {
-        ScreenTitle("mobile.tabs.dub")
+        ScreenTitle(if(libraryOnly) "projects.title" else "mobile.tabs.dub")
+        if(projectId==null && !libraryOnly) {
         StepHeading("mobile.simple.source",VSIcons.Video)
         Secondary("mobile.dub.pick_media",!copying&&!state.busy) {picker.launch(arrayOf("audio/*","video/*"))}
         path?.let {source ->SelectedDubSource(sourceName ?: File(source).name) {File(source).delete();path=null;sourceName=null}}
@@ -103,7 +109,8 @@ import java.io.File
                 vm.phone.refreshDubs()
             }
         }
-        phone.dubs.filterNot {it.checkpoint.done}.forEach {record ->
+        }
+        phone.dubs.filter {projectId==null || it.request.id==projectId}.filterNot {it.checkpoint.done}.forEach {record ->
             val active=works.firstOrNull {"phone-dub:${record.request.id}" in it.tags&&!it.state.isFinished}
             val percent=active?.progress?.getInt("percent",record.checkpoint.percent) ?: record.checkpoint.percent
             val stage=active?.progress?.getString("stage") ?: record.checkpoint.stage
@@ -111,7 +118,9 @@ import java.io.File
                 Column(Modifier.fillMaxWidth().padding(VSTheme.inset),verticalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
                     Text(record.request.title,maxLines=1,overflow=TextOverflow.Ellipsis)
                     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                        Text(tr(if(stage.contains("stage_")||stage in setOf("mobile.simple.mixing","mobile.simple.exporting","mobile.simple.cancelled")) stage else shortErrorKey(stage)),Modifier.weight(1f),maxLines=1,overflow=TextOverflow.Ellipsis)
+                        if(stage.contains("stage_")||stage in setOf("mobile.simple.mixing","mobile.simple.exporting","mobile.simple.cancelled"))
+                            Text(tr(stage),Modifier.weight(1f),maxLines=1,overflow=TextOverflow.Ellipsis)
+                        else ErrorMessage(stage,record.checkpoint.errorParams,Modifier.weight(1f))
                         Text(tr("mobile.simple.percent",mapOf("percent" to percent)))
                     }
                     LinearProgressIndicator(progress={percent/100f},modifier=Modifier.fillMaxWidth())
@@ -124,8 +133,8 @@ import java.io.File
             }
         }
         Heading("mobile.dub.history")
-        if(phone.dubs.none {it.checkpoint.outputs.isNotEmpty()}) EmptyState("mobile.simple.empty_dubs")
-        phone.dubs.forEach {record ->record.checkpoint.outputs.forEach {output ->
+        if(phone.dubs.filter {projectId==null || it.request.id==projectId}.none {it.checkpoint.outputs.isNotEmpty()}) EmptyState("mobile.simple.empty_dubs")
+        phone.dubs.filter {projectId==null || it.request.id==projectId}.forEach {record ->record.checkpoint.outputs.forEach {output ->
             val file=vm.phone.dubs.file(record.request.id,output.file)
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {

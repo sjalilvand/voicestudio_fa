@@ -17,12 +17,15 @@ public actor PhoneVoiceStore {
     private func directory(_ id: UUID) throws -> URL { try PrivateFiles.child(root,id.uuidString) }
     public func list() throws -> [PhoneVoice] {
         try FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil).filter { UUID(uuidString: $0.lastPathComponent) != nil }.compactMap { dir in
-            let path = try PrivateFiles.child(dir,"voice.json")
+            do {
+            let safe = try PrivateFiles.child(root,dir.lastPathComponent)
+            let path = try PrivateFiles.child(safe,"voice.json")
             guard FileManager.default.fileExists(atPath: path.path) else { return nil }
             let voice = try PrivateFiles.read(PhoneVoice.self,from: path)
-            let frames = try PCMFile(PrivateFiles.child(dir,"reference.pcm")).frames
+            let frames = try PCMFile(PrivateFiles.child(safe,"reference.pcm")).frames
             guard voice.id.uuidString == dir.lastPathComponent, voice.sampleRate == 24000, !voice.name.isEmpty, !voice.transcript.isEmpty, (2400...720000).contains(frames) else { throw ClientError("mobile.simple.clone_failed") }
             return voice
+            } catch { return nil }
         }.sorted { $0.createdAt > $1.createdAt }
     }
     public func create(name: String, source: URL, consent: Bool, asr: PhoneModel, engine: any LocalEngine, decoder: any PhoneAudioDecoder, progress: @escaping EngineProgressHandler = { _ in }) async throws -> PhoneVoice {

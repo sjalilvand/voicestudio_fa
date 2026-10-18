@@ -69,6 +69,7 @@ class StudioSmokeTest {
             compose.onAllNodesWithText("Connect").filter(hasClickAction()).onFirst().performScrollTo().performClick()
             awaitCondition {vm.state.value.connected&&engineRead.count==0L}
             compose.onAllNodes(isDialog()).assertCountEquals(0)
+            compose.onNodeWithTag("home.speak").performScrollTo().performClick()
             compose.onNodeWithText("Type what you want to hear…").performTextInput("A local generation")
             releaseEngines.countDown()
             awaitCondition {!vm.state.value.busy}

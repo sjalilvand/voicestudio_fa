@@ -75,7 +75,13 @@ def extract_tar(archive, output):
 
 
 def api(path):
-    request = urllib.request.Request('https://api.github.com/repos/' + path, headers={'User-Agent': 'VoiceStudio-native-builder'})
+    headers = {'User-Agent': 'VoiceStudio-native-builder'}
+    # Anonymous API calls share a 60/hour limit per IP, which shared CI runners
+    # exhaust; CI passes its read-only token. Responses are cached under build/.
+    token = os.environ.get('GITHUB_TOKEN')
+    if token:
+        headers['Authorization'] = 'Bearer ' + token
+    request = urllib.request.Request('https://api.github.com/repos/' + path, headers=headers)
     with urllib.request.urlopen(request, timeout=90) as response:
         return json.load(response)
 
@@ -182,6 +188,11 @@ def stamp_omni_source(verified, output):
     content = '#pragma once\n#define OMNIVOICE_VERSION "' + commit + ' (pinned)"\n'
     cmake = 'set(CONTENT [=[' + content + ']=])\nif(EXISTS "${OUTPUT}")\n  file(READ "${OUTPUT}" EXISTING)\n  if("${EXISTING}" STREQUAL "${CONTENT}")\n    return()\n  endif()\nendif()\nfile(WRITE "${OUTPUT}" "${CONTENT}")\n'
     (target / 'tools/version.cmake').write_text(cmake)
+    patch = HERE / 'patches/omnivoice-metal-transfers.patch'
+    if subprocess.run(['git', 'apply', '--reverse', '--check', str(patch)], cwd=target,
+                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode:
+        run('git', 'apply', '--check', patch, cwd=target)
+        run('git', 'apply', patch, cwd=target)
     return target
 
 
@@ -199,28 +210,32 @@ def framework(name, library, headers, output, platform_name):
     return target
 
 
-def notices(output, sherpa, omni, llama):
-    target = output / 'Notices'
-    target.mkdir(parents=True, exist_ok=True)
-    for name, root in [('sherpa-onnx', sherpa), ('omnivoice', omni), ('llama', llama), ('ggml', omni / 'ggml')]:
-        shutil.copy2(root / 'LICENSE', target / (name + '-LICENSE.txt'))
-    # Preserve licence/notice files from sherpa's fetched CMake dependencies as well.
-    deps = sherpa / 'build-ios/build'
-    if deps.exists():
-        for file in deps.rglob('*'):
-            if file.is_file() and file.name.upper() in ['LICENSE', 'LICENSE.TXT', 'COPYING', 'NOTICE']:
-                relative = str(file.relative_to(deps)).replace('/', '-')
-                shutil.copy2(file, target / ('sherpa-dependency-' + relative + '.txt'))
+def notices(output):
+    source = ROOT / 'mobile/ios/VoiceStudio/Resources/NativeLicences'
+    entries = json.loads((source / 'sources.json').read_text())
+    for entry in entries:
+        if digest(source / (entry['name'] + '.txt')) != entry['notice_sha256']:
+            raise RuntimeError('Native notice changed: ' + entry['name'])
+        if entry['name'] in PINS:
+            pin = PINS[entry['name']]['source']
+            if entry['source'] != pin['repo'] + '/tree/' + pin['commit']:
+                raise RuntimeError('Native notice pin drift: ' + entry['name'])
+    shutil.copytree(source, output / 'Notices', dirs_exist_ok=True)
+
+
+def onnxruntime_notice(sherpa):
     version = re.search(r'SHERPA_ONNX_ONNXRUNTIME_VERSION:-([^}]+)', (sherpa / 'build-ios.sh').read_text()).group(1)
-    cache = BUILD / 'downloads' / ('onnxruntime-' + version + '-LICENSE.txt')
+    cache = BUILD / 'downloads' / ('onnxruntime-' + version + '-LICENSE.json')
     if not cache.exists():
-        entry = api('microsoft/onnxruntime/contents/LICENSE?ref=v' + version)
-        payload = base64.b64decode(entry['content'])
-        blob = hashlib.sha1(b'blob ' + str(len(payload)).encode() + b'\0' + payload).hexdigest()
-        if blob != entry['sha']:
-            raise RuntimeError('ONNXRuntime licence blob mismatch')
-        cache.write_bytes(payload)
-    shutil.copy2(cache, target / 'onnxruntime-LICENSE.txt')
+        cache.write_text(json.dumps(api('microsoft/onnxruntime/contents/LICENSE?ref=v' + version)))
+    entry = json.loads(cache.read_text())
+    payload = base64.b64decode(entry['content'])
+    blob = hashlib.sha1(b'blob ' + str(len(payload)).encode() + b'\0' + payload).hexdigest()
+    if blob != entry['sha']:
+        raise RuntimeError('ONNXRuntime licence blob mismatch')
+    text = cache.with_suffix('.txt')
+    text.write_bytes(payload)
+    return text
 
 
 def macos_runtimes():
@@ -250,7 +265,7 @@ def ios():
     # Fail before downloading if the SDK is absent.
     run('xcrun', '--sdk', 'iphoneos', '--show-sdk-path')
     toolchain = subprocess.check_output(['xcodebuild', '-version'], text=True) + subprocess.check_output(['xcrun', '--sdk', 'iphoneos', '--show-sdk-version'], text=True)
-    pin_key = hashlib.sha256((HERE.parent / 'pins.json').read_bytes() + (HERE / 'build.py').read_bytes() + toolchain.encode()).hexdigest()
+    pin_key = hashlib.sha256((HERE.parent / 'pins.json').read_bytes() + (HERE / 'build.py').read_bytes() + (HERE / 'patches/omnivoice-metal-transfers.patch').read_bytes() + (ROOT / 'mobile/ios/VoiceStudio/Resources/NativeLicences/sources.json').read_bytes() + toolchain.encode()).hexdigest()
     output = BUILD / 'ios' / pin_key
     stable = BUILD / 'xcframeworks'
     sherpa, _ = source(**{k: PINS['sherpa-onnx']['source'][k] for k in ('repo', 'commit')})
@@ -295,7 +310,7 @@ def ios():
             library = next(build.rglob('libomnivoice.dylib'))
             frameworks.append(framework('OmniVoice', library, [omni / 'src/omnivoice.h'], output / sdk, platform_name))
         run('xcodebuild', '-create-xcframework', '-framework', frameworks[0], '-framework', frameworks[1], '-output', output / 'OmniVoice.xcframework')
-        notices(output, sherpa, omni, llama)
+        notices(output)
         receipt = {'toolchain': toolchain, 'pins_sha256': digest(HERE.parent / 'pins.json'), 'build_script_sha256': digest(HERE / 'build.py'), 'artifacts': {str(p.relative_to(output)): digest(p) for p in output.rglob('*') if p.is_file()}}
         (output / 'complete.json').write_text(json.dumps(receipt, indent=2))
     receipt = json.loads((output / 'complete.json').read_text())

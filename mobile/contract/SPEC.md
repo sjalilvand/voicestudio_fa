@@ -60,7 +60,18 @@ no accounts. M1 (below) is the computer connection; M2 is on-device inference.
 
 ## Screens (M1)
 
-Bottom navigation: **Speak**, **Voices**, **Dub**, **Dictate**, **Settings**.
+Bottom navigation: **Home**, **Voices**, **Dub**, **Dictate**, **Settings**.
+Home is the default after consent. It adapts Electron's dashboard with the same
+bundled `electron/public/signal-field.webp` artwork, generated palettes, Inter,
+card hierarchy, recent generated audio, recent dubbing projects and saved voices.
+Its six working shortcuts open Speak, voice cloning, Dub, Dictate, Models and
+Connect. Speak stays reachable from Home; it is not a sixth bottom tab. Recent
+phone audio plays locally, saved phone voices open Speak with that reference
+selected, and project rows open that project's outputs/resume controls. Computer
+libraries are shown only from the paired host. Empty sections use localized
+empty states; Home never starts downloads or external requests on its own.
+Desktop-only workspaces (voice design, stories, audiobooks, galleries and tools)
+are not represented as nonfunctional mobile shortcuts.
 All tabs work without pairing once on-device models are installed (see M2); the Connect flow is reachable from first run and from Settings.
 
 1. **First run**

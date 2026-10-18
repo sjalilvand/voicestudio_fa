@@ -65,18 +65,18 @@ class MainActivity:ComponentActivity() {
     CompositionLocalProvider(LocalL10n provides l,LocalLayoutDirection provides direction) {
         VoiceStudioTheme(ThemePreferences(prefs.mode,prefs.lightPalette,prefs.darkPalette)) {
             key(state.connectionId) {
-            val initialRoute=remember {if(state.error?.key=="mobile.connect.error_session_expired") "connect" else "speak"}
+            val initialRoute=remember {if(state.error?.key=="mobile.connect.error_session_expired") "connect" else "home"}
             val nav=rememberNavController()
             val back by nav.currentBackStackEntryAsState()
-            val route=back?.destination?.route ?: "speak"
+            val route=back?.destination?.route ?: "home"
             val dismissKeyboard=rememberKeyboardDismiss()
             Scaffold(containerColor=role("canvas"),bottomBar={
                 NavigationBar(containerColor=role("chrome"),contentColor=role("toolbarForeground")) {
-                    val tabs=listOf("speak","voices","dub","dictate","settings")
+                    val tabs=listOf("home","voices","dub","dictate","settings")
                     tabs.forEach {tab ->
-                        val label=if(tab=="connect") l.t("mobile.tabs.connect") else l.t("mobile.tabs.$tab")
-                        NavigationBarItem(selected=route==tab,onClick={dismissKeyboard();nav.navigate(tab) {popUpTo(nav.graph.startDestinationId) {saveState=true};launchSingleTop=true;restoreState=true}},
-                            icon={Icon(when(tab) {"speak" -> Icons.Default.PlayArrow;"voices" -> Icons.Default.Person;"dub" -> Icons.AutoMirrored.Filled.List;"dictate" -> Icons.Default.Edit;"connect" -> Icons.Default.Add;else -> Icons.Default.Settings},contentDescription=label)},
+                        val label=if(tab=="home") l.t("nav.home") else if(tab=="connect") l.t("mobile.tabs.connect") else l.t("mobile.tabs.$tab")
+                        NavigationBarItem(selected=route==tab || (tab=="home" && (route=="speak" || route.startsWith("voice/") || route.startsWith("host-voice/") || route.startsWith("project"))),onClick={dismissKeyboard();nav.navigate(tab) {popUpTo(nav.graph.startDestinationId) {saveState=true};launchSingleTop=true;restoreState=tab!="home"}},
+                            icon={Icon(when(tab) {"home" -> Icons.Default.Home;"speak" -> Icons.Default.PlayArrow;"voices" -> Icons.Default.Person;"dub" -> Icons.AutoMirrored.Filled.List;"dictate" -> Icons.Default.Edit;"connect" -> Icons.Default.Add;else -> Icons.Default.Settings},contentDescription=label)},
                             label=if(LocalDensity.current.fontScale<=1.5f) {{Text(label)}} else null,
                             colors=NavigationBarItemDefaults.colors(indicatorColor=role("messageSurface"),selectedIconColor=role("messageAction"),selectedTextColor=role("toolbarForeground"),unselectedIconColor=role("textMuted"),unselectedTextColor=role("textMuted")))
                     }
@@ -87,7 +87,7 @@ class MainActivity:ComponentActivity() {
                     state.error?.let {error ->
                         Surface(color=role("errorSurface"),shape=MaterialTheme.shapes.large,modifier=Modifier.fillMaxWidth().padding(VSTheme.inset)) {
                             Column(Modifier.padding(VSTheme.inset)) {
-                                Text(tr(shortErrorKey(error.key)),color=role("errorForeground"),maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis,modifier=Modifier.fillMaxWidth())
+                                ErrorMessage(error.key,error.params,color=role("errorForeground"),modifier=Modifier.fillMaxWidth())
                                 val models=error.key.split('.').take(2)==listOf("mobile","local")||error.key.contains("model")||error.key.contains("licence")
                                 val connection=error.key.split('.').take(2)==listOf("mobile","connect")||error.key=="mobile.errors.offline"
                                 val action=when {error.key=="mobile.permissions.denied" -> "mobile.permissions.open_settings";models -> "mobile.simple.download_models";connection -> "mobile.simple.reconnect";state.canRetry -> "mobile.simple.retry";else -> "common.close"}
@@ -114,6 +114,12 @@ class MainActivity:ComponentActivity() {
                         composable("connect") {ConnectScreen(vm)}
                         composable("settings") {SettingsScreen(vm,BuildConfig.VERSION_NAME,onConnect={nav.navigate("connect")},onModels={nav.navigate("models")})}
                         composable("models") {com.voicestudio.mobile.features.models.ModelsScreen(vm)}
+                        composable("home") {HomeScreen(vm) {nav.navigate(it)}}
+                        composable("host-dubs") {com.voicestudio.mobile.features.dub.ComputerDubScreen(vm)}
+                        composable("projects") {com.voicestudio.mobile.features.dub.PhoneProjectScreen(vm)}
+                        composable("project/{id}") {entry -> com.voicestudio.mobile.features.dub.PhoneProjectScreen(vm,entry.arguments?.getString("id"))}
+                        composable("host-voice/{id}") {entry -> SpeakScreen(vm,initialComputerVoiceID=entry.arguments?.getString("id"))}
+                        composable("voice/{id}") {entry -> SpeakScreen(vm,entry.arguments?.getString("id"))}
                         composable("speak") {SpeakScreen(vm)}
                         composable("voices") {VoicesScreen(vm)}
                         composable("dub") {DubScreen(vm)}

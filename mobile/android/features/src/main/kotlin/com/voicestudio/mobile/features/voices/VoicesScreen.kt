@@ -55,7 +55,7 @@ import java.io.File
     }
     LaunchedEffect(recording) {seconds=0;while(recording) {
         delay(1000);seconds++
-        if(seconds>=30) {try {sample=recorder.stop().absolutePath} catch(e:Exception) {sample=null;vm.fail(e)} finally {recording=false}}
+        if(seconds>=29) {try {sample=recorder.stop().absolutePath} catch(e:Exception) {sample=null;vm.fail(e)} finally {recording=false}}
     }}
     val record=permissionAction(Manifest.permission.RECORD_AUDIO,"mobile.permissions.microphone",vm::fail) {
         try {sample?.let {File(it).delete()};sample=recorder.start().absolutePath;recording=true} catch(e:Exception) {vm.fail(e)}

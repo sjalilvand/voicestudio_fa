@@ -17,7 +17,7 @@ import java.util.UUID
 @Serializable data class DubRender(val index: Int,val sha256: String,val frames: Long)
 @Serializable data class PhoneDubOutput(val language: String,val name: String,val file: String,val sha256: String,val duration: Double)
 @Serializable data class PhoneDubCheckpoint(val frames: Long = 0,val nextFrame: Long = 0,val segments: List<DubSegmentState> = emptyList(),
-    val renders: List<DubRender> = emptyList(),val outputs: List<PhoneDubOutput> = emptyList(),val stage: String = "mobile.android.stage_prepare",val percent: Int = 0,val done: Boolean = false)
+    val renders: List<DubRender> = emptyList(),val outputs: List<PhoneDubOutput> = emptyList(),val stage: String = "mobile.android.stage_prepare",val percent: Int = 0,val done: Boolean = false,val errorParams: Map<String,String> = emptyMap())
 data class PhoneDubRecord(val request: PhoneDubRequest,val checkpoint: PhoneDubCheckpoint)
 data class DubProgress(val stage: String,val percent: Int)
 fun modelPin(model: PhoneModel): DubModelPin {
@@ -70,7 +70,11 @@ class PhoneDubStore(private val root: File) {
         catch(e:CancellationException) {throw e} catch(e:Exception) {throw ClientFailure("mobile.simple.checkpoint_failed")}
     }
     suspend fun list(): List<PhoneDubRecord> = withContext(Dispatchers.IO) {
-        root.listFiles().orEmpty().filter {File(it,"request.json").exists()}.map {PhoneDubRecord(request(it.name),checkpoint(it.name))}.sortedByDescending {it.request.createdAt}
+        root.listFiles().orEmpty().filter {File(it,"request.json").exists()}.mapNotNull {
+            currentCoroutineContext().ensureActive()
+            try {PhoneDubRecord(request(it.name),checkpoint(it.name))}
+            catch(e:CancellationException) {throw e} catch(_:Exception) {null}
+        }.sortedByDescending {it.request.createdAt}
     }
     suspend fun delete(id: String) = withContext(Dispatchers.IO) {if(!directory(id).deleteRecursively()) throw ClientFailure("mobile.simple.checkpoint_failed")}
 }
@@ -87,7 +91,7 @@ class PhoneDubPipeline(private val store: PhoneDubStore,private val engine: Loca
         val asr=models.single {it.capability=="asr"};val translator=models.single {it.capability=="translate"};val clone=models.single {it.capability=="clone"}
         var checkpoint=store.checkpoint(id)
         suspend fun save(value: PhoneDubCheckpoint) {authorize();currentCoroutineContext().ensureActive();store.save(id,value);checkpoint=value}
-        suspend fun stage(key: String,percent: Int) {save(checkpoint.copy(stage=key,percent=percent));report(DubProgress(key,percent))}
+        suspend fun stage(key: String,percent: Int) {save(checkpoint.copy(stage=key,percent=percent,errorParams=emptyMap()));report(DubProgress(key,percent))}
         fun nativeProgress(key: String,base: Int,span: Int): (Float)->Unit = {value ->report(DubProgress(key,(base+value.coerceIn(0f,1f)*span).toInt().coerceIn(0,99)))}
         if(checkpoint.done&&checkpoint.outputs.size==request.targets.size&&checkpoint.outputs.all {output ->
             val file=store.file(id,output.file);file.exists()&&sha256(file)==output.sha256
@@ -145,10 +149,12 @@ class PhoneDubPipeline(private val store: PhoneDubStore,private val engine: Loca
                 val reference=if(request.referenceText!=null) {
                     val saved=PcmFile(store.file(id,"voice-reference.pcm"));saved.read(0,saved.frames.toInt())
                 } else pcm.clip(segment.speech.start,minOf(segment.speech.end,segment.speech.start+8.0))
-                val referenceText=request.referenceText ?: segment.referenceText ?: engine.transcribe(asr,reference).trim().also {text ->
-                    if(text.isBlank()) throw ClientFailure("mobile.simple.no_speech")
+                val referenceText=request.referenceText ?: segment.referenceText?.takeIf {it.isNotBlank()} ?: run {
+                    val text=if(segment.speech.end-segment.speech.start<=8.0) segment.speech.text
+                        else engine.transcribe(asr,reference).trim().ifBlank {segment.speech.text}
                     segment=segment.copy(referenceText=text)
                     save(checkpoint.copy(segments=checkpoint.segments.toMutableList().also {it[index]=segment}))
+                    text
                 }
                 val generated=engine.clone(clone,requireNotNull(segment.translations[target.code]),reference,referenceText,nativeProgress("mobile.android.stage_render",base,1))
                 val fitted=fitTiming(generated,frames)

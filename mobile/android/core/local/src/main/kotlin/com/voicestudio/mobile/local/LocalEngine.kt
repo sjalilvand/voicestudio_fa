@@ -43,7 +43,7 @@ internal object NativeBridge {
 
 class PhoneLocalEngine(private val models: ModelDownloads): LocalEngine {
     companion object {private val nativeLease=Mutex()}
-    private suspend fun <T> execute(model: PhoneModel, capability: String, progress: (Float)->Unit, block: suspend (File,Job)->T): T =
+    internal suspend fun <T> execute(model: PhoneModel, capability: String, progress: (Float)->Unit, block: suspend (File,Job)->T): T =
         withContext(Dispatchers.Default) {
             if(model.capability != capability) throw ClientFailure("mobile.local.model_incompatible")
             try {
