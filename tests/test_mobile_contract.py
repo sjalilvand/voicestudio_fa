@@ -329,3 +329,43 @@ def test_mobile_strings_are_not_placeholder_only():
             if isinstance(value, str) and placeholder.search(value) and not re.search(r"\w", placeholder.sub("", value)):
                 bad.append(f"{path.name}: {key} = {value!r}")
     assert not bad, "write the words around the placeholders:\n" + "\n".join(bad)
+
+
+@pytest.mark.parametrize("data_filter", [True, False])
+@pytest.mark.parametrize("entry", ["../escape.txt", "/abs.txt", "link-out"])
+def test_android_native_fetch_rejects_unsafe_archives(tmp_path, monkeypatch, data_filter, entry):
+    # Pinned source tarballs are checksum-verified, but extraction must still refuse
+    # path escapes and links out of the tree, on Pythons with and without
+    # tarfile's data filter (CodeQL py/tarslip).
+    import importlib.util
+    import io
+    import tarfile
+
+    spec = importlib.util.spec_from_file_location("vs_android_fetch", ROOT / "mobile/native/android/fetch.py")
+    fetch = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(fetch)
+    if not data_filter:
+        monkeypatch.delattr(tarfile, "data_filter", raising=False)
+    archive = tmp_path / "src.tar.gz"
+    with tarfile.open(archive, "w:gz") as tar:
+        if entry == "link-out":
+            info = tarfile.TarInfo("src/link-out")
+            info.type, info.linkname = tarfile.SYMTYPE, "../../outside"
+            tar.addfile(info)
+        else:
+            payload = b"x"
+            info = tarfile.TarInfo(entry)
+            info.size = len(payload)
+            tar.addfile(info, io.BytesIO(payload))
+    out = tmp_path / "out"
+    try:
+        fetch.extract(archive, out)
+    except Exception:
+        assert not out.exists()
+    else:
+        # The data filter may instead neutralize an entry (e.g. strip a leading
+        # '/'); then everything must have landed inside the target.
+        assert entry == "/abs.txt" and data_filter
+        assert all(out.resolve() in p.resolve().parents or p.resolve() == out.resolve() for p in out.rglob("*"))
+    assert not (tmp_path / "escape.txt").exists()
+    assert not (tmp_path.parent / "outside").exists()

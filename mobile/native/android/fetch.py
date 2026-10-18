@@ -35,18 +35,26 @@ def extract(archive, destination):
     temporary = destination.with_name(destination.name + '.extract')
     shutil.rmtree(temporary, ignore_errors=True)
     temporary.mkdir(parents=True)
+    root = temporary.resolve()
     with tarfile.open(archive) as source:
-        # Reject path escapes and symlinks out of the source tree, including on
-        # Python versions predating tarfile's data extraction filter.
-        for member in source.getmembers():
-            path = pathlib.PurePosixPath(member.name)
-            if path.is_absolute() or '..' in path.parts:
-                raise ValueError('Unsafe source archive path')
-            if member.islnk() or member.issym():
-                link = pathlib.PurePosixPath(member.linkname)
-                if link.is_absolute() or '..' in link.parts:
-                    raise ValueError('Unsafe source archive link')
-        source.extractall(temporary)
+        if hasattr(tarfile, 'data_filter'):
+            # Python's own safe-extraction rules: no absolute paths, no '..',
+            # no links leaving the tree, no device files.
+            source.extractall(root, filter='data')
+        else:
+            # Older Pythons: check every entry's resolved destination (and link
+            # target) stays inside the tree, then extract that entry alone.
+            for member in source.getmembers():
+                target = (root / member.name).resolve()
+                if target != root and root not in target.parents:
+                    raise ValueError('Unsafe source archive path')
+                if member.isdev() or member.isfifo():
+                    raise ValueError('Unsupported source archive entry')
+                if member.issym() or member.islnk():
+                    link = ((target.parent if member.issym() else root) / member.linkname).resolve()
+                    if link != root and root not in link.parents:
+                        raise ValueError('Unsafe source archive link')
+                source.extract(member, root)
     entries = list(temporary.iterdir())
     if len(entries) != 1:
         raise ValueError('Unexpected source archive layout')
