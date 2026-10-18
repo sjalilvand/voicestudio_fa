@@ -26,6 +26,7 @@ android {
     sourceSets["main"].jniLibs.srcDir(rootDir.resolve("../native/android/build/jniLibs"))
     sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/catalogs"))
     sourceSets["main"].res.srcDir(layout.buildDirectory.dir("generated/catalogResources"))
+    sourceSets["main"].res.srcDir(layout.buildDirectory.dir("generated/brandResources"))
 }
 kotlin { jvmToolchain(21); compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 val bundleCatalogs by tasks.registering {
@@ -110,3 +111,11 @@ val buildNativeRuntimes by tasks.registering(Exec::class) {
     commandLine("bash", nativeRoot.resolve("build.sh"))
 }
 tasks.named("preBuild") { dependsOn(buildNativeRuntimes) }
+
+val generateBrandResources by tasks.registering(Exec::class) {
+    val generator = rootDir.resolve("scripts/generate_brand_resources.py")
+    inputs.files(generator, repository.resolve("docs/logo.svg"), repository.resolve("mobile/contract/tokens.json"))
+    outputs.dir(layout.buildDirectory.dir("generated/brandResources"))
+    commandLine("python3", generator, "--output", layout.buildDirectory.dir("generated/brandResources").get().asFile)
+}
+tasks.named("preBuild") { dependsOn(generateBrandResources) }

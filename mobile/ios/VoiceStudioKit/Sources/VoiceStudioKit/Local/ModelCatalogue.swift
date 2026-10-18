@@ -51,6 +51,7 @@ public struct PhoneModel: Codable, Identifiable, Sendable {
         public var gated: Bool { category != "commercial-ok" || requires_acceptance }
     }
     public let id: String
+    public let name: String
     public let capability: ModelCapability
     public let runtime: ModelRuntime
     public let repo: String
@@ -65,7 +66,7 @@ public struct PhoneModel: Codable, Identifiable, Sendable {
     public func selectingLanguage(_ language: String) throws -> PhoneModel {
         guard capability == .tts, languages.contains(language) else { throw ClientError("mobile.local.configuration") }
         var options = config; options["lang"] = .string(language)
-        return PhoneModel(id: id,capability: capability,runtime: runtime,repo: repo,revision: revision,files: files,total_bytes: total_bytes,languages: languages,min_ram_gb: min_ram_gb,licence: licence,config: options)
+        return PhoneModel(id: id,name: name,capability: capability,runtime: runtime,repo: repo,revision: revision,files: files,total_bytes: total_bytes,languages: languages,min_ram_gb: min_ram_gb,licence: licence,config: options)
     }
     public func path(role: String, root: URL) -> String { files.first { $0.role == role }.map { root.appendingPathComponent($0.path).path } ?? "" }
     public func option(_ key: String, fallback: String = "") -> String { config[key]?.string ?? fallback }
@@ -77,7 +78,8 @@ public struct ModelCatalogue: Codable, Sendable {
         let value = try JSONDecoder().decode(Self.self, from: data)
         guard value.schema_version == 1, Set(value.models.map(\.id)).count == value.models.count else { throw ClientError("mobile.local.catalogue_error") }
         for m in value.models {
-            guard safe(m.id), m.repo.split(separator: "/").count == 2, m.repo.split(separator: "/").allSatisfy({ safe(String($0)) }),
+            guard safe(m.id), !m.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  m.repo.split(separator: "/").count == 2, m.repo.split(separator: "/").allSatisfy({ safe(String($0)) }),
                   hex(m.revision, count: 40), !m.files.isEmpty, m.min_ram_gb.isFinite, m.min_ram_gb > 0,
                   hex(m.licence.terms_fingerprint, count: 64), ["commercial-ok", "non-commercial", "conditional", "unidentified"].contains(m.licence.category),
                   Set(m.files.map(\.path)).count == m.files.count,

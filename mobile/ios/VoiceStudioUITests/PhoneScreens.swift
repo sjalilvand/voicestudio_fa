@@ -8,9 +8,9 @@ final class PhoneScreens: XCTestCase {
     }
     @MainActor func testRememberedComputerChoiceFallsBackWhileUnpaired() {
         let app = launch(extra: ["-run-on.speak","computer","-run-on.clone","computer","-run-on.dub","computer"])
-        XCTAssertTrue(app.buttons["Open Models"].exists)
+        XCTAssertTrue(app.buttons["models.get"].exists)
         app.tabBars.buttons["Voices"].tap(); app.buttons["voices.create"].tap()
-        XCTAssertTrue(app.buttons["Open Models"].waitForExistence(timeout: 5)); app.buttons["Cancel"].tap()
+        XCTAssertTrue(app.buttons["models.get"].waitForExistence(timeout: 5)); app.buttons["Cancel"].tap()
         app.tabBars.buttons["Dub"].tap()
         XCTAssertTrue(app.staticTexts["1 Source"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.textFields["dub.source_url"].exists)
@@ -18,7 +18,7 @@ final class PhoneScreens: XCTestCase {
     @MainActor func testUnpairedCloneShowsModelGateAndConsent() {
         let app = launch(); app.tabBars.buttons["Voices"].tap(); app.buttons["voices.create"].tap()
         XCTAssertTrue(app.textFields["voices.clone.name"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["Open Models"].exists)
+        XCTAssertTrue(app.buttons["models.get"].exists)
         XCTAssertTrue(app.switches["I have permission"].exists)
         XCTAssertFalse(app.buttons["Create clone"].isEnabled)
         XCTAssertFalse(app.staticTexts["This task currently runs on your paired computer."].exists)
@@ -43,6 +43,40 @@ final class PhoneScreens: XCTestCase {
         XCTAssertTrue(consent.exists); consent.tap(); XCTAssertTrue(accept.isEnabled)
         app.buttons["Decline"].tap()
     }
+    @MainActor func testCompactDownloadsUseProductNamesAndOneDubAction() {
+        let app = launch()
+        XCTAssertEqual(app.buttons.matching(identifier: "models.get").count, 1)
+        XCTAssertFalse(app.staticTexts["kitten-mini-en-fp16"].exists)
+        XCTAssertTrue(app.buttons["models.open"].label.contains("Kitten"))
+        app.buttons["models.get"].tap()
+        XCTAssertTrue(app.buttons["models.accept"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["models.accept"].isEnabled)
+        for _ in 0..<15 { if app.buttons["Decline"].isHittable { break }; app.swipeUp() }
+        app.buttons["Decline"].tap()
+        app.tabBars.buttons["Voices"].tap()
+        XCTAssertFalse(app.buttons["whisper-tiny-int8"].exists)
+        app.tabBars.buttons["Dub"].tap()
+        XCTAssertEqual(app.buttons.matching(identifier: "models.get").count, 1)
+        XCTAssertTrue(app.buttons["models.open"].label.contains("3 downloads"))
+        XCTAssertFalse(app.staticTexts["NOASSERTION"].exists)
+        XCTAssertFalse(app.navigationBars.buttons["Settings"].exists)
+    }
+    @MainActor func testPaletteSelectionAndDictationActionsClearTheTabBar() {
+        let app = launch(); app.tabBars.buttons["Dictate"].tap()
+        let bar = app.tabBars.firstMatch
+        for identifier in ["dictate.copy", "dictate.share"] {
+            let action = app.buttons[identifier]
+            XCTAssertTrue(action.exists)
+            XCTAssertLessThanOrEqual(action.frame.maxY, bar.frame.minY)
+        }
+        app.tabBars.buttons["Settings"].tap()
+        app.buttons["mobile.settings.light_palette"].tap()
+        let studio = app.buttons["choice.option.default"]
+        XCTAssertTrue(studio.waitForExistence(timeout: 5)); XCTAssertEqual(studio.value as? String, "Selected")
+        app.buttons["choice.option.canopy"].tap()
+        app.buttons["mobile.settings.light_palette"].tap()
+        XCTAssertEqual(app.buttons["choice.option.canopy"].value as? String, "Selected")
+    }
     @MainActor func testConnectAndPrivacyKeepDetailsCollapsed() {
         let app = launch(); app.tabBars.buttons["Settings"].tap()
         XCTAssertFalse(app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH %@","On-device tasks send nothing")).firstMatch.exists)
@@ -62,13 +96,16 @@ final class ScreenshotTour: XCTestCase {
     }
     @MainActor func testPhoneFirstScreens() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-smoke","-AppleLanguages","(en)"]
-        app.launch(); XCTAssertTrue(app.buttons["consent.no"].waitForExistence(timeout: 10)); capture("Consent",app); app.buttons["consent.no"].tap()
+        app.launch(); XCTAssertTrue(app.buttons["consent.no"].waitForExistence(timeout: 10)); XCTAssertTrue(app.staticTexts["Saved on this phone. Nothing is sent."].exists); capture("Consent",app); app.buttons["consent.no"].tap()
         XCTAssertTrue(app.textViews["speak.text"].waitForExistence(timeout: 5)); capture("Speak-phone",app)
         app.tabBars.buttons["Voices"].tap(); capture("Voices-phone",app)
         app.buttons["voices.create"].tap(); XCTAssertTrue(app.textFields["voices.clone.name"].waitForExistence(timeout: 5)); capture("Clone-phone",app); app.buttons["Cancel"].tap()
-        app.tabBars.buttons["Dub"].tap(); capture("Dub-phone",app)
+        app.tabBars.buttons["Dub"].tap(); XCTAssertEqual(app.buttons.matching(identifier: "models.get").count, 1); capture("Dub-phone",app)
         app.tabBars.buttons["Dictate"].tap(); capture("Dictate-phone",app)
         app.tabBars.buttons["Settings"].tap(); capture("Settings",app)
+        app.buttons["mobile.settings.light_palette"].tap()
+        XCTAssertTrue(app.buttons["choice.option.default"].waitForExistence(timeout: 5)); capture("Palette-picker",app); app.buttons["Close"].tap()
+        app.buttons["Language"].tap(); capture("Language-picker",app); app.buttons["Close"].tap()
         app.buttons["Models"].tap(); capture("Models",app)
         app.buttons["model.licence.kitten-mini-en-fp16"].tap(); capture("Model-terms",app); app.buttons["Close"].tap()
         app.navigationBars.buttons.firstMatch.tap(); app.buttons["settings.connect"].tap(); capture("Connect",app)

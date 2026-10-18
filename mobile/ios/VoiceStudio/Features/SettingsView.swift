@@ -7,8 +7,8 @@ struct SettingsView: View {
         @Bindable var model = model
         Page {
             Card {
-                NavigationLink { ModelsView() } label: { Label(model.t("mobile.local.models"),systemImage: "square.stack.3d.up") }
                 NavigationLink { ConnectView() } label: { HStack { Image(systemName: "link").accessibilityHidden(true); SelectionRow(label: model.t("mobile.settings.connection"),value: model.connection.active?.label ?? "") } }.accessibilityIdentifier("settings.connect")
+                NavigationLink { ModelsView() } label: { Label(model.t("mobile.local.models"),systemImage: "arrow.down.circle") }
             }
             if model.connection.client != nil {
                 Card {
@@ -28,7 +28,7 @@ struct SettingsView: View {
                     Toggle(isOn: Binding(get: { model.notifications }, set: { value in Task { await model.enableNotifications(value) } })) { Label(model.t("mobile.settings.notifications"),systemImage: "bell") }.frame(minHeight: 44)
                 }
             Card {
-                InfoButton(title: model.t("mobile.simple.privacy"), detail: model.t("mobile.local.privacy"), row: true)
+                InfoButton(title: model.t("mobile.simple.privacy"), detail: model.t("mobile.local.privacy"), row: true, icon: "shield")
                 Toggle(isOn: $model.analytics) { Label(model.t("mobile.simple.analytics"),systemImage: "chart.bar") }.frame(minHeight: 44)
             }
             Card {
@@ -41,7 +41,7 @@ struct SettingsView: View {
         }.navigationTitle(model.t("mobile.tabs.settings")).navigationBarTitleDisplayMode(.large)
     }
     private func palette(key: String, selection: Binding<String>) -> some View {
-        ChoicePicker(label: model.t(key), selection: selection, options: VSTokens.palettes.map { SelectionOption(id: $0.id, title: Theme.paletteLabel($0, l10n: model.l10n)) }, icon: "paintpalette")
+        ChoicePicker(label: model.t(key), selection: selection, options: VSTokens.palettes.map { SelectionOption(id: $0.id, title: Theme.paletteLabel($0, l10n: model.l10n), swatch: Theme(palette: $0.id, appearance: key == "mobile.settings.light_palette" ? .light : .dark)) }, icon: "paintpalette").accessibilityIdentifier(key)
     }
 }
 struct LicensesView: View {

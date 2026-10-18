@@ -58,11 +58,11 @@ class PhoneStudio(context: Context, private val scope: CoroutineScope, private v
         try {jobs[model.id]?.cancelAndJoin();cancelInference();downloads.delete(model);refresh()}
         catch(e:CancellationException) {throw e} catch(e:Exception) {failure(e)}
     }}
-    fun accept(model: PhoneModel, accepted: Boolean, fingerprint: String) {scope.launch {
+    fun accept(model: PhoneModel, accepted: Boolean, fingerprint: String, completed: (Boolean)->Unit = {}) {scope.launch {
         try {
             if(!accepted) {jobs[model.id]?.cancelAndJoin();cancelInference()}
-            withContext(Dispatchers.IO) {licence.record(model,accepted,fingerprint)};refresh()
-        } catch(e:CancellationException) {throw e} catch(e:Exception) {failure(e)}
+            withContext(Dispatchers.IO) {licence.record(model,accepted,fingerprint)};refresh();completed(true)
+        } catch(e:CancellationException) {throw e} catch(e:Exception) {failure(e);completed(false)}
     }}
     fun speak(model: PhoneModel, text: String, speaker: Int, voice: PhoneVoice? = null, language: String? = null) {
         if(inference?.isActive==true) return

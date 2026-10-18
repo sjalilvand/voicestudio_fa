@@ -25,7 +25,7 @@ struct DictateView: View {
     var body: some View {
         Page {
             RunOnPicker(preference: $preference, task: "dictate", installed: localReady).disabled(listening || finalizing)
-            if route == .download { LocalDownloadPrompt(item: phoneModel) }
+            if route == .download { LocalDownloadPrompt(items: phoneModel.map { [$0] } ?? [], feature: "mobile.tabs.dictate") }
             if route == .connect { NavigationLink(model.t("mobile.settings.connection")) { ConnectView() } }
             if checking { ProgressView(model.t("common.loading")) }
             else if !ready && route == .computer {
@@ -52,12 +52,16 @@ struct DictateView: View {
                         Task { try? await Task.sleep(for: .milliseconds(150)); suppressTap = false }
                     }
                 }, perform: { holding = true; suppressTap = true; if !listening && ready { start() } })
-            HStack {
-                Button(model.t("mobile.dictate.copy"), systemImage: "doc.on.doc") { UIPasteboard.general.string = text }
-                ShareLink(item: text) { Label(model.t("mobile.speak.share"), systemImage: "square.and.arrow.up") }
-            }.labelStyle(.iconOnly).buttonStyle(VSButtonStyle(kind: .tertiary)).disabled(text.isEmpty)
-
         }.navigationTitle(model.t("mobile.tabs.dictate"))
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            HStack(spacing: VSTokens.spacingGap) {
+                Button(model.t("mobile.dictate.copy"), systemImage: "doc.on.doc") { UIPasteboard.general.string = text }
+                    .accessibilityIdentifier("dictate.copy")
+                ShareLink(item: text) { Label(model.t("mobile.speak.share"), systemImage: "square.and.arrow.up") }
+                    .accessibilityIdentifier("dictate.share")
+            }.labelStyle(.iconOnly).buttonStyle(VSButtonStyle(kind: .tertiary)).disabled(text.isEmpty)
+                .frame(maxWidth: .infinity).padding(Theme.compactInset).background(theme.color("canvas"))
+        }
         .task { preference = model.phone.preference("dictate"); await model.phone.refresh(); await readiness() }
         .onChange(of: preference) { _, _ in Task { await readiness() } }
         .onChange(of: route) { _, _ in Task { await readiness() } }

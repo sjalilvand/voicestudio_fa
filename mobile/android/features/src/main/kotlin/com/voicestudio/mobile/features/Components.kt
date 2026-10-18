@@ -1,6 +1,10 @@
 package com.voicestudio.mobile.features
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -104,7 +108,7 @@ fun Modifier.dismissKeyboardOnTap(): Modifier = composed {
     val description=tr("mobile.android.selection",mapOf("label" to tr(label),"value" to value))
     Surface(onClick={dismiss();onClick()},enabled=enabled,color=role("surface"),shape=MaterialTheme.shapes.small,modifier=Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget).semantics {contentDescription=description}) {
         Row(Modifier.padding(VSTheme.inset),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
-            Icon(Icons.Default.Settings,contentDescription=null,tint=role("textMuted"))
+            Icon(rowIcon(label),contentDescription=null,tint=role("textMuted"))
             Text(tr(label),style=MaterialTheme.typography.labelLarge,maxLines=1,overflow=TextOverflow.Ellipsis)
             Text(value,Modifier.weight(1f),color=role("textMuted"),style=MaterialTheme.typography.labelLarge,textAlign=TextAlign.End,maxLines=1,overflow=TextOverflow.Ellipsis)
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight,contentDescription=null,tint=role("textMuted"))
@@ -120,7 +124,7 @@ fun Modifier.dismissKeyboardOnTap(): Modifier = composed {
     if(compact) {
         val valueLabel=choices.firstOrNull {it.id==value}?.title ?: tr(label)
         val description=tr("mobile.android.selection",mapOf("label" to tr(label),"value" to valueLabel))
-        AssistChip(onClick={open=true},enabled=choices.isNotEmpty(),label={Text(valueLabel,maxLines=1,overflow=TextOverflow.Ellipsis)},modifier=Modifier.heightIn(min=VSTheme.touchTarget).semantics {contentDescription=description})
+        AssistChip(onClick={open=true},enabled=choices.isNotEmpty(),label={Text(valueLabel,Modifier.fillMaxWidth(),textAlign=androidx.compose.ui.text.style.TextAlign.Center,maxLines=1,overflow=TextOverflow.Ellipsis)},modifier=Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget).semantics {contentDescription=description})
     } else PickerRow(label,choices.firstOrNull {it.id==value}?.title ?: tr("mobile.android.choose"),choices.isNotEmpty()) {open=true}
     if(open) AlertDialog(modifier=Modifier.dismissKeyboardOnTap(),shape=MaterialTheme.shapes.large,onDismissRequest={open=false}, title={Text(tr(label))}, containerColor=role("surfaceOverlay"),
         text={ Column(verticalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
@@ -130,11 +134,16 @@ fun Modifier.dismissKeyboardOnTap(): Modifier = composed {
             LazyColumn(Modifier.heightIn(max=(VSTokens.SPACING_GAP*20).dp)) {
                 items(matches,key={it.id}) { choice ->
                     TextButton(shape=MaterialTheme.shapes.small,onClick={change(choice.id);open=false;query=""},enabled=choice.enabled,
+                        colors=ButtonDefaults.textButtonColors(contentColor=role("text"),disabledContentColor=role("textMuted")),
                         modifier=Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget).semantics { selected = choice.id==value }) {
-                        Column(Modifier.fillMaxWidth()) {
+                        choice.swatch?.let {color ->
+                            Box(Modifier.padding(end=VSTheme.gap).size(24.dp).background(Color(color),CircleShape).testTag("palette-swatch"))
+                        }
+                        Column(Modifier.weight(1f)) {
                             Text(choice.title,maxLines=2,overflow=TextOverflow.Ellipsis)
                             choice.supporting?.let {Text(it,style=MaterialTheme.typography.bodySmall,color=role("textMuted"))}
                         }
+                        if(choice.id==value) Icon(Icons.Default.Check,contentDescription=null,modifier=Modifier.padding(start=VSTheme.gap).testTag("choice-check"))
                     }
                 }
             }
@@ -177,7 +186,7 @@ fun Modifier.dismissKeyboardOnTap(): Modifier = composed {
     val label = tr(key)
     val dismiss=rememberKeyboardDismiss()
     Row(Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget).padding(horizontal=VSTheme.inset),verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
-        Icon(Icons.Default.Settings,contentDescription=null,tint=role("textMuted"))
+        Icon(rowIcon(key),contentDescription=null,tint=role("textMuted"))
         Text(label, Modifier.weight(1f))
         Switch(checked=value, onCheckedChange={dismiss();change(it)}, modifier=Modifier.semantics { contentDescription=label })
     }
@@ -209,7 +218,7 @@ fun languageName(code: String, locale: String): String = Locale.forLanguageTag(c
 @Composable fun SettingsLink(label: String, value: String = "", onClick: ()->Unit) {
     Surface(onClick=onClick,color=role("surface"),shape=MaterialTheme.shapes.small,modifier=Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget)) {
         Row(Modifier.padding(VSTheme.inset),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
-            Icon(Icons.Default.Settings,contentDescription=null)
+            Icon(rowIcon(label),contentDescription=null)
             Text(tr(label),Modifier.weight(1f));if(value.isNotBlank()) Text(value,Modifier.weight(1f),color=role("textMuted"),maxLines=1,overflow=TextOverflow.Ellipsis,textAlign=TextAlign.End)
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight,contentDescription=null)
         }
@@ -271,5 +280,28 @@ fun shortErrorKey(key: String): String = when {
     Surface(color=role("messageSurface"),shape=MaterialTheme.shapes.small) {
         Text(tr(if(phone) "mobile.simple.phone" else "mobile.simple.computer"),style=MaterialTheme.typography.labelSmall,
             color=role("textMuted"),modifier=Modifier.padding(horizontal=VSTheme.gap/2,vertical=VSTheme.gap/4))
+    }
+}
+
+/** Semantic icons shared by settings and full-width picker rows. */
+fun rowIcon(key: String): ImageVector = when {
+    key.contains("connect") || key.contains("host") -> VSIcons.Link
+    key.contains("model") -> VSIcons.Download
+    key.endsWith("mode") -> VSIcons.Contrast
+    key.contains("palette") -> VSIcons.Palette
+    key.contains("language") -> VSIcons.Globe
+    key.contains("notification") -> VSIcons.Bell
+    key.contains("privacy") || key.contains("analytics") -> VSIcons.Shield
+    key.contains("voice") -> Icons.Default.Person
+    else -> Icons.Default.Info
+}
+
+/** Transcript scrolls independently; recording and sharing stay clear of the tab bar. */
+@Composable fun DictationLayout(content: @Composable ColumnScope.()->Unit, controls: @Composable ColumnScope.()->Unit) {
+    Column(Modifier.fillMaxSize().imePadding().dismissKeyboardOnTap()) {
+        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(VSTheme.inset),
+            verticalArrangement=Arrangement.spacedBy(VSTheme.gap),content=content)
+        Column(Modifier.fillMaxWidth().padding(horizontal=VSTheme.inset).padding(bottom=VSTheme.inset),
+            verticalArrangement=Arrangement.spacedBy(VSTheme.gap),content=controls)
     }
 }

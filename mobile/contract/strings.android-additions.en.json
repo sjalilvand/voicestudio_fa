@@ -33,7 +33,7 @@
       "inference_failed": "On-device inference failed. Free memory or choose a smaller model and try again.",
       "catalogue_failed": "The bundled model catalogue could not be read. Update or reinstall the app.",
       "capture_slow": "This phone could not process microphone audio fast enough. Stop other apps or use your computer.",
-      "preset_voice": "Preset voice {{number}}",
+      "preset_voice": "Voice {{number}}",
       "transfer": "{{received}} of {{total}}",
       "privacy": "On-device tasks send nothing anywhere. Only model downloads you start and requests to your paired computer use the network.",
       "computer_feature": "This feature currently runs on your computer. You can use Speak and Dictate on this phone without pairing.",
@@ -91,7 +91,14 @@
       "analytics": "Analytics",
       "language": "Language",
       "default_voice": "Default voice",
-      "licence_error": "Licence required"
+      "licence_error": "Licence required",
+      "get": "Get",
+      "downloads_one": "{{feature}} needs {{count}} download \u00b7 {{size}}",
+      "downloads_other": "{{feature}} needs {{count}} downloads \u00b7 {{size}}",
+      "download_one": "{{name}} \u00b7 {{size}}"
+    },
+    "consent": {
+      "phone_note": "Saved on this phone. Nothing is sent."
     }
   }
 }

@@ -44,7 +44,10 @@ struct ComputerDubView: View {
                 TextField(model.t("mobile.dub.paste_url"), text: $sourceURL).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled().accessibilityIdentifier("dub.source_url")
                 Label(model.t("mobile.simple.languages"), systemImage: "globe")
                 Button { selectingLanguages = true } label: {
-                    SelectionRow(label: model.t("mobile.dub.target_languages"), value: ListFormatter.localizedString(byJoining: languages.filter { selected.contains($0.code) }.map(\.name)))
+                    HStack(spacing: VSTokens.spacingGap) {
+                        Image(systemName: "globe").accessibilityHidden(true)
+                        SelectionRow(label: model.t("mobile.dub.target_languages"), value: ListFormatter.localizedString(byJoining: languages.filter { selected.contains($0.code) }.map(\.name)))
+                    }
                 }.buttonStyle(VSButtonStyle(kind: .tertiary)).accessibilityIdentifier("dub.languages")
                 ScrollView(.horizontal) {
                     HStack(spacing: VSTokens.spacingGap) {

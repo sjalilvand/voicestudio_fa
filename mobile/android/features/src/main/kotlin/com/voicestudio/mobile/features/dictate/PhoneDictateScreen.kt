@@ -17,7 +17,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.voicestudio.mobile.designsystem.*
 import com.voicestudio.mobile.features.*
-import com.voicestudio.mobile.features.models.ModelCard
+import com.voicestudio.mobile.features.models.MissingModelsCard
 import com.voicestudio.mobile.local.*
 import com.voicestudio.mobile.network.ClientFailure
 import kotlinx.coroutines.*
@@ -70,14 +70,15 @@ internal class PhoneDictation(private val engine: LocalEngine, private val scope
     var holding by remember {mutableStateOf(false)}
     val start=permissionAction(Manifest.permission.RECORD_AUDIO,"mobile.permissions.microphone",vm::fail) {if(ready&&model!=null) controller.start(model)}
     val holdStart=permissionAction(Manifest.permission.RECORD_AUDIO,"mobile.permissions.microphone",vm::fail) {if(holding&&ready&&model!=null) controller.start(model)}
-    Screen {
+    DictationLayout(content={
         ScreenTitle("mobile.tabs.dictate")
-        if(!ready) model?.let {ModelCard(vm,it)}
+        if(!ready) model?.let {MissingModelsCard(vm,"mobile.tabs.dictate",listOf(it))}
         Text(text,modifier=Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget*3).semantics {liveRegion=LiveRegionMode.Polite})
+    }, controls={
         MicControl(active,ready,tap={holding=false;if(active) controller.finish() else start()},hold={holding=true;holdStart()},release={if(holding) {holding=false;controller.finish()}})
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center) {
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(VSTheme.gap,androidx.compose.ui.Alignment.CenterHorizontally)) {
             IconAction("mobile.dictate.copy",VSIcons.Copy,text.isNotBlank()) {context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText(null,text))}
             IconAction("mobile.speak.share",androidx.compose.material.icons.Icons.Default.Share,text.isNotBlank()) {shareText(context,text)}
         }
-    }
+    })
 }

@@ -75,7 +75,10 @@ func catalogs() throws -> [String: Data] {
         for match in regex.matches(in: source, range: NSRange(source.startIndex..., in: source)) {
             let key = String(source[Range(match.range(at: 1), in: source)!])
             if let suffixes = dynamic[key] { for suffix in suffixes { #expect(l10n.contains(key + suffix), "Missing \(key + suffix)") } }
-            else { #expect(l10n.contains(key), "Missing \(key) in \(file.lastPathComponent)") }
+            else {
+                let exists = l10n.contains(key) || (l10n.contains(key + "_one") && l10n.contains(key + "_other"))
+                #expect(exists, "Missing \(key) in \(file.lastPathComponent)")
+            }
         }
     }
     let mobile = L10n.flatten(try JSONSerialization.jsonObject(with: Data(contentsOf: repository.appendingPathComponent("mobile/contract/strings.mobile.en.json"))))

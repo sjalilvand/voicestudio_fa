@@ -34,6 +34,7 @@ import BackgroundTasks
         if mockMode {
             for task in ["speak", "dictate", "clone", "dub"] { d.removeObject(forKey: "run-on."+task) }
             d.removeObject(forKey: "consentAnswered"); d.removeObject(forKey: "activeHost")
+            d.removeObject(forKey: "theme"); d.removeObject(forKey: "language")
             connection = ConnectionStore(defaults: d, vault: SmokeVault(), transport: SmokeTransport())
         } else { connection = ConnectionStore() }
         hostState = HostState(dub: DubWorkflow())

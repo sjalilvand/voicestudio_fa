@@ -33,7 +33,7 @@
       "this_phone": "This phone",
       "my_computer": "My computer",
       "download_prompt": "Download {{model}} ({{size}}) to run on this phone.",
-      "preset_voice": "Preset voice {{number}}",
+      "preset_voice": "Voice {{number}}",
       "model_details": "{{size}} \u00b7 {{languages}} \u00b7 Licence: {{licence}}",
       "privacy": "On-device tasks send nothing anywhere. The app only downloads models you start and sends requests to your paired computer. Models stay in private storage and are excluded from backups.",
       "computer_required": "Pair your computer in Settings to use this task.",
@@ -91,10 +91,17 @@
       "analytics": "Analytics",
       "language": "Language",
       "default_voice": "Default voice",
-      "licence_error": "Licence required"
+      "licence_error": "Licence required",
+      "get": "Get",
+      "downloads_one": "{{feature}} needs {{count}} download \u00b7 {{size}}",
+      "downloads_other": "{{feature}} needs {{count}} downloads \u00b7 {{size}}",
+      "download_one": "{{name}} \u00b7 {{size}}"
     },
     "permissions": {
       "microphone_phone": "VoiceStudio uses the microphone for on-device dictation and voice references. Computer tasks send audio only to your paired computer."
+    },
+    "consent": {
+      "phone_note": "Saved on this phone. Nothing is sent."
     }
   }
 }

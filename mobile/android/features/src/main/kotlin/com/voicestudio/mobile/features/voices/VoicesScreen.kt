@@ -35,6 +35,7 @@ import java.io.File
     val scope=rememberCoroutineScope()
     val lifecycle=LocalLifecycleOwner.current
     var cloning by rememberSaveable {mutableStateOf(false)}
+    var more by rememberSaveable {mutableStateOf(false)}
     var query by rememberSaveable {mutableStateOf("")}
     var name by rememberSaveable {mutableStateOf("")}
     var sample by rememberSaveable {mutableStateOf<String?>(null)}
@@ -66,7 +67,11 @@ import java.io.File
         ScreenTitle("mobile.tabs.voices")
         if(!cloning) Action("mobile.voices.new_clone",!state.busy&&phone.progress==null) {cloning=true}
         if(cloning) {
-        if(location!=RunLocation.COMPUTER&&model!=null&&!phone.canRun(model,vm.phone.ramBytes)) ModelCard(vm,model)
+        if(location!=RunLocation.COMPUTER) {
+            if(model!=null&&!phone.canRun(model,vm.phone.ramBytes)) MissingModelsCard(vm,"mobile.tabs.voices",listOf(model))
+            Secondary("mobile.simple.more") {more=!more}
+            if(more) TaskModelPicker(vm,"clone",setOf("asr"),model)
+        }
         Field("mobile.voices.name_label",name,{name=it.take(200)})
         Info("mobile.voices.consent_title","mobile.voices.consent_body")
         ConsentCheck("mobile.simple.voice_consent",permission,{permission=it})

@@ -68,11 +68,11 @@ import java.io.File
     }
     Screen {
         ScreenTitle("mobile.tabs.dub")
-        StepHeading("mobile.simple.source",VSIcons.Download)
+        StepHeading("mobile.simple.source",VSIcons.Video)
         Secondary("mobile.dub.pick_media",!copying&&!state.busy) {picker.launch(arrayOf("audio/*","video/*"))}
         path?.let {source ->SelectedDubSource(sourceName ?: File(source).name) {File(source).delete();path=null;sourceName=null}}
         if(copying||catalog==null) InlineLoading()
-        StepHeading("mobile.simple.languages",Icons.Default.Edit)
+        StepHeading("mobile.simple.languages",VSIcons.Globe)
         MultiPicker("mobile.dub.target_languages",targets,languages) {targets=it}
         StepHeading("mobile.simple.voice",Icons.Default.Person)
         ChoicePicker("mobile.speak.voice",voice,listOf(Choice("",tr("mobile.simple.reference")))+phone.voices.map {Choice(it.id,it.name)},compact=true) {voice=it}
@@ -87,7 +87,7 @@ import java.io.File
             TaskModelPicker(vm,"dub-translate",setOf("translate"),translator)
             TaskModelPicker(vm,"dub",setOf("clone"),clone)
         }
-        missing.forEach {ModelCard(vm,it)}
+        MissingModelsCard(vm,"mobile.tabs.dub",missing)
         Action("mobile.simple.dub",ready&&consent&&path!=null&&targets.isNotEmpty()&&!copying&&!state.busy) {
             val source=path?.let(::File) ?: return@Action
             val title=sourceName ?: source.name

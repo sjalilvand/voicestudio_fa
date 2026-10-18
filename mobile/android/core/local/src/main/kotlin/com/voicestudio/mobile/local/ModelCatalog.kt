@@ -12,7 +12,7 @@ import java.io.File
     @SerialName("terms_fingerprint") val termsFingerprint: String, val terms: JsonObject = JsonObject(emptyMap()))
 @Serializable data class PhoneModel(val id: String, val capability: String, val runtime: String, val repo: String, val revision: String,
     val files: List<ModelFile>, @SerialName("total_bytes") val totalBytes: Long, val languages: List<String>,
-    @SerialName("min_ram_gb") val minRamGb: Double, val licence: ModelLicence, val config: JsonObject = JsonObject(emptyMap())) {
+    @SerialName("min_ram_gb") val minRamGb: Double, val licence: ModelLicence, val config: JsonObject = JsonObject(emptyMap()), val name: String = "") {
     val gated: Boolean get() = licence.category != "commercial-ok" || licence.requiresAcceptance
     fun fits(ramBytes: Long): Boolean = ramBytes.toDouble() >= minRamGb * 1_000_000_000
     fun option(name: String, fallback: String = ""): String = config[name]?.jsonPrimitive?.contentOrNull ?: fallback
@@ -25,6 +25,7 @@ import java.io.File
             require(catalog.schemaVersion == 1)
             require(catalog.models.map {it.id}.distinct().size == catalog.models.size)
             catalog.models.forEach { m ->
+                require(m.name.isNotBlank())
                 require(Regex("[a-zA-Z0-9_-]+").matches(m.id))
                 require(Regex("[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+").matches(m.repo))
                 require(Regex("[0-9a-f]{40}").matches(m.revision))

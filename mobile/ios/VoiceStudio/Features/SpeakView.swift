@@ -43,7 +43,7 @@ struct SpeakView: View {
     var body: some View {
         Page {
             RunOnPicker(preference: $preference, task: "speak", installed: localReady).disabled(generating)
-            if route == .download { LocalDownloadPrompt(item: phoneModel) }
+            if route == .download { LocalDownloadPrompt(items: phoneModel.map { [$0] } ?? [], feature: "mobile.tabs.speak") }
             if route == .connect { NavigationLink(model.t("mobile.settings.connection")) { ConnectView() } }
             ZStack(alignment: .topLeading) {
             if text.isEmpty { Text(model.t("mobile.speak.placeholder")).foregroundStyle(theme.color("textMuted")).padding(Theme.compactInset).allowsHitTesting(false) }
@@ -55,7 +55,7 @@ struct SpeakView: View {
             if route != .computer {
                 HStack(spacing: VSTokens.spacingGap) {
                     ChoicePicker(label: model.t("mobile.speak.voice"), selection: $speakerID, options: (0..<min(128,Int(phoneModel?.config["num_speakers"]?.number ?? 1))).map { SelectionOption(id: String($0), title: model.t("mobile.local.preset_voice", ["number": String($0 + 1)])) } + model.phone.voices.map { SelectionOption(id: "phone:"+$0.id.uuidString,title: $0.name) }, compact: true)
-                    ChoicePicker(label: model.t("mobile.local.models"), selection: Binding(get: { phoneModel?.id ?? "" }, set: { phoneModelID = $0; model.phone.chooseModel("speak-"+capability.rawValue,$0) }), options: model.phone.candidates(capability).map { SelectionOption(id: $0.id, title: $0.id, enabled: $0.fits()) }, compact: true)
+                    ChoicePicker(label: model.t("mobile.local.models"), selection: Binding(get: { phoneModel?.id ?? "" }, set: { phoneModelID = $0; model.phone.chooseModel("speak-"+capability.rawValue,$0) }), options: model.phone.candidates(capability).map { SelectionOption(id: $0.id, title: $0.name, subtitle: model.t("mobile.simple." + $0.capability.rawValue), enabled: $0.fits()) }, compact: true)
                     ChoicePicker(label: model.t("mobile.speak.language"), selection: $phoneLanguage, options: phoneVoice == nil ? (phoneModel?.languages ?? []).map { SelectionOption(id: $0, title: Locale(identifier: model.l10n.locale).localizedString(forLanguageCode: $0) ?? $0) } : [SelectionOption(id: "auto",title: model.t("mobile.ios.language_auto"))], compact: true)
 
                 }.disabled(generating)

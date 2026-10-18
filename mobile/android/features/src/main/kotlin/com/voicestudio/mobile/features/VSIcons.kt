@@ -8,6 +8,17 @@ import androidx.compose.ui.unit.dp
 import com.voicestudio.mobile.designsystem.*
 
 object VSIcons {
+    private fun symbol(name: String, data: String): ImageVector = ImageVector.Builder(name,24.dp,24.dp,24f,24f)
+        .addPath(pathData=androidx.compose.ui.graphics.vector.PathParser().parsePathString(data).toNodes(),
+            fill=SolidColor(Color(VSTheme.roles("default",true).getValue("text"))),pathFillType=androidx.compose.ui.graphics.PathFillType.EvenOdd).build()
+    val Link by lazy {symbol("Link","M3.9 12a4 4 0 0 1 4-4h3V6h-3a6 6 0 0 0 0 12h3v-2h-3a4 4 0 0 1-4-4z M8 11h8v2H8z M13 6h3a6 6 0 0 1 0 12h-3v-2h3a4 4 0 0 0 0-8h-3z")}
+    val Globe by lazy {symbol("Globe","M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M4.3 10h3a17 17 0 0 0 0 4h-3a8 8 0 0 1 0-4z M5.1 8a8 8 0 0 1 4-3.5A15 15 0 0 0 7.7 8z M5.1 16h2.6a15 15 0 0 0 1.4 3.5A8 8 0 0 1 5.1 16z M9.4 10h5.2a15 15 0 0 1 0 4H9.4a15 15 0 0 1 0-4z M9.8 8A13 13 0 0 1 12 4a13 13 0 0 1 2.2 4z M9.8 16h4.4A13 13 0 0 1 12 20a13 13 0 0 1-2.2-4z M16.3 8a15 15 0 0 0-1.4-3.5 8 8 0 0 1 4 3.5z M16.7 10h3a8 8 0 0 1 0 4h-3a17 17 0 0 0 0-4z M16.3 16h2.6a8 8 0 0 1-4 3.5 15 15 0 0 0 1.4-3.5z")}
+    val Contrast by lazy {symbol("Contrast","M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M12 4v16a8 8 0 0 1 0-16z")}
+    val Palette by lazy {symbol("Palette","M12 2a10 10 0 0 0 0 20h1a3 3 0 0 0 2-5c-.5-.5-.1-1 .5-1H17a5 5 0 0 0 5-5c0-5-5-9-10-9z M7 7a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z M12 5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z M17 7a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z M7 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z")}
+    val Bell by lazy {symbol("Bell","M12 2a2 2 0 0 0-2 2v.3C7.6 5.1 6 7.3 6 10v6l-2 2v1h16v-1l-2-2v-6c0-2.7-1.6-4.9-4-5.7V4a2 2 0 0 0-2-2z M10 20a2 2 0 0 0 4 0z")}
+    val Shield by lazy {symbol("Shield","M12 2 3 6v6c0 5.5 4 9 9 11 5-2 9-5.5 9-11V6z M12 4.2 19 7v5c0 4-3 7-7 8.8z")}
+    val Video by lazy {symbol("Video","M3 4h14a2 2 0 0 1 2 2v3l4-3v12l-4-3v3a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z M8 8v8l6-4z")}
+
     private fun glyph(name: String, draw: androidx.compose.ui.graphics.vector.PathBuilder.()->Unit): ImageVector =
         ImageVector.Builder(name,24.dp,24.dp,24f,24f).path(fill=SolidColor(Color(VSTheme.roles("default",true).getValue("text"))),pathBuilder=draw).build()
     val Qr by lazy {glyph("QR") {

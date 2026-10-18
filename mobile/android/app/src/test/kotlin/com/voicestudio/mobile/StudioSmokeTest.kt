@@ -59,6 +59,7 @@ class StudioSmokeTest {
         try {
             compose.setContent {CompositionLocalProvider(LocalHostPlayerFactory provides {_,_->player}) {StudioApp(vm)}}
             awaitCondition {!vm.state.value.loading}
+            compose.onNodeWithText("Saved on this phone. Nothing is sent.").assertExists()
             compose.onNodeWithText("No thanks").assertExists().performClick()
             awaitCondition {vm.preferences.value.consent==false}
             compose.onNodeWithText("Settings").performClick()

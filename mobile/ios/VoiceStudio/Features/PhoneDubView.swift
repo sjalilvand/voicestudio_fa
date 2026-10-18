@@ -30,7 +30,10 @@ struct PhoneDubView: View {
             if let source { SelectedFileRow(name: source.name) { self.source = nil } }
             Label(model.t("mobile.simple.languages"),systemImage: "globe")
             Button { languages = true } label: {
-                SelectionRow(label: model.t("mobile.dub.target_languages"),value: ListFormatter.localizedString(byJoining: choices.filter { targets.contains($0.code) }.map(\.name)))
+                HStack(spacing: VSTokens.spacingGap) {
+                    Image(systemName: "globe").accessibilityHidden(true)
+                    SelectionRow(label: model.t("mobile.dub.target_languages"),value: ListFormatter.localizedString(byJoining: choices.filter { targets.contains($0.code) }.map(\.name)))
+                }
             }.buttonStyle(VSButtonStyle(kind: .tertiary)).accessibilityIdentifier("dub.languages")
             ScrollView(.horizontal) {
                 HStack { ForEach(choices.filter { targets.contains($0.code) }) { language in
@@ -49,7 +52,7 @@ struct PhoneDubView: View {
                 phoneModel("dub-translate",.translate)
                 phoneModel("dub",.clone)
             }.disabled(copying || model.phone.activeDub != nil)
-            ForEach(model.phone.dubModels.filter { !model.phone.ready($0) }) { LocalDownloadPrompt(item: $0) }
+            LocalDownloadPrompt(items: model.phone.dubModels, feature: "mobile.tabs.dub")
             Button(model.t("mobile.simple.dub"),systemImage: "film") { start() }.buttonStyle(VSButtonStyle(kind: .primary))
                 .disabled(!ready || !consent || source == nil || targets.isEmpty || model.busy || copying || model.phone.activeDub != nil)
                 .accessibilityIdentifier("dub.start")
@@ -102,7 +105,10 @@ struct PhoneDubView: View {
                             if let code = language.code { if targets.contains(code) { targets.remove(code) } else { targets.insert(code) } }
                         } label: {
                             HStack { Text(language.name); Spacer(); Image(systemName: targets.contains(language.code ?? "") ? "checkmark.circle.fill" : "circle") }.frame(minHeight: 44)
-                        }.accessibilityValue(model.t(targets.contains(language.code ?? "") ? "mobile.ios.selected" : "mobile.ios.not_selected"))
+                        }.buttonStyle(VSButtonStyle(kind: .tertiary))
+                            .accessibilityValue(model.t(targets.contains(language.code ?? "") ? "mobile.ios.selected" : "mobile.ios.not_selected"))
+                            .accessibilityAddTraits(targets.contains(language.code ?? "") ? .isSelected : [])
+                            .listRowBackground(theme.color("surface"))
                     }
                 }.scrollContentBackground(.hidden).background(theme.color("surfaceOverlay")).keyboardAccessible()
                     .navigationTitle(model.t("mobile.dub.target_languages"))
@@ -117,7 +123,7 @@ struct PhoneDubView: View {
         .onDisappear { creating?.cancel() }
     }
     private func phoneModel(_ task: String,_ capability: ModelCapability) -> some View {
-        ChoicePicker(label: model.t("mobile.simple."+capability.rawValue),selection: Binding(get: { model.phone.selectedModel(task,capability)?.id ?? "" },set: { model.phone.chooseModel(task,$0) }),options: model.phone.candidates(capability).map { SelectionOption(id: $0.id,title: $0.id,enabled: $0.fits()) })
+        ChoicePicker(label: model.t("mobile.simple."+capability.rawValue),selection: Binding(get: { model.phone.selectedModel(task,capability)?.id ?? "" },set: { model.phone.chooseModel(task,$0) }),options: model.phone.candidates(capability).map { SelectionOption(id: $0.id,title: $0.name,subtitle: model.t("mobile.simple." + $0.capability.rawValue),enabled: $0.fits()) })
     }
     private func start() {
         guard let source else { return }

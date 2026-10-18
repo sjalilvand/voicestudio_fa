@@ -23,6 +23,7 @@ class PhoneNavigationTest {
     @get:Rule val compose=createComposeRule()
     @Test fun allTabsAndModelManagementWorkWithoutPairing() = runBlocking {
         val app=ApplicationProvider.getApplicationContext<Application>()
+        androidx.work.testing.WorkManagerTestInitHelper.initializeTestWorkManager(app)
         val vault=object: CredentialVault {
             override fun read(host: String): Secret? = null
             override fun write(host: String,secret: Secret?) = Unit

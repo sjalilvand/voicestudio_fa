@@ -6,9 +6,21 @@ import pathlib
 import plistlib
 import re
 import shutil
+import subprocess
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
 IOS = ROOT / "mobile/ios"
+
+
+def prepare_brand_assets(output):
+    """Use macOS CoreGraphics, available with CLT, without an image dependency."""
+    source = IOS / "scripts/generate-brand-assets.swift"
+    cache = IOS / ".cache/brand-assets"
+    cache.mkdir(parents=True, exist_ok=True)
+    renderer = cache / "generate-brand-assets"
+    if not renderer.exists() or renderer.stat().st_mtime < source.stat().st_mtime:
+        subprocess.run(["xcrun", "swiftc", "-module-cache-path", str(cache / "modules"), str(source), "-o", str(renderer)], check=True)
+    subprocess.run([str(renderer), str(ROOT / "docs/logo.png"), str(ROOT / "mobile/contract/tokens.json"), str(output)], check=True)
 
 
 def merge(base, addition):
@@ -78,5 +90,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", required=True, type=pathlib.Path)
     parser.add_argument("--info-output", required=True, type=pathlib.Path)
+    parser.add_argument("--assets-output", type=pathlib.Path, default=IOS / ".generated/Brand.xcassets")
     args = parser.parse_args()
     prepare(args.output, args.info_output)
+    prepare_brand_assets(args.assets_output)

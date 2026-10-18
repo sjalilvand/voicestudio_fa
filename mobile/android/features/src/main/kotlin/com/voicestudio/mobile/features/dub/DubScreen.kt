@@ -107,14 +107,14 @@ import java.io.File
     }
     Screen {
         ScreenTitle("mobile.tabs.dub")
-        StepHeading("mobile.simple.source",VSIcons.Download)
+        StepHeading("mobile.simple.source",VSIcons.Video)
         if(copying || catalog==null) InlineLoading()
         Secondary("mobile.dub.pick_media",!copying) {picker.launch(arrayOf("video/*","audio/*"))}
         if(filePath!=null) {
             SelectedDubSource(sourceName ?: File(filePath!!).name) {File(filePath!!).delete();filePath=null;sourceName=null}
         }
         Field("mobile.dub.paste_url",link,{link=it})
-        StepHeading("mobile.simple.languages",Icons.Default.Edit)
+        StepHeading("mobile.simple.languages",VSIcons.Globe)
         MultiPicker("mobile.dub.target_languages",targets,languages) {targets=it}
         StepHeading("mobile.simple.voice",Icons.Default.Person)
         Group {Picker("mobile.speak.voice",voice,dubVoiceChoices(state.profiles,tr("mobile.simple.default_voice")),{voice=it})}

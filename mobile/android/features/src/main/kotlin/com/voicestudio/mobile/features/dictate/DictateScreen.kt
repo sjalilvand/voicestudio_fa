@@ -49,7 +49,7 @@ import kotlinx.coroutines.CancellationException
     var holding by remember {mutableStateOf(false)}
     val holdStart=permissionAction(Manifest.permission.RECORD_AUDIO,"mobile.permissions.microphone",vm::fail) {if(holding) controller.start()}
     val start=permissionAction(Manifest.permission.RECORD_AUDIO,"mobile.permissions.microphone",vm::fail,controller::start)
-    Screen {
+    DictationLayout(content={
         ScreenTitle("mobile.tabs.dictate")
         if(checking) {Text(tr("common.loading"));LinearProgressIndicator()}
         readinessError?.let {error ->
@@ -64,12 +64,13 @@ import kotlinx.coroutines.CancellationException
         }
         Secondary("mobile.simple.retry",!checking) {scope.launch {check()}}
         Text(transcript,modifier=Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget*3).semantics {liveRegion=LiveRegionMode.Polite})
+    }, controls={
         MicControl(active,ready,tap={holding=false;if(active) controller.finish() else start()},hold={holding=true;holdStart()},release={if(holding) {holding=false;controller.finish()}})
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center) {
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(VSTheme.gap,androidx.compose.ui.Alignment.CenterHorizontally)) {
             IconAction("mobile.dictate.copy",VSIcons.Copy,transcript.isNotBlank()) {context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText(null,transcript))}
             IconAction("mobile.speak.share",androidx.compose.material.icons.Icons.Default.Share,transcript.isNotBlank()) {shareText(context,transcript)}
         }
-    }
+    })
 }
 
 @Composable fun DictateScreen(vm: StudioViewModel) {

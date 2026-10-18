@@ -39,6 +39,7 @@ import java.util.Locale
 class VoiceStudioApplication:Application()
 class MainActivity:ComponentActivity() {
     override fun onCreate(savedInstanceState:Bundle?) {
+        setTheme(R.style.AppTheme)
         super.onCreate(savedInstanceState);enableEdgeToEdge()
         setContent {StudioApp()}
     }
@@ -124,7 +125,7 @@ class MainActivity:ComponentActivity() {
             }
             }
             if(!state.loading&&prefs.consent==null) AlertDialog(shape=MaterialTheme.shapes.large,onDismissRequest={vm.consent(false)},title={Text(tr("consent.title"))},
-                text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(VSTheme.gap)) {Text(tr("consent.body"));Text(tr("mobile.android.analytics_local"))}},
+                text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(VSTheme.gap)) {Text(tr("consent.body"));Text(tr("mobile.consent.phone_note"))}},
                 confirmButton={TextButton(shape=MaterialTheme.shapes.small,onClick={vm.consent(true)}) {Text(tr("consent.yes"))}},
                 dismissButton={TextButton(shape=MaterialTheme.shapes.small,onClick={vm.consent(false)}) {Text(tr("consent.no"))}})
         }

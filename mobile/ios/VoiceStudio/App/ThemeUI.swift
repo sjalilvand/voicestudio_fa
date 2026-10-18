@@ -150,6 +150,7 @@ struct ConsentView: View {
     var body: some View {
         Page {
             Text(model.t("privacy.analytics_title")).font(.custom("InterVariable", size: VSTokens.textEditor.size, relativeTo: .title))
+            Text(model.t("mobile.consent.phone_note"))
             InfoButton(title: model.t("mobile.simple.info"), detail: model.t("privacy.analytics_subtitle"))
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: VSTokens.spacingGap) { choice(true); choice(false) }

@@ -38,6 +38,11 @@ AGP 8.12.0, Kotlin 2.2.21 and direct dependencies are pinned in the wrapper and
 sandbox writable directories; parallel workers are capped for this shared host.
 The version name/code are derived at configuration time from root `package.json`.
 
+The adaptive launcher icon (including its themed monochrome layer) and launch
+screen are generated during Gradle preBuild from `docs/logo.svg` and the default
+canvas token by `scripts/generate_brand_resources.py`. Generated resources stay
+in `app/build/`; no copied logo binaries are checked in.
+
 ## Layout
 
 - `app`: launcher, Navigation Compose, consent, generated asset packaging, JVM UI
@@ -61,20 +66,24 @@ The version name/code are derived at configuration time from root `package.json`
 
 All five tabs are reachable without pairing. Consent dismissal means No.
 Speak, Clone, Dictate and Dub remember their own Run on choice. An installed
-phone model is preferred; otherwise the paired computer is used or a model
-card offers Download. Dub requires ASR, translation and cloning models. Run on
-is a compact This phone / Computer control visible only when paired. Phone and
+phone model is preferred; otherwise the paired computer is used or a
+compact card offers Get with the total download size. Dub groups its ASR,
+translation and cloning dependencies in one card; each gated model has its own
+licence confirmation. The card also opens Models. Run on is a compact This phone / Computer control visible only when paired. Phone and
 computer voices remain separate, with a location badge in the combined list.
-Settings opens optional Connect and Models.
+Settings opens optional Connect and Models. Model choices use product names and
+localized capabilities; licence details stay inside the acceptance sheet.
 
 Speak has a large editor with placeholder-only copy, three compact picker chips,
-Generate, a player and compact recent rows. Dictate has one central microphone
-control: tap starts/stops; hold records until release. Connect keeps URL/PIN
+Generate, a player and compact recent rows. Dictate keeps the microphone and
+copy/share controls above the tab bar while the transcript scrolls: tap
+starts/stops; hold records until release. Connect keeps URL/PIN
 under Enter address and the optional API key under More. Model licences open in
 a sheet with complete inert terms, a rights confirmation and Accept / Decline.
 Screens use short labels and icons; hints live behind one info action. Settings
-uses rows without explanatory paragraphs. Errors use short messages and a
-recovery action; the original structured error keys remain available to workers.
+uses distinct row icons without explanatory paragraphs. Pickers mark the current
+selection, use normal text colors, and show palette color swatches. Errors use
+short messages and a recovery action; the original structured error keys remain available to workers.
 
 Connect supports CameraX/ZXing QR scanning, manual URL/PIN/API-key entry, saved
 hosts and editable labels; last-seen timestamps are retained locally. Public `/health` must carry the backend
@@ -251,7 +260,7 @@ available offline in About.
   tasks. The separate computer model-licences link opens the paired host UI.
   Computer model setup remains on the host; no admin endpoint is exposed.
 - No blur or custom motion is used. Compose follows the system animation scale;
-  all content scrolls, text scales, touch targets are at least 48 dp. Large font
+  long content scrolls, text scales, touch targets are at least 48 dp. Large font
   scales show labelled navigation icons without squeezed tab text. A visible
   text field or backend-provided name is used for each interactive choice.
 
@@ -259,9 +268,9 @@ available offline in About.
 
 Gradle bundles the generated `mobile/contract/models.json` with the locale
 catalogues. Unknown fields are ignored; invalid revisions, checksums, file
-paths, sizes, runtime/capability pairs and schema versions fail closed. No
-catalogue or model is fetched when a tab is opened. Model IDs and declared
-metadata are displayed from that bundle.
+paths, sizes, product names, runtime/capability pairs and schema versions fail
+closed. No catalogue or model is fetched when a tab is opened. Screens use
+product names and localized capability labels from that bundle.
 
 Models cards show name, size, capability and one Download / Cancel / Delete
 action. Their licence action opens languages, declared terms and actual storage;
@@ -365,12 +374,14 @@ export HF_HUB_CACHE="$PWD/build/hf-empty"
 ./gradlew assembleDebugAndroidTest
 ```
 
-The current host run passed all four Gradle tasks: 119 JVM tests, zero failures
+The current host run passed all four Gradle tasks: 123 JVM tests, zero failures
 or skips, and zero lint errors. Debug app and instrumentation APKs build for
 arm64-v8a and x86_64; instrumentation is not executed here.
 
 JVM checks cover existing M1 API/security, storage, worker, picker, protocol and
-Compose smoke regressions, plus local catalogue/routing, licence persistence and
+Compose smoke regressions, plus generated logo/adaptive/splash resources, compact download prompts,
+separate queued licence sheets, picker marks/colors/swatches, Dictate control
+spacing, local catalogue/routing, licence persistence and
 withdrawal, HTTP resume and restart, checksum rejection, mirror fallback,
 Wi-Fi/mobile-data policy, low storage, cancellation, deletion, synthetic WAV
 metadata, native cancellation control and microphone lifecycle cleanup. Phone

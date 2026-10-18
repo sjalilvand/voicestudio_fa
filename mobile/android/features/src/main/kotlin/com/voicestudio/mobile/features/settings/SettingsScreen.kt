@@ -44,8 +44,8 @@ import com.voicestudio.mobile.l10n.L10n
             val palettes=paletteChoices(l)
             Group {
             Picker("mobile.settings.mode",prefs.mode,listOf("dark","light","system").map {it to l.t("mobile.settings.mode_$it")}) {value -> vm.preference {it.copy(mode=value)}}
-            Picker("mobile.settings.light_palette",prefs.lightPalette,palettes) {value -> vm.preference {it.copy(lightPalette=value)}}
-            Picker("mobile.settings.dark_palette",prefs.darkPalette,palettes) {value -> vm.preference {it.copy(darkPalette=value)}}
+            ChoicePicker("mobile.settings.light_palette",prefs.lightPalette,palettes.map {Choice(it.first,it.second,swatch=VSTheme.roles(it.first,false).getValue("messageAction"))}) {value -> vm.preference {it.copy(lightPalette=value)}}
+            ChoicePicker("mobile.settings.dark_palette",prefs.darkPalette,palettes.map {Choice(it.first,it.second,swatch=VSTheme.roles(it.first,true).getValue("messageAction"))}) {value -> vm.preference {it.copy(darkPalette=value)}}
             }
 
             Heading("mobile.settings.language")

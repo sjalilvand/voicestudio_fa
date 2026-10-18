@@ -12,7 +12,7 @@ private func localDirectory() throws -> URL {
 private func localFixture(bytes: Data = Data("model".utf8), gated: Bool = false, capability: String = "tts", fingerprint: String = String(repeating: "a", count: 64)) throws -> PhoneModel {
     let runtime = capability == "clone" ? "omnivoice.cpp" : capability == "translate" ? "llama.cpp" : "sherpa-onnx"
     let object: [String: Any] = ["schema_version": 1, "models": [[
-        "id": "fixture", "capability": capability, "runtime": runtime, "repo": "owner/model", "revision": String(repeating: "b", count: 40),
+        "id": "fixture", "name": "Fixture", "capability": capability, "runtime": runtime, "repo": "owner/model", "revision": String(repeating: "b", count: 40),
         "files": [["path": "model.bin", "size": bytes.count, "sha256": SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined(), "role": "model"]],
         "total_bytes": bytes.count, "languages": ["en"], "min_ram_gb": 1,
         "licence": ["id": "test", "category": gated ? "non-commercial" : "commercial-ok", "requires_acceptance": false, "credit": "Fixture", "rights_holder": "Fixture", "terms_fingerprint": fingerprint],
@@ -312,3 +312,38 @@ private struct LoopbackRangeTransport: HTTPTransport {
     #expect(try Data(contentsOf: path.appendingPathComponent("model.bin")) == bytes)
 }
 #endif
+
+@Test func modelProductNameIsRequiredAndSurvivesLanguageSelection() throws {
+    let fixture = try localFixture()
+    #expect(fixture.name == "Fixture")
+    #expect(try fixture.selectingLanguage("en").name == fixture.name)
+    let encoded = try JSONEncoder().encode(fixture)
+    var object = try JSONSerialization.jsonObject(with: encoded) as! [String: Any]
+    for invalid: String? in [nil, "", " \n "] {
+        object["name"] = invalid
+        let data = try JSONSerialization.data(withJSONObject: ["schema_version": 1, "models": [object]])
+        #expect(throws: (any Error).self) { try ModelCatalogue.decode(data) }
+    }
+}
+
+@Test func downloadBatchRequiresEveryReceiptAndSkipsInstalledModels() throws {
+    let first = try localFixture(gated: true)
+    var object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(first)) as! [String: Any]
+    object["id"] = "second"; object["name"] = "Second"
+    let second = try ModelCatalogue.decode(JSONSerialization.data(withJSONObject: ["schema_version": 1, "models": [object]])).models[0]
+    var queue = ModelDownloadQueue([first, second, first])
+    // Repeated calls cannot skip an unaccepted model (including persistence failure).
+    for _ in 0..<2 {
+        guard case .licence(let item) = queue.next(installed: [], accepted: []) else { Issue.record("Missing first licence gate"); return }
+        #expect(item.id == first.id)
+    }
+    guard case .download(let item) = queue.next(installed: [], accepted: [first.id]) else { Issue.record("Missing first download"); return }
+    #expect(item.id == first.id)
+    guard case .licence(let item) = queue.next(installed: [], accepted: [first.id]) else { Issue.record("Missing second licence gate"); return }
+    #expect(item.id == second.id)
+    // Accepting an installed model authorizes use without downloading it again.
+    #expect(queue.next(installed: [second.id], accepted: [first.id, second.id]) == nil)
+    var permissive = ModelDownloadQueue([try localFixture()])
+    guard case .download = permissive.next(installed: [], accepted: []) else { Issue.record("Permissive model was gated"); return }
+    #expect(permissive.next(installed: [], accepted: []) == nil)
+}

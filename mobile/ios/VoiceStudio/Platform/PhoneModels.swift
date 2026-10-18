@@ -101,14 +101,15 @@ final class WifiState: @unchecked Sendable {
         do { try await store.delete(model); await refresh() }
         catch { self.error = error as? ClientError ?? ClientError("mobile.errors.file") }
     }
-    func accept(_ model: PhoneModel, accepted: Bool) async {
-        guard let store else { return }
+    @discardableResult func accept(_ model: PhoneModel, accepted: Bool) async -> Bool {
+        guard let store else { return false }
         if !accepted { downloads[model.id]?.cancel() }
         do {
             guard let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String else { throw ClientError("mobile.local.configuration") }
             try await store.accept(model, fingerprint: model.licence.terms_fingerprint, appVersion: version, accepted: accepted)
             await refresh()
-        } catch { self.error = error as? ClientError ?? ClientError("mobile.errors.file") }
+            return true
+        } catch { self.error = error as? ClientError ?? ClientError("mobile.errors.file"); return false }
     }
     var dubModels: [PhoneModel] { [selectedModel("dub-asr",.asr), selectedModel("dub-translate",.translate), selectedModel("dub",.clone)].compactMap { $0 } }
     var dubReady: Bool { dubModels.count == 3 && dubModels.allSatisfy(ready) }

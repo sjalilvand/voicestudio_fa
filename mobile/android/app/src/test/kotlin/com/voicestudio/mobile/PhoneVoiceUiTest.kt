@@ -46,7 +46,8 @@ class PhoneVoiceUiTest {
             compose.onNodeWithText("Save").performClick()
             await {vm.phone.state.value.voices.any {it.name=="New name"}}
             compose.onNode(hasText("Speak") and hasClickAction()).performClick()
-            compose.onNodeWithContentDescription("Voice, currently Preset voice 1").performScrollTo().performClick()
+            compose.onNodeWithContentDescription(com.voicestudio.mobile.l10n.L10n.load(ApplicationProvider.getApplicationContext<Application>(),"en").let {l ->
+                l.t("mobile.android.selection",mapOf("label" to l.t("mobile.speak.voice"),"value" to l.t("mobile.local.preset_voice",mapOf("number" to 1))))}).performScrollTo().performClick()
             compose.onNodeWithText("Search").performTextInput("New name")
             compose.onNode(hasText("New name") and !hasSetTextAction()).performClick()
             compose.onNodeWithText("New name").assertExists()

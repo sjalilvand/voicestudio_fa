@@ -18,7 +18,7 @@ class LocalPolicyTest {
     @get:Rule val temporary=TemporaryFolder()
     private val payload="pinned model data".toByteArray()
     private fun model(gated: Boolean=false, digest: String=hash(payload)): PhoneModel = ModelCatalog.decode("""
-        {"schema_version":1,"unknown":"ignored","models":[{"id":"fixture","capability":"tts","runtime":"sherpa-onnx",
+        {"schema_version":1,"unknown":"ignored","models":[{"id":"fixture","name":"Fixture","capability":"tts","runtime":"sherpa-onnx",
         "repo":"org/model","revision":"${"a".repeat(40)}","files":[{"path":"weights.bin","size":${payload.size},"sha256":"$digest","role":"model"}],
         "total_bytes":${payload.size},"languages":["en"],"min_ram_gb":2,
         "licence":{"id":"example","category":"${if(gated) "non-commercial" else "commercial-ok"}","requires_acceptance":$gated,"credit":"Credit","rights_holder":"Holder","terms_fingerprint":"${"b".repeat(64)}"},"config":{}}]}
@@ -42,7 +42,7 @@ class LocalPolicyTest {
     @Test fun invalidCatalogueCannotChooseAnUnpinnedOrEscapingFile() {
         val json=kotlinx.serialization.json.Json
         val valid=json.encodeToString(ModelCatalog.serializer(),ModelCatalog(1,listOf(model())))
-        for(invalid in listOf(valid.replace("weights.bin","../escape"),valid.replace("weights.bin",".verified"),valid.replace(hash(payload),"missing-checksum"),valid.replace("\"schema_version\":1","\"schema_version\":2"))) {
+        for(invalid in listOf(valid.replace("\"name\":\"Fixture\"","\"name\":\"\""),valid.replace("weights.bin","../escape"),valid.replace("weights.bin",".verified"),valid.replace(hash(payload),"missing-checksum"),valid.replace("\"schema_version\":1","\"schema_version\":2"))) {
             try {ModelCatalog.decode(invalid);fail("Invalid catalogue accepted")} catch(_:IllegalArgumentException) {}
         }
     }

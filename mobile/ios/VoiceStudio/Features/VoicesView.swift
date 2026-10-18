@@ -27,9 +27,7 @@ struct VoicesView: View {
     var body: some View {
         Page {
             RunOnPicker(preference: $preference, task: "clone", installed: localReady)
-            if route != .computer {
-                ChoicePicker(label: model.t("mobile.local.models"),selection: Binding(get: { model.phone.selectedModel("clone",.asr)?.id ?? "" },set: { model.phone.chooseModel("clone",$0) }),options: model.phone.candidates(.asr).map { SelectionOption(id: $0.id,title: $0.id,enabled: $0.fits()) },compact: true)
-            }
+            if route == .download { LocalDownloadPrompt(items: model.phone.selectedModel("clone",.asr).map { [$0] } ?? [], feature: "mobile.tabs.voices") }
             SearchField(prompt: model.t("mobile.voices.search"), text: $query)
             if entries.isEmpty && !model.loading {
                 EmptyState(key: "mobile.simple.empty_voices", icon: "person")
@@ -113,8 +111,13 @@ struct CloneView: View {
     private var route: TaskRoute { LocalRouting.route(preference: preference,installed: ready,paired: model.connection.client != nil) }
     var body: some View {
         Page(backgroundRole: "surfaceOverlay") {
-            if route == .download { LocalDownloadPrompt(item: asr) }
+            if route == .download { LocalDownloadPrompt(items: asr.map { [$0] } ?? [], feature: "mobile.tabs.voices") }
             if route == .connect { NavigationLink(model.t("mobile.simple.reconnect")) { ConnectView() } }
+            if route != .computer {
+                DisclosureGroup(model.t("mobile.simple.more")) {
+                    ChoicePicker(label: model.t("mobile.local.models"), selection: Binding(get: { asr?.id ?? "" }, set: { model.phone.chooseModel("clone",$0) }), options: model.phone.candidates(.asr).map { SelectionOption(id: $0.id, title: $0.name, subtitle: model.t("mobile.simple." + $0.capability.rawValue), enabled: $0.fits()) })
+                }
+            }
             TextField(model.t("mobile.voices.name_label"),text: $name).accessibilityIdentifier("voices.clone.name")
             HStack {
                 Toggle(model.t("mobile.simple.voice_consent"),isOn: $consent).frame(minHeight: 44)

@@ -6,6 +6,7 @@ struct SelectionOption: Identifiable {
     let title: String
     var subtitle: String? = nil
     var enabled = true
+    var swatch: Theme? = nil
 }
 
 struct SelectionRow: View {
@@ -83,16 +84,27 @@ struct ChoicePicker: View {
                     selection = option.id; presenting = false
                 } label: {
                     HStack(spacing: VSTokens.spacingGap) {
+                        if let swatch = option.swatch {
+                            HStack(spacing: 0) {
+                                swatch.color("canvas")
+                                swatch.color("surface")
+                                swatch.color("messageAction")
+                            }.frame(width: 36, height: 24).clipShape(RoundedRectangle(cornerRadius: 4))
+                                .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(theme.color("border")))
+                                .accessibilityHidden(true).accessibilityIdentifier("choice.swatch." + option.id)
+                        }
                         VStack(alignment: .leading, spacing: VSTokens.spacingGap) {
                             Text(option.title).foregroundStyle(theme.color(option.enabled ? "text" : "textMuted"))
                                 .lineLimit(2).truncationMode(.tail)
                             if let subtitle = option.subtitle { Text(subtitle).font(.custom("InterVariable", size: VSTokens.textLabel.size, relativeTo: .caption)).foregroundStyle(theme.color("textMuted")) }
                         }
                         Spacer(minLength: 0)
-                        if selection == option.id { Image(systemName: "checkmark").foregroundStyle(theme.color("messageAction")) }
+                        if selection == option.id { Image(systemName: "checkmark").foregroundStyle(theme.color("text")).accessibilityIdentifier("choice.selected") }
                     }.frame(minHeight: 44).contentShape(Rectangle())
                 }.buttonStyle(VSButtonStyle(kind: .tertiary)).disabled(!option.enabled)
-                    .accessibilityLabel(option.title).accessibilityValue(option.subtitle ?? "")
+                    .accessibilityLabel(option.title)
+                    .accessibilityValue(ListFormatter.localizedString(byJoining: [model.t(selection == option.id ? "mobile.ios.selected" : "mobile.ios.not_selected")] + (option.subtitle.map { [$0] } ?? [])))
+                    .accessibilityAddTraits(selection == option.id ? .isSelected : [])
                     .accessibilityIdentifier("choice.option." + option.id).listRowBackground(theme.color("surface"))
             }
         }
@@ -179,11 +191,12 @@ struct InfoButton: View {
     let title: String
     let detail: String
     var row = false
+    var icon = "info.circle"
     @State private var showing = false
     var body: some View {
         Button { showing = true } label: {
-            if row { Label(title, systemImage: "info.circle") }
-            else { Image(systemName: "info.circle").accessibilityLabel(title) }
+            if row { Label(title, systemImage: icon) }
+            else { Image(systemName: icon).accessibilityLabel(title) }
         }.labelStyle(.titleAndIcon)
             .buttonStyle(VSButtonStyle(kind: .tertiary))
             .sheet(isPresented: $showing) {
