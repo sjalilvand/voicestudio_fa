@@ -16,6 +16,10 @@ metadata and the backend fallback mirror it.
 
 - Preview iOS and Android companion apps: drive your own VoiceStudio from your phone (speak, voices and cloning, dubbing, dictation) after pairing by QR code; build from source for now ([guide](docs/mobile.md)) (#2965)
 
+### Fixed
+
+- Missing audio-tokenizer feature-extractor configuration now triggers model-cache repair instead of an unclassified synthesis failure (#2984) — thanks @jonathanwxh-cell!
+
 ### Docs
 
 - Contributor guides and the pull request template explain how to sign the CLA before opening a first pull request (#2676)

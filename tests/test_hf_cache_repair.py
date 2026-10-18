@@ -30,6 +30,20 @@ _SIGNATURE = (
 )
 
 
+def _missing_feature_extractor(path):
+    return (
+        f"Can't load feature extractor for '{path}'. If you were trying to load "
+        "it from 'https://huggingface.co/models', make sure you don't have a "
+        f"local directory with the same name. Otherwise, make sure '{path}' is "
+        "the correct path to a directory containing a preprocessor_config.json file"
+    )
+
+
+_FEATURE_EXTRACTOR_SIGNATURE = _missing_feature_extractor(
+    "/cache/models--k2-fsa--OmniVoice/snapshots/revision/audio_tokenizer"
+)
+
+
 def _symlink_or_skip(target: str, link: str) -> None:
     """Create a symlink, skipping the test where the OS forbids it (Windows
     without Developer Mode). CI's full pytest run is Linux, so coverage holds."""
@@ -343,7 +357,9 @@ def _healed_summary(repo_id="test/checkpoint"):
             "outcome": "healed_with_links", "ok": True, "error": ""}
 
 
-def test_signature_failure_link_repairs_and_retries(model_manager, monkeypatch):
+@pytest.mark.parametrize("signature", [_SIGNATURE, _FEATURE_EXTRACTOR_SIGNATURE],
+                         ids=["weights", "feature-extractor"])
+def test_signature_failure_link_repairs_and_retries(model_manager, monkeypatch, signature):
     """The core fix: first load hits the missing-weights signature, the link
     self-heal repairs the snapshot, and the single retry succeeds — the legacy
     resume ladder (a real network re-download) is never entered."""
@@ -365,7 +381,7 @@ def test_signature_failure_link_repairs_and_retries(model_manager, monkeypatch):
         def from_pretrained(cls, *args, **kwargs):
             cls.attempts += 1
             if cls.attempts == 1:
-                raise OSError(_SIGNATURE)
+                raise OSError(signature)
             return SimpleNamespace(llm=object())
 
     monkeypatch.setattr(model_manager, "_lazy_omnivoice", lambda: FlakyOmniVoice)
@@ -426,7 +442,9 @@ def test_unrelated_load_error_does_not_trigger_repair(model_manager, monkeypatch
     assert repair_calls == []
 
 
-def test_noop_repair_falls_through_to_resume_ladder(model_manager, monkeypatch):
+@pytest.mark.parametrize("signature", [_SIGNATURE, _FEATURE_EXTRACTOR_SIGNATURE],
+                         ids=["weights", "feature-extractor"])
+def test_noop_repair_falls_through_to_resume_ladder(model_manager, monkeypatch, signature):
     """No broken links found → rung 0 must not eat the load retry budget; the
     pre-existing resume repair (#581) still runs and heals the cache."""
     monkeypatch.setattr(
@@ -449,7 +467,7 @@ def test_noop_repair_falls_through_to_resume_ladder(model_manager, monkeypatch):
         def from_pretrained(cls, *args, **kwargs):
             cls.attempts += 1
             if cls.attempts == 1:
-                raise OSError(_SIGNATURE)
+                raise OSError(signature)
             return SimpleNamespace(llm=object())
 
     monkeypatch.setattr(model_manager, "_lazy_omnivoice", lambda: Flaky)
@@ -564,3 +582,64 @@ def test_incomplete_cache_predicate_does_not_overmatch():
     assert not failure.is_incomplete_cache_message("nothing found in directory /tmp")
     assert not failure.is_incomplete_cache_message("")
     assert failure.classify("no file named foo.wav") != "MODEL_CACHE_CORRUPT"
+
+
+@pytest.mark.parametrize("path", [
+    "/cache/models--k2-fsa--OmniVoice/snapshots/revision/audio_tokenizer",
+    r"C:\cache\models--k2-fsa--OmniVoice\snapshots\revision\audio_tokenizer",
+])
+def test_missing_feature_extractor_classification(path):
+    text = _missing_feature_extractor(path)
+    assert failure.is_incomplete_cache_message(text)
+    assert failure.classify(text) == "MODEL_CACHE_CORRUPT"
+    assert not failure.is_corrupt_model_file_message(text)
+
+
+def test_real_missing_feature_extractor_config(tmp_path):
+    from transformers.feature_extraction_utils import FeatureExtractionMixin
+
+    tokenizer = tmp_path / "audio_tokenizer"
+    tokenizer.mkdir()
+    # Model configuration is present, but the processor's own config was
+    # omitted by the interrupted download. No weights or network are needed.
+    (tokenizer / "config.json").write_text("{}", encoding="utf-8")
+    with pytest.raises(OSError) as caught:
+        FeatureExtractionMixin.get_feature_extractor_dict(
+            str(tokenizer), local_files_only=True,
+        )
+    assert failure.is_incomplete_cache_message(str(caught.value))
+    assert failure.classify(str(caught.value)) == "MODEL_CACHE_CORRUPT"
+
+
+@pytest.mark.parametrize("text", [
+    "Could not import module 'AutoFeatureExtractor'",
+    "Can't load feature extractor for 'org/model'",
+    "Permission denied: preprocessor_config.json",
+    "Can't load tokenizer for 'org/model'.",
+    "Can't load feature extractor: unsupported configuration",
+])
+def test_feature_extractor_errors_do_not_overmatch(text):
+    assert not failure.is_incomplete_cache_message(text)
+
+
+@pytest.mark.parametrize("offline_flag", ["HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE"])
+def test_missing_feature_extractor_offline_does_not_download(
+    model_manager, monkeypatch, offline_flag,
+):
+    import huggingface_hub
+
+    monkeypatch.setenv(offline_flag, "1")
+    monkeypatch.setattr(
+        huggingface_hub, "snapshot_download",
+        lambda **kw: pytest.fail("offline recovery must not download"),
+    )
+
+    class MissingProcessor:
+        @staticmethod
+        def from_pretrained(*args, **kwargs):
+            raise OSError(_FEATURE_EXTRACTOR_SIGNATURE)
+
+    monkeypatch.setattr(model_manager, "_lazy_omnivoice", lambda: MissingProcessor)
+    with pytest.raises(RuntimeError, match="offline mode is enabled") as caught:
+        model_manager._load_model_sync()
+    assert failure.classify(str(caught.value)) == "MODEL_CACHE_CORRUPT"
