@@ -306,3 +306,26 @@ def test_mobile_models_have_display_names():
     for model in models:
         assert isinstance(model.get("name"), str) and model["name"].strip(), model["id"]
         assert model["name"] != model["id"], model["id"]
+
+
+def test_mobile_strings_are_not_placeholder_only():
+    # A value of only {{placeholders}} and punctuation is a missing string, and
+    # tests/test_locale_parity.py rejects it in every locale. Catch it here, at the
+    # source, before 20 translations copy it (this happened twice).
+    import re
+
+    placeholder = re.compile(r"\{\{\s*(\w+)\s*\}\}")
+
+    def walk(node, path=""):
+        for key, value in node.items():
+            if isinstance(value, dict):
+                yield from walk(value, f"{path}{key}.")
+            else:
+                yield f"{path}{key}", value
+
+    bad = []
+    for path in CONTRACT.glob("strings*.en.json"):
+        for key, value in walk(json.loads(path.read_text(encoding="utf-8"))):
+            if isinstance(value, str) and placeholder.search(value) and not re.search(r"\w", placeholder.sub("", value)):
+                bad.append(f"{path.name}: {key} = {value!r}")
+    assert not bad, "write the words around the placeholders:\n" + "\n".join(bad)

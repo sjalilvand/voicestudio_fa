@@ -583,7 +583,7 @@
         "min_p": 0.0,
         "presence_penalty": 1.5,
         "enable_thinking": false,
-        "prompt_template": "<|im_start|>system\nYou translate subtitles from {source_language} to {target_language}. Return only the translated text; preserve meaning and punctuation. /no_think<|im_end|>\n<|im_start|>user\n{text}<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n",
+        "prompt_template": "<|im_start|>system\nTranslate the user's subtitle into {target_language}. Reply with only the {target_language} translation; keep the meaning and punctuation. /no_think<|im_end|>\n<|im_start|>user\n{text}<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n",
         "stop_sequences": [
           "<|im_end|>",
           "<|endoftext|>"

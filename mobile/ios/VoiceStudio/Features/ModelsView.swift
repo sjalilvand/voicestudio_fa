@@ -21,11 +21,11 @@ struct ModelsView: View {
                     HStack {
                         Text(model.t("mobile.simple." + item.capability.rawValue)).font(.caption)
                         Spacer()
-                        Button(model.t("mobile.simple.info"), systemImage: "info.circle") { reviewing = item }.accessibilityIdentifier("model.licence."+item.id).buttonStyle(VSButtonStyle(kind: .tertiary))
+                        Button(model.t("mobile.local.review_licence"), systemImage: "info.circle") { reviewing = item }.labelStyle(.iconOnly).accessibilityIdentifier("model.licence."+item.id).buttonStyle(VSButtonStyle(kind: .tertiary))
                     }
                     if !item.fits() { Text(model.t("mobile.simple.ram", ["ram": String(item.min_ram_gb)])) }
                     if let value = phone.progress[item.id] {
-                        ProgressView(value: value).accessibilityLabel(model.t("mobile.local.downloading"))
+                        ProgressView(value: value).accessibilityLabel(model.t("mobile.local.download"))
                         Button(model.t("common.cancel")) { phone.cancel(item) }
                     } else if phone.installed.contains(item.id) {
                         Button(model.t("common.delete"), role: .destructive) { Task { await phone.delete(item) } }
@@ -55,16 +55,18 @@ struct ModelLicenceSheet: View {
         NavigationStack {
             Page(backgroundRole: "surfaceOverlay") {
                 Text(item.name).font(.headline)
-                Text(model.t("mobile.local.licence_terms", ["licence": item.licence.id, "category": model.t("mobile.local.category_" + item.licence.category), "holder": item.licence.rights_holder, "credit": item.licence.credit]))
+                Text(model.t("mobile.local.licence_label", ["licence": item.licence.id, "category": item.licence.category]))
+                if !item.licence.credit.isEmpty { Text(item.licence.credit) }
+                if !item.licence.rights_holder.isEmpty { Text(item.licence.rights_holder) }
                 if let terms = item.licence.disclosure { Text(terms).textSelection(.enabled) }
-                Text(model.t("mobile.local.fingerprint", ["fingerprint": item.licence.terms_fingerprint])).textSelection(.enabled)
+                Text(model.t("mobile.local.terms_fingerprint", ["fingerprint": item.licence.terms_fingerprint])).textSelection(.enabled)
                 Text(item.languages.joined(separator: ", "))
                 Text(model.t("mobile.local.storage_used", ["size": ByteCountFormatter.string(fromByteCount: model.phone.modelBytes[item.id] ?? 0, countStyle: .file)]))
                 if model.phone.progress[item.id] == nil && (model.phone.modelBytes[item.id] ?? 0) > 0 && !model.phone.installed.contains(item.id) {
                     Button(model.t("common.delete"), role: .destructive) { Task { await model.phone.delete(item); dismiss() } }
                 }
                 if item.licence.gated {
-                    Text(model.t("mobile.local.acceptance_help"))
+                    Text(model.t("mobile.local.licensor_notice"))
                     Toggle(model.t("mobile.local.licence_confirm"), isOn: $checked).accessibilityIdentifier("models.consent").frame(minHeight: 44)
                     if model.phone.accepted.contains(item.id) {
                         Button(model.t("mobile.local.withdraw"), role: .destructive) {
@@ -81,7 +83,7 @@ struct ModelLicenceSheet: View {
                         Button(model.t("mobile.simple.decline")) { dismiss() }.disabled(saving)
                     }
                 }
-            }.navigationTitle(model.t("mobile.local.licence"))
+            }.navigationTitle(model.t("mobile.local.review_licence"))
                 .toolbar { Button(model.t("common.close")) { dismiss() }.disabled(saving) }
         }.interactiveDismissDisabled(saving).presentationBackground(theme.color("surfaceOverlay"))
     }
@@ -176,7 +178,7 @@ struct LocalDownloadPrompt: View {
                     }.buttonStyle(VSButtonStyle(kind: .tertiary)).accessibilityIdentifier("models.open")
                     ModelDownloadButton(items: needed)
                 }
-                if let progress { ProgressView(value: progress).accessibilityLabel(model.t("mobile.local.downloading")) }
+                if let progress { ProgressView(value: progress).accessibilityLabel(model.t("mobile.local.download")) }
                 if let item = needed.first(where: { !$0.fits() }) {
                     Text(model.t("mobile.simple.ram", ["ram": String(item.min_ram_gb)])).font(.caption)
                 }

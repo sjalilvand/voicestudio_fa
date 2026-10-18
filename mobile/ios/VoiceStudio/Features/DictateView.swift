@@ -135,7 +135,7 @@ struct DictateView: View {
                             try Task.checkCancellation()
                             text = [previousText, update.text].filter { !$0.isEmpty }.joined(separator: "\n")
                         }
-                    } catch is CancellationError {} catch { model.error = error as? ClientError ?? ClientError("mobile.local.inference_error") }
+                    } catch is CancellationError {} catch { model.error = error as? ClientError ?? ClientError("mobile.local.inference_failed") }
                     audio.stop()
                 }
                 do {

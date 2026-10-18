@@ -33,11 +33,11 @@ private actor RangeServer: HTTPTransport {
         (events, continuation) = AsyncStream.makeStream()
     }
     func finishEvents() { continuation.finish() }
-    func send(_ request: URLRequest) async throws -> HTTPReply { throw ClientError("mobile.local.download_error") }
+    func send(_ request: URLRequest) async throws -> HTTPReply { throw ClientError("mobile.local.download_failed") }
     func download(_ request: URLRequest) async throws -> DownloadReply {
         requests.append(request); continuation.yield(requests.count)
         if let slowAfter, requests.count > slowAfter { try await Task.sleep(for: .seconds(30)) }
-        if let failAfter, requests.count > failAfter { throw ClientError("mobile.local.download_error") }
+        if let failAfter, requests.count > failAfter { throw ClientError("mobile.local.download_failed") }
         let range = request.value(forHTTPHeaderField: "Range")!.dropFirst(6).split(separator: "-").compactMap { Int($0) }
         let start = range[0], end = min(range[1], bytes.count - 1)
         var chunk = bytes.subdata(in: start..<(end + 1)); if corrupted { chunk[0] ^= 1 }
@@ -282,7 +282,7 @@ server.serve_forever()
         try process.run()
         var line = Data()
         while let byte = try output.fileHandleForReading.read(upToCount: 1), !byte.isEmpty { if byte == Data([10]) { break }; line.append(byte) }
-        guard let port = Int(String(decoding: line, as: UTF8.self)) else { process.terminate(); throw ClientError("mobile.local.download_error") }
+        guard let port = Int(String(decoding: line, as: UTF8.self)) else { process.terminate(); throw ClientError("mobile.local.download_failed") }
         self.port = port
     }
     deinit { if process.isRunning { process.terminate(); process.waitUntilExit() } }
@@ -290,7 +290,7 @@ server.serve_forever()
 private struct LoopbackRangeTransport: HTTPTransport {
     let port: Int
     let transport = URLSessionTransport()
-    func send(_ request: URLRequest) async throws -> HTTPReply { throw ClientError("mobile.local.download_error") }
+    func send(_ request: URLRequest) async throws -> HTTPReply { throw ClientError("mobile.local.download_failed") }
     func download(_ request: URLRequest) async throws -> DownloadReply {
         var local = request
         local.url = URL(string: "http://127.0.0.1:\(port)/model")!

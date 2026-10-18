@@ -71,7 +71,7 @@ public actor PhoneDubStore {
     public func directory(_ id: UUID) throws -> URL { try PrivateFiles.child(root,id.uuidString) }
     public func file(_ id: UUID,_ name: String) throws -> URL { try PrivateFiles.child(directory(id),name) }
     public func acquire(_ id: UUID) throws {
-        guard !active.contains(id) else { throw ClientError("mobile.local.in_use") }
+        guard !active.contains(id) else { throw ClientError("sidebarTools.wait") }
         active.insert(id)
     }
     public func release(_ id: UUID) { active.remove(id) }
@@ -126,7 +126,7 @@ public actor PhoneDubStore {
         return url
     }
     public func delete(_ id: UUID) throws {
-        guard !active.contains(id) else { throw ClientError("mobile.local.in_use") }
+        guard !active.contains(id) else { throw ClientError("sidebarTools.wait") }
         try FileManager.default.removeItem(at: directory(id))
     }
 }
@@ -149,7 +149,7 @@ public struct PhoneDubPipeline: Sendable {
     private func execute(id: UUID,models: [PhoneModel],report: @escaping PhoneDubReport) async throws -> PhoneDubCheckpoint {
         let request = try await store.request(id)
         guard models.count == 3, Set(models.map(\.capability)) == Set([.asr,.translate,.clone]), request.modelPins == (try Dictionary(uniqueKeysWithValues: models.map { ($0.id,try phoneModelPin($0)) })),
-              let asr = models.first(where: { $0.capability == .asr }), let translator = models.first(where: { $0.capability == .translate }), let clone = models.first(where: { $0.capability == .clone }) else { throw ClientError("mobile.local.configuration") }
+              let asr = models.first(where: { $0.capability == .asr }), let translator = models.first(where: { $0.capability == .translate }), let clone = models.first(where: { $0.capability == .clone }) else { throw ClientError("mobile.local.model_incompatible") }
         var cp = try await store.checkpoint(id)
         guard !request.targets.isEmpty, request.targets.count <= 20, cp.outputs.count <= request.targets.count,
               cp.outputs.enumerated().allSatisfy({ $0.element.language == request.targets[$0.offset].code }) else { throw ClientError("mobile.simple.checkpoint_failed") }
@@ -181,7 +181,7 @@ public struct PhoneDubPipeline: Sendable {
             let audio = try original.read(start: start,count: count)
             let segments = count >= 2400 && audio.samples.contains(where: { abs($0) > 0.001 }) ? try await engine.transcribeSegments(model: asr,audio: audio,progress: { _ in }) : []
             let offset = Double(start)/24000, duration = Double(count)/24000
-            guard segments.allSatisfy({ $0.start.isFinite && $0.end.isFinite && $0.start >= 0 && $0.end > $0.start && $0.end <= duration+0.01 && !$0.text.isEmpty }) else { throw ClientError("mobile.local.inference_error") }
+            guard segments.allSatisfy({ $0.start.isFinite && $0.end.isFinite && $0.start >= 0 && $0.end > $0.start && $0.end <= duration+0.01 && !$0.text.isEmpty }) else { throw ClientError("mobile.local.inference_failed") }
             cp.segments += segments.map { PhoneDubSegment(speech: SpeechSegment(start: offset+$0.start,end: min(Double(cp.frames)/24000,offset+$0.end),text: $0.text)) }
             guard cp.segments.count <= 10000 else { throw ClientError("mobile.simple.audio_long") }
             cp.nextFrame = start+count; try await save(cp)

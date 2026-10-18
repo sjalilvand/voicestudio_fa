@@ -55,12 +55,12 @@ final class WifiState: @unchecked Sendable {
             generationStore = try PhoneGenerationStore(root: root.appendingPathComponent("recent"))
             let store = try ModelStore(root: root)
             self.store = store; engine = NativeLocalEngine(store: store)
-            guard let url = bundle.url(forResource: "models", withExtension: "json", subdirectory: "Catalogs") else { throw ClientError("mobile.local.catalogue_error") }
+            guard let url = bundle.url(forResource: "models", withExtension: "json", subdirectory: "Catalogs") else { throw ClientError("mobile.local.catalogue_failed") }
             models = try ModelCatalogue.decode(Data(contentsOf: url)).models
         } catch {
             // Initialization remains usable for the paired-host flows; the Models page explains the failure.
 
-            self.error = error as? ClientError ?? ClientError("mobile.local.catalogue_error")
+            self.error = error as? ClientError ?? ClientError("mobile.local.catalogue_failed")
         }
     }
     func refresh() async {
@@ -90,7 +90,7 @@ final class WifiState: @unchecked Sendable {
                 try await store.download(model, policy: policy, wifi: { wifi.wifi }, progress: { fraction in
                     await MainActor.run { self.progress[model.id] = fraction }
                 })
-            } catch is CancellationError {} catch { self.error = error as? ClientError ?? ClientError("mobile.local.download_error") }
+            } catch is CancellationError {} catch { self.error = error as? ClientError ?? ClientError("mobile.local.download_failed") }
             await refresh()
         }
     }
@@ -105,7 +105,7 @@ final class WifiState: @unchecked Sendable {
         guard let store else { return false }
         if !accepted { downloads[model.id]?.cancel() }
         do {
-            guard let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String else { throw ClientError("mobile.local.configuration") }
+            guard let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String else { throw ClientError("mobile.local.model_incompatible") }
             try await store.accept(model, fingerprint: model.licence.terms_fingerprint, appVersion: version, accepted: accepted)
             await refresh()
             return true

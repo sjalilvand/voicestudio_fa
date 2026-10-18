@@ -56,8 +56,17 @@ class BrandResources(unittest.TestCase):
     def test_catalogue_bundles_names_and_phone_consent_note(self):
         catalogue = json.loads((self.root / "bundle/Catalogs/models.json").read_text())
         self.assertTrue(all(model["name"].strip() for model in catalogue["models"]))
-        additions = json.loads((self.root / "bundle/Catalogs/strings.ios-additions.en.json").read_text())
-        self.assertEqual(additions["mobile"]["consent"]["phone_note"], "Saved on this phone. Nothing is sent.")
+        shared = json.loads((self.root / "bundle/Catalogs/strings.mobile.en.json").read_text())
+        self.assertEqual(shared["mobile"]["consent"]["phone_note"], "Saved on this phone. Nothing is sent.")
+
+    def test_microphone_reason_reuses_shared_local_and_computer_privacy(self):
+        catalogs = self.root / "bundle/Catalogs"
+        desktop = json.loads((catalogs / "en.json").read_text())
+        shared = json.loads((catalogs / "strings.mobile.en.json").read_text())
+        expected = "\n".join([desktop["permissions"]["microphone_why"], shared["mobile"]["local"]["privacy"]])
+        info = plistlib.loads((self.root / "Info.plist").read_bytes())
+        self.assertEqual(info["NSMicrophoneUsageDescription"], expected)
+        self.assertIn(json.dumps(expected), (self.root / "bundle/en.lproj/InfoPlist.strings").read_text())
 
 
 if __name__ == "__main__":

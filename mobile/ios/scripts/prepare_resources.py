@@ -62,10 +62,10 @@ def prepare(output, info):
         merge(english, json.loads(path.read_text()))
         shutil.copy2(path, catalogs / path.name)
     permissions = {
-        "CFBundleDisplayName": "mobile.ios.app_name",
-        "NSCameraUsageDescription": "mobile.permissions.camera",
-        "NSMicrophoneUsageDescription": "mobile.permissions.microphone_phone",
-        "NSLocalNetworkUsageDescription": "mobile.permissions.local_network",
+        "CFBundleDisplayName": ("mobile.ios.app_name",),
+        "NSCameraUsageDescription": ("mobile.permissions.camera",),
+        "NSMicrophoneUsageDescription": ("permissions.microphone_why", "mobile.local.privacy"),
+        "NSLocalNetworkUsageDescription": ("mobile.permissions.local_network",),
     }
     for path in sorted(source.glob("*.json")):
         shutil.copy2(path, catalogs / path.name)
@@ -73,15 +73,16 @@ def prepare(output, info):
         localized = output / (path.stem + ".lproj")
         localized.mkdir(exist_ok=True)
         # JSON string syntax provides the escaping required by .strings files.
-        lines = [f'{json.dumps(k)} = {json.dumps(lookup(locale, v) or lookup(english, v), ensure_ascii=True)};' for k, v in permissions.items()]
+        descriptions = {field: "\n".join(lookup(locale, key) or lookup(english, key) for key in keys) for field, keys in permissions.items()}
+        lines = [f'{json.dumps(k)} = {json.dumps(v, ensure_ascii=True)};' for k, v in descriptions.items()]
         (localized / "InfoPlist.strings").write_text("\n".join(lines) + "\n")
     version = json.loads((ROOT / "package.json").read_text())["version"]
     data = plistlib.loads((IOS / "VoiceStudio/Info.plist").read_bytes())
     data["CFBundleShortVersionString"] = version
     data["CFBundleVersion"] = "1"
     data["CFBundleLocalizations"] = sorted(path.stem for path in source.glob("*.json"))
-    for field, key in permissions.items():
-        data[field] = lookup(english, key)
+    for field, keys in permissions.items():
+        data[field] = "\n".join(lookup(english, key) for key in keys)
     info.parent.mkdir(parents=True, exist_ok=True)
     info.write_bytes(plistlib.dumps(data))
 

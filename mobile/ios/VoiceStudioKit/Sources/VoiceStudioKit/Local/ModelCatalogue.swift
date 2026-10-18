@@ -64,7 +64,7 @@ public struct PhoneModel: Codable, Identifiable, Sendable {
     public let config: [String: JSONValue]
     public func fits(ram: UInt64 = ProcessInfo.processInfo.physicalMemory) -> Bool { Double(ram) >= min_ram_gb * 1_000_000_000 }
     public func selectingLanguage(_ language: String) throws -> PhoneModel {
-        guard capability == .tts, languages.contains(language) else { throw ClientError("mobile.local.configuration") }
+        guard capability == .tts, languages.contains(language) else { throw ClientError("mobile.local.model_incompatible") }
         var options = config; options["lang"] = .string(language)
         return PhoneModel(id: id,name: name,capability: capability,runtime: runtime,repo: repo,revision: revision,files: files,total_bytes: total_bytes,languages: languages,min_ram_gb: min_ram_gb,licence: licence,config: options)
     }
@@ -76,7 +76,7 @@ public struct ModelCatalogue: Codable, Sendable {
     public let models: [PhoneModel]
     public static func decode(_ data: Data) throws -> Self {
         let value = try JSONDecoder().decode(Self.self, from: data)
-        guard value.schema_version == 1, Set(value.models.map(\.id)).count == value.models.count else { throw ClientError("mobile.local.catalogue_error") }
+        guard value.schema_version == 1, Set(value.models.map(\.id)).count == value.models.count else { throw ClientError("mobile.local.catalogue_failed") }
         for m in value.models {
             guard safe(m.id), !m.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                   m.repo.split(separator: "/").count == 2, m.repo.split(separator: "/").allSatisfy({ safe(String($0)) }),
@@ -86,7 +86,7 @@ public struct ModelCatalogue: Codable, Sendable {
                   m.files.allSatisfy({ $0.size > 0 && hex($0.sha256, count: 64) && !$0.path.hasPrefix("/") && $0.path.split(separator: "/", omittingEmptySubsequences: false).allSatisfy({ safe(String($0)) }) }),
                   m.files.reduce(0.0, { $0 + Double($1.size) }) == Double(m.total_bytes),
                   m.runtime == (m.capability == .clone ? .omni : m.capability == .translate ? .llama : .sherpa)
-            else { throw ClientError("mobile.local.catalogue_error") }
+            else { throw ClientError("mobile.local.catalogue_failed") }
         }
         return value
     }

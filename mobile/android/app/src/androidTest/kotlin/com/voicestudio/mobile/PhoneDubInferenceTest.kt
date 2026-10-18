@@ -47,6 +47,10 @@ class PhoneDubInferenceTest {
             val result=PhoneDubPipeline(jobs,engine,authorize={models.forEach(licence::requireAccepted)}).run(request.id,models)
             assertTrue(result.done);assertEquals(1,result.outputs.size)
             assertTrue(result.segments.all {it.speech.start>=0&&it.speech.end>it.speech.start&&it.translations["fr"]?.isNotBlank()==true})
+            // The translation must actually be French, not the source echoed back (the
+            // prompt once named the source language "auto" and the model returned the input).
+            val french=result.segments.mapNotNull {it.translations["fr"]}.joinToString(" ").lowercase()
+            assertTrue("Not French: $french",listOf("bonjour","salut","comment","vous","merci","ça","toi").any {french.contains(it)})
             val output=jobs.file(request.id,result.outputs.single().file)
             val pcm=AndroidAudioDecoder().decode(output,File(root,"verification.pcm"))
             assertTrue(pcm.frames>2400)

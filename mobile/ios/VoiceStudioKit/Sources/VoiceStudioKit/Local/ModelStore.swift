@@ -32,11 +32,11 @@ public struct ModelDownloadTransport: HTTPTransport {
         config.timeoutIntervalForRequest = 60; config.timeoutIntervalForResource = 86_400
         session = URLSession(configuration: config, delegate: ModelRedirectDelegate(), delegateQueue: nil)
     }
-    public func send(_ request: URLRequest) async throws -> HTTPReply { throw ClientError("mobile.local.download_error") }
+    public func send(_ request: URLRequest) async throws -> HTTPReply { throw ClientError("mobile.local.download_failed") }
     public func download(_ request: URLRequest) async throws -> DownloadReply {
-        guard let url = request.url, ModelRedirectDelegate.allowed(url) else { throw ClientError("mobile.local.download_error") }
+        guard let url = request.url, ModelRedirectDelegate.allowed(url) else { throw ClientError("mobile.local.download_failed") }
         let (file, response) = try await session.download(for: request)
-        guard let http = response as? HTTPURLResponse else { throw ClientError("mobile.local.download_error") }
+        guard let http = response as? HTTPURLResponse else { throw ClientError("mobile.local.download_failed") }
         return DownloadReply(file: file, status: http.statusCode, headers: http.allHeaderFields.reduce(into: [:]) { out, entry in
             if let key = entry.key as? String { out[key.lowercased()] = String(describing: entry.value) }
         })
@@ -84,7 +84,7 @@ public actor ModelStore {
         guard model.fits(ram: ram) else { throw ClientError("mobile.local.ram_required", params: ["ram": String(model.min_ram_gb)]) }
         guard allowed(model) else { throw ClientError("mobile.local.licence_required") }
         guard installed(model) else { throw ClientError("mobile.local.model_required") }
-        for f in model.files { guard try ModelHash.file(directory(model).appendingPathComponent(f.path)) == f.sha256 else { throw ClientError("mobile.local.checksum") } }
+        for f in model.files { guard try ModelHash.file(directory(model).appendingPathComponent(f.path)) == f.sha256 else { throw ClientError("mobile.local.checksum_failed") } }
         return directory(model)
     }
     public func acquire(_ model: PhoneModel) throws -> URL { let path = try authorize(model); leases[model.id, default: 0] += 1; return path }
@@ -101,7 +101,7 @@ public actor ModelStore {
         return result
     }
     public func delete(_ model: PhoneModel) throws {
-        guard !active.contains(model.id), leases[model.id, default: 0] == 0 else { throw ClientError("mobile.local.in_use") }
+        guard !active.contains(model.id), leases[model.id, default: 0] == 0 else { throw ClientError("sidebarTools.wait") }
         let path = directory(model)
         if FileManager.default.fileExists(atPath: path.path) { try FileManager.default.removeItem(at: path) }
     }
@@ -112,7 +112,7 @@ public actor ModelStore {
                          progress: @escaping @Sendable (Double) async -> Void = { _ in }) async throws {
         guard model.fits(ram: ram) else { throw ClientError("mobile.local.ram_required", params: ["ram": String(model.min_ram_gb)]) }
         try checkPermission(model)
-        guard !active.contains(model.id), leases[model.id, default: 0] == 0 else { throw ClientError("mobile.local.in_use") }
+        guard !active.contains(model.id), leases[model.id, default: 0] == 0 else { throw ClientError("sidebarTools.wait") }
         active.insert(model.id); defer { active.remove(model.id) }
         let transport = supplied ?? ModelDownloadTransport(policy: policy)
         try FileManager.default.createDirectory(at: directory(model), withIntermediateDirectories: true)
@@ -144,12 +144,12 @@ public actor ModelStore {
                         try Task.checkCancellation(); try checkPermission(model)
                         let count = size(reply.file)
                         if reply.status == 200 {
-                            guard count == f.size else { throw ClientError("mobile.local.download_error") }
+                            guard count == f.size else { throw ClientError("mobile.local.download_failed") }
                             if FileManager.default.fileExists(atPath: part.path) { try FileManager.default.removeItem(at: part) }
                             try FileManager.default.moveItem(at: reply.file, to: part)
                         } else {
                             guard reply.status == 206, count == end - offset + 1,
-                                  reply.headers["content-range"] == "bytes \(offset)-\(end)/\(f.size)" else { throw ClientError("mobile.local.download_error") }
+                                  reply.headers["content-range"] == "bytes \(offset)-\(end)/\(f.size)" else { throw ClientError("mobile.local.download_failed") }
                             if !FileManager.default.fileExists(atPath: part.path) { FileManager.default.createFile(atPath: part.path, contents: nil) }
                             let writer = try FileHandle(forWritingTo: part); defer { try? writer.close() }
                             try writer.seekToEnd()
@@ -161,10 +161,10 @@ public actor ModelStore {
                     } catch is CancellationError { throw CancellationError() }
                     catch { if Task.isCancelled { throw CancellationError() }; lastFailure = error }
                 }
-                guard received else { throw lastFailure ?? ClientError("mobile.local.download_error") }
+                guard received else { throw lastFailure ?? ClientError("mobile.local.download_failed") }
                 await progress(Double(completed + size(part)) / Double(model.total_bytes))
             }
-            guard try ModelHash.file(part) == f.sha256 else { try? FileManager.default.removeItem(at: part); throw ClientError("mobile.local.checksum") }
+            guard try ModelHash.file(part) == f.sha256 else { try? FileManager.default.removeItem(at: part); throw ClientError("mobile.local.checksum_failed") }
             try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
             if FileManager.default.fileExists(atPath: destination.path) { try FileManager.default.removeItem(at: destination) }
             try FileManager.default.moveItem(at: part, to: destination); completed += f.size

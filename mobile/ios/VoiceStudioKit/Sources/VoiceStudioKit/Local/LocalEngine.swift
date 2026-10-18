@@ -66,6 +66,22 @@ public extension LocalEngine {
         return text.isEmpty ? [] : [SpeechSegment(start: 0,end: Double(audio.samples.count)/Double(audio.sampleRate),text: text)]
     }
 }
+/// One native inference at a time per process, whichever engine instance asks (Android
+/// uses the same rule). Concurrent sherpa/OmniVoice/llama jobs exceed phone memory, and
+/// running OmniVoice and llama together crashed the process (SIGBUS) in a real-model run.
+actor NativeLease {
+    static let shared = NativeLease()
+    private var busy = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+    func acquire() async throws {
+        if busy { await withCheckedContinuation { waiters.append($0) } } else { busy = true }
+        // Hand the lease straight back if the caller was cancelled while waiting.
+        if Task.isCancelled { release(); throw CancellationError() }
+    }
+    func release() {
+        if waiters.isEmpty { busy = false } else { waiters.removeFirst().resume() }
+    }
+}
 /// C allocations never escape the worker. Only the atomic cancellation flag crosses tasks.
 private final class NativeCancellation: @unchecked Sendable {
     let pointer: OpaquePointer
@@ -112,19 +128,23 @@ public actor NativeLocalEngine: LocalEngine {
         switch rc {
         case 0: return
         case -4: throw CancellationError()
-        case -1: throw ClientError("mobile.local.runtime_missing")
-        case -2: throw ClientError("mobile.local.configuration")
-        default: throw ClientError("mobile.local.inference_error")
+        case -1: throw ClientError("mobile.local.runtime_failed")
+        case -2: throw ClientError("mobile.local.model_incompatible")
+        default: throw ClientError("mobile.local.inference_failed")
         }
     }
     private static func audio(_ value: VSAudio) throws -> LocalAudio {
-        guard let samples = value.samples, value.count > 0 else { throw ClientError("mobile.local.inference_error") }
+        guard let samples = value.samples, value.count > 0 else { throw ClientError("mobile.local.inference_failed") }
         return LocalAudio(samples: Array(UnsafeBufferPointer(start: samples, count: Int(value.count))), sampleRate: Int(value.sample_rate))
     }
     private func execute<T: Sendable>(_ model: PhoneModel, capability: ModelCapability, progress: @escaping EngineProgressHandler,
                                       body: @escaping @Sendable (PhoneModel, URL, String, NativeCancellation) throws -> T) async throws -> T {
-        guard model.capability == capability else { throw ClientError("mobile.local.configuration") }
+        guard model.capability == capability else { throw ClientError("mobile.local.model_incompatible") }
         let root = try await store.acquire(model)
+        do {
+            try await NativeLease.shared.acquire()
+        } catch { await store.release(model); throw error }
+        defer { Task { await NativeLease.shared.release() } }
         do {
             let token = try NativeCancellation()
             let library = libraries[model.runtime] ?? ""
@@ -152,7 +172,7 @@ public actor NativeLocalEngine: LocalEngine {
         } catch { await store.release(model); throw error }
     }
     public func synthesize(model: PhoneModel, text: String, speaker: Int = 0, speed: Float = 1, progress: @escaping EngineProgressHandler = { _ in }) async throws -> LocalAudio {
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, speaker >= 0, speaker <= Int(Int32.max), speed.isFinite, speed > 0, speed <= 4, speaker < Int(model.config["num_speakers"]?.number ?? 1) else { throw ClientError("mobile.local.configuration") }
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, speaker >= 0, speaker <= Int(Int32.max), speed.isFinite, speed > 0, speed <= 4, speaker < Int(model.config["num_speakers"]?.number ?? 1) else { throw ClientError("mobile.local.model_incompatible") }
         return try await execute(model, capability: .tts, progress: progress) { m, root, library, token in
             let config = NativeConfiguration(model: m, root: root, library: library)
             var output = VSAudio(); defer { vs_audio_free(&output) }
@@ -175,7 +195,7 @@ public actor NativeLocalEngine: LocalEngine {
             let config = NativeConfiguration(model: m,root: root,library: library)
             var output = VSSegments(); defer { vs_segments_free(&output) }
             try audio.samples.withUnsafeBufferPointer { try Self.check(vs_transcribe_segments(&config.value,$0.baseAddress,Int32($0.count),Int32(audio.sampleRate),token.pointer,&output)) }
-            guard output.count == 0 || output.segments != nil else { throw ClientError("mobile.local.inference_error") }
+            guard output.count == 0 || output.segments != nil else { throw ClientError("mobile.local.inference_failed") }
             return (0..<Int(output.count)).compactMap { index in
                 let segment = output.segments![index]
                 let text = segment.text.map { String(cString: $0).trimmingCharacters(in: .whitespacesAndNewlines) } ?? ""
@@ -185,10 +205,10 @@ public actor NativeLocalEngine: LocalEngine {
     }
     public func clone(model: PhoneModel, text: String, reference: PCMChunk, referenceText: String, progress: @escaping EngineProgressHandler = { _ in }) async throws -> LocalAudio {
         try Self.validate(reference)
-        guard reference.sampleRate == 24000, !text.isEmpty, !referenceText.isEmpty else { throw ClientError("mobile.local.configuration") }
+        guard reference.sampleRate == 24000, !text.isEmpty, !referenceText.isEmpty else { throw ClientError("mobile.local.model_incompatible") }
         return try await execute(model, capability: .clone, progress: progress) { m, root, library, token in
             let config = NativeConfiguration(model: m, root: root, library: library)
-            guard !m.path(role: "codec", root: root).isEmpty || !m.path(role: "tokenizer", root: root).isEmpty else { throw ClientError("mobile.local.configuration") }
+            guard !m.path(role: "codec", root: root).isEmpty || !m.path(role: "tokenizer", root: root).isEmpty else { throw ClientError("mobile.local.model_incompatible") }
             var output = VSAudio(); defer { vs_audio_free(&output) }
             let rc = reference.samples.withUnsafeBufferPointer { vs_clone(&config.value, text, referenceText, $0.baseAddress, Int32($0.count), token.pointer, &output) }
             try Self.check(rc); return try Self.audio(output)
@@ -196,7 +216,7 @@ public actor NativeLocalEngine: LocalEngine {
     }
     public func translate(model: PhoneModel, text: String, sourceLanguage: String, targetLanguage: String, progress: @escaping EngineProgressHandler = { _ in }) async throws -> String {
         let template = model.option("prompt_template")
-        guard template.contains("{text}"), template.contains("{target_language}"), !text.isEmpty else { throw ClientError("mobile.local.configuration") }
+        guard template.contains("{text}"), template.contains("{target_language}"), !text.isEmpty else { throw ClientError("mobile.local.model_incompatible") }
         let prompt = template.replacingOccurrences(of: "{source_language}", with: sourceLanguage).replacingOccurrences(of: "{target_language}", with: targetLanguage).replacingOccurrences(of: "{text}", with: text)
         return try await execute(model, capability: .translate, progress: progress) { m, root, library, token in
             let config = NativeConfiguration(model: m, root: root, library: library)
@@ -206,7 +226,7 @@ public actor NativeLocalEngine: LocalEngine {
         }
     }
     public func streamTranscribe(model: PhoneModel, chunks: AsyncThrowingStream<PCMChunk, any Error>, progress: @escaping EngineProgressHandler = { _ in }) async throws -> AsyncThrowingStream<TranscriptUpdate, any Error> {
-        guard model.capability == .stream else { throw ClientError("mobile.local.configuration") }
+        guard model.capability == .stream else { throw ClientError("mobile.local.model_incompatible") }
         let root = try await store.acquire(model)
         let token: NativeCancellation
         do { token = try NativeCancellation() } catch { await store.release(model); throw error }
@@ -215,9 +235,13 @@ public actor NativeLocalEngine: LocalEngine {
         let (output, continuation) = AsyncThrowingStream<TranscriptUpdate, any Error>.makeStream(bufferingPolicy: .bufferingNewest(32))
         let work = Task.detached(priority: .userInitiated) {
             do {
+                try await NativeLease.shared.acquire()
+            } catch { continuation.finish(throwing: error); await store.release(model); return }
+            defer { Task { await NativeLease.shared.release() } }
+            do {
                 await progress(EngineProgress(stage: .loading, fraction: 0))
                 let config = NativeConfiguration(model: model, root: root, library: library)
-                guard let stream = vs_stream_create(&config.value) else { throw ClientError("mobile.local.inference_error") }
+                guard let stream = vs_stream_create(&config.value) else { throw ClientError("mobile.local.inference_failed") }
                 defer { vs_stream_free(stream) }
                 var finals: [String] = []
                 func accept(_ chunk: PCMChunk, finished: Bool) throws {
