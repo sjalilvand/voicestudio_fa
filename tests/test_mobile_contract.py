@@ -76,7 +76,14 @@ def test_openapi_contract_is_version_neutral():
 
 # M2: the catalogue is a source contract consumed by both native decoders.
 import export_mobile_models as mobile_models  # noqa: E402
-from services import model_acceptance, model_licenses  # noqa: E402
+
+
+def _services():
+    # Resolved at run time: other suites purge services.* after collection, so a
+    # module-level binding could point at a stale module.
+    import importlib
+
+    return importlib.import_module("services.model_acceptance"), importlib.import_module("services.model_licenses")
 
 
 def _mobile_models_source():
@@ -120,6 +127,7 @@ def test_mobile_models_are_pinned_and_have_complete_manifests():
 
 
 def test_mobile_models_registry_licence_gates_and_fingerprints():
+    model_acceptance, model_licenses = _services()
     registry = model_licenses.load_registry()
     rows = {row["id"]: row for row in registry["models"]}
     projected = {row["id"]: row for row in _mobile_licenses()["models"]}
