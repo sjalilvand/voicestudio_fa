@@ -298,3 +298,11 @@ def test_mobile_models_pin_falls_back_only_to_hf_mirror(monkeypatch):
     with mobile_models._open_hf("/api/models/example/model") as response:
         assert response.read() == b"mirror response"
     assert urls == ["https://huggingface.co/api/models/example/model", "https://hf-mirror.com/api/models/example/model"]
+
+
+def test_mobile_models_have_display_names():
+    # Screens show `name`, never the id, repo or licence code (SPEC.md M2 Models).
+    models = json.loads((CONTRACT / "models.json").read_text(encoding="utf-8"))["models"]
+    for model in models:
+        assert isinstance(model.get("name"), str) and model["name"].strip(), model["id"]
+        assert model["name"] != model["id"], model["id"]

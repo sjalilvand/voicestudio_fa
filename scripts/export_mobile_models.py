@@ -72,6 +72,10 @@ def validate_source(source: dict[str, Any], *, pinned: bool = True) -> None:
         if not isinstance(mid, str) or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", mid) or mid in ids:
             raise ValueError(f"Invalid or duplicate model id: {mid}")
         ids.add(mid)
+        # Display name: the model's product name only (never translated); what it
+        # is for comes from the app's localized capability label.
+        if not isinstance(model.get("name"), str) or not model["name"].strip() or len(model["name"]) > 24:
+            raise ValueError(f"{mid}: missing or overlong display name")
         if model.get("capability") not in CAPABILITIES or model.get("runtime") != CAPABILITIES[model["capability"]]:
             raise ValueError(f"{mid}: invalid capability/runtime pair")
         if not isinstance(model.get("repo"), str) or not REPO.fullmatch(model["repo"]):

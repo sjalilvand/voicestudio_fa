@@ -178,7 +178,7 @@ All tabs work without pairing once on-device models are installed (see M2); the 
 
   ```json
   {"schema_version": 1, "models": [{
-    "id": "kokoro-multi-int8", "capability": "tts | asr | asr-stream | clone | translate",
+    "id": "kokoro-multi-int8", "name": "Kokoro", "capability": "tts | asr | asr-stream | clone | translate",
     "runtime": "sherpa-onnx | omnivoice.cpp | llama.cpp",
     "repo": "csukuangfj/kokoro-int8-multi-lang-v1_1", "revision": "<40-hex commit>",
     "files": [{"path": "model.int8.onnx", "size": 0, "sha256": "<64-hex>", "role": "model"}],
@@ -189,6 +189,10 @@ All tabs work without pairing once on-device models are installed (see M2); the 
     "config": {}}]}
   ```
 
+  `name` is the model's product name, shown instead of the id (never translated;
+  what it is for comes from the app's localized capability label). The apps never
+  show ids, repo names or licence codes on screens; licence details appear only
+  in the acceptance sheet.
   `role` tells the runtime what a file is (e.g. `model`, `tokens`, `voices`,
   `encoder`, `decoder`, `joiner`, `espeak-data`, `tokenizer`); `config` carries
   runtime options (sample rate, speaker count, prompt template).
