@@ -196,7 +196,10 @@ func realAuxiliaryPhoneDubOfflineAndResume() async throws {
     let translated = result.segments.compactMap { $0.translations["fr"] }.joined(separator: " ").lowercased()
     print("Phone dub native segments:", result.segments.map { $0.speech.text })
     print("Phone dub native translation:", translated)
-    #expect(["bonjour", "salut", "comment", "vous", "merci"].contains { translated.contains($0) })
+    // Must be French, not the source echoed back (the prompt once named the source "auto").
+    let source = result.segments.map { $0.speech.text }.joined(separator: " ").lowercased()
+    let words = Set(translated.split { !$0.isLetter && $0 != "'" }.map(String.init))
+    #expect(translated != source && !words.isDisjoint(with: ["le", "la", "les", "des", "du", "un", "une", "et", "est", "par", "pour", "vous", "comment", "toi"]))
     let wave = try await store.file(request.id,result.outputs[0].file)
     let decoded = try await AVPhoneAudioDecoder().decode(source: wave,output: root.appendingPathComponent("result.pcm"),maxSeconds: 30,progress: { _ in })
     #expect(try decoded.frames > 1000)
