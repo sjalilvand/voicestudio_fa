@@ -8,9 +8,24 @@ metadata and the backend fallback mirror it.
 
 ## [Unreleased]
 
+**Highlights**
+
+- Preview iOS and Android companion apps for your own VoiceStudio
+
 ### Added
 
-- Urdu speech reads numbers, years, percentages, and decimals in Urdu words instead of raw digits (1956 → انیس سو چھپن).
+- Preview iOS and Android companion apps: drive your own VoiceStudio from your phone (speak, voices and cloning, dubbing, dictation) after pairing by QR code; build from source for now ([guide](docs/mobile.md)) (#2965)
+- Urdu speech reads numbers, years, percentages, and decimals in Urdu words instead of raw digits (1956 → انیس سو چھپن) (#2989)
+
+### Docs
+
+- Contributor guides and the pull request template explain how to sign the CLA before opening a first pull request (#2676)
+
+### CI
+
+- Desktop request-guard self-tests stay deterministic when app requests arrive during cleanup (#2676)
+
+- New `mobile` workflow builds and tests both phone apps; a contract test fails when their theme or API description drifts from the desktop app (#2965)
 
 ## [0.5.7] — 2026-10-17
 
