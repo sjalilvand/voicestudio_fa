@@ -14,8 +14,8 @@ metadata and the backend fallback mirror it.
 
 ### Changed
 
-- iOS Home shows Electron's contributor avatars, Dub is redesigned around one source card with animated icons, and the iOS bottom dock is icon-only
-- Model licence review on iOS and Android opens with a plain summary, rights rows and licence links; the raw terms move under Exact terms
+- iOS Home shows Electron's contributor avatars, Dub is redesigned around one source card with animated icons, and the iOS bottom dock is icon-only (#2969)
+- Model licence review on iOS and Android opens with a plain summary, rights rows and licence links; the raw terms move under Exact terms (#2969)
 
 ### Added
 
