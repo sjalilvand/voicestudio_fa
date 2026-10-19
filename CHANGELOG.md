@@ -16,6 +16,11 @@ metadata and the backend fallback mirror it.
 
 - Preview iOS and Android companion apps: drive your own VoiceStudio from your phone (speak, voices and cloning, dubbing, dictation) after pairing by QR code; build from source for now ([guide](docs/mobile.md)) (#2965)
 
+### Fixed
+
+- Long Urdu, Persian, Arabic and Hindi scripts split at sentence ends (۔ ؟ ।) and clause marks (، ؛) instead of mid-sentence, even with no space after the mark — thanks @maatitechnologies-hue!
+- Long text between `[pause]` markers is split into sentence chunks like unmarked text, so a long passage next to a pause no longer degrades into garbled audio — thanks @maatitechnologies-hue!
+
 ### Docs
 
 - Contributor guides and the pull request template explain how to sign the CLA before opening a first pull request (#2676)
