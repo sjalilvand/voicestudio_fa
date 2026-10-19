@@ -490,7 +490,7 @@ async function mirrorInPlace(source: string, target: string): Promise<void> {
 export async function stageRuntimeSources(
   bundle: string,
   project: string,
-  rename: typeof renameWithRetry = renameWithRetry,
+  renameDirectory: typeof renameWithRetry = renameWithRetry,
 ): Promise<void> {
   await mkdir(project, { recursive: true });
   for (const name of SOURCES) {
@@ -506,15 +506,15 @@ export async function stageRuntimeSources(
     try {
       let moved = false;
       try {
-        await rename(target, previous, DIRECTORY_RENAME);
+        await renameDirectory(target, previous, DIRECTORY_RENAME);
         moved = true;
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
       }
       try {
-        await rename(pending, target, DIRECTORY_RENAME);
+        await renameDirectory(pending, target, DIRECTORY_RENAME);
       } catch (error) {
-        if (moved) await rename(previous, target, DIRECTORY_RENAME);
+        if (moved) await renameDirectory(previous, target, DIRECTORY_RENAME);
         throw error;
       }
     } catch (error) {
