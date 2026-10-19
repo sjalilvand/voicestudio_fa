@@ -95,7 +95,7 @@ VoiceStudio through **Settings → Apps**, then run `-Yes` without `-RemoveApp`
 to clean up its remaining data.
 
 The script honors your custom locations: if you set `OMNIVOICE_DATA_DIR`,
-`OMNIVOICE_CACHE_DIR`, `HF_HOME`, or `HF_HUB_CACHE` (or picked custom
+`OMNIVOICE_CACHE_DIR`, `OMNIVOICE_ENGINES_DIR`, `HF_HOME`, or `HF_HUB_CACHE` (or picked custom
 data/model folders during setup), export the same variables before running it
 and it will target those instead of the defaults. It never touches anything
 outside the VoiceStudio folders, and without `--app` / `-RemoveApp` it does

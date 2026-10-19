@@ -14,6 +14,22 @@ app (MSI installers) is no longer maintained; if you still run it, follow the
 Python, FFmpeg, and model weights are bootstrapped by the app itself on first
 launch; no toolchain is needed for the installer.
 
+## Keep engine environments off `C:`
+
+Engine environments (IndexTTS, CosyVoice, MOSS-TTS and other sidecars, plus the
+audio.cpp runtime) install under `<app data>\engines` and can reach several GB
+each. To place them on another drive, set `OMNIVOICE_ENGINES_DIR` before
+launching VoiceStudio, for example in PowerShell:
+
+```powershell
+[Environment]::SetEnvironmentVariable('OMNIVOICE_ENGINES_DIR', 'D:\VoiceStudio\engines', 'User')
+```
+
+Restart VoiceStudio afterwards. Voices, projects and settings stay in the data
+folder (`OMNIVOICE_DATA_DIR` moves that too). Engines already installed under the
+old folder are not moved: reinstall them from Engines, or move the
+`engines\<engine>` folder yourself and delete the old copy.
+
 ## Install
 
 Download the installer matching your PC from the

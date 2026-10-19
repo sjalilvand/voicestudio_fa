@@ -30,6 +30,8 @@ metadata and the backend fallback mirror it.
 - The install location chosen in first-run setup now also holds your data, model cache and temp files instead of quietly filling `C:`, and the setup screen shows each path (#2971, #3035)
 - Supertonic-3's preset voices can be picked in the voice controls and are used for generation (#2938, #3035)
 
+- `OMNIVOICE_ENGINES_DIR` moves engine venvs and the audio.cpp runtime to another drive; the default location is unchanged (#3024)
+
 ### Docs
 
 - OmniVoice GGUF docs state that the installers do not ship its native binary yet (#3026) — thanks @DestinyQJY!
