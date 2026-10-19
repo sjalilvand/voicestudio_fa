@@ -20,6 +20,10 @@ metadata and the backend fallback mirror it.
 
 - Contributor guides and the pull request template explain how to sign the CLA before opening a first pull request (#2676)
 
+### Fixed
+
+- macOS builds without a Developer ID are now signed ad hoc so the bundle signature is valid, and the shell installer clears quarantine, repairs an invalid signature of older releases, names an unreadable disk image, and tells Intel Mac users the backend needs Apple Silicon (#3033, #2763, #2829, #2681)
+
 ### CI
 
 - Desktop request-guard self-tests stay deterministic when app requests arrive during cleanup (#2676)

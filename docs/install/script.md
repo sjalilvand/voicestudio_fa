@@ -50,6 +50,11 @@ and checks again before replacing files. macOS refreshes the installed app's
 Launch Services registration so Launchpad can find the new version.
 macOS installs `VoiceStudio.app` in
 `/Applications`, or `~/Applications` if `/Applications` is not writable.
+On macOS the installer also clears the `com.apple.quarantine` flag and, when
+`codesign --verify --deep --strict` fails (releases shipped before the build
+signed ad hoc, #2763), re-signs the bundle ad hoc so Gatekeeper does not report
+"damaged". A valid or notarized signature is never touched. On an Intel Mac it
+prints that the local backend needs Apple Silicon.
 Linux installs `~/.local/bin/VoiceStudio`; include `~/.local/bin` in your PATH.
 Current Electron source builds also read archived setup configuration for custom
 data/model folders and portable storage; explicit launch environment overrides
