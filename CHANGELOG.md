@@ -18,7 +18,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
-- Backend no longer dies with an access violation on a truncated model file; it re-downloads it, and hangs, port-denied and slow-start failures now name the cause and what to do (#3025) — thanks @tigerscurrying-prog, @prompteric, @anchetasmedellin!
+- Windows runtime refresh no longer fails with `EPERM` on a locked backend folder (OneDrive, antivirus): it updates the files in place; the missing-Python-environment message now names the exact folder and tells non-checkout installs to use the installer (#3023) — thanks @afraniohugo, @javalovelinux-cmd and @eduardpp00!
 
 ### Docs
 
@@ -29,6 +29,8 @@ metadata and the backend fallback mirror it.
 - Desktop request-guard self-tests stay deterministic when app requests arrive during cleanup (#2676)
 
 - New `mobile` workflow builds and tests both phone apps; a contract test fails when their theme or API description drifts from the desktop app (#2965)
+
+- Gallery preview fallback smoke no longer flakes when a slower runner reads the playing clip in several byte ranges (#3018)
 
 ## [0.5.7] — 2026-10-17
 

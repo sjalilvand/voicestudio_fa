@@ -431,8 +431,17 @@ export async function resolveSpawnPlan(
   // deadline and repeat that download after every restart (#2184).
   const portArg = ['--port', String(port)];
   const python = venvPython(root);
-  const setup = 'Run `bun run setup:api` in the repository, wait for it to finish, then restart.';
+  const setup = `Open a terminal in ${root}, run \`bun run setup:api\`, wait for it to finish, then restart.`;
   if (!existsSync(python)) {
+    // Not a source checkout and not a packaged app (a copied folder, a
+    // download of the wrong archive): setup:api does not exist there (#2988).
+    if (!existsSync(join(root, 'pyproject.toml'))) {
+      return {
+        error:
+          `The Python environment in ${root} is missing (no ${relative(root, python)}), and this is not a VoiceStudio source checkout. ` +
+          'Install VoiceStudio from the release installer, or clone the repository and run `bun run setup:api` inside it.',
+      };
+    }
     return {
       error: `The Python environment in ${root} is missing (no ${relative(root, python)}). ${setup}`,
     };
