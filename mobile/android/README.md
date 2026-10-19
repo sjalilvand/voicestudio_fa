@@ -291,8 +291,8 @@ installation marker is written; native loads reuse verification while the file s
 Phone files and local licence receipts live under Android's `noBackupFilesDir`;
 they are app-private and excluded from cloud and device backups. Non-commercial,
 conditional, unknown and explicitly gated licences block download and load until
-accepted locally. The dialog displays the bundled complete inert `licence.terms`
-disclosure, attribution and fingerprint. Receipts store that fingerprint, app
+accepted locally. The dialog leads with a plain summary (category, rights rows, notes, https licence links) and keeps the bundled complete inert `licence.terms`
+disclosure, attribution and fingerprint under a collapsed Exact terms section. Receipts store that fingerprint, app
 version and timestamp; the latest 20 accept/withdraw actions are retained.
 A changed fingerprint or withdrawal blocks use without deleting weights.
 
@@ -452,3 +452,11 @@ saved phone voices select the reference in Speak, and projects open their
 outputs and resume controls. Empty states are localized and downloads remain
 explicit. Home replaces Speak in the five-item navigation; Speak opens from Home.
 Desktop-only workspaces are not advertised as available mobile features.
+
+## Home, Dub and dock
+
+Home shows Electron's contributor avatars (`HomeContributors.kt`; the Gradle catalog task copies the
+images from `electron/.../home/contributors` into the APK assets, nothing is fetched at runtime and
+`tests/test_mobile_contract.py` guards the list). Dub opens with a dashed source card and the animated
+`DubGlyph`; the bottom navigation is icon-only with names as content descriptions.
+

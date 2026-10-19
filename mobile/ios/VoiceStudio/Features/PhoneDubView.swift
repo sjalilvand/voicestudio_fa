@@ -28,26 +28,24 @@ struct PhoneDubView: View {
         Page {
             if projectID == nil && !libraryOnly {
                 if connect { NavigationLink(model.t("mobile.simple.reconnect")) { ConnectView() } }
-                DubSourceButton { importing = true }.disabled(copying)
-                if let source { SelectedFileRow(name: source.name) { self.source = nil } }
-                DubSetupCard {
+                Group {
+                    if let source { DubFileCard(name: source.name) { self.source = nil } }
+                    else { DubSourceButton { importing = true } }
+                }.disabled(copying)
+                DubTiles {
                     Button { languages = true } label: {
-                        SelectionRow(label: model.t("mobile.dub.target_languages"), value: ListFormatter.localizedString(byJoining: choices.filter { targets.contains($0.code) }.map(\.name)))
+                        TileLabel(icon: "globe", label: model.t("mobile.dub.target_languages"), value: ListFormatter.localizedString(byJoining: choices.filter { targets.contains($0.code) }.map(\.name)))
                     }.studioButton(.tertiary).accessibilityIdentifier("dub.languages")
-                    Divider()
-                    ChoicePicker(label: model.t("mobile.speak.voice"), selection: $voice, options: [SelectionOption(id: "", title: model.t("mobile.simple.reference"))] + model.phone.voices.map { SelectionOption(id: $0.id.uuidString, title: $0.name) })
-                    Divider()
-                    HStack {
-                        Toggle(model.t("mobile.simple.voice_consent"), isOn: $consent).font(.subheadline).frame(minHeight: 44)
-                        InfoButton(title: model.t("mobile.voices.consent_title"), detail: model.t("mobile.voices.consent_body"))
-                    }
+                    ChoicePicker(label: model.t("mobile.speak.voice"), selection: $voice, options: [SelectionOption(id: "", title: model.t("mobile.simple.reference"))] + model.phone.voices.map { SelectionOption(id: $0.id.uuidString, title: $0.name) }, icon: "person.wave.2", tile: true)
                 }
-                DisclosureGroup(model.t("mobile.simple.more")) {
+                DubConsentRow(isOn: $consent)
+                DisclosureGroup {
                     Toggle(model.t("mobile.simple.audio_only"), isOn: $audioOnly).frame(minHeight: 44)
                     phoneModel("dub-asr", .asr)
                     phoneModel("dub-translate", .translate)
                     phoneModel("dub", .clone)
-                }.padding(.horizontal, Theme.compactInset)
+                } label: { Label(model.t("mobile.simple.more"), systemImage: "slider.horizontal.3") }
+                    .padding(.horizontal, Theme.compactInset)
                     .disabled(copying || model.phone.activeDub != nil)
                 if !ready { LocalDownloadPrompt(items: model.phone.dubModels, feature: "mobile.tabs.dub", compact: true) }
                 if copying { ProgressView().accessibilityLabel(model.t("mobile.ios.progress")) }
@@ -56,22 +54,14 @@ struct PhoneDubView: View {
                 Text(model.t("mobile.dub.history")).font(.headline)
                 Group {
                     ForEach(records.filter { !$0.checkpoint.done }) { record in
-                        Card {
-                            Text(record.request.title).lineLimit(1)
-                            let progress = model.phone.activeDub == record.id ? model.phone.dubProgress : nil
-                            let percent = progress?.percent ?? record.checkpoint.percent
-                            HStack {
-                                Text(model.t(progress?.stage ?? record.checkpoint.stage)).frame(maxWidth: .infinity,alignment: .leading)
-                                Text(model.t("mobile.simple.percent",["percent": String(percent)]))
-                            }
-                            ProgressView(value: Double(percent)/100).accessibilityLabel(model.t("mobile.ios.progress"))
+                        let progress = model.phone.activeDub == record.id ? model.phone.dubProgress : nil
+                        let percent = progress?.percent ?? record.checkpoint.percent
+                        DubJobCard(title: record.request.title, stage: model.t(progress?.stage ?? record.checkpoint.stage), fraction: Double(percent) / 100, running: model.phone.activeDub == record.id) {
                             if model.phone.activeDub == record.id {
-                                Button(model.t("common.cancel"),systemImage: "xmark") { model.phone.cancelDub() }
+                                Button(model.t("common.cancel"), systemImage: "xmark") { model.phone.cancelDub() }
                             } else {
-                                HStack {
-                                    Button(model.t("mobile.simple.resume"),systemImage: "play.fill") { model.phone.startDub(record.id) }.disabled(model.phone.activeDub != nil || model.busy)
-                                    Button(model.t("mobile.simple.remove_job"),systemImage: "trash",role: .destructive) { remove(record) }.labelStyle(.iconOnly)
-                                }
+                                Button(model.t("mobile.simple.resume"), systemImage: "play.fill") { model.phone.startDub(record.id) }.disabled(model.phone.activeDub != nil || model.busy)
+                                Button(model.t("mobile.simple.remove_job"), systemImage: "trash", role: .destructive) { remove(record) }.labelStyle(.iconOnly)
                             }
                         }
                     }
@@ -79,6 +69,7 @@ struct PhoneDubView: View {
                     ForEach(records) { record in
                         ForEach(record.checkpoint.outputs) { output in
                             HStack {
+                                Image(systemName: "film").foregroundStyle(theme.color("messageAction")).frame(width: 32).accessibilityHidden(true)
                                 VStack(alignment: .leading) { Text(record.request.title).lineLimit(1); Text(output.name).font(.caption).foregroundStyle(theme.color("textMuted")) }.frame(maxWidth: .infinity,alignment: .leading)
                                 Button(model.t("common.play"),systemImage: "play.fill") { open(record,output,action: .play) }
                                 Button(model.t("mobile.speak.share"),systemImage: "square.and.arrow.up") { open(record,output,action: .share) }
@@ -93,7 +84,7 @@ struct PhoneDubView: View {
         .navigationTitle(projectID != nil ? (records.first?.request.title ?? model.t("projects.title")) : model.t(libraryOnly ? "projects.title" : "mobile.tabs.dub")).navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if projectID == nil && !libraryOnly {
-                DubStartButton(action: start)
+                DubStartButton(busy: copying || model.phone.activeDub != nil, action: start)
                     .disabled(!ready || !consent || source == nil || targets.isEmpty || model.busy || copying || model.phone.activeDub != nil)
             }
         }

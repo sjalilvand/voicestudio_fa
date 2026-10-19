@@ -60,6 +60,7 @@ private val destinations = listOf(
                     Column(Modifier.fillMaxWidth().padding(VSTheme.inset),verticalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
                         Text(tr("homeUi.title"),style=MaterialTheme.typography.headlineLarge,fontWeight=FontWeight.SemiBold)
                         Text(tr("mobile.local.privacy"),style=MaterialTheme.typography.bodyMedium,color=role("textMuted"))
+                        Box(Modifier.fillMaxWidth(),contentAlignment=Alignment.CenterEnd) {ContributorCluster()}
                     }
                 }
             }

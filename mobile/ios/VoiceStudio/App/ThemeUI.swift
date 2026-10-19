@@ -125,11 +125,11 @@ struct RootView: View {
             if !model.consentAnswered { ConsentView() }
             else {
                 TabView {
-                        NavigationStack { HomeView() }.tabItem { Label(model.t("nav.home"), systemImage: "house") }
-                        NavigationStack { VoicesView() }.tabItem { Label(model.t("mobile.tabs.voices"), systemImage: "person.wave.2") }
-                        NavigationStack { DubView() }.tabItem { Label(model.t("mobile.tabs.dub"), systemImage: "film") }
-                        NavigationStack { DictateView() }.tabItem { Label(model.t("mobile.tabs.dictate"), systemImage: "mic") }
-                    NavigationStack { SettingsView() }.tabItem { Label(model.t("mobile.tabs.settings"), systemImage: "gearshape") }
+                        NavigationStack { HomeView() }.tabItem { StudioTabIcon(title: model.t("nav.home"), systemImage: "house") }
+                        NavigationStack { VoicesView() }.tabItem { StudioTabIcon(title: model.t("mobile.tabs.voices"), systemImage: "person.wave.2") }
+                        NavigationStack { DubView() }.tabItem { StudioTabIcon(title: model.t("mobile.tabs.dub"), systemImage: "film") }
+                        NavigationStack { DictateView() }.tabItem { StudioTabIcon(title: model.t("mobile.tabs.dictate"), systemImage: "mic") }
+                    NavigationStack { SettingsView() }.tabItem { StudioTabIcon(title: model.t("mobile.tabs.settings"), systemImage: "gearshape") }
                 }
                 .id(model.hostState.scopeID)
                 .modifier(StudioTabBehavior())
@@ -226,5 +226,14 @@ private struct StudioTabBehavior: ViewModifier {
         #else
         content
         #endif
+    }
+}
+
+/// Icon-only tab: a compact dock. The title stays as the accessibility label.
+private struct StudioTabIcon: View {
+    let title: String
+    let systemImage: String
+    var body: some View {
+        Image(systemName: systemImage).accessibilityLabel(title)
     }
 }

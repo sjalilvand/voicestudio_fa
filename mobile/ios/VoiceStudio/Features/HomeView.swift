@@ -11,11 +11,13 @@ struct HomeView: View {
         Page {
             VStack(alignment: .leading, spacing: VSTokens.spacingGap * 2) {
                 VStack(alignment: .leading, spacing: VSTokens.spacingGap) {
-                    Text(model.t("mobile.ios.app_name"))
+                    Text(model.t("homeUi.title"))
                         .font(.custom("InterVariable", size: VSTokens.iosHomeWordmarkSize, relativeTo: .title).weight(.semibold))
-                    Text(model.t("mobile.local.privacy"))
-                        .font(.subheadline)
-                        .foregroundStyle(theme.color("textMuted"))
+                        .fixedSize(horizontal: false, vertical: true)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .bottom, spacing: VSTokens.spacingGap) { privacy; ContributorCluster() }
+                        VStack(alignment: .leading, spacing: VSTokens.spacingGap) { privacy; ContributorCluster().frame(maxWidth: .infinity, alignment: .trailing) }
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading).padding(Theme.compactInset)
                 .background(alignment: .trailing) {
@@ -78,6 +80,9 @@ struct HomeView: View {
         .task { await model.phone.refresh() }
         .refreshable { await model.phone.refresh(); if model.connection.client != nil { await model.perform { try await model.refresh() } } }
         .onDisappear { player.pause() }
+    }
+    private var privacy: some View {
+        Text(model.t("mobile.local.privacy")).font(.subheadline).foregroundStyle(theme.color("textMuted")).frame(maxWidth: .infinity, alignment: .leading)
     }
     private func destination<Content: View>(_ id: String, title: String, detail: String, icon: String, primary: Bool = false, @ViewBuilder content: () -> Content) -> some View {
         NavigationLink(destination: content()) {

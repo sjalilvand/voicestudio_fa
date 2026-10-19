@@ -36,6 +36,7 @@ val bundleCatalogs by tasks.registering {
     inputs.file(repository.resolve("electron/public/signal-field.webp"))
     inputs.file(repository.resolve("electron/src/shared/languages.json"))
     inputs.file(repository.resolve("LICENSE"))
+    inputs.dir(repository.resolve("electron/src/renderer/src/features/home/contributors"))
     inputs.files(fileTree(contracts) { include("strings*.en.json", "tokens.json", "openapi.json", "models.json") })
     outputs.dir(layout.buildDirectory.dir("generated/catalogs"))
     outputs.dir(layout.buildDirectory.dir("generated/catalogResources"))
@@ -45,6 +46,8 @@ val bundleCatalogs by tasks.registering {
         assets.mkdirs()
         repository.resolve("electron/public/signal-field.webp").copyTo(assets.resolve("signal-field.webp"), overwrite=true)
         repository.resolve("electron/src/shared/languages.json").copyTo(assets.resolve("languages.json"), overwrite=true)
+        val avatars = repository.resolve("electron/src/renderer/src/features/home/contributors")
+        avatars.listFiles()!!.forEach { it.copyTo(assets.resolve("contributors/" + it.name).apply { parentFile.mkdirs() }, overwrite=true) }
         val out = assets.resolve("locales").apply { mkdirs() }
         assets.resolve("licenses").mkdirs()
         repository.resolve("LICENSE").copyTo(assets.resolve("licenses/VoiceStudio-AGPL-3.0.txt"), overwrite=true)

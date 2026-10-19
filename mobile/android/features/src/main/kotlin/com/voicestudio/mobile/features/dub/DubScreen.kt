@@ -110,7 +110,7 @@ import java.io.File
         ScreenTitle("mobile.tabs.dub")
         StepHeading("mobile.simple.source",VSIcons.Video)
         if(copying || catalog==null) InlineLoading()
-        Secondary("mobile.dub.pick_media",!copying) {picker.launch(arrayOf("video/*","audio/*"))}
+        DubSourceCard(!copying) {picker.launch(arrayOf("video/*","audio/*"))}
         if(filePath!=null) {
             SelectedDubSource(sourceName ?: File(filePath!!).name) {File(filePath!!).delete();filePath=null;sourceName=null}
         }

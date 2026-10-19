@@ -42,6 +42,7 @@ struct ChoicePicker: View {
     let options: [SelectionOption]
     var compact = false
     var icon: String? = nil
+    var tile = false
     @State private var presenting = false
     @State private var query = ""
     private var filtered: [SelectionOption] {
@@ -49,7 +50,9 @@ struct ChoicePicker: View {
     }
     var body: some View {
         Button { query = ""; presenting = true } label: {
-            if compact {
+            if tile {
+                TileLabel(icon: icon ?? "circle", label: label, value: options.first { $0.id == selection }?.title ?? "")
+            } else if compact {
                 HStack(spacing: 4) {
                     Text(options.first { $0.id == selection }?.title ?? label).lineLimit(1).truncationMode(.tail)
                     Image(systemName: "chevron.down").accessibilityHidden(true)

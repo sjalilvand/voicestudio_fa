@@ -6,11 +6,12 @@ struct VoicePicker: View {
     @Binding var selection: String
     var dubbing = false
     var compact = false
+    var tile = false
     var body: some View {
         ChoicePicker(label: model.t("mobile.speak.voice"), selection: $selection, options:
             (dubbing ? [SelectionOption(id: DubVoiceChoice.unselected, title: model.t("mobile.dub.choose_voice"), enabled: false)] : []) +
             [SelectionOption(id: "", title: model.t(DubVoiceChoice.defaultLabelKey))] +
-            model.profiles.map { SelectionOption(id: $0.id, title: $0.name, subtitle: model.languages.language($0.language)?.name) }, compact: compact)
+            model.profiles.map { SelectionOption(id: $0.id, title: $0.name, subtitle: model.languages.language($0.language)?.name) }, compact: compact, icon: tile ? "person.wave.2" : nil, tile: tile)
     }
 }
 struct SpeakView: View {

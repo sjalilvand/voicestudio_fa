@@ -36,22 +36,21 @@ struct ComputerDubView: View {
     var body: some View {
         Page {
             if model.connection.client == nil { NavigationLink(model.t("mobile.settings.connection")) { ConnectView() } }
-            DubSourceButton { importing = true }
-            if let selectedFile { SelectedFileRow(name: selectedFile.name) { self.selectedFile = nil } }
-            TextField(model.t("mobile.dub.paste_url"), text: $sourceURL).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled().accessibilityIdentifier("dub.source_url")
-            DubSetupCard {
+            if let selectedFile { DubFileCard(name: selectedFile.name) { self.selectedFile = nil } }
+            else { DubSourceButton { importing = true } }
+            HStack(spacing: VSTokens.spacingGap) {
+                Image(systemName: "link").foregroundStyle(theme.color("iconMuted")).accessibilityHidden(true)
+                TextField(model.t("mobile.dub.paste_url"), text: $sourceURL).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled().accessibilityIdentifier("dub.source_url")
+            }
+            DubTiles {
                 Button { selectingLanguages = true } label: {
-                    SelectionRow(label: model.t("mobile.dub.target_languages"), value: ListFormatter.localizedString(byJoining: languages.filter { selected.contains($0.code) }.map(\.name)))
+                    TileLabel(icon: "globe", label: model.t("mobile.dub.target_languages"), value: ListFormatter.localizedString(byJoining: languages.filter { selected.contains($0.code) }.map(\.name)))
                 }.studioButton(.tertiary).accessibilityIdentifier("dub.languages")
-                Divider()
-                VoicePicker(selection: $profile, dubbing: true)
+                VoicePicker(selection: $profile, dubbing: true, tile: true)
             }
             if let pending = upload.pending {
-                Card {
-                    if let name = pending.filename { Text(name).lineLimit(1).truncationMode(.middle) }
-                    Text(model.t("mobile.dub.uploading", ["percent": String(Int(upload.fraction * 100))]))
-                    ProgressView(value: upload.fraction).accessibilityLabel(model.t("mobile.ios.progress"))
-                    Button(model.t("mobile.ios.upload_cancel"), role: .destructive) { Task { await upload.cancel() } }
+                DubJobCard(title: pending.filename ?? model.t("mobile.tabs.dub"), stage: model.t("mobile.dub.uploading", ["percent": String(Int(upload.fraction * 100))]), fraction: upload.fraction) {
+                    Button(model.t("mobile.ios.upload_cancel"), systemImage: "xmark", role: .destructive) { Task { await upload.cancel() } }
                 }
             }
             if let engine = model.dub.pendingTranslation {
@@ -65,15 +64,12 @@ struct ComputerDubView: View {
                 }
             }
             if let cp = model.dub.checkpoint {
-                Card {
-                    Text(cp.title).lineLimit(1).truncationMode(.middle)
-                    Text(model.t("mobile.ios.dub_stages." + cp.stage.rawValue))
-                    ProgressView(value: model.dub.progress).accessibilityLabel(model.t("mobile.ios.progress"))
+                DubJobCard(title: cp.title, stage: model.t("mobile.ios.dub_stages." + cp.stage.rawValue), fraction: model.dub.progress, running: model.dub.monitoring) {
                     if cp.host != model.connection.active?.id { NavigationLink(model.t("mobile.simple.reconnect")) { ConnectView() } }
-                    else if cp.stage == .done { Button(model.t("mobile.dub.download")) { Task { await download(cp.jobID, name: cp.title) } } }
+                    else if cp.stage == .done { Button(model.t("mobile.dub.download"), systemImage: "arrow.down.to.line") { Task { await download(cp.jobID, name: cp.title) } } }
                     else if cp.stage != .cancelled {
-                        if !model.dub.monitoring { Button(model.t("mobile.ios.upload_resume")) { model.monitor() } }
-                        Button(model.t("mobile.dub.abort"), role: .destructive) { Task { await model.perform { model.pauseMonitor(); try await model.dub.abort(api: model.api()) } } }
+                        if !model.dub.monitoring { Button(model.t("mobile.ios.upload_resume"), systemImage: "play.fill") { model.monitor() } }
+                        Button(model.t("mobile.dub.abort"), systemImage: "xmark", role: .destructive) { Task { await model.perform { model.pauseMonitor(); try await model.dub.abort(api: model.api()) } } }
                     }
                 }
             }
@@ -83,6 +79,7 @@ struct ComputerDubView: View {
                     ForEach(model.dubHistory) { item in
                         ViewThatFits(in: .horizontal) {
                             HStack(spacing: VSTokens.spacingGap) {
+                                Image(systemName: "film").foregroundStyle(theme.color("messageAction")).frame(width: 32).accessibilityHidden(true)
                                 historyTitle(item)
                                 historyActions(item)
                             }
@@ -98,7 +95,7 @@ struct ComputerDubView: View {
         }
         .navigationTitle(model.t("mobile.tabs.dub")).navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            DubStartButton { Task { await start() } }
+            DubStartButton(busy: upload.pending != nil || model.dub.monitoring) { Task { await start() } }
                 .disabled(model.connection.client == nil || profile == DubVoiceChoice.unselected || model.busy || upload.pending != nil || selected.isEmpty || (selectedFile == nil && sourceURL.isEmpty) || model.dub.monitoring)
         }
         .fileImporter(isPresented: $importing, allowedContentTypes: [.movie, .audio]) { result in
@@ -187,44 +184,4 @@ struct ShareSheet: UIViewControllerRepresentable {
     let items: [URL]
     func makeUIViewController(context: Context) -> UIActivityViewController { UIActivityViewController(activityItems: items, applicationActivities: nil) }
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}
-
-/// Keep both processing routes in the same compact creation layout.
-struct DubSourceButton: View {
-    @Environment(AppModel.self) private var model
-    @Environment(\.vsTheme) private var theme
-    let action: () -> Void
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: VSTokens.spacingGap) {
-                Image(systemName: "doc.badge.plus").font(.title2).foregroundStyle(theme.color("messageAction"))
-                    .accessibilityHidden(true)
-                Text(model.t("mobile.dub.pick_media")).font(.headline).frame(maxWidth: .infinity, alignment: .leading)
-                Image(systemName: "chevron.right").font(.subheadline).foregroundStyle(theme.color("iconMuted"))
-                    .accessibilityHidden(true)
-            }.frame(minHeight: 44).padding(Theme.compactInset)
-                .background(theme.color("surface"), in: RoundedRectangle(cornerRadius: VSTokens.iosCardRadius))
-                .contentShape(Rectangle())
-        }.buttonStyle(.plain)
-    }
-}
-struct DubSetupCard<Content: View>: View {
-    @Environment(\.vsTheme) private var theme
-    let content: Content
-    init(@ViewBuilder content: () -> Content) { self.content = content() }
-    var body: some View {
-        VStack(spacing: 0) { content }
-            .padding(.horizontal, Theme.compactInset).padding(.vertical, VSTokens.spacingGap / 2)
-            .background(theme.color("surface"), in: RoundedRectangle(cornerRadius: VSTokens.iosCardRadius))
-    }
-}
-struct DubStartButton: View {
-    @Environment(AppModel.self) private var model
-    let action: () -> Void
-    var body: some View {
-        Button(action: action) {
-            Text(model.t("mobile.dub.start")).font(.headline).frame(maxWidth: .infinity)
-        }.studioButton(.primary).accessibilityIdentifier("dub.start")
-            .padding(.horizontal, Theme.compactInset).padding(.vertical, VSTokens.spacingGap / 2)
-    }
 }

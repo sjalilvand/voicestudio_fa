@@ -75,7 +75,7 @@ import java.io.File
         ScreenTitle(if(libraryOnly) "projects.title" else "mobile.tabs.dub")
         if(projectId==null && !libraryOnly) {
         StepHeading("mobile.simple.source",VSIcons.Video)
-        Secondary("mobile.dub.pick_media",!copying&&!state.busy) {picker.launch(arrayOf("audio/*","video/*"))}
+        DubSourceCard(!copying&&!state.busy) {picker.launch(arrayOf("audio/*","video/*"))}
         path?.let {source ->SelectedDubSource(sourceName ?: File(source).name) {File(source).delete();path=null;sourceName=null}}
         if(copying||catalog==null) InlineLoading()
         StepHeading("mobile.simple.languages",VSIcons.Globe)
