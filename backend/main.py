@@ -33,6 +33,13 @@ from core.contained_subprocess import secure_backend_drain_fd  # noqa: E402
 
 secure_backend_drain_fd()
 
+# The shell reads our stdout/stderr through pipes; a reader that falls behind
+# would otherwise block uvicorn's access-log write on the event loop and freeze
+# /health (#2970 class). Producers get a bounded buffer instead.
+from core.nonblocking_stdio import install as _install_nonblocking_stdio  # noqa: E402
+
+_install_nonblocking_stdio()
+
 import math  # noqa: E402
 
 # Windows: run every child process (ffmpeg, engine sidecars, yt-dlp, demucs, …)
