@@ -4,6 +4,7 @@ import VoiceStudioKit
 struct DictateView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.vsTheme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var preference: TaskLocation?
     private var phoneModel: PhoneModel? { model.phone.preferred(.stream) }
     private var localReady: Bool { phoneModel.map(model.phone.ready) ?? false }
@@ -32,17 +33,45 @@ struct DictateView: View {
                 Text(model.t("mobile.simple.connection_error"))
                 Button(model.t("mobile.simple.retry")) { Task { await readiness() } }
             }
-            Text(text).frame(maxWidth: .infinity, minHeight: 160, alignment: .bottomLeading)
-                .textSelection(.enabled).accessibilityLabel(model.t("mobile.ios.transcript"))
+            if text.isEmpty {
+                ContentUnavailableView {
+                    Label(model.t("mobile.tabs.dictate"), systemImage: "waveform")
+                } description: {
+                    Text(model.t("mobile.dictate.tap_to_start"))
+                }.frame(minHeight: 240)
+            } else {
+                Text(text).font(.title3).frame(maxWidth: .infinity, minHeight: 240, alignment: .topLeading)
+                    .textSelection(.enabled).accessibilityLabel(model.t("mobile.ios.transcript"))
+            }
+        }.studioNavigationTitle(model.t("mobile.tabs.dictate"))
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(spacing: VSTokens.spacingGap) {
+                recordControl
+            HStack(spacing: VSTokens.spacingGap) {
+                Button(model.t("mobile.dictate.copy"), systemImage: "doc.on.doc") { UIPasteboard.general.string = text }
+                    .accessibilityIdentifier("dictate.copy")
+                ShareLink(item: text) { Label(model.t("mobile.speak.share"), systemImage: "square.and.arrow.up") }
+                    .accessibilityIdentifier("dictate.share")
+            }.labelStyle(.iconOnly).studioButton(.tertiary).disabled(text.isEmpty)
+                .frame(maxWidth: .infinity).padding(Theme.compactInset).background(.bar)
+            }
+        }
+        .task { preference = model.phone.preference("dictate"); await model.phone.refresh(); await readiness() }
+        .onChange(of: preference) { _, _ in Task { await readiness() } }
+        .onChange(of: route) { _, _ in Task { await readiness() } }
+        .refreshable { await readiness() }
+        .onDisappear { capturing?.cancel(); receiving?.cancel(); audio.stop(); listening = false; finalizing = false; Task { await stream.close() } }
+    }
+    private var recordControl: some View {
             Button {
                 guard !suppressTap else { return }
                 if listening { stop() } else { start() }
             } label: {
                 Image(systemName: listening ? "stop.fill" : "mic.fill")
-                    .font(.largeTitle).frame(width: 112, height: 112)
+                    .font(.largeTitle).symbolEffect(.pulse, isActive: listening && !reduceMotion).frame(width: 88, height: 88)
                     .foregroundStyle(theme.color("messageActionForeground"))
                     .background(theme.color("messageAction"), in: Circle())
-            }.buttonStyle(.plain).frame(maxWidth: .infinity, minHeight: 144)
+            }.buttonStyle(.plain).frame(maxWidth: .infinity, minHeight: 104)
                 .disabled(!ready || finalizing || model.phone.activeDub != nil)
                 .accessibilityLabel(model.t(listening ? "common.stop" : "mobile.simple.microphone"))
                 .accessibilityIdentifier("dictate.record")
@@ -52,21 +81,6 @@ struct DictateView: View {
                         Task { try? await Task.sleep(for: .milliseconds(150)); suppressTap = false }
                     }
                 }, perform: { holding = true; suppressTap = true; if !listening && ready { start() } })
-        }.navigationTitle(model.t("mobile.tabs.dictate"))
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            HStack(spacing: VSTokens.spacingGap) {
-                Button(model.t("mobile.dictate.copy"), systemImage: "doc.on.doc") { UIPasteboard.general.string = text }
-                    .accessibilityIdentifier("dictate.copy")
-                ShareLink(item: text) { Label(model.t("mobile.speak.share"), systemImage: "square.and.arrow.up") }
-                    .accessibilityIdentifier("dictate.share")
-            }.labelStyle(.iconOnly).buttonStyle(VSButtonStyle(kind: .tertiary)).disabled(text.isEmpty)
-                .frame(maxWidth: .infinity).padding(Theme.compactInset).background(theme.color("canvas"))
-        }
-        .task { preference = model.phone.preference("dictate"); await model.phone.refresh(); await readiness() }
-        .onChange(of: preference) { _, _ in Task { await readiness() } }
-        .onChange(of: route) { _, _ in Task { await readiness() } }
-        .refreshable { await readiness() }
-        .onDisappear { capturing?.cancel(); receiving?.cancel(); audio.stop(); listening = false; finalizing = false; Task { await stream.close() } }
     }
     private func readiness() async {
         let scope = model.hostState.scopeID

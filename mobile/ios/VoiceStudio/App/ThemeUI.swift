@@ -9,33 +9,68 @@ extension Theme {
     func color(_ role: String) -> Color { let c = self[role]; return Color(.sRGB, red: c.r, green: c.g, blue: c.b, opacity: c.a) }
 }
 enum VSButtonKind { case primary, secondary, tertiary }
-struct VSButtonStyle: ButtonStyle {
+/// Keep destructive roles visible and put the full touch target inside the Button.
+private struct StudioPlainButtonStyle: ButtonStyle {
     @Environment(\.vsTheme) private var theme
-    @Environment(\.isEnabled) private var enabled
-    var kind: VSButtonKind = .secondary
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.custom("InterVariable", size: Theme.controlTypeSize, relativeTo: .body))
-            .frame(minWidth: 44, minHeight: 44)
-            .frame(maxWidth: kind == .primary ? .infinity : nil)
-            .padding(.horizontal, kind == .tertiary ? 0 : VSTokens.spacingGap)
-            .foregroundStyle(theme.color(!enabled ? "mutedForeground" : (configuration.role == .destructive ? "error" : (kind == .primary ? "messageActionForeground" : "text"))))
-            .background {
-                if kind != .tertiary {
-                    RoundedRectangle(cornerRadius: VSTokens.radiusControl)
-                        .fill(theme.color(!enabled ? "muted" : (kind == .primary ? (configuration.isPressed ? "messageActionHover" : "messageAction") : (configuration.isPressed ? "muted" : "surface"))))
+        Group {
+            if configuration.role == .destructive {
+                configuration.label.foregroundStyle(theme.color("error"))
+            } else {
+                configuration.label
+            }
+        }.frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+            .opacity(configuration.isPressed ? 0.65 : 1)
+    }
+}
+/// Apply system button styles to the original control, retaining its action,
+/// accessibility identity and List-row activation semantics.
+private struct StudioButton: ViewModifier {
+    let kind: VSButtonKind
+    @ViewBuilder func body(content: Content) -> some View {
+        if kind == .primary {
+            content.buttonStyle(.borderedProminent).buttonBorderShape(.capsule).controlSize(.large)
+        } else if kind == .secondary {
+            content.buttonStyle(.bordered).buttonBorderShape(.capsule).controlSize(.large)
+        } else {
+            content.buttonStyle(StudioPlainButtonStyle())
+        }
+    }
+}
+extension View {
+    func studioButton(_ kind: VSButtonKind = .secondary) -> some View { modifier(StudioButton(kind: kind)) }
+    func studioNavigationTitle(_ title: String) -> some View {
+        navigationTitle(title).navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                // Keep the navigation item's title for accessibility and Back,
+                // while placing the visible heading beside the trailing actions.
+                ToolbarItem(placement: .principal) {
+                    Color.clear.frame(width: 1, height: 1).accessibilityHidden(true)
                 }
+                StudioLeadingTitle(title: title)
             }
-            .overlay {
-                if kind == .secondary { RoundedRectangle(cornerRadius: VSTokens.radiusControl).strokeBorder(theme.color("border")) }
-            }
+    }
+}
+private struct StudioLeadingTitle: ToolbarContent {
+    let title: String
+    @ToolbarContentBuilder var body: some ToolbarContent {
+        if #available(iOS 26.0, *) {
+            ToolbarItem(placement: .topBarLeading) { label }
+                .sharedBackgroundVisibility(.hidden)
+        } else {
+            ToolbarItem(placement: .topBarLeading) { label }
+        }
+    }
+    private var label: some View {
+        Text(title).font(.headline).fixedSize(horizontal: true, vertical: false)
+            .accessibilityAddTraits(.isHeader).accessibilityIdentifier("navigation.title")
     }
 }
 struct VSFieldStyle: TextFieldStyle {
     @Environment(\.vsTheme) private var theme
     func _body(configuration: TextField<Self._Label>) -> some View {
         configuration.padding(Theme.compactInset).frame(minHeight: 44)
-            .background(theme.color("input"), in: RoundedRectangle(cornerRadius: VSTokens.radiusControl))
+            .background(theme.color("input"), in: RoundedRectangle(cornerRadius: VSTokens.iosFieldRadius))
             .tint(theme.color("focus"))
     }
 }
@@ -55,7 +90,8 @@ struct Page<Content: View>: View {
             }
                 .padding(Theme.compactInset).frame(maxWidth: .infinity, alignment: .leading)
         }
-        .background(theme.color(backgroundRole))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(theme.color(backgroundRole).ignoresSafeArea())
         .keyboardAccessible()
     }
 }
@@ -66,8 +102,7 @@ struct Card<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: VSTokens.spacingGap) { content }
             .frame(maxWidth: .infinity, alignment: .leading).padding(Theme.compactInset)
-            .background(theme.color("surface"), in: RoundedRectangle(cornerRadius: VSTokens.radiusLg))
-            .overlay(RoundedRectangle(cornerRadius: VSTokens.radiusLg).strokeBorder(theme.color("border")))
+            .background(theme.color("surface"), in: RoundedRectangle(cornerRadius: VSTokens.iosCardRadius, style: .continuous))
     }
 }
 struct RootView: View {
@@ -87,8 +122,7 @@ struct RootView: View {
                     NavigationStack { SettingsView() }.tabItem { Label(model.t("mobile.tabs.settings"), systemImage: "gearshape") }
                 }
                 .id(model.hostState.scopeID)
-                .toolbarBackground(theme.color("chrome"), for: .tabBar)
-                .toolbarBackground(.visible, for: .tabBar)
+                .modifier(StudioTabBehavior())
             }
         }
         .task { await model.phone.refresh() }
@@ -96,11 +130,10 @@ struct RootView: View {
         .onChange(of: model.theme) { _, _ in NativeTheme.apply(theme) }
         .onChange(of: scheme) { _, _ in NativeTheme.apply(theme) }
         .environment(\.vsTheme, theme)
-        .font(.custom("InterVariable", size: VSTokens.textEditor.size, relativeTo: .body))
+        .font(.body)
         .foregroundStyle(theme.color("text")).tint(theme.color("messageAction"))
-        .buttonStyle(VSButtonStyle()).textFieldStyle(VSFieldStyle())
+        .textFieldStyle(VSFieldStyle())
         .background(theme.color("canvas"))
-        .toolbarBackground(theme.color("chrome"), for: .navigationBar)
         .sheet(isPresented: Binding(get: { recovery != nil },set: { if !$0 { recovery = nil } })) {
             NavigationStack {
                 Group { if recovery == "models" { ModelsView() } else { ConnectView() } }
@@ -128,7 +161,7 @@ struct RootView: View {
                         }
                     }
                 }.padding(Theme.compactInset).background(theme.color("errorSurface"))
-                    .environment(\.vsTheme,theme).buttonStyle(VSButtonStyle(kind: .tertiary))
+                    .environment(\.vsTheme,theme).studioButton(.tertiary)
             }
 
         }
@@ -149,20 +182,35 @@ struct ErrorNotice: View {
 }
 struct ConsentView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.vsTheme) private var theme
     var body: some View {
         Page {
-            Text(model.t("privacy.analytics_title")).font(.custom("InterVariable", size: VSTokens.textEditor.size, relativeTo: .title))
-            Text(model.t("mobile.consent.phone_note"))
-            InfoButton(title: model.t("mobile.simple.info"), detail: model.t("privacy.analytics_subtitle"))
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: VSTokens.spacingGap) { choice(true); choice(false) }
-                VStack(spacing: VSTokens.spacingGap) { choice(true); choice(false) }
+            VStack(alignment: .leading, spacing: VSTokens.spacingGap * 2) {
+                Image(systemName: "waveform").font(.system(size: 52, weight: .medium)).foregroundStyle(theme.color("messageAction")).accessibilityHidden(true)
+                Text(model.t("privacy.analytics_title")).font(.largeTitle.bold()).fixedSize(horizontal: false, vertical: true)
+                Text(model.t("mobile.consent.phone_note")).font(.title3).foregroundStyle(theme.color("textMuted"))
+                Text(model.t("privacy.analytics_subtitle")).foregroundStyle(theme.color("textMuted"))
+            }.padding(.vertical, VSTokens.spacingGap * 2)
+        }.safeAreaInset(edge: .bottom) {
+            VStack(spacing: VSTokens.spacingGap) {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: VSTokens.spacingGap) { choice(true); choice(false) }
+                    VStack(spacing: VSTokens.spacingGap) { choice(true); choice(false) }
+                }
+                Button(model.t("common.dismiss")) { model.chooseConsent(false) }.accessibilityIdentifier("consent.dismiss")
             }
-            Button(model.t("common.dismiss")) { model.chooseConsent(false) }.accessibilityIdentifier("consent.dismiss")
+            .padding(Theme.compactInset).background(.bar)
         }.interactiveDismissDisabled()
     }
     func choice(_ value: Bool) -> some View {
         Button(model.t(value ? "common.yes" : "common.no")) { model.chooseConsent(value) }
-            .buttonStyle(VSButtonStyle(kind: .secondary)).frame(maxWidth: .infinity).accessibilityIdentifier(value ? "consent.yes" : "consent.no")
+            .studioButton(.secondary).frame(maxWidth: .infinity).accessibilityIdentifier(value ? "consent.yes" : "consent.no")
+    }
+}
+
+private struct StudioTabBehavior: ViewModifier {
+    @ViewBuilder func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) { content.tabBarMinimizeBehavior(.onScrollDown) }
+        else { content }
     }
 }

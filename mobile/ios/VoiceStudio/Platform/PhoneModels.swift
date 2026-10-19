@@ -44,12 +44,14 @@ final class WifiState: @unchecked Sendable {
     init(bundle: Bundle = .main) {
         allowMobileData = UserDefaults.standard.bool(forKey: "models.mobile-data")
         do {
-            let root: URL
-            if ProcessInfo.processInfo.arguments.contains("--ui-smoke") {
-                root = FileManager.default.temporaryDirectory.appendingPathComponent("PhoneModels-smoke-" + UUID().uuidString, isDirectory: true)
-            } else {
-                root = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true).appendingPathComponent("PhoneModels", isDirectory: true)
-            }
+            let root: URL = try {
+                #if DEBUG
+                if ProcessInfo.processInfo.arguments.contains("--ui-smoke") {
+                    return FileManager.default.temporaryDirectory.appendingPathComponent("PhoneModels-smoke-" + UUID().uuidString, isDirectory: true)
+                }
+                #endif
+                return try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true).appendingPathComponent("PhoneModels", isDirectory: true)
+            }()
             let store = try ModelStore(root: root)
             self.store = store; engine = NativeLocalEngine(store: store)
             guard let url = bundle.url(forResource: "models", withExtension: "json", subdirectory: "Catalogs") else { throw ClientError("mobile.local.catalogue_failed") }
@@ -65,6 +67,18 @@ final class WifiState: @unchecked Sendable {
 
             self.error = error as? ClientError ?? ClientError("mobile.local.catalogue_failed")
         }
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--ui-smoke"),
+           ProcessInfo.processInfo.arguments.contains("--ui-phone-history") {
+            Task {
+                if let generationStore {
+                    _ = try? await generationStore.save(text: "Saved audio for deletion review",
+                        audio: LocalAudio(samples: Array(repeating: 0, count: 16000), sampleRate: 16000))
+                    await refresh()
+                }
+            }
+        }
+        #endif
     }
     func refresh() async {
         guard let store else { return }

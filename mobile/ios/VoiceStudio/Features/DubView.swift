@@ -11,7 +11,8 @@ struct DubView: View {
                 .padding(.horizontal,Theme.compactInset).disabled(model.phone.activeDub != nil || model.busy)
             if route == .computer { ComputerDubView() }
             else { PhoneDubView(connect: route == .connect) }
-        }.task { preference = model.phone.preference("dub"); await model.phone.refresh() }
+        }.studioNavigationTitle(model.t("mobile.tabs.dub"))
+            .task { preference = model.phone.preference("dub"); await model.phone.refresh() }
     }
 }
 
@@ -29,11 +30,9 @@ struct ComputerDubView: View {
     @State private var selected = Set<String>()
     @State private var profile = DubVoiceChoice.unselected
     @State private var selectingLanguages = false
-    @State private var languageQuery = ""
     @State private var shared: SharedFile?
     @State private var saved: SharedFile?
     var languages: [DubLanguage] { model.languages.dubOptions }
-    private var filteredLanguages: [MobileLanguage] { model.languages.search(languageQuery, includeAuto: false) }
     var body: some View {
         Page {
             if model.connection.client == nil { NavigationLink(model.t("mobile.settings.connection")) { ConnectView() } }
@@ -48,7 +47,7 @@ struct ComputerDubView: View {
                         Image(systemName: "globe").accessibilityHidden(true)
                         SelectionRow(label: model.t("mobile.dub.target_languages"), value: ListFormatter.localizedString(byJoining: languages.filter { selected.contains($0.code) }.map(\.name)))
                     }
-                }.buttonStyle(VSButtonStyle(kind: .tertiary)).accessibilityIdentifier("dub.languages")
+                }.studioButton(.tertiary).accessibilityIdentifier("dub.languages")
                 ScrollView(.horizontal) {
                     HStack(spacing: VSTokens.spacingGap) {
                         ForEach(languages.filter { selected.contains($0.code) }) { language in
@@ -61,7 +60,7 @@ struct ComputerDubView: View {
                 Label(model.t("mobile.simple.voice"), systemImage: "person")
                 VoicePicker(selection: $profile, dubbing: true)
                 Button(model.t("mobile.simple.dub"), systemImage: "film") { Task { await start() } }
-                    .buttonStyle(VSButtonStyle(kind: .primary)).disabled(model.connection.client == nil || profile == DubVoiceChoice.unselected || model.busy || upload.pending != nil || selected.isEmpty || (selectedFile == nil && sourceURL.isEmpty) || model.dub.monitoring)
+                    .studioButton(.primary).disabled(model.connection.client == nil || profile == DubVoiceChoice.unselected || model.busy || upload.pending != nil || selected.isEmpty || (selectedFile == nil && sourceURL.isEmpty) || model.dub.monitoring)
             }
             if let pending = upload.pending {
                 Card {
@@ -113,43 +112,14 @@ struct ComputerDubView: View {
                     }
                 }
             }
-        }.navigationTitle(model.t("mobile.tabs.dub")).navigationBarTitleDisplayMode(.large)
+        }.navigationTitle(model.t("mobile.tabs.dub")).navigationBarTitleDisplayMode(.inline)
         .fileImporter(isPresented: $importing, allowedContentTypes: [.movie, .audio]) { result in
             switch result { case .success(let url): selectedFile = SelectedMedia(url: url); sourceURL = ""; case .failure: model.error = ClientError("mobile.errors.file") }
         }
-        .sheet(item: $shared) { file in ShareSheet(items: [file.url]).presentationCornerRadius(VSTokens.radiusLg) }
-        .sheet(item: $saved) { file in SaveFileSheet(url: file.url).presentationCornerRadius(VSTokens.radiusLg) }
+        .sheet(item: $shared) { file in ShareSheet(items: [file.url]) }
+        .sheet(item: $saved) { file in SaveFileSheet(url: file.url) }
         .sheet(isPresented: $selectingLanguages) {
-            NavigationStack {
-                List {
-                    SearchField(prompt: model.t("common.search"), text: $languageQuery).listRowBackground(theme.color("surfaceOverlay"))
-                    if filteredLanguages.isEmpty { SearchEmptyState(query: languageQuery).listRowBackground(theme.color("surface")) }
-                    ForEach(filteredLanguages) { language in
-                    Button {
-                        if let code = language.code {
-                            if selected.contains(code) { selected.remove(code) } else { selected.insert(code) }
-                        }
-                    } label: {
-                        HStack(spacing: VSTokens.spacingGap) {
-                            VStack(alignment: .leading, spacing: VSTokens.spacingGap) {
-                                Text(language.name).lineLimit(2).truncationMode(.tail)
-                                if language.code == nil { Text(model.t("mobile.dub.language_unavailable")).foregroundStyle(theme.color("textMuted")) }
-                            }
-                            Spacer(minLength: 0)
-                            Image(systemName: language.code.map { selected.contains($0) } == true ? "checkmark.circle.fill" : "circle")
-                                .foregroundStyle(theme.color("messageAction")).accessibilityHidden(true)
-                        }.frame(minHeight: 44).contentShape(Rectangle())
-                    }.buttonStyle(VSButtonStyle(kind: .tertiary)).disabled(language.code == nil)
-                        .accessibilityLabel(language.name)
-                        .accessibilityValue(model.t(language.code.map { selected.contains($0) } == true ? "mobile.ios.selected" : "mobile.ios.not_selected"))
-                        .listRowBackground(theme.color("surface"))
-                    }
-                }
-                .scrollContentBackground(.hidden).background(theme.color("surfaceOverlay"))
-                .keyboardAccessible()
-                .navigationTitle(model.t("mobile.dub.target_languages"))
-                .toolbar { Button(model.t("common.confirm")) { selectingLanguages = false }.buttonStyle(VSButtonStyle(kind: .tertiary)) }
-            }.presentationBackground(theme.color("surfaceOverlay")).presentationCornerRadius(VSTokens.radiusLg)
+            LanguageSelectionSheet(selection: selected, includesUnavailable: true) { selected = $0 }
         }
         .onChange(of: sourceURL) { _, value in if !value.isEmpty { selectedFile = nil } }
         .refreshable { await model.perform { model.dubHistory = try await model.api().dubHistory() }; model.monitor() }
@@ -162,7 +132,7 @@ struct ComputerDubView: View {
         } label: {
             Text(model.t(allowed ? "mobile.dub.translation_allow" : "mobile.dub.translation_decline"))
                 .frame(maxWidth: .infinity)
-        }.buttonStyle(VSButtonStyle(kind: .secondary))
+        }.studioButton(.secondary)
             .accessibilityIdentifier(allowed ? "dub.translation.allow" : "dub.translation.decline")
     }
     private func start() async {
@@ -186,7 +156,7 @@ struct ComputerDubView: View {
         VStack(alignment: .leading, spacing: VSTokens.spacingGap) {
             Text(item.title).lineLimit(1).truncationMode(.middle)
             Text(item.metadata(locale: Locale(identifier: model.l10n.locale)))
-                .font(.custom("InterVariable", size: VSTokens.textLabel.size, relativeTo: .caption))
+                .font(.caption)
                 .foregroundStyle(theme.color("textMuted")).lineLimit(1).truncationMode(.tail)
         }.frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -200,7 +170,7 @@ struct ComputerDubView: View {
                 Task { await download(item.job_id ?? item.id, name: item.title, share: true) }
             }.accessibilityIdentifier("dub.share." + item.id)
                 .accessibilityLabel(model.t("mobile.speak.share") + ": " + item.title)
-        }.labelStyle(.iconOnly).buttonStyle(VSButtonStyle(kind: .tertiary)).disabled(model.busy)
+        }.labelStyle(.iconOnly).studioButton(.tertiary).disabled(model.busy)
     }
     private func download(_ id: String, name: String, share: Bool = false) async {
         await model.perform {

@@ -16,12 +16,35 @@ extension XCUIApplication {
             if buttons["BackButton"].exists { buttons["BackButton"].tap() }
             else { navigationBars.buttons.element(boundBy: 0).tap() }
         }
+        for _ in 0..<8 { if buttons["home.speak"].isHittable { break }; swipeUp() }
         buttons["home.speak"].tap()
     }
 
 }
 
 final class SmokeTests: XCTestCase {
+    @MainActor func testDestructivePhoneHistoryAction() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-smoke", "--ui-phone-history", "-AppleLanguages", "(en)"]
+        app.launch()
+        XCTAssertTrue(app.buttons["consent.no"].waitForExistence(timeout: 10))
+        app.buttons["consent.no"].tap()
+        app.openSpeak()
+        let saved = app.staticTexts["Saved audio for deletion review"]
+        XCTAssertTrue(saved.waitForExistence(timeout: 5))
+        let delete = app.buttons["Delete"]
+        for _ in 0..<8 {
+            if delete.isHittable && delete.frame.maxY < app.buttons["speak.generate"].frame.minY { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(delete.isHittable)
+        XCTAssertGreaterThanOrEqual(delete.frame.height, 44)
+        let image = XCTAttachment(screenshot: app.screenshot())
+        image.name = "Destructive-history-action"; image.lifetime = .keepAlways; add(image)
+        delete.tap()
+        XCTAssertTrue(saved.wait(for: \.exists, toEqual: false, timeout: 5))
+    }
+
     @MainActor func testUnpairedTabsAndModelDownloadPrompt() throws {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-smoke", "-AppleLanguages", "(en)"]
@@ -34,6 +57,9 @@ final class SmokeTests: XCTestCase {
         for tab in ["Voices", "Dub", "Dictate", "Settings"] {
             app.tabButton(tab).tap()
             XCTAssertTrue(app.navigationBars[tab].waitForExistence(timeout: 2))
+            let title = app.descendants(matching: .any)["navigation.title"].firstMatch
+            XCTAssertEqual(title.label, tab)
+            XCTAssertLessThan(title.frame.midX, app.frame.width / 2)
         }
         XCTAssertTrue(app.buttons["settings.connect"].exists)
     }
@@ -155,9 +181,18 @@ final class SmokeTests: XCTestCase {
         app.buttons["speak.generate"].tap()
         let play = app.buttons["audio.play"]
         XCTAssertTrue(play.waitForExistence(timeout: 10))
+        // Generation inserts the player below the editor. Reveal its controls
+        // above the pinned Generate action before attempting playback.
+        for _ in 0..<5 {
+            if play.isHittable && play.frame.maxY < app.buttons["speak.generate"].frame.minY { break }
+            app.swipeUp()
+        }
+        XCTAssertLessThan(play.frame.maxY, app.buttons["speak.generate"].frame.minY)
         play.tap()
-        XCTAssertEqual(play.label, "Pause")
-        XCTAssertTrue(app.staticTexts["0:01"].exists)
+        XCTAssertTrue(play.wait(for: \.label, toEqual: "Pause", timeout: 3))
+        let playback = XCTAttachment(screenshot: app.screenshot())
+        playback.name = "Generated-audio-playback"; playback.lifetime = .keepAlways; add(playback)
+        XCTAssertTrue(app.staticTexts["0:05"].exists)
     }
 
     @MainActor func testKeyboardDismissalAcrossFormsAndSearch() throws {

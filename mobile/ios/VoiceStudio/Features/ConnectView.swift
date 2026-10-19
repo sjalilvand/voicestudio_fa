@@ -11,7 +11,7 @@ struct ConnectView: View {
     @State private var manual = false
     var body: some View {
         Page {
-            Button(model.t("mobile.connect.scan_qr"), systemImage: "qrcode.viewfinder") { scanning = true }.buttonStyle(VSButtonStyle(kind: .primary))
+            Button(model.t("mobile.connect.scan_qr"), systemImage: "qrcode.viewfinder") { scanning = true }.studioButton(.primary)
             DisclosureGroup(model.t("mobile.simple.address"), isExpanded: $manual) {
             Card {
                 TextField(model.t("mobile.connect.url_label"), text: $url).textContentType(.URL).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled().accessibilityIdentifier("connect.url")
@@ -20,7 +20,7 @@ struct ConnectView: View {
                 SecureField(model.t("mobile.connect.api_key_label"), text: $apiKey).textInputAutocapitalization(.never).autocorrectionDisabled()
                 }
                 Button(model.t(model.connection.connecting ? "mobile.connect.connecting" : "mobile.connect.connect")) { Task { await connect() } }
-                    .buttonStyle(VSButtonStyle(kind: .secondary)).disabled(model.connection.connecting || model.busy || BackgroundUpload.shared.pending != nil || url.isEmpty).accessibilityIdentifier("connect.submit")
+                    .studioButton(.secondary).disabled(model.connection.connecting || model.busy || BackgroundUpload.shared.pending != nil || url.isEmpty).accessibilityIdentifier("connect.submit")
             }
             }
             if let error = model.connection.error {
@@ -36,13 +36,16 @@ struct ConnectView: View {
                 }
             }
         }.navigationTitle(model.t("mobile.connect.title")).navigationBarTitleDisplayMode(.large)
-        .sheet(isPresented: $scanning) {
+        .fullScreenCover(isPresented: $scanning) {
             QRScanner(onCode: { code in
                 scanning = false
                 do { let address = try PairingAddress(code, qr: true); url = address.baseURL.absoluteString; pin = address.pin ?? ""; Task { await connect() } }
                 catch let e as ClientError { model.error = e } catch { model.error = ClientError("mobile.connect.error_qr") }
             }, onError: { e in scanning = false; model.error = e })
-                .presentationCornerRadius(VSTokens.radiusLg).ignoresSafeArea().overlay(alignment: .bottom) { Button(model.t("common.cancel")) { scanning = false } }
+                .ignoresSafeArea().overlay(alignment: .bottom) {
+                    Button(model.t("common.cancel")) { scanning = false }
+                        .studioButton(.secondary).padding(Theme.compactInset).background(.bar)
+                }
         }
     }
     private func connect() async {

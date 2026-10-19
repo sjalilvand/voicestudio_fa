@@ -18,6 +18,7 @@ struct SpeakView: View {
     var initialComputerVoiceID: String? = nil
     @Environment(AppModel.self) private var model
     @Environment(\.vsTheme) private var theme
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var preference: TaskLocation?
     @State private var phoneModelID = ""
     @State private var speakerID = "0"
@@ -49,13 +50,13 @@ struct SpeakView: View {
             if route == .connect { NavigationLink(model.t("mobile.settings.connection")) { ConnectView() } }
             ZStack(alignment: .topLeading) {
             if text.isEmpty { Text(model.t("mobile.speak.placeholder")).foregroundStyle(theme.color("textMuted")).padding(Theme.compactInset).allowsHitTesting(false) }
-            TextEditor(text: $text).frame(minHeight: VSTokens.textEditor.lineHeight * 6)
+            TextEditor(text: $text).frame(minHeight: 240)
                 .scrollContentBackground(.hidden).padding(Theme.compactInset)
-                .background(theme.color("input"), in: RoundedRectangle(cornerRadius: VSTokens.radiusControl))
+                .background(theme.color("input"), in: RoundedRectangle(cornerRadius: VSTokens.iosCardRadius, style: .continuous))
                 .accessibilityLabel(model.t("mobile.speak.placeholder")).accessibilityIdentifier("speak.text")
             }
             if route != .computer {
-                HStack(spacing: VSTokens.spacingGap) {
+                pickerLayout {
                     ChoicePicker(label: model.t("mobile.speak.voice"), selection: $speakerID, options: (0..<min(128,Int(phoneModel?.config["num_speakers"]?.number ?? 1))).map { SelectionOption(id: String($0), title: model.t("mobile.local.preset_voice", ["number": String($0 + 1)])) } + model.phone.voices.map { SelectionOption(id: "phone:"+$0.id.uuidString,title: $0.name) }, compact: true)
                     ChoicePicker(label: model.t("mobile.local.models"), selection: Binding(get: { phoneModel?.id ?? "" }, set: { phoneModelID = $0; model.phone.chooseModel("speak-"+capability.rawValue,$0) }), options: model.phone.candidates(capability).map { SelectionOption(id: $0.id, title: $0.name, subtitle: model.t("mobile.simple." + $0.capability.rawValue), enabled: $0.fits()) }, compact: true)
                     ChoicePicker(label: model.t("mobile.speak.language"), selection: $phoneLanguage, options: phoneVoice == nil ? (phoneModel?.languages ?? []).map { SelectionOption(id: $0, title: Locale(identifier: model.l10n.locale).localizedString(forLanguageCode: $0) ?? $0) } : [SelectionOption(id: "auto",title: model.t("mobile.ios.language_auto"))], compact: true)
@@ -71,7 +72,65 @@ struct SpeakView: View {
                              options: model.languages.languages.map { SelectionOption(id: $0.value, title: $0.name) }, compact: true).accessibilityIdentifier("speak.language")
             }
             }
-            Button(model.t(generating ? "mobile.speak.generating" : "mobile.speak.generate"), systemImage: "waveform") {
+            if player.file != nil || player.playing { AudioPlayerView(player: player) }
+            Text(model.t("mobile.speak.recent")).font(.headline)
+            if route != .computer {
+                if model.phone.recent.isEmpty { EmptyState(key: "mobile.simple.empty_recent") }
+                ForEach(model.phone.recent) { item in
+                    HStack {
+                        Text(item.text).lineLimit(1).frame(maxWidth: .infinity,alignment: .leading)
+                        Button(model.t("common.play"),systemImage: "play.fill") { Task { await model.performPhone {
+                            guard let store = model.phone.generationStore else { throw ClientError("mobile.errors.file") }
+                            try await player.load(Data(contentsOf: await store.file(item)),extension: "wav"); player.play()
+                        } } }
+                        Button(model.t("common.delete"),systemImage: "trash",role: .destructive) { Task { await model.performPhone { try await model.phone.generationStore?.delete(item); await model.phone.refresh() } } }
+                    }.labelStyle(.iconOnly).studioButton(.tertiary)
+                }
+            } else if model.history.isEmpty && !model.loading { EmptyState(key: "mobile.simple.empty_recent") }
+            else {
+                Card {
+                    ForEach(model.history) { item in
+                        HStack(spacing: VSTokens.spacingGap) {
+                            Text(item.text).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+                            Button(model.t("common.play"), systemImage: "play.fill") { Task { await model.perform { let api = try model.api(); try await player.stream(request: api.historyAudioRequest(item.id), api: api) } } }
+                                .labelStyle(.iconOnly).studioButton(.tertiary)
+                            Menu {
+                                Button(model.t(item.starred ? "mobile.speak.unstar" : "mobile.speak.star"), systemImage: item.starred ? "star.fill" : "star") { Task { await model.perform { try await model.api().star(item); model.history = try await model.api().history() } } }
+                                Button(model.t("common.delete"), systemImage: "trash", role: .destructive) { deleting = item }
+                            } label: { Label(model.t("mobile.ios.more_actions"), systemImage: "ellipsis") }
+                                .labelStyle(.iconOnly).studioButton(.tertiary).frame(minWidth: 44, minHeight: 44)
+                        }
+                        if item.id != model.history.last?.id { Divider().overlay(theme.color("border")) }
+                    }
+                }
+            }
+        }.navigationTitle(model.t("mobile.tabs.speak")).navigationBarTitleDisplayMode(.large)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            generationControls.padding(Theme.compactInset).background(.bar)
+        }
+        .onChange(of: model.inventory?.tts.active, initial: true) { _, _ in selection.reconcile(inventory: model.inventory, profiles: model.profiles) }
+        .onChange(of: model.profiles.map(\.id)) { _, _ in selection.reconcile(inventory: model.inventory, profiles: model.profiles) }
+        .refreshable { if model.connection.client != nil { await model.perform { try await model.refresh() } }; await model.phone.refresh(); selection.reconcile(inventory: model.inventory, profiles: model.profiles) }
+        .sheet(item: $deleting) { item in
+            DeleteConfirmation(title: model.t("mobile.ios.delete_generation")) {
+                Task { await model.perform { try await model.api().deleteHistory(item.id); model.history = try await model.api().history() } }
+            }
+        }
+        .onAppear { hostScope = model.hostState.scopeID; preference = initialPhoneVoiceID == nil ? model.phone.preference("speak") : .phone; if let id = initialPhoneVoiceID { speakerID = "phone:" + id }; if let id = initialComputerVoiceID { preference = .computer; selection.chooseProfile(id, profiles: model.profiles, inventory: model.inventory, catalog: model.languages) } }
+        .task { await model.phone.refresh(); reconcilePhone() }
+        .onChange(of: speakerID) { _, _ in reconcilePhone() }
+        .onChange(of: phoneModel?.id) { _, _ in reconcilePhone() }
+        .onChange(of: model.phone.voices) { _, _ in if speakerID.hasPrefix("phone:") && phoneVoice == nil { speakerID = "0" } }
+        .onDisappear { generation?.cancel(); if hostScope != model.hostState.scopeID { player.clear() } else { player.pause() } }
+    }
+    private var pickerLayout: AnyLayout {
+        typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: VSTokens.spacingGap))
+            : AnyLayout(HStackLayout(spacing: VSTokens.spacingGap))
+    }
+    private var generationControls: some View {
+        VStack(spacing: VSTokens.spacingGap) {
+            Button {
                 generation = Task {
                     generating = true; defer { generating = false; localProgress = nil }
                     await model.perform(onPhone: route == .phone) {
@@ -95,60 +154,17 @@ struct SpeakView: View {
                         model.history = try await model.api().history()
                     }
                 }
-            }.buttonStyle(VSButtonStyle(kind: .primary))
+            } label: {
+                Label(model.t(generating ? "mobile.speak.generating" : "mobile.speak.generate"), systemImage: "waveform")
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }.studioButton(.primary)
                 .disabled(model.busy || model.phone.activeDub != nil || generating || (route != .phone && route != .computer) || (route == .computer && !selection.canGenerate(in: model.inventory, profiles: model.profiles)) || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .accessibilityIdentifier("speak.generate")
             if generating {
                 if let value = localProgress { ProgressView(value: value.fraction).accessibilityLabel(model.t("mobile.ios.progress")) }
                 Button(model.t("common.cancel")) { generation?.cancel() }
             }
-            if player.file != nil || player.playing { AudioPlayerView(player: player) }
-            Text(model.t("mobile.speak.recent")).font(.custom("InterVariable", size: Theme.controlTypeSize, relativeTo: .headline))
-            if route != .computer {
-                if model.phone.recent.isEmpty { EmptyState(key: "mobile.simple.empty_recent") }
-                ForEach(model.phone.recent) { item in
-                    HStack {
-                        Text(item.text).lineLimit(1).frame(maxWidth: .infinity,alignment: .leading)
-                        Button(model.t("common.play"),systemImage: "play.fill") { Task { await model.performPhone {
-                            guard let store = model.phone.generationStore else { throw ClientError("mobile.errors.file") }
-                            try await player.load(Data(contentsOf: await store.file(item)),extension: "wav"); player.play()
-                        } } }
-                        Button(model.t("common.delete"),systemImage: "trash",role: .destructive) { Task { await model.performPhone { try await model.phone.generationStore?.delete(item); await model.phone.refresh() } } }
-                    }.labelStyle(.iconOnly).buttonStyle(VSButtonStyle(kind: .tertiary))
-                }
-            } else if model.history.isEmpty && !model.loading { EmptyState(key: "mobile.simple.empty_recent") }
-            else {
-                Card {
-                    ForEach(model.history) { item in
-                        HStack(spacing: VSTokens.spacingGap) {
-                            Text(item.text).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
-                            Button(model.t("common.play"), systemImage: "play.fill") { Task { await model.perform { let api = try model.api(); try await player.stream(request: api.historyAudioRequest(item.id), api: api) } } }
-                                .labelStyle(.iconOnly).buttonStyle(VSButtonStyle(kind: .tertiary))
-                            Menu {
-                                Button(model.t(item.starred ? "mobile.speak.unstar" : "mobile.speak.star"), systemImage: item.starred ? "star.fill" : "star") { Task { await model.perform { try await model.api().star(item); model.history = try await model.api().history() } } }
-                                Button(model.t("common.delete"), systemImage: "trash", role: .destructive) { deleting = item }
-                            } label: { Label(model.t("mobile.ios.more_actions"), systemImage: "ellipsis") }
-                                .labelStyle(.iconOnly).buttonStyle(VSButtonStyle(kind: .tertiary)).frame(minWidth: 44, minHeight: 44)
-                        }
-                        if item.id != model.history.last?.id { Divider().overlay(theme.color("border")) }
-                    }
-                }
-            }
-        }.navigationTitle(model.t("mobile.tabs.speak")).navigationBarTitleDisplayMode(.large)
-        .onChange(of: model.inventory?.tts.active, initial: true) { _, _ in selection.reconcile(inventory: model.inventory, profiles: model.profiles) }
-        .onChange(of: model.profiles.map(\.id)) { _, _ in selection.reconcile(inventory: model.inventory, profiles: model.profiles) }
-        .refreshable { if model.connection.client != nil { await model.perform { try await model.refresh() } }; await model.phone.refresh(); selection.reconcile(inventory: model.inventory, profiles: model.profiles) }
-        .sheet(item: $deleting) { item in
-            DeleteConfirmation(title: model.t("mobile.ios.delete_generation")) {
-                Task { await model.perform { try await model.api().deleteHistory(item.id); model.history = try await model.api().history() } }
-            }
         }
-        .onAppear { hostScope = model.hostState.scopeID; preference = initialPhoneVoiceID == nil ? model.phone.preference("speak") : .phone; if let id = initialPhoneVoiceID { speakerID = "phone:" + id }; if let id = initialComputerVoiceID { preference = .computer; selection.chooseProfile(id, profiles: model.profiles, inventory: model.inventory, catalog: model.languages) } }
-        .task { await model.phone.refresh(); reconcilePhone() }
-        .onChange(of: speakerID) { _, _ in reconcilePhone() }
-        .onChange(of: phoneModel?.id) { _, _ in reconcilePhone() }
-        .onChange(of: model.phone.voices) { _, _ in if speakerID.hasPrefix("phone:") && phoneVoice == nil { speakerID = "0" } }
-        .onDisappear { generation?.cancel(); if hostScope != model.hostState.scopeID { player.clear() } else { player.pause() } }
     }
     private func reconcilePhone() {
         if phoneVoice != nil { phoneLanguage = "auto" }

@@ -439,24 +439,35 @@ private final class NativeWorkGate: @unchecked Sendable {
     var count: Int { lock.withLock { calls } }
     func run() { lock.withLock { calls += 1 }; finish.wait() }
 }
-@Test func reviewCancelledExecuteKeepsBothLeasesUntilWorkerCleanup() async throws {
-    let root = try localDirectory(); defer { try? FileManager.default.removeItem(at: root) }
-    let model = try localFixture(), store = try ModelStore(root: root,available: { _ in 100_000_000 })
-    try await store.download(model,wifi: { true },transport: RangeServer(bytes: Data("model".utf8)))
-    let engine = NativeLocalEngine(store: store), first = NativeWorkGate(), second = NativeWorkGate()
-    let work = Task { try await engine.execute(model,capability: .tts,progress: { _ in }) { _,_,_,_ in first.run(); return 1 } }
-    while first.count == 0 { try await Task.sleep(for: .milliseconds(5)) }
-    work.cancel()
-    let next = Task { try await engine.execute(model,capability: .tts,progress: { _ in }) { _,_,_,_ in second.run(); return 2 } }
-    try await Task.sleep(for: .milliseconds(150))
-    #expect(second.count == 0)
-    await #expect(throws: (any Error).self) { try await store.delete(model) }
-    first.finish.signal()
-    await #expect(throws: CancellationError.self) { try await work.value }
-    while second.count == 0 { try await Task.sleep(for: .milliseconds(5)) }
-    second.finish.signal()
-    #expect(try await next.value == 2)
-    try await store.delete(model)
+// These tests deliberately hold the process-wide native permit. Run them in
+// sequence so one test cannot consume another test's worker-start deadline.
+@Suite(.serialized) struct NativeLeaseRegressionTests {
+    @Test func reviewCancelledExecuteKeepsBothLeasesUntilWorkerCleanup() async throws {
+        let root = try localDirectory(); defer { try? FileManager.default.removeItem(at: root) }
+        let model = try localFixture(), store = try ModelStore(root: root,available: { _ in 100_000_000 })
+        try await store.download(model,wifi: { true },transport: RangeServer(bytes: Data("model".utf8)))
+        let engine = NativeLocalEngine(store: store), first = NativeWorkGate(), second = NativeWorkGate()
+        defer { first.finish.signal(); second.finish.signal() }
+        let work = Task { try await engine.execute(model,capability: .tts,progress: { _ in }) { _,_,_,_ in first.run(); return 1 } }
+        defer { work.cancel() }
+        let firstDeadline = ContinuousClock.now + .seconds(10)
+        while first.count == 0 && ContinuousClock.now < firstDeadline { try await Task.sleep(for: .milliseconds(5)) }
+        try #require(first.count == 1)
+        work.cancel()
+        let next = Task { try await engine.execute(model,capability: .tts,progress: { _ in }) { _,_,_,_ in second.run(); return 2 } }
+        defer { next.cancel() }
+        try await Task.sleep(for: .milliseconds(150))
+        #expect(second.count == 0)
+        await #expect(throws: (any Error).self) { try await store.delete(model) }
+        first.finish.signal()
+        await #expect(throws: CancellationError.self) { try await work.value }
+        let secondDeadline = ContinuousClock.now + .seconds(10)
+        while second.count == 0 && ContinuousClock.now < secondDeadline { try await Task.sleep(for: .milliseconds(5)) }
+        try #require(second.count == 1)
+        second.finish.signal()
+        #expect(try await next.value == 2)
+        try await store.delete(model)
+    }
 }
 
 @Test func reviewCompactErrorsRetainLocalizedRecoveryAndConnectionCause() throws {
@@ -477,26 +488,28 @@ private final class NativeWorkGate: @unchecked Sendable {
     }
 }
 
-@Test func reviewQueuedNativeWorkReverifiesAfterPriorNativeFailure() async throws {
-    let root = try localDirectory(); defer { try? FileManager.default.removeItem(at: root) }
-    let model = try localFixture(), store = try ModelStore(root: root,available: { _ in 100_000_000 })
-    try await store.download(model,wifi: { true },transport: RangeServer(bytes: Data("model".utf8)))
-    let path = try await store.authorize(model), held = NativeWorkGate(), engine = NativeLocalEngine(store: store)
-    defer { held.finish.signal() }
-    let first = Task { try await engine.execute(model,capability: .tts,progress: { _ in }) { _,_,_,_ -> Bool in
-        held.run(); throw ClientError("mobile.local.inference_failed")
-    } }
-    let deadline = ContinuousClock.now + .seconds(5)
-    while held.count == 0 && ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(5)) }
-    try #require(held.count == 1)
-    let queued = Task { try await engine.execute(model,capability: .tts,progress: { _ in }) { _,_,_,_ in true } }
-    defer { first.cancel(); queued.cancel() }
-    try await Task.sleep(for: .milliseconds(100))
-    let file = path.appendingPathComponent("model.bin")
-    let modified = try file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate!
-    try Data("other".utf8).write(to: file)
-    try FileManager.default.setAttributes([.modificationDate: modified],ofItemAtPath: file.path)
-    held.finish.signal()
-    await #expect(throws: ClientError.self) { try await first.value }
-    await #expect(throws: ClientError("mobile.local.checksum_failed")) { try await queued.value }
+extension NativeLeaseRegressionTests {
+    @Test func reviewQueuedNativeWorkReverifiesAfterPriorNativeFailure() async throws {
+        let root = try localDirectory(); defer { try? FileManager.default.removeItem(at: root) }
+        let model = try localFixture(), store = try ModelStore(root: root,available: { _ in 100_000_000 })
+        try await store.download(model,wifi: { true },transport: RangeServer(bytes: Data("model".utf8)))
+        let path = try await store.authorize(model), held = NativeWorkGate(), engine = NativeLocalEngine(store: store)
+        defer { held.finish.signal() }
+        let first = Task { try await engine.execute(model,capability: .tts,progress: { _ in }) { _,_,_,_ -> Bool in
+            held.run(); throw ClientError("mobile.local.inference_failed")
+        } }
+        let deadline = ContinuousClock.now + .seconds(5)
+        while held.count == 0 && ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(5)) }
+        try #require(held.count == 1)
+        let queued = Task { try await engine.execute(model,capability: .tts,progress: { _ in }) { _,_,_,_ in true } }
+        defer { first.cancel(); queued.cancel() }
+        try await Task.sleep(for: .milliseconds(100))
+        let file = path.appendingPathComponent("model.bin")
+        let modified = try file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate!
+        try Data("other".utf8).write(to: file)
+        try FileManager.default.setAttributes([.modificationDate: modified],ofItemAtPath: file.path)
+        held.finish.signal()
+        await #expect(throws: ClientError.self) { try await first.value }
+        await #expect(throws: ClientError("mobile.local.checksum_failed")) { try await queued.value }
+    }
 }

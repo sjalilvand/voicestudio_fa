@@ -67,7 +67,7 @@ class DubConsentRegressionTest {
             compose.onNodeWithText("Target languages").performScrollTo().performClick()
             compose.onNodeWithText("Search").performTextInput("French")
             compose.onNode(hasText("French") and !hasSetTextAction()).performClick()
-            compose.onNodeWithText("Close").performClick()
+            compose.onNodeWithText("Confirm").performClick()
             compose.onNodeWithText("Voice").performScrollTo().performClick()
             compose.onNodeWithText("Default voice").performClick()
             repeat(2) {

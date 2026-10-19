@@ -30,8 +30,12 @@ struct VoicesView: View {
             if route == .download { LocalDownloadPrompt(items: model.phone.selectedModel("clone",.asr).map { [$0] } ?? [], feature: "mobile.tabs.voices") }
             SearchField(prompt: model.t("mobile.voices.search"), text: $query)
             if entries.isEmpty && !model.loading {
-                EmptyState(key: "mobile.simple.empty_voices", icon: "person")
-                Button(model.t("mobile.voices.new_clone"), systemImage: "plus") { creating = true }.buttonStyle(VSButtonStyle(kind: .primary))
+                ContentUnavailableView {
+                    Label(model.t("mobile.simple.empty_voices"), systemImage: "person.wave.2")
+                } description: {
+                    Text(model.t("clone.reference_hint"))
+                }
+                Button(model.t("mobile.voices.new_clone"), systemImage: "plus") { creating = true }.studioButton(.primary)
             } else {
                 Card {
                     if filtered.isEmpty { SearchEmptyState(query: query) }
@@ -49,23 +53,23 @@ struct VoicesView: View {
                                     else { bytes = try await model.api().profileAudio(entry.id) }
                                     try await player.load(bytes,extension: "wav"); player.play()
                                 } }
-                            }.labelStyle(.iconOnly).buttonStyle(VSButtonStyle(kind: .tertiary))
+                            }.labelStyle(.iconOnly).studioButton(.tertiary)
                             Menu {
                                 Button(model.t("mobile.voices.rename"),systemImage: "pencil") { name = entry.name; renamed = entry }
                                 Button(model.t("common.delete"),systemImage: "trash",role: .destructive) { deleting = entry }
                             } label: { Label(model.t("mobile.ios.more_actions"),systemImage: "ellipsis") }
-                                .labelStyle(.iconOnly).buttonStyle(VSButtonStyle(kind: .tertiary)).frame(minWidth: 44,minHeight: 44).accessibilityIdentifier("voices.actions."+entry.id)
+                                .labelStyle(.iconOnly).studioButton(.tertiary).frame(minWidth: 44,minHeight: 44).accessibilityIdentifier("voices.actions."+entry.id)
                         }
                         if entry.id != filtered.last?.id { Divider().overlay(theme.color("border")) }
                     }
                 }
             }
             if player.file != nil { AudioPlayerView(player: player) }
-        }.navigationTitle(model.t("mobile.tabs.voices")).navigationBarTitleDisplayMode(.large)
+        }.studioNavigationTitle(model.t("mobile.tabs.voices"))
         .toolbar { Button(model.t("mobile.voices.new_clone"),systemImage: "plus") { creating = true }.accessibilityIdentifier("voices.create") }
         .task { preference = model.phone.preference("clone"); await model.phone.refresh() }
         .refreshable { await model.phone.refresh(); if model.connection.client != nil { await model.perform { model.profiles = try await model.api().profiles() } } }
-        .sheet(isPresented: $creating) { NavigationStack { CloneView(preference: preference) }.environment(model).presentationBackground(theme.color("surfaceOverlay")) }
+        .fullScreenCover(isPresented: $creating) { NavigationStack { CloneView(preference: preference) }.environment(model) }
         .sheet(item: $renamed) { entry in
             NavigationStack {
                 Page(backgroundRole: "surfaceOverlay") {
@@ -74,10 +78,10 @@ struct VoicesView: View {
                         if let voice = entry.phone { try await model.phone.voiceStore?.rename(voice,name: name); await model.phone.refresh() }
                         else { try await model.api().rename(entry.id,name: name); model.profiles = try await model.api().profiles() }
                         renamed = nil
-                    } } }.buttonStyle(VSButtonStyle(kind: .primary)).disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.busy)
+                    } } }.studioButton(.primary).disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.busy)
                 }.navigationTitle(model.t("mobile.voices.rename"))
-                    .toolbar { Button(model.t("common.cancel")) { renamed = nil } }
-            }.presentationBackground(theme.color("surfaceOverlay"))
+                    .toolbar { ToolbarItem(placement: .cancellationAction) { Button(model.t("common.cancel")) { renamed = nil } } }
+            }.presentationDetents([.medium, .large]).presentationDragIndicator(.visible)
         }
         .sheet(item: $deleting) { entry in
             DeleteConfirmation(title: model.t("mobile.voices.delete_confirm",["name": entry.name])) {
@@ -134,15 +138,21 @@ struct CloneView: View {
             }
             if recorder.recording { Text(model.t("mobile.voices.recording",["seconds": String(recorder.seconds)])) }
             if let audio { SelectedFileRow(name: audio.name) { self.audio = nil } }
-            Button(model.t("mobile.ios.clone_create"),systemImage: "person.badge.plus") { create() }
-                .buttonStyle(VSButtonStyle(kind: .primary))
+        }.navigationTitle(model.t("mobile.voices.new_clone"))
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(spacing: VSTokens.spacingGap) {
+            Button { create() } label: {
+                Label(model.t("mobile.ios.clone_create"), systemImage: "person.badge.plus").frame(maxWidth: .infinity, minHeight: 44)
+            }
+                .studioButton(.primary)
                 .disabled(!consent || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || name.count > 200 || audio == nil || recorder.recording || model.busy || model.phone.activeDub != nil || running || (route != .phone && route != .computer))
             if running {
                 ProgressView(value: progress).accessibilityLabel(model.t("mobile.ios.progress"))
                 Button(model.t("common.cancel")) { work?.cancel() }
             }
-        }.navigationTitle(model.t("mobile.voices.new_clone"))
-        .toolbar { Button(model.t("common.cancel")) { work?.cancel(); recorder.stop(); dismiss() } }
+            }.padding(Theme.compactInset).background(.bar)
+        }
+        .toolbar { ToolbarItem(placement: .cancellationAction) { Button(model.t("common.cancel")) { work?.cancel(); recorder.stop(); dismiss() } } }
         .fileImporter(isPresented: $importing,allowedContentTypes: [.audio]) { result in
             switch result { case .success(let url): audio = SelectedMedia(url: url); case .failure: model.error = ClientError("mobile.errors.file") }
         }

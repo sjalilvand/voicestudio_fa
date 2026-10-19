@@ -27,16 +27,19 @@ import BackgroundTasks
     private(set) var monitorTask: Task<Void, Never>?
     private var notified = Set<String>()
     private var monitorID = UUID()
-    let mockMode: Bool
     init() {
-        mockMode = ProcessInfo.processInfo.arguments.contains("--ui-smoke")
         let d = UserDefaults.standard
+        #if DEBUG
+        let mockMode = ProcessInfo.processInfo.arguments.contains("--ui-smoke")
         if mockMode {
             for task in ["speak", "dictate", "clone", "dub"] { d.removeObject(forKey: "run-on."+task) }
             d.removeObject(forKey: "consentAnswered"); d.removeObject(forKey: "activeHost")
             d.removeObject(forKey: "theme"); d.removeObject(forKey: "language")
             connection = ConnectionStore(defaults: d, vault: SmokeVault(), transport: SmokeTransport())
         } else { connection = ConnectionStore() }
+        #else
+        connection = ConnectionStore()
+        #endif
         hostState = HostState(dub: DubWorkflow())
         consentAnswered = d.bool(forKey: "consentAnswered")
         analytics = d.bool(forKey: "analytics"); notifications = d.bool(forKey: "notifications")

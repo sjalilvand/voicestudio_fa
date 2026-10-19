@@ -33,7 +33,10 @@ no accounts. M1 (below) is the computer connection; M2 is on-device inference.
   secondary = `textMuted`/`mutedForeground`; separators = `border`; fields =
   `input`; focus ring = `focus`; errors = `error`/`errorForeground`/`errorSurface`;
   warnings likewise; tab/nav bars = `chrome` + `toolbarForeground`.
-- Type: Inter (bundled, SIL OFL — include its license). Desktop sizes
+- Type: Inter (bundled, SIL OFL — include its license) preserves the brand in
+  artwork and the Home wordmark. iOS uses the system semantic text styles for
+  navigation, controls and body content, scaling with Dynamic Type; Android keeps
+  the generated Inter typography. Desktop sizes
   (`VSTokens.text*`) are the base; scale with Dynamic Type / Android font
   scale. Body text on phones uses `editor` (16/28); controls use `ui` (14/20)
   scaled up to the platform minimum touch-readable size.
@@ -41,6 +44,19 @@ no accounts. M1 (below) is the computer connection; M2 is on-device inference.
   `spacingGap` between elements, `spacingInset` for screen padding (cap at 16
   on compact widths).
 - Respect reduced motion and reduced transparency.
+- Native iOS presentation follows Apple's current HIG: automatic system navigation
+  and tab-bar materials, platform button shapes and sheet curvature. Content can
+  scroll beneath native chrome while controls remain in safe areas. iOS content
+  cards and text fields use generated `iosCardRadius` and `iosFieldRadius`
+  tokens (continuous 24-point and 16-point corners). The Home wordmark uses
+  generated `iosHomeWordmarkSize` (28 points), scaling with Dynamic Type;
+  Android retains its generated shapes. These presentation differences preserve
+  the same capabilities and consent gates on both platforms.
+- iOS licence review is a large, scrollable sheet with a leading Close action,
+  readable exact terms, collapsed technical metadata, an initially unchecked
+  confirmation and a persistent Accept action disabled until confirmation. Closing
+  never records acceptance or starts a download. On both platforms, multi-selection
+  sheets/dialogs edit a draft; Cancel/dismiss discards it and Confirm applies it.
 
 ## Strings
 

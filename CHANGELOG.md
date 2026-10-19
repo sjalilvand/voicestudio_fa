@@ -22,6 +22,7 @@ metadata and the backend fallback mirror it.
 - Contributor guides and the pull request template explain how to sign the CLA before opening a first pull request (#2676)
 
 ### Fixed
+- Refined iOS navigation, creation workspaces and licence sheets with native controls, accessible text and explicit cancellation. (#2969)
 
 - Phone apps open on an Electron-style Home dashboard with shared artwork, workspace shortcuts, recent audio, saved voices and resumable dubbing projects (#2969)
 

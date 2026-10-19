@@ -7,22 +7,26 @@ struct ModelsView: View {
     @State private var reviewing: PhoneModel?
     var body: some View {
         @Bindable var phone = model.phone
-        Page {
-            Text(model.t("mobile.local.storage_used", ["size": ByteCountFormatter.string(fromByteCount: phone.used, countStyle: .file)]))
-            Toggle(model.t("mobile.simple.mobile_data"), isOn: $phone.allowMobileData).frame(minHeight: 44)
+        Form {
+            Section {
+                Label(model.t("mobile.local.storage_used", ["size": ByteCountFormatter.string(fromByteCount: phone.used, countStyle: .file)]), systemImage: "internaldrive")
+                Toggle(model.t("mobile.simple.mobile_data"), isOn: $phone.allowMobileData)
+            }.listRowBackground(theme.color("surface"))
             if phone.error != nil {
                 Text(model.t("mobile.simple.models_error")).foregroundStyle(theme.color("error"))
                 Button(model.t("mobile.simple.retry")) { phone.error = nil; Task { await phone.refresh() } }
             }
             ForEach(phone.models) { item in
-                Card {
-                    Text(item.name).font(.headline)
-                    Text(ByteCountFormatter.string(fromByteCount: item.total_bytes, countStyle: .file))
+                Section {
                     HStack {
-                        Text(model.t("mobile.simple." + item.capability.rawValue)).font(.caption)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(item.name).font(.headline)
+                            Text(model.t("mobile.simple." + item.capability.rawValue)).font(.subheadline).foregroundStyle(theme.color("textMuted"))
+                        }
                         Spacer()
-                        Button(model.t("mobile.local.review_licence"), systemImage: "info.circle") { reviewing = item }.labelStyle(.iconOnly).accessibilityIdentifier("model.licence."+item.id).buttonStyle(VSButtonStyle(kind: .tertiary))
+                        Button(model.t("mobile.local.review_licence"), systemImage: "info.circle") { reviewing = item }.labelStyle(.iconOnly).accessibilityIdentifier("model.licence."+item.id).studioButton(.tertiary)
                     }
+                    Text(ByteCountFormatter.string(fromByteCount: item.total_bytes, countStyle: .file)).font(.subheadline).foregroundStyle(theme.color("textMuted"))
                     if !item.fits() { Text(model.t("mobile.simple.ram", ["ram": String(item.min_ram_gb)])) }
                     if let value = phone.progress[item.id] {
                         ProgressView(value: value).accessibilityLabel(model.t("mobile.local.download"))
@@ -33,9 +37,10 @@ struct ModelsView: View {
                         ModelDownloadButton(items: [item], titleKey: "mobile.local.download")
                     }
 
-                }
+                }.listRowBackground(theme.color("surface"))
             }
-        }.navigationTitle(model.t("mobile.local.models"))
+        }.scrollContentBackground(.hidden).background(theme.color("canvas").ignoresSafeArea())
+        .navigationTitle(model.t("mobile.local.models")).navigationBarTitleDisplayMode(.large)
         .task { await phone.refresh() }
         .sheet(item: $reviewing) { item in
             ModelLicenceSheet(item: item)
@@ -52,40 +57,67 @@ struct ModelLicenceSheet: View {
     @State private var checked = false
     @State private var saving = false
     var body: some View {
+        let canAccept = checked && !saving
         NavigationStack {
-            Page(backgroundRole: "surfaceOverlay") {
-                Text(item.name).font(.headline)
-                Text(model.t("mobile.local.licence_label", ["licence": item.licence.id, "category": item.licence.category]))
-                if !item.licence.credit.isEmpty { Text(item.licence.credit) }
-                if !item.licence.rights_holder.isEmpty { Text(item.licence.rights_holder) }
-                if let terms = item.licence.disclosure { Text(terms).textSelection(.enabled) }
-                Text(model.t("mobile.local.terms_fingerprint", ["fingerprint": item.licence.terms_fingerprint])).textSelection(.enabled)
-                Text(item.languages.joined(separator: ", "))
-                Text(model.t("mobile.local.storage_used", ["size": ByteCountFormatter.string(fromByteCount: model.phone.modelBytes[item.id] ?? 0, countStyle: .file)]))
+            Form {
+                Section {
+                    Label {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(item.name).font(.title2.weight(.semibold))
+                            Text(model.t("mobile.simple." + item.capability.rawValue)).font(.subheadline).foregroundStyle(theme.color("textMuted"))
+                        }
+                    } icon: { Image(systemName: "waveform").font(.title2).foregroundStyle(theme.color("messageAction")) }
+                    Text(model.t("mobile.local.licence_label", ["licence": item.licence.id, "category": item.licence.category])).font(.subheadline)
+                    if !item.licence.rights_holder.isEmpty { Text(item.licence.rights_holder).font(.subheadline) }
+                }.listRowBackground(theme.color("surface"))
+                Section {
+                    if let terms = item.licence.disclosure { Text(terms).textSelection(.enabled).fixedSize(horizontal: false, vertical: true) }
+                    if !item.licence.credit.isEmpty { Text(item.licence.credit).font(.footnote).foregroundStyle(theme.color("textMuted")) }
+                }.listRowBackground(theme.color("surface"))
+                Section {
+                    DisclosureGroup(model.t("mobile.simple.more")) {
+                        Text(model.t("mobile.local.terms_fingerprint", ["fingerprint": item.licence.terms_fingerprint])).font(.footnote.monospaced()).textSelection(.enabled)
+                        Text(ListFormatter.localizedString(byJoining: item.languages.map { Locale(identifier: model.l10n.locale).localizedString(forLanguageCode: $0) ?? $0 })).font(.subheadline)
+                        Text(model.t("mobile.local.storage_used", ["size": ByteCountFormatter.string(fromByteCount: model.phone.modelBytes[item.id] ?? 0, countStyle: .file)]))
+                    }
+                }.listRowBackground(theme.color("surface"))
                 if model.phone.progress[item.id] == nil && (model.phone.modelBytes[item.id] ?? 0) > 0 && !model.phone.installed.contains(item.id) {
                     Button(model.t("common.delete"), role: .destructive) { Task { await model.phone.delete(item); dismiss() } }
                 }
                 if item.licence.gated {
-                    Text(model.t("mobile.local.licensor_notice"))
-                    Toggle(model.t("mobile.local.licence_confirm"), isOn: $checked).accessibilityIdentifier("models.consent").frame(minHeight: 44)
+                    Section {
+                        Toggle(model.t("mobile.local.licence_confirm"), isOn: $checked).accessibilityIdentifier("models.consent").disabled(saving)
+                    } footer: { Text(model.t("mobile.local.licensor_notice")) }
+                    .listRowBackground(theme.color("surface"))
                     if model.phone.accepted.contains(item.id) {
                         Button(model.t("mobile.local.withdraw"), role: .destructive) {
                             Task { saving = true; defer { saving = false }; if await model.phone.accept(item, accepted: false) { dismiss() } }
                         }
                     }
-                    HStack {
-                        Button(model.t("mobile.simple.accept")) {
-                            Task {
-                                saving = true; defer { saving = false }
-                                if await model.phone.accept(item, accepted: true) { onAccepted(); dismiss() }
-                            }
-                        }.disabled(!checked || saving).accessibilityIdentifier("models.accept")
-                        Button(model.t("mobile.simple.decline")) { dismiss() }.disabled(saving)
-                    }
                 }
-            }.navigationTitle(model.t("mobile.local.review_licence"))
-                .toolbar { Button(model.t("common.close")) { dismiss() }.disabled(saving) }
-        }.interactiveDismissDisabled(saving).presentationBackground(theme.color("surfaceOverlay"))
+            }.scrollContentBackground(.hidden)
+            .navigationTitle(model.t("mobile.local.review_licence")).navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(model.t("common.close")) { dismiss() }.disabled(saving)
+                }
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if item.licence.gated {
+                    Button {
+                        Task {
+                            saving = true; defer { saving = false }
+                            if await model.phone.accept(item, accepted: true) { onAccepted(); dismiss() }
+                        }
+                    } label: {
+                        HStack { if saving { ProgressView() }; Text(model.t("mobile.simple.accept")) }.frame(maxWidth: .infinity, minHeight: 44)
+                    }.studioButton(.primary)
+                    .disabled(!canAccept).accessibilityIdentifier("models.accept")
+                    .padding(Theme.compactInset).background(.bar)
+                }
+            }
+        }.interactiveDismissDisabled(saving)
+            .presentationDetents([.large]).presentationDragIndicator(.visible)
     }
 }
 
@@ -175,7 +207,7 @@ struct LocalDownloadPrompt: View {
                                 }
                             }.frame(maxWidth: .infinity, alignment: .leading)
                         }
-                    }.buttonStyle(VSButtonStyle(kind: .tertiary)).accessibilityIdentifier("models.open")
+                    }.studioButton(.tertiary).accessibilityIdentifier("models.open")
                     ModelDownloadButton(items: needed)
                 }
                 if let progress { ProgressView(value: progress).accessibilityLabel(model.t("mobile.local.download")) }

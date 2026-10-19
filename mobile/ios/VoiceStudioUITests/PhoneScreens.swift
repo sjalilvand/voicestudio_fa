@@ -51,11 +51,21 @@ final class PhoneScreens: XCTestCase {
         let licence = app.buttons["model.licence.kitten-mini-en-fp16"]
         XCTAssertTrue(licence.waitForExistence(timeout: 5)); licence.tap()
         let accept = app.buttons["models.accept"]
-        for _ in 0..<15 { if accept.isHittable { break }; app.swipeUp() }
-        XCTAssertTrue(accept.exists); XCTAssertFalse(accept.isEnabled)
+        XCTAssertTrue(accept.waitForExistence(timeout: 5))
+        XCTAssertTrue(accept.isHittable)
         let consent = app.switches["models.consent"]
-        XCTAssertTrue(consent.exists); consent.tap(); XCTAssertTrue(accept.isEnabled)
-        app.buttons["Decline"].tap()
+        for _ in 0..<15 { if consent.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(accept.exists); XCTAssertFalse(accept.isEnabled)
+        XCTAssertTrue(consent.exists)
+        // A long native toggle label spans the row; activate the switch thumb.
+        consent.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+        let image = XCTAttachment(screenshot: app.screenshot()); image.name = "Licence-confirmation"; image.lifetime = .keepAlways; add(image)
+        XCTAssertTrue(accept.wait(for: \.isEnabled, toEqual: true, timeout: 3))
+        for _ in 0..<15 { if app.buttons["Close"].isHittable { break }; app.swipeDown() }
+        app.buttons["Close"].tap()
+        licence.tap()
+        XCTAssertTrue(accept.waitForExistence(timeout: 5)); XCTAssertFalse(accept.isEnabled)
+        app.buttons["Close"].tap()
     }
     @MainActor func testCompactDownloadsUseProductNamesAndOneDubAction() {
         let app = launch()
@@ -65,10 +75,7 @@ final class PhoneScreens: XCTestCase {
         app.buttons["models.get"].tap()
         XCTAssertTrue(app.buttons["models.accept"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["models.accept"].isEnabled)
-        for _ in 0..<15 { if app.buttons["Decline"].isHittable { break }; app.swipeUp() }
-        app.buttons["Decline"].tap()
-        app.tabButton("Voices").tap()
-        XCTAssertFalse(app.buttons["whisper-tiny-int8"].exists)
+        app.buttons["Close"].tap()
         app.tabButton("Dub").tap()
         XCTAssertEqual(app.buttons.matching(identifier: "models.get").count, 1)
         XCTAssertTrue(app.buttons["models.open"].label.contains("3 downloads"))

@@ -62,15 +62,15 @@ struct ChoicePicker: View {
                 SelectionRow(label: label, value: options.first { $0.id == selection }?.title ?? model.t("common.unknown"))
                 }
             }
-        }.buttonStyle(VSButtonStyle(kind: .tertiary))
+        }.studioButton(compact ? .secondary : .tertiary)
         .sheet(isPresented: $presenting) {
             NavigationStack {
                 choices
                     .navigationTitle(label).navigationBarTitleDisplayMode(.inline)
-                    .toolbar { Button(model.t("common.close")) { presenting = false }.buttonStyle(VSButtonStyle(kind: .tertiary)) }
+                    .toolbar { ToolbarItem(placement: .cancellationAction) { Button(model.t("common.close")) { presenting = false } } }
             }
-            .presentationBackground(theme.color("surfaceOverlay"))
-            .presentationCornerRadius(VSTokens.radiusLg)
+            .presentationDetents(options.count > 6 ? [.large] : [.medium, .large])
+            .presentationDragIndicator(.visible)
         }
     }
     private var choices: some View {
@@ -96,12 +96,12 @@ struct ChoicePicker: View {
                         VStack(alignment: .leading, spacing: VSTokens.spacingGap) {
                             Text(option.title).foregroundStyle(theme.color(option.enabled ? "text" : "textMuted"))
                                 .lineLimit(2).truncationMode(.tail)
-                            if let subtitle = option.subtitle { Text(subtitle).font(.custom("InterVariable", size: VSTokens.textLabel.size, relativeTo: .caption)).foregroundStyle(theme.color("textMuted")) }
+                            if let subtitle = option.subtitle { Text(subtitle).font(.caption).foregroundStyle(theme.color("textMuted")) }
                         }
                         Spacer(minLength: 0)
                         if selection == option.id { Image(systemName: "checkmark").foregroundStyle(theme.color("text")).accessibilityIdentifier("choice.selected") }
                     }.frame(minHeight: 44).contentShape(Rectangle())
-                }.buttonStyle(VSButtonStyle(kind: .tertiary)).disabled(!option.enabled)
+                }.studioButton(.tertiary).disabled(!option.enabled)
                     .accessibilityLabel(option.title)
                     .accessibilityValue(ListFormatter.localizedString(byJoining: [model.t(selection == option.id ? "mobile.ios.selected" : "mobile.ios.not_selected")] + (option.subtitle.map { [$0] } ?? [])))
                     .accessibilityAddTraits(selection == option.id ? .isSelected : [])
@@ -124,6 +124,65 @@ struct SearchEmptyState: View {
     }
 }
 
+/// The modal owns the draft. Parent tasks only change when Confirm is pressed.
+struct LanguageSelectionSheet: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.vsTheme) private var theme
+    @Environment(\.dismiss) private var dismiss
+    let includesUnavailable: Bool
+    let confirm: (Set<String>) -> Void
+    @State private var draft: Set<String>
+    @State private var query = ""
+
+    init(selection: Set<String>, includesUnavailable: Bool, confirm: @escaping (Set<String>) -> Void) {
+        self.includesUnavailable = includesUnavailable
+        self.confirm = confirm
+        _draft = State(initialValue: selection)
+    }
+    var body: some View {
+        NavigationStack {
+            List {
+                SearchField(prompt: model.t("common.search"), text: $query)
+                    .listRowBackground(theme.color("surfaceOverlay"))
+                let matches = model.languages.search(query, includeAuto: false)
+                    .filter { includesUnavailable || $0.code != nil }
+                if matches.isEmpty { SearchEmptyState(query: query) }
+                ForEach(matches) { language in
+                    let selected = language.code.map { draft.contains($0) } ?? false
+                    Button {
+                        if let code = language.code {
+                            if draft.contains(code) { draft.remove(code) } else { draft.insert(code) }
+                        }
+                    } label: {
+                        HStack(spacing: VSTokens.spacingGap) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(language.name)
+                                if language.code == nil {
+                                    Text(model.t("mobile.dub.language_unavailable"))
+                                        .font(.caption).foregroundStyle(theme.color("textMuted"))
+                                }
+                            }
+                            Spacer(minLength: 0)
+                            Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                                .foregroundStyle(theme.color("messageAction")).accessibilityHidden(true)
+                        }.frame(minHeight: 44).contentShape(Rectangle())
+                    }.buttonStyle(.plain).disabled(language.code == nil)
+                    .accessibilityLabel(language.name)
+                    .accessibilityValue(model.t(selected ? "mobile.ios.selected" : "mobile.ios.not_selected"))
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                    .listRowBackground(theme.color("surface"))
+                }
+            }.scrollContentBackground(.hidden).background(theme.color("surfaceOverlay"))
+            .keyboardAccessible()
+            .navigationTitle(model.t("mobile.dub.target_languages")).navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button(model.t("common.cancel")) { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { Button(model.t("common.confirm")) { confirm(draft); dismiss() } }
+            }
+        }.presentationDetents([.large]).presentationDragIndicator(.visible)
+    }
+}
+
 struct SelectedFileRow: View {
     @Environment(AppModel.self) private var model
     let name: String
@@ -132,7 +191,7 @@ struct SelectedFileRow: View {
         HStack(spacing: VSTokens.spacingGap) {
             Text(name).lineLimit(1).truncationMode(.middle).frame(maxWidth: .infinity, alignment: .leading)
             Button(model.t("mobile.ios.remove_file"), systemImage: "xmark", action: remove)
-                .buttonStyle(VSButtonStyle(kind: .tertiary))
+                .studioButton(.tertiary)
                 .accessibilityLabel(model.t("common.remove", ["term": name]))
                 .accessibilityIdentifier("source.remove")
         }
@@ -151,6 +210,7 @@ struct SearchField: View {
         HStack(spacing: VSTokens.spacingGap) {
             Image(systemName: "magnifyingglass").foregroundStyle(theme.color("textMuted")).accessibilityHidden(true)
             TextField(prompt, text: $text)
+                .textFieldStyle(.plain)
                 .textInputAutocapitalization(.never).autocorrectionDisabled()
                 .submitLabel(.search)
                 .accessibilityIdentifier("search.field")
@@ -161,7 +221,7 @@ struct SearchField: View {
             }
         }
         .padding(.horizontal, VSTokens.spacingGap).frame(minHeight: 44)
-        .background(theme.color("input"), in: RoundedRectangle(cornerRadius: VSTokens.radiusControl))
+        .background(theme.color("input"), in: RoundedRectangle(cornerRadius: VSTokens.iosFieldRadius))
     }
 }
 
@@ -177,11 +237,10 @@ struct DeleteConfirmation: View {
             Page(backgroundRole: "surfaceOverlay") {
                 Text(title)
                 Button(model.t("common.delete"), role: .destructive) { onDelete(); dismiss() }
-                    .buttonStyle(VSButtonStyle(kind: .secondary))
+                    .studioButton(.secondary)
             }.navigationTitle(model.t("common.delete")).navigationBarTitleDisplayMode(.inline)
-                .toolbar { Button(model.t("common.cancel")) { dismiss() }.buttonStyle(VSButtonStyle(kind: .tertiary)) }
-        }.presentationBackground(theme.color("surfaceOverlay"))
-            .presentationCornerRadius(VSTokens.radiusLg).presentationDetents([.medium, .large])
+                .toolbar { ToolbarItem(placement: .cancellationAction) { Button(model.t("common.cancel")) { dismiss() } } }
+        }.presentationDragIndicator(.visible).presentationDetents([.medium, .large])
     }
 }
 
@@ -198,13 +257,13 @@ struct InfoButton: View {
             if row { Label(title, systemImage: icon) }
             else { Image(systemName: icon).accessibilityLabel(title) }
         }.labelStyle(.titleAndIcon)
-            .buttonStyle(VSButtonStyle(kind: .tertiary))
+            .studioButton(.tertiary)
             .sheet(isPresented: $showing) {
                 NavigationStack {
                     Page(backgroundRole: "surfaceOverlay") { Text(detail).textSelection(.enabled) }
                         .navigationTitle(title).navigationBarTitleDisplayMode(.inline)
-                        .toolbar { Button(model.t("common.close")) { showing = false } }
-                }.presentationDetents([.medium, .large]).presentationBackground(theme.color("surfaceOverlay"))
+                        .toolbar { ToolbarItem(placement: .cancellationAction) { Button(model.t("common.close")) { showing = false } } }
+                }.presentationDetents([.medium, .large]).presentationDragIndicator(.visible)
             }
     }
 }

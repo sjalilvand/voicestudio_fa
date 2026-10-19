@@ -129,20 +129,20 @@ struct AudioPlayerView: View {
             HStack(spacing: VSTokens.spacingGap) {
                 Button(model.t(player.playing ? "common.pause" : "common.play"), systemImage: player.playing ? "pause.fill" : "play.fill") {
                     if player.playing { player.pause() } else { player.play() }
-                }.labelStyle(.iconOnly).buttonStyle(VSButtonStyle(kind: .tertiary)).accessibilityIdentifier("audio.play")
+                }.labelStyle(.iconOnly).studioButton(.tertiary).accessibilityIdentifier("audio.play")
                 Slider(value: Binding(get: { min(player.position, max(1, player.duration)) }, set: { player.seek($0) }), in: 0...max(1, player.duration))
                     .accessibilityLabel(model.t("player.seek"))
                     .accessibilityValue(PlaybackTime.format(player.position))
                 if let file = player.file {
                     ShareLink(item: file) { Label(model.t("mobile.speak.share"), systemImage: "square.and.arrow.up") }
-                        .labelStyle(.iconOnly).buttonStyle(VSButtonStyle(kind: .tertiary))
+                        .labelStyle(.iconOnly).studioButton(.tertiary)
                 }
             }
             HStack {
                 Text(PlaybackTime.format(player.position))
                 Spacer(minLength: 0)
                 Text(PlaybackTime.format(player.duration))
-            }.font(.custom("InterVariable", size: VSTokens.textCaption.size, relativeTo: .caption))
+            }.font(.caption)
                 .monospacedDigit().foregroundStyle(theme.color("textMuted"))
         }
         .onChange(of: player.error) { _, error in if let error { model.error = error; player.error = nil } }

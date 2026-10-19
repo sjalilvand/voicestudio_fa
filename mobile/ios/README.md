@@ -39,6 +39,8 @@ The smoke fetcher verifies every file's size and SHA-256 from the actual shared 
 With full Xcode, prepare the native frameworks before generating or building the app:
 
 ```sh
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+mobile/ios/scripts/check-swift.sh test
 mobile/native/ios/build.sh ios
 xcodegen generate --spec mobile/ios/VoiceStudio/project.yml
 xcodebuild -project mobile/ios/VoiceStudio/VoiceStudio.xcodeproj \
@@ -119,7 +121,7 @@ inference runs below and do not establish physical-phone memory or thermal limit
 
 Local validation on 2026-10-18 passes the Swift 6 package suite (optional inference tests run separately), resource checks, pinned iOS xcframework builds, SwiftUI compilation, the simulator app build, and the unsigned iPhone Release build. Shared contract, theme-token and contact-email checks also pass. Separate opt-in runs exercise all three actual native libraries, Kitten/Whisper/Zipformer inference, phone reference creation and cloned Speak, and the complete audio dub workflow with native translation/cloning and checkpoint reuse. The complete native audio dub smoke passes its French-output, marked export and checkpoint-reuse assertions. Standalone translation, voice creation and cloned Speak pass. The tiny Whisper model can misrecognize the short synthetic source; these tests verify execution and pipeline completion rather than transcription accuracy. The tiny Zipformer recognizes the ending phrase of the synthetic smoke sentence; this is an inference check, not a transcription-accuracy claim.
 
-`VoiceStudioUITests/PhoneScreens.swift` covers unpaired screens, compact download cards, product names, licence consent, picker selection, dictation action placement and collapsed details; `ScreenshotTour` captures phone and computer screens plus palette/language pickers as retained Xcode test attachments. All 16 UI scenarios pass in one full run on the iPhone Duo simulator with iOS 27.1, including Home navigation and dark/light screenshots. The tests cover consent, optional pairing, generation/playback, phone download and licence gates, voice/dub screens, keyboard handling, search, and theme selection. They support both bottom tabs and adaptive side navigation. Download cards preserve separate accessibility identities for opening Models and starting a download. Physical-device model RAM/thermal behavior, download/cellular transitions, microphone/local-network/QR permissions, VoiceOver/largest Dynamic Type, signing, background uploads and real-host end-to-end workflows still require device validation. macOS inference does not prove iOS execution.
+`VoiceStudioUITests/PhoneScreens.swift` covers unpaired screens, compact download cards, product names, licence consent, picker selection, dictation action placement and collapsed details; `ScreenshotTour` captures phone and computer screens plus palette/language pickers as retained Xcode test attachments. Validation on 2026-10-19 under full Xcode passes all 18 existing UI scenarios together on the iPhone Duo simulator with iOS 27.1, including Home navigation and dark/light screenshots; the added destructive phone-history scenario passes separately. The 116-test Kit suite also passes, with five opt-in inference scenarios skipped in that run. The tests cover consent, optional pairing, generation/playback, phone download and licence gates, voice/dub screens, keyboard handling, search, and theme selection. They support both bottom tabs and adaptive side navigation. Download cards preserve separate accessibility identities for opening Models and starting a download. Physical-device model RAM/thermal behavior, download/cellular transitions, microphone/local-network/QR permissions, VoiceOver across all screens, background uploads and real-host end-to-end workflows still require device validation. A signed development Release build was installed and launched on the connected iPhone running iOS 27.0.1 on 2026-10-19, with compact leading tab titles and Settings/Dictate visually checked. macOS inference does not prove iOS execution.
 
 Contract interpretations: Get starts a queue with separate per-model acceptance; declining or dismissing stops the unstarted remainder while already authorized transfers continue. The compact card links to Models through its label. The optional catalogue `licence.terms` contains the full disclosure and is displayed when supplied; the fingerprint remains catalogue-authoritative. HF's signed delivery CDNs are allowed only within its HF-owned delivery domains, because normal model resolve URLs redirect there. Downloads resume at verified range boundaries rather than URLSession opaque resume blobs. The pinned llama prebuilt lacks a simulator slice, so that slice is built from the same pinned source. Missing transitive SHA-256 fields in shared pins are documented in the native README. For dubbing, “segments + timestamps” means one timed speech envelope per bounded Whisper window, matching Android; it does not imply diarization. A remembered computer route falls back while unpaired because its segmented control is hidden. A cancelled dub stays resumable; deletion is explicit. iOS background resume is a user-started Resume after foregrounding, not guaranteed background compute. The real iOS video regression verifies AVC/AAC muxing and compressed-source extraction; physical-device codec behavior remains a separate check.
 
@@ -134,3 +136,30 @@ saved phone voices select the reference in Speak, and projects open their
 outputs and resume controls. Empty states are localized and downloads remain
 explicit. Home replaces Speak in the five-item navigation; Speak opens from Home.
 Desktop-only workspaces are not advertised as available mobile features.
+
+## Native iOS presentation
+
+The app supports iOS 17 and later, using system navigation and tab-bar materials, semantic system
+text styles, native capsule buttons, grouped Settings/Models forms and platform
+sheet geometry. The Home wordmark and bundled Electron artwork retain VoiceStudio's
+identity and generated palette choices. Content scrolls behind native chrome;
+All five tabs use compact leading navigation titles, with Home aligned opposite
+Projects, and a smaller, Dynamic Type-aware Home wordmark.
+Speak and Dictate keep their main actions inside the bottom safe area. Clone
+creation and QR scanning use full-screen workspaces.
+
+Model licence review keeps the exact terms readable in a large sheet. Technical
+fingerprints are expandable, confirmation starts unchecked and Accept stays
+visible but disabled until confirmation. Close never accepts or starts a download.
+Language pickers have Cancel/Confirm actions and discard unconfirmed drafts.
+Large Dynamic Type, native reduced-transparency behavior and reduced-motion
+recording feedback are supported.
+Newer system materials follow the installed iOS version; tab-bar minimization is
+enabled on iOS 26 and later. Content radii and the Home wordmark size are exported
+from Electron's theme alongside the shared palette. Smoke networking and credentials
+are compiled only into Debug builds for UI automation.
+
+References: [Apple's Liquid Glass adoption guide](https://developer.apple.com/documentation/technologyoverviews/adopting-liquid-glass),
+[Sheets](https://developer.apple.com/design/human-interface-guidelines/sheets),
+[Layout](https://developer.apple.com/design/human-interface-guidelines/layout) and
+[Accessibility](https://developer.apple.com/design/human-interface-guidelines/accessibility).

@@ -5,7 +5,11 @@ final class HomeScreens: XCTestCase {
         let app = XCUIApplication(); app.launchArguments = ["--ui-smoke", "-AppleLanguages", "(en)"]
         app.launch(); XCTAssertTrue(app.buttons["consent.no"].waitForExistence(timeout: 10)); app.buttons["consent.no"].tap()
         XCTAssertTrue(app.navigationBars["Home"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["VoiceStudio.sh Open Source"].exists)
+        let title = app.descendants(matching: .any)["navigation.title"].firstMatch
+        XCTAssertTrue(title.exists)
+        XCTAssertEqual(title.label, "Home")
+        XCTAssertLessThan(title.frame.midX, app.frame.width / 2)
+        XCTAssertTrue(app.staticTexts["VoiceStudio"].exists)
         let attachment = XCTAttachment(screenshot: app.screenshot()); attachment.name = "Home-dark"; attachment.lifetime = .keepAlways; add(attachment)
         for (route, title) in [("speak","Speak"),("voices","Voices"),("dub","Dub"),("dictate","Dictate"),("models","Models"),("connect","Connect to VoiceStudio")] {
             let card = app.buttons["home."+route]

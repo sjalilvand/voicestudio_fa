@@ -57,6 +57,19 @@ class ReviewUiRegressionTest {
             assertNull(vm.api)
         } finally {vm.viewModelScope.cancel()}
     }
+    @Test fun languageSelectionOnlyAppliesConfirmedDraft() {
+        var selected by mutableStateOf(emptyList<String>())
+        content {MultiPicker("mobile.dub.target_languages",selected,listOf("fr" to "French")) {selected=it}}
+        compose.onNodeWithText("Target languages").performClick()
+        compose.onNodeWithText("French").performClick()
+        assertTrue(selected.isEmpty())
+        compose.onNodeWithText("Cancel").performClick()
+        assertTrue(selected.isEmpty())
+        compose.onNodeWithText("Target languages").performClick()
+        compose.onNodeWithText("French").performClick()
+        compose.onNodeWithText("Confirm").performClick()
+        assertEquals(listOf("fr"),selected)
+    }
     @Test fun successfulQrScanExposesAddressPinAndConnect() {
         shadowOf(app).grantPermissions(android.Manifest.permission.CAMERA)
         val vm=vm()

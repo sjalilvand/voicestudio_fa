@@ -14,7 +14,6 @@ struct PhoneDubView: View {
     @State private var importing = false
     @State private var targets = Set<String>()
     @State private var languages = false
-    @State private var query = ""
     @State private var voice = ""
     @State private var consent = false
     @State private var audioOnly = false
@@ -38,7 +37,7 @@ struct PhoneDubView: View {
                     Image(systemName: "globe").accessibilityHidden(true)
                     SelectionRow(label: model.t("mobile.dub.target_languages"),value: ListFormatter.localizedString(byJoining: choices.filter { targets.contains($0.code) }.map(\.name)))
                 }
-            }.buttonStyle(VSButtonStyle(kind: .tertiary)).accessibilityIdentifier("dub.languages")
+            }.studioButton(.tertiary).accessibilityIdentifier("dub.languages")
             ScrollView(.horizontal) {
                 HStack { ForEach(choices.filter { targets.contains($0.code) }) { language in
                     Button(language.name,systemImage: "xmark") { targets.remove(language.code) }.accessibilityLabel(model.t("mobile.dub.remove_language",["language": language.name]))
@@ -57,7 +56,7 @@ struct PhoneDubView: View {
                 phoneModel("dub",.clone)
             }.disabled(copying || model.phone.activeDub != nil)
             LocalDownloadPrompt(items: model.phone.dubModels, feature: "mobile.tabs.dub")
-            Button(model.t("mobile.simple.dub"),systemImage: "film") { start() }.buttonStyle(VSButtonStyle(kind: .primary))
+            Button(model.t("mobile.simple.dub"),systemImage: "film") { start() }.studioButton(.primary)
                 .disabled(!ready || !consent || source == nil || targets.isEmpty || model.busy || copying || model.phone.activeDub != nil)
                 .accessibilityIdentifier("dub.start")
             if copying { ProgressView().accessibilityLabel(model.t("mobile.ios.progress")) }
@@ -92,33 +91,15 @@ struct PhoneDubView: View {
                         Button(model.t("mobile.speak.share"),systemImage: "square.and.arrow.up") { open(record,output,action: .share) }
                         Button(model.t("common.save"),systemImage: "arrow.down.to.line") { open(record,output,action: .save) }
                         if record.checkpoint.done { Button(model.t("mobile.simple.remove_job"),systemImage: "trash",role: .destructive) { remove(record) } }
-                    }.labelStyle(.iconOnly).buttonStyle(VSButtonStyle(kind: .tertiary))
+                    }.labelStyle(.iconOnly).studioButton(.tertiary)
                 }
             }
-        }.navigationTitle(projectID != nil ? (records.first?.request.title ?? model.t("projects.title")) : model.t(libraryOnly ? "projects.title" : "mobile.tabs.dub")).navigationBarTitleDisplayMode(.large)
+        }.navigationTitle(projectID != nil ? (records.first?.request.title ?? model.t("projects.title")) : model.t(libraryOnly ? "projects.title" : "mobile.tabs.dub")).navigationBarTitleDisplayMode(.inline)
         .fileImporter(isPresented: $importing,allowedContentTypes: [.movie,.audio]) { result in
             switch result { case .success(let url): source = SelectedMedia(url: url); case .failure: model.error = ClientError("mobile.simple.media_failed") }
         }
         .sheet(isPresented: $languages) {
-            NavigationStack {
-                List {
-                    SearchField(prompt: model.t("common.search"),text: $query)
-                    let filtered = model.languages.search(query,includeAuto: false).filter { $0.code != nil }
-                    if filtered.isEmpty { SearchEmptyState(query: query) }
-                    ForEach(filtered) { language in
-                        Button {
-                            if let code = language.code { if targets.contains(code) { targets.remove(code) } else { targets.insert(code) } }
-                        } label: {
-                            HStack { Text(language.name); Spacer(); Image(systemName: targets.contains(language.code ?? "") ? "checkmark.circle.fill" : "circle") }.frame(minHeight: 44)
-                        }.buttonStyle(VSButtonStyle(kind: .tertiary))
-                            .accessibilityValue(model.t(targets.contains(language.code ?? "") ? "mobile.ios.selected" : "mobile.ios.not_selected"))
-                            .accessibilityAddTraits(targets.contains(language.code ?? "") ? .isSelected : [])
-                            .listRowBackground(theme.color("surface"))
-                    }
-                }.scrollContentBackground(.hidden).background(theme.color("surfaceOverlay")).keyboardAccessible()
-                    .navigationTitle(model.t("mobile.dub.target_languages"))
-                    .toolbar { Button(model.t("common.confirm")) { languages = false } }
-            }.presentationBackground(theme.color("surfaceOverlay"))
+            LanguageSelectionSheet(selection: targets, includesUnavailable: false) { targets = $0 }
         }
         .sheet(item: $shared) { file in ShareSheet(items: [file.url]) }
         .sheet(item: $saved) { file in SaveFileSheet(url: file.url) }

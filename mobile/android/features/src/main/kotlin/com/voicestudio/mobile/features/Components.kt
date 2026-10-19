@@ -152,9 +152,10 @@ fun Modifier.dismissKeyboardOnTap(): Modifier = composed {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable fun MultiPicker(label: String, selected: List<String>, choices: List<Pair<String,String>>, change: (List<String>) -> Unit) {
     var open by rememberSaveable {mutableStateOf(false)}
+    var draft by rememberSaveable {mutableStateOf(emptyList<String>())}
     var query by rememberSaveable {mutableStateOf("")}
     val dismiss=rememberKeyboardDismiss()
-    Group {PickerRow(label,selected.mapNotNull {id -> choices.firstOrNull {it.first==id}?.second}.joinToString().ifBlank {tr("mobile.android.choose")},choices.isNotEmpty()) {open=true}}
+    Group {PickerRow(label,selected.mapNotNull {id -> choices.firstOrNull {it.first==id}?.second}.joinToString().ifBlank {tr("mobile.android.choose")},choices.isNotEmpty()) {draft=selected;query="";open=true}}
     FlowRow(horizontalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
         choices.filter {it.first in selected}.forEach {(id,name) ->
             val remove=tr("mobile.android.remove_selection",mapOf("name" to name))
@@ -170,17 +171,18 @@ fun Modifier.dismissKeyboardOnTap(): Modifier = composed {
             if(matches.isEmpty()) SearchEmpty(query)
             LazyColumn(Modifier.heightIn(max=(VSTokens.SPACING_GAP*20).dp)) {
                 items(matches,key={it.first}) {(id,name) ->
-                    Surface(onClick={dismissSearch();change(if(id in selected) selected-id else selected+id)},color=role("surfaceOverlay"),shape=MaterialTheme.shapes.small,
-                        modifier=Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget).semantics {this.selected=id in selected}) {
+                    Surface(onClick={dismissSearch();draft=if(id in draft) draft-id else draft+id},color=role("surfaceOverlay"),shape=MaterialTheme.shapes.small,
+                        modifier=Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget).semantics {this.selected=id in draft}) {
                         Row(Modifier.padding(VSTheme.inset),verticalAlignment=Alignment.CenterVertically) {
                             Text(name,Modifier.weight(1f),maxLines=2,overflow=TextOverflow.Ellipsis)
-                            Checkbox(checked=id in selected,onCheckedChange=null)
+                            Checkbox(checked=id in draft,onCheckedChange=null)
                         }
                     }
                 }
             }
         }
-    },confirmButton={TextButton(shape=MaterialTheme.shapes.small,onClick={open=false}) {Text(tr("common.close"))}})
+    },confirmButton={TextButton(shape=MaterialTheme.shapes.small,onClick={change(draft);open=false}) {Text(tr("common.confirm"))}},
+        dismissButton={TextButton(shape=MaterialTheme.shapes.small,onClick={open=false}) {Text(tr("common.cancel"))}})
 }
 @Composable fun Toggle(key: String, value: Boolean, change: (Boolean) -> Unit) {
     val label = tr(key)
