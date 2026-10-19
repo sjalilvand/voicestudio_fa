@@ -1334,13 +1334,14 @@ the message:
   slowest because antivirus scans every new file; later starts are much faster.
 - **`The Python environment in <folder> is missing`** or **`… is incomplete:
   <reason>`** (running from a source checkout) — run `bun run setup:api` in the
-  repository and let it finish. *Missing* means no `.venv` exists yet.
+  repository and let it finish (the message names the folder to open the terminal in; it is never taken from the terminal's working directory, so running from `C:\Windows\System32` does not matter). A folder without `pyproject.toml` is not a source checkout: install from the release installer instead. *Missing* means no `.venv` exists yet.
   *Incomplete* quotes the import that failed, e.g. `ModuleNotFoundError: No
   module named 'sentencepiece'` (setup did not finish: rerun it) or `ImportError:
   DLL load failed` (Windows: rerun setup, which installs the Visual C++
   runtime). If the folder is inside OneDrive, Dropbox, iCloud Drive or Google
   Drive, move the checkout to a plain local folder first: online-only
-  placeholders and file locking break the Python environment.
+  placeholders and file locking break the Python environment. The same applies to `error loading dynamically imported module: http://localhost:3902/@fs/…/node_modules/.vite/deps/…` from a dev server running inside OneDrive (installed builds never load from a dev server).
+- **`EPERM: operation not permitted, rename …\.previous-backend`** — a scanner or OneDrive held the runtime folder while VoiceStudio refreshed it. The app retries for about 10 s, then updates the files in place; if it still fails, exclude the runtime folder from antivirus and quit any VoiceStudio left in Task Manager.
 
 A native crash (`3221225477`, `-1073741819`) right after pressing Generate
 shortly after launch was caused by the startup preload and the first generation
