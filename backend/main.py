@@ -1218,7 +1218,15 @@ async def lifespan(app: FastAPI):
         # StartupGate. The watchdog stays armed until the deferred task
         # disarms it, so a hang inside Phase A/B still gets its thread dump.
         app.state.startup_task = asyncio.create_task(_deferred_startup(app))
+    try:
+        from core.loop_stall_monitor import start_loop_stall_monitor
+
+        _loop_stall_stop = start_loop_stall_monitor()
+    except Exception:
+        _loop_stall_stop = None  # diagnostics-only
     yield
+    if _loop_stall_stop is not None:
+        _loop_stall_stop.set()
     # ── Graceful shutdown (SIGTERM from Tauri, Ctrl+C, etc.) ────────────
     # Retire the run sentinel FIRST, before any bounded wait below (#1895):
     # once uvicorn has begun graceful shutdown the exit is deliberate by
