@@ -103,11 +103,20 @@ fun Modifier.dismissKeyboardOnTap(): Modifier = composed {
     }
     }
 }
-@Composable private fun PickerRow(label: String, value: String, enabled: Boolean = true, onClick: () -> Unit) {
+@Composable private fun PickerRow(label: String, value: String, enabled: Boolean = true, tile: Boolean = false, onClick: () -> Unit) {
     val dismiss=rememberKeyboardDismiss()
     val description=tr("mobile.android.selection",mapOf("label" to tr(label),"value" to value))
-    Surface(onClick={dismiss();onClick()},enabled=enabled,color=role("surface"),shape=MaterialTheme.shapes.small,modifier=Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget).semantics {contentDescription=description}) {
-        Row(Modifier.padding(VSTheme.inset),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
+    Surface(onClick={dismiss();onClick()},enabled=enabled,color=role("surface"),shape=if(tile) MaterialTheme.shapes.large else MaterialTheme.shapes.small,modifier=Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget).semantics {contentDescription=description}) {
+        if(tile) Row(Modifier.padding(VSTheme.inset),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
+            Surface(shape=CircleShape,color=role("messageSurface"),modifier=Modifier.size(40.dp)) {
+                Box(contentAlignment=Alignment.Center) {Icon(rowIcon(label),contentDescription=null,tint=role("messageAction"))}
+            }
+            Column(Modifier.weight(1f)) {
+                Text(tr(label),style=MaterialTheme.typography.labelSmall,color=role("textMuted"),maxLines=1,overflow=TextOverflow.Ellipsis)
+                Text(value,style=MaterialTheme.typography.titleSmall,maxLines=2,overflow=TextOverflow.Ellipsis)
+            }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight,contentDescription=null,tint=role("textMuted"))
+        } else Row(Modifier.padding(VSTheme.inset),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
             Icon(rowIcon(label),contentDescription=null,tint=role("textMuted"))
             Text(tr(label),style=MaterialTheme.typography.labelLarge,maxLines=1,overflow=TextOverflow.Ellipsis)
             Text(value,Modifier.weight(1f),color=role("textMuted"),style=MaterialTheme.typography.labelLarge,textAlign=TextAlign.End,maxLines=1,overflow=TextOverflow.Ellipsis)
@@ -118,14 +127,14 @@ fun Modifier.dismissKeyboardOnTap(): Modifier = composed {
 @Composable fun Picker(label: String, value: String, choices: List<Pair<String, String>>, change: (String) -> Unit) =
     ChoicePicker(label,value,choices.map {Choice(it.first,it.second)},change=change)
 
-@Composable fun ChoicePicker(label: String, value: String, choices: List<Choice>, compact: Boolean = false, change: (String) -> Unit) {
+@Composable fun ChoicePicker(label: String, value: String, choices: List<Choice>, compact: Boolean = false, tile: Boolean = false, change: (String) -> Unit) {
     var open by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
     if(compact) {
         val valueLabel=choices.firstOrNull {it.id==value}?.title ?: tr(label)
         val description=tr("mobile.android.selection",mapOf("label" to tr(label),"value" to valueLabel))
         AssistChip(onClick={open=true},enabled=choices.isNotEmpty(),label={Text(valueLabel,Modifier.fillMaxWidth(),textAlign=androidx.compose.ui.text.style.TextAlign.Center,maxLines=1,overflow=TextOverflow.Ellipsis)},modifier=Modifier.fillMaxWidth().heightIn(min=VSTheme.touchTarget).semantics {contentDescription=description})
-    } else PickerRow(label,choices.firstOrNull {it.id==value}?.title ?: tr("mobile.android.choose"),choices.isNotEmpty()) {open=true}
+    } else PickerRow(label,choices.firstOrNull {it.id==value}?.title ?: tr("mobile.android.choose"),choices.isNotEmpty(),tile) {open=true}
     if(open) AlertDialog(modifier=Modifier.dismissKeyboardOnTap(),shape=MaterialTheme.shapes.large,onDismissRequest={open=false}, title={Text(tr(label))}, containerColor=role("surfaceOverlay"),
         text={ Column(verticalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
             Field("mobile.android.search", query, {query=it})
@@ -150,12 +159,13 @@ fun Modifier.dismissKeyboardOnTap(): Modifier = composed {
         }}, confirmButton={TextButton(shape=MaterialTheme.shapes.small,onClick={open=false}) {Text(tr("common.close"))}})
 }
 @OptIn(ExperimentalLayoutApi::class)
-@Composable fun MultiPicker(label: String, selected: List<String>, choices: List<Pair<String,String>>, change: (List<String>) -> Unit) {
+@Composable fun MultiPicker(label: String, selected: List<String>, choices: List<Pair<String,String>>, tile: Boolean = false, change: (List<String>) -> Unit) {
     var open by rememberSaveable {mutableStateOf(false)}
     var draft by rememberSaveable {mutableStateOf(emptyList<String>())}
     var query by rememberSaveable {mutableStateOf("")}
     val dismiss=rememberKeyboardDismiss()
-    Group {PickerRow(label,selected.mapNotNull {id -> choices.firstOrNull {it.first==id}?.second}.joinToString().ifBlank {tr("mobile.android.choose")},choices.isNotEmpty()) {draft=selected;query="";open=true}}
+    val trigger: @Composable () -> Unit = {PickerRow(label,selected.mapNotNull {id -> choices.firstOrNull {it.first==id}?.second}.joinToString().ifBlank {tr("mobile.android.choose")},choices.isNotEmpty(),tile) {draft=selected;query="";open=true}}
+    if(tile) trigger() else Group {trigger()}
     FlowRow(horizontalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
         choices.filter {it.first in selected}.forEach {(id,name) ->
             val remove=tr("mobile.android.remove_selection",mapOf("name" to name))

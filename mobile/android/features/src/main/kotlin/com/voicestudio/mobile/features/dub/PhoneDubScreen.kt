@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.work.WorkManager
 import com.voicestudio.mobile.designsystem.*
 import com.voicestudio.mobile.data.PhoneDubWorker
@@ -74,14 +75,11 @@ import java.io.File
     Screen {
         ScreenTitle(if(libraryOnly) "projects.title" else "mobile.tabs.dub")
         if(projectId==null && !libraryOnly) {
-        StepHeading("mobile.simple.source",VSIcons.Video)
         DubSourceCard(!copying&&!state.busy) {picker.launch(arrayOf("audio/*","video/*"))}
         path?.let {source ->SelectedDubSource(sourceName ?: File(source).name) {File(source).delete();path=null;sourceName=null}}
         if(copying||catalog==null) InlineLoading()
-        StepHeading("mobile.simple.languages",VSIcons.Globe)
-        MultiPicker("mobile.dub.target_languages",targets,languages) {targets=it}
-        StepHeading("mobile.simple.voice",Icons.Default.Person)
-        ChoicePicker("mobile.speak.voice",voice,listOf(Choice("",tr("mobile.simple.reference")))+phone.voices.map {Choice(it.id,it.name)},compact=true) {voice=it}
+        MultiPicker("mobile.dub.target_languages",targets,languages,tile=true) {targets=it}
+        ChoicePicker("mobile.speak.voice",voice,listOf(Choice("",tr("mobile.simple.reference")))+phone.voices.map {Choice(it.id,it.name)},tile=true) {voice=it}
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
             Box(Modifier.weight(1f)) {ConsentCheck("mobile.simple.voice_consent",consent) {consent=it}}
             Info("mobile.voices.consent_title","mobile.voices.consent_body")
@@ -116,6 +114,7 @@ import java.io.File
             val stage=active?.progress?.getString("stage") ?: record.checkpoint.stage
             Group {
                 Column(Modifier.fillMaxWidth().padding(VSTheme.inset),verticalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
+                    DubGlyph(44.dp,active=active!=null)
                     Text(record.request.title,maxLines=1,overflow=TextOverflow.Ellipsis)
                     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                         if(stage.contains("stage_")||stage in setOf("mobile.simple.mixing","mobile.simple.exporting","mobile.simple.cancelled"))

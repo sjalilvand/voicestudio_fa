@@ -13,6 +13,7 @@ import androidx.compose.ui.semantics.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.work.WorkManager
 import androidx.work.WorkInfo
 import com.voicestudio.mobile.features.*
@@ -108,17 +109,14 @@ import java.io.File
     }
     Screen {
         ScreenTitle("mobile.tabs.dub")
-        StepHeading("mobile.simple.source",VSIcons.Video)
         if(copying || catalog==null) InlineLoading()
         DubSourceCard(!copying) {picker.launch(arrayOf("video/*","audio/*"))}
         if(filePath!=null) {
             SelectedDubSource(sourceName ?: File(filePath!!).name) {File(filePath!!).delete();filePath=null;sourceName=null}
         }
         Field("mobile.dub.paste_url",link,{link=it})
-        StepHeading("mobile.simple.languages",VSIcons.Globe)
-        MultiPicker("mobile.dub.target_languages",targets,languages) {targets=it}
-        StepHeading("mobile.simple.voice",Icons.Default.Person)
-        Group {Picker("mobile.speak.voice",voice,dubVoiceChoices(state.profiles,tr("mobile.simple.default_voice")),{voice=it})}
+        MultiPicker("mobile.dub.target_languages",targets,languages,tile=true) {targets=it}
+        ChoicePicker("mobile.speak.voice",voice,dubVoiceChoices(state.profiles,tr("mobile.simple.default_voice")).map {Choice(it.first,it.second)},tile=true) {voice=it}
         Action("mobile.simple.dub",!state.busy&&!copying&&voice!=DubVoiceChoice.UNSELECTED&&languages.any {it.first in targets}&&(filePath!=null||link.isNotBlank())) {
             val current = vm.api ?: return@Action
             val draftHost = state.hostUrl ?: return@Action
@@ -139,6 +137,7 @@ import java.io.File
             val stage=info.displayStage()
             Group {Column(Modifier.fillMaxWidth().padding(VSTheme.inset),verticalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
             val value=if(info.state==WorkInfo.State.SUCCEEDED) 100 else info.progress.getInt("percent",0)
+            if(!info.state.isFinished) DubGlyph(44.dp,active=true)
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                 if(info.state==WorkInfo.State.FAILED) {
                     val params=runCatching {kotlinx.serialization.json.Json.decodeFromString<Map<String,String>>(info.outputData.getString("error_params") ?: "{}")}.getOrDefault(emptyMap())
