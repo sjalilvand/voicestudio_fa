@@ -131,8 +131,10 @@ async function openSession(browser, mode) {
   };
   const navigate = (to) =>
     page.evaluate(async (target) => {
-      const { router } = await import('/src/router.tsx');
-      await router.navigate({ to: target });
+      // Import once per page load: re-importing after a Vite hot update can catch the
+      // router/routes cycle mid-evaluation ("Cannot access 'routeTree' before initialization").
+      window.__crawlRouter ??= (await import('/src/router.tsx')).router;
+      await window.__crawlRouter.navigate({ to: target });
     }, to);
   const buttons = () =>
     page.locator(`main ${CLICKABLE}, [role="dialog"] ${CLICKABLE}`).filter({ visible: true });
@@ -186,7 +188,9 @@ async function openSession(browser, mode) {
       const greyed = await page.evaluate(() =>
         [...document.querySelectorAll('main [data-crawl-enabled]')]
           .filter((element) => element.matches('[disabled], [aria-disabled="true"]'))
-          .map((element) => (element.textContent || element.getAttribute('aria-label') || '?').trim()),
+          .map((element) =>
+            (element.textContent || element.getAttribute('aria-label') || '?').trim(),
+          ),
       );
       if (greyed.length)
         problems.push({
@@ -339,9 +343,16 @@ async function crawlMode(browser, mode, routes) {
   const { context, navigate, buttons, arm, clickAndCheck, page } = session;
   /** A click or upload that reloads the whole page (e.g. "Reload app") is legitimate. */
   const RELOADED = /Execution context was destroyed|navigat|Target .*closed|detached/i;
-  const recover = async (route) => {
-    await page.goto(`${BASE}/#${route}`);
-    await page.locator('main').first().waitFor();
+  const recover = async (route, error) => {
+    if (verbose)
+      console.log(`[${mode}] ${route} recovering after: ${error.message.split('\n')[0]}`);
+    // The click already started a reload; a goto that only changes the hash would never commit
+    // while it is pending, so let it finish and route inside the fresh app instead.
+    await page.waitForLoadState('domcontentloaded').catch(() => {});
+    if (!(await page.locator('main').first().isVisible().catch(() => false)))
+      await page.goto(`${BASE}/?recover=${Date.now()}#/settings/usage`, { waitUntil: 'commit' });
+    await page.locator('main').first().waitFor({ timeout: 15_000 });
+    await navigate(route);
   };
   // Remount the route so every click starts from the same fresh screen.
   const reset = async (route) => {
@@ -352,7 +363,7 @@ async function crawlMode(browser, mode, routes) {
       await navigate(route);
     } catch (error) {
       if (!RELOADED.test(error.message)) throw error;
-      await recover(route);
+      await recover(route, error);
     }
     await arm();
   };
@@ -373,7 +384,7 @@ async function crawlMode(browser, mode, routes) {
     visitOnce(route, prefix, prepare).catch(async (error) => {
       if (!RELOADED.test(error.message)) throw error;
       reloads += 1;
-      await recover(route);
+      await recover(route, error);
       return null;
     });
   const visitOnce = async (route, prefix, prepare) => {
@@ -466,8 +477,21 @@ try {
     .filter((_, index) => index % shards === shard - 1);
   await probe.close();
 
-  const results = await Promise.all(modes.map((mode) => crawlMode(browser, mode, routes)));
+  // Settle every mode before reporting: one mode's harness error must not close the shared
+  // browser under the others and bury their results.
+  const settled = await Promise.allSettled(modes.map((mode) => crawlMode(browser, mode, routes)));
   let failed = 0;
+  const results = settled.map((outcome, index) =>
+    outcome.status === 'fulfilled'
+      ? outcome.value
+      : {
+          mode: modes[index],
+          clicks: 0,
+          unclickable: 0,
+          reloads: 0,
+          findings: [{ key: `${modes[index]} harness error`, detail: outcome.reason?.stack }],
+        },
+  );
   for (const { mode, clicks, unclickable, reloads, findings } of results) {
     console.log(
       `${findings.length ? 'FAIL' : 'PASS'}  ${mode}: ${clicks} clicks (${unclickable} covered, ` +
