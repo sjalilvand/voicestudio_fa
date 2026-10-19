@@ -86,6 +86,22 @@ const LOG_RING_LINES = 200;
 const LOG_TAIL_LINES = 40;
 /** EX_CONFIG (sysexits.h): backend/main.py exits with it when the port is taken (#1223). */
 const EXIT_PORT_IN_USE = 78;
+
+/**
+ * The desktop shell starts `python -m uvicorn`, not backend/main.py's
+ * `__main__`, so main.py's own bind diagnostics (exit 78 / permission-denied
+ * text) never run. uvicorn instead exits 3 after logging asyncio's
+ * "[Errno N] error while attempting to bind on address ..." line. The errno
+ * is locale-independent, so classify on it (#3020).
+ */
+export function bindFailureFromLog(text: string): 'in_use' | 'denied' | null {
+  const match = /\[Errno (-?\d+)\] error while attempting to bind on address/.exec(text);
+  if (!match) return null;
+  const errno = Number(match[1]);
+  if ([48, 98, 10048].includes(errno)) return 'in_use';
+  if ([13, 10013].includes(errno)) return 'denied';
+  return null;
+}
 const POSIX_SIGKILL_AFTER_MS = 2000;
 const TAURI_APP_ID = 'com.debpalash.omnivoice-studio';
 const RUNTIME_LOCATION_FILE = 'runtime-location.json';
@@ -552,7 +568,13 @@ export function startupTimeoutMessage(
     `Backend did not answer on port ${port} within ${Math.round(budgetMs / 1000)} s ` +
     '(OMNIVOICE_STARTUP_BUDGET_S).';
   if (!owned) return `${base} Nothing was spawned for this attempt.`;
-  return lastOutput ? `${base} Last output: ${lastOutput}` : `${base} It printed no output.`;
+  const advice =
+    ' Slow disks and antivirus scanning of the runtime folder are the usual cause: click Retry, ' +
+    'exclude the VoiceStudio runtime folder from real-time scanning, or raise OMNIVOICE_STARTUP_BUDGET_S ' +
+    '(for example 900).';
+  return lastOutput
+    ? `${base} Last output: ${lastOutput}${advice}`
+    : `${base} It printed no output.${advice}`;
 }
 
 function delay(ms: number): Promise<void> {
@@ -921,7 +943,13 @@ export class BackendSupervisor extends EventEmitter<{
             child.on('close', (code) => {
               if (this.child === child) this.child = null;
               if (code === 0) resolve(capturedStdout);
-              else reject(new Error(`Runtime setup exited with code ${code}`));
+              else
+                reject(
+                  Object.assign(new Error(`Runtime setup exited with code ${code}`), {
+                    code,
+                    stdout: capturedStdout,
+                  }),
+                );
             });
           }),
         controller.signal,
@@ -1318,9 +1346,22 @@ export class BackendSupervisor extends EventEmitter<{
     const recorded = this.crashes.record(code, signal, Date.now() - this.startedAt, this.log);
     this.exitCode = code;
     this.exitSignal = signal;
-    if (code === EXIT_PORT_IN_USE) {
+    const bindFailure =
+      code === EXIT_PORT_IN_USE
+        ? 'in_use'
+        : bindFailureFromLog(this.childLog.join('\n'));
+    if (bindFailure === 'in_use') {
       this.setStage('port_in_use', {
         message: `Port ${this.port} is already in use by another process. Stop it or set OMNIVOICE_PORT.`,
+      });
+      return;
+    }
+    if (bindFailure === 'denied') {
+      this.setStage('port_in_use', {
+        message:
+          `Windows or another program refused access to port ${this.port}. It is often in a reserved ` +
+          'port range (Hyper-V, WSL, Docker) - run "netsh interface ipv4 show excludedportrange protocol=tcp" ' +
+          'to check - or held exclusively. Set OMNIVOICE_PORT to a free port (for example 3901) and restart.',
       });
       return;
     }

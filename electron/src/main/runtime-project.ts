@@ -291,9 +291,25 @@ async function ensureCudnn8Compat(
           '    pass',
         ]
       : [`device = '${variant === 'rocm' ? 'hip' : 'none'}'`]),
-    `print('${CUDNN8_PROBE_PREFIX}' + json.dumps({'device': device, 'sitePackages': sysconfig.get_paths()['purelib']}))`,
+    `print('${CUDNN8_PROBE_PREFIX}' + json.dumps({'device': device, 'sitePackages': sysconfig.get_paths()['purelib']}), flush=True)`,
+    // Skip interpreter teardown: unloading native Torch/CUDA DLLs at exit is
+    // where Windows access violations (0xC0000005) surface after the result
+    // has already been printed (#2942).
+    'import os',
+    'os._exit(0)',
   ].join('\n');
-  const probe = parseCudnn8Probe(await run(python, ['-c', script], project, env));
+  // The probe is advisory. A native crash inside it must never abort runtime
+  // setup: fall back to "no CUDA compat libraries needed" and let the real
+  // import verification below decide whether the runtime works.
+  let probeOutput: string | void;
+  try {
+    probeOutput = await run(python, ['-c', script], project, env);
+  } catch (error) {
+    signal.throwIfAborted();
+    probeOutput = (error as { stdout?: string }).stdout;
+    if (!parseCudnn8Probe(probeOutput)) return;
+  }
+  const probe = parseCudnn8Probe(probeOutput);
   signal.throwIfAborted();
   if (!probe) return;
   await clearCtranslate2ExecutableStack(probe.sitePackages);
