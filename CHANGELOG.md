@@ -26,7 +26,7 @@ metadata and the backend fallback mirror it.
 
 - New `mobile` workflow builds and tests both phone apps; a contract test fails when their theme or API description drifts from the desktop app (#2965)
 
-- New UI crawler clicks every button on every screen while the backend fails, and catches stuck spinners, buttons left greyed out, silent failures and crashes before they ship (#3014)
+- Gallery preview fallback smoke no longer flakes when a slower runner reads the playing clip in several byte ranges (#3018)
 
 ## [0.5.7] — 2026-10-17
 
