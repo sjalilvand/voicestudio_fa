@@ -18,7 +18,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
-- The backend no longer freezes ("temporarily not responding", startup never finishing) when the app reads its log slowly, for example during a model download (#PRN) — thanks @tigerscurrying-prog!
+- The backend no longer freezes ("temporarily not responding", startup never finishing) when the app reads its log slowly, for example during a model download (#3037) — thanks @tigerscurrying-prog!
 
 ### Docs
 
