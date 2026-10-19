@@ -37,6 +37,13 @@ After downloading the script for inspection, the equivalent local commands are
 
 ## Release installation
 
+If `voicestudio.sh/install` is unreachable or returns 404, run the same script
+straight from the repository, or clone it and run `scripts/install.sh`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/debpalash/VoiceStudio/main/scripts/install.sh | sh
+```
+
 Requires curl and `shasum` (included on macOS) or `sha256sum`. The installer
 resolves the latest GitHub release tag, downloads the Electron DMG or AppImage,
 and verifies its exact filename against that release's `SHA256SUMS.txt`.

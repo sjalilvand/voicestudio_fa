@@ -16,9 +16,17 @@ metadata and the backend fallback mirror it.
 
 - Preview iOS and Android companion apps: drive your own VoiceStudio from your phone (speak, voices and cloning, dubbing, dictation) after pairing by QR code; build from source for now ([guide](docs/mobile.md)) (#2965)
 
+- `OMNIVOICE_ENGINES_DIR` moves engine venvs and the audio.cpp runtime to another drive; the default location is unchanged (#PR)
+
 ### Docs
 
+- Install guides give a GitHub fallback command when `voicestudio.sh/install` is unreachable, and document building the Docker image on ARM64 + NVIDIA hosts (#PR)
+
 - Contributor guides and the pull request template explain how to sign the CLA before opening a first pull request (#2676)
+
+### Fixed
+
+- The Docker image build skips the unavailable cuDNN 8 compatibility step on aarch64, so ARM64 + NVIDIA hosts can build a GPU image (#PR)
 
 ### CI
 
