@@ -123,7 +123,7 @@ def invalid_media_file_detail() -> dict[str, str]:
 # One-line "what to do" per docs-taxonomy key. Keys mirror error_docs_map's
 # taxonomy; the docs URL itself stays owned by error_docs_map.
 _HINTS: dict[str, str] = {
-    "GPU_OOM": "Close other GPU-heavy apps or unload models, then retry. You can also choose CPU in Settings → Performance & Device or select a smaller TTS engine.",
+    "GPU_OOM": "Close other GPU-heavy apps or unload models, then retry. If another program is holding most of the GPU, or this computer has a second GPU, pick a different one in Settings → Performance & Device. You can also choose CPU there or select a smaller TTS engine.",
     "GPU_ARCH_UNSUPPORTED": "This PyTorch build does not support your GPU. Choose CPU in Settings → Performance & Device, or install a compatible PyTorch build.",
     # #2462: the HOST ran out of RAM, not a GPU. On a CPU-only machine there is
     # no device to spill to, so *every* out-of-memory failure there is this

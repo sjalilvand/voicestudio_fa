@@ -2377,11 +2377,13 @@ async def generate_speech(
                 # diagnostic bundle and opaque to the user (#1607). The raw
                 # exception is NOT logged: it can carry a reference-clip path or
                 # a provider secret, and only the journal scrubs before storing.
+                from core.public_errors import exception_origin, stream_generation_failure
+
+                _origin = exception_origin(exc)
                 logger.error(
-                    "Streaming generation failed unexpectedly (class=%s)",
-                    type(exc).__name__,
+                    "Streaming generation failed unexpectedly (class=%s%s)",
+                    type(exc).__name__, f"; {_origin}" if _origin else "",
                 )
-                from core.public_errors import stream_generation_failure
                 from core import error_journal
 
                 error_journal.record(
