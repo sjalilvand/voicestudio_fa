@@ -24,6 +24,10 @@ metadata and the backend fallback mirror it.
 
 - Contributor guides and the pull request template explain how to sign the CLA before opening a first pull request (#2676)
 
+### Fixed
+
+- A "Generation failed" log line now says where it was raised and which error caused it, and the out-of-memory advice mentions picking another GPU, so these reports can be told apart (#2895, #2684, #2666, #2626, #2622, #2580, #3034)
+
 ### CI
 
 - Desktop request-guard self-tests stay deterministic when app requests arrive during cleanup (#2676)
