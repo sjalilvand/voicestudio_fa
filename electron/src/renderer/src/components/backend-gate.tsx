@@ -233,7 +233,11 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
                   ? t('backend.proxy_bypass_help')
                   : setup
                     ? t(
-                        status.setupIssue ? `backend.setup_${status.setupIssue}` : 'backend.failed',
+                        status.setupIssue
+                          ? `backend.setup_${status.setupIssue}`
+                          : status.runtimeRepairFailed
+                            ? 'backend.repair_failed'
+                            : 'backend.failed',
                         {
                           gib: status.setupRequiredGib ?? 9,
                         },

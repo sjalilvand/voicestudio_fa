@@ -1,3 +1,4 @@
+import { decideMissingRuntime, runtimeWasInstalled } from './runtime-repair';
 import {
   installRuntime,
   promoteLegacyRuntimeCaches,
@@ -604,6 +605,8 @@ export class BackendSupervisor extends EventEmitter<{
   private setupIssue: BackendStatus['setupIssue'];
   private setupRequiredGib: number | undefined;
   private runtimeInterrupted = false;
+  private repairAttempted = false;
+  private runtimeRepairFailed = false;
   private setupPhase: BackendStatus['setupPhase'] = 'checking';
   private readonly setupProgress = new SetupProgressTracker();
   private installation: AbortController | null = null;
@@ -668,6 +671,8 @@ export class BackendSupervisor extends EventEmitter<{
       status.setupRequiredGib = this.setupRequiredGib;
     if (this.stage === 'setup_required' && this.runtimeInterrupted)
       status.runtimeInterrupted = true;
+    if (this.stage === 'setup_required' && this.runtimeRepairFailed)
+      status.runtimeRepairFailed = true;
     if (this.stage === 'installing') {
       status.setupPhase = this.setupPhase;
       status.setupProgress = this.setupProgress.snapshot();
@@ -751,12 +756,34 @@ export class BackendSupervisor extends EventEmitter<{
         const { project, ready } = await this.resolveRuntimeProject();
         if (!ready) {
           if (gen === this.generation) {
+            const action = decideMissingRuntime({
+              packaged: true,
+              previouslyInstalled: await runtimeWasInstalled(project),
+              repairAttempted: this.repairAttempted,
+              unsupported: isUnsupportedPlatform(),
+            });
+            this.runtimeRepairFailed = action === 'repair_failed';
             this.runtimeInterrupted = await runtimeInstallInterrupted(project);
             // Intel Macs can never resolve the runtime (#889), and the Intel
             // build under Rosetta resolves the same wheels (#2598): say so
             // now, before the setup screen offers an install that must fail.
             this.setupIssue = platformSetupIssue();
-            this.setStage('setup_required');
+            this.setStage(
+              'setup_required',
+              action === 'repair_failed'
+                ? {
+                    message:
+                      'The Python environment is missing and automatic repair did not finish. ' +
+                      `See the engine log in ${app.getPath('logs')}.`,
+                  }
+                : undefined,
+            );
+            if (action === 'repair') {
+              // Same flow as the setup wizard, one attempt per launch (no loop).
+              this.repairAttempted = true;
+              this.pushLog('out', `Python environment missing in ${project}; repairing it.`);
+              void this.setupRuntime();
+            }
           }
           return;
         }
@@ -833,6 +860,7 @@ export class BackendSupervisor extends EventEmitter<{
     this.childLog.length = 0;
     this.setupIssue = undefined;
     this.setupRequiredGib = undefined;
+    this.runtimeRepairFailed = false;
     this.runtimeInterrupted = false;
     this.setupPhase = 'checking';
     this.setupProgress.reset();
@@ -946,6 +974,7 @@ export class BackendSupervisor extends EventEmitter<{
                 : undefined;
         this.setupRequiredGib =
           code === 'ENOSPC' ? (error as { requiredGib?: number }).requiredGib : undefined;
+        this.runtimeRepairFailed = this.repairAttempted;
         this.runtimeInterrupted = await runtimeInstallInterrupted(project);
         this.pushLog('err', errorMessage(error));
         this.setStage('setup_required', { message: errorMessage(error) });
