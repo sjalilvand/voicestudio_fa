@@ -18,7 +18,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
-- The day of a date written with an ordinal period ("am 3. Mai", "den 17. mai", "3. května") keeps its digits in German, Danish, Norwegian, Finnish, Czech and Polish instead of becoming a cardinal with a stray sentence break ("drei. Mai")
+- The day of a date written with an ordinal period ("am 3. Mai", "den 17. mai", "3. května") keeps its digits in German, Danish, Norwegian, Finnish, Czech and Polish instead of becoming a cardinal with a stray sentence break ("drei. Mai") (#3040) — thanks @NishchayMahor!
 
 ### Docs
 

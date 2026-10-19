@@ -498,8 +498,9 @@ _INTEGER_RE = re.compile(
 # phrase, so the day is left as written before a month name; the integer rule
 # used to speak the cardinal and leave the period behind ("drei. Mai").
 _DATE_MONTHS = {
-    "de": r"Jan(?:uar|\.)|Jänner|Feb(?:ruar|\.)|März|Mär\.|Apr(?:il|\.)|Mai|Juni|Juli"
-          r"|Aug(?:ust|\.)|Sep(?:tember|t\.|\.)|Okt(?:ober|\.)|Nov(?:ember|\.)|Dez(?:ember|\.)",
+    "de": r"Jan(?:uar|\.)|Jänner|Feb(?:ruar|\.)|März|M(?:ä|r)z\.|Apr(?:il|\.)|Mai|Jun(?:i|\.)"
+          r"|Jul(?:i|\.)|Aug(?:ust|\.)|Sep(?:tember|t\.|\.)|Okt(?:ober|\.)|Nov(?:ember|\.)"
+          r"|Dez(?:ember|\.)",
     "da": r"januar|februar|marts|april|maj|juni|juli|august|september|oktober|november|december",
     "no": r"januar|februar|mars|april|mai|juni|juli|august|september|oktober|november|desember",
     "fi": r"(?:tammi|helmi|maalis|huhti|touko|kesä|heinä|elo|syys|loka|marras|joulu)kuu\w*",
