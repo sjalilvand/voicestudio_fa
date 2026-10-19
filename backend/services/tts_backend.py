@@ -1231,6 +1231,41 @@ def _reuse_or_rank_passage(ref_audio: str) -> Optional[tuple[str, str]]:
     return _omnivoice_installed_passage(ref_audio)
 
 
+def prepare_reference_passage(ref_audio) -> bool:
+    """Rank a long reference's best 15 s window NOW, off the generate clock.
+
+    Picking the window runs the installed recognizer over up to five 15 s
+    windows. On a CPU that is minutes, and when it ran inside the engine call
+    it was charged to the generate budget: the job was then abandoned with
+    "TTS generate exceeded 300s" before a single sample was synthesized
+    (#2764's log shows a CPU Whisper large-v3 transcribing the voice just
+    before). The choice is remembered per recognizer and file version
+    (``_recall_passage``), so the engine call that follows recalls it for free.
+
+    Returns True when a passage was chosen or remembered. Never raises, and a
+    clip that needs no window (<= the transcript limit) is a no-op.
+    """
+    if not isinstance(ref_audio, str):
+        return False
+    try:
+        from omnivoice.utils.audio import CLONE_REF_TEXT_MAX_SECONDS
+
+        duration = reference_duration_s(ref_audio)
+        if duration is None or duration <= CLONE_REF_TEXT_MAX_SECONDS:
+            return False
+        selected = _reuse_or_rank_passage(ref_audio)
+    except Exception:  # noqa: BLE001 — the engine ranks inline as before
+        logger.debug("reference passage pre-ranking failed", exc_info=True)
+        return False
+    if selected is None:
+        return False
+    try:
+        os.remove(selected[0])
+    except OSError:
+        logger.debug("failed to remove reference window")
+    return True
+
+
 def omnivoice_inline_reference(ref_audio, ref_text):
     """``(ref_audio, ref_text, owned_path)`` for a direct ``model.generate()``.
 

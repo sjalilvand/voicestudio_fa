@@ -103,7 +103,17 @@ receive a stable `docs_topic` and a safe fallback message, never private excepti
 | `HOST_MEMORY_EXHAUSTED` | The machine ran out of system memory, so the engine could not finish. Close other memory-heavy apps, unload unused models with **Flush models**, render a shorter passage, or select a lighter TTS engine. On Windows, enlarging the page file also helps. A CPU-only machine has no GPU memory to free — this is RAM, not VRAM. |
 | `WINDOWS_APP_CONTROL_BLOCKED` | Windows application control blocked a required file. Ask the administrator to allow the trusted VoiceStudio runtime, then restart the app. |
 | `AUDIO_IO_FAILED` | Check the audio format, free disk space, and file permissions; review the folder in Settings → Storage. |
+| `ENGINE_DEPENDENCY_MISSING` | A Python package the engine imports is not installed. Open Model Catalogue, select the engine and use **Install / Repair**, then restart VoiceStudio. Terminal: retrying the same request fails the same way. |
+| `REFERENCE_STT_MISSING` | The voice has no transcript and no speech-to-text model is installed to write one. Type the reference clip's words into the transcript box (clips up to 20 seconds), or install and select a speech-to-text model in Model Catalogue. |
 | `HF_MIRROR_UNREACHABLE` | The configured Hugging Face mirror could not be reached while fetching the engine's weights. Restore the official endpoint in Settings → Models → Hugging Face mirror, then retry. |
+
+Every unclassified 500 also carries `error_type` (the Python exception class, never
+its message), and bug reports record it as "Backend error class" together with the
+"Backend failure topic". A reverse proxy that times out (`502`/`504` with its own HTML
+page) is reported as a proxy problem, not a VoiceStudio one: raise its read timeout
+(for nginx, `proxy_read_timeout`) for long generations. Choosing the best 15-second
+window of a long reference clip happens before the generate time budget starts, so a
+slow CPU speech-to-text model no longer causes `TTS generate exceeded 300s`.
 
 Unsupported GPU builds and application-control blocks are terminal for the current
 stream: the client does not automatically render the whole passage again. After

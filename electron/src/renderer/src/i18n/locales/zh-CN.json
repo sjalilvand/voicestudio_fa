@@ -2817,7 +2817,13 @@
     "audio_io_failed": "无法读取或保存音频。请检查文件格式、磁盘剩余空间和文件访问权限，并在设置 → 存储中检查文件夹。",
     "no_audio_track": "此文件没有音轨，因此没有可转录、配音或克隆的语音。请选择包含声音的视频或音频文件。",
     "transcription_media_tool": "转录需要 ffmpeg，但 VoiceStudio 无法找到或运行它。请打开设置 → 音频工具并使用下载/修复，或安装 ffmpeg（macOS：brew install ffmpeg；Windows：winget install Gyan.FFmpeg；Linux：你的包管理器），然后重启 VoiceStudio。你也可以将 FFMPEG_PATH 指向 ffmpeg 可执行文件。",
-    "transcription_pipe_lost": "转录期间后端丢失了通往应用的输出管道（broken pipe）。请重启 VoiceStudio 后重试。"
+    "transcription_pipe_lost": "转录期间后端丢失了通往应用的输出管道（broken pipe）。请重启 VoiceStudio 后重试。",
+    "gpu_oom": "GPU 显存不足。请关闭其他占用 GPU 的应用或卸载模型后重试。你也可以在 设置 → 性能与设备 中选择 CPU，或选择更小的 TTS 引擎。",
+    "host_memory_exhausted": "电脑内存不足。请关闭其他占用内存的应用和浏览器标签页，卸载不用的模型，生成较短的片段，或选择更轻量的 TTS 引擎。",
+    "engine_dependency_missing": "此引擎所需的 Python 包未安装，因此引擎无法启动。请打开模型目录，选择该引擎并使用 安装 / 修复，然后重启 VoiceStudio。",
+    "reference_stt_missing": "此声音没有文字稿，也没有安装可用于生成文字稿的语音转文字模型。请在文字稿框中输入参考音频所说的内容（音频不超过 20 秒），或在模型目录中安装并选择一个语音转文字模型，然后重新生成。",
+    "proxy_gateway_error": "你与 VoiceStudio 之间的代理或网关返回了 HTTP {{status}}，而不是后端的响应。后端可能仍在处理。对于较长的生成，请调大代理的读取超时（nginx 为 proxy_read_timeout），然后查看 设置 → 日志 → 后端。",
+    "route_not_found": "正在运行的 VoiceStudio 后端没有 {{route}} 接口。请重启 VoiceStudio 使应用与后端一致；若仍然如此，请将两者更新到同一版本。"
   },
   "network": {
     "copied": "已复制",
