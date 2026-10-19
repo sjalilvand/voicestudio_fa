@@ -34,7 +34,7 @@ struct PhoneDubView: View {
                 }.disabled(copying)
                 DubTiles {
                     Button { languages = true } label: {
-                        TileLabel(icon: "globe", label: model.t("mobile.dub.target_languages"), value: ListFormatter.localizedString(byJoining: choices.filter { targets.contains($0.code) }.map(\.name)))
+                        TileLabel(icon: "globe", label: model.t("mobile.dub.target_languages"), value: {let names = choices.filter { targets.contains($0.code) }.map(\.name); return names.isEmpty ? model.t("mobile.android.choose") : ListFormatter.localizedString(byJoining: names)}())
                     }.studioButton(.tertiary).accessibilityIdentifier("dub.languages")
                     ChoicePicker(label: model.t("mobile.speak.voice"), selection: $voice, options: [SelectionOption(id: "", title: model.t("mobile.simple.reference"))] + model.phone.voices.map { SelectionOption(id: $0.id.uuidString, title: $0.name) }, icon: "person.wave.2", tile: true)
                 }

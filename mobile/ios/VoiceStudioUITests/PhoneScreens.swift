@@ -97,11 +97,11 @@ final class PhoneScreens: XCTestCase {
             }
         }
         app.tabButton("Settings").tap()
-        app.buttons["mobile.settings.light_palette"].tap()
+        app.buttons["settings.palette.light"].tap()
         let studio = app.buttons["choice.option.default"]
         XCTAssertTrue(studio.waitForExistence(timeout: 5)); XCTAssertEqual(studio.value as? String, "Selected")
         app.buttons["choice.option.canopy"].tap()
-        app.buttons["mobile.settings.light_palette"].tap()
+        app.buttons["settings.palette.light"].tap()
         XCTAssertEqual(app.buttons["choice.option.canopy"].value as? String, "Selected")
     }
     @MainActor func testConnectAndPrivacyKeepDetailsCollapsed() {
@@ -117,20 +117,20 @@ final class PhoneScreens: XCTestCase {
 }
 
 /// Xcode test attachments are the reviewable screen tour; no screenshots are fabricated by CLT checks.
-final class ScreenshotTour: XCTestCase {
+final class PhoneScreenshotTour: XCTestCase {
     @MainActor private func capture(_ name: String,_ app: XCUIApplication) {
         let attachment = XCTAttachment(screenshot: app.screenshot()); attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
     }
     @MainActor func testPhoneFirstScreens() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-smoke","-AppleLanguages","(en)"]
-        app.launch(); XCTAssertTrue(app.buttons["consent.no"].waitForExistence(timeout: 10)); XCTAssertTrue(app.staticTexts["Saved on this phone. Nothing is sent."].exists); capture("Consent",app); app.buttons["consent.no"].tap(); capture("Home",app); app.openSpeak()
+        app.launch(); XCTAssertTrue(app.buttons["consent.no"].waitForExistence(timeout: 10)); XCTAssertTrue(app.staticTexts["This companion app records your choice on this phone. It sends no analytics."].exists); capture("Consent",app); app.buttons["consent.no"].tap(); capture("Home",app); app.openSpeak()
         XCTAssertTrue(app.textViews["speak.text"].waitForExistence(timeout: 5)); capture("Speak-phone",app)
         app.tabButton("Voices").tap(); capture("Voices-phone",app)
         app.buttons["voices.create"].tap(); XCTAssertTrue(app.textFields["voices.clone.name"].waitForExistence(timeout: 5)); capture("Clone-phone",app); app.buttons["Cancel"].tap()
         app.tabButton("Dub").tap(); XCTAssertEqual(app.buttons.matching(identifier: "models.get").count, 1); capture("Dub-phone",app)
         app.tabButton("Dictate").tap(); capture("Dictate-phone",app)
         app.tabButton("Settings").tap(); capture("Settings",app)
-        app.buttons["mobile.settings.light_palette"].tap()
+        app.buttons["settings.palette.light"].tap()
         XCTAssertTrue(app.buttons["choice.option.default"].waitForExistence(timeout: 5)); capture("Palette-picker",app); app.buttons["Close"].tap()
         app.buttons["Language"].tap(); capture("Language-picker",app); app.buttons["Close"].tap()
         app.buttons["Models"].tap(); capture("Models",app)

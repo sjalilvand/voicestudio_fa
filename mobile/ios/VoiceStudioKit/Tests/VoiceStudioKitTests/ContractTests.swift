@@ -61,7 +61,7 @@ func catalogs() throws -> [String: Data] {
     let l10n = try L10n(catalogs: catalogs())
     let root = repository.appendingPathComponent("mobile/ios")
     let paths = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil)!
-    let pattern = #""((?:mobile|common|privacy|player|themeAppearance|sidebarTools)\.[a-zA-Z0-9_.-]+)""#
+    let pattern = #""((?:mobile|common|consent|privacy|player|themeAppearance|sidebarTools)\.[a-zA-Z0-9_.-]+)""#
     let regex = try NSRegularExpression(pattern: pattern)
     let dynamic: [String: [String]] = [
         "mobile.simple.": ["tts", "asr", "asr-stream", "clone", "translate"],

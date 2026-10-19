@@ -34,7 +34,7 @@ struct SettingsView: View {
                 }
             Section {
                 InfoButton(title: model.t("mobile.simple.privacy"), detail: model.t("mobile.local.privacy"), row: true, icon: "shield")
-                Toggle(isOn: $model.analytics) { Label(model.t("mobile.simple.analytics"),systemImage: "chart.bar") }.frame(minHeight: 44)
+                Toggle(isOn: $model.analytics) { Label(model.t("mobile.simple.analytics"),systemImage: "chart.bar") }.frame(minHeight: 44).accessibilityIdentifier("settings.analytics")
             }
             Section {
                 HStack { Label(model.t("mobile.ios.app_name"),systemImage: "info.circle"); Spacer(); Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? model.t("common.unknown")) }
@@ -47,7 +47,7 @@ struct SettingsView: View {
             .studioNavigationTitle(model.t("mobile.tabs.settings"))
     }
     private func palette(key: String, selection: Binding<String>) -> some View {
-        ChoicePicker(label: model.t(key), selection: selection, options: VSTokens.palettes.map { SelectionOption(id: $0.id, title: Theme.paletteLabel($0, l10n: model.l10n), swatch: Theme(palette: $0.id, appearance: key == "mobile.settings.light_palette" ? .light : .dark)) }, icon: "paintpalette").accessibilityIdentifier(key)
+        ChoicePicker(label: model.t(key), selection: selection, options: VSTokens.palettes.map { SelectionOption(id: $0.id, title: Theme.paletteLabel($0, l10n: model.l10n), swatch: Theme(palette: $0.id, appearance: key == "mobile.settings.light_palette" ? .light : .dark)) }, icon: "paintpalette").accessibilityIdentifier("settings.palette." + (key == "mobile.settings.light_palette" ? "light" : "dark"))
     }
 }
 struct LicensesView: View {

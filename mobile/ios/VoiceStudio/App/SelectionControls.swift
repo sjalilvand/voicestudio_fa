@@ -214,8 +214,10 @@ struct SearchField: View {
             Image(systemName: "magnifyingglass").foregroundStyle(theme.color("textMuted")).accessibilityHidden(true)
             TextField(prompt, text: $text)
                 .textFieldStyle(.plain)
+                .frame(minHeight: 44)
                 .textInputAutocapitalization(.never).autocorrectionDisabled()
                 .submitLabel(.search)
+                .accessibilityLabel(prompt)
                 .accessibilityIdentifier("search.field")
             if !text.isEmpty {
                 Button { text = "" } label: { Image(systemName: "xmark.circle.fill") }

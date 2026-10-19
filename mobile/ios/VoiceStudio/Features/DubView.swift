@@ -44,7 +44,7 @@ struct ComputerDubView: View {
             }
             DubTiles {
                 Button { selectingLanguages = true } label: {
-                    TileLabel(icon: "globe", label: model.t("mobile.dub.target_languages"), value: ListFormatter.localizedString(byJoining: languages.filter { selected.contains($0.code) }.map(\.name)))
+                    TileLabel(icon: "globe", label: model.t("mobile.dub.target_languages"), value: {let names = languages.filter { selected.contains($0.code) }.map(\.name); return names.isEmpty ? model.t("mobile.android.choose") : ListFormatter.localizedString(byJoining: names)}())
                 }.studioButton(.tertiary).accessibilityIdentifier("dub.languages")
                 VoicePicker(selection: $profile, dubbing: true, tile: true)
             }
@@ -140,7 +140,7 @@ struct ComputerDubView: View {
     private func historyTitle(_ item: DubHistoryItem) -> some View {
         VStack(alignment: .leading, spacing: VSTokens.spacingGap) {
             Text(item.title).lineLimit(1).truncationMode(.middle)
-            Text(item.metadata(locale: Locale(identifier: model.l10n.locale)))
+            Text(item.metadata(l10n: model.l10n)).accessibilityIdentifier("dub.metadata." + item.id)
                 .font(.caption)
                 .foregroundStyle(theme.color("textMuted")).lineLimit(1).truncationMode(.tail)
         }.frame(maxWidth: .infinity, alignment: .leading)

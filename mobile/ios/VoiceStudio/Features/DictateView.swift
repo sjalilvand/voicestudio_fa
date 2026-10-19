@@ -79,7 +79,7 @@ struct DictateView: View {
                     .background(theme.color("messageAction"), in: Circle())
             }.buttonStyle(.plain).frame(maxWidth: .infinity, minHeight: 104)
                 .disabled(!ready || finalizing || model.phone.activeDub != nil)
-                .accessibilityLabel(model.t(listening ? "common.stop" : "mobile.simple.microphone"))
+                .accessibilityLabel(model.t(listening ? "common.stop" : "mobile.dictate.tap_to_start")).accessibilityHint(model.t("mobile.dictate.hold_to_talk"))
                 .accessibilityIdentifier("dictate.record")
                 .onLongPressGesture(minimumDuration: 0.2, pressing: { pressed in
                     if !pressed && holding {
