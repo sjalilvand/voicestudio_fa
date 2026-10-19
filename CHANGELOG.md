@@ -18,7 +18,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
-- Backend no longer dies with an access violation on a truncated model file; it re-downloads it, and hangs, port-denied and slow-start failures now name the cause and what to do (#PRNUM)
+- Backend no longer dies with an access violation on a truncated model file; it re-downloads it, and hangs, port-denied and slow-start failures now name the cause and what to do (#3025) — thanks @tigerscurrying-prog, @prompteric, @anchetasmedellin!
 
 ### Docs
 
