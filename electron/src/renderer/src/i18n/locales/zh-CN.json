@@ -365,7 +365,9 @@
   },
   "referenceAsr": {
     "busy": "正在抄写…",
-    "retry": "重新转录"
+    "retry": "重新转录",
+    "install": "安装 {{label}}（{{size}} GB）以自动转写",
+    "installing": "正在下载 {{label}}，完成后将重新转写。"
   },
   "engineSidebar": {
     "tts": "TTS",

@@ -352,7 +352,9 @@
   },
   "referenceAsr": {
     "busy": "Mentranskripsikan…",
-    "retry": "Coba lagi transkripsi"
+    "retry": "Coba lagi transkripsi",
+    "install": "Pasang {{label}} ({{size}} GB) untuk transkripsi otomatis",
+    "installing": "Mengunduh {{label}}. Transkripsi akan diulang setelah selesai."
   },
   "engineSidebar": {
     "tts": "TTS",

@@ -352,7 +352,9 @@
   },
   "referenceAsr": {
     "busy": "Transkriberar...",
-    "retry": "Försök att transkriptera igen"
+    "retry": "Försök att transkriptera igen",
+    "install": "Installera {{label}} ({{size}} GB) för att transkribera automatiskt",
+    "installing": "Laddar ner {{label}}. Transkriberingen försöks igen när det är klart."
   },
   "engineSidebar": {
     "tts": "TTS",

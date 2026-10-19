@@ -352,7 +352,9 @@
   },
   "referenceAsr": {
     "busy": "받아쓰는 중…",
-    "retry": "전사 재시도"
+    "retry": "전사 재시도",
+    "install": "자동 전사를 위해 {{label}}({{size}} GB) 설치",
+    "installing": "{{label}} 다운로드 중입니다. 완료되면 전사를 다시 시도합니다."
   },
   "engineSidebar": {
     "tts": "TTS",
