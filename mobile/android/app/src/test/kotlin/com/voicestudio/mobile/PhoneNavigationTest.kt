@@ -40,7 +40,7 @@ class PhoneNavigationTest {
             for(label in listOf("Speak","Voices","Dub","Dictate","Settings")) tab(label).assertExists()
             compose.onNodeWithText("Run on").assertDoesNotExist()
             tab("Voices").performClick();compose.onNodeWithText("Clone a voice").assertExists()
-            tab("Dub").performClick();compose.onNodeWithText("1 Source").assertExists()
+            tab("Dub").performClick();compose.onNodeWithText("Choose video or audio").assertExists()
             compose.onNodeWithText("Original speaker").assertExists()
             compose.onNode(hasText("Dub") and SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.Role,androidx.compose.ui.semantics.Role.Button)).assertIsNotEnabled()
             tab("Dictate").performClick();compose.onNodeWithContentDescription("Record").assertExists()
