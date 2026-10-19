@@ -1234,6 +1234,17 @@
       ],
       "title": "Postprocess Output"
      },
+     "preset_voice": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Preset Voice"
+     },
      "profile_id": {
       "anyOf": [
        {

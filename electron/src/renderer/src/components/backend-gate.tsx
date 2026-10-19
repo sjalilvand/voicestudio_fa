@@ -449,7 +449,7 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium">{t('firstrun.env_dir')}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        {t('firstrun.env_dir_desc')}
+                        {t(status.runtimeStorage ? 'firstrun.env_dir_desc_scoped' : 'firstrun.env_dir_desc')}
                       </p>
                       <p
                         className="mt-2 truncate font-mono text-xs text-muted-foreground"
@@ -457,6 +457,21 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
                       >
                         {status.runtimePath}
                       </p>
+                      {status.runtimeStorage && (
+                        <dl className="mt-2 space-y-0.5 text-xs text-muted-foreground">
+                          {(['data', 'models', 'temp'] as const).map((kind) => (
+                            <div key={kind} className="flex gap-2">
+                              <dt className="shrink-0">{t(`firstrun.storage_${kind}`)}</dt>
+                              <dd
+                                className="min-w-0 truncate font-mono"
+                                title={status.runtimeStorage?.[kind]}
+                              >
+                                {status.runtimeStorage?.[kind]}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                      )}
                     </div>
                   </div>
                   <div className="mt-3 flex justify-end gap-2">

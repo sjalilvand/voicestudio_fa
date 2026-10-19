@@ -72,11 +72,14 @@ drive (for example an external SSD):
 
 1. Run the installer and choose the external drive on its **Installation
    Folder** page.
-2. On the setup screen, press **Change…** beside **App environment** to put the
-   Python environment on the drive. uv's download cache and managed Python stay
-   beside that environment, so multi-GB wheels are not staged on `C:`.
-3. In **Settings > Storage**, move the application data folder (voices,
-   projects, settings) and the model cache to the drive.
+2. On the setup screen, press **Change…** beside **App environment** and pick
+   the drive. That one folder then holds the Python environment, uv's download
+   cache, managed Python, your data (`data`), the model cache (`models`) and
+   scratch files (`tmp`), so nothing is staged on `C:`. The setup screen lists
+   each effective location. Variables you set yourself (`OMNIVOICE_DATA_DIR`,
+   `OMNIVOICE_CACHE_DIR`, `TEMP`) win over the folder.
+3. An existing installation is never moved. To relocate its data or model cache
+   later, use **Settings > Storage**.
 
 The drive must be connected when VoiceStudio starts.
 

@@ -16,6 +16,11 @@ metadata and the backend fallback mirror it.
 
 - Preview iOS and Android companion apps: drive your own VoiceStudio from your phone (speak, voices and cloning, dubbing, dictation) after pairing by QR code; build from source for now ([guide](docs/mobile.md)) (#2965)
 
+### Fixed
+
+- The install location chosen in first-run setup now also holds your data, model cache and temp files instead of quietly filling `C:`, and the setup screen shows each path (#2971, #PR)
+- Supertonic-3's preset voices can be picked in the voice controls and are used for generation (#2938, #PR)
+
 ### Docs
 
 - Contributor guides and the pull request template explain how to sign the CLA before opening a first pull request (#2676)

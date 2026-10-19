@@ -77,6 +77,8 @@ export interface BackendStatus {
   runtimePath?: string;
   runtimeCustom?: boolean;
   runtimeRegion?: RuntimeRegion;
+  /** Where data, models and temp files go when the location was chosen during setup. */
+  runtimeStorage?: { data: string; models: string; temp: string };
 }
 
 export type RuntimeRegion = 'auto' | 'global' | 'china' | 'russia' | 'restricted';
