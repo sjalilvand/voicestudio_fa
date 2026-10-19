@@ -15,9 +15,15 @@ metadata and the backend fallback mirror it.
 ### Added
 
 - Preview iOS and Android companion apps: drive your own VoiceStudio from your phone (speak, voices and cloning, dubbing, dictation) after pairing by QR code; build from source for now ([guide](docs/mobile.md)) (#2965)
+- Smart Fit speed limits: set the fastest and slowest speed dubbing may apply to a line, from the Timing section (#PRNUM) — thanks @MoonDragon-MD!
+
+### Fixed
+
+- Engine sidecars no longer load PyTorch just to answer the Test Engine ping, and a failed test logs its reason locally (#PRNUM) — thanks @tekay-de!
 
 ### Docs
 
+- OmniVoice GGUF docs state that the installers do not ship its native binary yet (#PRNUM) — thanks @DestinyQJY!
 - Contributor guides and the pull request template explain how to sign the CLA before opening a first pull request (#2676)
 
 ### CI
