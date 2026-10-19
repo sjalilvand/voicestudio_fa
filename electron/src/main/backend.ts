@@ -1361,7 +1361,7 @@ export class BackendSupervisor extends EventEmitter<{
         message:
           `Windows or another program refused access to port ${this.port}. It is often in a reserved ` +
           'port range (Hyper-V, WSL, Docker) - run "netsh interface ipv4 show excludedportrange protocol=tcp" ' +
-          'to check - or held exclusively. Set OMNIVOICE_PORT to a free port (for example 3901) and restart.',
+          'to check - or held exclusively. Set OMNIVOICE_PORT to a free port and restart.',
       });
       return;
     }
