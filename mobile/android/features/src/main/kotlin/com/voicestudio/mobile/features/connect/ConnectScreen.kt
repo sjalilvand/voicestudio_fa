@@ -25,7 +25,7 @@ import java.util.Date
         ScreenTitle("mobile.connect.title")
         Action("mobile.connect.scan_qr",!state.busy,onClick=camera)
         if(scanner) scanContent({raw ->
-            try {val address=PairingAddress.parse(raw);url=address.baseUrl.toString();pin=address.pin.orEmpty();scanner=false;manual=true;vm.connect(url,pin,"")}
+            try {val address=PairingAddress.parse(raw);url=address.baseUrl.toString();pin=address.pin.orEmpty();scanner=false;manual=true}
             catch(e:Exception) {scanner=false;vm.fail(e)}
         },{scanner=false},{scanner=false;vm.fail(it)})
         Secondary("mobile.simple.address") {manual=!manual}

@@ -55,6 +55,8 @@ class PhoneVoiceUiTest {
             compose.onNode(hasText("Home") and hasClickAction()).performClick()
             compose.onNodeWithText("New name").performScrollTo().performClick()
             compose.onNodeWithText("New name").assertExists()
+            // The preference is persisted asynchronously; wait for it instead of racing the IO dispatcher.
+            await {vm.preferences.value.runLocations["speak"]=="phone"}
             org.junit.Assert.assertEquals("phone",vm.preferences.value.runLocations["speak"])
             compose.onNode(hasText("Voices") and hasClickAction()).performClick()
             compose.onNodeWithContentDescription("More actions for New name").performScrollTo().performClick()

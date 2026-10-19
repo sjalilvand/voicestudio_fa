@@ -85,11 +85,11 @@ import com.voicestudio.mobile.local.*
             val uri=androidx.compose.ui.platform.LocalUriHandler.current
             var showTerms by remember(model.id) {mutableStateOf(false)}
             Text(model.name,style=MaterialTheme.typography.titleLarge)
-            Text(tr("mobile.local.category."+model.licence.category),style=MaterialTheme.typography.titleSmall,color=role(if(model.licence.category=="commercial-ok") "text" else "textMuted"))
+            Text(tr("mobile.local.category.${model.licence.category}"),style=MaterialTheme.typography.titleSmall,color=role(if(model.licence.category=="commercial-ok") "text" else "textMuted"))
             review.rights.forEach {(key,status) ->
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
-                    Text(tr("mobile.local.right_"+key))
-                    Text(tr("mobile.local.right_"+status),color=role(if(status=="restricted") "error" else "textMuted"))
+                    Text(tr("mobile.local.right_$key"))
+                    Text(tr("mobile.local.right_$status"),color=role(if(status=="restricted") "error" else "textMuted"))
                 }
             }
             review.notes?.let {Text(it,style=MaterialTheme.typography.bodyMedium)}
