@@ -189,6 +189,7 @@ _UNCHANGED_CASES = [
     ("German", "Der 1. Januar ist frei."),
     ("German", "am 21. dezember"),
     ("German", "Am 3. Mrz. und am 5. Jun."),      # abbreviated months
+    ("German", "Am 3. Mär. geschlossen"),
     ("German", "bis 1. Jul. offen"),
     ("Danish", "Den 3. maj"),
     ("Norwegian", "Den 17. mai"),
