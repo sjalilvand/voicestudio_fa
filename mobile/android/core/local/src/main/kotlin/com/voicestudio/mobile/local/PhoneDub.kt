@@ -146,12 +146,20 @@ class PhoneDubPipeline(private val store: PhoneDubStore,private val engine: Loca
                 val previous=checkpoint.renders.firstOrNull {it.index==index}
                 if(previous!=null&&previous.frames==frames.toLong()&&rendered.length()==frames*4L&&sha256(rendered)==previous.sha256) continue
                 stage("mobile.android.stage_render",base)
-                val reference=if(request.referenceText!=null) {
+                val duration=segment.speech.end-segment.speech.start
+                // A saved text equal to the segment's own transcript means recognition of the 8 s clip came back
+                // blank: the reference is then the whole segment, so a resumed job pairs the same audio with the same words.
+                val wholeSegment=request.referenceText==null&&duration>8.0&&!segment.referenceText.isNullOrBlank()&&segment.referenceText==segment.speech.text
+                var reference=if(request.referenceText!=null) {
                     val saved=PcmFile(store.file(id,"voice-reference.pcm"));saved.read(0,saved.frames.toInt())
-                } else pcm.clip(segment.speech.start,minOf(segment.speech.end,segment.speech.start+8.0))
+                } else pcm.clip(segment.speech.start,if(wholeSegment) segment.speech.end else minOf(segment.speech.end,segment.speech.start+8.0))
                 val referenceText=request.referenceText ?: segment.referenceText?.takeIf {it.isNotBlank()} ?: run {
-                    val text=if(segment.speech.end-segment.speech.start<=8.0) segment.speech.text
-                        else engine.transcribe(asr,reference).trim().ifBlank {segment.speech.text}
+                    val recognized=if(duration<=8.0) segment.speech.text else engine.transcribe(asr,reference).trim()
+                    val text=recognized.ifBlank {
+                        // Quiet or short clip: use the whole segment with its own transcript, never a clip with someone else's words.
+                        reference=pcm.clip(segment.speech.start,segment.speech.end)
+                        segment.speech.text
+                    }
                     segment=segment.copy(referenceText=text)
                     save(checkpoint.copy(segments=checkpoint.segments.toMutableList().also {it[index]=segment}))
                     text

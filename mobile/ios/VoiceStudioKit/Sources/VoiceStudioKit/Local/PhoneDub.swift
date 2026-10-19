@@ -204,18 +204,25 @@ public struct PhoneDubPipeline: Sendable {
                 let rendered = try await store.file(id,"render-\(targetIndex)-\(index).pcm")
                 if let saved = cp.renders.first(where: { $0.target == target.code && $0.index == index }), saved.frames == frames, (try? PCMFile(rendered).frames) == frames, (try? ModelHash.file(rendered)) == saved.hash { continue }
                 try await stage("mobile.android.stage_render",progress)
-                let reference: PCMChunk
+                let savedText = (request.referenceText ?? segment.referenceText)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                let segmentText = segment.speech.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                // When recognition of the 8 s clip came back blank, the saved text is the segment's own transcript and
+                // the reference is the whole segment, so a resumed job pairs the same audio with the same words.
+                let wholeSegment = request.referenceText == nil && !savedText.isEmpty && savedText == segmentText && segment.speech.end - segment.speech.start > 8
+                var reference: PCMChunk
                 if request.referenceText != nil {
                     let pcm = PCMFile(try await store.file(id,"reference.pcm")); reference = try pcm.read(start: 0,count: pcm.frames)
-                } else { reference = try original.clip(start: segment.speech.start,end: min(segment.speech.end,segment.speech.start+8)) }
-                let savedText = (request.referenceText ?? segment.referenceText)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                } else { reference = try original.clip(start: segment.speech.start,end: wholeSegment ? segment.speech.end : min(segment.speech.end,segment.speech.start+8)) }
                 let referenceText: String
                 if !savedText.isEmpty { referenceText = savedText }
                 else {
                     let recognized = try await engine.transcribe(model: asr,audio: reference,progress: { _ in }).trimmingCharacters(in: .whitespacesAndNewlines)
-                    // Quiet/short clips still have the segment's original ASR transcript.
-                    referenceText = recognized.isEmpty ? segment.speech.text.trimmingCharacters(in: .whitespacesAndNewlines) : recognized
-                    guard !referenceText.isEmpty else { throw ClientError("mobile.simple.no_speech") }
+                    if recognized.isEmpty {
+                        guard !segmentText.isEmpty else { throw ClientError("mobile.simple.no_speech") }
+                        // Quiet or short clip: use the whole segment with its own transcript, never a clip with someone else's words.
+                        reference = try original.clip(start: segment.speech.start,end: segment.speech.end)
+                        referenceText = segmentText
+                    } else { referenceText = recognized }
                 }
                 if segment.referenceText != referenceText {
                     segment.referenceText = referenceText; cp.segments[index] = segment; try await save(cp)

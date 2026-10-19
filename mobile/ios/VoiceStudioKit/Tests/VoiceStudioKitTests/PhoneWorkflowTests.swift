@@ -75,6 +75,9 @@ private actor FixtureEngine: LocalEngine {
     private(set) var translations = 0
     private(set) var clones = 0
     private var failClone = 0
+    private var longSegment = false
+    private(set) var references: [(frames: Int, text: String)] = []
+    func useLongSegment() { longSegment = true }
     func failOnClone(_ count: Int) { failClone = count }
     func empty() { transcript = "" }
     func synthesize(model: PhoneModel,text: String,speaker: Int,speed: Float,progress: @escaping EngineProgressHandler) async throws -> LocalAudio { LocalAudio(samples: Array(repeating: 0.25,count: 24000),sampleRate: 24000) }
@@ -82,11 +85,13 @@ private actor FixtureEngine: LocalEngine {
         clones += 1
         if clones == failClone { throw CancellationError() }
         #expect(reference.sampleRate == 24000); #expect(!referenceText.isEmpty)
+        references.append((reference.samples.count, referenceText))
         return LocalAudio(samples: Array(repeating: 0.4,count: 12000),sampleRate: 24000)
     }
     func transcribe(model: PhoneModel,audio: PCMChunk,progress: @escaping EngineProgressHandler) async throws -> String { try Task.checkCancellation(); transcriptions += 1; return transcript }
     func transcribeSegments(model: PhoneModel,audio: PCMChunk,progress: @escaping EngineProgressHandler) async throws -> [SpeechSegment] {
         transcriptions += 1
+        if longSegment { return [SpeechSegment(start: 0.5,end: 11.5,text: "Hello long")] }
         return [SpeechSegment(start: 0.1,end: 0.35,text: "Hello"), SpeechSegment(start: 0.5,end: 0.85,text: "World")]
     }
     func streamTranscribe(model: PhoneModel,chunks: AsyncThrowingStream<PCMChunk,any Error>,progress: @escaping EngineProgressHandler) async throws -> AsyncThrowingStream<TranscriptUpdate,any Error> { AsyncThrowingStream { $0.finish() } }
@@ -293,6 +298,23 @@ func realAuxiliaryPhoneDubOfflineAndResume() async throws {
     let result = try await pipeline.run(id: request.id,models: models)
     #expect(result.done)
     #expect(result.segments.map(\.referenceText) == ["Hello","World"])
+}
+
+@Test func blankRecognitionOfALongSegmentUsesTheWholeSegmentWithItsOwnText() async throws {
+    let root = try fixtureRoot(); defer { try? FileManager.default.removeItem(at: root) }
+    let source = root.appendingPathComponent("source.wav"); try Data("fixture".utf8).write(to: source)
+    let models = try [fixtureModel(.asr),fixtureModel(.translate),fixtureModel(.clone)]
+    let store = try PhoneDubStore(root: root.appendingPathComponent("dubs")), engine = FixtureEngine()
+    await engine.empty(); await engine.useLongSegment(); await engine.failOnClone(1)
+    let request = try await store.create(source: source,title: "Source",targets: [PhoneDubTarget(code: "fr",name: "French")],models: models,consent: true,audioOnly: true)
+    let pipeline = PhoneDubPipeline(store: store,engine: engine,decoder: FixtureDecoder(frames: 24000 * 12),media: FixtureMedia())
+    await #expect(throws: CancellationError.self) { try await pipeline.run(id: request.id,models: models) }
+    // The resumed job must pair the same audio with the same words as the interrupted one would have.
+    #expect(try await pipeline.run(id: request.id,models: models).done)
+    let references = await engine.references
+    #expect(references.count == 1)
+    #expect(references.first?.text == "Hello long")
+    #expect(references.first?.frames == 11 * 24000)
 }
 
 @Test func reviewCorruptRecordsDoNotHideHealthyLibraries() async throws {
