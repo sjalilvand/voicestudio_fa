@@ -28,8 +28,6 @@ metadata and the backend fallback mirror it.
 
 - New UI crawler clicks every button on every screen while the backend fails, and catches stuck spinners, buttons left greyed out, silent failures and crashes before they ship (#3014)
 
-- Gallery preview fallback smoke no longer flakes when a slower runner reads the playing clip in several byte ranges (#3014)
-
 ## [0.5.7] — 2026-10-17
 
 **VoiceStudio now runs on PCs without a GPU and recovers instead of giving up.** Voice cloning uses the speech-to-text model you installed from Model Catalogue, GPU-less computers get the small CPU PyTorch build, and slow or busy backends are no longer reported as failed.
