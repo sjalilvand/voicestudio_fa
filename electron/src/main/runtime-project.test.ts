@@ -532,6 +532,26 @@ describe('packaged runtime setup', () => {
     expect(await readFile(runtimePython(project), 'utf8')).toBe('interpreter');
     expect(await readFile(join(project, 'personal.txt'), 'utf8')).toBe('preserve');
   });
+  it('falls back to an in-place copy when Windows keeps a folder locked (#3010, #2669)', async () => {
+    const { bundle, project } = await fixture();
+    await stageRuntimeSources(bundle, project);
+    await writeFile(join(project, 'backend', 'obsolete.py'), 'old');
+    await writeFile(join(bundle, 'backend', 'main.py'), 'new');
+    const locked = async () => {
+      throw Object.assign(new Error('EPERM: operation not permitted, rename'), { code: 'EPERM' });
+    };
+    await stageRuntimeSources(bundle, project, locked);
+    expect(await readFile(join(project, 'backend', 'main.py'), 'utf8')).toBe('new');
+    expect(existsSync(join(project, 'backend', 'obsolete.py'))).toBe(false);
+    expect(existsSync(join(project, '.incoming-backend'))).toBe(false);
+  });
+  it('still fails on a rename error that is not a lock', async () => {
+    const { bundle, project } = await fixture();
+    const broken = async () => {
+      throw Object.assign(new Error('ENOSPC'), { code: 'ENOSPC' });
+    };
+    await expect(stageRuntimeSources(bundle, project, broken)).rejects.toThrow('ENOSPC');
+  });
   it('does not leave a ready marker after a failed repair', async () => {
     const { bundle, project } = await fixture();
     await installRuntime(

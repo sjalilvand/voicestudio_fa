@@ -464,8 +464,34 @@ export async function runtimeCompatible(bundle: string, project: string): Promis
   }
 }
 
+const LOCKED = new Set(['EPERM', 'EACCES', 'EBUSY']);
+
+/** Mirror `source` onto `target` file by file, for a folder Windows will not rename
+ *  (a scanner, OneDrive or a lingering backend holds a handle inside it, #3010, #2669).
+ *  Files can be overwritten where a folder rename cannot; files the new bundle no
+ *  longer ships are pruned best-effort. */
+async function mirrorInPlace(source: string, target: string): Promise<void> {
+  await cp(source, target, { recursive: true, force: true });
+  const walk = async (rel: string): Promise<void> => {
+    for (const entry of await readdir(join(target, rel), { withFileTypes: true })) {
+      const next = join(rel, entry.name);
+      const kept = await stat(join(source, next)).then(
+        () => true,
+        () => false,
+      );
+      if (!kept) await rm(join(target, next), { recursive: true, force: true }).catch(() => {});
+      else if (entry.isDirectory()) await walk(next);
+    }
+  };
+  await walk('').catch(() => {});
+}
+
 /** Replace only bundled code. The interpreter, models and user data are never removed. */
-export async function stageRuntimeSources(bundle: string, project: string): Promise<void> {
+export async function stageRuntimeSources(
+  bundle: string,
+  project: string,
+  rename: typeof renameWithRetry = renameWithRetry,
+): Promise<void> {
   await mkdir(project, { recursive: true });
   for (const name of SOURCES) {
     const target = join(project, name);
@@ -477,20 +503,26 @@ export async function stageRuntimeSources(bundle: string, project: string): Prom
       filter: (source) => !source.split(/[\\/]/).includes('__pycache__'),
     });
     await rm(previous, { recursive: true, force: true });
-    let moved = false;
     try {
-      await renameWithRetry(target, previous, DIRECTORY_RENAME);
-      moved = true;
+      let moved = false;
+      try {
+        await rename(target, previous, DIRECTORY_RENAME);
+        moved = true;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      }
+      try {
+        await rename(pending, target, DIRECTORY_RENAME);
+      } catch (error) {
+        if (moved) await rename(previous, target, DIRECTORY_RENAME);
+        throw error;
+      }
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      if (!LOCKED.has((error as NodeJS.ErrnoException).code ?? '')) throw error;
+      await mirrorInPlace(pending, target);
     }
-    try {
-      await renameWithRetry(pending, target, DIRECTORY_RENAME);
-    } catch (error) {
-      if (moved) await renameWithRetry(previous, target, DIRECTORY_RENAME);
-      throw error;
-    }
-    await rm(previous, { recursive: true, force: true });
+    await rm(pending, { recursive: true, force: true }).catch(() => {});
+    await rm(previous, { recursive: true, force: true }).catch(() => {});
   }
 }
 
