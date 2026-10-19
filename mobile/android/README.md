@@ -458,5 +458,5 @@ Desktop-only workspaces are not advertised as available mobile features.
 Home shows Electron's contributor avatars (`HomeContributors.kt`; the Gradle catalog task copies the
 images from `electron/.../home/contributors` into the APK assets, nothing is fetched at runtime and
 `tests/test_mobile_contract.py` guards the list). Dub opens with a dashed source card and the animated
-`DubGlyph`; the bottom navigation is icon-only with names as content descriptions.
+`DubGlyph`. The Material navigation bar keeps its labels: its height is fixed, so removing them would not make it more compact.
 
