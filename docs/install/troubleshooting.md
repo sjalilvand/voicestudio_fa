@@ -1354,6 +1354,7 @@ the message:
   ran out of time is treated as inconclusive instead of sending an intact
   runtime back to the setup screen. The first start after an install is the
   slowest because antivirus scans every new file; later starts are much faster.
+- **Installed app, Python environment deleted** (antivirus, disk cleanup, interrupted update): VoiceStudio rebuilds it by itself on the next launch with the normal setup progress screen, once per launch. If that repair fails the setup screen says so; check the engine log and press Retry. Your voices and projects are never touched.
 - **`The Python environment in <folder> is missing`** or **`… is incomplete:
   <reason>`** (running from a source checkout) — run `bun run setup:api` in the
   repository and let it finish (the message names the folder to open the terminal in; it is never taken from the terminal's working directory, so running from `C:\Windows\System32` does not matter). A folder without `pyproject.toml` is not a source checkout: install from the release installer instead. *Missing* means no `.venv` exists yet.

@@ -2050,6 +2050,7 @@
     "setup_hint": "Python ve uygulama bağımlılıklarını indirin (birkaç GB). Ses modelleri seçtiğinizde ayrı olarak yüklenir.",
     "installing": "Bağımlılıklar…",
     "setup_space": "Uygulamanın sürücüsünde en az {{gib}} GiB alan açıp yeniden deneyin.",
+    "repair_failed": "Python ortamının otomatik onarımı tamamlanamadı. Motor günlüğünü kontrol edip Yeniden dene’ye basın.",
     "setup_access": "Uygulamanın veri klasörüne yazma izni verip yeniden deneyin.",
     "setup_unsupported_platform": "Bu Intel Mac, yerel yapay zekâ arka ucunu çalıştıramaz — PyTorch'ta macOS Intel wheel'leri yok. Bunun yerine aşağıdan bir uzak arka uca bağlanın; yerel kurulum gerekmez.",
     "setup_wrong_architecture": "Bu, Apple Silicon bir Mac'te Rosetta üzerinden çalışan VoiceStudio Intel (x64) sürümü; bu yüzden yerel yapay zekâ arka ucu kurulamıyor. Uygulamadan çıkın, Apple Silicon (arm64) DMG'sini üzerine kurun ve yeniden açın — sesleriniz ve projeleriniz korunur.",

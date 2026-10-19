@@ -35,6 +35,8 @@ export interface BackendStatus {
   setupRequiredGib?: number;
   /** A prior explicit install stopped after creating its resumable project/cache. */
   runtimeInterrupted?: boolean;
+  /** Automatic repair of a lost Python environment already ran this launch and failed. */
+  runtimeRepairFailed?: boolean;
   setupPhase?: 'checking' | 'downloading_uv' | 'installing_deps' | 'verifying';
   setupProgress?: {
     resolvedPackages?: number;

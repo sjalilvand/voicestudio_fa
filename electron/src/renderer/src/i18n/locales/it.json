@@ -2052,6 +2052,7 @@
     "setup_hint": "Scarica Python e le dipendenze dell’app (diversi GB). I modelli vocali vengono installati separatamente quando li scegli.",
     "installing": "Installazione…",
     "setup_space": "Libera almeno {{gib}} GiB sull’unità dell’app, poi riprova.",
+    "repair_failed": "La riparazione automatica dell’ambiente Python non è terminata. Controlla il registro del motore, poi premi Riprova.",
     "setup_access": "Consenti l’accesso in scrittura alla cartella dati dell’app, poi riprova.",
     "setup_unsupported_platform": "Questo Mac Intel non può eseguire il backend IA locale — PyTorch non fornisce wheel per macOS Intel. Connetti un backend remoto qui sotto; nessuna installazione locale necessaria.",
     "setup_wrong_architecture": "Questa è la versione Intel (x64) di VoiceStudio in esecuzione tramite Rosetta su un Mac Apple Silicon, quindi il backend IA locale non può essere installato. Chiudi l'app, installa sopra il DMG Apple Silicon (arm64) e riaprila: voci e progetti vengono mantenuti.",
