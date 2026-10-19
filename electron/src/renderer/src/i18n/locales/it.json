@@ -354,7 +354,9 @@
   },
   "referenceAsr": {
     "busy": "Trascrizione…",
-    "retry": "Riprovare la trascrizione"
+    "retry": "Riprovare la trascrizione",
+    "install": "Installa {{label}} ({{size}} GB) per trascrivere automaticamente",
+    "installing": "Download di {{label}} in corso. La trascrizione riprenderà al termine."
   },
   "engineSidebar": {
     "tts": "TTS",
@@ -2822,7 +2824,13 @@
     "audio_io_failed": "Impossibile leggere o salvare l’audio. Controlla il formato del file, lo spazio libero e le autorizzazioni. Verifica la cartella in Impostazioni → Archiviazione.",
     "no_audio_track": "Questo file non ha una traccia audio, quindi non c'è parlato da trascrivere, doppiare o clonare. Scegli un file video o audio che contenga suono.",
     "transcription_media_tool": "La trascrizione richiede ffmpeg, che VoiceStudio non ha trovato o non è riuscito a eseguire. Apri Impostazioni → Strumenti audio e usa Scarica/Ripara, oppure installa ffmpeg (macOS: brew install ffmpeg; Windows: winget install Gyan.FFmpeg; Linux: il tuo gestore di pacchetti) e riavvia VoiceStudio. Puoi anche puntare FFMPEG_PATH a un binario ffmpeg.",
-    "transcription_pipe_lost": "Il backend ha perso il canale di output verso l'app durante la trascrizione (broken pipe). Riavvia VoiceStudio e riprova."
+    "transcription_pipe_lost": "Il backend ha perso il canale di output verso l'app durante la trascrizione (broken pipe). Riavvia VoiceStudio e riprova.",
+    "gpu_oom": "La GPU ha esaurito la memoria. Chiudi le altre app che usano molto la GPU o scarica i modelli, poi riprova. Puoi anche scegliere la CPU in Impostazioni → Prestazioni e dispositivo o selezionare un motore TTS più piccolo.",
+    "host_memory_exhausted": "Il computer ha esaurito la memoria. Chiudi le altre app e le schede del browser che usano molta memoria, scarica i modelli inutilizzati, genera un brano più breve o scegli un motore TTS più leggero.",
+    "engine_dependency_missing": "Manca un pacchetto Python necessario a questo motore, quindi non è stato possibile avviarlo. Apri il Catalogo modelli, seleziona il motore e usa Installa / Ripara, poi riavvia VoiceStudio.",
+    "reference_stt_missing": "Questa voce non ha una trascrizione e non è installato alcun modello di riconoscimento vocale per crearne una. Scrivi ciò che dice la clip di riferimento nella casella della trascrizione (clip fino a 20 secondi), oppure installa un modello di riconoscimento vocale nel Catalogo modelli, selezionalo e genera di nuovo.",
+    "proxy_gateway_error": "Un proxy o gateway tra te e VoiceStudio ha risposto HTTP {{status}} al posto del backend. Il backend potrebbe essere ancora al lavoro. Aumenta il timeout di lettura del proxy (in nginx, proxy_read_timeout) per le generazioni lunghe, poi controlla Impostazioni → Log → Backend.",
+    "route_not_found": "Il backend VoiceStudio in esecuzione non ha l'endpoint {{route}}. Riavvia VoiceStudio perché app e backend coincidano; se persiste, aggiorna entrambi alla stessa versione."
   },
   "network": {
     "copied": "Copiato",
