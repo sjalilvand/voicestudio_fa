@@ -49,6 +49,8 @@ public struct PhoneModel: Codable, Identifiable, Sendable {
             return (try? encoder.encode(terms)).flatMap { String(data: $0, encoding: .utf8) }
         }
         public var gated: Bool { category != "commercial-ok" || requires_acceptance }
+        public var review: LicenceReview { LicenceReview(terms: terms ?? [:]) }
+        public var termLines: [TermLine] { TermLine.lines(terms ?? [:]) }
     }
     public let id: String
     public let name: String
@@ -108,5 +110,57 @@ public enum LocalRouting {
         if preference == .computer && paired { return .computer }
         if preference == .phone { return installed ? .phone : .download }
         return installed ? .phone : paired ? .computer : .download
+    }
+}
+
+/// Plain-language reading of a model's declared terms. The raw terms and their
+/// fingerprint stay the record of what was accepted; this is only a summary.
+public struct LicenceReview: Sendable, Equatable {
+    public struct Right: Sendable, Equatable {
+        /// `commercial`, `outputs`, `redistribution` or `voice`.
+        public let key: String
+        /// `restricted`, or `unknown` for anything not stated.
+        public let status: String
+    }
+    private static let fields = [("commercial", "commercial_inference"), ("outputs", "commercial_outputs"),
+                                 ("redistribution", "redistribution"), ("voice", "voice_rights")]
+    public let rights: [Right]
+    public let notes: String?
+    public let evidenceURL: URL?
+    public let sourceURL: URL?
+    public init(terms: [String: JSONValue]) {
+        rights = Self.fields.map { key, field in Right(key: key, status: terms[field]?.string == "restricted" ? "restricted" : "unknown") }
+        notes = terms["notes"]?.string.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.flatMap { $0.isEmpty ? nil : $0 }
+        evidenceURL = Self.link(terms["evidence_url"]?.string)
+        sourceURL = Self.link(terms["source_url"]?.string)
+    }
+    /// Only plain https links are tappable.
+    private static func link(_ text: String?) -> URL? {
+        guard let text, let url = URL(string: text), url.scheme == "https", url.host?.isEmpty == false, url.user == nil else { return nil }
+        return url
+    }
+}
+
+/// One declared term as label and value. Every key of `terms` appears, so the
+/// readable list shows exactly what the fingerprint covers.
+public struct TermLine: Sendable, Equatable {
+    public let key: String
+    public let label: String
+    public let value: String
+    public static func lines(_ terms: [String: JSONValue]) -> [TermLine] {
+        terms.keys.sorted().map { key in
+            let words = key.replacingOccurrences(of: "_", with: " ")
+            return TermLine(key: key, label: words.prefix(1).uppercased() + words.dropFirst(), value: text(terms[key] ?? .null))
+        }
+    }
+    private static func text(_ value: JSONValue) -> String {
+        switch value {
+        case .string(let v): v.isEmpty ? "–" : v
+        case .number(let v): v == v.rounded() ? String(Int(v)) : String(v)
+        case .bool(let v): v ? "true" : "false"
+        case .null: "–"
+        case .array(let items): items.isEmpty ? "–" : items.map(text).joined(separator: ", ")
+        case .object(let fields): fields.isEmpty ? "–" : fields.keys.sorted().map { "\($0): \(text(fields[$0] ?? .null))" }.joined(separator: "; ")
+        }
     }
 }

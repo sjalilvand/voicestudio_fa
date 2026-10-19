@@ -6,6 +6,8 @@ import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import okio.Buffer
 import org.junit.Assert.*
 import org.junit.Rule
@@ -125,5 +127,27 @@ class LocalPolicyTest {
         control.progress(.5f);assertEquals(listOf(.5f),values);job.cancel();assertTrue(control.cancelled());control.progress(1f);assertEquals(1,values.size)
         val output=File(temporary.root,"result.wav");markSynthetic(LocalAudio(floatArrayOf(.1f,.2f,-.5f),24000),output)
         val bytes=output.readBytes();assertEquals("RIFF",bytes.copyOfRange(0,4).toString(Charsets.US_ASCII));assertTrue(bytes.toString(Charsets.US_ASCII).contains("VoiceStudio synthetic audio"))
+    }
+
+    @Test fun licenceReviewSummarisesTermsAndKeepsOnlyHttpsLinks() {
+        fun licence(vararg terms: Pair<String, String>) = ModelLicence("x", "conditional", true, "c", "r", "f", JsonObject(terms.associate { it.first to JsonPrimitive(it.second) }))
+        val review = licence("commercial_inference" to "restricted", "notes" to "  GPL data.  ", "evidence_url" to "https://huggingface.co/x/LICENSE", "source_url" to "http://insecure.example/m").review
+        assertEquals(listOf("commercial", "outputs", "redistribution", "voice"), review.rights.map { it.first })
+        assertEquals(listOf("restricted", "unknown", "unknown", "unknown"), review.rights.map { it.second })
+        assertEquals("GPL data.", review.notes)
+        assertEquals("https://huggingface.co/x/LICENSE", review.evidenceUrl)
+        assertNull(review.sourceUrl)
+        val blank = licence("commercial_inference" to "allowed-ish", "notes" to "  ", "evidence_url" to "https://u@evil.example/x").review
+        assertTrue(blank.rights.all { it.second == "unknown" }); assertNull(blank.notes); assertNull(blank.evidenceUrl)
+    }
+
+    @Test fun termLinesCoverEveryDeclaredKeyReadably() {
+        val terms = JsonObject(mapOf("evidence_revision" to JsonPrimitive("abc"), "variants" to kotlinx.serialization.json.JsonArray(emptyList()),
+            "nested" to JsonObject(mapOf("a" to JsonPrimitive("x")))))
+        val lines = ModelLicence("x", "conditional", true, "c", "r", "f", terms).termLines
+        assertEquals(setOf("evidence_revision", "variants", "nested"), lines.map { it.key }.toSet())
+        assertEquals("Evidence revision", lines.first { it.key == "evidence_revision" }.label)
+        assertEquals("–", lines.first { it.key == "variants" }.value)
+        assertEquals("a: x", lines.first { it.key == "nested" }.value)
     }
 }

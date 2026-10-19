@@ -81,18 +81,39 @@ import com.voicestudio.mobile.local.*
     var saving by remember(model.id) {mutableStateOf(false)}
     ModalBottomSheet(containerColor=role("surfaceOverlay"),onDismissRequest={if(!saving) onDismiss()}) {
         Column(Modifier.fillMaxWidth().heightIn(max=(LocalConfiguration.current.screenHeightDp*.65f).dp).padding(VSTheme.inset).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
-            Text(model.name)
-            Text(model.languages.joinToString(", "))
-            Text(tr("mobile.local.storage_used",mapOf("size" to Formatter.formatFileSize(context,state.storage[model.id] ?: 0))))
-            Text(tr("mobile.local.licence_label",mapOf("licence" to model.licence.id,"category" to model.licence.category)))
-            Text(model.licence.credit);Text(model.licence.rightsHolder)
-            androidx.compose.foundation.text.selection.SelectionContainer {
-                val disclosure=remember(model.licence.terms) {kotlinx.serialization.json.Json {prettyPrint=true}.encodeToString(kotlinx.serialization.json.JsonObject.serializer(),model.licence.terms)}
-                Text(disclosure)
+            val review=model.licence.review
+            val uri=androidx.compose.ui.platform.LocalUriHandler.current
+            var showTerms by remember(model.id) {mutableStateOf(false)}
+            Text(model.name,style=MaterialTheme.typography.titleLarge)
+            Text(tr("mobile.local.category."+model.licence.category),style=MaterialTheme.typography.titleSmall,color=role(if(model.licence.category=="commercial-ok") "text" else "textMuted"))
+            review.rights.forEach {(key,status) ->
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+                    Text(tr("mobile.local.right_"+key))
+                    Text(tr("mobile.local.right_"+status),color=role(if(status=="restricted") "error" else "textMuted"))
+                }
             }
-            Text(tr("mobile.local.terms_fingerprint",mapOf("fingerprint" to model.licence.termsFingerprint)))
-            state.receipts[model.id].orEmpty().asReversed().forEach {receipt ->
-                Text(tr("mobile.local.receipt",mapOf("action" to tr(if(receipt.accepted) "mobile.local.accepted" else "mobile.local.not_accepted"),"time" to java.text.DateFormat.getDateTimeInstance().format(java.util.Date(receipt.time)),"version" to receipt.appVersion,"fingerprint" to receipt.fingerprint)))
+            review.notes?.let {Text(it,style=MaterialTheme.typography.bodyMedium)}
+            if(model.licence.credit.isNotEmpty()) Text(model.licence.credit,style=MaterialTheme.typography.bodySmall,color=role("textMuted"))
+            review.evidenceUrl?.let {url -> TextButton(onClick={uri.openUri(url)}) {Text(tr("mobile.local.licence_view"))}}
+            review.sourceUrl?.let {url -> TextButton(onClick={uri.openUri(url)}) {Text(tr("mobile.local.licence_source"))}}
+            Secondary("mobile.local.exact_terms") {showTerms=!showTerms}
+            if(showTerms) {
+                Text(model.languages.joinToString(", "))
+                Text(tr("mobile.local.storage_used",mapOf("size" to Formatter.formatFileSize(context,state.storage[model.id] ?: 0))))
+                Text(tr("mobile.local.licence_label",mapOf("licence" to model.licence.id,"category" to model.licence.category)))
+                if(model.licence.rightsHolder!=model.licence.credit) Text(model.licence.rightsHolder)
+                androidx.compose.foundation.text.selection.SelectionContainer {
+                    Column(verticalArrangement=Arrangement.spacedBy(VSTheme.gap / 2)) {
+                        model.licence.termLines.forEach {line ->
+                            Text(line.label,style=MaterialTheme.typography.labelSmall,color=role("textMuted"))
+                            Text(line.value,style=MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+                Text(tr("mobile.local.terms_fingerprint",mapOf("fingerprint" to model.licence.termsFingerprint)),style=MaterialTheme.typography.bodySmall)
+                state.receipts[model.id].orEmpty().asReversed().forEach {receipt ->
+                    Text(tr("mobile.local.receipt",mapOf("action" to tr(if(receipt.accepted) "mobile.local.accepted" else "mobile.local.not_accepted"),"time" to java.text.DateFormat.getDateTimeInstance().format(java.util.Date(receipt.time)),"version" to receipt.appVersion,"fingerprint" to receipt.fingerprint)),style=MaterialTheme.typography.bodySmall)
+                }
             }
             Text(tr("mobile.local.licensor_notice"))
             if(!installed&&!downloading&&(state.storage[model.id] ?: 0)>0) Secondary("common.delete") {vm.phone.delete(model);onDismiss()}

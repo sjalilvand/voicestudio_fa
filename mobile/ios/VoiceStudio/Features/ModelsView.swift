@@ -56,29 +56,53 @@ struct ModelLicenceSheet: View {
     var onAccepted: () -> Void = {}
     @State private var checked = false
     @State private var saving = false
+    private static let rightIcons = ["commercial": "briefcase", "outputs": "waveform", "redistribution": "square.and.arrow.up", "voice": "person.wave.2"]
+    private static let categoryIcons = ["commercial-ok": "checkmark.seal", "conditional": "exclamationmark.circle", "non-commercial": "nosign"]
     var body: some View {
         let canAccept = checked && !saving
+        let review = item.licence.review
         NavigationStack {
             Form {
                 Section {
-                    Label {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(item.name).font(.title2.weight(.semibold))
-                            Text(model.t("mobile.simple." + item.capability.rawValue)).font(.subheadline).foregroundStyle(theme.color("textMuted"))
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(item.name).font(.title2.weight(.semibold))
+                        Label(model.t("mobile.local.category." + item.licence.category), systemImage: Self.categoryIcons[item.licence.category] ?? "questionmark.circle")
+                            .font(.subheadline).foregroundStyle(theme.color(item.licence.category == "commercial-ok" ? "text" : "textMuted"))
+                    }
+                }.listRowBackground(theme.color("surface"))
+                Section {
+                    ForEach(review.rights, id: \.key) { right in
+                        LabeledContent {
+                            Text(model.t("mobile.local.right_" + right.status))
+                                .foregroundStyle(theme.color(right.status == "restricted" ? "error" : "textMuted"))
+                        } label: { Label(model.t("mobile.local.right_" + right.key), systemImage: Self.rightIcons[right.key] ?? "circle") }
+                    }
+                }.listRowBackground(theme.color("surface"))
+                if review.notes != nil || !item.licence.credit.isEmpty {
+                    Section {
+                        if let notes = review.notes { Text(notes).font(.subheadline).fixedSize(horizontal: false, vertical: true).textSelection(.enabled) }
+                    } footer: { if !item.licence.credit.isEmpty { Text(item.licence.credit).font(.footnote).foregroundStyle(theme.color("textMuted")) } }
+                    .listRowBackground(theme.color("surface"))
+                }
+                if review.evidenceURL != nil || review.sourceURL != nil {
+                    Section {
+                        if let url = review.evidenceURL { Link(destination: url) { Label(model.t("mobile.local.licence_view"), systemImage: "doc.text") } }
+                        if let url = review.sourceURL { Link(destination: url) { Label(model.t("mobile.local.licence_source"), systemImage: "link") } }
+                    }.listRowBackground(theme.color("surface"))
+                }
+                Section {
+                    DisclosureGroup(model.t("mobile.local.exact_terms")) {
+                        ForEach(item.licence.termLines, id: \.key) { line in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(line.label).font(.caption).foregroundStyle(theme.color("textMuted"))
+                                Text(line.value).font(.footnote).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                            }.accessibilityElement(children: .combine)
                         }
-                    } icon: { Image(systemName: "waveform").font(.title2).foregroundStyle(theme.color("messageAction")) }
-                    Text(model.t("mobile.local.licence_label", ["licence": item.licence.id, "category": item.licence.category])).font(.subheadline)
-                    if !item.licence.rights_holder.isEmpty { Text(item.licence.rights_holder).font(.subheadline) }
-                }.listRowBackground(theme.color("surface"))
-                Section {
-                    if let terms = item.licence.disclosure { Text(terms).textSelection(.enabled).fixedSize(horizontal: false, vertical: true) }
-                    if !item.licence.credit.isEmpty { Text(item.licence.credit).font(.footnote).foregroundStyle(theme.color("textMuted")) }
-                }.listRowBackground(theme.color("surface"))
-                Section {
-                    DisclosureGroup(model.t("mobile.simple.more")) {
+                        Text(model.t("mobile.local.licence_label", ["licence": item.licence.id, "category": item.licence.category])).font(.footnote)
+                        if !item.licence.rights_holder.isEmpty && item.licence.rights_holder != item.licence.credit { Text(item.licence.rights_holder).font(.footnote) }
                         Text(model.t("mobile.local.terms_fingerprint", ["fingerprint": item.licence.terms_fingerprint])).font(.footnote.monospaced()).textSelection(.enabled)
-                        Text(ListFormatter.localizedString(byJoining: item.languages.map { Locale(identifier: model.l10n.locale).localizedString(forLanguageCode: $0) ?? $0 })).font(.subheadline)
-                        Text(model.t("mobile.local.storage_used", ["size": ByteCountFormatter.string(fromByteCount: model.phone.modelBytes[item.id] ?? 0, countStyle: .file)]))
+                        Text(ListFormatter.localizedString(byJoining: item.languages.map { Locale(identifier: model.l10n.locale).localizedString(forLanguageCode: $0) ?? $0 })).font(.footnote)
+                        Text(model.t("mobile.local.storage_used", ["size": ByteCountFormatter.string(fromByteCount: model.phone.modelBytes[item.id] ?? 0, countStyle: .file)])).font(.footnote)
                     }
                 }.listRowBackground(theme.color("surface"))
                 if model.phone.progress[item.id] == nil && (model.phone.modelBytes[item.id] ?? 0) > 0 && !model.phone.installed.contains(item.id) {

@@ -281,7 +281,22 @@
       "computer_feature": "This feature currently runs on your computer. You can use Speak and Dictate on this phone without pairing.",
       "accepted": "Licence accepted",
       "not_accepted": "Licence not accepted",
-      "receipt": "{{action}} · {{time}} · App {{version}} · Terms {{fingerprint}}"
+      "receipt": "{{action}} · {{time}} · App {{version}} · Terms {{fingerprint}}",
+      "category": {
+        "commercial-ok": "Commercial use allowed",
+        "conditional": "Conditions apply",
+        "non-commercial": "Non-commercial use only",
+        "unidentified": "Licence not identified"
+      },
+      "right_commercial": "Commercial use",
+      "right_outputs": "Generated audio",
+      "right_redistribution": "Sharing the model",
+      "right_voice": "Voice rights",
+      "right_unknown": "Not stated",
+      "right_restricted": "Restricted",
+      "licence_view": "View licence",
+      "licence_source": "Model source",
+      "exact_terms": "Exact terms"
     },
     "simple": {
       "phone": "Phone",

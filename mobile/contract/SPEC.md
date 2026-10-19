@@ -52,8 +52,12 @@ no accounts. M1 (below) is the computer connection; M2 is on-device inference.
   generated `iosHomeWordmarkSize` (28 points), scaling with Dynamic Type;
   Android retains its generated shapes. These presentation differences preserve
   the same capabilities and consent gates on both platforms.
-- iOS licence review is a large, scrollable sheet with a leading Close action,
-  readable exact terms, collapsed technical metadata, an initially unchecked
+- Licence review (both platforms) leads with a plain summary: the licence
+  category, four rights rows (commercial use, generated audio, sharing, voice
+  rights; each "Restricted" or "Not stated"), the licensor's notes, the credit
+  and tappable https licence/source links. The raw terms, fingerprint, licence
+  code and receipts sit under a collapsed "Exact terms" section. iOS shows it as a
+  large, scrollable sheet with a leading Close action, an initially unchecked
   confirmation and a persistent Accept action disabled until confirmation. Closing
   never records acceptance or starts a download. On both platforms, multi-selection
   sheets/dialogs edit a draft; Cancel/dismiss discards it and Confirm applies it.

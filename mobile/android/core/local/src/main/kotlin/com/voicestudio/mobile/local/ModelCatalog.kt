@@ -10,6 +10,29 @@ import java.io.File
     @SerialName("requires_acceptance") val requiresAcceptance: Boolean,
     val credit: String, @SerialName("rights_holder") val rightsHolder: String,
     @SerialName("terms_fingerprint") val termsFingerprint: String, val terms: JsonObject = JsonObject(emptyMap()))
+/** Plain-language reading of declared terms; the raw terms and fingerprint remain the accepted record. */
+data class LicenceReview(val rights: List<Pair<String, String>>, val notes: String?, val evidenceUrl: String?, val sourceUrl: String?)
+/** One declared term as label and value; every key of `terms` appears, matching what the fingerprint covers. */
+data class TermLine(val key: String, val label: String, val value: String)
+val ModelLicence.termLines: List<TermLine> get() {
+    fun text(value: JsonElement): String = when (value) {
+        is JsonNull -> "–"
+        is JsonPrimitive -> value.content.ifEmpty { "–" }
+        is JsonArray -> if (value.isEmpty()) "–" else value.joinToString(", ") { text(it) }
+        is JsonObject -> if (value.isEmpty()) "–" else value.keys.sorted().joinToString("; ") { "$it: ${text(value.getValue(it))}" }
+    }
+    return terms.keys.sorted().map { key -> TermLine(key, key.replace('_', ' ').replaceFirstChar { it.uppercase() }, text(terms.getValue(key))) }
+}
+val ModelLicence.review: LicenceReview get() {
+    fun text(key: String) = (terms[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
+    // Only plain https links are tappable.
+    fun link(key: String) = text(key)?.takeIf { value ->
+        runCatching { java.net.URI(value) }.getOrNull()?.let { it.scheme == "https" && !it.host.isNullOrEmpty() && it.userInfo == null } == true
+    }
+    val fields = listOf("commercial" to "commercial_inference", "outputs" to "commercial_outputs", "redistribution" to "redistribution", "voice" to "voice_rights")
+    return LicenceReview(fields.map { (key, field) -> key to if (text(field) == "restricted") "restricted" else "unknown" },
+        text("notes")?.trim()?.takeIf { it.isNotEmpty() }, link("evidence_url"), link("source_url"))
+}
 @Serializable data class PhoneModel(val id: String, val capability: String, val runtime: String, val repo: String, val revision: String,
     val files: List<ModelFile>, @SerialName("total_bytes") val totalBytes: Long, val languages: List<String>,
     @SerialName("min_ram_gb") val minRamGb: Double, val licence: ModelLicence, val config: JsonObject = JsonObject(emptyMap()), val name: String = "") {
