@@ -83,15 +83,41 @@ struct SpeakView: View {
             }
         }
     }
+    private var speakerOptions: [SelectionOption] {
+        let count = min(128, Int(phoneModel?.config["num_speakers"]?.number ?? 1))
+        let presets: [SelectionOption] = (0..<count).map { index in
+            SelectionOption(id: String(index), title: model.t("mobile.local.preset_voice", ["number": String(index + 1)]))
+        }
+        let saved: [SelectionOption] = model.phone.voices.map { SelectionOption(id: "phone:" + $0.id.uuidString, title: $0.name) }
+        return presets + saved
+    }
+    private var phoneModelBinding: Binding<String> {
+        Binding(get: { phoneModel?.id ?? "" }, set: { id in
+            phoneModelID = id
+            model.phone.chooseModel("speak-" + capability.rawValue, id)
+        })
+    }
+    private var modelOptions: [SelectionOption] {
+        model.phone.candidates(capability).map { item in
+            SelectionOption(id: item.id, title: item.name, subtitle: model.t("mobile.simple." + item.capability.rawValue), enabled: item.fits())
+        }
+    }
+    private var languageOptions: [SelectionOption] {
+        if phoneVoice != nil { return [SelectionOption(id: "auto", title: model.t("mobile.ios.language_auto"))] }
+        let locale = Locale(identifier: model.l10n.locale)
+        return (phoneModel?.languages ?? []).map { code in
+            SelectionOption(id: code, title: locale.localizedString(forLanguageCode: code) ?? code)
+        }
+    }
     private var speechOptions: some View {
         Card {
             if route != .computer {
                 VStack(alignment: .leading, spacing: 0) {
-                    ChoicePicker(label: model.t("mobile.speak.voice"), selection: $speakerID, options: (0..<min(128,Int(phoneModel?.config["num_speakers"]?.number ?? 1))).map { SelectionOption(id: String($0), title: model.t("mobile.local.preset_voice", ["number": String($0 + 1)])) } + model.phone.voices.map { SelectionOption(id: "phone:"+$0.id.uuidString,title: $0.name) }, compact: false)
+                    ChoicePicker(label: model.t("mobile.speak.voice"), selection: $speakerID, options: speakerOptions, compact: false)
                 Divider().overlay(theme.color("border"))
-                    ChoicePicker(label: model.t("mobile.local.models"), selection: Binding(get: { phoneModel?.id ?? "" }, set: { phoneModelID = $0; model.phone.chooseModel("speak-"+capability.rawValue,$0) }), options: model.phone.candidates(capability).map { SelectionOption(id: $0.id, title: $0.name, subtitle: model.t("mobile.simple." + $0.capability.rawValue), enabled: $0.fits()) }, compact: false)
+                    ChoicePicker(label: model.t("mobile.local.models"), selection: phoneModelBinding, options: modelOptions, compact: false)
                 Divider().overlay(theme.color("border"))
-                    ChoicePicker(label: model.t("mobile.speak.language"), selection: $phoneLanguage, options: phoneVoice == nil ? (phoneModel?.languages ?? []).map { SelectionOption(id: $0, title: Locale(identifier: model.l10n.locale).localizedString(forLanguageCode: $0) ?? $0) } : [SelectionOption(id: "auto",title: model.t("mobile.ios.language_auto"))], compact: false)
+                    ChoicePicker(label: model.t("mobile.speak.language"), selection: $phoneLanguage, options: languageOptions, compact: false)
 
                 }.disabled(generating)
             } else {
