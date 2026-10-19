@@ -13,7 +13,7 @@ final class PhoneScreens: XCTestCase {
         app.tabButton("Voices").tap(); app.buttons["voices.create"].tap()
         XCTAssertTrue(app.buttons["models.get"].waitForExistence(timeout: 5)); app.buttons["Cancel"].tap()
         app.tabButton("Dub").tap()
-        XCTAssertTrue(app.staticTexts["1 Source"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Choose video or audio"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.textFields["dub.source_url"].exists)
     }
     @MainActor func testChangingSpeechModelResetsUnavailablePreset() {
@@ -37,14 +37,17 @@ final class PhoneScreens: XCTestCase {
         XCTAssertFalse(app.buttons["Create clone"].isEnabled)
         XCTAssertFalse(app.staticTexts["This task currently runs on your paired computer."].exists)
     }
-    @MainActor func testUnpairedDubHasSourceLanguagesAndVoiceSteps() {
+    @MainActor func testUnpairedDubKeepsSetupVisibleAndRequiresInput() {
         let app = launch(); app.tabButton("Dub").tap()
-        for step in ["1 Source","2 Languages","3 Voice"] { XCTAssertTrue(app.staticTexts[step].waitForExistence(timeout: 5)) }
-        XCTAssertTrue(app.buttons["Choose video or audio"].exists)
-        XCTAssertTrue(app.buttons["dub.languages"].exists)
+        XCTAssertTrue(app.buttons["Choose video or audio"].waitForExistence(timeout: 5))
+        for label in ["Choose video or audio", "dub.languages", "Voice", "models.get"] {
+            XCTAssertTrue(app.buttons[label].isHittable, label)
+        }
+        XCTAssertTrue(app.switches["I have permission"].isHittable)
+        XCTAssertGreaterThanOrEqual(app.buttons["models.get"].frame.height, 44)
         XCTAssertFalse(app.buttons["dub.start"].isEnabled)
+        XCTAssertLessThan(app.buttons["dub.start"].frame.height, 72)
         XCTAssertFalse(app.textFields["dub.source_url"].exists)
-        XCTAssertTrue(app.staticTexts["No dubs"].exists)
     }
     @MainActor func testModelsTermsRequireExplicitUncheckedConsent() {
         let app = launch(); app.tabButton("Settings").tap(); app.buttons["Models"].tap()

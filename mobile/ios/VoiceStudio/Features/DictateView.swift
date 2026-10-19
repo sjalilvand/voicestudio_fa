@@ -24,9 +24,8 @@ struct DictateView: View {
     @State private var audio = DictationAudio()
     @State private var stream = DictationStream()
     var body: some View {
-        Page {
+        Page(fill: true) {
             RunOnPicker(preference: $preference, task: "dictate", installed: localReady).disabled(listening || finalizing)
-            if route == .download { LocalDownloadPrompt(items: phoneModel.map { [$0] } ?? [], feature: "mobile.tabs.dictate") }
             if route == .connect { NavigationLink(model.t("mobile.settings.connection")) { ConnectView() } }
             if checking { ProgressView(model.t("common.loading")) }
             else if !ready && route == .computer {
@@ -34,11 +33,13 @@ struct DictateView: View {
                 Button(model.t("mobile.simple.retry")) { Task { await readiness() } }
             }
             if text.isEmpty {
+                Spacer(minLength: 0)
                 ContentUnavailableView {
-                    Label(model.t("mobile.tabs.dictate"), systemImage: "waveform")
+                    Label(model.t("mobile.ios.transcript"), systemImage: "waveform")
                 } description: {
                     Text(model.t("mobile.dictate.tap_to_start"))
-                }.frame(minHeight: 240)
+                }
+                Spacer(minLength: 0)
             } else {
                 Text(text).font(.title3).frame(maxWidth: .infinity, minHeight: 240, alignment: .topLeading)
                     .textSelection(.enabled).accessibilityLabel(model.t("mobile.ios.transcript"))
@@ -46,15 +47,20 @@ struct DictateView: View {
         }.studioNavigationTitle(model.t("mobile.tabs.dictate"))
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: VSTokens.spacingGap) {
-                recordControl
-            HStack(spacing: VSTokens.spacingGap) {
-                Button(model.t("mobile.dictate.copy"), systemImage: "doc.on.doc") { UIPasteboard.general.string = text }
-                    .accessibilityIdentifier("dictate.copy")
-                ShareLink(item: text) { Label(model.t("mobile.speak.share"), systemImage: "square.and.arrow.up") }
-                    .accessibilityIdentifier("dictate.share")
-            }.labelStyle(.iconOnly).studioButton(.tertiary).disabled(text.isEmpty)
-                .frame(maxWidth: .infinity).padding(Theme.compactInset).background(.bar)
-            }
+                if route == .download {
+                    LocalDownloadPrompt(items: phoneModel.map { [$0] } ?? [], feature: "mobile.tabs.dictate")
+                        .padding(.horizontal, Theme.compactInset)
+                }
+                HStack(spacing: VSTokens.spacingGap) {
+                    Button(model.t("mobile.dictate.copy"), systemImage: "doc.on.doc") { UIPasteboard.general.string = text }
+                        .labelStyle(.iconOnly).studioButton(.tertiary).disabled(text.isEmpty)
+                        .frame(maxWidth: .infinity).accessibilityIdentifier("dictate.copy")
+                    recordControl
+                    ShareLink(item: text) { Label(model.t("mobile.speak.share"), systemImage: "square.and.arrow.up") }
+                        .labelStyle(.iconOnly).studioButton(.tertiary).disabled(text.isEmpty)
+                        .frame(maxWidth: .infinity).accessibilityIdentifier("dictate.share")
+                }.padding(.horizontal, Theme.compactInset).padding(.vertical, VSTokens.spacingGap / 2)
+            }.background(.bar)
         }
         .task { preference = model.phone.preference("dictate"); await model.phone.refresh(); await readiness() }
         .onChange(of: preference) { _, _ in Task { await readiness() } }

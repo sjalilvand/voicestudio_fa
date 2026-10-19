@@ -54,12 +54,16 @@ extension View {
 private struct StudioLeadingTitle: ToolbarContent {
     let title: String
     @ToolbarContentBuilder var body: some ToolbarContent {
+        #if compiler(>=6.2)
         if #available(iOS 26.0, *) {
             ToolbarItem(placement: .topBarLeading) { label }
                 .sharedBackgroundVisibility(.hidden)
         } else {
             ToolbarItem(placement: .topBarLeading) { label }
         }
+        #else
+        ToolbarItem(placement: .topBarLeading) { label }
+        #endif
     }
     private var label: some View {
         Text(title).font(.headline).fixedSize(horizontal: true, vertical: false)
@@ -79,16 +83,22 @@ struct Page<Content: View>: View {
     @Environment(AppModel.self) private var model
     let content: Content
     let backgroundRole: String
-    init(backgroundRole: String = "canvas", @ViewBuilder content: () -> Content) { self.backgroundRole = backgroundRole; self.content = content() }
+    let fill: Bool
+    init(backgroundRole: String = "canvas", fill: Bool = false, @ViewBuilder content: () -> Content) {
+        self.backgroundRole = backgroundRole; self.fill = fill; self.content = content()
+    }
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: VSTokens.spacingGap) {
-                if model.loading {
-                    ProgressView(model.t("common.loading")).frame(minHeight: 44).accessibilityIdentifier("page.loading")
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(alignment: .leading, spacing: VSTokens.spacingGap) {
+                    if model.loading {
+                        ProgressView(model.t("common.loading")).frame(minHeight: 44).accessibilityIdentifier("page.loading")
+                    }
+                    content
                 }
-                content
+                .frame(minHeight: fill ? max(0, geometry.size.height - Theme.compactInset * 2) : nil)
+                    .padding(Theme.compactInset).frame(maxWidth: .infinity, alignment: .leading)
             }
-                .padding(Theme.compactInset).frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(theme.color(backgroundRole).ignoresSafeArea())
@@ -210,7 +220,11 @@ struct ConsentView: View {
 
 private struct StudioTabBehavior: ViewModifier {
     @ViewBuilder func body(content: Content) -> some View {
+        #if compiler(>=6.2)
         if #available(iOS 26.0, *) { content.tabBarMinimizeBehavior(.onScrollDown) }
         else { content }
+        #else
+        content
+        #endif
     }
 }

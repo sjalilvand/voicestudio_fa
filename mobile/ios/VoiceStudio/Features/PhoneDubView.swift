@@ -27,74 +27,76 @@ struct PhoneDubView: View {
     var body: some View {
         Page {
             if projectID == nil && !libraryOnly {
-            if connect { NavigationLink(model.t("mobile.simple.reconnect")) { ConnectView() } }
-            Label(model.t("mobile.simple.source"),systemImage: "doc")
-            Button(model.t("mobile.dub.pick_media"),systemImage: "doc.badge.plus") { importing = true }.disabled(copying)
-            if let source { SelectedFileRow(name: source.name) { self.source = nil } }
-            Label(model.t("mobile.simple.languages"),systemImage: "globe")
-            Button { languages = true } label: {
-                HStack(spacing: VSTokens.spacingGap) {
-                    Image(systemName: "globe").accessibilityHidden(true)
-                    SelectionRow(label: model.t("mobile.dub.target_languages"),value: ListFormatter.localizedString(byJoining: choices.filter { targets.contains($0.code) }.map(\.name)))
-                }
-            }.studioButton(.tertiary).accessibilityIdentifier("dub.languages")
-            ScrollView(.horizontal) {
-                HStack { ForEach(choices.filter { targets.contains($0.code) }) { language in
-                    Button(language.name,systemImage: "xmark") { targets.remove(language.code) }.accessibilityLabel(model.t("mobile.dub.remove_language",["language": language.name]))
-                } }
-            }
-            Label(model.t("mobile.simple.voice"),systemImage: "person")
-            ChoicePicker(label: model.t("mobile.speak.voice"),selection: $voice,options: [SelectionOption(id: "",title: model.t("mobile.simple.reference"))]+model.phone.voices.map { SelectionOption(id: $0.id.uuidString,title: $0.name) },compact: true)
-            HStack {
-                Toggle(model.t("mobile.simple.voice_consent"),isOn: $consent).frame(minHeight: 44)
-                InfoButton(title: model.t("mobile.voices.consent_title"),detail: model.t("mobile.voices.consent_body"))
-            }
-            DisclosureGroup(model.t("mobile.simple.more")) {
-                Toggle(model.t("mobile.simple.audio_only"),isOn: $audioOnly).frame(minHeight: 44)
-                phoneModel("dub-asr",.asr)
-                phoneModel("dub-translate",.translate)
-                phoneModel("dub",.clone)
-            }.disabled(copying || model.phone.activeDub != nil)
-            LocalDownloadPrompt(items: model.phone.dubModels, feature: "mobile.tabs.dub")
-            Button(model.t("mobile.simple.dub"),systemImage: "film") { start() }.studioButton(.primary)
-                .disabled(!ready || !consent || source == nil || targets.isEmpty || model.busy || copying || model.phone.activeDub != nil)
-                .accessibilityIdentifier("dub.start")
-            if copying { ProgressView().accessibilityLabel(model.t("mobile.ios.progress")) }
-            }
-            ForEach(records.filter { !$0.checkpoint.done }) { record in
-                Card {
-                    Text(record.request.title).lineLimit(1)
-                    let progress = model.phone.activeDub == record.id ? model.phone.dubProgress : nil
-                    let percent = progress?.percent ?? record.checkpoint.percent
+                if connect { NavigationLink(model.t("mobile.simple.reconnect")) { ConnectView() } }
+                DubSourceButton { importing = true }.disabled(copying)
+                if let source { SelectedFileRow(name: source.name) { self.source = nil } }
+                DubSetupCard {
+                    Button { languages = true } label: {
+                        SelectionRow(label: model.t("mobile.dub.target_languages"), value: ListFormatter.localizedString(byJoining: choices.filter { targets.contains($0.code) }.map(\.name)))
+                    }.studioButton(.tertiary).accessibilityIdentifier("dub.languages")
+                    Divider()
+                    ChoicePicker(label: model.t("mobile.speak.voice"), selection: $voice, options: [SelectionOption(id: "", title: model.t("mobile.simple.reference"))] + model.phone.voices.map { SelectionOption(id: $0.id.uuidString, title: $0.name) })
+                    Divider()
                     HStack {
-                        Text(model.t(progress?.stage ?? record.checkpoint.stage)).frame(maxWidth: .infinity,alignment: .leading)
-                        Text(model.t("mobile.simple.percent",["percent": String(percent)]))
+                        Toggle(model.t("mobile.simple.voice_consent"), isOn: $consent).font(.subheadline).frame(minHeight: 44)
+                        InfoButton(title: model.t("mobile.voices.consent_title"), detail: model.t("mobile.voices.consent_body"))
                     }
-                    ProgressView(value: Double(percent)/100).accessibilityLabel(model.t("mobile.ios.progress"))
-                    if model.phone.activeDub == record.id {
-                        Button(model.t("common.cancel"),systemImage: "xmark") { model.phone.cancelDub() }
-                    } else {
-                        HStack {
-                            Button(model.t("mobile.simple.resume"),systemImage: "play.fill") { model.phone.startDub(record.id) }.disabled(model.phone.activeDub != nil || model.busy)
-                            Button(model.t("mobile.simple.remove_job"),systemImage: "trash",role: .destructive) { remove(record) }.labelStyle(.iconOnly)
+                }
+                DisclosureGroup(model.t("mobile.simple.more")) {
+                    Toggle(model.t("mobile.simple.audio_only"), isOn: $audioOnly).frame(minHeight: 44)
+                    phoneModel("dub-asr", .asr)
+                    phoneModel("dub-translate", .translate)
+                    phoneModel("dub", .clone)
+                }.padding(.horizontal, Theme.compactInset)
+                    .disabled(copying || model.phone.activeDub != nil)
+                if !ready { LocalDownloadPrompt(items: model.phone.dubModels, feature: "mobile.tabs.dub", compact: true) }
+                if copying { ProgressView().accessibilityLabel(model.t("mobile.ios.progress")) }
+            }
+            if !records.isEmpty || libraryOnly || projectID != nil {
+                Text(model.t("mobile.dub.history")).font(.headline)
+                Group {
+                    ForEach(records.filter { !$0.checkpoint.done }) { record in
+                        Card {
+                            Text(record.request.title).lineLimit(1)
+                            let progress = model.phone.activeDub == record.id ? model.phone.dubProgress : nil
+                            let percent = progress?.percent ?? record.checkpoint.percent
+                            HStack {
+                                Text(model.t(progress?.stage ?? record.checkpoint.stage)).frame(maxWidth: .infinity,alignment: .leading)
+                                Text(model.t("mobile.simple.percent",["percent": String(percent)]))
+                            }
+                            ProgressView(value: Double(percent)/100).accessibilityLabel(model.t("mobile.ios.progress"))
+                            if model.phone.activeDub == record.id {
+                                Button(model.t("common.cancel"),systemImage: "xmark") { model.phone.cancelDub() }
+                            } else {
+                                HStack {
+                                    Button(model.t("mobile.simple.resume"),systemImage: "play.fill") { model.phone.startDub(record.id) }.disabled(model.phone.activeDub != nil || model.busy)
+                                    Button(model.t("mobile.simple.remove_job"),systemImage: "trash",role: .destructive) { remove(record) }.labelStyle(.iconOnly)
+                                }
+                            }
+                        }
+                    }
+                    if records.isEmpty { EmptyState(key: "mobile.simple.empty_dubs",icon: "film") }
+                    ForEach(records) { record in
+                        ForEach(record.checkpoint.outputs) { output in
+                            HStack {
+                                VStack(alignment: .leading) { Text(record.request.title).lineLimit(1); Text(output.name).font(.caption).foregroundStyle(theme.color("textMuted")) }.frame(maxWidth: .infinity,alignment: .leading)
+                                Button(model.t("common.play"),systemImage: "play.fill") { open(record,output,action: .play) }
+                                Button(model.t("mobile.speak.share"),systemImage: "square.and.arrow.up") { open(record,output,action: .share) }
+                                Button(model.t("common.save"),systemImage: "arrow.down.to.line") { open(record,output,action: .save) }
+                                if record.checkpoint.done { Button(model.t("mobile.simple.remove_job"),systemImage: "trash",role: .destructive) { remove(record) } }
+                            }.labelStyle(.iconOnly).studioButton(.tertiary)
                         }
                     }
                 }
             }
-            Text(model.t("mobile.dub.history"))
-            if records.allSatisfy({ $0.checkpoint.outputs.isEmpty }) { EmptyState(key: "mobile.simple.empty_dubs",icon: "film") }
-            ForEach(records) { record in
-                ForEach(record.checkpoint.outputs) { output in
-                    HStack {
-                        VStack(alignment: .leading) { Text(record.request.title).lineLimit(1); Text(output.name).font(.caption).foregroundStyle(theme.color("textMuted")) }.frame(maxWidth: .infinity,alignment: .leading)
-                        Button(model.t("common.play"),systemImage: "play.fill") { open(record,output,action: .play) }
-                        Button(model.t("mobile.speak.share"),systemImage: "square.and.arrow.up") { open(record,output,action: .share) }
-                        Button(model.t("common.save"),systemImage: "arrow.down.to.line") { open(record,output,action: .save) }
-                        if record.checkpoint.done { Button(model.t("mobile.simple.remove_job"),systemImage: "trash",role: .destructive) { remove(record) } }
-                    }.labelStyle(.iconOnly).studioButton(.tertiary)
-                }
+        }
+        .navigationTitle(projectID != nil ? (records.first?.request.title ?? model.t("projects.title")) : model.t(libraryOnly ? "projects.title" : "mobile.tabs.dub")).navigationBarTitleDisplayMode(.inline)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if projectID == nil && !libraryOnly {
+                DubStartButton(action: start)
+                    .disabled(!ready || !consent || source == nil || targets.isEmpty || model.busy || copying || model.phone.activeDub != nil)
             }
-        }.navigationTitle(projectID != nil ? (records.first?.request.title ?? model.t("projects.title")) : model.t(libraryOnly ? "projects.title" : "mobile.tabs.dub")).navigationBarTitleDisplayMode(.inline)
+        }
         .fileImporter(isPresented: $importing,allowedContentTypes: [.movie,.audio]) { result in
             switch result { case .success(let url): source = SelectedMedia(url: url); case .failure: model.error = ClientError("mobile.simple.media_failed") }
         }

@@ -139,6 +139,7 @@ struct ModelDownloadButton: View {
                 queue = ModelDownloadQueue(items); advance()
             }
         }.disabled(items.isEmpty || !items.allSatisfy { $0.fits() })
+            .studioButton(.tertiary)
             .accessibilityIdentifier("models.get")
             .sheet(item: $reviewing, onDismiss: {
                 if continueDownloads { continueDownloads = false; advance() }
@@ -178,8 +179,10 @@ struct RunOnPicker: View {
 }
 struct LocalDownloadPrompt: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.vsTheme) private var theme
     let items: [PhoneModel]
     let feature: String
+    var compact = false
     private var needed: [PhoneModel] { items.filter { !model.phone.ready($0) } }
     private var progress: Double? {
         guard needed.contains(where: { model.phone.progress[$0.id] != nil }) else { return nil }
@@ -195,26 +198,34 @@ struct LocalDownloadPrompt: View {
     }
     var body: some View {
         if !needed.isEmpty {
-            Card {
+            Group {
+                if compact { summary.padding(.horizontal, Theme.compactInset) }
+                else { Card { summary } }
+            }.accessibilityElement(children: .contain).accessibilityIdentifier("models.prompt")
+        }
+    }
+    private var summary: some View {
+        VStack(alignment: .leading, spacing: VSTokens.spacingGap / 2) {
                 HStack(spacing: VSTokens.spacingGap) {
                     NavigationLink { ModelsView() } label: {
                         HStack(spacing: VSTokens.spacingGap) {
                             Image(systemName: "arrow.down.circle").accessibilityHidden(true)
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(title)
                                 if let item = needed.first, needed.count == 1 {
-                                    Text(model.t("mobile.simple." + item.capability.rawValue)).font(.caption)
+                                    Text(item.name).font(.subheadline.weight(.medium))
+                                    Text(size).font(.caption).foregroundStyle(theme.color("textMuted"))
+                                } else {
+                                    Text(title).font(.subheadline.weight(.medium))
                                 }
                             }.frame(maxWidth: .infinity, alignment: .leading)
                         }
-                    }.studioButton(.tertiary).accessibilityIdentifier("models.open")
+                    }.studioButton(.tertiary).accessibilityIdentifier("models.open").accessibilityLabel(title)
                     ModelDownloadButton(items: needed)
                 }
                 if let progress { ProgressView(value: progress).accessibilityLabel(model.t("mobile.local.download")) }
                 if let item = needed.first(where: { !$0.fits() }) {
                     Text(model.t("mobile.simple.ram", ["ram": String(item.min_ram_gb)])).font(.caption)
                 }
-            }.accessibilityElement(children: .contain).accessibilityIdentifier("models.prompt")
         }
     }
 }

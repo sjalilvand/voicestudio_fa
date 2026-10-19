@@ -5,6 +5,12 @@ extension XCUIApplication {
     @MainActor func tabButton(_ label: String) -> XCUIElement {
         let tab = tabBars.buttons[label]
         if tab.exists { return tab }
+        // iOS 26+ collapses the bar after scrolling. Its selected tab expands it.
+        let selected = tabBars.buttons.firstMatch
+        if selected.exists, (selected.value as? String)?.contains("Collapsed") == true {
+            selected.tap()
+            if tab.waitForExistence(timeout: 3) { return tab }
+        }
         let symbols = ["Home": "house", "Voices": "person.wave.2", "Dub": "film", "Dictate": "mic", "Settings": "gearshape"]
         return buttons.matching(NSPredicate(format: "label == %@ AND identifier == %@", label, symbols[label] ?? label)).firstMatch
     }
@@ -23,6 +29,20 @@ extension XCUIApplication {
 }
 
 final class SmokeTests: XCTestCase {
+    @MainActor func testCloneRemembersItsRunLocationAfterDismissal() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-smoke", "-AppleLanguages", "(en)"]
+        app.launch(); connect(app)
+        app.tabButton("Voices").tap(); app.buttons["voices.create"].tap()
+        let phone = app.segmentedControls.buttons["This phone"]
+        XCTAssertTrue(phone.waitForExistence(timeout: 5)); phone.tap()
+        app.buttons["Cancel"].tap()
+        app.buttons["voices.create"].tap()
+        XCTAssertTrue(phone.waitForExistence(timeout: 5))
+        XCTAssertTrue(phone.isSelected)
+        app.buttons["Cancel"].tap()
+    }
+
     @MainActor func testDestructivePhoneHistoryAction() {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-smoke", "--ui-phone-history", "-AppleLanguages", "(en)"]
