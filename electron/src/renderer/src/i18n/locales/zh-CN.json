@@ -22,6 +22,9 @@
     "preset32": "原始",
     "sizeUnknown": "生成后显示文件大小。"
   },
+  "presetVoice": {
+    "label": "预设声音"
+  },
   "audioQuality": {
     "check": "检查音频",
     "failed": "音频分析不可用。",
@@ -2291,6 +2294,10 @@
     "lib_show_all": "显示 {{count}} 个可选模型",
     "env_dir": "应用环境",
     "env_dir_desc": "Python 运行时与 AI 库。",
+    "env_dir_desc_scoped": "Python 运行时、AI 库、模型、你的数据和临时文件。",
+    "storage_data": "数据",
+    "storage_models": "模型",
+    "storage_temp": "临时文件",
     "change": "更改…",
     "reset_default": "恢复默认",
     "region_label": "下载区域"

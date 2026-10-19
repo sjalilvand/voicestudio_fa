@@ -22,6 +22,9 @@
     "preset32": "Original",
     "sizeUnknown": "Size shown after generation."
   },
+  "presetVoice": {
+    "label": "Preset voice"
+  },
   "audioQuality": {
     "check": "Check audio",
     "failed": "Audio analysis unavailable.",
@@ -2354,6 +2357,10 @@
     "lib_show_all": "Show {{count}} more models",
     "env_dir": "App environment",
     "env_dir_desc": "Python runtime and AI libraries.",
+    "env_dir_desc_scoped": "Python runtime, AI libraries, models, your data and temp files.",
+    "storage_data": "Data",
+    "storage_models": "Models",
+    "storage_temp": "Temp files",
     "change": "Change…",
     "reset_default": "Reset to default",
     "region_label": "Download region"

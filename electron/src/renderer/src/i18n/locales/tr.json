@@ -22,6 +22,9 @@
     "preset32": "Orijinal",
     "sizeUnknown": "Boyut, oluşturma tamamlandıktan sonra gösterilir."
   },
+  "presetVoice": {
+    "label": "Hazır ses"
+  },
   "audioQuality": {
     "check": "Sesi kontrol et",
     "failed": "Ses analizi kullanılamıyor.",
@@ -2291,6 +2294,10 @@
     "lib_show_all": "{{count}} isteğe bağlı modeli göster",
     "env_dir": "Uygulama ortamı",
     "env_dir_desc": "Python çalışma zamanı ve yapay zekâ kitaplıkları.",
+    "env_dir_desc_scoped": "Python çalışma ortamı, yapay zeka kitaplıkları, modeller, verileriniz ve geçici dosyalar.",
+    "storage_data": "Veriler",
+    "storage_models": "Modeller",
+    "storage_temp": "Geçici dosyalar",
     "change": "Değiştir…",
     "reset_default": "Varsayılana sıfırla",
     "region_label": "İndirme bölgesi"

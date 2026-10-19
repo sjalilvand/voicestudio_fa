@@ -22,6 +22,9 @@
     "preset32": "Asli",
     "sizeUnknown": "Ukuran ditampilkan setelah audio dibuat."
   },
+  "presetVoice": {
+    "label": "Suara bawaan"
+  },
   "audioQuality": {
     "check": "Periksa audio",
     "failed": "Analisis audio tidak tersedia.",
@@ -2291,6 +2294,10 @@
     "lib_show_all": "Tampilkan {{count}} model opsional",
     "env_dir": "Lingkungan aplikasi",
     "env_dir_desc": "Runtime Python dan pustaka AI.",
+    "env_dir_desc_scoped": "Runtime Python, pustaka AI, model, data Anda, dan file sementara.",
+    "storage_data": "Data",
+    "storage_models": "Model",
+    "storage_temp": "File sementara",
     "change": "Ubah…",
     "reset_default": "Atur ulang ke default",
     "region_label": "Wilayah unduhan"

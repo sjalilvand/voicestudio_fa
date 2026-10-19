@@ -590,6 +590,10 @@ export async function installRuntime(
     ))
   )
     uv = privateUv;
+  // #2971: uv and pip unpack wheels into the temp dir. Left at the system default
+  // it fills the system drive even when the runtime was placed on another one.
+  const scratch = join(project, '..', '.tmp');
+  await mkdir(scratch, { recursive: true });
   const env: NodeJS.ProcessEnv = {
     ...downloadProxyEnv(),
     ...(await runtimeDownloadEnv(region, signal)),
@@ -598,6 +602,9 @@ export async function installRuntime(
     // rebuild a broken venv without paying the multi-gigabyte transfer twice.
     UV_CACHE_DIR: join(project, '..', '.uv-cache'),
     UV_PYTHON_INSTALL_DIR: join(project, '..', '.python'),
+    TEMP: scratch,
+    TMP: scratch,
+    TMPDIR: scratch,
   };
   if (!uv) {
     phase('downloading_uv');

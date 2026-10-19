@@ -1218,7 +1218,7 @@ def _run_backend_inference(
     used_seed, effect_preset="broadcast",
     max_chunk_chars=None, crossfade_ms=None, *, t_shift=None,
     layer_penalty_factor=None, position_temperature=None,
-    class_temperature=None, dropped_sink=None,
+    class_temperature=None, dropped_sink=None, preset_voice=None,
 ):
     """Engine-aware twin of :func:`_run_inference` (issue #312).
 
@@ -1241,6 +1241,8 @@ def _run_backend_inference(
             instruct=instruct, num_step=num_step, guidance_scale=guidance_scale,
             speed=speed, denoise=denoise, postprocess_output=postprocess_output,
         )
+        if preset_voice:
+            gen_kwargs["voice"] = preset_voice
         native_proxy = bool(
             getattr(backend, "supports_native_omnivoice_controls", False)
         )
@@ -1697,6 +1699,9 @@ async def generate_speech(
     effect_preset: str = Form("broadcast"),
     wav_bits: Literal["16", "24", "32"] = Form("16"),
     engine: Optional[str] = Form(None),
+    # #2938: one of the engine's built-in voices (``preset_voices`` in the engine
+    # list). Only for engines that ship presets and no cloning reference.
+    preset_voice: Optional[str] = Form(None),
     # Wave 1.2 — unlimited-length generation: long text is split at sentence
     # boundaries and crossfaded. 0 disables chunking (whole text to engine).
     max_chunk_chars: int = Form(800, ge=0),
@@ -1825,6 +1830,18 @@ async def generate_speech(
         # health-check route so weights load once, not per request.
         from api.routers.engines import _get_engine_instance
         _backend = _get_engine_instance(backend_cls)
+
+    preset_voice = (preset_voice or "").strip() or None
+    if preset_voice:
+        from services.tts_backend import preset_voices_of
+        _presets = preset_voices_of(backend_cls)
+        if not _presets:
+            preset_voice = None  # engine has no presets: ignore, like other engine-specific fields
+        elif preset_voice not in _presets:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Unknown preset voice {preset_voice!r}. Valid: {', '.join(_presets)}",
+            )
 
     # ── Routing gate (#21 — no silent CPU fallback). Computed ONCE per
     # request (host caps are constant; the per-request engine= override
@@ -2225,6 +2242,7 @@ async def generate_speech(
                                     position_temperature=position_temperature,
                                     class_temperature=class_temperature,
                                     dropped_sink=_dropped_sink,
+                                    preset_voice=preset_voice,
                                 ),
                                 what="TTS generate",
                                 min_vram_gb=_engine_min_vram_gb,
@@ -2455,6 +2473,7 @@ async def generate_speech(
                 position_temperature=position_temperature,
                 class_temperature=class_temperature,
                 dropped_sink=_dropped_text,
+                preset_voice=preset_voice,
             )
         else:
             _local_render = functools.partial(

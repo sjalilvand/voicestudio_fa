@@ -289,6 +289,8 @@ describe('packaged runtime setup', () => {
 
     const syncEnv = run.mock.calls[0]?.[3];
     expect(syncEnv?.UV_CACHE_DIR).toBe(join(project, '..', '.uv-cache'));
+    for (const key of ['TEMP', 'TMP', 'TMPDIR'])
+      expect(syncEnv?.[key]).toBe(join(project, '..', '.tmp'));
     expect(syncEnv?.UV_PYTHON_INSTALL_DIR).toBe(join(project, '..', '.python'));
   });
   it('uses managed Python for new runtime setup and verifies native tokenizer imports', async () => {

@@ -22,6 +22,9 @@
     "preset32": "أصلي",
     "sizeUnknown": "يظهر الحجم بعد إنشاء الصوت."
   },
+  "presetVoice": {
+    "label": "الصوت الجاهز"
+  },
   "audioQuality": {
     "check": "فحص الصوت",
     "failed": "تحليل الصوت غير متاح.",
@@ -2299,6 +2302,10 @@
     "lib_show_all": "عرض {{count}} نموذجًا اختياريًا",
     "env_dir": "بيئة التطبيق",
     "env_dir_desc": "بيئة Python ومكتبات الذكاء الاصطناعي.",
+    "env_dir_desc_scoped": "بيئة Python ومكتبات الذكاء الاصطناعي والنماذج وبياناتك والملفات المؤقتة.",
+    "storage_data": "البيانات",
+    "storage_models": "النماذج",
+    "storage_temp": "الملفات المؤقتة",
     "change": "تغيير…",
     "reset_default": "إعادة التعيين إلى الوضع الافتراضي",
     "region_label": "منطقة التنزيل"

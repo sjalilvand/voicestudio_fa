@@ -22,6 +22,9 @@
     "preset32": "Origineel",
     "sizeUnknown": "De grootte wordt na het genereren getoond."
   },
+  "presetVoice": {
+    "label": "Voorgeprogrammeerde stem"
+  },
   "audioQuality": {
     "check": "Audio controleren",
     "failed": "Audioanalyse niet beschikbaar.",
@@ -2291,6 +2294,10 @@
     "lib_show_all": "Toon {{count}} optionele modellen",
     "env_dir": "App-omgeving",
     "env_dir_desc": "Python-runtime en AI-bibliotheken.",
+    "env_dir_desc_scoped": "Python-runtime, AI-bibliotheken, modellen, je gegevens en tijdelijke bestanden.",
+    "storage_data": "Gegevens",
+    "storage_models": "Modellen",
+    "storage_temp": "Tijdelijke bestanden",
     "change": "Wijzigen…",
     "reset_default": "Resetten naar standaard",
     "region_label": "Downloadregio"

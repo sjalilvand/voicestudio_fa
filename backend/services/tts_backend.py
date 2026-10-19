@@ -3587,6 +3587,14 @@ def voice_design_support(cls) -> Optional[bool]:
     return value if isinstance(value, bool) else None
 
 
+def preset_voices_of(cls) -> list[str]:
+    """Built-in voice ids an engine class exposes for selection (empty if none)."""
+    voices = getattr(cls, "PRESET_VOICES", None)
+    if not isinstance(voices, (list, tuple)):
+        return []
+    return [v for v in voices if isinstance(v, str)]
+
+
 def list_backends(*, include_hidden: bool = False) -> list[dict]:
     """Enumerate the engine catalogue with each backend's availability state.
 
@@ -3619,6 +3627,8 @@ def list_backends(*, include_hidden: bool = False) -> list[dict]:
           "instruct_vocabulary": "tags" | "freeform",  # OmniVoice tag set vs model-native text
           "supports_voice_design": Optional[bool],  # False = needs a reference clip;
                                                     #   None = undeclared (design allowed)
+          "preset_voices":  list[str],              # built-in voice ids a request may pick (``voice``); [] = none
+          "default_voice":  Optional[str],          # preset used when none is picked
           "max_ref_seconds": Optional[float],       # seconds of a clone clip the engine uses
           "ref_strategy": Optional[str],            # "best_window" | "head" | "full"; None = unverified
           "effective_device": str,                  # device this engine uses on THIS host
@@ -3750,6 +3760,8 @@ def list_backends(*, include_hidden: bool = False) -> list[dict]:
             # Reference-length truth (#2281): how much of a clone clip the
             # engine really uses and how it picks it. None = not verified.
             "max_ref_seconds": getattr(cls, "max_ref_seconds", None),
+            "preset_voices": preset_voices_of(cls),
+            "default_voice": getattr(cls, "DEFAULT_VOICE", None) if preset_voices_of(cls) else None,
             "ref_strategy": getattr(cls, "ref_strategy", None),
             "install_hint": _INSTALL_HINTS.get(bid),
             # Exact `export VAR=...` line for path-gated opt-in engines, or None.

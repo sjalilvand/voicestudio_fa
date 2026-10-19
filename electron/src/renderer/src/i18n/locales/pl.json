@@ -22,6 +22,9 @@
     "preset32": "Oryginalna",
     "sizeUnknown": "Rozmiar pojawi się po wygenerowaniu."
   },
+  "presetVoice": {
+    "label": "Głos wbudowany"
+  },
   "audioQuality": {
     "check": "Sprawdź dźwięk",
     "failed": "Analiza dźwięku niedostępna.",
@@ -2295,6 +2298,10 @@
     "lib_show_all": "Pokaż opcjonalne modele: {{count}}",
     "env_dir": "Środowisko aplikacji",
     "env_dir_desc": "Środowisko Python i biblioteki AI.",
+    "env_dir_desc_scoped": "Środowisko Python, biblioteki AI, modele, Twoje dane i pliki tymczasowe.",
+    "storage_data": "Dane",
+    "storage_models": "Modele",
+    "storage_temp": "Pliki tymczasowe",
     "change": "Zmień…",
     "reset_default": "Przywróć ustawienia domyślne",
     "region_label": "Region pobierania"

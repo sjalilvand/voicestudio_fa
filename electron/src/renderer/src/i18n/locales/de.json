@@ -22,6 +22,9 @@
     "preset32": "Original",
     "sizeUnknown": "Die Größe wird nach der Erzeugung angezeigt."
   },
+  "presetVoice": {
+    "label": "Voreingestellte Stimme"
+  },
   "audioQuality": {
     "check": "Audio prüfen",
     "failed": "Audioanalyse nicht verfügbar.",
@@ -2291,6 +2294,10 @@
     "lib_show_all": "{{count}} optionale Modelle anzeigen",
     "env_dir": "App-Umgebung",
     "env_dir_desc": "Python-Runtime und KI-Bibliotheken.",
+    "env_dir_desc_scoped": "Python-Laufzeit, KI-Bibliotheken, Modelle, deine Daten und temporäre Dateien.",
+    "storage_data": "Daten",
+    "storage_models": "Modelle",
+    "storage_temp": "Temporäre Dateien",
     "change": "Ändern…",
     "reset_default": "Auf Standard zurücksetzen",
     "region_label": "Download-Region"

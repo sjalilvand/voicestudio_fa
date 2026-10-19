@@ -22,6 +22,9 @@
     "preset32": "원본",
     "sizeUnknown": "생성 후 파일 크기가 표시됩니다."
   },
+  "presetVoice": {
+    "label": "프리셋 음성"
+  },
   "audioQuality": {
     "check": "오디오 확인",
     "failed": "오디오를 분석할 수 없습니다.",
@@ -2291,6 +2294,10 @@
     "lib_show_all": "모델 {{count}}개 더 보기",
     "env_dir": "앱 실행 환경",
     "env_dir_desc": "Python 런타임과 AI 라이브러리.",
+    "env_dir_desc_scoped": "Python 런타임, AI 라이브러리, 모델, 내 데이터와 임시 파일.",
+    "storage_data": "데이터",
+    "storage_models": "모델",
+    "storage_temp": "임시 파일",
     "change": "변경…",
     "reset_default": "기본값으로 재설정",
     "region_label": "다운로드 지역"

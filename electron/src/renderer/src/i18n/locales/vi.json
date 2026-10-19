@@ -22,6 +22,9 @@
     "preset32": "Nguyên bản",
     "sizeUnknown": "Kích thước hiển thị sau khi tạo âm thanh."
   },
+  "presetVoice": {
+    "label": "Giọng có sẵn"
+  },
   "audioQuality": {
     "check": "Kiểm tra âm thanh",
     "failed": "Không thể phân tích âm thanh.",
@@ -2291,6 +2294,10 @@
     "lib_show_all": "Hiện {{count}} mô hình tùy chọn",
     "env_dir": "Môi trường ứng dụng",
     "env_dir_desc": "Python runtime và các thư viện AI.",
+    "env_dir_desc_scoped": "Runtime Python, thư viện AI, mô hình, dữ liệu của bạn và tệp tạm.",
+    "storage_data": "Dữ liệu",
+    "storage_models": "Mô hình",
+    "storage_temp": "Tệp tạm",
     "change": "Thay đổi…",
     "reset_default": "Đặt lại về mặc định",
     "region_label": "Khu vực tải xuống"

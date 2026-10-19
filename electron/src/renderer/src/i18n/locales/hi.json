@@ -22,6 +22,9 @@
     "preset32": "मूल",
     "sizeUnknown": "ऑडियो बनने के बाद आकार दिखेगा।"
   },
+  "presetVoice": {
+    "label": "प्रीसेट आवाज़"
+  },
   "audioQuality": {
     "check": "ऑडियो जाँचें",
     "failed": "ऑडियो विश्लेषण उपलब्ध नहीं है।",
@@ -2291,6 +2294,10 @@
     "lib_show_all": "{{count}} वैकल्पिक मॉडल दिखाएँ",
     "env_dir": "ऐप एनवायरनमेंट",
     "env_dir_desc": "Python रनटाइम और AI लाइब्रेरीज़।",
+    "env_dir_desc_scoped": "Python रनटाइम, AI लाइब्रेरी, मॉडल, आपका डेटा और अस्थायी फ़ाइलें।",
+    "storage_data": "डेटा",
+    "storage_models": "मॉडल",
+    "storage_temp": "अस्थायी फ़ाइलें",
     "change": "बदलें…",
     "reset_default": "डिफ़ॉल्ट पर रीसेट करें",
     "region_label": "डाउनलोड क्षेत्र"

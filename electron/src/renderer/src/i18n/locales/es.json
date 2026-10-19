@@ -22,6 +22,9 @@
     "preset32": "Original",
     "sizeUnknown": "El tamaño se muestra después de generar el audio."
   },
+  "presetVoice": {
+    "label": "Voz predefinida"
+  },
   "audioQuality": {
     "check": "Revisar audio",
     "failed": "Análisis de audio no disponible.",
@@ -2293,6 +2296,10 @@
     "lib_show_all": "Mostrar {{count}} modelos opcionales",
     "env_dir": "Entorno de la aplicación",
     "env_dir_desc": "Runtime de Python y bibliotecas de IA.",
+    "env_dir_desc_scoped": "Entorno de Python, bibliotecas de IA, modelos, tus datos y archivos temporales.",
+    "storage_data": "Datos",
+    "storage_models": "Modelos",
+    "storage_temp": "Archivos temporales",
     "change": "Cambiar…",
     "reset_default": "Restablecer los valores predeterminados",
     "region_label": "Región de descarga"

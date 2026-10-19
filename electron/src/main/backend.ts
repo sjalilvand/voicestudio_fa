@@ -15,6 +15,7 @@ import { devProbeStamped, writeDevProbeStamp } from './dev-probe-stamp';
 import { CrashJournal } from './crash-journal';
 import { nativeFaultSummary } from '../shared/utils/crashReport';
 import { availableBackendPort } from './backend-port';
+import { scopedStorage, scopedStorageEnv, type ScopedStorage } from './storage-scope';
 import { legacyStorageEnv } from './legacy-storage';
 import { spawn, spawnSync, type ChildProcess, type StdioOptions } from 'node:child_process';
 import { EventEmitter } from 'node:events';
@@ -118,6 +119,8 @@ export function isExpectedPipeClose(error: unknown): boolean {
 interface RuntimeLocationConfig {
   root: string;
   owned: boolean;
+  /** Chosen during first-run setup: data, models and temp live beside the runtime. */
+  scoped: boolean;
 }
 
 function runtimePreferencesPath(): string {
@@ -354,9 +357,9 @@ function storedRuntimeLocation(): RuntimeLocationConfig | null {
   try {
     const parsed = JSON.parse(
       readFileSync(join(app.getPath('userData'), RUNTIME_LOCATION_FILE), 'utf8'),
-    ) as { root?: unknown; owned?: unknown };
+    ) as { root?: unknown; owned?: unknown; scoped?: unknown };
     return typeof parsed.root === 'string' && isAbsolute(parsed.root)
-      ? { root: resolve(parsed.root), owned: parsed.owned === true }
+      ? { root: resolve(parsed.root), owned: parsed.owned === true, scoped: parsed.scoped === true }
       : null;
   } catch {
     return null;
@@ -367,10 +370,20 @@ function storedRuntimeRoot(): string | null {
   return storedRuntimeLocation()?.root ?? null;
 }
 
-function writeRuntimeLocation(root: string, owned: boolean): void {
+function writeRuntimeLocation(
+  root: string,
+  owned: boolean,
+  scoped: boolean = storedRuntimeLocation()?.scoped === true,
+): void {
   const locationFile = join(app.getPath('userData'), RUNTIME_LOCATION_FILE);
   mkdirSync(dirname(locationFile), { recursive: true });
-  writeFileSync(locationFile, JSON.stringify({ root: resolve(root), owned }), 'utf8');
+  writeFileSync(locationFile, JSON.stringify({ root: resolve(root), owned, scoped }), 'utf8');
+}
+
+/** The recorded first-run location whose data/models/temp follow the runtime, if any. */
+function scopedRuntimeRoot(): string | null {
+  const stored = storedRuntimeLocation();
+  return stored?.scoped && !samePath(stored.root, defaultRuntimeRoot()) ? stored.root : null;
 }
 
 function selectedRuntimeRoot(parent: string): string {
@@ -483,6 +496,17 @@ function childEnv(
     ...(app.isPackaged ? legacyStorageEnv(legacyTauriRoots()) : {}),
     ...process.env,
   };
+  const scopedRoot = app.isPackaged ? scopedRuntimeRoot() : null;
+  if (scopedRoot) {
+    Object.assign(env, scopedStorageEnv(scopedRoot, env));
+    for (const dir of [scopedStorage(scopedRoot).temp]) {
+      try {
+        mkdirSync(dir, { recursive: true });
+      } catch {
+        /* An unwritable folder surfaces through the setup space/permission checks. */
+      }
+    }
+  }
   const packagedToken =
     typeof __POSTHOG_PROJECT_TOKEN__ === 'string' ? __POSTHOG_PROJECT_TOKEN__ : '';
   const packagedHost = typeof __POSTHOG_HOST__ === 'string' ? __POSTHOG_HOST__ : '';
@@ -691,6 +715,7 @@ export class BackendSupervisor extends EventEmitter<{
               defaultRuntimeRoot(),
             ),
             runtimeRegion: this.runtimeRegion,
+            ...this.runtimeStorage(),
           }
         : {}),
     };
@@ -1120,6 +1145,12 @@ export class BackendSupervisor extends EventEmitter<{
     return this.connection;
   }
 
+  private runtimeStorage(): { runtimeStorage?: ScopedStorage } {
+    const scoped = scopedRuntimeRoot();
+    const root = this.runtimeProject ? dirname(this.runtimeProject) : null;
+    return scoped && root && samePath(scoped, root) ? { runtimeStorage: scopedStorage(scoped) } : {};
+  }
+
   setRuntimeLocation(parent: string | null): { path: string; custom: boolean } {
     if (
       !app.isPackaged ||
@@ -1134,7 +1165,7 @@ export class BackendSupervisor extends EventEmitter<{
     if (samePath(root, defaultRoot)) {
       rmSync(locationFile, { force: true });
     } else {
-      writeRuntimeLocation(root, false);
+      writeRuntimeLocation(root, false, true);
     }
     this.runtimeProject = join(root, 'project');
     this.message = undefined;
@@ -1162,6 +1193,17 @@ export class BackendSupervisor extends EventEmitter<{
     return configured?.owned === true && !samePath(configured.root, defaultRuntimeRoot())
       ? configured.root
       : null;
+  }
+
+  /**
+   * What an uninstall may remove from the runtime location. A location chosen in
+   * setup also holds the user's data and models, which the uninstall prompt
+   * handles as separate choices, so only the runtime's own folders are listed.
+   */
+  get ownedRuntimeEntries(): string | string[] | null {
+    const root = this.ownedRuntimeRoot;
+    if (!root || storedRuntimeLocation()?.scoped !== true) return root;
+    return ['project', '.uv-cache', '.python', '.tmp', 'tmp'].map((name) => join(root, name));
   }
 
   websocketUrl(path: '/ws/transcribe' | '/ws/events' | '/ws/tts'): Promise<string> {

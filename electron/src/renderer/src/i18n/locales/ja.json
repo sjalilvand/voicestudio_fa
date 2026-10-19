@@ -22,6 +22,9 @@
     "preset32": "オリジナル",
     "sizeUnknown": "生成後にサイズを表示します。"
   },
+  "presetVoice": {
+    "label": "プリセット音声"
+  },
   "audioQuality": {
     "check": "音声を確認",
     "failed": "音声を解析できません。",
@@ -2291,6 +2294,10 @@
     "lib_show_all": "任意モデル {{count}} 件を表示",
     "env_dir": "アプリ実行環境",
     "env_dir_desc": "Python ランタイムと AI ライブラリ。",
+    "env_dir_desc_scoped": "Python ランタイム、AI ライブラリ、モデル、データ、一時ファイル。",
+    "storage_data": "データ",
+    "storage_models": "モデル",
+    "storage_temp": "一時ファイル",
     "change": "変更…",
     "reset_default": "デフォルトにリセットする",
     "region_label": "ダウンロード地域"

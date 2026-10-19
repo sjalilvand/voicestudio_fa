@@ -22,6 +22,9 @@
     "preset32": "原始",
     "sizeUnknown": "生成後顯示檔案大小。"
   },
+  "presetVoice": {
+    "label": "預設聲音"
+  },
   "audioQuality": {
     "check": "檢查音訊",
     "failed": "音訊分析無法使用。",
@@ -2291,6 +2294,10 @@
     "lib_show_all": "顯示 {{count}} 個可選模型",
     "env_dir": "應用程式環境",
     "env_dir_desc": "Python 執行環境與 AI 函式庫。",
+    "env_dir_desc_scoped": "Python 執行環境、AI 程式庫、模型、你的資料與暫存檔案。",
+    "storage_data": "資料",
+    "storage_models": "模型",
+    "storage_temp": "暫存檔案",
     "change": "變更…",
     "reset_default": "重設為預設值",
     "region_label": "下載區域"

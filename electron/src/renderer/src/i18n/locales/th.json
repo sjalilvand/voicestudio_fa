@@ -22,6 +22,9 @@
     "preset32": "ต้นฉบับ",
     "sizeUnknown": "ขนาดจะแสดงหลังสร้างเสียงเสร็จ"
   },
+  "presetVoice": {
+    "label": "เสียงที่ตั้งไว้ล่วงหน้า"
+  },
   "audioQuality": {
     "check": "ตรวจสอบเสียง",
     "failed": "ไม่สามารถวิเคราะห์เสียงได้",
@@ -2291,6 +2294,10 @@
     "lib_show_all": "แสดงโมเดลตัวเลือก {{count}} รายการ",
     "env_dir": "สภาพแวดล้อมของแอป",
     "env_dir_desc": "Python runtime และไลบรารี AI",
+    "env_dir_desc_scoped": "รันไทม์ Python ไลบรารี AI โมเดล ข้อมูลของคุณ และไฟล์ชั่วคราว",
+    "storage_data": "ข้อมูล",
+    "storage_models": "โมเดล",
+    "storage_temp": "ไฟล์ชั่วคราว",
     "change": "เปลี่ยน…",
     "reset_default": "รีเซ็ตเป็นค่าเริ่มต้น",
     "region_label": "ภูมิภาคการดาวน์โหลด"

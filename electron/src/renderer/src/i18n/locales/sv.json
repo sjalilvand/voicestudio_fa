@@ -22,6 +22,9 @@
     "preset32": "Original",
     "sizeUnknown": "Storleken visas efter genereringen."
   },
+  "presetVoice": {
+    "label": "Förinställd röst"
+  },
   "audioQuality": {
     "check": "Kontrollera ljud",
     "failed": "Ljudanalys är inte tillgänglig.",
@@ -2291,6 +2294,10 @@
     "lib_show_all": "Visa {{count}} valfria modeller",
     "env_dir": "Appmiljö",
     "env_dir_desc": "Python-runtime och AI-bibliotek.",
+    "env_dir_desc_scoped": "Python-miljö, AI-bibliotek, modeller, dina data och tillfälliga filer.",
+    "storage_data": "Data",
+    "storage_models": "Modeller",
+    "storage_temp": "Tillfälliga filer",
     "change": "Ändra…",
     "reset_default": "Återställ till standard",
     "region_label": "Nedladdningsregion"
