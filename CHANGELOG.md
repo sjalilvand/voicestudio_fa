@@ -18,7 +18,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
-- Windows runtime refresh no longer fails with `EPERM` on a locked backend folder (OneDrive, antivirus): it updates the files in place; the missing-Python-environment message now names the exact folder and tells non-checkout installs to use the installer (#PR) — thanks @afraniohugo, @javalovelinux-cmd and @eduardpp00!
+- Windows runtime refresh no longer fails with `EPERM` on a locked backend folder (OneDrive, antivirus): it updates the files in place; the missing-Python-environment message now names the exact folder and tells non-checkout installs to use the installer (#3023) — thanks @afraniohugo, @javalovelinux-cmd and @eduardpp00!
 
 ### Docs
 
