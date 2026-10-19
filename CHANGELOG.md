@@ -18,8 +18,8 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
-- Long Urdu, Persian, Arabic and Hindi scripts split at sentence ends (۔ ؟ ।) and clause marks (، ؛) instead of mid-sentence, even with no space after the mark — thanks @maatitechnologies-hue!
-- Long text between `[pause]` markers is split into sentence chunks like unmarked text, so a long passage next to a pause no longer degrades into garbled audio — thanks @maatitechnologies-hue!
+- Long Urdu, Persian, Arabic and Hindi scripts split at sentence ends (۔ ؟ ।) and clause marks (، ؛) instead of mid-sentence, even with no space after the mark (#3021) — thanks @maatitechnologies-hue!
+- Long text between `[pause]` markers is split into sentence chunks like unmarked text, so a long passage next to a pause no longer degrades into garbled audio (#3021) — thanks @maatitechnologies-hue!
 
 ### Docs
 
