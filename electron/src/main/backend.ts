@@ -15,6 +15,7 @@ import { devProbeStamped, writeDevProbeStamp } from './dev-probe-stamp';
 import { CrashJournal } from './crash-journal';
 import { nativeFaultSummary } from '../shared/utils/crashReport';
 import { availableBackendPort } from './backend-port';
+import { scopedStorage, scopedStorageEnv, type ScopedStorage } from './storage-scope';
 import { legacyStorageEnv } from './legacy-storage';
 import { spawn, spawnSync, type ChildProcess, type StdioOptions } from 'node:child_process';
 import { EventEmitter } from 'node:events';
@@ -86,6 +87,22 @@ const LOG_RING_LINES = 200;
 const LOG_TAIL_LINES = 40;
 /** EX_CONFIG (sysexits.h): backend/main.py exits with it when the port is taken (#1223). */
 const EXIT_PORT_IN_USE = 78;
+
+/**
+ * The desktop shell starts `python -m uvicorn`, not backend/main.py's
+ * `__main__`, so main.py's own bind diagnostics (exit 78 / permission-denied
+ * text) never run. uvicorn instead exits 3 after logging asyncio's
+ * "[Errno N] error while attempting to bind on address ..." line. The errno
+ * is locale-independent, so classify on it (#3020).
+ */
+export function bindFailureFromLog(text: string): 'in_use' | 'denied' | null {
+  const match = /\[Errno (-?\d+)\] error while attempting to bind on address/.exec(text);
+  if (!match) return null;
+  const errno = Number(match[1]);
+  if ([48, 98, 10048].includes(errno)) return 'in_use';
+  if ([13, 10013].includes(errno)) return 'denied';
+  return null;
+}
 const POSIX_SIGKILL_AFTER_MS = 2000;
 const TAURI_APP_ID = 'com.debpalash.omnivoice-studio';
 const RUNTIME_LOCATION_FILE = 'runtime-location.json';
@@ -102,6 +119,8 @@ export function isExpectedPipeClose(error: unknown): boolean {
 interface RuntimeLocationConfig {
   root: string;
   owned: boolean;
+  /** Chosen during first-run setup: data, models and temp live beside the runtime. */
+  scoped: boolean;
 }
 
 function runtimePreferencesPath(): string {
@@ -338,9 +357,9 @@ function storedRuntimeLocation(): RuntimeLocationConfig | null {
   try {
     const parsed = JSON.parse(
       readFileSync(join(app.getPath('userData'), RUNTIME_LOCATION_FILE), 'utf8'),
-    ) as { root?: unknown; owned?: unknown };
+    ) as { root?: unknown; owned?: unknown; scoped?: unknown };
     return typeof parsed.root === 'string' && isAbsolute(parsed.root)
-      ? { root: resolve(parsed.root), owned: parsed.owned === true }
+      ? { root: resolve(parsed.root), owned: parsed.owned === true, scoped: parsed.scoped === true }
       : null;
   } catch {
     return null;
@@ -351,10 +370,20 @@ function storedRuntimeRoot(): string | null {
   return storedRuntimeLocation()?.root ?? null;
 }
 
-function writeRuntimeLocation(root: string, owned: boolean): void {
+function writeRuntimeLocation(
+  root: string,
+  owned: boolean,
+  scoped: boolean = storedRuntimeLocation()?.scoped === true,
+): void {
   const locationFile = join(app.getPath('userData'), RUNTIME_LOCATION_FILE);
   mkdirSync(dirname(locationFile), { recursive: true });
-  writeFileSync(locationFile, JSON.stringify({ root: resolve(root), owned }), 'utf8');
+  writeFileSync(locationFile, JSON.stringify({ root: resolve(root), owned, scoped }), 'utf8');
+}
+
+/** The recorded first-run location whose data/models/temp follow the runtime, if any. */
+function scopedRuntimeRoot(): string | null {
+  const stored = storedRuntimeLocation();
+  return stored?.scoped && !samePath(stored.root, defaultRuntimeRoot()) ? stored.root : null;
 }
 
 function selectedRuntimeRoot(parent: string): string {
@@ -415,8 +444,17 @@ export async function resolveSpawnPlan(
   // deadline and repeat that download after every restart (#2184).
   const portArg = ['--port', String(port)];
   const python = venvPython(root);
-  const setup = 'Run `bun run setup:api` in the repository, wait for it to finish, then restart.';
+  const setup = `Open a terminal in ${root}, run \`bun run setup:api\`, wait for it to finish, then restart.`;
   if (!existsSync(python)) {
+    // Not a source checkout and not a packaged app (a copied folder, a
+    // download of the wrong archive): setup:api does not exist there (#2988).
+    if (!existsSync(join(root, 'pyproject.toml'))) {
+      return {
+        error:
+          `The Python environment in ${root} is missing (no ${relative(root, python)}), and this is not a VoiceStudio source checkout. ` +
+          'Install VoiceStudio from the release installer, or clone the repository and run `bun run setup:api` inside it.',
+      };
+    }
     return {
       error: `The Python environment in ${root} is missing (no ${relative(root, python)}). ${setup}`,
     };
@@ -458,6 +496,17 @@ function childEnv(
     ...(app.isPackaged ? legacyStorageEnv(legacyTauriRoots()) : {}),
     ...process.env,
   };
+  const scopedRoot = app.isPackaged ? scopedRuntimeRoot() : null;
+  if (scopedRoot) {
+    Object.assign(env, scopedStorageEnv(scopedRoot, env));
+    for (const dir of [scopedStorage(scopedRoot).temp]) {
+      try {
+        mkdirSync(dir, { recursive: true });
+      } catch {
+        /* An unwritable folder surfaces through the setup space/permission checks. */
+      }
+    }
+  }
   const packagedToken =
     typeof __POSTHOG_PROJECT_TOKEN__ === 'string' ? __POSTHOG_PROJECT_TOKEN__ : '';
   const packagedHost = typeof __POSTHOG_HOST__ === 'string' ? __POSTHOG_HOST__ : '';
@@ -552,7 +601,13 @@ export function startupTimeoutMessage(
     `Backend did not answer on port ${port} within ${Math.round(budgetMs / 1000)} s ` +
     '(OMNIVOICE_STARTUP_BUDGET_S).';
   if (!owned) return `${base} Nothing was spawned for this attempt.`;
-  return lastOutput ? `${base} Last output: ${lastOutput}` : `${base} It printed no output.`;
+  const advice =
+    ' Slow disks and antivirus scanning of the runtime folder are the usual cause: click Retry, ' +
+    'exclude the VoiceStudio runtime folder from real-time scanning, or raise OMNIVOICE_STARTUP_BUDGET_S ' +
+    '(for example 900).';
+  return lastOutput
+    ? `${base} Last output: ${lastOutput}${advice}`
+    : `${base} It printed no output.${advice}`;
 }
 
 function delay(ms: number): Promise<void> {
@@ -660,6 +715,7 @@ export class BackendSupervisor extends EventEmitter<{
               defaultRuntimeRoot(),
             ),
             runtimeRegion: this.runtimeRegion,
+            ...this.runtimeStorage(),
           }
         : {}),
     };
@@ -921,7 +977,13 @@ export class BackendSupervisor extends EventEmitter<{
             child.on('close', (code) => {
               if (this.child === child) this.child = null;
               if (code === 0) resolve(capturedStdout);
-              else reject(new Error(`Runtime setup exited with code ${code}`));
+              else
+                reject(
+                  Object.assign(new Error(`Runtime setup exited with code ${code}`), {
+                    code,
+                    stdout: capturedStdout,
+                  }),
+                );
             });
           }),
         controller.signal,
@@ -1083,6 +1145,12 @@ export class BackendSupervisor extends EventEmitter<{
     return this.connection;
   }
 
+  private runtimeStorage(): { runtimeStorage?: ScopedStorage } {
+    const scoped = scopedRuntimeRoot();
+    const root = this.runtimeProject ? dirname(this.runtimeProject) : null;
+    return scoped && root && samePath(scoped, root) ? { runtimeStorage: scopedStorage(scoped) } : {};
+  }
+
   setRuntimeLocation(parent: string | null): { path: string; custom: boolean } {
     if (
       !app.isPackaged ||
@@ -1097,7 +1165,7 @@ export class BackendSupervisor extends EventEmitter<{
     if (samePath(root, defaultRoot)) {
       rmSync(locationFile, { force: true });
     } else {
-      writeRuntimeLocation(root, false);
+      writeRuntimeLocation(root, false, true);
     }
     this.runtimeProject = join(root, 'project');
     this.message = undefined;
@@ -1125,6 +1193,17 @@ export class BackendSupervisor extends EventEmitter<{
     return configured?.owned === true && !samePath(configured.root, defaultRuntimeRoot())
       ? configured.root
       : null;
+  }
+
+  /**
+   * What an uninstall may remove from the runtime location. A location chosen in
+   * setup also holds the user's data and models, which the uninstall prompt
+   * handles as separate choices, so only the runtime's own folders are listed.
+   */
+  get ownedRuntimeEntries(): string | string[] | null {
+    const root = this.ownedRuntimeRoot;
+    if (!root || storedRuntimeLocation()?.scoped !== true) return root;
+    return ['project', '.uv-cache', '.python', '.tmp', 'tmp'].map((name) => join(root, name));
   }
 
   websocketUrl(path: '/ws/transcribe' | '/ws/events' | '/ws/tts'): Promise<string> {
@@ -1318,9 +1397,22 @@ export class BackendSupervisor extends EventEmitter<{
     const recorded = this.crashes.record(code, signal, Date.now() - this.startedAt, this.log);
     this.exitCode = code;
     this.exitSignal = signal;
-    if (code === EXIT_PORT_IN_USE) {
+    const bindFailure =
+      code === EXIT_PORT_IN_USE
+        ? 'in_use'
+        : bindFailureFromLog(this.childLog.join('\n'));
+    if (bindFailure === 'in_use') {
       this.setStage('port_in_use', {
         message: `Port ${this.port} is already in use by another process. Stop it or set OMNIVOICE_PORT.`,
+      });
+      return;
+    }
+    if (bindFailure === 'denied') {
+      this.setStage('port_in_use', {
+        message:
+          `Windows or another program refused access to port ${this.port}. It is often in a reserved ` +
+          'port range (Hyper-V, WSL, Docker) - run "netsh interface ipv4 show excludedportrange protocol=tcp" ' +
+          'to check - or held exclusively. Set OMNIVOICE_PORT to a free port and restart.',
       });
       return;
     }

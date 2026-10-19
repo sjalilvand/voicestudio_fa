@@ -170,7 +170,8 @@ model paths don't hit the 260-character `MAX_PATH` limit.
   set `OMNIVOICE_DATA_DIR` / `OMNIVOICE_CACHE_DIR` / `HF_HOME` /
   `HF_HUB_CACHE`), your data is there instead of the defaults above. A Python
   runtime you moved to another drive lives in the `VoiceStudio` folder you
-  picked.
+  picked. When you picked that folder during first-run setup, your data and models
+  live inside it too (`data`, `models`) and are offered as separate choices.
 - **Portable mode:** everything lives in an `OmniVoiceStudio-Data/` folder next
   to the app binary — delete that one folder and you're done.
 - **App-managed engine sidecars:** if VoiceStudio installed IndexTTS 2.5,
