@@ -542,12 +542,23 @@ _DATE_MONTH_RE = {
     code: re.compile(r"\.\s+(?:" + months + r")(?![^\W_])", re.IGNORECASE)
     for code, months in _DATE_MONTHS.items()
 }
-# Space-grouped thousands ("1 234", "10 000", "1 234,5") in the locales that
-# also group with a period. The run is kept as written, like "1,000" in
-# English; without this the integer rule read the leading group on its own.
+# Space-grouped thousands ("1 234", "10 000", "1 234,5", "12 500 %") in the
+# locales that also group with a period. The run is kept as written, like
+# "1,000" in English; without this the percent and integer rules read the
+# trailing or leading group on its own.
 _SPACE_GROUP_RE = re.compile(
-    r"(?<![\w.,:/$%-])\d{1,3}(?: \d{3})+(?:,\d+)?(?![\w:/%-])(?![.,]\d)"
+    r"(?<![\w.,:/$%-])\d{1,3}(?: \d{3})+(?:,\d+)?(?:\s?%)?(?![\w:/%-])(?![.,]\d)"
 )
+
+
+def _grouped_spans(text: str, lang: str) -> list[tuple[int, int]]:
+    if lang not in _COMMA_DECIMAL_LANGS:
+        return []
+    return [g.span() for g in _SPACE_GROUP_RE.finditer(text)]
+
+
+def _in_span(m: re.Match, spans: list[tuple[int, int]]) -> bool:
+    return any(start <= m.start() < end for start, end in spans)
 
 _ORDINAL_SUFFIX = {1: "st", 2: "nd", 3: "rd"}
 
@@ -640,7 +651,11 @@ def _numbers_to_words(text: str, lang: str, locale: Optional[str] = None) -> str
 
     percent_word = _PERCENT_WORD.get(lang)
     if percent_word:
+        grouped = _grouped_spans(text, lang)
+
         def _percent(m: re.Match) -> str:
+            if _in_span(m, grouped):
+                return m.group(0)
             raw = m.group(1)
             if "." in raw:
                 fraction = raw.split(".", 1)[1]
@@ -678,15 +693,13 @@ def _numbers_to_words(text: str, lang: str, locale: Optional[str] = None) -> str
         text = _DECIMAL_RE.sub(lambda m: _safe(m, _decimal), text)
 
     month_re = _DATE_MONTH_RE.get(lang)
-    grouped: list[tuple[int, int]] = []
-    if lang in _COMMA_DECIMAL_LANGS:
-        grouped = [g.span() for g in _SPACE_GROUP_RE.finditer(text)]
+    grouped = _grouped_spans(text, lang)
 
     def _integer(m: re.Match) -> str:
         raw = m.group(1)
         if _leading_zero(raw):
             return m.group(0)
-        if any(start <= m.start() < end for start, end in grouped):
+        if _in_span(m, grouped):
             return m.group(0)
         n = int(raw)
         if month_re and 1 <= n <= 31 and month_re.match(text, m.end()):
