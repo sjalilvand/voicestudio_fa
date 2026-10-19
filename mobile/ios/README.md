@@ -186,3 +186,10 @@ profile in the browser. Dub is one big source card with an animated vector mark
 (`DubGlyph`, static under Reduce Motion), language and voice tiles, a consent row and live
 job cards. The bottom dock is icon-only; tab names remain accessibility labels.
 
+## Live previews
+
+`App/Previews.swift` (debug builds only) adds Xcode canvas previews for Home, Dub (dark, light and large
+text), Models, the licence sheet and the dub glyph. They run the same offline mock host as the UI tests
+(`AppModel(mock: true)`), so screens render with realistic data and update as you edit. Open a view file
+and press Option-Command-Return; Run (Command-R) is still a full rebuild.
+

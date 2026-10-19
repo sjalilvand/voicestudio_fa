@@ -27,10 +27,11 @@ import BackgroundTasks
     private(set) var monitorTask: Task<Void, Never>?
     private var notified = Set<String>()
     private var monitorID = UUID()
-    init() {
+    /// `mock` runs the offline smoke host (debug builds only), for SwiftUI previews.
+    init(mock: Bool = false) {
         let d = UserDefaults.standard
         #if DEBUG
-        let mockMode = ProcessInfo.processInfo.arguments.contains("--ui-smoke")
+        let mockMode = mock || ProcessInfo.processInfo.arguments.contains("--ui-smoke")
         if mockMode {
             for task in ["speak", "dictate", "clone", "dub"] { d.removeObject(forKey: "run-on."+task) }
             d.removeObject(forKey: "consentAnswered"); d.removeObject(forKey: "activeHost")
