@@ -352,7 +352,9 @@
   },
   "referenceAsr": {
     "busy": "Metne dönüştürülüyor…",
-    "retry": "Transkripsiyonu yeniden dene"
+    "retry": "Transkripsiyonu yeniden dene",
+    "install": "Otomatik yazıya dökmek için {{label}} ({{size}} GB) kurun",
+    "installing": "{{label}} indiriliyor. Bittiğinde yazıya dökme yeniden denenecek."
   },
   "engineSidebar": {
     "tts": "TTS",

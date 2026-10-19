@@ -352,7 +352,9 @@
   },
   "referenceAsr": {
     "busy": "文字起こし中…",
-    "retry": "転写を再試行する"
+    "retry": "転写を再試行する",
+    "install": "自動で文字起こしするには {{label}}（{{size}} GB）をインストールしてください",
+    "installing": "{{label}} をダウンロード中です。完了すると文字起こしを再試行します。"
   },
   "engineSidebar": {
     "tts": "TTS",

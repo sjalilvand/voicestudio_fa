@@ -352,7 +352,9 @@
   },
   "referenceAsr": {
     "busy": "Phiên âm…",
-    "retry": "Thử chép lại"
+    "retry": "Thử chép lại",
+    "install": "Cài {{label}} ({{size}} GB) để tự động phiên âm",
+    "installing": "Đang tải {{label}}. Sẽ thử phiên âm lại khi hoàn tất."
   },
   "engineSidebar": {
     "tts": "TTS",

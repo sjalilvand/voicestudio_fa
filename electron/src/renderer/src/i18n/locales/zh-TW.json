@@ -352,7 +352,9 @@
   },
   "referenceAsr": {
     "busy": "正在抄寫…",
-    "retry": "重試轉錄"
+    "retry": "重試轉錄",
+    "install": "安裝 {{label}}（{{size}} GB）以自動轉寫",
+    "installing": "正在下載 {{label}}，完成後將重新轉寫。"
   },
   "engineSidebar": {
     "tts": "TTS",

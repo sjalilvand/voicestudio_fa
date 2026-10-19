@@ -356,7 +356,9 @@
   },
   "referenceAsr": {
     "busy": "Transkrypcja…",
-    "retry": "Ponów transkrypcję"
+    "retry": "Ponów transkrypcję",
+    "install": "Zainstaluj {{label}} ({{size}} GB), aby transkrybować automatycznie",
+    "installing": "Pobieranie {{label}}. Transkrypcja zostanie ponowiona po zakończeniu."
   },
   "engineSidebar": {
     "tts": "TTS",

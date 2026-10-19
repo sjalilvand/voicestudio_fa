@@ -352,7 +352,9 @@
   },
   "referenceAsr": {
     "busy": "Transcriberen…",
-    "retry": "Probeer de transcriptie opnieuw"
+    "retry": "Probeer de transcriptie opnieuw",
+    "install": "Installeer {{label}} ({{size}} GB) om automatisch te transcriberen",
+    "installing": "{{label}} wordt gedownload. De transcriptie start opnieuw zodra dit klaar is."
   },
   "engineSidebar": {
     "tts": "TTS",

@@ -89,6 +89,10 @@ Sidecar stderr is scrubbed for home directories and secrets before logging.
 This does not download an ASR model automatically: if no installed
 recognizer can transcribe the clip and no local model fallback is available,
 provide the matching transcript or explicitly install a speech-to-text model.
+The Clone page offers an **Install** button for the model recommended for your
+hardware (it downloads only after you click it) and then retries the transcript.
+The transcript preview also uses any other installed speech-to-text model when
+the selected one is not on disk.
 Unknown or unverifiable ASR selections are skipped for automatic reference
 transcription. An explicitly selected OpenAI-compatible ASR provider retains its
 opt-in behavior; it does not need local model weights. Default ASR remains local.

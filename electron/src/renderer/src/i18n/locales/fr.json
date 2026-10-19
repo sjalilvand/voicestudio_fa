@@ -354,7 +354,9 @@
   },
   "referenceAsr": {
     "busy": "Transcription…",
-    "retry": "Réessayer la transcription"
+    "retry": "Réessayer la transcription",
+    "install": "Installer {{label}} ({{size}} Go) pour transcrire automatiquement",
+    "installing": "Téléchargement de {{label}}. La transcription reprendra à la fin."
   },
   "engineSidebar": {
     "tts": "TTS",

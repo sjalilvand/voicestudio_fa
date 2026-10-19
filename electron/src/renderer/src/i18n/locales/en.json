@@ -692,7 +692,9 @@
   },
   "referenceAsr": {
     "busy": "Transcribing…",
-    "retry": "Retry transcription"
+    "retry": "Retry transcription",
+    "install": "Install {{label}} ({{size}} GB) to transcribe automatically",
+    "installing": "Downloading {{label}}. Transcription retries when it finishes."
   },
   "engineSidebar": {
     "tts": "TTS",
