@@ -854,6 +854,14 @@ rather than failing with "Can't reach the local backend". Nothing to do — it
 clears itself as soon as the job releases the event loop. If the dot turns
 **red** and names an exit code, that is a real crash; use the sections above.
 
+The backend also never waits on its own log output: stdout/stderr go through a
+bounded buffer when the shell reads them through pipes, so a slow log reader (a
+model download's progress bar, a busy shell) can no longer freeze the event
+loop. If the buffer overflows, the log shows one `[log] N output chunk(s)
+dropped` line. Set `OMNIVOICE_BLOCKING_STDIO=1` to restore plain blocking
+writes. When the loop does stall, the backend log names the blocking call
+(`OMNIVOICE_LOOP_STALL_S`, default 4 s, `0` disables).
+
 **Two things changed here** ([#1190](https://github.com/debpalash/VoiceStudio/issues/1190)):
 
 - **Waiting in line is no longer counted as compute.** The generate budget used
@@ -1344,13 +1352,14 @@ the message:
   slowest because antivirus scans every new file; later starts are much faster.
 - **`The Python environment in <folder> is missing`** or **`… is incomplete:
   <reason>`** (running from a source checkout) — run `bun run setup:api` in the
-  repository and let it finish. *Missing* means no `.venv` exists yet.
+  repository and let it finish (the message names the folder to open the terminal in; it is never taken from the terminal's working directory, so running from `C:\Windows\System32` does not matter). A folder without `pyproject.toml` is not a source checkout: install from the release installer instead. *Missing* means no `.venv` exists yet.
   *Incomplete* quotes the import that failed, e.g. `ModuleNotFoundError: No
   module named 'sentencepiece'` (setup did not finish: rerun it) or `ImportError:
   DLL load failed` (Windows: rerun setup, which installs the Visual C++
   runtime). If the folder is inside OneDrive, Dropbox, iCloud Drive or Google
   Drive, move the checkout to a plain local folder first: online-only
-  placeholders and file locking break the Python environment.
+  placeholders and file locking break the Python environment. The same applies to `error loading dynamically imported module: http://localhost:3902/@fs/…/node_modules/.vite/deps/…` from a dev server running inside OneDrive (installed builds never load from a dev server).
+- **`EPERM: operation not permitted, rename …\.previous-backend`** — a scanner or OneDrive held the runtime folder while VoiceStudio refreshed it. The app retries for about 10 s, then updates the files in place; if it still fails, exclude the runtime folder from antivirus and quit any VoiceStudio left in Task Manager.
 
 A native crash (`3221225477`, `-1073741819`) right after pressing Generate
 shortly after launch was caused by the startup preload and the first generation
@@ -1393,4 +1402,27 @@ If an older installer exits with code `3221225477` at this probe, install the
 updated desktop build and retry **Install local runtime**. CPU and ROCm setup
 now skip the native CUDA compatibility probe; runtime imports are still verified
 before setup finishes. If verification also fails, include the new setup log in
-your report rather than deleting saved voices or projects.
+your report rather than deleting saved voices or projects. The probe is also
+advisory now: if it still crashes natively, setup continues and the import
+verification decides whether the runtime works.
+
+### "Backend exited unexpectedly (exit code 3221225477)" while loading a model
+
+A cut-off model download makes Windows kill the backend with an access violation
+(`0xC0000005`) when the weights are read. VoiceStudio now checks each
+`.safetensors` file's header against its size before loading and re-downloads a
+truncated file automatically. If you point `OMNIVOICE_CHECKPOINT` at your own
+folder, it names the incomplete file instead; delete it and download it again.
+
+### "Backend is running but busy / not responding on port 3900"
+
+If the log shows `Event loop has not run for N s`, the stack dump right below it
+names the call that blocked the backend; include it in your report. Set
+`OMNIVOICE_LOOP_STALL_S` to change the 4 s threshold (`0` turns it off).
+
+### Backend exits with code 3 and "[Errno 13] error while attempting to bind"
+
+Windows or another program refused access to the port, often a reserved range
+(Hyper-V, WSL, Docker). Check with
+`netsh interface ipv4 show excludedportrange protocol=tcp`, then set
+`OMNIVOICE_PORT` to a different free port.

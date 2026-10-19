@@ -18,8 +18,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
-- Generation errors now name the real cause (missing engine package, missing speech-to-text model, GPU or system memory, proxy timeout, unknown route) with a translated next step, and bug reports record the backend error class and failure topic (#3027)
-- Picking a long reference clip's best passage no longer counts against the 300 s generate limit (#3027)
+- Windows runtime refresh no longer fails with `EPERM` on a locked backend folder (OneDrive, antivirus): it updates the files in place; the missing-Python-environment message now names the exact folder and tells non-checkout installs to use the installer (#3023) — thanks @afraniohugo, @javalovelinux-cmd and @eduardpp00!
 
 ### Docs
 
@@ -30,6 +29,8 @@ metadata and the backend fallback mirror it.
 - Desktop request-guard self-tests stay deterministic when app requests arrive during cleanup (#2676)
 
 - New `mobile` workflow builds and tests both phone apps; a contract test fails when their theme or API description drifts from the desktop app (#2965)
+
+- Gallery preview fallback smoke no longer flakes when a slower runner reads the playing clip in several byte ranges (#3018)
 
 ## [0.5.7] — 2026-10-17
 
