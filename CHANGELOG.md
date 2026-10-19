@@ -18,8 +18,8 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
-- Generation errors now name the real cause (missing engine package, missing speech-to-text model, GPU or system memory, proxy timeout, unknown route) with a translated next step, and bug reports record the backend error class and failure topic (#PRNUM)
-- Picking a long reference clip's best passage no longer counts against the 300 s generate limit (#PRNUM)
+- Generation errors now name the real cause (missing engine package, missing speech-to-text model, GPU or system memory, proxy timeout, unknown route) with a translated next step, and bug reports record the backend error class and failure topic (#3027)
+- Picking a long reference clip's best passage no longer counts against the 300 s generate limit (#3027)
 
 ### Docs
 
