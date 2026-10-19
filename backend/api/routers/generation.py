@@ -2030,6 +2030,32 @@ async def generate_speech(
         if ref_text and persist_ref_text_profile_id:
             _persist_profile_ref_text(persist_ref_text_profile_id, ref_text)
 
+    # #2764: choosing the best 15 s window of a long reference runs the
+    # installed recognizer over several windows — minutes on a CPU. Inside the
+    # engine call that time was billed to the generate budget and the job was
+    # abandoned ("exceeded 300s") before synthesis began. Do it here, on its own
+    # floor-scaled budget; the engine then recalls the remembered choice. Best
+    # effort: a timeout leaves the engine to rank inline exactly as before.
+    if ref_audio_path and ref_picks_own_passage and backend_cls is OmniVoiceBackend:
+        from services.tts_backend import prepare_reference_passage
+
+        try:
+            from omnivoice.utils.audio import CLONE_REF_MAX_WINDOWS
+
+            await _run_with_reference_lease(
+                ref_lease,
+                lambda release: run_on_gpu_pool_guarded(
+                    functools.partial(prepare_reference_passage, ref_audio_path),
+                    what="Reference passage selection",
+                    timeout=CLONE_REF_MAX_WINDOWS * _generate_timeout_s(
+                        "", execution_device=_routing["effective_device"]
+                    ),
+                    on_abandon=release,
+                )
+            )
+        except TimeoutError as e:
+            logger.warning("reference passage selection hung (%s); engine will rank inline", e)
+
     # #526: materialize a concrete seed when none was supplied (and no profile
     # pinned one) so the take is reproducible and we can hand it back via the
     # X-Seed header for the "keep this seed" control. An explicit request seed
@@ -2395,11 +2421,13 @@ async def generate_speech(
                 # diagnostic bundle and opaque to the user (#1607). The raw
                 # exception is NOT logged: it can carry a reference-clip path or
                 # a provider secret, and only the journal scrubs before storing.
+                from core.public_errors import exception_origin, stream_generation_failure
+
+                _origin = exception_origin(exc)
                 logger.error(
-                    "Streaming generation failed unexpectedly (class=%s)",
-                    type(exc).__name__,
+                    "Streaming generation failed unexpectedly (class=%s%s)",
+                    type(exc).__name__, f"; {_origin}" if _origin else "",
                 )
-                from core.public_errors import stream_generation_failure
                 from core import error_journal
 
                 error_journal.record(
@@ -2573,6 +2601,14 @@ async def generate_speech(
 
         _topic = classify(str(e))
         _owned = public_hint_for_topic(_topic) if _topic else ""
+        if _topic == "REFERENCE_STT_MISSING" and _owned:
+            # Structured so the client can show its localized copy (#2929/#2678)
+            # instead of the English sentence, and so the topic reaches the
+            # bug report.
+            raise HTTPException(
+                status_code=400,
+                detail={"docs_topic": _topic, "message": _owned, "hint": _owned},
+            ) from e
         raise HTTPException(status_code=400, detail=_owned or str(e)) from e
     except Exception as e:
         tb = traceback.format_exc()
