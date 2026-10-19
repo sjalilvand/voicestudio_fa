@@ -2819,7 +2819,13 @@
     "audio_io_failed": "No se pudo leer o guardar el audio. Comprueba el formato, el espacio libre y los permisos del archivo. Revisa la carpeta en Ajustes → Almacenamiento.",
     "no_audio_track": "Este archivo no tiene pista de audio, así que no hay voz que transcribir, doblar o clonar. Elige un archivo de vídeo o audio que tenga sonido.",
     "transcription_media_tool": "La transcripción necesita ffmpeg, que VoiceStudio no pudo encontrar o ejecutar. Abre Ajustes → Herramientas de audio y usa Descargar/Reparar, o instala ffmpeg (macOS: brew install ffmpeg; Windows: winget install Gyan.FFmpeg; Linux: tu gestor de paquetes) y reinicia VoiceStudio. También puedes apuntar FFMPEG_PATH a un binario de ffmpeg.",
-    "transcription_pipe_lost": "El backend perdió su canal de salida con la aplicación durante la transcripción (broken pipe). Reinicia VoiceStudio e inténtalo de nuevo."
+    "transcription_pipe_lost": "El backend perdió su canal de salida con la aplicación durante la transcripción (broken pipe). Reinicia VoiceStudio e inténtalo de nuevo.",
+    "gpu_oom": "La GPU se quedó sin memoria. Cierra otras apps que usen mucho la GPU o descarga modelos y vuelve a intentarlo. También puedes elegir CPU en Ajustes → Rendimiento y dispositivo o seleccionar un motor TTS más pequeño.",
+    "host_memory_exhausted": "El equipo se quedó sin memoria. Cierra otras apps y pestañas del navegador que consuman memoria, libera los modelos que no uses, genera un fragmento más corto o elige un motor TTS más ligero.",
+    "engine_dependency_missing": "Falta instalar un paquete de Python que necesita este motor, por lo que no pudo iniciarse. Abre el Catálogo de modelos, selecciona el motor y usa Instalar / Reparar; luego reinicia VoiceStudio.",
+    "reference_stt_missing": "Esta voz no tiene transcripción y no hay ningún modelo de voz a texto instalado para crearla. Escribe lo que dice el clip de referencia en el cuadro de transcripción (clips de hasta 20 segundos) o instala un modelo de voz a texto en el Catálogo de modelos, selecciónalo y genera de nuevo.",
+    "proxy_gateway_error": "Un proxy o puerta de enlace entre tú y VoiceStudio respondió HTTP {{status}} en lugar del backend. Puede que el backend siga trabajando. Aumenta el tiempo de espera de lectura del proxy (en nginx, proxy_read_timeout) para generaciones largas y revisa Ajustes → Registros → Backend.",
+    "route_not_found": "El backend de VoiceStudio en ejecución no tiene el endpoint {{route}}. Reinicia VoiceStudio para que la app y el backend coincidan; si persiste, actualiza ambos a la misma versión."
   },
   "network": {
     "copied": "Copiado",

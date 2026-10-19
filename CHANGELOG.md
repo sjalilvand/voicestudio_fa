@@ -16,6 +16,11 @@ metadata and the backend fallback mirror it.
 
 - Preview iOS and Android companion apps: drive your own VoiceStudio from your phone (speak, voices and cloning, dubbing, dictation) after pairing by QR code; build from source for now ([guide](docs/mobile.md)) (#2965)
 
+### Fixed
+
+- Generation errors now name the real cause (missing engine package, missing speech-to-text model, GPU or system memory, proxy timeout, unknown route) with a translated next step, and bug reports record the backend error class and failure topic (#PRNUM)
+- Picking a long reference clip's best passage no longer counts against the 300 s generate limit (#PRNUM)
+
 ### Docs
 
 - Contributor guides and the pull request template explain how to sign the CLA before opening a first pull request (#2676)

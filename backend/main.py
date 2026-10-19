@@ -1632,6 +1632,12 @@ async def global_exception_handler(request: Request, exc: Exception):
         fallback="VoiceStudio hit an internal error; check the backend log for details.",
     )
     content["error_class"] = _entry.get("error_class")
+    # The Python exception TYPE rides along with the taxonomy class. The class
+    # is "UNKNOWN" for most failures, which made every such 500 render the same
+    # fixed sentence AND the same report (#2917/#2916/#2688); the type name is
+    # VoiceStudio-safe (a type, never user text) and is what tells a
+    # RuntimeError from a KeyError. No substring of the message is copied.
+    content["error_type"] = type(exc).__name__
     return JSONResponse(
         content,
         status_code=500,
