@@ -10,40 +10,57 @@ metadata and the backend fallback mirror it.
 
 **Highlights**
 
-- The open-source app no longer contains a licence-key client
+- Preview iOS and Android companion apps for your own VoiceStudio
 
 ### Added
 
-- GitHub Sponsors is now the lead way to support VoiceStudio — on the Support page, the footer support menu, the repository Sponsor button, and SPONSORS.md (#2918)
-
-### Changed
-
-- The expanded sidebar shows the installed app version beneath VoiceStudio and clearly marks development builds (#2894)
-
-### Removed
-
-- The unused licence-key client and its Lemon Squeezy network call are gone from the open-source app (#2812)
+- Preview iOS and Android companion apps: drive your own VoiceStudio from your phone (speak, voices and cloning, dubbing, dictation) after pairing by QR code; build from source for now ([guide](docs/mobile.md)) (#2965)
+- Smart Fit speed limits: set the fastest and slowest speed dubbing may apply to a line, from the Timing section (#3026) — thanks @MoonDragon-MD!
 
 ### Fixed
 
-- "Text-to-speech is not ready" → Fix now downloads the model chosen for the selected engine instead of doing nothing and leaving the warning up (#2918)
-- Integrations show official logos for Cursor, Claude Code, Codex CLI, OpenAI Agents, Docker and the VoiceStudio API instead of a generic placeholder or a GitHub avatar (#2918)
-- Tools → Convert includes saved Voice Design profiles and clones with locked reference audio in the target voice picker (#2899)
-- Preview voice buttons no longer freeze or stick on a warning: loading can be cancelled, errors retry on click, and repeat clicks share one render (#2915)
+- Engine sidecars no longer load PyTorch just to answer the Test Engine ping, and a failed test logs its reason locally (#3026) — thanks @tekay-de!
 
-- Snap packages follow Canonical’s strict-confinement approach to launch without manual Chromium sandbox setup (#2893) — thanks @velixio!
-- Snap launches explain missing sandbox permissions instead of crashing before startup (#2889)
-- Snap packages expand the Electron desktop runtime so they launch after installation (#2858)
+### Fixed
+
+- Windows runtime refresh no longer fails with `EPERM` on a locked backend folder (OneDrive, antivirus): it updates the files in place; the missing-Python-environment message now names the exact folder and tells non-checkout installs to use the installer (#3023) — thanks @afraniohugo, @javalovelinux-cmd and @eduardpp00!
+
+### Fixed
+
+- The install location chosen in first-run setup now also holds your data, model cache and temp files instead of quietly filling `C:`, and the setup screen shows each path (#2971, #3035)
+- Supertonic-3's preset voices can be picked in the voice controls and are used for generation (#2938, #3035)
+
+- `OMNIVOICE_ENGINES_DIR` moves engine venvs and the audio.cpp runtime to another drive; the default location is unchanged (#3024)
+
+### Fixed
+
+- The installed app now rebuilds a Python environment that antivirus or disk cleanup removed, once per launch with the usual setup progress, instead of stopping at a setup error; your voices and projects are untouched (#3032) — thanks @afraniohugo and @javalovelinux-cmd!
+
+### Docs
+
+- OmniVoice GGUF docs state that the installers do not ship its native binary yet (#3026) — thanks @DestinyQJY!
+- Contributor guides and the pull request template explain how to sign the CLA before opening a first pull request (#2676)
+
+### Fixed
+
+- macOS builds without a Developer ID are now signed ad hoc so the bundle signature is valid, and the shell installer clears quarantine, repairs an invalid signature of older releases, names an unreadable disk image, and tells Intel Mac users the backend needs Apple Silicon (#3033, #2763, #2829, #2681)
+- A "Generation failed" log line now says where it was raised and which error caused it, and the out-of-memory advice mentions picking another GPU, so these reports can be told apart (#2895, #2684, #2666, #2626, #2622, #2580, #3034)
 
 ### CI
 
-- Tagged releases upload to the Snap Store candidate channel automatically; stable stays a manual promote (#2932)
+- Desktop request-guard self-tests stay deterministic when app requests arrive during cleanup (#2676)
 
-## [0.5.7] — 2026-10-13
+- New `mobile` workflow builds and tests both phone apps; a contract test fails when their theme or API description drifts from the desktop app (#2965)
+
+- Gallery preview fallback smoke no longer flakes when a slower runner reads the playing clip in several byte ranges (#3018)
+
+## [0.5.7] — 2026-10-17
 
 **VoiceStudio now runs on PCs without a GPU and recovers instead of giving up.** Voice cloning uses the speech-to-text model you installed from Model Catalogue, GPU-less computers get the small CPU PyTorch build, and slow or busy backends are no longer reported as failed.
 
 This release also adds a GPU acceleration panel with honest Radeon reporting, the Ask VoiceStudio Agent, and a batch of fixes to dubbing, audiobooks, downloads and dictation.
+
+![Dubbing workspace in the Electron renderer with a sample project](https://raw.githubusercontent.com/debpalash/VoiceStudio/v0.5.7/docs/releases/v0.5.7-dubbing.png)
 
 **Download**
 
@@ -76,6 +93,8 @@ This release also adds a GPU acceleration panel with honest Radeon reporting, th
 - Ask VoiceStudio Agent adds chat, harness selection, feature presets, read-only planning and autopilot app actions without a source checkout (#2407)
 
 ### Changed
+
+- The expanded sidebar shows the installed app version beneath VoiceStudio and clearly marks development builds (#2894)
 
 - The Pro page lists only what Pro adds; recipes, watch folders and voice cloning stay free (#2587)
 - App identity and backend, browser and Electron development ports now come from one validated configuration file (#2759)
@@ -128,6 +147,8 @@ This release also adds a GPU acceleration panel with honest Radeon reporting, th
 
 ### Added
 
+- GitHub Sponsors is now the lead way to support VoiceStudio — on the Support page, the footer support menu, the repository Sponsor button, and SPONSORS.md (#2918)
+
 - The OpenAI-compatible speech API accepts a voice-profile name as `voice`, and the voice list shows which names work (#2617) — thanks @HuntingSuccubus!
 - New opt-in setting moves the voice model to system RAM after generation, freeing GPU memory for other apps such as a local LLM (#2618) — thanks @HuntingSuccubus!
 - Settings → About credits the speech models VoiceStudio can install, with links to their upstream terms and the required Higgs Audio and Llama notices (#2587)
@@ -162,6 +183,8 @@ This release also adds a GPU acceleration panel with honest Radeon reporting, th
 
 ### Removed
 
+- The unused licence-key client and its Lemon Squeezy network call are gone from the open-source app (#2812)
+
 - Remote compute devices, remote workers and GPU sharing moved to VoiceStudio Pro; legacy worker database records are kept and ignored (#2748)
 - Licence activation is no longer part of the open-source Pro page (#2762)
 
@@ -184,6 +207,25 @@ This release also adds a GPU acceleration panel with honest Radeon reporting, th
 - License notice: commercial use is free under the AGPL; the paid licence is for closed-source use, with Pro plans linked (#2578)
 
 ### Fixed
+
+- Cloning without a transcript no longer dead-ends when speech-to-text is missing: the transcript preview reuses any installed model, and the Clone page offers a one-click install of the recommended one (#3036)
+- Dubbing can replace an uploaded source with a link without removing it first (#2944) — thanks @mvanhorn!
+- Open WebUI lists VoiceStudio voice profiles: each voice from `/v1/audio/voices` also carries the `id` field it reads (#2934) — thanks @chiarorosa!
+- Renders no longer wait out a network timeout each time the AudioSeal watermark checkpoint can't be fetched; a failed load is retried after 10 minutes (#2933) — thanks @chiarorosa!
+- First-run setup installs into the selected runtime folder when it already exists but is empty (#2766) — thanks @emreisik95!
+- CPU and ROCm runtime setup avoids an unnecessary native CUDA probe that can crash before installation finishes (#2942)
+- Supertonic-3 accepts full language names without selecting the wrong language or producing invalid language codes. (#2939) — thanks @rudycelekli, @P4tch4nk4!
+- Local speech-recognition model paths beginning with a slash work on Windows without a model-licence error (#2930) — thanks @DeryFerd!
+- Long-reference cloning skips repeated speech-recognition hallucinations instead of choosing silent audio (#2838) — thanks @bercedev!
+- MOSS-TTS-v1.5 loads its model and codec from separate pinned snapshots and repairs older audio-decoder installs (#2702) — thanks @BichengWang!
+- Dubbing accepts crash-isolated Faster-Whisper transcripts instead of reporting no segments (#2789) — thanks @vincentfranstyo!
+- "Text-to-speech is not ready" → Fix now downloads the model chosen for the selected engine instead of doing nothing and leaving the warning up (#2918)
+- Integrations show official logos for Cursor, Claude Code, Codex CLI, OpenAI Agents, Docker and the VoiceStudio API instead of a generic placeholder or a GitHub avatar (#2918)
+- Tools → Convert includes saved Voice Design profiles and clones with locked reference audio in the target voice picker (#2899)
+- Preview voice buttons no longer freeze or stick on a warning: loading can be cancelled, errors retry on click, and repeat clicks share one render (#2915)
+- Snap packages follow Canonical’s strict-confinement approach to launch without manual Chromium sandbox setup (#2893) — thanks @velixio!
+- Snap launches explain missing sandbox permissions instead of crashing before startup (#2889)
+- Snap packages expand the Electron desktop runtime so they launch after installation (#2858)
 
 - A fresh install no longer logs settings errors before its database is created (#2776)
 - The model licence dialog says when licences are accepted and no longer assumes an action is waiting (#2776)
@@ -387,6 +429,28 @@ This release also adds a GPU acceleration panel with honest Radeon reporting, th
 - One bun, TypeScript and Playwright version and one lockfile across the workspace; frontend unit tests run in the required check (#2578)
 - Tests keep the review-bot configs, issue-template labels and locale catalogs consistent (#2578)
 - Trusted base-branch checks reject leaked, placeholder, and AI agent identities while allowing human co-authors with names shared by agents (#2556)
+
+
+### Contributors
+
+- @abdullah-rashid62, @bercedev, @BichengWang, @Cengokill, @chiarorosa, @debpalash, @DeryFerd, @drakeo338.
+- @ege-arhan, @eltociear, @emreisik95, @FenjuFu, @HoneyTyagii, @JoshuaWIls, @kevin9327, @li-lizhe.
+- @mvanhorn, @Nikhi00718, @nirmalchatur, @NN708, @nvtoan0201-swe, @Raunaksplanet, @rudycelekli, @shivsin25.
+- @strauss-visuals, @swadhinbiswas, @Vaishnavi220506, @velixio, @vincentfranstyo, @Yi-111-a.
+
+### Bug reporters
+
+- @Lihahaokok, @LouisCanBe, @105252803-create, @17lijunyi, @aanbiluitel-sys, @alannhery, @Ankith51, @Anuj04432.
+- @Bad-ptr, @be-huge, @brunobarrientos, @creatorliao, @davidamoline, @dominikj-cf, @dubeypankaj11-spec, @ewh1tman.
+- @FenjuFu, @geogjaime, @harrsoft-dev, @HNK-I, @HuntingSuccubus, @igiteam, @imsemoo, @javalovelinux-cmd.
+- @Jokeryt27, @jonathanmoronta1-lab, @JopsTaku, @kynjal26, @LoaiAlmoallem, @luomo1, @lyrenth, @mahdinazmi.
+- @manoooo202020, @Marcin-CCC, @nathanvinteset, @P4tch4nk4, @Pates2004, @PsychoRhythmist, @quan0pek, @Rey-de-la-Tierra.
+- @rishi2288, @RobAsticles, @rudycelekli, @scprdytj2s-beep, @simoncheese, @spvn81, @thelselutopia, @tigerscurrying-prog.
+- @tokutei58301-boop, @tracyndoan, @Xpertfall.
+
+### Feature requests and feedback
+
+- @CaptainAi777, @Cengokill, @FenjuFu, @HuntingSuccubus, @luminosity-d3v, @MayoGit204, @poshpaws, @shuvashish76, @z0tedd.
 
 ## [0.5.6] — 2026-09-23
 
