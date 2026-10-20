@@ -74,7 +74,15 @@ function PreviewButton({
       settle();
       setStatus('idle');
     } else if (status === 'playing') void player.current?.pause().catch(() => {});
-    else void player.current?.play().catch(() => setStatus('error'));
+    else {
+      // History refreshes and another playback claim can leave the control in
+      // its valid paused state after Vidstack has discarded the old provider.
+      // Rebuild lazily when that instance is gone (or rejects replay) instead
+      // of leaving an older take's Play button as a no-op.
+      const pausedPlayer = player.current;
+      if (!pausedPlayer) start();
+      else void pausedPlayer.play().catch(start);
+    }
   };
   const resolved = fallback && fallbackSrc ? fallbackSrc : src;
   const label =

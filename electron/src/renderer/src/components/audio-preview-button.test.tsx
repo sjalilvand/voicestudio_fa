@@ -72,3 +72,14 @@ it('defers onReady until playback stops so a refetch cannot cut the clip', () =>
   expect(onReady).toHaveBeenCalledTimes(1);
   expect(screen.getByRole('button', { name: 'clone.preview_voice' })).toBeVisible();
 });
+it('rebuilds a paused preview when its media instance was discarded', () => {
+  render(<AudioPreviewButton src="/older-take.wav" source="take-older" />);
+  fireEvent.click(screen.getByRole('button'));
+  fire('onPlaying');
+  fire('onPause');
+
+  fireEvent.click(screen.getByRole('button', { name: 'clone.preview_voice' }));
+
+  expect(players.mounted).toHaveLength(2);
+  expect(screen.getByRole('button', { name: 'common.loading · common.cancel' })).toBeEnabled();
+});
