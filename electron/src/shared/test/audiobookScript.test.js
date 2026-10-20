@@ -87,6 +87,12 @@ describe('chapterHeadingSnippet', () => {
     expect(chapterHeadingSnippet('Hello', 5)).toBe('\n# ');
     expect(chapterHeadingSnippet('Hello\n', 6)).toBe('# ');
   });
+  it('moves text after a mid-line caret or selection off the heading line', () => {
+    expect(chapterHeadingSnippet('Hello world', 6)).toBe('\n# \n');
+    expect(chapterHeadingSnippet('Hello world', 0)).toBe('# \n');
+    expect(chapterHeadingSnippet('Hello world\nNext', 6, 11)).toBe('\n# ');
+    expect(chapterHeadingSnippet('Hello world', 0, 5)).toBe('# \n');
+  });
 });
 
 describe('formatRuntimeClock', () => {

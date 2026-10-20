@@ -90,12 +90,19 @@ export function parseChapterOutline(text) {
   });
 }
 
-/** Heading to insert at `caret`, with a leading newline when not already at a line start. */
-export function chapterHeadingSnippet(text, caret) {
+/**
+ * Heading to insert at `caret`, with a leading newline when not already at a
+ * line start and a trailing one when text follows on the same line (after
+ * `end`, the selection end), so that text stays out of the heading.
+ */
+export function chapterHeadingSnippet(text, caret, end = caret) {
   const value = text || '';
-  const at = Number.isFinite(caret) ? Math.max(0, Math.min(caret, value.length)) : value.length;
+  const clamp = (n) => (Number.isFinite(n) ? Math.max(0, Math.min(n, value.length)) : value.length);
+  const at = clamp(caret);
+  const to = Math.max(at, clamp(end));
   const atLineStart = at === 0 || value[at - 1] === '\n';
-  return atLineStart ? '# ' : '\n# ';
+  const atLineEnd = to === value.length || value[to] === '\n';
+  return (atLineStart ? '' : '\n') + '# ' + (atLineEnd ? '' : '\n');
 }
 
 /**

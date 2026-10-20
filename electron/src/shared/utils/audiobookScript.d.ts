@@ -9,7 +9,7 @@ export type ChapterOutlineItem = {
   words: number;
 };
 export function parseChapterOutline(text: string): ChapterOutlineItem[];
-export function chapterHeadingSnippet(text: string, caret: number): string;
+export function chapterHeadingSnippet(text: string, caret: number, end?: number): string;
 export function formatRuntimeClock(seconds: number): string;
 export function validateScript(
   text: string,

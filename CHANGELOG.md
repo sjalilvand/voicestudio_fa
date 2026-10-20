@@ -14,7 +14,7 @@ metadata and the backend fallback mirror it.
 
 ### Added
 
-- Audiobook scripts show a live chapter outline: click a `#` heading to jump there, see spoken-word counts, and insert a new chapter from the markup toolbar — thanks @mvanhorn!
+- Audiobook scripts show a live chapter outline: click a `#` heading to jump there, see spoken-word counts, and insert a new chapter from the markup toolbar (#2963) — thanks @mvanhorn!
 
 ## [0.5.7] — 2026-10-17
 

@@ -60,9 +60,10 @@ export function AudiobookMarkupToolbar({
     const input = textareaRef.current;
     if (!input) return;
     const start = input.selectionStart ?? text.length;
-    const snippet = chapterHeadingSnippet(input.value, start);
-    splice(snippet, start, input.selectionEnd ?? start);
-    focus(start + snippet.length);
+    const end = input.selectionEnd ?? start;
+    const snippet = chapterHeadingSnippet(input.value, start, end);
+    splice(snippet, start, end);
+    focus(start + snippet.replace(/\n$/, '').length);
   };
   const insertVoice = () => {
     const input = textareaRef.current;

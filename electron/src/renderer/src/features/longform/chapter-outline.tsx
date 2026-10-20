@@ -6,17 +6,70 @@ import { parseChapterOutline } from '@shared/utils/audiobookScript';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
+const MIRROR_STYLES = [
+  'font-family',
+  'font-size',
+  'font-style',
+  'font-weight',
+  'letter-spacing',
+  'line-height',
+  'overflow-wrap',
+  'padding-bottom',
+  'padding-left',
+  'padding-right',
+  'padding-top',
+  'tab-size',
+  'text-indent',
+  'text-transform',
+  'white-space',
+  'word-break',
+  'word-spacing',
+];
+
+/**
+ * Displayed top of `offset` inside the textarea's content, counting soft-wrapped
+ * lines: lay the preceding text out in a hidden mirror with the same width,
+ * font and wrapping, then read where a marker after it lands.
+ */
+function textareaOffsetTop(textarea: HTMLTextAreaElement, offset: number) {
+  const style = window.getComputedStyle(textarea);
+  const mirror = document.createElement('div');
+  mirror.style.whiteSpace = 'pre-wrap';
+  mirror.style.overflowWrap = 'break-word';
+  for (const name of MIRROR_STYLES) {
+    const value = style.getPropertyValue(name);
+    if (value) mirror.style.setProperty(name, value);
+  }
+  Object.assign(mirror.style, {
+    position: 'absolute',
+    visibility: 'hidden',
+    top: '0',
+    left: '-9999px',
+    boxSizing: 'border-box',
+    border: '0',
+    width: `${textarea.clientWidth}px`,
+    height: 'auto',
+    overflow: 'hidden',
+  });
+  mirror.textContent = textarea.value.slice(0, offset);
+  const marker = document.createElement('span');
+  marker.dataset.caretMarker = '';
+  marker.textContent = '\u200b';
+  mirror.appendChild(marker);
+  document.body.appendChild(mirror);
+  const top = marker.offsetTop;
+  mirror.remove();
+  return top;
+}
+
 export function scrollTextareaToOffset(textarea: HTMLTextAreaElement, start: number, end = start) {
   const length = textarea.value.length;
   const from = Math.max(0, Math.min(start, length));
   const to = Math.max(from, Math.min(end, length));
   textarea.focus();
   textarea.setSelectionRange(from, to);
-  const style = window.getComputedStyle(textarea);
-  const lineHeight =
-    Number.parseFloat(style.lineHeight) || Number.parseFloat(style.fontSize) * 1.75 || 28;
-  const lineIndex = textarea.value.slice(0, from).split('\n').length - 1;
-  textarea.scrollTop = Math.max(0, lineIndex * lineHeight - textarea.clientHeight / 3);
+  const top = textareaOffsetTop(textarea, from);
+  textarea.scrollTop = Math.max(0, top - textarea.clientHeight / 3);
 }
 
 export function ChapterOutline({
