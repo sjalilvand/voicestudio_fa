@@ -7,7 +7,13 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { isMac } from '@/components/bridge';
 
-export function WorkspaceHeader({ children }: { children: ReactNode }) {
+export function WorkspaceHeader({
+  children,
+  actions,
+}: {
+  children: ReactNode;
+  actions?: ReactNode;
+}) {
   const { t } = useTranslation();
   return (
     <header
@@ -19,6 +25,7 @@ export function WorkspaceHeader({ children }: { children: ReactNode }) {
       {!isMac() && <SidebarToggle />}
       {children}
       <div className="ml-auto flex shrink-0 items-center gap-1">
+        {actions}
         <SupportShortcut />
         <Button
           variant="ghost"
