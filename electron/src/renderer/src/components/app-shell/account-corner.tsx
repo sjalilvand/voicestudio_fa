@@ -5,6 +5,8 @@ import { AccountMenu } from './account-menu';
 import { SystemNotifications } from './system-notifications';
 
 const SPACE_VAR = '--corner-space';
+/** Clear space kept between a page's own title bar buttons and the corner. */
+const CORNER_GAP = 12;
 
 /**
  * The window's top-right corner, on every page: the account control (photo and
@@ -22,7 +24,7 @@ export function AccountCorner({ notificationsEnabled }: { notificationsEnabled: 
     const node = host.current;
     const measure = () => {
       if (node && node.childElementCount > 0)
-        root.style.setProperty(SPACE_VAR, `${Math.ceil(node.offsetWidth) + 8}px`);
+        root.style.setProperty(SPACE_VAR, `${Math.ceil(node.offsetWidth) + CORNER_GAP}px`);
       else root.style.removeProperty(SPACE_VAR);
     };
     measure();
