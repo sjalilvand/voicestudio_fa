@@ -275,6 +275,10 @@ export function DubPage() {
   const [findQuery, setFindQuery] = useState('');
   const [replaceText, setReplaceText] = useState('');
   const [matchIndex, setMatchIndex] = useState(0);
+  // False until the current hit has been scrolled into view, so the first Next
+  // lands on hit 1 instead of skipping it.
+  const findAnchored = useRef(false);
+  const followFindAfterReplace = useRef(false);
   const [recoveringAsr, setRecoveringAsr] = useState(false);
   const [installingArgosPacks, setInstallingArgosPacks] = useState(false);
   const [translationAgents, setTranslationAgents] = useState<RepairAgentInfo[]>([]);
@@ -391,6 +395,7 @@ export function DubPage() {
     (index: number) => {
       if (index < 0 || index >= findMatches.length) return;
       const match = findMatches[index];
+      findAnchored.current = true;
       setMatchIndex(index);
       setSelectedSegmentId(match.id);
       const row = session.segments.findIndex((segment) => String(segment.id) === match.id);
@@ -403,6 +408,11 @@ export function DubPage() {
     },
     [findMatches, session.segments, segmentVirtualizer],
   );
+  useEffect(() => {
+    if (!followFindAfterReplace.current) return;
+    followFindAfterReplace.current = false;
+    if (findMatches.length) goToFindMatch(Math.min(matchIndex, findMatches.length - 1));
+  }, [findMatches, goToFindMatch, matchIndex]);
   const applySpokenUpdates = useCallback(
     (next: typeof session.segments) => {
       const updates = textUpdates(session.segments, next);
@@ -2341,10 +2351,17 @@ export function DubPage() {
                   onQuery={(value) => {
                     setFindQuery(value);
                     setMatchIndex(0);
+                    findAnchored.current = false;
                   }}
                   onReplacement={setReplaceText}
                   onPrev={() => goToFindMatch(nextMatchIndex(findMatches.length, matchIndex, -1))}
-                  onNext={() => goToFindMatch(nextMatchIndex(findMatches.length, matchIndex, 1))}
+                  onNext={() =>
+                    goToFindMatch(
+                      findAnchored.current
+                        ? nextMatchIndex(findMatches.length, matchIndex, 1)
+                        : Math.min(matchIndex, findMatches.length - 1),
+                    )
+                  }
                   onReplace={() => {
                     if (!currentFindMatch || currentFindMatch.field !== 'text') return;
                     const next = replaceCurrentMatch(
@@ -2352,7 +2369,11 @@ export function DubPage() {
                       currentFindMatch,
                       replaceText,
                     );
-                    if (!applySpokenUpdates(next)) return;
+                    followFindAfterReplace.current = true;
+                    if (!applySpokenUpdates(next)) {
+                      followFindAfterReplace.current = false;
+                      return;
+                    }
                     toast.success(t('segment.replace_done', { count: 1 }));
                   }}
                   onReplaceAll={() => {
@@ -2364,6 +2385,7 @@ export function DubPage() {
                     if (!count || !applySpokenUpdates(next)) return;
                     toast.success(t('segment.replace_done', { count }));
                     setMatchIndex(0);
+                    findAnchored.current = false;
                   }}
                 />
               )}

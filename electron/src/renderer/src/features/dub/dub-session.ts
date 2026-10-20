@@ -596,7 +596,9 @@ export function replaceDubSegmentTexts(
     const text = byId.get(String(segment.id));
     if (text === undefined || text === segment.text) return segment;
     changed += 1;
-    if (targetCode) {
+    // Only rewrite an existing target translation; untranslated rows keep
+    // their source words out of translations so they are not counted as done.
+    if (targetCode && segment.translations?.[targetCode] !== undefined) {
       return patchSegment(segment, {
         text,
         translations: { ...segment.translations, [targetCode]: text },
@@ -605,7 +607,7 @@ export function replaceDubSegmentTexts(
     return patchSegment(segment, { text });
   });
   if (!changed) return 0;
-  return commitSegmentEdit(next, 'find-replace') ? changed : 0;
+  return commitSegmentEdit(next) ? changed : 0;
 }
 
 export function applyDubTranslationRows(targetCode: string, rows: PasteTranslationRow[]) {
