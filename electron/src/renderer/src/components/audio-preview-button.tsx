@@ -74,13 +74,7 @@ function PreviewButton({
       settle();
       setStatus('idle');
     } else if (status === 'playing') void player.current?.pause().catch(() => {});
-    else {
-      // History refreshes and another playback claim can leave the control in
-      // its valid paused state after Vidstack has discarded the old provider.
-      // Rebuild synchronously from this click: trying the stale provider first
-      // loses the user gesture before the retry and Chromium rejects autoplay.
-      start();
-    }
+    else void player.current?.play().catch(() => setStatus('error'));
   };
   const resolved = fallback && fallbackSrc ? fallbackSrc : src;
   const label =

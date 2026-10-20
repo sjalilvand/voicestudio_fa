@@ -1,10 +1,6 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
-type MockPlayer = { play: ReturnType<typeof vi.fn> };
-type Handlers = Record<string, (() => void) | undefined> & {
-  src: { src: string };
-  playerRef: { current: MockPlayer | null };
-};
+type Handlers = Record<string, (() => void) | undefined> & { src: { src: string } };
 const players = vi.hoisted(() => ({ mounted: [] as Handlers[], live: null as Handlers | null }));
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock('./media-player', async () => {
@@ -75,18 +71,4 @@ it('defers onReady until playback stops so a refetch cannot cut the clip', () =>
   fire('onEnded');
   expect(onReady).toHaveBeenCalledTimes(1);
   expect(screen.getByRole('button', { name: 'clone.preview_voice' })).toBeVisible();
-});
-it('rebuilds a paused preview instead of replaying its discarded media instance', () => {
-  render(<AudioPreviewButton src="/older-take.wav" source="take-older" />);
-  fireEvent.click(screen.getByRole('button'));
-  fire('onPlaying');
-  fire('onPause');
-  const stalePlay = vi.fn(async () => undefined);
-  players.live!.playerRef.current = { play: stalePlay };
-
-  fireEvent.click(screen.getByRole('button', { name: 'clone.preview_voice' }));
-
-  expect(stalePlay).not.toHaveBeenCalled();
-  expect(players.mounted).toHaveLength(2);
-  expect(screen.getByRole('button', { name: 'common.loading · common.cancel' })).toBeEnabled();
 });

@@ -17,6 +17,7 @@ export function OutputPanel() {
   if (!result || !objectUrl) return null;
 
   const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  const playbackUrl = result.audioPath ? audioUrl(result.audioPath) : objectUrl;
 
   return (
     <section
@@ -48,11 +49,16 @@ export function OutputPanel() {
             </Button>
           </div>
         </div>
-        {result && objectUrl ? (
+        {result && playbackUrl ? (
           <>
-            <WaveformPlayer key={objectUrl} src={objectUrl} source="output" height={36} />
+            <WaveformPlayer
+              key={`player-${playbackUrl}`}
+              src={playbackUrl}
+              source="output"
+              height={36}
+            />
             <AudioFileDetails blob={result.blob} />
-            {result.audioPath && <AudioQuality key={objectUrl} audioPath={result.audioPath} />}
+            {result.audioPath && <AudioQuality audioPath={result.audioPath} />}
             <div className="flex flex-wrap items-start justify-between gap-3">
               <p
                 className="line-clamp-2 min-w-40 flex-1 text-sm text-muted-foreground"
