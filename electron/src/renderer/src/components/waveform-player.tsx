@@ -49,6 +49,20 @@ export function waveColors(el: HTMLElement): { waveColor: string; progressColor:
   return { waveColor: muted, progressColor: primary };
 }
 
+/**
+ * The URL WaveSurfer must be given for a media element Vidstack already loaded.
+ * WaveSurfer compares it to `media.currentSrc`, which is always absolute; a
+ * relative `/api/audio/...` path never matches, so WaveSurfer swaps the element
+ * onto its own blob URL behind Vidstack and the play button and clock go stale.
+ */
+export function waveformUrl(src: string, base = document.baseURI): string {
+  try {
+    return new URL(src, base).href;
+  } catch {
+    return src;
+  }
+}
+
 /** Keep controls aligned with the concrete audio element even if provider state is stale. */
 export function subscribeMediaPaused(
   media: HTMLMediaElement,
@@ -167,7 +181,7 @@ function WaveformControls({
     const ws = WaveSurfer.create({
       container: container.current,
       media,
-      url: src,
+      url: waveformUrl(src),
       height,
       ...waveColors(container.current),
       cursorWidth: 1,
