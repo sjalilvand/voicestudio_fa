@@ -15,6 +15,8 @@ export interface CloneSettings {
   steps: number;
   wavBits: 16 | 24 | 32;
   effectPreset: 'broadcast' | 'raw';
+  /** Built-in voice id for preset engines; '' = the engine's default. */
+  presetVoice: string;
   cfg: number;
   speed: number;
   tShift: number;
@@ -38,6 +40,7 @@ export const DEFAULT_CLONE_SETTINGS: CloneSettings = {
   steps: 16, // ~16 avoids ODE destabilisation in the flow-matcher.
   wavBits: 16,
   effectPreset: 'broadcast',
+  presetVoice: '',
   cfg: 2.0,
   speed: 1.0,
   tShift: 0.1,
