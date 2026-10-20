@@ -59,7 +59,6 @@ import { EngineLanguagePicker } from '@/features/clone/engine-language-picker';
 import { queryKeys } from '@/lib/query';
 import { cn } from '@/lib/utils';
 import { cloneSettingsStore } from '@/lib/store/clone-settings';
-import { setWorkspace } from '@/lib/store/workspace';
 import type { Profile } from '@/lib/api/types';
 import { CATEGORIES, PRESETS } from '@shared/utils/constants';
 import { buildDesignInstruct, mergeDescribedAttrs } from '@shared/utils/voiceInstruct';
@@ -171,18 +170,7 @@ export function DesignPage() {
       .join(' · ') || t('clone.identity_auto');
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <WorkspaceHeader
-        actions={
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setWorkspace({ libraryOpen: true, libraryTab: 'takes' })}
-          >
-            <HistoryIcon data-icon="inline-start" />
-            {t('clone.history_title')}
-          </Button>
-        }
-      >
+      <WorkspaceHeader>
         <h1 className="text-sm font-medium">{t('designWorkspace.title')}</h1>
       </WorkspaceHeader>
       <div className="flex min-h-0 flex-1 @max-[40rem]:flex-col">

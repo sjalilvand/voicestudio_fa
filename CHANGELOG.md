@@ -19,7 +19,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
-- Recent synthesized takes remain visible and playable, with permanent History exposed in Voice Design (#3102)
+- Older synthesized takes play again after a newer generation takes over audio playback (#3102)
 - Generated speech no longer starts and ends with silence, and `[pause]` markers give exactly the pause you asked for (Raw preset and explicit durations untouched) (#3080)
 - Engine sidecars no longer load PyTorch just to answer the Test Engine ping, and a failed test logs its reason locally (#3026) — thanks @tekay-de!
 

@@ -13,10 +13,11 @@ import { SectionLabel } from './section-label';
 
 export function OutputPanel() {
   const { t } = useTranslation();
-  const { result, objectUrl, text, takes } = useLatestOutput();
+  const { result, objectUrl, text } = useLatestOutput();
   if (!result || !objectUrl) return null;
 
   const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  const playbackUrl = result.audioPath ? audioUrl(result.audioPath) : objectUrl;
 
   return (
     <section
@@ -40,7 +41,7 @@ export function OutputPanel() {
               aria-label={t('common.close')}
               title={t('common.close')}
               onClick={() => {
-                if (activePlaybackSource()?.startsWith('output')) stopActivePlayback();
+                if (activePlaybackSource() === 'output') stopActivePlayback();
                 clearLatestOutput();
               }}
             >
@@ -50,23 +51,9 @@ export function OutputPanel() {
         </div>
         {result && objectUrl ? (
           <>
-            <div className="flex max-h-64 flex-col gap-2 overflow-y-auto pr-1">
-              {takes.map((take, index) => {
-                const playbackUrl = take.result.audioPath
-                  ? audioUrl(take.result.audioPath)
-                  : take.objectUrl;
-                return playbackUrl ? (
-                  <WaveformPlayer
-                    key={take.result.id ?? take.result.audioPath ?? take.objectUrl ?? index}
-                    src={playbackUrl}
-                    source={index === 0 ? 'output' : `output-${take.result.id ?? index}`}
-                    height={36}
-                  />
-                ) : null;
-              })}
-            </div>
+            <WaveformPlayer key={objectUrl} src={playbackUrl} source="output" height={36} />
             <AudioFileDetails blob={result.blob} />
-            {result.audioPath && <AudioQuality audioPath={result.audioPath} />}
+            {result.audioPath && <AudioQuality key={objectUrl} audioPath={result.audioPath} />}
             <div className="flex flex-wrap items-start justify-between gap-3">
               <p
                 className="line-clamp-2 min-w-40 flex-1 text-sm text-muted-foreground"
