@@ -13,11 +13,10 @@ import { SectionLabel } from './section-label';
 
 export function OutputPanel() {
   const { t } = useTranslation();
-  const { result, objectUrl, text } = useLatestOutput();
+  const { result, objectUrl, text, takes } = useLatestOutput();
   if (!result || !objectUrl) return null;
 
   const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-  const playbackUrl = result.audioPath ? audioUrl(result.audioPath) : objectUrl;
 
   return (
     <section
@@ -41,7 +40,7 @@ export function OutputPanel() {
               aria-label={t('common.close')}
               title={t('common.close')}
               onClick={() => {
-                if (activePlaybackSource() === 'output') stopActivePlayback();
+                if (activePlaybackSource()?.startsWith('output')) stopActivePlayback();
                 clearLatestOutput();
               }}
             >
@@ -49,14 +48,23 @@ export function OutputPanel() {
             </Button>
           </div>
         </div>
-        {result && playbackUrl ? (
+        {result && objectUrl ? (
           <>
-            <WaveformPlayer
-              key={`player-${playbackUrl}`}
-              src={playbackUrl}
-              source="output"
-              height={36}
-            />
+            <div className="flex max-h-64 flex-col gap-2 overflow-y-auto pr-1">
+              {takes.map((take, index) => {
+                const playbackUrl = take.result.audioPath
+                  ? audioUrl(take.result.audioPath)
+                  : take.objectUrl;
+                return playbackUrl ? (
+                  <WaveformPlayer
+                    key={take.result.id ?? take.result.audioPath ?? take.objectUrl ?? index}
+                    src={playbackUrl}
+                    source={index === 0 ? 'output' : `output-${take.result.id ?? index}`}
+                    height={36}
+                  />
+                ) : null;
+              })}
+            </div>
             <AudioFileDetails blob={result.blob} />
             {result.audioPath && <AudioQuality audioPath={result.audioPath} />}
             <div className="flex flex-wrap items-start justify-between gap-3">

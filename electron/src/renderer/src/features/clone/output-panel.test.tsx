@@ -41,16 +41,22 @@ function result(audioPath: string | null): GenerateResult {
 }
 
 it('plays a completed take from its persistent audio path instead of a revocable blob URL', () => {
+  const older = result('take-0.wav');
+  const latest = result('take-1.wav');
   mocks.output.mockReturnValue({
-    result: result('take-1.wav'),
+    result: latest,
     objectUrl: 'blob:http://localhost/revoked',
     text: 'Hello',
+    takes: [
+      { result: latest, objectUrl: 'blob:http://localhost/latest', text: 'Hello' },
+      { result: older, objectUrl: 'blob:http://localhost/older', text: 'Earlier' },
+    ],
   });
 
   render(<OutputPanel />);
 
-  expect(screen.getByTestId('player')).toHaveAttribute(
-    'data-src',
+  expect(screen.getAllByTestId('player').map((player) => player.dataset.src)).toEqual([
     '/api/audio/take-1.wav',
-  );
+    '/api/audio/take-0.wav',
+  ]);
 });

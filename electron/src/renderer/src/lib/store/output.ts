@@ -9,20 +9,39 @@ export interface OutputState {
   objectUrl: string | null;
   /** The script that produced `result`. */
   text: string;
+  /** Recent takes from this synthesis session, newest first. */
+  takes: OutputTake[];
 }
 
-export const outputStore = new Store<OutputState>({ result: null, objectUrl: null, text: '' });
+export interface OutputTake {
+  result: GenerateResult;
+  objectUrl: string | null;
+  text: string;
+}
+
+const MAX_SESSION_TAKES = 10;
+
+export const outputStore = new Store<OutputState>({
+  result: null,
+  objectUrl: null,
+  text: '',
+  takes: [],
+});
 
 export function useLatestOutput(): OutputState {
   return useStore(outputStore);
 }
 
 export function setLatestOutput(result: GenerateResult, text: string): void {
-  revokeObjectUrl(outputStore.state.objectUrl);
-  outputStore.setState(() => ({ result, objectUrl: createObjectUrl(result.blob), text }));
+  const take = { result, objectUrl: createObjectUrl(result.blob), text };
+  outputStore.setState((state) => {
+    const takes = [take, ...state.takes];
+    for (const dropped of takes.slice(MAX_SESSION_TAKES)) revokeObjectUrl(dropped.objectUrl);
+    return { ...take, takes: takes.slice(0, MAX_SESSION_TAKES) };
+  });
 }
 
 export function clearLatestOutput(): void {
-  revokeObjectUrl(outputStore.state.objectUrl);
-  outputStore.setState(() => ({ result: null, objectUrl: null, text: '' }));
+  for (const take of outputStore.state.takes) revokeObjectUrl(take.objectUrl);
+  outputStore.setState(() => ({ result: null, objectUrl: null, text: '', takes: [] }));
 }
