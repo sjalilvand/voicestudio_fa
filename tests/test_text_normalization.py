@@ -45,6 +45,7 @@ _CHANGE_CASES = [
     ("English", "just $0.01 more", "just one cent more"),
     ("English", "it costs $5.00 now", "it costs five dollars now"),
     ("English", "only $1.00.", "only one dollar."),
+    ("English", "it was $0.00 then", "it was zero dollars then"),
     # Sentence punctuation after an amount is not part of it: the lookahead
     # used to reject any period or comma, so these reached the engine as digits.
     ("English", "It costs $5.", "It costs five dollars."),
