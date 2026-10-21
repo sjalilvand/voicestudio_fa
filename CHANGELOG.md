@@ -20,6 +20,8 @@ metadata and the backend fallback mirror it.
 ### Fixed
 
 - The backend no longer reports "temporarily not responding" while its log fills up: the request log now goes through the same buffer as the rest of the output, so a slow log reader cannot freeze health checks (#3108) — thanks @holywings0727!
+- Older synthesized takes play again with accurate play/pause controls after a newer generation (#3102)
+- Generation-complete notifications appear above the workspace instead of covering synthesis controls (#3102)
 - Generated speech no longer starts and ends with silence, and `[pause]` markers give exactly the pause you asked for (Raw preset and explicit durations untouched) (#3080)
 - Engine sidecars no longer load PyTorch just to answer the Test Engine ping, and a failed test logs its reason locally (#3026) — thanks @tekay-de!
 
