@@ -122,6 +122,19 @@ class TestKaraokeTags:
         # No karaoke duration may exceed the 1 s cue.
         assert all(int(cs) <= 100 for cs in re.findall(r"\\kf?(\d+)", line))
 
+    def test_tags_add_up_to_the_cue_length_on_a_long_cue(self):
+        # 30 words evenly over 10 s are 33.33 cs each. Rounding every tag on
+        # its own gave 30 x 33 = 990 cs, so the sweep ended 0.1 s before the
+        # cue did and ran further ahead of the audio with every word.
+        text = " ".join(f"w{i}" for i in range(30))
+        script = build_ass([{"start": 1.0, "end": 11.0, "text": text}])
+        line = next(l for l in script.splitlines() if l.startswith("Dialogue:"))
+        durations = [int(cs) for cs in re.findall(r"\\kf?(\d+)", line)]
+        assert len(durations) == 30
+        assert sum(durations) == 1000
+        # Word 15 starts 5 s into the cue on the rounded timeline.
+        assert sum(durations[:15]) == 500
+
     def test_braces_and_newlines_escaped(self):
         cue = {"start": 0.0, "end": 1.0, "text": "{\\b1}bold\nnext"}
         script = build_ass([cue])

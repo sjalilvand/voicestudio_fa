@@ -77,9 +77,14 @@ def _ass_escape(text: str) -> str:
     )
 
 
-def _cs(seconds: float) -> int:
-    """Karaoke tag duration in centiseconds; ≥1 so a tag never renders as 0."""
-    return max(1, int(round(float(seconds) * 100)))
+def _cs_between(start: float, end: float) -> int:
+    """Karaoke tag duration in centiseconds from ``start`` to ``end``.
+
+    Measured between the two times rounded to centiseconds (as _ass_time
+    rounds), so consecutive tags add up to the rounded span. ≥1 so a tag
+    never renders as 0.
+    """
+    return max(1, int(round(float(end) * 100)) - int(round(float(start) * 100)))
 
 
 def even_split_words(text: str, start: float, end: float) -> list[dict]:
@@ -175,14 +180,18 @@ def _karaoke_text(cue: dict, text: str, start: float, end: float) -> str:
         ws = min(max(ws, prev), end)
         clamped.append((wtext, ws))
         prev = ws
+    # Tag lengths are differences of times rounded to centiseconds, the way
+    # _ass_time rounds the event's own start and end. Rounding each duration
+    # on its own let the error add up word by word, so on a long cue the
+    # sweep drifted off the audio and stopped short of the cue end.
     parts: list[str] = []
     lead = clamped[0][1] - start
     if lead > 0.005:
-        parts.append(f"{{\\k{_cs(lead)}}}")
+        parts.append(f"{{\\k{_cs_between(start, clamped[0][1])}}}")
     for i, (wtext, ws) in enumerate(clamped):
         nxt = clamped[i + 1][1] if i + 1 < len(clamped) else end
         sep = " " if i + 1 < len(clamped) else ""
-        parts.append(f"{{\\kf{_cs(max(nxt, ws) - ws)}}}{_ass_escape(wtext)}{sep}")
+        parts.append(f"{{\\kf{_cs_between(ws, max(nxt, ws))}}}{_ass_escape(wtext)}{sep}")
     return "".join(parts)
 
 
