@@ -9,6 +9,7 @@ import pytest
 
 @pytest.fixture
 def model_manager(monkeypatch):
+    """Isolate model state and select native OmniVoice regardless of host hardware."""
     for mod_name in ("core.config", "services.model_manager"):
         if getattr(sys.modules.get(mod_name), "__file__", None) is None:
             sys.modules.pop(mod_name, None)
@@ -151,6 +152,7 @@ def test_preload_warms_up_locally_installed_checkpoint(model_manager, monkeypatc
     loaded = SimpleNamespace(llm=object())
 
     async def _fake_load():
+        """Return installed weights without loading a real model."""
         return loaded
 
     monkeypatch.setattr(model_manager, "_load_model_with_timeout", _fake_load)
@@ -162,6 +164,7 @@ def test_preload_warms_up_locally_installed_checkpoint(model_manager, monkeypatc
 @pytest.mark.parametrize("family", ["cpu", "cuda", "rocm", "mps"])
 @pytest.mark.parametrize("backend_id", ["voxcpm2", "omnivoice-subprocess", "mlx-audio", "unknown"])
 def test_preload_skips_other_selected_engines(model_manager, monkeypatch, family, backend_id):
+    """Other engine selections must skip all native OmniVoice preload work."""
     from core import device_caps, prefs
 
     monkeypatch.setattr(
@@ -171,6 +174,7 @@ def test_preload_skips_other_selected_engines(model_manager, monkeypatch, family
     prefs.set_("tts_backend", backend_id)
 
     def unexpected(*args, **kwargs):
+        """Fail if the unselected engine reaches licence, cache, or weight work."""
         pytest.fail("an unselected OmniVoice must not check its licence, cache or load weights")
 
     monkeypatch.setattr(model_manager, "_ensure_omnivoice_licence", unexpected)
@@ -189,6 +193,7 @@ def test_preload_skips_other_selected_engines(model_manager, monkeypatch, family
 def test_preload_respects_engine_environment_override(
     model_manager, monkeypatch, saved, override, should_load
 ):
+    """An environment override wins over the saved engine in either direction."""
     from core import prefs
 
     prefs.set_("tts_backend", saved)
@@ -197,6 +202,7 @@ def test_preload_respects_engine_environment_override(
     loaded = SimpleNamespace(llm=object())
 
     async def fake_load():
+        """Return a recognizable model to detect whether preload ran."""
         return loaded
 
     monkeypatch.setattr(model_manager, "_load_model_with_timeout", fake_load)
@@ -206,6 +212,7 @@ def test_preload_respects_engine_environment_override(
 
 
 def test_preload_keeps_default_omnivoice_warmup(model_manager, monkeypatch):
+    """Missing engine preferences and overrides preserve the default warm-up."""
     from core import prefs
 
     monkeypatch.delenv("OMNIVOICE_TTS_BACKEND")
@@ -214,6 +221,7 @@ def test_preload_keeps_default_omnivoice_warmup(model_manager, monkeypatch):
     loaded = SimpleNamespace(llm=object())
 
     async def fake_load():
+        """Return a recognizable model without downloading or allocating weights."""
         return loaded
 
     monkeypatch.setattr(model_manager, "_load_model_with_timeout", fake_load)
