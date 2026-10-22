@@ -52,6 +52,11 @@ Electron publication uses these GitHub Actions secrets:
   `APP_STORE_CONNECT_API_KEY` in the `app-store-connect` environment for the
   iOS TestFlight upload ([`mobile.md`](mobile.md#testflight-maintainers)).
   TestFlight is not a release channel.
+- `ANDROID_UPLOAD_KEYSTORE`, `ANDROID_UPLOAD_KEYSTORE_PASSWORD`,
+  `ANDROID_UPLOAD_KEY_ALIAS`, `ANDROID_UPLOAD_KEY_PASSWORD` and
+  `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` in the `google-play` environment for the
+  Play internal testing upload ([`mobile.md`](mobile.md#play-internal-testing-maintainers)).
+  Play internal testing is not a release channel either.
 - The repository `GITHUB_TOKEN` for draft creation and asset uploads.
 - `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` for the Docker Hub mirror.
 - `POSTHOG_PROJECT_TOKEN` (secret) and `POSTHOG_HOST` (repository variable),

@@ -95,3 +95,30 @@ submits the app for App Store review. One-time setup in the Apple Developer team
 The version is the root `package.json` version without any `-beta.N` suffix
 (App Store Connect accepts only `X.Y.Z`); the build number is the workflow run
 number and attempt, so every upload is new.
+
+## Play internal testing (maintainers)
+
+The `Android Play internal testing` workflow is the Android counterpart: it
+signs a release bundle with the Play upload key and uploads it to the Play
+Console **internal testing** track. It is dispatched by hand from `main` and
+never sends a release to production. One-time setup:
+
+1. Create the app in the Play Console with the package name
+   `com.voicestudio.mobile` and keep Play App Signing on (Google holds the app
+   signing key; CI only holds the upload key).
+2. Create an upload key once and keep a backup in the team password manager:
+   `keytool -genkeypair -v -keystore upload.jks -alias upload -keyalg RSA -keysize 4096 -validity 10000`.
+3. Create a Google Cloud service account with a JSON key, then invite its email
+   in the Play Console (Users and permissions) with release access to this app.
+4. Create the `google-play` environment (Settings → Environments), limit it to
+   the `main` branch, and add `ANDROID_UPLOAD_KEYSTORE` (the `.jks` as base64),
+   `ANDROID_UPLOAD_KEYSTORE_PASSWORD`, `ANDROID_UPLOAD_KEY_ALIAS`,
+   `ANDROID_UPLOAD_KEY_PASSWORD` and `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`.
+5. Google Play takes the first bundle only through the Play Console: run the
+   workflow once (its upload step fails), download the `VoiceStudio-android-play`
+   artifact and upload it to internal testing by hand. Until the app's first
+   release is rolled out, dispatch with status `draft`.
+
+The version name is the root `package.json` version; the version code is the
+workflow run number × 10 plus the attempt, so every upload is new. Local and
+`mobile` workflow builds stay debug-signed.
