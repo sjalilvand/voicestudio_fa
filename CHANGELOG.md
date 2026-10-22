@@ -45,6 +45,7 @@ metadata and the backend fallback mirror it.
 
 ### Docs
 
+- Sponsorship is one framework: GitHub Sponsors tiers match `SPONSORS.md`, which now states what each tier gives, when recognition starts, and what sponsorship does not buy (#3172)
 - OmniVoice GGUF docs state that the installers do not ship its native binary yet (#3026) — thanks @DestinyQJY!
 - Contributor guides and the pull request template explain how to sign the CLA before opening a first pull request (#2676)
 
