@@ -21,17 +21,28 @@ def release():
 
 
 @pytest.mark.parametrize(
-    ("current", "channel", "expected"),
+    ("current", "channel", "tags", "expected"),
     [
-        ("0.5.7", "stable", "0.5.8"),
-        ("0.5.7", "beta", "0.5.8-beta.1"),
-        ("0.5.8-beta.1", "beta", "0.5.8-beta.2"),
-        ("0.5.8-beta.9", "beta", "0.5.8-beta.10"),
-        ("0.5.8-beta.2", "stable", "0.5.8"),
+        # package.json already names the upcoming release: v0.5.7 is the new tag.
+        ("0.5.7", "stable", ["v0.5.6"], "0.5.7"),
+        ("0.5.7", "beta", ["v0.5.6"], "0.5.7-beta.1"),
+        ("0.5.7", "beta", ["v0.5.6", "v0.5.7-beta.1"], "0.5.7-beta.2"),
+        ("0.5.7", "beta", ["v0.5.7-beta.9"], "0.5.7-beta.10"),
+        ("0.5.7-beta.2", "stable", ["v0.5.6", "v0.5.7-beta.2"], "0.5.7"),
+        # the base is already released: move to the next patch
+        ("0.5.7", "stable", ["v0.5.7"], "0.5.8"),
+        ("0.5.7", "beta", ["v0.5.7"], "0.5.8-beta.1"),
+        ("0.5.7", "stable", [], "0.5.7"),
     ],
 )
-def test_next_version(release, current, channel, expected):
-    assert release.next_version(current, channel) == expected
+def test_next_version(release, current, channel, tags, expected):
+    assert release.next_version(current, channel, tags) == expected
+
+
+def test_latest_stable_ignores_betas_and_sorts_numerically(release):
+    tags = ["v0.5.9", "v0.5.10", "v0.5.11-beta.1", "v0.4.0", "nightly"]
+    assert release.latest_stable(tags) == "v0.5.10"
+    assert release.latest_stable(["v1.0.0-beta.1"]) is None
 
 
 def test_next_version_rejects_other_shapes(release):
@@ -102,34 +113,49 @@ def test_generated_changelog_passes_the_release_notes_extraction(release, versio
     assert section and section[1].strip()
 
 
-def _drive(release, monkeypatch, answers, *, dry_run, secrets_missing=()):
+def _drive(release, monkeypatch, answers, *, dry_run, secrets_missing=(), branch="main"):
     """Run release() with scripted prompts and every side effect recorded, not run."""
     import argparse
 
     calls = []
     feed = iter(answers)
+
+    def fake_sh(*cmd, **kw):
+        if cmd[:2] == ("git", "show"):
+            return json.dumps({"version": "0.5.7"})
+        if cmd[:3] == ("git", "tag", "-l"):
+            return "v0.5.5 v0.5.6"
+        if cmd[:2] == ("git", "branch"):
+            return branch
+        if cmd[:2] == ("git", "rev-list"):
+            return "34"
+        calls.append(cmd)
+        return ""
+
     monkeypatch.setattr("builtins.input", lambda prompt="": next(feed))
-    monkeypatch.setattr(release, "preflight", lambda tag=None: None)
+    monkeypatch.setattr(release, "check_ready", lambda tag=None: None)
+    monkeypatch.setattr(release, "ensure_main", lambda: calls.append(("ensure_main",)))
     monkeypatch.setattr(release, "missing_signing_secrets", lambda: list(secrets_missing))
-    monkeypatch.setattr(release, "sh", lambda *cmd, **kw: calls.append(cmd) or "")
+    monkeypatch.setattr(release, "sh", fake_sh)
     monkeypatch.setattr(release, "bump_files", lambda *a: calls.append(("bump", *a[1:])))
     monkeypatch.setattr(release, "dispatch_publish", lambda *a: calls.append(("dispatch", *a)))
     monkeypatch.setattr(
         release.Path, "write_text", lambda self, *a, **k: calls.append(("write", self.name))
     )
     monkeypatch.setattr(release, "prepare_changelog", lambda text, *a: text)
+    monkeypatch.setattr(release.Path, "read_text", lambda self, *a, **k: "")
     release.release(argparse.Namespace(dry_run=dry_run))
     return calls
 
 
-def _current(release):
-    return json.loads((ROOT / "package.json").read_text())["version"]
-
-
 def test_dry_run_shows_the_plan_and_changes_nothing(release, monkeypatch, capsys):
-    calls = _drive(release, monkeypatch, ["beta", "", "draft"], dry_run=True)
-    assert calls == []
+    calls = _drive(release, monkeypatch, ["beta", "", "draft"], dry_run=True, branch="feat/x")
+    assert [c for c in calls if c[:2] != ("git", "fetch")] == []  # a fetch is read-only
     out = capsys.readouterr().out
+    assert "Last release: v0.5.6    package.json on main: 0.5.7" in out
+    assert "New release: v0.5.7-beta.1" in out and "format X.Y.Z-beta.N" in out
+    assert "new tag   v0.5.7-beta.1   (last release v0.5.6)" in out
+    assert "switch from feat/x to main, fast-forward main by 34 commits" in out
     assert "prerelease, never latest" in out and "nothing changed" in out
 
 
@@ -144,14 +170,15 @@ def test_a_version_of_the_other_channel_is_refused(release, monkeypatch):
 
 
 def test_draft_pushes_the_tag_but_never_dispatches_a_publish(release, monkeypatch):
-    tag = f"v{release.next_version(_current(release), 'beta')}"
+    tag = "v0.5.7-beta.1"
     calls = _drive(release, monkeypatch, ["beta", "", "draft", tag], dry_run=False)
+    assert ("ensure_main",) in calls and ("bump", "0.5.7-beta.1") in calls
     assert ("git", "push", "origin", tag) in calls
     assert not any(c[0] == "dispatch" for c in calls)
 
 
 def test_publish_without_signing_is_refused_unless_unsigned_is_accepted(release, monkeypatch):
-    tag = f"v{release.next_version(_current(release), 'stable')}"
+    tag = "v0.5.7"
     with pytest.raises(SystemExit, match="configure signing"):
         _drive(release, monkeypatch, ["stable", "", "publish", "n"], dry_run=False,
                secrets_missing=["APPLE_ID"])

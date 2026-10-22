@@ -5,7 +5,8 @@
     uv run python scripts/release.py --dry-run       # show the plan, change nothing
     uv run python scripts/release.py --publish TAG   # publish an existing draft
 
-Runs from a clean, up-to-date `main`. Bumps the three version files in lockstep,
+Asks first (channel, version, draft/publish), shows the new tag next to the last
+release, and only then switches to an up-to-date `main` if needed. Bumps the three version files in lockstep,
 refreshes uv.lock, writes the CHANGELOG section, runs the version guards,
 commits, pushes, tags, and either leaves the build as a draft (tag push) or
 dispatches `electron-release.yml` with `publish`. Nothing leaves the machine
@@ -34,20 +35,36 @@ SIGNING_SECRETS = ("ELECTRON_MACOS_CSC_LINK", "ELECTRON_WINDOWS_CSC_LINK", "APPL
 _VERSION = re.compile(r"(\d+)\.(\d+)\.(\d+)(?:-beta\.(\d+))?")
 
 
-def next_version(current: str, channel: str) -> str:
-    """Suggest the next version: beta -> beta.N+1 or next patch beta.1; stable -> final."""
+def latest_stable(tags: list[str]) -> str | None:
+    finals = [t for t in tags if re.fullmatch(r"v\d+\.\d+\.\d+", t)]
+    return max(finals, key=lambda t: tuple(map(int, t[1:].split(".")))) if finals else None
+
+
+def next_version(current: str, channel: str, tags: list[str] = ()) -> str:
+    """The version to release next.
+
+    `current` is package.json on main, which usually already names the upcoming
+    release; if that base is already tagged, move to the next patch. Beta numbers
+    continue after any existing `vBASE-beta.N` tag: `0.5.7-beta.1`, `-beta.2`...
+    """
     match = _VERSION.fullmatch(current)
     if not match:
         raise ValueError(f"Not a stable or beta version: {current}")
-    major, minor, patch, beta = (int(g) if g else None for g in match.groups())
+    if channel not in ("stable", "beta"):
+        raise ValueError(f"Unknown channel: {channel}")
+    major, minor, patch = (int(g) for g in match.groups()[:3])
+    taken = set(tags)
+    if f"v{major}.{minor}.{patch}" in taken:
+        patch += 1
     base = f"{major}.{minor}.{patch}"
     if channel == "stable":
-        return base if beta is not None else f"{major}.{minor}.{patch + 1}"
-    if channel != "beta":
-        raise ValueError(f"Unknown channel: {channel}")
-    if beta is not None:
-        return f"{base}-beta.{beta + 1}"
-    return f"{major}.{minor}.{patch + 1}-beta.1"
+        return base
+    numbers = [
+        int(m.group(1))
+        for t in taken
+        if (m := re.fullmatch(rf"v{re.escape(base)}-beta\.(\d+)", t))
+    ]
+    return f"{base}-beta.{max(numbers, default=0) + 1}"
 
 
 def bump_files(root: Path, version: str) -> None:
@@ -102,21 +119,26 @@ def ask(question: str, choices: list[str], default: str | None = None) -> str:
         print(f"  Please answer one of: {', '.join(choices)}")
 
 
-def preflight(tag: str | None = None) -> None:
+def check_ready(tag: str | None = None) -> None:
+    """Read-only checks for anything the helper cannot fix on its own."""
     problems = []
-    if sh("git", "branch", "--show-current", capture=True) != "main":
-        problems.append("not on main (releases are always cut from main)")
     if sh("git", "status", "--porcelain", "--untracked-files=no", capture=True):
-        problems.append("tracked files have uncommitted changes")
-    sh("git", "fetch", "-q", "origin", "main")
-    if sh("git", "rev-parse", "HEAD", capture=True) != sh("git", "rev-parse", "origin/main", capture=True):
-        problems.append("main is not identical to origin/main (pull or push first)")
+        problems.append("tracked files have uncommitted changes (commit or stash them)")
+    if sh("git", "rev-list", "--count", "origin/main..main", capture=True, check=False) not in ("", "0"):
+        problems.append("local main has commits that are not on origin/main")
     if subprocess.run(["gh", "auth", "status"], cwd=ROOT, capture_output=True).returncode:
-        problems.append("gh is not authenticated")
+        problems.append("gh is not authenticated (run: gh auth login)")
     if tag and sh("git", "ls-remote", "--tags", "origin", tag, capture=True):
         problems.append(f"tag {tag} already exists on origin")
     if problems:
         raise SystemExit("Cannot release:\n  - " + "\n  - ".join(problems))
+
+
+def ensure_main() -> None:
+    """Releases are cut from main: switch to it and fast-forward to origin/main."""
+    if sh("git", "branch", "--show-current", capture=True) != "main":
+        sh("git", "switch", "main")
+    sh("git", "merge", "--ff-only", "origin/main")
 
 
 def missing_signing_secrets() -> list[str]:
@@ -140,7 +162,8 @@ def dispatch_publish(tag: str, allow_unsigned: bool) -> None:
 
 def publish_existing(tag: str) -> None:
     channel = channel_for(tag.removeprefix("v"))
-    preflight()
+    if subprocess.run(["gh", "auth", "status"], cwd=ROOT, capture_output=True).returncode:
+        raise SystemExit("gh is not authenticated (run: gh auth login)")
     unsigned = False
     if missing_signing_secrets():
         unsigned = ask("Signing secrets missing or unreadable. Ship UNSIGNED installers?", ["y", "n"], "n") == "y"
@@ -152,15 +175,24 @@ def publish_existing(tag: str) -> None:
 
 
 def release(args: argparse.Namespace) -> None:
-    current = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))["version"]
-    preflight()
+    sh("git", "fetch", "-q", "--tags", "origin", "main")
+    current = json.loads(sh("git", "show", "origin/main:package.json", capture=True))["version"]
+    tags = sh("git", "tag", "-l", "v*", capture=True).split()
+    last = latest_stable(tags) or "none"
+    branch = sh("git", "branch", "--show-current", capture=True)
+    behind = sh("git", "rev-list", "--count", "main..origin/main", capture=True, check=False) or "?"
+    check_ready()
+
+    print(f"Last release: {last}    package.json on main: {current}")
     channel = ask("Release channel?", ["stable", "beta"])
-    suggestion = next_version(current, channel)
-    version = input(f"Version [{suggestion}]: ").strip() or suggestion
+    suggestion = next_version(current, channel, tags)
+    shape = "X.Y.Z-beta.N, e.g. 0.5.7-beta.1" if channel == "beta" else "X.Y.Z"
+    print(f"  New release: v{suggestion}   (last release {last}; format {shape})")
+    version = input(f"Version [{suggestion}]: ").strip().removeprefix("v") or suggestion
     if channel_for(version) != channel:
-        raise SystemExit(f"{version} is not a {channel} version")
+        raise SystemExit(f"{version} is not a {channel} version ({shape})")
     tag = f"v{version}"
-    preflight(tag)
+    check_ready(tag)
     mode = ask("Draft (build only, publish later) or publish now?", ["draft", "publish"], "draft")
     unsigned = False
     if mode == "publish" and missing_signing_secrets():
@@ -169,19 +201,24 @@ def release(args: argparse.Namespace) -> None:
         if not unsigned:
             raise SystemExit("Cancelled: configure signing, or choose draft.")
 
+    switch = (
+        f"switch from {branch} to main, " if branch != "main" else ""
+    ) + (f"fast-forward main by {behind} commits, " if behind not in ("0", "?") else "")
     print(f"""
 Release plan
   channel   {channel}  ({'GitHub prerelease, never latest; :beta Docker' if channel == 'beta' else 'GitHub latest; :stable Docker'})
-  version   {current} -> {version}   tag {tag}
+  new tag   {tag}   (last release {last})
   mode      {mode}{'  (UNSIGNED installers)' if unsigned else ''}
-  steps     bump 3 version files + uv lock + CHANGELOG, run guards,
-            commit + push main, push tag{', then publish' if mode == 'publish' else ' (draft release; publish later with --publish)'}""")
+  steps     {switch}set package.json + pyproject.toml + backend/core/version.py to {version},
+            uv lock, CHANGELOG section, run version guards,
+            commit "chore(release): {tag}", push main, tag {tag}, push tag{', publish' if mode == 'publish' else ' (draft; publish later with --publish)'}""")
     if args.dry_run:
         print("\n--dry-run: nothing changed.")
         return
     if input(f"\nThis pushes to main and tags. Type {tag} to confirm: ").strip() != tag:
         raise SystemExit("Cancelled.")
 
+    ensure_main()
     bump_files(ROOT, version)
     changelog = ROOT / "CHANGELOG.md"
     changelog.write_text(
@@ -204,7 +241,7 @@ Release plan
         dispatch_publish(tag, unsigned)
         print(f"\nPublishing {tag}. Then verify: docs/RELEASING.md → Beta channel / verification table.")
     else:
-        print(f"\nDraft build started for {tag}. Publish later: uv run python scripts/release.py --publish {tag}")
+        print(f"\nDraft build started for {tag}. Publish later: make release-publish TAG={tag}")
 
 
 def main() -> None:

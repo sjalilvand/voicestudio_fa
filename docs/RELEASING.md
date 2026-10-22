@@ -162,9 +162,14 @@ branch. No Tauri build is maintained.
 
 ## Release helper
 
-`make release` (or `uv run python scripts/release.py`) runs a release from a clean, up-to-date
-`main`. It asks **stable or beta**, suggests the next version, asks **draft or
-publish**, prints the plan, and only proceeds when you type the tag name.
+`make release` (or `uv run python scripts/release.py`) cuts a release from any
+branch. It shows the last release and the version on `main`, then asks **stable
+or beta** and suggests the new tag (`v0.5.7`, or `v0.5.7-beta.1`, `-beta.2`, ...
+for a beta; the beta suffix is always `-beta.N`). If `package.json` already names
+the upcoming release it uses that version; if that version is already tagged it
+moves to the next patch. It then asks **draft or publish**, prints the plan
+(including switching to `main` and fast-forwarding it), and only proceeds when you
+type the tag name.
 
 - **Draft:** bumps the three version files in lockstep, runs `uv lock`, writes
   the `CHANGELOG.md` section from `[Unreleased]` (a stable release renames it; a
