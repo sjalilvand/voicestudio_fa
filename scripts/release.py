@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import datetime
 import json
+import os
 import re
 import subprocess
 import sys
@@ -122,6 +123,79 @@ def ask(question: str, choices: list[str], default: str | None = None) -> str:
         print(f"  Please answer one of: {', '.join(choices)}")
 
 
+def interactive() -> bool:
+    return sys.stdin.isatty() and sys.stdout.isatty()
+
+
+def read_key() -> str:
+    """One keypress as up/down/enter/esc or the character itself (stdlib only)."""
+    if os.name == "nt":
+        import msvcrt
+
+        ch = msvcrt.getwch()
+        if ch in ("\x00", "\xe0"):
+            return {"H": "up", "P": "down"}.get(msvcrt.getwch(), "")
+        return {"\r": "enter", "\x03": "interrupt", "\x1b": "esc"}.get(ch, ch)
+    import select
+    import termios
+    import tty
+
+    fd = sys.stdin.fileno()
+    saved = termios.tcgetattr(fd)
+    try:
+        tty.setcbreak(fd)  # keeps Ctrl-C working
+        # Unbuffered: sys.stdin would swallow the rest of an arrow's escape sequence.
+        ch = os.read(fd, 1).decode("latin-1")
+        if ch == "\x1b":
+            if not select.select([fd], [], [], 0.05)[0]:
+                return "esc"
+            seq = os.read(fd, 2).decode("latin-1")
+            return {"[A": "up", "[B": "down", "OA": "up", "OB": "down"}.get(seq, "")
+        return "enter" if ch in ("\r", "\n") else ch
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, saved)
+
+
+def select_option(question: str, options: list[tuple[str, str]], default: int = 0) -> str:
+    """Arrow-key menu (up/down or k/j, Enter). Typed prompt when not on a terminal."""
+    values = [value for value, _ in options]
+    if not interactive():
+        return ask(question, values, values[default])
+    if os.name == "nt":
+        os.system("")  # enable ANSI escapes in legacy Windows consoles
+    index = default
+    out = sys.stdout
+
+    def draw(redraw: bool) -> None:
+        if redraw:
+            out.write(f"\x1b[{len(options)}A")
+        for i, (value, label) in enumerate(options):
+            line = f"{'>' if i == index else ' '} {value:<9} {label}"
+            out.write("\x1b[2K" + (f"\x1b[1;36m{line}\x1b[0m" if i == index else line) + "\n")
+        out.flush()
+
+    out.write(f"{question}  (up/down to move, Enter to select)\n\x1b[?25l")
+    draw(False)
+    try:
+        while True:
+            key = read_key()
+            if key in ("up", "k"):
+                index = (index - 1) % len(options)
+            elif key in ("down", "j"):
+                index = (index + 1) % len(options)
+            elif key == "enter":
+                break
+            elif key in ("interrupt", "esc", "q"):
+                raise KeyboardInterrupt
+            draw(True)
+    finally:
+        out.write("\x1b[?25h")
+    # Collapse the menu to the chosen answer.
+    out.write(f"\x1b[{len(options) + 1}A\x1b[J{question} {values[index]}\n")
+    out.flush()
+    return values[index]
+
+
 def check_ready(tag: str | None = None) -> None:
     """Read-only checks for anything the helper cannot fix on its own."""
     problems = []
@@ -169,7 +243,10 @@ def publish_existing(tag: str) -> None:
         raise SystemExit("gh is not authenticated (run: gh auth login)")
     unsigned = False
     if missing_signing_secrets():
-        unsigned = ask("Signing secrets missing or unreadable. Ship UNSIGNED installers?", ["y", "n"], "n") == "y"
+        unsigned = select_option(
+            "Signing secrets missing or unreadable. Ship UNSIGNED installers?",
+            [("no", "cancel"), ("yes", "trust warnings, macOS updates unverified")],
+        ) == "yes"
     print(f"\nPublish {tag} ({channel}) from its existing build{' (unsigned)' if unsigned else ''}.")
     if input(f"Type {tag} to confirm: ").strip() != tag:
         raise SystemExit("Cancelled.")
@@ -187,7 +264,11 @@ def release(args: argparse.Namespace) -> None:
     check_ready()
 
     print(f"Last release: {last}    package.json on main: {current}")
-    channel = ask("Release channel?", ["stable", "beta"])
+    channel = select_option(
+        "Release channel?",
+        [("stable", "GitHub latest, :stable Docker, all stores"),
+         ("beta", "opt-in prerelease, never latest, :beta Docker")],
+    )
     suggestion = next_version(current, channel, tags)
     shape = "X.Y.Z-beta.N, e.g. 0.5.7-beta.1" if channel == "beta" else "X.Y.Z"
     print(f"  New release: v{suggestion}   (last release {last}; format {shape})")
@@ -196,11 +277,18 @@ def release(args: argparse.Namespace) -> None:
         raise SystemExit(f"{version} is not a {channel} version ({shape})")
     tag = f"v{version}"
     check_ready(tag)
-    mode = ask("Draft (build only, publish later) or publish now?", ["draft", "publish"], "draft")
+    mode = select_option(
+        "Draft or publish?",
+        [("draft", "build only, nothing public; publish later"),
+         ("publish", "build and publish now")],
+    )
     unsigned = False
     if mode == "publish" and missing_signing_secrets():
         print("Signing secrets are missing or unreadable (Mac/Windows signing).")
-        unsigned = ask("Ship UNSIGNED installers?", ["y", "n"], "n") == "y"
+        unsigned = select_option(
+            "Ship UNSIGNED installers?",
+            [("no", "cancel; configure signing or choose draft"), ("yes", "trust warnings, macOS updates unverified")],
+        ) == "yes"
         if not unsigned:
             raise SystemExit("Cancelled: configure signing, or choose draft.")
 
