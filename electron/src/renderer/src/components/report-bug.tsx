@@ -5,7 +5,7 @@ import { formatBreadcrumbs } from '@shared/utils/breadcrumbs';
 import { contactAge, lastBackendContact } from '@shared/utils/backendContact';
 import { clampCrashTail } from '@shared/utils/crashReport';
 import { scrubText } from '@shared/utils/scrub';
-import { formatHostSnapshot } from '@shared/utils/hostSnapshot';
+import { formatHostSnapshot, withDeadline } from '@shared/utils/hostSnapshot';
 import { describeExitCode, isNativeFaultExit } from '@shared/utils/nativeExit';
 import {
   _adaptLastRunCrash,
@@ -110,7 +110,8 @@ export function ReportBug({ error }: { error?: Error | string }) {
         error
           ? apiJson<{ lines?: unknown[] }>('/system/logs?tail=120', { signal })
           : Promise.resolve(null),
-        bridge?.backend?.getHostSnapshot?.() ?? Promise.resolve(null),
+        // A stalled network drive must not hold the report hostage.
+        withDeadline(bridge?.backend?.getHostSnapshot?.() ?? Promise.resolve(null), 3000),
       ]);
       const backend =
         nativeStatus.status === 'fulfilled' && nativeStatus.value

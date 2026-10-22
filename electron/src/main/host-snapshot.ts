@@ -1,5 +1,6 @@
 import { arch, cpus, release, totalmem, version } from 'node:os';
 import { stat, statfs } from 'node:fs/promises';
+import { dirname } from 'node:path';
 
 export interface HostSnapshot {
   os: string;
@@ -21,6 +22,8 @@ export interface HostSnapshotInput {
   runtimeProject: string | null;
   runtimePython: string | null;
   uv: string | null;
+  /** True when the uv search completed, so a null `uv` means "not installed". */
+  uvSearched?: boolean;
   gpu?: () => Promise<string | null>;
 }
 
@@ -57,11 +60,17 @@ async function exists(path: string | null): Promise<boolean | null> {
 
 async function freeGb(path: string | null): Promise<number | null> {
   if (!path) return null;
-  try {
-    const fs = await statfs(path);
-    return Math.round(((fs.bavail * fs.bsize) / 1024 ** 3) * 10) / 10;
-  } catch {
-    return null;
+  // First run: the project dir does not exist yet, but its drive does.
+  let probe = path;
+  for (;;) {
+    try {
+      const fs = await statfs(probe);
+      return Math.round(((fs.bavail * fs.bsize) / 1024 ** 3) * 10) / 10;
+    } catch {
+      const parent = dirname(probe);
+      if (parent === probe) return null;
+      probe = parent;
+    }
   }
 }
 
@@ -86,9 +95,9 @@ async function withTimeout<T>(task: Promise<T>, ms: number): Promise<T | null> {
 export async function collectHostSnapshot(input: HostSnapshotInput): Promise<HostSnapshot> {
   const platform = input.platform ?? process.platform;
   const [pythonPresent, uvPresent, diskFreeGb, gpu] = await Promise.all([
-    exists(input.runtimePython),
-    exists(input.uv),
-    freeGb(input.runtimeProject),
+    withTimeout(exists(input.runtimePython), 1500),
+    input.uv ? exists(input.uv) : Promise.resolve(input.uvSearched ? false : null),
+    withTimeout(freeGb(input.runtimeProject), 1500),
     input.gpu ? withTimeout(input.gpu(), 1500) : Promise.resolve(null),
   ]);
   return {

@@ -1,5 +1,11 @@
 import { expect, it } from 'vitest';
-import { formatHostSnapshot } from './hostSnapshot';
+import { formatHostSnapshot, withDeadline } from './hostSnapshot';
+
+it('gives up on a stalled snapshot after the deadline', async () => {
+  expect(await withDeadline(new Promise(() => {}), 20)).toBeNull();
+  expect(await withDeadline(Promise.resolve(5), 20)).toBe(5);
+  expect(await withDeadline(Promise.reject(new Error('x')), 20)).toBeNull();
+});
 
 const snapshot = {
   os: 'win32 Windows 11 Pro (10.0.26100)',
