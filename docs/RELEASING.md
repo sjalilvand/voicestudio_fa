@@ -162,7 +162,7 @@ branch. No Tauri build is maintained.
 
 ## Release helper
 
-`uv run python scripts/release.py` runs a release from a clean, up-to-date
+`make release` (or `uv run python scripts/release.py`) runs a release from a clean, up-to-date
 `main`. It asks **stable or beta**, suggests the next version, asks **draft or
 publish**, prints the plan, and only proceeds when you type the tag name.
 
@@ -173,8 +173,9 @@ publish**, prints the plan, and only proceeds when you type the tag name.
 - **Publish:** the same, then dispatches `electron-release.yml` with
   `publish=true`. If the Mac/Windows signing secrets are missing or unreadable it
   stops unless you explicitly accept unsigned installers.
-- `--publish vX.Y.Z[-beta.N]` publishes an existing draft build later.
-- `--dry-run` prints the plan and changes nothing.
+- `--publish vX.Y.Z[-beta.N]` (`make release-publish TAG=…`) publishes an existing
+  draft build later.
+- `--dry-run` (`make release-dry`) prints the plan and changes nothing.
 
 It does not replace the post-release verification below; run it every time.
 
