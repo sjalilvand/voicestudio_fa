@@ -12,7 +12,24 @@ export interface HostSnapshotLike {
   };
 }
 
-const present = (value: boolean | null | undefined) =>
+/** Resolve with the task's value, or null if it rejects or outlasts `ms`. */
+export async function withDeadline<T>(task: Promise<T>, ms: number): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      task,
+      new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), ms);
+      }),
+    ]);
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+const present =(value: boolean | null | undefined) =>
   value == null ? 'unknown' : value ? 'present' : 'MISSING';
 
 /**
