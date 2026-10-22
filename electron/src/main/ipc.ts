@@ -355,7 +355,11 @@ export function registerIpc(
     return supervisor.acknowledgeLastCrash();
   });
   ipcMain.handle(CHANNELS.backendGetConnection, () => supervisor.connection);
-  ipcMain.handle(CHANNELS.backendHostSnapshot, () => supervisor.hostSnapshot());
+  ipcMain.handle(CHANNELS.backendHostSnapshot, (event) => {
+    const owner = getMainWindow();
+    assertTrustedMainFrame(event, owner);
+    return supervisor.hostSnapshot();
+  });
   ipcMain.handle(CHANNELS.backendTestRemote, async (event, raw: unknown) => {
     const owner = getMainWindow();
     assertTrustedMainFrame(event, owner);

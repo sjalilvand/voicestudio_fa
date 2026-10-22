@@ -106,9 +106,12 @@ export type UpdateStatus =
   | 'downloading'
   | 'downloaded'
   | 'error';
+export type UpdateChannel = 'stable' | 'beta';
 export interface UpdateState {
   status: UpdateStatus;
   currentVersion: string;
+  /** Absent when this build cannot switch channels (Store builds, dev runs). */
+  channel?: UpdateChannel;
   availableVersion?: string;
   notes?: string | null;
   progress: number;
@@ -334,7 +337,10 @@ export interface VoiceStudioBridge {
     signIn(): Promise<void>;
     cancelSignIn(): Promise<void>;
     signOut(): Promise<void>;
-    setSwitches(patch: { accountEnabled?: boolean; syncEnabled?: boolean }): Promise<AccountPublicState>;
+    setSwitches(patch: {
+      accountEnabled?: boolean;
+      syncEnabled?: boolean;
+    }): Promise<AccountPublicState>;
     updateProfile(patch: { display_name?: string }): Promise<AccountPublicState>;
     onState(cb: (state: AccountPublicState) => void): () => void;
   };
@@ -360,6 +366,7 @@ export interface VoiceStudioBridge {
     check(): Promise<UpdateState>;
     download(): Promise<UpdateState>;
     dismiss(): Promise<UpdateState>;
+    setChannel(channel: UpdateChannel): Promise<UpdateState>;
     install(): Promise<void>;
     listReleases(): Promise<UpdateReleaseInfo[]>;
     onState(cb: (state: UpdateState) => void): () => void;

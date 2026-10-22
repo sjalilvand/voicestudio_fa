@@ -698,11 +698,15 @@ export class BackendSupervisor extends EventEmitter<{
 
   /** Machine and runtime facts for bug reports; works while the backend is down. */
   async hostSnapshot(): Promise<HostSnapshot> {
-    const project = this.runtimeProject ?? join(storedRuntimeRoot() ?? defaultRuntimeRoot(), 'project');
+    // Same location resolveSpawnPlan() launches from.
+    const project = app.isPackaged
+      ? (this.runtimeProject ?? join(storedRuntimeRoot() ?? defaultRuntimeRoot(), 'project'))
+      : backendRoot();
     return collectHostSnapshot({
       runtimeProject: project,
       runtimePython: runtimePython(project),
       uv: findUv(),
+      uvSearched: true,
       gpu: async () => {
         const info = (await app.getGPUInfo('basic')) as {
           gpuDevice?: { vendorId?: number; deviceId?: number; active?: boolean; driverVersion?: string }[];
