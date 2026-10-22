@@ -176,7 +176,9 @@ branch. It shows the last release and the version on `main`, then asks **stable
 or beta** and suggests the new tag (`v0.5.7`, or `v0.5.7-beta.1`, `-beta.2`, ...
 for a beta; the beta suffix is always `-beta.N`). If `package.json` already names
 the upcoming release it uses that version; if that version is already tagged it
-moves to the next patch. It then asks **draft or publish**, prints the plan
+moves to the next patch. Choices are arrow-key menus (up/down or `j`/`k`,
+Enter; Esc cancels) that fall back to typed answers when there is no terminal.
+It then asks **draft or publish**, prints the plan
 (including switching to `main` and fast-forwarding it), and only proceeds when you
 type the tag name.
 
