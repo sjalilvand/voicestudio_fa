@@ -219,7 +219,7 @@ internal fun splitUtterances(text: String,tokens: List<String>,timestamps: List<
     val groups=mutableListOf(mutableListOf(0))
     for(i in 1 until tokens.size) {
         val gap=timestamps[i]-(if(durations.size==tokens.size) endOf(i-1) else timestamps[i-1].toDouble())
-        val sentenceEnd=tokens[i-1].trimEnd().lastOrNull()?.let {it in ".!?。！？"}==true
+        val sentenceEnd=tokens[i-1].trimEnd().lastOrNull()?.let {it in ".!?\u3002\uFF01\uFF1F"}==true
         if(gap>=UTTERANCE_GAP||(sentenceEnd&&gap>=SENTENCE_GAP)) groups+=mutableListOf(i) else groups.last()+=i
     }
     val pieces=groups.mapIndexedNotNull {n,g ->

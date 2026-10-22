@@ -41,7 +41,7 @@ class DubConcurrencyAndTimingTest {
 
     @Test fun rawTimelineInsertsSilenceForLateStartAndGaps() {
         assertEquals(24000L,timelineShift(1_000_000,0))
-        assertEquals(12000L,timelineShift(1_500_000,12000))
+        assertEquals(24000L,timelineShift(1_500_000,12000)) // 1.5 s = 36000 samples, 12000 written
     }
     @Test fun rawTimelineDropsOverlapAndIgnoresJitterAndMissingTime() {
         assertEquals(-2400L,timelineShift(900_000,24000))

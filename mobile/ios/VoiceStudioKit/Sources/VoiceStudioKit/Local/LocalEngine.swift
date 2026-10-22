@@ -76,7 +76,7 @@ func splitUtterances(text: String,tokens: [String],timestamps: [Double],ends: [D
     var groups: [[Int]] = [[0]]
     for i in 1..<max(1,tokens.count) {
         let gap = timestamps[i]-endOf(i-1)
-        let sentenceEnd = tokens[i-1].trimmingCharacters(in: .whitespaces).last.map { ".!?。！？".contains($0) } ?? false
+        let sentenceEnd = tokens[i-1].trimmingCharacters(in: .whitespaces).last.map { ".!?\u{3002}\u{FF01}\u{FF1F}".contains($0) } ?? false
         if gap >= utteranceGap || (sentenceEnd && gap >= sentenceGap) { groups.append([i]) } else { groups[groups.count-1].append(i) }
     }
     var pieces: [SpeechSegment] = []
