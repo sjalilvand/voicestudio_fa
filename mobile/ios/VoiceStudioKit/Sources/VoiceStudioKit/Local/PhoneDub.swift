@@ -70,11 +70,16 @@ public actor PhoneDubStore {
     public init(root: URL) throws { self.root = root; try PrivateFiles.directory(root); try PrivateFiles.removeUnpublished(in: root,metadata: "request.json") }
     public func directory(_ id: UUID) throws -> URL { try PrivateFiles.child(root,id.uuidString) }
     public func file(_ id: UUID,_ name: String) throws -> URL { try PrivateFiles.child(directory(id),name) }
-    public func acquire(_ id: UUID) throws {
-        guard !active.contains(id) else { throw ClientError("sidebarTools.wait") }
-        active.insert(id)
+    private var waiters: [UUID: [CheckedContinuation<Void,Never>]] = [:]
+    /// One lock per job. A resumed run or a delete waits for the previous run (including its cancel
+    /// cleanup and final checkpoint save) instead of racing it; the lock is handed straight to the next waiter.
+    public func acquire(_ id: UUID) async throws {
+        if active.contains(id) { await withCheckedContinuation { waiters[id,default: []].append($0) } } else { active.insert(id) }
+        if Task.isCancelled { release(id); throw CancellationError() }
     }
-    public func release(_ id: UUID) { active.remove(id) }
+    public func release(_ id: UUID) {
+        if var queue = waiters[id], !queue.isEmpty { let next = queue.removeFirst(); waiters[id] = queue.isEmpty ? nil : queue; next.resume() } else { active.remove(id) }
+    }
     public func create(source: URL,title: String,targets: [PhoneDubTarget],models: [PhoneModel],consent: Bool,reference: PCMChunk? = nil,referenceText: String? = nil,audioOnly: Bool = false) throws -> PhoneDubRequest {
         guard consent, !targets.isEmpty, targets.count <= 20, Set(targets.map(\.code)).count == targets.count,
               targets.allSatisfy({ !$0.code.isEmpty && $0.code.count <= 80 && $0.code.utf8.allSatisfy({ (48...57).contains($0) || (65...90).contains($0) || (97...122).contains($0) || [45,95].contains($0) }) && (2...120).contains($0.name.count) && !$0.name.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }) }),
@@ -125,8 +130,8 @@ public actor PhoneDubStore {
         guard try ModelHash.file(url) == output.hash else { throw ClientError("mobile.simple.media_failed") }
         return url
     }
-    public func delete(_ id: UUID) throws {
-        guard !active.contains(id) else { throw ClientError("sidebarTools.wait") }
+    public func delete(_ id: UUID) async throws {
+        try await acquire(id); defer { release(id) }
         try FileManager.default.removeItem(at: directory(id))
     }
 }

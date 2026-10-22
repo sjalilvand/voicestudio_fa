@@ -54,6 +54,41 @@ public struct SpeechSegment: Codable, Sendable, Equatable {
     public let text: String
     public init(start: Double,end: Double,text: String) { self.start = start; self.end = end; self.text = text }
 }
+/// Pause that starts a new utterance; shorter after sentence-final punctuation.
+let utteranceGap = 1.0, sentenceGap = 0.4
+/// One 20 s recognition window can hold several sentences with long pauses. Dubbing speaks each segment
+/// at its start, so later sentences would play early; split at pauses so each keeps its own timing.
+/// `ends[i] <= timestamps[i]` means token i has no duration. Falls back to one segment when tokens and
+/// timestamps do not line up.
+func splitUtterances(text: String,tokens: [String],timestamps: [Double],ends: [Double],window: Double) -> [SpeechSegment] {
+    let ok = !tokens.isEmpty && tokens.count == timestamps.count && timestamps.allSatisfy { $0.isFinite && $0 >= 0 && $0 < window }
+    let valid = timestamps.filter { $0.isFinite && $0 >= 0 && $0 < window }
+    func tail(_ i: Int) -> Double { i < ends.count && ends.count == timestamps.count && ends[i].isFinite && ends[i] > timestamps[i] ? ends[i]-timestamps[i] : 0.5 }
+    func single() -> [SpeechSegment] {
+        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty else { return [] }
+        let first = min(max(valid.min() ?? 0,0),max(0,window-0.02))
+        let end = valid.max().map { min(window,max(first+0.01,$0+(ok ? tail(timestamps.count-1) : 0.5))) } ?? window
+        return [SpeechSegment(start: first,end: end,text: clean)]
+    }
+    guard ok else { return single() }
+    func endOf(_ i: Int) -> Double { min(window,timestamps[i]+tail(i)) }
+    var groups: [[Int]] = [[0]]
+    for i in 1..<max(1,tokens.count) {
+        let gap = timestamps[i]-endOf(i-1)
+        let sentenceEnd = tokens[i-1].trimmingCharacters(in: .whitespaces).last.map { ".!?。！？".contains($0) } ?? false
+        if gap >= utteranceGap || (sentenceEnd && gap >= sentenceGap) { groups.append([i]) } else { groups[groups.count-1].append(i) }
+    }
+    var pieces: [SpeechSegment] = []
+    for (n,group) in groups.enumerated() {
+        let piece = group.map { tokens[$0] }.joined().trimmingCharacters(in: .whitespacesAndNewlines)
+        if piece.isEmpty { continue }
+        let start = timestamps[group[0]]
+        let nextStart = n+1 < groups.count ? timestamps[groups[n+1][0]] : window
+        pieces.append(SpeechSegment(start: start,end: min(window,min(max(endOf(group[group.count-1]),start+0.01),max(start+0.01,nextStart))),text: piece))
+    }
+    return pieces.count <= 1 ? single() : pieces
+}
 public protocol LocalEngine: Sendable {
     func synthesize(model: PhoneModel, text: String, speaker: Int, speed: Float, progress: @escaping EngineProgressHandler) async throws -> LocalAudio
     func clone(model: PhoneModel, text: String, reference: PCMChunk, referenceText: String, progress: @escaping EngineProgressHandler) async throws -> LocalAudio
@@ -209,11 +244,29 @@ public actor NativeLocalEngine: LocalEngine {
             var output = VSSegments(); defer { vs_segments_free(&output) }
             try audio.samples.withUnsafeBufferPointer { try Self.check(vs_transcribe_segments(&config.value,$0.baseAddress,Int32($0.count),Int32(audio.sampleRate),token.pointer,&output)) }
             guard output.count == 0 || output.segments != nil else { throw ClientError("mobile.local.inference_failed") }
-            return (0..<Int(output.count)).compactMap { index in
-                let segment = output.segments![index]
-                let text = segment.text.map { String(cString: $0).trimmingCharacters(in: .whitespacesAndNewlines) } ?? ""
-                return text.isEmpty ? nil : SpeechSegment(start: segment.start,end: segment.end,text: text)
+            let total = Double(audio.samples.count)/Double(audio.sampleRate)
+            var result: [SpeechSegment] = [], window = -1, tokens: [(String,Double,Double)] = []
+            func flush() {
+                guard window >= 0, !tokens.isEmpty else { tokens = []; return }
+                let base = Double(window)*20, length = min(20,max(0,total-base))
+                result += splitUtterances(text: tokens.map(\.0).joined(),tokens: tokens.map(\.0),timestamps: tokens.map(\.1),ends: tokens.map(\.2),window: length)
+                    .map { SpeechSegment(start: base+$0.start,end: base+$0.end,text: $0.text) }
+                tokens = []
             }
+            for index in 0..<Int(output.count) {
+                let segment = output.segments![index]
+                let text = segment.text.map { String(cString: $0) } ?? ""
+                if segment.token == 0 {
+                    flush()
+                    let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !clean.isEmpty { result.append(SpeechSegment(start: Double(segment.window)*20,end: min(total,Double(segment.window)*20+20),text: clean)) }
+                    continue
+                }
+                if Int(segment.window) != window { flush(); window = Int(segment.window) }
+                tokens.append((text,segment.start,segment.end))
+            }
+            flush()
+            return result
         }
     }
     public func clone(model: PhoneModel, text: String, reference: PCMChunk, referenceText: String, progress: @escaping EngineProgressHandler = { _ in }) async throws -> LocalAudio {
@@ -246,10 +299,13 @@ public actor NativeLocalEngine: LocalEngine {
         let library = libraries[model.runtime] ?? ""
         let store = store
         let (output, continuation) = AsyncThrowingStream<TranscriptUpdate, any Error>.makeStream(bufferingPolicy: .bufferingNewest(32))
+        // Signals once the worker holds the inference slot and the recognizer exists, so the
+        // caller starts the microphone only then (the capture buffer is bounded).
+        let (ready, readiness) = AsyncThrowingStream<Void, any Error>.makeStream(bufferingPolicy: .bufferingNewest(1))
         let work = Task.detached(priority: .userInitiated) {
             do {
                 try await NativeLease.shared.acquire()
-            } catch { continuation.finish(throwing: error); await store.release(model); return }
+            } catch { readiness.finish(throwing: error); continuation.finish(throwing: error); await store.release(model); return }
             do {
                 let root = try await store.authorize(model)
                 try Task.checkCancellation()
@@ -257,6 +313,7 @@ public actor NativeLocalEngine: LocalEngine {
                 let config = NativeConfiguration(model: model, root: root, library: library)
                 guard let stream = vs_stream_create(&config.value) else { throw ClientError("mobile.local.inference_failed") }
                 defer { vs_stream_free(stream) }
+                readiness.yield(); readiness.finish()
                 var finals: [String] = []
                 func accept(_ chunk: PCMChunk, finished: Bool) throws {
                     try Task.checkCancellation()
@@ -281,6 +338,7 @@ public actor NativeLocalEngine: LocalEngine {
                 continuation.finish()
             } catch {
                 if !(error is CancellationError) { await store.invalidateVerification(model) }
+                readiness.finish(throwing: error) // no-op once ready was signalled
                 continuation.finish(throwing: error)
             }
             // The stream and recognizer have been freed by the inner scope's defer.
@@ -288,6 +346,13 @@ public actor NativeLocalEngine: LocalEngine {
             await store.release(model)
         }
         continuation.onTermination = { _ in token.cancel(); work.cancel() }
+        do {
+            try await withTaskCancellationHandler {
+                for try await _ in ready { return }
+                try Task.checkCancellation()
+                throw ClientError("mobile.local.inference_failed")
+            } onCancel: { token.cancel(); work.cancel() }
+        } catch { token.cancel(); work.cancel(); throw error }
         return output
     }
     private static func validate(_ pcm: PCMChunk) throws {

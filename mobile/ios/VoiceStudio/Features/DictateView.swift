@@ -145,10 +145,14 @@ struct DictateView: View {
             defer { audio.stop(); listening = false; finalizing = false }
             do {
                 guard let phoneModel, let engine = model.phone.engine else { throw ClientError("mobile.local.model_required") }
-                let bytes = try await audio.start()
-                guard listening, !Task.isCancelled else { audio.stop(); return }
                 let (chunks, continuation) = AsyncThrowingStream<PCMChunk, any Error>.makeStream(bufferingPolicy: .bufferingOldest(64))
+                // The inference slot and recognizer come first; the bounded capture buffer would overflow while waiting.
                 let updates = try await engine.streamTranscribe(model: phoneModel, chunks: chunks, progress: { _ in })
+                let bytes: AsyncThrowingStream<Data, any Error>
+                do {
+                    bytes = try await audio.start()
+                    guard listening, !Task.isCancelled else { audio.stop(); continuation.finish(); return }
+                } catch { continuation.finish(throwing: error); throw error } // releases the slot
                 receiving = Task {
                     do {
                         for try await update in updates {

@@ -2,6 +2,7 @@ import Foundation
 import CryptoKit
 import Darwin
 import Testing
+import VSNative
 @testable import VoiceStudioKit
 
 private func localDirectory() throws -> URL {
@@ -512,4 +513,73 @@ extension NativeLeaseRegressionTests {
         await #expect(throws: ClientError.self) { try await first.value }
         await #expect(throws: ClientError("mobile.local.checksum_failed")) { try await queued.value }
     }
+}
+
+@Test func pausesSplitOneWindowIntoTimedUtterances() {
+    let tokens = [" Hello"," there","."," Much"," later","."]
+    let ts: [Double] = [0.5,0.9,1.2,9.0,9.4,9.8]
+    let ends: [Double] = [0.8,1.2,1.4,9.3,9.7,10.0]
+    let parts = splitUtterances(text: "Hello there. Much later.",tokens: tokens,timestamps: ts,ends: ends,window: 20)
+    #expect(parts.map(\.text) == ["Hello there.","Much later."])
+    #expect(parts[0].start == 0.5 && parts[1].start == 9.0)
+    #expect(parts[0].end <= 9.0 && parts[1].end <= 20 && parts[1].end > parts[1].start)
+    // 0.4 s after sentence-final punctuation is enough; mid-sentence needs 1.0 s.
+    #expect(splitUtterances(text: "a. b",tokens: ["a","."," b"],timestamps: [0,0.3,1.0],ends: [0.3,0.5,1.3],window: 20).count == 2)
+    #expect(splitUtterances(text: "a b c",tokens: ["a"," b"," c"],timestamps: [0,0.4,1.2],ends: [0.3,0.7,1.5],window: 20).count == 1)
+}
+@Test func continuousSpeechAndMismatchedTimestampsStayOneSegment() {
+    #expect(splitUtterances(text: "a b c",tokens: ["a"," b"," c"],timestamps: [0,0.4,0.8],ends: [],window: 20).count == 1)
+    let bad = splitUtterances(text: "a b",tokens: ["a"," b"],timestamps: [0],ends: [],window: 20)
+    #expect(bad.count == 1 && bad[0].text == "a b")
+}
+@Test func rawPCMIsPlacedByTimestampWithJitterTolerance() {
+    #expect(timelineShift(timestamp: 1,written: 0) == 24000)
+    #expect(timelineShift(timestamp: 1.5,written: 12000) == 24000)
+    #expect(timelineShift(timestamp: 0.9,written: 24000) == -2400)
+    #expect(timelineShift(timestamp: 1.004,written: 24000) == 0)
+    #expect(timelineShift(timestamp: .nan,written: 500) == 0)
+}
+@Test func dubJobLockMakesResumeAndDeleteWaitForTheOldRun() async throws {
+    let root = try localDirectory(); defer { try? FileManager.default.removeItem(at: root) }
+    let store = try PhoneDubStore(root: root.appendingPathComponent("dubs")), id = UUID()
+    try FileManager.default.createDirectory(at: try await store.directory(id),withIntermediateDirectories: true)
+    try await store.acquire(id)
+    let finished = Flag()
+    let deleting = Task { try await store.delete(id); finished.set() }
+    try await Task.sleep(for: .milliseconds(150))
+    #expect(!finished.value)
+    #expect(FileManager.default.fileExists(atPath: try await store.directory(id).path))
+    await store.release(id)
+    try await deleting.value
+    #expect(!FileManager.default.fileExists(atPath: try await store.directory(id).path))
+    // A different job is never blocked.
+    try await store.acquire(UUID())
+}
+@Test func dictationMicrophoneWaitsForInferenceSlot() async throws {
+    let root = try localDirectory(); defer { try? FileManager.default.removeItem(at: root) }
+    let model = try localFixture(), stream = try localFixture(capability: "asr-stream")
+    let store = try ModelStore(root: root, available: { _ in 100_000_000 })
+    try await store.download(model, wifi: { true }, transport: RangeServer(bytes: Data("model".utf8)))
+    try await store.download(stream, wifi: { true }, transport: RangeServer(bytes: Data("model".utf8)))
+    let engine = NativeLocalEngine(store: store), gate = NativeWorkGate()
+    defer { gate.finish.signal() }
+    let holder = Task { try await engine.execute(model, capability: .tts, progress: { _ in }) { _, _, _, _ in gate.run(); return 1 } }
+    let deadline = ContinuousClock.now + .seconds(10)
+    while gate.count == 0 && ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(5)) }
+    try #require(gate.count == 1)
+    let (chunks, feed) = AsyncThrowingStream<PCMChunk, any Error>.makeStream()
+    defer { feed.finish() }
+    let returned = Flag()
+    let waiting = Task { _ = try? await engine.streamTranscribe(model: stream, chunks: chunks); returned.set() }
+    try await Task.sleep(for: .milliseconds(200))
+    #expect(!returned.value, "streamTranscribe must not return (so the mic must not start) while the slot is held")
+    gate.finish.signal()
+    _ = try await holder.value
+    await waiting.value
+    #expect(returned.value)
+}
+private final class Flag: @unchecked Sendable {
+    private let lock = NSLock(); private var flag = false
+    func set() { lock.withLock { flag = true } }
+    var value: Bool { lock.withLock { flag } }
 }

@@ -103,24 +103,22 @@ static int transcribe_impl(const VSConfig *c, const float *samples, int32_t n, i
         if(r && r->text) {
             size_t size=strlen(r->text);
             if(segments && size) {
-                double duration=(double)count/rate, start=0, end=duration, first=duration, last=-1;
-                if(r->timestamps) for(int32_t i=0;i<r->count;++i) {
-                    double t=r->timestamps[i];
-                    if(isfinite(t) && t>=0 && t<duration) { if(t<first) first=t; if(t>last) last=t; }
-                }
-                if(last>=0) {
-                    start=fmax(0,fmin(first,duration-.02));
-                    double tail=(r->durations && r->count>0 && isfinite(r->durations[r->count-1]) && r->durations[r->count-1]>0) ? r->durations[r->count-1] : .5;
-                    end=fmin(duration,fmax(start+.01,last+tail));
-                }
-                VSSegment *next_segments=realloc(segments->segments,(size_t)(segments->count+1)*sizeof(VSSegment));
-                if(!next_segments) rc=-3;
+                // Window-relative token timing goes to Swift, which splits the window at pauses.
+                // Without aligned tokens and timestamps the window is one untimed segment (token=0).
+                int aligned=r->timestamps && r->tokens_arr && r->count>0;
+                int32_t emit=aligned ? r->count : 1;
+                VSSegment *grown=realloc(segments->segments,(size_t)(segments->count+emit)*sizeof(VSSegment));
+                if(!grown) rc=-3;
                 else {
-                    segments->segments=next_segments;
-                    VSSegment *segment=&segments->segments[segments->count];
-                    segment->start=(double)offset/rate+start; segment->end=(double)offset/rate+end;
-                    segment->text=strdup(r->text);
-                    if(!segment->text) rc=-3; else segments->count++;
+                    segments->segments=grown;
+                    for(int32_t i=0;i<emit && rc==0;++i) {
+                        VSSegment *segment=&segments->segments[segments->count];
+                        segment->window=(int32_t)(offset/((int64_t)rate*20)); segment->token=aligned ? 1 : 0;
+                        segment->start=aligned ? r->timestamps[i] : 0;
+                        segment->end=aligned && r->durations ? r->timestamps[i]+r->durations[i] : 0;
+                        segment->text=strdup(aligned ? r->tokens_arr[i] : r->text);
+                        if(!segment->text) rc=-3; else segments->count++;
+                    }
                 }
             }
             char *next=realloc(combined,length+size+2);

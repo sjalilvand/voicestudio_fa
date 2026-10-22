@@ -33,7 +33,8 @@ void vs_text_free(char *text);
 int vs_runtime_available(const char *runtime, const char *library);
 int vs_synthesize(const VSConfig *config, const char *text, int32_t speaker, float speed, VSCancel *cancel, VSAudio *audio);
 int vs_transcribe(const VSConfig *config, const float *samples, int32_t count, int32_t rate, VSCancel *cancel, char **text);
-typedef struct { double start; double end; char *text; } VSSegment;
+/// token=1: one recognised token with window-relative start/end (end<=start when untimed); token=0: a whole window.
+typedef struct { double start; double end; char *text; int32_t window; int32_t token; } VSSegment;
 typedef struct { VSSegment *segments; int32_t count; } VSSegments;
 void vs_segments_free(VSSegments *segments);
 int vs_transcribe_segments(const VSConfig *config, const float *samples, int32_t count, int32_t rate, VSCancel *cancel, VSSegments *segments);

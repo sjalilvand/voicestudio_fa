@@ -42,8 +42,9 @@ public struct AVPhoneAudioDecoder: PhoneAudioDecoder {
                 guard rc == kCMBlockBufferNoErr, bytes.count.isMultiple(of: 4) else { throw ClientError("mobile.simple.media_failed") }
                 let timestamp = CMSampleBufferGetPresentationTimeStamp(buffer).seconds
                 guard timestamp.isFinite else { throw ClientError("mobile.simple.media_failed") }
-                let position = Int((timestamp*24000).rounded())
+                var position = Int((timestamp*24000).rounded())
                 if position >= totalFrames { continue }
+                position = count+timelineShift(timestamp: timestamp,written: count)
                 if position > count { try pad(position-count); count = position }
                 let skip = max(0,count-position)
                 let frames = min(bytes.count/4-skip,totalFrames-count)
@@ -161,4 +162,12 @@ public struct AVPhoneDubMedia: PhoneDubMedia {
         }
         return try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
     }
+}
+
+/// Frames to insert (positive) or leading frames to drop (negative) so a buffer stamped `timestamp`
+/// seconds lands at its container time given `written` 24 kHz frames already output. Under 10 ms is jitter.
+func timelineShift(timestamp: Double,written: Int) -> Int {
+    guard timestamp.isFinite, timestamp >= 0 else { return 0 }
+    let delta = Int((timestamp*24000).rounded())-written
+    return abs(delta) < 240 ? 0 : delta
 }
