@@ -48,6 +48,10 @@ Electron publication uses these GitHub Actions secrets:
   and `APPLE_TEAM_ID` for macOS notarization and stapling.
 - `ELECTRON_WINDOWS_CSC_LINK` and `ELECTRON_WINDOWS_CSC_KEY_PASSWORD` for
   Windows Authenticode signing. The macOS certificate cannot sign Windows apps.
+- `APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID` and
+  `APP_STORE_CONNECT_API_KEY` in the `app-store-connect` environment for the
+  iOS TestFlight upload ([`mobile.md`](mobile.md#testflight-maintainers)).
+  TestFlight is not a release channel.
 - The repository `GITHUB_TOKEN` for draft creation and asset uploads.
 - `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` for the Docker Hub mirror.
 - `POSTHOG_PROJECT_TOKEN` (secret) and `POSTHOG_HOST` (repository variable),
