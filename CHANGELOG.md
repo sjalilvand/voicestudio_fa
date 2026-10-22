@@ -19,6 +19,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- Bug reports now include your OS, memory, free disk and whether the Python runtime exists, even when the backend never started, plus flags for risky install paths such as OneDrive or non-ASCII folders (#3156)
 - Older synthesized takes play again with accurate play/pause controls after a newer generation (#3102)
 - Generation-complete notifications appear above the workspace instead of covering synthesis controls (#3102)
 - Generated speech no longer starts and ends with silence, and `[pause]` markers give exactly the pause you asked for (Raw preset and explicit durations untouched) (#3080)
