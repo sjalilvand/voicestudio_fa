@@ -15,7 +15,7 @@ metadata and the backend fallback mirror it.
 
 ### Changed
 
-- Phone apps now use the app ID `sh.voicestudio.mobile`; a preview build installed before installs alongside as a new app, so pair it again and remove the old one (#PR)
+- Phone apps now use the app ID `sh.voicestudio.mobile`; a preview build installed before installs alongside as a new app, so pair it again and remove the old one (#3194)
 
 ### Added
 
