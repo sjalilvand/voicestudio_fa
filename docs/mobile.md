@@ -101,6 +101,11 @@ never publishes to production; promote a build in each store console.
 - **Run it:** Actions → `mobile-release` → Run workflow (uploads are off by
   default, so you get signed artifacts to test), or push a `mobile-v*` tag
   (builds and uploads both).
+- **Downloads for everyone:** a `mobile-v*` tag also creates a **draft** GitHub
+  prerelease with the signed APK and AAB, the App Store IPA, an unsigned IPA for
+  sideloading, and `SHA256SUMS.txt`. Review it, then publish. The App Store IPA
+  only installs through TestFlight; iPhone users outside TestFlight sideload the
+  unsigned IPA with their own Apple ID.
 - **Version:** the root `package.json` version. Each run's number is the store
   build number, so a rebuild of the same version still uploads.
 - **Secrets** (repository environment `mobile-release`, with required reviewers):

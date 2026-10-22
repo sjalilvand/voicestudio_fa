@@ -160,6 +160,14 @@ the opt-in **Beta** channel (below). Previews between betas are builds from
 `main` (the `electron-build.yml` artifacts or Docker `:latest`), never a side
 branch. No Tauri build is maintained.
 
+## Mobile apps
+
+Phone apps ship on their own `mobile-v*` tags through the `mobile-release`
+workflow (Play internal track, TestFlight and a draft GitHub prerelease with the
+APK, AAB and IPAs). The version is the root `package.json` version and each run's
+number is the store build number. Setup, secrets and sideloading: `docs/mobile.md`
+→ Releasing. Publishing the draft and promoting the store builds are manual.
+
 ## Beta channel
 
 Beta is a second release channel cut from `main`, for testers who opt in under

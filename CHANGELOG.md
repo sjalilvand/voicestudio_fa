@@ -73,6 +73,7 @@ metadata and the backend fallback mirror it.
 
 ### CI
 
+- New `mobile-release` workflow builds signed Android and iOS apps and drafts a GitHub prerelease with the APK, AAB and IPAs, with optional Play internal and TestFlight uploads (#2969)
 - Desktop request-guard self-tests stay deterministic when app requests arrive during cleanup (#2676)
 
 - New `mobile` workflow builds and tests both phone apps; a contract test fails when their theme or API description drifts from the desktop app (#2965)
