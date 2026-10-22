@@ -4,6 +4,7 @@ from __future__ import annotations
 import datetime
 import importlib.util
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -180,8 +181,98 @@ def test_draft_pushes_the_tag_but_never_dispatches_a_publish(release, monkeypatc
 def test_publish_without_signing_is_refused_unless_unsigned_is_accepted(release, monkeypatch):
     tag = "v0.5.7"
     with pytest.raises(SystemExit, match="configure signing"):
-        _drive(release, monkeypatch, ["stable", "", "publish", "n"], dry_run=False,
+        _drive(release, monkeypatch, ["stable", "", "publish", "no"], dry_run=False,
                secrets_missing=["APPLE_ID"])
-    calls = _drive(release, monkeypatch, ["stable", "", "publish", "y", tag], dry_run=False,
+    calls = _drive(release, monkeypatch, ["stable", "", "publish", "yes", tag], dry_run=False,
                    secrets_missing=["APPLE_ID"])
     assert ("dispatch", tag, True) in calls
+
+
+def _menu(release, monkeypatch, keys, default=0):
+    feed = iter(keys)
+    monkeypatch.setattr(release, "interactive", lambda: True)
+    monkeypatch.setattr(release, "read_key", lambda: next(feed))
+    options = [("stable", "a"), ("beta", "b"), ("other", "c")]
+    return release.select_option("Channel?", options, default)
+
+
+@pytest.mark.parametrize(
+    ("keys", "expected"),
+    [
+        (["enter"], "stable"),
+        (["down", "enter"], "beta"),
+        (["down", "down", "enter"], "other"),
+        (["down", "down", "down", "enter"], "stable"),  # wraps around
+        (["up", "enter"], "other"),
+        (["j", "j", "k", "enter"], "beta"),
+        (["x", "", "enter"], "stable"),  # unknown keys are ignored
+    ],
+)
+def test_select_moves_with_arrows_and_vim_keys(release, monkeypatch, keys, expected):
+    assert _menu(release, monkeypatch, keys) == expected
+
+
+def test_select_collapses_to_the_chosen_answer(release, monkeypatch, capsys):
+    _menu(release, monkeypatch, ["down", "enter"])
+    out = capsys.readouterr().out
+    assert out.endswith("Channel? beta\n") and "\x1b[?25h" in out
+
+
+@pytest.mark.parametrize("key", ["esc", "q", "interrupt"])
+def test_select_cancels_on_escape_and_restores_the_cursor(release, monkeypatch, capsys, key):
+    with pytest.raises(KeyboardInterrupt):
+        _menu(release, monkeypatch, [key])
+    assert "\x1b[?25h" in capsys.readouterr().out
+
+
+def test_select_falls_back_to_a_typed_answer_without_a_terminal(release, monkeypatch):
+    monkeypatch.setattr(release, "interactive", lambda: False)
+    monkeypatch.setattr("builtins.input", lambda prompt="": "beta")
+    assert release.select_option("Channel?", [("stable", "a"), ("beta", "b")]) == "beta"
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="needs a POSIX pseudo-terminal")
+def test_menu_reads_real_arrow_key_bytes_from_a_terminal():
+    """Regression: buffered stdin swallowed the rest of an arrow's escape sequence,
+    so every arrow press read as a lone Esc and cancelled the menu."""
+    import os
+    import pty
+    import re
+    import select
+    import time
+
+    driver = (
+        "import importlib.util\n"
+        "s = importlib.util.spec_from_file_location('r', 'scripts/release.py')\n"
+        "m = importlib.util.module_from_spec(s); s.loader.exec_module(m)\n"
+        "print('RESULT=' + m.select_option('Channel?', [('stable', 'x'), ('beta', 'y')]))\n"
+        "print('RESULT=' + m.select_option('Mode?', [('draft', 'x'), ('publish', 'y')]))\n"
+    )
+    pid, fd = pty.fork()
+    if pid == 0:
+        os.chdir(ROOT)
+        os.execvp(sys.executable, [sys.executable, "-c", driver])
+    output = b""
+
+    def pump(seconds: float) -> None:
+        nonlocal output
+        end = time.time() + seconds
+        while time.time() < end:
+            if select.select([fd], [], [], 0.05)[0]:
+                try:
+                    output += os.read(fd, 4096)
+                except OSError:
+                    return
+
+    pump(1.0)
+    os.write(fd, b"\x1b[B")  # down
+    pump(0.3)
+    os.write(fd, b"\r")
+    pump(0.5)
+    os.write(fd, b"\x1b[B\x1b[A\x1b[B")  # down, up, down
+    pump(0.3)
+    os.write(fd, b"\r")
+    pump(0.8)
+    os.waitpid(pid, 0)
+    text = re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", "", output.decode(errors="replace"))
+    assert re.findall(r"RESULT=(\w+)", text) == ["beta", "publish"], text
