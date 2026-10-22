@@ -228,10 +228,15 @@ private struct FixtureMedia: PhoneDubMedia {
     let pipeline = PhoneDubPipeline(store: store,engine: engine,decoder: FixtureDecoder(),media: FixtureMedia())
     await #expect(throws: (any Error).self) { try await pipeline.run(id: request.id,models: Array(models.prefix(2))) }
     #expect(await engine.transcriptions == 0)
+    // The per-job lock makes a second run or a delete wait for the holder instead of failing.
     try await store.acquire(request.id)
-    await #expect(throws: (any Error).self) { try await pipeline.run(id: request.id,models: models) }
-    await #expect(throws: (any Error).self) { try await store.delete(request.id) }
+    let waitingRun = Task { try await pipeline.run(id: request.id,models: models) }
+    let waitingDelete = Task { try await store.delete(request.id) }
+    try await Task.sleep(nanoseconds: 100_000_000)
+    #expect(await engine.transcriptions == 0)
     await store.release(request.id)
+    _ = try? await waitingRun.value
+    _ = try? await waitingDelete.value
     await #expect(throws: (any Error).self) { try await store.file(request.id,"../outside") }
 }
 @Test(.enabled(if: ProcessInfo.processInfo.environment["VOICESTUDIO_REAL_AUX"] == "1"))
