@@ -113,11 +113,11 @@ def test_generated_changelog_passes_the_release_notes_extraction(release, versio
     assert section and section[1].strip()
 
 
-def _drive(release, monkeypatch, answers, *, dry_run, secrets_missing=(), branch="main"):
+def _drive(release, monkeypatch, answers, *, dry_run, secrets_missing=(), branch="main", fail_on=None, calls=None):
     """Run release() with scripted prompts and every side effect recorded, not run."""
     import argparse
 
-    calls = []
+    calls = [] if calls is None else calls
     feed = iter(answers)
 
     def fake_sh(*cmd, **kw):
@@ -130,6 +130,10 @@ def _drive(release, monkeypatch, answers, *, dry_run, secrets_missing=(), branch
         if cmd[:2] == ("git", "rev-list"):
             return "34"
         calls.append(cmd)
+        if fail_on and fail_on in cmd:
+            import subprocess
+
+            raise subprocess.CalledProcessError(1, cmd)
         return ""
 
     monkeypatch.setattr("builtins.input", lambda prompt="": next(feed))
@@ -185,3 +189,13 @@ def test_publish_without_signing_is_refused_unless_unsigned_is_accepted(release,
     calls = _drive(release, monkeypatch, ["stable", "", "publish", "y", tag], dry_run=False,
                    secrets_missing=["APPLE_ID"])
     assert ("dispatch", tag, True) in calls
+
+
+@pytest.mark.parametrize("failing", ["pytest", "lock"])
+def test_a_failed_guard_restores_the_files_and_pushes_nothing(release, monkeypatch, failing):
+    calls = []
+    with pytest.raises(SystemExit, match="restored; nothing was pushed"):
+        _drive(release, monkeypatch, ["beta", "", "draft", "v0.5.7-beta.1"],
+               dry_run=False, fail_on=failing, calls=calls)
+    assert ("git", "checkout", "--", *release.RELEASE_FILES) in calls
+    assert not any(c[:2] in (("git", "commit"), ("git", "push"), ("git", "tag")) for c in calls)

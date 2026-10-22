@@ -31,6 +31,9 @@ GUARD_TESTS = [
     "tests/test_voicestudio_branding.py",
     "tests/test_changelog_style.py",
 ]
+RELEASE_FILES = [
+    "package.json", "pyproject.toml", "backend/core/version.py", "uv.lock", "CHANGELOG.md",
+]
 SIGNING_SECRETS = ("ELECTRON_MACOS_CSC_LINK", "ELECTRON_WINDOWS_CSC_LINK", "APPLE_ID")
 _VERSION = re.compile(r"(\d+)\.(\d+)\.(\d+)(?:-beta\.(\d+))?")
 
@@ -219,15 +222,23 @@ Release plan
         raise SystemExit("Cancelled.")
 
     ensure_main()
-    bump_files(ROOT, version)
-    changelog = ROOT / "CHANGELOG.md"
-    changelog.write_text(
-        prepare_changelog(changelog.read_text(encoding="utf-8"), version, datetime.date.today()),
-        encoding="utf-8",
-    )
-    sh("uv", "lock")
-    sh("uv", "run", "pytest", *GUARD_TESTS, "-q")
-    sh("git", "add", "package.json", "pyproject.toml", "backend/core/version.py", "uv.lock", "CHANGELOG.md")
+    try:
+        bump_files(ROOT, version)
+        changelog = ROOT / "CHANGELOG.md"
+        changelog.write_text(
+            prepare_changelog(changelog.read_text(encoding="utf-8"), version, datetime.date.today()),
+            encoding="utf-8",
+        )
+        sh("uv", "lock")
+        sh("uv", "run", "pytest", *GUARD_TESTS, "-q")
+    except (subprocess.CalledProcessError, ValueError) as error:
+        # Nothing is committed or pushed yet: put the working tree back.
+        sh("git", "checkout", "--", *RELEASE_FILES)
+        raise SystemExit(
+            f"\nRelease aborted before committing: {error}\n"
+            "The version files, uv.lock and CHANGELOG.md were restored; nothing was pushed."
+        )
+    sh("git", "add", *RELEASE_FILES)
     sh("git", "commit", "-m", f"chore(release): {tag}")
     sh("git", "push", "origin", "main")
     sh("git", "tag", tag)
