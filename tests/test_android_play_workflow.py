@@ -29,7 +29,7 @@ def test_workflow_uploads_only_a_verified_release_bundle_to_internal():
     assert names.index("Verify bundle signature") < names.index("Upload to Play internal testing")
     upload = steps[names.index("Upload to Play internal testing")]
     assert upload["with"]["track"] == "internal"
-    assert upload["with"]["packageName"] == "com.voicestudio.mobile"
+    assert upload["with"]["packageName"] == "sh.voicestudio.mobile"
     cleanup = steps[-1]
     assert cleanup["name"] == "Remove upload keystore" and cleanup["if"] == "always()"
     build = steps[names.index("Build signed bundle")]
@@ -48,3 +48,14 @@ def test_mobile_ci_configures_a_beta_version():
     steps = load(MOBILE)["jobs"]["android"]["steps"]
     step = next(step for step in steps if step.get("name") == "Beta version configures")
     assert "-beta.1" in step["run"] and ":app:printAppVersion" in step["run"]
+
+
+def test_store_app_id_matches_on_both_platforms_and_the_upload():
+    # The shared mobile contract ships both apps under one store identity.
+    ios = load(ROOT / "mobile" / "ios" / "VoiceStudio" / "project.yml")
+    bundle_id = ios["targets"]["VoiceStudio"]["settings"]["base"]["PRODUCT_BUNDLE_IDENTIFIER"]
+    assert bundle_id == "sh.voicestudio.mobile"
+    assert f'applicationId = "{bundle_id}"' in GRADLE.read_text()
+    steps = load(WORKFLOW)["jobs"]["play-internal"]["steps"]
+    upload = next(step for step in steps if step.get("name") == "Upload to Play internal testing")
+    assert upload["with"]["packageName"] == bundle_id

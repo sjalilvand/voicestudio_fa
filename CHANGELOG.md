@@ -13,6 +13,10 @@ metadata and the backend fallback mirror it.
 - Preview iOS and Android companion apps for your own VoiceStudio
 - Opt-in Beta update channel: get fixes early from Settings → Updates, and roll onto the next stable release automatically
 
+### Changed
+
+- Phone apps now use the app ID `sh.voicestudio.mobile`; a preview build installed before installs alongside as a new app, so pair it again and remove the old one (#3194)
+
 ### Added
 
 - Beta update channel: choose Stable or Beta under Settings → Updates; betas are `-beta.N` prereleases that never reach Stable users, and Docker gets matching `:beta` tags ([guide](docs/update-channels.md)) (#3175)

@@ -82,7 +82,7 @@ The `iOS TestFlight` workflow signs the iPhone app and uploads it to TestFlight
 for the team's internal testers. It is dispatched by hand from `main` and never
 submits the app for App Store review. One-time setup in the Apple Developer team:
 
-1. Register the App ID `com.voicestudio.mobile` (Certificates, Identifiers &
+1. Register the App ID `sh.voicestudio.mobile` (Certificates, Identifiers &
    Profiles → Identifiers) and create the app in App Store Connect with it.
 2. Create an App Store Connect API key with the **Admin** role (Users and
    Access → Integrations). Admin lets CI create the cloud-managed Apple
@@ -104,7 +104,7 @@ Console **internal testing** track. It is dispatched by hand from `main` and
 never sends a release to production. One-time setup:
 
 1. Create the app in the Play Console with the package name
-   `com.voicestudio.mobile` and keep Play App Signing on (Google holds the app
+   `sh.voicestudio.mobile` and keep Play App Signing on (Google holds the app
    signing key; CI only holds the upload key).
 2. Create an upload key once and keep a backup in the team password manager:
    `keytool -genkeypair -v -keystore upload.jks -alias upload -keyalg RSA -keysize 4096 -validity 10000`.

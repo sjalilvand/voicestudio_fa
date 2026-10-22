@@ -18,7 +18,8 @@ android {
     namespace = "com.voicestudio.mobile"
     compileSdk = 36
     defaultConfig {
-        applicationId = "com.voicestudio.mobile"
+        // Store identity (voicestudio.sh); the Kotlin namespace stays com.voicestudio.mobile.
+        applicationId = "sh.voicestudio.mobile"
         minSdk = 29
         targetSdk = 36
         versionCode = appVersionCode
