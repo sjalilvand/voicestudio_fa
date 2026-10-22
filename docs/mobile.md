@@ -91,3 +91,23 @@ after 7 days; turn on Developer Mode on the iPhone (Settings → Privacy &
 Security) when iOS asks. App text uses the
 Electron locale catalogs (`mobile.*` keys). The `mobile` workflow builds and
 tests both apps.
+
+## Releasing
+
+The `mobile-release` workflow builds the signed Android APK/AAB and iOS IPA and,
+when asked, uploads them to the Play **internal** track and **TestFlight**. It
+never publishes to production; promote a build in each store console.
+
+- **Run it:** Actions → `mobile-release` → Run workflow (uploads are off by
+  default, so you get signed artifacts to test), or push a `mobile-v*` tag
+  (builds and uploads both).
+- **Version:** the root `package.json` version. Each run's number is the store
+  build number, so a rebuild of the same version still uploads.
+- **Secrets** (repository environment `mobile-release`, with required reviewers):
+  - Android: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
+    `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON`
+  - iOS: `IOS_CERT_P12_BASE64`, `IOS_CERT_PASSWORD`, `IOS_PROFILE_BASE64`
+    (App Store distribution profile for `com.voicestudio.mobile`), `IOS_TEAM_ID`,
+    `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`
+- **First upload:** create the app records in Play Console and App Store Connect
+  first; Play needs the first bundle uploaded once and the data-safety form filled.
