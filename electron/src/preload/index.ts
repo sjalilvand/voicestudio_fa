@@ -103,6 +103,7 @@ const bridge: VoiceStudioBridge = {
     useDefaultRuntimeLocation: () => ipcRenderer.invoke('backend:useDefaultRuntimeLocation'),
     restart: () => ipcRenderer.invoke('backend:restart') as Promise<void>,
     getConnection: () => ipcRenderer.invoke('backend:getConnection'),
+    getHostSnapshot: () => ipcRenderer.invoke('backend:hostSnapshot'),
     testRemote: (input) => ipcRenderer.invoke('backend:testRemote', input),
     useRemote: (input) => ipcRenderer.invoke('backend:useRemote', input),
     useLocal: () => ipcRenderer.invoke('backend:useLocal'),
