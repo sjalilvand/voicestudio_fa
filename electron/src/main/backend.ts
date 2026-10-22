@@ -51,7 +51,7 @@ import {
   saveRemoteBackend,
   type RemoteSession,
 } from './remote-backend';
-import { toolSearchDirs } from './tool-path';
+import { toolSearchDirs, toolSearchDirsAsync } from './tool-path';
 import { SetupProgressTracker, cleanProcessLine } from './setup-progress';
 import { scrubText } from '../shared/utils/scrub';
 import { DEFAULT_BACKEND_PORT } from '../../../config/app-config.mjs';
@@ -313,7 +313,7 @@ async function findUvAsync(): Promise<string | null> {
     if (await usable(bundled)) return bundled;
   }
   const names = process.platform === 'win32' ? ['uv.exe', 'uv'] : ['uv'];
-  for (const dir of toolSearchDirs()) {
+  for (const dir of await toolSearchDirsAsync()) {
     for (const name of names) {
       const candidate = join(dir, name);
       if (await usable(candidate)) return candidate;
