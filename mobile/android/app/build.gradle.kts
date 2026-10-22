@@ -15,10 +15,23 @@ android {
         minSdk = 29
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
         targetSdk = 36
-        versionCode = appVersion.split(".").take(3).map { it.toInt() }.let { it[0]*1000000+it[1]*1000+it[2] }
+        // Play needs a unique, increasing code per upload: version * 1000 + CI build number.
+        versionCode = appVersion.split(".").take(3).map { it.toInt() }.let { it[0]*1000000+it[1]*1000+it[2] } * 1000 + (System.getenv("VS_BUILD_NUMBER")?.toInt() ?: 0)
         versionName = appVersion
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+    signingConfigs {
+        // Release signing comes from CI secrets; local builds stay unsigned-release.
+        System.getenv("VS_ANDROID_KEYSTORE")?.let { path ->
+            create("release") {
+                storeFile = file(path)
+                storePassword = System.getenv("VS_ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("VS_ANDROID_KEY_ALIAS")
+                keyPassword = System.getenv("VS_ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
+    buildTypes { release { signingConfigs.findByName("release")?.let { signingConfig = it } } }
     buildFeatures { compose = true; buildConfig = true }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     testOptions { unitTests.isIncludeAndroidResources = true }

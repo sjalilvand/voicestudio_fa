@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import os
 import pathlib
 import plistlib
 import re
@@ -107,7 +108,8 @@ def prepare(output, info):
     version = json.loads((ROOT / "package.json").read_text())["version"]
     data = plistlib.loads((IOS / "VoiceStudio/Info.plist").read_bytes())
     data["CFBundleShortVersionString"] = version
-    data["CFBundleVersion"] = "1"
+    # Store uploads need a unique, increasing build per version (CI passes the run number).
+    data["CFBundleVersion"] = os.environ.get("VS_BUILD_NUMBER", "1")
     data["CFBundleLocalizations"] = sorted(path.stem for path in source.glob("*.json"))
     for field, keys in permissions.items():
         data[field] = "\n".join(lookup(english, key) for key in keys)
