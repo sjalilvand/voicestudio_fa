@@ -15,7 +15,7 @@ metadata and the backend fallback mirror it.
 
 ### Added
 
-- Beta update channel: choose Stable or Beta under Settings → Updates; betas are `-beta.N` prereleases that never reach Stable users, and Docker gets matching `:beta` tags ([guide](docs/update-channels.md))
+- Beta update channel: choose Stable or Beta under Settings → Updates; betas are `-beta.N` prereleases that never reach Stable users, and Docker gets matching `:beta` tags ([guide](docs/update-channels.md)) (#3175)
 
 - Preview iOS and Android companion apps: drive your own VoiceStudio from your phone (speak, voices and cloning, dubbing, dictation) after pairing by QR code; build from source for now ([guide](docs/mobile.md)) (#2965)
 - Smart Fit speed limits: set the fastest and slowest speed dubbing may apply to a line, from the Timing section (#3026) — thanks @MoonDragon-MD!
