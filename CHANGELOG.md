@@ -14,6 +14,7 @@ metadata and the backend fallback mirror it.
 
 ### Added
 
+- VoxCPM2 8-bit for Apple Silicon (MLX): 30 languages at 48 kHz for voice and audiobooks, listed under MLX-Audio in the Model Catalogue (#3171)
 - Preview iOS and Android companion apps: drive your own VoiceStudio from your phone (speak, voices and cloning, dubbing, dictation) after pairing by QR code; build from source for now ([guide](docs/mobile.md)) (#2965)
 - Smart Fit speed limits: set the fastest and slowest speed dubbing may apply to a line, from the Timing section (#3026) — thanks @MoonDragon-MD!
 
