@@ -75,3 +75,23 @@ after 7 days; turn on Developer Mode on the iPhone (Settings → Privacy &
 Security) when iOS asks. App text uses the
 Electron locale catalogs (`mobile.*` keys). The `mobile` workflow builds and
 tests both apps.
+
+## TestFlight (maintainers)
+
+The `iOS TestFlight` workflow signs the iPhone app and uploads it to TestFlight
+for the team's internal testers. It is dispatched by hand from `main` and never
+submits the app for App Store review. One-time setup in the Apple Developer team:
+
+1. Register the App ID `com.voicestudio.mobile` (Certificates, Identifiers &
+   Profiles → Identifiers) and create the app in App Store Connect with it.
+2. Create an App Store Connect API key with the **Admin** role (Users and
+   Access → Integrations). Admin lets CI create the cloud-managed Apple
+   Distribution certificate and App Store profile, so no `.p12` is stored.
+3. Create the `app-store-connect` environment (Settings → Environments), limit
+   it to the `main` branch, and add `APP_STORE_CONNECT_KEY_ID`,
+   `APP_STORE_CONNECT_ISSUER_ID` and `APP_STORE_CONNECT_API_KEY` (the full
+   `.p8` text). `APPLE_TEAM_ID` is shared with macOS notarization.
+
+The version is the root `package.json` version without any `-beta.N` suffix
+(App Store Connect accepts only `X.Y.Z`); the build number is the workflow run
+number and attempt, so every upload is new.
