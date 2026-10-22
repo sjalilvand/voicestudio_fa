@@ -11,8 +11,11 @@ metadata and the backend fallback mirror it.
 **Highlights**
 
 - Preview iOS and Android companion apps for your own VoiceStudio
+- Opt-in Beta update channel: get fixes early from Settings → Updates, and roll onto the next stable release automatically
 
 ### Added
+
+- Beta update channel: choose Stable or Beta under Settings → Updates; betas are `-beta.N` prereleases that never reach Stable users, and Docker gets matching `:beta` tags ([guide](docs/update-channels.md)) (#3175)
 
 - Preview iOS and Android companion apps: drive your own VoiceStudio from your phone (speak, voices and cloning, dubbing, dictation) after pairing by QR code; build from source for now ([guide](docs/mobile.md)) (#2965)
 - Smart Fit speed limits: set the fastest and slowest speed dubbing may apply to a line, from the Timing section (#3026) — thanks @MoonDragon-MD!
@@ -43,6 +46,7 @@ metadata and the backend fallback mirror it.
 
 ### Docs
 
+- Sponsorship is one framework: GitHub Sponsors tiers match `SPONSORS.md`, which now states what each tier gives, when recognition starts, and what sponsorship does not buy (#3172)
 - OmniVoice GGUF docs state that the installers do not ship its native binary yet (#3026) — thanks @DestinyQJY!
 - Contributor guides and the pull request template explain how to sign the CLA before opening a first pull request (#2676)
 
