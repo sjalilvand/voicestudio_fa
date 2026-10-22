@@ -313,7 +313,11 @@ export function ModelLicense({
             </DialogTitle>
             <DialogDescription className="break-all">{repoId}</DialogDescription>
           </DialogHeader>
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <LicenceAcceptanceFooter
+            models={currentAcceptance ? [toAcceptable(label, currentAcceptance)] : []}
+            onClose={close}
+            closeDisabled={busy === 'commit'}
+          >
             <div className="p-4">
               <ModelLicenceView details={details.data} infoFallback={info} extra={verifiedInstall} />
               {details.isError && (
@@ -322,12 +326,7 @@ export function ModelLicense({
                 </p>
               )}
             </div>
-            <LicenceAcceptanceFooter
-              models={currentAcceptance ? [toAcceptable(label, currentAcceptance)] : []}
-              onClose={close}
-              closeDisabled={busy === 'commit'}
-            />
-          </div>
+          </LicenceAcceptanceFooter>
         </DialogContent>
       </Dialog>
     </>

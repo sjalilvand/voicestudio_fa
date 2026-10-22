@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -31,11 +31,11 @@ import {
  * Button row per platform convention: macOS puts the default action rightmost
  * with Cancel beside it, Windows (Fluent) uses equal-width buttons with the
  * primary action first, Linux (GNOME/KDE) right-aligns Cancel then the action.
- * Pinned to the bottom of the dialog's one scroll area so it never scrolls away.
+ * Rendered below the dialog's scroll region so it is always visible.
  */
 function footerActionsClass(platform: PlatformFamily) {
   const base =
-    'sticky bottom-0 -mx-8 flex flex-col-reverse gap-2 border-t border-border px-8 py-4 sm:flex-row sm:items-center ' +
+    'flex shrink-0 flex-col-reverse gap-2 border-t border-border px-8 py-4 sm:flex-row sm:items-center ' +
     // Fluent dialogs put the actions on their own tinted command area.
     (platform === 'windows' ? 'bg-muted' : 'bg-popover');
   if (platform === 'windows') return cn(base, 'sm:flex-row-reverse [&>button]:sm:flex-1');
@@ -85,7 +85,9 @@ export function LicenceAcceptanceFooter({
   onAccepted,
   onClose,
   closeDisabled,
+  children,
 }: {
+  children?: ReactNode;
   models: AcceptableModel[];
   onAccepted?: () => void;
   onClose: () => void;
@@ -145,10 +147,13 @@ export function LicenceAcceptanceFooter({
   };
 
   return (
+    <>
+    <div className="min-h-0 flex-1 overflow-y-auto">
+    {children}
     <div
       data-licence-acceptance
       data-platform={platform}
-      className="space-y-4 border-t border-border px-8 pt-5"
+      className="space-y-4 border-t border-border px-8 py-5"
     >
       {pending.length > 0 && (
         <>
@@ -201,7 +206,9 @@ export function LicenceAcceptanceFooter({
           {t(error === 'changed' ? 'modelLicense.acceptChanged' : 'modelLicense.acceptFailed')}
         </p>
       )}
-      <div className={footerActionsClass(platform)}>
+    </div>
+    </div>
+      <div data-licence-actions className={footerActionsClass(platform)}>
         {accepted.map((model) => (
           <Button
             key={model.repo_id}
@@ -226,7 +233,7 @@ export function LicenceAcceptanceFooter({
           </Button>
         )}
       </div>
-    </div>
+    </>
   );
 }
 
@@ -299,7 +306,8 @@ export function ModelLicenceGate() {
             </div>
           </div>
         </DialogHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        {models ? (
+          <LicenceAcceptanceFooter models={acceptable} onAccepted={() => setDone(true)} onClose={close}>
         <div className="space-y-3 px-8 pb-4">
           {done && (
             <p role="status" className="rounded-lg border border-success/40 bg-success/10 p-3 text-sm">
@@ -339,10 +347,8 @@ export function ModelLicenceGate() {
             );
           })}
         </div>
-        {models && (
-          <LicenceAcceptanceFooter models={acceptable} onAccepted={() => setDone(true)} onClose={close} />
-        )}
-        </div>
+          </LicenceAcceptanceFooter>
+        ) : null}
       </DialogContent>
     </Dialog>
   );
