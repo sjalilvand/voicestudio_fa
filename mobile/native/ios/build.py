@@ -189,10 +189,13 @@ def stamp_omni_source(verified, output):
     cmake = 'set(CONTENT [=[' + content + ']=])\nif(EXISTS "${OUTPUT}")\n  file(READ "${OUTPUT}" EXISTING)\n  if("${EXISTING}" STREQUAL "${CONTENT}")\n    return()\n  endif()\nendif()\nfile(WRITE "${OUTPUT}" "${CONTENT}")\n'
     (target / 'tools/version.cmake').write_text(cmake)
     patch = HERE / 'patches/omnivoice-metal-transfers.patch'
-    if subprocess.run(['git', 'apply', '--reverse', '--check', str(patch)], cwd=target,
+    # target sits inside this repo's work tree; without a ceiling git apply resolves
+    # paths against the repo root and silently skips the patch.
+    env = {**os.environ, 'GIT_CEILING_DIRECTORIES': str(target.parent)}
+    if subprocess.run(['git', 'apply', '--reverse', '--check', str(patch)], cwd=target, env=env,
                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode:
-        run('git', 'apply', '--check', patch, cwd=target)
-        run('git', 'apply', patch, cwd=target)
+        run('git', 'apply', '--check', patch, cwd=target, env=env)
+        run('git', 'apply', patch, cwd=target, env=env)
     return target
 
 
