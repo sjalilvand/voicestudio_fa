@@ -1,3 +1,4 @@
+import type { HostSnapshotLike } from '../shared/utils/hostSnapshot';
 /**
  * The contextBridge surface exposed to the renderer as `window.voicestudio`.
  *
@@ -399,6 +400,7 @@ export interface VoiceStudioBridge {
     chooseRuntimeLocation(title: string): Promise<RuntimeLocation | null>;
     useDefaultRuntimeLocation(): Promise<RuntimeLocation>;
     getConnection(): Promise<BackendConnection>;
+    getHostSnapshot(): Promise<HostSnapshotLike>;
     testRemote(input: { url: string; apiKey: string }): Promise<RemoteBackendProbe>;
     useRemote(input: { url: string; apiKey: string }): Promise<RemoteBackendProbe>;
     useLocal(): Promise<BackendConnection>;
