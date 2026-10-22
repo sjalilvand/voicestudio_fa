@@ -164,6 +164,30 @@ the opt-in **Beta** channel (below). Previews between betas are builds from
 `main` (the `electron-build.yml` artifacts or Docker `:latest`), never a side
 branch. No Tauri build is maintained.
 
+## Release helper
+
+`make release` (or `uv run python scripts/release.py`) cuts a release from any
+branch. It shows the last release and the version on `main`, then asks **stable
+or beta** and suggests the new tag (`v0.5.7`, or `v0.5.7-beta.1`, `-beta.2`, ...
+for a beta; the beta suffix is always `-beta.N`). If `package.json` already names
+the upcoming release it uses that version; if that version is already tagged it
+moves to the next patch. It then asks **draft or publish**, prints the plan
+(including switching to `main` and fast-forwarding it), and only proceeds when you
+type the tag name.
+
+- **Draft:** bumps the three version files in lockstep, runs `uv lock`, writes
+  the `CHANGELOG.md` section from `[Unreleased]` (a stable release renames it; a
+  beta copies it), runs the version guards, commits, pushes `main` and the tag.
+  The tag push builds a draft release; nothing is public.
+- **Publish:** the same, then dispatches `electron-release.yml` with
+  `publish=true`. If the Mac/Windows signing secrets are missing or unreadable it
+  stops unless you explicitly accept unsigned installers.
+- `--publish vX.Y.Z[-beta.N]` (`make release-publish TAG=…`) publishes an existing
+  draft build later.
+- `--dry-run` (`make release-dry`) prints the plan and changes nothing.
+
+It does not replace the post-release verification below; run it every time.
+
 ## Beta channel
 
 Beta is a second release channel cut from `main`, for testers who opt in under
