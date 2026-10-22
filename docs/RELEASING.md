@@ -211,7 +211,9 @@ has no soak period, no side branch and no cherry-picks.
 | Tauri sunset feeds | copied into the release | not copied |
 
 Cutting a beta: with owner approval of the version, bump `package.json`,
-`pyproject.toml` and `_FALLBACK_VERSION` to `X.Y.Z-beta.N` together, add a
+`pyproject.toml` and `_FALLBACK_VERSION` to `X.Y.Z-beta.N` together, run `uv lock`
+(it records the PEP 440 form `X.Y.ZbN`; the lockstep test compares versions, not
+strings), add a
 `## [X.Y.Z-beta.N]` section to `CHANGELOG.md`, tag from `main`, then run
 `electron-release.yml` with `publish`. The workflow derives the channel from
 the version (`prepare_electron_release.py --print-channel`), stamps it into every

@@ -114,11 +114,11 @@ def test_generated_changelog_passes_the_release_notes_extraction(release, versio
     assert section and section[1].strip()
 
 
-def _drive(release, monkeypatch, answers, *, dry_run, secrets_missing=(), branch="main"):
+def _drive(release, monkeypatch, answers, *, dry_run, secrets_missing=(), branch="main", fail_on=None, calls=None):
     """Run release() with scripted prompts and every side effect recorded, not run."""
     import argparse
 
-    calls = []
+    calls = [] if calls is None else calls
     feed = iter(answers)
 
     def fake_sh(*cmd, **kw):
@@ -131,6 +131,10 @@ def _drive(release, monkeypatch, answers, *, dry_run, secrets_missing=(), branch
         if cmd[:2] == ("git", "rev-list"):
             return "34"
         calls.append(cmd)
+        if fail_on and fail_on in cmd:
+            import subprocess
+
+            raise subprocess.CalledProcessError(1, cmd)
         return ""
 
     monkeypatch.setattr("builtins.input", lambda prompt="": next(feed))
