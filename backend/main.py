@@ -671,9 +671,19 @@ def _phase_a_build_inner() -> None:
     try:
         import torchaudio  # noqa: F401
     except Exception as exc:  # noqa: BLE001
-        logging.getLogger("omnivoice.model").exception(
-            "torchaudio import failed during ml_imports (startup will continue degraded): %s",
-            exc,
+        # Sanitized summary only, never a traceback-bearing log call: an
+        # import traceback embeds absolute user-home paths (C:\Users\<name>\…, /Users/<name>/…)
+        # and lands in backend.log, which goes into diagnostic bundles and
+        # prefilled bug reports (CWE-532; CodeRabbit #3150).
+        try:
+            from core.failure import sanitize as _sanitize
+            _detail = _sanitize(f"{type(exc).__name__}: {exc}")
+        except Exception:  # noqa: BLE001 — never lose the signal to this
+            _detail = type(exc).__name__
+        logging.getLogger("omnivoice.model").warning(
+            "torchaudio import failed during ml_imports (startup will "
+            "continue degraded): %s",
+            _detail,
         )
         torchaudio = None  # type: ignore[assignment]
     warnings.filterwarnings("ignore", category=UserWarning)
@@ -693,8 +703,12 @@ def _phase_a_build_inner() -> None:
     # lists sm_120 in get_arch_list(). CU128_ARCHS in
     # tests/test_cuda_arch_compat.py records the same list, captured verbatim
     # from a real cu128 build in #1285.
+    # The bare hasattr guard (no `torchaudio is not None` prefix) is what
+    # tests/test_torchaudio_legacy_backend_1931.py asserts, and it is safe
+    # either way: hasattr(None, ...) is False, so the call is skipped when
+    # the import above failed too.
     try:
-        if torchaudio is not None and hasattr(torchaudio, "set_audio_backend"):
+        if hasattr(torchaudio, "set_audio_backend"):
             torchaudio.set_audio_backend("soundfile")
     except Exception:  # noqa: BLE001
         pass
