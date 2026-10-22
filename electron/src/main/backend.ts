@@ -10,6 +10,7 @@ import {
   stageRuntimeSources,
   type RuntimeRegion,
 } from './runtime-project';
+import { collectHostSnapshot, type HostSnapshot } from './host-snapshot';
 import { runtimeSetupSupported } from './distribution';
 import { asciiSafePthFiles } from './pth-ascii';
 import { devProbeStamped, writeDevProbeStamp } from './dev-probe-stamp';
@@ -693,6 +694,26 @@ export class BackendSupervisor extends EventEmitter<{
       url: this.baseUrl,
       authenticated: Boolean(this.activeSession()),
     };
+  }
+
+  /** Machine and runtime facts for bug reports; works while the backend is down. */
+  async hostSnapshot(): Promise<HostSnapshot> {
+    const project = this.runtimeProject ?? join(storedRuntimeRoot() ?? defaultRuntimeRoot(), 'project');
+    return collectHostSnapshot({
+      runtimeProject: project,
+      runtimePython: runtimePython(project),
+      uv: findUv(),
+      gpu: async () => {
+        const info = (await app.getGPUInfo('basic')) as {
+          gpuDevice?: { vendorId?: number; deviceId?: number; active?: boolean; driverVersion?: string }[];
+        };
+        const devices = info.gpuDevice ?? [];
+        const active = devices.find((device) => device.active) ?? devices[0];
+        return active
+          ? `vendor 0x${(active.vendorId ?? 0).toString(16)} device 0x${(active.deviceId ?? 0).toString(16)}${active.driverVersion ? ` driver ${active.driverVersion}` : ''}`
+          : null;
+      },
+    });
   }
 
   requestHeaders(): Record<string, string> {
