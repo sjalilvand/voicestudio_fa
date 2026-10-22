@@ -183,7 +183,14 @@ class AndroidAudioDecoder: AudioDecoder {
                     var sum=0f;repeat(channels) {sum+=if(encoding==AudioFormat.ENCODING_PCM_FLOAT) buffer.float else buffer.short/32768f}
                     (sum/channels).takeIf {it.isFinite()} ?: 0f
                 }
-                val samples=converter.accept(mono);written+=samples.size
+                var samples=converter.accept(mono)
+                // Container timestamps are the truth: a late start or a dropped packet must stay silent, overlap must not drift.
+                val shift=timelineShift(extractor.sampleTime,written)
+                if(shift>0) {
+                    if(written+shift>maxSeconds*24000L) throw ClientFailure("mobile.simple.audio_long")
+                    appendSilence(out,shift);written+=shift
+                } else if(shift<0) samples=samples.copyOfRange(minOf(-shift,samples.size.toLong()).toInt(),samples.size)
+                written+=samples.size
                 if(written>maxSeconds*24000L) throw ClientFailure("mobile.simple.audio_long")
                 val bytes=ByteBuffer.allocate(samples.size*4).order(ByteOrder.LITTLE_ENDIAN)
                 samples.forEach {bytes.putFloat(it)};out.write(bytes.array())
@@ -199,6 +206,17 @@ class AndroidAudioDecoder: AudioDecoder {
         progress(1f);return PcmFile(output)
     }
 
+}
+
+/**
+ * Frames of 24 kHz silence to insert (positive) or leading frames to drop (negative) so a raw-PCM buffer
+ * stamped [sampleTimeUs] lands at its container time given [written] frames already output.
+ * Jitter under 10 ms is ignored; a missing timestamp changes nothing.
+ */
+internal fun timelineShift(sampleTimeUs: Long,written: Long): Long {
+    if(sampleTimeUs<0) return 0
+    val delta=sampleTimeUs*24000/1_000_000-written
+    return if(kotlin.math.abs(delta)<240) 0 else delta
 }
 
 /** Real recordings have no synthetic marker; generated audio uses markSynthetic. */

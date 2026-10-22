@@ -42,6 +42,10 @@ class PhoneDubWorker(context: Context,params: WorkerParameters): CoroutineWorker
     override suspend fun getForegroundInfo(): ForegroundInfo = notification()
     override suspend fun doWork(): Result {
         val job=inputData.getString("job") ?: return Result.failure()
+        // Valid ids only: an invalid one fails inside run() with the checkpoint error as before.
+        return if(runCatching {jobs.directory(job)}.isSuccess) jobs.exclusive(job) {execute(job)} else execute(job)
+    }
+    private suspend fun execute(job: String): Result {
         try {
             setForeground(notification())
             val runtime=PhoneRuntime.get(applicationContext)

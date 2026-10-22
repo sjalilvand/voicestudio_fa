@@ -12,6 +12,7 @@ import com.voicestudio.mobile.designsystem.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
+import com.voicestudio.mobile.local.PhoneModel
 import com.voicestudio.mobile.features.*
 import java.io.File
 import kotlinx.coroutines.*
@@ -79,6 +80,13 @@ import kotlinx.coroutines.*
     }
 }
 
+/** Preset speech and saved-voice cloning use different models, so each keeps its own remembered choice. */
+internal fun speakModelKey(capability: String)=if(capability=="clone") "speak-clone" else "speak"
+internal fun chooseSpeakModel(models: List<PhoneModel>,installed: Set<String>,choices: Map<String,String>,capability: String): PhoneModel? {
+    val matching=models.filter {it.capability==capability}
+    return matching.firstOrNull {it.id==choices[speakModelKey(capability)]} ?: matching.firstOrNull {it.id in installed} ?: matching.firstOrNull()
+}
+
 @Composable fun SpeakScreen(vm: StudioViewModel, initialPhoneVoiceID: String? = null, initialComputerVoiceID: String? = null) {
     com.voicestudio.mobile.features.models.TaskLocation(vm,"speak",setOf("tts","clone")) {location,model ->
         if(location==com.voicestudio.mobile.local.RunLocation.COMPUTER) ComputerSpeakScreen(vm,initialComputerVoiceID)
@@ -90,7 +98,8 @@ import kotlinx.coroutines.*
             var speaker by rememberSaveable(initialPhoneVoiceID) {mutableStateOf(initialPhoneVoiceID?.let {"phone:"+it} ?: "0")}
             val voice=phone.voices.firstOrNull {"phone:"+it.id==speaker}
             val capability=if(voice==null) "tts" else "clone"
-            val selected=model?.takeIf {it.capability==capability} ?: phone.models.firstOrNull {it.capability==capability&&it.id in phone.installed} ?: phone.models.firstOrNull {it.capability==capability}
+            val prefs by vm.preferences.collectAsState()
+            val selected=chooseSpeakModel(phone.models,phone.installed,prefs.phoneModels,capability)
             LaunchedEffect(phone.voices) {if(speaker.startsWith("phone:")&&voice==null) speaker="0"}
             val save=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("audio/wav")) {uri ->
                 val source=phone.audio
@@ -111,7 +120,7 @@ import kotlinx.coroutines.*
                 val languageChoices=if(voice!=null) listOf(Choice("auto",tr("languagePicker.auto"))) else selected?.languages.orEmpty().map {Choice(it,languageName(it,LocalL10n.current.locale))}
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
                     Box(Modifier.weight(1f)) {ChoicePicker("mobile.speak.voice",speaker,(0 until speakers).map {Choice(it.toString(),tr("mobile.local.preset_voice",mapOf("number" to it+1)))}+phone.voices.map {Choice("phone:"+it.id,it.name)},compact=true) {speaker=it}}
-                    Box(Modifier.weight(1f)) {com.voicestudio.mobile.features.models.TaskModelPicker(vm,"speak",setOf(capability),selected,compact=true)}
+                    Box(Modifier.weight(1f)) {com.voicestudio.mobile.features.models.TaskModelPicker(vm,"speak",setOf(capability),selected,compact=true,key=speakModelKey(capability))}
                     Box(Modifier.weight(1f)) {ChoicePicker("mobile.speak.language",language,languageChoices,compact=true) {language=it}}
                 }
                 if(selected?.let {!phone.canRun(it,vm.phone.ramBytes)}!=false) selected?.let {com.voicestudio.mobile.features.models.MissingModelsCard(vm,"mobile.tabs.speak",listOf(it))}

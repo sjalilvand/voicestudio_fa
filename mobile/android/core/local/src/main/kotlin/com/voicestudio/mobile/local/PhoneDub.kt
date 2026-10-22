@@ -2,6 +2,8 @@ package com.voicestudio.mobile.local
 
 import com.voicestudio.mobile.network.ClientFailure
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
 import java.io.File
 import java.nio.file.Files
@@ -76,7 +78,17 @@ class PhoneDubStore(private val root: File) {
             catch(e:CancellationException) {throw e} catch(_:Exception) {null}
         }.sortedByDescending {it.request.createdAt}
     }
-    suspend fun delete(id: String) = withContext(Dispatchers.IO) {if(!directory(id).deleteRecursively()) throw ClientFailure("mobile.simple.checkpoint_failed")}
+    /**
+     * Serialises everything that writes one job (a running worker, its cancel cleanup, a resumed worker,
+     * deletion). WorkManager reports a cancelled job finished before its native call has returned, so
+     * the lock, not WorkInfo, is what makes resume and delete wait for the old run to finish saving.
+     */
+    suspend fun <T> exclusive(id: String,block: suspend ()->T): T {
+        val key=directory(id).absolutePath
+        return locks.getOrPut(key) {Mutex()}.withLock {block()}
+    }
+    suspend fun delete(id: String) = exclusive(id) {withContext(Dispatchers.IO) {if(!directory(id).deleteRecursively()) throw ClientFailure("mobile.simple.checkpoint_failed")}}
+    private companion object {val locks=java.util.concurrent.ConcurrentHashMap<String,Mutex>()}
 }
 interface DubMedia {
     /** Returns the output file; a video export replaces its original soundtrack. */

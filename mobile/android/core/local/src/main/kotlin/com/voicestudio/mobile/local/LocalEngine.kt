@@ -97,13 +97,8 @@ class PhoneLocalEngine(private val models: ModelDownloads): LocalEngine {
                     val text=result.text.trim()
                     if(text.isNotEmpty()) {
                         val duration=(limit-start).toDouble()/audio.sampleRate
-                        val valid=result.timestamps.filter {it.isFinite()&&it>=0&&it<duration}
-                        val first=(valid.minOrNull()?.toDouble() ?: 0.0).coerceIn(0.0,(duration-.02).coerceAtLeast(0.0))
-                        val last=valid.maxOrNull()?.toDouble()
-                        val tail=result.durations.lastOrNull()?.takeIf {it.isFinite()&&it>0}?.toDouble() ?: .5
-                        val end=if(last==null) duration else (last+tail).coerceIn(minOf(first+.01,duration),duration)
                         val offset=start.toDouble()/audio.sampleRate
-                        segments+=SpeechSegment(offset+first,offset+end,text)
+                        segments+=splitUtterances(text,result.tokens.toList(),result.timestamps.toList(),result.durations.toList(),duration).map {SpeechSegment(offset+it.start,offset+it.end,it.text)}
                     }
                 } finally {stream.release()}
                 progress(limit.toFloat()/audio.samples.size)
@@ -197,4 +192,43 @@ suspend fun verifyNativeRuntimes(): Map<String,Int> = withContext(Dispatchers.IO
  */
 internal class NativeTtsCallback(private val onChunk: () -> Int) : (FloatArray) -> Int {
     override fun invoke(samples: FloatArray): Int = onChunk()
+}
+
+/** Pause that starts a new utterance; shorter after sentence-final punctuation. */
+private const val UTTERANCE_GAP=1.0
+private const val SENTENCE_GAP=.4
+/**
+ * One recognition window can hold several sentences with long pauses. Dubbing speaks each segment at its
+ * start, so later sentences would play early; split at pauses so each keeps its own timing.
+ * Falls back to one segment when tokens and timestamps do not line up.
+ */
+internal fun splitUtterances(text: String,tokens: List<String>,timestamps: List<Float>,durations: List<Float>,windowSeconds: Double): List<SpeechSegment> {
+    val valid=tokens.size==timestamps.size&&tokens.isNotEmpty()&&timestamps.all {it.isFinite()&&it>=0&&it<windowSeconds}
+    fun single(): List<SpeechSegment> {
+        val times=timestamps.filter {it.isFinite()&&it>=0&&it<windowSeconds}
+        val first=(times.minOrNull()?.toDouble() ?: 0.0).coerceIn(0.0,(windowSeconds-.02).coerceAtLeast(0.0))
+        val tail=durations.lastOrNull()?.takeIf {it.isFinite()&&it>0}?.toDouble() ?: .5
+        val end=times.maxOrNull()?.let {(it+tail).coerceIn(minOf(first+.01,windowSeconds),windowSeconds)} ?: windowSeconds
+        return listOf(SpeechSegment(first,end,text))
+    }
+    if(!valid) return single()
+    fun endOf(i: Int): Double {
+        val tail=durations.getOrNull(i)?.takeIf {it.isFinite()&&it>0}?.toDouble() ?: .5
+        return (timestamps[i]+tail).coerceAtMost(windowSeconds)
+    }
+    val groups=mutableListOf(mutableListOf(0))
+    for(i in 1 until tokens.size) {
+        val gap=timestamps[i]-(if(durations.size==tokens.size) endOf(i-1) else timestamps[i-1].toDouble())
+        val sentenceEnd=tokens[i-1].trimEnd().lastOrNull()?.let {it in ".!?。！？"}==true
+        if(gap>=UTTERANCE_GAP||(sentenceEnd&&gap>=SENTENCE_GAP)) groups+=mutableListOf(i) else groups.last()+=i
+    }
+    val pieces=groups.mapIndexedNotNull {n,g ->
+        val piece=g.joinToString("") {tokens[it]}.trim()
+        if(piece.isEmpty()) null else {
+            val start=timestamps[g.first()].toDouble()
+            val nextStart=groups.getOrNull(n+1)?.let {timestamps[it.first()].toDouble()} ?: windowSeconds
+            SpeechSegment(start,endOf(g.last()).coerceIn(start+.01,maxOf(start+.01,nextStart)).coerceAtMost(windowSeconds),piece)
+        }
+    }
+    return if(pieces.size<=1) single() else pieces
 }

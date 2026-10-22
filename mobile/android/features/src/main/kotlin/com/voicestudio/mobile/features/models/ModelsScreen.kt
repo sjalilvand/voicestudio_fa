@@ -148,11 +148,11 @@ import com.voicestudio.mobile.local.*
     }
 }
 
-@Composable fun TaskModelPicker(vm: StudioViewModel, task: String, capabilities: Set<String>, selected: PhoneModel?, compact: Boolean = false) {
+@Composable fun TaskModelPicker(vm: StudioViewModel, task: String, capabilities: Set<String>, selected: PhoneModel?, compact: Boolean = false, key: String = task) {
     val phone by vm.phone.state.collectAsState()
     ChoicePicker("mobile.local.model",selected?.id.orEmpty(),phone.models.filter {it.capability in capabilities}.map {
         Choice(it.id,it.name,enabled=it.fits(vm.phone.ramBytes),supporting=if(it.fits(vm.phone.ramBytes)) tr("mobile.simple.${it.capability}") else tr("mobile.local.ram_required",mapOf("ram" to it.minRamGb)))
-    },compact=compact) {id -> vm.phone.cancelInference();vm.preference {it.copy(phoneModels=it.phoneModels+(task to id))}}
+    },compact=compact) {id -> vm.phone.cancelInference();vm.preference {it.copy(phoneModels=it.phoneModels+(key to id))}}
 }
 
 /** One explicit Get action starts the dependency list; each gated model keeps its own sheet. */
