@@ -29,6 +29,8 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- Bug reports no longer risk freezing the app while looking for your tools: the Node-version folder scan now runs off the main thread (#3180)
+- Bug reports no longer freeze the app when the tool search or a drive stalls, and free disk is only borrowed from a parent folder when the install folder doesn't exist yet (#3179)
 - Model licence dialog is wider and scrolls as one area with the buttons pinned, and follows macOS, Windows and Linux dialog conventions (#3160)
 - Bug reports now include your OS, memory, free disk and whether the Python runtime exists, even when the backend never started, plus flags for risky install paths such as OneDrive or non-ASCII folders (#3156)
 - Bug reports no longer hang on a stalled drive, and report free disk and the uv tool correctly on first run and in source checkouts (#3170)
@@ -54,7 +56,7 @@ metadata and the backend fallback mirror it.
 
 ### Docs
 
-- Sponsorship is one framework: GitHub Sponsors tiers match `SPONSORS.md`, which now states what each tier gives, when recognition starts, and what sponsorship does not buy (#3172)
+- `SPONSORS.md` now states what each sponsorship tier gives, when recognition starts, and what sponsorship does not buy, and the README and inquiry form point to it (#3172)
 - OmniVoice GGUF docs state that the installers do not ship its native binary yet (#3026) — thanks @DestinyQJY!
 - Contributor guides and the pull request template explain how to sign the CLA before opening a first pull request (#2676)
 
