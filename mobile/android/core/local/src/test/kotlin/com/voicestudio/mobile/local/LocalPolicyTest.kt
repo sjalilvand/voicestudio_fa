@@ -98,6 +98,20 @@ class LocalPolicyTest {
             assertEquals(0,server.requestCount)
         }
     }
+    @Test fun verifiedInstalledModelCanBeReacceptedOfflineWithoutDownloadSpace() = runTest {
+        MockWebServer().use {server -> server.start();server.enqueue(MockResponse().setBody(Buffer().write(payload)))
+            val m=model(true);val g=gate();g.record(m,true)
+            downloads(server,g).download(m,false)
+            g.record(m,false);g.record(m,true)
+            // A fresh downloader verifies disk contents rather than trusting an in-memory stamp.
+            val offline=downloads(server,g,wifi={false},free={0})
+            offline.download(m,false)
+            assertTrue(offline.installed(m));assertEquals(1,server.requestCount)
+            File(temporary.root,"models/fixture/weights.bin").writeBytes(ByteArray(payload.size))
+            failure("mobile.local.wifi_required") {downloads(server,g,wifi={false},free={0}).download(m,false)}
+            assertEquals(1,server.requestCount)
+        }
+    }
     @Test fun fallbackAndMobileDataRequireAnExplicitDownload() = runTest {
         MockWebServer().use {primary ->MockWebServer().use {mirror ->
             primary.start();mirror.start();primary.enqueue(MockResponse().setResponseCode(503));mirror.enqueue(MockResponse().setBody(Buffer().write(payload)))
@@ -114,6 +128,22 @@ class LocalPolicyTest {
             withContext(Dispatchers.IO) {assertNotNull(server.takeRequest(5,TimeUnit.SECONDS))}
             job.cancelAndJoin();assertFalse(d.installed(model()));assertFalse(d.progress.value[model().id]?.running==true)
             d.delete(model());assertEquals(0L,d.usedBytes())
+        }
+    }
+    @Test fun concurrentDownloadsReserveDiskAndCancellationReleasesIt() = runBlocking {
+        MockWebServer().use {server -> server.start()
+            server.enqueue(MockResponse().setSocketPolicy(okhttp3.mockwebserver.SocketPolicy.NO_RESPONSE))
+            server.enqueue(MockResponse().setBody(Buffer().write(payload)))
+            val d=downloads(server,free={16*1024*1024+payload.size.toLong()})
+            val first=launch(Dispatchers.IO) {d.download(model(),false)}
+            try {
+                withContext(Dispatchers.IO) {assertNotNull(server.takeRequest(5,TimeUnit.SECONDS))}
+                failure("mobile.local.storage_required") {withTimeout(5000) {d.download(model().copy(id="second"),false)}}
+                assertEquals(1,server.requestCount)
+            } finally {first.cancelAndJoin()}
+            withTimeout(5000) {d.download(model().copy(id="second"),false)}
+            assertTrue(d.installed(model().copy(id="second")))
+            assertEquals(2,server.requestCount)
         }
     }
     @Test fun withdrawalBlocksPreviouslyVerifiedWeights() = runTest {

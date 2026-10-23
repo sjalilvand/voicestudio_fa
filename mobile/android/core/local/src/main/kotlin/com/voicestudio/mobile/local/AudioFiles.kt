@@ -132,13 +132,7 @@ class AndroidAudioDecoder: AudioDecoder {
                                     }
                                     val converter=resampler ?: MonoResampler(rate,24000).also {resampler=it}
                                     val samples=converter.accept(mono)
-                                    val expected=info.presentationTimeUs.coerceAtLeast(0)*24000/1_000_000
-                                    val gap=(expected-written).takeIf {it>2400} ?: 0L
-                                    if(written+gap+samples.size>maxSeconds*24000L) throw ClientFailure("mobile.simple.audio_long")
-                                    appendSilence(out,gap);written+=gap+samples.size
-                                    if(written>maxSeconds*24000L) throw ClientFailure("mobile.simple.audio_long")
-                                    val bytes=ByteBuffer.allocate(samples.size*4).order(ByteOrder.LITTLE_ENDIAN)
-                                    samples.forEach {bytes.putFloat(it)};out.write(bytes.array())
+                                    written=appendDecodedPcm(out,samples,info.presentationTimeUs,written,maxSeconds)
                                     if(durationUs>0) progress((info.presentationTimeUs.toFloat()/durationUs).coerceIn(0f,1f))
                                 }
                                 outputDone=info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM!=0
@@ -183,17 +177,7 @@ class AndroidAudioDecoder: AudioDecoder {
                     var sum=0f;repeat(channels) {sum+=if(encoding==AudioFormat.ENCODING_PCM_FLOAT) buffer.float else buffer.short/32768f}
                     (sum/channels).takeIf {it.isFinite()} ?: 0f
                 }
-                var samples=converter.accept(mono)
-                // Container timestamps are the truth: a late start or a dropped packet must stay silent, overlap must not drift.
-                val shift=timelineShift(extractor.sampleTime,written)
-                if(shift>0) {
-                    if(written+shift>maxSeconds*24000L) throw ClientFailure("mobile.simple.audio_long")
-                    appendSilence(out,shift);written+=shift
-                } else if(shift<0) samples=samples.copyOfRange(minOf(-shift,samples.size.toLong()).toInt(),samples.size)
-                written+=samples.size
-                if(written>maxSeconds*24000L) throw ClientFailure("mobile.simple.audio_long")
-                val bytes=ByteBuffer.allocate(samples.size*4).order(ByteOrder.LITTLE_ENDIAN)
-                samples.forEach {bytes.putFloat(it)};out.write(bytes.array())
+                written=appendDecodedPcm(out,converter.accept(mono),extractor.sampleTime,written,maxSeconds)
                 if(durationUs>0) progress((extractor.sampleTime.toFloat()/durationUs).coerceIn(0f,1f))
                 extractor.advance()
             }
@@ -208,8 +192,24 @@ class AndroidAudioDecoder: AudioDecoder {
 
 }
 
+/** Write one decoded buffer at its container timestamp. */
+internal suspend fun appendDecodedPcm(out: FileOutputStream,samples: FloatArray,timeUs: Long,written: Long,maxSeconds: Int): Long {
+    val shift=timelineShift(timeUs,written)
+    val gap=shift.coerceAtLeast(0)
+    val skip=minOf((-shift).coerceAtLeast(0),samples.size.toLong()).toInt()
+    val end=written+gap+samples.size-skip
+    if(end>maxSeconds*24000L) throw ClientFailure("mobile.simple.audio_long")
+    var remaining=gap*4
+    val zeros=ByteArray(32768)
+    while(remaining>0) {currentCoroutineContext().ensureActive();val count=minOf(zeros.size.toLong(),remaining).toInt();out.write(zeros,0,count);remaining-=count}
+    val bytes=ByteBuffer.allocate((samples.size-skip)*4).order(ByteOrder.LITTLE_ENDIAN)
+    for(i in skip until samples.size) bytes.putFloat(samples[i])
+    out.write(bytes.array())
+    return end
+}
+
 /**
- * Frames of 24 kHz silence to insert (positive) or leading frames to drop (negative) so a raw-PCM buffer
+ * Frames of 24 kHz silence to insert (positive) or leading frames to drop (negative) so a decoded audio buffer
  * stamped [sampleTimeUs] lands at its container time given [written] frames already output.
  * Jitter under 10 ms is ignored; a missing timestamp changes nothing.
  */

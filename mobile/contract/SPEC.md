@@ -255,8 +255,9 @@ All tabs work without pairing once on-device models are installed (see M2); the 
 ### On-device dubbing
 
 Extract audio (AVFoundation / MediaExtractor), transcribe (sherpa Whisper),
-translate per segment (llama.cpp), synthesize per segment cloning the original
-speaker from a reference clip cut from the source (omnivoice.cpp), fit timing,
+translate per segment (llama.cpp), synthesize per segment using either the
+original speaker from a source reference clip or a saved phone voice
+(omnivoice.cpp), fit timing,
 mix, and mux back into the video (AVAssetWriter / MediaMuxer). Long jobs run as
 a foreground task with progress (Android foreground service; iOS keeps
 progress visible and resumes from a saved checkpoint after interruption).

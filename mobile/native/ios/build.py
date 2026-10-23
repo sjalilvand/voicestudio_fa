@@ -196,6 +196,8 @@ def stamp_omni_source(verified, output):
                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode:
         run('git', 'apply', '--check', patch, cwd=target, env=env)
         run('git', 'apply', patch, cwd=target, env=env)
+    # Fail closed if a tool invocation ever succeeds without applying all hunks.
+    run('git', 'apply', '--reverse', '--check', patch, cwd=target, env=env)
     return target
 
 

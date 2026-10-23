@@ -60,7 +60,7 @@ class ModelDownloads internal constructor(
     private fun fit(model: PhoneModel) {if(!model.fits(ramBytes)) throw ClientFailure("mobile.local.ram_required",mapOf("ram" to model.minRamGb.toString()))}
     suspend fun download(model: PhoneModel, allowMobile: Boolean) = withContext(Dispatchers.IO) {
         lock(model).withLock {
-            fit(model);licence.requireAccepted(model);networkAllowed(allowMobile)
+            fit(model);licence.requireAccepted(model)
             val job=currentCoroutineContext().job
             val directory=dir(model).apply {mkdirs()}
             val catalogue=modelPin(model).identity
@@ -69,9 +69,10 @@ class ModelDownloads internal constructor(
                 val partial=File(directory,f.path+".part").length().takeIf {it<=f.size} ?: 0L
                 f.size-partial
             }
+            if(needed>0) networkAllowed(allowMobile)
             // Concurrent downloads each pass the check alone; reserve what the others still need.
             synchronized(reservations) {
-                if(freeBytes()-reservations.values.sum()<needed+16*1024*1024) throw ClientFailure("mobile.local.storage_required")
+                if(needed>0 && freeBytes()-reservations.values.sum()<needed+16*1024*1024) throw ClientFailure("mobile.local.storage_required")
                 reservations[model.id]=needed
             }
             mutable.update {it+(model.id to DownloadProgress(total=model.totalBytes,running=true))}

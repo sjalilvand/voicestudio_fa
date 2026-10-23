@@ -60,11 +60,13 @@ Plain `http://` works only for addresses on your own network (home Wi-Fi,
 
 - **"Accept the licence on your computer"**: some models need their licence
   accepted first. Open VoiceStudio on the computer → **Model Catalogue** and
-  accept it there; the phone can't accept licences.
-- **Engine shown as unavailable**: install it on the computer. The reason the
-  app shows comes from the computer.
+  accept it there for the **My computer** route. For **This phone**, review and
+  accept the licence in the phone’s **Models** screen.
+- **Computer engine shown as unavailable**: install it on the paired computer.
+  For phone tasks, install the model from the phone’s **Models** screen.
 - **Dictate isn't ready**: install the speech-to-text model the app names, on
-  the computer. Remote dictation also needs an API-key session or a trusted
+  the phone for **This phone**, or the computer for **My computer**. Remote
+  dictation also needs an API-key session or a trusted
   network set up on the computer; the share PIN alone isn't enough.
 - **Can't connect**: make sure the phone and computer are on the same network
   (or both on Tailscale), sharing is on, and you used the IP address the panel

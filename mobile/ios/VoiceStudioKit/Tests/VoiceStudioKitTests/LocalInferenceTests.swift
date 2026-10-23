@@ -185,6 +185,9 @@ private actor RangeServer: HTTPTransport {
     // iOS links the runtimes statically, so a missing library path cannot make them unavailable there.
     #expect(!NativeLocalEngine.runtimeAvailable(.omni, library: "/does-not-exist"))
     #expect(!NativeLocalEngine.runtimeAvailable(.llama, library: "/does-not-exist"))
+    #else
+    #expect(NativeLocalEngine.runtimeAvailable(.omni))
+    #expect(NativeLocalEngine.runtimeAvailable(.llama))
     #endif
     await #expect(throws: (any Error).self) { try await engine.clone(model: clone, text: "Hello", reference: PCMChunk(samples: [0], sampleRate: 16000), referenceText: "Reference") }
     try await store.download(translate, wifi: { true }, transport: RangeServer(bytes: Data("model".utf8)))

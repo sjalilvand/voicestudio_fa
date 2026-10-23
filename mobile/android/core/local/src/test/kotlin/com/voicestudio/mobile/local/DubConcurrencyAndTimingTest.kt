@@ -39,6 +39,24 @@ class DubConcurrencyAndTimingTest {
         gate.complete(Unit);holder.join()
     }
 
+    @Test fun decodedBuffersPreserveShortGapsAndTrimOverlap() = runBlocking {
+        val output=File(temporary.root,"decoded.pcm")
+        java.io.FileOutputStream(output).use {stream ->
+            var written=appendDecodedPcm(stream,FloatArray(1200) {.25f},50_000,0,1)
+            assertEquals(2400L,written) // 50 ms of silence then 50 ms of speech
+            written=appendDecodedPcm(stream,FloatArray(1200) {.5f},150_000,written,1)
+            assertEquals(4800L,written)
+            written=appendDecodedPcm(stream,FloatArray(1200) {.75f},175_000,written,1)
+            assertEquals(5400L,written) // overlapping 25 ms is discarded
+        }
+        val samples=PcmFile(output).read(0,5400).samples
+        assertTrue(samples.sliceArray(0 until 1200).all {it==0f})
+        assertTrue(samples.sliceArray(1200 until 2400).all {it==.25f})
+        assertTrue(samples.sliceArray(2400 until 3600).all {it==0f})
+        assertTrue(samples.sliceArray(3600 until 4800).all {it==.5f})
+        assertTrue(samples.sliceArray(4800 until 5400).all {it==.75f})
+    }
+
     @Test fun rawTimelineInsertsSilenceForLateStartAndGaps() {
         assertEquals(24000L,timelineShift(1_000_000,0))
         assertEquals(24000L,timelineShift(1_500_000,12000)) // 1.5 s = 36000 samples, 12000 written
