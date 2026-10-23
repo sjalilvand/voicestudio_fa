@@ -47,6 +47,7 @@ public actor ModelStore {
     public let root: URL
     private var acceptances: [String: [LicenceAcceptance]] = [:]
     private var active = Set<String>()
+    private var reservations: [String: [PhoneModel.File]] = [:]
     private var leases: [String: Int] = [:]
     private struct VerificationStamp: Equatable {
         let size: Int64
@@ -143,10 +144,15 @@ public actor ModelStore {
         guard model.fits(ram: ram) else { throw ClientError("mobile.local.ram_required", params: ["ram": String(model.min_ram_gb)]) }
         try checkPermission(model)
         guard !active.contains(model.id), leases[model.id, default: 0] == 0 else { throw ClientError("sidebarTools.wait") }
-        active.insert(model.id); defer { active.remove(model.id) }
+        active.insert(model.id)
+        defer { active.remove(model.id); reservations.removeValue(forKey: model.id) }
         let transport = supplied ?? ModelDownloadTransport(policy: policy)
         try FileManager.default.createDirectory(at: directory(model), withIntermediateDirectories: true)
         let identity = try phoneModelPin(model)
+        reservations[model.id] = try model.files.filter {
+            try !verify(directory(model).appendingPathComponent($0.path), file: $0, identity: identity)
+        }
+        try checkDownloadSpace()
         var completed: Int64 = 0
         for f in model.files {
             try Task.checkCancellation(); try checkPermission(model)
@@ -160,7 +166,7 @@ public actor ModelStore {
                 let onWifi = await wifi()
                 guard policy.allowMobileData || onWifi else { throw ClientError("mobile.local.wifi_required") }
                 let offset = size(part)
-                guard try available(root) >= (f.size - offset) + 16_777_216 else { throw ClientError("mobile.local.storage_required") }
+                try checkDownloadSpace()
                 var lastFailure: (any Error)?
                 var received = false
                 for host in ["huggingface.co", "hf-mirror.com"] {
@@ -202,10 +208,23 @@ public actor ModelStore {
             verified.removeValue(forKey: part)
             verified[destination] = try stamp(destination,identity: identity)
             completed += f.size
+            reservations[model.id]?.removeAll { $0.path == f.path }
         }
         try Task.checkCancellation(); try checkPermission(model)
         try JSONEncoder().encode(Dictionary(uniqueKeysWithValues: model.files.map { ($0.path, $0.sha256) })).write(to: directory(model).appendingPathComponent("verified.json"), options: .atomic)
         await progress(1)
+    }
+    private func checkDownloadSpace() throws {
+        // Already persisted ranges occupy real disk space, so reserve only bytes still missing.
+        let remaining = reservations.reduce(Int64(0)) { total, entry in
+            total + entry.value.reduce(Int64(0)) { subtotal, file in
+                let part = root.appendingPathComponent(entry.key).appendingPathComponent(".partial/" + file.sha256)
+                return subtotal + max(0, file.size - size(part))
+            }
+        }
+        if remaining > 0 {
+            guard try available(root) >= remaining + 16_777_216 else { throw ClientError("mobile.local.storage_required") }
+        }
     }
     private func directory(_ model: PhoneModel) -> URL { root.appendingPathComponent(model.id, isDirectory: true) }
     private func partial(_ model: PhoneModel, _ file: PhoneModel.File) -> URL { directory(model).appendingPathComponent(".partial/" + file.sha256) }

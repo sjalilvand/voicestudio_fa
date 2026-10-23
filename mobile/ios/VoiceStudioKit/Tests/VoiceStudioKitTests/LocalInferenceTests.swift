@@ -10,10 +10,10 @@ private func localDirectory() throws -> URL {
     try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
     return url
 }
-private func localFixture(bytes: Data = Data("model".utf8), gated: Bool = false, capability: String = "tts", fingerprint: String = String(repeating: "a", count: 64)) throws -> PhoneModel {
+private func localFixture(bytes: Data = Data("model".utf8), gated: Bool = false, capability: String = "tts", fingerprint: String = String(repeating: "a", count: 64), id: String = "fixture") throws -> PhoneModel {
     let runtime = capability == "clone" ? "omnivoice.cpp" : capability == "translate" ? "llama.cpp" : "sherpa-onnx"
     let object: [String: Any] = ["schema_version": 1, "models": [[
-        "id": "fixture", "name": "Fixture", "capability": capability, "runtime": runtime, "repo": "owner/model", "revision": String(repeating: "b", count: 40),
+        "id": id, "name": "Fixture", "capability": capability, "runtime": runtime, "repo": "owner/model", "revision": String(repeating: "b", count: 40),
         "files": [["path": "model.bin", "size": bytes.count, "sha256": SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined(), "role": "model"]],
         "total_bytes": bytes.count, "languages": ["en"], "min_ram_gb": 1,
         "licence": ["id": "test", "category": gated ? "non-commercial" : "commercial-ok", "requires_acceptance": false, "credit": "Fixture", "rights_holder": "Fixture", "terms_fingerprint": fingerprint],
@@ -96,6 +96,33 @@ private actor RangeServer: HTTPTransport {
     await #expect(throws: (any Error).self) { try await full.download(model, wifi: { true }, transport: host) }
     #expect(await host.requests.isEmpty)
     try await store.download(model, policy: DownloadPolicy(allowMobileData: true), wifi: { false }, transport: host)
+    #expect(await store.installed(model))
+}
+@Test func concurrentModelDownloadsReserveSpaceAndReleaseItOnCancellation() async throws {
+    let root = try localDirectory(); defer { try? FileManager.default.removeItem(at: root) }
+    let first = try localFixture(), second = try localFixture(id: "second")
+    let store = try ModelStore(root: root, available: { _ in 16_777_216 + 7 })
+    let blocked = RangeServer(bytes: Data("model".utf8), slowAfter: 0)
+    let work = Task { try await store.download(first, wifi: { true }, transport: blocked) }
+    defer { work.cancel() }
+    for await count in blocked.events { if count == 1 { break } }
+    let other = RangeServer(bytes: Data("model".utf8))
+    await #expect(throws: (any Error).self) { try await store.download(second, wifi: { true }, transport: other) }
+    #expect(await other.requests.isEmpty)
+    work.cancel()
+    await #expect(throws: CancellationError.self) { try await work.value }
+    try await store.download(second, wifi: { true }, transport: other)
+    #expect(await store.installed(second))
+}
+@Test func downloadReservationDoesNotCountPersistedRangesTwice() async throws {
+    let root = try localDirectory(); defer { try? FileManager.default.removeItem(at: root) }
+    let bytes = Data(repeating: 23, count: 4_194_304 + 8), model = try localFixture(bytes: bytes)
+    let part = root.appendingPathComponent(model.id).appendingPathComponent(".partial/" + model.files[0].sha256)
+    let store = try ModelStore(root: root, available: { _ in
+        let written = (try? FileManager.default.attributesOfItem(atPath: part.path)[.size] as? NSNumber)?.int64Value ?? 0
+        return 16_777_216 + Int64(bytes.count) - written
+    })
+    try await store.download(model, wifi: { true }, transport: RangeServer(bytes: bytes))
     #expect(await store.installed(model))
 }
 @Test func localDownloadCancellationRetainsRangeForResume() async throws {

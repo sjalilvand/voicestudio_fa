@@ -170,6 +170,7 @@ struct SpeakView: View {
     private var generationControls: some View {
         VStack(spacing: VSTokens.spacingGap) {
             Button {
+                let submittedText = text
                 generation = Task {
                     generating = true; defer { generating = false; localProgress = nil }
                     await model.perform(onPhone: route == .phone) {
@@ -179,16 +180,16 @@ struct SpeakView: View {
                             let report: EngineProgressHandler = { value in await MainActor.run { localProgress = value } }
                             if let voice = phoneVoice, let store = model.phone.voiceStore {
                                 let reference = try await store.reference(voice)
-                                audio = try await engine.clone(model: phoneModel,text: text,reference: reference,referenceText: voice.transcript,progress: report)
+                                audio = try await engine.clone(model: phoneModel,text: submittedText,reference: reference,referenceText: voice.transcript,progress: report)
                             } else {
-                                audio = try await engine.synthesize(model: phoneModel.selectingLanguage(phoneLanguage),text: text,speaker: Int(speakerID) ?? 0,speed: 1,progress: report)
+                                audio = try await engine.synthesize(model: phoneModel.selectingLanguage(phoneLanguage),text: submittedText,speaker: Int(speakerID) ?? 0,speed: 1,progress: report)
                             }
-                            _ = try await model.phone.generationStore?.save(text: text,audio: audio)
+                            _ = try await model.phone.generationStore?.save(text: submittedText,audio: audio)
                             await model.phone.refresh()
                             try await player.load(audio.markSynthetic(), extension: "wav")
                             return
                         }
-                        let result = try await model.hostState.generate(api: model.api(), text: text, profile: selection.profileID, engine: selection.engineID, language: selection.language)
+                        let result = try await model.hostState.generate(api: model.api(), text: submittedText, profile: selection.profileID, engine: selection.engineID, language: selection.language)
                         try await player.load(result.audio, extension: "wav")
                         model.history = try await model.api().history()
                     }

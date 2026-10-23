@@ -29,6 +29,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- iOS reserves storage across simultaneous model downloads and keeps saved speech paired with the submitted text (#2969)
 - TestFlight builds prepare the on-device inference runtimes before archiving the iPhone app (#2969)
 
 - Phone models can be reaccepted offline without downloading again, and Android dubbing preserves short audio gaps and overlaps (#2969)

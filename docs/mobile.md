@@ -30,6 +30,11 @@ Open **Models** and download what you need. Nothing downloads until you tap
 it; files come from Hugging Face and are checked before use. Wi-Fi only unless
 you allow mobile data.
 
+Concurrent downloads reserve their combined remaining disk space. If they will
+not fit together, finish or cancel one before starting another; completed ranges
+remain available for resume. Saved speech keeps the text submitted for that take,
+even if you edit the next script while synthesis is running.
+
 | Model | For | Size | Phone memory |
 |---|---|---|---|
 | Kitten (English) / Kokoro (multi-language) | Speak | ~170 MB each | 2–3 GB |
