@@ -125,6 +125,26 @@ private actor RangeServer: HTTPTransport {
     try await store.download(model, wifi: { true }, transport: RangeServer(bytes: bytes))
     #expect(await store.installed(model))
 }
+@Test func installedModelRevalidationNeedsNoSpaceDuringAnotherDownload() async throws {
+    let root = try localDirectory(); defer { try? FileManager.default.removeItem(at: root) }
+    let capacity = root.appendingPathComponent("available")
+    try Data("16777223".utf8).write(to: capacity)
+    let store = try ModelStore(root: root, available: { _ in
+        Int64(try String(contentsOf: capacity, encoding: .utf8))!
+    })
+    let installed = try localFixture(id: "installed"), pending = try localFixture()
+    try await store.download(installed, wifi: { true }, transport: RangeServer(bytes: Data("model".utf8)))
+    let blocked = RangeServer(bytes: Data("model".utf8), slowAfter: 0)
+    let work = Task { try await store.download(pending, wifi: { true }, transport: blocked) }
+    defer { work.cancel() }
+    for await count in blocked.events { if count == 1 { break } }
+    try Data("0".utf8).write(to: capacity)
+    let network = RangeServer(bytes: Data("model".utf8))
+    try await store.download(installed, wifi: { false }, transport: network)
+    #expect(await network.requests.isEmpty)
+    work.cancel()
+    await #expect(throws: CancellationError.self) { try await work.value }
+}
 @Test func localDownloadCancellationRetainsRangeForResume() async throws {
     let root = try localDirectory(); defer { try? FileManager.default.removeItem(at: root) }
     let bytes = Data(repeating: 19, count: 4_194_304 + 8)

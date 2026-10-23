@@ -152,7 +152,7 @@ public actor ModelStore {
         reservations[model.id] = try model.files.filter {
             try !verify(directory(model).appendingPathComponent($0.path), file: $0, identity: identity)
         }
-        try checkDownloadSpace()
+        if reservations[model.id]?.isEmpty == false { try checkDownloadSpace() }
         var completed: Int64 = 0
         for f in model.files {
             try Task.checkCancellation(); try checkPermission(model)
