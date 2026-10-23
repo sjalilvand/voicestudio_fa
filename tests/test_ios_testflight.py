@@ -129,3 +129,17 @@ def test_mobile_ci_builds_ios_with_the_upload_toolchain():
     assert mobile["jobs"]["ios"]["runs-on"] == load_workflow()["jobs"]["testflight"]["runs-on"]
     release = yaml.load((ROOT / ".github/workflows/mobile-release.yml").read_text(), Loader=yaml.BaseLoader)
     assert release["jobs"]["ios"]["runs-on"] == load_workflow()["jobs"]["testflight"]["runs-on"]
+
+
+@pytest.mark.parametrize("filename", ["mobile.yml", "mobile-release.yml"])
+def test_native_runtime_cache_survives_later_app_or_ui_failures(filename):
+    workflow = yaml.load((ROOT / ".github/workflows" / filename).read_text(), Loader=yaml.BaseLoader)
+    steps = workflow["jobs"]["ios"]["steps"]
+    restore = next(step for step in steps if step.get("uses", "").startswith("actions/cache/restore@"))
+    save = next(step for step in steps if step.get("uses", "").startswith("actions/cache/save@"))
+    build = next(i for i, step in enumerate(steps) if "bash mobile/native/ios/build.sh ios" in step.get("run", ""))
+    generate = next(i for i, step in enumerate(steps) if "xcodegen generate" in step.get("run", ""))
+    assert build < steps.index(save) < generate
+    assert "if" not in steps[build]  # Cache hits still need generated headers restored.
+    assert save["with"]["path"] == restore["with"]["path"]
+    assert save["with"]["key"] == "${{ steps." + restore["id"] + ".outputs.cache-primary-key }}"
