@@ -145,6 +145,27 @@ private actor FixtureEngine: LocalEngine {
     #expect(try audio.read(start: 0,count: 2400).samples.contains { abs($0) > 0.1 })
     await #expect(throws: (any Error).self) { try await AVPhoneAudioDecoder().decode(source: source,output: root.appendingPathComponent("long.pcm"),maxSeconds: 0.5,progress: { _ in }) }
 }
+@Test(arguments: ["wav", "caf", "aiff"])
+func phoneAVExtractionKeepsTheRightStereoChannel(_ ext: String) async throws {
+    let root = try fixtureRoot(); defer { try? FileManager.default.removeItem(at: root) }
+    let source = root.appendingPathComponent("stereo").appendingPathExtension(ext)
+    let format = try #require(AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 48000, channels: 2, interleaved: false))
+    let buffer = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 12000))
+    buffer.frameLength = 12000
+    let channels = try #require(buffer.floatChannelData)
+    for frame in 0..<12000 {
+        let phase = Double(frame) * 2.0 * Double.pi * 440.0 / format.sampleRate
+        channels[0][frame] = 0
+        channels[1][frame] = Float(sin(phase) * 0.4)
+    }
+    do {
+        let writer = try AVAudioFile(forWriting: source, settings: format.settings)
+        try writer.write(from: buffer)
+    }
+    let audio = try await AVPhoneAudioDecoder().decode(source: source, output: root.appendingPathComponent("mono.pcm"), maxSeconds: 1, progress: { _ in })
+    let samples = try audio.read(start: 0, count: audio.frames).samples
+    #expect(samples.contains { abs($0) > 0.05 })
+}
 @Test(.enabled(if: ProcessInfo.processInfo.environment["VOICESTUDIO_REAL_AUX"] == "1"))
 func realAuxiliaryPhoneVoiceCreationAndSpeak() async throws {
     let root = try fixtureRoot(); defer { try? FileManager.default.removeItem(at: root) }

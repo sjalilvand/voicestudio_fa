@@ -66,6 +66,7 @@ public struct AVPhoneAudioDecoder: PhoneAudioDecoder {
               let format = AVAudioFormat(commonFormat: .pcmFormatFloat32,sampleRate: 24000,channels: 1,interleaved: false),
               let converter = AVAudioConverter(from: input.processingFormat,to: format),
               let buffer = AVAudioPCMBuffer(pcmFormat: format,frameCapacity: 8192) else { throw ClientError("mobile.simple.audio_long") }
+        converter.downmix = true
         let handle = try FileHandle(forWritingTo: PrivateFiles.empty(output)); defer { try? handle.close() }
         var finished = false, total = 0
         while !finished {

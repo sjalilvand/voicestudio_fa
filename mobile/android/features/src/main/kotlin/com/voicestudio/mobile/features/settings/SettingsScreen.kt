@@ -62,7 +62,7 @@ import com.voicestudio.mobile.l10n.L10n
     }
     if(editUrl!=null) AlertDialog(onDismissRequest={editUrl=null},text={Field("mobile.android.host_label",editName,{editName=it})},confirmButton={TextButton(onClick={val url=editUrl;vm.preference {it.copy(hosts=it.hosts.map {h -> if(h.url==url) h.copy(label=editName) else h})};editUrl=null}) {Text(tr("common.save"))}},dismissButton={TextButton(onClick={editUrl=null}) {Text(tr("common.cancel"))}})
     if(licenses) AlertDialog(shape=MaterialTheme.shapes.large,onDismissRequest={licenses=false},title={Text(tr("mobile.settings.licenses"))},text={
-        val content=remember {context.assets.list("licenses").orEmpty().sorted().joinToString("\n\n") {name -> context.assets.open("licenses/$name").bufferedReader().use {it.readText()}}}
+        val content=remember {context.assets.list("licenses").orEmpty().filter {it.endsWith(".txt")}.sorted().joinToString("\n\n") {name -> context.assets.open("licenses/$name").bufferedReader().use {it.readText()}}}
         Text(content,Modifier.verticalScroll(rememberScrollState()))
     },confirmButton={TextButton(shape=MaterialTheme.shapes.small,onClick={licenses=false}) {Text(tr("common.close"))}})
 }

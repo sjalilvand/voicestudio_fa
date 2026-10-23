@@ -127,3 +127,5 @@ def test_generated_and_bundled_catalogs_have_one_app_icon(tmp_path):
 def test_mobile_ci_builds_ios_with_the_upload_toolchain():
     mobile = yaml.load((ROOT / ".github/workflows/mobile.yml").read_text(), Loader=yaml.BaseLoader)
     assert mobile["jobs"]["ios"]["runs-on"] == load_workflow()["jobs"]["testflight"]["runs-on"]
+    release = yaml.load((ROOT / ".github/workflows/mobile-release.yml").read_text(), Loader=yaml.BaseLoader)
+    assert release["jobs"]["ios"]["runs-on"] == load_workflow()["jobs"]["testflight"]["runs-on"]

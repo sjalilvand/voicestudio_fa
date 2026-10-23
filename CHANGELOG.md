@@ -10,7 +10,7 @@ metadata and the backend fallback mirror it.
 
 **Highlights**
 
-- Preview iOS and Android apps that run VoiceStudio on your phone, offline
+- Preview iOS and Android apps that run VoiceStudio on your phone, offline after downloading the models
 - Opt-in Beta update channel: get fixes early from Settings → Updates, and roll onto the next stable release automatically
 
 ### Changed
@@ -22,6 +22,7 @@ metadata and the backend fallback mirror it.
 
 ### Added
 
+- The phone apps run speech, dictation, voice cloning and dubbing on the phone itself, offline once you download the models; pairing a computer is optional ([guide](docs/mobile.md)) (#2969)
 - Beta update channel: choose Stable or Beta under Settings → Updates; betas are `-beta.N` prereleases that never reach Stable users, and Docker gets matching `:beta` tags ([guide](docs/update-channels.md)) (#3175)
 
 - Preview iOS and Android companion apps: drive your own VoiceStudio from your phone (speak, voices and cloning, dubbing, dictation) after pairing by QR code; build from source for now ([guide](docs/mobile.md)) (#2965)
@@ -30,6 +31,7 @@ metadata and the backend fallback mirror it.
 ### Fixed
 
 - Phone dub playback restores sound after dictation on iOS and keeps the video visible when switching results on Android (#2969)
+- Stereo WAV, CAF and AIFF references keep both channels when converted to mono on iOS (#2969)
 - Android dubbing errors remain visible when worker updates arrive while their receipt is being saved (#3031)
 
 - iOS reserves storage across simultaneous model downloads and keeps saved speech paired with the submitted text (#2969)
@@ -75,6 +77,7 @@ metadata and the backend fallback mirror it.
 
 ### CI
 
+- Native licence notices keep their pinned hashes on Windows checkouts (#2969)
 - New `mobile-release` workflow builds signed Android and iOS apps and drafts a GitHub prerelease with the APK, AAB and IPAs (#2969)
 - The `mobile` workflow builds the pinned on-device runtimes for both apps (#2969)
 - Interactive release helper: pick stable or beta, draft or publish, and confirm by typing the tag (`scripts/release.py`) (#3187)
@@ -238,7 +241,6 @@ metadata and the backend fallback mirror it.
 - Beta update channel: choose Stable or Beta under Settings → Updates; betas are `-beta.N` prereleases that never reach Stable users, and Docker gets matching `:beta` tags ([guide](docs/update-channels.md)) (#3175)
 
 - Preview iOS and Android companion apps: drive your own VoiceStudio from your phone (speak, voices and cloning, dubbing, dictation) after pairing by QR code; build from source for now ([guide](docs/mobile.md)) (#2965)
-- The phone apps run speech, dictation, voice cloning and dubbing on the phone itself, offline once you download the models; pairing a computer is optional ([guide](docs/mobile.md)) (#2969)
 - Smart Fit speed limits: set the fastest and slowest speed dubbing may apply to a line, from the Timing section (#3026) — thanks @MoonDragon-MD!
 
 ### Fixed

@@ -19,6 +19,7 @@ choose, per task, to run on **This phone** or **My computer**.
 - **Speak**: type text, pick a voice and language, generate, play, share.
 - **Voices**: clone a voice from a recording or an audio file. Voices you
   clone on the phone stay on the phone.
+  Stereo recordings use audio from both channels.
 - **Dub**: pick a video or audio file and target languages; the phone
   transcribes, translates and re-voices it in the original speaker's voice.
   Play completed dubs directly in the app, including after using Dictate;
@@ -123,7 +124,7 @@ submits the app for App Store review. One-time setup in the Apple Developer team
    `.p8` text). `APPLE_TEAM_ID` is shared with macOS notarization.
 
 The workflow builds on the `macos-26` runner because App Store Connect accepts
-only the current iOS SDK; the `mobile` workflow's iOS job uses the same runner.
+only the current iOS SDK; the `mobile` and `mobile-release` iOS jobs use the same runner.
 The app icon is `Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png`, a
 1024×1024 opaque PNG rendered from `mobile/ios/VoiceStudio/AppIcon.svg`.
 Generated `Brand.xcassets` supplies launch and Home artwork; it removes the former

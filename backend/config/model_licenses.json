@@ -3176,11 +3176,6 @@
             "method": "read_primary_source"
           },
           {
-            "url": "https://github.com/openai/whisper/blob/31243bad24cc746f07d4c8bfdd2d974872cb1803/LICENSE",
-            "checked_at": "2026-10-18",
-            "method": "read_primary_source"
-          },
-          {
             "url": "https://github.com/openai/whisper/blob/31243bad24cc746f07d4c8bfdd2d974872cb1803/README.md",
             "checked_at": "2026-10-18",
             "method": "read_primary_source"
