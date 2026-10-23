@@ -32,6 +32,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- Large VirusTotal uploads upgrade the documented legacy upload URL to HTTPS before sending files or credentials (#3238)
 - iPhone: tapping Play right after generating speech starts playback instead of doing nothing (#3233)
 - Android app icons preserve transparent waveform paths from the shared logo, including themed icons (#2969)
 - Speak keeps your script when switching between the phone and computer on Android (#2969)
