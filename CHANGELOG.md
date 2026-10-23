@@ -26,6 +26,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- App icon, tray icons and in-app logo no longer show a black band behind the waveform (#3221)
 - Speed/quality changes finish as soon as they are saved, even while the clone controls are still loading (#3031)
 - Android dubbing errors remain visible when worker updates arrive while their receipt is being saved (#3031)
 - Speed / quality in the sidebar is a simple slider again; models and hardware fit open in a popover on hover, click or change, so the simplest view leaves the sidebar bottom free (#3031)
