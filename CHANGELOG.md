@@ -34,7 +34,6 @@ metadata and the backend fallback mirror it.
 ### Fixed
 
 - Saved dub loads confirm before replacing unsaved work, recheck edits made during loading and stop when you leave the workspace (#3234)
-- Desktop crash-recovery checks keep the process handle after a forced exit, avoiding a race in the macOS test harness (#3234)
 - iPhone: tapping Play right after generating speech starts playback instead of doing nothing (#3233)
 
 - Android app icons preserve transparent waveform paths from the shared logo, including themed icons (#2969)
@@ -110,6 +109,7 @@ metadata and the backend fallback mirror it.
 
 - Interactive release helper: pick stable or beta, draft or publish, and confirm by typing the tag (`scripts/release.py`) (#3187)
 - Release helper choices are arrow-key menus (#3190)
+- Desktop UI tests no longer fail at random when Electron's debugger takes the dev proxy's port; the proxy now binds an OS-assigned port (#3126)
 - Desktop request-guard self-tests stay deterministic when app requests arrive during cleanup (#2676)
 
 - New `mobile` workflow builds and tests both phone apps; a contract test fails when their theme or API description drifts from the desktop app (#2965)

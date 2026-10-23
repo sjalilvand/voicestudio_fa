@@ -81,14 +81,7 @@ const slug = (name) =>
     .replace(/^-|-$/g, '')
     .toLowerCase();
 
-/** A killed app has already disposed its Playwright handle and cannot answer IPC. */
-export async function readRequestLog(started) {
-  const child = started.child;
-  if (child.exitCode !== null || child.signalCode !== null) return null;
-  return started.app.evaluate(() => globalThis.__requestLog);
-}
-
-async function launch({ profile, backendPort, proxyPort, seed }) {
+async function launch({ profile, backendPort, seed }) {
   // VS Code terminals export ELECTRON_RUN_AS_NODE=1, which makes Electron boot as plain Node.
   const { ELECTRON_RUN_AS_NODE: _runAsNode, ...inherited } = process.env;
   const app = await electron.launch({
@@ -107,14 +100,13 @@ async function launch({ profile, backendPort, proxyPort, seed }) {
       VOICESTUDIO_SKIP_BACKEND: '1',
       VOICESTUDIO_ALLOW_MULTIPLE_INSTANCES: '1',
       VOICESTUDIO_DISABLE_UPDATER: '1',
-      VOICESTUDIO_ELECTRON_PROXY_PORT: String(proxyPort),
+      // The OS assigns it at bind time; a pre-picked port can be taken before the app binds it.
+      VOICESTUDIO_ELECTRON_PROXY_PORT: '0',
     },
     timeout: 60000,
   });
   const output = [];
-  // Capture while the handle is live: process() itself throws after Playwright disposes it.
-  const child = app.process();
-  for (const stream of [child.stdout, child.stderr]) {
+  for (const stream of [app.process().stdout, app.process().stderr]) {
     stream?.on('data', (chunk) => output.push(String(chunk)));
   }
   const context = app.context();
@@ -163,7 +155,7 @@ async function launch({ profile, backendPort, proxyPort, seed }) {
   });
   // The main-process guard predates the app; one reload also replays the first page's console.
   await page.reload();
-  return { app, child, page, errors };
+  return { app, page, errors };
 }
 
 /**
@@ -191,16 +183,17 @@ export async function withApp(t, options, body) {
         })
       : null;
   let backendPort = backend ? backend.port : await freePort();
-  let proxyPort = await freePort();
   const live = [];
   const session = { profile, backend, relaunch: null };
   const start = async () => {
+    // With the dev proxy on an OS-assigned port, the backend port is the only one
+    // picked ahead of time, so it is the only one worth re-picking on a collision.
     const started = await launchWithFreshPorts(
-      () => launch({ profile, backendPort, proxyPort, seed }),
+      () => launch({ profile, backendPort, seed }),
       async () => {
-        proxyPort = await freePort();
-        if (!backend) backendPort = await freePort();
+        backendPort = await freePort();
       },
+      backend ? 1 : 3,
     );
     live.push(started);
     Object.assign(session, started);
@@ -218,9 +211,10 @@ export async function withApp(t, options, body) {
   let unobserved = 0;
   async function collectGuards(started) {
     errors.push(...started.errors);
+    const child = started.app.process();
     // A killed app cannot be asked for its log; every other read error must fail the run.
-    const seen = await readRequestLog(started);
-    if (seen === null) return;
+    if (child.exitCode !== null || child.signalCode !== null) return;
+    const seen = await started.app.evaluate(() => globalThis.__requestLog);
     // An empty log means the guard never ran (hook missing or replaced), not that all is well.
     if (!seen.some((url) => url.startsWith('app:'))) unobserved += 1;
     // The guard already left out the renderer's stubbed star-count request.
