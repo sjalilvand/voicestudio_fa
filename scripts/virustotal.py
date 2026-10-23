@@ -36,12 +36,34 @@ class NoRedirects(HTTPRedirectHandler):
 
 
 def validate_url(url: str) -> str:
-    parsed = urlsplit(url)
-    if (parsed.scheme != "https" or parsed.hostname != "www.virustotal.com"
-            or parsed.port not in (None, 443) or parsed.username or parsed.password
-            or parsed.fragment):
-        raise ScanError("VirusTotal returned an unexpected upload URL; refusing to send the file/key.")
+    try:
+        parsed = urlsplit(url)
+        allowed = (parsed.scheme == "https" and parsed.hostname == "www.virustotal.com"
+                   and parsed.port in (None, 443) and not parsed.username
+                   and not parsed.password and not parsed.fragment)
+    except ValueError:
+        raise ScanError("VirusTotal returned a malformed upload URL; refusing to send the file/key.") from None
+    if not allowed:
+        # Report only the origin, never the one-use upload token/path/query.
+        scheme = re.sub(r"[^A-Za-z0-9.-]", "?", parsed.scheme or "missing")[:16]
+        host = re.sub(r"[^A-Za-z0-9.:-]", "?", parsed.hostname or "missing")[:255]
+        origin = f"{scheme}://{host}"
+        raise ScanError(f"VirusTotal returned an unexpected upload origin ({origin}); refusing to send the file/key.")
     return url
+
+
+def normalize_upload_url(url: str) -> str:
+    # The official /files/upload_url example uses http://www.virustotal.com/
+    # _ah/upload/… . Upgrade that known legacy form locally, before any request.
+    try:
+        parsed = urlsplit(url)
+        if (parsed.scheme == "http" and parsed.hostname == "www.virustotal.com"
+                and parsed.port in (None, 80) and not parsed.username
+                and not parsed.password and parsed.path.startswith("/_ah/upload/")):
+            url = parsed._replace(scheme="https", netloc="www.virustotal.com").geturl()
+    except ValueError:
+        raise ScanError("VirusTotal returned a malformed upload URL; refusing to send the file/key.") from None
+    return validate_url(url)
 
 
 def multipart(path: Path, boundary: str):
@@ -112,6 +134,7 @@ class Client:
             url = self.request("GET", f"{API}/files/upload_url")["data"]
             if not isinstance(url, str):
                 raise ScanError("VirusTotal returned an invalid upload URL.")
+            url = normalize_upload_url(url)
         result = self.request("POST", url, file=path)
         analysis_id = result.get("data", {}).get("id")
         if not isinstance(analysis_id, str) or not analysis_id:

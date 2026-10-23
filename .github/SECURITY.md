@@ -119,7 +119,10 @@ appropriate paid licence when those terms do not cover your use.
 
 The tool spaces requests 16 seconds apart, automatically requests the
 [large-file upload URL](https://docs.virustotal.com/reference/files-upload-url)
-above 32 MiB, and streams files up to 650 MiB. It prints the SHA-256, report URL,
+above 32 MiB, and streams files up to 650 MiB.
+VirusTotal's legacy HTTP-form `www.virustotal.com/_ah/upload/` URLs are upgraded
+locally to HTTPS before uploading; credentials and files are never sent over
+HTTP. Other origins and redirects remain rejected. It prints the SHA-256, report URL,
 analysis ID and flagged vendor labels, and waits up to 10 minutes for results.
 Exit status is 0 for a completed analysis with no flags, 1 for malicious or
 suspicious detections, and 2 for errors or an inconclusive/pending analysis.
