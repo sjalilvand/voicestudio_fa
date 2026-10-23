@@ -57,6 +57,23 @@ class VirusTotalTests(unittest.TestCase):
         self.assertEqual([(r.get_method(), r.full_url) for r in requests],
                          [("GET", f"{vt.API}/files/upload_url"), ("POST", upload_url)])
 
+    def test_large_upload_may_use_the_big_file_host_virustotal_returns(self):
+        """VirusTotal's /files/upload_url answers with bigfiles.virustotal.com for
+        files over 32 MiB; refusing it made every full-repo scan fail."""
+        upload_url = "https://bigfiles.virustotal.com/_ah/upload/one-use-token/?q=1"
+        self.client.opener.open.side_effect = [response({"data": upload_url}), response({"data": {"id": "big"}})]
+        with patch.object(vt, "DIRECT_LIMIT", 1), patch.object(vt.time, "sleep"):
+            self.assertEqual(self.client.upload(self.path), "big")
+        post = self.client.opener.open.call_args_list[1].args[0]
+        self.assertEqual((post.get_method(), post.full_url), ("POST", upload_url))
+        self.assertEqual(post.get_header("X-apikey"), "private-test-key")
+
+    def test_big_file_host_is_for_the_file_upload_only(self):
+        for method in ("GET", "POST"):
+            with self.subTest(method=method), self.assertRaises(vt.ScanError):
+                self.client.request(method, "https://bigfiles.virustotal.com/api/v3/files/upload_url")
+        self.client.opener.open.assert_not_called()
+
     def test_documented_http_upload_urls_are_upgraded_before_sending_credentials(self):
         # VirusTotal's own /files/upload_url example uses an HTTP-form URL.
         for authority in ("www.virustotal.com", "www.virustotal.com:80"):
@@ -91,7 +108,15 @@ class VirusTotalTests(unittest.TestCase):
                     "http://user@www.virustotal.com/_ah/upload/token",
                     "http://www.virustotal.com/_ah/upload/token#fragment",
                     "http://www.virustotal.com.evil.example/_ah/upload/token",
-                    "https://www.virustotal.com:invalid/_ah/upload/token"):
+                    "https://www.virustotal.com:invalid/_ah/upload/token",
+                    "http://bigfiles.virustotal.com/_ah/upload/token",
+                    "https://bigfiles.virustotal.com.evil.example/_ah/upload/token",
+                    "https://evilbigfiles.virustotal.com/_ah/upload/token",
+                    "https://static.virustotal.com/_ah/upload/token",
+                    "https://virustotal.com/_ah/upload/token",
+                    "https://user@bigfiles.virustotal.com/_ah/upload/token",
+                    "https://bigfiles.virustotal.com:8443/_ah/upload/token",
+                    "https://bigfiles.virustotal.com/_ah/upload/token#fragment"):
             with self.subTest(url=url), patch.object(vt, "DIRECT_LIMIT", 1):
                 self.client.opener.open.reset_mock()
                 self.client.opener.open.side_effect = None

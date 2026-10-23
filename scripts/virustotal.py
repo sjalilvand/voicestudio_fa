@@ -20,6 +20,10 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 API = "https://www.virustotal.com/api/v3"
+API_HOSTS = ("www.virustotal.com",)
+# Files over DIRECT_LIMIT go to a one-use URL VirusTotal hands out, and that URL is
+# on its big-file host. Only the file POST may use it; API calls stay on www.
+UPLOAD_HOSTS = ("www.virustotal.com", "bigfiles.virustotal.com")
 DIRECT_LIMIT = 32 * 1024 * 1024
 MAX_SIZE = 650 * 1024 * 1024
 REQUEST_INTERVAL = 16  # Public API: at most four requests per minute.
@@ -35,10 +39,11 @@ class NoRedirects(HTTPRedirectHandler):
         return None
 
 
-def validate_url(url: str) -> str:
+def validate_url(url: str, *, upload: bool = False) -> str:
     try:
         parsed = urlsplit(url)
-        allowed = (parsed.scheme == "https" and parsed.hostname == "www.virustotal.com"
+        allowed = (parsed.scheme == "https"
+                   and parsed.hostname in (UPLOAD_HOSTS if upload else API_HOSTS)
                    and parsed.port in (None, 443) and not parsed.username
                    and not parsed.password and not parsed.fragment)
     except ValueError:
@@ -63,7 +68,7 @@ def normalize_upload_url(url: str) -> str:
             url = parsed._replace(scheme="https", netloc="www.virustotal.com").geturl()
     except ValueError:
         raise ScanError("VirusTotal returned a malformed upload URL; refusing to send the file/key.") from None
-    return validate_url(url)
+    return validate_url(url, upload=True)
 
 
 def multipart(path: Path, boundary: str):
@@ -91,7 +96,7 @@ class Client:
 
     def request(self, method: str, url: str, *, file: Path | None = None,
                 deadline: float | None = None) -> dict:
-        validate_url(url)
+        validate_url(url, upload=file is not None)
         delay = 0
         if self.last_request is not None:
             delay = REQUEST_INTERVAL - (time.monotonic() - self.last_request)
