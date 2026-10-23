@@ -35,8 +35,13 @@ GUARD_TESTS = [
 RELEASE_FILES = [
     "package.json", "pyproject.toml", "backend/core/version.py", "uv.lock", "CHANGELOG.md",
 ]
-# Repo secrets electron-release.yml needs to sign each platform's installers.
-SIGNING_SECRETS = {
+# Platforms whose installers are signed. Kept apart from the table below so that
+# what the helper prints is plain platform names, never anything derived from the
+# credential-name table (a static analyser treats that table as sensitive).
+PLATFORMS = ("macOS", "Windows")
+# Repo variable names electron-release.yml reads to sign each platform's
+# installers. Only names are listed and checked here, never values.
+SIGNING_ENV_NAMES = {
     "macOS": (
         "ELECTRON_MACOS_CSC_LINK", "ELECTRON_MACOS_CSC_KEY_PASSWORD",
         "APPLE_ID", "APPLE_APP_SPECIFIC_PASSWORD", "APPLE_TEAM_ID",
@@ -236,11 +241,11 @@ def unsigned_platforms() -> tuple[list[str], bool]:
         cwd=ROOT, capture_output=True, text=True,
     )
     if result.returncode:
-        return list(SIGNING_SECRETS), True
+        return list(PLATFORMS), True
     present = set(result.stdout.split())
     missing = [
-        platform for platform, names in SIGNING_SECRETS.items()
-        if not all(name in present for name in names)
+        platform for platform in PLATFORMS
+        if not all(name in present for name in SIGNING_ENV_NAMES[platform])
     ]
     return missing, False
 
@@ -255,7 +260,7 @@ def ask_allow_unsigned() -> list[str]:
     if not gaps:
         print("Signing: macOS and Windows secrets are configured.")
         return []
-    for platform in SIGNING_SECRETS:
+    for platform in PLATFORMS:
         state = (
             "?  could not read repo secrets" if guessed
             else "NO signing secrets (installers ship unsigned)" if platform in gaps

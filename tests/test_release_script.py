@@ -312,8 +312,9 @@ def test_draft_never_asks_about_signing(release, monkeypatch):
     assert not any(c[0] == "dispatch" for c in calls)
 
 
-def test_secret_names_match_what_the_release_workflow_reads(release):
+def test_signing_names_match_what_the_release_workflow_reads(release):
+    assert set(release.PLATFORMS) == set(release.SIGNING_ENV_NAMES)
     workflow = (ROOT / ".github/workflows/electron-release.yml").read_text(encoding="utf-8")
-    for names in release.SIGNING_SECRETS.values():
+    for names in release.SIGNING_ENV_NAMES.values():
         for name in names:
             assert f"secrets.{name}" in workflow, f"{name} is not used by electron-release.yml"
