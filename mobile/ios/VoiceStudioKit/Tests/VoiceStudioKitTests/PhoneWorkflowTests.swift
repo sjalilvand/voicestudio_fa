@@ -40,7 +40,11 @@ private func fixtureRoot() throws -> URL {
     input.markAsFinished(); writer.endSession(atSourceTime: CMTime(seconds: 1, preferredTimescale: 30))
     await writer.finishWriting(); try #require(writer.status == .completed)
     let wave = root.appendingPathComponent("marked.wav")
-    try LocalAudio(samples: (0..<24000).map { Float(sin(Double($0) * 2 * .pi * 440 / 24000) * 0.3) }, sampleRate: 24000).markSynthetic().write(to: wave)
+    let samples: [Float] = (0..<24000).map { frame in
+        let phase = Double(frame) * 2.0 * Double.pi * 440.0 / 24000.0
+        return Float(sin(phase) * 0.3)
+    }
+    try LocalAudio(samples: samples, sampleRate: 24000).markSynthetic().write(to: wave)
     let result = try await AVPhoneDubMedia().finish(source: source, markedWave: wave, output: root.appendingPathComponent("dub"), audioOnly: false, progress: { _ in })
     let asset = AVURLAsset(url: result)
     let video = try #require(try await asset.loadTracks(withMediaType: .video).first)
