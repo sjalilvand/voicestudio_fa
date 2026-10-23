@@ -448,6 +448,7 @@ private final class NativeWorkGate: @unchecked Sendable {
 }
 // These tests deliberately hold the process-wide native permit. Run them in
 // sequence so one test cannot consume another test's worker-start deadline.
+// Startup budgets allow busy CI hosts; the cancellation assertions remain immediate.
 @Suite(.serialized) struct NativeLeaseRegressionTests {
     @Test func reviewCancelledExecuteKeepsBothLeasesUntilWorkerCleanup() async throws {
         let root = try localDirectory(); defer { try? FileManager.default.removeItem(at: root) }
@@ -457,7 +458,7 @@ private final class NativeWorkGate: @unchecked Sendable {
         defer { first.finish.signal(); second.finish.signal() }
         let work = Task { try await engine.execute(model,capability: .tts,progress: { _ in }) { _,_,_,_ in first.run(); return 1 } }
         defer { work.cancel() }
-        let firstDeadline = ContinuousClock.now + .seconds(10)
+        let firstDeadline = ContinuousClock.now + .seconds(60)
         while first.count == 0 && ContinuousClock.now < firstDeadline { try await Task.sleep(for: .milliseconds(5)) }
         try #require(first.count == 1)
         work.cancel()
@@ -468,7 +469,7 @@ private final class NativeWorkGate: @unchecked Sendable {
         await #expect(throws: (any Error).self) { try await store.delete(model) }
         first.finish.signal()
         await #expect(throws: CancellationError.self) { try await work.value }
-        let secondDeadline = ContinuousClock.now + .seconds(10)
+        let secondDeadline = ContinuousClock.now + .seconds(60)
         while second.count == 0 && ContinuousClock.now < secondDeadline { try await Task.sleep(for: .milliseconds(5)) }
         try #require(second.count == 1)
         second.finish.signal()
@@ -505,7 +506,7 @@ extension NativeLeaseRegressionTests {
         let first = Task { try await engine.execute(model,capability: .tts,progress: { _ in }) { _,_,_,_ -> Bool in
             held.run(); throw ClientError("mobile.local.inference_failed")
         } }
-        let deadline = ContinuousClock.now + .seconds(5)
+        let deadline = ContinuousClock.now + .seconds(60)
         while held.count == 0 && ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(5)) }
         try #require(held.count == 1)
         let queued = Task { try await engine.execute(model,capability: .tts,progress: { _ in }) { _,_,_,_ in true } }
@@ -561,28 +562,30 @@ extension NativeLeaseRegressionTests {
     // A different job is never blocked.
     try await store.acquire(UUID())
 }
-@Test func dictationMicrophoneWaitsForInferenceSlot() async throws {
-    let root = try localDirectory(); defer { try? FileManager.default.removeItem(at: root) }
-    let model = try localFixture(), stream = try localFixture(capability: "asr-stream")
-    let store = try ModelStore(root: root, available: { _ in 100_000_000 })
-    try await store.download(model, wifi: { true }, transport: RangeServer(bytes: Data("model".utf8)))
-    try await store.download(stream, wifi: { true }, transport: RangeServer(bytes: Data("model".utf8)))
-    let engine = NativeLocalEngine(store: store), gate = NativeWorkGate()
-    defer { gate.finish.signal() }
-    let holder = Task { try await engine.execute(model, capability: .tts, progress: { _ in }) { _, _, _, _ in gate.run(); return 1 } }
-    let deadline = ContinuousClock.now + .seconds(10)
-    while gate.count == 0 && ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(5)) }
-    try #require(gate.count == 1)
-    let (chunks, feed) = AsyncThrowingStream<PCMChunk, any Error>.makeStream()
-    defer { feed.finish() }
-    let returned = Flag()
-    let waiting = Task { _ = try? await engine.streamTranscribe(model: stream, chunks: chunks); returned.set() }
-    try await Task.sleep(for: .milliseconds(200))
-    #expect(!returned.value, "streamTranscribe must not return (so the mic must not start) while the slot is held")
-    gate.finish.signal()
-    _ = try await holder.value
-    await waiting.value
-    #expect(returned.value)
+extension NativeLeaseRegressionTests {
+    @Test func dictationMicrophoneWaitsForInferenceSlot() async throws {
+        let root = try localDirectory(); defer { try? FileManager.default.removeItem(at: root) }
+        let model = try localFixture(), stream = try localFixture(capability: "asr-stream")
+        let store = try ModelStore(root: root, available: { _ in 100_000_000 })
+        try await store.download(model, wifi: { true }, transport: RangeServer(bytes: Data("model".utf8)))
+        try await store.download(stream, wifi: { true }, transport: RangeServer(bytes: Data("model".utf8)))
+        let engine = NativeLocalEngine(store: store), gate = NativeWorkGate()
+        defer { gate.finish.signal() }
+        let holder = Task { try await engine.execute(model, capability: .tts, progress: { _ in }) { _, _, _, _ in gate.run(); return 1 } }
+        let deadline = ContinuousClock.now + .seconds(60)
+        while gate.count == 0 && ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(5)) }
+        try #require(gate.count == 1)
+        let (chunks, feed) = AsyncThrowingStream<PCMChunk, any Error>.makeStream()
+        defer { feed.finish() }
+        let returned = Flag()
+        let waiting = Task { _ = try? await engine.streamTranscribe(model: stream, chunks: chunks); returned.set() }
+        try await Task.sleep(for: .milliseconds(200))
+        #expect(!returned.value, "streamTranscribe must not return (so the mic must not start) while the slot is held")
+        gate.finish.signal()
+        _ = try await holder.value
+        await waiting.value
+        #expect(returned.value)
+    }
 }
 private final class Flag: @unchecked Sendable {
     private let lock = NSLock(); private var flag = false
