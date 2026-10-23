@@ -27,13 +27,17 @@ import UniformTypeIdentifiers
         try Task.checkCancellation()
         let path = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension(ext)
         try data.write(to: path, options: .atomic)
+        let asset = AVURLAsset(url: path)
+        let duration: Double, waveform: [Float]
+        do {
+            duration = try await asset.load(.duration).seconds
+            waveform = try await Self.waveform(url: path)
+            try Task.checkCancellation()
+            guard revision == self.revision else { throw CancellationError() }
+        } catch { try? FileManager.default.removeItem(at: path); throw error }
+        // `file` shows the player view, so it is set only once the player can play.
         if let old = file { try? FileManager.default.removeItem(at: old) }
         file = path
-        let asset = AVURLAsset(url: path)
-        let duration = try await asset.load(.duration).seconds
-        let waveform = try await Self.waveform(url: path)
-        try Task.checkCancellation()
-        guard revision == self.revision else { throw CancellationError() }
         self.duration = duration.isFinite ? duration : 0; position = 0
         self.waveform = waveform
         player = AVPlayer(playerItem: AVPlayerItem(asset: asset))

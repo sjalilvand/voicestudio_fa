@@ -30,6 +30,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- iPhone: tapping Play right after generating speech starts playback instead of doing nothing (#3233)
 - Android app icons preserve transparent waveform paths from the shared logo, including themed icons (#2969)
 - Speak keeps your script when switching between the phone and computer on Android (#2969)
 - Phone dubbing no longer speaks the wrong words when a quiet reference clip is not recognised (#2969)
