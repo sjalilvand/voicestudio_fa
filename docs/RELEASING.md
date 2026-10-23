@@ -104,7 +104,14 @@ version only after validation.
 4. Rename `## [Unreleased]` in `CHANGELOG.md` to `## [X.Y.Z] — YYYY-MM-DD`.
    Lead with the largest user-visible change, keep Highlights to 3–5 bullets,
    include migration steps and real screenshots when relevant, and verify human
-   contributors and bug reporters from the tag comparison and included PRs.
+   contributors and bug reporters from the tag comparison and included PRs. The
+   release workflow adds a `### Contributors` block to the GitHub Release notes
+   by itself: everyone who committed since the latest stable release, plus the
+   authors of PRs merged in that span (ranked by commits; bots, AI agents and
+   unlinked placeholders are never listed). It does **not** find bug reporters,
+   and it skips the block when the changelog section already has a
+   `### Contributors` heading, so write one by hand when you want roles or
+   reporters credited.
 5. Run `uv run pytest tests/test_app_version.py tests/test_changelog_style.py -q`.
 6. Audit contributor agreements: `git fetch origin cla-signatures`, then
    `GH_TOKEN=... python scripts/cla_audit.py`. Follow up with each unsigned
