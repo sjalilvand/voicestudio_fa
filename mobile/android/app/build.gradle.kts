@@ -6,32 +6,37 @@ plugins {
 }
 val repository = rootDir.resolve("../..")
 val appVersion = (JsonSlurper().parse(repository.resolve("package.json")) as Map<*, *>)["version"].toString()
+// Play accepts any versionName, but the code must be numeric; a beta's -beta.N maps to its X.Y.Z.
+val (major, minor, patch) = Regex("""(\d+)\.(\d+)\.(\d+)(?:-beta\.\d+)?""").matchEntire(appVersion)?.destructured
+    ?: error("Unsupported app version for Android: $appVersion")
+// Play uploads pass a new, increasing code per upload; local builds derive it from the version.
+val appVersionCode = providers.environmentVariable("VOICESTUDIO_ANDROID_VERSION_CODE").orNull?.toInt()
+    ?: (major.toInt() * 1000000 + minor.toInt() * 1000 + patch.toInt())
+// The Play upload key, supplied only by the Play workflow; other builds stay debug-signed.
+val uploadKeystore = providers.environmentVariable("VOICESTUDIO_ANDROID_KEYSTORE").orNull
 android {
     namespace = "com.voicestudio.mobile"
     compileSdk = 36
     ndkVersion = "27.1.12297006"
     defaultConfig {
-        applicationId = "com.voicestudio.mobile"
+        // Store identity (voicestudio.sh); the Kotlin namespace stays com.voicestudio.mobile.
+        applicationId = "sh.voicestudio.mobile"
         minSdk = 29
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
         targetSdk = 36
-        // Play needs a unique, increasing code per upload: version * 1000 + CI build number.
-        versionCode = appVersion.split(".").take(3).map { it.toInt() }.let { it[0]*1000000+it[1]*1000+it[2] } * 1000 + (System.getenv("VS_BUILD_NUMBER")?.toInt() ?: 0)
+        versionCode = appVersionCode
         versionName = appVersion
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
-    signingConfigs {
-        // Release signing comes from CI secrets; local builds stay unsigned-release.
-        System.getenv("VS_ANDROID_KEYSTORE")?.let { path ->
-            create("release") {
-                storeFile = file(path)
-                storePassword = System.getenv("VS_ANDROID_KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("VS_ANDROID_KEY_ALIAS")
-                keyPassword = System.getenv("VS_ANDROID_KEY_PASSWORD")
-            }
+    if (uploadKeystore != null) {
+        signingConfigs.create("upload") {
+            storeFile = file(uploadKeystore)
+            storePassword = providers.environmentVariable("VOICESTUDIO_ANDROID_KEYSTORE_PASSWORD").get()
+            keyAlias = providers.environmentVariable("VOICESTUDIO_ANDROID_KEY_ALIAS").get()
+            keyPassword = providers.environmentVariable("VOICESTUDIO_ANDROID_KEY_PASSWORD").get()
         }
+        buildTypes.getByName("release").signingConfig = signingConfigs.getByName("upload")
     }
-    buildTypes { release { signingConfigs.findByName("release")?.let { signingConfig = it } } }
     buildFeatures { compose = true; buildConfig = true }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     testOptions { unitTests.isIncludeAndroidResources = true }
@@ -75,6 +80,7 @@ val bundleCatalogs by tasks.registering {
     }
 }
 tasks.named("preBuild") { dependsOn(bundleCatalogs) }
+tasks.register("printAppVersion") { doLast { println("versionName=$appVersion versionCode=$appVersionCode") } }
 dependencies {
     implementation(files(rootDir.resolve("../native/android/build/downloads/sherpa.aar")).builtBy(":core:local:fetchRuntimes"))
     implementation(project(":features"))

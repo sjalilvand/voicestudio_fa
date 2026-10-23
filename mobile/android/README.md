@@ -26,6 +26,8 @@ printf 'sdk.dir=%s\n' "$ANDROID_HOME" > local.properties
 ./gradlew testDebugUnitTest
 ./gradlew lint
 ./gradlew assembleDebugAndroidTest
+./gradlew installDebug
+adb shell am start -n sh.voicestudio.mobile/com.voicestudio.mobile.MainActivity
 ```
 
 Windows: Gradle uses `gradlew.bat`; native preparation also needs Bash and

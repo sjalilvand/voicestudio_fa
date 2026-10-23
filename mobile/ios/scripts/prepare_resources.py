@@ -64,6 +64,21 @@ def validate_native_notices(directory, pins):
         raise ValueError("Missing GPL corresponding sources")
 
 
+def marketing_version(version):
+    # App Store Connect accepts only X.Y.Z, so a beta uploads as its X.Y.Z under a new build number.
+    match = re.fullmatch(r"(\d+\.\d+\.\d+)(?:-beta\.\d+)?", version)
+    if not match:
+        raise ValueError(f"Unsupported app version for iOS: {version}")
+    return match.group(1)
+
+
+def build_number(value):
+    # TestFlight needs a new, increasing build number per upload: up to three integers.
+    if not re.fullmatch(r"\d+(?:\.\d+){0,2}", value):
+        raise ValueError(f"Invalid iOS build number: {value}")
+    return value
+
+
 def prepare(output, info):
     output.mkdir(parents=True, exist_ok=True)
     legal = IOS / "VoiceStudio/Resources/NativeLicences"
@@ -107,9 +122,8 @@ def prepare(output, info):
         (localized / "InfoPlist.strings").write_text("\n".join(lines) + "\n")
     version = json.loads((ROOT / "package.json").read_text())["version"]
     data = plistlib.loads((IOS / "VoiceStudio/Info.plist").read_bytes())
-    data["CFBundleShortVersionString"] = version
-    # Store uploads need a unique, increasing build per version (CI passes the run number).
-    data["CFBundleVersion"] = os.environ.get("VS_BUILD_NUMBER", "1")
+    data["CFBundleShortVersionString"] = marketing_version(version)
+    data["CFBundleVersion"] = build_number(os.environ.get("VOICESTUDIO_IOS_BUILD_NUMBER", "1"))
     data["CFBundleLocalizations"] = sorted(path.stem for path in source.glob("*.json"))
     for field, keys in permissions.items():
         data[field] = "\n".join(lookup(english, key) for key in keys)

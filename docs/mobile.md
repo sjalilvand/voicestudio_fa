@@ -92,27 +92,73 @@ Security) when iOS asks. App text uses the
 Electron locale catalogs (`mobile.*` keys). The `mobile` workflow builds and
 tests both apps.
 
+## TestFlight (maintainers)
+
+The `iOS TestFlight` workflow signs the iPhone app and uploads it to TestFlight
+for the team's internal testers. It is dispatched by hand from `main` and never
+submits the app for App Store review. One-time setup in the Apple Developer team:
+
+1. Register the App ID `sh.voicestudio.mobile` (Certificates, Identifiers &
+   Profiles → Identifiers) and create the app in App Store Connect with it.
+2. Create an App Store Connect API key with the **Admin** role (Users and
+   Access → Integrations). Admin lets CI create the cloud-managed Apple
+   Distribution certificate and App Store profile, so no `.p12` is stored.
+3. Create the `app-store-connect` environment (Settings → Environments), limit
+   it to the `main` branch, and add `APP_STORE_CONNECT_KEY_ID`,
+   `APP_STORE_CONNECT_ISSUER_ID` and `APP_STORE_CONNECT_API_KEY` (the full
+   `.p8` text). `APPLE_TEAM_ID` is shared with macOS notarization.
+
+The version is the root `package.json` version without any `-beta.N` suffix
+(App Store Connect accepts only `X.Y.Z`); the build number is the workflow run
+number and attempt, so every upload is new.
+
+## Play internal testing (maintainers)
+
+The `Android Play internal testing` workflow is the Android counterpart: it
+signs a release bundle with the Play upload key and uploads it to the Play
+Console **internal testing** track. It is dispatched by hand from `main` and
+never sends a release to production. One-time setup:
+
+1. Create the app in the Play Console with the package name
+   `sh.voicestudio.mobile` and keep Play App Signing on (Google holds the app
+   signing key; CI only holds the upload key).
+2. Create an upload key once and keep a backup in the team password manager:
+   `keytool -genkeypair -v -keystore upload.jks -alias upload -keyalg RSA -keysize 4096 -validity 10000`.
+3. Create a Google Cloud service account with a JSON key, then invite its email
+   in the Play Console (Users and permissions) with release access to this app.
+4. Create the `google-play` environment (Settings → Environments), limit it to
+   the `main` branch, and add `ANDROID_UPLOAD_KEYSTORE` (the `.jks` as base64),
+   `ANDROID_UPLOAD_KEYSTORE_PASSWORD`, `ANDROID_UPLOAD_KEY_ALIAS`,
+   `ANDROID_UPLOAD_KEY_PASSWORD` and `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`.
+5. Google Play takes the first bundle only through the Play Console: run the
+   workflow once (its upload step fails), download the `VoiceStudio-android-play`
+   artifact and upload it to internal testing by hand. Until the app's first
+   release is rolled out, dispatch with status `draft`.
+
+The version name is the root `package.json` version; the version code is the
+workflow run number × 10 plus the attempt, so every upload is new. Local and
+`mobile` workflow builds stay debug-signed.
+
 ## Releasing
 
-The `mobile-release` workflow builds the signed Android APK/AAB and iOS IPA and,
-when asked, uploads them to the Play **internal** track and **TestFlight**. It
-never publishes to production; promote a build in each store console.
+The `mobile-release` workflow builds the signed Android APK/AAB and iOS IPA and
+drafts a GitHub prerelease with them. Store uploads are separate: use
+[TestFlight](#testflight-maintainers) and
+[Play internal testing](#play-internal-testing-maintainers). Nothing is published
+to production automatically.
 
-- **Run it:** Actions → `mobile-release` → Run workflow (uploads are off by
-  default, so you get signed artifacts to test), or push a `mobile-v*` tag
-  (builds and uploads both).
-- **Downloads for everyone:** a `mobile-v*` tag also creates a **draft** GitHub
-  prerelease with the signed APK and AAB, the App Store IPA, an unsigned IPA for
-  sideloading, and `SHA256SUMS.txt`. Review it, then publish. The App Store IPA
-  only installs through TestFlight; iPhone users outside TestFlight sideload the
-  unsigned IPA with their own Apple ID.
-- **Version:** the root `package.json` version. Each run's number is the store
-  build number, so a rebuild of the same version still uploads.
-- **Secrets** (repository environment `mobile-release`, with required reviewers):
-  - Android: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
-    `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON`
-  - iOS: `IOS_CERT_P12_BASE64`, `IOS_CERT_PASSWORD`, `IOS_PROFILE_BASE64`
-    (App Store distribution profile for `com.voicestudio.mobile`), `IOS_TEAM_ID`,
-    `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`
-- **First upload:** create the app records in Play Console and App Store Connect
-  first; Play needs the first bundle uploaded once and the data-safety form filled.
+- **Run it:** Actions → `mobile-release` → Run workflow (signed artifacts only),
+  or push a `mobile-v*` tag (also drafts the release).
+- **Downloads for everyone:** the draft prerelease holds the signed APK and AAB,
+  the App Store IPA, an unsigned IPA for sideloading, and `SHA256SUMS.txt`. Review
+  it, then publish. The App Store IPA only installs through TestFlight; iPhone
+  users outside TestFlight sideload the unsigned IPA with their own Apple ID.
+- **Version:** the root `package.json` version; each run's number makes the build
+  number, so a rebuild of the same version stays unique.
+- **Secrets** (repository environment `mobile-release`, with required reviewers,
+  not limited to `main` so tags can use it): the same values as the store
+  workflows, `ANDROID_UPLOAD_KEYSTORE`, `ANDROID_UPLOAD_KEYSTORE_PASSWORD`,
+  `ANDROID_UPLOAD_KEY_ALIAS`, `ANDROID_UPLOAD_KEY_PASSWORD`,
+  `APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID`,
+  `APP_STORE_CONNECT_API_KEY` and `APPLE_TEAM_ID`.
+
