@@ -15,7 +15,7 @@ SPEC.loader.exec_module(prepare_resources)
 
 
 def load_workflow():
-    return yaml.load(WORKFLOW.read_text(), Loader=yaml.BaseLoader)
+    return yaml.load(WORKFLOW.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
 
 
 @pytest.mark.parametrize(("version", "expected"), [("0.5.7", "0.5.7"), ("0.5.8-beta.2", "0.5.8")])
@@ -77,7 +77,7 @@ def test_workflow_signs_verifies_and_cleans_up_the_key():
     assert names.index("Verify archive signature and version") < names.index("Upload to TestFlight")
     cleanup = steps[-1]
     assert cleanup["name"] == "Remove API key" and cleanup["if"] == "always()"
-    source = WORKFLOW.read_text()
+    source = WORKFLOW.read_text(encoding="utf-8")
     assert "CODE_SIGNING_ALLOWED=NO" not in source
     assert "testFlightInternalTestingOnly bool true" in source
     # Secrets reach only the steps that need them, never the whole job.
@@ -118,7 +118,7 @@ def test_app_store_validation_requirements():
         "UIInterfaceOrientationLandscapeLeft",
         "UIInterfaceOrientationLandscapeRight",
     }
-    project = yaml.safe_load((IOS / "project.yml").read_text())
+    project = yaml.safe_load((IOS / "project.yml").read_text(encoding="utf-8"))
     assert project["targets"]["VoiceStudio"]["settings"]["base"]["ASSETCATALOG_COMPILER_APPICON_NAME"] == "AppIcon"
 
 
@@ -143,15 +143,15 @@ def test_generated_and_bundled_catalogs_have_one_app_icon(tmp_path):
 
 
 def test_mobile_ci_builds_ios_with_the_upload_toolchain():
-    mobile = yaml.load((ROOT / ".github/workflows/mobile.yml").read_text(), Loader=yaml.BaseLoader)
+    mobile = yaml.load((ROOT / ".github/workflows/mobile.yml").read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
     assert mobile["jobs"]["ios"]["runs-on"] == load_workflow()["jobs"]["testflight"]["runs-on"]
-    release = yaml.load((ROOT / ".github/workflows/mobile-release.yml").read_text(), Loader=yaml.BaseLoader)
+    release = yaml.load((ROOT / ".github/workflows/mobile-release.yml").read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
     assert release["jobs"]["ios"]["runs-on"] == load_workflow()["jobs"]["testflight"]["runs-on"]
 
 
 @pytest.mark.parametrize("filename", ["mobile.yml", "mobile-release.yml"])
 def test_native_runtime_cache_survives_later_app_or_ui_failures(filename):
-    workflow = yaml.load((ROOT / ".github/workflows" / filename).read_text(), Loader=yaml.BaseLoader)
+    workflow = yaml.load((ROOT / ".github/workflows" / filename).read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
     steps = workflow["jobs"]["ios"]["steps"]
     restore = next(step for step in steps if step.get("uses", "").startswith("actions/cache/restore@"))
     save = next(step for step in steps if step.get("uses", "").startswith("actions/cache/save@"))
