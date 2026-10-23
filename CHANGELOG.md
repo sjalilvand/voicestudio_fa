@@ -26,6 +26,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- iPhone: tapping Play right after generating speech starts playback instead of doing nothing (#3233)
 - App icon, tray icons and in-app logo no longer show a black band behind the waveform (#3221)
 - Speed/quality changes finish as soon as they are saved, even while the clone controls are still loading (#3031)
 - Android dubbing errors remain visible when worker updates arrive while their receipt is being saved (#3031)
