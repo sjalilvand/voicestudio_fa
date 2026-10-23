@@ -120,6 +120,11 @@ submits the app for App Store review. One-time setup in the Apple Developer team
    `APP_STORE_CONNECT_ISSUER_ID` and `APP_STORE_CONNECT_API_KEY` (the full
    `.p8` text). `APPLE_TEAM_ID` is shared with macOS notarization.
 
+The workflow builds on the `macos-26` runner because App Store Connect accepts
+only the current iOS SDK; the `mobile` workflow's iOS job uses the same runner.
+The app icon is `Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png`, a
+1024×1024 opaque PNG rendered from `mobile/ios/VoiceStudio/AppIcon.svg`.
+
 The version is the root `package.json` version without any `-beta.N` suffix
 (App Store Connect accepts only `X.Y.Z`); the build number is the workflow run
 number and attempt, so every upload is new.
