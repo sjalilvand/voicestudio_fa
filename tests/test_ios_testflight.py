@@ -37,6 +37,24 @@ def test_build_number_comes_from_the_environment(tmp_path, monkeypatch):
     assert prepare_resources.re.fullmatch(r"\d+\.\d+\.\d+", info["CFBundleShortVersionString"])
 
 
+def test_resource_catalogs_keep_utf8_under_a_windows_default_codec(tmp_path, monkeypatch):
+    read_text, write_text = Path.read_text, Path.write_text
+
+    def legacy_read(path, encoding=None, errors=None):
+        return read_text(path, encoding=encoding or "cp1252", errors=errors)
+
+    def legacy_write(path, data, encoding=None, errors=None):
+        return write_text(path, data, encoding=encoding or "cp1252", errors=errors)
+
+    monkeypatch.setattr(Path, "read_text", legacy_read)
+    monkeypatch.setattr(Path, "write_text", legacy_write)
+    prepare_resources.prepare(tmp_path / "bundle", tmp_path / "Info.plist")
+    french = prepare_resources.json.loads(read_text(ROOT / "electron/src/renderer/src/i18n/locales/fr.json", encoding="utf-8"))
+    expected = prepare_resources.json.dumps(french["permissions"]["microphone_why"])[1:-1]
+    actual = (tmp_path / "bundle/fr.lproj/InfoPlist.strings").read_bytes().decode("utf-8")
+    assert expected in actual
+
+
 @pytest.mark.parametrize("value", ["", "1.2.3.4", "12a"])
 def test_build_number_rejects_values_app_store_connect_refuses(value):
     with pytest.raises(ValueError):
