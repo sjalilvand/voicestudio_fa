@@ -238,7 +238,9 @@ def test_electron_release_scopes_signing_secrets_and_gates_unsigned_owner_dispat
     assert [step["name"] for step in scoped] == ["Package without publishing"]
     assert credentials.issubset(scoped[0]["env"])
     guard = next(step for step in jobs["validate"]["steps"] if step.get("name") == "Require an exact version tag")
-    assert 'test "$DISPATCH_ACTOR" = "$OWNER" && test "$RERUN_ACTOR" = "$OWNER"' in guard["run"]
+    # Who may publish unsigned is exercised in test_unsigned_publish_needs_owner_or_listed_publisher.
+    assert 'may_publish_unsigned "$DISPATCH_ACTOR" && may_publish_unsigned "$RERUN_ACTOR"' in guard["run"]
+    assert guard["env"]["OWNER"] == "${{ github.repository_owner }}"
     assert guard["env"]["DISPATCH_ACTOR"] == "${{ github.actor }}"
     assert guard["env"]["RERUN_ACTOR"] == "${{ github.triggering_actor }}"
     publish = jobs["release"]["steps"][-1]
@@ -293,5 +295,33 @@ def test_release_tag_override_preserves_exact_tag_checkout(tmp_path, workflow_re
     env = dict(os.environ, PATH=str(tmp_path) + os.pathsep + os.environ['PATH'], REF=ref,
                WORKFLOW_REF=workflow_ref, RELEASE_TAG_OVERRIDE=override, ALLOW_UNSIGNED='false',
                TEST_HEAD='tagged' if head_matches else 'different')
+    result = subprocess.run(['bash', '-e', '-c', guard['run']], env=env, capture_output=True)
+    assert (result.returncode == 0) == ok, result.stderr
+
+
+@pytest.mark.parametrize('publishers,dispatcher,rerunner,ok', [
+    ('', 'owner', 'owner', True),
+    ('', 'maintainer', 'maintainer', False),
+    ('maintainer', 'maintainer', 'maintainer', True),
+    (' other , maintainer ', 'maintainer', 'maintainer', True),
+    ('maintainer', 'maintainer', 'stranger', False),
+    ('maintainer', 'stranger', 'maintainer', False),
+    ('maint', 'maintainer', 'maintainer', False),
+    ('maintainer,', '', '', False),
+])
+def test_unsigned_publish_needs_owner_or_listed_publisher(tmp_path, publishers, dispatcher, rerunner, ok):
+    import os
+    import subprocess
+    import yaml
+    workflow = yaml.load((ROOT / '.github/workflows/electron-release.yml').read_text(), Loader=yaml.BaseLoader)
+    for name, body in [('node', 'echo 1.2.3'), ('git', 'echo tagged')]:
+        executable = tmp_path / name
+        executable.write_text('#!/bin/sh\n' + body + '\n')
+        executable.chmod(0o755)
+    guard = next(s for s in workflow['jobs']['validate']['steps'] if 'run' in s)
+    assert guard['env']['UNSIGNED_PUBLISHERS'] == '${{ vars.UNSIGNED_RELEASE_PUBLISHERS }}'
+    env = dict(os.environ, PATH=str(tmp_path) + os.pathsep + os.environ['PATH'], REF='refs/tags/v1.2.3',
+               WORKFLOW_REF='refs/tags/v1.2.3', RELEASE_TAG_OVERRIDE='', ALLOW_UNSIGNED='true',
+               OWNER='owner', UNSIGNED_PUBLISHERS=publishers, DISPATCH_ACTOR=dispatcher, RERUN_ACTOR=rerunner)
     result = subprocess.run(['bash', '-e', '-c', guard['run']], env=env, capture_output=True)
     assert (result.returncode == 0) == ok, result.stderr
