@@ -35,6 +35,8 @@ metadata and the backend fallback mirror it.
 
 - Saved dub loads confirm before replacing unsaved work, recheck edits made during loading and stop when you leave the workspace (#3234)
 - Desktop crash-recovery checks keep the process handle after a forced exit, avoiding a race in the macOS test harness (#3234)
+- iPhone: tapping Play right after generating speech starts playback instead of doing nothing (#3233)
+
 - Android app icons preserve transparent waveform paths from the shared logo, including themed icons (#2969)
 - Speak keeps your script when switching between the phone and computer on Android (#2969)
 - Phone dubbing no longer speaks the wrong words when a quiet reference clip is not recognised (#2969)
@@ -99,6 +101,7 @@ metadata and the backend fallback mirror it.
 
 ### CI
 
+- The owner can let named maintainers publish releases while Windows installers are still unsigned (#3236)
 - Android release and Play builds share an increasing version code to prevent reused or decreasing build numbers (#2969)
 - Phone build resources keep notice hashes and localized text intact on Windows (#2969)
 - New `mobile-release` workflow builds signed Android and iOS apps and drafts a GitHub prerelease with the APK, AAB and IPAs (#2969)
@@ -113,6 +116,8 @@ metadata and the backend fallback mirror it.
 
 - iOS TestFlight workflow: maintainers can upload a signed iPhone build for internal testers from `main` ([guide](docs/mobile.md#testflight-maintainers)) (#3188)
 - iOS TestFlight builds declare their exempt encryption, so uploads no longer wait on the export compliance question (#3230)
+- iOS TestFlight uploads with on-device inference pass App Store validation, and the workflow checks every bundled framework before uploading (#3235)
+- Beta and stable release builds no longer fail when a slow build machine runs the app's tests (#3232)
 - Android Play internal testing workflow: the matching signed Android upload from `main`, and beta versions no longer break the Android build ([guide](docs/mobile.md#play-internal-testing-maintainers)) (#3189)
 
 - Gallery preview fallback smoke no longer flakes when a slower runner reads the playing clip in several byte ranges (#3018)
