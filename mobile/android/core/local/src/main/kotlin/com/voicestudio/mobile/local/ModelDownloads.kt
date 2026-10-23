@@ -44,6 +44,7 @@ class ModelDownloads internal constructor(
     }
     private fun invalidate(model: PhoneModel) {model.files.forEach {verified.remove(File(dir(model),it.path))}}
     private val locks=ConcurrentHashMap<String,Mutex>()
+    private val reservations=HashMap<String,Long>()
     private fun lock(model: PhoneModel)=locks.getOrPut(model.id) {Mutex()}
     private val mutable=MutableStateFlow<Map<String,DownloadProgress>>(emptyMap())
     val progress=mutable.asStateFlow()
@@ -68,7 +69,11 @@ class ModelDownloads internal constructor(
                 val partial=File(directory,f.path+".part").length().takeIf {it<=f.size} ?: 0L
                 f.size-partial
             }
-            if(freeBytes()<needed+16*1024*1024) throw ClientFailure("mobile.local.storage_required")
+            // Concurrent downloads each pass the check alone; reserve what the others still need.
+            synchronized(reservations) {
+                if(freeBytes()-reservations.values.sum()<needed+16*1024*1024) throw ClientFailure("mobile.local.storage_required")
+                reservations[model.id]=needed
+            }
             mutable.update {it+(model.id to DownloadProgress(total=model.totalBytes,running=true))}
             try {
                 var completed=0L
@@ -102,7 +107,7 @@ class ModelDownloads internal constructor(
             catch(e:Exception) {
                 val failure=e as? ClientFailure ?: ClientFailure("mobile.local.download_failed")
                 mutable.update {it+(model.id to DownloadProgress(total=model.totalBytes,error=failure.key))};throw failure
-            }
+            } finally {synchronized(reservations) {reservations.remove(model.id)}}
         }
     }
     private fun allowed(url: HttpUrl): Boolean = allowTestHttp || (url.scheme=="https" && url.username.isEmpty() && url.password.isEmpty() &&

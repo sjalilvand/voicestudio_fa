@@ -181,8 +181,11 @@ private actor RangeServer: HTTPTransport {
     let root = try localDirectory(); defer { try? FileManager.default.removeItem(at: root) }
     let store = try ModelStore(root: root, available: { _ in 100_000_000_000 }), engine = NativeLocalEngine(store: store)
     let clone = try localFixture(capability: "clone"), translate = try localFixture(capability: "translate")
+    #if !os(iOS)
+    // iOS links the runtimes statically, so a missing library path cannot make them unavailable there.
     #expect(!NativeLocalEngine.runtimeAvailable(.omni, library: "/does-not-exist"))
     #expect(!NativeLocalEngine.runtimeAvailable(.llama, library: "/does-not-exist"))
+    #endif
     await #expect(throws: (any Error).self) { try await engine.clone(model: clone, text: "Hello", reference: PCMChunk(samples: [0], sampleRate: 16000), referenceText: "Reference") }
     try await store.download(translate, wifi: { true }, transport: RangeServer(bytes: Data("model".utf8)))
     await #expect(throws: (any Error).self) { try await engine.translate(model: translate, text: "Hello", sourceLanguage: "en", targetLanguage: "fr") }
