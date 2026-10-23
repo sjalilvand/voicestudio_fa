@@ -24,9 +24,10 @@ const mocks = vi.hoisted(() => ({
   activeWork: false,
 }));
 
-vi.mock('@/components/bridge', () => ({
-  appVersion: () => '0.5.2',
-  getBridge: () => ({
+vi.mock('@/components/bridge', () => {
+  // Electron exposes one stable bridge. Recreating it on every render reruns
+  // the state-subscription effect and can overwrite a completed update check.
+  const bridge = {
     updates: {
       getState: mocks.getState,
       check: mocks.check,
@@ -42,8 +43,9 @@ vi.mock('@/components/bridge', () => ({
         };
       },
     },
-  }),
-}));
+  };
+  return { appVersion: () => '0.5.2', getBridge: () => bridge };
+});
 
 vi.mock('@/features/dub/dub-session', () => ({
   dubSession: { state: { phase: 'idle', recovery: null, batchProgress: null } },
@@ -130,6 +132,7 @@ describe('UpdateSettings', () => {
     await waitFor(() => expect(mocks.setChannel).toHaveBeenCalledWith('beta'));
     await waitFor(() => expect(mocks.check).toHaveBeenCalledOnce());
     expect(await screen.findByText('update.available')).toBeInTheDocument();
+    expect(mocks.getState).toHaveBeenCalledOnce();
   });
 
   test('does not check when the channel switch is refused', async () => {
