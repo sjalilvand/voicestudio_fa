@@ -114,7 +114,7 @@ def test_generated_changelog_passes_the_release_notes_extraction(release, versio
     assert section and section[1].strip()
 
 
-def _drive(release, monkeypatch, answers, *, dry_run, secrets_missing=(), branch="main", fail_on=None, calls=None):
+def _drive(release, monkeypatch, answers, *, dry_run, secrets_missing=(), branch="main", fail_on=None, calls=None, guessed=False):
     """Run release() with scripted prompts and every side effect recorded, not run."""
     import argparse
 
@@ -140,7 +140,7 @@ def _drive(release, monkeypatch, answers, *, dry_run, secrets_missing=(), branch
     monkeypatch.setattr("builtins.input", lambda prompt="": next(feed))
     monkeypatch.setattr(release, "check_ready", lambda tag=None: None)
     monkeypatch.setattr(release, "ensure_main", lambda: calls.append(("ensure_main",)))
-    monkeypatch.setattr(release, "missing_signing_secrets", lambda: list(secrets_missing))
+    monkeypatch.setattr(release, "unsigned_platforms", lambda: (list(secrets_missing), guessed))
     monkeypatch.setattr(release, "sh", fake_sh)
     monkeypatch.setattr(release, "bump_files", lambda *a: calls.append(("bump", *a[1:])))
     monkeypatch.setattr(release, "dispatch_publish", lambda *a: calls.append(("dispatch", *a)))
@@ -186,10 +186,10 @@ def test_publish_without_signing_is_refused_unless_unsigned_is_accepted(release,
     tag = "v0.5.7"
     with pytest.raises(SystemExit, match="configure signing"):
         _drive(release, monkeypatch, ["stable", "", "publish", "no"], dry_run=False,
-               secrets_missing=["APPLE_ID"])
+               secrets_missing=["Windows"])
     calls = _drive(release, monkeypatch, ["stable", "", "publish", "yes", tag], dry_run=False,
-                   secrets_missing=["APPLE_ID"])
-    assert ("dispatch", tag, True) in calls
+                   secrets_missing=["Windows"])
+    assert ("dispatch", tag, ["Windows"]) in calls
 
 
 def _menu(release, monkeypatch, keys, default=0):
@@ -280,3 +280,41 @@ def test_menu_reads_real_arrow_key_bytes_from_a_terminal():
     os.waitpid(pid, 0)
     text = re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", "", output.decode(errors="replace"))
     assert re.findall(r"RESULT=(\w+)", text) == ["beta", "publish"], text
+
+
+def test_all_platforms_signed_asks_nothing_and_does_not_allow_unsigned(release, monkeypatch, capsys):
+    tag = "v0.5.7"
+    calls = _drive(release, monkeypatch, ["stable", "", "publish", tag], dry_run=False)
+    assert ("dispatch", tag, []) in calls
+    assert "macOS and Windows secrets are configured" in capsys.readouterr().out
+
+
+def test_missing_windows_signing_is_named_and_needs_an_explicit_yes(release, monkeypatch, capsys):
+    tag = "v0.5.7-beta.1"
+    calls = _drive(release, monkeypatch, ["beta", "", "publish", "yes", tag], dry_run=False,
+                   secrets_missing=["Windows"])
+    out = capsys.readouterr().out
+    assert "macOS    signed" in out and "Windows  NO signing secrets" in out
+    assert "UNSIGNED: Windows" in out
+    assert ("dispatch", tag, ["Windows"]) in calls
+
+
+def test_unreadable_secrets_are_reported_as_unknown_not_as_signed(release, monkeypatch, capsys):
+    with pytest.raises(SystemExit, match="Cancelled"):
+        _drive(release, monkeypatch, ["stable", "", "publish", "no"], dry_run=False,
+               secrets_missing=["macOS", "Windows"], guessed=True)
+    assert "could not read repo secrets" in capsys.readouterr().out
+
+
+def test_draft_never_asks_about_signing(release, monkeypatch):
+    calls = _drive(release, monkeypatch, ["beta", "", "draft", "v0.5.7-beta.1"], dry_run=False,
+                   secrets_missing=["macOS", "Windows"])
+    assert not any(c[0] == "dispatch" for c in calls)
+
+
+def test_signing_names_match_what_the_release_workflow_reads(release):
+    assert set(release.PLATFORMS) == set(release.SIGNING_ENV_NAMES)
+    workflow = (ROOT / ".github/workflows/electron-release.yml").read_text(encoding="utf-8")
+    for names in release.SIGNING_ENV_NAMES.values():
+        for name in names:
+            assert f"secrets.{name}" in workflow, f"{name} is not used by electron-release.yml"
