@@ -79,6 +79,19 @@ class HostSwitchRegressionTest {
         var request=b.takeRequest(10,TimeUnit.MILLISECONDS)
         while(request!=null) {assertFalse(request.path.orEmpty().contains("host-a"));request=b.takeRequest(10,TimeUnit.MILLISECONDS)}
     }
+    @Test fun changingRunLocationPreservesTheSharedSpeakScript() = runBlocking<Unit> {
+        vm.connect(a.url("/").toString(),"","");awaitIdle()
+        compose.setContent {StudioApp(vm)}
+        compose.onNodeWithTag("home.speak").performScrollTo().performClick()
+        compose.onNodeWithText("Type what you want to hear…").performTextInput("Draft from computer")
+        compose.onNodeWithText("This phone").performClick()
+        compose.onNode(hasSetTextAction() and hasText("Draft from computer")).assertExists()
+        compose.onNode(hasSetTextAction()).performTextReplacement("Edited on phone")
+        compose.onNodeWithText("Computer").performClick()
+        compose.onNode(hasSetTextAction() and hasText("Edited on phone")).assertExists()
+        compose.onNodeWithText("This phone").performClick()
+        compose.onNode(hasSetTextAction() and hasText("Edited on phone")).assertExists()
+    }
     @Test fun reconnectAndDisconnectClearCheckpointsAndStopOldMonitoring() = runBlocking {
         vm.connect(a.url("/").toString(),"","");awaitIdle()
         val oldHost=a.url("/").toString()

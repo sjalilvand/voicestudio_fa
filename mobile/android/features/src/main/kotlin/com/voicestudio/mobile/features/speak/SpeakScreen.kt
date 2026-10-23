@@ -17,11 +17,10 @@ import com.voicestudio.mobile.features.*
 import java.io.File
 import kotlinx.coroutines.*
 
-@Composable private fun ComputerSpeakScreen(vm:StudioViewModel, initialVoiceID: String? = null) {
+@Composable private fun ComputerSpeakScreen(vm:StudioViewModel, text: String, onTextChange: (String)->Unit, initialVoiceID: String? = null) {
     val state by vm.state.collectAsState()
     val context=LocalContext.current
     val scope=rememberCoroutineScope()
-    var text by rememberSaveable {mutableStateOf("")}
     var voice by rememberSaveable(initialVoiceID) {mutableStateOf(initialVoiceID.orEmpty())}
     var engine by rememberSaveable {mutableStateOf("")}
     var language by rememberSaveable {mutableStateOf("Auto")}
@@ -44,7 +43,7 @@ import kotlinx.coroutines.*
     }
     Screen {
         ScreenTitle("mobile.tabs.speak")
-        Field("mobile.speak.placeholder",text,{text=it},multiline=true)
+        Field("mobile.speak.placeholder",text,onTextChange,multiline=true)
         if(catalog==null) InlineLoading()
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(VSTheme.gap)) {
             Box(Modifier.weight(1f)) {ChoicePicker("mobile.speak.voice",voice,listOf(Choice("",tr("mobile.simple.default_voice")))+state.profiles.map {Choice(it.id,it.name)},compact=true) {voice=it}}
@@ -88,13 +87,13 @@ internal fun chooseSpeakModel(models: List<PhoneModel>,installed: Set<String>,ch
 }
 
 @Composable fun SpeakScreen(vm: StudioViewModel, initialPhoneVoiceID: String? = null, initialComputerVoiceID: String? = null) {
+    var text by rememberSaveable {mutableStateOf("")}
     com.voicestudio.mobile.features.models.TaskLocation(vm,"speak",setOf("tts","clone")) {location,model ->
-        if(location==com.voicestudio.mobile.local.RunLocation.COMPUTER) ComputerSpeakScreen(vm,initialComputerVoiceID)
+        if(location==com.voicestudio.mobile.local.RunLocation.COMPUTER) ComputerSpeakScreen(vm,text,{text=it},initialComputerVoiceID)
         else {
             val phone by vm.phone.state.collectAsState()
             val context=LocalContext.current
             val scope=rememberCoroutineScope()
-            var text by rememberSaveable {mutableStateOf("")}
             var speaker by rememberSaveable(initialPhoneVoiceID) {mutableStateOf(initialPhoneVoiceID?.let {"phone:"+it} ?: "0")}
             val voice=phone.voices.firstOrNull {"phone:"+it.id==speaker}
             val capability=if(voice==null) "tts" else "clone"

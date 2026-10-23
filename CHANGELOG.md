@@ -30,6 +30,11 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- Speak keeps your script when switching between the phone and computer on Android (#2969)
+- Phone dubbing no longer speaks the wrong words when a quiet reference clip is not recognised (#2969)
+- Refined iOS navigation, voice libraries, grouped creation forms and licence sheets with native controls, accessible text and explicit cancellation (#2969)
+- Phone apps open on an Electron-style Home dashboard with shared artwork, workspace shortcuts, recent audio, saved voices and resumable dubbing projects (#2969)
+- Phone video dubbing uses a supported AAC bitrate and preserves playable audio, rotation and synthetic-audio metadata (#2969)
 - Phone dub playback restores sound after dictation on iOS and keeps the video visible when switching results on Android (#2969)
 - Stereo reference files and dictation inputs keep both channels when converted to mono on iOS (#2969)
 - Android dubbing errors remain visible when worker updates arrive while their receipt is being saved (#3031)
@@ -278,12 +283,6 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
-- Phone dubbing no longer speaks the wrong words when a quiet reference clip is not recognised (#2969)
-- Refined iOS navigation, voice libraries, grouped creation forms and licence sheets with native controls, accessible text and explicit cancellation. (#2969)
-
-- Phone apps open on an Electron-style Home dashboard with shared artwork, workspace shortcuts, recent audio, saved voices and resumable dubbing projects (#2969)
-
-- Phone video dubbing uses a supported AAC bitrate and preserves playable audio, rotation and synthetic-audio metadata (#2969)
 - macOS builds without a Developer ID are now signed ad hoc so the bundle signature is valid, and the shell installer clears quarantine, repairs an invalid signature of older releases, names an unreadable disk image, and tells Intel Mac users the backend needs Apple Silicon (#3033, #2763, #2829, #2681)
 - A "Generation failed" log line now says where it was raised and which error caused it, and the out-of-memory advice mentions picking another GPU, so these reports can be told apart (#2895, #2684, #2666, #2626, #2622, #2580, #3034)
 
@@ -291,11 +290,9 @@ metadata and the backend fallback mirror it.
 
 - Interactive release helper: pick stable or beta, draft or publish, and confirm by typing the tag (`scripts/release.py`) (#3187)
 - Release helper choices are arrow-key menus (#3190)
-- New `mobile-release` workflow builds signed Android and iOS apps and drafts a GitHub prerelease with the APK, AAB and IPAs, (#2969)
 - Desktop request-guard self-tests stay deterministic when app requests arrive during cleanup (#2676)
 
 - New `mobile` workflow builds and tests both phone apps; a contract test fails when their theme or API description drifts from the desktop app (#2965)
-- The `mobile` workflow builds the pinned on-device runtimes for both apps (#2969)
 
 - iOS TestFlight workflow: maintainers can upload a signed iPhone build for internal testers from `main` ([guide](docs/mobile.md#testflight-maintainers)) (#3188)
 - Android Play internal testing workflow: the matching signed Android upload from `main`, and beta versions no longer break the Android build ([guide](docs/mobile.md#play-internal-testing-maintainers)) (#3189)

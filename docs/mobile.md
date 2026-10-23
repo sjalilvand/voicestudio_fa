@@ -17,6 +17,7 @@ choose, per task, to run on **This phone** or **My computer**.
 ## What you can do
 
 - **Speak**: type text, pick a voice and language, generate, play, share.
+  Switching between the phone and computer keeps your script.
 - **Voices**: clone a voice from a recording or an audio file. Voices you
   clone on the phone stay on the phone.
   Stereo recordings use audio from both channels.
