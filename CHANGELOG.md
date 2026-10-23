@@ -15,6 +15,9 @@ metadata and the backend fallback mirror it.
 
 ### Changed
 
+- The sidebar is a slim icon rail beside each section's own pane: Home and Clone get a Saved voices / Recent takes column, Design gets a Saved voices tab, and the full navigation is one click away (#3234)
+- The GitHub button in the top bar is one Star pill with the live count, and the star fills gold on hover (#3234)
+- Stories, Audiobook and Dubbing show their saved projects in a Projects tab beside the controls, so your files are one tap away wherever you work (#3234)
 - Small models now install with as little as 2 GB spare disk; the setup check only warns below 10 GB instead of blocking (#2969)
 - iOS Home shows Electron's contributor avatars, Dub is redesigned around one source card with animated icons, and the iOS bottom dock is icon-only (#2969)
 - Model licence review on iOS and Android opens with a plain summary, rights rows and licence links; the raw terms move under Exact terms (#2969)
@@ -30,6 +33,8 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- Saved dub loads confirm before replacing unsaved work, recheck edits made during loading and stop when you leave the workspace (#3234)
+- Desktop crash-recovery checks keep the process handle after a forced exit, avoiding a race in the macOS test harness (#3234)
 - Android app icons preserve transparent waveform paths from the shared logo, including themed icons (#2969)
 - Speak keeps your script when switching between the phone and computer on Android (#2969)
 - Phone dubbing no longer speaks the wrong words when a quiet reference clip is not recognised (#2969)
