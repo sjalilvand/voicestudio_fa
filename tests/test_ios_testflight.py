@@ -63,3 +63,13 @@ def test_workflow_signs_verifies_and_cleans_up_the_key():
     assert "testFlightInternalTestingOnly bool true" in source
     # Secrets reach only the steps that need them, never the whole job.
     assert "secrets." not in yaml.dump(load_workflow()["jobs"]["testflight"].get("env", {}))
+
+
+def test_clean_testflight_runner_prepares_native_dependencies_before_project_generation():
+    steps = load_workflow()["jobs"]["testflight"]["steps"]
+    commands = [step.get("run", "") for step in steps]
+    native = next(i for i, command in enumerate(commands) if "bash mobile/native/ios/build.sh ios" in command)
+    generate = next(i for i, command in enumerate(commands) if "xcodegen generate" in command)
+    archive = next(i for i, command in enumerate(commands) if "-archivePath" in command)
+    assert native < generate < archive
+    assert "if" not in steps[native]  # A cache hit still needs generated headers restored.

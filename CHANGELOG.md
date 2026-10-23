@@ -29,6 +29,8 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- TestFlight builds prepare the on-device inference runtimes before archiving the iPhone app (#2969)
+
 - Phone models can be reaccepted offline without downloading again, and Android dubbing preserves short audio gaps and overlaps (#2969)
 
 - Bug reports no longer risk freezing the app while looking for your tools: the Node-version folder scan now runs off the main thread (#3180)

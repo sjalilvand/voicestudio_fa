@@ -97,7 +97,9 @@ tests both apps.
 ## TestFlight (maintainers)
 
 The `iOS TestFlight` workflow signs the iPhone app and uploads it to TestFlight
-for the team's internal testers. It is dispatched by hand from `main` and never
+for the team's internal testers. It prepares the pinned native inference runtimes
+before generating and archiving the Xcode project, including on a clean runner.
+It is dispatched by hand from `main` and never
 submits the app for App Store review. One-time setup in the Apple Developer team:
 
 1. Register the App ID `sh.voicestudio.mobile` (Certificates, Identifiers &
