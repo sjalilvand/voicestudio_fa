@@ -1,5 +1,6 @@
 import importlib.util
 import plistlib
+import sys
 from pathlib import Path
 
 import pytest
@@ -109,6 +110,18 @@ def test_app_icon_is_an_opaque_1024_png():
     width, height = int.from_bytes(png[16:20], "big"), int.from_bytes(png[20:24], "big")
     assert (width, height) == (1024, 1024)
     assert png[25] == 2, "App Store icons must be RGB without an alpha channel"
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="Brand renderer uses macOS CoreGraphics")
+def test_generated_and_bundled_catalogs_have_one_app_icon(tmp_path):
+    generated = tmp_path / "Brand.xcassets"
+    # Simulate an incremental build made before the App Store icon was bundled.
+    (generated / "AppIcon.appiconset").mkdir(parents=True)
+    prepare_resources.prepare_brand_assets(generated)
+    icons = list((IOS / "Resources").rglob("AppIcon.appiconset"))
+    icons += list(generated.rglob("AppIcon.appiconset"))
+    assert len(icons) == 1, "Duplicate AppIcon catalogs make actool's icon selection ambiguous"
+    assert (generated / "LaunchLogo.imageset" / "logo-3x.png").is_file()
 
 
 def test_mobile_ci_builds_ios_with_the_upload_toolchain():

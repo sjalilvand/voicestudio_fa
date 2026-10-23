@@ -126,6 +126,8 @@ The workflow builds on the `macos-26` runner because App Store Connect accepts
 only the current iOS SDK; the `mobile` workflow's iOS job uses the same runner.
 The app icon is `Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png`, a
 1024×1024 opaque PNG rendered from `mobile/ios/VoiceStudio/AppIcon.svg`.
+Generated `Brand.xcassets` supplies launch and Home artwork; it removes the former
+generated app icon so incremental builds also bundle exactly one icon catalog.
 
 The version is the root `package.json` version without any `-beta.N` suffix
 (App Store Connect accepts only `X.Y.Z`); the build number is the workflow run

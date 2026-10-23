@@ -1,4 +1,4 @@
-// Build-time rendering of the repository logo. No binary artwork is maintained in iOS.
+// Build-time launch artwork. The App Store icon lives in the app's bundled catalog.
 import CoreGraphics
 import Foundation
 import ImageIO
@@ -46,8 +46,8 @@ func png(_ size: Int, at url: URL, background: String? = nil) throws {
 let info: [String: Any] = ["author": "xcode", "version": 1]
 try json(["info": info], at: output)
 let icons = output.appendingPathComponent("AppIcon.appiconset")
-try json(["info": info, "images": [["filename": "AppIcon.png", "idiom": "universal", "platform": "ios", "size": "1024x1024"]]], at: icons)
-try png(1024, at: icons.appendingPathComponent("AppIcon.png"), background: colors["dark"]!["canvas"]!)
+// Remove the former generated icon too, so incremental builds do not retain two sets.
+if FileManager.default.fileExists(atPath: icons.path) { try FileManager.default.removeItem(at: icons) }
 let launch = output.appendingPathComponent("LaunchLogo.imageset")
 try json(["info": info, "images": (1...3).map { ["filename": "logo-\($0)x.png", "idiom": "universal", "scale": "\($0)x"] }], at: launch)
 for scale in 1...3 { try png(128 * scale, at: launch.appendingPathComponent("logo-\(scale)x.png")) }
