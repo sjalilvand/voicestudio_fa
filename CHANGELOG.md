@@ -30,6 +30,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- Android app icons preserve transparent waveform paths from the shared logo, including themed icons (#2969)
 - Speak keeps your script when switching between the phone and computer on Android (#2969)
 - Phone dubbing no longer speaks the wrong words when a quiet reference clip is not recognised (#2969)
 - Refined iOS navigation, voice libraries, grouped creation forms and licence sheets with native controls, accessible text and explicit cancellation (#2969)

@@ -43,7 +43,11 @@ def generate(repository, output):
                 value = path.attrib.get(source)
                 if not value:
                     continue
-                if monochrome:
+                if value == 'none':
+                    # Android vectors need a color, and themed icons must keep
+                    # deliberately unpainted SVG paths transparent too.
+                    node.attrib.update(android(**{target: '#00000000'}))
+                elif monochrome:
                     node.attrib.update(android(**{target: '#FFFFFFFF'}))
                 elif value.startswith('url(#'):
                     gradient = gradients[value[5:-1]]
