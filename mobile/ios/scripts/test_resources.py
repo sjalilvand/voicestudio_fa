@@ -26,7 +26,8 @@ class BrandResources(unittest.TestCase):
         cls.directory.cleanup()
 
     def test_icon_is_opaque_1024_and_registered(self):
-        icon = self.assets / "AppIcon.appiconset"
+        icon = resources.IOS / "VoiceStudio/Resources/Assets.xcassets/AppIcon.appiconset"
+        self.assertFalse((self.assets / "AppIcon.appiconset").exists())
         entry = json.loads((icon / "Contents.json").read_text())["images"][0]
         data = (icon / entry["filename"]).read_bytes()
         self.assertEqual(data[:8], b"\x89PNG\r\n\x1a\n")
