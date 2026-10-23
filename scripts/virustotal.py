@@ -20,6 +20,10 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 API = "https://www.virustotal.com/api/v3"
+API_HOSTS = ("www.virustotal.com",)
+# Files over DIRECT_LIMIT go to a one-use URL VirusTotal hands out, and that URL is
+# on its big-file host. Only the file POST may use it; API calls stay on www.
+UPLOAD_HOSTS = ("www.virustotal.com", "bigfiles.virustotal.com")
 DIRECT_LIMIT = 32 * 1024 * 1024
 MAX_SIZE = 650 * 1024 * 1024
 REQUEST_INTERVAL = 16  # Public API: at most four requests per minute.
@@ -35,13 +39,36 @@ class NoRedirects(HTTPRedirectHandler):
         return None
 
 
-def validate_url(url: str) -> str:
-    parsed = urlsplit(url)
-    if (parsed.scheme != "https" or parsed.hostname != "www.virustotal.com"
-            or parsed.port not in (None, 443) or parsed.username or parsed.password
-            or parsed.fragment):
-        raise ScanError("VirusTotal returned an unexpected upload URL; refusing to send the file/key.")
+def validate_url(url: str, *, upload: bool = False) -> str:
+    try:
+        parsed = urlsplit(url)
+        allowed = (parsed.scheme == "https"
+                   and parsed.hostname in (UPLOAD_HOSTS if upload else API_HOSTS)
+                   and parsed.port in (None, 443) and not parsed.username
+                   and not parsed.password and not parsed.fragment)
+    except ValueError:
+        raise ScanError("VirusTotal returned a malformed upload URL; refusing to send the file/key.") from None
+    if not allowed:
+        # Report only the origin, never the one-use upload token/path/query.
+        scheme = re.sub(r"[^A-Za-z0-9.-]", "?", parsed.scheme or "missing")[:16]
+        host = re.sub(r"[^A-Za-z0-9.:-]", "?", parsed.hostname or "missing")[:255]
+        origin = f"{scheme}://{host}"
+        raise ScanError(f"VirusTotal returned an unexpected upload origin ({origin}); refusing to send the file/key.")
     return url
+
+
+def normalize_upload_url(url: str) -> str:
+    # The official /files/upload_url example uses http://www.virustotal.com/
+    # _ah/upload/… . Upgrade that known legacy form locally, before any request.
+    try:
+        parsed = urlsplit(url)
+        if (parsed.scheme == "http" and parsed.hostname == "www.virustotal.com"
+                and parsed.port in (None, 80) and not parsed.username
+                and not parsed.password and parsed.path.startswith("/_ah/upload/")):
+            url = parsed._replace(scheme="https", netloc="www.virustotal.com").geturl()
+    except ValueError:
+        raise ScanError("VirusTotal returned a malformed upload URL; refusing to send the file/key.") from None
+    return validate_url(url, upload=True)
 
 
 def multipart(path: Path, boundary: str):
@@ -69,7 +96,7 @@ class Client:
 
     def request(self, method: str, url: str, *, file: Path | None = None,
                 deadline: float | None = None) -> dict:
-        validate_url(url)
+        validate_url(url, upload=file is not None)
         delay = 0
         if self.last_request is not None:
             delay = REQUEST_INTERVAL - (time.monotonic() - self.last_request)
@@ -112,6 +139,7 @@ class Client:
             url = self.request("GET", f"{API}/files/upload_url")["data"]
             if not isinstance(url, str):
                 raise ScanError("VirusTotal returned an invalid upload URL.")
+            url = normalize_upload_url(url)
         result = self.request("POST", url, file=path)
         analysis_id = result.get("data", {}).get("id")
         if not isinstance(analysis_id, str) or not analysis_id:

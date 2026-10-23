@@ -37,6 +37,8 @@ metadata and the backend fallback mirror it.
 ### Fixed
 
 - Saved dub loads confirm before replacing unsaved work, recheck edits made during loading and stop when you leave the workspace (#3234)
+- Large VirusTotal uploads upgrade the documented legacy upload URL to HTTPS before sending files or credentials (#3238)
+
 - iPhone: tapping Play right after generating speech starts playback instead of doing nothing (#3233)
 
 - Android app icons preserve transparent waveform paths from the shared logo, including themed icons (#2969)
