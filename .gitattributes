@@ -6,3 +6,7 @@ mobile/android/app/src/main/assets/licenses/*.txt text eol=lf
 
 # Windows batch files break goto/labels with LF endings.
 *.bat text eol=crlf
+
+# Repository-only moderation tests contain copied scam commands. Keep them in
+# Git checkouts/CI, but do not distribute attack examples in source archives.
+/tests/test_scam_guard.py export-ignore

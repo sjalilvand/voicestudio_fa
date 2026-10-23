@@ -21,7 +21,7 @@ export function ContextSidebar() {
       collapsed={!libraryOpen}
       onCollapsedChange={(collapsed) => setWorkspace({ libraryOpen: !collapsed })}
     >
-      <VoicesSidebar key={libraryTab} initialTab={libraryTab} />
+      <VoicesSidebar initialTab={libraryTab} />
     </SecondarySidebar>
   );
 }

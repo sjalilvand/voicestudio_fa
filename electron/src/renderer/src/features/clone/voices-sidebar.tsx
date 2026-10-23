@@ -654,6 +654,8 @@ export function VoicesSidebar({
 }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<'voices' | 'takes'>(initialTab);
+  // The tab can also be chosen from outside (command palette, shortcuts) without remounting the list.
+  useEffect(() => setTab(initialTab), [initialTab]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   return (

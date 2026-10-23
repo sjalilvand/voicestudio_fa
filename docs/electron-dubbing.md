@@ -42,7 +42,7 @@ dialogue with a retryable error state.
 
 Long projects virtualize transcript rows, so only the visible editors are mounted.
 
-The Dubbing pane has a Projects tab beside its controls that lists saved dub projects, newest first. One tap opens a project in place (it waits while a dub is running); the Projects workspace remains the place to save, rename and delete.
+The Dubbing pane has a Projects tab beside its controls that lists saved dub projects, newest first. Selecting a project and confirming opens it in place (it waits while a dub is running); the Projects workspace remains the place to save, rename and delete.
 Timeline waveform peaks and onsets are computed once by the backend and cached as a
 small JSON payload; Chromium never decodes the full separated-vocals WAV to draw the
 timeline. Video previews are written atomically with MP4 fast-start metadata and are
