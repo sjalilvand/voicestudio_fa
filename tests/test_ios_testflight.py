@@ -83,6 +83,8 @@ def test_app_store_validation_requirements():
     assert load_workflow()["jobs"]["testflight"]["runs-on"] == "macos-26"
     info = plistlib.loads((IOS / "Info.plist").read_bytes())
     assert info["CFBundleIconName"] == "AppIcon"
+    # Only OS-provided HTTPS and hashing: exempt, so TestFlight skips the per-build question.
+    assert info["ITSAppUsesNonExemptEncryption"] is False
     assert set(info["UISupportedInterfaceOrientations~ipad"]) == {
         "UIInterfaceOrientationPortrait",
         "UIInterfaceOrientationPortraitUpsideDown",
