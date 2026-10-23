@@ -32,9 +32,12 @@ const mocks = vi.hoisted(() => ({
   activeWork: false,
 }));
 
-vi.mock('@/components/bridge', () => ({
-  appVersion: () => '0.5.2',
-  getBridge: () => ({
+// One bridge object, like window.voicestudio. A fresh object per call changed the
+// component's `updates` dependency on every render, re-running its getState()
+// effect and letting a stale answer overwrite the state under test (the Beta
+// switch test timed out in ~1 of 5 runs on a loaded machine).
+vi.mock('@/components/bridge', () => {
+  const bridge = {
     updates: {
       getState: mocks.getState,
       check: mocks.check,
@@ -50,8 +53,9 @@ vi.mock('@/components/bridge', () => ({
         };
       },
     },
-  }),
-}));
+  };
+  return { appVersion: () => '0.5.2', getBridge: () => bridge };
+});
 
 vi.mock('@/features/dub/dub-session', () => ({
   dubSession: { state: { phase: 'idle', recovery: null, batchProgress: null } },
