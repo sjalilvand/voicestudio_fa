@@ -364,8 +364,14 @@ Release plan
             "The version files, uv.lock and CHANGELOG.md were restored; nothing was pushed."
         )
     sh("git", "add", *RELEASE_FILES)
-    sh("git", "commit", "-m", f"chore(release): {tag}")
-    sh("git", "push", "origin", "main")
+    # Version-bump commits stay on main when a tag is deleted or a build fails, so
+    # main may already hold this version; then there is nothing to commit and the
+    # release only needs the tag.
+    if sh("git", "status", "--porcelain", "--untracked-files=no", capture=True):
+        sh("git", "commit", "-m", f"chore(release): {tag}")
+        sh("git", "push", "origin", "main")
+    else:
+        print(f"main already has {version} and its changelog; tagging it as is.")
     sh("git", "tag", tag)
     sh("git", "push", "origin", tag)
     if mode == "publish":

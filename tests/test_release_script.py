@@ -114,7 +114,7 @@ def test_generated_changelog_passes_the_release_notes_extraction(release, versio
     assert section and section[1].strip()
 
 
-def _drive(release, monkeypatch, answers, *, dry_run, secrets_missing=(), branch="main", fail_on=None, calls=None, guessed=False):
+def _drive(release, monkeypatch, answers, *, dry_run, secrets_missing=(), branch="main", fail_on=None, calls=None, guessed=False, clean=False):
     """Run release() with scripted prompts and every side effect recorded, not run."""
     import argparse
 
@@ -130,6 +130,8 @@ def _drive(release, monkeypatch, answers, *, dry_run, secrets_missing=(), branch
             return branch
         if cmd[:2] == ("git", "rev-list"):
             return "34"
+        if cmd[:2] == ("git", "status"):
+            return "" if clean else " M package.json"
         calls.append(cmd)
         if fail_on and fail_on in cmd:
             import subprocess
@@ -318,3 +320,21 @@ def test_signing_names_match_what_the_release_workflow_reads(release):
     for names in release.SIGNING_ENV_NAMES.values():
         for name in names:
             assert f"secrets.{name}" in workflow, f"{name} is not used by electron-release.yml"
+
+
+def test_a_version_already_on_main_is_tagged_without_an_empty_commit(release, monkeypatch, capsys):
+    """main keeps the bump commits of deleted tags, so the bump can change nothing;
+    `git commit` then exits 1 ("nothing to commit") and used to crash the release."""
+    tag = "v0.5.7-beta.1"
+    calls = _drive(release, monkeypatch, ["beta", "", "draft", tag], dry_run=False, clean=True)
+    assert not any(c[:2] == ("git", "commit") for c in calls)
+    assert ("git", "push", "origin", "main") not in calls
+    assert ("git", "tag", tag) in calls and ("git", "push", "origin", tag) in calls
+    assert "already has 0.5.7-beta.1" in capsys.readouterr().out
+
+
+def test_a_changed_tree_is_still_committed_and_pushed(release, monkeypatch):
+    tag = "v0.5.7-beta.1"
+    calls = _drive(release, monkeypatch, ["beta", "", "draft", tag], dry_run=False)
+    assert ("git", "commit", "-m", f"chore(release): {tag}") in calls
+    assert calls.index(("git", "push", "origin", "main")) < calls.index(("git", "tag", tag))
