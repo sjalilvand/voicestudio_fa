@@ -210,7 +210,7 @@ def framework(name, library, headers, output, platform_name):
         shutil.copy2(header, target / 'Headers' / header.name)
     (target / 'Modules').mkdir(exist_ok=True)
     (target / 'Modules/module.modulemap').write_text('framework module ' + name + ' { umbrella "../Headers" export * }\n')
-    (target / 'Info.plist').write_bytes(plistlib.dumps({'CFBundleIdentifier': 'com.voicestudio.native.' + name, 'CFBundleName': name, 'CFBundleExecutable': name, 'CFBundlePackageType': 'FMWK', 'CFBundleVersion': '1', 'MinimumOSVersion': '17.0', 'CFBundleSupportedPlatforms': [platform_name]}))
+    (target / 'Info.plist').write_bytes(plistlib.dumps({'CFBundleIdentifier': 'com.voicestudio.native.' + name, 'CFBundleName': name, 'CFBundleExecutable': name, 'CFBundlePackageType': 'FMWK', 'CFBundleShortVersionString': '1.0', 'CFBundleVersion': '1', 'MinimumOSVersion': '17.0', 'CFBundleSupportedPlatforms': [platform_name]}))
     run('install_name_tool', '-id', '@rpath/' + name + '.framework/' + name, target / name)
     return target
 

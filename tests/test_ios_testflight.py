@@ -163,3 +163,24 @@ def test_native_runtime_cache_survives_later_app_or_ui_failures(filename):
     assert "if" not in steps[build]  # Cache hits still need generated headers restored.
     assert save["with"]["path"] == restore["with"]["path"]
     assert save["with"]["key"] == "${{ steps." + restore["id"] + ".outputs.cache-primary-key }}"
+
+
+def test_native_frameworks_carry_app_store_version_keys(tmp_path, monkeypatch):
+    # Upload run 40004846857 was rejected: OmniVoice.framework lacked CFBundleShortVersionString.
+    spec = importlib.util.spec_from_file_location("native_ios_build", ROOT / "mobile/native/ios/build.py")
+    build = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(build)
+    monkeypatch.setattr(build, "run", lambda *args, **kwargs: None)
+    library = tmp_path / "libomnivoice.dylib"
+    library.write_bytes(b"")
+    header = tmp_path / "omnivoice.h"
+    header.write_text("")
+    target = build.framework("OmniVoice", library, [header], tmp_path / "out", "iPhoneOS")
+    info = plistlib.loads((target / "Info.plist").read_bytes())
+    assert info["CFBundleShortVersionString"] and info["CFBundleVersion"]
+
+
+def test_upload_checks_every_embedded_framework_version():
+    script = next(s["run"] for s in load_workflow()["jobs"]["testflight"]["steps"] if s.get("name") == "Verify archive signature and version")
+    assert 'Frameworks/*.framework/Info.plist' in script
+    assert "CFBundleShortVersionString CFBundleVersion" in script
