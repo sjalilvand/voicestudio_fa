@@ -100,6 +100,10 @@ only the current iOS SDK; the `mobile` workflow's iOS job uses the same runner.
 The app icon is `Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png`, a
 1024×1024 opaque PNG rendered from `mobile/ios/VoiceStudio/AppIcon.svg`.
 
+`Info.plist` declares `ITSAppUsesNonExemptEncryption` as `NO`: the app uses
+only the system's HTTPS and hashing, which are exempt, so builds skip the
+export compliance question. Revisit it if the app ever adds its own encryption.
+
 The version is the root `package.json` version without any `-beta.N` suffix
 (App Store Connect accepts only `X.Y.Z`); the build number is the workflow run
 number and attempt, so every upload is new.
