@@ -65,6 +65,20 @@ def test_every_package_leg_reports_and_mac_check_ignores_allow_unsigned():
     assert steps["Save the signing report"]["with"]["name"] == "electron-signing-${{ matrix.platform }}-${{ matrix.arch }}"
 
 
+def test_mac_package_discovers_the_imported_developer_id(tmp_path):
+    # electron-builder's findIdentity returns null without a lookup when discovery is
+    # off and no identity is named, so a supplied certificate was silently ignored.
+    import os
+    import subprocess
+    package = next(s for s in load_workflow()["jobs"]["package"]["steps"] if s.get("name") == "Package without publishing")
+    script = package["run"].split("bun x electron-builder")[0].replace("${{ matrix.platform }}", "darwin")
+    for link, expected in [("base64-p12", "true"), ("", "false")]:
+        env = dict(os.environ, CSC_LINK=link, CSC_KEY_PASSWORD="x", CSC_IDENTITY_AUTO_DISCOVERY="false", PUBLISH="false")
+        out = subprocess.run(["bash", "-e", "-c", script + 'echo "$CSC_IDENTITY_AUTO_DISCOVERY"'],
+                             env=env, capture_output=True, text=True, check=True).stdout.strip()
+        assert out == expected, link
+
+
 def test_release_notes_are_built_from_the_reports():
     steps = load_workflow()["jobs"]["release"]["steps"]
     describe = next(step for step in steps if step.get("name") == "Describe installer signing per platform")

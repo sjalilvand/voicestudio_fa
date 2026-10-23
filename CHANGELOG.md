@@ -106,7 +106,7 @@ metadata and the backend fallback mirror it.
 ### CI
 
 - Release notes list everyone who contributed since the last stable release automatically, instead of only the people thanked by hand (#3242)
-- Release notes list each platform's installer signing as measured on the build, and a macOS build that would open as "damaged" can no longer be released (#3241)
+- Release notes list each platform's installer signing as measured on the build, and a macOS build that would open as "damaged" can no longer be released, and macOS releases are signed with the Developer ID again (#3241, #3243)
 - The owner can let named maintainers publish releases while Windows installers are still unsigned (#3236)
 - Android release and Play builds share an increasing version code to prevent reused or decreasing build numbers (#2969)
 - Phone build resources keep notice hashes and localized text intact on Windows (#2969)
