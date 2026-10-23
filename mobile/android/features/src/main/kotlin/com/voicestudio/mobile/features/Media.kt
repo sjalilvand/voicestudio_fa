@@ -142,9 +142,13 @@ val LocalHostPlayerFactory=staticCompositionLocalOf<(Context,VoiceStudioApi)->Pl
     }
 }
 
+val LocalAudioPlayerFactory=staticCompositionLocalOf<(Context)->Player> {
+    { context -> ExoPlayer.Builder(context).build() }
+}
 @Composable fun LocalAudioPlayer(file: File, failure: (Throwable)->Unit) {
     val context=LocalContext.current
-    val player=remember(file) {ExoPlayer.Builder(context).build()}
+    val factory=LocalAudioPlayerFactory.current
+    val player=remember(file) {factory(context)}
     var playing by remember(file) {mutableStateOf(false)}
     var position by remember(file) {mutableLongStateOf(0)}
     var duration by remember(file) {mutableLongStateOf(0)}
@@ -162,7 +166,7 @@ val LocalHostPlayerFactory=staticCompositionLocalOf<(Context,VoiceStudioApi)->Pl
     Group {
         Column(Modifier.fillMaxWidth().padding(VSTheme.inset)) {
             if(file.extension=="mp4") Box(Modifier.fillMaxWidth().heightIn(max=(com.voicestudio.mobile.designsystem.VSTokens.SPACING_GAP*25).dp),contentAlignment=Alignment.Center) {
-                androidx.compose.ui.viewinterop.AndroidView(factory={android.view.SurfaceView(it).also(player::setVideoSurfaceView)},modifier=Modifier.aspectRatio(videoRatio,matchHeightConstraintsFirst=true))
+                androidx.compose.ui.viewinterop.AndroidView(factory={android.view.SurfaceView(it)},update={player.setVideoSurfaceView(it)},modifier=Modifier.aspectRatio(videoRatio,matchHeightConstraintsFirst=true))
             }
             IconAction(if(playing) "player.pause" else "player.play",if(playing) VSIcons.Pause else Icons.Default.PlayArrow) {
                 if(playing) player.pause() else {if(player.playbackState==Player.STATE_ENDED) player.seekTo(0);player.play()}

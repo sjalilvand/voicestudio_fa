@@ -21,6 +21,8 @@ choose, per task, to run on **This phone** or **My computer**.
   clone on the phone stay on the phone.
 - **Dub**: pick a video or audio file and target languages; the phone
   transcribes, translates and re-voices it in the original speaker's voice.
+  Play completed dubs directly in the app, including after using Dictate;
+  switching between video results keeps both picture and sound.
 - **Dictate**: tap the mic and watch the transcript appear live.
 - **Models**: download, update or delete the on-device models.
 

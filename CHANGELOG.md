@@ -29,6 +29,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- Phone dub playback restores sound after dictation on iOS and keeps the video visible when switching results on Android (#2969)
 - Android dubbing errors remain visible when worker updates arrive while their receipt is being saved (#3031)
 
 - iOS reserves storage across simultaneous model downloads and keeps saved speech paired with the submitted text (#2969)

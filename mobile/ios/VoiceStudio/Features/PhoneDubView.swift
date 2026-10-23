@@ -133,10 +133,20 @@ struct PhoneDubView: View {
         Task { await model.performPhone { try await model.phone.dubStore?.delete(record.id); await model.phone.refresh() } }
     }
 }
-private struct PhoneDubPlayback: View {
+struct PhoneDubPlayback: View {
+    @Environment(AppModel.self) private var model
     let url: URL
     @State private var player: AVPlayer?
+    @MainActor static func startPlayback(url: URL) throws -> AVPlayer {
+        try activatePlaybackSession()
+        let player = AVPlayer(url: url)
+        player.play()
+        return player
+    }
     var body: some View {
-        VideoPlayer(player: player).onAppear { player = AVPlayer(url: url); player?.play() }.onDisappear { player?.pause(); player = nil }
+        VideoPlayer(player: player).onAppear {
+            do { player = try Self.startPlayback(url: url) }
+            catch { model.error = ClientError("mobile.errors.audio") }
+        }.onDisappear { player?.pause(); player = nil }
     }
 }

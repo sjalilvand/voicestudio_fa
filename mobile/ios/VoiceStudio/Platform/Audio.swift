@@ -5,6 +5,11 @@ import Observation
 import VoiceStudioKit
 import UniformTypeIdentifiers
 
+@MainActor func activatePlaybackSession() throws {
+    try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+    try AVAudioSession.sharedInstance().setActive(true)
+}
+
 @MainActor @Observable final class AudioPlayer {
     private var player: AVPlayer?
     private var ticker: Task<Void, Never>?
@@ -64,8 +69,7 @@ import UniformTypeIdentifiers
     func play() {
         guard let player else { return }
         do {
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
-            try AVAudioSession.sharedInstance().setActive(true)
+            try activatePlaybackSession()
         } catch { self.error = ClientError("mobile.errors.audio"); return }
         if duration > 0 && position >= duration { seek(0) }
         player.play(); playing = true
