@@ -6,6 +6,8 @@ import json
 import re
 from pathlib import Path
 
+from packaging.version import Version
+
 
 ROOT = Path(__file__).resolve().parents[1]
 CURRENT_VERSION = json.loads((ROOT / "package.json").read_text())["version"]
@@ -26,14 +28,17 @@ def test_current_version_is_in_lockstep_everywhere() -> None:
     lock_contracts = {"uv.lock": r'name = "omnivoice"\s+version = "([^"]+)"'}
     for path, pattern in lock_contracts.items():
         match = re.search(pattern, (ROOT / path).read_text())
-        assert match and match.group(1) == CURRENT_VERSION, path
+        # uv writes the PEP 440 form of a beta (0.5.9b1 for 0.5.9-beta.1).
+        assert match and Version(match.group(1)) == Version(CURRENT_VERSION), path
 
 
 def test_visible_brand_surfaces_say_voicestudio() -> None:
     visible_files = ("electron/build/Info.plist", "electron/src/renderer/index.html")
+    product_name = json.loads((ROOT / "config/app.json").read_text())["productName"]
+    assert product_name == "VoiceStudio"
     for path in visible_files:
         text = (ROOT / path).read_text()
-        assert "VoiceStudio" in text, path
+        assert "__APP_PRODUCT_NAME__" in text, path
         assert "OmniVoice needs" not in text, path
         assert "OmniVoice may" not in text, path
         assert "OmniVoice Gallery" not in text, path
@@ -93,7 +98,8 @@ def test_compatibility_identifiers_stay_stable() -> None:
     package = json.loads((ROOT / "package.json").read_text())
     assert package["name"] == "omnivoice-studio-monorepo"
     assert 'name = "omnivoice"' in (ROOT / "pyproject.toml").read_text()
-    assert "com.voicestudio.desktop" in (ROOT / "electron/electron-builder.config.mjs").read_text()
+    app_config = json.loads((ROOT / "config/app.json").read_text())
+    assert app_config["appId"] == "com.voicestudio.desktop"
 
 
 def test_active_source_launch_is_electron_and_web_ports_clean_quietly() -> None:
@@ -101,7 +107,7 @@ def test_active_source_launch_is_electron_and_web_ports_clean_quietly() -> None:
     assert scripts["dev"] == "bun run --cwd electron dev"
     assert not any("tauri" in name for name in scripts)
     command = scripts["predev:web"]
-    assert "bun scripts/clear-dev-ports.mjs 3900 3901" in command
+    assert command.endswith("bun scripts/clear-dev-ports.mjs")
     assert "|| true" not in command
 
 

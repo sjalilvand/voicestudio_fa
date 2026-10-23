@@ -38,6 +38,7 @@ async function fixture() {
   const bundle = join(root, 'bundle');
   const project = join(root, 'runtime');
   await mkdir(join(bundle, 'backend'), { recursive: true });
+  await mkdir(join(bundle, 'config'), { recursive: true });
   await mkdir(join(bundle, 'frontend', 'dist'), { recursive: true });
   await mkdir(join(bundle, 'omnivoice'));
   for (const file of [
@@ -46,6 +47,7 @@ async function fixture() {
     'README.md',
     'LICENSE',
     'backend/main.py',
+    'config/app.json',
     'frontend/dist/index.html',
     'omnivoice/__init__.py',
   ]) {
@@ -82,21 +84,77 @@ afterEach(async () => {
 });
 
 describe('packaged runtime setup', () => {
-  it.each([0, 1])('verifies the runtime when .pth repair attempt %i fails', async (failedAttempt) => {
+  it.each(['win32', 'linux'] as const)(
+    'does not import torch for the CUDA compatibility probe on a %s CPU runtime',
+    async (platform) => {
+      forcePlatform(platform);
+      vi.spyOn(process, 'arch', 'get').mockReturnValue('x64');
+      vi.stubEnv('OMNIVOICE_TORCH_VARIANT', 'cpu');
+      const { bundle, project } = await fixture();
+      const sitePackages = join(project, '.venv', 'Lib', 'site-packages');
+      const run = vi.fn(async (_command: string, args: string[]) => {
+        if (args[0] === 'sync') await interpreter(project);
+        if (args[1]?.includes('VOICESTUDIO_CUDNN8_PROBE=')) {
+          if (args[1].includes('import torch')) {
+            throw new Error('Runtime setup exited with code 3221225477');
+          }
+          return `VOICESTUDIO_CUDNN8_PROBE=${JSON.stringify({ device: 'none', sitePackages })}\n`;
+        }
+        return undefined;
+      });
+      await installRuntime(bundle, project, 'uv', run, new AbortController().signal, undefined, 'global');
+      expect(run.mock.calls.some(([, args]) => args.includes(CUDNN8_COMPAT_PIN))).toBe(false);
+      expect(run.mock.calls.some(([, args]) => args[1] === RUNTIME_IMPORT_PROBE)).toBe(true);
+      expect(await runtimeReady(bundle, project)).toBe(true);
+    },
+  );
+  it.each([
+    ['after printing its result', true],
+    ['before printing anything', false],
+  ])('keeps setting up when the CUDA compatibility probe crashes natively %s', async (_name, printed) => {
+    forcePlatform('win32');
+    vi.spyOn(process, 'arch', 'get').mockReturnValue('x64');
+    vi.stubEnv('OMNIVOICE_TORCH_VARIANT', 'cuda');
     const { bundle, project } = await fixture();
-    let attempt = 0;
-    const heal = vi.spyOn(pthAscii, 'asciiSafePthFiles').mockImplementation(async () => {
-      if (attempt++ === failedAttempt) throw Object.assign(new Error('file locked'), { code: 'EPERM' });
-      return [];
+    const sitePackages = join(project, '.venv', 'Lib', 'site-packages');
+    const run = vi.fn(async (_command: string, args: string[]) => {
+      if (args[0] === 'sync') await interpreter(project);
+      if (args[1]?.includes('VOICESTUDIO_CUDNN8_PROBE=')) {
+        throw Object.assign(new Error('Runtime setup exited with code 3221225477'), {
+          stdout: printed
+            ? `VOICESTUDIO_CUDNN8_PROBE=${JSON.stringify({ device: 'none', sitePackages })}\n`
+            : '',
+        });
+      }
+      return undefined;
     });
-    const run = vi.fn(async () => {});
-
-    await installRuntime(bundle, project, 'uv', run, new AbortController().signal);
-
-    expect(heal).toHaveBeenCalledTimes(2);
-    expect(run).toHaveBeenCalledWith(runtimePython(project), ['-c', RUNTIME_IMPORT_PROBE], project);
-    expect(await readFile(join(project, '.runtime-ready'), 'utf8')).not.toBe('');
+    await installRuntime(bundle, project, 'uv', run, new AbortController().signal, undefined, 'global');
+    expect(run.mock.calls.some(([, args]) => args[1] === RUNTIME_IMPORT_PROBE)).toBe(true);
+    expect(await runtimeReady(bundle, project)).toBe(true);
   });
+  it.each([0, 1])(
+    'verifies the runtime when .pth repair attempt %i fails',
+    async (failedAttempt) => {
+      const { bundle, project } = await fixture();
+      let attempt = 0;
+      const heal = vi.spyOn(pthAscii, 'asciiSafePthFiles').mockImplementation(async () => {
+        if (attempt++ === failedAttempt)
+          throw Object.assign(new Error('file locked'), { code: 'EPERM' });
+        return [];
+      });
+      const run = vi.fn(async () => {});
+
+      await installRuntime(bundle, project, 'uv', run, new AbortController().signal);
+
+      expect(heal).toHaveBeenCalledTimes(2);
+      expect(run).toHaveBeenCalledWith(
+        runtimePython(project),
+        ['-c', RUNTIME_IMPORT_PROBE],
+        project,
+      );
+      expect(await readFile(join(project, '.runtime-ready'), 'utf8')).not.toBe('');
+    },
+  );
 
   it('does not mark a runtime ready when verification fails after a .pth repair error', async () => {
     const { bundle, project } = await fixture();
@@ -105,9 +163,12 @@ describe('packaged runtime setup', () => {
       if (args.includes(RUNTIME_IMPORT_PROBE)) throw new Error('Python import failed');
     });
 
-    await expect(installRuntime(bundle, project, 'uv', run, new AbortController().signal))
-      .rejects.toThrow('Python import failed');
-    await expect(readFile(join(project, '.runtime-ready'))).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(
+      installRuntime(bundle, project, 'uv', run, new AbortController().signal),
+    ).rejects.toThrow('Python import failed');
+    await expect(readFile(join(project, '.runtime-ready'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
   });
 
   it('rejects Intel Macs before creating files or downloading dependencies', async () => {
@@ -228,6 +289,8 @@ describe('packaged runtime setup', () => {
 
     const syncEnv = run.mock.calls[0]?.[3];
     expect(syncEnv?.UV_CACHE_DIR).toBe(join(project, '..', '.uv-cache'));
+    for (const key of ['TEMP', 'TMP', 'TMPDIR'])
+      expect(syncEnv?.[key]).toBe(join(project, '..', '.tmp'));
     expect(syncEnv?.UV_PYTHON_INSTALL_DIR).toBe(join(project, '..', '.python'));
   });
   it('uses managed Python for new runtime setup and verifies native tokenizer imports', async () => {
@@ -480,6 +543,7 @@ describe('packaged runtime setup', () => {
     // a staged copy would only ever be a stale second source of truth (#2599).
     expect(existsSync(join(project, 'frontend'))).toBe(false);
     expect(existsSync(join(project, 'backend', 'main.py'))).toBe(true);
+    expect(await readFile(join(project, 'config', 'app.json'), 'utf8')).toBe('config/app.json');
   });
   it('replaces obsolete bundled modules without removing the interpreter or user files', async () => {
     const { bundle, project } = await fixture();
@@ -493,6 +557,26 @@ describe('packaged runtime setup', () => {
     await expect(readFile(join(project, 'backend', 'obsolete.py'))).rejects.toThrow();
     expect(await readFile(runtimePython(project), 'utf8')).toBe('interpreter');
     expect(await readFile(join(project, 'personal.txt'), 'utf8')).toBe('preserve');
+  });
+  it('falls back to an in-place copy when Windows keeps a folder locked (#3010, #2669)', async () => {
+    const { bundle, project } = await fixture();
+    await stageRuntimeSources(bundle, project);
+    await writeFile(join(project, 'backend', 'obsolete.py'), 'old');
+    await writeFile(join(bundle, 'backend', 'main.py'), 'new');
+    const locked = async () => {
+      throw Object.assign(new Error('EPERM: operation not permitted, rename'), { code: 'EPERM' });
+    };
+    await stageRuntimeSources(bundle, project, locked);
+    expect(await readFile(join(project, 'backend', 'main.py'), 'utf8')).toBe('new');
+    expect(existsSync(join(project, 'backend', 'obsolete.py'))).toBe(false);
+    expect(existsSync(join(project, '.incoming-backend'))).toBe(false);
+  });
+  it('still fails on a rename error that is not a lock', async () => {
+    const { bundle, project } = await fixture();
+    const broken = async () => {
+      throw Object.assign(new Error('ENOSPC'), { code: 'ENOSPC' });
+    };
+    await expect(stageRuntimeSources(bundle, project, broken)).rejects.toThrow('ENOSPC');
   });
   it('does not leave a ready marker after a failed repair', async () => {
     const { bundle, project } = await fixture();

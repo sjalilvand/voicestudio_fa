@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { PanelLeftIcon, PanelLeftOpenIcon, SettingsIcon } from 'lucide-react';
 import { brandIcon, brandArtwork } from '@/lib/brand';
-import { isMac } from '@/components/bridge';
+import { appVersion, isMac } from '@/components/bridge';
 import { cn } from '@/lib/utils';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { usePaneResize } from '@/hooks/use-pane-resize';
@@ -11,14 +11,17 @@ import { useWorkspaceSidebarState } from './use-workspace-sidebar';
 import { VoicesSidebar } from '@/features/clone/voices-sidebar';
 import { WorkspaceNavigation } from './workspace-menu';
 import { StatusBar } from './status-bar';
-import { SystemNotifications } from './system-notifications';
-import { useBackendStatus } from '@/hooks/use-backend-status';
-import { isBackendReachable } from '@shared/utils/backendStage';
+
+export function versionTranslationKey(development: boolean) {
+  return development ? ('app.version_dev' as const) : ('app.version' as const);
+}
 
 export function WorkspaceSidebar() {
-  const backend = useBackendStatus();
   const { t } = useTranslation();
   const mac = isMac();
+  const versionLabel = t(versionTranslationKey(import.meta.env.DEV), {
+    version: appVersion(),
+  });
   const { libraryOpen, libraryTab } = useWorkspace();
   // One source of truth for "rail or full sidebar": the header toggle and the
   // sidebar's own buttons used to keep separate copies of this state.
@@ -102,7 +105,6 @@ export function WorkspaceSidebar() {
               />
             </Link>
             {mac && <StatusBar compact inline />}
-            {!mac && <SystemNotifications enabled={isBackendReachable(backend.stage)} compact />}
           </div>
         </aside>
       )}
@@ -127,11 +129,16 @@ export function WorkspaceSidebar() {
           >
             <Link
               to="/"
-              aria-label={t('app.name')}
+              aria-label={`${t('app.name')} ${versionLabel}`}
               className="flex min-w-0 flex-1 items-center gap-2 rounded outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <img src={brandIcon} alt="" className="size-6 shrink-0" />
-              <span className="truncate text-base font-semibold">{t('app.name')}</span>
+              <span className="flex min-w-0 flex-col leading-tight">
+                <span className="truncate text-base font-semibold">{t('app.name')}</span>
+                <span className="text-[11px] leading-none text-muted-foreground tabular-nums">
+                  {versionLabel}
+                </span>
+              </span>
             </Link>
             <Button
               variant="ghost"
@@ -191,7 +198,6 @@ export function WorkspaceSidebar() {
                   />
                   {t('nav.settings')}
                 </Link>
-                <SystemNotifications enabled={isBackendReachable(backend.stage)} />
               </div>
             )}
           </div>

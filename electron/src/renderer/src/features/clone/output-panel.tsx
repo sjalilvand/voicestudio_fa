@@ -17,11 +17,12 @@ export function OutputPanel() {
   if (!result || !objectUrl) return null;
 
   const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  const playbackUrl = result.audioPath ? audioUrl(result.audioPath) : objectUrl;
 
   return (
     <section
       aria-label={t('clone.output_title')}
-      className="w-full border-t border-border/60 bg-muted/15 px-6 py-3"
+      className="w-full shrink-0 border-t border-border/60 bg-muted/15 px-6 py-3"
     >
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
@@ -50,7 +51,7 @@ export function OutputPanel() {
         </div>
         {result && objectUrl ? (
           <>
-            <WaveformPlayer key={objectUrl} src={objectUrl} source="output" height={36} />
+            <WaveformPlayer key={objectUrl} src={playbackUrl} source="output" height={36} />
             <AudioFileDetails blob={result.blob} />
             {result.audioPath && <AudioQuality key={objectUrl} audioPath={result.audioPath} />}
             <div className="flex flex-wrap items-start justify-between gap-3">
