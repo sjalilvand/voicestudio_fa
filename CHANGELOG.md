@@ -29,6 +29,8 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- Android dubbing errors remain visible when worker updates arrive while their receipt is being saved (#3031)
+
 - iOS reserves storage across simultaneous model downloads and keeps saved speech paired with the submitted text (#2969)
 - TestFlight builds prepare the on-device inference runtimes before archiving the iPhone app (#2969)
 

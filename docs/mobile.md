@@ -171,3 +171,9 @@ to production automatically.
   `APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID`,
   `APP_STORE_CONNECT_API_KEY` and `APPLE_TEAM_ID`.
 
+
+## Dubbing errors
+
+Android keeps a failed computer dubbing job visible while you stay on the Dub
+screen. Worker updates do not dismiss the error, and reopening the screen does
+not repeat an error already shown.
