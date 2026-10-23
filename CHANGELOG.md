@@ -15,8 +15,8 @@ metadata and the backend fallback mirror it.
 
 ### Changed
 
-- Source ZIPs and tarballs omit scam-moderation attack examples; Git clones and CI retain their regression tests (#3208, #3211)
-- Maintainers can upload public source ZIPs or individual files with `make virustotal`, or scan a branch through the manual VirusTotal Actions workflow (#3208, #3211)
+- Source ZIPs and tarballs omit scam-moderation attack examples; Git clones and CI retain their regression tests (#3237)
+- Maintainers can upload public source ZIPs or individual files with `make virustotal`, or scan a branch through the manual VirusTotal Actions workflow (#3237)
 - Small models now install with as little as 2 GB spare disk; the setup check only warns below 10 GB instead of blocking (#2969)
 - iOS Home shows Electron's contributor avatars, Dub is redesigned around one source card with animated icons, and the iOS bottom dock is icon-only (#2969)
 - Model licence review on iOS and Android opens with a plain summary, rights rows and licence links; the raw terms move under Exact terms (#2969)
