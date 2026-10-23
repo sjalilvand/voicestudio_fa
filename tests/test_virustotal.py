@@ -1,0 +1,202 @@
+"""Offline tests for upload routing, credential handling and scan verdicts."""
+import contextlib
+import importlib.util
+import io
+import json
+import os
+from pathlib import Path
+import tempfile
+import subprocess
+import unittest
+from unittest.mock import Mock, patch
+from urllib.error import HTTPError, URLError
+
+
+ROOT = Path(__file__).resolve().parents[1]
+SPEC = importlib.util.spec_from_file_location("virustotal_scan", ROOT / "scripts/virustotal.py")
+vt = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(vt)
+
+
+def response(payload):
+    return io.BytesIO(json.dumps(payload).encode())
+
+
+class VirusTotalTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.path = Path(self.temporary.name) / 'public "sample".zip'
+        self.path.write_bytes(b"public sample bytes\x00\xff")
+        self.client = vt.Client("private-test-key")
+        self.client.opener = Mock()
+
+    def test_small_upload_streams_multipart_with_exact_length_and_basename(self):
+        sent = []
+
+        def upload(request, **kwargs):
+            body = b"".join(request.data)
+            self.assertEqual(int(request.get_header("Content-length")), len(body))
+            self.assertIn(self.path.read_bytes(), body)
+            self.assertIn(b'filename="public__sample_.zip"', body)
+            self.assertNotIn(str(self.path.parent).encode(), body)
+            self.assertEqual(request.get_header("X-apikey"), "private-test-key")
+            sent.append(request.full_url)
+            return response({"data": {"id": "analysis-1"}})
+
+        self.client.opener.open.side_effect = upload
+        self.assertEqual(self.client.upload(self.path), "analysis-1")
+        self.assertEqual(sent, [f"{vt.API}/files"])
+
+    def test_large_upload_gets_one_use_url_then_uploads(self):
+        upload_url = "https://www.virustotal.com/_ah/upload/one-use-token"
+        self.client.opener.open.side_effect = [response({"data": upload_url}), response({"data": {"id": "large"}})]
+        with patch.object(vt, "DIRECT_LIMIT", 1), patch.object(vt.time, "sleep"):
+            self.assertEqual(self.client.upload(self.path), "large")
+        requests = [call.args[0] for call in self.client.opener.open.call_args_list]
+        self.assertEqual([(r.get_method(), r.full_url) for r in requests],
+                         [("GET", f"{vt.API}/files/upload_url"), ("POST", upload_url)])
+
+    def test_empty_or_oversize_files_make_no_requests(self):
+        for limit in (0, 1):
+            with self.subTest(limit=limit), patch.object(vt, "MAX_SIZE", limit):
+                with self.assertRaises(vt.ScanError):
+                    self.client.upload(self.path)
+        self.path.write_bytes(b"")
+        with self.assertRaises(vt.ScanError):
+            self.client.upload(self.path)
+        self.client.opener.open.assert_not_called()
+
+    def test_untrusted_upload_url_cannot_receive_file_or_key(self):
+        for url in ("http://www.virustotal.com/upload", "https://evil.example/upload",
+                    "https://www.virustotal.com.evil.example/upload",
+                    "https://user@www.virustotal.com/upload", "https://www.virustotal.com:444/upload"):
+            with self.subTest(url=url), patch.object(vt, "DIRECT_LIMIT", 1):
+                self.client.opener.open.reset_mock()
+                self.client.opener.open.side_effect = None
+                self.client.opener.open.return_value = response({"data": url})
+                with patch.object(vt.time, "sleep"), self.assertRaises(vt.ScanError):
+                    self.client.upload(self.path)
+                self.assertEqual(self.client.opener.open.call_count, 1)
+
+    def test_redirects_never_forward_credentials(self):
+        self.assertIsNone(vt.NoRedirects().redirect_request(None, None, 302, "", {}, "https://evil.example"))
+
+    def test_requests_respect_public_api_interval(self):
+        self.client.opener.open.side_effect = [response({}), response({})]
+        with patch.object(vt.time, "monotonic", side_effect=[100, 103, 116]), patch.object(vt.time, "sleep") as sleep:
+            self.client.request("GET", f"{vt.API}/files/upload_url")
+            self.client.request("GET", f"{vt.API}/analyses/test")
+        sleep.assert_called_once_with(13)
+
+    def test_api_errors_are_actionable_without_echoing_credentials_or_body(self):
+        for code in (401, 403, 429, 500):
+            with self.subTest(code=code):
+                self.client.last_request = None
+                self.client.opener.open.side_effect = HTTPError(
+                    "https://www.virustotal.com/private-test-key", code, "private-test-key", {},
+                    io.BytesIO(b"private-test-key"))
+                with self.assertRaises(vt.ScanError) as caught:
+                    self.client.request("GET", f"{vt.API}/analyses/test")
+                self.assertIn(str(code), str(caught.exception))
+                self.assertNotIn("private-test-key", str(caught.exception))
+        self.client.last_request = None
+        self.client.opener.open.side_effect = URLError("private-test-key")
+        with self.assertRaises(vt.ScanError) as caught:
+            self.client.request("GET", f"{vt.API}/analyses/test")
+        self.assertNotIn("private-test-key", str(caught.exception))
+
+    def test_polling_waits_for_completed_analysis(self):
+        completed = {"status": "completed", "stats": {"undetected": 1}, "results": {}}
+        self.client.request = Mock(side_effect=[{"data": {"attributes": {"status": "queued"}}},
+                                                {"data": {"attributes": completed}}])
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(self.client.wait("id/with=characters", 600), completed)
+        self.assertTrue(self.client.request.call_args.args[1].endswith("id%2Fwith%3Dcharacters"))
+
+    def test_timeout_is_not_a_clean_verdict(self):
+        with patch.object(vt.time, "monotonic", side_effect=[0, 601]):
+            with self.assertRaisesRegex(vt.ScanError, "pending"):
+                self.client.wait("analysis", 600)
+
+    def test_poll_deadline_prevents_waiting_for_another_quota_slot(self):
+        self.client.last_request = 100
+        with patch.object(vt.time, "monotonic", return_value=101), patch.object(vt.time, "sleep") as sleep:
+            with self.assertRaisesRegex(vt.ScanError, "pending"):
+                self.client.request("GET", f"{vt.API}/analyses/test", deadline=110)
+        sleep.assert_not_called()
+        self.client.opener.open.assert_not_called()
+
+    def test_flagged_engines_fail_but_unsupported_only_is_inconclusive(self):
+        for category in ("malicious", "suspicious"):
+            with self.subTest(category=category), contextlib.redirect_stdout(io.StringIO()) as output:
+                self.assertEqual(vt.summarize({"status": "completed", "stats": {category: 1},
+                    "results": {"ExampleEngine": {"category": category, "result": "example-label"}}}), 1)
+                self.assertIn("ExampleEngine: example-label", output.getvalue())
+        with contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(vt.ScanError):
+                vt.summarize({"status": "completed", "stats": {"type-unsupported": 58}})
+            self.assertEqual(vt.summarize({"status": "completed", "stats": {"undetected": 58}}), 0)
+            with self.assertRaises(vt.ScanError):
+                vt.summarize({"status": "in-progress", "stats": {"undetected": 1}})
+
+    def test_missing_key_fails_before_archive_or_network(self):
+        with patch.dict(os.environ, {}, clear=True), patch.object(vt.sys.stdin, "isatty", return_value=False), \
+                patch.object(vt, "Client") as client, patch.object(vt, "source_archive") as archive, \
+                contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(vt.main([]), 2)
+        client.assert_not_called()
+        archive.assert_not_called()
+
+    def test_file_override_and_no_wait_print_link_without_key(self):
+        client = Mock()
+        client.upload.return_value = "analysis-1"
+        with patch.dict(os.environ, {"VIRUSTOTAL_API_KEY": "private-test-key", "VIRUSTOTAL_FILE": str(self.path)}), \
+                patch.object(vt, "Client", return_value=client), patch.object(vt, "source_archive") as archive, \
+                contextlib.redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(vt.main(["--no-wait"]), 0)
+        client.upload.assert_called_once_with(self.path)
+        client.wait.assert_not_called()
+        archive.assert_not_called()
+        self.assertIn("https://www.virustotal.com/gui/file/", output.getvalue())
+        self.assertIn("pending", output.getvalue())
+        self.assertNotIn("private-test-key", output.getvalue())
+
+    @unittest.skipUnless((ROOT / ".git").exists(), "requires a Git checkout")
+    def test_default_archive_uses_committed_tree_instead_of_local_edits(self):
+        import zipfile
+
+        archive_path = Path(self.temporary.name) / "source.zip"
+        vt.source_archive(archive_path)
+        committed_attributes = subprocess.check_output(["git", "show", "HEAD:.gitattributes"], cwd=ROOT)
+        with zipfile.ZipFile(archive_path) as archive:
+            self.assertEqual(archive.read("VoiceStudio-main/.gitattributes"), committed_attributes)
+            self.assertNotIn("VoiceStudio-main/.env", archive.namelist())
+
+    def test_make_passes_file_override_without_needing_a_live_api(self):
+        import shutil
+
+        if not shutil.which("make"):
+            self.skipTest("Make is unavailable")
+        missing_file = Path(self.temporary.name) / "missing public file.zip"
+        result = subprocess.run(
+            ["make", "virustotal", f"FILE={missing_file}", f"PYTHON={vt.sys.executable}"],
+            cwd=ROOT, capture_output=True, text=True,
+            env={**os.environ, "VIRUSTOTAL_API_KEY": "private-test-key"},
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Upload path must be an existing file", result.stderr)
+        self.assertNotIn("private-test-key", result.stdout + result.stderr)
+
+    def test_plain_make_keeps_the_existing_release_default(self):
+        import shutil
+
+        if not shutil.which("make"):
+            self.skipTest("Make is unavailable")
+        result = subprocess.run(["make", "-n"], cwd=ROOT, capture_output=True, text=True, check=True)
+        self.assertIn("uv run python scripts/release.py", result.stdout)
+        self.assertNotIn("virustotal.py", result.stdout)
+
+
+if __name__ == "__main__":
+    unittest.main()
