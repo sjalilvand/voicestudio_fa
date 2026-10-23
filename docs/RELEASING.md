@@ -200,6 +200,14 @@ type the tag name.
 
 It does not replace the post-release verification below; run it every time.
 
+## Mobile apps
+
+Phone apps ship on their own `mobile-v*` tags through the `mobile-release`
+workflow (a draft GitHub prerelease with the APK, AAB and IPAs; store uploads use
+the TestFlight and Play internal workflows). The version is the root `package.json` version and each run's
+number is the store build number. Setup, secrets and sideloading: `docs/mobile.md`
+→ Releasing. Publishing the draft and promoting the store builds are manual.
+
 ## Beta channel
 
 Beta is a second release channel cut from `main`, for testers who opt in under

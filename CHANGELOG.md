@@ -10,15 +10,19 @@ metadata and the backend fallback mirror it.
 
 **Highlights**
 
-- Preview iOS and Android companion apps for your own VoiceStudio
+- Preview iOS and Android apps that run VoiceStudio on your phone, offline after downloading the models
 - Opt-in Beta update channel: get fixes early from Settings → Updates, and roll onto the next stable release automatically
 
 ### Changed
 
+- Small models now install with as little as 2 GB spare disk; the setup check only warns below 10 GB instead of blocking (#2969)
+- iOS Home shows Electron's contributor avatars, Dub is redesigned around one source card with animated icons, and the iOS bottom dock is icon-only (#2969)
+- Model licence review on iOS and Android opens with a plain summary, rights rows and licence links; the raw terms move under Exact terms (#2969)
 - Phone apps now use the app ID `sh.voicestudio.mobile`; a preview build installed before installs alongside as a new app, so pair it again and remove the old one (#3194)
 
 ### Added
 
+- The phone apps run speech, dictation, voice cloning and dubbing on the phone itself, offline once you download the models; pairing a computer is optional ([guide](docs/mobile.md)) (#2969)
 - Beta update channel: choose Stable or Beta under Settings → Updates; betas are `-beta.N` prereleases that never reach Stable users, and Docker gets matching `:beta` tags ([guide](docs/update-channels.md)) (#3175)
 
 - Preview iOS and Android companion apps: drive your own VoiceStudio from your phone (speak, voices and cloning, dubbing, dictation) after pairing by QR code; build from source for now ([guide](docs/mobile.md)) (#2965)
@@ -26,13 +30,27 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- Android app icons preserve transparent waveform paths from the shared logo, including themed icons (#2969)
+- Speak keeps your script when switching between the phone and computer on Android (#2969)
+- Phone dubbing no longer speaks the wrong words when a quiet reference clip is not recognised (#2969)
+- Refined iOS navigation, voice libraries, grouped creation forms and licence sheets with native controls, accessible text and explicit cancellation (#2969)
+- Phone apps open on an Electron-style Home dashboard with shared artwork, workspace shortcuts, recent audio, saved voices and resumable dubbing projects (#2969)
+- Phone video dubbing uses a supported AAC bitrate and preserves playable audio, rotation and synthetic-audio metadata (#2969)
+- Phone dub playback restores sound after dictation on iOS and keeps the video visible when switching results on Android (#2969)
+- Stereo reference files and dictation inputs keep both channels when converted to mono on iOS (#2969)
+- Android dubbing errors remain visible when worker updates arrive while their receipt is being saved (#3031)
+
+- iOS reserves storage across simultaneous model downloads and keeps saved speech paired with the submitted text (#2969)
+- TestFlight builds prepare the on-device inference runtimes before archiving the iPhone app (#2969)
+
+- Phone models can be reaccepted offline without downloading again, and Android dubbing preserves short audio gaps and overlaps (#2969)
 - App icon, tray icons and in-app logo no longer show a black band behind the waveform (#3221)
 - Speed/quality changes finish as soon as they are saved, even while the clone controls are still loading (#3031)
-- Android dubbing errors remain visible when worker updates arrive while their receipt is being saved (#3031)
 - Speed / quality in the sidebar is a simple slider again; models and hardware fit open in a popover on hover, click or change, so the simplest view leaves the sidebar bottom free (#3031)
 - The Latest take panel is more compact: file details, render time and Check audio share one row (#3031)
 - The sidebar's Saved voices and Recent takes buttons both keep their labels instead of collapsing the inactive one to an icon (#3031)
 - On macOS full screen the sidebar logo moves into the freed corner, the compact rail drops its traffic-light gap (#3031)
+
 
 - Bug reports no longer risk freezing the app while looking for your tools: the Node-version folder scan now runs off the main thread (#3180)
 - Bug reports no longer freeze the app when the tool search or a drive stalls, and free disk is only borrowed from a parent folder when the install folder doesn't exist yet (#3179)
@@ -76,7 +94,12 @@ metadata and the backend fallback mirror it.
 
 ### CI
 
+- Android release and Play builds share an increasing version code to prevent reused or decreasing build numbers (#2969)
+- Phone build resources keep notice hashes and localized text intact on Windows (#2969)
+- New `mobile-release` workflow builds signed Android and iOS apps and drafts a GitHub prerelease with the APK, AAB and IPAs (#2969)
+- The `mobile` workflow builds the pinned on-device runtimes for both apps (#2969)
 - The main test step runs in parallel with pytest-xdist, about 3 minutes faster per CI run (#3223)
+
 - Interactive release helper: pick stable or beta, draft or publish, and confirm by typing the tag (`scripts/release.py`) (#3187)
 - Release helper choices are arrow-key menus (#3190)
 - Desktop request-guard self-tests stay deterministic when app requests arrive during cleanup (#2676)
