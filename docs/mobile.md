@@ -158,9 +158,11 @@ never sends a release to production. One-time setup:
    artifact and upload it to internal testing by hand. Until the app's first
    release is rolled out, dispatch with status `draft`.
 
-The version name is the root `package.json` version; the version code is the
-workflow run number × 10 plus the attempt, so every upload is new. Local and
-`mobile` workflow builds stay debug-signed.
+The version name is the root `package.json` version. Both signed Android
+workflows get their version code from `scripts/android_version_code.py`: UTC
+seconds since 2020-01-01. They share a concurrency group, so signed builds run
+one at a time and subsequent builds, including reruns, receive increasing codes
+across Play and GitHub releases. Local and `mobile` workflow builds stay debug-signed.
 
 ## Releasing
 
@@ -176,14 +178,18 @@ to production automatically.
   the App Store IPA, an unsigned IPA for sideloading, and `SHA256SUMS.txt`. Review
   it, then publish. The App Store IPA only installs through TestFlight; iPhone
   users outside TestFlight sideload the unsigned IPA with their own Apple ID.
-- **Version:** the root `package.json` version; each run's number makes the build
-  number, so a rebuild of the same version stays unique.
+- **Version:** the root `package.json` version. Android shares its increasing
+  build code with Play; iOS uses the workflow run number and attempt.
 - **Secrets** (repository environment `mobile-release`, with required reviewers,
   not limited to `main` so tags can use it): the same values as the store
   workflows, `ANDROID_UPLOAD_KEYSTORE`, `ANDROID_UPLOAD_KEYSTORE_PASSWORD`,
   `ANDROID_UPLOAD_KEY_ALIAS`, `ANDROID_UPLOAD_KEY_PASSWORD`,
   `APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID`,
   `APP_STORE_CONNECT_API_KEY` and `APPLE_TEAM_ID`.
+
+Android updates also require the installed app's signing certificate. Google
+Play App Signing may use a different certificate from the APK upload key;
+version codes do not make builds with different signing keys interchangeable.
 
 
 ## Dubbing errors
