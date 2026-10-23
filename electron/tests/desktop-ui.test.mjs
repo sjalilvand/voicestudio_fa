@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync } from 'node:fs';
 import { once } from 'node:events';
+import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { withApp } from './desktop-harness.mjs';
 import { ROUTES } from './fixtures/routes.mjs';
@@ -253,8 +254,16 @@ test('unclean exit: relaunch on the same profile starts normally', async (t) => 
   await withApp(t, {}, async (session) => {
     const child = session.app.process();
     const exited = once(child, 'exit');
-    child.kill('SIGKILL');
+    const closed = session.app.waitForEvent('close', { timeout: 30_000 });
+    if (process.platform === 'win32') {
+      // Playwright launches through cmd.exe here; killing only that wrapper leaves
+      // Electron alive with inherited output pipes, so the close event never fires.
+      execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F']);
+    } else {
+      child.kill('SIGKILL');
+    }
     await exited;
+    await closed;
     const restarted = await session.relaunch();
     await restarted.page.waitForFunction(() => Boolean(window.voicestudio?.files?.saveData));
     const facts = await bridgeFacts(restarted.page);

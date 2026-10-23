@@ -1636,7 +1636,8 @@
     "select_item": "Seleccionar {{name}}",
     "delete_selected": "Eliminar selección ({{count}})",
     "deleted_count": "Eliminados: {{count}}",
-    "delete_warning": "Esta acción no se puede deshacer. Se eliminan los proyectos y las transcripciones. Al eliminar voces o tomas también se borra su audio guardado. Se conservan los archivos exportados y el audio de los renderizados terminados."
+    "delete_warning": "Esta acción no se puede deshacer. Se eliminan los proyectos y las transcripciones. Al eliminar voces o tomas también se borra su audio guardado. Se conservan los archivos exportados y el audio de los renderizados terminados.",
+    "draft_changed": "Tu borrador cambió mientras se cargaba este proyecto. Confirma de nuevo para reemplazarlo."
   },
   "projectActions": {
     "delete": "¿Eliminar «{{name}}»? No se puede deshacer.",

@@ -1,7 +1,33 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:net';
 import test from 'node:test';
-import { freePort, isPortConflict, launchWithFreshPorts } from './desktop-harness.mjs';
+import { freePort, isPortConflict, launchWithFreshPorts, readRequestLog } from './desktop-harness.mjs';
+
+test('a terminated app needs no disposed Playwright handle to collect its guards', async () => {
+  for (const child of [
+    { exitCode: 0, signalCode: null },
+    { exitCode: null, signalCode: 'SIGKILL' },
+  ]) {
+    const app = {
+      process: () => {
+        throw new TypeError("Cannot read properties of undefined (reading '_object')");
+      },
+      evaluate: () => assert.fail('a terminated app cannot answer IPC'),
+    };
+    assert.equal(await readRequestLog({ app, child }), null);
+  }
+});
+
+test('a live app still reports its request log and surfaces IPC failures', async () => {
+  const child = { exitCode: null, signalCode: null };
+  const seen = ['app://voicestudio/'];
+  const app = { process: () => child, evaluate: async () => seen };
+  assert.equal(await readRequestLog({ app, child }), seen);
+  app.evaluate = async () => {
+    throw new Error('request guard unavailable');
+  };
+  await assert.rejects(readRequestLog({ app, child }), /request guard unavailable/);
+});
 
 const conflict = () =>
   new Error(

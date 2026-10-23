@@ -81,6 +81,13 @@ const slug = (name) =>
     .replace(/^-|-$/g, '')
     .toLowerCase();
 
+/** A killed app has already disposed its Playwright handle and cannot answer IPC. */
+export async function readRequestLog(started) {
+  const child = started.child;
+  if (child.exitCode !== null || child.signalCode !== null) return null;
+  return started.app.evaluate(() => globalThis.__requestLog);
+}
+
 async function launch({ profile, backendPort, proxyPort, seed }) {
   // VS Code terminals export ELECTRON_RUN_AS_NODE=1, which makes Electron boot as plain Node.
   const { ELECTRON_RUN_AS_NODE: _runAsNode, ...inherited } = process.env;
@@ -105,7 +112,9 @@ async function launch({ profile, backendPort, proxyPort, seed }) {
     timeout: 60000,
   });
   const output = [];
-  for (const stream of [app.process().stdout, app.process().stderr]) {
+  // Capture while the handle is live: process() itself throws after Playwright disposes it.
+  const child = app.process();
+  for (const stream of [child.stdout, child.stderr]) {
     stream?.on('data', (chunk) => output.push(String(chunk)));
   }
   const context = app.context();
@@ -154,7 +163,7 @@ async function launch({ profile, backendPort, proxyPort, seed }) {
   });
   // The main-process guard predates the app; one reload also replays the first page's console.
   await page.reload();
-  return { app, page, errors };
+  return { app, child, page, errors };
 }
 
 /**
@@ -209,10 +218,9 @@ export async function withApp(t, options, body) {
   let unobserved = 0;
   async function collectGuards(started) {
     errors.push(...started.errors);
-    const child = started.app.process();
     // A killed app cannot be asked for its log; every other read error must fail the run.
-    if (child.exitCode !== null || child.signalCode !== null) return;
-    const seen = await started.app.evaluate(() => globalThis.__requestLog);
+    const seen = await readRequestLog(started);
+    if (seen === null) return;
     // An empty log means the guard never ran (hook missing or replaced), not that all is well.
     if (!seen.some((url) => url.startsWith('app:'))) unobserved += 1;
     // The guard already left out the renderer's stubbed star-count request.

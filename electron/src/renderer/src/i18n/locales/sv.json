@@ -1634,7 +1634,8 @@
     "select_item": "Markera {{name}}",
     "delete_selected": "Ta bort markerade ({{count}})",
     "deleted_count": "Borttagna: {{count}}",
-    "delete_warning": "Detta kan inte ångras. Projekt och transkriptioner tas bort. När röster eller tagningar tas bort raderas även deras sparade ljud. Exporterade filer och färdigrenderat ljud behålls."
+    "delete_warning": "Detta kan inte ångras. Projekt och transkriptioner tas bort. När röster eller tagningar tas bort raderas även deras sparade ljud. Exporterade filer och färdigrenderat ljud behålls.",
+    "draft_changed": "Ditt utkast ändrades medan projektet laddades. Bekräfta igen för att ersätta det."
   },
   "projectActions": {
     "delete": "Ta bort ”{{name}}”? Detta kan inte ångras.",

@@ -1762,7 +1762,8 @@
     "select_item": "Select {{name}}",
     "delete_selected": "Delete selected ({{count}})",
     "deleted_count": "Deleted: {{count}}",
-    "delete_warning": "This cannot be undone. Projects and transcripts are removed. Deleting voices or takes also removes their stored audio. Exported files and finished render audio are kept."
+    "delete_warning": "This cannot be undone. Projects and transcripts are removed. Deleting voices or takes also removes their stored audio. Exported files and finished render audio are kept.",
+    "draft_changed": "Your draft changed while this project was loading. Confirm again to replace it."
   },
   "projectActions": {
     "delete": "Delete “{{name}}”? This cannot be undone.",
