@@ -187,8 +187,13 @@ type the tag name.
   beta copies it), runs the version guards, commits, pushes `main` and the tag.
   The tag push builds a draft release; nothing is public.
 - **Publish:** the same, then dispatches `electron-release.yml` with
-  `publish=true`. If the Mac/Windows signing secrets are missing or unreadable it
-  stops unless you explicitly accept unsigned installers.
+  `publish=true`. It lists which platforms have signing secrets (macOS needs the
+  Developer ID and notarization set, Windows needs `ELECTRON_WINDOWS_CSC_LINK` and
+  its password) and, for any platform without them, stops unless you explicitly
+  accept shipping that platform unsigned. The dispatch's `allow_unsigned` flag is
+  all-or-nothing: with it, the workflow also skips its macOS signature check even
+  where macOS signing is configured, and the release notes carry the generic
+  unsigned disclosure.
 - `--publish vX.Y.Z[-beta.N]` (`make release-publish TAG=…`) publishes an existing
   draft build later.
 - `--dry-run` (`make release-dry`) prints the plan and changes nothing.
