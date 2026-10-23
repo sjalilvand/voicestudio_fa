@@ -73,3 +73,13 @@ def test_clean_testflight_runner_prepares_native_dependencies_before_project_gen
     archive = next(i for i, command in enumerate(commands) if "-archivePath" in command)
     assert native < generate < archive
     assert "if" not in steps[native]  # A cache hit still needs generated headers restored.
+
+
+def test_archive_check_matches_automatic_signing():
+    # The archive carries the development identity until export re-signs it, so
+    # requiring Apple Distribution here failed every run; check the team instead.
+    steps = load_workflow()["jobs"]["testflight"]["steps"]
+    verify = next(step for step in steps if step.get("name") == "Verify archive signature and version")
+    assert "Authority=Apple Distribution" not in verify["run"]
+    assert 'TeamIdentifier=$TEAM_ID' in verify["run"]
+    assert verify["env"]["TEAM_ID"] == "${{ secrets.APPLE_TEAM_ID }}"
