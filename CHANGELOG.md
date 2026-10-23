@@ -108,6 +108,7 @@ metadata and the backend fallback mirror it.
 
 - iOS TestFlight workflow: maintainers can upload a signed iPhone build for internal testers from `main` ([guide](docs/mobile.md#testflight-maintainers)) (#3188)
 - iOS TestFlight builds declare their exempt encryption, so uploads no longer wait on the export compliance question (#3230)
+- Beta and stable release builds no longer fail when a slow build machine runs the app's tests (#3232)
 - Android Play internal testing workflow: the matching signed Android upload from `main`, and beta versions no longer break the Android build ([guide](docs/mobile.md#play-internal-testing-maintainers)) (#3189)
 
 - Gallery preview fallback smoke no longer flakes when a slower runner reads the playing clip in several byte ranges (#3018)
