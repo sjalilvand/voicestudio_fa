@@ -95,6 +95,7 @@ metadata and the backend fallback mirror it.
 
 ### CI
 
+- The owner can let named maintainers publish releases while Windows installers are still unsigned (#3236)
 - Android release and Play builds share an increasing version code to prevent reused or decreasing build numbers (#2969)
 - Phone build resources keep notice hashes and localized text intact on Windows (#2969)
 - New `mobile-release` workflow builds signed Android and iOS apps and drafts a GitHub prerelease with the APK, AAB and IPAs (#2969)

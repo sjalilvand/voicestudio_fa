@@ -148,6 +148,10 @@ Dispatch `electron-release.yml` for the exact tag with `publish=true`. Signing
 and notarization are required by default. The owner may explicitly set
 `allow_unsigned=true`; the workflow then adds the installer-trust disclosure to
 the release notes. Never select that exception without the owner's decision.
+The owner can delegate it: accounts listed in the `UNSIGNED_RELEASE_PUBLISHERS`
+Actions variable (comma-separated logins, Settings → Secrets and variables →
+Actions → Variables; only admins can edit it) may also dispatch or re-run an
+unsigned publish. Remove a login to revoke it; an empty variable means owner only.
 
 Publishing the GitHub Release triggers the Docker workflow for that tag. Docker
 release tags are never built from a tag push, and `:latest` only ever tracks
