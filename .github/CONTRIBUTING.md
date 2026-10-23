@@ -155,8 +155,9 @@ Open an [issue](https://github.com/debpalash/VoiceStudio/issues/new) with:
 2. **Keep PRs focused** — one feature or fix per PR
 3. **Run tests** before pushing:
    ```bash
-   # Backend tests (the same two runs as CI)
-   uv run pytest tests/ -q
+   # Backend tests (the same two runs as CI; -n auto runs tests/ in parallel,
+   # optional locally, it is about 4x faster on 4 cores)
+   uv run pytest tests/ -q -n auto
    uv run pytest backend/tests/ -q
 
    # Frontend build check
@@ -313,7 +314,7 @@ OMNIVOICE_PORT=3999 bun run --cwd electron smoke:server &
 OMNIVOICE_PORT=3999 VOICESTUDIO_UI_URL=http://localhost:3912 PLAYWRIGHT_CHANNEL=chromium \
   node electron/tests/run-renderer-smokes.mjs [name-filter ...]
 
-# UI crawler (the sharded "UI crawler" CI jobs), against the same smoke server:
+# UI crawler (the "UI crawler" CI job), against the same smoke server:
 # clicks every enabled button on every route, then the buttons a filled-in form
 # enables, then one level into each dialog, while API writes answer normally,
 # with 500, with a network error, or with broken JSON. It fails on a spinner
@@ -415,6 +416,16 @@ hard rules from the first prompt.
     the user (`electron/src/main/updater.ts`).
   - **yt-dlp updates** from PyPI, only when the user clicks update
     (`backend/services/media_tools.py`).
+  - **VoiceStudio Cloud account features, only after the user turns them on**
+    (first-run setup or Settings → Account; off by default, skipping = off):
+    browser sign-in against `voicestudio.sh/identity` and the account API at
+    `appapi.voicestudio.sh` from Electron main (`electron/src/main/account/`),
+    and, only after the user also turns cloud sync on, settings sync with
+    `appapi.voicestudio.sh/v1/sync` from the backend
+    (`backend/services/cloud_sync/`), which can call only with a token main
+    hands out. Turning either off stops every request at once; switching
+    account features off sends one best-effort token revocation. Hidden in
+    packaged builds until VoiceStudio Cloud launches.
   - Bug reports as prefilled GitHub Issue URLs opened in the user's browser.
   - PostHog analytics only after a yes at the first-run consent prompt
     (`backend/core/analytics.py`, allowlisted content-free metadata).

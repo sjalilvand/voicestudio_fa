@@ -1,4 +1,3 @@
-import { SponsorFooter } from './sponsor-footer';
 import { WorkspaceSidebar } from './workspace-sidebar';
 import { CommandPalette } from '@/components/command-palette';
 import { Outlet, useRouterState } from '@tanstack/react-router';
@@ -8,7 +7,7 @@ import { isMac } from '../bridge';
 import { cn } from '@/lib/utils';
 import { useBackendStatus } from '@/hooks/use-backend-status';
 import { isBackendReachable } from '@shared/utils/backendStage';
-import { SystemNotifications } from './system-notifications';
+import { AccountCorner } from './account-corner';
 
 export function AppShell() {
   const backend = useBackendStatus();
@@ -54,22 +53,15 @@ export function AppShell() {
               <div className="min-h-0 flex-1 overflow-hidden">
                 <Outlet />
               </div>
-              <SponsorFooter />
               <RepairAgentDock />
             </main>
           </BackendGate>
         )}
       </div>
-      {/* Native drag-region hit testing follows document order. Keep this
-          no-drag control after every workspace titlebar, outside BackendGate. */}
-      {macWorkspace && (
-        <div
-          data-slot="macos-system-notifications"
-          className="app-no-drag fixed top-3.5 right-3.5 z-50"
-        >
-          <SystemNotifications enabled={isBackendReachable(backend.stage)} titlebar />
-        </div>
-      )}
+      {/* Native drag-region hit testing follows document order. Keep these
+          no-drag controls after every workspace titlebar, outside BackendGate. */}
+      {/* Top-right corner on every page and platform: account, then the notifications bell. */}
+      <AccountCorner notificationsEnabled={isBackendReachable(backend.stage)} />
     </div>
   );
 }

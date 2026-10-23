@@ -6,23 +6,22 @@ import { appVersion, isMac } from '@/components/bridge';
 import { cn } from '@/lib/utils';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { usePaneResize } from '@/hooks/use-pane-resize';
+import { useWindowFullscreen } from '@/hooks/use-window-fullscreen';
 import { useWorkspace } from '@/lib/store/workspace';
 import { useWorkspaceSidebarState } from './use-workspace-sidebar';
 import { VoicesSidebar } from '@/features/clone/voices-sidebar';
 import { WorkspaceNavigation } from './workspace-menu';
 import { StatusBar } from './status-bar';
-import { SystemNotifications } from './system-notifications';
-import { useBackendStatus } from '@/hooks/use-backend-status';
-import { isBackendReachable } from '@shared/utils/backendStage';
 
 export function versionTranslationKey(development: boolean) {
   return development ? ('app.version_dev' as const) : ('app.version' as const);
 }
 
 export function WorkspaceSidebar() {
-  const backend = useBackendStatus();
   const { t } = useTranslation();
   const mac = isMac();
+  // Fullscreen hides the traffic lights, so their reserved corner is given back to the brand.
+  const trafficLights = mac && !useWindowFullscreen();
   const versionLabel = t(versionTranslationKey(import.meta.env.DEV), {
     version: appVersion(),
   });
@@ -56,13 +55,16 @@ export function WorkspaceSidebar() {
             <span
               aria-hidden="true"
               data-slot="compact-sidebar-divider"
-              className="pointer-events-none absolute top-[72px] right-0 bottom-0 w-px bg-border/50"
+              className={cn(
+                'pointer-events-none absolute right-0 bottom-0 w-px bg-border/50',
+                trafficLights ? 'top-[72px]' : 'top-12',
+              )}
             />
           )}
           <div
             className={cn(
               'workspace-titlebar flex shrink-0 justify-center',
-              mac ? 'min-h-[72px] items-end pb-1' : 'h-12 items-center',
+              trafficLights ? 'min-h-[72px] items-end pb-1' : 'h-12 items-center',
             )}
           >
             {/* The rail can always reopen itself, on every platform: the
@@ -109,7 +111,6 @@ export function WorkspaceSidebar() {
               />
             </Link>
             {mac && <StatusBar compact inline />}
-            {!mac && <SystemNotifications enabled={isBackendReachable(backend.stage)} compact />}
           </div>
         </aside>
       )}
@@ -129,7 +130,7 @@ export function WorkspaceSidebar() {
           <header
             className={cn(
               'workspace-titlebar flex shrink-0 items-center gap-2 px-4',
-              mac && 'pl-24',
+              trafficLights && 'pl-24',
             )}
           >
             <Link
@@ -203,7 +204,6 @@ export function WorkspaceSidebar() {
                   />
                   {t('nav.settings')}
                 </Link>
-                <SystemNotifications enabled={isBackendReachable(backend.stage)} />
               </div>
             )}
           </div>
