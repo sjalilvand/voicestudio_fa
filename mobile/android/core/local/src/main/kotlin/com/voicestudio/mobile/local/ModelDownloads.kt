@@ -44,7 +44,7 @@ class ModelDownloads internal constructor(
     }
     private fun invalidate(model: PhoneModel) {model.files.forEach {verified.remove(File(dir(model),it.path))}}
     private val locks=ConcurrentHashMap<String,Mutex>()
-    private val reservations=HashMap<String,Long>()
+    private val reservations=HashMap<String,()->Long>()
     private fun lock(model: PhoneModel)=locks.getOrPut(model.id) {Mutex()}
     private val mutable=MutableStateFlow<Map<String,DownloadProgress>>(emptyMap())
     val progress=mutable.asStateFlow()
@@ -64,16 +64,18 @@ class ModelDownloads internal constructor(
             val job=currentCoroutineContext().job
             val directory=dir(model).apply {mkdirs()}
             val catalogue=modelPin(model).identity
-            val completedFiles=model.files.filter {verifiedFile(File(directory,it.path),it,catalogue) {job.ensureActive()}}.toSet()
-            val needed=model.files.filterNot {it in completedFiles}.sumOf { f ->
+            val completedFiles=model.files.filter {verifiedFile(File(directory,it.path),it,catalogue) {job.ensureActive()}}.toMutableSet()
+            fun remainingBytes()=model.files.filterNot {it in completedFiles}.sumOf { f ->
                 val partial=File(directory,f.path+".part").length().takeIf {it<=f.size} ?: 0L
                 f.size-partial
             }
+            val needed=remainingBytes()
             if(needed>0) networkAllowed(allowMobile)
-            // Concurrent downloads each pass the check alone; reserve what the others still need.
+            // Read current partial lengths so retries and completed writes are not counted twice.
+            // completedFiles is updated under this same monitor after each successful install.
             synchronized(reservations) {
-                if(needed>0 && freeBytes()-reservations.values.sum()<needed+16*1024*1024) throw ClientFailure("mobile.local.storage_required")
-                reservations[model.id]=needed
+                if(needed>0 && freeBytes()-reservations.values.sumOf {it()}<needed+16*1024*1024) throw ClientFailure("mobile.local.storage_required")
+                reservations[model.id]=::remainingBytes
             }
             mutable.update {it+(model.id to DownloadProgress(total=model.totalBytes,running=true))}
             try {
@@ -96,7 +98,10 @@ class ModelDownloads internal constructor(
                     currentCoroutineContext().ensureActive()
                     if(part.length()!=f.size||digest(part) {job.ensureActive()}!=f.sha256) {part.delete();throw ClientFailure("mobile.local.checksum_failed")}
                     licence.requireAccepted(model)
-                    if(!part.renameTo(target)) throw ClientFailure("mobile.local.storage_required")
+                    synchronized(reservations) {
+                        if(!part.renameTo(target)) throw ClientFailure("mobile.local.storage_required")
+                        completedFiles.add(f)
+                    }
                     verified[target]=stamp(target,catalogue)
                     completed+=f.size
                 }

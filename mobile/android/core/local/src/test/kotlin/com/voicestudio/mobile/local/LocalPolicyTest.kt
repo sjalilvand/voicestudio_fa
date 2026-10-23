@@ -146,6 +146,21 @@ class LocalPolicyTest {
             assertEquals(2,server.requestCount)
         }
     }
+    @Test fun concurrentDownloadCountsOnlyBytesStillMissingFromOtherDownloads() = runBlocking {
+        MockWebServer().use {server -> server.start()
+            server.enqueue(MockResponse().setBody(Buffer().write(payload)).throttleBody(payload.size-1L,2,TimeUnit.SECONDS))
+            server.enqueue(MockResponse().setBody(Buffer().write(payload)))
+            val part=File(temporary.root,"models/fixture/weights.bin.part")
+            val d=downloads(server,free={16*1024*1024+2L*payload.size-part.length()})
+            val first=launch(Dispatchers.IO) {d.download(model(),false)}
+            try {
+                withTimeout(5000) {while(part.length()<payload.size-1) delay(10)}
+                withTimeout(5000) {d.download(model().copy(id="second"),false)}
+                assertTrue(d.installed(model().copy(id="second")))
+                assertEquals(2,server.requestCount)
+            } finally {first.cancelAndJoin()}
+        }
+    }
     @Test fun withdrawalBlocksPreviouslyVerifiedWeights() = runTest {
         MockWebServer().use {server ->server.start();server.enqueue(MockResponse().setBody(Buffer().write(payload)))
             val m=model(true);val g=gate();g.record(m,true);val d=downloads(server,g);d.download(m,false)
