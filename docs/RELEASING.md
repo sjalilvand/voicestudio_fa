@@ -146,8 +146,13 @@ only the workflow definition comes from `main`.
 
 Dispatch `electron-release.yml` for the exact tag with `publish=true`. Signing
 and notarization are required by default. The owner may explicitly set
-`allow_unsigned=true`; the workflow then adds the installer-trust disclosure to
-the release notes. Never select that exception without the owner's decision.
+`allow_unsigned=true`. Never select that exception without the owner's decision.
+Every build, published or not, verifies what each platform leg actually ships
+and the release notes end with an **Installer signing** table built from those
+checks (✅ signed and notarized, ⚠️ unsigned or ad hoc, with what users will
+see). A macOS bundle with an invalid signature always fails, and a platform
+whose signing credentials are configured fails if its installers are not signed
+with them, even with `allow_unsigned=true`.
 The owner can delegate it: accounts listed in the `UNSIGNED_RELEASE_PUBLISHERS`
 Actions variable (comma-separated logins, Settings → Secrets and variables →
 Actions → Variables; only admins can edit it) may also dispatch or re-run an
@@ -194,10 +199,10 @@ type the tag name.
   `publish=true`. It lists which platforms have signing secrets (macOS needs the
   Developer ID and notarization set, Windows needs `ELECTRON_WINDOWS_CSC_LINK` and
   its password) and, for any platform without them, stops unless you explicitly
-  accept shipping that platform unsigned. The dispatch's `allow_unsigned` flag is
-  all-or-nothing: with it, the workflow also skips its macOS signature check even
-  where macOS signing is configured, and the release notes carry the generic
-  unsigned disclosure.
+  accept shipping that platform unsigned. The dispatch's `allow_unsigned` flag
+  only accepts platforms without credentials: a platform with signing configured
+  must still produce signed installers, and the notes' **Installer signing**
+  table shows each platform's measured result.
 - `--publish vX.Y.Z[-beta.N]` (`make release-publish TAG=…`) publishes an existing
   draft build later.
 - `--dry-run` (`make release-dry`) prints the plan and changes nothing.
