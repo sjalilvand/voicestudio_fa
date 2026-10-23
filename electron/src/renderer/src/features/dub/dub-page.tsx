@@ -15,6 +15,8 @@ import { segmentGenInputs } from '@shared/utils/segments';
 import { clampSegmentEdit } from '@shared/utils/timeline';
 import { dialectLabel, dialectMatchesLang, dialectOptionsFor } from '@shared/api/dialects';
 import { DubExportPanel } from './dub-export-panel';
+import { argosPackInstall, argosPackStatus, buildArgosPackRequest } from './argos-packs';
+import { dubSourceLanguage } from './source-language';
 import { DubTimeline } from './dub-timeline';
 import { PasteTranslation } from './paste-translation';
 import { GlossaryPanel } from './glossary-panel';
@@ -165,15 +167,6 @@ const sourceOptions = LANG_CODES.map((item) => item.label);
 // maps to the "Portuguese" track plus its dialect.
 const targetChoices = withVariantChoices(targetOptions);
 const sentenceEnd = /[.!?\u3002\uff01\uff1f]/;
-
-type ArgosPackStatus = {
-  source_lang: string;
-  pairs: Array<{
-    source_lang: string;
-    target_lang: string;
-    installed: boolean;
-  }>;
-};
 
 function compactSourceLabel(source: string): string {
   if (!source) return '';
@@ -415,14 +408,7 @@ export function DubPage() {
   const needsArgosPackCheck = Boolean(
     provider?.id === 'argos' && session.jobId && session.segments.length && argosTargets.length,
   );
-  const argosPackRequest = {
-    source_lang:
-      (session.sourceLang || session.sourceLanguage || '').toLowerCase() === 'auto'
-        ? undefined
-        : session.sourceLang || session.sourceLanguage || undefined,
-    target_langs: argosTargets,
-    job_id: session.jobId || undefined,
-  };
+  const argosPackRequest = buildArgosPackRequest(session, argosTargets);
   const argosPacks = useQuery({
     enabled: needsArgosPackCheck,
     queryKey: [
@@ -431,13 +417,7 @@ export function DubPage() {
       argosPackRequest.job_id,
       ...argosTargets,
     ],
-    queryFn: ({ signal }) =>
-      apiJson<ArgosPackStatus>('/engines/translation/argos/packs/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(argosPackRequest),
-        signal,
-      }),
+    queryFn: ({ signal }) => argosPackStatus(argosPackRequest, signal),
     staleTime: 30_000,
   });
   const missingArgosPacks = argosPacks.data?.pairs.filter((pair) => !pair.installed) || [];
@@ -919,11 +899,7 @@ export function DubPage() {
     if (!missingArgosPacks.length || installingArgosPacks) return;
     setInstallingArgosPacks(true);
     try {
-      await apiJson<ArgosPackStatus>('/engines/translation/argos/packs/install', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(argosPackRequest),
-      });
+      await argosPackInstall(argosPackRequest);
       await argosPacks.refetch();
     } catch (error) {
       toast.error(describeError(error));
@@ -2315,7 +2291,9 @@ export function DubPage() {
               {glossaryOpen && code && session.jobId && session.segments.length > 0 && (
                 <GlossaryPanel
                   projectId={session.jobId}
-                  sourceLang={session.sourceLang || session.sourceLanguage || 'auto'}
+                  sourceLang={
+                    dubSourceLanguage(session.sourceLanguage, session.sourceLang) || 'auto'
+                  }
                   targetLang={code}
                   segments={session.segments}
                   disabled={busy || Boolean(session.recovery)}

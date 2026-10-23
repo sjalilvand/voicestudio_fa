@@ -1,3 +1,4 @@
+import { dubSourceLanguage } from './source-language';
 import {
   startTranslationRun,
   appendTranslationLog,
@@ -1172,7 +1173,7 @@ export async function translateDubWithAgent(
         {
           agent,
           purpose: 'translate',
-          sourceLanguage: snapshot.sourceLang || snapshot.sourceLanguage || undefined,
+          sourceLanguage: dubSourceLanguage(snapshot.sourceLanguage, snapshot.sourceLang),
           targetLanguage: targetLabel,
           dialect: snapshot.dialect,
           translationInstructions: snapshot.translationInstructions,
@@ -1297,7 +1298,7 @@ export async function translateDub(
         signal,
         body: JSON.stringify({
           job_id: snapshot.jobId,
-          source_lang: snapshot.sourceLang || undefined,
+          source_lang: dubSourceLanguage(snapshot.sourceLanguage, snapshot.sourceLang),
           target_lang: target,
           provider,
           quality: snapshot.quality,
@@ -1584,7 +1585,7 @@ export async function generateDub(
               {
                 agent: current.agentCli,
                 purpose: 'fit',
-                sourceLanguage: current.sourceLang || current.sourceLanguage || undefined,
+                sourceLanguage: dubSourceLanguage(current.sourceLanguage, current.sourceLang),
                 targetLanguage: language,
                 dialect: current.dialect,
                 translationInstructions: current.translationInstructions,
