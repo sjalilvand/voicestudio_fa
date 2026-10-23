@@ -1,4 +1,12 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  cleanup,
+  configure,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { UpdateState } from '../../../../preload/index.d';
@@ -61,6 +69,10 @@ vi.mock('sonner', () => ({ toast: { error: mocks.toastError, info: vi.fn() } }))
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 
 import { UpdateSettings } from './update-settings';
+
+// The release workflow runs this on shared Linux runners, where the default 1s
+// wait for the async update flow timed out once (v0.5.7-beta.1 packaging).
+configure({ asyncUtilTimeout: 5_000 });
 
 function renderSettings() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
