@@ -63,3 +63,13 @@ def test_workflow_signs_verifies_and_cleans_up_the_key():
     assert "testFlightInternalTestingOnly bool true" in source
     # Secrets reach only the steps that need them, never the whole job.
     assert "secrets." not in yaml.dump(load_workflow()["jobs"]["testflight"].get("env", {}))
+
+
+def test_archive_check_matches_automatic_signing():
+    # The archive carries the development identity until export re-signs it, so
+    # requiring Apple Distribution here failed every run; check the team instead.
+    steps = load_workflow()["jobs"]["testflight"]["steps"]
+    verify = next(step for step in steps if step.get("name") == "Verify archive signature and version")
+    assert "Authority=Apple Distribution" not in verify["run"]
+    assert 'TeamIdentifier=$TEAM_ID' in verify["run"]
+    assert verify["env"]["TEAM_ID"] == "${{ secrets.APPLE_TEAM_ID }}"
