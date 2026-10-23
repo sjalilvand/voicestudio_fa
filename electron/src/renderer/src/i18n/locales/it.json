@@ -1636,7 +1636,8 @@
     "select_item": "Seleziona {{name}}",
     "delete_selected": "Elimina selezione ({{count}})",
     "deleted_count": "Eliminati: {{count}}",
-    "delete_warning": "Questa azione è irreversibile. Progetti e trascrizioni vengono rimossi. Eliminare voci o registrazioni rimuove anche il relativo audio salvato. I file esportati e i rendering audio completati vengono conservati."
+    "delete_warning": "Questa azione è irreversibile. Progetti e trascrizioni vengono rimossi. Eliminare voci o registrazioni rimuove anche il relativo audio salvato. I file esportati e i rendering audio completati vengono conservati.",
+    "draft_changed": "La bozza è cambiata durante il caricamento di questo progetto. Conferma di nuovo per sostituirla."
   },
   "projectActions": {
     "delete": "Eliminare “{{name}}”? Questa azione è irreversibile.",

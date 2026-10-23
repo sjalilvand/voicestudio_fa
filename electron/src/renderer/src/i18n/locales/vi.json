@@ -1634,7 +1634,8 @@
     "select_item": "Chọn {{name}}",
     "delete_selected": "Xóa mục đã chọn ({{count}})",
     "deleted_count": "Đã xóa: {{count}}",
-    "delete_warning": "Không thể hoàn tác. Dự án và bản chép lời sẽ bị xóa. Xóa giọng nói hoặc bản thu cũng xóa âm thanh đã lưu của chúng. Tệp đã xuất và âm thanh kết xuất hoàn tất được giữ lại."
+    "delete_warning": "Không thể hoàn tác. Dự án và bản chép lời sẽ bị xóa. Xóa giọng nói hoặc bản thu cũng xóa âm thanh đã lưu của chúng. Tệp đã xuất và âm thanh kết xuất hoàn tất được giữ lại.",
+    "draft_changed": "Bản nháp của bạn đã thay đổi trong khi tải dự án này. Xác nhận lại để thay thế bản nháp."
   },
   "projectActions": {
     "delete": "Xóa “{{name}}”? Không thể hoàn tác thao tác này.",

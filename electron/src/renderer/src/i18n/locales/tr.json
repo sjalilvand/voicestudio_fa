@@ -1634,7 +1634,8 @@
     "select_item": "{{name}} seç",
     "delete_selected": "Seçilenleri sil ({{count}})",
     "deleted_count": "Silinen: {{count}}",
-    "delete_warning": "Bu işlem geri alınamaz. Projeler ve dökümler kaldırılır. Sesleri veya kayıtları silmek, saklanan ses dosyalarını da siler. Dışa aktarılan dosyalar ve tamamlanmış işleme sesleri korunur."
+    "delete_warning": "Bu işlem geri alınamaz. Projeler ve dökümler kaldırılır. Sesleri veya kayıtları silmek, saklanan ses dosyalarını da siler. Dışa aktarılan dosyalar ve tamamlanmış işleme sesleri korunur.",
+    "draft_changed": "Bu proje yüklenirken taslağınız değişti. Değiştirmek için yeniden onaylayın."
   },
   "projectActions": {
     "delete": "“{{name}}” silinsin mi? Bu işlem geri alınamaz.",

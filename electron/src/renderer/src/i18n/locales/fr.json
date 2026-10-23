@@ -1636,7 +1636,8 @@
     "select_item": "Sélectionner {{name}}",
     "delete_selected": "Supprimer la sélection ({{count}})",
     "deleted_count": "Supprimés : {{count}}",
-    "delete_warning": "Cette action est irréversible. Les projets et transcriptions sont supprimés. Supprimer des voix ou des prises efface aussi leur audio enregistré. Les fichiers exportés et les rendus audio terminés sont conservés."
+    "delete_warning": "Cette action est irréversible. Les projets et transcriptions sont supprimés. Supprimer des voix ou des prises efface aussi leur audio enregistré. Les fichiers exportés et les rendus audio terminés sont conservés.",
+    "draft_changed": "Votre brouillon a changé pendant le chargement de ce projet. Confirmez à nouveau pour le remplacer."
   },
   "projectActions": {
     "delete": "Supprimer « {{name}} » ? Cette action est irréversible.",

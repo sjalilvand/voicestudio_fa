@@ -1634,7 +1634,8 @@
     "select_item": "选择{{name}}",
     "delete_selected": "删除所选项（{{count}}）",
     "deleted_count": "已删除：{{count}}",
-    "delete_warning": "此操作无法撤销。项目和转录文本将被删除。删除声音或录音也会删除其保存的音频。导出的文件和已完成渲染的音频将保留。"
+    "delete_warning": "此操作无法撤销。项目和转录文本将被删除。删除声音或录音也会删除其保存的音频。导出的文件和已完成渲染的音频将保留。",
+    "draft_changed": "加载此项目时，你的草稿已更改。请再次确认以替换草稿。"
   },
   "projectActions": {
     "delete": "删除“{{name}}”？此操作无法撤销。",

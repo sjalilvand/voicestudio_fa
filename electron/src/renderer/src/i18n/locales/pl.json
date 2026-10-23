@@ -1638,7 +1638,8 @@
     "select_item": "Zaznacz {{name}}",
     "delete_selected": "Usuń zaznaczone ({{count}})",
     "deleted_count": "Usunięto: {{count}}",
-    "delete_warning": "Tej operacji nie można cofnąć. Projekty i transkrypcje zostaną usunięte. Usunięcie głosów lub nagrań usuwa też ich zapisany dźwięk. Wyeksportowane pliki i ukończone rendery audio pozostaną."
+    "delete_warning": "Tej operacji nie można cofnąć. Projekty i transkrypcje zostaną usunięte. Usunięcie głosów lub nagrań usuwa też ich zapisany dźwięk. Wyeksportowane pliki i ukończone rendery audio pozostaną.",
+    "draft_changed": "Szkic zmienił się podczas wczytywania tego projektu. Potwierdź ponownie, aby go zastąpić."
   },
   "projectActions": {
     "delete": "Usunąć „{{name}}”? Tej czynności nie można cofnąć.",
