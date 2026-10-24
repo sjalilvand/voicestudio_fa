@@ -3862,6 +3862,28 @@
     },
     "consent": {
       "phone_note": "Lưu trên điện thoại này. Không gửi gì cả."
+    },
+    "report": {
+      "action": "Báo cáo",
+      "title": "Báo cáo kết quả này",
+      "reason": "Có vấn đề gì?",
+      "reasons": {
+        "sexual": "Nội dung tình dục",
+        "hateful": "Thù ghét hoặc lăng mạ",
+        "impersonation": "Mạo danh hoặc giọng nói bị nhân bản khi chưa được đồng ý",
+        "misleading": "Gây hiểu lầm hoặc có hại",
+        "other": "Lý do khác"
+      },
+      "note": "Chi tiết (không bắt buộc)",
+      "include_text": "Kèm văn bản tôi đã nhập",
+      "disclosure": "Gửi lý do, ghi chú, phiên bản ứng dụng và mô hình đã tạo nội dung này đến nhóm VoiceStudio. Không gửi âm thanh, tài khoản hay ID thiết bị.",
+      "send": "Gửi báo cáo",
+      "sending": "Đang gửi…",
+      "sent": "Đã gửi báo cáo. Cảm ơn bạn.",
+      "failed": "Không thể gửi báo cáo. Hãy kiểm tra kết nối và thử lại.",
+      "retry": "Thử lại",
+      "rate_limited": "Quá nhiều báo cáo từ mạng này. Hãy thử lại sau.",
+      "invalid": "Không thể gửi báo cáo này. Hãy cập nhật ứng dụng và thử lại."
     }
   }
 }

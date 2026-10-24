@@ -3864,6 +3864,28 @@
     },
     "consent": {
       "phone_note": "Enregistré sur ce téléphone. Rien n'est envoyé."
+    },
+    "report": {
+      "action": "Signaler",
+      "title": "Signaler ce résultat",
+      "reason": "Quel est le problème ?",
+      "reasons": {
+        "sexual": "Contenu sexuel",
+        "hateful": "Haineux ou abusif",
+        "impersonation": "Usurpation d'identité ou voix clonée sans consentement",
+        "misleading": "Trompeur ou dangereux",
+        "other": "Autre chose"
+      },
+      "note": "Détails (facultatif)",
+      "include_text": "Inclure le texte que j'ai saisi",
+      "disclosure": "Envoie votre motif, votre note, la version de l'app et le modèle utilisé à l'équipe VoiceStudio. Aucun audio, compte ni identifiant d'appareil n'est envoyé.",
+      "send": "Envoyer le signalement",
+      "sending": "Envoi…",
+      "sent": "Signalement envoyé. Merci.",
+      "failed": "Impossible d'envoyer le signalement. Vérifiez votre connexion et réessayez.",
+      "retry": "Réessayer",
+      "rate_limited": "Trop de signalements depuis ce réseau. Réessayez plus tard.",
+      "invalid": "Ce signalement n'a pas pu être envoyé. Mettez l'app à jour et réessayez."
     }
   }
 }

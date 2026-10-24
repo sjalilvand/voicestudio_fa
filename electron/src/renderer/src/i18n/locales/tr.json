@@ -3862,6 +3862,28 @@
     },
     "consent": {
       "phone_note": "Bu telefonda saklanır. Hiçbir şey gönderilmez."
+    },
+    "report": {
+      "action": "Bildir",
+      "title": "Bu sonucu bildir",
+      "reason": "Sorun nedir?",
+      "reasons": {
+        "sexual": "Cinsel içerik",
+        "hateful": "Nefret içeren veya taciz edici",
+        "impersonation": "Kimliğe bürünme veya izinsiz klonlanmış ses",
+        "misleading": "Yanıltıcı veya zararlı",
+        "other": "Başka bir şey"
+      },
+      "note": "Ayrıntılar (isteğe bağlı)",
+      "include_text": "Girdiğim metni ekle",
+      "disclosure": "Nedeninizi, notunuzu, uygulama sürümünü ve bunu üreten modeli VoiceStudio ekibine gönderir. Ses, hesap veya cihaz kimliği gönderilmez.",
+      "send": "Bildirimi gönder",
+      "sending": "Gönderiliyor…",
+      "sent": "Bildirim gönderildi. Teşekkürler.",
+      "failed": "Bildirim gönderilemedi. Bağlantınızı kontrol edip tekrar deneyin.",
+      "retry": "Tekrar dene",
+      "rate_limited": "Bu ağdan çok fazla bildirim geldi. Daha sonra tekrar deneyin.",
+      "invalid": "Bu bildirim gönderilemedi. Uygulamayı güncelleyip tekrar deneyin."
     }
   }
 }
