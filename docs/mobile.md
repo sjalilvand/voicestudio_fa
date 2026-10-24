@@ -14,6 +14,9 @@ choose, per task, to run on **This phone** or **My computer**.
 | Minimum OS | iOS 17 (iPhone, iPad) | Android 10 (API 29) |
 | Source | [`mobile/ios/`](../mobile/ios/README.md) | [`mobile/android/`](../mobile/android/README.md) |
 
+Home marks **@debpalash** and **@velixio** with a small star badge as the core
+maintainer team, matching Electron. The badge has a localized core-maintainer description for accessibility.
+
 ## What you can do
 
 - **Speak**: type text, pick a voice and language, generate, play, share.
@@ -280,8 +283,9 @@ answers are in [`store/google-play.md`](../store/google-play.md). One-time setup
 
 The version name is the root `package.json` version. Both signed Android
 workflows get their version code from `scripts/android_version_code.py`: UTC
-seconds since 2020-01-01. They share a concurrency group, so signed builds run
-one at a time and subsequent builds, including reruns, receive increasing codes
+minutes since 2020-01-01 (seconds jumped too far for Play). They share a concurrency
+group, so signed builds run one at a time, each taking minutes, and subsequent
+builds, including reruns, receive increasing codes
 across Play and GitHub releases. Local and `mobile` workflow builds stay debug-signed.
 
 ## Releasing
