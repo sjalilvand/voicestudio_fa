@@ -91,6 +91,7 @@ def test_handler_is_registered_on_the_real_app():
 
 @pytest.mark.parametrize("field", [
     "max_audio_only_rate", "audio_rate_cap", "video_slow_cap", "gap_guard_s",
+    "min_audio_rate",
 ])
 @pytest.mark.parametrize("token", ["NaN", "Infinity", "-Infinity", "1e309", "-1e309"])
 def test_nonfinite_smart_fit_input_is_422_before_engine_resolution(monkeypatch, field, token):

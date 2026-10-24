@@ -7,9 +7,11 @@ from pydantic import ValidationError
 from schemas.requests import DubRequest, FitOptions
 
 
-_NUMERIC_FIELDS = (
+_UNBOUNDED_FIELDS = (
     "max_audio_only_rate", "audio_rate_cap", "video_slow_cap", "gap_guard_s",
 )
+# min_audio_rate is the slowest-speed floor: bounded to 0.5-1.0 by the schema.
+_NUMERIC_FIELDS = (*_UNBOUNDED_FIELDS, "min_audio_rate")
 
 
 @pytest.mark.parametrize("field", _NUMERIC_FIELDS)
@@ -55,9 +57,17 @@ def test_fit_options_preserve_boundary_values_and_false():
         "gap_guard_s": 0.0,
         "allow_video_retime": False,
     }
-    assert FitOptions(**values).model_dump() == values
+    assert FitOptions(**values).model_dump() == {**values, "min_audio_rate": None}
+    assert FitOptions(min_audio_rate=0.5).min_audio_rate == 0.5
+    assert FitOptions(min_audio_rate=1.0).min_audio_rate == 1.0
 
 
-@pytest.mark.parametrize("field", _NUMERIC_FIELDS)
+@pytest.mark.parametrize("value", [0.0, 0.49, 1.01, 2.0])
+def test_fit_options_reject_slowest_speed_floor_out_of_range(value):
+    with pytest.raises(ValidationError):
+        FitOptions(min_audio_rate=value)
+
+
+@pytest.mark.parametrize("field", _UNBOUNDED_FIELDS)
 def test_fit_options_do_not_impose_an_arbitrary_upper_bound(field):
     assert getattr(FitOptions(**{field: 1e100}), field) == 1e100

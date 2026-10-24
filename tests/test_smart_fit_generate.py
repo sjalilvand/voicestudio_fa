@@ -248,7 +248,7 @@ def test_smart_fit_api_preserves_valid_options_and_defaults(
     overrides = extra.get("fit_options") or {}
     expected = {"timing_strategy": "smart_fit"}
     for field in ("max_audio_only_rate", "audio_rate_cap", "video_slow_cap",
-                  "gap_guard_s", "allow_video_retime"):
+                  "gap_guard_s", "allow_video_retime", "min_audio_rate"):
         value = overrides.get(field)
         expected[field] = getattr(defaults, field) if value is None else value
     assert job["fit_plans"]["es"]["params"] == expected
