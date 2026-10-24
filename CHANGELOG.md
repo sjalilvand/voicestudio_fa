@@ -117,6 +117,7 @@ metadata and the backend fallback mirror it.
 
 ### CI
 
+- The Electron renderer smokes run as their own job and the UI crawler is split into three shards, so the slowest CI job drops from ~21 to ~9 minutes (#3303)
 - The mobile workflow captures Google Play phone screenshots of the Android app on an emulator and keeps them as a download (#3277)
 - Pull requests that only change Python, docs, mobile or non-Electron workflows skip the Electron-only CI jobs (UI crawler, Desktop UI, native package), cutting their CI time from ~26 to ~8 minutes; deleted or renamed files, unknown paths and a failed lookup always run everything (#3271)
 - CI cancels a pull request's older run when it is pushed again, older Docker builds on main are cancelled, and review-bot comments no longer take a runner, so mass pushes stop flooding the queue (#3260)
