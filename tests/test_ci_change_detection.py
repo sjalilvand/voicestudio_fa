@@ -111,6 +111,61 @@ def test_a_broken_grep_never_means_skip(tmp_path, grep_exit):
     assert _detect(tmp_path, rows, grep_exit=grep_exit)[0] == "electron=true"
 
 
+# --- found by the second review: early-exit consumers under pipefail ------------------
+# `grep -q` / `head -5` close the pipe early; the producer dies of SIGPIPE, `pipefail`
+# reports the pipeline as failed, and on a list larger than the pipe buffer (64 KiB)
+# "a file was deleted" read as "no match". The lists below are well past that.
+
+def _bulk(prefix, n, status="modified"):
+    return [(status, f"{prefix}/module_{i:04}.py") for i in range(n)]
+
+
+@pytest.mark.parametrize("first", [("removed", "README.md"), ("removed", "LICENSE-NOTICE.md"),
+                                   ("renamed", "docs/app.tsx"), ("removed", "uv.lock")])
+@pytest.mark.parametrize("position", ["first", "last"])
+def test_a_deletion_or_rename_is_found_however_large_the_list_and_wherever_it_sits(tmp_path, first, position):
+    bulk = _bulk("backend/services", 2500) + [("modified", f"docs/page{i:04}.md") for i in range(400)]
+    rows = [first] + bulk if position == "first" else bulk + [first]
+    # well past the 64 KiB pipe buffer, but under the 3000-file cap (which would mask the bug)
+    assert 100_000 < sum(len(f"{a}\t{b}\n") for a, b in rows) and len(rows) < 3000
+    assert _detect(tmp_path, rows)[0] == "electron=true"
+
+
+def test_a_huge_electron_pr_does_not_crash_the_detection_step(tmp_path):
+    """`printf | head -5` exited 141 here and the step failed before writing its output."""
+    rows = [("modified", f"electron/src/renderer/file{i:04}.tsx") for i in range(2500)]
+    result, stdout = _detect(tmp_path, rows)    # _detect asserts the step itself exited 0
+    assert result == "electron=true"
+    assert stdout.count("    electron/") == 5
+
+
+def test_a_huge_but_safe_pr_still_skips(tmp_path):
+    rows = _bulk("backend/services", 2000) + [("modified", f"docs/page{i:04}.md") for i in range(900)]
+    assert _detect(tmp_path, rows)[0] == "electron=false"
+
+
+@pytest.mark.parametrize("status", ["copied", "changed", "unchanged", "removed", "renamed", "weird"])
+def test_only_added_and_modified_files_can_be_skipped(tmp_path, status):
+    """`changed` is a mode/type change (a file turned into a symlink); fail safe on any status."""
+    assert _detect(tmp_path, [(status, "backend/x.py")])[0] == "electron=true"
+
+
+def test_added_and_modified_mixed_is_still_skippable(tmp_path):
+    assert _detect(tmp_path, [("added", "backend/new.py"), ("modified", "docs/a.md")])[0] == "electron=false"
+
+
+@pytest.mark.parametrize("name", [
+    "backend/assets/samples/dictation/en_conversational.wav",   # played by the gallery smoke
+    "backend/assets/anything.bin",
+])
+def test_backend_assets_are_read_by_the_renderer_smokes_so_they_run_everything(tmp_path, name):
+    assert _detect(tmp_path, _mod(name))[0] == "electron=true"
+
+
+def test_the_rest_of_backend_is_still_skippable(tmp_path):
+    assert _detect(tmp_path, _mod("backend/assets_helper.py", "backend/api/x.py"))[0] == "electron=false"
+
+
 # --- other fail-safes --------------------------------------------------------------
 
 def test_3000_files_is_the_api_cap_so_it_runs_everything(tmp_path):
