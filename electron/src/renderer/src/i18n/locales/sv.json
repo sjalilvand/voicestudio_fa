@@ -2077,7 +2077,17 @@
     "hint_spawn_blocked": "Operativsystemet eller säkerhetsprogramvaran vägrade starta den lokala motorn. Lägg till VoiceStudios körtidsmapp bland undantagen i ditt antivirusprogram (Windows: Windows-säkerhet → Virus- och hotskydd → Hantera inställningar → Undantag), kontrollera att den inte ligger i en molnsynkad mapp som OneDrive och försök igen.",
     "hint_smart_app_control": "Windows Smart appkontroll blockerade den lokala motorn. Den saknar undantag per app, så ett undantag i antivirusprogrammet hjälper inte. Stäng av den i Windows-säkerhet → App- och webbläsarkontroll → Inställningar för Smart appkontroll (Windows kan inte slå på den igen utan en återställning), eller anslut VoiceStudio till en motor på en annan dator och försök igen.",
     "hint_slow_start": "Motorn höll fortfarande på att starta när väntetiden tog slut. Långsamma datorer, särskilt utan dedikerat grafikkort, och den första starten efter en installation (antivirusprogrammet skannar varje ny fil) kan ta flera minuter. Stäng minneskrävande appar och försök igen; senare starter går mycket snabbare.",
-    "hint_synced_folder": "Den här platsen ligger i en molnsynkad mapp (OneDrive, Dropbox, iCloud Drive, Google Drive). Platshållare som bara finns online och fillåsning förstör Python-miljön. Flytta VoiceStudio till en vanlig lokal mapp (till exempel C:\\VoiceStudio i Windows eller ~/VoiceStudio i macOS och Linux) och konfigurera den på nytt."
+    "hint_synced_folder": "Den här platsen ligger i en molnsynkad mapp (OneDrive, Dropbox, iCloud Drive, Google Drive). Platshållare som bara finns online och fillåsning förstör Python-miljön. Flytta VoiceStudio till en vanlig lokal mapp (till exempel C:\\VoiceStudio i Windows eller ~/VoiceStudio i macOS och Linux) och konfigurera den på nytt.",
+    "cause_smart_app_control": "Windows Smart App Control blockerade motorn",
+    "cause_spawn_blocked": "Säkerhetsprogram blockerade att motorn startade",
+    "cause_native_crash": "Motorn kraschade vid start (inbyggt fel)",
+    "cause_missing_env": "Python-miljön saknas eller är ofullständig",
+    "cause_permission": "Ingen behörighet att skriva till motormappen",
+    "cause_synced_folder": "Motormappen ligger i en molnsynkad mapp",
+    "cause_slow_start": "Motorn startar fortfarande på en långsam dator",
+    "choose_folder": "Välj en annan mapp",
+    "copy_diagnostics": "Kopiera diagnostik",
+    "diagnostics_copied": "Diagnostik kopierad"
   },
   "bootstrap": {
     "checking": "Kontrollerar miljö…",

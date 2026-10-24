@@ -5,6 +5,7 @@ import {
   CheckIcon,
   ChevronDownIcon,
   CircleIcon,
+  ClipboardCopyIcon,
   RotateCcwIcon,
   DownloadIcon,
   FolderOpenIcon,
@@ -26,7 +27,11 @@ import { ConfirmDialog } from '@/features/clone/confirm-dialog';
 import { RemoteBackendSettings } from '@/features/settings/remote-backend-settings';
 import { useBackendStatus } from '@/hooks/use-backend-status';
 import { isBackendBusy } from '@shared/utils/backendStage';
-import { backendFailureHints } from '@shared/utils/backendHint';
+import {
+  BACKEND_CAUSE_ACTION,
+  backendFailureCause,
+  backendFailureHints,
+} from '@shared/utils/backendHint';
 import { scrubText } from '@shared/utils/scrub';
 import i18n, { APP_LANGUAGE_ITEMS, APP_LANGUAGES, setAppLanguage, type AppLocale } from '@/i18n';
 import { brandIcon } from '@/lib/brand';
@@ -98,6 +103,7 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
   const [restarting, setRestarting] = useState(false);
   const [choosingLocation, setChoosingLocation] = useState(false);
   const [choosingRegion, setChoosingRegion] = useState(false);
+  const [diagnosticsCopied, setDiagnosticsCopied] = useState(false);
   const [cleanConfirmOpen, setCleanConfirmOpen] = useState(false);
   const setup = status.stage === 'setup_required';
   const regionItems = (['auto', 'global', 'china', 'russia', 'restricted'] as const).map(
@@ -156,6 +162,9 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
     );
 
   const failed = RETRYABLE.has(status.stage);
+  // One named cause and one primary action, instead of a raw error to decode.
+  const cause = failed && !setup ? backendFailureCause(status.message) : null;
+  const causeAction = cause ? BACKEND_CAUSE_ACTION[cause] : 'retry';
   const stageText =
     installing && status.setupPhase
       ? t(`bootstrap.${status.setupPhase}`)
@@ -175,6 +184,28 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
       await getBridge()?.backend.restart();
     } catch {
       setRestarting(false);
+    }
+  };
+
+  const chooseFolder = async () => {
+    setChoosingLocation(true);
+    try {
+      const chosen = await getBridge()?.backend.chooseRuntimeLocation(t('firstrun.env_dir'));
+      if (chosen) await getBridge()?.backend.restart();
+    } catch {
+      /* The failure screen stays and Retry remains available. */
+    } finally {
+      setChoosingLocation(false);
+    }
+  };
+
+  const copyDiagnostics = async () => {
+    const text = scrubText([status.message, ...status.logTail].filter(Boolean).join('\n'));
+    try {
+      await navigator.clipboard.writeText(text);
+      setDiagnosticsCopied(true);
+    } catch {
+      /* Clipboard can be blocked; the log below stays selectable. */
     }
   };
 
@@ -243,6 +274,11 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
                         },
                       )
                     : status.message}
+              </p>
+            ) : null}
+            {cause ? (
+              <p className="text-sm font-medium" data-testid="backend-cause">
+                {t(`backend.cause_${cause}`)}
               </p>
             ) : null}
             {failed && !setup
@@ -339,7 +375,9 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
                           </span>
                           <span>
                             {transferLive && progress.etaSeconds !== undefined
-                              ? t('bootstrap.eta', { time: formatEta(progress.etaSeconds) })
+                              ? t('bootstrap.eta', {
+                                  time: formatEta(progress.etaSeconds),
+                                })
                               : '—'}
                           </span>
                         </div>
@@ -348,7 +386,9 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
                   ) : null}
                   {dependencyCount ? (
                     <p className="mt-2 text-xs text-muted-foreground">
-                      {t('bootstrap.dependencies_resolved', { count: dependencyCount })}
+                      {t('bootstrap.dependencies_resolved', {
+                        count: dependencyCount,
+                      })}
                     </p>
                   ) : null}
                 </div>
@@ -453,7 +493,11 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium">{t('firstrun.env_dir')}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        {t(status.runtimeStorage ? 'firstrun.env_dir_desc_scoped' : 'firstrun.env_dir_desc')}
+                        {t(
+                          status.runtimeStorage
+                            ? 'firstrun.env_dir_desc_scoped'
+                            : 'firstrun.env_dir_desc',
+                        )}
                       </p>
                       <p
                         className="mt-2 truncate font-mono text-xs text-muted-foreground"
@@ -551,7 +595,28 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
           ) : null}
           {failed ? (
             <div className="flex flex-wrap justify-center gap-2">
-              <Button onClick={retry} disabled={restarting}>
+              {causeAction === 'choose_folder' ? (
+                <Button
+                  onClick={() => void chooseFolder()}
+                  disabled={restarting || choosingLocation}
+                >
+                  <FolderOpenIcon data-icon="inline-start" />
+                  {t('backend.choose_folder')}
+                </Button>
+              ) : null}
+              {causeAction === 'copy_diagnostics' ? (
+                <Button onClick={() => void copyDiagnostics()}>
+                  <ClipboardCopyIcon data-icon="inline-start" />
+                  {diagnosticsCopied
+                    ? t('backend.diagnostics_copied')
+                    : t('backend.copy_diagnostics')}
+                </Button>
+              ) : null}
+              <Button
+                variant={causeAction === 'retry' ? 'default' : 'outline'}
+                onClick={retry}
+                disabled={restarting}
+              >
                 <RotateCcwIcon data-icon="inline-start" />
                 {t('backend.retry')}
               </Button>

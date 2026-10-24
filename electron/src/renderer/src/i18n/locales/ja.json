@@ -2077,7 +2077,17 @@
     "hint_spawn_blocked": "OSまたはセキュリティソフトがローカルエンジンの起動を拒否しました。VoiceStudioのランタイムフォルダーをウイルス対策ソフトの除外に追加し（Windows: Windowsセキュリティ → ウイルスと脅威の防止 → 設定の管理 → 除外）、OneDriveなどクラウド同期フォルダー内にないことを確認してから、もう一度お試しください。",
     "hint_smart_app_control": "Windows のスマート アプリ コントロールがローカルエンジンをブロックしました。アプリごとの例外は設定できないため、ウイルス対策の除外は効果がありません。Windows セキュリティ → アプリとブラウザー コントロール → スマート アプリ コントロールの設定 でオフにするか（リセットしないと再びオンにできません）、別のコンピューターで動作するエンジンに VoiceStudio を接続してから、もう一度お試しください。",
     "hint_slow_start": "待機時間が切れた時点で、エンジンはまだ起動中でした。低速なPC（特に専用GPUなし）やインストール後の初回起動（ウイルス対策ソフトがすべての新規ファイルをスキャンします）では、数分かかることがあります。メモリを多く使うアプリを閉じてから、もう一度お試しください。2回目以降の起動はずっと速くなります。",
-    "hint_synced_folder": "この場所はクラウド同期フォルダー（OneDrive、Dropbox、iCloud Drive、Google Drive）内にあります。オンライン専用のプレースホルダーやファイルのロックにより、Python環境が壊れます。VoiceStudioを通常のローカルフォルダー（例: WindowsではC:\\VoiceStudio、macOSとLinuxでは~/VoiceStudio）に移動して、もう一度セットアップしてください。"
+    "hint_synced_folder": "この場所はクラウド同期フォルダー（OneDrive、Dropbox、iCloud Drive、Google Drive）内にあります。オンライン専用のプレースホルダーやファイルのロックにより、Python環境が壊れます。VoiceStudioを通常のローカルフォルダー（例: WindowsではC:\\VoiceStudio、macOSとLinuxでは~/VoiceStudio）に移動して、もう一度セットアップしてください。",
+    "cause_smart_app_control": "Windows のスマート アプリ コントロールがエンジンをブロックしました",
+    "cause_spawn_blocked": "セキュリティソフトがエンジンの起動をブロックしました",
+    "cause_native_crash": "起動中にエンジンがクラッシュしました（ネイティブ障害）",
+    "cause_missing_env": "Python 環境が見つからないか不完全です",
+    "cause_permission": "エンジンのフォルダーへの書き込み権限がありません",
+    "cause_synced_folder": "エンジンのフォルダーがクラウド同期フォルダー内にあります",
+    "cause_slow_start": "動作の遅いパソコンでエンジンがまだ起動中です",
+    "choose_folder": "別のフォルダーを選択",
+    "copy_diagnostics": "診断情報をコピー",
+    "diagnostics_copied": "診断情報をコピーしました"
   },
   "bootstrap": {
     "checking": "環境の確認中…",

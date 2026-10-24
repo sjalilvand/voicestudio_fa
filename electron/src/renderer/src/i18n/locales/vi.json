@@ -2077,7 +2077,17 @@
     "hint_spawn_blocked": "Hệ điều hành hoặc phần mềm bảo mật của bạn đã từ chối khởi chạy engine cục bộ. Hãy thêm thư mục runtime của VoiceStudio vào danh sách loại trừ của phần mềm diệt virus (Windows: Bảo mật Windows → Bảo vệ khỏi virus và mối đe dọa → Quản lý cài đặt → Loại trừ), đảm bảo thư mục này không nằm trong thư mục đồng bộ đám mây như OneDrive, rồi thử lại.",
     "hint_smart_app_control": "Smart App Control của Windows đã chặn công cụ cục bộ. Tính năng này không có ngoại lệ cho từng ứng dụng nên loại trừ trong phần mềm diệt virus sẽ không giúp được. Hãy tắt nó trong Bảo mật Windows → Kiểm soát ứng dụng và trình duyệt → Cài đặt Smart App Control (Windows không thể bật lại nếu không đặt lại máy), hoặc kết nối VoiceStudio với công cụ chạy trên máy tính khác, rồi thử lại.",
     "hint_slow_start": "Engine vẫn đang khởi động thì hết thời gian chờ. Máy chậm, nhất là máy không có GPU rời, và lần khởi chạy đầu tiên sau khi cài đặt (phần mềm diệt virus quét mọi tệp mới) có thể mất vài phút. Hãy đóng các ứng dụng tốn nhiều bộ nhớ rồi thử lại; những lần khởi động sau nhanh hơn nhiều.",
-    "hint_synced_folder": "Vị trí này nằm trong thư mục đồng bộ đám mây (OneDrive, Dropbox, iCloud Drive, Google Drive). Các tệp giữ chỗ chỉ có trên mạng và việc khóa tệp làm hỏng môi trường Python. Hãy chuyển VoiceStudio sang một thư mục cục bộ thông thường (ví dụ C:\\VoiceStudio trên Windows hoặc ~/VoiceStudio trên macOS và Linux) rồi thiết lập lại."
+    "hint_synced_folder": "Vị trí này nằm trong thư mục đồng bộ đám mây (OneDrive, Dropbox, iCloud Drive, Google Drive). Các tệp giữ chỗ chỉ có trên mạng và việc khóa tệp làm hỏng môi trường Python. Hãy chuyển VoiceStudio sang một thư mục cục bộ thông thường (ví dụ C:\\VoiceStudio trên Windows hoặc ~/VoiceStudio trên macOS và Linux) rồi thiết lập lại.",
+    "cause_smart_app_control": "Smart App Control của Windows đã chặn công cụ",
+    "cause_spawn_blocked": "Phần mềm bảo mật đã chặn công cụ khởi động",
+    "cause_native_crash": "Công cụ bị sập khi khởi động (lỗi gốc)",
+    "cause_missing_env": "Môi trường Python bị thiếu hoặc chưa đầy đủ",
+    "cause_permission": "Không có quyền ghi vào thư mục của công cụ",
+    "cause_synced_folder": "Thư mục của công cụ nằm trong thư mục đồng bộ đám mây",
+    "cause_slow_start": "Công cụ vẫn đang khởi động trên máy chậm",
+    "choose_folder": "Chọn thư mục khác",
+    "copy_diagnostics": "Sao chép chẩn đoán",
+    "diagnostics_copied": "Đã sao chép chẩn đoán"
   },
   "bootstrap": {
     "checking": "Đang kiểm tra môi trường…",

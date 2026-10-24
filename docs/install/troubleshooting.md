@@ -1339,6 +1339,11 @@ program it tried to launch, quotes what the backend last printed (or says it
 printed nothing, or that nothing was spawned), and adds a localized hint under
 the message:
 
+When the app recognises the cause it also names it in one line and puts the
+matching action first: **Choose another folder** for a missing environment, a
+write-permission error or a cloud-synced folder, **Copy diagnostics** for a
+native crash such as exit code `3221225477`, and **Retry** otherwise.
+
 - **`Could not start <program>: spawn UNKNOWN`** — Windows (or your security
   software) refused to run the Python runtime; `UNKNOWN` is how the OS reports a
   blocked executable. Add VoiceStudio's runtime folder to your antivirus
