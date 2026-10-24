@@ -234,3 +234,13 @@ def test_the_colab_notebook_passes_the_overrides():
         args = _install_argv(src)
         i = args.index("--override")
         assert args[i + 1:i + 2] == ["deploy/uv-overrides.txt"], args
+
+
+def test_the_colab_notebook_updates_a_reused_clone():
+    # A clone from an earlier session lacked deploy/uv-overrides.txt, so the
+    # install cell failed on the file it now passes (#3281 review).
+    nb = json.loads(_NOTEBOOK.read_text(encoding="utf-8"))
+    src = next("".join(c["source"]) for c in nb["cells"] if "# 2a. Clone the repo" in "".join(c["source"]))
+    reuse = src[src.index("# 2a."):src.index("else:", src.index("# 2a."))]
+    assert '"pull", "--ff-only"' in reuse
+    assert 'shutil.rmtree(os.path.join(REPO_DIR, "frontend", "dist")' in reuse
