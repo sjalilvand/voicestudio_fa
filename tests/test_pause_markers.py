@@ -134,3 +134,18 @@ def test_render_chunking_disabled_by_default():
     _render_with_pauses(lambda t: calls.append(t) or torch.ones(1, sr),
                         [(long_span, 0), ("b", 0)], sr)
     assert calls == [long_span, "b"]
+
+
+def test_render_omits_a_long_span_whose_chunks_are_all_empty():
+    sr = 1000
+    long_span = "A full sentence here. " * 60
+    dropped = []
+
+    def gen(text, chunk_index=None):
+        if text == "ok":
+            return torch.ones(1, sr)
+        return torch.zeros(1, 0)
+
+    out = _render_with_pauses(gen, [(long_span, 100), ("ok", 0)], sr,
+                              max_chunk_chars=800, crossfade_ms=0, dropped_sink=dropped)
+    assert out.shape == (1, sr + 100)  # the pause stays, the dead span is gone
