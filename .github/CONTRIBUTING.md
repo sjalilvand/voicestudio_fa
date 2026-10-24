@@ -382,7 +382,7 @@ hard rules from the first prompt.
 ## Quality gates your PR must pass
 
 - **CI scope:** the Electron-only jobs (UI crawler, Desktop UI, Linux native
-  package, and the Electron steps of `Tests (backend + frontend)`) are skipped on a
+  package, and `Tests (Electron)`, one half of `Tests (backend + frontend)`) are skipped on a
   pull request whose every changed file is an *edit or addition* under `backend/`
   (except `backend/assets/`), `omnivoice/`, `docs/` or `mobile/`, a Python file under `tests/` or `scripts/`,
   a root `*.md`, `Makefile`, `uv.lock`, or a workflow other than `ci.yml` and
