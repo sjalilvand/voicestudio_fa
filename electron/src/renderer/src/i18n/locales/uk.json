@@ -2091,7 +2091,13 @@
     "cause_slow_start": "Рушій ще запускається на повільному комп’ютері",
     "choose_folder": "Вибрати іншу теку",
     "copy_diagnostics": "Копіювати діагностику",
-    "diagnostics_copied": "Діагностику скопійовано"
+    "diagnostics_copied": "Діагностику скопійовано",
+    "details": "Докладніше",
+    "pill_starting": "Запуск",
+    "pill_recovering": "Відновлення",
+    "pill_failed": "Збій",
+    "pill_repeats": "{{count}} разів поспіль",
+    "offline_bar": "Рушій зайнятий, підключення відновлюється автоматично"
   },
   "bootstrap": {
     "checking": "Перевірка оточення…",

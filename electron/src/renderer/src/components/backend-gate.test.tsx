@@ -348,7 +348,9 @@ it.each([
 
     renderGate('failed');
 
-    expect(screen.getByText(message)).toBeInTheDocument();
+    // The raw message moves under Details once a cause is named.
+  fireEvent.click(screen.getByRole('button', { name: i18n.t('backend.details') }));
+  expect(screen.getByLabelText(i18n.t('backend.log_label'))).toHaveTextContent(message);
     expect(screen.getByTestId('backend-hint')).toHaveTextContent(i18n.t(key));
   },
 );
@@ -395,4 +397,51 @@ it('names no cause for an unrecognised failure', () => {
   renderGate('failed');
 
   expect(screen.queryByTestId('backend-cause')).not.toBeInTheDocument();
+});
+
+it('shows one status pill with the stage and elapsed time while starting', () => {
+  backendStatus.elapsedMs = 12_000;
+
+  renderGate('starting');
+
+  const pill = screen.getByTestId('backend-status-pill');
+  expect(pill).toHaveAttribute('data-state', 'starting');
+  expect(pill).toHaveTextContent(i18n.t('backend.pill_starting'));
+  expect(pill).toHaveTextContent(i18n.t('backend.elapsed', { seconds: 12 }));
+});
+
+it('shows a failed pill and keeps the raw log tail under Details', () => {
+  backendStatus.message = 'Backend exited unexpectedly (exit code 3221225477).';
+  backendStatus.logTail = ['line one', 'line two'];
+
+  renderGate('crashed');
+
+  expect(screen.getByTestId('backend-status-pill')).toHaveAttribute('data-state', 'failed');
+  expect(screen.queryByText('line one', { exact: false })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: i18n.t('backend.details') }));
+  expect(screen.getByLabelText(i18n.t('backend.log_label'))).toHaveTextContent('line two');
+});
+
+it('collapses repeated identical failures into one pill counter', () => {
+  backendStatus.message = 'Backend exited unexpectedly (exit code 1).';
+  const view = renderGate('failed');
+  expect(screen.getByTestId('backend-status-pill')).not.toHaveTextContent(/2/);
+
+  backendStatus.stage = 'starting';
+  view.rerender(<QueryClientProvider client={new QueryClient()}><BackendGate><div>workspace</div></BackendGate></QueryClientProvider>);
+  backendStatus.stage = 'failed';
+  view.rerender(<QueryClientProvider client={new QueryClient()}><BackendGate><div>workspace</div></BackendGate></QueryClientProvider>);
+
+  expect(screen.getByTestId('backend-status-pill')).toHaveTextContent(
+    i18n.t('backend.pill_repeats', { count: 2 }),
+  );
+});
+
+it('shows a non-blocking offline bar while a live engine is busy', () => {
+  backendStatus.managed = true;
+
+  renderGate('unresponsive');
+
+  expect(screen.getByTestId('backend-offline-bar')).toHaveTextContent(i18n.t('backend.offline_bar'));
+  expect(screen.queryByTestId('backend-gate-scroll')).not.toBeInTheDocument();
 });

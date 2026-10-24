@@ -2087,7 +2087,13 @@
     "cause_slow_start": "느린 컴퓨터에서 엔진이 아직 시작 중입니다",
     "choose_folder": "다른 폴더 선택",
     "copy_diagnostics": "진단 정보 복사",
-    "diagnostics_copied": "진단 정보를 복사했습니다"
+    "diagnostics_copied": "진단 정보를 복사했습니다",
+    "details": "세부 정보",
+    "pill_starting": "시작 중",
+    "pill_recovering": "복구 중",
+    "pill_failed": "실패",
+    "pill_repeats": "{{count}}회 연속",
+    "offline_bar": "엔진이 사용 중입니다. 자동으로 다시 연결합니다"
   },
   "bootstrap": {
     "checking": "환경 확인 중…",

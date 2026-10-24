@@ -2089,7 +2089,13 @@
     "cause_slow_start": "Le moteur démarre encore sur un ordinateur lent",
     "choose_folder": "Choisir un autre dossier",
     "copy_diagnostics": "Copier le diagnostic",
-    "diagnostics_copied": "Diagnostic copié"
+    "diagnostics_copied": "Diagnostic copié",
+    "details": "Détails",
+    "pill_starting": "Démarrage",
+    "pill_recovering": "Récupération",
+    "pill_failed": "Échec",
+    "pill_repeats": "{{count}} fois de suite",
+    "offline_bar": "Moteur occupé, reconnexion automatique"
   },
   "bootstrap": {
     "checking": "Vérification de l'environnement…",

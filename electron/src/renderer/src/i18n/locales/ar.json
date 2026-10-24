@@ -2095,7 +2095,13 @@
     "cause_slow_start": "لا يزال المحرك يبدأ على جهاز بطيء",
     "choose_folder": "اختيار مجلد آخر",
     "copy_diagnostics": "نسخ التشخيصات",
-    "diagnostics_copied": "تم نسخ التشخيصات"
+    "diagnostics_copied": "تم نسخ التشخيصات",
+    "details": "التفاصيل",
+    "pill_starting": "جارٍ البدء",
+    "pill_recovering": "جارٍ الاسترداد",
+    "pill_failed": "فشل",
+    "pill_repeats": "{{count}} مرات متتالية",
+    "offline_bar": "المحرك مشغول، تتم إعادة الاتصال تلقائيًا"
   },
   "bootstrap": {
     "checking": "جاري التحقق من البيئة…",

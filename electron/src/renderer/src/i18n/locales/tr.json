@@ -2087,7 +2087,13 @@
     "cause_slow_start": "Altyapı yavaş bir bilgisayarda hâlâ başlıyor",
     "choose_folder": "Başka bir klasör seç",
     "copy_diagnostics": "Tanılamayı kopyala",
-    "diagnostics_copied": "Tanılama kopyalandı"
+    "diagnostics_copied": "Tanılama kopyalandı",
+    "details": "Ayrıntılar",
+    "pill_starting": "Başlatılıyor",
+    "pill_recovering": "Toparlanıyor",
+    "pill_failed": "Başarısız",
+    "pill_repeats": "Art arda {{count}} kez",
+    "offline_bar": "Altyapı meşgul, otomatik olarak yeniden bağlanılıyor"
   },
   "bootstrap": {
     "checking": "Ortam kontrol ediliyor…",

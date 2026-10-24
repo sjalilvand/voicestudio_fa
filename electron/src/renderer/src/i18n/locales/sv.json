@@ -2087,7 +2087,13 @@
     "cause_slow_start": "Motorn startar fortfarande på en långsam dator",
     "choose_folder": "Välj en annan mapp",
     "copy_diagnostics": "Kopiera diagnostik",
-    "diagnostics_copied": "Diagnostik kopierad"
+    "diagnostics_copied": "Diagnostik kopierad",
+    "details": "Detaljer",
+    "pill_starting": "Startar",
+    "pill_recovering": "Återhämtar",
+    "pill_failed": "Misslyckades",
+    "pill_repeats": "{{count}} gånger i rad",
+    "offline_bar": "Motorn är upptagen, återansluter automatiskt"
   },
   "bootstrap": {
     "checking": "Kontrollerar miljö…",

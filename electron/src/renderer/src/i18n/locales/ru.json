@@ -2091,7 +2091,13 @@
     "cause_slow_start": "Движок ещё запускается на медленном компьютере",
     "choose_folder": "Выбрать другую папку",
     "copy_diagnostics": "Копировать диагностику",
-    "diagnostics_copied": "Диагностика скопирована"
+    "diagnostics_copied": "Диагностика скопирована",
+    "details": "Подробности",
+    "pill_starting": "Запуск",
+    "pill_recovering": "Восстановление",
+    "pill_failed": "Сбой",
+    "pill_repeats": "{{count}} раз подряд",
+    "offline_bar": "Движок занят, подключение восстанавливается автоматически"
   },
   "bootstrap": {
     "checking": "Проверка окружения…",

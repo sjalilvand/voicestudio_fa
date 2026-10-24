@@ -2089,7 +2089,13 @@
     "cause_slow_start": "Il motore è ancora in avvio su un computer lento",
     "choose_folder": "Scegli un’altra cartella",
     "copy_diagnostics": "Copia diagnostica",
-    "diagnostics_copied": "Diagnostica copiata"
+    "diagnostics_copied": "Diagnostica copiata",
+    "details": "Dettagli",
+    "pill_starting": "Avvio",
+    "pill_recovering": "Ripristino",
+    "pill_failed": "Non riuscito",
+    "pill_repeats": "{{count}} volte di fila",
+    "offline_bar": "Motore occupato, riconnessione automatica"
   },
   "bootstrap": {
     "checking": "Verifica dell'ambiente…",
