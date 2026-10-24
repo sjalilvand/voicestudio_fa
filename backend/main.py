@@ -871,7 +871,7 @@ def _phase_a_finalize() -> None:
             target = dev_ui_redirect(client, request.headers.get("host", ""), ui_port)
             if target and request.url.port != ui_port:
                 query = request.url.query
-                return RedirectResponse(url=target + (f"?{query}" if query else ""))
+                return RedirectResponse(url=target + (f"/?{query}" if query else ""))
             media_type, body = web_ui_missing_body(request.headers.get("accept", ""))
             return Response(body, status_code=503, media_type=media_type)
 

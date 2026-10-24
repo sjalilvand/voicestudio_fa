@@ -142,7 +142,7 @@ def test_local_redirect_keeps_the_pin_query(boot, tmp_path):
     response = _get(app, "127.0.0.1", "localhost:3900", path="/?pin=123456")
 
     assert response.status_code == 307
-    assert response.headers["location"] == "http://localhost:3901?pin=123456"
+    assert response.headers["location"] == "http://localhost:3901/?pin=123456"
 
 
 def test_no_redirect_loop_when_sharing_from_the_ui_port(boot, tmp_path):
