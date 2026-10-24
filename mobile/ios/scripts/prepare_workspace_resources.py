@@ -23,16 +23,16 @@ def flatten(obj, prefix=""):
 
 def prepare(output):
     source = ROOT / "electron/src/renderer/src/i18n/locales"
-    english = flatten(json.loads((source / "en.json").read_text()))
+    english = flatten(json.loads((source / "en.json").read_text(encoding="utf-8")))
     for path in sorted((ROOT / "mobile/contract").glob("strings*.en.json")):
-        english.update(flatten(json.loads(path.read_text())))
+        english.update(flatten(json.loads(path.read_text(encoding="utf-8"))))
     for path in sorted(source.glob("*.json")):
-        catalog = flatten(json.loads(path.read_text()))
+        catalog = flatten(json.loads(path.read_text(encoding="utf-8")))
         directory = output / (path.stem + ".lproj")
         directory.mkdir(parents=True, exist_ok=True)
         lines = [f'{json.dumps(key)} = {json.dumps(catalog.get(key, english.get(key, key)), ensure_ascii=True)};' for key in KEYS]
-        (directory / "Localizable.strings").write_text("\n".join(lines) + "\n")
-    version = json.loads((ROOT / "package.json").read_text())["version"]
+        (directory / "Localizable.strings").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    version = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))["version"]
     match = re.fullmatch(r"(\d+\.\d+\.\d+)(?:-beta\.\d+)?", version)
     if not match:
         raise ValueError("Unsupported app version")
@@ -41,7 +41,7 @@ def prepare(output):
         raise ValueError("Invalid iOS build number")
     generated = ROOT / "mobile/ios/.generated"
     generated.mkdir(parents=True, exist_ok=True)
-    (generated / "Version.xcconfig").write_text(f"VS_MARKETING_VERSION = {match[1]}\nVS_BUILD_NUMBER = {build}\n")
+    (generated / "Version.xcconfig").write_text(f"VS_MARKETING_VERSION = {match[1]}\nVS_BUILD_NUMBER = {build}\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

@@ -7,6 +7,7 @@ import os
 import pathlib
 import plistlib
 import re
+import runpy
 import shutil
 import subprocess
 
@@ -101,8 +102,9 @@ def build_number(value):
 
 def prepare(output, info):
     output.mkdir(parents=True, exist_ok=True)
-    from prepare_workspace_resources import prepare as prepare_workspaces
-    prepare_workspaces(output)
+    # Load the sibling by location: release checks also import this script by file path.
+    workspace = runpy.run_path(str(IOS / "scripts/prepare_workspace_resources.py"))
+    workspace["prepare"](output)
     legal = IOS / "VoiceStudio/Resources/NativeLicences"
     validate_native_notices(legal,json.loads((ROOT / "mobile/native/pins.json").read_text(encoding="utf-8")))
     shutil.copytree(legal,output / "NativeLicences",dirs_exist_ok=True)
