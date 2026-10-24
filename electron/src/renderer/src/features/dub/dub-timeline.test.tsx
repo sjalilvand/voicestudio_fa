@@ -21,12 +21,13 @@ it('keeps short segments proportional on long recordings and offers zoom', () =>
   fireEvent.click(screen.getByRole('button', { name: 'trimmer.fit_all' }));
   expect(screen.getByRole('listbox').style.width).toBe('100%');
 });
-it('snaps to an onset with S but leaves Mod+S alone', () => {
+it('snaps to an onset with S but leaves Mod+S and Alt+S alone', () => {
   render(<DubTimeline segments={[{id:'a',start:0.2,end:1,text:'a',text_original:'a'}]}
     disabled={false} mediaDuration={10} onsets={[0.25]} selectedId={null} onSelect={vi.fn()} />);
   const segment = screen.getByRole('option');
   fireEvent.keyDown(segment, { key: 's', metaKey: true });
   fireEvent.keyDown(segment, { key: 's', ctrlKey: true });
+  fireEvent.keyDown(segment, { key: 's', altKey: true });
   expect(moveResizeDubSegment).not.toHaveBeenCalled();
   fireEvent.keyDown(segment, { key: 's' });
   expect(moveResizeDubSegment).toHaveBeenCalledWith('a', expect.objectContaining({ start: 0.25 }));
