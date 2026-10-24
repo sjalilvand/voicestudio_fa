@@ -16,7 +16,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { apiJson } from '@/lib/api/client';
 import { clearDubEditHistory, dubSession, translateDub, type DubSegment } from './dub-session';
 
-vi.mock('@/lib/api/client', () => ({ apiJson: vi.fn() }));
+vi.mock('@/lib/api/client', () => ({ apiJson: vi.fn(), ApiError: class extends Error {} }));
 
 const segment = (id: string): DubSegment => ({
   id,
@@ -28,7 +28,7 @@ const segment = (id: string): DubSegment => ({
 });
 
 /** A dub mid-edit with Portuguese (Portugal) chosen, as the reporter had it. */
-function editingWithDialect(dialect: string | undefined = 'pt-PT') {
+function editingWithDialect(dialect: string | null = 'pt-PT') {
   dubSession.setState((current) => ({
     ...current,
     jobId: 'job',
@@ -36,7 +36,7 @@ function editingWithDialect(dialect: string | undefined = 'pt-PT') {
     recovery: null,
     error: null,
     tracks: [],
-    dialect,
+    dialect: dialect ?? undefined,
     dialectIgnored: false,
     segments: [segment('a')],
   }));
@@ -75,7 +75,7 @@ it('stays quiet when the engine did honour it', async () => {
 });
 
 it('stays quiet when no dialect was chosen', async () => {
-  editingWithDialect(undefined);
+  editingWithDialect(null);
   backendAnswers({});
 
   await translateDub('pt', 'nllb');
@@ -110,4 +110,20 @@ it('clears the notice once a later translation applies the dialect', async () =>
   await translateDub('pt', 'openai');
 
   expect(dubSession.state.dialectIgnored).toBe(false);
+});
+
+it('keeps the earlier verdict when no translated text landed', async () => {
+  editingWithDialect('pt-PT');
+  dubSession.setState((current) => ({ ...current, dialectIgnored: true }));
+  vi.mocked(apiJson).mockImplementation((path: string) =>
+    Promise.resolve(
+      path === '/dub/translate'
+        ? { translated: [{ id: 'a', error: 'provider down' }], dialect_applied: true }
+        : [],
+    ),
+  );
+
+  await translateDub('pt', 'nllb');
+
+  expect(dubSession.state.dialectIgnored).toBe(true);
 });

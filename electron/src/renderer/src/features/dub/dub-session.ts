@@ -1336,7 +1336,15 @@ export async function translateDub(
         }),
       });
       const fallback = translated.cinematic_skipped === 'no-llm-configured';
-      const dialectIgnored = dialectWasIgnored(translated);
+      // The verdict only describes text that landed: a reply with row errors
+      // or no rows leaves the previous verdict standing.
+      const landed = requestedSegments.some((segment) => {
+        const row = translated.translated.find((r) => String(r.id) === segment.id);
+        return Boolean(row && !row.error && row.text);
+      });
+      const dialectIgnored = landed
+        ? dialectWasIgnored(translated)
+        : Boolean(snapshot.dialectIgnored);
       agentFallback = fallback && snapshot.quality === 'agent';
       const rows = new Map(translated.translated.map((row) => [String(row.id), row]));
       clearDubEditHistory();
