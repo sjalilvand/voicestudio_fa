@@ -114,7 +114,8 @@ def test_canonical_unicode_respelling_is_not_drift_in_score_dub():
     out = score_dub([_seg(0, 3, text, "a")], recog)
     assert out[0].drift == 0.0
     assert out[0].flagged is False
-    assert out[0].expected == text
+    assert out[0].target_text == text
+    assert out[0].recognized_text == unicodedata.normalize("NFD", text)
 
 
 def test_drifted_segment_is_flagged():
