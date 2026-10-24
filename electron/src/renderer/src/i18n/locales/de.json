@@ -2322,7 +2322,9 @@
     "not_included": "Nicht in deinem Tarif",
     "plan_ends": "bis {{date}}",
     "details_failed": "Deine Kontodaten konnten nicht geladen werden ({{reason}}).",
-    "retry": "Erneut versuchen"
+    "retry": "Erneut versuchen",
+    "manage_profile": "Profil verwalten",
+    "manage_plan": "Tarif verwalten"
   },
   "cloudsync": {
     "unavailable": "Die Synchronisierung ist gerade nicht verfügbar.",

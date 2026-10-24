@@ -2386,7 +2386,9 @@
     "not_included": "Not on your plan",
     "plan_ends": "until {{date}}",
     "details_failed": "Couldn’t load your account details ({{reason}}).",
-    "retry": "Retry"
+    "retry": "Retry",
+    "manage_profile": "Manage profile",
+    "manage_plan": "Manage plan"
   },
   "cloudsync": {
     "unavailable": "Sync is not available right now.",

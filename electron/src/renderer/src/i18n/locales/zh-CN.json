@@ -2322,7 +2322,9 @@
     "not_included": "不在你的方案中",
     "plan_ends": "至 {{date}}",
     "details_failed": "无法加载你的账户详情（{{reason}}）。",
-    "retry": "重试"
+    "retry": "重试",
+    "manage_profile": "管理个人资料",
+    "manage_plan": "管理方案"
   },
   "cloudsync": {
     "unavailable": "同步当前不可用。",

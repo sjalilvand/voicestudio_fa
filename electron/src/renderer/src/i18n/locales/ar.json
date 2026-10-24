@@ -2330,7 +2330,9 @@
     "not_included": "غير مضمّن في خطتك",
     "plan_ends": "حتى {{date}}",
     "details_failed": "تعذّر تحميل تفاصيل حسابك ({{reason}}).",
-    "retry": "إعادة المحاولة"
+    "retry": "إعادة المحاولة",
+    "manage_profile": "إدارة الملف الشخصي",
+    "manage_plan": "إدارة الخطة"
   },
   "cloudsync": {
     "unavailable": "المزامنة غير متاحة الآن.",

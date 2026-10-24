@@ -2322,7 +2322,9 @@
     "not_included": "プランに含まれません",
     "plan_ends": "{{date}} まで",
     "details_failed": "アカウントの詳細を読み込めませんでした（{{reason}}）。",
-    "retry": "再試行"
+    "retry": "再試行",
+    "manage_profile": "プロフィールを管理",
+    "manage_plan": "プランを管理"
   },
   "cloudsync": {
     "unavailable": "現在、同期を利用できません。",

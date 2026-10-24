@@ -2322,7 +2322,9 @@
     "not_included": "Không có trong gói của bạn",
     "plan_ends": "đến {{date}}",
     "details_failed": "Không thể tải thông tin tài khoản của bạn ({{reason}}).",
-    "retry": "Thử lại"
+    "retry": "Thử lại",
+    "manage_profile": "Quản lý hồ sơ",
+    "manage_plan": "Quản lý gói"
   },
   "cloudsync": {
     "unavailable": "Đồng bộ hiện không khả dụng.",

@@ -2324,7 +2324,9 @@
     "not_included": "Non incluso nel tuo piano",
     "plan_ends": "fino al {{date}}",
     "details_failed": "Impossibile caricare i dettagli dell’account ({{reason}}).",
-    "retry": "Riprova"
+    "retry": "Riprova",
+    "manage_profile": "Gestisci profilo",
+    "manage_plan": "Gestisci piano"
   },
   "cloudsync": {
     "unavailable": "La sincronizzazione non è disponibile al momento.",

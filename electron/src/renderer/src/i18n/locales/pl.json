@@ -2326,7 +2326,9 @@
     "not_included": "Poza twoim planem",
     "plan_ends": "do {{date}}",
     "details_failed": "Nie udało się wczytać danych konta ({{reason}}).",
-    "retry": "Spróbuj ponownie"
+    "retry": "Spróbuj ponownie",
+    "manage_profile": "Zarządzaj profilem",
+    "manage_plan": "Zarządzaj planem"
   },
   "cloudsync": {
     "unavailable": "Synchronizacja jest teraz niedostępna.",

@@ -2322,7 +2322,9 @@
     "not_included": "Niet in je abonnement",
     "plan_ends": "tot {{date}}",
     "details_failed": "Je accountgegevens konden niet worden geladen ({{reason}}).",
-    "retry": "Opnieuw proberen"
+    "retry": "Opnieuw proberen",
+    "manage_profile": "Profiel beheren",
+    "manage_plan": "Abonnement beheren"
   },
   "cloudsync": {
     "unavailable": "Synchronisatie is nu niet beschikbaar.",

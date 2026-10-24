@@ -2322,7 +2322,9 @@
     "not_included": "आपके प्लान में नहीं",
     "plan_ends": "{{date}} तक",
     "details_failed": "आपके खाते का विवरण लोड नहीं हो सका ({{reason}})।",
-    "retry": "फिर कोशिश करें"
+    "retry": "फिर कोशिश करें",
+    "manage_profile": "प्रोफ़ाइल प्रबंधित करें",
+    "manage_plan": "प्लान प्रबंधित करें"
   },
   "cloudsync": {
     "unavailable": "सिंक अभी उपलब्ध नहीं है।",
