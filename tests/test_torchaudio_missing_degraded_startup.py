@@ -25,23 +25,23 @@ _AUDIO_IO = _BACKEND / "services" / "audio_io.py"
 def test_audio_io_tolerates_a_broken_torchaudio():
     """Import services.audio_io with a poisoned torchaudio: must not raise.
 
-    ``sys.modules["torchaudio"] = None`` (plus a poisoned ``__import__``-level
-    failure via a raising stub module) simulates the wheel that loads torch
+    A meta-path finder that raises OSError for torchaudio (the real
+    DLL-load failure) simulates the wheel that loads torch
     but fails on torchaudio's shared libraries. If the module still has a bare
     module-level ``import torchaudio`` without a guard, this raises and the
     test fails — fail-before, pass-after.
     """
     code = (
-        "import sys\n"
-        "class _Broken:\n"
-        "    def __getattr__(self, name):\n"
-        "        raise ImportError('TorchCodec is required: shared libraries missing')\n"
-        "sys.modules['torchaudio'] = _Broken()\n"
+        "import sys, importlib.abc\n"
+        "class _Block(importlib.abc.MetaPathFinder):\n"
+        "    def find_spec(self, name, path=None, target=None):\n"
+        "        if name == 'torchaudio':\n"
+        "            raise OSError('Could not find module libtorchaudio.pyd')\n"
+        "sys.meta_path.insert(0, _Block())\n"
         "sys.path.insert(0, r'" + str(_BACKEND) + "')\n"
         "import services.audio_io as aio\n"
-        "assert aio.torchaudio is None or isinstance(aio.torchaudio, _Broken), (\n"
-        "    'services.audio_io imported torchaudio unguarded; a broken install '\n"
-        "    'would crash startup via _deferred_startup -> os._exit(1)')\n"
+        "assert aio.torchaudio is None, (\n"
+        "    'services.audio_io must degrade to torchaudio=None when the import fails')\n"
         "print('ok')\n"
     )
     proc = subprocess.run(
