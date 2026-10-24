@@ -38,7 +38,7 @@ def test_audio_io_tolerates_a_broken_torchaudio():
         "        if name == 'torchaudio':\n"
         "            raise OSError('Could not find module libtorchaudio.pyd')\n"
         "sys.meta_path.insert(0, _Block())\n"
-        "sys.path.insert(0, r'" + str(_BACKEND) + "')\n"
+        "sys.path.insert(0, " + repr(str(_BACKEND)) + ")\n"
         "import services.audio_io as aio\n"
         "assert aio.torchaudio is None, (\n"
         "    'services.audio_io must degrade to torchaudio=None when the import fails')\n"
@@ -52,20 +52,32 @@ def test_audio_io_tolerates_a_broken_torchaudio():
     assert "ok" in proc.stdout
 
 
-def test_load_audio_and_save_fall_back_when_torchaudio_is_missing():
-    """Both helpers take the soundfile path without touching torchaudio.load."""
-    source = _AUDIO_IO.read_text(encoding="utf-8")
-    tree = ast.parse(source)
-    # load_audio guards its torchaudio.load call behind `torchaudio is not None`.
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) \
-                and node.func.attr == "load":
-            assert isinstance(node.func.value, ast.Name) and node.func.value.id == "torchaudio"
-    # The save helper short-circuits to soundfile when the module is None.
-    assert "if torchaudio is None:" in source, (
-        "_safe_torchaudio_save must route to the soundfile fallback when "
-        "torchaudio did not import"
+def test_load_audio_and_save_fall_back_when_torchaudio_is_missing(tmp_path):
+    """Round-trip real audio through the helpers with torchaudio unimportable."""
+    code = (
+        "import sys, importlib.abc\n"
+        "class _Block(importlib.abc.MetaPathFinder):\n"
+        "    def find_spec(self, name, path=None, target=None):\n"
+        "        if name == 'torchaudio':\n"
+        "            raise OSError('Could not find module libtorchaudio.pyd')\n"
+        "sys.meta_path.insert(0, _Block())\n"
+        f"sys.path.insert(0, {str(_BACKEND)!r})\n"
+        "import torch, soundfile as sf\n"
+        "import services.audio_io as aio\n"
+        "assert aio.torchaudio is None\n"
+        "wave = torch.sin(torch.linspace(0, 100, 4000)).unsqueeze(0) * 0.5\n"
+        f"target = {str(tmp_path / 'tone.wav')!r}\n"
+        "aio._safe_torchaudio_save(target, wave, 16000, bits_per_sample=24)\n"
+        "assert sf.info(target).subtype == 'PCM_24', sf.info(target).subtype\n"
+        "loaded, rate = aio.load_audio(target)\n"
+        "assert rate == 16000 and tuple(loaded.shape) == (1, 4000), (rate, loaded.shape)\n"
+        "print('ok')\n"
     )
+    proc = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, timeout=300
+    )
+    assert proc.returncode == 0, "fallback round trip failed (exit %s)" % proc.returncode
+    assert "ok" in proc.stdout
 
 
 def test_no_module_level_import_torchaudio_in_api_routers():

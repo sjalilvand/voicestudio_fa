@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { EventEmitter } from 'node:events';
+import { join } from 'node:path';
 
 const mocks = vi.hoisted(() => ({
   dependencies: vi.fn(async () => true),
@@ -41,6 +42,8 @@ const FATAL_STARTUP =
   "FATAL: backend startup failed during 'ml_imports': Could not find module " +
   "'~\\AppData\\Roaming\\VoiceStudio\\runtime\\project\\.venv\\Lib\\site-packages\\torchaudio\\lib\\libtorchaudio.pyd' " +
   '(or one of its dependencies).';
+/** The project this install created: the only kind a crash-time repair may rebuild. */
+const OWN_PROJECT = join('/private/voicestudio', 'runtime', 'project');
 const ACCESS_LOG = 'INFO: 127.0.0.1:50081 - "GET /health HTTP/1.1" 503 Service Unavailable';
 
 /** A child that never answers, so the shell reports the crash instead of attaching. */
@@ -107,7 +110,7 @@ it('quotes the backend\'s own startup verdict instead of the last access-log lin
 it('repairs the managed runtime when the backend died importing its dependencies', async () => {
   const supervisor = new BackendSupervisor();
   const { child, internal } = launch(supervisor);
-  internal.runtimeProject = '/project';
+  internal.runtimeProject = OWN_PROJECT;
   internal.pushLog(
     'err',
     [
@@ -142,5 +145,40 @@ it('leaves a crash alone when the backend died for an unrelated reason', async (
 
   expect(mocks.install).not.toHaveBeenCalled();
   expect(supervisor.status.stage).toBe('crashed');
+  await supervisor.shutdown();
+});
+
+it('never rebuilds a runtime project another install owns', async () => {
+  const supervisor = new BackendSupervisor();
+  const { child, internal } = launch(supervisor);
+  // A legacy Tauri project adopted as the runtime: repairing it would run
+  // `uv sync` inside files this install does not own.
+  internal.runtimeProject = '/legacy-tauri/project';
+  internal.pushLog('err', FATAL_STARTUP, true);
+
+  child.emit('exit', 1, null);
+  await vi.advanceTimersByTimeAsync(11_000);
+
+  expect(mocks.install).not.toHaveBeenCalled();
+  expect(supervisor.status.stage).toBe('crashed');
+  await supervisor.shutdown();
+});
+
+it('forgets import errors once the backend has been healthy', async () => {
+  const supervisor = new BackendSupervisor();
+  const { child, internal } = launch(supervisor);
+  internal.runtimeProject = OWN_PROJECT;
+  internal.pushLog('err', FATAL_STARTUP, true);
+  await (
+    supervisor as unknown as {
+      markReady: (gen: number, patch: object, supervise: boolean) => Promise<boolean>;
+    }
+  ).markReady(1, {}, false);
+
+  // An unrelated exit later must not match the stale import error.
+  child.emit('exit', 1, null);
+  await vi.advanceTimersByTimeAsync(11_000);
+
+  expect(mocks.install).not.toHaveBeenCalled();
   await supervisor.shutdown();
 });

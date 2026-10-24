@@ -1619,13 +1619,28 @@ export class BackendSupervisor extends EventEmitter<{
    * runtime, no custom backend command, a resolved runtime project and no
    * install already running.
    */
+  /**
+   * Whether the resolved runtime project is one this install created. A
+   * compatible legacy Tauri project can be adopted as the runtime; a crash-time
+   * repair must never run `uv sync` inside files another install owns.
+   */
+  private ownsRuntimeProject(): boolean {
+    const project = this.runtimeProject;
+    if (!project) return false;
+    if (samePath(project, join(defaultRuntimeRoot(), 'project'))) return true;
+    const configured = storedRuntimeLocation();
+    return Boolean(
+      configured?.owned && samePath(project, join(configured.root, 'project')),
+    );
+  }
+
   private canRepairRuntime(): boolean {
     return (
       app.isPackaged &&
       runtimeSetupSupported() &&
       !parseBackendCmdOverride(process.env.OMNIVOICE_BACKEND_CMD) &&
       !isUnsupportedPlatform() &&
-      Boolean(this.runtimeProject) &&
+      this.ownsRuntimeProject() &&
       !this.repairAttempted &&
       !this.installation &&
       !this.cleaningRuntime
@@ -1734,6 +1749,9 @@ export class BackendSupervisor extends EventEmitter<{
     const credentials = await this.remoteCredentials();
     if (gen !== this.generation) return false;
     if (credentials === 'valid') {
+      // A healthy run must not leave import errors behind: a later unrelated
+      // exit would otherwise match them and be misread as a broken runtime.
+      this.childErrorLog.length = 0;
       this.setStage('ready', patch);
     } else if (credentials === 'rejected') {
       if (this.diagnosis !== 'auth_required' || this.stage !== 'failed') {

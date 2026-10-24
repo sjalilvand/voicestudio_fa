@@ -401,8 +401,8 @@ def _safe_torchaudio_save(
         # wheel). The tensor is fully normalized by this point, so write via
         # the audited soundfile path instead of failing every generation.
         _subtype = {
-            "wav": "FLOAT" if bits_per_sample == 32 else "PCM_16",
-            "flac": "PCM_16",
+            "wav": "FLOAT" if bits_per_sample == 32 else "PCM_24" if bits_per_sample == 24 else "PCM_16",
+            "flac": "PCM_24" if bits_per_sample == 24 else "PCM_16",
             "ogg": "VORBIS",
             "mp3": "MPEG_LAYER_III",
         }.get(fmt, "PCM_16")
