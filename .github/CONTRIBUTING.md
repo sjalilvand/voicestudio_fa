@@ -164,6 +164,7 @@ Open an [issue](https://github.com/debpalash/VoiceStudio/issues/new) with:
    bun run check:electron
    ```
 4. **Write a clear PR title** — it becomes the squash-merge commit message
+5. **Add a changelog fragment** if users will notice the change: one line in `changelog.d/<PR#>.<type>.md` (see [`changelog.d/README.md`](../changelog.d/README.md)). Don't edit `CHANGELOG.md` directly, so your PR never conflicts with others
 5. **Don't include** local machine stats, file paths, or private system info in PR descriptions
 
 ### Adding a New TTS Engine
