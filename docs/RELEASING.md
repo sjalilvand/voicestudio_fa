@@ -223,6 +223,8 @@ workflow (a draft GitHub prerelease with the APK, AAB and IPAs; store uploads us
 the TestFlight and Play internal workflows). The version is the root `package.json` version and each run's
 number is the store build number. Setup, secrets and sideloading: `docs/mobile.md`
 → Releasing. Publishing the draft and promoting the store builds are manual.
+Publish it as a prerelease that is not `latest`; the desktop app's update checks
+and release list read only `vX.Y.Z` tags, so `mobile-v*` releases never reach them.
 
 ## Beta channel
 
