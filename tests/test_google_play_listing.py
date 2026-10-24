@@ -23,9 +23,11 @@ def test_package_name_matches_the_app():
 
 
 def test_every_manifest_permission_is_declared():
-    # A new permission needs its Play Console reason written before it ships.
-    manifest = (ROOT / "mobile/android/app/src/main/AndroidManifest.xml").read_text()
-    used = set(re.findall(r'uses-permission android:name="([^"]+)"', manifest))
+    # A new permission needs its Play Console reason written before it ships. Library
+    # modules merge into the app, so read every module's manifest (#3257 review).
+    manifests = [p for p in (ROOT / "mobile/android").rglob("src/main/AndroidManifest.xml") if "build" not in p.parts]
+    used = {name for path in manifests for name in re.findall(r'uses-permission android:name="([^"]+)"', path.read_text())}
+    assert "android.permission.FOREGROUND_SERVICE_MEDIA_PROCESSING" in used
     assert used == set(LISTING["permissions"])
 
 
@@ -39,9 +41,18 @@ def test_graphics_meet_play_specs():
         assert (ROOT / path).stat().st_size <= 1024 * 1024
 
 
-def test_store_languages_match_the_phone_models():
-    # The listing names the languages phone cloning supports; keep them in step.
+def languages(capability):
     models = json.loads((ROOT / "mobile/contract/models.json").read_text())["models"]
-    clone = next(m for m in models if m["capability"] == "clone")
+    return set().union(*(m["languages"] for m in models if m["capability"] == capability))
+
+
+def test_store_languages_match_the_phone_models():
+    # Each task is limited by the models it runs: dictation streams with `asr-stream`;
+    # cloning transcribes the reference with `asr`; dubbing also translates (#3257 review).
     description = "\n".join(LISTING["listing"]["fullDescription"])
-    assert f"cover {len(clone['languages'])} languages" in description
+    clone = languages("clone") & languages("asr")
+    assert clone & languages("translate") == clone
+    assert f"Voice cloning and dubbing cover {len(clone)} languages" in description
+    assert languages("asr-stream") == {"en"}, "phone dictation gained languages; update the listing"
+    assert "Dictation on the phone is English" in description
+    assert languages("tts") == {"en", "zh"} and "Preset voices are English and Chinese" in description
