@@ -4,8 +4,12 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { publicFailureFromEvent } from '@/lib/api/failure';
 import { PipelineFailure } from './pipeline-failure';
 
+const JA_PROXY = 'プロキシがHTTP 504を返しました。proxy_read_timeout を延ばしてください。';
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, options?: { status?: number }) =>
+      key === 'tts_errors.proxy_gateway_error' ? JA_PROXY.replace('504', String(options?.status)) : key,
+  }),
 }));
 
 afterEach(cleanup);
@@ -146,4 +150,10 @@ it('keeps a failure that already carries curated guidance', () => {
   );
   expect(screen.getByText('GPU ran out of memory, close apps')).toBeInTheDocument();
   expect(screen.queryByText('failureCause.details')).not.toBeInTheDocument();
+});
+
+it('keeps our own translated proxy advice instead of the generic timeout cause', () => {
+  render(<PipelineFailure fallback={JA_PROXY.replace('504', '504')} />);
+  expect(screen.getByText(JA_PROXY)).toBeInTheDocument();
+  expect(screen.queryByText('failureCause.timeout.title')).not.toBeInTheDocument();
 });

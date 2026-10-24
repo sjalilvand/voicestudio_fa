@@ -9,6 +9,13 @@ import { cn } from '@/lib/utils';
 import { ExternalLink } from './external-link';
 import { Button } from './ui/button';
 
+const GATEWAY_STATUSES = [502, 503, 504, 520, 521, 522, 523, 524, 525, 526, 527, 530];
+
+/** Our own localized proxy advice (any language), recognised by catalogue text, not wording. */
+function isProxyAdvice(text: string, t: (key: string, options?: Record<string, unknown>) => string) {
+  return GATEWAY_STATUSES.some((status) => t('tts_errors.proxy_gateway_error', { status }) === text);
+}
+
 function safeDocsUrl(value: string | undefined): string | null {
   if (!value) return null;
   try {
@@ -55,7 +62,7 @@ export function PipelineFailure({
     visibleFailure?.hint || visibleFailure?.docsTopic || visibleFailure?.docsUrl,
   );
   const cause =
-    curated || (/\b(?:proxy|gateway)\b/i.test(rawText) && !looksLikeHtml(rawText))
+    curated || isProxyAdvice(rawText, t)
       ? null
       : classifyFailure(rawText, visibleFailure?.diagnostic, visibleFailure?.errorClass);
   const htmlBody = looksLikeHtml(rawText);
