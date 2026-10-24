@@ -383,10 +383,14 @@ hard rules from the first prompt.
 
 - **CI scope:** the Electron-only jobs (UI crawler, Desktop UI, Linux native
   package, and the Electron steps of `Tests (backend + frontend)`) are skipped on a
-  pull request whose every changed file is Python/backend, docs, mobile, a
-  non-Electron workflow, or a lockfile; the job list in the PR shows them as
-  skipped. Any other path, and every push to `main`, runs the full matrix. The
-  allowlist is in the `changes` job of `.github/workflows/ci.yml`.
+  pull request whose every changed file is an *edit or addition* under `backend/`,
+  `omnivoice/`, `docs/` or `mobile/`, a Python file under `tests/` or `scripts/`,
+  a root `*.md`, `Makefile`, `uv.lock`, or a workflow other than `ci.yml` and
+  `electron-*.yml`. Any other path (including `pyproject.toml`, `package.json`,
+  `bun.lock` and shared test fixtures), any **deleted or renamed** file, 3,000 or
+  more files, and every push to `main` run the full matrix; so does a failed
+  detection. Skipped jobs show as skipped in the PR. The rule is the `changes`
+  job in `.github/workflows/ci.yml`.
 - **Cross-platform parity (hard rule):** anything that ships in default mode
   must behave identically on macOS, Windows, and Linux. Platform-specific
   *implementation* is fine; platform-divergent *default behavior* is a P0.

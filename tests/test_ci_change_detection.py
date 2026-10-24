@@ -1,15 +1,20 @@
 """CI skips the Electron-only jobs for pull requests that provably cannot affect them.
 
-The detection script is extracted from ci.yml and run against a fake `gh`, so the
-exact shipped regex is what is tested. The rule is an allowlist: unknown paths run
-everything, and any failure to detect also runs everything.
+The detection script is extracted from ci.yml and run for real (bash with the same
+flags Actions uses) against a fake `gh`, so the shipped regex and control flow are
+what is tested. The rule is fail-safe: an allowlist, and any doubt runs everything.
+An independent review found three ways a breaking PR could be skipped (a rename out
+of electron/, root files the packaging contract reads, and a swallowed grep error);
+each has a test below.
 """
 from __future__ import annotations
 
+import json
 import os
+import re
+import shutil
 import stat
 import subprocess
-import textwrap
 from pathlib import Path
 
 import pytest
@@ -17,66 +22,132 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
+STEP = next(s for s in WORKFLOW["jobs"]["changes"]["steps"] if s.get("id") == "detect")
+SCRIPT = STEP["run"]
+HAS_GREP_P = subprocess.run(["grep", "-P", "x"], input=b"", capture_output=True).returncode != 2
+pytestmark = pytest.mark.skipif(not HAS_GREP_P, reason="needs GNU grep -P, as on the Actions runner")
 
 
-def _script() -> str:
-    step = next(s for s in WORKFLOW["jobs"]["changes"]["steps"] if s.get("id") == "detect")
-    return step["run"]
-
-
-def _detect(tmp_path: Path, files: str | None, event: str = "pull_request", gh_fails: bool = False) -> str:
+def _detect(tmp_path: Path, rows, *, event="pull_request", gh_exit=0, gh_output_then_fail=False, grep_exit=None):
+    """rows: iterable of (status, filename) as `gh api ... --jq` prints them (TSV)."""
+    listing = "\n".join(f"{status}\t{name}" for status, name in rows)
     gh = tmp_path / "gh"
-    body = "exit 1" if gh_fails else f"cat <<'LIST'\n{files or ''}\nLIST"
+    if gh_exit:
+        body = f"echo boom >&2; exit {gh_exit}"
+    else:
+        body = f"cat <<'LIST'\n{listing}\nLIST" + ("\nexit 1" if gh_output_then_fail else "")
     gh.write_text(f"#!/bin/sh\n{body}\n", encoding="utf-8")
     gh.chmod(gh.stat().st_mode | stat.S_IEXEC)
+    if grep_exit is not None:  # a grep that is broken on this runner (e.g. BSD grep without -P)
+        fake = tmp_path / "grep"
+        fake.write_text(f"#!/bin/sh\ncat >/dev/null\nexit {grep_exit}\n", encoding="utf-8")
+        fake.chmod(fake.stat().st_mode | stat.S_IEXEC)
     out = tmp_path / "output"
     out.write_text("", encoding="utf-8")
     env = dict(os.environ, PATH=f"{tmp_path}:{os.environ['PATH']}", GITHUB_OUTPUT=str(out),
                EVENT=event, PR="1", REPO="o/r", GH_TOKEN="x")
-    subprocess.run(["bash", "-e", "-c", _script()], env=env, check=True, capture_output=True)
-    return out.read_text(encoding="utf-8").strip()
+    # `shell: bash` in Actions is: bash --noprofile --norc -eo pipefail {0}
+    proc = subprocess.run(["bash", "--noprofile", "--norc", "-eo", "pipefail", "-c", SCRIPT],
+                          env=env, capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stderr
+    return out.read_text(encoding="utf-8").strip(), proc.stdout
+
+
+def _mod(*names):
+    return [("modified", n) for n in names]
+
+
+def test_the_step_uses_the_pipefail_shell():
+    assert STEP.get("shell") == "bash"
 
 
 @pytest.mark.parametrize("files", [
-    "backend/api/routers/dub_export.py\ntests/test_dub_export.py",
-    "CHANGELOG.md\ndocs/RELEASING.md\nREADME.md",
-    "omnivoice/utils/text.py\nuv.lock\npyproject.toml",
-    "scripts/release.py\ntests/backend/api/test_x.py",
-    "mobile/android/app/build.gradle.kts\nmobile/contract/openapi.json",
-    ".github/ISSUE_TEMPLATE/bug.yml",
-    ".github/workflows/docker.yml\n.github/workflows/mobile.yml\nMakefile",
-    ".github/scripts/scam_guard.py\n.github/CONTRIBUTING.md",
+    ["backend/api/routers/dub_export.py", "tests/test_dub_export.py"],
+    ["CHANGELOG.md", "docs/RELEASING.md", "README.md", "LICENSE-NOTICE.md"],   # edits only
+    ["omnivoice/utils/text.py", "uv.lock"],
+    ["scripts/release.py", "tests/backend/api/test_x.py"],
+    ["mobile/android/app/build.gradle.kts", "mobile/contract/openapi.json"],
+    [".github/ISSUE_TEMPLATE/bug.yml", "Makefile"],
+    [".github/workflows/docker.yml", ".github/workflows/mobile.yml"],
+    [".github/scripts/scam_guard.py", ".github/CONTRIBUTING.md"],
 ])
-def test_python_docs_and_mobile_only_pull_requests_skip_the_electron_jobs(tmp_path, files):
-    assert _detect(tmp_path, files) == "electron=false"
+def test_python_docs_and_mobile_edits_skip_the_electron_jobs(tmp_path, files):
+    assert _detect(tmp_path, _mod(*files))[0] == "electron=false"
 
 
 @pytest.mark.parametrize("files", [
-    "electron/src/renderer/src/app.tsx",
-    "backend/api/x.py\nelectron/src/main/updater.ts",      # one Electron file is enough
-    "native/desktop-bridge/src/lib.rs",
-    "package.json", "bun.lock", "config/app.json",
-    "tests/fixtures/longform_parser_cases.json",            # shared with the JS suite
-    "tests/frontend/ssml.test.mjs",
-    ".github/workflows/ci.yml", ".github/workflows/electron-release.yml",
-    ".github/workflows/electron-build.yml", "backend/x.py\n.github/workflows/ci.yml",
-    "scripts/install.sh", "scripts/export-mobile-tokens.ts",
-    "something/unknown.txt",                                # unknown paths fail safe
-    "docs/logo.svg\nbackend/x.py\nLICENSE",                 # LICENSE is not allowlisted
+    ["electron/src/renderer/src/app.tsx"],
+    ["backend/x.py", "electron/src/main/updater.ts"],            # one Electron file is enough
+    ["native/desktop-bridge/src/lib.rs"],
+    ["package.json"], ["bun.lock"], ["config/app.json"],
+    ["pyproject.toml"],                                         # the contract parses its `readme =` key
+    ["tests/fixtures/longform_parser_cases.json"],              # shared with the JS suite
+    ["tests/frontend/ssml.test.mjs"],
+    [".github/workflows/ci.yml"], [".github/workflows/electron-release.yml"],
+    [".github/workflows/electron-build.yml"], ["backend/x.py", ".github/workflows/ci.yml"],
+    ["scripts/install.sh"], ["scripts/export-mobile-tokens.ts"],
+    ["something/unknown.txt"], ["LICENSE"], ["store/listing.json"],
 ])
 def test_anything_else_runs_the_electron_jobs(tmp_path, files):
-    assert _detect(tmp_path, files) == "electron=true"
+    assert _detect(tmp_path, _mod(*files))[0] == "electron=true"
 
 
-@pytest.mark.parametrize("event", ["push", "workflow_dispatch", "schedule"])
+# --- the three bypasses found in review -------------------------------------------
+
+def test_a_file_renamed_out_of_electron_runs_everything(tmp_path):
+    """`git mv electron/src/app.tsx docs/app.tsx` lists only the NEW path."""
+    assert _detect(tmp_path, [("renamed", "docs/app.tsx")])[0] == "electron=true"
+
+
+@pytest.mark.parametrize("name", ["LICENSE-NOTICE.md", "README.md", "uv.lock", "backend/__init__.py"])
+def test_deleting_a_file_the_packaging_contract_requires_runs_everything(tmp_path, name):
+    assert _detect(tmp_path, [("removed", name)])[0] == "electron=true"
+
+
+@pytest.mark.parametrize("grep_exit", [2, 127])
+def test_a_broken_grep_never_means_skip(tmp_path, grep_exit):
+    """grep exit 2 (bad pattern, no -P) was swallowed by `|| true` and gave false."""
+    rows = _mod("electron/src/main/updater.ts")
+    assert _detect(tmp_path, rows, grep_exit=grep_exit)[0] == "electron=true"
+
+
+# --- other fail-safes --------------------------------------------------------------
+
+def test_3000_files_is_the_api_cap_so_it_runs_everything(tmp_path):
+    rows = _mod(*[f"docs/page{i}.md" for i in range(2999)] + ["electron/src/x.ts"])
+    assert _detect(tmp_path, rows)[0] == "electron=true"
+    assert _detect(tmp_path, _mod(*[f"docs/page{i}.md" for i in range(2999)]))[0] == "electron=false"
+
+
+def test_hostile_file_names_cannot_start_a_workflow_command(tmp_path):
+    rows = _mod("::set-output name=electron::false", "::add-mask::value", "electron/a.ts")
+    result, stdout = _detect(tmp_path, rows)
+    assert result == "electron=true"
+    assert not [line for line in stdout.splitlines() if line.startswith("::")], stdout
+
+
+@pytest.mark.parametrize("event", ["push", "workflow_dispatch"])
 def test_main_pushes_and_manual_runs_always_run_everything(tmp_path, event):
-    assert _detect(tmp_path, "docs/only.md", event=event) == "electron=true"
+    assert _detect(tmp_path, _mod("docs/only.md"), event=event)[0] == "electron=true"
 
 
-def test_a_failed_or_empty_lookup_runs_everything(tmp_path):
-    assert _detect(tmp_path, None, gh_fails=True) == "electron=true"
-    assert _detect(tmp_path, "") == "electron=true"
+def test_a_failed_partial_or_empty_lookup_runs_everything(tmp_path):
+    assert _detect(tmp_path, [], gh_exit=1)[0] == "electron=true"
+    assert _detect(tmp_path, [])[0] == "electron=true"
+    # gh printed a page of safe files, then failed (partial pagination)
+    assert _detect(tmp_path, _mod("docs/a.md"), gh_output_then_fail=True)[0] == "electron=true"
 
+
+@pytest.mark.skipif(shutil.which("jq") is None, reason="jq not installed")
+def test_the_jq_expression_emits_status_and_filename_for_renames_too(tmp_path):
+    expr = re.search(r"--jq '([^']+)'", SCRIPT).group(1)
+    api = [{"status": "renamed", "filename": "docs/app.tsx", "previous_filename": "electron/app.tsx"},
+           {"status": "modified", "filename": "backend/x.py"}]
+    got = subprocess.run(["jq", "-r", expr], input=json.dumps(api), capture_output=True, text=True).stdout
+    assert got.splitlines() == ["renamed\tdocs/app.tsx", "modified\tbackend/x.py"]
+
+
+# --- structure ----------------------------------------------------------------------
 
 def test_the_electron_jobs_are_gated_on_the_detection_and_survive_its_failure():
     jobs = WORKFLOW["jobs"]
