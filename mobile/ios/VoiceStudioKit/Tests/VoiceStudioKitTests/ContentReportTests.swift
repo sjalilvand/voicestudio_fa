@@ -195,3 +195,14 @@ private let speak = ContentReportSubject.phone(.speak, id: "take", repo: "k2-fsa
     let voice = try JSONDecoder().decode(PhoneVoice.self, from: data(#"{"id":"6F9619FF-8B86-D011-B42D-00CF4FC964FF","name":"V","transcript":"t","createdAt":0,"consentAt":0,"sampleRate":24000}"#))
     #expect(voice.modelRepo == nil)
 }
+
+@Test func dubReportNamesTheRevisionOnlyWhileThePinMatches() throws {
+    // #3268 review: a dub saved before a catalogue update must not blame the new revision.
+    let catalogue = try ModelCatalogue.decode(Data(contentsOf: repository.appendingPathComponent("mobile/contract/models.json")))
+    let clone = try #require(catalogue.models.first { $0.capability == .clone })
+    let current = try #require(phoneDubVoiceModel(pins: [clone.id: try phoneModelPin(clone)], in: catalogue.models))
+    #expect(current.repo == clone.repo && current.revision == clone.revision)
+    let stale = try #require(phoneDubVoiceModel(pins: [clone.id: "stale-pin"], in: catalogue.models))
+    #expect(stale.repo == clone.repo && stale.revision == nil)
+    #expect(phoneDubVoiceModel(pins: [:], in: catalogue.models) == nil)
+}
