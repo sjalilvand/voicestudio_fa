@@ -3890,5 +3890,34 @@
       "rate_limited": "Quá nhiều báo cáo từ mạng này. Hãy thử lại sau.",
       "invalid": "Không thể gửi báo cáo này. Hãy cập nhật ứng dụng và thử lại."
     }
+  },
+  "failureCause": {
+    "details": "Chi tiết",
+    "fixes": "Cách khắc phục gợi ý",
+    "vram": {
+      "title": "GPU đã hết bộ nhớ",
+      "fix1": "Đóng các ứng dụng khác dùng GPU",
+      "fix2": "Chọn CPU hoặc engine nhỏ hơn"
+    },
+    "model_missing": {
+      "title": "Chưa tải mô hình",
+      "fix1": "Tải về trong Danh mục mô hình",
+      "fix2": "Dùng Sửa để cài đặt"
+    },
+    "busy": {
+      "title": "Engine đang bận",
+      "fix1": "Chờ tác vụ hiện tại hoàn tất",
+      "fix2": "Thử lại sau giây lát"
+    },
+    "timeout": {
+      "title": "Quá thời gian tạo",
+      "fix1": "Thử đoạn ngắn hơn",
+      "fix2": "Tăng thời gian chờ của proxy"
+    },
+    "bad_response": {
+      "title": "Phản hồi bất thường từ máy chủ",
+      "fix1": "Kiểm tra backend trong Cài đặt > Nhật ký",
+      "fix2": "Khởi động lại VoiceStudio rồi thử lại"
+    }
   }
 }

@@ -3890,5 +3890,34 @@
       "rate_limited": "Zu viele Meldungen aus diesem Netzwerk. Versuche es später erneut.",
       "invalid": "Diese Meldung konnte nicht gesendet werden. Aktualisiere die App und versuche es erneut."
     }
+  },
+  "failureCause": {
+    "details": "Details",
+    "fixes": "Vorgeschlagene Lösungen",
+    "vram": {
+      "title": "Der GPU ist der Speicher ausgegangen",
+      "fix1": "Andere GPU-Apps schließen",
+      "fix2": "CPU oder eine kleinere Engine wählen"
+    },
+    "model_missing": {
+      "title": "Das Modell ist nicht heruntergeladen",
+      "fix1": "Im Modellkatalog herunterladen",
+      "fix2": "Mit Beheben installieren"
+    },
+    "busy": {
+      "title": "Die Engine ist ausgelastet",
+      "fix1": "Auf den laufenden Auftrag warten",
+      "fix2": "Gleich noch einmal versuchen"
+    },
+    "timeout": {
+      "title": "Zeitüberschreitung bei der Erzeugung",
+      "fix1": "Einen kürzeren Abschnitt versuchen",
+      "fix2": "Proxy-Timeout erhöhen"
+    },
+    "bad_response": {
+      "title": "Unerwartete Antwort des Servers",
+      "fix1": "Backend unter Einstellungen > Protokolle prüfen",
+      "fix2": "VoiceStudio neu starten und erneut versuchen"
+    }
   }
 }

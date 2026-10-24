@@ -3890,5 +3890,34 @@
       "rate_limited": "Te veel meldingen vanaf dit netwerk. Probeer het later opnieuw.",
       "invalid": "Deze melding kon niet worden verstuurd. Werk de app bij en probeer het opnieuw."
     }
+  },
+  "failureCause": {
+    "details": "Details",
+    "fixes": "Voorgestelde oplossingen",
+    "vram": {
+      "title": "De GPU heeft geen geheugen meer",
+      "fix1": "Sluit andere GPU-apps",
+      "fix2": "Kies CPU of een kleinere engine"
+    },
+    "model_missing": {
+      "title": "Het model is niet gedownload",
+      "fix1": "Download het in de Modelcatalogus",
+      "fix2": "Gebruik Herstel om het te installeren"
+    },
+    "busy": {
+      "title": "De engine is bezig",
+      "fix1": "Wacht tot de huidige taak klaar is",
+      "fix2": "Probeer het zo meteen opnieuw"
+    },
+    "timeout": {
+      "title": "De generatie is verlopen",
+      "fix1": "Probeer een korter fragment",
+      "fix2": "Verhoog de proxy-timeout"
+    },
+    "bad_response": {
+      "title": "Onverwacht antwoord van de server",
+      "fix1": "Controleer de backend in Instellingen > Logboeken",
+      "fix2": "Start VoiceStudio opnieuw en probeer het nog eens"
+    }
   }
 }

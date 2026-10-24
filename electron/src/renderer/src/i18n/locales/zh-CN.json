@@ -3890,5 +3890,34 @@
       "rate_limited": "此网络的举报次数过多,请稍后再试。",
       "invalid": "无法发送此举报。请更新应用后重试。"
     }
+  },
+  "failureCause": {
+    "details": "详情",
+    "fixes": "建议的解决办法",
+    "vram": {
+      "title": "GPU 显存不足",
+      "fix1": "关闭其他占用 GPU 的应用",
+      "fix2": "改用 CPU 或更小的引擎"
+    },
+    "model_missing": {
+      "title": "模型尚未下载",
+      "fix1": "在模型目录中下载",
+      "fix2": "点击修复进行安装"
+    },
+    "busy": {
+      "title": "引擎正忙",
+      "fix1": "等待当前任务完成",
+      "fix2": "稍后重试"
+    },
+    "timeout": {
+      "title": "生成超时",
+      "fix1": "尝试更短的文本",
+      "fix2": "调高代理超时时间"
+    },
+    "bad_response": {
+      "title": "服务器返回了意外响应",
+      "fix1": "在 设置 > 日志 中检查后端",
+      "fix2": "重启 VoiceStudio 后重试"
+    }
   }
 }

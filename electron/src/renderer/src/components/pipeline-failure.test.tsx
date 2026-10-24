@@ -118,3 +118,32 @@ it.each([
     translate.mockRestore();
   }
 });
+
+it.each([
+  ['CUDA out of memory. Tried to allocate 2.00 GiB', 'vram'],
+  ['Model is not downloaded yet', 'model_missing'],
+  ['A generation is already running', 'busy'],
+  ['Request timed out after 300s', 'timeout'],
+])('turns "%s" into a %s cause with fix chips and the raw text under Details', (raw, cause) => {
+  render(<PipelineFailure fallback={raw} />);
+  expect(screen.getByText(`failureCause.${cause}.title`)).toBeInTheDocument();
+  expect(screen.getByText(`failureCause.${cause}.fix1`)).toBeInTheDocument();
+  expect(screen.getByText('failureCause.details')).toBeInTheDocument();
+  expect(screen.getByText(raw)).toBeInTheDocument();
+});
+
+it('never renders an HTML gateway page as the message', () => {
+  const html = '<html><head><title>504 Gateway Time-out</title></head><body>nginx</body></html>';
+  render(<PipelineFailure fallback={html} />);
+  expect(screen.getByText('failureCause.timeout.title')).toBeInTheDocument();
+  expect(screen.queryByText(html)).not.toBeInTheDocument();
+  expect(document.body.innerHTML).not.toContain('<title>');
+});
+
+it('keeps a failure that already carries curated guidance', () => {
+  render(
+    <PipelineFailure failure={{ reason: 'GPU ran out of memory, close apps', hint: 'Use CPU' }} fallback="x" />,
+  );
+  expect(screen.getByText('GPU ran out of memory, close apps')).toBeInTheDocument();
+  expect(screen.queryByText('failureCause.details')).not.toBeInTheDocument();
+});

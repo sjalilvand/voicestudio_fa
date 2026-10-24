@@ -3890,5 +3890,34 @@
       "rate_limited": "Terlalu banyak laporan dari jaringan ini. Coba lagi nanti.",
       "invalid": "Laporan ini tidak dapat dikirim. Perbarui aplikasi dan coba lagi."
     }
+  },
+  "failureCause": {
+    "details": "Detail",
+    "fixes": "Saran perbaikan",
+    "vram": {
+      "title": "GPU kehabisan memori",
+      "fix1": "Tutup aplikasi lain yang memakai GPU",
+      "fix2": "Pilih CPU atau mesin yang lebih kecil"
+    },
+    "model_missing": {
+      "title": "Model belum diunduh",
+      "fix1": "Unduh di Katalog Model",
+      "fix2": "Gunakan Perbaiki untuk memasangnya"
+    },
+    "busy": {
+      "title": "Mesin sedang sibuk",
+      "fix1": "Tunggu tugas saat ini selesai",
+      "fix2": "Coba lagi sebentar lagi"
+    },
+    "timeout": {
+      "title": "Pembuatan melewati batas waktu",
+      "fix1": "Coba bagian yang lebih pendek",
+      "fix2": "Naikkan batas waktu proxy"
+    },
+    "bad_response": {
+      "title": "Respons tak terduga dari server",
+      "fix1": "Periksa backend di Pengaturan > Log",
+      "fix2": "Mulai ulang VoiceStudio lalu coba lagi"
+    }
   }
 }
