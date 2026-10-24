@@ -3862,6 +3862,28 @@
     },
     "consent": {
       "phone_note": "Disimpan di ponsel ini. Tidak ada yang dikirim."
+    },
+    "report": {
+      "action": "Laporkan",
+      "title": "Laporkan hasil ini",
+      "reason": "Apa masalahnya?",
+      "reasons": {
+        "sexual": "Konten seksual",
+        "hateful": "Kebencian atau pelecehan",
+        "impersonation": "Peniruan identitas atau suara yang dikloning tanpa izin",
+        "misleading": "Menyesatkan atau berbahaya",
+        "other": "Lainnya"
+      },
+      "note": "Detail (opsional)",
+      "include_text": "Sertakan teks yang saya masukkan",
+      "disclosure": "Mengirim alasan, catatan, versi aplikasi, dan model yang membuat ini ke tim VoiceStudio. Tidak ada audio, akun, atau ID perangkat yang dikirim.",
+      "send": "Kirim laporan",
+      "sending": "Mengirim…",
+      "sent": "Laporan terkirim. Terima kasih.",
+      "failed": "Laporan tidak dapat dikirim. Periksa koneksi Anda dan coba lagi.",
+      "retry": "Coba lagi",
+      "rate_limited": "Terlalu banyak laporan dari jaringan ini. Coba lagi nanti.",
+      "invalid": "Laporan ini tidak dapat dikirim. Perbarui aplikasi dan coba lagi."
     }
   }
 }

@@ -427,6 +427,11 @@ hard rules from the first prompt.
     account features off sends one best-effort token revocation. Hidden in
     packaged builds until VoiceStudio Cloud launches.
   - Bug reports as prefilled GitHub Issue URLs opened in the user's browser.
+  - **Phone content reports, only when the user taps Send** in a generated
+    result's Report sheet: `appapi.voicestudio.sh/v1/content-reports` with the
+    reason, optional note and typed text, app version and model; no audio,
+    account or device identifier (`mobile/contract/SPEC.md` → Reporting
+    generated content; required by Google Play's AI-generated content policy).
   - PostHog analytics only after a yes at the first-run consent prompt
     (`backend/core/analytics.py`, allowlisted content-free metadata).
   - The GitHub star count (no credentials or referrer, refreshed every 20

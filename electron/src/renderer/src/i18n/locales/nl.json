@@ -3862,6 +3862,28 @@
     },
     "consent": {
       "phone_note": "Opgeslagen op deze telefoon. Er wordt niets verzonden."
+    },
+    "report": {
+      "action": "Melden",
+      "title": "Dit resultaat melden",
+      "reason": "Wat is er mis mee?",
+      "reasons": {
+        "sexual": "Seksuele inhoud",
+        "hateful": "Haatdragend of beledigend",
+        "impersonation": "Imitatie of een stem gekloond zonder toestemming",
+        "misleading": "Misleidend of schadelijk",
+        "other": "Iets anders"
+      },
+      "note": "Details (optioneel)",
+      "include_text": "De tekst die ik invoerde meesturen",
+      "disclosure": "Stuurt je reden, notitie, de app-versie en het gebruikte model naar het VoiceStudio-team. Er wordt geen audio, account of apparaat-ID verstuurd.",
+      "send": "Melding versturen",
+      "sending": "Versturen…",
+      "sent": "Melding verstuurd. Bedankt.",
+      "failed": "De melding kon niet worden verstuurd. Controleer je verbinding en probeer het opnieuw.",
+      "retry": "Opnieuw proberen",
+      "rate_limited": "Te veel meldingen vanaf dit netwerk. Probeer het later opnieuw.",
+      "invalid": "Deze melding kon niet worden verstuurd. Werk de app bij en probeer het opnieuw."
     }
   }
 }

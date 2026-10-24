@@ -3862,6 +3862,28 @@
     },
     "consent": {
       "phone_note": "保存在这部手机上，不会发送任何内容。"
+    },
+    "report": {
+      "action": "举报",
+      "title": "举报此结果",
+      "reason": "有什么问题?",
+      "reasons": {
+        "sexual": "色情内容",
+        "hateful": "仇恨或辱骂",
+        "impersonation": "冒充他人或未经同意克隆的声音",
+        "misleading": "误导或有害",
+        "other": "其他"
+      },
+      "note": "详细说明(可选)",
+      "include_text": "附上我输入的文字",
+      "disclosure": "将你的举报原因、说明、应用版本和生成此内容的模型发送给 VoiceStudio 团队。不会发送音频、账号或设备 ID。",
+      "send": "发送举报",
+      "sending": "正在发送…",
+      "sent": "举报已发送,谢谢。",
+      "failed": "无法发送举报。请检查网络连接后重试。",
+      "retry": "重试",
+      "rate_limited": "此网络的举报次数过多,请稍后再试。",
+      "invalid": "无法发送此举报。请更新应用后重试。"
     }
   }
 }

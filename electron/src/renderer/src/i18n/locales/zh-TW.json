@@ -3862,6 +3862,28 @@
     },
     "consent": {
       "phone_note": "儲存在這支手機上，不會傳送任何內容。"
+    },
+    "report": {
+      "action": "檢舉",
+      "title": "檢舉此結果",
+      "reason": "有什麼問題?",
+      "reasons": {
+        "sexual": "色情內容",
+        "hateful": "仇恨或辱罵",
+        "impersonation": "冒充他人或未經同意複製的聲音",
+        "misleading": "誤導或有害",
+        "other": "其他"
+      },
+      "note": "詳細說明(選填)",
+      "include_text": "附上我輸入的文字",
+      "disclosure": "將你的檢舉原因、說明、應用程式版本和產生此內容的模型傳送給 VoiceStudio 團隊。不會傳送音訊、帳號或裝置 ID。",
+      "send": "傳送檢舉",
+      "sending": "正在傳送…",
+      "sent": "檢舉已傳送,謝謝。",
+      "failed": "無法傳送檢舉。請檢查網路連線後重試。",
+      "retry": "重試",
+      "rate_limited": "此網路的檢舉次數過多,請稍後再試。",
+      "invalid": "無法傳送此檢舉。請更新應用程式後重試。"
     }
   }
 }

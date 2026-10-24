@@ -3864,6 +3864,28 @@
     },
     "consent": {
       "phone_note": "Salvo neste celular. Nada é enviado."
+    },
+    "report": {
+      "action": "Denunciar",
+      "title": "Denunciar este resultado",
+      "reason": "Qual é o problema?",
+      "reasons": {
+        "sexual": "Conteúdo sexual",
+        "hateful": "Ódio ou abuso",
+        "impersonation": "Falsificação de identidade ou voz clonada sem consentimento",
+        "misleading": "Enganoso ou prejudicial",
+        "other": "Outra coisa"
+      },
+      "note": "Detalhes (opcional)",
+      "include_text": "Incluir o texto que digitei",
+      "disclosure": "Envia o motivo, a nota, a versão do app e o modelo usado para a equipe do VoiceStudio. Nenhum áudio, conta ou ID do dispositivo é enviado.",
+      "send": "Enviar denúncia",
+      "sending": "Enviando…",
+      "sent": "Denúncia enviada. Obrigado.",
+      "failed": "Não foi possível enviar a denúncia. Verifique sua conexão e tente novamente.",
+      "retry": "Tentar novamente",
+      "rate_limited": "Muitas denúncias desta rede. Tente mais tarde.",
+      "invalid": "Não foi possível enviar esta denúncia. Atualize o app e tente novamente."
     }
   }
 }

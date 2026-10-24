@@ -3862,6 +3862,28 @@
     },
     "consent": {
       "phone_note": "Gespeichert auf diesem Telefon. Es wird nichts gesendet."
+    },
+    "report": {
+      "action": "Melden",
+      "title": "Dieses Ergebnis melden",
+      "reason": "Was stimmt damit nicht?",
+      "reasons": {
+        "sexual": "Sexuelle Inhalte",
+        "hateful": "Hasserfüllt oder beleidigend",
+        "impersonation": "Identitätsdiebstahl oder ohne Einwilligung geklonte Stimme",
+        "misleading": "Irreführend oder schädlich",
+        "other": "Etwas anderes"
+      },
+      "note": "Details (optional)",
+      "include_text": "Den eingegebenen Text mitsenden",
+      "disclosure": "Sendet deinen Grund, deine Notiz, die App-Version und das verwendete Modell an das VoiceStudio-Team. Es werden kein Audio, kein Konto und keine Geräte-ID gesendet.",
+      "send": "Meldung senden",
+      "sending": "Wird gesendet…",
+      "sent": "Meldung gesendet. Danke.",
+      "failed": "Die Meldung konnte nicht gesendet werden. Prüfe deine Verbindung und versuche es erneut.",
+      "retry": "Erneut versuchen",
+      "rate_limited": "Zu viele Meldungen aus diesem Netzwerk. Versuche es später erneut.",
+      "invalid": "Diese Meldung konnte nicht gesendet werden. Aktualisiere die App und versuche es erneut."
     }
   }
 }
