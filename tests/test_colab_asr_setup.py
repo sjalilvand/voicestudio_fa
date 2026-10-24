@@ -123,14 +123,14 @@ class ColabLicenceErrorTests(unittest.TestCase):
     def test_api_fail_names_licence_and_models(self):
         resp = types.SimpleNamespace(status_code=403, text=json.dumps(self.BODY),
                                      json=lambda: self.BODY)
-        with self.assertRaisesRegex(RuntimeError, r"model licence not accepted[\s\S]*org/model-a"):
+        with self.assertRaisesRegex(SystemExit, r"model licence not accepted[\s\S]*org/model-a[\s\S]*cell 6[\s\S]*Model Catalogue"):
             self.helpers()["api_fail"](resp, "/generate")
 
     def test_api_fail_keeps_plain_http_errors(self):
         def not_json():
             raise ValueError("not json")
         resp = types.SimpleNamespace(status_code=500, text="boom", json=not_json)
-        with self.assertRaisesRegex(RuntimeError, r"HTTP 500\nboom") as cm:
+        with self.assertRaisesRegex(SystemExit, r"HTTP 500\nboom") as cm:
             self.helpers()["api_fail"](resp, "/generate")
         self.assertNotIn("licence", str(cm.exception))
 
@@ -147,11 +147,11 @@ class ColabLicenceErrorTests(unittest.TestCase):
             exec(self.cell("# ── 7. Smoke test"), {})
 
     def test_smoke_cell_names_licence(self):
-        with self.assertRaisesRegex(RuntimeError, r"model licence not accepted[\s\S]*org/model-a"):
+        with self.assertRaisesRegex(SystemExit, r"model licence not accepted[\s\S]*org/model-a[\s\S]*cell 6[\s\S]*Model Catalogue"):
             self.run_smoke(json.dumps(self.BODY), 403)
 
     def test_smoke_cell_keeps_plain_http_errors(self):
-        with self.assertRaisesRegex(RuntimeError, r"HTTP 500\nboom") as cm:
+        with self.assertRaisesRegex(SystemExit, r"HTTP 500\nboom") as cm:
             self.run_smoke("boom", 500)
         self.assertNotIn("licence", str(cm.exception))
 
