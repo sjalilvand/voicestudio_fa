@@ -2,6 +2,8 @@ package com.voicestudio.mobile.features
 
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -53,7 +55,17 @@ object HomeContributors {
     }
 }
 
-@Composable private fun Contributor(login: String) {
+/** Keep the complete contributor list reachable without a three-row Home banner. */
+@Composable fun ContributorStrip() {
+    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.CenterVertically) {
+        Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+            HomeContributors.logins.forEach {Contributor(it,compact=true)}
+        }
+        Contributor("all",compact=true)
+    }
+}
+
+@Composable private fun Contributor(login: String, compact: Boolean = false) {
     val uri = LocalUriHandler.current
     val context = LocalContext.current
     val all = login == "all"
@@ -64,10 +76,13 @@ object HomeContributors {
             context.assets.open("contributors/$name").use { BitmapFactory.decodeStream(it)?.asImageBitmap() }
         }
     }
-    Box(Modifier.size(40.dp).clip(CircleShape).background(role("surfaceRaised")).border(1.dp, role("border"), CircleShape)
-        .clickable(onClickLabel = label) { uri.openUri(if (all) "${HomeContributors.REPOSITORY}/graphs/contributors" else "https://github.com/$login") }
-        .semantics { contentDescription = label }, contentAlignment = Alignment.Center) {
-        if (all) Text(tr("homeUi.all"), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
-        else avatar?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
+    Box(Modifier.size(if(compact) 48.dp else 34.dp).clip(CircleShape)
+        .clickable(onClickLabel=label) {uri.openUri(if(all) "${HomeContributors.REPOSITORY}/graphs/contributors" else "https://github.com/$login")}
+        .semantics {contentDescription=label},contentAlignment=Alignment.Center) {
+        Box(Modifier.size(if(compact) 28.dp else 34.dp).clip(CircleShape).background(role("surfaceRaised"))
+            .border(1.dp,role("border"),CircleShape),contentAlignment=Alignment.Center) {
+            if(all) Text(tr("homeUi.all"),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.SemiBold)
+            else avatar?.let {Image(it,null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)}
+        }
     }
 }

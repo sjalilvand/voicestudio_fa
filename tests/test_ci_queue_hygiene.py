@@ -57,3 +57,8 @@ def test_mobile_builds_on_pull_requests_only_for_mobile_changes():
     assert "mobile/**" in pr_paths
     assert not [p for p in pr_paths if "locales" in p or p in ("package.json", "electron/src/shared/languages.json")]
     assert any("locales" in p for p in triggers["push"]["paths"])
+
+
+def test_platform_smokes_start_after_the_python_tests_not_the_whole_gate():
+    needs = _load("ci.yml")["jobs"]["smoke-matrix"]["needs"]
+    assert needs == "test-python", "waiting on `test` delays the smokes by the Electron jobs' runtime"
