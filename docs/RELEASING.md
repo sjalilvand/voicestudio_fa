@@ -224,7 +224,8 @@ the TestFlight and Play internal workflows). The version is the root `package.js
 number is the store build number. Setup, secrets and sideloading: `docs/mobile.md`
 → Releasing. Publishing the draft and promoting the store builds are manual.
 Publish it as a prerelease that is not `latest`; the desktop app's update checks
-and release list read only `vX.Y.Z` tags, so `mobile-v*` releases never reach them.
+and release list read only desktop tags (`vX.Y.Z` and `vX.Y.Z-beta.N`), so
+`mobile-v*` releases never reach them.
 
 ## Beta channel
 
