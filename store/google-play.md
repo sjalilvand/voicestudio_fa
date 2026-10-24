@@ -36,4 +36,9 @@ every permission in the Android manifest has a declaration here.
 - **Privacy policy:** `https://voicestudio.sh/privacy` should describe the phone
   apps: what leaves the phone (model downloads, reports the user sends and
   requests to the paired computer) and that reports are kept 180 days.
-- **Screenshots:** capture from a release build on a phone or emulator.
+- **Screenshots:** the `android-screenshots` job in the `mobile` workflow
+  captures Home, Speak (with a take made on the phone), Voices, Dub, Dictate,
+  Models and Settings from the debug app in English on a 1080×1920 emulator,
+  phone-only with the smallest speech model. It runs on pushes to `main` that
+  touch the mobile app, or via Actions → `mobile` → Run workflow. Download the
+  `android-play-screenshots` artifact (kept 30 days) from that run's summary page.
