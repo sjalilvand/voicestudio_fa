@@ -101,7 +101,7 @@ version only after validation.
    connection and clean shutdown, and removes the test profile. A setup-screen
    check alone is not evidence that runtime installation works.
 3. Verify a packaged launch and managed backend startup on the changed platforms.
-4. Rename `## [Unreleased]` in `CHANGELOG.md` to `## [X.Y.Z] — YYYY-MM-DD`.
+4. Fold the `changelog.d/` fragments into `## [Unreleased]` (`scripts/release.py` does this and deletes them; by hand: `uv run python scripts/changelog_fragments.py`), then rename `## [Unreleased]` in `CHANGELOG.md` to `## [X.Y.Z] — YYYY-MM-DD`.
    Lead with the largest user-visible change, keep Highlights to 3–5 bullets,
    include migration steps and real screenshots when relevant, and verify human
    contributors and bug reporters from the tag comparison and included PRs. The
