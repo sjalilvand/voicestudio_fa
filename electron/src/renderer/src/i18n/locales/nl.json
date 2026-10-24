@@ -2372,7 +2372,8 @@
     "storage_temp": "Tijdelijke bestanden",
     "change": "Wijzigen…",
     "reset_default": "Resetten naar standaard",
-    "region_label": "Downloadregio"
+    "region_label": "Downloadregio",
+    "free_space": "{{free}} GB vrij op deze schijf, ongeveer {{needed}} GB nodig"
   },
   "asr_missing": {
     "message": "Er is geen spraak-naar-tekstmodel geïnstalleerd — deze functie heeft er een nodig om audio te transcriberen.",

@@ -40,6 +40,7 @@ beforeEach(() => {
   delete backendStatus.message;
   delete backendStatus.diagnosis;
   delete backendStatus.setupIssue;
+  delete backendStatus.runtimeFreeGib;
   delete backendStatus.setupPhase;
   delete backendStatus.setupProgress;
   platform.current = 'linux';
@@ -344,4 +345,23 @@ it('shows no advice for a failure it cannot classify', () => {
   renderGate('failed');
 
   expect(screen.queryByTestId('backend-hint')).not.toBeInTheDocument();
+});
+
+it('shows the effective install path with free space before setup starts', () => {
+  backendStatus.runtimeFreeGib = 120;
+  renderGate('setup_required');
+
+  expect(screen.getByText('C:\\VoiceStudio\\runtime')).toBeInTheDocument();
+  expect(screen.getByTestId('setup-free-space')).toHaveTextContent(
+    i18n.t('firstrun.free_space', { free: 120, needed: 9 }),
+  );
+  expect(screen.getByTestId('setup-free-space')).not.toHaveClass('text-warning');
+});
+
+it('warns when the install drive has less free space than the install needs', () => {
+  backendStatus.runtimeFreeGib = 3;
+  renderGate('setup_required');
+
+  expect(screen.getByTestId('setup-free-space')).toHaveClass('text-warning');
+  delete backendStatus.runtimeFreeGib;
 });

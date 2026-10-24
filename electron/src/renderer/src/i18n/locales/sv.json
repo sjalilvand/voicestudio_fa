@@ -2372,7 +2372,8 @@
     "storage_temp": "Tillfälliga filer",
     "change": "Ändra…",
     "reset_default": "Återställ till standard",
-    "region_label": "Nedladdningsregion"
+    "region_label": "Nedladdningsregion",
+    "free_space": "{{free}} GB ledigt på den här enheten, cirka {{needed}} GB behövs"
   },
   "asr_missing": {
     "message": "Ingen tal-till-text-modell är installerad — den här funktionen behöver en för att transkribera ljud.",

@@ -461,6 +461,22 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
                       >
                         {status.runtimePath}
                       </p>
+                      {status.runtimeFreeGib !== undefined ? (
+                        <p
+                          data-testid="setup-free-space"
+                          className={cn(
+                            'mt-1 text-xs',
+                            status.runtimeFreeGib < (status.setupRequiredGib ?? 9)
+                              ? 'text-warning'
+                              : 'text-muted-foreground',
+                          )}
+                        >
+                          {t('firstrun.free_space', {
+                            free: status.runtimeFreeGib,
+                            needed: status.setupRequiredGib ?? 9,
+                          })}
+                        </p>
+                      ) : null}
                       {status.runtimeStorage && (
                         <dl className="mt-2 space-y-0.5 text-xs text-muted-foreground">
                           {(['data', 'models', 'temp'] as const).map((kind) => (
@@ -521,7 +537,11 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
                 </ExternalLink>
               )}
               {!unsupportedPlatform && !wrongArchitecture && (
-                <Button disabled={restarting || choosingLocation} onClick={() => void runSetup()}>
+                <Button
+                  className="h-auto min-h-8 max-w-full whitespace-normal py-1.5 text-center"
+                  disabled={restarting || choosingLocation}
+                  onClick={() => void runSetup()}
+                >
                   {status.runtimeInterrupted
                     ? t('common.resume')
                     : setupFailed
@@ -532,6 +552,7 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
               {setupFailed ? (
                 <Button
                   variant="outline"
+                  className="h-auto min-h-8 max-w-full whitespace-normal py-1.5 text-center"
                   disabled={restarting || choosingLocation}
                   onClick={() => setCleanConfirmOpen(true)}
                 >

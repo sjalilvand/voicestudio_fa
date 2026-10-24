@@ -2372,7 +2372,8 @@
     "storage_temp": "临时文件",
     "change": "更改…",
     "reset_default": "恢复默认",
-    "region_label": "下载区域"
+    "region_label": "下载区域",
+    "free_space": "此磁盘可用空间 {{free}} GB，大约需要 {{needed}} GB"
   },
   "asr_missing": {
     "message": "尚未安装语音转文字模型 — 此功能需要一个模型来转写音频。",

@@ -2436,7 +2436,8 @@
     "storage_temp": "Temp files",
     "change": "Change…",
     "reset_default": "Reset to default",
-    "region_label": "Download region"
+    "region_label": "Download region",
+    "free_space": "{{free}} GB free on this drive, about {{needed}} GB needed"
   },
   "asr_missing": {
     "message": "No speech-to-text model is installed — this feature needs one to transcribe audio.",

@@ -145,7 +145,7 @@ function createWindow(): BrowserWindow {
     backgroundColor: BACKGROUND,
     titleBarStyle: 'hidden',
     ...(process.platform === 'darwin'
-      ? { trafficLightPosition: { x: 12, y: 10 } }
+      ? { trafficLightPosition: { x: 16, y: 20 } }
       : { titleBarOverlay: OVERLAY }),
     webPreferences: {
       preload: PRELOAD_PATH,

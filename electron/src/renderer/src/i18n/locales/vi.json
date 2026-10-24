@@ -2372,7 +2372,8 @@
     "storage_temp": "Tệp tạm",
     "change": "Thay đổi…",
     "reset_default": "Đặt lại về mặc định",
-    "region_label": "Khu vực tải xuống"
+    "region_label": "Khu vực tải xuống",
+    "free_space": "Ổ đĩa này còn trống {{free}} GB, cần khoảng {{needed}} GB"
   },
   "asr_missing": {
     "message": "Chưa cài đặt mô hình chuyển giọng nói thành văn bản — tính năng này cần một mô hình để phiên âm.",

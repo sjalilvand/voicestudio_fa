@@ -2374,7 +2374,8 @@
     "storage_temp": "File temporanei",
     "change": "Cambia…",
     "reset_default": "Ripristina le impostazioni predefinite",
-    "region_label": "Area di download"
+    "region_label": "Area di download",
+    "free_space": "{{free}} GB liberi su questa unità, ne servono circa {{needed}} GB"
   },
   "asr_missing": {
     "message": "Nessun modello di riconoscimento vocale è installato — questa funzione ne richiede uno per trascrivere l'audio.",

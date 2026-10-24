@@ -2372,7 +2372,8 @@
     "storage_temp": "暫存檔案",
     "change": "變更…",
     "reset_default": "重設為預設值",
-    "region_label": "下載區域"
+    "region_label": "下載區域",
+    "free_space": "此磁碟可用空間 {{free}} GB，大約需要 {{needed}} GB"
   },
   "asr_missing": {
     "message": "尚未安裝語音轉文字模型 — 此功能需要一個模型來轉錄音訊。",
