@@ -2,6 +2,11 @@ package com.voicestudio.mobile
 
 import android.app.Application
 import android.os.Bundle
+import android.content.Intent
+import android.content.pm.ShortcutInfo
+import android.content.pm.ShortcutManager
+import android.graphics.drawable.Icon
+import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -39,17 +44,26 @@ import java.util.Locale
 
 class VoiceStudioApplication:Application()
 class MainActivity:ComponentActivity() {
+    private var incoming by mutableStateOf<Intent?>(null)
+    override fun onNewIntent(intent: Intent) {super.onNewIntent(intent);incoming=intent}
     override fun onCreate(savedInstanceState:Bundle?) {
         setTheme(R.style.AppTheme)
         super.onCreate(savedInstanceState);enableEdgeToEdge()
-        setContent {StudioApp()}
+        incoming=intent
+        val l=L10n.load(this,Locale.getDefault().toLanguageTag())
+        getSystemService(ShortcutManager::class.java).dynamicShortcuts=listOf("speak","dictate").map {route ->
+            ShortcutInfo.Builder(this,route).setShortLabel(l.t("mobile.integration.shortcut_$route"))
+                .setIcon(Icon.createWithResource(this,android.R.drawable.ic_btn_speak_now))
+                .setIntent(Intent(Intent.ACTION_VIEW,Uri.parse("voicestudio://workspace/$route"),this,MainActivity::class.java)).build()
+        }
+        setContent {StudioApp(incomingIntent=incoming,onIncomingConsumed={incoming=null})}
     }
 }
 
 /** Reports go to VoiceStudio's app API: the dev server for debug builds, production for release. */
 fun contentReportClient()=ContentReportClient(BuildConfig.CONTENT_REPORTS_URL,BuildConfig.VERSION_NAME)
 
-@Composable fun StudioApp(vm:StudioViewModel = viewModel(), reportClient:ContentReportClient? = remember {contentReportClient()}) {
+@Composable fun StudioApp(vm:StudioViewModel = viewModel(), reportClient:ContentReportClient? = remember {contentReportClient()},incomingIntent: Intent?=null,onIncomingConsumed: ()->Unit={}) {
     val prefs by vm.preferences.collectAsStateWithLifecycle()
     val state by vm.state.collectAsStateWithLifecycle()
     val context=LocalContext.current
@@ -72,6 +86,16 @@ fun contentReportClient()=ContentReportClient(BuildConfig.CONTENT_REPORTS_URL,Bu
             key(state.connectionId) {
             val initialRoute=remember {if(state.error?.key=="mobile.connect.error_session_expired") "connect" else "home"}
             val nav=rememberNavController()
+            var received by remember {mutableStateOf<PhoneIncoming?>(null)}
+            LaunchedEffect(incomingIntent,state.loading) {
+                if(!state.loading&&incomingIntent!=null) {
+                    try {PhoneIncoming.read(context,incomingIntent)?.let {payload ->
+                        received=payload
+                        nav.navigate(if(payload.text==null&&payload.file==null) payload.route ?: "incoming" else "incoming") {launchSingleTop=true}
+                    }} catch(e:Exception) {vm.fail(e)}
+                    onIncomingConsumed()
+                }
+            }
             val back by nav.currentBackStackEntryAsState()
             val route=back?.destination?.route ?: "home"
             val dismissKeyboard=rememberKeyboardDismiss()
@@ -80,7 +104,7 @@ fun contentReportClient()=ContentReportClient(BuildConfig.CONTENT_REPORTS_URL,Bu
                     val tabs=listOf("home","voices","dub","dictate","settings")
                     tabs.forEach {tab ->
                         val label=if(tab=="home") l.t("nav.home") else if(tab=="connect") l.t("mobile.tabs.connect") else l.t("mobile.tabs.$tab")
-                        NavigationBarItem(selected=route==tab || (tab=="home" && (route=="speak" || route.startsWith("voice/") || route.startsWith("host-voice/") || route.startsWith("project"))),onClick={dismissKeyboard();nav.navigate(tab) {popUpTo(nav.graph.startDestinationId) {saveState=true};launchSingleTop=true;restoreState=tab!="home"}},
+                        NavigationBarItem(selected=route==tab || (tab=="home" && (route in setOf("speak","stories","audiobook","design","tools","gallery","batch","workflows","calls","local-api","incoming") || route.startsWith("preset/") || route.startsWith("voice/") || route.startsWith("host-voice/") || route.startsWith("project"))),onClick={dismissKeyboard();nav.navigate(tab) {popUpTo(nav.graph.startDestinationId) {saveState=true};launchSingleTop=true;restoreState=tab!="home"}},
                             icon={Icon(when(tab) {"home" -> Icons.Default.Home;"speak" -> Icons.Default.PlayArrow;"voices" -> Icons.Default.Person;"dub" -> Icons.AutoMirrored.Filled.List;"dictate" -> Icons.Default.Edit;"connect" -> Icons.Default.Add;else -> Icons.Default.Settings},contentDescription=label)},
                             label=if(LocalDensity.current.fontScale<=1.5f) {{Text(label)}} else null,
                             colors=NavigationBarItemDefaults.colors(indicatorColor=role("messageSurface"),selectedIconColor=role("messageAction"),selectedTextColor=role("toolbarForeground"),unselectedIconColor=role("textMuted"),unselectedTextColor=role("textMuted")))
@@ -126,6 +150,17 @@ fun contentReportClient()=ContentReportClient(BuildConfig.CONTENT_REPORTS_URL,Bu
                         composable("host-voice/{id}") {entry -> SpeakScreen(vm,initialComputerVoiceID=entry.arguments?.getString("id"))}
                         composable("voice/{id}") {entry -> SpeakScreen(vm,entry.arguments?.getString("id"))}
                         composable("speak") {SpeakScreen(vm)}
+                        composable("design") {VoiceDesignScreen(vm)}
+                        composable("stories") {ProductionScreen(vm,"stories")}
+                        composable("audiobook") {ProductionScreen(vm,"audiobook")}
+                        composable("batch") {com.voicestudio.mobile.features.dub.BatchDubScreen(vm)}
+                        composable("workflows") {WorkflowsScreen(vm)}
+                        composable("incoming") {received?.let {PhoneIncomingScreen(vm,it)}}
+                        composable("calls") {CallsScreen(vm)}
+                        composable("local-api") {LocalAPIScreen(vm,onVoices={nav.navigate("voices")})}
+                        composable("gallery") {GalleryScreen(vm) {nav.navigate(it)}}
+                        composable("preset/{model}/{speaker}") {entry -> SpeakScreen(vm,initialPhonePreset=entry.arguments?.getString("speaker")?.toIntOrNull(),initialPhoneModelID=entry.arguments?.getString("model"))}
+                        composable("tools") {VoiceToolsScreen(vm)}
                         composable("voices") {VoicesScreen(vm)}
                         composable("dub") {DubScreen(vm)}
                         composable("dictate") {DictateScreen(vm)}

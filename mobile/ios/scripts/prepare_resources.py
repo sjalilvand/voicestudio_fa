@@ -81,6 +81,8 @@ def build_number(value):
 
 def prepare(output, info):
     output.mkdir(parents=True, exist_ok=True)
+    from prepare_workspace_resources import prepare as prepare_workspaces
+    prepare_workspaces(output)
     legal = IOS / "VoiceStudio/Resources/NativeLicences"
     validate_native_notices(legal,json.loads((ROOT / "mobile/native/pins.json").read_text(encoding="utf-8")))
     shutil.copytree(legal,output / "NativeLicences",dirs_exist_ok=True)
@@ -100,6 +102,7 @@ def prepare(output, info):
     if not model_catalogue.is_file():
         raise ValueError("Generate mobile/contract/models.json before building the app")
     shutil.copy2(model_catalogue, catalogs / "models.json")
+    shutil.copy2(ROOT / "mobile/contract/design.json", catalogs / "design.json")
     english = json.loads((source / "en.json").read_text(encoding="utf-8"))
     additions = sorted((ROOT / "mobile/contract").glob("strings*.en.json"))
     for path in additions:
