@@ -3,16 +3,15 @@
 ## Current status
 
 - Branch: `feat/snap-store`, based on `feat/store-publishing-foundation`.
-- Lifecycle: packaging prepared; no store revision has been uploaded.
+- Lifecycle: every `v*` tag uploads to `candidate`; stable is a manual promote.
 - Package: Electron x64 Snap alongside the existing AppImage and Debian packages.
 - Confinement: `strict`, using the `core22` base supported by the pinned
   electron-builder. Recheck the supported bases before the first submission.
 - Update owner: Snap Store. The in-app updater is unavailable in this build.
-- Expected Snap name: `voicestudio`; the owner must reserve and confirm it
-  before any upload workflow is added or run.
+- Snap name: `voicestudio` (`SNAP_NAME` in the workflow).
 
-No store credentials, listing changes, uploads or releases are part of the
-build-only rehearsal workflow.
+The workflow never changes listing copy, visibility or the `stable` channel on
+its own.
 
 ## Package and interface contract
 
@@ -25,7 +24,7 @@ The Snap requests only interfaces needed by maintained desktop behaviour:
 
 | Interface | Purpose | Connection expectation |
 | --- | --- | --- |
-| `browser-support` | Chromium sandbox inside strict confinement | Manual with `allow-sandbox: true` unless the Store grants auto-connect |
+| `browser-support` | Electron APIs under strict Snap confinement (`allow-sandbox: false`) | Automatic by default |
 | `desktop`, `desktop-legacy`, `x11`, `wayland`, `unity7`, `gsettings` | Desktop integration | Automatic on supported desktops |
 | `network` | User-started runtime and model downloads | Automatic |
 | `network-bind` | Local backend and opt-in LAN sharing | Automatic |
@@ -49,8 +48,8 @@ permissions.
 
 ## Build and inspect
 
-Run the build-only GitHub workflow `.github/workflows/snap-store.yml`, or on an
-x64 Linux builder:
+Dispatch `.github/workflows/snap-store.yml` from any branch to build without
+uploading, or on an x64 Linux builder:
 
 ```bash
 export VOICESTUDIO_DISTRIBUTION=snap-store
@@ -82,39 +81,47 @@ copy or image sources in the Snap dashboard.
 
 ## Confinement validation
 
-Install the rehearsal locally, then connect the sandbox and recording interfaces:
+Install the rehearsal locally, then connect the recording interface:
 
 ```bash
 sudo snap install --dangerous <file>.snap
-sudo snap connect voicestudio:browser-support
 sudo snap connect voicestudio:audio-record
 snap connections voicestudio
 snap run voicestudio
 ```
 
-`browser-support` with `allow-sandbox: true` does not auto-connect by default.
-An unconnected plug can abort Electron before application code runs with
-`No usable sandbox!`. Connecting it permits Chromium's sandbox inside strict
-Snap confinement; do not change the host's user-namespace policy, chmod the
-read-only Snap payload, or add `--no-sandbox` to work around this failure.
-See Canonical's [browser-support interface documentation](https://snapcraft.io/docs/reference/interfaces/browser-support-interface/).
+The Snap follows Canonical's [Electron guidance for browser-support](https://snapcraft.io/docs/reference/interfaces/browser-support-interface/):
+`allow-sandbox: false` and `--no-sandbox` in the packaged Snap launcher, while
+retaining `confinement: strict`. The interface auto-connects by default without
+the privileged `allow-sandbox: true` Store approval. Fresh installations should
+start from the desktop launcher without a terminal or manual sandbox setup.
+An explicitly disconnected interface is a user choice; inspect
+`snap connections voicestudio` and reconnect it manually if needed. When testing
+an upgrade from an older local revision, verify the existing connection state
+rather than assuming the metadata change reconnects it.
 
-Record `snap connections voicestudio` and relevant denials from the system log.
-Confirm `browser-support` has the `:browser-support` slot before launching.
-The Snap launcher checks this connection before starting Electron. If it is
-missing or cannot be checked, it exits with a localized terminal message and
-the connection command instead of letting Chromium crash. A dialog also appears
-when `zenity` is available; otherwise launch from a terminal to read the command.
-The check applies only to Snap packages and never runs sudo automatically.
-Local sideload testing requires these manual connections even when Store
-auto-connect approval is available for Store installations.
+The launcher flag is limited to Snap artifacts. AppImage, Debian, macOS,
+Windows and development launches retain their existing sandbox configuration.
+The old preflight and optional Zenity dialog are removed.
+
+Security tradeoff: strict Snap confinement still restricts the application via
+AppArmor, seccomp and namespaces, but Chromium's per-process sandbox is disabled
+for every process in this Snap, including the embedded website preview and
+sponsor form. These are different security boundaries, not equivalent layers.
+Keep context isolation, disabled Node integration for remote content, isolated
+browser sessions and denied browser permissions. Electron's general
+[guidance](https://www.electronjs.org/docs/latest/tutorial/sandbox) advises against
+production `--no-sandbox`; this package deliberately follows Canonical's
+Snap-specific approach. Do not extend this flag to other distributions or
+switch to classic/devmode confinement.
 
 Complete every item on a clean supported host:
 
-- clean install and first launch;
+- clean install, automatic `browser-support` connection and first launch from both desktop and terminal;
 - first-run managed Python installation and offline relaunch;
 - model installation followed by offline synthesis;
 - microphone capture, audio playback and dictation;
+- website preview, address-bar navigation and sponsor-form display;
 - GPU discovery and one GPU-backed generation where hardware is available;
 - file import/export in the home directory and on removable media through the portal;
 - project open/save and watch-folder access;
@@ -128,18 +135,37 @@ do not switch to classic confinement merely to pass the test.
 
 ## Submission and evidence
 
-The owner must first reserve the name, approve visibility and listing answers,
-and add narrowly scoped Snapcraft credentials as a repository secret. Upload
-the validated artifact without releasing it, record the assigned revision, then
-release that exact revision to `candidate`. Stable promotion requires a separate
-owner approval after independent install, refresh and rollback verification.
+One-time setup, by the owner:
 
-Before promoting to stable, obtain Store approval to auto-connect
-`browser-support` with `allow-sandbox: true` and `audio-record`. Record the
-approval evidence and verify a fresh Store installation starts and records
-without manual interface commands. Declaring the plugs in the package alone
-does not grant auto-connect; this requires a Store assertion. Keep Chromium's
-sandbox enabled while requesting approval.
+1. Register the name and confirm the Snapcraft account controls it:
+   `snapcraft register voicestudio`, then `snapcraft status voicestudio`.
+2. Create a GitHub environment named `snap-store` (optionally with required
+   reviewers) and store upload credentials in it as
+   `SNAPCRAFT_STORE_CREDENTIALS`:
+
+   ```bash
+   snapcraft export-login --snaps=voicestudio \
+     --acls=package_access,package_push,package_update,package_release \
+     --expires=<date> credentials.txt
+   ```
+
+Pushing a final `vX.Y.Z` tag then builds the Snap, checks the tag matches `package.json`,
+uploads it and releases it to `candidate`. The workflow uploads first and checks
+the newest `v*` tag just before releasing, so an older tag's revision is
+uploaded without moving `candidate`. The run
+summary records the Store revision and channel. A tag build can be retried by dispatching the workflow from the tag
+with `upload` enabled.
+
+Stable promotion requires a separate owner approval after independent install,
+refresh and rollback verification: the repository owner dispatches the
+workflow with `promote_revision` set to the verified candidate revision. The
+job refuses any other triggering account.
+
+Before promoting to stable, obtain Store auto-connect approval for
+`audio-record` and verify recording on a fresh Store installation. The
+`browser-support` plug uses its default auto-connect policy without requesting
+privileged Chromium sandbox access. Record the actual connection state and
+first-launch evidence from both a fresh install and an upgrade.
 
 For each submitted revision retain:
 
