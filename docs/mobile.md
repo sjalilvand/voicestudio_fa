@@ -144,7 +144,8 @@ number and attempt, so every upload is new.
 The `Android Play internal testing` workflow is the Android counterpart: it
 signs a release bundle with the Play upload key and uploads it to the Play
 Console **internal testing** track. It is dispatched by hand from `main` and
-never sends a release to production. One-time setup:
+never sends a release to production. The store listing, graphics and Play Console
+answers are in [`store/google-play.md`](../store/google-play.md). One-time setup:
 
 1. Create the app in the Play Console with the package name
    `sh.voicestudio.mobile` and keep Play App Signing on (Google holds the app
