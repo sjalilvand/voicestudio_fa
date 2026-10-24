@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const root = resolve(__dirname, '../../..');
+// Lives in src/main: the renderer's tsconfig has no Node types, and this reads files.
+const root = resolve(__dirname, '../..');
 const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
 
 // Every config that builds or serves the renderer must define each build-time global the
