@@ -2322,7 +2322,9 @@
     "not_included": "요금제에 포함되지 않음",
     "plan_ends": "{{date}}까지",
     "details_failed": "계정 정보를 불러오지 못했습니다({{reason}}).",
-    "retry": "다시 시도"
+    "retry": "다시 시도",
+    "manage_profile": "프로필 관리",
+    "manage_plan": "요금제 관리"
   },
   "cloudsync": {
     "unavailable": "지금은 동기화를 사용할 수 없습니다.",

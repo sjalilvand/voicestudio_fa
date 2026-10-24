@@ -2324,7 +2324,9 @@
     "not_included": "Hors de votre offre",
     "plan_ends": "jusqu’au {{date}}",
     "details_failed": "Impossible de charger les détails de votre compte ({{reason}}).",
-    "retry": "Réessayer"
+    "retry": "Réessayer",
+    "manage_profile": "Gérer le profil",
+    "manage_plan": "Gérer l'offre"
   },
   "cloudsync": {
     "unavailable": "La synchronisation n’est pas disponible pour le moment.",

@@ -2322,7 +2322,9 @@
     "not_included": "Tidak ada di paket Anda",
     "plan_ends": "hingga {{date}}",
     "details_failed": "Detail akun Anda tidak dapat dimuat ({{reason}}).",
-    "retry": "Coba lagi"
+    "retry": "Coba lagi",
+    "manage_profile": "Kelola profil",
+    "manage_plan": "Kelola paket"
   },
   "cloudsync": {
     "unavailable": "Sinkronisasi tidak tersedia saat ini.",

@@ -2322,7 +2322,9 @@
     "not_included": "Ingår inte i ditt abonnemang",
     "plan_ends": "till {{date}}",
     "details_failed": "Det gick inte att läsa in dina kontouppgifter ({{reason}}).",
-    "retry": "Försök igen"
+    "retry": "Försök igen",
+    "manage_profile": "Hantera profil",
+    "manage_plan": "Hantera abonnemang"
   },
   "cloudsync": {
     "unavailable": "Synkning är inte tillgänglig just nu.",
