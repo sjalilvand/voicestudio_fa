@@ -134,8 +134,8 @@ struct PhoneDubView: View {
     }
     /// The dub's speech comes from its pinned voice (clone) model.
     private func reportSubject(_ record: PhoneDubRecord,_ output: PhoneDubOutput) -> ContentReportSubject {
-        let voiceModel = model.phone.models.first { $0.capability == .clone && record.request.modelPins[$0.id] != nil }
-        return .phone(.dub, id: record.id.uuidString + ":" + output.language, repo: voiceModel?.repo, revision: voiceModel?.revision)
+        let voice = phoneDubVoiceModel(pins: record.request.modelPins, in: model.phone.models)
+        return .phone(.dub, id: record.id.uuidString + ":" + output.language, repo: voice?.repo, revision: voice?.revision)
     }
     private func remove(_ record: PhoneDubRecord) {
         Task { await model.performPhone { try await model.phone.dubStore?.delete(record.id); await model.phone.refresh() } }
