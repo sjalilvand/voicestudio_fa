@@ -280,6 +280,16 @@ function usableFile(path: string): boolean {
   }
 }
 
+/**
+ * The uv to hand the backend: the user's own non-blank pin, else the one this shell
+ * located. A blank value is dropped rather than passed on, because the backend reads
+ * any set value as "the shell tried and failed" instead of falling back to PATH.
+ */
+export function bundledUvEnv(pinned: string | undefined, locate: () => string | null): string | undefined {
+  if (pinned?.trim()) return pinned;
+  return locate() ?? undefined;
+}
+
 function findUv(): string | null {
   if (app.isPackaged && process.resourcesPath) {
     const bundled = bundledUvPath(process.resourcesPath);
@@ -542,6 +552,10 @@ function childEnv(
     env.POSTHOG_PROJECT_TOKEN = packagedToken;
   }
   if (packagedHost && !env.POSTHOG_HOST) env.POSTHOG_HOST = packagedHost;
+  // The backend reports the same build commit as the app in bug reports.
+  if (!env.OMNIVOICE_BUILD_COMMIT && __BUILD_COMMIT__ !== 'unknown') {
+    env.OMNIVOICE_BUILD_COMMIT = __BUILD_COMMIT__;
+  }
   delete env.PYTHONHOME;
   delete env.PYTHONPATH;
   env.PYTHONUNBUFFERED = '1';
@@ -562,10 +576,9 @@ function childEnv(
   // while the binary sat inside the app bundle. findUv() knows where to look;
   // hand the answer over instead of keeping it. An explicit override from the
   // environment still wins.
-  if (!env.OMNIVOICE_BUNDLED_UV) {
-    const uv = findUv();
-    if (uv) env.OMNIVOICE_BUNDLED_UV = uv;
-  }
+  const uv = bundledUvEnv(env.OMNIVOICE_BUNDLED_UV, findUv);
+  if (uv) env.OMNIVOICE_BUNDLED_UV = uv;
+  else delete env.OMNIVOICE_BUNDLED_UV;
   // #2599: LAN devices load the web UI from this backend. Serve the build
   // shipped inside this app version's resources, never a copy beside the
   // runtime project (absent on updated installs, stale after an update).
