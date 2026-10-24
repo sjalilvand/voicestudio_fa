@@ -94,5 +94,8 @@ def test_the_workflow_is_a_safe_pull_request_target_job():
     steps = workflow["jobs"]["cancel"]["steps"]
     checkout = next(s for s in steps if s.get("uses", "").startswith("actions/checkout@"))
     assert checkout["with"]["persist-credentials"] is False
+    # base.sha is the base as of the PR's last update: it lacks this script for every PR
+    # opened before the script merged, so the default (current base tip) must be used.
+    assert "ref" not in checkout["with"]
     # the PR number reaches the script through the environment, not the command line
     assert "${{" not in "".join(s.get("run", "") for s in steps)
