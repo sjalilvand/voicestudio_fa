@@ -18,7 +18,7 @@
       "Pick which models to download. Each shows its size, languages and licence before you download it; models with restrictive licences ask you to accept their terms first. Downloads use Wi-Fi unless you allow mobile data, are checked before use, and can be deleted any time.",
       "",
       "LANGUAGES",
-      "Dictation, voice cloning and dubbing cover 11 languages: English, Chinese, Japanese, Korean, French, German, Spanish, Portuguese, Italian, Russian and Arabic. Preset voices are English and Chinese.",
+      "Voice cloning and dubbing cover 11 languages: English, Chinese, Japanese, Korean, French, German, Spanish, Portuguese, Italian, Russian and Arabic. Dictation on the phone is English; pair your computer for more. Preset voices are English and Chinese.",
       "",
       "USE YOUR COMPUTER TOO (OPTIONAL)",
       "If you run VoiceStudio on your computer, scan its QR code to pair. Heavy jobs can then run on your computer's engines, chosen per task. The phone talks only to your own computer; there is no cloud relay.",
@@ -57,7 +57,8 @@
     "android.permission.RECORD_AUDIO": "Dictation and recording a reference clip for voice cloning, only while the user records.",
     "android.permission.POST_NOTIFICATIONS": "Tell the user when a dubbing job finishes.",
     "android.permission.FOREGROUND_SERVICE": "Keep a long dubbing job running with a visible progress notification.",
-    "android.permission.FOREGROUND_SERVICE_DATA_SYNC": "Upload a video to the user's own computer for dubbing and download the result, started by the user."
+    "android.permission.FOREGROUND_SERVICE_DATA_SYNC": "Upload a video to the user's own computer for dubbing and download the result, started by the user.",
+    "android.permission.FOREGROUND_SERVICE_MEDIA_PROCESSING": "Dub a video on the phone (transcribe, translate, voice and mux) with a visible progress notification, started by the user; Android 15 and newer."
   },
   "appContent": {
     "ads": false,
