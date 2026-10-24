@@ -403,7 +403,9 @@ Workflows on both platforms. These are native screens; no embedded desktop UI.
   foreground Metal remains the default. Unsupported/denied grants and older OS
   limits retain explicit resume. Thermal critical state and critically low
   battery pause work. Sustained jobs cover dubs, narration and workflows;
-  interactive tools remain screen-owned.
+  interactive tools remain screen-owned. Paused book/workflow recipes may resume
+  only when their full draft and model configuration still match; edits discard
+  stale resume closures without replacing the newer draft.
 - **Cloning** requires separate ASR and cloning models. ASR alone cannot create a
   cloned voice. Publication follows successful marked cloned-preview synthesis;
   original reference WAV/PCM stays separate. Failed/canceled synthesis publishes

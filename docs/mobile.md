@@ -100,8 +100,9 @@ continued processing with the signed background GPU entitlement; the UI only
 claims it after the OS grants it. An explicit CPU fallback option can cancel,
 checkpoint and continue on CPU when GPU background execution is unavailable.
 Foreground work retains GPU acceleration. Older systems use limited background
-grants. The OS may still pause work; Resume restarts its saved settings. Low
-battery or critical thermal conditions pause processing. This sustained job
+grants. The OS may still pause work; Resume continues an unchanged saved draft.
+After editing a book or workflow, Generate uses the current settings and reuses
+matching cached work. Low battery or critical thermal conditions pause processing. This sustained job
 support covers dubs, stories/books and workflows; short interactive tools and
 the phone API remain foreground tasks. Delete a project/job to remove its media.
 
