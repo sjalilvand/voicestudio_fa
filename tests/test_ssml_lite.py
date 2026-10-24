@@ -177,18 +177,27 @@ def test_spell_out_keeps_devanagari_vowel_sign_with_its_base():
 
 
 def test_spell_out_long_combining_run_is_linear_time():
-    # Guard the O(n) implementation. A pathological run of combining marks
-    # must not blow up the way repeated ``units[-1] += ch`` would.
+    # A run of combining marks must stay O(n): quadrupling the input may not
+    # cost much more than ~4x (repeated ``units[-1] += ch`` costs ~16x).
     import time
 
-    payload = "a" + "े" * 5000  # 5000 Devanagari vowel signs after one base
-    t0 = time.perf_counter()
-    out = spell_out(payload)
-    elapsed = time.perf_counter() - t0
-    assert elapsed < 1.0, f"spell_out took {elapsed:.2f}s for 5000 marks"
-    # All 5000 marks attach to the same leading base; one grapheme, one
-    # spelled-out unit.
-    assert out == payload
+    def best(n):
+        payload = "a" + "े" * n
+        runs = []
+        for _ in range(3):
+            t0 = time.perf_counter()
+            out = spell_out(payload)
+            runs.append(time.perf_counter() - t0)
+        assert out == payload  # one base, all marks attached: a single unit
+        return min(runs)
+
+    small, large = best(100_000), best(400_000)
+    assert large < max(small, 0.005) * 9, (small, large)
+
+
+def test_spell_out_does_not_fuse_separate_tokens():
+    # Whitespace separates tokens: two lone conjoining jamo stay two units.
+    assert spell_out("\u1100 \u1161") == "\u1100 \u1161"
 
 
 def test_redos_safe_on_adversarial_input():

@@ -199,5 +199,6 @@ def spell_out(word: str) -> str:
     # Drop all existing whitespace, then interleave the visible characters
     # with spaces. ``split()`` + ``"".join`` removes runs of whitespace
     # first.
-    compact = "".join(word.split())
-    return " ".join(_grapheme_units(compact))
+    # Group each whitespace-separated token on its own so separate jamo or
+    # letters never fuse into one syllable across a space.
+    return " ".join(unit for token in word.split() for unit in _grapheme_units(token))
