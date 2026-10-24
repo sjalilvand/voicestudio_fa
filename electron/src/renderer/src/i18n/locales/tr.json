@@ -96,6 +96,7 @@
     "brand_by": "{{brand}} geliştiricisi",
     "all": "Tümü",
     "allContributors": "Tüm katkıda bulunanlar",
+    "coreMaintainer": "Ana bakım sorumlusu",
     "title": "VoiceStudio.sh Açık Kaynak",
     "design": "Bir açıklamadan ses tasarlayın.",
     "dub": "Ses veya videoyu çevirip dublaj yapın.",

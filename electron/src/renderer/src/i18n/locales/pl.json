@@ -96,6 +96,7 @@
     "brand_by": "{{brand}} autorstwa",
     "all": "Wszyscy",
     "allContributors": "Wszyscy współtwórcy",
+    "coreMaintainer": "Główny opiekun",
     "title": "VoiceStudio.sh Otwarty kod źródłowy",
     "design": "Zaprojektuj głos na podstawie opisu.",
     "dub": "Tłumacz i dubbinguj dźwięk lub wideo.",

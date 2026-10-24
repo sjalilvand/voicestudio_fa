@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.voicestudio.mobile.designsystem.*
@@ -37,6 +41,7 @@ import kotlin.math.min
  */
 object HomeContributors {
     val logins = listOf("debpalash", "kevin9327", "psiberfunk", "velixio", "jaketame", "paoloantinori", "Chang-Jin-Lee", "Shivendra-Coherent", "marreiradigital")
+    val coreMaintainers = setOf("debpalash", "velixio")
     const val REPOSITORY = "https://github.com/debpalash/VoiceStudio"
     /** Three right-aligned rows that taper downward, filled right to left, ending with "All". */
     fun rows(items: List<String>): List<List<String>> {
@@ -69,6 +74,8 @@ object HomeContributors {
     val uri = LocalUriHandler.current
     val context = LocalContext.current
     val all = login == "all"
+    val maintainer = login in HomeContributors.coreMaintainers
+    val maintainerLabel = if(maintainer) tr("homeUi.coreMaintainer") else null
     val label = if (all) tr("homeUi.allContributors") else "@$login"
     val avatar by produceState<ImageBitmap?>(null, login) {
         if (!all) value = withContext(Dispatchers.IO) {
@@ -76,13 +83,19 @@ object HomeContributors {
             context.assets.open("contributors/$name").use { BitmapFactory.decodeStream(it)?.asImageBitmap() }
         }
     }
-    Box(Modifier.size(if(compact) 48.dp else 34.dp).clip(CircleShape)
+    Box(Modifier.size(if(compact) 48.dp else 34.dp)
         .clickable(onClickLabel=label) {uri.openUri(if(all) "${HomeContributors.REPOSITORY}/graphs/contributors" else "https://github.com/$login")}
-        .semantics {contentDescription=label},contentAlignment=Alignment.Center) {
-        Box(Modifier.size(if(compact) 28.dp else 34.dp).clip(CircleShape).background(role("surfaceRaised"))
-            .border(1.dp,role("border"),CircleShape),contentAlignment=Alignment.Center) {
-            if(all) Text(tr("homeUi.all"),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.SemiBold)
-            else avatar?.let {Image(it,null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)}
+        .semantics {contentDescription=label;if(maintainerLabel!=null) stateDescription=maintainerLabel},contentAlignment=Alignment.Center) {
+        Box(Modifier.size(if(compact) 28.dp else 34.dp)) {
+            Box(Modifier.matchParentSize().clip(CircleShape).background(role("surfaceRaised"))
+                .border(1.dp,role("border"),CircleShape),contentAlignment=Alignment.Center) {
+                if(all) Text(tr("homeUi.all"),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.SemiBold)
+                else avatar?.let {Image(it,null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)}
+            }
+            if(maintainer) Box(Modifier.align(Alignment.BottomEnd).size(12.dp).clip(CircleShape)
+                .background(role("messageAction")).border(1.5.dp,role("canvas"),CircleShape),contentAlignment=Alignment.Center) {
+                Icon(Icons.Default.Star,null,Modifier.size(7.dp),tint=role("messageActionForeground"))
+            }
         }
     }
 }

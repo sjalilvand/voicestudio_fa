@@ -96,6 +96,7 @@
     "brand_by": "{{brand}} door",
     "all": "Allen",
     "allContributors": "Alle bijdragers",
+    "coreMaintainer": "Kernbeheerder",
     "title": "VoiceStudio.sh Open source",
     "design": "Ontwerp een stem op basis van een beschrijving.",
     "dub": "Vertaal en dub audio of video.",

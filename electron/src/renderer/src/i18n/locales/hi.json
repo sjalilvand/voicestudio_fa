@@ -96,6 +96,7 @@
     "brand_by": "{{brand}} के निर्माता",
     "all": "सभी",
     "allContributors": "सभी योगदानकर्ता",
+    "coreMaintainer": "मुख्य अनुरक्षक",
     "title": "VoiceStudio.sh ओपन सोर्स",
     "design": "विवरण से एक आवाज़ बनाएँ।",
     "dub": "ऑडियो या वीडियो का अनुवाद और डबिंग करें।",

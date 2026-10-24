@@ -14,6 +14,9 @@ choose, per task, to run on **This phone** or **My computer**.
 | Minimum OS | iOS 17 (iPhone, iPad) | Android 10 (API 29) |
 | Source | [`mobile/ios/`](../mobile/ios/README.md) | [`mobile/android/`](../mobile/android/README.md) |
 
+Home marks **@debpalash** and **@velixio** with a small star badge as the core
+maintainer team, matching Electron. The badge has a localized core-maintainer description for accessibility.
+
 ## What you can do
 
 - **Speak**: type text, pick a voice and language, generate, play, share.

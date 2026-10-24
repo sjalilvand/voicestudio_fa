@@ -96,6 +96,7 @@
     "brand_by": "{{brand}} โดย",
     "all": "ทั้งหมด",
     "allContributors": "ผู้มีส่วนร่วมทั้งหมด",
+    "coreMaintainer": "ผู้ดูแลหลัก",
     "title": "VoiceStudio.sh โอเพนซอร์ส",
     "design": "ออกแบบเสียงจากคำอธิบาย",
     "dub": "แปลและพากย์เสียงหรือวิดีโอ",

@@ -439,7 +439,8 @@ into the app's own model store with the same explicit `downloadSmokeModels` and
 reference clip spoken by that model) through `PhoneVoiceStore`, declines
 analytics, generates one take on the phone (and fails if its player never gets a
 duration), picks two dub target languages and saves `01-home.png` … `07-settings.png` to the app's external files
-directory (`play-screenshots/`). It asserts Play's size rules, so use a 16:9
+directory (`play-screenshots/`). It checks the fixed Generate action directly and scrolls the form content rather
+than the fixed workspace headers. It asserts Play's size rules, so use a 16:9
 device; the `android-screenshots` job uses the Nexus 5X profile and uploads the
 `android-play-screenshots` artifact.
 
@@ -478,6 +479,7 @@ Desktop-only workspaces are not advertised as available mobile features.
 
 ## Home, Dub and dock
 
+Home marks debpalash and velixio with a small core-maintainer star; TalkBack announces the role.
 Home shows Electron's contributor avatars (`HomeContributors.kt`; the Gradle catalog task copies the
 images from `electron/.../home/contributors` into the APK assets, nothing is fetched at runtime and
 `tests/test_mobile_contract.py` guards the list). Dub opens with a dashed source card and the animated
