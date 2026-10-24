@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 public enum NativeComputeMode: Sendable, Equatable { case automatic, cpuOnly }
 
@@ -42,5 +43,19 @@ public struct PhoneJobRestartGate: Sendable {
         let restart = stopping == .cpuHandoff
         stopping = nil
         return restart
+    }
+}
+
+/// Identifies the immutable task input, excluding progress and generated output.
+/// A saved recipe may only resume while the editor still describes that input.
+public struct PhoneJobResumeIdentity: Sendable {
+    private let value: String?
+    public init(_ value: String?) { self.value = value }
+    public func matches(_ current: String?) -> Bool { value == current }
+    public static func fingerprint<T: Encodable>(_ snapshot: T,configuration: String) throws -> String {
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        let input = try encoder.encode(snapshot)
+        let payload = try encoder.encode([input.base64EncodedString(),configuration])
+        return SHA256.hash(data: payload).map { String(format: "%02x",$0) }.joined()
     }
 }

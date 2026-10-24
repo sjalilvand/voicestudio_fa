@@ -6,6 +6,7 @@ struct PhoneJobStatusView: View {
     let id: String
     let requiresGPU: Bool
     let cpuFallbackSupported: Bool
+    var resumeIdentity: String? = nil
     var onResume: (@MainActor () -> Void)? = nil
     @Environment(AppModel.self) private var model
     private var jobs: PhoneJobs { .shared }
@@ -21,9 +22,11 @@ struct PhoneJobStatusView: View {
                     .disabled(!cpuFallbackSupported || jobs.states[id]?.running == true)
                 Text(model.t(cpuFallbackSupported ? "mobile.jobs.cpu_tradeoff" : "mobile.jobs.cpu_unavailable")).font(.caption)
             }
-            if jobs.canResume(id: id) {
-                Button(model.t("mobile.jobs.resume_checkpoint"),systemImage: "play.fill") { if let onResume { onResume() } else { jobs.resume(id: id) } }.studioButton(.tertiary)
+            if jobs.canResume(id: id,identity: resumeIdentity) {
+                Button(model.t("mobile.jobs.resume_checkpoint"),systemImage: "play.fill") { if let onResume { onResume() } else { jobs.resume(id: id,identity: resumeIdentity) } }.studioButton(.tertiary)
             }
         }
+        .onChange(of: resumeIdentity,initial: true) { _,identity in jobs.discardStaleResume(id: id,identity: identity) }
+        .onChange(of: jobs.states[id]?.running) { _,_ in jobs.discardStaleResume(id: id,identity: resumeIdentity) }
     }
 }

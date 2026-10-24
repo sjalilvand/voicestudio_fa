@@ -14,6 +14,13 @@ struct WorkflowsView: View {
     @State private var result: PhoneWorkflowResult?
     @State private var resultSubject: ContentReportSubject?
     @State private var importing = false
+    private var resumeConfiguration: String {
+        [tts,clone].compactMap { $0 }.map { (try? phoneModelPin($0)) ?? "" }.joined(separator: "|")+"|"+voice+"|"+((try? translator.map(phoneModelPin)) ?? "")+"|"+((try? recognizer.map(phoneModelPin)) ?? "")
+    }
+    private var resumeIdentity: String? {
+        var snapshot = workflow; snapshot.inputText = input; snapshot.voiceSelection = voice
+        return try? PhoneJobResumeIdentity.fingerprint(snapshot,configuration: resumeConfiguration)
+    }
     private var jobID: String { "workflow:"+workflow.id.uuidString }
     private var jobState: PhoneJobState? { PhoneJobs.shared.states[jobID] }
     private var running: Bool { jobState?.running == true }
@@ -38,7 +45,7 @@ struct WorkflowsView: View {
         Page {
             Text(model.t("mobile.local.this_phone"))
             editor.disabled(running)
-            PhoneJobStatusView(id: jobID,requiresGPU: needed.contains { $0.runtime != .sherpa },cpuFallbackSupported: NativeLocalEngine.cpuFallbackAvailable(models: needed))
+            PhoneJobStatusView(id: jobID,requiresGPU: needed.contains { $0.runtime != .sherpa },cpuFallbackSupported: NativeLocalEngine.cpuFallbackAvailable(models: needed),resumeIdentity: resumeIdentity)
             if !needed.allSatisfy(model.phone.ready) { LocalDownloadPrompt(items: needed,feature: "workflows.title") }
             if running {
                 ProgressView(value: jobState?.progress ?? 0)
@@ -166,7 +173,7 @@ struct WorkflowsView: View {
         PhoneWorkflow(name: model.t(templateKey(kind)),steps: (kind == "clean" ? ["normalize","speak"] : kind == "translate" ? ["normalize","translate","speak"] : ["transcribe","normalize","translate","speak"]).map { PhoneWorkflowStep(kind: $0) })
     }
     private func run() {
-        guard let store = model.phone.workflowStore,let engine = model.phone.engine,let voicesStore = model.phone.voiceStore else { return }
+        guard let store = model.phone.workflowStore,let engine = model.phone.engine,let voicesStore = model.phone.voiceStore,let resumeIdentity else { return }
         let renderer = ProductionVoiceRenderer(engine: engine,store: voicesStore,voices: model.phone.voices,tts: tts,clone: clone)
         var submitted = workflow; submitted.inputText = input; submitted.voiceSelection = voice
         let snapshot = submitted, text = input,selection = voice,translator = translator,recognizer = recognizer
@@ -174,7 +181,7 @@ struct WorkflowsView: View {
         let languages = model.languages.dubOptions
         let configuration = renderer.configuration+"|"+selection+"|"+((try? translator.map(phoneModelPin)) ?? "")+"|"+((try? recognizer.map(phoneModelPin)) ?? "")
         result = nil; resultSubject = nil; player.clear()
-        PhoneJobs.shared.start(id: jobID,title: workflow.name,requiresGPU: snapshot.steps.contains { $0.kind == "translate" } || (snapshot.steps.contains { $0.kind == "speak" } && selection.hasPrefix("phone:")),cpuFallbackSupported: NativeLocalEngine.cpuFallbackAvailable(models: needed)) { report in
+        PhoneJobs.shared.start(id: jobID,title: workflow.name,requiresGPU: snapshot.steps.contains { $0.kind == "translate" } || (snapshot.steps.contains { $0.kind == "speak" } && selection.hasPrefix("phone:")),cpuFallbackSupported: NativeLocalEngine.cpuFallbackAvailable(models: needed),resumeIdentity: resumeIdentity) { report in
             let result = try await store.run(snapshot,text: text,configuration: configuration,progress: { value in await report(EngineProgress(stage: .running,fraction: value)) }) { step,text in
                 if step.kind == "transcribe",let recognizer {
                     let source = try await store.source(snapshot)

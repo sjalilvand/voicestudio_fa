@@ -53,3 +53,22 @@ import Foundation
     }
     #expect(await trace.events == ["gpu-started","gpu-cleaned","cpu-started"])
 }
+
+@Test func pausedRecipeRejectsNewDraftAndModelSelectionsButKeepsIdenticalInputResumable() throws {
+    struct Draft: Codable { var script: String; var cast: [String:String]; var speed: Double }
+    let original = Draft(script: "Original manuscript",cast: ["Alice":"phone:alice","Bob":"preset:0"],speed: 1)
+    let identity = try PhoneJobResumeIdentity.fingerprint(original,configuration: "tts@rev1|clone@rev1")
+    let savedRecipe = PhoneJobResumeIdentity(identity)
+    #expect(savedRecipe.matches(try PhoneJobResumeIdentity.fingerprint(original,configuration: "tts@rev1|clone@rev1")))
+    var edited = original; edited.script = "Newer saved manuscript"
+    #expect(!savedRecipe.matches(try PhoneJobResumeIdentity.fingerprint(edited,configuration: "tts@rev1|clone@rev1")))
+    edited = original; edited.cast["Alice"] = "preset:1"
+    #expect(!savedRecipe.matches(try PhoneJobResumeIdentity.fingerprint(edited,configuration: "tts@rev1|clone@rev1")))
+    edited = original; edited.speed = 1.25
+    #expect(!savedRecipe.matches(try PhoneJobResumeIdentity.fingerprint(edited,configuration: "tts@rev1|clone@rev1")))
+    #expect(!savedRecipe.matches(try PhoneJobResumeIdentity.fingerprint(original,configuration: "tts@rev2|clone@rev1")))
+    #expect(!savedRecipe.matches(nil))
+    // Dictionary order and transient progress/output do not enter the input identity.
+    let same = Draft(script: original.script,cast: ["Bob":"preset:0","Alice":"phone:alice"],speed: 1)
+    #expect(savedRecipe.matches(try PhoneJobResumeIdentity.fingerprint(same,configuration: "tts@rev1|clone@rev1")))
+}

@@ -31,6 +31,7 @@ struct ProductionView: View {
     @State private var word = ""
     @State private var spoken = ""
     private var jobID: String { "production:"+project.id.uuidString }
+    private var resumeIdentity: String? { try? PhoneJobResumeIdentity.fingerprint(project,configuration: renderer?.configuration ?? "") }
     private var running: Bool { PhoneJobs.shared.states[jobID]?.running == true }
     private var progress: Double { PhoneJobs.shared.states[jobID]?.progress ?? 0 }
     @State private var output: URL?
@@ -65,7 +66,7 @@ struct ProductionView: View {
         Page {
             Text(model.t("mobile.local.this_phone")).font(.caption).foregroundStyle(theme.color("textMuted"))
             editor.disabled(running)
-            PhoneJobStatusView(id: jobID,requiresGPU: needed.contains { $0.runtime != .sherpa },cpuFallbackSupported: NativeLocalEngine.cpuFallbackAvailable(models: needed))
+            PhoneJobStatusView(id: jobID,requiresGPU: needed.contains { $0.runtime != .sherpa },cpuFallbackSupported: NativeLocalEngine.cpuFallbackAvailable(models: needed),resumeIdentity: resumeIdentity)
             if !needed.allSatisfy(model.phone.ready) { LocalDownloadPrompt(items: needed,feature: titleKey) }
             if running {
                 ProgressView(value: progress)
@@ -201,10 +202,10 @@ struct ProductionView: View {
         return .phone(.speak,id: output?.path ?? project.id.uuidString,repo: engine?.repo,revision: engine?.revision,typedText: project.script)
     }
     private func generate() {
-        guard let renderer, let store = model.phone.productionStore else { return }
+        guard let renderer, let store = model.phone.productionStore,let resumeIdentity else { return }
         let snapshot = project
         output = nil; player.clear()
-        PhoneJobs.shared.start(id: jobID,title: snapshot.title,requiresGPU: needed.contains { $0.runtime != .sherpa },cpuFallbackSupported: NativeLocalEngine.cpuFallbackAvailable(models: needed)) { progress in
+        PhoneJobs.shared.start(id: jobID,title: snapshot.title,requiresGPU: needed.contains { $0.runtime != .sherpa },cpuFallbackSupported: NativeLocalEngine.cpuFallbackAvailable(models: needed),resumeIdentity: resumeIdentity) { progress in
             let file = try await store.render(snapshot,configuration: renderer.configuration,progress: { value in await progress(EngineProgress(stage: .running,fraction: value)) },synthesize: renderer.render)
             return PhoneJobResult(file: file)
         }

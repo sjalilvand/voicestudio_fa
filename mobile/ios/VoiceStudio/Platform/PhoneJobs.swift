@@ -29,6 +29,7 @@ struct PhoneJobState: Sendable {
         let requiresGPU: Bool
         let cpuAvailable: Bool
         var allowCPU: Bool
+        let identity: PhoneJobResumeIdentity
         let operation: Operation
     }
     private(set) var states: [String:PhoneJobState] = [:]
@@ -58,17 +59,21 @@ struct PhoneJobState: Sendable {
     private var safePower: Bool {
         ProcessInfo.processInfo.thermalState != .critical && !(UIDevice.current.batteryState == .unplugged && UIDevice.current.batteryLevel >= 0 && UIDevice.current.batteryLevel < 0.05)
     }
-    @discardableResult func start(id: String,title: String,requiresGPU: Bool = true,cpuFallbackSupported: Bool = false,operation: @escaping Operation) -> Bool {
+    @discardableResult func start(id: String,title: String,requiresGPU: Bool = true,cpuFallbackSupported: Bool = false,resumeIdentity: String? = nil,operation: @escaping Operation) -> Bool {
         guard tasks[id] == nil else { return false }
-        recipes[id] = Recipe(title: title,requiresGPU: requiresGPU,cpuAvailable: cpuFallbackSupported,allowCPU: allowCPUFallback,operation: operation)
+        recipes[id] = Recipe(title: title,requiresGPU: requiresGPU,cpuAvailable: cpuFallbackSupported,allowCPU: allowCPUFallback,identity: PhoneJobResumeIdentity(resumeIdentity),operation: operation)
         return begin(id: id)
     }
-    @discardableResult func resume(id: String) -> Bool {
-        guard tasks[id] == nil, recipes[id] != nil else { return false }
+    @discardableResult func resume(id: String,identity: String? = nil) -> Bool {
+        guard tasks[id] == nil, recipes[id]?.identity.matches(identity) == true else { return false }
         recipes[id]?.allowCPU = allowCPUFallback
         return begin(id: id)
     }
-    func canResume(id: String) -> Bool { states[id]?.paused == true && tasks[id] == nil && recipes[id] != nil }
+    func canResume(id: String,identity: String? = nil) -> Bool { states[id]?.paused == true && tasks[id] == nil && recipes[id]?.identity.matches(identity) == true }
+    func discardStaleResume(id: String,identity: String?) {
+        guard tasks[id] == nil,states[id]?.paused == true,let recipe = recipes[id],!recipe.identity.matches(identity) else { return }
+        recipes[id] = nil; states[id] = nil
+    }
     private func begin(id: String) -> Bool {
         guard let recipe = recipes[id] else { return false }
         guard safePower else {
