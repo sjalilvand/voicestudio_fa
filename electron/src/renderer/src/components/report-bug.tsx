@@ -126,6 +126,7 @@ export function ReportBug({ error }: { error?: Error | string }) {
       if (system.status === 'fulfilled') {
         for (const key of [
           'platform',
+          'build_commit',
           'arch',
           'os_version',
           'python',
