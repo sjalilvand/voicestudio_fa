@@ -293,3 +293,69 @@ def test_security_change_detection(rows, expected, tmp_path):
 @pytest.mark.skipif(sys.platform == "win32", reason="needs a POSIX shell and grep -P")
 def test_security_change_detection_runs_everything_off_pull_requests(tmp_path):
     assert _security_detect("modified\tdocs/a.md", tmp_path, event="push") == "code=true"
+
+
+# --- mobile.yml: only the iOS (macOS) jobs wait for a change that can reach iOS ----------
+
+MOBILE = yaml.safe_load((ROOT / ".github/workflows/mobile.yml").read_text(encoding="utf-8"))
+DOCKER = yaml.safe_load((ROOT / ".github/workflows/docker.yml").read_text(encoding="utf-8"))
+
+
+def test_only_the_macos_jobs_wait_for_ios_relevant_changes():
+    jobs = MOBILE["jobs"]
+    for name in ("ios", "ios-inference"):
+        assert jobs[name]["needs"] == "changes", name
+        assert "outputs.ios != 'false'" in jobs[name]["if"] and "!cancelled()" in jobs[name]["if"], name
+    for name in ("android", "android-inference"):
+        assert "needs" not in jobs[name], f"{name} must still build Android on every trigger"
+
+
+def _mobile_detect(rows, tmp_path, event="pull_request"):
+    script = MOBILE["jobs"]["changes"]["steps"][0]["run"]
+    gh = tmp_path / "gh"
+    gh.write_text("#!/bin/sh\nprintf '%s\\n' \"$FAKE_ROWS\"\n", encoding="utf-8")
+    gh.chmod(0o755)
+    out = tmp_path / "out"
+    env = dict(os.environ, PATH=f"{tmp_path}:{os.environ['PATH']}", EVENT=event, PR="1",
+               REPO="o/r", GITHUB_OUTPUT=str(out), GH_TOKEN="x", FAKE_ROWS=rows)
+    done = subprocess.run(["bash", "-eo", "pipefail", "-c", script], env=env, capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+    return out.read_text(encoding="utf-8").strip()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="needs a POSIX shell and grep -E")
+@pytest.mark.parametrize("rows,expected", [
+    ("modified\telectron/src/renderer/src/i18n/locales/en.json", "ios=false"),
+    ("modified\tpackage.json\nmodified\tdocs/logo.svg", "ios=false"),
+    ("modified\tmobile/android/app/build.gradle.kts", "ios=false"),
+    ("modified\tmobile/ios/Package.swift", "ios=true"),
+    ("modified\tmobile/contract/openapi.json", "ios=true"),
+    ("modified\tmobile/native/x.c\nmodified\tmobile/android/a.kt", "ios=true"),
+    ("modified\t.github/workflows/mobile.yml", "ios=true"),
+    ("removed\tmobile/android/a.kt", "ios=true"),
+])
+def test_mobile_ios_detection(rows, expected, tmp_path):
+    assert _mobile_detect(rows, tmp_path) == expected
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="needs a POSIX shell and grep -E")
+def test_every_push_and_manual_run_builds_ios(tmp_path):
+    for event in ("push", "workflow_dispatch"):
+        (tmp_path / event).mkdir()
+        assert _mobile_detect("modified\tpackage.json", tmp_path / event, event=event) == "ios=true"
+
+
+def test_docker_main_pushes_skip_only_changes_that_cannot_alter_the_image():
+    ignored = set(DOCKER[True]["push"]["paths-ignore"])
+    assert {"docs/**", "mobile/**", "changelog.d/**"} <= ignored
+    # these reach the image or the Docker Hub page, so they must still rebuild
+    for path in ("deploy/dockerhub-overview.md", "deploy/Dockerfile", "README.md", "backend/main.py",
+                 ".github/workflows/docker.yml", "pyproject.toml"):
+        assert not any(_matches(path, pattern) for pattern in ignored), path
+    assert "paths-ignore" not in (DOCKER[True].get("release") or {})
+
+
+def _matches(path, pattern):
+    import fnmatch
+    regex = fnmatch.translate(pattern.replace("**", "\0")).replace("\\\0", ".*").replace("\0", ".*")
+    return re.match(regex, path) is not None
