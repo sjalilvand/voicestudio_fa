@@ -71,4 +71,13 @@ class AudioProcessingTest {
         try {PhoneAudioProcessing.process(input,AudioEditOptions(),temporary.root) {if(it>.2f) throw CancellationException("cancel")};fail()} catch(_:CancellationException) {}
         assertEquals(hash,sha256(input.pcm.file));assertEquals(before,temporary.root.listFiles().orEmpty().map {it.name}.toSet())
     }
+    @Test fun fullLengthNormalizationIncludesLastFrameDespiteTimestampRoundoff()=runTest {
+        val input=document(FloatArray(3003).also {it[3002]=.5f})
+        for(explicitEnd in listOf(false,true)) {
+            val options=AudioEditOptions(normalize=true,end=if(explicitEnd) input.duration else null)
+            val result=PhoneAudioProcessing.process(input,options,temporary.root);val actual=samples(result.file)
+            assertEquals(3003,actual.size);assertEquals(10.0.pow(-2.0/20),actual.last().toDouble(),.00004)
+        }
+    }
+
 }

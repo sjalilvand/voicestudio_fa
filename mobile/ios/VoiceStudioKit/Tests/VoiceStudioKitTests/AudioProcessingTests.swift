@@ -77,3 +77,15 @@ private func waveSamples(_ file: URL) throws -> [Float] {
     await #expect(throws: CancellationError.self) { try await task.value }
     #expect(try ModelHash.file(document.pcm.url) == hash)
 }
+
+@Test func phoneAudioFullLengthNormalizationIncludesTheLastFrame() async throws {
+    let root = try processingRoot(); defer { try? FileManager.default.removeItem(at: root) }
+    var samples = Array(repeating: Float(0),count: 3003); samples[3002] = 0.5
+    let document = try processingDocument(root,samples)
+    for explicitEnd in [false,true] {
+        var options = PhoneAudioEditOptions(); options.normalize = true
+        if explicitEnd { options.end = document.duration }
+        let result = try await PhoneAudioProcessing.process(document,options: options,workspace: root), actual = try waveSamples(result.file)
+        #expect(actual.count == 3003); #expect(abs(Double(actual.last!)-pow(10,-2.0/20)) < 0.00004)
+    }
+}

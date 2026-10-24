@@ -71,7 +71,9 @@ public enum PhoneAudioProcessing {
               options.fadeIn.isFinite, options.fadeOut.isFinite, options.fadeIn >= 0, options.fadeOut >= 0, options.fadeIn <= end-options.start, options.fadeOut <= end-options.start,
               options.gainDB.isFinite, (-24...24).contains(options.gainDB), options.targetDB.isFinite, (-24...(-1)).contains(options.targetDB), options.gateDB.isFinite, (-80...(-10)).contains(options.gateDB),
               try document.pcm.frames == document.frames else { throw ClientError("mobile.processing.invalid") }
-        let first = Int(options.start*24000), last = min(document.frames,Int(end*24000)), count = last-first
+        let first = Int(options.start*24000)
+        let last = end >= document.duration ? document.frames : min(document.frames,Int(end*24000))
+        let count = last-first
         guard count > 0 else { throw ClientError("mobile.processing.invalid") }
         let directory = workspace.appendingPathComponent("audio-edit-"+UUID().uuidString)
         try PrivateFiles.directory(directory)

@@ -3,16 +3,41 @@ import Network
 import Security
 import CoreFoundation
 
-/// Small foreground server; stopping the owning screen cancels every request.
+/// Serial admission remains closed after stop, even when Network delivers a queued callback.
+internal final class PhoneServerLifetime: @unchecked Sendable {
+    private let lock = NSLock()
+    private var serial: UInt64 = 0
+    private var active: UInt64?
+    private var cancellations: [UUID: @Sendable () -> Void] = [:]
+    func begin() throws -> UInt64 { try lock.withLock {
+        guard active == nil else { throw ClientError("mobile.errors.file") }; serial &+= 1; active = serial; return serial
+    } }
+    func isCurrent(_ generation: UInt64) -> Bool { lock.withLock { active == generation } }
+    @discardableResult func register(_ id: UUID,generation: UInt64,cancel: @escaping @Sendable () -> Void) -> Bool {
+        let accepted = lock.withLock { guard active == generation else { return false }; cancellations[id] = cancel; return true }
+        if !accepted { cancel() }; return accepted
+    }
+    func remove(_ id: UUID) { lock.withLock { cancellations[id] = nil } }
+    @discardableResult func stop(generation: UInt64? = nil) -> UInt64? {
+        let stopped: (UInt64,[@Sendable () -> Void])? = lock.withLock {
+            guard let current = active, generation == nil || generation == current else { return nil }
+            active = nil; let callbacks = Array(cancellations.values); cancellations.removeAll(); return (current,callbacks)
+        }
+        stopped?.1.forEach { $0() }; return stopped?.0
+    }
+}
+/// Small foreground server; stop invalidates admission and cancels requests before returning.
 public final class PhoneSpeechServer: @unchecked Sendable {
     public typealias Provider = @Sendable (String, Float) async throws -> Data
     public let token: String
     private let queue = DispatchQueue(label: "voicestudio.phone.http")
     private let router: SpeechRouter
-    private var listener: NWListener?
-    private var connections: [UUID: NWConnection] = [:]
-    private var tasks: [UUID: Task<Void,Never>] = [:]
-    private var hosts: Set<String> = []
+    private let lifetime = PhoneServerLifetime()
+    private var listener: (generation: UInt64,value: NWListener)?
+    private var connections: [UUID: (generation: UInt64,value: NWConnection)] = [:]
+    private var tasks: [UUID: (generation: UInt64,value: Task<Void,Never>)] = [:]
+    private var configuration: Task<Void,Never>?
+    internal var listenerStarter: (@Sendable (NWListener,DispatchQueue) -> Void)?
     public private(set) var port: UInt16 = 0
     public private(set) var addresses: [String] = []
     public init(model: String, capabilities: PhoneServerCapabilities = .init(), provider: @escaping Provider) throws {
@@ -22,57 +47,82 @@ public final class PhoneSpeechServer: @unchecked Sendable {
         router = SpeechRouter(model: model,token: token,capabilities: capabilities,provider: provider)
     }
     public func start(lan: Bool = false) async throws {
-        let parameters = NWParameters.tcp
-        parameters.requiredLocalEndpoint = .hostPort(host: lan ? "0.0.0.0" : "127.0.0.1",port: .any)
-        let listener = try NWListener(using: parameters)
-        let hosts = Self.localHosts(lan: lan)
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void,Error>) in
-            queue.async { [self] in
-                guard self.listener == nil else { continuation.resume(throwing: ClientError("mobile.errors.file")); return }
-                self.listener = listener
-                let start = SpeechListenerStart()
-                listener.stateUpdateHandler = { [self] state in
-                    switch state {
-                    case .ready:
-                        guard !start.finished, let bound = listener.port else { return }; start.finished = true
-                        self.port = bound.rawValue; self.hosts = hosts
-                        self.addresses = hosts.filter { $0 != "localhost" }.sorted().map { "http://\($0):\(bound.rawValue)" }
-                        Task { await self.router.configure(hosts: hosts,port: bound.rawValue); continuation.resume() }
-                    case .failed(let error):
-                        if !start.finished { start.finished = true; continuation.resume(throwing: error) }; self.stop()
-                    case .cancelled:
-                        if !start.finished { start.finished = true; continuation.resume(throwing: CancellationError()) }
-                    default: break
+        let generation = try lifetime.begin()
+        do {
+            try await withTaskCancellationHandler {
+                try Task.checkCancellation()
+                let parameters = NWParameters.tcp
+                parameters.requiredLocalEndpoint = .hostPort(host: lan ? "0.0.0.0" : "127.0.0.1",port: .any)
+                let listener = try NWListener(using: parameters), hosts = Self.localHosts(lan: lan)
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void,Error>) in
+                    let start = SpeechListenerStart(continuation)
+                    let listenerID = UUID()
+                    guard lifetime.register(listenerID,generation: generation,cancel: { listener.cancel(); start.finish(.failure(CancellationError())) }) else { return }
+                    queue.async { [self] in
+                        guard lifetime.isCurrent(generation) else { listener.cancel(); start.finish(.failure(CancellationError())); return }
+                        self.listener?.value.stateUpdateHandler = nil; self.listener?.value.newConnectionHandler = nil
+                        self.listener?.value.cancel(); self.listener = (generation,listener)
+                        listener.stateUpdateHandler = { [self] state in
+                            switch state {
+                            case .ready:
+                                guard lifetime.isCurrent(generation), let bound = listener.port else { return }
+                                self.port = bound.rawValue
+                                self.addresses = hosts.filter { $0 != "localhost" }.sorted().map { "http://\($0):\(bound.rawValue)" }
+                                let previous = configuration
+                                configuration = Task {
+                                    if let previous { await previous.value }
+                                    guard lifetime.isCurrent(generation) else { start.finish(.failure(CancellationError())); return }
+                                    await router.configure(hosts: hosts,port: bound.rawValue)
+                                    guard lifetime.isCurrent(generation) else { start.finish(.failure(CancellationError())); return }
+                                    start.finish(.success(()))
+                                }
+                            case .failed(let error): start.finish(.failure(error)); self.stop(generation: generation)
+                            case .cancelled: start.finish(.failure(CancellationError()))
+                            default: break
+                            }
+                        }
+                        listener.newConnectionHandler = { [weak self] connection in
+                            guard let self else { connection.cancel(); return }; self.accept(connection,generation: generation)
+                        }
+                        if let listenerStarter { listenerStarter(listener,queue) } else { listener.start(queue: queue) }
                     }
                 }
-                listener.newConnectionHandler = { [weak self] connection in self?.accept(connection) }
-                listener.start(queue: queue)
-            }
-        }
+            } onCancel: { self.stop(generation: generation) }
+        } catch { stop(generation: generation); throw error }
     }
-    public func stop() {
+    public func stop() { stop(generation: nil) }
+    private func stop(generation: UInt64?) {
+        guard let stopped = lifetime.stop(generation: generation) else { return }
         queue.async { [self] in
-            listener?.cancel(); listener = nil
-            connections.values.forEach { $0.cancel() }; connections.removeAll()
-            tasks.values.forEach { $0.cancel() }; tasks.removeAll()
+            if listener?.generation == stopped { listener?.value.stateUpdateHandler = nil; listener?.value.newConnectionHandler = nil; listener?.value.cancel(); listener = nil }
+            for id in Array(connections.keys) where connections[id]?.generation == stopped { connections.removeValue(forKey: id)?.value.cancel() }
+            for id in Array(tasks.keys) where tasks[id]?.generation == stopped { tasks.removeValue(forKey: id)?.value.cancel() }
         }
     }
-    private func accept(_ connection: NWConnection) {
-        guard connections.count < 8 else { connection.cancel(); return }
-        let id = UUID(); connections[id] = connection
-        connection.start(queue: queue)
+    private func accept(_ connection: NWConnection,generation: UInt64) {
+        guard lifetime.isCurrent(generation), connections.count < 8 else { connection.cancel(); return }
+        let id = UUID()
+        guard lifetime.register(id,generation: generation,cancel: { connection.cancel() }) else { return }
+        connections[id] = (generation,connection); connection.start(queue: queue)
         let session = SpeechConnection(connection: connection)
         session.receive { [weak self] request in
-            guard let self else { connection.cancel(); return }
-            self.tasks[id] = Task {
-                let response: SpeechReply
-                if let request { response = await self.router.respond(request) } else { response = SpeechReply(status: 400) }
+            guard let self, self.lifetime.isCurrent(generation), self.connections[id]?.value === connection else { connection.cancel(); return }
+            // Admission is published before the task can reach a provider. Stop also cancels tasks
+            // that have been allocated but have not yet entered their body.
+            let (admission,permit) = AsyncStream<Void>.makeStream()
+            let task = Task {
+                for await _ in admission { break }
+                guard !Task.isCancelled, self.lifetime.isCurrent(generation) else { return }
+                let response = if let request { await self.router.respond(request) } else { SpeechReply(status: 400) }
                 self.queue.async { [self] in
+                    guard lifetime.isCurrent(generation), connections[id]?.value === connection else { connection.cancel(); return }
                     connection.send(content: response.wire,completion: .contentProcessed { [weak self] _ in
-                        connection.cancel(); self?.connections.removeValue(forKey: id); self?.tasks.removeValue(forKey: id)
+                        connection.cancel(); self?.connections.removeValue(forKey: id); self?.tasks.removeValue(forKey: id); self?.lifetime.remove(id)
                     })
                 }
             }
+            if self.lifetime.register(id,generation: generation,cancel: { task.cancel(); connection.cancel() }) { self.tasks[id] = (generation,task) }
+            permit.yield(); permit.finish()
         }
     }
     private static func localHosts(lan: Bool) -> Set<String> {
@@ -125,7 +175,15 @@ public struct SpeechReply: Sendable {
     public init(status: Int,body: Data = Data(),type: String = "application/json") { self.status = status; self.body = body; self.type = type }
     public var wire: Data { Data("HTTP/1.1 \(status) Response\r\nContent-Type: \(type)\r\nContent-Length: \(body.count)\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\n\r\n".utf8)+body }
 }
-private final class SpeechListenerStart: @unchecked Sendable { var finished = false }
+private final class SpeechListenerStart: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<Void,Error>?
+    init(_ continuation: CheckedContinuation<Void,Error>) { self.continuation = continuation }
+    func finish(_ result: Result<Void,Error>) {
+        let pending = lock.withLock { let value = continuation; continuation = nil; return value }
+        pending?.resume(with: result)
+    }
+}
 private final class SpeechConnection: @unchecked Sendable {
     let connection: NWConnection
     var bytes = Data()

@@ -335,7 +335,10 @@ public struct PhoneDubPipeline: Sendable {
             let targetRenders = try cp.segments.indices.map { index -> PhoneDubRender in
                 guard let render = renderedByIndex[index] else { throw ClientError("mobile.simple.checkpoint_failed") }; return render
             }
-            let outputFingerprint = phoneDubFingerprint([cp.originalHash ?? "",request.sourceHash,String(request.audioOnly)]+targetRenders.map { $0.fingerprint ?? "" }+cp.segments.flatMap { [String($0.gain ?? 1),String($0.muted == true)] })
+            var outputInputs: [String] = [cp.originalHash ?? "",request.sourceHash,String(request.audioOnly)]
+            outputInputs.append(contentsOf: targetRenders.map { $0.fingerprint ?? "" })
+            for segment in cp.segments { outputInputs.append(String(segment.gain ?? 1)); outputInputs.append(String(segment.muted == true)) }
+            let outputFingerprint = phoneDubFingerprint(outputInputs)
             let previousOutput = cp.outputs.first(where: { $0.language == target.code })
             if let previous = previousOutput, previous.fingerprint == outputFingerprint, (try? ModelHash.file(await store.file(id,previous.file))) == previous.hash { continue }
             try await stage("mobile.simple.mixing",percent(0.9))

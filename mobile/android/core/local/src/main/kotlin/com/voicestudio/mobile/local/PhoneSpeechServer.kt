@@ -17,6 +17,7 @@ class PhoneSpeechServer(private val model: String, private val capabilities: Pho
     private val sockets = ConcurrentHashMap.newKeySet<Socket>()
     private var scope: CoroutineScope? = null
     private var listener: ServerSocket? = null
+    internal var beforeClientRegistration: (() -> Unit)? = null
     private var hosts = emptySet<String>()
     var port: Int = 0; private set
     val addresses: List<String> get() = hosts.filter { it != "localhost" }.sorted().map { "http://$it:$port" }
@@ -31,15 +32,23 @@ class PhoneSpeechServer(private val model: String, private val capabilities: Pho
         running.launch {
             try { while (isActive) {
                 val client = socket.accept()
-                // Bound open connections, including clients sending incomplete headers.
-                if (sockets.size >= 8) { client.close(); continue }
-                sockets.add(client)
-                launch { client.use { try {
-                    it.soTimeout = 10_000
-                    val request = readRequest(it)
-                    val response = respond(request)
-                    it.getOutputStream().write(response.wire())
-                } catch (_: Exception) { runCatching { it.getOutputStream().write(Reply(400).wire()) } } finally { sockets.remove(it) } } }
+                beforeClientRegistration?.invoke()
+                synchronized(this@PhoneSpeechServer) {
+                    // close() shares this monitor, so an accepted socket either joins its cleanup
+                    // set or is closed here. A canceled lazy job still executes completion cleanup.
+                    if(listener!==socket||!running.isActive||sockets.size>=8) {client.close()}
+                    else {
+                        sockets.add(client)
+                        val request=launch(start=CoroutineStart.LAZY) { client.use { try {
+                            it.soTimeout=10_000
+                            val input=readRequest(it)
+                            val response=respond(input)
+                            it.getOutputStream().write(response.wire())
+                        } catch(e:CancellationException) {throw e} catch(_:Exception) {runCatching {it.getOutputStream().write(Reply(400).wire())}} } }
+                        request.invokeOnCompletion {sockets.remove(client);runCatching {client.close()}}
+                        request.start()
+                    }
+                }
             } } catch (_: SocketException) { /* stop closes accept */ }
         }
     }

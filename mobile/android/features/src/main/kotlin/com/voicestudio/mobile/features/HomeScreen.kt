@@ -35,6 +35,8 @@ private val destinations = listOf(
     HomeDestination("voices", "nav.clone", "clone.reference_hint", Icons.Default.Person, true),
     HomeDestination("dub", "nav.dub", "homeUi.dub", VSIcons.Video, true),
     HomeDestination("dictate", "nav.dictation", "mobile.dictate.tap_to_start", VSIcons.Mic),
+    HomeDestination("models", "mobile.local.models", "mobile.local.installed", VSIcons.Download),
+    HomeDestination("connect", "mobile.local.my_computer", "mobile.local.pair_settings", VSIcons.Computer),
     HomeDestination("design", "nav.design", "clone.design_placeholder", Icons.Default.Create),
     HomeDestination("stories", "nav.stories", "stories.subtitle", Icons.Default.Person),
     HomeDestination("audiobook", "audiobook.title", "audiobook.subtitle", VSIcons.Folder),
@@ -44,8 +46,6 @@ private val destinations = listOf(
     HomeDestination("calls", "calls.title", "mobile.calls.hint", Icons.Default.Call),
     HomeDestination("local-api", "mobile.host.title", "mobile.host.hint", Icons.Default.Settings),
     HomeDestination("tools", "tools.title", "compare.title", Icons.Default.Settings),
-    HomeDestination("models", "mobile.local.models", "mobile.local.installed", VSIcons.Download),
-    HomeDestination("connect", "mobile.local.my_computer", "mobile.local.pair_settings", VSIcons.Computer),
 )
 
 @Composable fun HomeScreen(vm: StudioViewModel, navigate: (String)->Unit) {

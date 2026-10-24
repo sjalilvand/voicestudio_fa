@@ -33,6 +33,8 @@ struct HomeView: View {
                     destination("voices", title: "nav.clone", detail: "clone.reference_hint", icon: "person.wave.2", primary: true) { VoicesView() }
                     destination("dub", title: "nav.dub", detail: "homeUi.dub", icon: "film", primary: true) { DubView() }
                     destination("dictate", title: "nav.dictation", detail: "mobile.dictate.tap_to_start", icon: "mic") { DictateView() }
+                    destination("models", title: "mobile.local.models", detail: "mobile.local.installed", icon: "arrow.down.circle") { ModelsView() }
+                    destination("connect", title: "mobile.local.my_computer", detail: "mobile.local.pair_settings", icon: "desktopcomputer") { ConnectView() }
                     destination("design", title: "nav.design", detail: "clone.design_placeholder", icon: "wand.and.stars") { VoiceDesignView() }
                     destination("stories", title: "nav.stories", detail: "stories.subtitle", icon: "person.2.wave.2") { ProductionView(kind: "stories") }
                     destination("audiobook", title: "audiobook.title", detail: "audiobook.subtitle", icon: "book") { ProductionView(kind: "audiobook") }
@@ -42,8 +44,6 @@ struct HomeView: View {
                     destination("calls", title: "calls.title", detail: "mobile.calls.hint", icon: "phone") { CallsView() }
                     destination("local-api", title: "mobile.host.title", detail: "mobile.host.hint", icon: "network") { LocalAPIView() }
                     destination("tools", title: "tools.title", detail: "compare.title", icon: "slider.horizontal.3") { VoiceToolsView() }
-                    destination("models", title: "mobile.local.models", detail: "mobile.local.installed", icon: "arrow.down.circle") { ModelsView() }
-                    destination("connect", title: "mobile.local.my_computer", detail: "mobile.local.pair_settings", icon: "desktopcomputer") { ConnectView() }
                 }
                 section("projects.generated_audio") {
                     if model.phone.recent.isEmpty && model.history.isEmpty { empty("mobile.speak.empty_recent") }

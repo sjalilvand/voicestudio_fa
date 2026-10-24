@@ -16,6 +16,21 @@ final class ProductionScreens: XCTestCase {
             XCTAssertFalse(app.descendants(matching: .any)["error.notice"].exists,route)
             if route == "design" { XCTAssertTrue(app.descendants(matching: .any)["design.script"].firstMatch.exists) }
             let attachment = XCTAttachment(screenshot: app.screenshot()); attachment.name = "Production-"+route; attachment.lifetime = .keepAlways; add(attachment)
+            if route == "local-api" {
+                app.switches["Allow transcription"].tap()
+                app.switches["Allow translation"].tap()
+                XCTAssertFalse(app.buttons["Start server"].isEnabled)
+                XCTAssertFalse(app.descendants(matching: .any)["error.notice"].exists)
+            }
+            if route == "tools" {
+                let editor = app.buttons["Audio editor"]
+                for _ in 0..<6 { if editor.isHittable { break }; app.swipeDown() }
+                XCTAssertTrue(editor.isHittable); editor.tap()
+                XCTAssertTrue(app.navigationBars["Audio editor"].waitForExistence(timeout: 10))
+                XCTAssertFalse(app.descendants(matching: .any)["error.notice"].exists)
+                let editorScreenshot = XCTAttachment(screenshot: app.screenshot())
+                editorScreenshot.name = "Production-audio-editor"; editorScreenshot.lifetime = .keepAlways; add(editorScreenshot)
+            }
             for _ in 0..<3 where !app.navigationBars["Home"].exists {
                 // Exercise the native back gesture; iOS 27 reports bar items as
                 // both Other and Button in XCTest's legacy/modern attributes.

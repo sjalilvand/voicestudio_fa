@@ -41,7 +41,7 @@ object PhoneAudioProcessing {
     suspend fun process(document: PhoneAudioDocument,options: AudioEditOptions,workspace: File,progress: (Float)->Unit = {}): AudioEditResult = withContext(Dispatchers.IO) {
         val end=options.end ?: document.duration
         if(document.frames !in 1..345600000||!options.start.isFinite()||!end.isFinite()||options.start<0||end>document.duration+.000001||end<=options.start||!options.fadeIn.isFinite()||!options.fadeOut.isFinite()||options.fadeIn<0||options.fadeOut<0||options.fadeIn>end-options.start||options.fadeOut>end-options.start||!options.gainDB.isFinite()||options.gainDB !in -24.0..24.0||!options.targetDB.isFinite()||options.targetDB !in -24.0..-1.0||!options.gateDB.isFinite()||options.gateDB !in -80.0..-10.0||document.pcm.frames!=document.frames) throw ClientFailure("mobile.processing.invalid")
-        val first=(options.start*24000).toLong();val last=minOf(document.frames,(end*24000).toLong());val count=last-first
+        val first=(options.start*24000).toLong();val last=if(end>=document.duration) document.frames else minOf(document.frames,(end*24000).toLong());val count=last-first
         if(count<=0) throw ClientFailure("mobile.processing.invalid")
         val directory=File(workspace,"audio-edit-${UUID.randomUUID()}").apply {mkdirs()};val pcm=PcmFile(File(directory,"edited.pcm"));val output=File(directory,"edited.wav")
         try {
