@@ -52,6 +52,8 @@ _CHANGE_CASES = [
     ("English", "version 3.0 ships", "version three point zero ships"),
     ("English", "it weighs 2.50 kg", "it weighs two point five zero kg"),
     ("German", "Version 3.0 kommt", "Version drei Komma null kommt"),
+    ("English", "version \uff13.\uff10 ships", "version three point zero ships"),
+    ("Portuguese", "valor 3.0", "valor três vírgula zero"),
     # English writes decimals with a period, so three digits after it are a
     # decimal here (the same digits are a thousands group in German, below).
     ("English", "pi is 3.141 here", "pi is three point one four one here"),
