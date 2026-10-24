@@ -394,6 +394,11 @@ hard rules from the first prompt.
   The `Security` workflow works the same way: CodeQL, bandit and the dependency
   audits are skipped for a PR that only edits files under `docs/` or `mobile/` or
   Markdown, while the secret scan always runs (rule: its own `changes` job).
+- **Closed PRs stop their CI:** merging or closing a PR cancels its queued and
+  running pull-request workflows (`.github/workflows/cancel-closed-pr-runs.yml`);
+  the repository is capped at 20 concurrent jobs, so they would only delay others.
+  Maintainers can run the same cleanup for the whole repository from the Actions
+  tab (`cancel-closed-pr-runs`, dry run by default).
 - **Cross-platform parity (hard rule):** anything that ships in default mode
   must behave identically on macOS, Windows, and Linux. Platform-specific
   *implementation* is fine; platform-divergent *default behavior* is a P0.
