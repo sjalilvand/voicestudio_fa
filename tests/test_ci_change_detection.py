@@ -15,6 +15,7 @@ import re
 import shutil
 import stat
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -237,3 +238,48 @@ def test_required_check_names_are_unchanged():
     assert {"Tests (backend + frontend)", "UI crawler", "Linux native package",
             "Electron installer contracts"} <= names
     assert any(n.startswith("Desktop UI (") for n in names)
+
+
+# --- security.yml: skip the code scanners for docs/mobile-only pull requests ------------
+
+SECURITY = yaml.safe_load((ROOT / ".github/workflows/security.yml").read_text(encoding="utf-8"))
+
+
+def test_security_code_scanners_skip_docs_only_prs_but_the_secret_scan_never_does():
+    jobs = SECURITY["jobs"]
+    assert "needs" not in jobs["secrets"] and "if" not in jobs["secrets"]
+    for name in ("codeql", "bandit", "dependencies"):
+        assert jobs[name]["needs"] == "changes", name
+        condition = jobs[name]["if"]
+        assert "!cancelled()" in condition and "outputs.code != 'false'" in condition, name
+
+
+def _security_detect(rows, tmp_path, event="pull_request"):
+    script = SECURITY["jobs"]["changes"]["steps"][0]["run"]
+    gh = tmp_path / "gh"
+    gh.write_text("#!/bin/sh\nprintf '%s\\n' \"$FAKE_ROWS\"\n", encoding="utf-8")
+    gh.chmod(0o755)
+    out = tmp_path / "out"
+    env = dict(os.environ, PATH=f"{tmp_path}:{os.environ['PATH']}", EVENT=event, PR="1",
+               REPO="o/r", GITHUB_OUTPUT=str(out), GH_TOKEN="x", FAKE_ROWS=rows)
+    done = subprocess.run(["bash", "-eo", "pipefail", "-c", script], env=env, capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+    return out.read_text(encoding="utf-8").strip()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="needs a POSIX shell and grep -P")
+@pytest.mark.parametrize("rows,expected", [
+    ("modified\tdocs/a.md\nadded\tmobile/ios/App.swift", "code=false"),
+    ("modified\tREADME.md", "code=false"),
+    ("modified\tbackend/x.py\nmodified\tdocs/a.md", "code=true"),
+    ("modified\telectron/src/a.ts", "code=true"),
+    ("removed\tdocs/a.md", "code=true"),
+    ("renamed\tdocs/a.md", "code=true"),
+])
+def test_security_change_detection(rows, expected, tmp_path):
+    assert _security_detect(rows, tmp_path) == expected
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="needs a POSIX shell and grep -P")
+def test_security_change_detection_runs_everything_off_pull_requests(tmp_path):
+    assert _security_detect("modified\tdocs/a.md", tmp_path, event="push") == "code=true"
