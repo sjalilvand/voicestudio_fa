@@ -37,7 +37,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
-- Security updates: Pillow 13 (critical image-decoding fixes), Brotli, certifi, filelock, pypdf and mcp, in the app, Docker images and Colab (#3275, #3281)
+- iPhone Settings → About and licence receipts show the full app version (`0.5.7-beta.2`), like Android, instead of only `0.5.7` (#3273)
 - A voice with no transcript now offers a one-click speech-to-text model install instead of only an error (#3269)
 - Saved voice and recent take rows show their hover actions on a solid background, so the buttons stay visible over long names (#3263)
 - Saved dub loads confirm before replacing unsaved work, recheck edits made during loading and stop when you leave the workspace (#3234)
