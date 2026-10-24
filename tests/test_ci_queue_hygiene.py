@@ -41,3 +41,8 @@ def test_scam_guard_skips_bots_but_still_checks_every_human():
 def test_other_pr_workflows_already_cancel_superseded_runs():
     for name in ("security.yml", "commit-identity.yml", "mobile.yml"):
         assert _load(name)["concurrency"]["cancel-in-progress"], name
+
+
+def test_platform_smokes_start_after_the_python_tests_not_the_whole_gate():
+    needs = _load("ci.yml")["jobs"]["smoke-matrix"]["needs"]
+    assert needs == "test-python", "waiting on `test` delays the smokes by the Electron jobs' runtime"
