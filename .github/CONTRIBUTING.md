@@ -330,6 +330,18 @@ OMNIVOICE_PORT=3999 VOICESTUDIO_UI_URL=http://localhost:3912 \
 cargo check --manifest-path native/desktop-bridge/Cargo.toml
 ```
 
+### Cached local checks (Dagger, optional)
+
+[Dagger](https://docs.dagger.io/install) runs the frontend tests, the mobile
+token check and both backend pytest suites in containers whose steps are cached
+by content, so a re-run after an unrelated edit takes seconds. It needs Docker
+and nothing leaves your machine. CI is unchanged: `ci.yml` stays the gate.
+
+```bash
+dagger call check             # all of the above, in parallel
+dagger call frontend-tests    # or: mobile-tokens, python-tests
+```
+
 ---
 
 ## What code review looks like
