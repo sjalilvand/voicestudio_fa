@@ -2514,7 +2514,18 @@
     "staleTitle": "업데이트 사용 가능",
     "staleMessage": "VoiceStudio {{current}}을(를) 사용 중이지만 {{latest}}이(가) 이미 출시되었습니다. 이 버그는 이미 수정되었을 수 있습니다. 신고하기 전에 최신 릴리스를 확인할까요?",
     "staleView": "업데이트 보기",
-    "staleFileAnyway": "그래도 신고"
+    "staleFileAnyway": "그래도 신고",
+    "summary_label": "무엇이 잘못되었나요?",
+    "summary_placeholder": "한 줄로 입력하세요. 예: 더빙이 40%에서 멈춤",
+    "summary_required": "먼저 한 줄 설명을 입력하세요.",
+    "sent_title": "전송되는 내용",
+    "sent_app": "앱 버전 및 빌드",
+    "sent_system": "운영 체제, GPU, 메모리 및 디스크 여유 공간",
+    "sent_engines": "활성 엔진",
+    "sent_logs": "최근 엔진 로그(파일 경로와 토큰 제거)",
+    "sent_pages": "최근 방문한 페이지 이름",
+    "not_sent": "절대 전송되지 않음: 오디오, 텍스트, 음성, 파일 이름.",
+    "submit": "GitHub 이슈 열기"
   },
   "crash": {
     "notice_unclean": "이전 세션이 {{ago}} 전에 정상 종료되지 않은 채 끝났습니다. 대부분 무해합니다 — 컴퓨터가 절전 모드로 전환되었거나, 앱이 강제 종료되었거나, VM/컨테이너가 중지된 경우입니다.",

@@ -2578,7 +2578,18 @@
     "staleTitle": "Update available",
     "staleMessage": "You're running VoiceStudio {{current}}, but {{latest}} is already out — this bug may be fixed there. See the latest release before filing?",
     "staleView": "View update",
-    "staleFileAnyway": "File anyway"
+    "staleFileAnyway": "File anyway",
+    "summary_label": "What went wrong?",
+    "summary_placeholder": "One line, for example: Dubbing stops at 40%",
+    "summary_required": "Add a one-line description first.",
+    "sent_title": "What will be sent",
+    "sent_app": "App version and build",
+    "sent_system": "Operating system, GPU, memory and free disk space",
+    "sent_engines": "Which engines are active",
+    "sent_logs": "Recent engine log lines, with file paths and tokens removed",
+    "sent_pages": "Names of recently visited pages",
+    "not_sent": "Never sent: your audio, text, voices or file names.",
+    "submit": "Open GitHub issue"
   },
   "crash": {
     "notice": "The voice backend crashed ({{exit}}) {{ago}} ago and is being restarted automatically.",

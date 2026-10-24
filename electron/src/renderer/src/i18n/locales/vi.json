@@ -2514,7 +2514,18 @@
     "staleTitle": "Có bản cập nhật",
     "staleMessage": "Bạn đang dùng VoiceStudio {{current}}, nhưng {{latest}} đã ra mắt — lỗi này có thể đã được sửa ở đó. Xem bản phát hành mới nhất trước khi báo cáo?",
     "staleView": "Xem bản cập nhật",
-    "staleFileAnyway": "Vẫn báo cáo"
+    "staleFileAnyway": "Vẫn báo cáo",
+    "summary_label": "Đã xảy ra sự cố gì?",
+    "summary_placeholder": "Một dòng, ví dụ: Lồng tiếng dừng ở 40%",
+    "summary_required": "Hãy thêm mô tả một dòng trước.",
+    "sent_title": "Những gì sẽ được gửi",
+    "sent_app": "Phiên bản và bản dựng của ứng dụng",
+    "sent_system": "Hệ điều hành, GPU, bộ nhớ và dung lượng ổ đĩa trống",
+    "sent_engines": "Các công cụ đang hoạt động",
+    "sent_logs": "Các dòng nhật ký công cụ gần đây, đã xóa đường dẫn tệp và mã thông báo",
+    "sent_pages": "Tên các trang đã xem gần đây",
+    "not_sent": "Không bao giờ gửi: âm thanh, văn bản, giọng nói hoặc tên tệp của bạn.",
+    "submit": "Mở issue trên GitHub"
   },
   "crash": {
     "notice_unclean": "Phiên trước đã kết thúc mà không tắt đúng cách {{ago}} trước. Điều này thường vô hại — máy ngủ, ứng dụng bị buộc đóng, hoặc VM/container bị dừng.",

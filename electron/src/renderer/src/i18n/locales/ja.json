@@ -2514,7 +2514,18 @@
     "staleTitle": "アップデートがあります",
     "staleMessage": "VoiceStudio {{current}} を使用していますが、{{latest}} が既に公開されています。このバグは修正済みかもしれません。報告する前に最新リリースを確認しますか？",
     "staleView": "アップデートを見る",
-    "staleFileAnyway": "そのまま報告する"
+    "staleFileAnyway": "そのまま報告する",
+    "summary_label": "何が起きましたか？",
+    "summary_placeholder": "1 行で入力（例：吹き替えが 40% で止まる）",
+    "summary_required": "最初に 1 行の説明を入力してください。",
+    "sent_title": "送信される内容",
+    "sent_app": "アプリのバージョンとビルド",
+    "sent_system": "OS、GPU、メモリ、ディスクの空き容量",
+    "sent_engines": "有効なエンジン",
+    "sent_logs": "エンジンログの直近の行（ファイルパスとトークンは除去）",
+    "sent_pages": "最近開いたページの名前",
+    "not_sent": "送信されないもの：音声、テキスト、ボイス、ファイル名。",
+    "submit": "GitHub の Issue を開く"
   },
   "crash": {
     "notice_unclean": "前回のセッションは {{ago}}前に正常終了せずに終わりました。多くの場合は無害です — スリープ、強制終了、または VM/コンテナの停止が原因です。",

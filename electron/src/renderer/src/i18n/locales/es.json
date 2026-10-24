@@ -2516,7 +2516,18 @@
     "staleTitle": "Actualización disponible",
     "staleMessage": "Está usando VoiceStudio {{current}}, pero {{latest}} ya está disponible; puede que este error ya esté corregido. ¿Ver la última versión antes de informar?",
     "staleView": "Ver actualización",
-    "staleFileAnyway": "Informar de todos modos"
+    "staleFileAnyway": "Informar de todos modos",
+    "summary_label": "¿Qué salió mal?",
+    "summary_placeholder": "Una línea, por ejemplo: El doblaje se detiene al 40 %",
+    "summary_required": "Añade primero una descripción de una línea.",
+    "sent_title": "Qué se enviará",
+    "sent_app": "Versión y compilación de la app",
+    "sent_system": "Sistema operativo, GPU, memoria y espacio libre en disco",
+    "sent_engines": "Qué motores están activos",
+    "sent_logs": "Últimas líneas del registro del motor, sin rutas de archivo ni tokens",
+    "sent_pages": "Nombres de las páginas visitadas recientemente",
+    "not_sent": "Nunca se envía: tu audio, texto, voces ni nombres de archivo.",
+    "submit": "Abrir incidencia en GitHub"
   },
   "crash": {
     "notice_unclean": "La sesión anterior terminó sin un cierre limpio hace {{ago}}. Suele ser inofensivo: el equipo se suspendió, la app se cerró a la fuerza o se detuvo una VM/contenedor.",

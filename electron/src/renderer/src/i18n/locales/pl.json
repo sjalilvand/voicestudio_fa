@@ -2518,7 +2518,18 @@
     "staleTitle": "Dostępna aktualizacja",
     "staleMessage": "Używasz VoiceStudio {{current}}, ale dostępna jest już wersja {{latest}} — ten błąd może być tam już naprawiony. Zobaczyć najnowsze wydanie przed zgłoszeniem?",
     "staleView": "Zobacz aktualizację",
-    "staleFileAnyway": "Zgłoś mimo to"
+    "staleFileAnyway": "Zgłoś mimo to",
+    "summary_label": "Co poszło nie tak?",
+    "summary_placeholder": "Jedna linijka, np.: dubbing zatrzymuje się na 40%",
+    "summary_required": "Najpierw dodaj jednolinijkowy opis.",
+    "sent_title": "Co zostanie wysłane",
+    "sent_app": "Wersja i kompilacja aplikacji",
+    "sent_system": "System operacyjny, GPU, pamięć i wolne miejsce na dysku",
+    "sent_engines": "Które silniki są aktywne",
+    "sent_logs": "Ostatnie wiersze dziennika silnika, bez ścieżek plików i tokenów",
+    "sent_pages": "Nazwy ostatnio odwiedzonych stron",
+    "not_sent": "Nigdy nie wysyłamy: dźwięku, tekstu, głosów ani nazw plików.",
+    "submit": "Otwórz zgłoszenie na GitHubie"
   },
   "crash": {
     "notice_unclean": "Poprzednia sesja zakończyła się bez poprawnego zamknięcia {{ago}} temu. To często niegroźne — komputer uśpiono, wymuszono zamknięcie aplikacji albo zatrzymano VM/kontener.",

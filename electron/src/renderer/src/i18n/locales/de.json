@@ -2514,7 +2514,18 @@
     "staleTitle": "Update verfügbar",
     "staleMessage": "Sie verwenden VoiceStudio {{current}}, aber {{latest}} ist bereits erschienen – dieser Fehler ist dort möglicherweise schon behoben. Vor dem Melden die neueste Version ansehen?",
     "staleView": "Update ansehen",
-    "staleFileAnyway": "Trotzdem melden"
+    "staleFileAnyway": "Trotzdem melden",
+    "summary_label": "Was ist schiefgelaufen?",
+    "summary_placeholder": "Eine Zeile, z. B.: Synchronisation bleibt bei 40 % stehen",
+    "summary_required": "Bitte zuerst eine einzeilige Beschreibung eingeben.",
+    "sent_title": "Das wird gesendet",
+    "sent_app": "App-Version und Build",
+    "sent_system": "Betriebssystem, GPU, Arbeitsspeicher und freier Speicherplatz",
+    "sent_engines": "Welche Engines aktiv sind",
+    "sent_logs": "Letzte Engine-Logzeilen ohne Dateipfade und Tokens",
+    "sent_pages": "Namen zuletzt besuchter Seiten",
+    "not_sent": "Nie gesendet: Ihr Audio, Text, Stimmen oder Dateinamen.",
+    "submit": "GitHub-Issue öffnen"
   },
   "crash": {
     "notice_unclean": "Die vorherige Sitzung wurde vor {{ago}} nicht sauber beendet. Das ist oft harmlos — Ruhezustand, erzwungenes Beenden oder eine gestoppte VM/Container.",

@@ -2514,7 +2514,18 @@
     "staleTitle": "有可用更新",
     "staleMessage": "您正在使用 VoiceStudio {{current}}，但 {{latest}} 已經發布——這個錯誤可能已在新版本中修復。回報前先查看最新版本？",
     "staleView": "查看更新",
-    "staleFileAnyway": "仍然回報"
+    "staleFileAnyway": "仍然回報",
+    "summary_label": "發生了什麼問題？",
+    "summary_placeholder": "一句話描述，例如：配音在 40% 處停止",
+    "summary_required": "請先填寫一句話描述。",
+    "sent_title": "將傳送的內容",
+    "sent_app": "應用程式版本與組建編號",
+    "sent_system": "作業系統、GPU、記憶體與可用磁碟空間",
+    "sent_engines": "目前啟用的引擎",
+    "sent_logs": "最近的引擎記錄行（已移除檔案路徑與權杖）",
+    "sent_pages": "最近造訪的頁面名稱",
+    "not_sent": "絕不傳送：你的音訊、文字、聲音或檔案名稱。",
+    "submit": "開啟 GitHub Issue"
   },
   "crash": {
     "notice_unclean": "上一個工作階段在 {{ago}}前未正常關閉就結束了。這通常無害 —— 電腦進入了睡眠、應用程式被強制結束，或某個虛擬機/容器停止了。",

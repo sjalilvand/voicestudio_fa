@@ -2514,7 +2514,18 @@
     "staleTitle": "Update beschikbaar",
     "staleMessage": "U gebruikt VoiceStudio {{current}}, maar {{latest}} is al uit — deze bug is daar mogelijk al verholpen. De nieuwste versie bekijken voordat u rapporteert?",
     "staleView": "Update bekijken",
-    "staleFileAnyway": "Toch rapporteren"
+    "staleFileAnyway": "Toch rapporteren",
+    "summary_label": "Wat ging er mis?",
+    "summary_placeholder": "Eén regel, bijvoorbeeld: nasynchronisatie stopt bij 40%",
+    "summary_required": "Voeg eerst een beschrijving van één regel toe.",
+    "sent_title": "Wat wordt verzonden",
+    "sent_app": "App-versie en build",
+    "sent_system": "Besturingssysteem, GPU, geheugen en vrije schijfruimte",
+    "sent_engines": "Welke engines actief zijn",
+    "sent_logs": "Recente enginelogregels, zonder bestandspaden en tokens",
+    "sent_pages": "Namen van onlangs bezochte pagina’s",
+    "not_sent": "Nooit verzonden: je audio, tekst, stemmen of bestandsnamen.",
+    "submit": "GitHub-issue openen"
   },
   "crash": {
     "notice_unclean": "De vorige sessie is {{ago}} geleden zonder nette afsluiting geëindigd. Dit is vaak onschuldig — de machine sliep, de app werd geforceerd gesloten of een VM/container stopte.",
