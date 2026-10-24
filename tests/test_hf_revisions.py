@@ -128,5 +128,20 @@ def test_curated_revisions_survives_unreadable_registry(tmp_path):
 
     # Missing file: the registry is not present at all (e.g. a stripped
     # install or a path the user moved).
-    missing = tmp_path / "model_licenses.json"
+    missing = tmp_path / "missing_model_licenses.json"
     assert hf_revisions._curated_revisions(missing) == {}
+
+
+@pytest.mark.parametrize("body", ["null", "[]", '"x"', '{"models": null}', '{"models": {}}', "{}"])
+def test_curated_revisions_survives_unexpected_registry_shape(tmp_path, body):
+    path = tmp_path / "shape_model_licenses.json"
+    path.write_text(body, encoding="utf-8")
+    assert hf_revisions._curated_revisions(path) == {}
+
+
+def test_curated_revisions_warning_omits_absolute_path(tmp_path, caplog):
+    path = tmp_path / "secret_dir" / "model_licenses.json"
+    with caplog.at_level("WARNING", logger="omnivoice.hf_revisions"):
+        assert hf_revisions._curated_revisions(path) == {}
+    assert str(tmp_path) not in caplog.text
+    assert "model_licenses.json" in caplog.text

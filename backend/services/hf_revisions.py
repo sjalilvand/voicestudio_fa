@@ -30,13 +30,21 @@ def _curated_revisions(config_path: Path = CONFIG_PATH) -> dict[str, str]:
         # repo, so the first download that depends on curation fails
         # loudly with a useful diagnostic instead of crashing the import.
         _logger.warning(
-            "Curated HF revision registry %s is unreadable or corrupt (%s: %s); "
+            "Curated HF revision registry %s is unreadable or corrupt (%s); "
             "treating every repo as unpinned until the file is repaired.",
-            config_path, type(exc).__name__, exc,
+            config_path.name, type(exc).__name__,
+        )
+        return {}
+    models = registry.get("models") if isinstance(registry, dict) else None
+    if not isinstance(models, list):
+        _logger.warning(
+            "Curated HF revision registry %s has an unexpected shape; "
+            "treating every repo as unpinned until the file is repaired.",
+            config_path.name,
         )
         return {}
     pins = {}
-    for record in registry.get("models", []):
+    for record in models:
         if not isinstance(record, dict):
             continue
         if record.get("runtime_pin_scope") != "central":
