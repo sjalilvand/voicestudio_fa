@@ -147,6 +147,7 @@ val buildNativeRuntimes by tasks.registering(Exec::class) {
     inputs.files(fileTree(nativeRoot) { include("*.cpp", "*.c", "*.h", "*.json", "*.py", "*.sh", "CMakeLists.txt") }, nativeRoot.resolve("../pins.json"))
     inputs.files(fileTree("src/main/assets/licenses") { include("native-*") })
     inputs.files(fileTree(rootDir.resolve("../ios/VoiceStudioKit/Sources/VSNative")) { include("Mp3Encoder.c","include/Mp3Encoder.h","Lame/**") })
+    inputs.files(fileTree(nativeRoot.resolve("../mp3")) { include("*.py") })
     outputs.dir(nativeRoot.resolve("build/jniLibs"))
     outputs.dir(nativeRoot.resolve("build/assets"))
     commandLine("bash", nativeRoot.resolve("build.sh"), "--skip-fetch")

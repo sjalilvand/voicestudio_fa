@@ -30,3 +30,17 @@ def test_both_mobile_builds_compile_the_same_encoder_sources():
     assert 'ios/VoiceStudioKit/Sources/VSNative' in cmake
     assert 'Lame/libmp3lame/*.c' in cmake and 'Mp3Encoder.c' in cmake
     assert 'HAVE_CONFIG_H' in package and 'HAVE_CONFIG_H' in cmake
+
+
+def test_ios_current_notices_override_cached_framework_copies(tmp_path):
+    spec = importlib.util.spec_from_file_location("mobile_resource_notices", ROOT / "mobile/ios/scripts/prepare_resources.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    current, cached, output = (tmp_path / name for name in ("current", "cached", "bundle"))
+    current.mkdir(); cached.mkdir()
+    (current / "lame.txt").write_text("current encoder notice", encoding="utf-8")
+    (cached / "lame.txt").write_text("stale encoder notice", encoding="utf-8")
+    (cached / "framework-only.txt").write_text("framework notice", encoding="utf-8")
+    module.copy_native_notices(current, cached, output)
+    assert (output / "lame.txt").read_text(encoding="utf-8") == "current encoder notice"
+    assert (output / "framework-only.txt").read_text(encoding="utf-8") == "framework notice"
