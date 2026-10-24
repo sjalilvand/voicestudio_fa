@@ -7,7 +7,6 @@ from services.diarization_native import (
     MAX_V1_AUDIO_SECONDS,
     SORTFORMER_FRAME_SAMPLES,
     NativeSortformer,
-    _read_turns_output,
     _sortformer_command,
     _validated_turn,
 )
@@ -69,6 +68,18 @@ def test_native_sortformer_rejects_large_boundary_overshoot():
             },
             frames,
         )
+
+
+def _read_turns_output(path):
+    # Resolved at call time so a replaced module in sys.modules is not stale.
+    from services import diarization_native
+
+    return diarization_native._read_turns_output(path)
+
+
+def test_validated_turn_rejects_non_object_turn():
+    with pytest.raises(ValueError, match="Invalid native speaker-turn"):
+        _validated_turn(7, 16000)
 
 
 def test_read_turns_output_handles_missing_file(tmp_path):

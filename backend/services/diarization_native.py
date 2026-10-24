@@ -39,23 +39,22 @@ def _read_turns_output(output: Path) -> list:
     here, any of those surfaces as a raw ``UnicodeDecodeError`` or
     ``json.JSONDecodeError`` to the caller, with no hint that the bug is
     in the sidecar output rather than in the request. Raise a clear
-    ``RuntimeError`` that names the file, the underlying error, and the
-    most recent log tail so the user has a chance to file a useful
-    bug report.
+    ``RuntimeError`` that names the file and the underlying error type so
+    the user has a chance to file a useful bug report.
     """
     try:
         raw = output.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as exc:
         raise RuntimeError(
-            f"Native Sortformer output {output} could not be read as UTF-8: "
-            f"{type(exc).__name__}: {exc}"
+            f"Native Sortformer output {output.name} could not be read as UTF-8: "
+            f"{type(exc).__name__}"
         ) from exc
     try:
         turns = json.loads(raw)
     except json.JSONDecodeError as exc:
         raise RuntimeError(
-            f"Native Sortformer output {output} is not valid JSON: "
-            f"{type(exc).__name__}: {exc}"
+            f"Native Sortformer output {output.name} is not valid JSON: "
+            f"{type(exc).__name__}"
         ) from exc
     if not isinstance(turns, list):
         raise ValueError("Invalid native speaker-turn output")
@@ -63,6 +62,8 @@ def _read_turns_output(output: Path) -> list:
 
 
 def _validated_turn(turn: dict, audio_frames: int) -> tuple[int, int, str]:
+    if not isinstance(turn, dict):
+        raise ValueError("Invalid native speaker-turn boundaries")
     start, end = turn.get("start_sample"), turn.get("end_sample")
     speaker = turn.get("speaker_id")
     if (
