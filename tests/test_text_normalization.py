@@ -76,6 +76,8 @@ _CHANGE_CASES = [
     ("German", "Am 3. Mai 2024", "Am 3. Mai zweitausendvierundzwanzig"),
     ("German", "Ich habe 3. Dann 4.", "Ich habe drei. Dann vier."),
     ("German", "Kapitel 3. Der Anfang.", "Kapitel drei. Der Anfang."),
+    # A month name glued to a digit is not a month token.
+    ("German", "Am 3. Mai2 war es", "Am drei. Mai2 war es"),
     ("Spanish", "tengo 42 gatos", "tengo cuarenta y dos gatos"),
     ("Spanish", "el Sr. García", "el Señor García"),
     ("French", "il a 42 chats", "il a quarante-deux chats"),

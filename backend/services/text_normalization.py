@@ -510,7 +510,7 @@ _DATE_MONTHS = {
           r"|lip(?:iec|ca)|sierp(?:ień|nia)|wrze(?:sień|śnia)|październik[a]?|listopad[a]?|grud(?:zień|nia)",
 }
 _DATE_MONTH_RE = {
-    code: re.compile(r"\.\s+(?:" + months + r")(?![^\W\d_])", re.IGNORECASE)
+    code: re.compile(r"\.\s+(?:" + months + r")(?![^\W_])", re.IGNORECASE)
     for code, months in _DATE_MONTHS.items()
 }
 

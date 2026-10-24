@@ -104,10 +104,6 @@ metadata and the backend fallback mirror it.
 
 - The sponsor footer is gone from the app; sponsored integrations keep a Featured badge on their card in Integrations (#3031)
 
-### Fixed
-
-- The day of a date written with an ordinal period ("am 3. Mai", "den 17. mai", "3. května") keeps its digits in German, Danish, Norwegian, Finnish, Czech and Polish instead of becoming a cardinal with a stray sentence break ("drei. Mai") (#3040) — thanks @NishchayMahor!
-
 ### Docs
 
 - `funding.json` at the repository root publishes how to fund VoiceStudio in the [funding.json](https://fundingjson.org) format, matching the tiers in SPONSORS.md (#3294)
