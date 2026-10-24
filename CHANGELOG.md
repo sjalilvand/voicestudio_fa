@@ -37,6 +37,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- The Hugging Face token field shows an `hf_…` placeholder, and the docs name the Credentials page where it lives (#3266) — thanks @bercedev!
 - A voice with no transcript now offers a one-click speech-to-text model install instead of only an error (#3269)
 - Saved voice and recent take rows show their hover actions on a solid background, so the buttons stay visible over long names (#3263)
 - Saved dub loads confirm before replacing unsaved work, recheck edits made during loading and stop when you leave the workspace (#3234)
