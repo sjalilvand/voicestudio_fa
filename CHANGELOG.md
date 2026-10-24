@@ -105,6 +105,7 @@ metadata and the backend fallback mirror it.
 
 ### CI
 
+- Release notes open with the installer signing table, so you see which downloads are signed before the changelog (#3255)
 - macOS release builds retry once when Apple's ticket server drops the notarization staple, instead of failing the whole release (#3244)
 - Release notes list everyone who contributed since the last stable release automatically, instead of only the people thanked by hand (#3242)
 - Release notes list each platform's installer signing as measured on the build, and a macOS build that would open as "damaged" can no longer be released, and macOS releases are signed with the Developer ID again (#3241, #3243)
