@@ -164,6 +164,7 @@ Open an [issue](https://github.com/debpalash/VoiceStudio/issues/new) with:
    bun run check:electron
    ```
 4. **Write a clear PR title** — it becomes the squash-merge commit message
+5. **Add a changelog fragment** if users will notice the change: one line in `changelog.d/<PR#>.<type>.md` (see [`changelog.d/README.md`](../changelog.d/README.md)). Don't edit `CHANGELOG.md` directly, so your PR never conflicts with others
 5. **Don't include** local machine stats, file paths, or private system info in PR descriptions
 
 ### Adding a New TTS Engine
@@ -329,6 +330,22 @@ OMNIVOICE_PORT=3999 VOICESTUDIO_UI_URL=http://localhost:3912 \
 cargo check --manifest-path native/desktop-bridge/Cargo.toml
 ```
 
+### Cached local checks (Dagger, optional)
+
+[Dagger](https://docs.dagger.io/install) runs the frontend tests, the mobile
+token check and both backend pytest suites in containers whose steps are cached
+by content, so a re-run after an unrelated edit takes seconds. It needs Docker.
+The first run downloads container images and dependencies (as CI does); after
+that your code and results stay on your machine. CI is unchanged: `ci.yml`
+stays the gate.
+
+```bash
+dagger call check             # all of the above, in parallel
+dagger call check --git=.git  # also run tests that read real git history
+                              # (in a linked worktree: --git=$(git rev-parse --git-common-dir))
+dagger call frontend-tests    # or: mobile-tokens, python-tests
+```
+
 ---
 
 ## What code review looks like
@@ -394,6 +411,11 @@ hard rules from the first prompt.
   The `Security` workflow works the same way: CodeQL, bandit and the dependency
   audits are skipped for a PR that only edits files under `docs/` or `mobile/` or
   Markdown, while the secret scan always runs (rule: its own `changes` job).
+- **Closed PRs stop their CI:** merging or closing a PR cancels its queued and
+  running pull-request workflows (`.github/workflows/cancel-closed-pr-runs.yml`);
+  the repository is capped at 20 concurrent jobs, so they would only delay others.
+  Maintainers can run the same cleanup for the whole repository from the Actions
+  tab (`cancel-closed-pr-runs`, dry run by default).
 - **Cross-platform parity (hard rule):** anything that ships in default mode
   must behave identically on macOS, Windows, and Linux. Platform-specific
   *implementation* is fine; platform-divergent *default behavior* is a P0.
