@@ -1411,6 +1411,11 @@ your report rather than deleting saved voices or projects. The probe is also
 advisory now: if it still crashes natively, setup continues and the import
 verification decides whether the runtime works.
 
+The import verification now prints `VOICESTUDIO_IMPORT=<module>` before loading
+each runtime module, and a crash names the module in the error (`the import
+check stopped while importing "<module>"`). Include that line from the setup log
+in your report: the last `VOICESTUDIO_IMPORT=` line is the module that crashed.
+
 ### "Backend exited unexpectedly (exit code 3221225477)" while loading a model
 
 A cut-off model download makes Windows kill the backend with an access violation

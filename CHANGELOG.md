@@ -29,6 +29,7 @@ metadata and the backend fallback mirror it.
 ### Added
 
 - Bug reports and Settings → Diagnostics now show the build commit next to the version, so beta and preview builds of one version can be told apart (#3293)
+- The backend and Docker images report their build commit in `/system/info` and in bug reports (#3293)
 - The phone apps have a Report action on every generated result: pick a reason, add an optional note, and it reaches the VoiceStudio team only when you tap Send (#3268, #3276, #3281)
 - The phone apps run speech, dictation, voice cloning and dubbing on the phone itself, offline once you download the models; pairing a computer is optional ([guide](docs/mobile.md)) (#2969)
 - Beta update channel: choose Stable or Beta under Settings → Updates; betas are `-beta.N` prereleases that never reach Stable users, and Docker gets matching `:beta` tags ([guide](docs/update-channels.md)) (#3175)
@@ -38,6 +39,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- A runtime setup crash during the final import check now names the module that crashed, so reports stop ending at an unrelated log line (#3293)
 - Settings → Updates lists only desktop releases; phone app releases no longer appear there for Beta users (#3292)
 - One-click engine installs fall back to the `uv` on your PATH when the app has none of its own to offer, instead of failing on an empty `uv` setting (#3284)
 - iPhone Settings → About and licence receipts show the full app version (`0.5.7-beta.2`), like Android, instead of only `0.5.7` (#3273)
