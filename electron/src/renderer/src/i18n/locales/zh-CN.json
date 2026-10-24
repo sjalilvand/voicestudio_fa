@@ -96,6 +96,7 @@
     "brand_by": "{{brand}} 作者",
     "all": "全部",
     "allContributors": "所有贡献者",
+    "coreMaintainer": "核心维护者",
     "title": "VoiceStudio.sh 开源",
     "design": "根据描述设计声音。",
     "dub": "翻译并配音音频或视频。",

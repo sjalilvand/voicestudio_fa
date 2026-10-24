@@ -96,6 +96,7 @@
     "brand_by": "{{brand}} por",
     "all": "Todos",
     "allContributors": "Todos os colaboradores",
+    "coreMaintainer": "Mantenedor principal",
     "title": "VoiceStudio.sh Código aberto",
     "design": "Crie uma voz a partir de uma descrição.",
     "dub": "Traduza e duble áudio ou vídeo.",

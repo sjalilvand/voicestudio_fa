@@ -96,6 +96,7 @@
     "brand_by": "{{brand}} di",
     "all": "Tutti",
     "allContributors": "Tutti i collaboratori",
+    "coreMaintainer": "Manutentore principale",
     "title": "VoiceStudio.sh Codice aperto",
     "design": "Crea una voce da una descrizione.",
     "dub": "Traduci e doppia audio o video.",

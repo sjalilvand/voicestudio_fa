@@ -96,6 +96,7 @@
     "brand_by": "{{brand}} von",
     "all": "Alle",
     "allContributors": "Alle Mitwirkenden",
+    "coreMaintainer": "Hauptbetreuer",
     "title": "VoiceStudio.sh Open Source",
     "design": "Entwirf eine Stimme anhand einer Beschreibung.",
     "dub": "Übersetze und synchronisiere Audio oder Video.",

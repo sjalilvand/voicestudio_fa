@@ -96,6 +96,7 @@
     "brand_by": "{{brand}} av",
     "all": "Alla",
     "allContributors": "Alla bidragsgivare",
+    "coreMaintainer": "Huvudansvarig",
     "title": "VoiceStudio.sh Öppen källkod",
     "design": "Skapa en röst utifrån en beskrivning.",
     "dub": "Översätt och dubba ljud eller video.",

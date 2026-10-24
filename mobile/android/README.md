@@ -478,6 +478,7 @@ Desktop-only workspaces are not advertised as available mobile features.
 
 ## Home, Dub and dock
 
+Home marks debpalash and velixio with a small core-maintainer star; TalkBack announces the role.
 Home shows Electron's contributor avatars (`HomeContributors.kt`; the Gradle catalog task copies the
 images from `electron/.../home/contributors` into the APK assets, nothing is fetched at runtime and
 `tests/test_mobile_contract.py` guards the list). Dub opens with a dashed source card and the animated
