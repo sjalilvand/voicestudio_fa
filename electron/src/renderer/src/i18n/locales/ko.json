@@ -1874,7 +1874,9 @@
     "deepl_base_url_help": "사용자 정의 DeepL API 엔드포인트(기본값: https://api.deepl.com/v2). 프록시/자체 호스팅으로 변경합니다.",
     "microsoft_base_url_help": "사용자 지정 Azure Translator 엔드포인트(기본값: https://api.cognitive.microsofttranslator.com).",
     "region": "리전",
-    "aws_profile": "AWS 프로필"
+    "aws_profile": "AWS 프로필",
+    "deepl_key_placeholder": "DeepL API 키",
+    "microsoft_key_placeholder": "Microsoft API 키"
   },
   "about": {
     "architecture": "아키텍처",

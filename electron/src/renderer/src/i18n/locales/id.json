@@ -1874,7 +1874,9 @@
     "deepl_base_url_help": "Titik akhir API DeepL khusus (default: https://api.deepl.com/v2). Ubah untuk proxy/hosting mandiri.",
     "microsoft_base_url_help": "Titik akhir Azure Translator kustom (default: https://api.cognitive.microsofttranslator.com).",
     "region": "Wilayah",
-    "aws_profile": "Profil AWS"
+    "aws_profile": "Profil AWS",
+    "deepl_key_placeholder": "DeepL kunci API",
+    "microsoft_key_placeholder": "Microsoft kunci API"
   },
   "about": {
     "architecture": "Arsitektur",

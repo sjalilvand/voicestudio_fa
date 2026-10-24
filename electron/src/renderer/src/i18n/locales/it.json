@@ -1876,7 +1876,9 @@
     "deepl_base_url_help": "Endpoint API DeepL personalizzato (impostazione predefinita: https://api.deepl.com/v2). Modifica per proxy/self-hosted.",
     "microsoft_base_url_help": "Endpoint personalizzato di traduttore di Azure (impostazione predefinita: https://api.cognitive.microsofttranslator.com).",
     "region": "Regione",
-    "aws_profile": "Profilo AWS"
+    "aws_profile": "Profilo AWS",
+    "deepl_key_placeholder": "DeepL chiave API",
+    "microsoft_key_placeholder": "Microsoft chiave API"
   },
   "about": {
     "architecture": "Architettura",

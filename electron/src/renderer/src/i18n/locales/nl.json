@@ -1874,7 +1874,9 @@
     "deepl_base_url_help": "Aangepast DeepL API-eindpunt (standaard: https://api.deepl.com/v2). Wijzigen voor proxy/zelf-gehost.",
     "microsoft_base_url_help": "Aangepast Azure Translator-eindpunt (standaard: https://api.cognitive.microsofttranslator.com).",
     "region": "Regio",
-    "aws_profile": "AWS-profiel"
+    "aws_profile": "AWS-profiel",
+    "deepl_key_placeholder": "DeepL API-sleutel",
+    "microsoft_key_placeholder": "Microsoft API-sleutel"
   },
   "about": {
     "architecture": "Architectuur",

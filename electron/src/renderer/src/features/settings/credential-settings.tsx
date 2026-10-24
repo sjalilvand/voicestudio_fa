@@ -242,7 +242,11 @@ function ProviderCredential({ field }: { field: (typeof PROVIDER_FIELDS)[number]
             autoComplete="new-password"
             spellCheck={false}
             aria-label={label}
-            placeholder={field.placeholder ?? (field.isPassword ? '••••••••••••' : undefined)}
+            placeholder={
+              field.placeholderKey
+                ? t(field.placeholderKey)
+                : (field.placeholder ?? (field.isPassword ? '••••••••••••' : undefined))
+            }
             value={value}
             disabled={action.busy}
             onChange={(event) => {

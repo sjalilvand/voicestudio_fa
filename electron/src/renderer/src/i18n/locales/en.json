@@ -1991,7 +1991,9 @@
     "deepl_base_url_help": "Custom DeepL API endpoint (default: https://api.deepl.com/v2). Change for proxy/self-hosted.",
     "microsoft_base_url_help": "Custom Azure Translator endpoint (default: https://api.cognitive.microsofttranslator.com).",
     "region": "Region",
-    "aws_profile": "AWS profile"
+    "aws_profile": "AWS profile",
+    "deepl_key_placeholder": "DeepL API key",
+    "microsoft_key_placeholder": "Microsoft API key"
   },
   "about": {
     "architecture": "Architecture",
