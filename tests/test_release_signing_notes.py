@@ -71,7 +71,7 @@ def test_mac_package_discovers_the_imported_developer_id(tmp_path):
     import os
     import subprocess
     package = next(s for s in load_workflow()["jobs"]["package"]["steps"] if s.get("name") == "Package without publishing")
-    script = package["run"].split("bun x electron-builder")[0].replace("${{ matrix.platform }}", "darwin")
+    script = package["run"].split("set -o pipefail")[0].replace("${{ matrix.platform }}", "darwin")
     for link, expected in [("base64-p12", "true"), ("", "false")]:
         env = dict(os.environ, CSC_LINK=link, CSC_KEY_PASSWORD="x", CSC_IDENTITY_AUTO_DISCOVERY="false", PUBLISH="false")
         out = subprocess.run(["bash", "-e", "-c", script + 'echo "$CSC_IDENTITY_AUTO_DISCOVERY"'],
@@ -108,3 +108,30 @@ def test_release_notes_helper_comes_from_the_workflow_commit(tmp_path):
                GITHUB_REPOSITORY="debpalash/VoiceStudio", RUNNER_TEMP=str(tmp_path))
     subprocess.run(["bash", "-e", "-c", describe["run"]], cwd=work, env=env, check=True)
     assert "| Linux x64 |" in (work / "release-assets/RELEASE_NOTES.md").read_text()
+
+
+@pytest.mark.parametrize("failures,message,calls,ok", [
+    (1, "Failed to staple your application with code: 68", 2, True),
+    (2, "Failed to staple your application with code: 68", 2, False),
+    (1, "codesign failed", 1, False),
+])
+def test_package_builds_again_only_when_stapling_fails(tmp_path, failures, message, calls, ok):
+    # A dropped connection to Apple's ticket server failed beta.2 after notarization.
+    import os
+    import subprocess
+    package = next(s for s in load_workflow()["jobs"]["package"]["steps"] if s.get("name") == "Package without publishing")
+    script = package["run"].split('if [ "$RUNNER_OS" = Linux ]')[0]
+    script = script.replace("${{ matrix.platform }}", "darwin").replace("${{ matrix.flags }}", "--mac")
+    fake = tmp_path / "bin"
+    fake.mkdir()
+    count = tmp_path / "calls"
+    (fake / "bun").write_text(
+        f'#!/bin/sh\necho x >> "{count}"\n'
+        f'[ "$(wc -l < "{count}")" -gt {failures} ] && exit 0\necho "{message}"; exit 1\n'
+    )
+    (fake / "bun").chmod(0o755)
+    env = dict(os.environ, PATH=f"{fake}{os.pathsep}{os.environ['PATH']}", RUNNER_TEMP=str(tmp_path),
+               CSC_LINK="", PUBLISH="false")
+    result = subprocess.run(["bash", "-e", "-c", script], env=env, capture_output=True, text=True)
+    assert (result.returncode == 0) is ok, result.stdout + result.stderr
+    assert len(count.read_text().splitlines()) == calls
