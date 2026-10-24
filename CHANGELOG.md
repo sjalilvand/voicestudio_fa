@@ -108,7 +108,7 @@ metadata and the backend fallback mirror it.
 
 ### CI
 
-- The mobile workflow captures Google Play phone screenshots of the Android app on an emulator and keeps them as a download (#PR)
+- The mobile workflow captures Google Play phone screenshots of the Android app on an emulator and keeps them as a download (#3277)
 - CI cancels a pull request's older run when it is pushed again, older Docker builds on main are cancelled, and review-bot comments no longer take a runner, so mass pushes stop flooding the queue (#3260)
 - Release notes open with the installer signing table, so you see which downloads are signed before the changelog (#3255)
 - macOS release builds retry once when Apple's ticket server drops the notarization staple, instead of failing the whole release (#3244)
