@@ -142,9 +142,9 @@ def load_lexicon(path) -> dict[str, str]:
     surface it).
     """
     p = Path(path)
-    if not p.is_file():
-        return {}
     try:
+        if not p.is_file():
+            return {}
         raw = p.read_text(encoding="utf-8").strip()
     except (OSError, UnicodeDecodeError):
         # Same family as a missing file: the lexicon is unreadable, so

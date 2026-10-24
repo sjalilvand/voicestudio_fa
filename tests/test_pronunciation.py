@@ -6,6 +6,7 @@ JSON round-trip. No torch, no engine, no GPU.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 from services.pronunciation import (
@@ -158,6 +159,19 @@ def test_load_unreadable_bytes_fall_back_to_empty_lexicon(tmp_path):
     bad = tmp_path / "lex.json"
     bad.write_bytes(b"\xff\xfe" + b'{"Dr": "Doctor"}')
     assert load_lexicon(str(bad)) == {}
+
+
+def test_load_os_error_falls_back_to_empty_lexicon(tmp_path, monkeypatch):
+    ok = tmp_path / "lex.json"
+    ok.write_text('{"Dr": "Doctor"}', encoding="utf-8")
+
+    def _boom(self, *a, **k):
+        raise PermissionError("denied")
+
+    monkeypatch.setattr(Path, "read_text", _boom)
+    assert load_lexicon(str(ok)) == {}
+    monkeypatch.setattr(Path, "is_file", _boom)
+    assert load_lexicon(str(ok)) == {}
 
 
 def test_load_malformed_json_still_raises(tmp_path):
