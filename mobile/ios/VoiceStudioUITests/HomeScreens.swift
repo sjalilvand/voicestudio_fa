@@ -20,7 +20,7 @@ final class HomeScreens: XCTestCase {
             // and never tap again once it does (Home's first bar button is Projects).
             for _ in 0..<3 where !app.navigationBars["Home"].exists {
                 if app.buttons["BackButton"].exists { app.buttons["BackButton"].tap() }
-                else { app.navigationBars.buttons.element(boundBy: 0).tap() }
+                else if app.navigationBars[title].exists { app.navigationBars[title].buttons.element(boundBy: 0).tap() }
                 _ = app.navigationBars["Home"].waitForExistence(timeout: 3)
             }
             XCTAssertTrue(app.navigationBars["Home"].exists, "did not return Home from \(route)")
