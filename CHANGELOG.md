@@ -37,7 +37,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
-- Security updates: Pillow 13 (critical image-decoding fixes), Brotli, certifi, filelock, pypdf and mcp (#PR)
+- Security updates: Pillow 13 (critical image-decoding fixes), Brotli, certifi, filelock, pypdf and mcp (#3275)
 - Saved voice and recent take rows show their hover actions on a solid background, so the buttons stay visible over long names (#3263)
 - Saved dub loads confirm before replacing unsaved work, recheck edits made during loading and stop when you leave the workspace (#3234)
 - Large VirusTotal uploads upgrade the documented legacy upload URL to HTTPS before sending files or credentials (#3238)
