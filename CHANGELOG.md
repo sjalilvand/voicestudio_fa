@@ -37,6 +37,7 @@ metadata and the backend fallback mirror it.
 
 ### Fixed
 
+- One-click engine installs fall back to the `uv` on your PATH when the app has none of its own to offer, instead of failing on an empty `uv` setting (#3284)
 - iPhone Settings → About and licence receipts show the full app version (`0.5.7-beta.2`), like Android, instead of only `0.5.7` (#3273)
 - A voice with no transcript now offers a one-click speech-to-text model install instead of only an error (#3269)
 - Saved voice and recent take rows show their hover actions on a solid background, so the buttons stay visible over long names (#3263)
