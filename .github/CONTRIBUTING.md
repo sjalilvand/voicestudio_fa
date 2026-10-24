@@ -334,11 +334,15 @@ cargo check --manifest-path native/desktop-bridge/Cargo.toml
 
 [Dagger](https://docs.dagger.io/install) runs the frontend tests, the mobile
 token check and both backend pytest suites in containers whose steps are cached
-by content, so a re-run after an unrelated edit takes seconds. It needs Docker
-and nothing leaves your machine. CI is unchanged: `ci.yml` stays the gate.
+by content, so a re-run after an unrelated edit takes seconds. It needs Docker.
+The first run downloads container images and dependencies (as CI does); after
+that your code and results stay on your machine. CI is unchanged: `ci.yml`
+stays the gate.
 
 ```bash
 dagger call check             # all of the above, in parallel
+dagger call check --git=.git  # also run tests that read real git history
+                              # (in a linked worktree: --git=$(git rev-parse --git-common-dir))
 dagger call frontend-tests    # or: mobile-tokens, python-tests
 ```
 
