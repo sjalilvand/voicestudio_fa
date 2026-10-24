@@ -206,17 +206,29 @@ def test_the_jq_expression_emits_status_and_filename_for_renames_too(tmp_path):
 
 def test_the_electron_jobs_are_gated_on_the_detection_and_survive_its_failure():
     jobs = WORKFLOW["jobs"]
-    for name in ("ui-crawler", "linux-native-package", "electron-ui"):
+    for name in ("ui-crawler", "linux-native-package", "electron-ui", "test-electron"):
         assert jobs[name]["needs"] == "changes", name
         condition = jobs[name]["if"]
         assert "!cancelled()" in condition and "outputs.electron != 'false'" in condition, name
     # the merge gate always reports, even if detection broke
-    assert jobs["test"]["needs"] == "changes" and jobs["test"]["if"] == "${{ !cancelled() }}"
-    gated = {s["name"] for s in jobs["test"]["steps"] if "outputs.electron != 'false'" in str(s.get("if", ""))}
-    assert gated == {
+    assert jobs["test-python"]["needs"] == "changes" and jobs["test-python"]["if"] == "${{ !cancelled() }}"
+    # `test` is the required check: it must wait for both halves and always report,
+    # and may accept a skipped Electron half only when detection said "false".
+    assert set(jobs["test"]["needs"]) == {"changes", "test-python", "test-electron"}
+    assert jobs["test"]["if"] == "${{ !cancelled() }}"
+    gate = "\n".join(str(s.get("run", "")) for s in jobs["test"]["steps"])
+    assert '[ "$PYTHON" = success ]' in gate
+    assert '"$ELECTRON" = skipped' in gate and '"$ELECTRON_NEEDED" = false' in gate
+    electron_steps = {s["name"] for s in jobs["test-electron"]["steps"] if "name" in s}
+    assert {
         "Frontend unit tests", "Electron typecheck, tests and production contract",
         "Snap artifact repair regression", "Install Playwright chromium",
         "Electron renderer workflow smokes",
+    } <= electron_steps
+    # nothing Electron-only stays behind in the Python job
+    assert not electron_steps & {s.get("name") for s in jobs["test-python"]["steps"]} - {
+        "Setup Node 22", "Setup Bun", "System deps (ffmpeg and squashfs-tools)",
+        "Cache bun deps", "Install Electron deps",
     }
 
 
