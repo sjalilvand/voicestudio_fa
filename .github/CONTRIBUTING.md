@@ -391,6 +391,9 @@ hard rules from the first prompt.
   more files, and every push to `main` run the full matrix; so does a failed
   detection. Skipped jobs show as skipped in the PR. The rule is the `changes`
   job in `.github/workflows/ci.yml`.
+  The `Security` workflow works the same way: CodeQL, bandit and the dependency
+  audits are skipped for a PR that only edits files under `docs/` or `mobile/` or
+  Markdown, while the secret scan always runs (rule: its own `changes` job).
 - **Cross-platform parity (hard rule):** anything that ships in default mode
   must behave identically on macOS, Windows, and Linux. Platform-specific
   *implementation* is fine; platform-divergent *default behavior* is a P0.
