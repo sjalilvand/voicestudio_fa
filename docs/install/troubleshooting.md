@@ -277,11 +277,11 @@ before the token works for downloads.
 
 **Fix:**
 
-1. Open **Settings → API Keys** in the app and paste a working HF token (or set
+1. Open **Settings → Credentials** in the app and paste a working HF token (or set
    `HF_TOKEN` in your env). See [docs/setup/huggingface-token.md](../setup/huggingface-token.md).
 2. Visit https://huggingface.co/pyannote/speaker-diarization-3.1 while signed
    in with the same HF account → click **"Agree and access repository"**.
-3. Retry the job. The token state in **Settings → API Keys** should now show
+3. Retry the job. The token state in **Settings → Credentials** should now show
    the "App" row with a green check next to your username.
 
 If the token and license are already valid but an older build still reports
@@ -306,7 +306,7 @@ itself does not grant access.
 1. Visit https://huggingface.co/kyutai/pocket-tts while signed in, review the
    license and prohibited-use conditions, share the requested contact details,
    and accept the conditions.
-2. Open **Settings → API Keys** and save a read token from that same account.
+2. Open **Settings → Credentials** and save a read token from that same account.
 3. Open **Model Catalogue**, review and accept the PocketTTS terms locally,
    then retry. VoiceStudio stores this acknowledgement only on your machine.
 
@@ -337,12 +337,6 @@ archived Tauri app, which rendered with WebKitGTK.)
 
 ## 5. Windows Triton / torch.compile OOM
 
-Startup only preloads the native OmniVoice model when OmniVoice is the selected
-TTS engine (and the host uses its native backend). Selecting another engine,
-such as VoxCPM2, leaves OmniVoice unloaded at startup to preserve memory for
-that engine. `OMNIVOICE_TTS_BACKEND`, when set, takes precedence over the saved
-engine choice. Models still load on demand when requested.
-
 **Symptom:** the first synthesis call fails with `OutOfMemoryError: CUDA out
 of memory` or `RuntimeError: Triton compilation failed`, especially on
 <16 GB VRAM GPUs.
@@ -353,6 +347,14 @@ peak memory footprint that exceeds free VRAM. Windows-only quirk.
 **Fix:** see [windows.md#torch-compile-oom](windows.md#torch-compile-oom).
 
 **Linked issue:** [#65](https://github.com/debpalash/VoiceStudio/issues/65)
+
+## 5c. OmniVoice is not preloaded at startup
+
+Startup only preloads the native OmniVoice model when OmniVoice is the selected
+TTS engine (and the host uses its native backend). Selecting another engine,
+such as VoxCPM2, leaves OmniVoice unloaded at startup to preserve memory for
+that engine. `OMNIVOICE_TTS_BACKEND`, when set, takes precedence over the saved
+engine choice. Models still load on demand when requested.
 
 ## 5a. Backend dies on the first `/generate` (older NVIDIA GPUs, e.g. Tesla T4)
 
@@ -1350,6 +1352,18 @@ the message:
   blocked executable. Add VoiceStudio's runtime folder to your antivirus
   exclusions (Windows Security → Virus & threat protection → Manage settings →
   Exclusions) and make sure it is not inside OneDrive, then retry.
+- **`… spawn UNKNOWN. Windows Smart App Control blocked it.`** — Smart App
+  Control (Windows 11) blocks programs without a known reputation, including the
+  runtime's `python.exe`; Event Viewer → Applications and Services Logs →
+  Microsoft → Windows → CodeIntegrity → Operational shows event 3077 for it.
+  Unlike antivirus it has **no per-app exceptions**, so an exclusion cannot help.
+  Either turn it off (Windows Security → App & browser control → Smart App
+  Control settings; Windows cannot turn it back on without a reset) or connect
+  VoiceStudio to an engine running on another computer. The app says this only
+  when it reads Smart App Control as on or in evaluation
+  (`VerifiedAndReputablePolicyState` 1 or 2 under
+  `HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy`); otherwise it shows the
+  antivirus advice above (#3224).
 - **`Backend did not answer on port 3900 within N s`** — the wait for the
   backend ran out. The budget (`OMNIVOICE_STARTUP_BUDGET_S`) now starts when the
   backend process is spawned, not when the launch began, defaults to 300 s (600 s
@@ -1416,6 +1430,11 @@ before setup finishes. If verification also fails, include the new setup log in
 your report rather than deleting saved voices or projects. The probe is also
 advisory now: if it still crashes natively, setup continues and the import
 verification decides whether the runtime works.
+
+The import verification now prints `VOICESTUDIO_IMPORT=<module>` before loading
+each runtime module, and a crash names the module in the error (`the import
+check stopped while importing "<module>"`). Include that line from the setup log
+in your report: the last `VOICESTUDIO_IMPORT=` line is the module that crashed.
 
 ### "Backend exited unexpectedly (exit code 3221225477)" while loading a model
 
