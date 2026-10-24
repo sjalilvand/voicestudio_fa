@@ -16,4 +16,5 @@ Saved voice rows keep their hover actions visible over long names (#3263)
 ```
 
 `tests/test_changelog_fragments.py` checks every fragment. Entries already in
-`## [Unreleased]` stay valid, so a PR may still edit the file directly.
+`## [Unreleased]` stay valid, but new entries go in fragments, not in
+`CHANGELOG.md`.

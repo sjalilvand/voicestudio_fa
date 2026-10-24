@@ -59,9 +59,11 @@ def apply_fragments(text: str, fragments: list[tuple[str, str]]) -> str:
         raise ValueError("CHANGELOG.md has no [Unreleased] section")
     body = match.group(1)
     for section, entry in fragments:
-        if f"- {entry}" in body:
-            continue
         heading = re.search(rf"^### {section}[ \t]*\n\n?", body, re.M)
+        if heading:
+            under = re.split(r"^#{2,3} ", body[heading.end():], maxsplit=1, flags=re.M)[0]
+            if f"- {entry}\n" in under or under.rstrip().endswith(f"- {entry}"):
+                continue
         if heading:
             rest = body[heading.end():]
             gap = "" if rest.startswith("- ") else "\n"

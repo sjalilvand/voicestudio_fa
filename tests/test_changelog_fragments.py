@@ -48,12 +48,12 @@ def test_every_repo_fragment_is_one_valid_line():
     for path in cf.fragment_files():
         entry = cf.entry_of(path)
         kind = cf.NAME.match(path.name).group("type")
-        ident = cf.NAME.match(path.name).group("id")
+        ident = re.match(r"\d*", cf.NAME.match(path.name).group("id")).group()
         if len(entry) > _MAX_ENTRY_CHARS:
             problems.append(f"{path.name}: longer than {_MAX_ENTRY_CHARS} characters")
         if kind in ("added", "fixed") and not (_REF_AT_END.search(entry) or _CREDIT.search(entry)):
             problems.append(f"{path.name}: needs a (#N) reference or a thanks credit")
-        if ident.isdigit() and f"#{ident}" not in entry:
+        if ident and not re.search(rf"#{ident}\b", entry):
             problems.append(f"{path.name}: should reference its own PR (#{ident})")
     assert not problems, "\n".join(problems)
 
@@ -110,3 +110,14 @@ def test_removal_keeps_the_readme(tmp_path):
     _write(tmp_path, "50.docs.md", "Doc (#50)\n")
     assert cf.remove_fragments(tmp_path) == ["50.docs.md"]
     assert (tmp_path / "README.md").exists()
+
+
+def test_a_bullet_elsewhere_does_not_hide_a_fragment(tmp_path):
+    text = SAMPLE.replace("- One highlight", "- Same words (#9)")
+    _write(tmp_path, "9.fixed.md", "Same words (#9)\n")
+    out = cf.apply_fragments(text, cf.read_fragments(tmp_path))
+    assert out.count("Same words (#9)") == 2
+
+
+def test_suffixed_fragment_names_keep_their_pr_number():
+    assert re.match(r"\d*", cf.NAME.match("3263-b.docs.md").group("id")).group() == "3263"

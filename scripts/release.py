@@ -357,9 +357,10 @@ Release plan
             prepare_changelog(folded, version, datetime.date.today()),
             encoding="utf-8",
         )
-        remove_fragments()
         sh("uv", "lock")
         sh("uv", "run", "pytest", *GUARD_TESTS, "-q")
+        # Only now, with every guard passed: a failed release keeps every fragment.
+        remove_fragments()
     except (subprocess.CalledProcessError, ValueError) as error:
         # Nothing is committed or pushed yet: put the working tree back.
         sh("git", "checkout", "--", *RELEASE_FILES)
