@@ -106,6 +106,17 @@ def test_clean_dub_no_flags():
     assert all(q.drift == 0.0 for q in out)
 
 
+def test_canonical_unicode_respelling_is_not_drift_in_score_dub():
+    import unicodedata
+
+    text = "naïve café"
+    recog = [_seg(0, 3, unicodedata.normalize("NFD", text))]
+    out = score_dub([_seg(0, 3, text, "a")], recog)
+    assert out[0].drift == 0.0
+    assert out[0].flagged is False
+    assert out[0].expected == text
+
+
 def test_drifted_segment_is_flagged():
     dub = [_seg(0, 3, "the quarterly report is ready", "a")]
     # ASR heard something quite different (mispronunciation / bad clone).
