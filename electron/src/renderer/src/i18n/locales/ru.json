@@ -1878,7 +1878,9 @@
     "deepl_base_url_help": "Пользовательская конечная точка API DeepL (по умолчанию: https://api.deepl.com/v2). Изменение на прокси/самостоятельное размещение.",
     "microsoft_base_url_help": "Пользовательская конечная точка переводчика Azure (по умолчанию: https://api.cognitive.microsofttranslator.com).",
     "region": "Регион",
-    "aws_profile": "Профиль AWS"
+    "aws_profile": "Профиль AWS",
+    "deepl_key_placeholder": "DeepL ключ API",
+    "microsoft_key_placeholder": "Microsoft ключ API"
   },
   "about": {
     "architecture": "Архитектура",

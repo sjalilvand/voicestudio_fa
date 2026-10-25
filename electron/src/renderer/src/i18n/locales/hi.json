@@ -1874,7 +1874,9 @@
     "deepl_base_url_help": "कस्टम डीपएल एपीआई एंडपॉइंट (डिफ़ॉल्ट: https://api.depl.com/v2)। प्रॉक्सी/स्वयं-होस्टेड के लिए परिवर्तन।",
     "microsoft_base_url_help": "कस्टम एज़्योर ट्रांसलेटर एंडपॉइंट (डिफ़ॉल्ट: https://api.cognitive.microsofttranslator.com)।",
     "region": "क्षेत्र",
-    "aws_profile": "AWS प्रोफ़ाइल"
+    "aws_profile": "AWS प्रोफ़ाइल",
+    "deepl_key_placeholder": "DeepL API कुंजी",
+    "microsoft_key_placeholder": "Microsoft API कुंजी"
   },
   "about": {
     "architecture": "वास्तुकला",

@@ -1874,7 +1874,9 @@
     "deepl_base_url_help": "自定义 DeepL API 端点（默认 https://api.deepl.com/v2）。代理或自托管时修改。",
     "microsoft_base_url_help": "自定义 Azure Translator 端点（默认 https://api.cognitive.microsofttranslator.com）。",
     "region": "区域",
-    "aws_profile": "AWS 配置"
+    "aws_profile": "AWS 配置",
+    "deepl_key_placeholder": "DeepLAPI 密钥",
+    "microsoft_key_placeholder": "MicrosoftAPI 密钥"
   },
   "about": {
     "architecture": "架构",

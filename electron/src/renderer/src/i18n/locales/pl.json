@@ -1878,7 +1878,9 @@
     "deepl_base_url_help": "Niestandardowy punkt końcowy API DeepL (domyślnie: https://api.deepl.com/v2). Zmień na serwer proxy/samodzielnie hostowany.",
     "microsoft_base_url_help": "Niestandardowy punkt końcowy usługi Azure Translator (domyślnie: https://api.cognitive.microsofttranslator.com).",
     "region": "Region",
-    "aws_profile": "Profil AWS"
+    "aws_profile": "Profil AWS",
+    "deepl_key_placeholder": "DeepL klucz API",
+    "microsoft_key_placeholder": "Microsoft klucz API"
   },
   "about": {
     "architecture": "Architektura",

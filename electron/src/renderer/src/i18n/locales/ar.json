@@ -1882,7 +1882,9 @@
     "deepl_base_url_help": "نقطة نهاية DeepL API المخصصة (الافتراضي: https://api.deepl.com/v2). التغيير للوكيل/الاستضافة الذاتية.",
     "microsoft_base_url_help": "نقطة نهاية Azure Translator المخصصة (الافتراضية: https://api.cognitive.microsofttranslator.com).",
     "region": "المنطقة",
-    "aws_profile": "ملف AWS"
+    "aws_profile": "ملف AWS",
+    "deepl_key_placeholder": "DeepL مفتاح API",
+    "microsoft_key_placeholder": "Microsoft مفتاح API"
   },
   "about": {
     "architecture": "الهندسة المعمارية",

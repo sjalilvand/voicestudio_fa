@@ -1874,7 +1874,9 @@
     "deepl_base_url_help": "Điểm cuối API DeepL tùy chỉnh (mặc định: https://api.deepl.com/v2). Thay đổi cho proxy/tự lưu trữ.",
     "microsoft_base_url_help": "Điểm cuối Azure Translator tùy chỉnh (mặc định: https://api.cognitive.microsofttranslator.com).",
     "region": "Khu vực",
-    "aws_profile": "Hồ sơ AWS"
+    "aws_profile": "Hồ sơ AWS",
+    "deepl_key_placeholder": "DeepL khóa API",
+    "microsoft_key_placeholder": "Microsoft khóa API"
   },
   "about": {
     "architecture": "Kiến trúc",

@@ -1876,7 +1876,9 @@
     "deepl_base_url_help": "Point de terminaison de l'API DeepL personnalisé (par défaut : https://api.deepl.com/v2). Changer pour proxy/auto-hébergé.",
     "microsoft_base_url_help": "Point de terminaison Azure Translator personnalisé (par défaut : https://api.cognitive.microsofttranslator.com).",
     "region": "Région",
-    "aws_profile": "Profil AWS"
+    "aws_profile": "Profil AWS",
+    "deepl_key_placeholder": "DeepL clé API",
+    "microsoft_key_placeholder": "Microsoft clé API"
   },
   "about": {
     "architecture": "Architecture",

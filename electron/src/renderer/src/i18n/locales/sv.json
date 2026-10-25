@@ -1874,7 +1874,9 @@
     "deepl_base_url_help": "Anpassad DeepL API-slutpunkt (standard: https://api.deepl.com/v2). Ändra för proxy/självvärd.",
     "microsoft_base_url_help": "Anpassad Azure Translator-slutpunkt (standard: https://api.cognitive.microsofttranslator.com).",
     "region": "Region",
-    "aws_profile": "AWS-profil"
+    "aws_profile": "AWS-profil",
+    "deepl_key_placeholder": "DeepL API-nyckel",
+    "microsoft_key_placeholder": "Microsoft API-nyckel"
   },
   "about": {
     "architecture": "Arkitektur",

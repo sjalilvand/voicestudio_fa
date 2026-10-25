@@ -1874,7 +1874,9 @@
     "deepl_base_url_help": "自訂 DeepL API 端點（預設：https://api.deepl.com/v2）。變更為代理/自架。",
     "microsoft_base_url_help": "自訂 Azure 翻譯端點（預設：https://api.cognitive.microsofttranslator.com）。",
     "region": "區域",
-    "aws_profile": "AWS 設定檔"
+    "aws_profile": "AWS 設定檔",
+    "deepl_key_placeholder": "DeepLAPI 金鑰",
+    "microsoft_key_placeholder": "MicrosoftAPI 金鑰"
   },
   "about": {
     "architecture": "大樓",

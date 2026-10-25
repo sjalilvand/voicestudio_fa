@@ -1874,7 +1874,9 @@
     "deepl_base_url_help": "ตำแหน่งข้อมูล DeepL API ที่กำหนดเอง (ค่าเริ่มต้น: https://api.deepl.com/v2) การเปลี่ยนแปลงสำหรับพร็อกซี/โฮสต์ด้วยตนเอง",
     "microsoft_base_url_help": "จุดสิ้นสุด Azure Translator แบบกำหนดเอง (ค่าเริ่มต้น: https://api.cognitive.microsofttranslator.com)",
     "region": "ภูมิภาค",
-    "aws_profile": "โปรไฟล์ AWS"
+    "aws_profile": "โปรไฟล์ AWS",
+    "deepl_key_placeholder": "DeepL คีย์ API",
+    "microsoft_key_placeholder": "Microsoft คีย์ API"
   },
   "about": {
     "architecture": "สถาปัตยกรรม",

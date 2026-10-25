@@ -1874,7 +1874,9 @@
     "deepl_base_url_help": "カスタム DeepL API エンドポイント (デフォルト: https://api.deepl.com/v2)。プロキシ/セルフホスト用に変更します。",
     "microsoft_base_url_help": "カスタム Azure Translator エンドポイント (既定: https://api.cognitive.microsofttranslator.com)。",
     "region": "リージョン",
-    "aws_profile": "AWSプロファイル"
+    "aws_profile": "AWSプロファイル",
+    "deepl_key_placeholder": "DeepLAPIキー",
+    "microsoft_key_placeholder": "MicrosoftAPIキー"
   },
   "about": {
     "architecture": "建築",

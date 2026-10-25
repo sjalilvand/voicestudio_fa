@@ -1874,7 +1874,9 @@
     "deepl_base_url_help": "Özel DeepL API uç noktası (varsayılan: https://api.deepl.com/v2). Proxy/kendi kendine barındırılan için değişiklik.",
     "microsoft_base_url_help": "Özel Azure Translator uç noktası (varsayılan: https://api.cognitive.microsofttranslator.com).",
     "region": "Bölge",
-    "aws_profile": "AWS profili"
+    "aws_profile": "AWS profili",
+    "deepl_key_placeholder": "DeepL API anahtarı",
+    "microsoft_key_placeholder": "Microsoft API anahtarı"
   },
   "about": {
     "architecture": "Mimarlık",
