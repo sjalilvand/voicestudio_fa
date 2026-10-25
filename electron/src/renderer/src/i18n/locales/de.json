@@ -912,6 +912,7 @@
     "mirror_failed": "Vortrag übernehmen fehlgeschlagen: {{message}}",
     "cinematic_no_llm": "Diese Qualität benötigt einen LLM-Anbieter. Richte ihn unter „LLM-Anbieter“ ein, um fortzufahren.",
     "dialect_not_applied": "Der gewählte Dialekt benötigt ein LLM — wechsle die Engine auf OpenAI/Ollama oder wähle die Cinematic-Qualität.",
+    "dialect_used": "Diese Engine schreibt nur {{variant}}. Verwende eine LLM-Übersetzungs-Engine, um den gewählten Dialekt anzuwenden.",
     "translate_errors": "{{errorCount}}/{{totalCount}} Segment(e) fehlgeschlagen: {{firstError}}",
     "translate_degraded": "Alle {{totalCount}} Segment(e) übersetzt — {{count}} verwenden die einfache Übersetzung, da der Feinschliff übersprungen wurde ({{reason}})",
     "translated_segments": "{{count}} Segment(e) → {{lang}} übersetzt",
@@ -3443,6 +3444,8 @@
     "hint": "Meist sind die Standardwerte passend. Die Vorgabe beeinflusst das Ergebnis; die anderen Regler ändern den Klangaufbau des Modells. Jeweils nur einen ändern."
   },
   "languagePicker": {
+    "dialectFollowsVoice": "{{model}} hat ein einziges Modell für {{language}}, daher folgt der Akzent der Referenzstimme.",
+    "dialectUsed": "{{model}} spricht nur {{variant}}.",
     "auto": "Automatisch",
     "unavailable": "Nicht unterstützt",
     "unsupportedBy": "Von {{model}} nicht unterstützt",

@@ -920,6 +920,7 @@
     "mirror_failed": "فشلت محاكاة الأداء: {{message}}",
     "cinematic_no_llm": "تحتاج هذه الجودة إلى مزوّد LLM. اضبط مزوّدًا في «مزوّدو LLM» للمتابعة.",
     "dialect_not_applied": "تحتاج اللهجة المحددة إلى LLM لتطبيقها — بدّل المحرك إلى OpenAI/Ollama أو اختر جودة Cinematic.",
+    "dialect_used": "يكتب هذا المحرك {{variant}} فقط. استخدم محرك ترجمة يعتمد على نموذج لغوي كبير (LLM) لتطبيق اللهجة المحددة.",
     "translate_errors": "{{errorCount}}/{{totalCount}} فشل المقطع (المقاطع): {{firstError}}",
     "translate_degraded": "تمت ترجمة جميع المقاطع ({{totalCount}}) — استخدم {{count}} منها الترجمة المباشرة لأن خطوة الصقل تم تخطيها ({{reason}})",
     "translated_segments": "تمت ترجمة {{count}} مقطع (مقاطع) → {{lang}}",
@@ -3451,6 +3452,8 @@
     "hint": "يُفضل عادةً إبقاء القيم الافتراضية. يضبط التوجيه تأثير التعليمات؛ وتغيّر الخيارات الأخرى كيفية بناء النموذج للصوت. غيّر خيارًا واحدًا كل مرة."
   },
   "languagePicker": {
+    "dialectFollowsVoice": "يحتوي {{model}} على نموذج واحد للغة {{language}}، لذا تتبع اللكنة الصوت المرجعي.",
+    "dialectUsed": "يتحدث {{model}} {{variant}} فقط.",
     "auto": "تلقائي",
     "unavailable": "غير مدعومة",
     "unsupportedBy": "غير مدعومة بواسطة {{model}}",
