@@ -102,7 +102,11 @@
     "dub": "Översätt och dubba ljud eller video.",
     "stories": "Skapa scener med flera röster.",
     "audiobook": "Skapa ljudböcker med kapitel.",
-    "transcribe": "Omvandla inspelningar till text."
+    "transcribe": "Omvandla inspelningar till text.",
+    "creatorCoreTeam": "Skapare och kärnteam",
+    "coreTeam": "Kärnteam",
+    "follow": "Följ",
+    "website": "Webbplats"
   },
   "twilioIntegration": {
     "exposureWarning": "När detta slås på öppnas en separat lokal port som din tunnel publicerar på internet. Endast förfrågningar signerade med din Twilio Auth Token accepteras; resten av VoiceStudio förblir privat.",

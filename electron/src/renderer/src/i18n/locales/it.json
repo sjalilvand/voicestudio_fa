@@ -102,7 +102,11 @@
     "dub": "Traduci e doppia audio o video.",
     "stories": "Crea scene con più voci.",
     "audiobook": "Crea audiolibri con capitoli.",
-    "transcribe": "Trasforma le registrazioni in testo."
+    "transcribe": "Trasforma le registrazioni in testo.",
+    "creatorCoreTeam": "Creatore e team principale",
+    "coreTeam": "Team principale",
+    "follow": "Segui",
+    "website": "Sito web"
   },
   "twilioIntegration": {
     "exposureWarning": "Attivandolo si apre una porta locale separata che il tuo tunnel pubblica su internet. Sono accettate solo richieste firmate con il tuo Auth Token Twilio; il resto di VoiceStudio resta privato.",

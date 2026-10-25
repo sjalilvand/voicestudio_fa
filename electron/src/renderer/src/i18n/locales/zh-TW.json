@@ -102,7 +102,11 @@
     "dub": "翻譯並配音音訊或影片。",
     "stories": "用多種聲音創作場景。",
     "audiobook": "製作分章節的有聲書。",
-    "transcribe": "將錄音轉成文字。"
+    "transcribe": "將錄音轉成文字。",
+    "creatorCoreTeam": "創作者 · 核心團隊",
+    "coreTeam": "核心團隊",
+    "follow": "追蹤",
+    "website": "網站"
   },
   "twilioIntegration": {
     "exposureWarning": "開啟後會開啟一個獨立的本機連接埠，由你的通道發布到網際網路。只接受以你的 Twilio Auth Token 簽署的請求；VoiceStudio 的其餘部分維持私密。",
