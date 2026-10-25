@@ -68,8 +68,11 @@ it('credits qualifying contributors and opens their GitHub profiles externally',
   ).toEqual(['debpalash', 'velixio']);
   expect(credits).toHaveLength(homeContributors.length + 1);
   expect(
-    [1, 2, 3].map((row) => credits.filter((credit) => credit.style.gridRow === String(row)).length),
-  ).toEqual([5, 3, 2]);
+    Array.from(document.querySelectorAll('.home-contributors-core li img')).length,
+  ).toBe(2);
+  expect(document.querySelectorAll('.home-contributors-rest li')).toHaveLength(
+    homeContributors.length - 2 + 1,
+  );
   expect(homeContributors.every((person) => person.commits > 10)).toBe(true);
   const all = screen.getByRole('link', { name: 'homeUi.allContributors' });
   expect(all).toHaveAttribute(
@@ -81,7 +84,7 @@ it('credits qualifying contributors and opens their GitHub profiles externally',
     'https://github.com/debpalash/VoiceStudio/graphs/contributors',
   );
   for (const { login } of homeContributors) {
-    if (login === 'debpalash') continue;
+    if (login === 'debpalash' || login === 'velixio') continue;
     const profile = screen.getByRole('link', { name: `GitHub · @${login}` });
     expect(profile).toHaveAttribute('href', `https://github.com/${login}`);
     expect(profile.querySelector('img')?.src).not.toMatch(/^https?:\/\/(avatars|github)/);
@@ -101,6 +104,13 @@ it('opens both creator profiles from the accessible avatar card', async () => {
   expect(files.openExternal).toHaveBeenCalledWith('https://github.com/debpalash');
   fireEvent.click(x);
   expect(files.openExternal).toHaveBeenCalledWith('https://x.com/idebpalash');
+});
+
+it('gives velixio the same hover card as the creator', async () => {
+  render(<HomePage />);
+  fireEvent.click(screen.getByRole('button', { name: '@velixio' }));
+  const github = await screen.findByRole('link', { name: 'GitHub @velixio' });
+  expect(github).toHaveAttribute('href', 'https://github.com/velixio');
 });
 
 it('separates three primary creation actions and describes all nine destinations', () => {
