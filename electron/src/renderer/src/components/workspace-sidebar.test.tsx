@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { FilmIcon } from 'lucide-react';
-import { MAC_TRAFFIC_LIGHTS_BAND } from '@shared/utils/windowChrome';
+import { MAC_TRAFFIC_LIGHTS_INLINE_END } from '@shared/utils/windowChrome';
 import { SecondarySidebar } from './workspace-sidebar';
 
 const platform = vi.hoisted(() => ({ mac: false }));
@@ -157,14 +157,48 @@ it('reports a retained library as inactive when its tab is hidden', () => {
   expect(field).toHaveValue('true');
 });
 
-it('starts its header below the macOS traffic lights, which reach past the slim column', () => {
+it('insets its header beside the macOS traffic lights instead of moving it down', () => {
   platform.mac = true;
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      disconnect() {}
+    },
+  );
+  // The column starts right of a 64px rail, still under the lights' reach.
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    left: 64,
+  } as DOMRect);
   render(
     <SecondarySidebar title="Voice" icon={FilmIcon}>
       <section>Body</section>
     </SecondarySidebar>,
   );
   const header = document.querySelector<HTMLElement>('[data-slot="secondary-sidebar-header"]')!;
-  expect(header.style.paddingTop).toBe(`${MAC_TRAFFIC_LIGHTS_BAND}px`);
+  expect(header.style.paddingTop).toBe('');
+  expect(header.style.paddingInlineStart).toBe(`${MAC_TRAFFIC_LIGHTS_INLINE_END - 64 + 12}px`);
+  platform.mac = false;
+});
+
+it('leaves a column clear of the traffic lights untouched', () => {
+  platform.mac = true;
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      disconnect() {}
+    },
+  );
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    left: 300,
+  } as DOMRect);
+  render(
+    <SecondarySidebar title="Voice" icon={FilmIcon}>
+      <section>Body</section>
+    </SecondarySidebar>,
+  );
+  const header = document.querySelector<HTMLElement>('[data-slot="secondary-sidebar-header"]')!;
+  expect(header.style.paddingInlineStart).toBe('');
   platform.mac = false;
 });
