@@ -120,6 +120,43 @@ it('shows package installation after the last large download instead of a stale 
   expect(screen.queryByText('Downloaded scipy')).not.toBeInTheDocument();
 });
 
+it('lists install steps with the active package on the current step and the log in the card', async () => {
+  const restart = vi.fn().mockResolvedValue(undefined);
+  bridgeStub.current = { backend: { restart } };
+  backendStatus.stage = 'installing';
+  backendStatus.setupPhase = 'installing_deps';
+  backendStatus.logTail = ['Downloading torch (848.0MiB)'];
+  backendStatus.setupProgress = {
+    completedDownloads: 3,
+    downloadedBytes: 1024 ** 3,
+    totalBytes: 4 * 1024 ** 3,
+    activePackage: 'nvidia-cudnn-cu12',
+  };
+
+  render(
+    <BackendGate>
+      <div>workspace</div>
+    </BackendGate>,
+  );
+
+  const steps = screen.getAllByRole('listitem');
+  expect(steps).toHaveLength(4);
+  expect(steps[2]).toHaveAttribute('aria-current', 'step');
+  expect(steps[2]).toHaveTextContent('nvidia-cudnn-cu12');
+  // Settled steps drop the running ellipsis; the current one keeps it.
+  expect(steps[0].textContent).toBe(i18n.t('bootstrap.checking').replace(/…$/, ''));
+  expect(steps[2]).toHaveTextContent(i18n.t('bootstrap.installing_deps'));
+  expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '25');
+  expect(screen.getByText(i18n.t('backend.first_run_hint'))).toBeVisible();
+
+  fireEvent.click(screen.getByRole('button', { name: i18n.t('backend.details') }));
+  expect(screen.getByLabelText(i18n.t('backend.log_label'))).toHaveTextContent('Downloading torch');
+  expect(screen.getAllByRole('button', { name: i18n.t('backend.details') })).toHaveLength(1);
+
+  fireEvent.click(screen.getByRole('button', { name: i18n.t('common.cancel') }));
+  await waitFor(() => expect(restart).toHaveBeenCalledTimes(1));
+});
+
 // #2430 — a live-but-busy backend is not a failure.
 //
 // A heavy job blocks the Python event loop past the health-probe deadline. The
