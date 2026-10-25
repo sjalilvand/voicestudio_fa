@@ -102,7 +102,11 @@
     "dub": "音声や動画を翻訳・吹き替え。",
     "stories": "複数の声でシーンを作成。",
     "audiobook": "章立てのオーディオブックを作成。",
-    "transcribe": "録音を文字に起こす。"
+    "transcribe": "録音を文字に起こす。",
+    "creatorCoreTeam": "作者・コアチーム",
+    "coreTeam": "コアチーム",
+    "follow": "フォロー",
+    "website": "ウェブサイト"
   },
   "twilioIntegration": {
     "exposureWarning": "オンにすると、トンネルがインターネットに公開する別のローカルポートが開きます。Twilio Auth Token で署名されたリクエストのみ受け付け、VoiceStudio のその他の部分は非公開のままです。",

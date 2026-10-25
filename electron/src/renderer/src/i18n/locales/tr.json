@@ -102,7 +102,11 @@
     "dub": "Ses veya videoyu çevirip dublaj yapın.",
     "stories": "Birden fazla sesle sahneler oluşturun.",
     "audiobook": "Bölümlü sesli kitaplar oluşturun.",
-    "transcribe": "Kayıtları metne dönüştürün."
+    "transcribe": "Kayıtları metne dönüştürün.",
+    "creatorCoreTeam": "Yaratıcı ve çekirdek ekip",
+    "coreTeam": "Çekirdek ekip",
+    "follow": "Takip et",
+    "website": "Web sitesi"
   },
   "twilioIntegration": {
     "exposureWarning": "Bunu açmak, tünelinizin internette yayımladığı ayrı bir yerel bağlantı noktası açar. Yalnızca Twilio Auth Token'ınızla imzalanan istekler kabul edilir; VoiceStudio'nun geri kalanı gizli kalır.",

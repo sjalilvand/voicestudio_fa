@@ -102,7 +102,11 @@
     "dub": "Übersetze und synchronisiere Audio oder Video.",
     "stories": "Erstelle Szenen mit mehreren Stimmen.",
     "audiobook": "Erstelle Hörbücher mit Kapiteln.",
-    "transcribe": "Wandle Aufnahmen in Text um."
+    "transcribe": "Wandle Aufnahmen in Text um.",
+    "creatorCoreTeam": "Gründer und Kernteam",
+    "coreTeam": "Kernteam",
+    "follow": "Folgen",
+    "website": "Website"
   },
   "twilioIntegration": {
     "exposureWarning": "Beim Einschalten wird ein separater lokaler Port geöffnet, den dein Tunnel im Internet veröffentlicht. Nur mit deinem Twilio Auth Token signierte Anfragen werden akzeptiert; der Rest von VoiceStudio bleibt privat.",
