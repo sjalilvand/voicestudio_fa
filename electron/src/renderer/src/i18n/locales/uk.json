@@ -1971,6 +1971,7 @@
     "original": "Оригінал",
     "dub_suffix": "(дубляж)",
     "bg_audio": "Background audio",
+    "bg_level": "Гучність фону",
     "mix_bg_video": "Змішуйте музику/ефекти під кожен дубльований трек",
     "subs_in_video": "Субтитри у відео",
     "hardsub": "Записати субтитри в зображення (hardsub)",
