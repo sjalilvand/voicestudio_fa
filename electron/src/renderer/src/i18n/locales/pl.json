@@ -392,7 +392,9 @@
     "select": "Wybierz",
     "selected": "Wybrano",
     "change": "Zmień silnik",
-    "failed": "Nie można zmienić silnika. Spróbuj ponownie."
+    "failed": "Nie można zmienić silnika. Spróbuj ponownie.",
+    "empty": "Brak jeszcze silników i modeli w tej kategorii.",
+    "modelsInstalled": "Zainstalowano {{installed}} z {{count}}"
   },
   "modelMaintenance": {
     "download": "Pobierz",

@@ -390,7 +390,9 @@
     "select": "Selecione",
     "selected": "Selecionado",
     "change": "Alterar mecanismo",
-    "failed": "Não foi possível alterar o mecanismo. Tente novamente."
+    "failed": "Não foi possível alterar o mecanismo. Tente novamente.",
+    "empty": "Ainda não há motores nem modelos para esta categoria.",
+    "modelsInstalled": "{{installed}} de {{count}} instalados"
   },
   "modelMaintenance": {
     "download": "Baixar",

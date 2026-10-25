@@ -388,7 +388,9 @@
     "select": "Pilih",
     "selected": "Dipilih",
     "change": "Ganti mesin",
-    "failed": "Mesin tidak dapat diganti. Coba lagi."
+    "failed": "Mesin tidak dapat diganti. Coba lagi.",
+    "empty": "Belum ada mesin atau model untuk kategori ini.",
+    "modelsInstalled": "{{installed}} dari {{count}} terpasang"
   },
   "modelMaintenance": {
     "download": "Unduh",

@@ -758,7 +758,9 @@
     "select": "Select",
     "selected": "Selected",
     "change": "Change engine",
-    "failed": "Could not change the engine. Try again."
+    "failed": "Could not change the engine. Try again.",
+    "empty": "No engines or models for this family yet.",
+    "modelsInstalled": "{{installed}} of {{count}} installed"
   },
   "modelMaintenance": {
     "download": "Download",

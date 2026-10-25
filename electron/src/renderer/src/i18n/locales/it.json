@@ -390,7 +390,9 @@
     "select": "Seleziona",
     "selected": "Selezionato",
     "change": "Cambia motore",
-    "failed": "Impossibile cambiare motore. Riprova."
+    "failed": "Impossibile cambiare motore. Riprova.",
+    "empty": "Nessun motore o modello per questa categoria al momento.",
+    "modelsInstalled": "{{installed}} di {{count}} installati"
   },
   "modelMaintenance": {
     "download": "Scarica",

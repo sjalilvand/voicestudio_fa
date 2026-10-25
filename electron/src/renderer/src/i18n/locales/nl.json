@@ -388,7 +388,9 @@
     "select": "Selecteer",
     "selected": "Geselecteerd",
     "change": "Engine wijzigen",
-    "failed": "De engine kon niet worden gewijzigd. Probeer opnieuw."
+    "failed": "De engine kon niet worden gewijzigd. Probeer opnieuw.",
+    "empty": "Nog geen engines of modellen voor deze categorie.",
+    "modelsInstalled": "{{installed}} van {{count}} geïnstalleerd"
   },
   "modelMaintenance": {
     "download": "Downloaden",
