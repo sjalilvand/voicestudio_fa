@@ -374,7 +374,8 @@
   },
   "paneActions": {
     "collapse": "Ciutkan panel",
-    "edit": "Edit profil suara"
+    "edit": "Edit profil suara",
+    "expand": "Luaskan panel"
   },
   "modelSettings": {
     "models": "Model",

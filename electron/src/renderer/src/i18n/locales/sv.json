@@ -374,7 +374,8 @@
   },
   "paneActions": {
     "collapse": "Fäll ihop panelen",
-    "edit": "Redigera röstprofil"
+    "edit": "Redigera röstprofil",
+    "expand": "Expandera panel"
   },
   "modelSettings": {
     "models": "Modeller",
