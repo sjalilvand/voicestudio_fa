@@ -37,6 +37,8 @@ private val destinations = listOf(
     HomeDestination("dictate", "nav.dictation", "mobile.dictate.tap_to_start", VSIcons.Mic),
     HomeDestination("models", "mobile.local.models", "mobile.local.installed", VSIcons.Download),
     HomeDestination("connect", "mobile.local.my_computer", "mobile.local.pair_settings", VSIcons.Computer),
+    HomeDestination("transcriptions", "transcriptions.title", "mobile.transcripts.hint", Icons.AutoMirrored.Filled.List),
+    HomeDestination("handoff", "mobile.handoff.title", "mobile.handoff.hint", VSIcons.Folder),
     HomeDestination("design", "nav.design", "clone.design_placeholder", Icons.Default.Create),
     HomeDestination("stories", "nav.stories", "stories.subtitle", Icons.Default.Person),
     HomeDestination("audiobook", "audiobook.title", "audiobook.subtitle", VSIcons.Folder),

@@ -64,7 +64,10 @@ class PhoneWorkflowWorker(context: Context,params: WorkerParameters): CoroutineW
             val finished=coroutineScope {
                 val updates=Channel<Float>(Channel.CONFLATED)
                 val reporter=launch {for(value in updates) {requirePhonePower(applicationContext);setProgress(workDataOf("percent" to (value*100).toInt()));setForeground(phoneJobForeground(applicationContext,id,"workflows.title",(value*100).toInt()))}}
-                try {store.run(workflow,workflow.inputText.orEmpty(),configuration,progress={updates.trySend(it)}) {step,text ->
+                try {if(workflow.graph!=null) {
+                    val executor=WorkflowGraphExecutor(runtime.engine,voiceStore,request.voices,model("tts"),model("clone"),model("asr"),model("translate"))
+                    store.runGraph(workflow,workflow.inputText.orEmpty(),configuration,progress={updates.trySend(it)},execute=executor::execute)
+                } else store.run(workflow,workflow.inputText.orEmpty(),configuration,progress={updates.trySend(it)}) {step,text ->
                     requirePhonePower(applicationContext)
                     when(step.kind) {
                         "transcribe"->WorkflowValue(WorkflowTranscription.run(store.source(workflow),requireNotNull(model("asr")),runtime.engine))

@@ -64,7 +64,9 @@ public struct Segment: Codable, Sendable {
     public var profile_id: String?
     public var target_lang: String?
     public var cue_source_id: String?
-    enum CodingKeys: String, CodingKey { case id, start, end, text, profile_id, target_lang, cue_source_id }
+    public var speaker_id: String?
+    public var text_original: String?
+    enum CodingKeys: String, CodingKey { case id, start, end, text, profile_id, target_lang, cue_source_id, speaker_id, text_original }
     public init(id: String, start: Double, end: Double, text: String, profile: String? = nil, language: String? = nil) {
         self.id = id; self.start = start; self.end = end; self.text = text; profile_id = profile; target_lang = language; cue_source_id = id
     }
@@ -78,6 +80,8 @@ public struct Segment: Codable, Sendable {
         profile_id = try c.decodeIfPresent(String.self, forKey: .profile_id)
         target_lang = try c.decodeIfPresent(String.self, forKey: .target_lang)
         cue_source_id = try c.decodeIfPresent(String.self, forKey: .cue_source_id)
+        speaker_id = try c.decodeIfPresent(String.self, forKey: .speaker_id)
+        text_original = try c.decodeIfPresent(String.self, forKey: .text_original)
     }
 }
 public struct Transcript: Codable, Sendable { public let segments: [Segment]; public let source_lang: String? }
