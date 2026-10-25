@@ -483,8 +483,8 @@ it.each([
       presets: undefined,
       vocabulary: undefined,
     });
-    },
-  );
+  },
+);
 
 it.each([
   ['text', true, false, 'text'],
