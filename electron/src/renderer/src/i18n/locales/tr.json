@@ -1874,7 +1874,9 @@
     "deepl_base_url_help": "Özel DeepL API uç noktası (varsayılan: https://api.deepl.com/v2). Proxy/kendi kendine barındırılan için değişiklik.",
     "microsoft_base_url_help": "Özel Azure Translator uç noktası (varsayılan: https://api.cognitive.microsofttranslator.com).",
     "region": "Bölge",
-    "aws_profile": "AWS profili"
+    "aws_profile": "AWS profili",
+    "deepl_key_placeholder": "DeepL API anahtarı",
+    "microsoft_key_placeholder": "Microsoft API anahtarı"
   },
   "about": {
     "architecture": "Mimarlık",
@@ -2054,6 +2056,7 @@
     "setup_access": "Uygulamanın veri klasörüne yazma izni verip yeniden deneyin.",
     "setup_unsupported_platform": "Bu Intel Mac, yerel yapay zekâ arka ucunu çalıştıramaz — PyTorch'ta macOS Intel wheel'leri yok. Bunun yerine aşağıdan bir uzak arka uca bağlanın; yerel kurulum gerekmez.",
     "setup_wrong_architecture": "Bu, Apple Silicon bir Mac'te Rosetta üzerinden çalışan VoiceStudio Intel (x64) sürümü; bu yüzden yerel yapay zekâ arka ucu kurulamıyor. Uygulamadan çıkın, Apple Silicon (arm64) DMG'sini üzerine kurun ve yeniden açın — sesleriniz ve projeleriniz korunur.",
+    "setup_missing_system_library": "Bu Windows sisteminde, PyTorch ses eklentisinin ihtiyaç duyduğu Microsoft Visual C++ 2015-2022 Redistributable (x64) eksik. Microsoft’tan yükleyip Yeniden Dene’ye basın.",
     "download_apple_silicon": "Apple Silicon sürümünü indir",
     "ready": "Motor hazır",
     "show_log": "Günlüğü göster",
@@ -2077,7 +2080,23 @@
     "hint_spawn_blocked": "İşletim sisteminiz veya güvenlik yazılımınız yerel motorun başlatılmasını reddetti. VoiceStudio çalışma zamanı klasörünü antivirüs dışlamalarınıza ekleyin (Windows: Windows Güvenliği → Virüs ve tehdit koruması → Ayarları yönet → Dışlamalar), klasörün OneDrive gibi bulutla eşitlenen bir klasörde olmadığından emin olun ve yeniden deneyin.",
     "hint_smart_app_control": "Windows Akıllı Uygulama Denetimi yerel motoru engelledi. Uygulama başına istisna tanımıyor, bu yüzden antivirüs dışlaması işe yaramaz. Windows Güvenliği → Uygulama ve tarayıcı denetimi → Akıllı Uygulama Denetimi ayarları bölümünden kapatın (Windows sıfırlanmadan tekrar açamaz) ya da VoiceStudio’yu başka bir bilgisayarda çalışan bir motora bağlayıp yeniden deneyin.",
     "hint_slow_start": "Bekleme süresi dolduğunda motor hâlâ başlıyordu. Yavaş bilgisayarlar, özellikle ayrı ekran kartı olmayanlar, ve bir kurulumdan sonraki ilk başlatma (antivirüs her yeni dosyayı tarar) birkaç dakika sürebilir. Çok bellek kullanan uygulamaları kapatıp yeniden deneyin; sonraki başlatmalar çok daha hızlıdır.",
-    "hint_synced_folder": "Bu konum, bulutla eşitlenen bir klasörde (OneDrive, Dropbox, iCloud Drive, Google Drive). Yalnızca çevrimiçi yer tutucular ve dosya kilitleme Python ortamını bozar. VoiceStudio'yu normal bir yerel klasöre (örneğin Windows'ta C:\\VoiceStudio, macOS ve Linux'ta ~/VoiceStudio) taşıyın ve yeniden kurun."
+    "hint_synced_folder": "Bu konum, bulutla eşitlenen bir klasörde (OneDrive, Dropbox, iCloud Drive, Google Drive). Yalnızca çevrimiçi yer tutucular ve dosya kilitleme Python ortamını bozar. VoiceStudio'yu normal bir yerel klasöre (örneğin Windows'ta C:\\VoiceStudio, macOS ve Linux'ta ~/VoiceStudio) taşıyın ve yeniden kurun.",
+    "cause_smart_app_control": "Windows Akıllı Uygulama Denetimi altyapıyı engelledi",
+    "cause_spawn_blocked": "Güvenlik yazılımı altyapının başlamasını engelledi",
+    "cause_native_crash": "Altyapı başlarken çöktü (yerel hata)",
+    "cause_missing_env": "Python ortamı eksik veya tamamlanmamış",
+    "cause_permission": "Altyapı klasörüne yazma izni yok",
+    "cause_synced_folder": "Altyapı klasörü bulutla eşitlenen bir klasörün içinde",
+    "cause_slow_start": "Altyapı yavaş bir bilgisayarda hâlâ başlıyor",
+    "choose_folder": "Başka bir klasör seç",
+    "copy_diagnostics": "Tanılamayı kopyala",
+    "diagnostics_copied": "Tanılama kopyalandı",
+    "details": "Ayrıntılar",
+    "pill_starting": "Başlatılıyor",
+    "pill_recovering": "Toparlanıyor",
+    "pill_failed": "Başarısız",
+    "pill_repeats": "Art arda {{count}} kez",
+    "offline_bar": "Altyapı meşgul, otomatik olarak yeniden bağlanılıyor"
   },
   "bootstrap": {
     "checking": "Ortam kontrol ediliyor…",
@@ -2372,7 +2391,8 @@
     "storage_temp": "Geçici dosyalar",
     "change": "Değiştir…",
     "reset_default": "Varsayılana sıfırla",
-    "region_label": "İndirme bölgesi"
+    "region_label": "İndirme bölgesi",
+    "free_space": "Bu sürücüde {{free}} GB boş alan var, yaklaşık {{needed}} GB gerekli"
   },
   "asr_missing": {
     "message": "Yüklü bir konuşmadan metne modeli yok — bu özellik sesi yazıya dökmek için bir model gerektirir.",
@@ -2514,7 +2534,18 @@
     "staleTitle": "Güncelleme mevcut",
     "staleMessage": "VoiceStudio {{current}} kullanıyorsunuz, ancak {{latest}} zaten yayında — bu hata orada düzeltilmiş olabilir. Bildirmeden önce en son sürüme bakmak ister misiniz?",
     "staleView": "Güncellemeyi görüntüle",
-    "staleFileAnyway": "Yine de bildir"
+    "staleFileAnyway": "Yine de bildir",
+    "summary_label": "Ne ters gitti?",
+    "summary_placeholder": "Tek satır, örneğin: Dublaj %40’ta duruyor",
+    "summary_required": "Önce tek satırlık bir açıklama ekleyin.",
+    "sent_title": "Neler gönderilecek",
+    "sent_app": "Uygulama sürümü ve derlemesi",
+    "sent_system": "İşletim sistemi, GPU, bellek ve boş disk alanı",
+    "sent_engines": "Hangi altyapıların etkin olduğu",
+    "sent_logs": "Dosya yolları ve belirteçler çıkarılmış son altyapı günlük satırları",
+    "sent_pages": "Son ziyaret edilen sayfa adları",
+    "not_sent": "Asla gönderilmez: sesiniz, metniniz, seslendirmeleriniz veya dosya adlarınız.",
+    "submit": "GitHub sorunu aç"
   },
   "crash": {
     "notice_unclean": "Önceki oturum {{ago}} önce düzgün kapanmadan sona erdi. Bu çoğu zaman zararsızdır — makine uykuya geçti, uygulama zorla kapatıldı veya bir VM/kapsayıcı durduruldu.",

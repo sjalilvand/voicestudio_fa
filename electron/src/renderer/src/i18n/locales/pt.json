@@ -1876,7 +1876,9 @@
     "deepl_base_url_help": "Endpoint personalizado da API DeepL (padrão: https://api.deepl.com/v2). Mudança para proxy/auto-hospedado.",
     "microsoft_base_url_help": "Ponto de extremidade personalizado do Azure Translator (padrão: https://api.cognitive.microsofttranslator.com).",
     "region": "Região",
-    "aws_profile": "Perfil AWS"
+    "aws_profile": "Perfil AWS",
+    "deepl_key_placeholder": "DeepL chave de API",
+    "microsoft_key_placeholder": "Microsoft chave de API"
   },
   "about": {
     "architecture": "Arquitetura",
@@ -2056,6 +2058,7 @@
     "setup_access": "Permita a escrita na pasta de dados da aplicação e tente novamente.",
     "setup_unsupported_platform": "Este Mac Intel não consegue executar o backend de IA local — o PyTorch não oferece wheels para macOS Intel. Conecte um backend remoto abaixo; nenhuma instalação local é necessária.",
     "setup_wrong_architecture": "Esta é a versão Intel (x64) do VoiceStudio executada pelo Rosetta num Mac com Apple Silicon, por isso o backend de IA local não pode ser instalado. Feche o app, instale por cima o DMG para Apple Silicon (arm64) e abra-o novamente — suas vozes e projetos são mantidos.",
+    "setup_missing_system_library": "Este sistema Windows não tem o Microsoft Visual C++ 2015-2022 Redistributable (x64), de que a extensão de áudio do PyTorch precisa. Instale-o a partir da Microsoft e prima Tentar novamente.",
     "download_apple_silicon": "Baixar a versão para Apple Silicon",
     "ready": "Motor pronto",
     "show_log": "Mostrar registro",
@@ -2079,7 +2082,23 @@
     "hint_spawn_blocked": "O sistema operacional ou o software de segurança recusou-se a iniciar o mecanismo local. Adicione a pasta de runtime do VoiceStudio às exclusões do antivírus (Windows: Segurança do Windows → Proteção contra vírus e ameaças → Gerenciar configurações → Exclusões), verifique se ela não está dentro de uma pasta sincronizada na nuvem, como o OneDrive, e tente novamente.",
     "hint_smart_app_control": "O Controle Inteligente de Aplicativos do Windows bloqueou o motor local. Ele não tem exceções por aplicativo, então uma exclusão no antivírus não ajuda. Desative-o em Segurança do Windows → Controle de aplicativos e navegador → Configurações do Controle Inteligente de Aplicativos (o Windows não consegue reativá-lo sem uma redefinição) ou conecte o VoiceStudio a um motor em outro computador e tente de novo.",
     "hint_slow_start": "O mecanismo ainda estava iniciando quando o tempo de espera acabou. Computadores lentos, principalmente sem GPU dedicada, e a primeira inicialização após uma instalação (o antivírus verifica cada arquivo novo) podem levar vários minutos. Feche aplicativos que consomem muita memória e tente novamente; as próximas inicializações são bem mais rápidas.",
-    "hint_synced_folder": "Este local está dentro de uma pasta sincronizada na nuvem (OneDrive, Dropbox, iCloud Drive, Google Drive). Marcadores somente online e bloqueio de arquivos quebram o ambiente Python. Mova o VoiceStudio para uma pasta local comum (por exemplo, C:\\VoiceStudio no Windows ou ~/VoiceStudio no macOS e no Linux) e configure-o novamente."
+    "hint_synced_folder": "Este local está dentro de uma pasta sincronizada na nuvem (OneDrive, Dropbox, iCloud Drive, Google Drive). Marcadores somente online e bloqueio de arquivos quebram o ambiente Python. Mova o VoiceStudio para uma pasta local comum (por exemplo, C:\\VoiceStudio no Windows ou ~/VoiceStudio no macOS e no Linux) e configure-o novamente.",
+    "cause_smart_app_control": "O Controle Inteligente de Aplicativos do Windows bloqueou o mecanismo",
+    "cause_spawn_blocked": "Um software de segurança impediu o mecanismo de iniciar",
+    "cause_native_crash": "O mecanismo travou ao iniciar (falha nativa)",
+    "cause_missing_env": "O ambiente Python está ausente ou incompleto",
+    "cause_permission": "Sem permissão para gravar na pasta do mecanismo",
+    "cause_synced_folder": "A pasta do mecanismo está dentro de uma pasta sincronizada na nuvem",
+    "cause_slow_start": "O mecanismo ainda está iniciando em um computador lento",
+    "choose_folder": "Escolher outra pasta",
+    "copy_diagnostics": "Copiar diagnóstico",
+    "diagnostics_copied": "Diagnóstico copiado",
+    "details": "Detalhes",
+    "pill_starting": "Iniciando",
+    "pill_recovering": "Recuperando",
+    "pill_failed": "Falhou",
+    "pill_repeats": "{{count}} vezes seguidas",
+    "offline_bar": "Mecanismo ocupado, reconectando automaticamente"
   },
   "bootstrap": {
     "checking": "Verificando o ambiente…",
@@ -2374,7 +2393,8 @@
     "storage_temp": "Arquivos temporários",
     "change": "Alterar…",
     "reset_default": "Redefinir para o padrão",
-    "region_label": "Região de download"
+    "region_label": "Região de download",
+    "free_space": "{{free}} GB livres nesta unidade, são necessários cerca de {{needed}} GB"
   },
   "asr_missing": {
     "message": "Nenhum modelo de fala para texto está instalado — este recurso precisa de um para transcrever áudio.",
@@ -2516,7 +2536,18 @@
     "staleTitle": "Atualização disponível",
     "staleMessage": "Você está usando o VoiceStudio {{current}}, mas a {{latest}} já foi lançada — este bug pode já estar corrigido. Ver a versão mais recente antes de reportar?",
     "staleView": "Ver atualização",
-    "staleFileAnyway": "Reportar mesmo assim"
+    "staleFileAnyway": "Reportar mesmo assim",
+    "summary_label": "O que deu errado?",
+    "summary_placeholder": "Uma linha, por exemplo: a dublagem para em 40%",
+    "summary_required": "Adicione primeiro uma descrição de uma linha.",
+    "sent_title": "O que será enviado",
+    "sent_app": "Versão e compilação do aplicativo",
+    "sent_system": "Sistema operacional, GPU, memória e espaço livre em disco",
+    "sent_engines": "Quais mecanismos estão ativos",
+    "sent_logs": "Últimas linhas do registro do mecanismo, sem caminhos de arquivo e tokens",
+    "sent_pages": "Nomes das páginas visitadas recentemente",
+    "not_sent": "Nunca enviados: seu áudio, texto, vozes ou nomes de arquivo.",
+    "submit": "Abrir issue no GitHub"
   },
   "crash": {
     "notice_unclean": "A sessão anterior terminou sem um encerramento limpo há {{ago}}. Muitas vezes é inofensivo — o computador dormiu, o app foi encerrado à força ou uma VM/contêiner parou.",
