@@ -378,7 +378,8 @@
   },
   "paneActions": {
     "collapse": "Zwiń panel",
-    "edit": "Edytuj profil głosu"
+    "edit": "Edytuj profil głosu",
+    "expand": "Rozwiń panel"
   },
   "modelSettings": {
     "models": "Modele",
@@ -997,7 +998,8 @@
     "play": "Odtwórz",
     "pause": "Wstrzymaj",
     "seek": "Pozycja odtwarzania",
-    "missing": "Brak pliku audio."
+    "missing": "Brak pliku audio.",
+    "now_playing": "Teraz odtwarzane"
   },
   "logs": {
     "no_tauri_log": "Brak jeszcze logowania Tauri na dysku — uruchom go za pomocą wersji desktopowej, aby go utworzyć",
