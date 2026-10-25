@@ -373,7 +373,8 @@
     "inactive": "Etkin değil",
     "translation": "Çeviri",
     "diarisation": "Konuşmacı ayrıştırma",
-    "localDevice": "Yerel cihaz"
+    "localDevice": "Yerel cihaz",
+    "localShort": "Yerel"
   },
   "paneActions": {
     "collapse": "Paneli daralt",
@@ -625,7 +626,10 @@
     "replace_reference": "Referansı değiştir",
     "keep_reference": "Mevcut referansı koru",
     "new_reference": "Yeni referans: {{name}}",
-    "replace_reference_hint": "Kaydetmek bu sesin referans örneğini değiştirir. Yeni klip farklı bir konuşmacıya ait olabileceğinden kilitli kayıt ve kendi ses doğrulaması temizlenir. Yeni klibin otomatik olarak yazıya dökülmesi için transkripti boş bırakın."
+    "replace_reference_hint": "Kaydetmek bu sesin referans örneğini değiştirir. Yeni klip farklı bir konuşmacıya ait olabileceğinden kilitli kayıt ve kendi ses doğrulaması temizlenir. Yeni klibin otomatik olarak yazıya dökülmesi için transkripti boş bırakın.",
+    "cannotCloneUseDesign": "Bu model ses klonlayamaz. Ses tasarımında bir ses tarif edin veya klonlayan bir model seçin.",
+    "savedTab": "Kayıtlı",
+    "recentsTab": "Son"
   },
   "designWorkspace": {
     "title": "Tasarla",

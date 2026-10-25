@@ -687,7 +687,7 @@ export function VoicesSidebar({
               className="min-w-0 flex-1 rounded-lg text-sidebar-foreground/60 hover:bg-sidebar-accent/50 data-active:bg-[var(--sidebar-row-active)] data-active:text-sidebar-foreground dark:data-active:border-transparent dark:data-active:bg-[var(--sidebar-row-active)] dark:data-active:text-sidebar-foreground"
             >
               <UsersRoundIcon aria-hidden="true" />
-              <span className="min-w-0 truncate">{t('clone.saved_profiles')}</span>
+              <span className="min-w-0 truncate">{t('clone.savedTab')}</span>
             </TabsTrigger>
             <TabsTrigger
               value="takes"
@@ -696,7 +696,7 @@ export function VoicesSidebar({
               className="min-w-0 flex-1 rounded-lg text-sidebar-foreground/60 hover:bg-sidebar-accent/50 data-active:bg-[var(--sidebar-row-active)] data-active:text-sidebar-foreground dark:data-active:border-transparent dark:data-active:bg-[var(--sidebar-row-active)] dark:data-active:text-sidebar-foreground"
             >
               <HistoryIcon aria-hidden="true" />
-              <span className="min-w-0 truncate">{t('clone.history_title')}</span>
+              <span className="min-w-0 truncate">{t('clone.recentsTab')}</span>
             </TabsTrigger>
           </TabsList>
         </div>

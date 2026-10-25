@@ -375,7 +375,8 @@
     "inactive": "Inativo",
     "translation": "Tradução",
     "diarisation": "Diarização",
-    "localDevice": "Dispositivo local"
+    "localDevice": "Dispositivo local",
+    "localShort": "Local"
   },
   "paneActions": {
     "collapse": "Recolher painel",
@@ -627,7 +628,10 @@
     "replace_reference": "Substituir referência",
     "keep_reference": "Manter a referência atual",
     "new_reference": "Nova referência: {{name}}",
-    "replace_reference_hint": "Salvar substitui a amostra de referência desta voz. A tomada bloqueada e a verificação de voz própria são removidas porque o novo clipe pode ser de outra pessoa. Deixe a transcrição em branco para transcrever o novo clipe automaticamente."
+    "replace_reference_hint": "Salvar substitui a amostra de referência desta voz. A tomada bloqueada e a verificação de voz própria são removidas porque o novo clipe pode ser de outra pessoa. Deixe a transcrição em branco para transcrever o novo clipe automaticamente.",
+    "cannotCloneUseDesign": "Este modelo não consegue clonar uma voz. Descreva uma em Design de voz ou escolha um modelo que clone.",
+    "savedTab": "Salvas",
+    "recentsTab": "Recentes"
   },
   "designWorkspace": {
     "title": "Desenhar",

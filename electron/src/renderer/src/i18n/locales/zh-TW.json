@@ -373,7 +373,8 @@
     "inactive": "未啟用",
     "translation": "翻譯",
     "diarisation": "說話者分離",
-    "localDevice": "本機裝置"
+    "localDevice": "本機裝置",
+    "localShort": "本機"
   },
   "paneActions": {
     "collapse": "收合面板",
@@ -625,7 +626,10 @@
     "replace_reference": "替換參考音訊",
     "keep_reference": "保留目前的參考音訊",
     "new_reference": "新參考音訊：{{name}}",
-    "replace_reference_hint": "儲存後將替換此音色的參考樣本。由於新片段可能來自其他說話者，已鎖定的片段和本人聲音驗證會被清除。逐字稿留空即可自動轉寫新片段。"
+    "replace_reference_hint": "儲存後將替換此音色的參考樣本。由於新片段可能來自其他說話者，已鎖定的片段和本人聲音驗證會被清除。逐字稿留空即可自動轉寫新片段。",
+    "cannotCloneUseDesign": "此模型無法複製聲音。請在聲音設計中描述一個聲音，或選擇支援複製的模型。",
+    "savedTab": "已儲存",
+    "recentsTab": "最近"
   },
   "designWorkspace": {
     "title": "設計聲音",

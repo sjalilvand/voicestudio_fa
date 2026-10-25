@@ -375,7 +375,8 @@
     "inactive": "Inactif",
     "translation": "Traduction",
     "diarisation": "Diarisation",
-    "localDevice": "Appareil local"
+    "localDevice": "Appareil local",
+    "localShort": "Local"
   },
   "paneActions": {
     "collapse": "Réduire le panneau",
@@ -627,7 +628,10 @@
     "replace_reference": "Remplacer la référence",
     "keep_reference": "Conserver la référence actuelle",
     "new_reference": "Nouvelle référence : {{name}}",
-    "replace_reference_hint": "L'enregistrement remplace l'échantillon de référence de cette voix. La prise verrouillée et la vérification de votre propre voix sont effacées, car le nouveau clip peut provenir d'une autre personne. Laissez la transcription vide pour transcrire automatiquement le nouveau clip."
+    "replace_reference_hint": "L'enregistrement remplace l'échantillon de référence de cette voix. La prise verrouillée et la vérification de votre propre voix sont effacées, car le nouveau clip peut provenir d'une autre personne. Laissez la transcription vide pour transcrire automatiquement le nouveau clip.",
+    "cannotCloneUseDesign": "Ce modèle ne peut pas cloner une voix. Décrivez-en une dans Conception de voix ou choisissez un modèle qui clone.",
+    "savedTab": "Enregistrées",
+    "recentsTab": "Récentes"
   },
   "designWorkspace": {
     "title": "Concevoir",

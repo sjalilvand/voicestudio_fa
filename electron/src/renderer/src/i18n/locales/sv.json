@@ -373,7 +373,8 @@
     "inactive": "Inaktiv",
     "translation": "Översättning",
     "diarisation": "Diarisering",
-    "localDevice": "Lokal enhet"
+    "localDevice": "Lokal enhet",
+    "localShort": "Lokal"
   },
   "paneActions": {
     "collapse": "Fäll ihop panelen",
@@ -625,7 +626,10 @@
     "replace_reference": "Ersätt referens",
     "keep_reference": "Behåll nuvarande referens",
     "new_reference": "Ny referens: {{name}}",
-    "replace_reference_hint": "När du sparar ersätts röstens referensprov. Den låsta tagningen och verifieringen av egen röst rensas eftersom det nya klippet kan vara en annan talare. Lämna transkriptionen tom för att transkribera det nya klippet automatiskt."
+    "replace_reference_hint": "När du sparar ersätts röstens referensprov. Den låsta tagningen och verifieringen av egen röst rensas eftersom det nya klippet kan vara en annan talare. Lämna transkriptionen tom för att transkribera det nya klippet automatiskt.",
+    "cannotCloneUseDesign": "Den här modellen kan inte klona en röst. Beskriv en i Röstdesign eller välj en modell som klonar.",
+    "savedTab": "Sparade",
+    "recentsTab": "Senaste"
   },
   "designWorkspace": {
     "title": "Designa",

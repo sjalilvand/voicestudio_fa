@@ -373,7 +373,8 @@
     "inactive": "Không hoạt động",
     "translation": "Dịch thuật",
     "diarisation": "Phân tách người nói",
-    "localDevice": "Thiết bị cục bộ"
+    "localDevice": "Thiết bị cục bộ",
+    "localShort": "Cục bộ"
   },
   "paneActions": {
     "collapse": "Thu gọn bảng",
@@ -625,7 +626,10 @@
     "replace_reference": "Thay mẫu tham chiếu",
     "keep_reference": "Giữ mẫu tham chiếu hiện tại",
     "new_reference": "Mẫu tham chiếu mới: {{name}}",
-    "replace_reference_hint": "Khi lưu, mẫu tham chiếu của giọng này sẽ được thay thế. Bản thu đã khóa và xác minh giọng của chính bạn sẽ bị xóa vì đoạn mới có thể là của người nói khác. Để trống bản chép lời để tự động chép lời đoạn mới."
+    "replace_reference_hint": "Khi lưu, mẫu tham chiếu của giọng này sẽ được thay thế. Bản thu đã khóa và xác minh giọng của chính bạn sẽ bị xóa vì đoạn mới có thể là của người nói khác. Để trống bản chép lời để tự động chép lời đoạn mới.",
+    "cannotCloneUseDesign": "Mô hình này không thể nhân bản giọng. Hãy mô tả giọng trong Thiết kế giọng, hoặc chọn mô hình hỗ trợ nhân bản.",
+    "savedTab": "Đã lưu",
+    "recentsTab": "Gần đây"
   },
   "designWorkspace": {
     "title": "Thiết kế",

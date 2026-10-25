@@ -377,7 +377,8 @@
     "inactive": "Nieaktywne",
     "translation": "Tłumaczenie",
     "diarisation": "Diaryzacja",
-    "localDevice": "Urządzenie lokalne"
+    "localDevice": "Urządzenie lokalne",
+    "localShort": "Lokalnie"
   },
   "paneActions": {
     "collapse": "Zwiń panel",
@@ -629,7 +630,10 @@
     "replace_reference": "Zastąp próbkę referencyjną",
     "keep_reference": "Zachowaj obecną próbkę",
     "new_reference": "Nowa próbka: {{name}}",
-    "replace_reference_hint": "Zapisanie zastępuje próbkę referencyjną tego głosu. Zablokowane nagranie i weryfikacja własnego głosu zostaną wyczyszczone, ponieważ nowy klip może należeć do innej osoby. Zostaw transkrypcję pustą, aby nowy klip został przepisany automatycznie."
+    "replace_reference_hint": "Zapisanie zastępuje próbkę referencyjną tego głosu. Zablokowane nagranie i weryfikacja własnego głosu zostaną wyczyszczone, ponieważ nowy klip może należeć do innej osoby. Zostaw transkrypcję pustą, aby nowy klip został przepisany automatycznie.",
+    "cannotCloneUseDesign": "Ten model nie potrafi klonować głosu. Opisz głos w Projektowaniu głosu lub wybierz model, który klonuje.",
+    "savedTab": "Zapisane",
+    "recentsTab": "Ostatnie"
   },
   "designWorkspace": {
     "title": "Projektuj",

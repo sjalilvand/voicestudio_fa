@@ -541,7 +541,10 @@
     "replace_reference": "Replace reference",
     "keep_reference": "Keep current reference",
     "new_reference": "New reference: {{name}}",
-    "replace_reference_hint": "Saving replaces this voice's reference sample. Its locked take and own-voice verification are cleared because the new clip may be a different speaker. Leave the transcript blank to transcribe the new clip automatically."
+    "replace_reference_hint": "Saving replaces this voice's reference sample. Its locked take and own-voice verification are cleared because the new clip may be a different speaker. Leave the transcript blank to transcribe the new clip automatically.",
+    "cannotCloneUseDesign": "This model can't clone a voice. Describe one in Voice design, or choose a model that clones.",
+    "savedTab": "Saved",
+    "recentsTab": "Recents"
   },
   "recording": {
     "cleaned_loaded": "Recording cleaned and loaded.",
@@ -740,7 +743,8 @@
     "inactive": "Inactive",
     "translation": "Translation",
     "diarisation": "Diarisation",
-    "localDevice": "Local device"
+    "localDevice": "Local device",
+    "localShort": "Local"
   },
   "paneActions": {
     "collapse": "Collapse pane",
