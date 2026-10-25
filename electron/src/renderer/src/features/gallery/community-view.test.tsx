@@ -119,6 +119,8 @@ it('links only real GitHub handles, never the house author', () => {
   expect(authorProfileUrl('-bad')).toBeNull();
   expect(authorProfileUrl('a'.repeat(40))).toBeNull();
   expect(authorProfileUrl(undefined)).toBeNull();
+  expect(authorProfileUrl(123)).toBeNull();
+  expect(authorProfileUrl({ login: 'x' })).toBeNull();
 });
 
 it('opens the submission form only after an explicit click', async () => {

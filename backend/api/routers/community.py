@@ -61,6 +61,7 @@ _SOURCE_RE = re.compile(
 _ITEM_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_MAX_CREDIT_CHARS = 120
 
 # A gallery open may touch this loader several times (grid, preview, use). Keep
 # a successful response for six hours, then revalidate it once. On a network
@@ -234,6 +235,12 @@ def validate_item(raw: dict) -> Optional[dict]:
         facets.setdefault("whisper", False)
         facets.setdefault("lang", it["language"])
     it["facets"] = facets
+    # Credit fields are rendered and string-matched by every client; a remote
+    # number or object here must not reach them as anything but absent.
+    for key in ("author", "license"):
+        value = it.pop(key, None)
+        if isinstance(value, str) and value.strip():
+            it[key] = value.strip()[:_MAX_CREDIT_CHARS]
     # ``added_at`` drives the gallery's "new" badge. It is remote text, so it
     # survives only as a real ISO date; anything else is dropped, not guessed.
     added_at = it.pop("added_at", None)

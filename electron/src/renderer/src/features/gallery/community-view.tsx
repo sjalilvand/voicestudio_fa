@@ -43,14 +43,16 @@ const GITHUB_HANDLE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/;
 
 /** Joined the gallery in the last 30 days (``added_at`` is a validated ISO date). */
 export function isNewItem(item: CommunityItem, now = Date.now()): boolean {
-  if (!item.added_at) return false;
+  if (typeof item.added_at !== 'string') return false;
   const added = Date.parse(item.added_at + 'T00:00:00Z');
   return Number.isFinite(added) && added <= now && now - added < NEW_FOR_MS;
 }
 
 /** Profile URL for a community author who credited themselves by GitHub handle. */
-export function authorProfileUrl(author?: string): string | null {
-  if (!author || !GITHUB_HANDLE.test(author) || author.toLowerCase() === 'voicestudio') return null;
+export function authorProfileUrl(author?: unknown): string | null {
+  // Remote data: an older backend may still pass a non-string through.
+  if (typeof author !== 'string' || !GITHUB_HANDLE.test(author)) return null;
+  if (author.toLowerCase() === 'voicestudio') return null;
   return 'https://github.com/' + author;
 }
 

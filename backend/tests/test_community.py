@@ -196,6 +196,20 @@ def test_added_at_is_kept_only_as_a_real_date(raw, kept):
     assert item.get("added_at") == kept
 
 
+@pytest.mark.parametrize("raw, kept", [
+    ("  iluucasz ", "iluucasz"),
+    (123, None),
+    ({"login": "x"}, None),
+    ("   ", None),
+    ("x" * 500, "x" * 120),
+])
+def test_credit_fields_are_bounded_strings(raw, kept):
+    item = community.validate_item({**_FIXTURE["items"][0], "author": raw, "license": raw})
+    assert item is not None
+    assert item.get("author") == kept
+    assert item.get("license") == kept
+
+
 def test_sources_endpoint(client):
     assert client.get("/community/sources").json()["sources"]
 
