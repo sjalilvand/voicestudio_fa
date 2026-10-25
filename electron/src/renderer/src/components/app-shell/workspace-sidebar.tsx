@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { usePaneResize } from '@/hooks/use-pane-resize';
 import { useWindowFullscreen } from '@/hooks/use-window-fullscreen';
+import { MAC_TRAFFIC_LIGHTS_BAND } from '@shared/utils/windowChrome';
 import { useWorkspace } from '@/lib/store/workspace';
 import { useWorkspaceSidebarState } from './use-workspace-sidebar';
 import { WorkspaceNavigation } from './workspace-menu';
@@ -54,17 +55,14 @@ export function WorkspaceSidebar() {
             <span
               aria-hidden="true"
               data-slot="compact-sidebar-divider"
-              className={cn(
-                'pointer-events-none absolute right-0 bottom-0 w-px bg-border/50',
-                trafficLights ? 'top-[72px]' : 'top-12',
-              )}
+              style={{ top: 48 + (trafficLights ? MAC_TRAFFIC_LIGHTS_BAND : 0) }}
+              className="pointer-events-none absolute right-0 bottom-0 w-px bg-border/50"
             />
           )}
           <div
-            className={cn(
-              'workspace-titlebar flex shrink-0 justify-center',
-              trafficLights ? 'min-h-[72px] items-end pb-1' : 'h-12 items-center',
-            )}
+            data-slot="titlebar-row"
+            style={trafficLights ? { paddingTop: MAC_TRAFFIC_LIGHTS_BAND } : undefined}
+            className="workspace-titlebar box-content flex h-12 shrink-0 items-center justify-center"
           >
             {/* The rail can always reopen itself, on every platform: the
                 brand icon alone gave Windows/Linux no local control. */}
@@ -127,12 +125,11 @@ export function WorkspaceSidebar() {
             className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-40 w-full object-cover object-right opacity-25 [mask-image:linear-gradient(black,transparent)] dark:opacity-40"
           />
           <header
-            className={cn(
-              'workspace-titlebar flex shrink-0 gap-2 px-3',
-              // The traffic lights get their own row above the brand, so the narrow
-              // column never has to reserve their width beside the wordmark.
-              trafficLights ? 'min-h-[72px] items-end pb-2' : 'items-center',
-            )}
+            data-slot="titlebar-row"
+            // The traffic lights own a strip above the brand (one shared constant
+            // with the main process); this drag row pads past it, never under it.
+            style={trafficLights ? { paddingTop: MAC_TRAFFIC_LIGHTS_BAND } : undefined}
+            className="workspace-titlebar box-content flex h-14 shrink-0 items-center gap-2 px-3"
           >
             <Link
               to="/"
