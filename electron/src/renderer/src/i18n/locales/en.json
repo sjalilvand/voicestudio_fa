@@ -102,7 +102,11 @@
     "dub": "Translate and dub audio or video.",
     "stories": "Create scenes with multiple voices.",
     "audiobook": "Build audiobooks with chapters.",
-    "transcribe": "Turn recordings into text."
+    "transcribe": "Turn recordings into text.",
+    "creatorCoreTeam": "Creator and Core Team",
+    "coreTeam": "Core Team",
+    "follow": "Follow",
+    "website": "Website"
   },
   "twilioIntegration": {
     "exposureWarning": "Turning this on opens a separate local port that your tunnel publishes to the internet. Only requests signed with your Twilio Auth Token are accepted; the rest of VoiceStudio stays private.",
@@ -603,7 +607,8 @@
     "unmute": "Unmute",
     "volume": "Volume",
     "exit_fullscreen": "Exit full screen",
-    "unavailable": "Playback unavailable"
+    "unavailable": "Playback unavailable",
+    "now_playing": "Now playing"
   },
   "common": {
     "close": "Close",
@@ -736,7 +741,8 @@
   },
   "paneActions": {
     "collapse": "Collapse pane",
-    "edit": "Edit voice profile"
+    "edit": "Edit voice profile",
+    "expand": "Expand pane"
   },
   "modelSettings": {
     "models": "Models",
@@ -2606,9 +2612,9 @@
     "sent_app": "App version and build",
     "sent_system": "Operating system, GPU, memory and free disk space",
     "sent_engines": "Which engines are active",
-    "sent_logs": "Recent engine log lines, with file paths and tokens removed",
+    "sent_logs": "Recent engine log lines, with your home folder path and tokens removed",
     "sent_pages": "Names of recently visited pages",
-    "not_sent": "Never sent: your audio, text, voices or file names.",
+    "not_sent": "Never sent: your audio, text or voices. File names can appear in logs or your description, so review the GitHub preview before submitting.",
     "submit": "Open GitHub issue"
   },
   "crash": {
@@ -3920,6 +3926,135 @@
       "retry": "Try again",
       "rate_limited": "Too many reports from this network. Try again later.",
       "invalid": "This report couldn't be sent. Update the app and try again."
+    },
+    "production": {
+      "new": "New project",
+      "script_hint": "Use # Chapter title for chapters and [voice:Name] at the start of a line to switch character. Plain text only; other markup is read aloud.",
+      "conversion_hint": "Choose an audio clip up to 30 seconds. Conversion transcribes it and speaks it in the selected voice; it does not preserve the original performance.",
+      "normalize_text": "Clean up text"
+    },
+    "calls": {
+      "remote_control": "Allow paired call control",
+      "remote_control_hint": "Allow API-key-authenticated phones to place and manage calls. Call settings stay on this computer.",
+      "hint": "Calls run through your paired computer and its configured Twilio number. Enable paired call control on that computer first.",
+      "authentication": "Pair using the computer’s API key to control calls. A sharing PIN cannot authorize calls.",
+      "billing": "Twilio call charges apply.",
+      "clone_hint": "Whisper transcribes your sample. A separate cloning model generates a cloned preview before saving; both models are required."
+    },
+    "host": {
+      "title": "Phone speech API",
+      "hint": "Serve the selected installed voice through an OpenAI-style speech endpoint and MCP (2025-11-25). Runs only while this screen is open and the app is active.",
+      "lan": "Allow local network",
+      "lan_hint": "Off: this phone only. On: devices on your network can connect using the temporary bearer token. Keep the token private.",
+      "start": "Start server",
+      "copy": "Copy bearer token",
+      "running": "Server running",
+      "capabilities_hint": "Expose only the installed models and voice you choose. Speech, transcription and translation run on this phone while this screen stays open.",
+      "allow_speech": "Allow speech generation",
+      "allow_transcription": "Allow transcription",
+      "allow_translation": "Allow translation",
+      "voice_source": "Voice source",
+      "preset": "Preset voices",
+      "saved": "Saved voices",
+      "audio_hint": "Transcription accepts base64 PCM16 mono WAV, 8–24 kHz, up to 30 seconds."
+    },
+    "books": {
+      "import_failed": "Couldn't import this book. Use an unencrypted EPUB, text PDF, or UTF-8 text file (up to 64 MB).",
+      "no_text": "No readable text found. Scanned PDFs need text recognition before import.",
+      "export_failed": "Couldn't export audio. M4B supports up to 255 chapters.",
+      "invalid_controls": "Use speeds from 0.5 to 2, pauses up to 30 seconds, and nonempty pronunciation entries.",
+      "controls_hint": "Import EPUB, text PDF, or TXT. Add [pause:0.5] for seconds of silence; start a line with [speed:1.25] to change its speed. Unchanged lines reuse saved audio.",
+      "line_speed": "Line speed",
+      "restore_recipe": "Edit saved voice recipe",
+      "save_recipe_copy": "Save as a new voice"
+    },
+    "editing": {
+      "undo": "Undo",
+      "redo": "Redo",
+      "subtitles": "Subtitles",
+      "import_subtitles": "Import SRT / VTT",
+      "export_srt": "Export SRT",
+      "export_vtt": "Export VTT",
+      "source_text": "Source text",
+      "original": "Original audio",
+      "generated": "Generated audio",
+      "split_at": "Split at",
+      "split": "Split segment",
+      "merge": "Merge with next",
+      "replace_subtitles": "Replace subtitle timeline?",
+      "replace": "Replace",
+      "replace_subtitles_detail": "This replaces the segment timeline for this language. Other languages may need translation again. You can undo before generating.",
+      "preview_unavailable": "Generate this segment before previewing its audio.",
+      "subtitle_invalid": "Choose a valid SRT or VTT file with cues of 30 seconds or less.",
+      "subtitle_missing": "Translate every segment before exporting subtitles.",
+      "split_invalid": "Choose a split point inside a segment with enough text on both sides.",
+      "merge_invalid": "Merge adjacent segments with the same voice and a combined duration of 30 seconds or less.",
+      "waveform": "Audio waveform"
+    },
+    "jobs": {
+      "title": "Phone processing",
+      "checkpointed": "Completed steps are saved. Cancel and resume when needed.",
+      "power_paused": "Processing paused to protect the battery or cool the phone. Resume when conditions improve.",
+      "background_paused": "Paused in the background. Reopen this task and resume from the saved steps.",
+      "requesting_gpu": "Requesting background GPU access…",
+      "requesting_cpu": "Requesting background CPU time…",
+      "continued_gpu": "GPU continuation granted; iOS can still pause or end this task.",
+      "continued_cpu": "CPU continuation granted; iOS can still pause or end this task.",
+      "switching_cpu": "Saving progress and releasing the GPU before continuing on CPU…",
+      "background_limited": "Background time is limited by iOS. Completed steps are saved if time expires.",
+      "background_requestable": "This phone supports background GPU requests. Each task still needs iOS approval.",
+      "gpu_unavailable": "Background GPU is unavailable here. Use CPU continuation or reopen to resume saved steps.",
+      "cpu_fallback": "Allow CPU continuation when background GPU is unavailable",
+      "cpu_tradeoff": "CPU continuation is slower and may use more battery. Foreground work normally uses the GPU.",
+      "cpu_unavailable": "CPU continuation is unavailable for this model in the installed build. Saved steps can still resume in the foreground.",
+      "resume_checkpoint": "Resume saved task",
+      "foreground_service": "A foreground service keeps this task running while Android allows it."
+    },
+    "flow": {
+      "import_media": "Import audio or video",
+      "template_clean": "Clean and speak",
+      "template_translate": "Translate and speak",
+      "template_transcribe": "Transcribe and translate",
+      "contains": "Continue if text contains (case-sensitive)",
+      "skip": "When absent, skip {{count}} steps",
+      "skip_label": "Steps to skip when absent",
+      "retries": "Retries: {{count}}",
+      "retries_label": "Retries after an error",
+      "step_transcribe": "Transcribe media",
+      "step_condition": "Condition"
+    },
+    "integration": {
+      "received": "Received content",
+      "review": "Review the shared content before running a task. Nothing starts automatically.",
+      "shortcut_speak": "Open speech",
+      "shortcut_dictate": "Open dictation",
+      "widget_description": "Open speech or dictation. Recording starts only when you tap Start.",
+      "text": "Text"
+    },
+    "export": {
+      "failed": "Couldn't export audio. Check free storage and try again."
+    },
+    "processing": {
+      "audio_editor": "Audio editor",
+      "hint": "Offline speech editing: 24 kHz mono. Your source stays unchanged.",
+      "select_audio": "Choose audio",
+      "fade_in": "Fade in (seconds)",
+      "fade_out": "Fade out (seconds)",
+      "gain_db": "Gain (dB)",
+      "normalize": "Normalize peak",
+      "target_peak": "Target peak (dBFS)",
+      "noise_gate": "Noise gate",
+      "gate_threshold": "Gate threshold (dBFS)",
+      "process": "Apply edits",
+      "result": "Processed audio",
+      "peak": "Peak",
+      "changed_settings": "Settings changed. Apply edits to preview or export the updated audio.",
+      "preview_hint": "Source preview plays up to 30 seconds from the trim start.",
+      "invalid": "Check the trim times, fade lengths, and audio levels.",
+      "segment_gain": "Segment volume",
+      "mute": "Mute segment",
+      "record_consent": "I have permission to use this recording for voice conversion.",
+      "merge_levels": "Use the same volume and mute settings before combining segments."
     }
   },
   "failureCause": {

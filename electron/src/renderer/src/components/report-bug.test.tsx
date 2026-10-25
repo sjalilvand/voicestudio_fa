@@ -429,3 +429,19 @@ it('lists what will be sent and puts the description in the issue title and body
   expect(url.searchParams.get('title')).not.toContain('private-user');
   expect(url.searchParams.get('body')).toContain('**Summary:** Dubbing stops at 40%');
 });
+
+it('never splits an emoji when truncating the description for the title', async () => {
+  mock.api.mockResolvedValue({});
+  render(<ReportBug />);
+  await submitReport('a'.repeat(99) + '😀 tail');
+  await waitFor(() => expect(mock.open).toHaveBeenCalledTimes(1));
+  const title = new URL(mock.open.mock.calls[0]![0]).searchParams.get('title')!;
+  expect(title).toBe('[Bug] ' + 'a'.repeat(99) + '😀');
+});
+
+it('survives a lone surrogate in the description', async () => {
+  mock.api.mockResolvedValue({});
+  render(<ReportBug />);
+  await submitReport('broken \ud83d text');
+  await waitFor(() => expect(mock.open).toHaveBeenCalledTimes(1));
+});
