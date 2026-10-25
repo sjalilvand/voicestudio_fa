@@ -623,7 +623,8 @@
     "replace_reference": "Referenz ersetzen",
     "keep_reference": "Aktuelle Referenz behalten",
     "new_reference": "Neue Referenz: {{name}}",
-    "replace_reference_hint": "Beim Speichern wird das Referenzbeispiel dieser Stimme ersetzt. Die fixierte Aufnahme und die Bestätigung der eigenen Stimme werden zurückgesetzt, da der neue Clip von einer anderen Person stammen kann. Lass das Transkript leer, um den neuen Clip automatisch zu transkribieren."
+    "replace_reference_hint": "Beim Speichern wird das Referenzbeispiel dieser Stimme ersetzt. Die fixierte Aufnahme und die Bestätigung der eigenen Stimme werden zurückgesetzt, da der neue Clip von einer anderen Person stammen kann. Lass das Transkript leer, um den neuen Clip automatisch zu transkribieren.",
+    "cannotCloneUseDesign": "Dieses Modell kann keine Stimme klonen. Beschreibe eine im Stimmdesign oder wähle ein Modell, das klonen kann."
   },
   "designWorkspace": {
     "title": "Designen",

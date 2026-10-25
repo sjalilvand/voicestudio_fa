@@ -625,7 +625,8 @@
     "replace_reference": "Sostituisci riferimento",
     "keep_reference": "Mantieni il riferimento attuale",
     "new_reference": "Nuovo riferimento: {{name}}",
-    "replace_reference_hint": "Il salvataggio sostituisce il campione di riferimento di questa voce. La ripresa bloccata e la verifica della propria voce vengono cancellate perché la nuova clip potrebbe essere di un'altra persona. Lascia vuota la trascrizione per trascrivere automaticamente la nuova clip."
+    "replace_reference_hint": "Il salvataggio sostituisce il campione di riferimento di questa voce. La ripresa bloccata e la verifica della propria voce vengono cancellate perché la nuova clip potrebbe essere di un'altra persona. Lascia vuota la trascrizione per trascrivere automaticamente la nuova clip.",
+    "cannotCloneUseDesign": "Questo modello non può clonare una voce. Descrivine una in Design vocale o scegli un modello che clona."
   },
   "designWorkspace": {
     "title": "Progetta",
