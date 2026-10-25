@@ -18,6 +18,7 @@ vi.mock('react-i18next', () => ({
 }));
 
 import { EngineFamilyList } from './engine-family-list';
+import { ModelStoreShownContext } from './model-store-context';
 
 afterEach(() => {
   cleanup();
@@ -160,4 +161,59 @@ it('searches hosted models and opens the engine that holds the match', async () 
     'true',
   );
   expect(screen.getByRole('group', { name: 'CSM' })).toBeInTheDocument();
+});
+
+it('leaves install-only model rows to the first-run store shown above it', async () => {
+  serve();
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <ModelStoreShownContext.Provider value>
+        <EngineFamilyList family="tts" />
+      </ModelStoreShownContext.Provider>
+    </QueryClientProvider>,
+  );
+  await screen.findByRole('group', { name: 'OmniVoice' });
+  const headings = screen.getAllByRole('heading', { level: 3 }).map((node) => node.textContent);
+  expect(headings).toEqual(['OmniVoice', 'MLX-Audio', 'VoxCPM']);
+});
+
+it('opens the active multi-model engine once its models arrive after the engine list', async () => {
+  let release!: () => void;
+  const models = new Promise<void>((resolve) => (release = resolve));
+  serve();
+  const fallback = mock.api.getMockImplementation()!;
+  mock.api.mockImplementation(async (path: string, ...rest: unknown[]) => {
+    if (path === '/engines') {
+      const engines = (await fallback(path, ...rest)) as { tts: Record<string, unknown> };
+      return { tts: { ...engines.tts, active: 'mlx-audio', active_model: 'csm' } };
+    }
+    if (path === '/models') await models;
+    return fallback(path, ...rest);
+  });
+  renderList();
+  await screen.findByRole('heading', { name: 'MLX-Audio' });
+  release();
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'MLX-Audio' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    ),
+  );
+});
+
+it('reports a failed model catalogue with a retry instead of hiding downloads', async () => {
+  serve();
+  const fallback = mock.api.getMockImplementation()!;
+  mock.api.mockImplementation((path: string, ...rest: unknown[]) =>
+    path === '/models' ? Promise.reject(new Error('catalogue down')) : fallback(path, ...rest),
+  );
+  render(
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
+      <EngineFamilyList family="tts" />
+    </QueryClientProvider>,
+  );
+  expect(await screen.findByText('Error: catalogue down')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'backend.retry' })).toBeInTheDocument();
 });

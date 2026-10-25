@@ -148,5 +148,6 @@ export function modelFamilyItem({
       ...rank,
     },
     folded: model.supported === false,
+    installOnly: !select,
   };
 }

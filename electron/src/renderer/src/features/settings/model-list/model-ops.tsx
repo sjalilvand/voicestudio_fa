@@ -150,8 +150,7 @@ export function useModelOps({
       `/model/unload/${encodeURIComponent(entry.id)}`,
       { method: 'POST' },
     );
-    if (result.success === false)
-      throw new Error(result.reason || t('modelMaintenance.unloadFailed'));
+    if (result.success === false) throw new Error(result.reason || t('common.error'));
   };
   const unloadForRemoval = async (model: CatalogueModel) => {
     const resident = residentFor(model);

@@ -10,6 +10,7 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { SettingsActionError } from './settings-action-error';
 import type { EngineSelectionResult } from '@/lib/engine-selection-feedback';
 import { useModelCatalogue } from './model-catalogue-query';
+import { ModelLicense } from './model-license';
 import {
   familyModels,
   modelSearchText,
@@ -55,7 +56,7 @@ export function TranslationSettings() {
   const { t } = useTranslation();
   const query = useTranslationEngines();
   const catalogue = useModelCatalogue();
-  const ops = useModelOps({ trackResidency: false });
+  const ops = useModelOps();
   const client = useQueryClient();
   const selection = useSelection('translation', ['translation-engines', 'performance-profile']);
   const [installing, setInstalling] = useState<string | null>(null);
@@ -118,6 +119,14 @@ export function TranslationSettings() {
         <>
           {active && <ActiveBadge />}
           {model?.curated && <RecommendedBadge />}
+          {model && (
+            <ModelLicense
+              repoId={model.repo_id}
+              label={model.label}
+              info={model.license_info}
+              acceptance={model.license_acceptance}
+            />
+          )}
           {!ready(engine) && (
             <StatusBadge tone="muted">{t('modelSettings.unavailable')}</StatusBadge>
           )}

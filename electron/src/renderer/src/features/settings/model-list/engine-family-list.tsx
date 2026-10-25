@@ -8,6 +8,7 @@ import type { EngineBackend, EngineFamilyState } from '@/lib/api/types';
 import { EngineInstall } from '../engine-install';
 import { EngineLicense, licensedEngine } from '../engine-license';
 import { EngineHealth } from '../engine-health';
+import { ModelLicense } from '../model-license';
 import { useModelCatalogue, type CatalogueModel } from '../model-catalogue-query';
 import { familyIcons } from '../model-family';
 import { SettingsActionError } from '../settings-action-error';
@@ -141,6 +142,14 @@ function engineItem(ctx: Context, engine: EngineBackend): FamilyItem {
       <>
         {active && <ActiveBadge />}
         {linked.some((model) => model.curated) && <RecommendedBadge />}
+        {single && (
+          <ModelLicense
+            repoId={single.repo_id}
+            label={single.label}
+            info={single.license_info}
+            acceptance={single.license_acceptance}
+          />
+        )}
         {!engine.available && (
           <StatusBadge tone="muted" title={engine.reason || undefined}>
             {t('modelSettings.unavailable')}

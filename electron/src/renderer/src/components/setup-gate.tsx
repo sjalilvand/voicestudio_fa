@@ -1,4 +1,5 @@
 import { ModelLibrary, PerformanceModelPacks } from '@/features/settings/model-library';
+import { ModelStoreShownContext } from '@/features/settings/model-list/model-store-context';
 import { AnalyticsConsent } from './analytics-consent';
 import { AccountConsent } from './account-consent';
 import { SetupRecovery } from './setup-recovery';
@@ -198,7 +199,11 @@ export function SetupGate({ children }: { children: ReactNode }) {
                           </Button>
                         ))}
                       </div>
-                      <ModelSettings family={family} />
+                      {/* The store above lists every model; the family list
+                          adds engines and choices without repeating rows. */}
+                      <ModelStoreShownContext.Provider value>
+                        <ModelSettings family={family} />
+                      </ModelStoreShownContext.Provider>
                     </div>
                   )}
                   {Boolean(status.data?.missing?.length) && (

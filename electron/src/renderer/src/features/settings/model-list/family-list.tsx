@@ -1,10 +1,34 @@
-import { useState, type ReactNode } from 'react';
+import { useContext, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronRightIcon, SearchIcon, type LucideIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { describeError } from '@/lib/api/client';
+import { useModelCatalogue } from '../model-catalogue-query';
+import { SettingsActionError } from '../settings-action-error';
 import { SettingsRowsSkeleton } from '../settings-layout';
 import { matchesQuery, normalizeQuery, sortByRank } from './linking';
 import { FamilyRow, type FamilyItem } from './family-row';
+import { ModelStoreShownContext } from './model-store-context';
+
+/** Model rows and their download controls come from the catalogue; say when it failed. */
+function CatalogueError() {
+  const { t } = useTranslation();
+  const catalogue = useModelCatalogue();
+  if (!catalogue.isError) return null;
+  return (
+    <SettingsActionError
+      className="m-4"
+      title={t('modelSettings.failed')}
+      detail={describeError(catalogue.error)}
+      action={
+        <Button size="xs" variant="ghost" onClick={() => void catalogue.refetch()}>
+          {t('backend.retry')}
+        </Button>
+      }
+    />
+  );
+}
 
 /**
  * The single list of a Settings -> Models family: every engine and standalone
@@ -13,7 +37,7 @@ import { FamilyRow, type FamilyItem } from './family-row';
 export function FamilyList({
   title,
   icon: Icon,
-  items,
+  items: allItems,
   header,
   error,
   footer,
@@ -27,6 +51,8 @@ export function FamilyList({
   footer?: ReactNode;
 }) {
   const { t } = useTranslation();
+  const storeShown = useContext(ModelStoreShownContext);
+  const items = storeShown ? allItems?.filter((item) => !item.installOnly) : allItems;
   const [query, setQuery] = useState('');
   const needle = normalizeQuery(query);
   const visible = items
@@ -71,6 +97,7 @@ export function FamilyList({
         )}
       </div>
       <div className="glass-panel overflow-hidden rounded-xl border border-border/60 bg-card/40 shadow-xs/5 [&>*+*]:border-t [&>*+*]:border-border/50">
+        <CatalogueError />
         {header}
         {error ??
           (!visible ? (

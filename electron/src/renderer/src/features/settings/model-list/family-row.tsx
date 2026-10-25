@@ -24,13 +24,17 @@ export interface FamilyItem {
   rank: ListRank;
   /** Can never run on this device: listed under the folded group. */
   folded?: boolean;
+  /** A model row with install actions only; hidden where the model store is shown. */
+  installOnly?: boolean;
 }
 
 export function FamilyRow({ item, forceOpen = false }: { item: FamilyItem; forceOpen?: boolean }) {
-  const [openState, setOpen] = useState(Boolean(item.defaultOpen));
+  // null until the user toggles: the default then follows late-arriving data
+  // (the active engine's models load after the engine list).
+  const [openState, setOpen] = useState<boolean | null>(null);
   const panelId = useId();
   const expandable = Boolean(item.body);
-  const open = expandable && (openState || forceOpen);
+  const open = expandable && ((openState ?? Boolean(item.defaultOpen)) || forceOpen);
   return (
     <div
       data-slot="model-row"
