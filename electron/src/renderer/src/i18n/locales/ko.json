@@ -102,7 +102,11 @@
     "dub": "오디오나 영상을 번역하고 더빙하세요.",
     "stories": "여러 목소리로 장면을 만드세요.",
     "audiobook": "챕터가 있는 오디오북을 만드세요.",
-    "transcribe": "녹음을 텍스트로 변환하세요."
+    "transcribe": "녹음을 텍스트로 변환하세요.",
+    "creatorCoreTeam": "제작자 · 코어 팀",
+    "coreTeam": "코어 팀",
+    "follow": "팔로우",
+    "website": "웹사이트"
   },
   "twilioIntegration": {
     "exposureWarning": "켜면 터널이 인터넷에 공개하는 별도의 로컬 포트가 열립니다. Twilio Auth Token으로 서명된 요청만 허용되며 VoiceStudio의 나머지 부분은 비공개로 유지됩니다.",

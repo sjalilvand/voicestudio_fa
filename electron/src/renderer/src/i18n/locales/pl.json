@@ -102,7 +102,11 @@
     "dub": "Tłumacz i dubbinguj dźwięk lub wideo.",
     "stories": "Twórz sceny z wieloma głosami.",
     "audiobook": "Twórz audiobooki z rozdziałami.",
-    "transcribe": "Zamieniaj nagrania na tekst."
+    "transcribe": "Zamieniaj nagrania na tekst.",
+    "creatorCoreTeam": "Twórca i zespół główny",
+    "coreTeam": "Zespół główny",
+    "follow": "Obserwuj",
+    "website": "Strona"
   },
   "twilioIntegration": {
     "exposureWarning": "Włączenie otwiera osobny port lokalny, który Twój tunel publikuje w internecie. Akceptowane są tylko żądania podpisane Twoim Auth Token Twilio; reszta VoiceStudio pozostaje prywatna.",
