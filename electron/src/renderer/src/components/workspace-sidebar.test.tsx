@@ -1,7 +1,12 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { FilmIcon } from 'lucide-react';
+import { MAC_TRAFFIC_LIGHTS_BAND } from '@shared/utils/windowChrome';
 import { SecondarySidebar } from './workspace-sidebar';
+
+const platform = vi.hoisted(() => ({ mac: false }));
+vi.mock('@/components/bridge', () => ({ isMac: () => platform.mac }));
+vi.mock('@/hooks/use-window-fullscreen', () => ({ useWindowFullscreen: () => false }));
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 
@@ -150,4 +155,16 @@ it('reports a retained library as inactive when its tab is hidden', () => {
   fireEvent.click(screen.getByRole('tab', { name: 'Projects' }));
   expect(screen.getByRole('textbox', { name: 'Load active' })).toBe(field);
   expect(field).toHaveValue('true');
+});
+
+it('starts its header below the macOS traffic lights, which reach past the slim column', () => {
+  platform.mac = true;
+  render(
+    <SecondarySidebar title="Voice" icon={FilmIcon}>
+      <section>Body</section>
+    </SecondarySidebar>,
+  );
+  const header = document.querySelector<HTMLElement>('[data-slot="secondary-sidebar-header"]')!;
+  expect(header.style.paddingTop).toBe(`${MAC_TRAFFIC_LIGHTS_BAND}px`);
+  platform.mac = false;
 });

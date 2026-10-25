@@ -4,6 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { usePaneResize } from '@/hooks/use-pane-resize';
 import { cn } from '@/lib/utils';
+import { isMac } from '@/components/bridge';
+import { useWindowFullscreen } from '@/hooks/use-window-fullscreen';
+import { MAC_TRAFFIC_LIGHTS_BAND } from '@shared/utils/windowChrome';
 
 const WIDTHS = {
   default: { minimum: 248, initial: 280, maximum: 515, reserve: 480 },
@@ -53,6 +56,7 @@ export function SecondarySidebar({
   onCollapsedChange?: (collapsed: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const trafficLights = isMac() && !useWindowFullscreen();
   const [uncontrolledCollapsed, setUncontrolledCollapsed] = useState(false);
   const collapsed = controlledCollapsed ?? uncontrolledCollapsed;
   const [view, setView] = useState<'controls' | 'library'>('controls');
@@ -109,8 +113,10 @@ export function SecondarySidebar({
       )}
       <div
         data-slot="secondary-sidebar-header"
+        // The macOS traffic lights reach past the slim navigation column into this one.
+        style={trafficLights ? { paddingTop: MAC_TRAFFIC_LIGHTS_BAND } : undefined}
         className={cn(
-          'workspace-titlebar flex h-12 shrink-0 items-center gap-2.5 border-b border-border/45 bg-background/30 shadow-[0_1px_0_color-mix(in_oklab,var(--foreground)_2%,transparent)] backdrop-blur-xl',
+          'workspace-titlebar box-content flex h-12 shrink-0 items-center gap-2.5 border-b border-border/45 bg-background/30 shadow-[0_1px_0_color-mix(in_oklab,var(--foreground)_2%,transparent)] backdrop-blur-xl',
           collapsed ? 'justify-center px-1' : 'px-3',
         )}
       >
