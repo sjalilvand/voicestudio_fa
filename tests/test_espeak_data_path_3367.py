@@ -191,3 +191,15 @@ def test_kittentts_load_checks_espeak_before_constructing(monkeypatch):
     with pytest.raises(ed.EspeakDataError):
         tts_backend.KittenTTSBackend()._ensure_loaded()
     assert constructed == []
+
+
+@pytest.mark.parametrize(("owned", "reused"), [(False, False), (True, True), (None, True)])
+def test_windows_cache_needs_this_users_ownership(tmp_path, monkeypatch, owned, reused):
+    """A cache directory another Windows user owns is skipped; unknown falls back to the content check."""
+    ed = _ed()
+    source = Path(_fake_loader(tmp_path).get_data_path())
+    root = tmp_path / "programdata"
+    assert ed._cached_copy(source, root) is not None
+    monkeypatch.setattr(ed.sys, "platform", "win32")
+    monkeypatch.setattr(ed, "_windows_owned_by_me", lambda path: owned)
+    assert (ed._cached_copy(source, root) is not None) is reused

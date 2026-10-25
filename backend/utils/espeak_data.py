@@ -133,15 +133,82 @@ def _tree_digest(root: Path) -> str | None:
     return h.hexdigest()
 
 
-def _private_dir(path: Path) -> bool:
-    """Whether ``path`` is a directory only this user can write (POSIX).
+def _windows_owned_by_me(path: Path) -> bool | None:
+    """Whether the current user owns ``path`` (Windows); ``None`` if unknown."""
+    try:
+        from ctypes import wintypes
 
-    The cache roots include shared temp folders, where another local user
-    could pre-create the predictable cache directory. Windows has no cheap
-    equivalent; there the content check in ``_cached_copy`` is the guard.
+        advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)  # type: ignore[attr-defined]
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)  # type: ignore[attr-defined]
+        LPVOID, PVOID_P = ctypes.c_void_p, ctypes.POINTER(ctypes.c_void_p)
+        advapi32.GetNamedSecurityInfoW.argtypes = [
+            wintypes.LPCWSTR, ctypes.c_int, wintypes.DWORD,
+            PVOID_P, PVOID_P, PVOID_P, PVOID_P, PVOID_P,
+        ]
+        advapi32.GetNamedSecurityInfoW.restype = wintypes.DWORD
+        kernel32.GetCurrentProcess.argtypes = []
+        kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+        advapi32.OpenProcessToken.argtypes = [
+            wintypes.HANDLE, wintypes.DWORD, ctypes.POINTER(wintypes.HANDLE),
+        ]
+        advapi32.OpenProcessToken.restype = wintypes.BOOL
+        advapi32.GetTokenInformation.argtypes = [
+            wintypes.HANDLE, ctypes.c_int, LPVOID, wintypes.DWORD,
+            ctypes.POINTER(wintypes.DWORD),
+        ]
+        advapi32.GetTokenInformation.restype = wintypes.BOOL
+        advapi32.EqualSid.argtypes = [LPVOID, LPVOID]
+        advapi32.EqualSid.restype = wintypes.BOOL
+        kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+        kernel32.CloseHandle.restype = wintypes.BOOL
+        kernel32.LocalFree.argtypes = [LPVOID]
+        kernel32.LocalFree.restype = LPVOID
+        owner = ctypes.c_void_p()
+        descriptor = ctypes.c_void_p()
+        # SE_FILE_OBJECT = 1, OWNER_SECURITY_INFORMATION = 1
+        if advapi32.GetNamedSecurityInfoW(
+            str(path), 1, 1, ctypes.byref(owner), None, None, None, ctypes.byref(descriptor),
+        ) != 0:
+            return None
+        try:
+            token = wintypes.HANDLE()
+            # TOKEN_QUERY = 0x0008
+            if not advapi32.OpenProcessToken(
+                kernel32.GetCurrentProcess(), 0x0008, ctypes.byref(token)
+            ):
+                return None
+            try:
+                size = wintypes.DWORD()
+                # TokenUser = 1; the first call reports the buffer size.
+                advapi32.GetTokenInformation(token, 1, None, 0, ctypes.byref(size))
+                buf = ctypes.create_string_buffer(size.value)
+                if not size.value or not advapi32.GetTokenInformation(
+                    token, 1, buf, size, ctypes.byref(size)
+                ):
+                    return None
+                # TOKEN_USER starts with SID_AND_ATTRIBUTES, whose first field is the SID pointer.
+                me = ctypes.c_void_p.from_buffer(buf).value
+                return bool(advapi32.EqualSid(owner, me))
+            finally:
+                kernel32.CloseHandle(token)
+        finally:
+            kernel32.LocalFree(descriptor)
+    except Exception:  # pragma: no cover - best effort
+        return None
+
+
+def _private_dir(path: Path) -> bool:
+    """Whether ``path`` is a directory this user owns and others cannot write.
+
+    The cache roots include shared folders (``/tmp``, ``%PROGRAMDATA%``,
+    ``%PUBLIC%``), where another local user could pre-create the predictable
+    cache directory. POSIX checks the owner and group/other write bits;
+    Windows checks the owner (its inherited ACLs let other users add files
+    but not change ours), falling back to the content check in
+    ``_cached_copy`` when the owner cannot be read.
     """
     if sys.platform == "win32":
-        return path.is_dir()
+        return path.is_dir() and _windows_owned_by_me(path) is not False
     try:
         st = path.lstat()
     except OSError:
