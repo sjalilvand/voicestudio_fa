@@ -651,12 +651,21 @@ export function StatusBar({
           <button
             type="button"
             aria-label={`${deviceLabel}: ${stageText}`}
-            className="group/status flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1 text-left outline-none transition-[background-color,box-shadow,backdrop-filter] duration-150 hover:bg-sidebar-accent/65 hover:backdrop-blur-xl hover:shadow-[inset_0_1px_0_rgb(255_255_255/8%),0_5px_14px_rgb(0_0_0/10%)] hover:ring-1 hover:ring-inset hover:ring-sidebar-border/60 focus-visible:ring-2 focus-visible:ring-ring"
+            className="group/status flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-1.5 py-1 text-left outline-none transition-[background-color,box-shadow,backdrop-filter] duration-150 hover:bg-sidebar-accent/65 hover:backdrop-blur-xl hover:shadow-[inset_0_1px_0_rgb(255_255_255/8%),0_5px_14px_rgb(0_0_0/10%)] hover:ring-1 hover:ring-inset hover:ring-sidebar-border/60 focus-visible:ring-2 focus-visible:ring-ring"
           />
         }
       >
-        <span className={cn('size-1.5 shrink-0 rounded-full', stageDot)} aria-hidden="true" />
-        <CpuIcon className="size-3.5 shrink-0" aria-hidden="true" />
+        {/* Status dot as a badge on the chip, so the icon lines up with the
+            rows below it. */}
+        <span className="relative shrink-0" aria-hidden="true">
+          <CpuIcon className="size-3.5" />
+          <span
+            className={cn(
+              'absolute -end-0.5 -bottom-0.5 size-1.5 rounded-full ring-2 ring-sidebar',
+              stageDot,
+            )}
+          />
+        </span>
         <span className="min-w-0 flex-1 truncate" role="status">
           {deviceLabel}
         </span>
