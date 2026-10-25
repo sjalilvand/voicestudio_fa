@@ -91,6 +91,23 @@ it('shows one chip row: speaker, effective voice, and speed only when overridden
   expect(secondTone.textContent).toBe('1.25×');
 });
 
+it('names a removed voice profile as unavailable instead of a fallback voice', () => {
+  const draft = draftWith(
+    [
+      { id: 'a', text: 'Hello.', profileId: 'gone' },
+      { id: 'b', text: 'Hi.', profileId: null, character: 'mara' },
+    ],
+    [{ id: 'mara', name: 'Mara', profileId: 'also-gone' }],
+  );
+  const { container } = render(
+    <StoryEditor draft={draft} profiles={profiles} disabled={false} onChange={vi.fn()} />,
+  );
+  const unavailable = i18n.t('stories.voiceChip', { name: i18n.t('modelSettings.unavailable') });
+  for (const block of container.querySelectorAll<HTMLElement>('[data-slot="story-block"]')) {
+    within(block).getByRole('button', { name: unavailable });
+  }
+});
+
 it('assigns a speaker from the chip popover', async () => {
   const onChange = vi.fn();
   const draft = draftWith(
