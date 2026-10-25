@@ -20,7 +20,8 @@
     "preset16": "Standaard",
     "preset24": "Voor bewerking",
     "preset32": "Origineel",
-    "sizeUnknown": "De grootte wordt na het genereren getoond."
+    "sizeUnknown": "De grootte wordt na het genereren getoond.",
+    "sampleRate": "{{rate}} kHz"
   },
   "presetVoice": {
     "label": "Voorgeprogrammeerde stem"

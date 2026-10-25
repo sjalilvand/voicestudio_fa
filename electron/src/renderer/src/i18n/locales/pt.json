@@ -20,7 +20,8 @@
     "preset16": "Padrão",
     "preset24": "Para editar",
     "preset32": "Original",
-    "sizeUnknown": "O tamanho aparece após a geração."
+    "sizeUnknown": "O tamanho aparece após a geração.",
+    "sampleRate": "{{rate}} kHz"
   },
   "presetVoice": {
     "label": "Voz predefinida"

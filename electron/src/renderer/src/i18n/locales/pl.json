@@ -20,7 +20,8 @@
     "preset16": "Standardowa",
     "preset24": "Do edycji",
     "preset32": "Oryginalna",
-    "sizeUnknown": "Rozmiar pojawi się po wygenerowaniu."
+    "sizeUnknown": "Rozmiar pojawi się po wygenerowaniu.",
+    "sampleRate": "{{rate}} kHz"
   },
   "presetVoice": {
     "label": "Głos wbudowany"

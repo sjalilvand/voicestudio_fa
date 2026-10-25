@@ -20,7 +20,8 @@
     "preset16": "قياسي",
     "preset24": "للتحرير",
     "preset32": "أصلي",
-    "sizeUnknown": "يظهر الحجم بعد إنشاء الصوت."
+    "sizeUnknown": "يظهر الحجم بعد إنشاء الصوت.",
+    "sampleRate": "{{rate}} kHz"
   },
   "presetVoice": {
     "label": "الصوت الجاهز"
