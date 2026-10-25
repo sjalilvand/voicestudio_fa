@@ -112,6 +112,31 @@ def _speak(client, voice):
     )
 
 
+def test_native_profile_keeps_full_description_in_openai_speech(client, engine, profiles):
+    """OpenAI-compatible synthesis uses the authoring engine's voice recipe."""
+    import json
+    from core.db import db_conn
+
+    engine.instruct_vocabulary = "freeform"
+    pid = profiles(f"Native {profiles.stem}")
+    desc = "A warm, breathy adult voice with intimate cinematic delivery."
+    with db_conn() as conn:
+        conn.execute(
+            "UPDATE voice_profiles SET kind='design', instruct='female', "
+            "design_recipe=?, vd_states=? WHERE id=?",
+            (json.dumps({
+                "description": desc, "picks": {"Pitch": "low pitch"},
+                "engine": engine.id,
+            }), json.dumps({"Gender": "female"}), pid),
+        )
+    try:
+        res = _speak(client, pid)
+        assert res.status_code == 200, res.text
+        assert engine.calls[-1]["instruct"] == desc + ", low pitch"
+    finally:
+        engine.instruct_vocabulary = "tags"
+
+
 def test_profile_name_resolves_case_insensitively(client, engine, profiles):
     name = f"Narrator {profiles.stem}"
     pid = profiles(name, ref_text="reference words")

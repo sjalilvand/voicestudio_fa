@@ -124,6 +124,7 @@ export function DesignPage() {
       );
     }
   };
+  /** Persist the native description and category picks alongside legacy tags. */
   const save = async () => {
     if (!name.trim() || saving) return;
     setSaving(true);

@@ -19,6 +19,7 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
+    """Add nullable recipe storage without replacing existing voice profiles."""
     have = {r[1] for r in op.get_bind().execute(
         sa.text("PRAGMA table_info(voice_profiles)")
     ).fetchall()}
@@ -27,5 +28,4 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Additive migration: keep user-authored voice recipes on downgrade.
-    pass
+    """Keep user-authored voice recipes on downgrade (additive migration)."""

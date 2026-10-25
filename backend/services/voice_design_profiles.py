@@ -13,6 +13,7 @@ from omnivoice.utils.voice_design import heal_design_instruct, instruct_from_vd_
 
 
 def _field(row, name: str, default=None):
+    """Read a sqlite row or mapping key while tolerating legacy schemas."""
     try:
         return row[name]
     except (KeyError, IndexError, TypeError):
@@ -20,6 +21,7 @@ def _field(row, name: str, default=None):
 
 
 def read_recipe(row) -> dict | None:
+    """Parse a saved native Voice Design recipe; omit malformed/legacy data."""
     raw = _field(row, "design_recipe")
     if not raw:
         return None
@@ -37,6 +39,7 @@ def read_recipe(row) -> dict | None:
 
 
 def recipe_engine(row) -> str:
+    """Return the stored authoring engine or legacy OmniVoice default."""
     recipe = read_recipe(row)
     engine = recipe.get("engine") if recipe else None
     return engine if isinstance(engine, str) and engine else "omnivoice"

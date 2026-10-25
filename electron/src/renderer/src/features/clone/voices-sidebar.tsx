@@ -144,6 +144,7 @@ export function SavedVoices({
     return () => window.removeEventListener(DESIGN_DRAFT_EVENT, sync);
   }, []);
 
+  /** Restore a saved design's complete recipe or select a clone reference. */
   const select = async (profile: Profile) => {
     if (profile.kind === 'design') {
       const current = readDraft();

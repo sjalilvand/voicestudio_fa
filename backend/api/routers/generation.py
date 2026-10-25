@@ -358,7 +358,10 @@ def _conditioning_refusal(backend_cls, *, profile_id=None, has_ref_audio=False,
                 "SELECT * FROM voice_profiles WHERE id=?", (profile_id,)
             ).fetchone()
         if row is not None:
-            cond = _resolve_profile_conditioning(row, instruct=instruct, seed=seed)
+            cond = _resolve_profile_conditioning(
+                row, instruct=instruct, seed=seed,
+                engine_id=getattr(backend_cls, "id", None),
+            )
             reference = bool(cond["ref_audio_path"])
             designing = designing or cond["kind"] == "design"
     name = getattr(backend_cls, "display_name", None) or getattr(backend_cls, "id", "This engine")
@@ -1758,6 +1761,12 @@ async def generate_speech(
     # (text-level chunking, no per-engine token streaming).
     stream: bool = Form(False),
 ):
+    """Synthesize a TTS take using the selected engine and optional voice profile.
+
+    Both WAV and streaming-preview paths share engine selection, validated
+    profile conditioning, reference lifetime, seed, watermarking and history.
+    Free-form saved designs select their engine-specific stored instructions.
+    """
     # #502: NFC-normalize the input text so decomposed (NFD) diacritics — common
     # in pasted Vietnamese and other Latin-with-marks text — are composed to the
     # single codepoints the tokenizer/model expect, instead of base-letter +

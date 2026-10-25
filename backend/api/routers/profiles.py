@@ -342,7 +342,7 @@ def update_profile(profile_id: str, patch: ProfileUpdate):
     """Partial update — only fields set on the payload are changed."""
     with db_conn() as conn:
         existing = conn.execute(
-            "SELECT kind FROM voice_profiles WHERE id = ?", (profile_id,),
+            "SELECT kind, instruct FROM voice_profiles WHERE id = ?", (profile_id,),
         ).fetchone()
     if not existing:
         raise HTTPException(
@@ -374,6 +374,13 @@ def update_profile(profile_id: str, patch: ProfileUpdate):
 
         fields.append("vd_states = ?")
         params.append(json.dumps(instruct_to_vd_states(edited_instruct)))
+        if edited_instruct != (existing["instruct"] or ""):
+            # A legacy tag editor cannot edit the native prose recipe. Treat
+            # this deliberate instruction change as a new design, rather
+            # than silently replaying stale prose or cloning its old sample.
+            # The preview materializer replaces the old WAV atomically on
+            # the next request; metadata-only edits retain their recipe.
+            fields.extend(("design_recipe = NULL", "ref_audio_path = NULL"))
     if not fields:
         raise HTTPException(
             status_code=400,
@@ -821,6 +828,11 @@ _PROFILE_ID_RE = re.compile(r"[A-Za-z0-9_-]{1,64}")
 
 @router.get("/profiles/{profile_id}/audio")
 async def get_profile_audio(profile_id: str):
+    """Serve a saved voice sample or lazily render a pending designed voice.
+
+    Profile IDs and stored filenames are confined to VOICES_DIR; concurrent
+    sample requests share a single synthesis job and never expose partial WAVs.
+    """
     if not _PROFILE_ID_RE.fullmatch(profile_id or ""):
         return Response("Profile not found", status_code=404)
     with db_conn() as conn:
@@ -859,6 +871,9 @@ async def _render_native_design_sample(row, audio_path, engine_id: str) -> None:
     from api.routers.archetypes import _FALLBACK_SCRIPT
     from api.routers.generation import _safe_torchaudio_save, run_on_gpu_pool_guarded
     from core.audio_validation import is_playable_wav
+    from api.routers.engines import _get_engine_instance
+    from services import gpu_gateway
+    from services.engine_memory import evict_other_tts_engines
     from services.model_manager import generate_timeout_s
     from services.tts_backend import get_backend_class
     from services.voice_design_profiles import profile_instruct
@@ -868,7 +883,11 @@ async def _render_native_design_sample(row, audio_path, engine_id: str) -> None:
     ready, reason = backend_cls.is_available()
     if not ready:
         raise RuntimeError(f"{engine_id} is not installed or ready: {reason}")
-    backend = backend_cls()
+    # Match /generate's single-active-engine and cached-instance lifecycle:
+    # a preview must not spawn another multi-GB model beside a warm engine.
+    await evict_other_tts_engines(engine_id)
+    backend = _get_engine_instance(backend_cls)
+    await gpu_gateway.prewarm(backend=backend, engine=engine_id)
     script = (row["ref_text"] or "").strip() or _FALLBACK_SCRIPT
     instruct = profile_instruct(row, engine_id)
     language = row["language"] or None
@@ -876,11 +895,17 @@ async def _render_native_design_sample(row, audio_path, engine_id: str) -> None:
     seed = row["seed"] if row["seed"] is not None else _DESIGN_SEED
 
     def render():
+        """Render the pending identity with the authoring engine and seed."""
         import torch
         torch.manual_seed(seed)
+        extra = (
+            {"seed": seed}
+            if getattr(backend, "supports_generation_seed", False) else {}
+        )
         return backend.generate(
             script, ref_audio=None, ref_text=None, instruct=instruct,
             language=language, num_step=steps, guidance_scale=2.0, speed=1.0,
+            **extra,
         )
 
     audio = await run_on_gpu_pool_guarded(
@@ -932,6 +957,7 @@ async def _materialize_design_sample(profile_id: str, row) -> Optional[str]:
         raise HTTPException(status_code=400, detail="invalid profile identifier")
 
     async def _materialize() -> None:
+        """Render once with the authoring engine and atomically link the WAV."""
         # Atomic + validated: concurrent callers join via _render_once and
         # a failed render never publishes a half-written sample.
         from services.voice_design_profiles import recipe_engine

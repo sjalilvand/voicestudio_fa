@@ -94,10 +94,9 @@ export function writeDraft(draft: DesignDraft) {
 }
 
 /**
- * Replace the design recipe (saved profile, preset, personality or demo). The
- * description belonged to the previous voice, so it is dropped: a free-form
- * engine would otherwise receive both as contradictory directions. The new
- * recipe's details are explicit choices.
+ * Replace a Voice Design draft with a saved profile, preset, or new recipe.
+ * Any description and picks supplied by the source are preserved. If omitted,
+ * they reset instead of leaking another voice's earlier free-form directions.
  */
 export function replaceRecipe(current: DesignDraft, recipe: Partial<DesignDraft>): DesignDraft {
   // Only a saved voice links the draft; a preset, personality or demo starts
