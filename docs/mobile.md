@@ -70,7 +70,8 @@ maintainer team, matching Electron. The badge has a localized core-maintainer de
   captions or karaoke. Speaker analysis, background separation and subtitle burn
   run on the paired computer. Detect reruns the installed speaker model on an
   already-transcribed project without replacing its text, timing, translations
-  or explicit voice choices. Model downloads remain explicit.
+  or explicit voice choices. Regeneration keeps saved line volumes, speech rates,
+  delivery instructions and audio effects. Model downloads remain explicit.
 - **Project transfer**: export/import editable `.vsproject` archives on either
   phone or Electron's Projects page. Manuscripts, casts, pronunciation settings,
   dub timelines, translations, references and assets travel together. Imports

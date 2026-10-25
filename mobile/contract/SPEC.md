@@ -382,6 +382,8 @@ Workflows on both platforms. These are native screens; no embedded desktop UI.
   SSE/task receipts. Explicit Detect requests `reanalyze_speakers=true` to refresh
   labels on completed transcripts while preserving cue IDs, text, translations,
   timing and explicit voice choices; ordinary reconnects replay the saved result.
+  Analysis and regeneration retain per-cue `gain`, `speed`, `direction`, `instruct`
+  and `effect_preset`; omitted legacy values retain the backend defaults.
   Recasting translates fresh source cues on the same approved
   provider before regeneration; resumed events validate original source text.
   Host export supports selected/default/original tracks, separated background,

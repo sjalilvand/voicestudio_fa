@@ -84,7 +84,7 @@ suspend fun VoiceStudioApi.computerDubCast(job: String,analysis: ComputerDubAnal
         putJsonArray("segments") {analysis.segments.forEach {cue ->
             val id=cue.id?.jsonPrimitive?.content ?: throw ClientFailure("mobile.dub_advanced.invalid_cast")
             val text=texts[id]?.takeIf(String::isNotEmpty) ?: throw ClientFailure("mobile.dub_advanced.missing_translation")
-            add(buildJsonObject {put("start",cue.start);put("end",cue.end);put("text",text);put("profile_id",voices[cue.speakerId.orEmpty()].orEmpty());put("target_lang",language)})
+            add(buildJsonObject {put("start",cue.start);put("end",cue.end);put("text",text);put("profile_id",voices[cue.speakerId.orEmpty()].orEmpty());put("target_lang",language);putRenderSettings(cue)})
         }}
     }
     raw("/dub/generate/${VoiceStudioApi.segment(job)}","POST",body.toString().toRequestBody("application/json".toMediaType())).use {json.decodeFromString(it.body!!.string())}

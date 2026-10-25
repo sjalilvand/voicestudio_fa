@@ -61,6 +61,34 @@ class AdvancedDubApiTest {
             assertEquals(4,server.requestCount)
         } finally {server.shutdown()}
     }
+    @Test fun computerCastPreservesSavedRenderSettingsWhileLegacySegmentsOmitOverrides(): Unit=runBlocking {
+        val server=MockWebServer().apply {start()}
+        try {
+            val api=VoiceStudioApi(PairingAddress.parse(server.url("/").toString()))
+            val authorization=TranslationEngine("argos",category="offline",installed=true,ready=true).authorize()!!
+            fun assertSettings(cue: JsonObject,gain: Double?) {
+                val keys=setOf("gain","speed","direction","effect_preset","instruct")
+                val expected=if(gain==null) emptyMap() else mapOf("gain" to JsonPrimitive(gain),"speed" to JsonPrimitive(0.85),"direction" to JsonPrimitive("Whisper urgently"),"effect_preset" to JsonPrimitive("raw"),"instruct" to JsonPrimitive("Calm delivery"))
+                assertEquals(expected,cue.filterKeys {it in keys})
+            }
+            for(gain in listOf(0.0,0.35,1.0,null)) {
+                val response=gain?.let {stream.replace("\"speaker_id\":","\"gain\":$it,\"speed\":0.85,\"direction\":\"Whisper urgently\",\"effect_preset\":\"raw\",\"instruct\":\"Calm delivery\",\"speaker_id\":")} ?: stream
+                server.enqueue(MockResponse().setBody("""{"installed":true}"""));server.enqueue(MockResponse().setBody(response))
+                val analysis=api.computerDubAnalysis("job")
+                server.takeRequest();server.takeRequest()
+                assertSettings(Json.encodeToJsonElement(analysis.segments.single()).jsonObject,gain)
+                server.enqueue(MockResponse().setBody(engine));server.enqueue(MockResponse().setBody("""{"translated":[{"id":"0","text":"Bonjour"}]}"""));server.enqueue(MockResponse().setBody("""{"task_id":"render"}"""))
+                api.computerDubCast("job",analysis,"fr","French",emptyMap(),authorization)
+                server.takeRequest();server.takeRequest()
+                val cue=Json.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject.getValue("segments").jsonArray.single().jsonObject
+                assertSettings(cue,gain);assertEquals("Bonjour",cue.getValue("text").jsonPrimitive.content)
+                server.enqueue(MockResponse().setBody("""{"task_id":"render"}"""))
+                api.startDub("job","fr","French","",analysis.segments.map {it.copy(text="Bonjour")})
+                val ordinary=Json.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject.getValue("segments").jsonArray.single().jsonObject
+                assertSettings(ordinary,gain)
+            }
+        } finally {server.shutdown()}
+    }
     @Test fun exportOptionsExplicitlySelectTracksBackgroundAndRealBurnWithoutPathInjection() {
         val options=ComputerDubExport(language="fr",tracks=listOf("fr","de"),original=true,preserveBackground=true,burn=true,karaoke=true)
         val url=okhttp3.HttpUrl.Builder().scheme("http").host("localhost").build().resolve(options.path("job-1"))!!

@@ -4,6 +4,8 @@ import Testing
 
 private let computerCastStream = "event: warning\ndata: {\"detail\":\"Check the speaker labels\"}\n\nevent: final\ndata: {\"segments\":[{\"id\":0,\"start\":0,\"end\":1,\"text\":\"Previous translation\",\"text_original\":\"Original speech\",\"speaker_id\":\"Speaker 1\"}],\"cast_sources\":{\"Speaker 1\":{\"kind\":\"speaker\",\"duration\":4}}}\n\nevent: done\ndata: {}\n\n"
 private actor AdvancedDubHost: HTTPTransport {
+    let stream: String
+    init(stream: String = computerCastStream) { self.stream = stream }
     var installed = true
     var engine = "argos"
     var category = "offline"
@@ -15,7 +17,7 @@ private actor AdvancedDubHost: HTTPTransport {
         let body: String
         switch request.url!.path {
         case "/engines/diarisation": body = "{\"installed\":\(installed),\"label\":\"Installed diarizer\"}"
-        case "/dub/transcribe-stream/job": body = computerCastStream
+        case "/dub/transcribe-stream/job": body = stream
         case "/engines/translation": body = "{\"active\":\"\(engine)\",\"engines\":[{\"id\":\"\(engine)\",\"display_name\":\"Translator\",\"category\":\"\(category)\",\"installed\":true,\"ready\":true}]}"
         case "/dub/translate": body = "{\"translated\":[{\"id\":\"0\",\"text\":\"Bonjour\"}]}"
         case "/dub/generate/job": body = "{\"task_id\":\"new-task\"}"
@@ -75,6 +77,30 @@ private actor AdvancedDubHost: HTTPTransport {
     let switchedClient = APIClient(address: client.address,transport: switched)
     await #expect(throws: (any Error).self) { try await switchedClient.computerDubCast("job",analysis: source,language: "fr",name: "French",voices: [:],provider: provider) }
     #expect(await switched.requests.count == 1)
+}
+@Test func computerCastPreservesSavedRenderSettingsWhileLegacySegmentsOmitOverrides() async throws {
+    func expectSettings(_ cue: [String:Any], gain: Double?) {
+        #expect(cue["gain"] as? Double == gain)
+        #expect(cue["speed"] as? Double == (gain == nil ? nil : 0.85))
+        #expect(cue["direction"] as? String == (gain == nil ? nil : "Whisper urgently"))
+        #expect(cue["effect_preset"] as? String == (gain == nil ? nil : "raw"))
+        #expect(cue["instruct"] as? String == (gain == nil ? nil : "Calm delivery"))
+        for key in ["gain","speed","direction","effect_preset","instruct"] { #expect(cue.keys.contains(key) == (gain != nil)) }
+    }
+    for gain in [Double?](arrayLiteral: 0,0.35,1,nil) {
+        let stream = gain.map { computerCastStream.replacingOccurrences(of: "\"speaker_id\":",with: "\"gain\":\($0),\"speed\":0.85,\"direction\":\"Whisper urgently\",\"effect_preset\":\"raw\",\"instruct\":\"Calm delivery\",\"speaker_id\":") } ?? computerCastStream
+        let host = AdvancedDubHost(stream: stream), client = APIClient(address: try PairingAddress("http://127.0.0.1:3900"),transport: host)
+        let analysis = try await client.computerDubAnalysis("job")
+        let saved = try #require(try JSONSerialization.jsonObject(with: JSONEncoder().encode(analysis.segments[0])) as? [String:Any])
+        expectSettings(saved,gain: gain)
+        let provider = try JSONDecoder().decode(TranslationEngine.self,from: Data(#"{"id":"argos","display_name":"Argos","category":"offline","installed":true,"ready":true}"#.utf8))
+        _ = try await client.computerDubCast("job",analysis: analysis,language: "fr",name: "French",voices: [:],provider: provider)
+        let request = try #require(await host.requests.last)
+        let payload = try #require(try JSONSerialization.jsonObject(with: request.httpBody!) as? [String:Any])
+        let cue = try #require((payload["segments"] as? [[String:Any]])?.first)
+        expectSettings(cue,gain: gain)
+        #expect(cue["text"] as? String == "Bonjour")
+    }
 }
 @Test func advancedExportQueriesAreBoundedAndExplicitAboutBackgroundTracksAndBurn() throws {
     var export = ComputerDubExport(); export.language = "fr"; export.tracks = ["fr","de"]; export.original = true; export.preserveBackground = true; export.burn = true; export.karaoke = true
