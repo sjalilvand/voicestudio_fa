@@ -1,55 +1,60 @@
-import type { MouseEvent } from "react";
-import { useTranslation } from "react-i18next";
-import { ArrowUpRightIcon, StarIcon } from "lucide-react";
-import { getBridge } from "@/components/bridge";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { runRendererTask } from "@/lib/global-error-recovery";
-import { REPO_URL, X_URL } from "@shared/utils/contactLinks";
-import {
-  homeContributors,
-  homeCoreMaintainers,
-} from "./home-contributors-data";
+import type { MouseEvent } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ArrowUpRightIcon, StarIcon } from 'lucide-react';
+import { getBridge } from '@/components/bridge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { runRendererTask } from '@/lib/global-error-recovery';
+import { REPO_URL, WEBSITE_URL, X_URL } from '@shared/utils/contactLinks';
+import { homeContributors, homeCoreMaintainers } from './home-contributors-data';
 
 function openProfile(event: MouseEvent<HTMLAnchorElement>) {
   const bridge = getBridge();
   if (!bridge) return;
   event.preventDefault();
   const href = event.currentTarget.href;
-  runRendererTask("Open contributor profile", () =>
-    bridge.files.openExternal(href),
-  );
+  runRendererTask('Open contributor profile', () => bridge.files.openExternal(href));
 }
 
-/** Core maintainers get a hover card; `name` is shown instead of the handle when set. */
+/** Core team hover cards: name, role and the profiles people can follow. */
 const MAINTAINER_CARDS: Record<
   string,
-  { name?: string; links: { label: string; handle: string; href: string }[] }
+  {
+    name: string;
+    role: 'homeUi.creatorCoreTeam' | 'homeUi.coreTeam';
+    links: CardLink[];
+  }
 > = {
   debpalash: {
-    name: "Palash",
+    name: 'Palash',
+    role: 'homeUi.creatorCoreTeam',
     links: [
+      { kind: 'website', handle: 'palash.dev', href: WEBSITE_URL },
       {
-        label: "GitHub",
-        handle: "debpalash",
-        href: "https://github.com/debpalash",
+        kind: 'github',
+        handle: '@debpalash',
+        href: 'https://github.com/debpalash',
       },
-      { label: "X", handle: "idebpalash", href: X_URL },
+      { kind: 'x', handle: '@idebpalash', href: X_URL },
     ],
   },
   velixio: {
+    name: 'Velixio',
+    role: 'homeUi.coreTeam',
     links: [
       {
-        label: "GitHub",
-        handle: "velixio",
-        href: "https://github.com/velixio",
+        kind: 'github',
+        handle: '@velixio',
+        href: 'https://github.com/velixio',
       },
     ],
   },
+};
+
+type CardLink = {
+  kind: 'website' | 'github' | 'x';
+  handle: string;
+  href: string;
 };
 
 type Credit = { login: string; avatar: string };
@@ -57,31 +62,23 @@ type Credit = { login: string; avatar: string };
 /** Home contributor credits: core maintainers large on top, everyone else smaller below, then All. */
 export function HomeContributors() {
   const { t } = useTranslation();
-  const maintainers = homeContributors.filter(
-    ({ login }) => login in MAINTAINER_CARDS,
-  );
+  const maintainers = homeContributors.filter(({ login }) => login in MAINTAINER_CARDS);
   const others: Credit[] = [
     ...homeContributors.filter(({ login }) => !(login in MAINTAINER_CARDS)),
-    { login: "all", avatar: "" },
+    { login: 'all', avatar: '' },
   ];
 
   const portrait = ({ login, avatar }: Credit) => {
-    const coreMaintainer = homeCoreMaintainers.some(
-      (maintainer) => maintainer === login,
-    );
+    const coreMaintainer = homeCoreMaintainers.some((maintainer) => maintainer === login);
     return (
       <span className="home-contributor-avatar">
-        {login === "all" ? (
-          <span className="home-contributor-all">{t("homeUi.all")}</span>
+        {login === 'all' ? (
+          <span className="home-contributor-all">{t('homeUi.all')}</span>
         ) : (
           <img src={avatar} alt="" width={56} height={56} />
         )}
         {coreMaintainer && (
-          <span
-            className="home-core-maintainer"
-            data-core-maintainer={login}
-            aria-hidden="true"
-          >
+          <span className="home-core-maintainer" data-core-maintainer={login} aria-hidden="true">
             <StarIcon />
           </span>
         )}
@@ -102,7 +99,7 @@ export function HomeContributors() {
               type="button"
               className="home-contributor"
               aria-label={`@${credit.login}`}
-              aria-description={t("homeUi.coreMaintainer")}
+              aria-description={t('homeUi.coreMaintainer')}
             />
           }
         >
@@ -117,26 +114,36 @@ export function HomeContributors() {
           <div className="home-contributor-identity">
             <img src={credit.avatar} alt="" width={40} height={40} />
             <div>
-              <strong>{card.name ?? `@${credit.login}`}</strong>
-              <small>{t("homeUi.coreMaintainer")}</small>
+              <strong>{card.name}</strong>
+              <small>{t(card.role)}</small>
             </div>
           </div>
-          {card.links.map(({ label, handle, href }) => (
-            <a
-              key={label}
-              aria-label={`${label} @${handle}`}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={openProfile}
-            >
-              <span>
-                <strong>{label}</strong>
-                <small>@{handle}</small>
-              </span>
-              <ArrowUpRightIcon className="size-3.5" aria-hidden="true" />
-            </a>
-          ))}
+          {card.links.map(({ kind, handle, href }) => {
+            const label =
+              kind === 'website' ? t('homeUi.website') : kind === 'github' ? 'GitHub' : 'X';
+            return (
+              <a
+                key={kind}
+                aria-label={`${label} ${handle}`}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={openProfile}
+              >
+                <span>
+                  <strong>{label}</strong>
+                  <small>{handle}</small>
+                </span>
+                <span className="home-contributor-follow">
+                  {kind === 'website' ? (
+                    <ArrowUpRightIcon className="size-3.5" aria-hidden="true" />
+                  ) : (
+                    t('homeUi.follow')
+                  )}
+                </span>
+              </a>
+            );
+          })}
         </PopoverContent>
       </Popover>
     );
@@ -149,16 +156,14 @@ export function HomeContributors() {
           <a
             className="home-contributor"
             href={
-              credit.login === "all"
+              credit.login === 'all'
                 ? `${REPO_URL}/graphs/contributors`
                 : `https://github.com/${credit.login}`
             }
             target="_blank"
             rel="noopener noreferrer"
             aria-label={
-              credit.login === "all"
-                ? t("homeUi.allContributors")
-                : `GitHub · @${credit.login}`
+              credit.login === 'all' ? t('homeUi.allContributors') : `GitHub · @${credit.login}`
             }
             onClick={openProfile}
           />
@@ -167,19 +172,13 @@ export function HomeContributors() {
         {portrait(credit)}
       </TooltipTrigger>
       <TooltipContent surface="theme" side="bottom">
-        {credit.login === "all"
-          ? t("homeUi.allContributors")
-          : `@${credit.login}`}
+        {credit.login === 'all' ? t('homeUi.allContributors') : `@${credit.login}`}
       </TooltipContent>
     </Tooltip>
   );
 
   return (
-    <div
-      className="home-contributors"
-      role="list"
-      aria-label={t("homeUi.allContributors")}
-    >
+    <div className="home-contributors" role="list" aria-label={t('homeUi.allContributors')}>
       <ul className="home-contributors-core">
         {maintainers.map((credit) => (
           <li key={credit.login}>{maintainer(credit)}</li>

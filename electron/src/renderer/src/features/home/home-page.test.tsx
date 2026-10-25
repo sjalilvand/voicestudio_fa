@@ -3,7 +3,9 @@ import { afterEach, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 const browser = vi.hoisted(() => ({ open: vi.fn(async () => {}) }));
 const files = vi.hoisted(() => ({ openExternal: vi.fn(async () => {}) }));
-vi.mock('@/components/bridge', () => ({ getBridge: () => ({ browser, files }) }));
+vi.mock('@/components/bridge', () => ({
+  getBridge: () => ({ browser, files }),
+}));
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ to, children, ...props }: { to: string; children: ReactNode }) => (
@@ -21,7 +23,9 @@ vi.mock('@/hooks/use-profiles', () => ({ useProfiles: () => ({ data: [] }) }));
 vi.mock('@/components/app-shell/workspace-header', () => ({
   WorkspaceHeader: ({ children }: { children: ReactNode }) => <header>{children}</header>,
 }));
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+}));
 import { HomePage } from './home-page';
 import { homeContributors } from './home-contributors-data';
 import en from '@/i18n/locales/en.json';
@@ -67,9 +71,7 @@ it('credits qualifying contributors and opens their GitHub profiles externally',
     ),
   ).toEqual(['debpalash', 'velixio']);
   expect(credits).toHaveLength(homeContributors.length + 1);
-  expect(
-    Array.from(document.querySelectorAll('.home-contributors-core li img')).length,
-  ).toBe(2);
+  expect(Array.from(document.querySelectorAll('.home-contributors-core li img')).length).toBe(2);
   expect(document.querySelectorAll('.home-contributors-rest li')).toHaveLength(
     homeContributors.length - 2 + 1,
   );
@@ -98,6 +100,12 @@ it('opens both creator profiles from the accessible avatar card', async () => {
   fireEvent.click(screen.getByRole('button', { name: '@debpalash' }));
   const github = await screen.findByRole('link', { name: 'GitHub @debpalash' });
   const x = screen.getByRole('link', { name: 'X @idebpalash' });
+  expect(screen.getByRole('link', { name: 'homeUi.website palash.dev' })).toHaveAttribute(
+    'href',
+    'https://palash.dev',
+  );
+  expect(screen.getByText('homeUi.creatorCoreTeam')).toBeVisible();
+  expect(screen.getAllByText('homeUi.follow')).toHaveLength(2);
   expect(github).toHaveAttribute('href', 'https://github.com/debpalash');
   expect(x).toHaveAttribute('href', 'https://x.com/idebpalash');
   fireEvent.click(github);
