@@ -861,7 +861,8 @@ clears itself as soon as the job releases the event loop. If the dot turns
 The backend also never waits on its own log output: stdout/stderr go through a
 bounded buffer when the shell reads them through pipes, so a slow log reader (a
 model download's progress bar, a busy shell) can no longer freeze the event
-loop. If the buffer overflows, the log shows one `[log] N output chunk(s)
+loop. The request log goes through the same buffer, so it cannot block the loop
+either. If the buffer overflows, the log shows one `[log] N output chunk(s)
 dropped` line. Set `OMNIVOICE_BLOCKING_STDIO=1` to restore plain blocking
 writes. When the loop does stall, the backend log names the blocking call
 (`OMNIVOICE_LOOP_STALL_S`, default 4 s, `0` disables).
@@ -1341,6 +1342,17 @@ Three different startup failures share the same screen. The app now names the
 program it tried to launch, quotes what the backend last printed (or says it
 printed nothing, or that nothing was spawned), and adds a localized hint under
 the message:
+
+When the app recognises the cause it also names it in one line and puts the
+matching action first: **Choose another folder** for a missing environment, a
+write-permission error or a cloud-synced folder, **Copy diagnostics** for a
+native crash such as exit code `3221225477`, and **Retry** otherwise.
+
+The failure screen shows a single status pill (Starting, Recovering or Failed)
+with the elapsed time; repeated identical failures count up on the pill instead
+of redrawing the screen, and the raw message and log tail sit under **Details**.
+While a running engine is only busy, a slim bar at the bottom says it is
+reconnecting automatically; the workspace stays usable.
 
 - **`Could not start <program>: spawn UNKNOWN`** — Windows (or your security
   software) refused to run the Python runtime; `UNKNOWN` is how the OS reports a
