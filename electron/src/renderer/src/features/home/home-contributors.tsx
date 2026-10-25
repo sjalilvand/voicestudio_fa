@@ -1,6 +1,7 @@
 import type { MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowUpRightIcon, StarIcon } from 'lucide-react';
+import { ArrowUpRightIcon, GlobeIcon, StarIcon } from 'lucide-react';
+import { GitHubIcon, XLogoIcon } from '@/components/brand-icons';
 import { getBridge } from '@/components/bridge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -122,18 +123,22 @@ export function HomeContributors() {
           {card.links.map(({ kind, handle, href }) => {
             const label =
               kind === 'website' ? t('homeUi.website') : kind === 'github' ? 'GitHub' : 'X';
+            const KindIcon =
+              kind === 'website' ? GlobeIcon : kind === 'github' ? GitHubIcon : XLogoIcon;
             return (
               <a
                 key={kind}
+                data-kind={kind}
                 aria-label={`${label} ${handle}`}
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={openProfile}
               >
-                <span>
+                <KindIcon className="home-contributor-link-icon" aria-hidden="true" />
+                <span className="min-w-0 flex-1">
                   <strong>{label}</strong>
-                  <small>{handle}</small>
+                  <small className="truncate">{handle}</small>
                 </span>
                 <span className="home-contributor-follow">
                   {kind === 'website' ? (
