@@ -250,12 +250,14 @@ try {
     const expandedDevice = macSidebar.getByRole('button', { name: /Local device/ });
     const expandedSettingsBounds = await expandedSettings.boundingBox();
     const expandedDeviceBounds = await expandedDevice.boundingBox();
-    assert.equal((await expandedSettings.innerText()).trim(), '');
+    // Labelled, not icon-only: the footer reads as "Settings" and the device name.
+    assert.equal((await expandedSettings.innerText()).trim(), 'Settings');
+    assert.notEqual((await expandedDevice.innerText()).trim(), '');
     assert.ok(
       expandedSettingsBounds &&
         expandedDeviceBounds &&
         expandedDeviceBounds.x > expandedSettingsBounds.x,
-      'expanded macOS Local device must sit right of icon-only Settings',
+      'expanded macOS Local device must sit right of Settings',
     );
     await expandedDevice.click();
     await macPage.locator('[data-slot=popover-content][data-open]').waitFor({ state: 'visible' });

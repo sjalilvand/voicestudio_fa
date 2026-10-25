@@ -169,8 +169,8 @@ export function WorkspaceSidebar() {
                     aria-label={t('nav.settings')}
                     title={t('nav.settings')}
                     className={cn(
-                      buttonVariants({ variant: 'ghost', size: 'icon-xs' }),
-                      'workspace-nav-item',
+                      buttonVariants({ variant: 'ghost', size: 'sm' }),
+                      'workspace-nav-item h-7 shrink-0 gap-1.5 px-2 text-xs',
                     )}
                   >
                     <SettingsIcon
@@ -178,6 +178,7 @@ export function WorkspaceSidebar() {
                       data-tone="settings"
                       data-motion="turn"
                     />
+                    {t('nav.settings')}
                   </Link>
                 ) : undefined
               }
