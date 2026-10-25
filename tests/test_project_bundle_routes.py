@@ -288,13 +288,13 @@ def test_source_voice_dub_export_resolves_automatic_bindings(handoff, tmp_path, 
 
 
 
-def test_bundle_directory_rejects_symlink_escape(handoff, tmp_path):
+def test_bundle_directory_rejects_symlink_escape(handoff, tmp_path, symlink_or_skip):
     import uuid
     client, routes, _ = handoff
     identifier = str(uuid.uuid4())
     outside = tmp_path / 'outside'; outside.mkdir()
     (outside/'project.vsproject').write_bytes(b'private')
-    (routes._root()/identifier).symlink_to(outside, target_is_directory=True)
+    symlink_or_skip(routes._root()/identifier, outside, target_is_directory=True)
     assert client.get('/project-bundles/'+identifier).status_code == 400
 
 
@@ -345,12 +345,12 @@ def test_retention_ignores_unfinished_exports_and_imported_asset_directories(han
 
 
 @pytest.mark.parametrize('filename',['project.vsproject','result.json'])
-def test_bundle_file_rejects_symlink_escape(handoff,tmp_path,filename):
+def test_bundle_file_rejects_symlink_escape(handoff,tmp_path,filename,symlink_or_skip):
     import uuid
     client,routes,_ = handoff
     directory = routes._directory(str(uuid.uuid4())); directory.mkdir()
     outside = tmp_path/'private.json'; outside.write_text('{"secret":true}')
-    (directory/filename).symlink_to(outside)
+    symlink_or_skip(directory/filename,outside)
     url = '/project-bundles/'+directory.name+('/document' if filename=='result.json' else '')
     assert client.get(url).status_code == 400
 
