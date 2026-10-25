@@ -3510,7 +3510,11 @@
     "unknown": "Dukungan bahasa tidak diketahui",
     "error": "Tidak dapat memeriksa bahasa",
     "modelLanguages": "Bahasa untuk model ini",
-    "changeModel": "Ganti model"
+    "changeModel": "Ganti model",
+    "recent": "Terbaru",
+    "available": "Tersedia",
+    "showAll": "Tampilkan semua bahasa",
+    "hideUnsupported": "Sembunyikan bahasa yang tidak didukung"
   },
   "modelLicense": {
     "title": "Ketentuan model",

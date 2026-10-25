@@ -3510,7 +3510,11 @@
     "unknown": "Sprachunterstützung unbekannt",
     "error": "Sprachen konnten nicht geprüft werden",
     "modelLanguages": "Sprachen dieses Modells",
-    "changeModel": "Modell wechseln"
+    "changeModel": "Modell wechseln",
+    "recent": "Zuletzt verwendet",
+    "available": "Verfügbar",
+    "showAll": "Alle Sprachen anzeigen",
+    "hideUnsupported": "Nicht unterstützte Sprachen ausblenden"
   },
   "modelLicense": {
     "title": "Modellbedingungen",

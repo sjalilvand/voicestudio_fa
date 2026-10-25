@@ -3510,7 +3510,11 @@
     "unknown": "Dil desteği bilinmiyor",
     "error": "Diller kontrol edilemedi",
     "modelLanguages": "Bu modelin dilleri",
-    "changeModel": "Modeli değiştir"
+    "changeModel": "Modeli değiştir",
+    "recent": "Son kullanılanlar",
+    "available": "Kullanılabilir",
+    "showAll": "Tüm dilleri göster",
+    "hideUnsupported": "Desteklenmeyen dilleri gizle"
   },
   "modelLicense": {
     "title": "Model koşulları",

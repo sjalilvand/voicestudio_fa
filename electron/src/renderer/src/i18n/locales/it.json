@@ -3512,7 +3512,11 @@
     "unknown": "Supporto lingue sconosciuto",
     "error": "Impossibile verificare le lingue",
     "modelLanguages": "Lingue di questo modello",
-    "changeModel": "Cambia modello"
+    "changeModel": "Cambia modello",
+    "recent": "Recenti",
+    "available": "Disponibili",
+    "showAll": "Mostra tutte le lingue",
+    "hideUnsupported": "Nascondi le lingue non supportate"
   },
   "modelLicense": {
     "title": "Condizioni del modello",

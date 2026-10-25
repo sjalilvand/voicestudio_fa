@@ -3514,7 +3514,11 @@
     "unknown": "Obsługiwane języki nieznane",
     "error": "Nie udało się sprawdzić języków",
     "modelLanguages": "Języki tego modelu",
-    "changeModel": "Zmień model"
+    "changeModel": "Zmień model",
+    "recent": "Ostatnie",
+    "available": "Dostępne",
+    "showAll": "Pokaż wszystkie języki",
+    "hideUnsupported": "Ukryj nieobsługiwane języki"
   },
   "modelLicense": {
     "title": "Warunki modelu",

@@ -3510,7 +3510,11 @@
     "unknown": "対応言語は不明です",
     "error": "言語を確認できませんでした",
     "modelLanguages": "このモデルの言語",
-    "changeModel": "モデルを変更"
+    "changeModel": "モデルを変更",
+    "recent": "最近使用",
+    "available": "利用可能",
+    "showAll": "すべての言語を表示",
+    "hideUnsupported": "非対応の言語を隠す"
   },
   "modelLicense": {
     "title": "モデルの利用条件",
