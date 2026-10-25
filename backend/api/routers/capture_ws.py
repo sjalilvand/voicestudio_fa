@@ -109,14 +109,16 @@ def _final_polisher(websocket, language: str | None):
 
     Dictation sessions get the full cleanup (services.dictation_cleanup);
     platform-stream API clients keep the plain polish they always had. The
-    spoken-punctuation setting is read once per session."""
+    spoken-punctuation setting is read once per session. The returned
+    callable takes ``(text, language=None)``; a language passed in overrides
+    the session's (the silent-model recovery knows the fallback's language)."""
     if isinstance(websocket, _PlatformWebSocket):
-        return polish_text
+        return lambda text, lang=None: polish_text(text)
     from services.dictation_cleanup import _spoken_punctuation_enabled
 
     spoken = _spoken_punctuation_enabled()
-    return lambda text, lang=language: polish_dictation(
-        text, lang, spoken_punctuation=spoken,
+    return lambda text, lang=None: polish_dictation(
+        text, lang or language, spoken_punctuation=spoken,
     )
 
 
@@ -716,9 +718,12 @@ def _pcm16_rms(pcm: bytes) -> float:
 
 
 async def _recover_silent_sherpa(
-    spec, pcm: bytes, pcm_sr: int,
+    spec, pcm: bytes, pcm_sr: int, polish=None,
 ) -> tuple[str, list[dict]]:
-    """Retry a token-silent Sherpa session through an installed local ASR."""
+    """Retry a token-silent Sherpa session through an installed local ASR.
+
+    ``polish`` is the session's :func:`_final_polisher`, so platform-stream
+    clients keep plain polish on this path too."""
     logger.warning(
         "dictation model %s decoded NOTHING from %.1fs of speech-level audio "
         "— falling back to the capture ASR engine for this session",
@@ -743,7 +748,7 @@ async def _recover_silent_sherpa(
         result = await _transcribe_buffer_full(
             [pcm], pcm_sr=pcm_sr, skip_sherpa=True,
         )
-        text = polish_dictation(_result_text(result), result.get("language"))
+        text = (polish or polish_dictation)(_result_text(result), result.get("language"))
         if not text:
             return "", []
         # The RMS gate can fire on fan/keyboard noise. Only another recognizer
@@ -970,7 +975,7 @@ async def _run_sherpa_streaming(websocket: WebSocket, spec):
     model_silent = is_model_silent(full, heard_speech, session_pcm.total_bytes)
     if model_silent:
         recovered, recovered_segments = await _recover_silent_sherpa(
-            spec, session_pcm.tail(), pcm_sr,
+            spec, session_pcm.tail(), pcm_sr, polish,
         )
         if recovered:
             full = recovered
@@ -1161,7 +1166,7 @@ async def _run_sherpa_offline(websocket: WebSocket, spec):
     model_silent = is_model_silent(full, heard_speech, session_pcm.total_bytes)
     if model_silent:
         recovered, recovered_segments = await _recover_silent_sherpa(
-            spec, session_pcm.tail(), pcm_sr,
+            spec, session_pcm.tail(), pcm_sr, polish,
         )
         if recovered:
             full = recovered

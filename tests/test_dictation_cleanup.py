@@ -152,7 +152,7 @@ def test_setting_failure_never_costs_the_final(monkeypatch):
 
 @pytest.mark.parametrize("raw", [
     "HELLO WORLD", "um so the the thing", "Hello , world", "hi comma there new line ok",
-    "你好世界", "привет мир", "", "   ",
+    "\u4f60\u597d\u4e16\u754c", "привет мир", "", "   ",
 ])
 @pytest.mark.parametrize("spoken", [False, True])
 def test_idempotent(raw, spoken):
@@ -175,9 +175,41 @@ def test_join_latin_pieces_with_one_space():
 
 def test_join_cjk_pieces_without_space():
     # Before: " ".join put a space between Chinese sentences.
-    assert join_dictation_pieces(["你好。", "世界。"]) == \
-        "你好。世界。"
+    assert join_dictation_pieces(["\u4f60\u597d\u3002", "\u4e16\u754c\u3002"]) == \
+        "\u4f60\u597d\u3002\u4e16\u754c\u3002"
 
 
 def test_join_skips_empty_pieces():
     assert join_dictation_pieces(["", "Hi.", "  ", "Bye."]) == "Hi. Bye."
+
+
+# ── Review regressions ──────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("raw,clean", [
+    ("hello comma", "Hello,"),
+    ("dear Sam colon", "Dear Sam:"),
+    ("first semicolon", "First;"),
+])
+def test_spoken_separator_at_utterance_end_is_kept(raw, clean):
+    # polish_text swaps a dangling ASR comma for a stop; a spoken one stays.
+    assert _p(raw, "en", spoken=True) == clean
+
+
+def test_trailing_asr_comma_still_becomes_a_stop():
+    assert _p("see you tomorrow,", "en", spoken=True) == "See you tomorrow."
+
+
+def test_explicit_language_beats_all_caps_english_guess():
+    assert _p("UM CARRO AZUL", "pt") == "Um carro azul."
+    assert _p("ER IST HIER", "de") == "Er ist hier."
+    # No language (or "auto") from an English streaming model: English rules.
+    assert _p("UM I THINK SO", "auto") == "I think so."
+
+
+def test_platform_stream_polisher_keeps_plain_polish():
+    from api.routers import capture_ws as cw
+
+    platform = cw._PlatformWebSocket.__new__(cw._PlatformWebSocket)
+    polish = cw._final_polisher(platform, "en")
+    assert polish("um hello comma world", "en") == "Um hello comma world."

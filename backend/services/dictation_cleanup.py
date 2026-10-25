@@ -2,7 +2,8 @@
 Deterministic cleanup for dictation finals — runs before
 :func:`services.text_polish.polish_text` on every text dictation types.
 
-What it fixes (rule-based, no model, no network, idempotent):
+What it fixes (rule-based, no model, no network; idempotent except that a
+spoken trailing ", ; :" is kept only on the first pass, where it was spoken):
 
   * ALL-CAPS output from the streaming sherpa zipformers ("HELLO WORLD") is
     put into sentence case, so it no longer types as shouting.
@@ -35,8 +36,10 @@ from services.text_polish import polish_text
 
 logger = logging.getLogger("omnivoice.dictation_cleanup")
 
-# Private-use marker: "capitalize the next letter" (a sentence starts here).
-_CAP = ""
+# Private-use markers: "capitalize the next letter" (a sentence starts here),
+# and "this separator was spoken on purpose" (keep it at the very end).
+_CAP = "\ue000"
+_SPOKEN = "\ue001"
 
 _LATIN_WORD = re.compile(r"[A-Za-zÀ-ɏ]{2,}")
 _LATIN_LOWER = re.compile(r"[a-zß-öø-ÿā-ɏ]")
@@ -86,7 +89,7 @@ _CAP_NEXT = re.compile(_CAP + r"[ \t" + _CAP + r"]*(\w?)")
 # CJK (kana, ideographs, compatibility forms, fullwidth punctuation): no space
 # between pieces that meet on one of these.
 _CJK_EDGE = re.compile(
-    "[　-〿぀-ヿ㐀-䶿一-鿿豈-﫿＀-￯]"
+    "[\u3000-\u303f\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff00-\uffef]"
 )
 
 
@@ -140,9 +143,13 @@ def _apply_commands(text: str) -> str:
             return lead + symbol + _CAP
         if symbol in ".?!":
             return symbol + " " + _CAP
-        return symbol + " "
+        return symbol + _SPOKEN + " "
 
     return _COMMAND.sub(repl, text)
+
+
+def _language_given(language: str | None) -> bool:
+    return bool(language) and language.lower() not in {"auto", "unknown", "none"}
 
 
 def clean_dictation_text(
@@ -150,11 +157,18 @@ def clean_dictation_text(
 ) -> str:
     """Apply the cleanup rules above. Does not add terminal punctuation or the
     leading capital — :func:`polish_dictation` adds those via polish_text."""
+    return _clean(text, language, spoken_punctuation)[0]
+
+
+def _clean(text: str, language: str | None, spoken_punctuation: bool) -> tuple[str, bool]:
+    """Cleaned text, plus whether it ends with a spoken , ; or : to keep."""
     if not text or not text.strip():
-        return ""
-    out = text.replace(_CAP, "")
+        return "", False
+    out = text.replace(_CAP, "").replace(_SPOKEN, "")
     out, decased = _decase_shouting(out)
-    english = decased or _is_english(language)
+    # All-caps output comes from the English streaming models, but an explicit
+    # language always wins: "UM CARRO" in Portuguese keeps its "um".
+    english = _is_english(language) or (decased and not _language_given(language))
     if spoken_punctuation:
         out = _apply_commands(out)
     out = _remove_fillers(out, english)
@@ -170,10 +184,12 @@ def clean_dictation_text(
     if decased:
         out = re.sub(r"([.!?]\s+)([a-z])", lambda m: m.group(1) + m.group(2).upper(), out)
     out = out.strip()
+    spoken_end = out.endswith(_SPOKEN)
+    out = out.replace(_SPOKEN, "")
     # Punctuation alone (a lone "comma" utterance) types nothing.
     if not any(ch.isalnum() for ch in out):
-        return ""
-    return out
+        return "", False
+    return out, spoken_end
 
 
 def _spoken_punctuation_enabled() -> bool:
@@ -193,9 +209,15 @@ def polish_dictation(
     reads the saved setting (Settings → Models → Dictation)."""
     if spoken_punctuation is None:
         spoken_punctuation = _spoken_punctuation_enabled()
-    return polish_text(
-        clean_dictation_text(text, language, spoken_punctuation=spoken_punctuation)
-    )
+    out, spoken_end = _clean(text, language, spoken_punctuation)
+    if spoken_end:
+        # "hello comma" keeps the comma the speaker asked for; polish_text
+        # would swap a dangling separator for a stop.
+        body = polish_text(out[:-1])
+        if body.endswith(".") and not body.endswith(".."):
+            body = body[:-1]
+        return body + out[-1]
+    return polish_text(out)
 
 
 def join_dictation_pieces(pieces: list[str]) -> str:
