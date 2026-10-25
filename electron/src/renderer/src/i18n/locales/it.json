@@ -3923,5 +3923,34 @@
       "rate_limited": "Troppe segnalazioni da questa rete. Riprova più tardi.",
       "invalid": "Impossibile inviare questa segnalazione. Aggiorna l'app e riprova."
     }
+  },
+  "failureCause": {
+    "details": "Dettagli",
+    "fixes": "Soluzioni suggerite",
+    "vram": {
+      "title": "La GPU ha esaurito la memoria",
+      "fix1": "Chiudi le altre app che usano la GPU",
+      "fix2": "Scegli la CPU o un motore più leggero"
+    },
+    "model_missing": {
+      "title": "Il modello non è scaricato",
+      "fix1": "Scaricalo nel Catalogo modelli",
+      "fix2": "Usa Ripara per installarlo"
+    },
+    "busy": {
+      "title": "Il motore è occupato",
+      "fix1": "Attendi la fine del lavoro in corso",
+      "fix2": "Riprova tra un momento"
+    },
+    "timeout": {
+      "title": "Generazione scaduta",
+      "fix1": "Prova un brano più breve",
+      "fix2": "Aumenta il timeout del proxy"
+    },
+    "bad_response": {
+      "title": "Risposta inattesa dal server",
+      "fix1": "Controlla il backend in Impostazioni > Log",
+      "fix2": "Riavvia VoiceStudio e riprova"
+    }
   }
 }

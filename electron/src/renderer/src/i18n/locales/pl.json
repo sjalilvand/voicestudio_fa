@@ -3927,5 +3927,34 @@
       "rate_limited": "Zbyt wiele zgłoszeń z tej sieci. Spróbuj później.",
       "invalid": "Nie udało się wysłać tego zgłoszenia. Zaktualizuj aplikację i spróbuj ponownie."
     }
+  },
+  "failureCause": {
+    "details": "Szczegóły",
+    "fixes": "Sugerowane rozwiązania",
+    "vram": {
+      "title": "Procesorowi GPU zabrakło pamięci",
+      "fix1": "Zamknij inne aplikacje używające GPU",
+      "fix2": "Wybierz CPU lub mniejszy silnik"
+    },
+    "model_missing": {
+      "title": "Model nie został pobrany",
+      "fix1": "Pobierz go w Katalogu modeli",
+      "fix2": "Użyj Napraw, aby go zainstalować"
+    },
+    "busy": {
+      "title": "Silnik jest zajęty",
+      "fix1": "Poczekaj na zakończenie bieżącego zadania",
+      "fix2": "Spróbuj ponownie za chwilę"
+    },
+    "timeout": {
+      "title": "Przekroczono limit czasu generowania",
+      "fix1": "Spróbuj krótszego fragmentu",
+      "fix2": "Zwiększ limit czasu proxy"
+    },
+    "bad_response": {
+      "title": "Nieoczekiwana odpowiedź serwera",
+      "fix1": "Sprawdź backend w Ustawienia > Dzienniki",
+      "fix2": "Uruchom VoiceStudio ponownie i spróbuj jeszcze raz"
+    }
   }
 }

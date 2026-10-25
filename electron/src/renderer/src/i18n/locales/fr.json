@@ -3923,5 +3923,34 @@
       "rate_limited": "Trop de signalements depuis ce réseau. Réessayez plus tard.",
       "invalid": "Ce signalement n'a pas pu être envoyé. Mettez l'app à jour et réessayez."
     }
+  },
+  "failureCause": {
+    "details": "Détails",
+    "fixes": "Correctifs suggérés",
+    "vram": {
+      "title": "Le GPU n'a plus de mémoire",
+      "fix1": "Fermez les autres applications GPU",
+      "fix2": "Choisissez le CPU ou un moteur plus léger"
+    },
+    "model_missing": {
+      "title": "Le modèle n'est pas téléchargé",
+      "fix1": "Téléchargez-le dans le Catalogue de modèles",
+      "fix2": "Utilisez Réparer pour l'installer"
+    },
+    "busy": {
+      "title": "Le moteur est occupé",
+      "fix1": "Attendez la fin de la tâche en cours",
+      "fix2": "Réessayez dans un instant"
+    },
+    "timeout": {
+      "title": "La génération a expiré",
+      "fix1": "Essayez un passage plus court",
+      "fix2": "Augmentez le délai d'attente du proxy"
+    },
+    "bad_response": {
+      "title": "Réponse inattendue du serveur",
+      "fix1": "Vérifiez le backend dans Réglages > Journaux",
+      "fix2": "Redémarrez VoiceStudio et réessayez"
+    }
   }
 }

@@ -3921,5 +3921,34 @@
       "rate_limited": "Bu ağdan çok fazla bildirim geldi. Daha sonra tekrar deneyin.",
       "invalid": "Bu bildirim gönderilemedi. Uygulamayı güncelleyip tekrar deneyin."
     }
+  },
+  "failureCause": {
+    "details": "Ayrıntılar",
+    "fixes": "Önerilen çözümler",
+    "vram": {
+      "title": "GPU belleği doldu",
+      "fix1": "GPU kullanan diğer uygulamaları kapatın",
+      "fix2": "CPU'yu veya daha küçük bir motoru seçin"
+    },
+    "model_missing": {
+      "title": "Model indirilmemiş",
+      "fix1": "Model Kataloğu'ndan indirin",
+      "fix2": "Yüklemek için Onar'ı kullanın"
+    },
+    "busy": {
+      "title": "Motor meşgul",
+      "fix1": "Geçerli işin bitmesini bekleyin",
+      "fix2": "Birazdan tekrar deneyin"
+    },
+    "timeout": {
+      "title": "Oluşturma zaman aşımına uğradı",
+      "fix1": "Daha kısa bir bölüm deneyin",
+      "fix2": "Proxy zaman aşımını artırın"
+    },
+    "bad_response": {
+      "title": "Sunucudan beklenmeyen yanıt",
+      "fix1": "Ayarlar > Günlükler'de arka ucu kontrol edin",
+      "fix2": "VoiceStudio'yu yeniden başlatıp tekrar deneyin"
+    }
   }
 }

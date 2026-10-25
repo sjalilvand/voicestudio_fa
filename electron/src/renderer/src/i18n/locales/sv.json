@@ -3921,5 +3921,34 @@
       "rate_limited": "För många rapporter från det här nätverket. Försök igen senare.",
       "invalid": "Rapporten kunde inte skickas. Uppdatera appen och försök igen."
     }
+  },
+  "failureCause": {
+    "details": "Detaljer",
+    "fixes": "Föreslagna åtgärder",
+    "vram": {
+      "title": "GPU:n fick slut på minne",
+      "fix1": "Stäng andra GPU-appar",
+      "fix2": "Välj CPU eller en mindre motor"
+    },
+    "model_missing": {
+      "title": "Modellen är inte nedladdad",
+      "fix1": "Ladda ned den i Modellkatalogen",
+      "fix2": "Använd Åtgärda för att installera den"
+    },
+    "busy": {
+      "title": "Motorn är upptagen",
+      "fix1": "Vänta tills pågående jobb är klart",
+      "fix2": "Försök igen om en stund"
+    },
+    "timeout": {
+      "title": "Genereringen översteg tidsgränsen",
+      "fix1": "Prova ett kortare stycke",
+      "fix2": "Höj proxyns tidsgräns"
+    },
+    "bad_response": {
+      "title": "Oväntat svar från servern",
+      "fix1": "Kontrollera backend i Inställningar > Loggar",
+      "fix2": "Starta om VoiceStudio och försök igen"
+    }
   }
 }
