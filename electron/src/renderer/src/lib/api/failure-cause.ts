@@ -1,11 +1,14 @@
 /** Plain-language cause of a failed generation, inferred from the raw error text. */
 export type FailureCause = 'vram' | 'model_missing' | 'busy' | 'timeout' | 'bad_response';
 
-const HTML_BODY = /^\s*(?:<!doctype\s+html|<html[\s>]|<head[\s>]|<body[\s>])|<\/(?:html|body|title)>/i;
+// Two patterns rather than one alternation: only the first is anchored, and a single
+// `^a|b` regex reads as a missing anchor (CodeQL js/regex/missing-regexp-anchor).
+const HTML_DOCUMENT_START = /^\s*(?:<!doctype\s+html|<html[\s>]|<head[\s>]|<body[\s>])/i;
+const HTML_CLOSING_TAG = /<\/(?:html|body|title)>/i;
 
 /** A proxy error page (nginx 504, Cloudflare 524, ...) leaked in place of a message. */
 export function looksLikeHtml(text: string): boolean {
-  return HTML_BODY.test(text);
+  return HTML_DOCUMENT_START.test(text) || HTML_CLOSING_TAG.test(text);
 }
 
 const PATTERNS: Array<[FailureCause, RegExp]> = [
