@@ -40,7 +40,7 @@ import kotlin.math.min
  * Electron's bundle into the APK assets at build time: nothing is fetched at runtime.
  */
 object HomeContributors {
-    val logins = listOf("debpalash", "kevin9327", "psiberfunk", "velixio", "jaketame", "paoloantinori", "Chang-Jin-Lee", "Shivendra-Coherent", "marreiradigital")
+    val logins = listOf("debpalash", "velixio", "kevin9327", "jaketame", "psiberfunk", "rudycelekli", "paoloantinori", "Chang-Jin-Lee", "swadhinbiswas", "BichengWang", "nirmalchatur", "Shivendra-Coherent", "marreiradigital", "nvtoan0201-swe")
     val coreMaintainers = setOf("debpalash", "velixio")
     const val REPOSITORY = "https://github.com/debpalash/VoiceStudio"
     /** Three right-aligned rows that taper downward, filled right to left, ending with "All". */
