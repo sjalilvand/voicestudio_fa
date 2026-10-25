@@ -2090,7 +2090,13 @@
     "cause_slow_start": "O mecanismo ainda está iniciando em um computador lento",
     "choose_folder": "Escolher outra pasta",
     "copy_diagnostics": "Copiar diagnóstico",
-    "diagnostics_copied": "Diagnóstico copiado"
+    "diagnostics_copied": "Diagnóstico copiado",
+    "details": "Detalhes",
+    "pill_starting": "Iniciando",
+    "pill_recovering": "Recuperando",
+    "pill_failed": "Falhou",
+    "pill_repeats": "{{count}} vezes seguidas",
+    "offline_bar": "Mecanismo ocupado, reconectando automaticamente"
   },
   "bootstrap": {
     "checking": "Verificando o ambiente…",

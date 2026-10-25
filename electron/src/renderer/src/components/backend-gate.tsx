@@ -2,6 +2,13 @@ import { SetupGate } from './setup-gate';
 import { ReportBug } from './report-bug';
 import { CrashDetails } from './crash-details';
 import {
+  BackendOfflineBar,
+  BackendStatusPill,
+  useActiveSeconds,
+  useFailureRepeats,
+  type BackendPillState,
+} from './backend-status-pill';
+import {
   CheckIcon,
   ChevronDownIcon,
   CircleIcon,
@@ -146,6 +153,9 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
   // bar carries the only signal this needs. Tearing the app down behind an
   // error screen mid-generation is the bug this stage exists to prevent.
   const busy = isBackendBusy(status.stage);
+  const busySeconds = useActiveSeconds(busy);
+  const failedNow = RETRYABLE.has(status.stage);
+  const repeats = useFailureRepeats(failedNow, status.message);
 
   useEffect(() => {
     setRestarting(false);
@@ -158,12 +168,18 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
     return (
       <div className="contents">
         <SetupGate>{children}</SetupGate>
+        {busy ? <BackendOfflineBar seconds={busySeconds} /> : null}
       </div>
     );
 
   const failed = RETRYABLE.has(status.stage);
   // One named cause and one primary action, instead of a raw error to decode.
   const cause = failed && !setup ? backendFailureCause(status.message) : null;
+  const pillState: BackendPillState = failed
+    ? 'failed'
+    : reachedReady
+      ? 'recovering'
+      : 'starting';
   const causeAction = cause ? BACKEND_CAUSE_ACTION[cause] : 'retry';
   const stageText =
     installing && status.setupPhase
@@ -256,9 +272,12 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
           ) : (
             <Spinner className="size-8 text-primary" aria-label={t('common.loading')} />
           )}
+          {!setup && !installing && (failed || running) ? (
+            <BackendStatusPill state={pillState} seconds={seconds} repeats={repeats} />
+          ) : null}
           <div className="space-y-1">
             <p className={cn('text-base font-medium', failed && 'text-destructive')}>{stageText}</p>
-            {(failed || setup) && status.message && !status.diagnosis ? (
+            {(failed || setup) && status.message && !status.diagnosis && !(cause && !setup) ? (
               <p className="text-sm text-muted-foreground">
                 {status.message === 'VOICESTUDIO_PROXY_BYPASS_UNSUPPORTED'
                   ? t('backend.proxy_bypass_help')
@@ -295,7 +314,7 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
                 <RemoteBackendSettings />
               </div>
             ) : null}
-            {running ? (
+            {installing ? (
               <p className="font-mono text-xs text-muted-foreground tabular-nums">
                 {t('backend.elapsed', { seconds })}
               </p>
@@ -646,21 +665,21 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
               request={`Resume and repair the interrupted VoiceStudio runtime setup. Current issue: ${status.setupIssue || 'unknown'}.${delimitedDiagnostic(status.message)} Use the Electron runtime setup control, wait for completion, and verify backend health. Do not clean reinstall or change user consent.`}
             />
           ) : null}
-          {status.logTail.length > 0 ? (
+          {status.logTail.length > 0 || (cause && status.message) ? (
             <Collapsible open={logOpen} onOpenChange={setLogOpen} className="w-full">
               <CollapsibleTrigger className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50">
                 <ChevronDownIcon
                   className={cn('size-3.5 transition-transform', logOpen && 'rotate-180')}
                   aria-hidden="true"
                 />
-                {logOpen ? t('backend.hide_log') : t('backend.show_log')}
+                {t('backend.details')}
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <pre
                   className="mt-2 max-h-56 overflow-auto rounded-lg border bg-card p-3 text-left font-mono text-[11px] leading-relaxed whitespace-pre-wrap text-muted-foreground"
                   aria-label={t('backend.log_label')}
                 >
-                  {status.logTail.join('\n')}
+                  {[cause && status.message, ...status.logTail].filter(Boolean).join('\n')}
                 </pre>
               </CollapsibleContent>
             </Collapsible>

@@ -349,7 +349,13 @@
     "cause_slow_start": "The engine is still starting on a slow computer",
     "choose_folder": "Choose another folder",
     "copy_diagnostics": "Copy diagnostics",
-    "diagnostics_copied": "Diagnostics copied"
+    "diagnostics_copied": "Diagnostics copied",
+    "details": "Details",
+    "pill_starting": "Starting",
+    "pill_recovering": "Recovering",
+    "pill_failed": "Failed",
+    "pill_repeats": "{{count}} times in a row",
+    "offline_bar": "Engine busy, reconnecting automatically"
   },
   "engines": {
     "selectCpuFallback": "{{engine}}: running on CPU — {{reason}}",

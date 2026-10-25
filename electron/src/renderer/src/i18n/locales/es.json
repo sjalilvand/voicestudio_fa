@@ -2090,7 +2090,13 @@
     "cause_slow_start": "El motor aún se está iniciando en un equipo lento",
     "choose_folder": "Elegir otra carpeta",
     "copy_diagnostics": "Copiar diagnóstico",
-    "diagnostics_copied": "Diagnóstico copiado"
+    "diagnostics_copied": "Diagnóstico copiado",
+    "details": "Detalles",
+    "pill_starting": "Iniciando",
+    "pill_recovering": "Recuperando",
+    "pill_failed": "Error",
+    "pill_repeats": "{{count}} veces seguidas",
+    "offline_bar": "Motor ocupado, reconectando automáticamente"
   },
   "bootstrap": {
     "checking": "Comprobando el entorno…",

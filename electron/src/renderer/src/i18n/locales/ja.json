@@ -2088,7 +2088,13 @@
     "cause_slow_start": "動作の遅いパソコンでエンジンがまだ起動中です",
     "choose_folder": "別のフォルダーを選択",
     "copy_diagnostics": "診断情報をコピー",
-    "diagnostics_copied": "診断情報をコピーしました"
+    "diagnostics_copied": "診断情報をコピーしました",
+    "details": "詳細",
+    "pill_starting": "起動中",
+    "pill_recovering": "復旧中",
+    "pill_failed": "失敗",
+    "pill_repeats": "{{count}} 回連続",
+    "offline_bar": "エンジンがビジー状態です。自動的に再接続します"
   },
   "bootstrap": {
     "checking": "環境の確認中…",

@@ -1345,6 +1345,12 @@ matching action first: **Choose another folder** for a missing environment, a
 write-permission error or a cloud-synced folder, **Copy diagnostics** for a
 native crash such as exit code `3221225477`, and **Retry** otherwise.
 
+The failure screen shows a single status pill (Starting, Recovering or Failed)
+with the elapsed time; repeated identical failures count up on the pill instead
+of redrawing the screen, and the raw message and log tail sit under **Details**.
+While a running engine is only busy, a slim bar at the bottom says it is
+reconnecting automatically; the workspace stays usable.
+
 - **`Could not start <program>: spawn UNKNOWN`** — Windows (or your security
   software) refused to run the Python runtime; `UNKNOWN` is how the OS reports a
   blocked executable. Add VoiceStudio's runtime folder to your antivirus

@@ -2092,7 +2092,13 @@
     "cause_slow_start": "Silnik nadal się uruchamia na wolnym komputerze",
     "choose_folder": "Wybierz inny folder",
     "copy_diagnostics": "Kopiuj diagnostykę",
-    "diagnostics_copied": "Skopiowano diagnostykę"
+    "diagnostics_copied": "Skopiowano diagnostykę",
+    "details": "Szczegóły",
+    "pill_starting": "Uruchamianie",
+    "pill_recovering": "Odzyskiwanie",
+    "pill_failed": "Niepowodzenie",
+    "pill_repeats": "{{count}} razy z rzędu",
+    "offline_bar": "Silnik jest zajęty, trwa automatyczne ponowne łączenie"
   },
   "bootstrap": {
     "checking": "Sprawdzanie środowiska…",

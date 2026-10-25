@@ -2088,7 +2088,13 @@
     "cause_slow_start": "धीमे कंप्यूटर पर इंजन अभी शुरू हो रहा है",
     "choose_folder": "दूसरा फ़ोल्डर चुनें",
     "copy_diagnostics": "डायग्नोस्टिक कॉपी करें",
-    "diagnostics_copied": "डायग्नोस्टिक कॉपी हो गया"
+    "diagnostics_copied": "डायग्नोस्टिक कॉपी हो गया",
+    "details": "विवरण",
+    "pill_starting": "शुरू हो रहा है",
+    "pill_recovering": "पुनः चालू हो रहा है",
+    "pill_failed": "विफल",
+    "pill_repeats": "लगातार {{count}} बार",
+    "offline_bar": "इंजन व्यस्त है, अपने आप दोबारा जुड़ रहा है"
   },
   "bootstrap": {
     "checking": "वातावरण की जाँच हो रही है…",

@@ -2088,7 +2088,13 @@
     "cause_slow_start": "Công cụ vẫn đang khởi động trên máy chậm",
     "choose_folder": "Chọn thư mục khác",
     "copy_diagnostics": "Sao chép chẩn đoán",
-    "diagnostics_copied": "Đã sao chép chẩn đoán"
+    "diagnostics_copied": "Đã sao chép chẩn đoán",
+    "details": "Chi tiết",
+    "pill_starting": "Đang khởi động",
+    "pill_recovering": "Đang khôi phục",
+    "pill_failed": "Thất bại",
+    "pill_repeats": "{{count}} lần liên tiếp",
+    "offline_bar": "Công cụ đang bận, tự động kết nối lại"
   },
   "bootstrap": {
     "checking": "Đang kiểm tra môi trường…",

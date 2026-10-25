@@ -2088,7 +2088,13 @@
     "cause_slow_start": "Mesin masih dimulai di komputer yang lambat",
     "choose_folder": "Pilih folder lain",
     "copy_diagnostics": "Salin diagnostik",
-    "diagnostics_copied": "Diagnostik disalin"
+    "diagnostics_copied": "Diagnostik disalin",
+    "details": "Detail",
+    "pill_starting": "Memulai",
+    "pill_recovering": "Memulihkan",
+    "pill_failed": "Gagal",
+    "pill_repeats": "{{count}} kali berturut-turut",
+    "offline_bar": "Mesin sibuk, menyambung kembali otomatis"
   },
   "bootstrap": {
     "checking": "Memeriksa lingkungan…",

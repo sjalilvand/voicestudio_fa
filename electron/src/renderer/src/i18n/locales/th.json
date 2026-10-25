@@ -2088,7 +2088,13 @@
     "cause_slow_start": "เอนจินยังเริ่มต้นอยู่บนคอมพิวเตอร์ที่ช้า",
     "choose_folder": "เลือกโฟลเดอร์อื่น",
     "copy_diagnostics": "คัดลอกข้อมูลวินิจฉัย",
-    "diagnostics_copied": "คัดลอกข้อมูลวินิจฉัยแล้ว"
+    "diagnostics_copied": "คัดลอกข้อมูลวินิจฉัยแล้ว",
+    "details": "รายละเอียด",
+    "pill_starting": "กำลังเริ่มต้น",
+    "pill_recovering": "กำลังกู้คืน",
+    "pill_failed": "ล้มเหลว",
+    "pill_repeats": "ติดต่อกัน {{count}} ครั้ง",
+    "offline_bar": "เอนจินกำลังทำงานอยู่ กำลังเชื่อมต่อใหม่อัตโนมัติ"
   },
   "bootstrap": {
     "checking": "กำลังตรวจสอบระบบ…",
