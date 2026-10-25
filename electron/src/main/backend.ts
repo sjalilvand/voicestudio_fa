@@ -1316,7 +1316,9 @@ export class BackendSupervisor extends EventEmitter<{
   setRuntimeLocation(parent: string | null): { path: string; custom: boolean } {
     if (
       !app.isPackaged ||
-      this.stage !== 'setup_required' ||
+      // A failed start can be fixed by moving the runtime (permission, synced
+      // folder, missing environment), so those stages may change location too.
+      !['setup_required', 'failed', 'crashed', 'port_in_use'].includes(this.stage) ||
       this.installation ||
       this.cleaningRuntime
     )

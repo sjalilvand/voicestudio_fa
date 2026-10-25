@@ -158,6 +158,10 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
   const repeats = useFailureRepeats(failedNow, status.message);
 
   useEffect(() => {
+    // "Copied" describes one failure; a retry or new crash needs a fresh copy.
+    setDiagnosticsCopied(false);
+  }, [status.stage, status.message]);
+  useEffect(() => {
     setRestarting(false);
   }, [status.stage]);
   useEffect(() => {
