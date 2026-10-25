@@ -138,6 +138,8 @@ export interface DubSession {
   translationFallback?: boolean;
   /** The dialect was requested but the engine could not honour it (#2752). */
   dialectIgnored?: boolean;
+  /** The variant the engine wrote instead, when it said (#3143). */
+  dialectUsed?: string;
   subtitleImport?: { file: string; stats: Record<string, number> };
   recovery: 'preparing' | 'generating' | 'transcribing' | null;
   target: string;
@@ -1192,6 +1194,7 @@ export async function translateDubWithAgent(
         agentCli: agent,
         translationFallback: false,
         dialectIgnored: false,
+        dialectUsed: undefined,
         segments: snapshot.segments.map((segment) => {
           const text = rows.get(segment.id);
           if (!text) return segment;
@@ -1276,6 +1279,7 @@ export async function translateDub(
         cinematic_skipped?: string;
         dialect?: string;
         dialect_applied?: boolean;
+        dialect_used?: string;
         translated: Array<{
           id: string;
           text: string;
@@ -1345,6 +1349,11 @@ export async function translateDub(
       const dialectIgnored = landed
         ? dialectWasIgnored(translated)
         : Boolean(snapshot.dialectIgnored);
+      const dialectUsed = landed
+        ? dialectIgnored
+          ? translated.dialect_used
+          : undefined
+        : snapshot.dialectUsed;
       agentFallback = fallback && snapshot.quality === 'agent';
       const rows = new Map(translated.translated.map((row) => [String(row.id), row]));
       clearDubEditHistory();
@@ -1352,6 +1361,7 @@ export async function translateDub(
         quality: fallback && !agentFallback ? 'fast' : snapshot.quality,
         translationFallback: fallback,
         dialectIgnored,
+        dialectUsed,
         segments: snapshot.segments.map((segment) => {
           const row = rows.get(segment.id);
           if (!row) return segment;

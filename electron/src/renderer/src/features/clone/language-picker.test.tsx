@@ -186,3 +186,44 @@ it('does not select while an IME composition is in progress', async () => {
   fireEvent.keyDown(search, { key: 'Enter' });
   expect(onValueChange).toHaveBeenCalledTimes(1);
 });
+
+it('shows a saved plain Portuguese as Brazilian and says the accent follows the voice (#3143)', async () => {
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(320);
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(340);
+  const onValueChange = vi.fn();
+  render(
+    <LanguagePicker
+      value="Portuguese"
+      options={['Auto', 'Portuguese (Brazil)', 'Portuguese (Portugal)']}
+      supportedOptions={['portuguese (brazil)', 'portuguese (portugal)']}
+      renderedDialects={[]}
+      modelLabel="OmniVoice"
+      onValueChange={onValueChange}
+    />,
+  );
+  const button = screen.getByRole('button', { name: 'Language' });
+  expect(button).toHaveTextContent('Brazilian Portuguese');
+  fireEvent.click(button);
+  expect(
+    await screen.findByText(
+      'OmniVoice has one Portuguese model, so the accent follows the reference voice.',
+    ),
+  ).toBeInTheDocument();
+  expect(onValueChange).not.toHaveBeenCalled();
+});
+
+it('names the variant a model speaks instead of the chosen one (#3143)', async () => {
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(320);
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(340);
+  render(
+    <LanguagePicker
+      value="Portuguese (Portugal)"
+      options={['Auto', 'Portuguese (Brazil)', 'Portuguese (Portugal)']}
+      renderedDialects={['pt-BR']}
+      modelLabel="Kokoro"
+      onValueChange={vi.fn()}
+    />,
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Language' }));
+  expect(await screen.findByText('Kokoro speaks Brazilian Portuguese only.')).toBeInTheDocument();
+});

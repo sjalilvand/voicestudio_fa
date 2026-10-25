@@ -7,6 +7,12 @@ import LanguageFlag from '@shared/components/LanguageFlag';
 import type { SearchOption } from '@/lib/language-search';
 import { LANGUAGES } from '@/lib/languages';
 import { languageOptions, languageSupported, type LanguageOption } from '@/lib/language-options';
+import {
+  canonicalLanguage,
+  dialectOutcome,
+  languageDialect,
+  languageTagName,
+} from '@/lib/language-variants';
 import { setCloneSetting, useCloneSetting } from '@/lib/store/clone-settings';
 import { LanguageMenu } from './language-menu';
 
@@ -20,6 +26,8 @@ export interface LanguagePickerProps {
   modelLabel?: string;
   capabilityState?: 'known' | 'unknown' | 'loading' | 'error';
   recentsScope?: string;
+  /** Regional accents the model renders itself (#3143); null = unknown. */
+  renderedDialects?: readonly string[] | null;
 }
 
 export function LanguagePicker({
@@ -32,10 +40,31 @@ export function LanguagePicker({
   modelLabel,
   capabilityState,
   recentsScope = 'language',
+  renderedDialects,
 }: LanguagePickerProps = {}) {
   const { t, i18n } = useTranslation();
   const saved = useCloneSetting('language');
-  const language = value ?? saved;
+  // A value saved before the regional split ("Portuguese") shows as the
+  // variant it means when this picker offers variants; the stored value
+  // itself is left untouched (#3143). Pickers without variants (dub source)
+  // keep showing it as-is.
+  const raw = value ?? saved;
+  const canonical = canonicalLanguage(raw);
+  const language = canonical !== raw && options.includes(canonical) ? canonical : raw;
+  const dialect = modelLabel ? languageDialect(language) : undefined;
+  const outcome = dialectOutcome(dialect, renderedDialects);
+  const dialectNote =
+    outcome === 'voice' && dialect
+      ? t('languagePicker.dialectFollowsVoice', {
+          model: modelLabel,
+          language: languageTagName(dialect.split('-')[0], i18n.language),
+        })
+      : outcome && typeof outcome === 'object'
+        ? t('languagePicker.dialectUsed', {
+            model: modelLabel,
+            variant: languageTagName(outcome.used, i18n.language),
+          })
+        : '';
   const entries = useMemo(
     () =>
       languageOptions(options, i18n.language, t('languagePicker.auto')).map((option) => ({
@@ -118,16 +147,19 @@ export function LanguagePicker({
       }
       footer={
         modelLabel ? (
-          <div className="flex items-center justify-between gap-2">
-            <span>
-              {invalid ? t('languagePicker.chooseSupported') : t('languagePicker.modelLanguages')}
-            </span>
-            <a
-              href="#/settings/models/tts"
-              className="shrink-0 rounded text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {t('languagePicker.changeModel')}
-            </a>
+          <div className="space-y-1">
+            {dialectNote && <p role="status">{dialectNote}</p>}
+            <div className="flex items-center justify-between gap-2">
+              <span>
+                {invalid ? t('languagePicker.chooseSupported') : t('languagePicker.modelLanguages')}
+              </span>
+              <a
+                href="#/settings/models/tts"
+                className="shrink-0 rounded text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {t('languagePicker.changeModel')}
+              </a>
+            </div>
           </div>
         ) : undefined
       }

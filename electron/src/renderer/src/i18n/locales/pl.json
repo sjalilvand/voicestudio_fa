@@ -916,6 +916,7 @@
     "mirror_failed": "Odwzorowanie interpretacji nie powiodło się: {{message}}",
     "cinematic_no_llm": "Ta jakość wymaga dostawcy LLM. Skonfiguruj go w sekcji Dostawcy LLM, aby kontynuować.",
     "dialect_not_applied": "Wybrany dialekt wymaga LLM — przełącz silnik na OpenAI/Ollama lub wybierz jakość Cinematic.",
+    "dialect_used": "Ten silnik tłumaczy tylko na wariant: {{variant}}. Aby zastosować wybrany dialekt, użyj silnika tłumaczenia LLM.",
     "translate_errors": "{{errorCount}}/{{totalCount}} segment(y) nie powiodły się: {{firstError}}",
     "translate_degraded": "Przetłumaczono wszystkie {{totalCount}} segmenty — {{count}} używa zwykłego tłumaczenia, bo pominięto etap szlifowania ({{reason}})",
     "translated_segments": "Przetłumaczone segmenty {{count}} → {{lang}}",
@@ -3447,6 +3448,8 @@
     "hint": "Zwykle najlepiej pozostawić wartości domyślne. Sterowanie określa wpływ polecenia; pozostałe ustawienia zmieniają sposób budowania dźwięku. Zmieniaj jedno naraz."
   },
   "languagePicker": {
+    "dialectFollowsVoice": "{{model}} ma jeden model dla języka: {{language}}, więc akcent podąża za głosem referencyjnym.",
+    "dialectUsed": "{{model}} obsługuje tylko wariant: {{variant}}.",
     "auto": "Automatycznie",
     "unavailable": "Nieobsługiwany",
     "unsupportedBy": "Nieobsługiwany przez {{model}}",

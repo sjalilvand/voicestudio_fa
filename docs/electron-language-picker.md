@@ -5,6 +5,10 @@ native name when different, and language code. Search matches all names and code
 the representative flag's country name/code, and flag emoji,
 ignores case and accents, and runs locally without a typing delay or network requests.
 The selected value remains the existing canonical language name in projects and requests.
+Portuguese is offered as Portuguese (Brazil) and Portuguese (Portugal); a value saved as
+plain "Portuguese" shows as Portuguese (Brazil) and is not rewritten. When the selected
+model cannot render the chosen variant's accent, the picker footer says so (the engine's
+`rendered_dialects`); see [Supported Languages](languages.md#regional-variants).
 
 ![Responsive language picker with supported choices first](assets/language-picker.png)
 
