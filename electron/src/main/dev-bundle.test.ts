@@ -16,6 +16,7 @@ import {
   createMacDevBundlePlan,
   launchElectronVite,
   prepareMacDevElectron,
+  pruneOldBundles,
   // @ts-expect-error JavaScript launcher has no separate declaration file.
 } from '../../scripts/dev.mjs';
 
@@ -182,6 +183,21 @@ describe('macOS development bundle cache repair', () => {
       ).toEqual([]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('macOS development bundle cache pruning', () => {
+  it('keeps only the current bundle and leaves a concurrent staging directory alone', () => {
+    const root = mkdtempSync(join(tmpdir(), 'vs-dev-prune-'));
+    try {
+      for (const name of ['old-1', 'old-2', 'current', '.staging-abc']) {
+        mkdirSync(join(root, name));
+      }
+      pruneOldBundles(root, join(root, 'current'));
+      expect(readdirSync(root).sort()).toEqual(['.staging-abc', 'current']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
     }
   });
 });

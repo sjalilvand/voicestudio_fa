@@ -5,6 +5,7 @@ import {
   existsSync,
   mkdtempSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   renameSync,
   rmSync,
@@ -101,7 +102,10 @@ export function prepareMacDevElectron({
     existsSync(plan.manifest) &&
     readFileSync(plan.manifest, 'utf8') === expectedManifest;
 
-  if (cacheIsValid()) return plan.destinationExecutable;
+  if (cacheIsValid()) {
+    pruneOldBundles(cacheRoot, plan.destinationRoot);
+    return plan.destinationExecutable;
+  }
 
   mkdirSync(cacheRoot, { recursive: true });
   const stagingRoot = mkdtempSync(join(cacheRoot, '.staging-'));
@@ -151,7 +155,27 @@ export function prepareMacDevElectron({
     rmSync(stagingRoot, { recursive: true, force: true });
   }
 
+  pruneOldBundles(cacheRoot, plan.destinationRoot);
   return plan.destinationExecutable;
+}
+
+/**
+ * Each Electron/app version or icon change gets a new branded bundle; the old
+ * ones (about 300 MB each) are never used again, so keep only the current one.
+ * In-progress staging directories of a concurrent launcher are left alone.
+ */
+export function pruneOldBundles(cacheRoot, keep) {
+  let entries = [];
+  try {
+    entries = readdirSync(cacheRoot, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    if (!entry.isDirectory() || entry.name.startsWith('.staging-')) continue;
+    const path = join(cacheRoot, entry.name);
+    if (resolve(path) !== resolve(keep)) rmSync(path, { recursive: true, force: true });
+  }
 }
 
 /**
