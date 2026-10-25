@@ -250,12 +250,16 @@ try {
     const expandedDevice = macSidebar.getByRole('button', { name: /Local device/ });
     const expandedSettingsBounds = await expandedSettings.boundingBox();
     const expandedDeviceBounds = await expandedDevice.boundingBox();
-    assert.equal((await expandedSettings.innerText()).trim(), '');
+    // Labelled, not icon-only: the footer reads as "Settings" and the device name.
+    assert.equal((await expandedSettings.innerText()).trim(), 'Settings');
+    assert.notEqual((await expandedDevice.innerText()).trim(), '');
+    // The device has its own row above Settings, so its name keeps the full width.
     assert.ok(
       expandedSettingsBounds &&
         expandedDeviceBounds &&
-        expandedDeviceBounds.x > expandedSettingsBounds.x,
-      'expanded macOS Local device must sit right of icon-only Settings',
+        expandedDeviceBounds.y + expandedDeviceBounds.height <= expandedSettingsBounds.y + 1 &&
+        expandedDeviceBounds.width >= 120,
+      `expanded macOS Local device must have its own row above Settings: ${JSON.stringify({ expandedSettingsBounds, expandedDeviceBounds })}`,
     );
     await expandedDevice.click();
     await macPage.locator('[data-slot=popover-content][data-open]').waitFor({ state: 'visible' });
@@ -284,16 +288,17 @@ try {
     const compactDeviceBounds = await compactMacSidebar
       .getByRole('button', { name: /Local device/ })
       .boundingBox();
+    // The rail footer is one centered column, like the navigation above it.
     assert.ok(
       compactSettingsBounds &&
         compactDeviceBounds &&
-        compactDeviceBounds.x > compactSettingsBounds.x &&
+        compactDeviceBounds.y >= compactSettingsBounds.y + compactSettingsBounds.height &&
         Math.abs(
-          compactDeviceBounds.y +
-            compactDeviceBounds.height / 2 -
-            (compactSettingsBounds.y + compactSettingsBounds.height / 2),
+          compactDeviceBounds.x +
+            compactDeviceBounds.width / 2 -
+            (compactSettingsBounds.x + compactSettingsBounds.width / 2),
         ) <= 1,
-      `macOS Local device must sit to the right of Settings: ${JSON.stringify({ compactSettingsBounds, compactDeviceBounds })}`,
+      `macOS Local device must sit centered below Settings: ${JSON.stringify({ compactSettingsBounds, compactDeviceBounds })}`,
     );
     const workspaceTitleBounds = await macPage
       .getByRole('heading', { name: 'Voice cloning' })

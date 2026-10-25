@@ -381,14 +381,14 @@ export function PerformanceProfile({
           onClick={() => void choose(autoOn ? (plan?.resolved ?? 'balanced') : 'auto')}
           className={cn(
             'inline-flex h-6 shrink-0 items-center justify-center gap-1 rounded-full text-[11px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50',
-            popoverMode ? 'w-6' : 'px-2',
+            'px-2',
             autoOn
               ? 'bg-primary/15 text-primary ring-1 ring-inset ring-primary/30'
               : 'text-muted-foreground ring-1 ring-inset ring-border/60 hover:text-foreground',
           )}
         >
           <WandSparklesIcon className="size-3" aria-hidden="true" />
-          {!popoverMode && t('performanceProfile.auto')}
+          {t('performanceProfile.auto')}
         </button>
       </div>
       <DirectionProvider direction={i18n.dir(i18n.language)}>
@@ -417,6 +417,17 @@ export function PerformanceProfile({
           </Slider.Control>
         </Slider.Root>
       </DirectionProvider>
+      {/* Name both ends so the slider reads without hovering. */}
+      <div
+        aria-hidden="true"
+        className={cn(
+          'flex justify-between px-1 text-[10px] text-muted-foreground',
+          (disabled || autoOn) && 'opacity-60',
+        )}
+      >
+        <span>{t('performanceProfile.' + tiers[0])}</span>
+        <span>{t('performanceProfile.' + tiers[tiers.length - 1])}</span>
+      </div>
       {plan && !family && showHardware && (
         <Popover open={hardwareOpen} onOpenChange={setHardwareOpen}>
           <PopoverTrigger
