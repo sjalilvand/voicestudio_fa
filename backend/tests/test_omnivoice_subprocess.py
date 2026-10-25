@@ -268,19 +268,22 @@ def test_sidecar_short_reference_without_transcript_is_encoded_once(monkeypatch,
             speak(line)
         assert len(encodes) == 1
         assert all("voice_clone_prompt" in kw and "ref_audio" not in kw for kw in generated)
-        # Only the first request tries the recognizer (sidecar pre-pass + prompt
-        # build); once the prompt is cached, later lines never load it again.
-        assert len(asr_calls) == 2
+        # Only the first request tries the recognizer, and only once: the
+        # prompt build must not repeat the sidecar's unsuccessful pre-pass.
+        # Once the prompt is cached, later lines never load it again.
+        assert len(asr_calls) == 1
 
         # The user installs or selects another recognizer: it gets its turn
         # (the stale prompt is not trusted), and when it also finds no words
         # the cached prompt is reused and trusted again for the new chain.
+        # Its single empty attempt runs before the prompt-cache hit and is not
+        # repeated on the way to that hit.
         recognizers[0] = "newly-selected"
         speak("four")
-        assert len(asr_calls) == 4
+        assert len(asr_calls) == 2
         assert len(encodes) == 1
         speak("five")
-        assert len(asr_calls) == 4
+        assert len(asr_calls) == 2
     finally:
         tts_backend.clear_clone_prompt_cache()
 
@@ -324,7 +327,7 @@ def test_sidecar_keeps_retrying_a_recognizer_that_errors(monkeypatch, tmp_path):
     finally:
         tts_backend.clear_clone_prompt_cache()
 
-    assert len(asr_calls) == 6  # sidecar pre-pass + prompt build, on every line
+    assert len(asr_calls) == 3  # the sidecar pre-pass, once on every line
     assert len(encodes) == 1    # the prompt itself is still reused
 
 

@@ -1396,6 +1396,7 @@ def has_unresolved_clone_prompt(ref_audio: str, preprocess_prompt: bool = True) 
 def _get_clone_prompt(
     model, ref_audio: str, ref_text, preprocess_prompt: bool = True, *,
     store: bool = True,
+    reference_asr: Optional[str] = None,
 ):
     """Return a cached/precomputed ``VoiceClonePrompt`` for
     (ref_audio, ref_text, preprocess_prompt), or ``None`` to fall back to the
@@ -1412,6 +1413,11 @@ def _get_clone_prompt(
     LRU of 8 evicts the per-speaker and locked-profile prompts that ARE reused.
     Every short segment falling back to its speaker ref then re-encodes it
     (~0.4 s each, measured). Scan-resistance, not a second cache policy.
+
+    ``reference_asr`` reports a reference transcription the caller already ran
+    in this pass: ``"empty"`` (it completed and found no words) or ``"failed"``
+    (it raised). Either way it is not repeated here; only ``"empty"`` lets the
+    resulting prompt be trusted for the current recognizers on later requests.
     """
     # Resolve transcript-free references through an already-installed ASR
     # before deriving the cache key. This protects every native OmniVoice
@@ -1472,13 +1478,18 @@ def _get_clone_prompt(
                     if hit is not None:
                         _prompt_cache.move_to_end(unresolved_key)
                         return hit
-            try:
-                from services.asr_backend import transcribe_reference
+            if reference_asr is not None:
+                # Already tried in this pass: running the same recognizers on
+                # the same audio again cannot help and costs a full ASR load.
+                recognition_found_nothing = reference_asr == "empty"
+            else:
+                try:
+                    from services.asr_backend import transcribe_reference
 
-                ref_text = transcribe_reference(ref_audio)
-                recognition_found_nothing = not ref_text
-            except Exception as e:  # noqa: BLE001 — model fallback remains available
-                logger.warning("reference transcript resolution failed: %s", e)
+                    ref_text = transcribe_reference(ref_audio)
+                    recognition_found_nothing = not ref_text
+                except Exception as e:  # noqa: BLE001 — model fallback remains available
+                    logger.warning("reference transcript resolution failed: %s", e)
             if ref_text and unresolved_key is not None:
                 _prompt_cache_evict(unresolved_key)
 
@@ -1648,6 +1659,9 @@ def generate_with_cached_ref(model, *, ref_audio, ref_text, **gen_kw):
         # the prompt (or inline passage) exists, before the synthesis model
         # runs. Popped for the same reason as cache_ref.
         release_asr = bool(gen_kw.pop("release_reference_asr", False))
+        # Outcome of a reference transcription the caller already ran ("empty"
+        # or "failed"), so it is not repeated. Popped for the same reason.
+        reference_asr = gen_kw.pop("reference_asr", None)
         if release_asr:
             from services.asr_backend import release_reference_asr_after
 
@@ -1660,7 +1674,10 @@ def generate_with_cached_ref(model, *, ref_audio, ref_text, **gen_kw):
         preprocess_prompt = bool(gen_kw.get("preprocess_prompt", True))
         with release_scope():
             prompt = (
-                _get_clone_prompt(model, ref_audio, ref_text, preprocess_prompt, store=cache_ref)
+                _get_clone_prompt(
+                    model, ref_audio, ref_text, preprocess_prompt,
+                    store=cache_ref, reference_asr=reference_asr,
+                )
                 if ref_audio else None
             )
         if prompt is not None:

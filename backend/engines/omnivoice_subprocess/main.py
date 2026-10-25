@@ -280,6 +280,9 @@ def _handle_synthesize(msg: dict, stdout) -> None:
 
     ref_audio = msg.get("ref_audio") or None
     ref_text = msg.get("ref_text") or None
+    # Outcome of the transcription below when it ran and found nothing, so the
+    # cached-prompt path does not run the same recognizers a second time.
+    reference_asr = None
     if isinstance(ref_audio, str) and not (ref_text or "").strip():
         # Keep native ASR inside the same killable process and synthesize
         # deadline as TTS, rather than holding the API's GPU worker forever.
@@ -299,7 +302,9 @@ def _handle_synthesize(msg: dict, stdout) -> None:
             ref_text = None
             try:
                 ref_text = transcribe_reference(ref_audio, release_after=True)
+                reference_asr = None if ref_text else "empty"
             except Exception:  # noqa: BLE001 — preserve installed-only model fallback
+                reference_asr = "failed"
                 logging.getLogger(__name__).warning("reference transcript resolution failed")
 
     model = _load_model(stdout)
@@ -324,7 +329,7 @@ def _handle_synthesize(msg: dict, stdout) -> None:
 
         audios = generate_with_cached_ref(
             model, text=text, ref_audio=ref_audio, ref_text=None,
-            release_reference_asr=True, **gen_kw,
+            release_reference_asr=True, reference_asr=reference_asr, **gen_kw,
         )
     else:
         audios = model.generate(
