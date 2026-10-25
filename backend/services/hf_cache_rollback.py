@@ -162,10 +162,12 @@ def rollback(
                 for name in dirs:
                     rel = os.path.normpath(os.path.join(rel_current, name))
                     path = os.path.join(current, name)
-                    if rel in before and not os.path.islink(path):
-                        keep_dirs.append(name)
-                    else:
+                    if rel not in before:
                         doomed.append(path)
+                    elif not os.path.islink(path):
+                        keep_dirs.append(name)
+                    # A directory link that existed before (weights moved to
+                    # another drive) is kept as is and never traversed.
                 dirs[:] = keep_dirs
                 for name in files:
                     rel = os.path.normpath(os.path.join(rel_current, name))
@@ -178,7 +180,7 @@ def rollback(
                     if handle.read() == content:
                         continue
             except OSError:
-                pass
+                pass  # Missing or unreadable marker: rewrite it below.
             try:
                 os.makedirs(os.path.dirname(path), exist_ok=True)
                 temporary = f"{path}.rollback-{os.getpid()}"

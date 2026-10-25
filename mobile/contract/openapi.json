@@ -15441,7 +15441,7 @@
   },
   "/models/install/cancel": {
    "post": {
-    "description": "Request cancellation of an in-flight install (FDL-11).\n\nBest-effort: stops further retry attempts and marks the row cancelled. A\nsingle in-flight snapshot_download/Xet fetch isn't interruptible mid-file\nin hf_hub 1.7.2, so an already-streaming file finishes; the cancel takes\neffect at the next retry boundary. Clears the cooldown so the user can\nimmediately restart.",
+    "description": "Request cancellation of an in-flight install (FDL-11).\n\nReturns at once; the worker stops the transfer at its next chunk (or the\nnext boundary before any byte flows), removes the partial data it wrote\nand reports ``install_cancelled``. ``/models/install/status`` shows the\njob as ``cancelling`` until then. Clears the cooldown so the user can\nrestart immediately.",
     "operationId": "cancel_install_models_install_cancel_post",
     "requestBody": {
      "content": {

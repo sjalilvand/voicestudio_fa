@@ -333,6 +333,38 @@ def test_rollback_removes_a_repository_the_download_created(tmp_path):
     assert not (tmp_path / ".locks" / FOLDER).exists()
 
 
+def _dir_link(link, target) -> None:
+    try:
+        os.symlink(target, link, target_is_directory=True)
+    except (OSError, NotImplementedError):
+        pytest.skip("directory symlinks are not available here")
+
+
+def test_rollback_keeps_existing_directory_links_and_their_targets(tmp_path):
+    from services import hf_cache_rollback
+
+    _seed_previous_install(tmp_path)
+    repo = tmp_path / FOLDER
+    moved = tmp_path / "other-drive" / "blobs"
+    moved.mkdir(parents=True)
+    (moved / "movedblob").write_bytes(b"old")
+    _dir_link(repo / "moved", moved)
+    before = hf_cache_rollback.capture(str(tmp_path), [REPO])
+
+    added = tmp_path / "other-drive" / "added"
+    added.mkdir()
+    (added / "keep.bin").write_bytes(b"k")
+    _dir_link(repo / "added", added)
+    (moved / "newblob").write_bytes(b"new")
+
+    assert hf_cache_rollback.rollback(before) == []
+
+    assert os.path.islink(repo / "moved")
+    assert sorted(p.name for p in moved.iterdir()) == ["movedblob", "newblob"]
+    assert not os.path.lexists(repo / "added")
+    assert (added / "keep.bin").exists()
+
+
 def test_rollback_skips_a_repository_another_install_is_writing(tmp_path):
     from services import hf_cache_rollback
 
