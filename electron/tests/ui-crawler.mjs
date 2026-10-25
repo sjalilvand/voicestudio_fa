@@ -176,8 +176,12 @@ async function openSession(browser, mode) {
       state.faulting = false;
       return null; // covered by an overlay or detached mid-click; not a finding
     }
-    const observation = await settle(SETTLE_MS, () => page.locator(BUSY).filter({ visible: true }).count());
-    state.faulting = false;
+    let observation;
+    try {
+      observation = await settle(SETTLE_MS, () => page.locator(BUSY).filter({ visible: true }).count());
+    } finally {
+      state.faulting = false;
+    }
     const problems = [];
     const responsive = !observation.unresponsive && await Promise.race([
       page.evaluate(() => true),
@@ -262,6 +266,7 @@ async function canary(browser) {
       main.prepend(button);
       return button;
     };
+    add('canary-reload', () => {});
     add('canary-late-request', () => {
       setTimeout(() => {
         const spinner = document.createElement('span');
@@ -302,6 +307,33 @@ async function canary(browser) {
   assert.ok((await kinds('canary-silent')).includes('silent'), 'silent detector went blind');
   assert.ok((await kinds('canary-disabled')).includes('disabled'), 'disabled detector went blind');
   assert.ok((await kinds('canary-crash')).includes('crash'), 'crash detector went blind');
+  // Playwright can reject the post-click DOM snapshot when a reload replaces
+  // its execution context. Recovery writes must not inherit this click's fault.
+  await arm();
+  const reloadError = new Error('Execution context was destroyed during reload');
+  const locate = page.locator.bind(page);
+  let busyReads = 0;
+  page.locator = (selector, ...args) => selector !== BUSY ? locate(selector, ...args) : {
+    filter: (options) => ({
+      count: async () => {
+        if (++busyReads === 2) throw reloadError;
+        return locate(selector, ...args).filter(options).count();
+      },
+    }),
+  };
+  try {
+    await assert.rejects(
+      clickAndCheck(page.getByRole('button', { name: 'canary-reload', exact: true }), route),
+      (error) => error === reloadError,
+      'snapshot reload must preserve the original recovery error',
+    );
+  } finally {
+    page.locator = locate;
+  }
+  const recoveryStatus = await page.evaluate(async () =>
+    (await fetch('/api/health', { method: 'POST' })).status,
+  );
+  assert.equal(recoveryStatus, 200, 'snapshot failure leaked fault injection into recovery');
   await session.context.close();
 }
 
