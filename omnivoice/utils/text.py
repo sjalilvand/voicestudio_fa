@@ -142,7 +142,13 @@ def chunk_text_punctuation(
         if not tokens_list[i].isascii() or i + 1 == len(tokens_list):
             return True
         nxt = tokens_list[i + 1]
-        return nxt.isspace() or nxt in CLOSING_MARKS or nxt in SPLIT_PUNCTUATION
+        # A run ("...", "!?") ends at its last mark: splitting after the first
+        # would leave the rest glued to the next word ("wait...what").
+        if nxt in SPLIT_PUNCTUATION:
+            return False
+        # Chinese/Japanese text often follows ASCII "!" or "?" with the next
+        # sentence directly, no space: a non-ASCII letter starts a new token.
+        return nxt.isspace() or nxt in CLOSING_MARKS or not nxt.isascii()
 
     for index, token in enumerate(tokens_list):
         # If the first token of current sentence is punctuation,

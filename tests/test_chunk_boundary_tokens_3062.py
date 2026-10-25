@@ -12,8 +12,19 @@ import random
 
 import pytest
 
-from omnivoice.utils.text import chunk_text_punctuation
-from services.chunked_tts import split_text_into_chunks
+
+
+# Resolved at call time: another test may replace these modules in sys.modules.
+def chunk_text_punctuation(*args, **kwargs):
+    from omnivoice.utils.text import chunk_text_punctuation as impl
+
+    return impl(*args, **kwargs)
+
+
+def split_text_into_chunks(*args, **kwargs):
+    from services.chunked_tts import split_text_into_chunks as impl
+
+    return impl(*args, **kwargs)
 
 
 def _words(chunks):
@@ -70,3 +81,15 @@ def test_model_chunker_does_not_split_inside_a_token(token):
 def test_model_chunker_still_splits_at_real_punctuation():
     chunks = chunk_text_punctuation("One two, three four. Five six!", chunk_len=10, min_chunk_len=3)
     assert chunks == ["One two,", "three four.", "Five six!"]
+
+
+def test_no_space_cjk_sentences_after_ascii_marks_still_split():
+    text = "你好吗?我很好!谢谢你。" * 20
+    chunks = chunk_text_punctuation(text, chunk_len=20)
+    assert len(chunks) > 1
+    assert "".join(chunks).replace(" ", "") == text
+
+
+def test_a_punctuation_run_inside_a_token_stays_whole():
+    chunks = chunk_text_punctuation("wait...what is this. " * 10, chunk_len=12)
+    assert all("wait...what" in c or "wait" not in c for c in chunks)
