@@ -20,7 +20,8 @@
     "preset16": "Standar",
     "preset24": "Untuk penyuntingan",
     "preset32": "Asli",
-    "sizeUnknown": "Ukuran ditampilkan setelah audio dibuat."
+    "sizeUnknown": "Ukuran ditampilkan setelah audio dibuat.",
+    "sampleRate": "{{rate}} kHz"
   },
   "presetVoice": {
     "label": "Suara bawaan"

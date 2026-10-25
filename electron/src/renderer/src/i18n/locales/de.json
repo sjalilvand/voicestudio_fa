@@ -20,7 +20,8 @@
     "preset16": "Standard",
     "preset24": "Zum Bearbeiten",
     "preset32": "Original",
-    "sizeUnknown": "Die Größe wird nach der Erzeugung angezeigt."
+    "sizeUnknown": "Die Größe wird nach der Erzeugung angezeigt.",
+    "sampleRate": "{{rate}} kHz"
   },
   "presetVoice": {
     "label": "Voreingestellte Stimme"
