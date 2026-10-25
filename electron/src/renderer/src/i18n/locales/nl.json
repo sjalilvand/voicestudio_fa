@@ -1574,7 +1574,10 @@
     "aec_description": "Verwijder VoiceStudio-weergave uit de microfoon.",
     "aec_row_title": "Echo-onderdrukking voor dicteren inschakelen",
     "aec_experimental": "Experimenteel",
-    "aec_hint": "Laat je dicteren tijdens een voorbeeld, dub of video zonder de audio van de app te transcriberen. Voegt enige verwerking toe; laat uit als je niet tijdens afspelen dicteert."
+    "aec_hint": "Laat je dicteren tijdens een voorbeeld, dub of video zonder de audio van de app te transcriberen. Voegt enige verwerking toe; laat uit als je niet tijdens afspelen dicteert.",
+    "cleanup_title": "Tekst opschonen",
+    "spoken_punctuation": "Gesproken leestekens",
+    "spoken_punctuation_desc": "Zeg “comma”, “period”, “question mark”, “new line” om het te typen. Alleen Engels."
   },
   "tools": {
     "title": "Gereedschap",

@@ -1,0 +1,183 @@
+"""
+Unit tests for services/dictation_cleanup.py — the deterministic cleanup that
+runs before text_polish on every dictation final: hesitations, stutters,
+all-caps streaming output, punctuation spacing, optional spoken punctuation,
+and the CJK-aware join of committed utterances. Pure functions, exact strings.
+"""
+import os
+
+import pytest
+
+os.environ.setdefault("OMNIVOICE_MODEL", "test")
+os.environ.setdefault("OMNIVOICE_DISABLE_FILE_LOG", "1")
+
+from services.dictation_cleanup import (  # noqa: E402
+    join_dictation_pieces,
+    polish_dictation,
+)
+
+
+def _p(text, language=None, spoken=False):
+    return polish_dictation(text, language, spoken_punctuation=spoken)
+
+
+# ── Casing ──────────────────────────────────────────────────────────────────
+
+
+def test_all_caps_streaming_output_is_sentence_cased():
+    # The streaming zipformers emit upper case without punctuation.
+    assert _p("HELLO WORLD HOW ARE YOU") == "Hello world how are you."
+    assert _p("I THINK I AM READY") == "I think I am ready."
+
+
+def test_single_acronym_and_mixed_case_kept():
+    assert _p("NASA") == "NASA."
+    assert _p("Ship it to NASA today", "en") == "Ship it to NASA today."
+
+
+def test_english_pronoun_i():
+    assert _p("i think i'm ready", "en") == "I think I'm ready."
+    assert _p("i.e. this works", "en") == "I.e. this works."  # not "I.E."
+
+
+def test_pronoun_rule_is_english_only():
+    # Italian "i" is an article.
+    assert _p("ho visto i ragazzi", "it") == "Ho visto i ragazzi."
+
+
+# ── Hesitations ─────────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("raw,clean", [
+    ("um so the meeting is at three", "So the meeting is at three."),
+    ("So, um, the meeting is, uh, at three.", "So, the meeting is, at three."),
+    ("Hello. Um, so we start", "Hello. So we start."),
+    ("thanks, um", "Thanks."),
+    ("the end, uh.", "The end."),
+    ("Umm I'm not sure erm about that", "I'm not sure about that."),
+    ("uh-huh, that works", "Uh-huh, that works."),  # a real answer, kept
+])
+def test_hesitations_removed(raw, clean):
+    assert _p(raw, "en") == clean
+
+
+def test_um_and_er_are_words_outside_english():
+    assert _p("um carro azul", "pt") == "Um carro azul."
+    assert _p("Er sagt nein", "de") == "Er sagt nein."
+    # ...but "uh" is never a word, so it goes even with no language hint.
+    assert _p("uh I mean it") == "I mean it."
+
+
+# ── Stutters ────────────────────────────────────────────────────────────────
+
+
+def test_function_word_stutters_collapse():
+    assert _p("the the thing is i i think", "en") == "The thing is I think."
+    assert _p("I- I think we, we should go", "en") == "I think we should go."
+
+
+def test_emphasis_and_grammatical_doubles_survive():
+    assert _p("I know that that is very very good", "en") == \
+        "I know that that is very very good."
+    assert _p("what it is is a test", "en") == "What it is is a test."
+    assert _p("no no no", "en") == "No no no."
+
+
+def test_stutter_rule_is_english_only():
+    assert _p("nous nous levons", "fr") == "Nous nous levons."
+
+
+# ── Spacing ─────────────────────────────────────────────────────────────────
+
+
+def test_space_before_punctuation_removed():
+    assert _p("hello , world , how are you ?", "en") == "Hello, world, how are you?"
+
+
+def test_french_keeps_typographic_space():
+    assert _p("Quoi ?", "fr") == "Quoi ?"
+    assert _p("Bonjour , madame", "fr") == "Bonjour, madame."
+
+
+def test_decimal_and_ellipsis_untouched():
+    assert _p("it costs .5 dollars", "en") == "It costs .5 dollars."
+
+
+# ── Spoken punctuation (opt-in) ─────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("raw,clean", [
+    ("hello comma how are you question mark", "Hello, how are you?"),
+    # Whisper's own punctuation around the command word is absorbed.
+    ("Hello, comma, how are you? Period.", "Hello, how are you."),
+    ("first line new line second line", "First line\nSecond line."),
+    ("done. New line. next", "Done.\nNext."),
+    ("dear Sam new paragraph thanks period", "Dear Sam\n\nThanks."),
+    ("wait exclamation point really full stop", "Wait! Really."),
+    ("HELLO COMMA WORLD PERIOD THANKS", "Hello, world. Thanks."),
+    ("comma", ""),  # punctuation alone types nothing
+])
+def test_spoken_punctuation(raw, clean):
+    assert _p(raw, "en", spoken=True) == clean
+
+
+def test_spoken_punctuation_off_by_default_keeps_words():
+    assert _p("the trial period ended", "en") == "The trial period ended."
+    assert _p("hello comma world", "en") == "Hello comma world."
+
+
+def test_spoken_punctuation_reads_setting(monkeypatch):
+    from services import refinement
+
+    monkeypatch.setattr(refinement, "get_refinement_config",
+                        lambda: {"spoken_punctuation": True})
+    assert polish_dictation("hello comma world", "en") == "Hello, world."
+    monkeypatch.setattr(refinement, "get_refinement_config",
+                        lambda: {"spoken_punctuation": False})
+    assert polish_dictation("hello comma world", "en") == "Hello comma world."
+
+
+def test_setting_failure_never_costs_the_final(monkeypatch):
+    from services import refinement
+
+    def boom():
+        raise RuntimeError("db locked")
+
+    monkeypatch.setattr(refinement, "get_refinement_config", boom)
+    assert polish_dictation("hello comma world", "en") == "Hello comma world."
+
+
+# ── Invariants ──────────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("raw", [
+    "HELLO WORLD", "um so the the thing", "Hello , world", "hi comma there new line ok",
+    "你好世界", "привет мир", "", "   ",
+])
+@pytest.mark.parametrize("spoken", [False, True])
+def test_idempotent(raw, spoken):
+    once = _p(raw, "en", spoken)
+    assert _p(once, "en", spoken) == once
+
+
+def test_no_trailing_spaces_on_lines():
+    out = _p("one   new line   two  ", "en", spoken=True)
+    assert all(line == line.rstrip() for line in out.split("\n"))
+
+
+# ── Joining committed utterances ────────────────────────────────────────────
+
+
+def test_join_latin_pieces_with_one_space():
+    assert join_dictation_pieces(["Hello world.", " How are you? "]) == \
+        "Hello world. How are you?"
+
+
+def test_join_cjk_pieces_without_space():
+    # Before: " ".join put a space between Chinese sentences.
+    assert join_dictation_pieces(["你好。", "世界。"]) == \
+        "你好。世界。"
+
+
+def test_join_skips_empty_pieces():
+    assert join_dictation_pieces(["", "Hi.", "  ", "Bye."]) == "Hi. Bye."

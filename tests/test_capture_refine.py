@@ -104,8 +104,9 @@ def test_no_refine_flag_returns_raw_only(client, monkeypatch):
     body = r.json()
     # REST now polishes the final exactly like the WS socket (leading capital +
     # terminal punctuation) — no more raw "um so like…" leaking to the widget
-    # fallback / MCP / CLI.
-    assert body["text"] == "Um so like the meeting is at 3pm you know."
+    # fallback / MCP / CLI. The deterministic dictation cleanup drops the
+    # English hesitation "um" too (services.dictation_cleanup).
+    assert body["text"] == "So like the meeting is at 3pm you know."
     assert "refined_text" not in body
     assert called["n"] == 0
 
@@ -119,7 +120,7 @@ def test_refine_flag_adds_refined_text_when_changed(client, monkeypatch):
     assert r.status_code == 200
     body = r.json()
     # The (polished) raw text is preserved …
-    assert body["text"] == "Um so like the meeting is at 3pm you know."
+    assert body["text"] == "So like the meeting is at 3pm you know."
     # … and the cleaned text rides alongside it (already terminal-punctuated,
     # so polish is idempotent here).
     assert body["refined_text"] == "So the meeting is at 3pm."

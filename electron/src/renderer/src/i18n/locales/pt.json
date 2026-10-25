@@ -1576,7 +1576,10 @@
     "aec_description": "Remova a reprodução do VoiceStudio do microfone.",
     "aec_row_title": "Ativar cancelamento de eco para ditado",
     "aec_experimental": "Experimental",
-    "aec_hint": "Permite ditar enquanto uma prévia, dublagem ou vídeo é reproduzido sem transcrever o áudio do aplicativo. Adiciona um pouco de processamento; deixe desligado se não ditar durante a reprodução."
+    "aec_hint": "Permite ditar enquanto uma prévia, dublagem ou vídeo é reproduzido sem transcrever o áudio do aplicativo. Adiciona um pouco de processamento; deixe desligado se não ditar durante a reprodução.",
+    "cleanup_title": "Limpeza do texto",
+    "spoken_punctuation": "Pontuação ditada",
+    "spoken_punctuation_desc": "Diga “comma”, “period”, “question mark”, “new line” para digitar. Apenas em inglês."
   },
   "tools": {
     "title": "Ferramentas",

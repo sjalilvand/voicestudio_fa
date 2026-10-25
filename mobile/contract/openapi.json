@@ -5527,6 +5527,17 @@
        }
       ],
       "title": "Smart Cleanup"
+     },
+     "spoken_punctuation": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Spoken Punctuation"
      }
     },
     "title": "_RefinementBody",

@@ -1574,7 +1574,10 @@
     "aec_description": "VoiceStudio-Wiedergabe aus dem Mikrofonsignal entfernen.",
     "aec_row_title": "Echounterdrückung für Diktat aktivieren",
     "aec_experimental": "Experimentell",
-    "aec_hint": "Du kannst während einer Vorschau, Synchronisation oder eines Videos diktieren, ohne den App-Ton zu transkribieren. Benötigt etwas zusätzliche Verarbeitung; lass es aus, wenn du nicht über Wiedergabe diktierst."
+    "aec_hint": "Du kannst während einer Vorschau, Synchronisation oder eines Videos diktieren, ohne den App-Ton zu transkribieren. Benötigt etwas zusätzliche Verarbeitung; lass es aus, wenn du nicht über Wiedergabe diktierst.",
+    "cleanup_title": "Textbereinigung",
+    "spoken_punctuation": "Gesprochene Satzzeichen",
+    "spoken_punctuation_desc": "Sag “comma”, “period”, “question mark”, “new line”, um es zu tippen. Nur Englisch."
   },
   "tools": {
     "title": "Werkzeuge",
