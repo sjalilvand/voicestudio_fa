@@ -80,7 +80,7 @@ it('truncates a long title on a word boundary and keeps the full text in the too
     "Welcome aboard. I was just a three-second clip a moment ago — now I can say anything you'd like.";
   render(<NowPlayingDock />);
   act(() => playInDock({ src: '/audio/a.wav', source: 'take-1', title, kind: 'design' }));
-  const heading = screen.getByText(/^Welcome aboard\. I was just a three-second clip a moment…$/);
+  const heading = screen.getByText(/^Welcome aboard\. I was just a…$/);
   expect(heading.parentElement).toHaveAttribute('title', title + ' · nav.design');
 });
 

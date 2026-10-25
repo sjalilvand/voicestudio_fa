@@ -19,6 +19,9 @@ import { cn } from '@/lib/utils';
  * the same waveform player as Latest take, so playback keeps going while the
  * user moves between pages.
  */
+/** What fits the 15rem title column, so the word-boundary cut wins over the CSS one. */
+const DOCK_TITLE_CHARS = 32;
+
 export function NowPlayingDock() {
   const { t } = useTranslation();
   const clip = useNowPlaying();
@@ -34,7 +37,7 @@ export function NowPlayingDock() {
         <AudioLinesIcon className="size-4" aria-hidden="true" />
       </span>
       <div className="w-60 min-w-0 shrink" title={clip.title + ' · ' + label}>
-        <p className="truncate text-sm leading-5 font-medium">{clipTitle(clip.title)}</p>
+        <p className="truncate text-sm leading-5 font-medium">{clipTitle(clip.title, DOCK_TITLE_CHARS)}</p>
         <p className="truncate text-xs leading-4 text-muted-foreground">{label}</p>
       </div>
       <WaveformPlayer
