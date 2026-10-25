@@ -2393,7 +2393,8 @@
     "storage_temp": "Arquivos temporários",
     "change": "Alterar…",
     "reset_default": "Redefinir para o padrão",
-    "region_label": "Região de download"
+    "region_label": "Região de download",
+    "free_space": "{{free}} GB livres nesta unidade, são necessários cerca de {{needed}} GB"
   },
   "asr_missing": {
     "message": "Nenhum modelo de fala para texto está instalado — este recurso precisa de um para transcrever áudio.",

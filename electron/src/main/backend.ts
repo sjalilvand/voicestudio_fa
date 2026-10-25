@@ -11,7 +11,7 @@ import {
   stageRuntimeSources,
   type RuntimeRegion,
 } from './runtime-project';
-import { collectHostSnapshot, type HostSnapshot } from './host-snapshot';
+import { collectHostSnapshot, freeGb, type HostSnapshot } from './host-snapshot';
 import { runtimeSetupSupported } from './distribution';
 import { asciiSafePthFiles } from './pth-ascii';
 import { devProbeStamped, writeDevProbeStamp } from './dev-probe-stamp';
@@ -760,6 +760,9 @@ export class BackendSupervisor extends EventEmitter<{
   private diagnosis: BackendStatus['diagnosis'];
   private setupIssue: BackendStatus['setupIssue'];
   private setupRequiredGib: number | undefined;
+  /** Free GiB on the drive that will hold the runtime; probed once per location during setup. */
+  private runtimeFreeGib: number | undefined;
+  private freeProbeRoot: string | undefined;
   private runtimeInterrupted = false;
   private repairAttempted = false;
   private runtimeRepairFailed = false;
@@ -849,6 +852,8 @@ export class BackendSupervisor extends EventEmitter<{
     if (this.stage === 'setup_required' && this.setupIssue) status.setupIssue = this.setupIssue;
     if (this.stage === 'setup_required' && this.setupIssue === 'space' && this.setupRequiredGib)
       status.setupRequiredGib = this.setupRequiredGib;
+    if (this.stage === 'setup_required' && app.isPackaged && this.runtimeFreeGib !== undefined)
+      status.runtimeFreeGib = this.runtimeFreeGib;
     if (this.stage === 'setup_required' && this.runtimeInterrupted)
       status.runtimeInterrupted = true;
     if (this.stage === 'setup_required' && this.runtimeRepairFailed)
@@ -1407,7 +1412,26 @@ export class BackendSupervisor extends EventEmitter<{
   }
 
   private emitStatus(): void {
+    this.probeRuntimeFree();
     this.emit('status', this.status);
+  }
+
+  /** Reads the free space of the install drive once per location so the setup screen can show it. */
+  private probeRuntimeFree(): void {
+    if (this.stage !== 'setup_required' || !app.isPackaged) {
+      this.freeProbeRoot = undefined;
+      return;
+    }
+    const root = dirname(this.runtimeProject ?? join(defaultRuntimeRoot(), 'project'));
+    if (this.freeProbeRoot === root) return;
+    this.freeProbeRoot = root;
+    void freeGb(root)
+      .then((gb) => {
+        if (this.freeProbeRoot !== root) return;
+        this.runtimeFreeGib = gb ?? undefined;
+        this.emit('status', this.status);
+      })
+      .catch(() => undefined);
   }
 
   private pushLog(stream: 'out' | 'err', line: string, fromChild = false): void {

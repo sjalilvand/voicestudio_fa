@@ -2395,7 +2395,8 @@
     "storage_temp": "Pliki tymczasowe",
     "change": "Zmień…",
     "reset_default": "Przywróć ustawienia domyślne",
-    "region_label": "Region pobierania"
+    "region_label": "Region pobierania",
+    "free_space": "Wolne miejsce na tym dysku: {{free}} GB, potrzeba około {{needed}} GB"
   },
   "asr_missing": {
     "message": "Nie zainstalowano modelu zamiany mowy na tekst — ta funkcja wymaga go do transkrypcji dźwięku.",

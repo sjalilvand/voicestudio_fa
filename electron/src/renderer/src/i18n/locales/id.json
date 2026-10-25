@@ -2391,7 +2391,8 @@
     "storage_temp": "File sementara",
     "change": "Ubah…",
     "reset_default": "Atur ulang ke default",
-    "region_label": "Wilayah unduhan"
+    "region_label": "Wilayah unduhan",
+    "free_space": "{{free}} GB tersedia di drive ini, dibutuhkan sekitar {{needed}} GB"
   },
   "asr_missing": {
     "message": "Tidak ada model ucapan-ke-teks yang terpasang — fitur ini membutuhkannya untuk mentranskripsi audio.",
