@@ -79,6 +79,13 @@ describe('parseChapterOutline', () => {
     ]);
     expect(outline[1].start).toBe(outline[0].start + '# First\nbody\n'.length);
   });
+
+  it('counts lines cumulatively across many chapters', () => {
+    const script = Array.from({ length: 200 }, (_, i) => `# C${i}\na\n\nb`).join('\n');
+    const outline = parseChapterOutline(script);
+    expect(outline).toHaveLength(200);
+    outline.forEach((chapter, i) => expect(chapter.line).toBe(i * 4 + 1));
+  });
 });
 
 describe('chapterHeadingSnippet', () => {

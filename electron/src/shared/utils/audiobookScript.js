@@ -77,14 +77,23 @@ function spokenWordCount(text) {
 export function parseChapterOutline(text) {
   const norm = (text || '').replace(/\r\n?/g, '\n');
   const heads = headingSpans(norm);
+  // One forward scan for line numbers: rescanning each heading's prefix is
+  // quadratic and stalls typing in large chaptered manuscripts.
+  let line = 1;
+  let scanned = 0;
   return heads.map((head, index) => {
+    for (let at = norm.indexOf('\n', scanned); at !== -1 && at < head.index;) {
+      line++;
+      at = norm.indexOf('\n', at + 1);
+    }
+    scanned = head.index;
     const bodyEnd = index + 1 < heads.length ? heads[index + 1].index : norm.length;
     return {
       index,
       title: head.title,
       start: head.index,
       headingEnd: head.end,
-      line: norm.slice(0, head.index).split('\n').length,
+      line,
       words: spokenWordCount(norm.slice(head.end, bodyEnd)),
     };
   });
