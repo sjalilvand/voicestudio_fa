@@ -2542,9 +2542,9 @@
     "sent_app": "Phiên bản và bản dựng của ứng dụng",
     "sent_system": "Hệ điều hành, GPU, bộ nhớ và dung lượng ổ đĩa trống",
     "sent_engines": "Các công cụ đang hoạt động",
-    "sent_logs": "Các dòng nhật ký công cụ gần đây, đã xóa đường dẫn tệp và mã thông báo",
+    "sent_logs": "Các dòng nhật ký công cụ gần đây, đã xóa đường dẫn thư mục chính và mã thông báo",
     "sent_pages": "Tên các trang đã xem gần đây",
-    "not_sent": "Không bao giờ gửi: âm thanh, văn bản, giọng nói hoặc tên tệp của bạn.",
+    "not_sent": "Không bao giờ gửi: âm thanh, văn bản hoặc giọng nói của bạn. Tên tệp có thể xuất hiện trong nhật ký hoặc mô tả của bạn, vì vậy hãy xem lại bản xem trước trên GitHub trước khi gửi.",
     "submit": "Mở issue trên GitHub"
   },
   "crash": {

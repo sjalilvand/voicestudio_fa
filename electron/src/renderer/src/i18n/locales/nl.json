@@ -2542,9 +2542,9 @@
     "sent_app": "App-versie en build",
     "sent_system": "Besturingssysteem, GPU, geheugen en vrije schijfruimte",
     "sent_engines": "Welke engines actief zijn",
-    "sent_logs": "Recente enginelogregels, zonder bestandspaden en tokens",
+    "sent_logs": "Recente enginelogregels, zonder het pad van je thuismap en tokens",
     "sent_pages": "Namen van onlangs bezochte pagina’s",
-    "not_sent": "Nooit verzonden: je audio, tekst, stemmen of bestandsnamen.",
+    "not_sent": "Nooit verzonden: je audio, tekst of stemmen. Bestandsnamen kunnen in logs of je beschrijving staan, dus controleer de GitHub-voorbeeldweergave voordat je verzendt.",
     "submit": "GitHub-issue openen"
   },
   "crash": {
