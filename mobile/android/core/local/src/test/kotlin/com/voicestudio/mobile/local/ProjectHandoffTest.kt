@@ -92,4 +92,70 @@ class ProjectHandoffTest {
         try {ProjectArchive.extract(archive,staging);fail()} catch(_:IllegalArgumentException) {}
         assertFalse(staging.exists())
     }
+    @Test fun nativeDubHandoffKeepsVerifiedPackagesAndInvalidatesEditedInputs()=runTest {
+        val(production,dubs,voices)=stores();val models=listOf(fixtureModel(),fixtureModel("translate"),fixtureModel("clone"))
+        for(globalReference in listOf(false,true)) {
+            val root=File(temporary.root,"rendered-$globalReference").apply {mkdirs()}
+            val original=PhoneProjectHandoff.restore(File(fixtures,"desktop-dub.vsproject"),production,dubs,voices,models,allowVoices=true)
+            var id=original.id
+            if(globalReference) {
+                val initial=dubs.request(id);val cp=dubs.checkpoint(id)
+                val reference=PcmFile(dubs.file(id,cp.segments.single().referenceFile!!)).read(0,4800)
+                val request=dubs.create(dubs.file(id,initial.sourceFile),"Global reference",initial.targets,models,true,reference,"Reference words",true)
+                dubs.file(id,"original.pcm").copyTo(dubs.file(request.id,"original.pcm"))
+                dubs.save(request.id,cp.copy(segments=cp.segments.map {it.copy(referenceFile=null,referenceText=null)}));id=request.id
+            }
+            var clones=0
+            val engine=object: FakeLocalEngine() {
+                override suspend fun clone(model: PhoneModel,text: String,reference: LocalAudio,referenceText: String,progress: (Float)->Unit): LocalAudio {clones++;return LocalAudio(FloatArray(4800) {.3f},24000)}
+            }
+            val decoder=object: AudioDecoder {override suspend fun decode(source: File,output: File,maxSeconds: Int,progress: (Float)->Unit): PcmFile=error("Unexpected decode")}
+            val media=object: DubMedia {override suspend fun finish(source: File,audio: PcmFile,markedWave: File,output: File,audioOnly: Boolean,progress: (Float)->Unit): File=markedWave.copyTo(File(output.path+".wav"))}
+            val pipeline=PhoneDubPipeline(dubs,engine,decoder,media);val rendered=pipeline.run(id,models)
+            assertTrue(rendered.done);assertEquals(1,clones)
+            val archive=File(root,"rendered.vsproject");PhoneProjectHandoff.exportDub(id,dubs,models,voices,archive)
+            val restored=PhoneProjectHandoff.restore(archive,production,dubs,voices,models,allowVoices=true);val cp=dubs.checkpoint(restored.id)
+            assertTrue(cp.done);assertEquals(rendered.renders.map {it.file},cp.renders.map {it.file})
+            pipeline.run(restored.id,models);assertEquals(1,clones)
+            for(kind in listOf(DubPackage.CLIPS,DubPackage.STEMS)) {
+                val archive=dubs.exportPackage(restored.id,"fr",kind,root)
+                assertTrue(ProjectArchive.entries(archive).any {it.path=="manifest.json"})
+            }
+            val files=ProjectArchive.extract(archive,File(root,"editing"));val manifestFile=files.getValue("manifest.json");val originalManifest=Json.parseToJsonElement(manifestFile.readText()).jsonObject
+            val patches=listOf(mapOf("translations" to buildJsonObject {put("fr","Edited translation")}),mapOf("reference" to JsonPrimitive("native/dub/original.pcm")),mapOf("referenceText" to JsonPrimitive("Edited reference transcript")),mapOf("referenceNeedsTranscription" to JsonPrimitive(true)))
+            for((index,patch) in patches.withIndex()) {
+                val doc=originalManifest.getValue("document").jsonObject
+                val segments=doc.getValue("segments").jsonArray.toMutableList();segments[0]=JsonObject(segments[0].jsonObject+patch)
+                manifestFile.writeText(JsonObject(originalManifest+("document" to JsonObject(doc+("segments" to JsonArray(segments))))).toString())
+                val modified=File(root,"edited-$index.vsproject");ProjectArchive.write(files.map {(path,file)->ProjectArchiveFile(path,file)},modified)
+                val changed=PhoneProjectHandoff.restore(modified,production,dubs,voices,models,allowVoices=true);val changedCheckpoint=dubs.checkpoint(changed.id)
+                assertFalse(changedCheckpoint.done);assertTrue(changedCheckpoint.renders.isEmpty());assertTrue(changedCheckpoint.outputs.isEmpty())
+            }
+            for(key in listOf("scope","sha256","referenceHash","clonePin")) {
+                val doc=originalManifest.getValue("document").jsonObject;val native=doc.getValue("native").jsonObject
+                val checkpoint=native.getValue("checkpoint").jsonObject;val renders=checkpoint.getValue("renders").jsonArray.toMutableList()
+                renders[0]=JsonObject(renders[0].jsonObject+(key to JsonPrimitive("stale")))
+                val changedNative=JsonObject(native+("checkpoint" to JsonObject(checkpoint+("renders" to JsonArray(renders)))))
+                manifestFile.writeText(JsonObject(originalManifest+("document" to JsonObject(doc+("native" to changedNative)))).toString())
+                val modified=File(root,"stale-$key.vsproject");ProjectArchive.write(files.map {(path,file)->ProjectArchiveFile(path,file)},modified)
+                val changed=PhoneProjectHandoff.restore(modified,production,dubs,voices,models,allowVoices=true);val changedCheckpoint=dubs.checkpoint(changed.id)
+                assertFalse(changedCheckpoint.done);assertTrue(changedCheckpoint.renders.isEmpty());assertTrue(changedCheckpoint.outputs.isEmpty())
+            }
+            for(damage in listOf("missing-renders","duplicate-render","missing-outputs","output-hash")) {
+                val doc=originalManifest.getValue("document").jsonObject;val native=doc.getValue("native").jsonObject
+                val checkpoint=native.getValue("checkpoint").jsonObject.toMutableMap()
+                when(damage) {
+                    "missing-renders"->checkpoint["renders"]=JsonArray(emptyList())
+                    "duplicate-render"->checkpoint["renders"]=JsonArray(checkpoint.getValue("renders").jsonArray.let {it+it.first()})
+                    "missing-outputs"->checkpoint["outputs"]=JsonArray(emptyList())
+                    else->checkpoint["outputs"]=JsonArray(checkpoint.getValue("outputs").jsonArray.map {JsonObject(it.jsonObject+("sha256" to JsonPrimitive("stale")))})
+                }
+                val changedNative=JsonObject(native+("checkpoint" to JsonObject(checkpoint)))
+                manifestFile.writeText(JsonObject(originalManifest+("document" to JsonObject(doc+("native" to changedNative)))).toString())
+                val modified=File(root,"$damage.vsproject");ProjectArchive.write(files.map {(path,file)->ProjectArchiveFile(path,file)},modified)
+                val changed=PhoneProjectHandoff.restore(modified,production,dubs,voices,models,allowVoices=true);val changedCheckpoint=dubs.checkpoint(changed.id)
+                assertFalse(changedCheckpoint.done);assertTrue(changedCheckpoint.renders.isEmpty());assertTrue(changedCheckpoint.outputs.isEmpty())
+            }
+        }
+    }
 }

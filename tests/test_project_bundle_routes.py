@@ -364,3 +364,86 @@ def test_list_skips_malformed_index_before_sorting(handoff,index):
     response = client.get('/project-bundles')
     assert response.status_code == 200
     assert response.json() == []
+
+
+def dub_media_archive(tmp_path, *, native=False):
+    from services import project_bundle as bundles
+    source = tmp_path/'source.wav'
+    with wave.open(str(source),'wb') as out:
+        out.setnchannels(1); out.setsampwidth(2); out.setframerate(24000)
+        out.writeframes(b'\0\0'*24000)
+    track = tmp_path/'track.wav'; track.write_bytes(source.read_bytes())
+    document = {'duration':1,'source':'assets/source.wav','audioOnly':True,
+                'targets':[{'code':'fr','name':'French'}],
+                'segments':[{'id':'cue','start':0,'end':1,'text':'Source','translations':{'fr':'Traduit'}}],
+                'desktop':{'state':{'dubAudioPath':'asset:assets/track.wav'},'job':{
+                    'audio_path':'asset:assets/source.wav','no_vocals_path':'asset:assets/source.wav',
+                    'dubbed_tracks':{'fr':{'path':'asset:assets/track.wav','language':'French'}}}}}
+    if native: document['native'] = {'platform':'ios'}
+    output = tmp_path/'media.vsproject'
+    bundles.write_bundle({'kind':'dub','title':'Imported media','document':document,'voices':[]},
+                         {'assets/source.wav':source,'assets/track.wav':track},output)
+    return output.read_bytes(), source.read_bytes()
+
+
+@pytest.mark.parametrize('native',[False,True])
+def test_imported_dub_media_preview_and_download_use_owned_job_artifacts(handoff,tmp_path,monkeypatch,native):
+    from api.routers import dub_export
+    from services import dub_pipeline
+    client,routes,db = handoff
+    client.app.include_router(dub_export.router)
+    monkeypatch.setattr(dub_export,'DUB_DIR',str(routes.DUB_DIR))
+    monkeypatch.setattr(dub_pipeline,'_dub_jobs',{})
+    archive_data,wav = dub_media_archive(tmp_path,native=native)
+    response = client.post('/project-bundles/import?allow_voices=true',content=archive_data)
+    assert response.status_code == 200, response.text
+    identifier = response.json()['projectId']
+    media = client.get('/dub/media/'+identifier)
+    assert media.status_code == 200, media.text
+    assert media.content == wav
+    audio = client.get('/dub/audio/'+identifier)
+    assert audio.status_code == 200, audio.text
+    assert audio.content == wav
+    job = dub_pipeline.get_job(identifier)
+    working_dir = routes.DUB_DIR/identifier
+    assert working_dir.is_dir()
+    if native:
+        assert job['dubbed_tracks'] == {}
+        # A regenerated track must still export with this imported source.
+        generated = working_dir/'dubbed_fr.wav'; generated.write_bytes(wav)
+        job['dubbed_tracks'] = {'fr':{'path':str(generated),'language':'French'}}
+    downloaded = client.get('/dub/download-audio/'+identifier,params={'lang':'fr','preserve_bg':'false'})
+    assert downloaded.status_code == 200, downloaded.text
+    assert downloaded.content == wav
+    preview = client.head('/dub/preview-video/'+identifier,params={'lang':'fr','preserve_bg':'false'})
+    assert preview.status_code == 200, preview.text
+    async def render_export(command,**kwargs):
+        Path(command[-1]).write_bytes(wav)
+        return 0,b'',b''
+    monkeypatch.setattr(dub_export,'find_ffmpeg',lambda:'ffmpeg')
+    monkeypatch.setattr(dub_export,'run_ffmpeg',render_export)
+    exported = client.get('/dub/download/'+identifier,params={'preserve_bg':'false','out_format':'wav'})
+    assert exported.status_code == 200, exported.text
+    assert exported.content == wav
+    assert all(Path(job[key]).is_relative_to(working_dir) for key in ('video_path','audio_path','vocals_path','no_vocals_path'))
+    with db.db_conn() as conn:
+        state = json.loads(conn.execute('SELECT state_json FROM studio_projects WHERE id=?',(identifier,)).fetchone()[0])
+    assert Path(state['dubAudioPath']).is_relative_to(working_dir)
+    assert all(Path(asset['source']).is_relative_to(routes.OUTPUTS_DIR) for asset in state['handoff']['assets'])
+
+
+def test_dub_import_failure_removes_working_job_and_rolls_back_history(handoff,tmp_path,monkeypatch):
+    client,routes,db = handoff
+    data,_ = dub_media_archive(tmp_path)
+    original = Path.write_text
+    def fail_result(path,*args,**kwargs):
+        if path.name == 'result.json': raise OSError('Disk full')
+        return original(path,*args,**kwargs)
+    monkeypatch.setattr(Path,'write_text',fail_result)
+    with pytest.raises(OSError,match='Disk full'):
+        client.post('/project-bundles/import?allow_voices=true',content=data)
+    assert list(routes.DUB_DIR.iterdir()) == []
+    assert list(routes._root().iterdir()) == []
+    with db.db_conn() as conn:
+        assert conn.execute('SELECT COUNT(*) FROM studio_projects').fetchone()[0] == 0
+        assert conn.execute('SELECT COUNT(*) FROM dub_history').fetchone()[0] == 0

@@ -152,7 +152,7 @@ public enum PhoneProjectHandoff {
                 var referenceNames: [String:String] = [:]
                 for raw in document["segments"]?.handoffArray ?? [] {
                     guard let value = raw.handoffObject, let start = value["start"]?.number, let end = value["end"]?.number, let text = value["text"]?.string, start >= 0, end > start, end <= Double(frames)/24000+0.01, !text.isEmpty else { throw ClientError("mobile.handoff.invalid") }
-                    var segment = PhoneDubSegment(speech: SpeechSegment(start: start,end: end,text: text),referenceText: value["referenceText"]?.string,translations: (value["translations"]?.handoffObject ?? [:]).compactMapValues(\.string),id: value["id"]?.string ?? UUID().uuidString,gain: value["gain"]?.number,muted: value["muted"]?.handoffBool)
+                    var segment = PhoneDubSegment(speech: SpeechSegment(start: start,end: end,text: text),referenceText: value["referenceText"]?.string,translations: (value["translations"]?.handoffObject ?? [:]).compactMapValues(\.string),id: value["id"]?.string ?? UUID().uuidString,referenceNeedsTranscription: value["referenceNeedsTranscription"]?.handoffBool,gain: value["gain"]?.number,muted: value["muted"]?.handoffBool)
                     segment.speaker = value["speaker"]?.string; segment.referenceOrigin = value["referenceOrigin"]?.string; segment.voiceID = value["voiceID"]?.string.flatMap { text in mapping.values.contains("phone:"+text) || mapping.values.contains(text) ? text.replacingOccurrences(of: "phone:",with: "") : nil }
                     if let path = value["reference"]?.string, let existing = referenceNames[path] { segment.referenceFile = existing }
                     else if let path = value["reference"]?.string, let reference = files[path] {
@@ -178,15 +178,46 @@ public enum PhoneProjectHandoff {
                         let name = String(asset.path.dropFirst("native/dub/".count)); guard !["request.json","checkpoint.json","handoff.json"].contains(name) else { continue }; _ = try ProjectArchive.path(name); try copy(files[asset.path]!,to: root.appendingPathComponent(name))
                     }
                     let hashes = Dictionary(uniqueKeysWithValues: manifest.assets.map { ($0.path,$0.sha256) })
-                    let rawSegments = document["segments"]?.handoffArray ?? []
+                    var restoredReferenceHashes: [String:String] = [:]
+                    for name in Set(checkpoint.segments.compactMap(\.referenceFile)) { restoredReferenceHashes[name] = try ModelHash.file(root.appendingPathComponent(name)) }
                     let referencesMatch = old.segments.enumerated().allSatisfy { index,segment in
                         let before = segment.referenceFile.map { "native/dub/"+$0 } ?? (native["request"]?.handoffObject?["referenceText"]?.string == nil ? nil : "native/dub/reference.pcm")
-                        let after = rawSegments.indices.contains(index) ? rawSegments[index].handoffObject?["reference"]?.string : nil
+                        let after = checkpoint.segments.indices.contains(index) ? checkpoint.segments[index].referenceFile : nil
                         if before == nil && after == nil { return true }
-                        guard let before, let after, let hash = hashes[before] else { return false }; return hash == hashes[after]
+                        guard let before, let after, let hash = hashes[before] else { return false }; return hash == restoredReferenceHashes[after]
                     }
-                    if referencesMatch, native["request"]?.handoffObject?["sourceHash"]?.string == request.sourceHash, old.originalHash == checkpoint.originalHash, old.frames == frames, old.segments.count == checkpoint.segments.count, zip(old.segments,checkpoint.segments).allSatisfy({ before,after in before.speech == after.speech && before.translations == after.translations && (before.referenceText ?? native["request"]?.handoffObject?["referenceText"]?.string) == after.referenceText && before.gain == after.gain && before.muted == after.muted && before.speaker == after.speaker }) {
-                        let current = checkpoint.segments; checkpoint = old; checkpoint.segments = current
+                    if referencesMatch, native["request"]?.handoffObject?["sourceHash"]?.string == request.sourceHash, old.originalHash == checkpoint.originalHash, old.frames == frames, old.segments.count == checkpoint.segments.count, zip(old.segments,checkpoint.segments).allSatisfy({ before,after in before.speech == after.speech && before.translations == after.translations && (before.referenceText ?? native["request"]?.handoffObject?["referenceText"]?.string) == after.referenceText && before.gain == after.gain && before.muted == after.muted && before.speaker == after.speaker && (before.referenceNeedsTranscription == true) == (after.referenceNeedsTranscription == true) }) {
+                        let current = checkpoint.segments
+                        // References are copied under fresh names (global references become per-line).
+                        // Rebind receipts only when their original scope was valid and all inputs above match.
+                        let uniqueReceipts = Set(old.renders.map { $0.target+":"+String($0.index) }).count == old.renders.count
+                        let completeCoverage = !old.done || (!current.isEmpty && old.renders.count == current.count*request.targets.count && old.outputs.count == request.targets.count)
+                        var validReceipts = uniqueReceipts && completeCoverage
+                        for (index,output) in old.outputs.enumerated() {
+                            guard request.targets.indices.contains(index), request.targets[index].code == output.language,
+                                  let file = try? await dubs.file(id,output.file), (try? ModelHash.file(file)) == output.hash else { validReceipts = false; break }
+                        }
+                        for render in old.renders {
+                            guard validReceipts else { break }
+                            guard old.segments.indices.contains(render.index), request.targets.contains(where: { $0.code == render.target }) else { validReceipts = false; break }
+                            let before = old.segments[render.index]
+                            let referenceName = before.referenceFile ?? (native["request"]?.handoffObject?["referenceText"]?.string == nil ? nil : "reference.pcm")
+                            let referenceHash = referenceName.flatMap { hashes["native/dub/"+$0] } ?? ""
+                            guard let name = render.file, let file = try? await dubs.file(id,name), render.fingerprint != nil,
+                                  render.segmentID == before.id, render.scope == phoneDubSegmentScope(before,target: render.target),
+                                  render.referenceHash == referenceHash, render.originalHash == old.originalHash,
+                                  render.clonePin == selected.first(where: { $0.capability == .clone }).flatMap({ request.modelPins[$0.id] }),
+                                  render.frames == max(1,Int(before.speech.end*24000)-Int(before.speech.start*24000)),
+                                  (try? PCMFile(file).frames) == render.frames, (try? ModelHash.file(file)) == render.hash else { validReceipts = false; break }
+                        }
+                        if validReceipts {
+                            checkpoint = old; checkpoint.segments = current
+                            checkpoint.renders = old.renders.map { render in
+                                var updated = render; updated.segmentID = current[render.index].id
+                                updated.scope = phoneDubSegmentScope(current[render.index],target: render.target)
+                                return updated
+                            }
+                        }
                     }
                 }
                 try await dubs.save(id,checkpoint); try Task.checkCancellation()

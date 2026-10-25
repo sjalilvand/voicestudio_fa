@@ -154,10 +154,10 @@ def _collect_paths(value, files: dict, roots, prefix='assets/desktop', depth=0):
     return value
 
 
-def _restore_paths(value, files, *, asset=False):
+def _restore_paths(value, files, *, asset=False, install_asset=None):
     if isinstance(value,str) and asset and value.startswith('asset:'):
         if value[6:] not in files: raise ArchiveError(400,'Project asset reference is missing')
-        return str(files[value[6:]])
+        return str(install_asset(value[6:]) if install_asset else files[value[6:]])
     if isinstance(value,dict):
         result = {}
         descriptor = {'path','source','sha256','size'}.issubset(value)
@@ -169,9 +169,9 @@ def _restore_paths(value, files, *, asset=False):
             if capability and isinstance(child,str) and child and not child.startswith('asset:'):
                 # Only manifest references can install a filesystem capability.
                 result[key] = '' if key == 'output' else None
-            else: result[key] = _restore_paths(child,files,asset=capability)
+            else: result[key] = _restore_paths(child,files,asset=capability,install_asset=install_asset)
         return result
-    if isinstance(value,list): return [_restore_paths(v,files) for v in value]
+    if isinstance(value,list): return [_restore_paths(v,files,install_asset=install_asset) for v in value]
     return value
 
 
@@ -384,6 +384,7 @@ def _import(directory: Path,source: Path,allow_voices: bool):
     manifest, files = bundles.read_bundle(source,directory/'content')
     if (manifest['voices'] or manifest['kind']=='dub') and not allow_voices: raise ArchiveError(403,'Explicit permission to use the bundled voices is required')
     cleanup = []
+    cleanup_directories = []
     try:
         with db_conn() as conn:
             mapping = _install_voices(manifest,files,conn,cleanup)
@@ -407,7 +408,22 @@ def _import(directory: Path,source: Path,allow_voices: bool):
                 result = {'kind':manifest['kind'],'title':manifest['title'],'project':project}
             else:
                 doc = manifest['document']; identifier = str(uuid.uuid4())[:8]
-                desktop = _restore_paths(doc.get('desktop') or {},files); state = desktop.get('state') or {}
+                # The preview/render/export APIs require job-owned media, not
+                # paths inside the retained handoff archive under OUTPUTS_DIR.
+                job_directory = resolve_within(DUB_DIR,identifier)
+                job_directory.mkdir()
+                cleanup_directories.append(job_directory)
+                installed = {}
+                def install_asset(name):
+                    if name not in installed:
+                        if name not in files:
+                            raise ArchiveError(400,'Project asset reference is missing')
+                        target = resolve_within(job_directory,'imported/'+bundles.archive_path(name))
+                        target.parent.mkdir(parents=True,exist_ok=True)
+                        shutil.copyfile(files[name],target)
+                        installed[name] = target
+                    return installed[name]
+                desktop = _restore_paths(doc.get('desktop') or {},files,install_asset=install_asset); state = desktop.get('state') or {}
                 job = desktop.get('job') or {}
                 target = (doc.get('targets') or [{'code':'en','name':'English'}])[0]
                 segments = []
@@ -419,9 +435,9 @@ def _import(directory: Path,source: Path,allow_voices: bool):
                     if value.get('voiceID'): segment['profile_id'] = value['voiceID']
                     if value.get('muted'): segment['gain'] = 0
                     if value.get('reference'):
-                        reference = files[value['reference']]
+                        reference = install_asset(value['reference'])
                         if reference.suffix == '.pcm':
-                            reference = _pcm_wave(reference,directory/('reference-'+uuid.uuid4().hex+'.wav'),max_frames=720000)
+                            reference = _pcm_wave(reference,job_directory/('reference-'+uuid.uuid4().hex+'.wav'),max_frames=720000)
                         # Imported clips are explicit voice choices, not the renderer's
                         # auto-seg:<own-id> defaults that consistent mode can replace.
                         reference_id = 'handoff-'+uuid.uuid4().hex
@@ -430,16 +446,16 @@ def _import(directory: Path,source: Path,allow_voices: bool):
                             segment['profile_id'] = 'auto-seg:'+reference_id
                     segments.append(segment)
                 if references: job['segment_clones'] = references
-                source_asset = str(files[doc['source']]); audio = job.get('audio_path')
+                source_asset = str(install_asset(doc['source'])); audio = job.get('audio_path')
                 if not audio:
                     # Pure WAV conversion, not synthesis; retain source provenance.
                     if doc.get('original') in files:
-                        audio = str(_pcm_wave(files[doc['original']],directory/'original.wav',max_frames=345600000))
+                        audio = str(_pcm_wave(install_asset(doc['original']),job_directory/'original.wav',max_frames=345600000))
                     elif Path(source_asset).suffix.lower() in {'.wav','.flac','.ogg'}: audio = source_asset
                     else:
                         from services.ffmpeg_utils import find_ffmpeg, local_inputs_only
                         import subprocess
-                        audio = str(directory/'original.wav')
+                        audio = str(job_directory/'original.wav')
                         subprocess.run([find_ffmpeg(),'-nostdin','-v','error',*local_inputs_only(),'-i',source_asset,'-vn','-ac','1','-ar','24000',audio],check=True,timeout=300)
                 target = (doc.get('targets') or [{'code':'en','name':'English'}])[0]
                 state['handoff'] = {'document':{k:v for k,v in doc.items() if k != 'desktop'},'assets':[{**asset,'source':str(files[asset['path']])} for asset in manifest['assets']]}
@@ -460,6 +476,7 @@ def _import(directory: Path,source: Path,allow_voices: bool):
         return manifest,result
     except BaseException:
         for path in cleanup: path.unlink(missing_ok=True)
+        for path in cleanup_directories: shutil.rmtree(path,ignore_errors=True)
         raise
 
 

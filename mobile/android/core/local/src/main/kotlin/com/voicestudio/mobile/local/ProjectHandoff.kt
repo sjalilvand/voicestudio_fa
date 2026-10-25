@@ -116,7 +116,7 @@ object PhoneProjectHandoff {
                         require(ref.frames in 2400..720000L);val name="edited-reference-${UUID.randomUUID()}.pcm";copy(ref.file,File(root,name));referenceFile=name;referenceNames[path]=name
                         }
                     }}
-                    var segment=DubSegmentState(SpeechSegment(start,end,text),referenceText=raw.string("referenceText"),translations=raw["translations"]?.jsonObject.orEmpty().mapValues {it.value.jsonPrimitive.content},referenceFile=referenceFile,id=raw.string("id") ?: UUID.randomUUID().toString(),gain=raw["gain"]?.jsonPrimitive?.doubleOrNull ?: 1.0,muted=raw["muted"]?.jsonPrimitive?.booleanOrNull ?: false,speaker=raw.string("speaker"),referenceOrigin=raw.string("referenceOrigin"),voiceID=raw.string("voiceID")?.removePrefix("phone:")?.takeIf {selected->imported.any {it.id==selected}})
+                    var segment=DubSegmentState(SpeechSegment(start,end,text),referenceText=raw.string("referenceText"),translations=raw["translations"]?.jsonObject.orEmpty().mapValues {it.value.jsonPrimitive.content},referenceFile=referenceFile,id=raw.string("id") ?: UUID.randomUUID().toString(),referenceNeedsTranscription=raw["referenceNeedsTranscription"]?.jsonPrimitive?.booleanOrNull ?: false,gain=raw["gain"]?.jsonPrimitive?.doubleOrNull ?: 1.0,muted=raw["muted"]?.jsonPrimitive?.booleanOrNull ?: false,speaker=raw.string("speaker"),referenceOrigin=raw.string("referenceOrigin"),voiceID=raw.string("voiceID")?.removePrefix("phone:")?.takeIf {selected->imported.any {it.id==selected}})
                     if(segment.referenceFile==null&&segment.voiceID!=null) imported.firstOrNull {it.id==segment.voiceID}?.let {voice->
                         val key="voice:${voice.id}";val name=referenceNames[key] ?: "edited-reference-${UUID.randomUUID()}.pcm".also {copy(voices.handoffFiles(voice).getValue("reference.pcm"),File(root,it));referenceNames[key]=it}
                         segment=segment.copy(referenceFile=name,referenceText=voice.transcript,referenceOrigin=segment.referenceOrigin ?: "cast")
@@ -128,15 +128,32 @@ object PhoneProjectHandoff {
                 if(native?.string("platform")==PLATFORM&&(native["request"]?.jsonObject?.get("audioOnly")?.jsonPrimitive?.booleanOrNull ?: false)==request.audioOnly&&native["request"]?.jsonObject?.get("targets")?.let {runCatching {HandoffJson.decodeFromJsonElement<List<DubTarget>>(it)}.getOrNull()}==request.targets) {
                     val oldPins=native["request"]?.jsonObject?.get("models")?.let {runCatching {HandoffJson.decodeFromJsonElement<List<DubModelPin>>(it)}.getOrNull()}
                     val old=native["checkpoint"]?.let {runCatching {HandoffJson.decodeFromJsonElement<PhoneDubCheckpoint>(it)}.getOrNull()}
-                    val hashes=manifest.assets.associate {it.path to it.sha256};val rawSegments=document["segments"]?.jsonArray.orEmpty()
+                    val hashes=manifest.assets.associate {it.path to it.sha256}
+                    val restoredReferenceHashes=segments.mapNotNull {it.referenceFile}.distinct().associateWith {sha256(dubs.file(id,it))}
                     val referencesMatch=old?.segments?.mapIndexed {index,segment->
                         val before=segment.referenceFile?.let {"native/dub/$it"} ?: native["request"]?.jsonObject?.string("referenceText")?.let {"native/dub/voice-reference.pcm"}
-                        val after=rawSegments.getOrNull(index)?.jsonObject?.string("reference")
-                        if(before==null&&after==null) true else before!=null&&after!=null&&hashes[before]!=null&&hashes[before]==hashes[after]
+                        val after=segments.getOrNull(index)?.referenceFile
+                        if(before==null&&after==null) true else before!=null&&after!=null&&hashes[before]!=null&&hashes[before]==restoredReferenceHashes[after]
                     }?.all {it}==true
-                    if(referencesMatch&&native["request"]?.jsonObject?.string("sourceHash")==request.sourceHash&&old?.originalHash==checkpoint.originalHash&&old!=null&&oldPins?.toSet()==request.models.toSet()&&old.frames==pcm.frames&&old.segments.size==segments.size&&old.segments.zip(segments).all {(before,after)->before.speech==after.speech&&before.translations==after.translations&&(before.referenceText ?: native["request"]?.jsonObject?.string("referenceText"))==after.referenceText&&before.gain==after.gain&&before.muted==after.muted&&before.speaker==after.speaker}) {
+                    if(referencesMatch&&native["request"]?.jsonObject?.string("sourceHash")==request.sourceHash&&old?.originalHash==checkpoint.originalHash&&old!=null&&oldPins?.toSet()==request.models.toSet()&&old.frames==pcm.frames&&old.segments.size==segments.size&&old.segments.zip(segments).all {(before,after)->before.speech==after.speech&&before.translations==after.translations&&(before.referenceText ?: native["request"]?.jsonObject?.string("referenceText"))==after.referenceText&&before.gain==after.gain&&before.muted==after.muted&&before.speaker==after.speaker&&before.referenceNeedsTranscription==after.referenceNeedsTranscription}) {
                         for(asset in manifest.assets.filter {it.path.startsWith("native/dub/")}) {val name=asset.path.removePrefix("native/dub/");if(name !in setOf("request.json","checkpoint.json","handoff.json")) {ProjectArchive.path(name);copy(files.getValue(asset.path),File(root,name))}}
-                        checkpoint=old.copy(segments=segments)
+                        // Rebind fresh reference names only after checking the original receipt and identical inputs.
+                        val uniqueReceipts=old.renders.map {it.target to it.index}.distinct().size==old.renders.size
+                        val completeCoverage=!old.done||(segments.isNotEmpty()&&old.renders.size==segments.size*request.targets.size&&old.outputs.size==request.targets.size)
+                        val validOutputs=old.outputs.withIndex().all {(index,output)->
+                            request.targets.getOrNull(index)?.code==output.language&&runCatching {sha256(dubs.file(id,output.file))==output.sha256}.getOrDefault(false)
+                        }
+                        val validReceipts=uniqueReceipts&&completeCoverage&&validOutputs&&old.renders.all {render->
+                            val before=old.segments.getOrNull(render.index) ?: return@all false
+                            val name=render.file ?: return@all false
+                            val referenceName=before.referenceFile ?: native["request"]?.jsonObject?.string("referenceText")?.let {"voice-reference.pcm"}
+                            val referenceHash=referenceName?.let {hashes["native/dub/$it"]}.orEmpty()
+                            request.targets.any {it.code==render.target}&&render.fingerprint!=null&&render.segmentID==before.id&&render.scope==dubSegmentScope(before,render.target!!)&&
+                                render.referenceHash==referenceHash&&render.originalHash==old.originalHash&&render.clonePin==request.models.firstOrNull {it.id==selected.first {model->model.capability=="clone"}.id}?.identity&&
+                                render.frames==maxOf(1L,minOf(pcm.frames,(before.speech.end*24000).toLong())-(before.speech.start*24000).toLong())&&
+                                runCatching {val file=dubs.file(id,name);PcmFile(file).frames==render.frames&&sha256(file)==render.sha256}.getOrDefault(false)
+                        }
+                        if(validReceipts) checkpoint=old.copy(segments=segments,renders=old.renders.map {render->render.copy(segmentID=segments[render.index].id,scope=dubSegmentScope(segments[render.index],render.target!!))})
                     }
                 }
                 dubs.save(id,checkpoint);currentCoroutineContext().ensureActive();atomicText(File(root,"request.json"),HandoffJson.encodeToString(request));atomicText(File(root,"handoff.json"),HandoffJson.encodeToString(memory));dubs.checkpoint(id)

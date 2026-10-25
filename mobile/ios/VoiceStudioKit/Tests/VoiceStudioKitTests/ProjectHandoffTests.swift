@@ -135,3 +135,87 @@ private actor HandoffEngine {
     let reference = PCMFile(try await dubs.file(result.id,name))
     #expect(try reference.frames == 4800); #expect(try reference.read(start: 0,count: 4800).samples.allSatisfy { abs($0-0.4)<0.001 })
 }
+
+private actor HandoffDubEngine: LocalEngine {
+    private(set) var clones = 0
+    func synthesize(model: PhoneModel,text: String,speaker: Int,speed: Float,progress: @escaping EngineProgressHandler) async throws -> LocalAudio { throw ClientError("unexpected") }
+    func clone(model: PhoneModel,text: String,reference: PCMChunk,referenceText: String,progress: @escaping EngineProgressHandler) async throws -> LocalAudio { clones += 1; return LocalAudio(samples: Array(repeating: 0.3,count: 4800),sampleRate: 24000) }
+    func transcribe(model: PhoneModel,audio: PCMChunk,progress: @escaping EngineProgressHandler) async throws -> String { throw ClientError("unexpected") }
+    func streamTranscribe(model: PhoneModel,chunks: AsyncThrowingStream<PCMChunk,any Error>,progress: @escaping EngineProgressHandler) async throws -> AsyncThrowingStream<TranscriptUpdate,any Error> { throw ClientError("unexpected") }
+    func translate(model: PhoneModel,text: String,sourceLanguage: String,targetLanguage: String,progress: @escaping EngineProgressHandler) async throws -> String { throw ClientError("unexpected") }
+}
+@Test(arguments: [false,true])
+func nativeDubHandoffKeepsVerifiedPackagesAndInvalidatesEditedInputs(_ globalReference: Bool) async throws {
+    let root = try handoffRoot(); defer { try? FileManager.default.removeItem(at: root) }
+    let allModels = try ModelCatalogue.decode(Data(contentsOf: repository.appendingPathComponent("mobile/contract/models.json"))).models
+    let models = try [ModelCapability.asr,.translate,.clone].map { capability in try #require(allModels.first { $0.capability == capability }) }
+    let production = try ProductionStore(root: root.appendingPathComponent("production")), dubs = try PhoneDubStore(root: root.appendingPathComponent("dubs")), voices = try PhoneVoiceStore(root: root.appendingPathComponent("voices"))
+    let original = try await PhoneProjectHandoff.restore(handoffFixtures.appendingPathComponent("desktop-dub.vsproject"),production: production,dubs: dubs,voices: voices,models: models,allowVoices: true)
+    var id = original.id
+    if globalReference {
+        let initial = try await dubs.request(id), cp = try await dubs.checkpoint(id)
+        let reference = try PCMFile(await dubs.file(id,cp.segments[0].referenceFile!)).read(start: 0,count: 4800)
+        let request = try await dubs.create(source: dubs.file(id,initial.sourceFile),title: "Global reference",targets: initial.targets,models: models,consent: true,reference: reference,referenceText: "Reference words",audioOnly: true)
+        try FileManager.default.copyItem(at: await dubs.file(id,"original.pcm"),to: await dubs.file(request.id,"original.pcm"))
+        var global = cp; global.segments[0].referenceFile = nil; global.segments[0].referenceText = nil
+        try await dubs.save(request.id,global); id = request.id
+    }
+    let engine = HandoffDubEngine(), pipeline = PhoneDubPipeline(store: dubs,engine: engine)
+    let rendered = try await pipeline.run(id: id,models: models)
+    #expect(rendered.done); #expect(await engine.clones == 1)
+    let archive = root.appendingPathComponent("rendered.vsproject")
+    _ = try await PhoneProjectHandoff.exportDub(id,store: dubs,models: models,voices: voices,to: archive)
+    let restored = try await PhoneProjectHandoff.restore(archive,production: production,dubs: dubs,voices: voices,models: models,allowVoices: true)
+    let cp = try await dubs.checkpoint(restored.id)
+    #expect(cp.done); #expect(cp.renders.map(\.file) == rendered.renders.map(\.file))
+    _ = try await pipeline.run(id: restored.id,models: models); #expect(await engine.clones == 1)
+    for kind in [PhoneDubPackage.clips,.stems] {
+        let package = try await dubs.exportPackage(restored.id,target: "fr",kind: kind,workspace: root)
+        #expect(try ProjectArchive.entries(package).contains { $0.path == "manifest.json" })
+    }
+    let files = try await ProjectArchive.extract(archive,to: root.appendingPathComponent("editing"))
+    let manifestFile = files["manifest.json"]!, originalManifest = try Data(contentsOf: manifestFile)
+    for (index,patch) in [["translations":JSONValue.object(["fr":.string("Edited translation")])],["reference":.string("native/dub/original.pcm")],["referenceText":.string("Edited reference transcript")],["referenceNeedsTranscription":.bool(true)]].enumerated() {
+        var manifest = try JSONDecoder().decode(HandoffManifest.self,from: originalManifest)
+        var segments = manifest.document["segments"]!.handoffArray!, segment = segments[0].handoffObject!
+        segment.merge(patch) { _,new in new }; segments[0] = .object(segment); manifest.document["segments"] = .array(segments)
+        try JSONEncoder().encode(manifest).write(to: manifestFile)
+        let modified = root.appendingPathComponent("edited-\(index).vsproject")
+        _ = try await ProjectArchive.write(entries: files.map { ProjectArchiveFile(path: $0.key,file: $0.value) },to: modified)
+        let changed = try await PhoneProjectHandoff.restore(modified,production: production,dubs: dubs,voices: voices,models: models,allowVoices: true)
+        let changedCheckpoint = try await dubs.checkpoint(changed.id)
+        #expect(!changedCheckpoint.done); #expect(changedCheckpoint.renders.isEmpty); #expect(changedCheckpoint.outputs.isEmpty)
+    }
+    for key in ["scope","hash","referenceHash","clonePin"] {
+        var manifest = try JSONDecoder().decode(HandoffManifest.self,from: originalManifest)
+        var native = manifest.document["native"]!.handoffObject!, checkpoint = native["checkpoint"]!.handoffObject!
+        var renders = checkpoint["renders"]!.handoffArray!, render = renders[0].handoffObject!
+        render[key] = .string("stale"); renders[0] = .object(render); checkpoint["renders"] = .array(renders)
+        native["checkpoint"] = .object(checkpoint); manifest.document["native"] = .object(native)
+        try JSONEncoder().encode(manifest).write(to: manifestFile)
+        let modified = root.appendingPathComponent("stale-"+key+".vsproject")
+        _ = try await ProjectArchive.write(entries: files.map { ProjectArchiveFile(path: $0.key,file: $0.value) },to: modified)
+        let changed = try await PhoneProjectHandoff.restore(modified,production: production,dubs: dubs,voices: voices,models: models,allowVoices: true)
+        let changedCheckpoint = try await dubs.checkpoint(changed.id)
+        #expect(!changedCheckpoint.done); #expect(changedCheckpoint.renders.isEmpty); #expect(changedCheckpoint.outputs.isEmpty)
+    }
+
+    for damage in ["missing-renders","duplicate-render","missing-outputs","output-hash"] {
+        var manifest = try JSONDecoder().decode(HandoffManifest.self,from: originalManifest)
+        var native = manifest.document["native"]!.handoffObject!, checkpoint = native["checkpoint"]!.handoffObject!
+        switch damage {
+        case "missing-renders": checkpoint["renders"] = .array([])
+        case "duplicate-render": let renders = checkpoint["renders"]!.handoffArray!; checkpoint["renders"] = .array(renders+[renders[0]])
+        case "missing-outputs": checkpoint["outputs"] = .array([])
+        default: checkpoint["outputs"] = .array(checkpoint["outputs"]!.handoffArray!.map { value in var output = value.handoffObject!; output["hash"] = .string("stale"); return .object(output) })
+        }
+        native["checkpoint"] = .object(checkpoint); manifest.document["native"] = .object(native)
+        try JSONEncoder().encode(manifest).write(to: manifestFile)
+        let modified = root.appendingPathComponent(damage+".vsproject")
+        _ = try await ProjectArchive.write(entries: files.map { ProjectArchiveFile(path: $0.key,file: $0.value) },to: modified)
+        let changed = try await PhoneProjectHandoff.restore(modified,production: production,dubs: dubs,voices: voices,models: models,allowVoices: true)
+        let changedCheckpoint = try await dubs.checkpoint(changed.id)
+        #expect(!changedCheckpoint.done); #expect(changedCheckpoint.renders.isEmpty); #expect(changedCheckpoint.outputs.isEmpty)
+    }
+
+}
