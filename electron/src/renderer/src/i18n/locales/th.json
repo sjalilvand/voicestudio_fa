@@ -373,7 +373,8 @@
     "inactive": "ไม่ใช้งาน",
     "translation": "การแปล",
     "diarisation": "แยกผู้พูด",
-    "localDevice": "อุปกรณ์ภายในเครื่อง"
+    "localDevice": "อุปกรณ์ภายในเครื่อง",
+    "localShort": "ภายในเครื่อง"
   },
   "paneActions": {
     "collapse": "ยุบแผง",
