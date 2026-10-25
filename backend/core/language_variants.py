@@ -54,7 +54,10 @@ def is_variant(language: object) -> bool:
 def base_language(language):
     """The language an engine understands: variant names become their base
     picker name ("Portuguese (Portugal)" -> "Portuguese"); anything else is
-    returned unchanged, including ``None`` and ISO tags engines already parse."""
+    returned unchanged, including ``None`` and ISO tags engines already parse.
+    A list or tuple (native batch renders) is converted item by item."""
+    if isinstance(language, (list, tuple)):
+        return type(language)(base_language(item) for item in language)
     variant = VARIANT_NAMES.get(_key(language))
     return variant[0] if variant else language
 

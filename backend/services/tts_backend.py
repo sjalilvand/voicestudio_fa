@@ -2461,7 +2461,15 @@ def resolve_kokoro_lang_code(language: str) -> str:
     """
     from mlx_audio.tts.models.kokoro.pipeline import ALIASES, LANG_CODES
 
-    key = language.strip().lower()
+    from core.language_variants import base_language, split_target
+
+    # Regional variants (#3143): "Portuguese (Portugal)" resolves like its base
+    # name, and a region tag Kokoro's own table lacks ("pt-pt") falls back to
+    # the base code. Text normalization has already applied the dialect.
+    key = str(base_language(language)).strip().lower()
+    base, region = split_target(key)
+    if region and key not in ALIASES and key not in LANG_CODES:
+        key = str(base)
     iso = _KOKORO_ISO_BY_FULL_NAME.get(key, key)
     code = ALIASES.get(iso, iso)
     if code not in LANG_CODES:

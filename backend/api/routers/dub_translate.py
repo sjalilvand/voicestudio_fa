@@ -302,14 +302,25 @@ def _resolve_target_dialect(req) -> None:
     """
     from core.language_variants import canonical_dialect, default_dialect, split_target
 
+    # Internal callers may hand over a request-like object without the
+    # optional ``dialect`` field; treat it as unset rather than failing.
+    dialect = getattr(req, "dialect", None)
     base, region = split_target(req.target_lang)
     if region:
         req.target_lang = base
-        req.dialect = req.dialect or region
-    if req.dialect:
-        req.dialect = canonical_dialect(req.dialect) or req.dialect
+        dialect = dialect or region
+    if dialect:
+        req.dialect = canonical_dialect(dialect) or dialect
     else:
         req.dialect = default_dialect(req.target_lang)
+    # Per-segment overrides reach the same provider lookups, so a regional
+    # segment target ("pt-PT") must name its base code as well.
+    for seg in getattr(req, "segments", None) or ():
+        seg_target = getattr(seg, "target_lang", None)
+        if seg_target:
+            seg_base, seg_region = split_target(seg_target)
+            if seg_region:
+                seg.target_lang = seg_base
 
 
 def _dialect_flags(req, applied: bool) -> dict:

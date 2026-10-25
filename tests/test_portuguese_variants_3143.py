@@ -45,6 +45,14 @@ def test_base_language_only_rewrites_variant_names():
         assert base_language(unchanged) == unchanged
 
 
+def test_base_language_converts_native_batch_lists():
+    from core.language_variants import base_language
+    assert base_language(["Portuguese (Portugal)", "English", None]) == [
+        "Portuguese", "English", None,
+    ]
+    assert base_language(("Portuguese (Brazil)",)) == ("Portuguese",)
+
+
 def test_regional_target_splits_into_base_and_dialect():
     from core.language_variants import split_target
     assert split_target("pt-PT") == ("pt", "pt-PT")
@@ -97,6 +105,31 @@ def test_engines_receive_the_language_they_know(recording_backend, picked, engin
     backend = recording_backend()
     backend.generate("Olá", language=picked)
     assert backend.calls[-1]["language"] == engine_sees
+
+
+def test_native_batch_engines_receive_base_languages(recording_backend):
+    class Batching(recording_backend):
+        def generate_batch(self, texts, **kw):  # type: ignore[override]
+            self.calls.append(kw)
+            return []
+
+    backend = Batching()
+    backend.generate_batch(["a", "b"], language=["Portuguese (Portugal)", "Portuguese (Brazil)"])
+    assert backend.calls[-1]["language"] == ["Portuguese", "Portuguese"]
+
+
+def test_kokoro_resolves_portuguese_variants(monkeypatch):
+    import sys
+    import types
+
+    from services import tts_backend
+
+    pipeline = types.ModuleType("mlx_audio.tts.models.kokoro.pipeline")
+    pipeline.ALIASES = {"pt": "p", "pt-br": "p"}
+    pipeline.LANG_CODES = {"p": "pt-br"}
+    monkeypatch.setitem(sys.modules, "mlx_audio.tts.models.kokoro.pipeline", pipeline)
+    for picked in ("Portuguese (Portugal)", "Portuguese (Brazil)", "pt-PT", "pt-BR", "Portuguese"):
+        assert tts_backend.resolve_kokoro_lang_code(picked) == "p"
 
 
 def test_finite_engine_accepts_both_variants(recording_backend):
@@ -166,6 +199,29 @@ def test_regional_target_becomes_base_plus_dialect():
     other = _request(target_lang="es")
     _resolve_target_dialect(other)
     assert other.dialect is None
+
+
+def test_regional_segment_targets_become_base_codes():
+    from api.routers.dub_translate import _resolve_target_dialect
+    from schemas.requests import TranslateRequest
+
+    req = TranslateRequest(
+        segments=[{"id": "s1", "text": "Hi", "target_lang": "pt-PT"},
+                  {"id": "s2", "text": "Hi", "target_lang": "es-AR"}],
+        target_lang="pt",
+    )
+    _resolve_target_dialect(req)
+    assert [seg.target_lang for seg in req.segments] == ["pt", "es-AR"]
+
+
+def test_resolver_accepts_request_objects_without_a_dialect_field():
+    from types import SimpleNamespace
+
+    from api.routers.dub_translate import _resolve_target_dialect
+
+    req = SimpleNamespace(target_lang="pt-PT", segments=[])
+    _resolve_target_dialect(req)
+    assert (req.target_lang, req.dialect) == ("pt", "pt-PT")
 
 
 def test_mt_engine_reports_the_variant_it_wrote():
