@@ -202,3 +202,15 @@ it('leaves a column clear of the traffic lights untouched', () => {
   expect(header.style.paddingInlineStart).toBe('');
   platform.mac = false;
 });
+
+it('collapses to one expand control, leaving the titlebar row empty', () => {
+  render(
+    <SecondarySidebar title="Voice" icon={FilmIcon} collapsed onCollapsedChange={vi.fn()}>
+      <section>Body</section>
+    </SecondarySidebar>,
+  );
+  const header = document.querySelector<HTMLElement>('[data-slot="secondary-sidebar-header"]')!;
+  expect(header.querySelector('button')).toBeNull();
+  expect(screen.getAllByRole('button', { expanded: false })).toHaveLength(1);
+  expect(screen.getByRole('button', { name: 'Voice' })).toHaveAttribute('aria-expanded', 'false');
+});
