@@ -17,9 +17,15 @@ struct HomeView: View {
                             ContributorCluster().frame(maxWidth: .infinity, alignment: .trailing)
                         }
                     } else {
-                        HStack(alignment: .center, spacing: 12) {
-                            heroText.frame(maxWidth: .infinity, alignment: .leading)
-                            ContributorCluster()
+                        ViewThatFits(in: .horizontal) {
+                            HStack(alignment: .center, spacing: 12) {
+                                heroText.frame(minWidth: 140, idealWidth: 180, maxWidth: .infinity, alignment: .leading)
+                                ContributorCluster()
+                            }
+                            VStack(alignment: .leading, spacing: 12) {
+                                heroText
+                                ContributorCluster().frame(maxWidth: .infinity, alignment: .trailing)
+                            }
                         }
                     }
                 }
@@ -102,7 +108,7 @@ struct HomeView: View {
                 .font(.custom("InterVariable", size: VSTokens.iosHomeWordmarkSize, relativeTo: .title2).weight(.semibold))
                 .lineLimit(typeSize.isAccessibilitySize ? nil : 1).minimumScaleFactor(0.8)
                 .accessibilityIdentifier("home.wordmark")
-            Text(model.t("mobile.home.subtitle")).font(.subheadline)
+            Text(model.t("mobile.home.subtitle")).font(typeSize.isAccessibilitySize ? .body : .caption)
                 .foregroundStyle(theme.color("textMuted"))
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("home.subtitle")

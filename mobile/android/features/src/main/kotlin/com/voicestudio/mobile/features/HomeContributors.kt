@@ -45,7 +45,7 @@ import kotlin.math.min
 
 /** Human contributors and portraits mirror Electron's bundled contributor snapshot. */
 object HomeContributors {
-    val logins = listOf("debpalash", "kevin9327", "psiberfunk", "velixio", "jaketame", "paoloantinori", "Chang-Jin-Lee", "Shivendra-Coherent", "marreiradigital")
+    val logins = listOf("debpalash", "velixio", "kevin9327", "psiberfunk", "jaketame", "rudycelekli", "paoloantinori", "Chang-Jin-Lee", "swadhinbiswas", "BichengWang", "nirmalchatur", "Shivendra-Coherent", "marreiradigital", "nvtoan0201-swe")
     val coreMaintainers = setOf("debpalash", "velixio")
     const val REPOSITORY = "https://github.com/debpalash/VoiceStudio"
     fun rows(items: List<String>): List<List<String>> {
@@ -73,19 +73,21 @@ object HomeContributors {
         }
     }
     var selected by rememberSaveable { mutableStateOf<String?>(null) }
-    Column(Modifier.width(104.dp).testTag("home.contributors"), verticalArrangement=Arrangement.spacedBy(0.dp)) {
+    Column(Modifier.width(112.dp).testTag("home.contributors"), verticalArrangement=Arrangement.spacedBy(4.dp),horizontalAlignment=Alignment.End) {
+        Text(tr("mobile.home.brought_by"),style=MaterialTheme.typography.labelSmall,color=role("textMuted"))
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp), verticalAlignment=Alignment.CenterVertically) {
             HomeContributors.logins.filter {it in HomeContributors.coreMaintainers}.forEach {login ->
                 Contributor(login, prominent=true, card=cards[login]) { selected=login }
             }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(4.dp), verticalAlignment=Alignment.CenterVertically) {
-            Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()).testTag("home.other-contributors"), horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-                HomeContributors.logins.filterNot {it in HomeContributors.coreMaintainers}.forEach {login ->
-                    Contributor(login) { uri.openUri("https://github.com/$login") }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).testTag("home.other-contributors")) {
+            (HomeContributors.logins.filterNot {it in HomeContributors.coreMaintainers}+"all").chunked(2).forEach {column ->
+                Column {
+                    column.forEach {login -> Contributor(login) {
+                        uri.openUri(if(login=="all") "${HomeContributors.REPOSITORY}/graphs/contributors" else "https://github.com/$login")
+                    } }
                 }
             }
-            Contributor("all") { uri.openUri("${HomeContributors.REPOSITORY}/graphs/contributors") }
         }
     }
     selected?.let {login -> cards[login]?.let {card -> MaintainerSheet(login,card) {selected=null}} }

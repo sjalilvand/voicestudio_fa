@@ -3582,7 +3582,8 @@
   },
   "mobile": {
     "home": {
-      "subtitle": "Studio suara lokal Anda."
+      "subtitle": "Alternatif ElevenLabs Anda yang sumber terbuka dan sepenuhnya lokal — kloning dan rancang suara, sulihsuarakan video, dikte, transkripsikan, dan buat buku audio dalam 646 bahasa.",
+      "brought_by": "Dipersembahkan oleh"
     },
     "tabs": {
       "speak": "Bicara",

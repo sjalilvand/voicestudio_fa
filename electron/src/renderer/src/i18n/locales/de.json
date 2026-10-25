@@ -3582,7 +3582,8 @@
   },
   "mobile": {
     "home": {
-      "subtitle": "Dein lokales Sprachstudio."
+      "subtitle": "Deine quelloffene, vollständig lokale Alternative zu ElevenLabs — Stimmen klonen und gestalten, Videos synchronisieren, diktieren, transkribieren und Hörbücher in 646 Sprachen erstellen.",
+      "brought_by": "Bereitgestellt von"
     },
     "tabs": {
       "speak": "Sprechen",

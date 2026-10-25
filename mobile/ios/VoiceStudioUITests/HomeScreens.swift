@@ -57,20 +57,31 @@ final class MaintainerCardScreens: XCTestCase {
         XCTAssertTrue(palash.isHittable)
         XCTAssertTrue(shimul.isHittable)
         XCTAssertTrue(other.isHittable)
-        XCTAssertGreaterThanOrEqual(palash.frame.height, 44)
-        XCTAssertGreaterThanOrEqual(other.frame.height, 44)
-        XCTAssertGreaterThanOrEqual(other.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(palash.frame.height + 0.001, 44)
+        XCTAssertGreaterThanOrEqual(other.frame.height + 0.001, 44)
+        XCTAssertGreaterThanOrEqual(other.frame.width + 0.001, 44)
         XCTAssertLessThan(palash.frame.maxY, other.frame.minY)
         let wordmark = app.staticTexts["home.wordmark"]
         let subtitle = app.staticTexts["home.subtitle"]
         XCTAssertTrue(wordmark.isHittable)
         XCTAssertTrue(subtitle.isHittable)
         XCTAssertEqual(wordmark.label, "VoiceStudio")
-        XCTAssertEqual(subtitle.label, "Your local voice studio.")
+        XCTAssertEqual(subtitle.label, "Open Source fully-local ElevenLabs alternative — voice cloning, voice design, video dubbing, dictation, transcription & audiobook creation in 646 languages.")
         XCTAssertLessThanOrEqual(wordmark.frame.maxX, palash.frame.minX)
         XCTAssertLessThanOrEqual(subtitle.frame.maxX, palash.frame.minX)
         XCTAssertLessThan(wordmark.frame.minY, other.frame.maxY)
-        XCTAssertLessThanOrEqual(other.frame.maxY - min(wordmark.frame.minY, palash.frame.minY), 110)
+        let credit = app.staticTexts["home.contributors.credit"]
+        XCTAssertTrue(credit.isHittable)
+        XCTAssertEqual(credit.label, "Brought to you by")
+        XCTAssertLessThanOrEqual(credit.frame.maxY, palash.frame.minY)
+        for login in ["kevin9327", "psiberfunk", "jaketame", "rudycelekli"] {
+            let visible = app.descendants(matching: .any)["home.contributor." + login].firstMatch
+            XCTAssertTrue(visible.isHittable, login)
+            XCTAssertGreaterThanOrEqual(visible.frame.height + 0.001, 44)
+        }
+        let bottomRow = app.descendants(matching: .any)["home.contributor.psiberfunk"].firstMatch
+        XCTAssertGreaterThan(bottomRow.frame.minY, other.frame.minY)
+        XCTAssertLessThanOrEqual(max(bottomRow.frame.maxY, subtitle.frame.maxY) - min(wordmark.frame.minY, credit.frame.minY), 180)
         let compact = XCTAttachment(screenshot: app.screenshot())
         compact.name = "Home-compact-hero"; compact.lifetime = .keepAlways; add(compact)
         for (login, name, role, website, social) in [
@@ -85,20 +96,22 @@ final class MaintainerCardScreens: XCTestCase {
                 for _ in 0..<5 { if link.isHittable { break }; app.swipeUp() }
                 XCTAssertTrue(link.isHittable, kind)
                 XCTAssertTrue(link.label.contains(handle))
-                XCTAssertGreaterThanOrEqual(link.frame.height, 44)
-                XCTAssertGreaterThanOrEqual(link.frame.width, 44)
+                XCTAssertGreaterThanOrEqual(link.frame.height + 0.001, 44)
+                XCTAssertGreaterThanOrEqual(link.frame.width + 0.001, 44)
             }
             let image = XCTAttachment(screenshot: app.screenshot())
             image.name = "Maintainer-" + login; image.lifetime = .keepAlways; add(image)
             app.buttons["home.maintainer.close"].tap()
             XCTAssertTrue(app.buttons["home.contributor." + login].waitForExistence(timeout: 5))
         }
-        XCTAssertTrue(app.descendants(matching: .any)["home.contributor.all"].firstMatch.isHittable)
         let contributors = app.scrollViews["home.contributors.others"]
-        let lastContributor = app.descendants(matching: .any)["home.contributor.marreiradigital"].firstMatch
+        let lastContributor = app.descendants(matching: .any)["home.contributor.nvtoan0201-swe"].firstMatch
         for _ in 0..<12 { if lastContributor.isHittable { break }; contributors.swipeLeft() }
         XCTAssertTrue(lastContributor.isHittable)
-        XCTAssertGreaterThanOrEqual(lastContributor.frame.height, 44)
+        XCTAssertGreaterThanOrEqual(lastContributor.frame.height + 0.001, 44)
+        let all = app.descendants(matching: .any)["home.contributor.all"].firstMatch
+        for _ in 0..<3 { if all.isHittable { break }; contributors.swipeLeft() }
+        XCTAssertTrue(all.isHittable)
     }
 
     @MainActor func testMaintainerLinksRemainReachableAtLargestTextSize() {
@@ -112,7 +125,7 @@ final class MaintainerCardScreens: XCTestCase {
             let link = app.descendants(matching: .any)["home.maintainer.velixio." + kind].firstMatch
             for _ in 0..<8 { if link.isHittable { break }; app.swipeUp() }
             XCTAssertTrue(link.isHittable, kind)
-            XCTAssertGreaterThanOrEqual(link.frame.height, 44)
+            XCTAssertGreaterThanOrEqual(link.frame.height + 0.001, 44)
             XCTAssertGreaterThanOrEqual(link.frame.minX, 0)
             XCTAssertLessThanOrEqual(link.frame.maxX, app.frame.width)
         }

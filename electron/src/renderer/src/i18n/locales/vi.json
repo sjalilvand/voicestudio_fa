@@ -3582,7 +3582,8 @@
   },
   "mobile": {
     "home": {
-      "subtitle": "Phòng thu giọng nói cục bộ của bạn."
+      "subtitle": "Giải pháp thay thế ElevenLabs mã nguồn mở, chạy hoàn toàn trên máy — nhân bản và thiết kế giọng nói, lồng tiếng video, nhập liệu bằng giọng nói, phiên âm và tạo sách nói bằng 646 ngôn ngữ.",
+      "brought_by": "Được mang đến bởi"
     },
     "tabs": {
       "speak": "Nói",

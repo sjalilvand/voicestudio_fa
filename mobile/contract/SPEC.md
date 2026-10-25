@@ -82,10 +82,10 @@ no accounts. M1 (below) is the computer connection; M2 is on-device inference.
 ## Screens (M1)
 
 Bottom navigation: **Home**, **Voices**, **Dub**, **Dictate**, **Settings**.
-Home is the default after consent. The compact hero places the wordmark and short
-subtitle beside the contributor column; accessibility text sizes can stack them.
+Home is the default after consent. The compact hero places the wordmark and feature
+summary beside the labeled contributor column; accessibility text sizes can stack them.
 Both apps show larger core-maintainer portraits
-above the remaining contributors; tapping a core maintainer opens a scrollable
+above a two-row horizontal scroller of remaining contributors; tapping a core maintainer opens a scrollable
 native sheet with their localized identity and website, GitHub and X links.
 Profile metadata and brand artwork derive from Electron and are bundled offline.
 External pages open only on an explicit link tap. It adapts Electron's dashboard with the same

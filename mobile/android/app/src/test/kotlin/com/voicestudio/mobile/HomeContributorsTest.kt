@@ -50,19 +50,21 @@ class HomeContributorsTest {
         assertTrue(visible.width>=with(compose.density) {48.dp.toPx()})
         contributor.performClick()
         assertEquals("https://github.com/kevin9327",opened.last())
-        compose.onNodeWithTag("home.contributor.all").assertIsDisplayed().performClick()
+        compose.onNodeWithTag("home.contributor.all").performScrollTo().assertIsDisplayed().performClick()
         assertEquals("${HomeContributors.REPOSITORY}/graphs/contributors",opened.last())
     }
     @Test fun homeHeroKeepsTextAndPortraitsParallelAndCompact() {
         compose.setContent {Content(hero=true)}
         compose.onNodeWithText("VoiceStudio").assertExists()
+        compose.onNodeWithText(L10n.load(app,"en").t("mobile.home.brought_by")).assertExists()
+        for(login in listOf("kevin9327","psiberfunk","jaketame","rudycelekli")) compose.onNodeWithTag("home.contributor.$login").assertIsDisplayed()
         compose.onNodeWithText(L10n.load(app,"en").t("mobile.home.subtitle")).assertExists()
         val text=compose.onNodeWithTag("home.hero-text").fetchSemanticsNode().boundsInRoot
         val portraits=compose.onNodeWithTag("home.contributors").fetchSemanticsNode().boundsInRoot
         assertTrue(text.right<=portraits.left)
         assertTrue(text.top<portraits.bottom && portraits.top<text.bottom)
         val hero=compose.onNodeWithTag("home.hero").fetchSemanticsNode().boundsInRoot
-        assertTrue(hero.height<=with(compose.density) {128.dp.toPx()})
+        assertTrue(hero.height<=with(compose.density) {220.dp.toPx()})
         compose.onNodeWithTag("home.contributor.debpalash").assertIsDisplayed().assertHeightIsAtLeast(48.dp)
         compose.onNodeWithTag("home.contributor.velixio").assertIsDisplayed().assertHeightIsAtLeast(48.dp)
     }
@@ -87,7 +89,7 @@ class HomeContributorsTest {
         }
         compose.onNodeWithTag("home.contributor.kevin9327").assertHeightIsAtLeast(48.dp).performClick()
         assertEquals("https://github.com/kevin9327",opened.last())
-        compose.onNodeWithTag("home.contributor.all").assertHeightIsAtLeast(48.dp).performClick()
+        compose.onNodeWithTag("home.contributor.all").performScrollTo().assertHeightIsAtLeast(48.dp).performClick()
         assertEquals("${HomeContributors.REPOSITORY}/graphs/contributors",opened.last())
         for(name in listOf("contributor_github","contributor_x")) assertNotEquals(0,app.resources.getIdentifier(name,"drawable",app.packageName))
     }

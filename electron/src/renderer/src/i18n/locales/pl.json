@@ -3586,7 +3586,8 @@
   },
   "mobile": {
     "home": {
-      "subtitle": "Twoje lokalne studio głosowe."
+      "subtitle": "Twoja otwartoźródłowa, w pełni lokalna alternatywa dla ElevenLabs — klonuj i projektuj głosy, dubbinguj filmy, dyktuj, transkrybuj i twórz audiobooki w 646 językach.",
+      "brought_by": "Przygotowane dla Ciebie przez"
     },
     "tabs": {
       "speak": "Mów",

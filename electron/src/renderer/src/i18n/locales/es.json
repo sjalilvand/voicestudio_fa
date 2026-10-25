@@ -3584,7 +3584,8 @@
   },
   "mobile": {
     "home": {
-      "subtitle": "Tu estudio de voz local."
+      "subtitle": "Tu alternativa a ElevenLabs de código abierto y totalmente local: clona y diseña voces, dobla vídeos, dicta, transcribe y crea audiolibros en 646 idiomas.",
+      "brought_by": "De la mano de"
     },
     "tabs": {
       "speak": "Hablar",

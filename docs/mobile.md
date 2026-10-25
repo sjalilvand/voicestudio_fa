@@ -14,8 +14,9 @@ choose, per task, to run on **This phone** or **My computer**.
 | Minimum OS | iOS 17 (iPhone, iPad) | Android 10 (API 29) |
 | Source | [`mobile/ios/`](../mobile/ios/README.md) | [`mobile/android/`](../mobile/android/README.md) |
 
-Home keeps its title and short subtitle beside a compact contributor column,
-with a stacked layout at accessibility text sizes. It puts
+Home keeps its title and feature summary beside a compact contributor column,
+with a stacked layout at accessibility text sizes. “Brought to you by” introduces
+14 contributors, with the smaller portraits in a two-row horizontal scroller. It puts
 **Palash (@debpalash)** and **Shimul (@velixio)** above the smaller
 contributor portraits. Tap either core maintainer to open a native profile sheet
 with their role, website, GitHub and X links. Portraits, brand icons and profile

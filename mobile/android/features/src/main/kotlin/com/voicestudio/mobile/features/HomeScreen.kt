@@ -182,6 +182,6 @@ private val destinations = listOf(
     Column(modifier.testTag("home.hero-text"),verticalArrangement=Arrangement.spacedBy(6.dp)) {
         Text(tr("app.name"),style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.SemiBold,
             modifier=Modifier.semantics {heading()})
-        Text(tr("mobile.home.subtitle"),style=MaterialTheme.typography.bodySmall,color=role("textMuted"))
+        Text(tr("mobile.home.subtitle"),style=MaterialTheme.typography.bodyMedium,color=role("textMuted"))
     }
 }

@@ -1,11 +1,11 @@
 import SwiftUI
 import VoiceStudioKit
 
-/// Human GitHub contributors with more than 10 commits, mirroring
+/// Human GitHub contributors, mirroring
 /// `electron/src/renderer/src/features/home/home-contributors-data.ts`.
 /// Avatars and profile metadata are bundled: nothing is fetched at runtime.
 enum HomeContributors {
-    static let logins = ["debpalash", "kevin9327", "psiberfunk", "velixio", "jaketame", "paoloantinori", "Chang-Jin-Lee", "Shivendra-Coherent", "marreiradigital"]
+    static let logins = ["debpalash", "velixio", "kevin9327", "psiberfunk", "jaketame", "rudycelekli", "paoloantinori", "Chang-Jin-Lee", "swadhinbiswas", "BichengWang", "nirmalchatur", "Shivendra-Coherent", "marreiradigital", "nvtoan0201-swe"]
     static let coreMaintainers: Set<String> = ["debpalash", "velixio"]
     static let repository = URL(string: "https://github.com/debpalash/VoiceStudio")!
     static func profile(_ login: String) -> URL { URL(string: "https://github.com/" + login)! }
@@ -46,8 +46,12 @@ struct ContributorCluster: View {
 
     var body: some View {
         let maintainers = HomeContributors.logins.filter { HomeContributors.coreMaintainers.contains($0) }
-        let others = HomeContributors.logins.filter { !HomeContributors.coreMaintainers.contains($0) }
+        let others = HomeContributors.logins.filter { !HomeContributors.coreMaintainers.contains($0) } + ["all"]
         VStack(alignment: .trailing, spacing: 4) {
+            Text(model.t("mobile.home.brought_by")).font(.caption)
+                .foregroundStyle(theme.color("textMuted"))
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("home.contributors.credit")
             HStack(spacing: 8) {
                 ForEach(maintainers, id: \.self) { login in
                     Button {
@@ -59,18 +63,15 @@ struct ContributorCluster: View {
                     .accessibilityIdentifier("home.contributor." + login)
                 }
             }
-            HStack(spacing: 4) {
-                ScrollView(.horizontal) {
-                    HStack(spacing: 4) {
-                        ForEach(others, id: \.self) { login in contributorLink(login) }
-                    }
+            ScrollView(.horizontal) {
+                LazyHGrid(rows: [GridItem(.fixed(44), spacing: 4), GridItem(.fixed(44), spacing: 4)], spacing: 4) {
+                    ForEach(others, id: \.self) { login in contributorLink(login) }
                 }
-                .scrollIndicators(.hidden).frame(width: 56, height: 44)
-                .accessibilityIdentifier("home.contributors.others")
-                contributorLink("all")
             }
+            .scrollIndicators(.hidden).frame(width: 112, height: 92)
+            .accessibilityIdentifier("home.contributors.others")
         }
-        .frame(width: 104)
+        .frame(width: 112)
         .scaleEffect(shown || reduceMotion ? 1 : 0.95).opacity(shown || reduceMotion ? 1 : 0)
         .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: shown)
         .accessibilityElement(children: .contain).accessibilityLabel(model.t("homeUi.allContributors"))

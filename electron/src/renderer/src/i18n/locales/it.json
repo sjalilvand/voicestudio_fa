@@ -3584,7 +3584,8 @@
   },
   "mobile": {
     "home": {
-      "subtitle": "Il tuo studio vocale locale."
+      "subtitle": "La tua alternativa a ElevenLabs, open source e completamente locale: clona e crea voci, doppia video, detta, trascrivi e crea audiolibri in 646 lingue.",
+      "brought_by": "Offerto da"
     },
     "tabs": {
       "speak": "Parla",

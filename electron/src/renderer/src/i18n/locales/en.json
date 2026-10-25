@@ -3582,7 +3582,8 @@
   },
   "mobile": {
     "home": {
-      "subtitle": "Your local voice studio."
+      "subtitle": "Open Source fully-local ElevenLabs alternative — voice cloning, voice design, video dubbing, dictation, transcription & audiobook creation in 646 languages.",
+      "brought_by": "Brought to you by"
     },
     "tabs": {
       "speak": "Speak",

@@ -3582,7 +3582,8 @@
   },
   "mobile": {
     "home": {
-      "subtitle": "Yerel ses stüdyonuz."
+      "subtitle": "ElevenLabs’a açık kaynaklı, tamamen yerel alternatifiniz — 646 dilde ses klonlayıp tasarlayın, videolara dublaj yapın, dikte edin, yazıya dökün ve sesli kitaplar oluşturun.",
+      "brought_by": "Sizlere sunanlar"
     },
     "tabs": {
       "speak": "Konuş",

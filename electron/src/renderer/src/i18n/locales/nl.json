@@ -3582,7 +3582,8 @@
   },
   "mobile": {
     "home": {
-      "subtitle": "Jouw lokale stemstudio."
+      "subtitle": "Jouw open-source, volledig lokale alternatief voor ElevenLabs — kloon en ontwerp stemmen, dub video’s, dicteer, transcribeer en maak luisterboeken in 646 talen.",
+      "brought_by": "Mogelijk gemaakt door"
     },
     "tabs": {
       "speak": "Spreken",
