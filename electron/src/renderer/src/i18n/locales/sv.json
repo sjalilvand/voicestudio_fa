@@ -2533,7 +2533,18 @@
     "staleTitle": "Uppdatering tillgänglig",
     "staleMessage": "Du använder VoiceStudio {{current}}, men {{latest}} är redan ute — det här felet kan redan vara åtgärdat där. Se den senaste versionen innan du rapporterar?",
     "staleView": "Visa uppdatering",
-    "staleFileAnyway": "Rapportera ändå"
+    "staleFileAnyway": "Rapportera ändå",
+    "summary_label": "Vad gick fel?",
+    "summary_placeholder": "En rad, till exempel: Dubbningen stannar vid 40 %",
+    "summary_required": "Lägg först till en beskrivning på en rad.",
+    "sent_title": "Detta skickas",
+    "sent_app": "Appversion och bygge",
+    "sent_system": "Operativsystem, GPU, minne och ledigt diskutrymme",
+    "sent_engines": "Vilka motorer som är aktiva",
+    "sent_logs": "Senaste raderna i motorloggen, utan filsökvägar och token",
+    "sent_pages": "Namn på nyligen besökta sidor",
+    "not_sent": "Skickas aldrig: ditt ljud, din text, dina röster eller filnamn.",
+    "submit": "Öppna GitHub-ärende"
   },
   "crash": {
     "notice_unclean": "Föregående session avslutades utan en ren avstängning för {{ago}} sedan. Det är ofta ofarligt — datorn sov, appen tvångsavslutades eller en VM/container stoppades.",

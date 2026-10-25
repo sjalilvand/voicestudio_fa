@@ -2533,7 +2533,18 @@
     "staleTitle": "有可用更新",
     "staleMessage": "你正在使用 VoiceStudio {{current}}，但 {{latest}} 已经发布——这个错误可能已在新版本中修复。报告前先查看最新版本？",
     "staleView": "查看更新",
-    "staleFileAnyway": "仍然报告"
+    "staleFileAnyway": "仍然报告",
+    "summary_label": "出了什么问题？",
+    "summary_placeholder": "一句话描述，例如：配音在 40% 处停止",
+    "summary_required": "请先填写一句话描述。",
+    "sent_title": "将发送的内容",
+    "sent_app": "应用版本和构建号",
+    "sent_system": "操作系统、GPU、内存和可用磁盘空间",
+    "sent_engines": "当前启用的引擎",
+    "sent_logs": "最近的引擎日志行（已移除文件路径和令牌）",
+    "sent_pages": "最近访问的页面名称",
+    "not_sent": "绝不发送：你的音频、文本、声音或文件名。",
+    "submit": "打开 GitHub Issue"
   },
   "crash": {
     "notice": "语音后端于 {{ago}}前崩溃（{{exit}}），正在自动重启。",
