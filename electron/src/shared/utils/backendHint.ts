@@ -93,7 +93,9 @@ export function backendFailureCause(message: string | undefined): BackendCause |
   const code = /exit code (-?\d+)/.exec(message)?.[1];
   const signal = /signal (SIG[A-Z]+)/.exec(message)?.[1];
   if (isNativeFaultExit({ exitCode: code ? Number(code) : null, signal })) return 'native_crash';
-  if (/missing or incomplete/i.test(message)) return 'missing_env';
+  // resolveSpawnPlan: "environment in X is missing (no ...)" / "is incomplete: ...".
+  if (/Python environment\b.*\b(is missing|is incomplete|missing or incomplete)\b/is.test(message))
+    return 'missing_env';
   if (/\b(EPERM|EACCES|permission denied|access is denied)\b/i.test(message)) return 'permission';
   if (/did not answer on port \d+ within \d+ s/.test(message)) return 'slow_start';
   return null;

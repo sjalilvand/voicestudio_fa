@@ -61,6 +61,8 @@ describe('backendFailureCause', () => {
       'The Python environment in C:\\Users\\a\\OneDrive\\VS is missing or incomplete.',
       'synced_folder',
     ],
+    ['The Python environment in C:\\VoiceStudio is missing (no .venv\\Scripts\\python.exe). Install it.', 'missing_env'],
+    ['The Python environment in C:\\VoiceStudio is incomplete: ImportError: torch. Install it.', 'missing_env'],
     ['EPERM: operation not permitted, mkdir', 'permission'],
     ['Backend did not answer on port 3900 within 600 s', 'slow_start'],
   ])('names %s', (message, cause) => expect(backendFailureCause(message)).toBe(cause));

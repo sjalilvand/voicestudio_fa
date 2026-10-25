@@ -464,4 +464,21 @@ it('shows a non-blocking offline bar while a live engine is busy', () => {
 
   expect(screen.getByTestId('backend-offline-bar')).toHaveTextContent(i18n.t('backend.offline_bar'));
   expect(screen.queryByTestId('backend-gate-scroll')).not.toBeInTheDocument();
+
+it('forgets that diagnostics were copied once the failure changes', async () => {
+  Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
+  backendStatus.message = 'Backend exited unexpectedly (exit code 3221225477).';
+  const view = renderGate('crashed');
+  fireEvent.click(screen.getByRole('button', { name: i18n.t('backend.copy_diagnostics') }));
+  await screen.findByRole('button', { name: i18n.t('backend.diagnostics_copied') });
+
+  backendStatus.message = 'Backend exited unexpectedly (exit code -1073741819).';
+  view.rerender(
+    <QueryClientProvider client={new QueryClient()}>
+      <BackendGate>
+        <div>workspace</div>
+      </BackendGate>
+    </QueryClientProvider>,
+  );
+  expect(screen.getByRole('button', { name: i18n.t('backend.copy_diagnostics') })).toBeEnabled();
 });
