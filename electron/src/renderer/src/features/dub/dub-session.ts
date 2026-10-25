@@ -596,15 +596,17 @@ export function replaceDubSegmentTexts(
     const text = byId.get(String(segment.id));
     if (text === undefined || text === segment.text) return segment;
     changed += 1;
-    // Only rewrite an existing target translation; untranslated rows keep
-    // their source words out of translations so they are not counted as done.
-    if (targetCode && segment.translations?.[targetCode] !== undefined) {
+    // Same rules as the row editor: a translated row rewrites its target
+    // translation; an untranslated row is a source edit, so text_original
+    // carries the corrected words into later translations and stale
+    // translations of the old source are dropped rather than counted as done.
+    if (targetCode && typeof segment.translations?.[targetCode] === 'string') {
       return patchSegment(segment, {
         text,
         translations: { ...segment.translations, [targetCode]: text },
       });
     }
-    return patchSegment(segment, { text });
+    return patchSegment(segment, { text, text_original: text, translations: undefined });
   });
   if (!changed) return 0;
   return commitSegmentEdit(next) ? changed : 0;

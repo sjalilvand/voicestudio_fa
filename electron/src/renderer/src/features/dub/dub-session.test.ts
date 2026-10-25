@@ -250,7 +250,29 @@ it('does not mark untranslated rows as translated when find-and-replace edits th
   ).toBe(2);
   expect(dubSession.state.segments[0].text).toBe('Hello Apex');
   expect(dubSession.state.segments[0].translations).toBeUndefined();
-  expect(dubSession.state.segments[1].translations).toEqual({ fr: 'Au revoir ACME' });
+  // Like a row edit, the corrected source replaces stale translations of the old words.
+  expect(dubSession.state.segments[1].translations).toBeUndefined();
+});
+
+it('keeps find-and-replace corrections on untranslated rows as the source for translation', () => {
+  dubSession.setState((current) => ({
+    ...current,
+    phase: 'editing',
+    recovery: null,
+    segments: [{ id: 'a', start: 0, end: 1, text: 'Hello ACME', text_original: 'Hello ACME' }],
+  }));
+  clearDubEditHistory();
+  expect(replaceDubSegmentTexts([{ id: 'a', text: 'Hello Apex' }], 'es')).toBe(1);
+  // Translation and target switches read text_original; it must carry the fix.
+  expect(dubSession.state.segments[0]).toMatchObject({
+    text: 'Hello Apex',
+    text_original: 'Hello Apex',
+  });
+  undoDubEdit();
+  expect(dubSession.state.segments[0]).toMatchObject({
+    text: 'Hello ACME',
+    text_original: 'Hello ACME',
+  });
 });
 
 it('keeps back-to-back find-and-replace actions as separate undo steps', () => {
