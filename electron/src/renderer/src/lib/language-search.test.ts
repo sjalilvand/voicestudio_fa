@@ -59,6 +59,14 @@ describe('layoutMenu', () => {
       'Zulu',
     ]);
     expect(result.navigation).not.toContain('German');
+    // The toggle is an option too: it takes a position and counts toward the set size.
+    expect(result.size).toBe(6);
+    const more = result.rows.find((row) => row.kind === 'more');
+    expect(more && 'position' in more ? more.position : -1).toBe(3);
+    const german = result.rows.find(
+      (row) => row.kind === 'items' && row.items[0].value === 'German',
+    );
+    expect(german && 'start' in german ? german.start : -1).toBe(4);
   });
 
   it('keeps unsupported matches searchable without the toggle row', () => {

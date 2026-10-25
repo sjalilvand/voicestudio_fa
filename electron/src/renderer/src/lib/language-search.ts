@@ -59,7 +59,7 @@ export type MenuRow =
   | { kind: 'header'; key: string; label: string }
   | { kind: 'family'; key: string; label: string }
   | { kind: 'items'; key: string; items: SearchOption[]; start: number }
-  | { kind: 'more'; key: string; hidden: number; expanded: boolean };
+  | { kind: 'more'; key: string; hidden: number; expanded: boolean; position: number };
 
 export interface MenuLayout {
   rows: MenuRow[];
@@ -67,6 +67,8 @@ export interface MenuLayout {
   navigation: string[];
   /** Options the list renders, in visual order. */
   visible: SearchOption[];
+  /** Number of option rows (languages plus the toggle row), for aria-setsize. */
+  size: number;
 }
 
 export interface MenuLabels {
@@ -98,6 +100,7 @@ export function layoutMenu({
   const rows: MenuRow[] = [];
   const navigation: string[] = [];
   const visible: SearchOption[] = [];
+  let size = 0;
   const searching = normalizeSearch(query) !== '';
   const enabled = sorted.filter((item) => !item.disabled);
   const unavailable = sorted.filter((item) => item.disabled);
@@ -114,10 +117,11 @@ export function layoutMenu({
         kind: 'items',
         key: `${key}:${chunk[0].value}`,
         items: chunk,
-        start: visible.length,
+        start: size,
       });
       for (const item of chunk) {
         visible.push(item);
+        size += 1;
         if (!item.disabled) navigation.push(item.value);
       }
     }
@@ -141,12 +145,19 @@ export function layoutMenu({
   );
   if (unavailable.length) {
     if (!searching) {
-      rows.push({ kind: 'more', key: 'more', hidden: unavailable.length, expanded });
+      rows.push({
+        kind: 'more',
+        key: 'more',
+        hidden: unavailable.length,
+        expanded,
+        position: size,
+      });
+      size += 1;
       navigation.push(MORE_ROW);
     }
     if (searching || expanded) pushSection(unavailable, 'unavailable', labels.unavailable);
   }
-  return { rows, navigation, visible };
+  return { rows, navigation, visible, size };
 }
 
 /** Split a section into runs, pulling each multi-variant family together at its first position. */

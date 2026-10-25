@@ -74,7 +74,7 @@ export function LanguageMenu({
   const current = options.find((item) => item.value === value);
   const unavailable = unavailableLabel || t('languagePicker.unavailable');
   const sorted = useMemo(() => rankOptions(options, query, recents), [options, query, recents]);
-  const { rows, navigation, visible } = useMemo(
+  const { rows, navigation, size } = useMemo(
     () =>
       layoutMenu({
         sorted,
@@ -188,6 +188,8 @@ export function LanguageMenu({
           aria-label={label}
           aria-selected={false}
           aria-description={unavailable}
+          aria-posinset={row.position + 1}
+          aria-setsize={size}
           tabIndex={-1}
           className={`${rowClass(MORE_ROW)} h-[34px] w-full text-muted-foreground`}
           onPointerMove={(event) => {
@@ -225,7 +227,7 @@ export function LanguageMenu({
             aria-disabled={Boolean(option.disabled)}
             aria-description={option.disabled ? unavailable : undefined}
             aria-posinset={row.start + index + 1}
-            aria-setsize={visible.length}
+            aria-setsize={size}
             disabled={option.disabled}
             tabIndex={-1}
             className={rowClass(option.value)}
