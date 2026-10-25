@@ -35,6 +35,8 @@ struct HomeView: View {
                     destination("dictate", title: "nav.dictation", detail: "mobile.dictate.tap_to_start", icon: "mic") { DictateView() }
                     destination("models", title: "mobile.local.models", detail: "mobile.local.installed", icon: "arrow.down.circle") { ModelsView() }
                     destination("connect", title: "mobile.local.my_computer", detail: "mobile.local.pair_settings", icon: "desktopcomputer") { ConnectView() }
+                    destination("transcriptions", title: "transcriptions.title", detail: "mobile.transcripts.hint", icon: "text.bubble") { TranscriptsView() }
+                    destination("handoff", title: "mobile.handoff.title", detail: "mobile.handoff.hint", icon: "arrow.left.arrow.right") { HandoffView() }
                     destination("design", title: "nav.design", detail: "clone.design_placeholder", icon: "wand.and.stars") { VoiceDesignView() }
                     destination("stories", title: "nav.stories", detail: "stories.subtitle", icon: "person.2.wave.2") { ProductionView(kind: "stories") }
                     destination("audiobook", title: "audiobook.title", detail: "audiobook.subtitle", icon: "book") { ProductionView(kind: "audiobook") }

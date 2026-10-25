@@ -1,3 +1,4 @@
+import { ProjectHandoff } from './project-handoff';
 import { SecondarySidebar } from '@/components/workspace-sidebar';
 import { WorkspaceHeader } from '@/components/app-shell/workspace-header';
 import { PlayInDockButton } from '@/components/now-playing-dock';
@@ -485,6 +486,18 @@ export function ProjectsPage() {
     <div className="flex h-full min-h-0 flex-col">
       <WorkspaceHeader>
         <h1 className="text-sm font-medium">{t('projects.title')}</h1>
+        <ProjectHandoff
+          disabled={locked}
+          selection={
+            selectedRows.length === 1 && selectedRows[0].projectKind
+              ? {
+                  id: selectedRows[0].id,
+                  kind: selectedRows[0].projectKind,
+                  name: selectedRows[0].name,
+                }
+              : undefined
+          }
+        />
       </WorkspaceHeader>
       <div className="flex min-h-0 flex-1 @max-[40rem]:flex-col">
         <SecondarySidebar
