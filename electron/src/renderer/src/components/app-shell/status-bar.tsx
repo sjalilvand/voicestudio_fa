@@ -680,12 +680,12 @@ export function StatusBar({
   return (
     <footer className="@container/engines max-h-[55dvh] w-full min-w-0 max-w-full overflow-y-auto overscroll-contain border-t border-border/50 px-3 py-1.5 text-[length:var(--text-caption)] text-muted-foreground">
       <div>
-        {!footerLeading && (
-          <div className="flex items-center gap-0.5">
-            {labeledDevicePopover}
-            {level !== 'simple' && viewControl}
-          </div>
-        )}
+        {/* The device keeps its own row on every platform, so its name never
+            competes with Settings for the sidebar's width. */}
+        <div className="flex items-center gap-0.5">
+          {labeledDevicePopover}
+          {level !== 'simple' && viewControl}
+        </div>
         {isBackendReachable(status.stage) && (
           <PerformanceProfile
             showHardware={level !== 'simple'}
@@ -716,8 +716,6 @@ export function StatusBar({
         {footerLeading && (
           <div className="sticky bottom-0 mt-1.5 flex items-center gap-1 border-t border-border/50 bg-sidebar pt-1.5">
             {footerLeading}
-            <div className="flex min-w-0 flex-1 items-center gap-0.5">{labeledDevicePopover}</div>
-            {level !== 'simple' && viewControl}
           </div>
         )}
       </div>
