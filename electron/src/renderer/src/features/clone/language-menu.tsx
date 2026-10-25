@@ -82,7 +82,8 @@ export function LanguageMenu({
         recents,
         columns,
         // A saved unsupported choice stays visible instead of hiding behind the toggle.
-        expanded: expanded || Boolean(current?.disabled),
+        expanded,
+        toggle: !current?.disabled,
         labels: {
           recent: t('languagePicker.recent'),
           available: t('languagePicker.available'),

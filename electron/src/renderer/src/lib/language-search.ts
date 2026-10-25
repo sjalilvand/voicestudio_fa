@@ -88,6 +88,7 @@ export function layoutMenu({
   recents,
   columns,
   expanded,
+  toggle = true,
   labels,
 }: {
   sorted: SearchOption[];
@@ -95,6 +96,8 @@ export function layoutMenu({
   recents: string[];
   columns: number;
   expanded: boolean;
+  /** False when unsupported languages must stay shown (a saved unsupported choice). */
+  toggle?: boolean;
   labels: MenuLabels;
 }): MenuLayout {
   const rows: MenuRow[] = [];
@@ -144,7 +147,7 @@ export function layoutMenu({
     recent.length || unavailable.length ? labels.available : undefined,
   );
   if (unavailable.length) {
-    if (!searching) {
+    if (!searching && toggle) {
       rows.push({
         kind: 'more',
         key: 'more',
@@ -155,7 +158,8 @@ export function layoutMenu({
       size += 1;
       navigation.push(MORE_ROW);
     }
-    if (searching || expanded) pushSection(unavailable, 'unavailable', labels.unavailable);
+    if (searching || expanded || !toggle)
+      pushSection(unavailable, 'unavailable', labels.unavailable);
   }
   return { rows, navigation, visible, size };
 }

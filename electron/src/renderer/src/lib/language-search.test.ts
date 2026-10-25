@@ -69,6 +69,20 @@ describe('layoutMenu', () => {
     expect(german && 'start' in german ? german.start : -1).toBe(4);
   });
 
+  it('shows unsupported languages without a toggle when it must not hide them', () => {
+    const result = layoutMenu({
+      sorted: rankOptions(options, '', []),
+      query: '',
+      recents: [],
+      columns: 1,
+      expanded: false,
+      toggle: false,
+      labels,
+    });
+    expect(shape(result.rows).slice(-3)).toEqual(['header:Not supported', 'German', 'Zulu']);
+    expect(result.navigation).not.toContain(MORE_ROW);
+  });
+
   it('keeps unsupported matches searchable without the toggle row', () => {
     const result = layout(options, { query: 'zu' });
     expect(shape(result.rows)).toEqual(['header:Not supported', 'Zulu']);
