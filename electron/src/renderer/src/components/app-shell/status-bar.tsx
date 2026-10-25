@@ -327,7 +327,7 @@ export function StatusBar({
           : DOT.starting;
   const deviceLabel = status.remote
     ? t('settings.remote_backend_title')
-    : t('engineSidebar.localDevice');
+    : t('engineSidebar.localShort');
   const formatMemory = (used: number, total?: number) =>
     total && total > 0 ? `${used.toFixed(1)} / ${total.toFixed(1)} GB` : `${used.toFixed(1)} GB`;
   const deviceContent = (

@@ -373,7 +373,8 @@
     "inactive": "비활성",
     "translation": "번역",
     "diarisation": "화자 분리",
-    "localDevice": "로컬 기기"
+    "localDevice": "로컬 기기",
+    "localShort": "로컬"
   },
   "paneActions": {
     "collapse": "패널 접기",
