@@ -375,7 +375,8 @@
   },
   "paneActions": {
     "collapse": "Paneel inklappen",
-    "edit": "Stemprofiel bewerken"
+    "edit": "Stemprofiel bewerken",
+    "expand": "Paneel uitklappen"
   },
   "modelSettings": {
     "models": "Modellen",
@@ -994,7 +995,8 @@
     "play": "Afspelen",
     "pause": "Pauzeren",
     "seek": "Afspeelpositie",
-    "missing": "Audiobestand ontbreekt."
+    "missing": "Audiobestand ontbreekt.",
+    "now_playing": "Nu aan het spelen"
   },
   "logs": {
     "no_tauri_log": "Nog geen Tauri-inlogschijf: start via de desktop-build om er een te maken",

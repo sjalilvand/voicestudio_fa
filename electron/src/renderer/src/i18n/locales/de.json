@@ -375,7 +375,8 @@
   },
   "paneActions": {
     "collapse": "Bereich einklappen",
-    "edit": "Stimmprofil bearbeiten"
+    "edit": "Stimmprofil bearbeiten",
+    "expand": "Bereich ausklappen"
   },
   "modelSettings": {
     "models": "Modelle",
@@ -994,7 +995,8 @@
     "play": "Abspielen",
     "pause": "Pausieren",
     "seek": "Wiedergabeposition",
-    "missing": "Audiodatei fehlt."
+    "missing": "Audiodatei fehlt.",
+    "now_playing": "Wird abgespielt"
   },
   "logs": {
     "no_tauri_log": "Noch kein Tauri-Log auf der Festplatte – starten Sie es über den Desktop-Build, um eines zu erstellen",
