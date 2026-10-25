@@ -374,7 +374,8 @@
   },
   "paneActions": {
     "collapse": "Ciutkan panel",
-    "edit": "Edit profil suara"
+    "edit": "Edit profil suara",
+    "expand": "Luaskan panel"
   },
   "modelSettings": {
     "models": "Model",
@@ -993,7 +994,8 @@
     "play": "Putar",
     "pause": "Jeda",
     "seek": "Cari posisi",
-    "missing": "File audio tidak ditemukan."
+    "missing": "File audio tidak ditemukan.",
+    "now_playing": "Sedang diputar"
   },
   "logs": {
     "no_tauri_log": "Belum ada Tauri yang masuk ke disk — luncurkan melalui versi desktop untuk menghasilkannya",
