@@ -4196,5 +4196,25 @@
       "fix1": "Periksa backend di Pengaturan > Log",
       "fix2": "Mulai ulang VoiceStudio lalu coba lagi"
     }
+  },
+  "modelInstall": {
+    "queued": "Menunggu dimulai…",
+    "downloading": "Mengunduh…",
+    "downloadingPct": "Mengunduh · {{pct}}%",
+    "finishing": "Memverifikasi dan memasang…",
+    "cancelling": "Membatalkan…",
+    "cancelled": "Unduhan dibatalkan",
+    "failed": "Unduhan gagal",
+    "ready": "Siap digunakan",
+    "bytes": "{{done}} dari {{total}}",
+    "speed": "{{rate}}/d",
+    "eta": "{{time}} lagi",
+    "downloadAgain": "Unduh lagi",
+    "nextDisk": "Ruang disk tidak cukup. Kosongkan ruang atau pindahkan folder model di Pengaturan → Penyimpanan, lalu coba lagi.",
+    "nextGated": "Model ini memerlukan akses Hugging Face. Minta akses di halaman model, tambahkan token Anda di Pengaturan → Kredensial, lalu coba lagi.",
+    "nextNetwork": "Server unduhan tidak dapat dijangkau. Periksa koneksi, proxy, atau mirror di Pengaturan → Jaringan, lalu coba lagi.",
+    "nextMemory": "Perangkat ini kehabisan memori. Pilih profil yang lebih ringan di Pengaturan → Performa, lalu coba lagi.",
+    "downloads": "Unduhan",
+    "activeCount": "Unduhan berjalan: {{count}}"
   }
 }

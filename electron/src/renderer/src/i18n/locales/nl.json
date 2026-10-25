@@ -4196,5 +4196,25 @@
       "fix1": "Controleer de backend in Instellingen > Logboeken",
       "fix2": "Start VoiceStudio opnieuw en probeer het nog eens"
     }
+  },
+  "modelInstall": {
+    "queued": "Wacht op start…",
+    "downloading": "Downloaden…",
+    "downloadingPct": "Downloaden · {{pct}}%",
+    "finishing": "Controleren en installeren…",
+    "cancelling": "Annuleren…",
+    "cancelled": "Download geannuleerd",
+    "failed": "Download mislukt",
+    "ready": "Klaar voor gebruik",
+    "bytes": "{{done}} van {{total}}",
+    "speed": "{{rate}}/s",
+    "eta": "nog {{time}}",
+    "downloadAgain": "Opnieuw downloaden",
+    "nextDisk": "Niet genoeg schijfruimte. Maak ruimte vrij of verplaats de modelmap via Instellingen → Opslag en probeer het opnieuw.",
+    "nextGated": "Dit model vereist toegang via Hugging Face. Vraag die aan op de modelpagina, voeg je token toe via Instellingen → Inloggegevens en probeer het opnieuw.",
+    "nextNetwork": "De downloadserver is niet bereikbaar. Controleer verbinding, proxy of mirror via Instellingen → Netwerk en probeer het opnieuw.",
+    "nextMemory": "Dit apparaat heeft te weinig geheugen. Kies een lichter profiel via Instellingen → Prestaties en probeer het opnieuw.",
+    "downloads": "Downloads",
+    "activeCount": "Lopende downloads: {{count}}"
   }
 }

@@ -4196,5 +4196,25 @@
       "fix1": "在 設定 > 記錄 中檢查後端",
       "fix2": "重新啟動 VoiceStudio 後再試"
     }
+  },
+  "modelInstall": {
+    "queued": "等待開始…",
+    "downloading": "正在下載…",
+    "downloadingPct": "正在下載 · {{pct}}%",
+    "finishing": "正在驗證並安裝…",
+    "cancelling": "正在取消…",
+    "cancelled": "已取消下載",
+    "failed": "下載失敗",
+    "ready": "可以使用",
+    "bytes": "{{done}} / {{total}}",
+    "speed": "{{rate}}/秒",
+    "eta": "剩餘 {{time}}",
+    "downloadAgain": "重新下載",
+    "nextDisk": "磁碟空間不足。請釋放空間，或在 設定 → 儲存 中移動模型資料夾，然後重試。",
+    "nextGated": "此模型需要 Hugging Face 存取權限。請在模型頁面申請，並在 設定 → 金鑰憑證 中加入權杖，然後重試。",
+    "nextNetwork": "無法連線到下載伺服器。請在 設定 → 網路 中檢查網路連線、代理或鏡像，然後重試。",
+    "nextMemory": "此裝置記憶體不足。請在 設定 → 效能 中選擇較輕量的設定檔，然後重試。",
+    "downloads": "下載",
+    "activeCount": "進行中的下載：{{count}}"
   }
 }
