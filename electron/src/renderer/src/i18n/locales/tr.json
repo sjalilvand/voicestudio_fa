@@ -2542,9 +2542,9 @@
     "sent_app": "Uygulama sürümü ve derlemesi",
     "sent_system": "İşletim sistemi, GPU, bellek ve boş disk alanı",
     "sent_engines": "Hangi altyapıların etkin olduğu",
-    "sent_logs": "Dosya yolları ve belirteçler çıkarılmış son altyapı günlük satırları",
+    "sent_logs": "Ana klasör yolunuz ve belirteçler çıkarılmış son altyapı günlük satırları",
     "sent_pages": "Son ziyaret edilen sayfa adları",
-    "not_sent": "Asla gönderilmez: sesiniz, metniniz, seslendirmeleriniz veya dosya adlarınız.",
+    "not_sent": "Asla gönderilmez: sesiniz, metniniz veya seslendirmeleriniz. Dosya adları günlüklerde veya açıklamanızda yer alabilir; göndermeden önce GitHub önizlemesini kontrol edin.",
     "submit": "GitHub sorunu aç"
   },
   "crash": {

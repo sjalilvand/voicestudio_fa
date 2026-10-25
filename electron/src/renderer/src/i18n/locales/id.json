@@ -2542,9 +2542,9 @@
     "sent_app": "Versi dan build aplikasi",
     "sent_system": "Sistem operasi, GPU, memori, dan ruang disk kosong",
     "sent_engines": "Mesin mana yang aktif",
-    "sent_logs": "Baris log mesin terbaru, tanpa jalur file dan token",
+    "sent_logs": "Baris log mesin terbaru, tanpa jalur folder home dan token",
     "sent_pages": "Nama halaman yang baru dikunjungi",
-    "not_sent": "Tidak pernah dikirim: audio, teks, suara, atau nama file Anda.",
+    "not_sent": "Tidak pernah dikirim: audio, teks, atau suara Anda. Nama file bisa muncul di log atau deskripsi Anda, jadi periksa pratinjau GitHub sebelum mengirim.",
     "submit": "Buka issue GitHub"
   },
   "crash": {

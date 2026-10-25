@@ -2542,9 +2542,9 @@
     "sent_app": "App-Version und Build",
     "sent_system": "Betriebssystem, GPU, Arbeitsspeicher und freier Speicherplatz",
     "sent_engines": "Welche Engines aktiv sind",
-    "sent_logs": "Letzte Engine-Logzeilen ohne Dateipfade und Tokens",
+    "sent_logs": "Letzte Engine-Logzeilen, ohne Ihren Home-Ordner-Pfad und Tokens",
     "sent_pages": "Namen zuletzt besuchter Seiten",
-    "not_sent": "Nie gesendet: Ihr Audio, Text, Stimmen oder Dateinamen.",
+    "not_sent": "Nie gesendet: Ihr Audio, Text oder Stimmen. Dateinamen können in Logs oder Ihrer Beschreibung vorkommen – prüfen Sie daher die GitHub-Vorschau vor dem Absenden.",
     "submit": "GitHub-Issue öffnen"
   },
   "crash": {

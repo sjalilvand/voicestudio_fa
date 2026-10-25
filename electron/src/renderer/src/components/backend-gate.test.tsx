@@ -464,6 +464,7 @@ it('shows a non-blocking offline bar while a live engine is busy', () => {
 
   expect(screen.getByTestId('backend-offline-bar')).toHaveTextContent(i18n.t('backend.offline_bar'));
   expect(screen.queryByTestId('backend-gate-scroll')).not.toBeInTheDocument();
+});
 
 it('forgets that diagnostics were copied once the failure changes', async () => {
   Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });

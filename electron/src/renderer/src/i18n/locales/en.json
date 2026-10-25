@@ -2606,9 +2606,9 @@
     "sent_app": "App version and build",
     "sent_system": "Operating system, GPU, memory and free disk space",
     "sent_engines": "Which engines are active",
-    "sent_logs": "Recent engine log lines, with file paths and tokens removed",
+    "sent_logs": "Recent engine log lines, with your home folder path and tokens removed",
     "sent_pages": "Names of recently visited pages",
-    "not_sent": "Never sent: your audio, text, voices or file names.",
+    "not_sent": "Never sent: your audio, text or voices. File names can appear in logs or your description, so review the GitHub preview before submitting.",
     "submit": "Open GitHub issue"
   },
   "crash": {
