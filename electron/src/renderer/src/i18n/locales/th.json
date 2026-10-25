@@ -374,7 +374,8 @@
   },
   "paneActions": {
     "collapse": "ยุบแผง",
-    "edit": "แก้ไขโปรไฟล์เสียง"
+    "edit": "แก้ไขโปรไฟล์เสียง",
+    "expand": "ขยายแผง"
   },
   "modelSettings": {
     "models": "โมเดล",

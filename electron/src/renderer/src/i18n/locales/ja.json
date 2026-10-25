@@ -374,7 +374,8 @@
   },
   "paneActions": {
     "collapse": "パネルを折りたたむ",
-    "edit": "音声プロフィールを編集"
+    "edit": "音声プロフィールを編集",
+    "expand": "ペインを展開"
   },
   "modelSettings": {
     "models": "モデル",

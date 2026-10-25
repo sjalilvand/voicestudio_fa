@@ -741,7 +741,8 @@
   },
   "paneActions": {
     "collapse": "Collapse pane",
-    "edit": "Edit voice profile"
+    "edit": "Edit voice profile",
+    "expand": "Expand pane"
   },
   "modelSettings": {
     "models": "Models",

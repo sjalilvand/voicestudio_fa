@@ -374,7 +374,8 @@
   },
   "paneActions": {
     "collapse": "Thu gọn bảng",
-    "edit": "Chỉnh sửa hồ sơ giọng nói"
+    "edit": "Chỉnh sửa hồ sơ giọng nói",
+    "expand": "Mở rộng ngăn"
   },
   "modelSettings": {
     "models": "Mô hình",

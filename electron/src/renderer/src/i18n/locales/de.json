@@ -374,7 +374,8 @@
   },
   "paneActions": {
     "collapse": "Bereich einklappen",
-    "edit": "Stimmprofil bearbeiten"
+    "edit": "Stimmprofil bearbeiten",
+    "expand": "Bereich ausklappen"
   },
   "modelSettings": {
     "models": "Modelle",
