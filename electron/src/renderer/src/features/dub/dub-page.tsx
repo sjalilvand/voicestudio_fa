@@ -2488,7 +2488,9 @@ export function DubPage() {
                                 })
                               }
                             />
-                            <span>{segmentTimeLabel(segment.start)}</span>
+                            <span>
+                              {segmentTimeLabel(segment.start)}
+                            </span>
                           </div>
                           <div className="min-w-0">
                             <div className="flex min-h-6 min-w-0 items-center gap-1">
