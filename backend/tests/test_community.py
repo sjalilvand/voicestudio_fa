@@ -164,6 +164,38 @@ def test_items_filter_by_use_case(client):
     assert body["total"] == 2
 
 
+def test_items_filter_by_pack_and_report_facets(client):
+    body = client.get("/community/items", params={"pack": "starter"}).json()
+    assert [i["id"] for i in body["items"]] == ["p1"]
+    # Facets cover the whole catalogue, so the filter keeps its own options.
+    assert body["packs"] == [{"id": "starter", "name": "Starter", "count": 1}]
+    assert body["languages"] == ["English"]
+    assert client.get("/community/items", params={"pack": "missing"}).json()["total"] == 0
+
+
+def test_pack_cannot_claim_another_sources_items():
+    packs = community._pack_index([
+        {"id": "x", "name": "X", "item_ids": ["p1"], "_source_repo": "a/one"},
+        {"id": "bad id!", "name": "Bad"},
+        {"id": "y", "name": "  "},
+    ])
+    assert list(packs) == ["x"]
+    assert packs["x"]["members"] == {("a/one", "p1")}
+
+
+@pytest.mark.parametrize("raw, kept", [
+    ("2026-10-26", "2026-10-26"),
+    ("2026-02-30", None),
+    ("26-10-2026", None),
+    ("2026-10-26T00:00:00", None),
+    (20261026, None),
+])
+def test_added_at_is_kept_only_as_a_real_date(raw, kept):
+    item = community.validate_item({**_FIXTURE["items"][0], "added_at": raw})
+    assert item is not None
+    assert item.get("added_at") == kept
+
+
 def test_sources_endpoint(client):
     assert client.get("/community/sources").json()["sources"]
 

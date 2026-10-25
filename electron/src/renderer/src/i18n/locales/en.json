@@ -1649,6 +1649,12 @@
     "submit_failed": "Could not open the submission form.",
     "submit_preset": "Submit a preset",
     "submit_voice": "Submit a voice",
+    "community_packs": "Packs",
+    "community_all_packs": "All",
+    "community_language": "Language",
+    "community_all_languages": "All languages",
+    "community_new": "New",
+    "community_author_profile": "{{author}} on GitHub",
     "zone_community": "Community",
     "filters": "Filters"
   },
