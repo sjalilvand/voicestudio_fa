@@ -393,8 +393,10 @@ Workflows on both platforms. These are native screens; no embedded desktop UI.
 - **Editable project handoff** uses a version-1 `.vsproject` stored ZIP with a
   SHA-256 manifest, canonical manuscript/timeline, assets, voice metadata and
   preserved foreign settings/caches. Both phones and Electron import new IDs;
-  canonical phone edits override preserved desktop snapshots. Voice/source
-  conditioning requires explicit permission; credentials, licence receipts and
+  canonical phone edits override preserved desktop snapshots. Story chapter
+  headings survive both directions without becoming spoken lines; dub targets
+  include saved translation languages even before those tracks are rendered.
+  Voice/source conditioning requires explicit permission; credentials, licence receipts and
   ownership verification are never restored. Bounded extraction rejects unsafe
   paths, links, duplicate entries, unsupported versions and altered content.
   Imports roll back failed writes; disconnected host imports finish their

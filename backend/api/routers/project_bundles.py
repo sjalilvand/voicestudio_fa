@@ -322,8 +322,12 @@ def export_project_bundle(body: BundleExport):
                     item['voiceID'] = seg['profile_id']
                 if 'gain' in seg: item['muted'] = seg['gain'] == 0
                 language = state.get('dubLangCode')
-                if language and seg.get('text_original') and seg.get('text'):
-                    item['translations'] = {**item['translations'],language:seg['text']}
+                # Modern drafts keep authoritative translations by language. A
+                # switch to an untranslated target can leave the outgoing text
+                # visible, so only seed legacy rows without that map.
+                if (language and 'translations' not in seg and seg.get('text_original')
+                        and seg.get('text') and seg['text'] != seg['text_original']):
+                    item['translations'] = {language:seg['text']}
                 reference = _source_reference(job,{**seg,'id':item['id']},consistent=state.get('voiceMatch') == 'consistent')
                 if _automatic_voice(seg.get('profile_id')) and not (isinstance(reference,dict) and reference.get('ref_audio')):
                     raise ArchiveError(400,'A source voice reference is missing; prepare the source voice before exporting')
@@ -332,8 +336,19 @@ def export_project_bundle(body: BundleExport):
                     name = next((name for name,existing in files.items() if existing == path),None) or 'assets/references/'+uuid.uuid4().hex+path.suffix.lower()
                     files[name] = path; item['reference'] = name; item['referenceText'] = reference.get('ref_text') or item['text']
                 segments.append(item)
-            targets = [{'code':code,'name':code} for code in state.get('dubTracks',[]) if code != 'original']
-            if not targets and state.get('dubLangCode'): targets = [{'code':state['dubLangCode'],'name':state.get('dubLang') or state['dubLangCode']}]
+            # Imports open the first target. Preserve the current selection,
+            # rendered tracks and translated drafts that have no audio yet.
+            current = state.get('dubLangCode')
+            target_codes = [current] if current and current != 'original' else []
+            candidates = [code for code in state.get('dubTracks',[]) if code != 'original']
+            for segment in segments:
+                if isinstance(segment.get('translations'),dict):
+                    candidates.extend(segment['translations'])
+            for code in candidates:
+                if code not in target_codes:
+                    target_codes.append(code)
+            targets = [{'code':code,'name':(state.get('dubLang') or code) if code == current else code}
+                       for code in target_codes]
             document = copy.deepcopy(memory.get('document',{})) if isinstance(memory,dict) else {}
             document.update({'duration':project.get('duration') or job.get('duration') or max([0]+[s.get('end',0) for s in segments]),'source':source_name,'segments':segments,'targets':targets,'audioOnly':state.get('inputType') == 'audio','desktop':{'name':project['name'],'state':_collect_paths(_strip_automatic_bindings(state),files,[DUB_DIR,OUTPUTS_DIR,VOICES_DIR]),'job':_collect_paths(_strip_automatic_bindings(job),files,[DUB_DIR,OUTPUTS_DIR,VOICES_DIR])}})
             title = project['name']

@@ -73,8 +73,9 @@ maintainer team, matching Electron. The badge has a localized core-maintainer de
   or explicit voice choices. Regeneration keeps saved line volumes, speech rates,
   delivery instructions and audio effects. Model downloads remain explicit.
 - **Project transfer**: export/import editable `.vsproject` archives on either
-  phone or Electron's Projects page. Manuscripts, casts, pronunciation settings,
-  dub timelines, translations, references and assets travel together. Imports
+  phone or Electron's Projects page. Manuscripts, chapter headings, casts,
+  pronunciation settings, dub timelines, translations, references and assets
+  travel together, including translations that have not been rendered. Imports
   create new copies and require permission for bundled voice recordings. Engine
   settings and foreign caches remain in the archive; rendering uses compatible
   installed models. Pairing also provides a received-project inbox. The computer

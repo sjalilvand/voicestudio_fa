@@ -264,6 +264,13 @@ def read_bundle(source: Path, destination: Path) -> tuple[dict, dict[str, Path]]
             shutil.rmtree(destination, ignore_errors=True)
 
 
+def _chapter_heading(text: str) -> str | None:
+    # Match the renderer's canonical H1 grammar; phone plans require "# ".
+    from services.longform_parser import _HEADING_RE
+    heading = _HEADING_RE.fullmatch(text.strip())
+    return '# '+heading.group(1).strip() if heading else None
+
+
 def manuscript_document(project: dict) -> dict:
     """Electron's current LongformProject.draft is retained, not a legacy store clone."""
     draft = project.get('draft', {})
@@ -272,6 +279,10 @@ def manuscript_document(project: dict) -> dict:
     characters = {c['id']: c for c in draft.get('cast', []) if isinstance(c,dict) and isinstance(c.get('id'),str)}
     for index, line in enumerate(draft.get('lines', [])):
         if not isinstance(line,dict) or not isinstance(line.get('text'),str): continue
+        heading = _chapter_heading(line['text'])
+        if heading is not None:
+            lines.append(heading)
+            continue
         role = 'line-'+str(index) if line.get('profileId') else str(line.get('character') or 'narrator')
         role = re.sub(r'[^A-Za-z0-9_-]', '_', role)[:100] or 'narrator'
         voice = line.get('profileId') or characters.get(line.get('character'), {}).get('profileId') or draft.get('voice')
@@ -307,7 +318,17 @@ def desktop_manuscript(manifest: dict) -> dict:
         known = {c.get('id') for c in cast if isinstance(c,dict)}
         for raw in doc['script'].splitlines():
             text = raw.strip()
-            if not text or text.startswith('# '): continue
+            if not text: continue
+            heading = _chapter_heading(text)
+            if heading is not None:
+                old = next((line for line in original
+                            if line.get('id') not in used_ids
+                            and _chapter_heading(line.get('text') or '') == heading), {})
+                line_id = old.get('id') or str(uuid.uuid4())
+                used_ids.add(line_id)
+                lines.append({**old,'id':line_id,'text':heading,'character':'narrator',
+                              'profileId':None,'speed':None})
+                continue
             match = re.match(r'^\[voice:([^\]\r\n]+)\]\s*', text)
             if match: role = match[1]; text = text[match.end():]
             speed = None; match = re.match(r'^\[speed:([0-9.]+)\]\s*', text)
