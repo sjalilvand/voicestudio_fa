@@ -623,7 +623,8 @@
     "replace_reference": "Referentie vervangen",
     "keep_reference": "Huidige referentie behouden",
     "new_reference": "Nieuwe referentie: {{name}}",
-    "replace_reference_hint": "Opslaan vervangt het referentievoorbeeld van deze stem. De vastgezette opname en de verificatie van je eigen stem worden gewist, omdat de nieuwe clip van een andere spreker kan zijn. Laat het transcript leeg om de nieuwe clip automatisch te transcriberen."
+    "replace_reference_hint": "Opslaan vervangt het referentievoorbeeld van deze stem. De vastgezette opname en de verificatie van je eigen stem worden gewist, omdat de nieuwe clip van een andere spreker kan zijn. Laat het transcript leeg om de nieuwe clip automatisch te transcriberen.",
+    "cannotCloneUseDesign": "Dit model kan geen stem klonen. Beschrijf er een in Stemontwerp of kies een model dat kan klonen."
   },
   "designWorkspace": {
     "title": "Ontwerpen",
