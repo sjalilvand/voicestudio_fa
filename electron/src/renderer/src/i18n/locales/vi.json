@@ -20,7 +20,8 @@
     "preset16": "Tiêu chuẩn",
     "preset24": "Để chỉnh sửa",
     "preset32": "Nguyên bản",
-    "sizeUnknown": "Kích thước hiển thị sau khi tạo âm thanh."
+    "sizeUnknown": "Kích thước hiển thị sau khi tạo âm thanh.",
+    "sampleRate": "{{rate}} kHz"
   },
   "presetVoice": {
     "label": "Giọng có sẵn"

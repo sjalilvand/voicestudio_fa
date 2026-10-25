@@ -20,7 +20,8 @@
     "preset16": "Standard",
     "preset24": "För redigering",
     "preset32": "Original",
-    "sizeUnknown": "Storleken visas efter genereringen."
+    "sizeUnknown": "Storleken visas efter genereringen.",
+    "sampleRate": "{{rate}} kHz"
   },
   "presetVoice": {
     "label": "Förinställd röst"

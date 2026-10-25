@@ -20,7 +20,8 @@
     "preset16": "标准",
     "preset24": "用于编辑",
     "preset32": "原始",
-    "sizeUnknown": "生成后显示文件大小。"
+    "sizeUnknown": "生成后显示文件大小。",
+    "sampleRate": "{{rate}} kHz"
   },
   "presetVoice": {
     "label": "预设声音"

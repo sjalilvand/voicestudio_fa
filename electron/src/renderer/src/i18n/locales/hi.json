@@ -20,7 +20,8 @@
     "preset16": "मानक",
     "preset24": "संपादन के लिए",
     "preset32": "मूल",
-    "sizeUnknown": "ऑडियो बनने के बाद आकार दिखेगा।"
+    "sizeUnknown": "ऑडियो बनने के बाद आकार दिखेगा।",
+    "sampleRate": "{{rate}} kHz"
   },
   "presetVoice": {
     "label": "प्रीसेट आवाज़"

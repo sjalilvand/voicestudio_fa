@@ -20,7 +20,8 @@
     "preset16": "Standart",
     "preset24": "Düzenleme için",
     "preset32": "Orijinal",
-    "sizeUnknown": "Boyut, oluşturma tamamlandıktan sonra gösterilir."
+    "sizeUnknown": "Boyut, oluşturma tamamlandıktan sonra gösterilir.",
+    "sampleRate": "{{rate}} kHz"
   },
   "presetVoice": {
     "label": "Hazır ses"

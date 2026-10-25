@@ -15,6 +15,7 @@ import {
   StarIcon,
   Trash2Icon,
   WandSparklesIcon,
+  UsersRoundIcon,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -685,6 +686,7 @@ export function VoicesSidebar({
               aria-label={t('clone.saved_profiles')}
               className="min-w-0 flex-1 rounded-lg text-sidebar-foreground/60 hover:bg-sidebar-accent/50 data-active:bg-[var(--sidebar-row-active)] data-active:text-sidebar-foreground dark:data-active:border-transparent dark:data-active:bg-[var(--sidebar-row-active)] dark:data-active:text-sidebar-foreground"
             >
+              <UsersRoundIcon aria-hidden="true" />
               <span className="min-w-0 truncate">{t('clone.saved_profiles')}</span>
             </TabsTrigger>
             <TabsTrigger
@@ -693,6 +695,7 @@ export function VoicesSidebar({
               aria-label={t('clone.history_title')}
               className="min-w-0 flex-1 rounded-lg text-sidebar-foreground/60 hover:bg-sidebar-accent/50 data-active:bg-[var(--sidebar-row-active)] data-active:text-sidebar-foreground dark:data-active:border-transparent dark:data-active:bg-[var(--sidebar-row-active)] dark:data-active:text-sidebar-foreground"
             >
+              <HistoryIcon aria-hidden="true" />
               <span className="min-w-0 truncate">{t('clone.history_title')}</span>
             </TabsTrigger>
           </TabsList>
