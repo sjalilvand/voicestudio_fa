@@ -43,6 +43,7 @@ const MAINTAINER_CARDS: Record<
     name: 'Velixio',
     role: 'homeUi.coreTeam',
     links: [
+      { kind: 'website', handle: 'shimul.me', href: 'https://shimul.me' },
       {
         kind: 'github',
         handle: '@velixio',
