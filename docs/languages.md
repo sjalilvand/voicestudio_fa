@@ -8,6 +8,23 @@ and supported choices, rather than producing speech in the wrong language.
 Language names and regional codes are accepted; Auto keeps the engine's default.
 The same validation applies to direct synthesis, dubbing, and batch generation.
 
+## Regional variants
+
+Brazilian and European Portuguese are separate choices: **Portuguese (Brazil)**
+(`pt-BR`) and **Portuguese (Portugal)** (`pt-PT`). They share the `pt` model
+below. What the variant changes:
+
+| Where | Portuguese (Brazil) / (Portugal) |
+|-------|----------------------------------|
+| Number words before synthesis | Brazilian ("dezesseis") / European ("dezasseis") |
+| Dub translation with an LLM engine or Cinematic | Brazilian / European vocabulary and spelling |
+| Dub translation with NLLB, Argos or Google | Brazilian for both: these engines have one Portuguese, and the dub page says so when European was asked for |
+| Accent of the generated speech | Follows the reference voice: every bundled engine has one Portuguese model (Kokoro's is Brazilian). Clone from a European clip for a European accent; the language picker says this when the variant is chosen |
+
+A plain "Portuguese" or `pt`, including every setting saved before the split,
+means Brazilian Portuguese. API callers can pass either picker name, `pt-BR` or
+`pt-PT` as the language, and `pt-PT` as a dub translation target.
+
 The table below lists each language with its VoiceStudio language ID,
 ISO 639-3 code, and training data duration (hours).
 

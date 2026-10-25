@@ -909,6 +909,7 @@
     "mirror_failed": "เลียนแบบการแสดงไม่สำเร็จ: {{message}}",
     "cinematic_no_llm": "คุณภาพนี้ต้องใช้ผู้ให้บริการ LLM โปรดตั้งค่าในผู้ให้บริการ LLM เพื่อดำเนินการต่อ",
     "dialect_not_applied": "สำเนียงที่เลือกต้องใช้ LLM — เปลี่ยนเอนจินเป็น OpenAI/Ollama หรือเลือกคุณภาพ Cinematic",
+    "dialect_used": "เอนจินนี้แปลเป็น{{variant}}เท่านั้น ใช้เอนจินแปลภาษาแบบ LLM เพื่อใช้ภาษาถิ่นที่เลือก",
     "translate_errors": "{{errorCount}}/{{totalCount}} เซ็กเมนต์ล้มเหลว: {{firstError}}",
     "translate_degraded": "แปลครบทั้ง {{totalCount}} ส่วนแล้ว — {{count}} ส่วนใช้คำแปลแบบตรงตัวเพราะข้ามขั้นตอนขัดเกลา ({{reason}})",
     "translated_segments": "แปล {{count}} ส่วน → {{lang}}",
@@ -3440,6 +3441,8 @@
     "hint": "โดยทั่วไปควรใช้ค่าเริ่มต้น การชี้นำปรับอิทธิพลของคำสั่ง ส่วนตัวควบคุมอื่นเปลี่ยนวิธีที่โมเดลสร้างเสียง ให้เปลี่ยนทีละรายการ"
   },
   "languagePicker": {
+    "dialectFollowsVoice": "{{model}} มีโมเดล{{language}}เพียงโมเดลเดียว สำเนียงจึงเป็นไปตามเสียงต้นแบบ",
+    "dialectUsed": "{{model}} รองรับเฉพาะ{{variant}}",
     "auto": "อัตโนมัติ",
     "unavailable": "ไม่รองรับ",
     "unsupportedBy": "{{model}} ไม่รองรับ",

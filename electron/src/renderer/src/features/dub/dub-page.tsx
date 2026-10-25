@@ -101,6 +101,13 @@ import { createObjectUrl, revokeObjectUrl } from '@/lib/audio/object-url';
 import { requestPlaybackSeek } from '@/lib/audio/playback-clock';
 import { beginAppActivity } from '@/lib/app-activity';
 import { LANG_CODES } from '@shared/utils/languages';
+import {
+  LANGUAGE_VARIANTS,
+  hasVariantChoices,
+  languageTagName,
+  variantChoice,
+  withVariantChoices,
+} from '@/lib/language-variants';
 import { cn } from '@/lib/utils';
 import {
   useDubSession,
@@ -150,6 +157,9 @@ import {
 const DEFAULT_TRANSLATION_AGENT_KEY = 'voicestudio.defaultTranslationAgent';
 const LIVE_PREVIEW_KEY = 'voicestudio.dubLivePreview';
 const targetOptions = LANG_CODES.map((item) => item.label);
+// #3143: Brazilian and European Portuguese are separate target choices; each
+// maps to the "Portuguese" track plus its dialect.
+const targetChoices = withVariantChoices(targetOptions);
 const sentenceEnd = /[.!?\u3002\uff01\uff1f]/;
 
 type ArgosPackStatus = {
@@ -1344,18 +1354,21 @@ export function DubPage() {
               {t('dub.target_language')}
             </h2>
             <LanguagePicker
-              value={target}
-              onValueChange={(language) => {
+              value={hasVariantChoices(target) ? variantChoice(target, session.dialect) : target}
+              onValueChange={(choice) => {
+                const variant = LANGUAGE_VARIANTS[choice];
+                const language = variant?.base ?? choice;
                 const selectedCode = LANG_CODES.find((item) => item.label === language)?.code;
                 setTarget(language, selectedCode);
-                if (!dialectMatchesLang(session.dialect, selectedCode))
+                if (variant) setDubTranslationOptions({ dialect: variant.dialect });
+                else if (!dialectMatchesLang(session.dialect, selectedCode))
                   setDubTranslationOptions({ dialect: undefined });
                 if (selectedCode)
                   setDubMultiTargets(
                     (session.multiTargets || []).filter((item) => item.code !== selectedCode),
                   );
               }}
-              options={targetOptions}
+              options={targetChoices}
               disabled={busy || Boolean(session.recovery)}
             />
             <MultiLanguagePicker
@@ -1371,7 +1384,7 @@ export function DubPage() {
                 )
               }
             />
-            {dialectOptionsFor(code).length > 0 && (
+            {dialectOptionsFor(code).length > 0 && !hasVariantChoices(code) && (
               <details className="group space-y-2 border-t border-border/50 pt-2">
                 <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-medium text-muted-foreground">
                   <LanguagesIcon className="size-3.5" />
@@ -1568,7 +1581,13 @@ export function DubPage() {
                 this the pick looked applied and the output looked simply wrong. */}
             {session.dialectIgnored && (
               <div role="status" className="space-y-2 text-xs text-muted-foreground">
-                <p>{t('dub_workflow.dialect_not_applied')}</p>
+                <p>
+                  {session.dialectUsed
+                    ? t('dub_workflow.dialect_used', {
+                        variant: languageTagName(session.dialectUsed, i18n.language),
+                      })
+                    : t('dub_workflow.dialect_not_applied')}
+                </p>
                 <Link to="/settings/models/$family" params={{ family: 'llm' }}>
                   {t('engineSidebar.llm')}
                 </Link>
@@ -2469,9 +2488,7 @@ export function DubPage() {
                                 })
                               }
                             />
-                            <span>
-                              {segmentTimeLabel(segment.start)}
-                            </span>
+                            <span>{segmentTimeLabel(segment.start)}</span>
                           </div>
                           <div className="min-w-0">
                             <div className="flex min-h-6 min-w-0 items-center gap-1">

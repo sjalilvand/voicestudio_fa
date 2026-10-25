@@ -909,6 +909,7 @@
     "mirror_failed": "還原演繹失敗：{{message}}",
     "cinematic_no_llm": "此品質需要 LLM 供應商。請在「LLM 供應商」中設定後繼續。",
     "dialect_not_applied": "所選方言需要 LLM 才能套用 — 請將引擎切換為 OpenAI/Ollama，或選擇 Cinematic 品質。",
+    "dialect_used": "此引擎只能輸出{{variant}}。如需套用所選方言，請使用 LLM 翻譯引擎。",
     "translate_errors": "{{errorCount}}/{{totalCount}} 段失敗：{{firstError}}",
     "translate_degraded": "全部 {{totalCount}} 個片段已翻譯 — 其中 {{count}} 個因潤飾步驟被略過而使用直譯（{{reason}}）",
     "translated_segments": "翻譯的 {{count}} 段 → {{lang}}",
@@ -3440,6 +3441,8 @@
     "hint": "通常建議保留預設值。引導強度控制提示詞的影響，其他選項改變模型建構聲音的方式。每次只調整一項。"
   },
   "languagePicker": {
+    "dialectFollowsVoice": "{{model}} 只有一個{{language}}模型，因此口音取決於參考語音。",
+    "dialectUsed": "{{model}} 僅支援{{variant}}。",
     "auto": "自動",
     "unavailable": "不支援",
     "unsupportedBy": "{{model}} 不支援",

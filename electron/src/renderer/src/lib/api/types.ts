@@ -61,6 +61,8 @@ export interface EngineBackend {
   output_channels?: number | null;
   /** Lowercase picker names; null/absent means model-specific or unrestricted. */
   supported_language_names?: string[] | null;
+  /** Regional accents the engine renders itself, e.g. ['pt-BR'] (#3143). */
+  rendered_dialects?: string[] | null;
   execution_evidence?: {
     evidence_state: string;
     actual_execution_provider?: string | null;

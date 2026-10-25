@@ -909,6 +909,7 @@
     "mirror_failed": "Gagal meniru pembawaan: {{message}}",
     "cinematic_no_llm": "Kualitas ini memerlukan penyedia LLM. Konfigurasikan di Penyedia LLM untuk melanjutkan.",
     "dialect_not_applied": "Dialek terpilih memerlukan LLM — ganti Engine ke OpenAI/Ollama atau pilih kualitas Cinematic.",
+    "dialect_used": "Mesin ini hanya menulis dalam {{variant}}. Gunakan mesin terjemahan LLM untuk menerapkan dialek yang dipilih.",
     "translate_errors": "{{errorCount}}/{{totalCount}} segmen gagal: {{firstError}}",
     "translate_degraded": "Semua {{totalCount}} segmen diterjemahkan — {{count}} memakai terjemahan biasa karena tahap penyempurnaan dilewati ({{reason}})",
     "translated_segments": "Diterjemahkan {{count}} segmen → {{lang}}",
@@ -3440,6 +3441,8 @@
     "hint": "Biasanya biarkan nilai bawaan. Panduan mengatur pengaruh instruksi; kontrol lain mengubah cara model membentuk suara. Ubah satu per satu."
   },
   "languagePicker": {
+    "dialectFollowsVoice": "{{model}} hanya punya satu model {{language}}, jadi aksennya mengikuti suara referensi.",
+    "dialectUsed": "{{model}} hanya berbicara {{variant}}.",
     "auto": "Otomatis",
     "unavailable": "Tidak didukung",
     "unsupportedBy": "Tidak didukung oleh {{model}}",

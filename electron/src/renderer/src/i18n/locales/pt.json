@@ -911,6 +911,7 @@
     "mirror_failed": "Falha ao espelhar a interpretação: {{message}}",
     "cinematic_no_llm": "Esta qualidade requer um provedor LLM. Configure-o em Provedores LLM para continuar.",
     "dialect_not_applied": "O dialeto selecionado precisa de um LLM — mude o motor para OpenAI/Ollama ou escolha a qualidade Cinematic.",
+    "dialect_used": "Este mecanismo escreve apenas em {{variant}}. Use um mecanismo de tradução com LLM para aplicar o dialeto escolhido.",
     "translate_errors": "{{errorCount}}/{{totalCount}} segmento(s) falhou: {{firstError}}",
     "translate_degraded": "Todos os {{totalCount}} segmento(s) traduzidos — {{count}} usam a tradução simples porque o polimento foi ignorado ({{reason}})",
     "translated_segments": "Segmento(s) {{count}} traduzido(s) → {{lang}}",
@@ -3442,6 +3443,8 @@
     "hint": "Em geral, mantenha os valores padrão. A orientação ajusta a influência da instrução; os outros controles mudam como o modelo constrói o som. Altere um de cada vez."
   },
   "languagePicker": {
+    "dialectFollowsVoice": "{{model}} tem um único modelo de {{language}}, por isso o sotaque segue a voz de referência.",
+    "dialectUsed": "{{model}} fala apenas {{variant}}.",
     "auto": "Automático",
     "unavailable": "Não suportado",
     "unsupportedBy": "Não suportado por {{model}}",

@@ -909,6 +909,7 @@
     "mirror_failed": "演技の反映に失敗しました: {{message}}",
     "cinematic_no_llm": "この品質にはLLMプロバイダーが必要です。続行するには「LLMプロバイダー」で設定してください。",
     "dialect_not_applied": "選択した方言の適用には LLM が必要です — エンジンを OpenAI/Ollama に切り替えるか、Cinematic 品質を選んでください。",
+    "dialect_used": "このエンジンは{{variant}}のみで出力します。選択した方言を適用するには LLM 翻訳エンジンを使用してください。",
     "translate_errors": "{{errorCount}}/{{totalCount}} セグメントが失敗しました: {{firstError}}",
     "translate_degraded": "全 {{totalCount}} セグメントを翻訳しました — {{count}} 件は仕上げ処理がスキップされたため通常の翻訳を使用しています（{{reason}}）",
     "translated_segments": "{{count}} セグメント → {{lang}} を翻訳しました",
@@ -3440,6 +3441,8 @@
     "hint": "通常は既定値のままで構いません。ガイダンスはプロンプトの影響を、その他の設定はモデルの音の組み立て方を調整します。一度に一つずつ変更してください。"
   },
   "languagePicker": {
+    "dialectFollowsVoice": "{{model}} の{{language}}モデルは1つだけのため、アクセントは参照音声に従います。",
+    "dialectUsed": "{{model}} は{{variant}}のみに対応しています。",
     "auto": "自動",
     "unavailable": "非対応",
     "unsupportedBy": "{{model}} は非対応",

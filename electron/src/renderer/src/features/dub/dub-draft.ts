@@ -165,14 +165,22 @@ export function restoreDubDraft(raw: string | null, defaults: DubSession): DubSe
                 if (typeof item !== 'number' || !Number.isFinite(item)) return false;
                 if (key === 'gap_guard_s') return item >= 0;
                 if (key === 'min_audio_rate') return item >= 0.5 && item <= 1;
-                return ['max_audio_only_rate', 'audio_rate_cap', 'video_slow_cap'].includes(key)
-                  && item >= 1;
+                return (
+                  ['max_audio_only_rate', 'audio_rate_cap', 'video_slow_cap'].includes(key) &&
+                  item >= 1
+                );
               }),
             )
           : undefined,
       exportOptions: restoreExportPreferences(value.exportOptions),
       translationFallback: value.translationFallback === true,
       dialectIgnored: value.dialectIgnored === true,
+      dialectUsed:
+        value.dialectIgnored === true &&
+        typeof value.dialectUsed === 'string' &&
+        /^[a-zA-Z]{2,3}-[a-zA-Z]{2,4}$/.test(value.dialectUsed)
+          ? value.dialectUsed
+          : undefined,
       quality: ['fast', 'autofit', 'cinematic', 'agent'].includes(value.quality)
         ? value.quality
         : defaults.quality,
@@ -187,8 +195,10 @@ export function restoreDubDraft(raw: string | null, defaults: DubSession): DubSe
         typeof value.condenseSuggest === 'boolean'
           ? value.condenseSuggest
           : defaults.condenseSuggest,
-      translationInstructions: typeof value.translationInstructions === 'string'
-        ? value.translationInstructions.slice(0, 5000) : undefined,
+      translationInstructions:
+        typeof value.translationInstructions === 'string'
+          ? value.translationInstructions.slice(0, 5000)
+          : undefined,
       dialect:
         typeof value.dialect === 'string' && /^[a-zA-Z]{2,3}-[a-zA-Z]{2,4}$/.test(value.dialect)
           ? value.dialect
