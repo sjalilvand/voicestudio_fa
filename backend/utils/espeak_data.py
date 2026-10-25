@@ -11,13 +11,18 @@ wheel was built (``D:/a/espeakng-loader/...``). It then cannot read
 ``phontab`` and ``espeak_Initialize`` calls ``exit(1)``: no Python exception,
 the whole backend dies mid-request.
 
-``ensure_espeak_data_path()`` asks the library itself how it resolves each
-candidate path (``espeak_ng_InitializePath`` + ``espeak_Info`` only resolve
-the path; neither loads data or can exit). It uses the first candidate espeak
-accepts: the wheel's own directory, its Windows 8.3 short form, then a copy
-in a short cache directory. When none works it raises ``EspeakDataError``, an
-ordinary engine-load failure, before phonemizer can initialize espeak and
-take the process down.
+``ensure_espeak_data_path()`` asks the library itself whether it can load
+each candidate: ``espeak_ng_InitializePath`` + ``espeak_ng_Initialize`` load
+the phoneme data and *return* a status (only the legacy ``espeak_Initialize``
+that phonemizer calls turns a failure into ``exit(1)``), and ``espeak_Info``
+confirms espeak kept the candidate rather than its build-time fallback. Each
+candidate is probed in the exact form phonemizer passes on, which is
+``Path(path).resolve()`` (that also expands Windows 8.3 short names and
+symlinks, so neither can stand in for a long path). It uses the first
+candidate espeak accepts: the wheel's own directory, then a copy in a short
+cache directory. When none works it raises ``EspeakDataError``, an ordinary
+engine-load failure, before phonemizer can initialize espeak and take the
+process down.
 
 Leaf module: stdlib only at import time.
 """
@@ -28,6 +33,7 @@ import hashlib
 import logging
 import os
 import shutil
+import stat
 import sys
 import tempfile
 import threading
@@ -50,9 +56,16 @@ def _same_path(a: str, b: str) -> bool:
     return norm(a) == norm(b)
 
 
-def espeak_resolves(library: str, candidate: str) -> bool | None:
-    """Whether espeak-ng would use ``candidate`` as its data directory.
+_ENS_OK = 0
 
+
+def espeak_resolves(library: str, candidate: str) -> bool | None:
+    """Whether espeak-ng can load its data from ``candidate``.
+
+    ``True`` only when ``espeak_ng_Initialize`` loads the phoneme data from
+    that directory with ``ENS_OK`` and espeak reports it as its data path, so
+    a missing, unreadable or corrupt ``phontab``/``phondata`` is rejected here
+    instead of making phonemizer's ``espeak_Initialize`` exit the process.
     ``None`` means the library could not be asked (missing symbol, load
     failure); callers treat that as "unknown" and let phonemizer report
     its own, catchable, load error.
@@ -60,35 +73,31 @@ def espeak_resolves(library: str, candidate: str) -> bool | None:
     try:
         lib = ctypes.CDLL(library)
         init_path = lib.espeak_ng_InitializePath
+        initialize = lib.espeak_ng_Initialize
         info = lib.espeak_Info
     except (OSError, AttributeError):
         return None
     init_path.argtypes = [ctypes.c_char_p]
     init_path.restype = None
+    initialize.argtypes = [ctypes.POINTER(ctypes.c_void_p)]
+    initialize.restype = ctypes.c_int
     info.argtypes = [ctypes.POINTER(ctypes.c_char_p)]
     info.restype = ctypes.c_char_p
     init_path(str(candidate).encode("utf-8"))
+    context = ctypes.c_void_p()
+    status = initialize(ctypes.byref(context))
+    clear = getattr(lib, "espeak_ng_ClearErrorContext", None)
+    if clear is not None and context.value:
+        clear.argtypes = [ctypes.POINTER(ctypes.c_void_p)]
+        clear.restype = None
+        clear(ctypes.byref(context))
+    if status != _ENS_OK:
+        return False
     resolved = ctypes.c_char_p()
     info(ctypes.byref(resolved))
     if not resolved.value:
         return False
     return _same_path(resolved.value.decode("utf-8", "replace"), str(candidate))
-
-
-def _windows_short_path(path: Path) -> Path | None:
-    if sys.platform != "win32":
-        return None
-    try:
-        get_short = ctypes.windll.kernel32.GetShortPathNameW  # type: ignore[attr-defined]
-        size = get_short(str(path), None, 0)
-        if not size:
-            return None
-        buf = ctypes.create_unicode_buffer(size)
-        if not get_short(str(path), buf, size):
-            return None
-        return Path(buf.value)
-    except Exception:  # pragma: no cover - best effort
-        return None
 
 
 def _cache_roots() -> list[Path]:
@@ -108,20 +117,71 @@ def _cache_roots() -> list[Path]:
     return out
 
 
+def _tree_digest(root: Path) -> str | None:
+    """Content hash of every file under ``root`` (relative path + bytes)."""
+    h = hashlib.sha256()
+    try:
+        for path in sorted(p for p in root.rglob("*") if p.is_file()):
+            h.update(path.relative_to(root).as_posix().encode("utf-8", "replace"))
+            h.update(b"\0")
+            with open(path, "rb") as fh:
+                for chunk in iter(lambda: fh.read(1 << 20), b""):
+                    h.update(chunk)
+            h.update(b"\0")
+    except OSError:
+        return None
+    return h.hexdigest()
+
+
+def _private_dir(path: Path) -> bool:
+    """Whether ``path`` is a directory only this user can write (POSIX).
+
+    The cache roots include shared temp folders, where another local user
+    could pre-create the predictable cache directory. Windows has no cheap
+    equivalent; there the content check in ``_cached_copy`` is the guard.
+    """
+    if sys.platform == "win32":
+        return path.is_dir()
+    try:
+        st = path.lstat()
+    except OSError:
+        return False
+    return (
+        stat.S_ISDIR(st.st_mode)
+        and st.st_uid == os.getuid()
+        and not st.st_mode & (stat.S_IWGRP | stat.S_IWOTH)
+    )
+
+
 def _cached_copy(source: Path, root: Path) -> Path | None:
-    """A copy of ``source`` under ``root``; reused while the source is unchanged."""
+    """A copy of ``source`` under ``root``; reused only while it matches the source.
+
+    Returns ``None`` (try the next root) when the cache directory is not
+    private to this user or an existing copy differs from the source.
+    """
     phontab = source / "phontab"
     try:
         stamp = f"{source}|{phontab.stat().st_size}|{phontab.stat().st_mtime_ns}"
     except OSError:
         return None
     digest = hashlib.sha256(stamp.encode("utf-8", "replace")).hexdigest()[:10]
-    target = root / "voicestudio-espeak" / digest
+    parent = root / "voicestudio-espeak"
+    target = parent / digest
+    try:
+        parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    except OSError as exc:
+        logger.debug("espeak data cache root not writable: %s", type(exc).__name__)
+        return None
+    if not _private_dir(parent):
+        logger.debug("espeak data cache directory is shared with other users; skipped")
+        return None
     if (target / "phontab").is_file():
-        return target
+        if _private_dir(target) and _tree_digest(target) == _tree_digest(source):
+            return target
+        logger.debug("existing espeak data cache does not match the bundled data; skipped")
+        return None
     staging = target.with_name(f"{digest}.tmp-{os.getpid()}")
     try:
-        target.parent.mkdir(parents=True, exist_ok=True)
         shutil.rmtree(staging, ignore_errors=True)
         shutil.copytree(source, staging)
         try:
@@ -130,21 +190,41 @@ def _cached_copy(source: Path, root: Path) -> Path | None:
             # Another process won the race; its copy is equivalent.
             shutil.rmtree(staging, ignore_errors=True)
     except OSError as exc:
-        logger.debug("espeak data copy into %s failed: %s", root, exc)
+        logger.debug("espeak data copy failed: %s", type(exc).__name__)
         shutil.rmtree(staging, ignore_errors=True)
         return None
     return target if (target / "phontab").is_file() else None
 
 
+def _as_phonemizer_passes(path: Path) -> Path:
+    """The form phonemizer hands to espeak: ``EspeakWrapper.data_path`` resolves it."""
+    try:
+        return Path(path).resolve()
+    except OSError:
+        return Path(path)
+
+
 def _candidates(source: Path):
-    yield source
-    short = _windows_short_path(source)
-    if short is not None:
-        yield short
+    """Candidate data directories, each in the exact form phonemizer will pass."""
+    seen: set[str] = set()
+
+    def fresh(path: Path) -> Path | None:
+        effective = _as_phonemizer_passes(path)
+        key = os.path.normcase(str(effective))
+        if key in seen:
+            return None
+        seen.add(key)
+        return effective
+
+    first = fresh(source)
+    if first is not None:
+        yield first
     for root in _cache_roots():
         copy = _cached_copy(source, root)
         if copy is not None:
-            yield copy
+            effective = fresh(copy)
+            if effective is not None:
+                yield effective
 
 
 def _apply(library: str, data_path: str) -> None:
@@ -192,9 +272,8 @@ def ensure_espeak_data_path(*, _loader=None) -> str | None:
             ) from exc
         if not (source / "phontab").is_file():
             raise EspeakDataError(
-                f"The espeak-ng data bundled with this engine is incomplete "
-                f"(no phontab in {source}). Reinstall the engine from Model "
-                f"Catalogue."
+                "The espeak-ng data bundled with this engine is incomplete "
+                "(no phontab). Reinstall the engine from Model Catalogue."
             )
         for candidate in _candidates(source):
             verdict = espeak_resolves(library, str(candidate))
@@ -204,18 +283,19 @@ def ensure_espeak_data_path(*, _loader=None) -> str | None:
                 _apply(library, str(source))
                 return str(source)
             if verdict:
-                if candidate != source:
+                if not _same_path(str(candidate), str(_as_phonemizer_passes(source))):
                     logger.info(
-                        "espeak-ng cannot open %s (path too long or not "
-                        "representable); using %s",
-                        source, candidate,
+                        "espeak-ng cannot open the bundled data folder (path "
+                        "of %d characters is too long or not representable); "
+                        "using a short cached copy",
+                        len(str(source)),
                     )
                 _apply(library, str(candidate))
                 _RESOLVED = str(candidate)
                 return _RESOLVED
         raise EspeakDataError(
-            f"espeak-ng cannot open its data directory {source} (the path is "
-            f"too long or contains characters it cannot read) and no shorter "
-            f"copy could be made. Set OMNIVOICE_ESPEAK_DATA_CACHE to a short, "
-            f"writable ASCII folder (for example C:\\espeak) and retry."
+            "espeak-ng cannot open its data directory (the path is "
+            "too long, contains characters it cannot read, or the data is "
+            "unreadable) and no usable shorter copy could be made. Set OMNIVOICE_ESPEAK_DATA_CACHE to a short, "
+            "writable ASCII folder (for example C:\\espeak) and retry."
         )
