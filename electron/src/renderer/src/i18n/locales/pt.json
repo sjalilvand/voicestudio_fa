@@ -3583,6 +3583,9 @@
     "detailsFailed": "Não foi possível carregar os detalhes da licença. Feche esta janela e tente novamente."
   },
   "mobile": {
+    "home": {
+      "subtitle": "Seu estúdio de voz local."
+    },
     "tabs": {
       "speak": "Falar",
       "voices": "Vozes",

@@ -3581,6 +3581,9 @@
     "detailsFailed": "Die Lizenzdetails konnten nicht geladen werden. Schließe diesen Dialog und versuche es erneut."
   },
   "mobile": {
+    "home": {
+      "subtitle": "Dein lokales Sprachstudio."
+    },
     "tabs": {
       "speak": "Sprechen",
       "voices": "Stimmen",

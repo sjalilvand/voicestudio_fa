@@ -3581,6 +3581,9 @@
     "detailsFailed": "Không thể tải chi tiết giấy phép. Hãy đóng hộp thoại này và thử lại."
   },
   "mobile": {
+    "home": {
+      "subtitle": "Phòng thu giọng nói cục bộ của bạn."
+    },
     "tabs": {
       "speak": "Nói",
       "voices": "Giọng nói",

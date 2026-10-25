@@ -3583,6 +3583,9 @@
     "detailsFailed": "Impossibile caricare i dettagli della licenza. Chiudi questa finestra e riprova."
   },
   "mobile": {
+    "home": {
+      "subtitle": "Il tuo studio vocale locale."
+    },
     "tabs": {
       "speak": "Parla",
       "voices": "Voci",

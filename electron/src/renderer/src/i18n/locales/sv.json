@@ -3581,6 +3581,9 @@
     "detailsFailed": "Licensinformationen kunde inte läsas in. Stäng dialogrutan och försök igen."
   },
   "mobile": {
+    "home": {
+      "subtitle": "Din lokala röststudio."
+    },
     "tabs": {
       "speak": "Tala",
       "voices": "Röster",

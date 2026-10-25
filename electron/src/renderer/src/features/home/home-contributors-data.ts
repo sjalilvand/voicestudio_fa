@@ -3,12 +3,13 @@ import avatar1 from './contributors/kevin9327.png';
 import avatar2 from './contributors/psiberfunk.png';
 import avatar3 from './contributors/velixio.png';
 import avatar4 from './contributors/jaketame.png';
-import avatar5 from './contributors/paoloantinori.jpg';
+import avatar5 from './contributors/paoloantinori.png';
 import avatar6 from './contributors/Chang-Jin-Lee.png';
 import avatar7 from './contributors/Shivendra-Coherent.png';
-import avatar8 from './contributors/marreiradigital.jpg';
+import avatar8 from './contributors/marreiradigital.png';
 
 // GitHub /repos/debpalash/VoiceStudio/contributors snapshot, 2026-09-28.
+// Public GitHub profile portraits refreshed 2026-10-26.
 // Human contributors with strictly more than 10 repository commits; bundled for offline use.
 // Core maintainers are assigned by the project owner, independently of commit counts.
 export const homeCoreMaintainers = ['debpalash', 'velixio'] as const;

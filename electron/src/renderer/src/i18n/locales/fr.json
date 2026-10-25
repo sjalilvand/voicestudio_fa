@@ -3583,6 +3583,9 @@
     "detailsFailed": "Impossible de charger les détails de la licence. Fermez cette boîte de dialogue et réessayez."
   },
   "mobile": {
+    "home": {
+      "subtitle": "Votre studio vocal local."
+    },
     "tabs": {
       "speak": "Parler",
       "voices": "Voix",

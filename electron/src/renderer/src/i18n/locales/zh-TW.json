@@ -3581,6 +3581,9 @@
     "detailsFailed": "無法載入授權詳細資料。請關閉此對話方塊後再試一次。"
   },
   "mobile": {
+    "home": {
+      "subtitle": "你的本機語音工作室。"
+    },
     "tabs": {
       "speak": "朗讀",
       "voices": "語音",

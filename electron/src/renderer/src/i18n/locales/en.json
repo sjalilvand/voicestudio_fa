@@ -3581,6 +3581,9 @@
     "detailsFailed": "The licence details could not be loaded. Close this dialog and try again."
   },
   "mobile": {
+    "home": {
+      "subtitle": "Your local voice studio."
+    },
     "tabs": {
       "speak": "Speak",
       "voices": "Voices",

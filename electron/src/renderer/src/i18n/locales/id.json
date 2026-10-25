@@ -3581,6 +3581,9 @@
     "detailsFailed": "Detail lisensi tidak dapat dimuat. Tutup dialog ini dan coba lagi."
   },
   "mobile": {
+    "home": {
+      "subtitle": "Studio suara lokal Anda."
+    },
     "tabs": {
       "speak": "Bicara",
       "voices": "Suara",

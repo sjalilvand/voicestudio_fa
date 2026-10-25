@@ -3581,6 +3581,9 @@
     "detailsFailed": "无法加载许可详情。请关闭此对话框后重试。"
   },
   "mobile": {
+    "home": {
+      "subtitle": "你的本地语音工作室。"
+    },
     "tabs": {
       "speak": "朗读",
       "voices": "声音",

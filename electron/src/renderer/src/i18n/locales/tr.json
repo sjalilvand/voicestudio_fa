@@ -3581,6 +3581,9 @@
     "detailsFailed": "Lisans ayrıntıları yüklenemedi. Bu pencereyi kapatıp yeniden deneyin."
   },
   "mobile": {
+    "home": {
+      "subtitle": "Yerel ses stüdyonuz."
+    },
     "tabs": {
       "speak": "Konuş",
       "voices": "Sesler",

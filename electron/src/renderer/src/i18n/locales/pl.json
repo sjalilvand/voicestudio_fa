@@ -3585,6 +3585,9 @@
     "detailsFailed": "Nie udało się wczytać szczegółów licencji. Zamknij to okno i spróbuj ponownie."
   },
   "mobile": {
+    "home": {
+      "subtitle": "Twoje lokalne studio głosowe."
+    },
     "tabs": {
       "speak": "Mów",
       "voices": "Głosy",

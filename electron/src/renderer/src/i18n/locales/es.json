@@ -3583,6 +3583,9 @@
     "detailsFailed": "No se pudieron cargar los detalles de la licencia. Cierra este diálogo e inténtalo de nuevo."
   },
   "mobile": {
+    "home": {
+      "subtitle": "Tu estudio de voz local."
+    },
     "tabs": {
       "speak": "Hablar",
       "voices": "Voces",

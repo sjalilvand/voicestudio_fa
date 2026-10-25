@@ -3581,6 +3581,9 @@
     "detailsFailed": "De licentiegegevens konden niet worden geladen. Sluit dit venster en probeer het opnieuw."
   },
   "mobile": {
+    "home": {
+      "subtitle": "Jouw lokale stemstudio."
+    },
     "tabs": {
       "speak": "Spreken",
       "voices": "Stemmen",
