@@ -55,7 +55,7 @@ const WIDTHS = {
 
 const VARIANT_STYLES = {
   controls:
-    '[&>section]:shadow-[inset_0_1px_0_color-mix(in_oklab,var(--foreground)_3%,transparent)] [&>details]:shadow-[inset_0_1px_0_color-mix(in_oklab,var(--foreground)_3%,transparent)] [&_summary]:min-h-8 [&_summary]:select-none [&_summary]:items-center [&_summary]:px-0.5 [&_summary]:font-medium [&_summary]:text-foreground/90 [&_summary:hover]:bg-background/35 [&_h2]:text-foreground/90 [&_h3]:text-foreground/90',
+    '[&_summary]:min-h-8 [&_summary]:select-none [&_summary]:items-center [&_summary]:px-0.5 [&_summary]:font-medium [&_summary]:text-foreground/90 [&_summary:hover]:bg-background/35 [&_h2]:text-foreground/90 [&_h3]:text-foreground/90',
   navigation:
     '[&>button]:h-9 [&>button]:w-full [&>button]:justify-start [&>button]:gap-2.5 [&>button]:rounded-lg [&>button]:px-2.5 [&>button]:font-normal [&>button]:transition-[color,background-color,box-shadow] [&>button:hover]:bg-accent/55 [&>button[aria-pressed=true]]:bg-accent/80 [&>button[aria-pressed=true]]:font-medium [&>button[aria-pressed=true]]:shadow-[inset_2px_0_0_var(--primary)] [&>button>svg]:text-muted-foreground [&>button[aria-pressed=true]>svg]:text-primary',
   library:
@@ -137,7 +137,7 @@ export function SecondarySidebar({
         } as CSSProperties
       }
       className={cn(
-        'secondary-sidebar relative [--pane-resize-display:flex] @max-[40rem]:[--pane-resize-display:none] flex min-h-0 shrink-0 flex-col border-r border-border/55 bg-[color-mix(in_oklab,var(--muted)_13%,var(--background))] shadow-[inset_-1px_0_0_color-mix(in_oklab,var(--foreground)_2%,transparent)] [container-type:inline-size]',
+        'secondary-sidebar relative [--pane-resize-display:flex] @max-[40rem]:[--pane-resize-display:none] flex min-h-0 shrink-0 flex-col border-r border-border/55 bg-[color-mix(in_oklab,var(--muted)_13%,var(--background))] [container-type:inline-size]',
         collapsed
           ? 'w-11'
           : 'w-[var(--secondary-sidebar-width)] @max-[40rem]:max-h-[40%] @max-[40rem]:w-full @max-[40rem]:border-r-0 @max-[40rem]:border-b',
@@ -157,7 +157,7 @@ export function SecondarySidebar({
         data-slot="secondary-sidebar-header"
         style={lightsInset ? { paddingInlineStart: lightsInset + 12 } : undefined}
         className={cn(
-          'workspace-titlebar flex h-12 shrink-0 items-center gap-2.5 border-b border-border/45 bg-background/30 shadow-[0_1px_0_color-mix(in_oklab,var(--foreground)_2%,transparent)] backdrop-blur-xl',
+          'workspace-titlebar flex h-12 shrink-0 items-center gap-2.5 border-b border-border/45',
           collapsed ? 'px-1' : 'px-3',
         )}
       >
@@ -285,7 +285,7 @@ export function SecondarySidebar({
       {footer !== undefined && footer !== null && !collapsed && !showLibrary && (
         <div
           data-slot="secondary-sidebar-footer"
-          className="flex min-h-0 max-h-[70%] flex-col space-y-3 border-t border-border/55 bg-background/40 p-3.5 text-[13px] backdrop-blur-xl"
+          className="flex min-h-0 max-h-[70%] flex-col space-y-3 border-t border-border/55 p-3.5 text-[13px]"
         >
           {footer}
         </div>
