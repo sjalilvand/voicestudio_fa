@@ -4209,7 +4209,7 @@
     "cancelled": "다운로드 취소됨",
     "failed": "다운로드 실패",
     "ready": "사용 준비 완료",
-    "bytes": "{{done}} / {{total}}",
+    "bytes": "{{total}} 중 {{done}}",
     "speed": "{{rate}}/초",
     "eta": "{{time}} 남음",
     "downloadAgain": "다시 다운로드",

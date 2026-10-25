@@ -4209,7 +4209,7 @@
     "cancelled": "İndirme iptal edildi",
     "failed": "İndirme başarısız oldu",
     "ready": "Kullanıma hazır",
-    "bytes": "{{done}} / {{total}}",
+    "bytes": "{{total}} içinden {{done}}",
     "speed": "{{rate}}/sn",
     "eta": "{{time}} kaldı",
     "downloadAgain": "Yeniden indir",

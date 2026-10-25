@@ -4209,7 +4209,7 @@
     "cancelled": "Đã hủy tải xuống",
     "failed": "Tải xuống thất bại",
     "ready": "Sẵn sàng sử dụng",
-    "bytes": "{{done}} / {{total}}",
+    "bytes": "{{done}} trên {{total}}",
     "speed": "{{rate}}/giây",
     "eta": "còn {{time}}",
     "downloadAgain": "Tải xuống lại",

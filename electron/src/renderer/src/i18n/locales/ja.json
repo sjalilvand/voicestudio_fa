@@ -4209,7 +4209,7 @@
     "cancelled": "ダウンロードをキャンセルしました",
     "failed": "ダウンロードに失敗しました",
     "ready": "使用できます",
-    "bytes": "{{done}} / {{total}}",
+    "bytes": "{{total}} 中 {{done}}",
     "speed": "{{rate}}/秒",
     "eta": "残り {{time}}",
     "downloadAgain": "もう一度ダウンロード",

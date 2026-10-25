@@ -4209,7 +4209,7 @@
     "cancelled": "已取消下載",
     "failed": "下載失敗",
     "ready": "可以使用",
-    "bytes": "{{done}} / {{total}}",
+    "bytes": "{{done}}，共 {{total}}",
     "speed": "{{rate}}/秒",
     "eta": "剩餘 {{time}}",
     "downloadAgain": "重新下載",
