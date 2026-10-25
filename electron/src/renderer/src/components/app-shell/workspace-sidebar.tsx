@@ -184,7 +184,7 @@ export function WorkspaceSidebar() {
                       data-tone="settings"
                       data-motion="turn"
                     />
-                    {t('nav.settings')}
+                    <span className="hidden @[11rem]/engines:inline">{t('nav.settings')}</span>
                   </Link>
                 ) : undefined
               }
