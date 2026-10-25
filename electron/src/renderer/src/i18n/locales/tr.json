@@ -993,7 +993,8 @@
     "play": "Oynat",
     "pause": "Duraklat",
     "seek": "Oynatma konumu",
-    "missing": "Ses dosyası bulunamadı."
+    "missing": "Ses dosyası bulunamadı.",
+    "now_playing": "Şimdi çalıyor"
   },
   "logs": {
     "no_tauri_log": "Henüz diskte Tauri oturumu açılmadı; bir tane oluşturmak için masaüstü sürümü aracılığıyla başlatın",
