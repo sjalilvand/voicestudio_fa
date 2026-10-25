@@ -119,6 +119,10 @@ it('gives velixio the same hover card as the creator', async () => {
   fireEvent.click(screen.getByRole('button', { name: '@velixio' }));
   const github = await screen.findByRole('link', { name: 'GitHub @velixio' });
   expect(github).toHaveAttribute('href', 'https://github.com/velixio');
+  expect(screen.getByRole('link', { name: 'X @shimuldn' })).toHaveAttribute(
+    'href',
+    'https://x.com/shimuldn',
+  );
 });
 
 it('separates three primary creation actions and describes all nine destinations', () => {

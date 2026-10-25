@@ -47,6 +47,7 @@ const MAINTAINER_CARDS: Record<
         handle: '@velixio',
         href: 'https://github.com/velixio',
       },
+      { kind: 'x', handle: '@shimuldn', href: 'https://x.com/shimuldn' },
     ],
   },
 };
