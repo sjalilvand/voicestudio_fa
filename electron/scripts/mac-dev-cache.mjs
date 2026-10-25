@@ -21,7 +21,8 @@ export function macDevLeaseDirectory(cacheRoot) {
 }
 
 function lockDescriptor(fd, wait) {
-  // macOS lockf can lock an inherited descriptor. The kernel lock survives
+  // Darwin lockf has a descriptor-only form: lockf [-s] [-t seconds] fd.
+  // The kernel lock survives
   // this helper's exit until every copy of that open descriptor is closed.
   const result = spawnSync('/usr/bin/lockf', ['-s', ...(wait ? [] : ['-t', '0']), '3'], {
     stdio: ['ignore', 'pipe', 'pipe', fd],
