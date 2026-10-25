@@ -20,7 +20,8 @@
     "preset16": "표준",
     "preset24": "편집용",
     "preset32": "원본",
-    "sizeUnknown": "생성 후 파일 크기가 표시됩니다."
+    "sizeUnknown": "생성 후 파일 크기가 표시됩니다.",
+    "sampleRate": "{{rate}} kHz"
   },
   "presetVoice": {
     "label": "프리셋 음성"

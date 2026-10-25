@@ -20,7 +20,8 @@
     "preset16": "標準",
     "preset24": "編集用",
     "preset32": "オリジナル",
-    "sizeUnknown": "生成後にサイズを表示します。"
+    "sizeUnknown": "生成後にサイズを表示します。",
+    "sampleRate": "{{rate}} kHz"
   },
   "presetVoice": {
     "label": "プリセット音声"
