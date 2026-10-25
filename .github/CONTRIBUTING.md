@@ -91,6 +91,11 @@ bun run dev:web     # maintained Electron renderer in a browser + backend
 | **Backend** | `localhost:3900` | FastAPI server — TTS, ASR, diarization, dubbing pipeline |
 | **Frontend** | `localhost:3901` | Electron renderer served by Vite in a browser |
 
+`bun run dev` keeps one desktop dev instance per checkout: starting it again
+stops the earlier dev app and its dev server (only this checkout's, never an
+installed VoiceStudio or another project) instead of failing with "Port 3902 is
+already in use". Set `VOICESTUDIO_ALLOW_MULTIPLE_INSTANCES=1` to keep both.
+
 Product builds read the app name, application ID, and the backend/web/Electron
 development ports from `config/app.json`. Change that manifest instead of
 copying new defaults into launchers or runtime modules.
