@@ -188,10 +188,15 @@
 
 .home-contributor-identity {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 12px;
-  margin-top: -26px;
+  margin-top: -22px;
   padding: 0 14px 12px;
+}
+
+/* The name block starts below the banner so it centres on the portrait. */
+.home-contributor-identity > div {
+  padding-top: 22px;
 }
 
 .home-contributor-identity img {
@@ -314,6 +319,14 @@
 .home-contributor-popup small {
   display: block;
   color: var(--muted-foreground);
+}
+
+/* Label and handle sit as one tight block, centred on the icon tile. */
+.home-contributor-popup a > span:not(.home-contributor-link-icon, .home-contributor-follow) {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.25;
 }
 
 @media (prefers-reduced-motion: reduce) {
