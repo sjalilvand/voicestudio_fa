@@ -1969,6 +1969,7 @@
     "original": "Original",
     "dub_suffix": "(Dubba)",
     "bg_audio": "Bakgrundsljud",
+    "bg_level": "Bakgrundsvolym",
     "mix_bg_video": "Mixa musik/FX under varje dubbat spår",
     "subs_in_video": "Undertexter i video",
     "hardsub": "Bränn undertexter i bild (hardsub)",

@@ -10547,6 +10547,20 @@
       }
      },
      {
+      "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+      "in": "query",
+      "name": "bed_level",
+      "required": false,
+      "schema": {
+       "default": 1.0,
+       "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+       "maximum": 4.0,
+       "minimum": 0.0,
+       "title": "Bed Level",
+       "type": "number"
+      }
+     },
+     {
       "in": "header",
       "name": "X-VoiceStudio-Path-Authorization",
       "required": false,
@@ -10613,6 +10627,20 @@
       }
      },
      {
+      "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+      "in": "query",
+      "name": "bed_level",
+      "required": false,
+      "schema": {
+       "default": 1.0,
+       "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+       "maximum": 4.0,
+       "minimum": 0.0,
+       "title": "Bed Level",
+       "type": "number"
+      }
+     },
+     {
       "in": "header",
       "name": "X-VoiceStudio-Path-Authorization",
       "required": false,
@@ -10676,6 +10704,20 @@
        "default": true,
        "title": "Preserve Bg",
        "type": "boolean"
+      }
+     },
+     {
+      "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+      "in": "query",
+      "name": "bed_level",
+      "required": false,
+      "schema": {
+       "default": 1.0,
+       "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+       "maximum": 4.0,
+       "minimum": 0.0,
+       "title": "Bed Level",
+       "type": "number"
       }
      },
      {
@@ -10755,6 +10797,20 @@
       }
      },
      {
+      "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+      "in": "query",
+      "name": "bed_level",
+      "required": false,
+      "schema": {
+       "default": 1.0,
+       "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+       "maximum": 4.0,
+       "minimum": 0.0,
+       "title": "Bed Level",
+       "type": "number"
+      }
+     },
+     {
       "in": "query",
       "name": "bitrate",
       "required": false,
@@ -10821,6 +10877,20 @@
        "description": "Mix background noise into dubbed tracks",
        "title": "Preserve Bg",
        "type": "boolean"
+      }
+     },
+     {
+      "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+      "in": "query",
+      "name": "bed_level",
+      "required": false,
+      "schema": {
+       "default": 1.0,
+       "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+       "maximum": 4.0,
+       "minimum": 0.0,
+       "title": "Bed Level",
+       "type": "number"
       }
      },
      {
@@ -10952,6 +11022,20 @@
        "description": "Mix background noise into dubbed tracks",
        "title": "Preserve Bg",
        "type": "boolean"
+      }
+     },
+     {
+      "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+      "in": "query",
+      "name": "bed_level",
+      "required": false,
+      "schema": {
+       "default": 1.0,
+       "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+       "maximum": 4.0,
+       "minimum": 0.0,
+       "title": "Bed Level",
+       "type": "number"
       }
      },
      {
@@ -11582,6 +11666,20 @@
        "title": "Preserve Bg",
        "type": "boolean"
       }
+     },
+     {
+      "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+      "in": "query",
+      "name": "bed_level",
+      "required": false,
+      "schema": {
+       "default": 1.0,
+       "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+       "maximum": 4.0,
+       "minimum": 0.0,
+       "title": "Bed Level",
+       "type": "number"
+      }
      }
     ],
     "responses": {
@@ -11638,6 +11736,20 @@
        "default": true,
        "title": "Preserve Bg",
        "type": "boolean"
+      }
+     },
+     {
+      "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+      "in": "query",
+      "name": "bed_level",
+      "required": false,
+      "schema": {
+       "default": 1.0,
+       "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+       "maximum": 4.0,
+       "minimum": 0.0,
+       "title": "Bed Level",
+       "type": "number"
       }
      }
     ],
