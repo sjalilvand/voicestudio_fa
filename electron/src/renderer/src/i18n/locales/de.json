@@ -373,7 +373,8 @@
     "inactive": "Inaktiv",
     "translation": "Übersetzung",
     "diarisation": "Sprechertrennung",
-    "localDevice": "Lokales Gerät"
+    "localDevice": "Lokales Gerät",
+    "localShort": "Lokal"
   },
   "paneActions": {
     "collapse": "Bereich einklappen",

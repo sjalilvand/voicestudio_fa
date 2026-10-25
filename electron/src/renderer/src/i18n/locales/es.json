@@ -375,7 +375,8 @@
     "inactive": "Inactivo",
     "translation": "Traducción",
     "diarisation": "Diarización",
-    "localDevice": "Dispositivo local"
+    "localDevice": "Dispositivo local",
+    "localShort": "Local"
   },
   "paneActions": {
     "collapse": "Contraer panel",
