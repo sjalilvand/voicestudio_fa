@@ -9,6 +9,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+# Exercise the real dub renderer with its existing reference-capturing backend.
+from test_dub_voice_match import patched_generate
+
 
 @pytest.fixture
 def handoff(tmp_path, monkeypatch):
@@ -133,10 +136,12 @@ def test_native_dub_import_keeps_canonical_edits_cast_and_atomic_history(handoff
     assert cue['text'] == 'Texte traduit'
     assert cue['speaker_id'] == 'Alice'
     assert cue['gain'] == 0
-    assert cue['profile_id'] == 'auto-seg:phone-cue'
+    assert cue['profile_id'].startswith('auto-seg:')
+    reference_id = cue['profile_id'].removeprefix('auto-seg:')
+    assert reference_id != cue['id']
     assert job['segments'] == state['dubSegments']
-    assert Path(job['segment_clones']['phone-cue']['ref_audio']).is_file()
-    assert job['segment_clones']['phone-cue']['ref_text'] == 'Reference words'
+    assert Path(job['segment_clones'][reference_id]['ref_audio']).is_file()
+    assert job['segment_clones'][reference_id]['ref_text'] == 'Reference words'
 
 
 def test_asset_collection_strips_secret_fields_before_reading_files(handoff, tmp_path):
@@ -230,12 +235,13 @@ def test_rendered_output_import_uses_downloadable_relative_path(handoff, tmp_pat
 @pytest.mark.parametrize('binding,expected,mode', [
     ('auto:speaker_1','line','per_line'),
     ('auto:speaker_2','speaker','per_line'),
+    ('auto:speaker_2','speaker','consistent'),
     ('auto-seg:other','other','per_line'),
     ('auto:speaker_1','other','consistent'),
     ('auto-seg:one','other','consistent'),
     ('auto:missing',None,'per_line'),
 ])
-def test_source_voice_dub_export_resolves_automatic_bindings(handoff, tmp_path, monkeypatch, binding, expected, mode):
+def test_source_voice_dub_export_resolves_automatic_bindings(handoff, tmp_path, monkeypatch, binding, expected, mode, patched_generate):
     from services import dub_pipeline, project_bundle as bundles
     client, routes, db = handoff
     source = routes.DUB_DIR / 'source.wav'; source.write_bytes(b'source')
@@ -267,8 +273,19 @@ def test_source_voice_dub_export_resolves_automatic_bindings(handoff, tmp_path, 
     assert imported.status_code == 200, imported.text
     with db.db_conn() as conn:
         imported_job = json.loads(conn.execute('SELECT job_data FROM dub_history WHERE id=?',(imported.json()['projectId'],)).fetchone()[0])
-    assert imported_job['segments'][0]['profile_id'] == 'auto-seg:one'
-    assert Path(imported_job['segment_clones']['one']['ref_audio']).read_bytes() == expected.encode()
+    assert imported_job['segments'][0]['profile_id'].startswith('auto-seg:')
+    reference_id = imported_job['segments'][0]['profile_id'].removeprefix('auto-seg:')
+    assert reference_id != 'one'
+    assert Path(imported_job['segment_clones'][reference_id]['ref_audio']).read_bytes() == expected.encode()
+    rendered = patched_generate(imported_job,{
+        'segments':imported_job['segments'], 'segment_ids':['one'],
+        'language':'French', 'language_code':'fr', 'num_step':4,
+        'timing_strategy':'concise', 'voice_match':'consistent',
+    })
+    assert len(rendered.refs) == 1
+    assert Path(rendered.refs[0][0]).read_bytes() == expected.encode()
+    assert rendered.refs[0][1] == expected+' transcript'
+
 
 
 def test_bundle_directory_rejects_symlink_escape(handoff, tmp_path):

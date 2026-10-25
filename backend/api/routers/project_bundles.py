@@ -422,9 +422,12 @@ def _import(directory: Path,source: Path,allow_voices: bool):
                         reference = files[value['reference']]
                         if reference.suffix == '.pcm':
                             reference = _pcm_wave(reference,directory/('reference-'+uuid.uuid4().hex+'.wav'),max_frames=720000)
-                        references[segment['id']] = {'ref_audio':str(reference),'ref_text':value.get('referenceText') or value['text']}
+                        # Imported clips are explicit voice choices, not the renderer's
+                        # auto-seg:<own-id> defaults that consistent mode can replace.
+                        reference_id = 'handoff-'+uuid.uuid4().hex
+                        references[reference_id] = {'ref_audio':str(reference),'ref_text':value.get('referenceText') or value['text']}
                         if not value.get('voiceID'):
-                            segment['profile_id'] = 'auto-seg:'+segment['id']
+                            segment['profile_id'] = 'auto-seg:'+reference_id
                     segments.append(segment)
                 if references: job['segment_clones'] = references
                 source_asset = str(files[doc['source']]); audio = job.get('audio_path')
