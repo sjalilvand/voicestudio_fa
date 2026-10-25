@@ -124,3 +124,19 @@ it('labels Settings in the expanded macOS footer instead of a bare icon', () => 
     platform.mac = false;
   }
 });
+
+it('shows the brand mark on the compact rail on macOS too, with the expand icon behind it', () => {
+  platform.mac = true;
+  sidebar.compact = true;
+  try {
+    const { container } = render(<WorkspaceSidebar />);
+    const toggle = screen.getByRole('button', { name: 'clone.toggle_sidebar' });
+    expect(toggle.querySelector('[data-slot="rail-brand"]')).not.toBeNull();
+    expect(toggle.querySelector('svg')).not.toBeNull();
+    fireEvent.click(toggle);
+    expect(sidebar.setOpen).toHaveBeenCalledWith(true);
+    expect(container).toBeTruthy();
+  } finally {
+    platform.mac = false;
+  }
+});
