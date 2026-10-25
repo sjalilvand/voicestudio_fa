@@ -624,7 +624,9 @@
     "keep_reference": "현재 참조 오디오 유지",
     "new_reference": "새 참조 오디오: {{name}}",
     "replace_reference_hint": "저장하면 이 음성의 참조 샘플이 교체됩니다. 새 클립이 다른 화자의 것일 수 있으므로 고정된 테이크와 본인 음성 인증이 초기화됩니다. 새 클립을 자동으로 받아쓰려면 대본을 비워 두세요.",
-    "cannotCloneUseDesign": "이 모델은 음성을 복제할 수 없습니다. 음성 디자인에서 음성을 설명하거나 복제를 지원하는 모델을 선택하세요."
+    "cannotCloneUseDesign": "이 모델은 음성을 복제할 수 없습니다. 음성 디자인에서 음성을 설명하거나 복제를 지원하는 모델을 선택하세요.",
+    "savedTab": "저장됨",
+    "recentsTab": "최근"
   },
   "designWorkspace": {
     "title": "디자인",
