@@ -205,9 +205,19 @@ class TTSInputError(ValueError):
 
 
 def _lease_render(method):
-    """Keep engines resident for every render caller, including dub and batch."""
+    """Keep engines resident for every render caller, including dub and batch.
+
+    Also the one place a regional variant name ("Portuguese (Portugal)",
+    #3143) becomes the base language engines know: the bundled vocabulary and
+    every adapter have a single Portuguese, so passing the variant through
+    would fail their lookups. The dialect itself is applied before synthesis
+    (text normalization) and reported to the UI by ``language_dialects``.
+    """
     @functools.wraps(method)
     def render(instance, *args, **kwargs):
+        if "language" in kwargs:
+            from core.language_variants import base_language
+            kwargs["language"] = base_language(kwargs["language"])
         with engine_in_use(instance):
             return method(instance, *args, **kwargs)
     return render
@@ -339,8 +349,10 @@ class TTSBackend(ABC):
             return None
         from omnivoice.utils.lang_map import LANG_NAME_TO_ID
 
+        from core.language_variants import VARIANT_CODES
+
         # Reuse the same complete, bundled mapping as the language picker.
-        aliases = {"mandarin": "zh", "arabic": "ar", "tagalog": "tl"}
+        aliases = {"mandarin": "zh", "arabic": "ar", "tagalog": "tl", **VARIANT_CODES}
         if value in aliases:
             return aliases[value]
         if value in LANG_NAME_TO_ID:
@@ -423,6 +435,13 @@ class TTSBackend(ABC):
             label = self.language_display_names.get(code)
             out.append(f"{code} ({label})" if label else code)
         return out
+
+    #: Regional dialects whose accent this engine renders by itself (BCP-47,
+    #: e.g. ``("pt-BR",)``), #3143. Empty — the default and every bundled
+    #: engine today — means the engine has one model per language, so a
+    #: regional pick changes spelling and number words but the accent follows
+    #: the reference voice. Read through :func:`rendered_dialects`.
+    rendered_dialects: tuple[str, ...] = ()
 
     #: Whether this engine already emits mastered, studio-grade audio and should
     #: therefore skip the shared apply_mastering() chain (highpass + Compressor,
@@ -2442,7 +2461,15 @@ def resolve_kokoro_lang_code(language: str) -> str:
     """
     from mlx_audio.tts.models.kokoro.pipeline import ALIASES, LANG_CODES
 
-    key = language.strip().lower()
+    from core.language_variants import base_language, split_target
+
+    # Regional variants (#3143): "Portuguese (Portugal)" resolves like its base
+    # name, and a region tag Kokoro's own table lacks ("pt-pt") falls back to
+    # the base code. Text normalization has already applied the dialect.
+    key = str(base_language(language)).strip().lower()
+    base, region = split_target(key)
+    if region and key not in ALIASES and key not in LANG_CODES:
+        key = str(base)
     iso = _KOKORO_ISO_BY_FULL_NAME.get(key, key)
     code = ALIASES.get(iso, iso)
     if code not in LANG_CODES:
@@ -3910,23 +3937,24 @@ def language_options(backend_id: str) -> Optional[list[str]]:
     get_active_tts_backend here: discovery must not switch or unload an engine.
     """
     from omnivoice.utils.lang_map import LANG_NAME_TO_ID
+    from core.language_variants import with_variant_names
 
     backend = None
     try:
         # The native OmniVoice adapters use this exact vocabulary at inference.
         if backend_id in {"omnivoice", "omnivoice-subprocess", "omnivoice-gguf"}:
-            return sorted(LANG_NAME_TO_ID)
+            return with_variant_names(sorted(LANG_NAME_TO_ID))
         backend = get_backend_class(backend_id)()
         if backend_id == "mlx-audio" and backend.model_identity() == backend.CURATED_MODELS.get("kokoro"):
-            return _installed_kokoro_language_options()
+            return with_variant_names(_installed_kokoro_language_options())
         declared = backend.supported_languages
         if not declared or "multi" in declared:
             return None
         codes = {backend._normalize_language_code(code) for code in declared}
         candidates = set(LANG_NAME_TO_ID) | {"mandarin", "arabic", "tagalog"}
         candidates.update(name.lower() for name in backend.language_display_names.values())
-        return sorted(name for name in candidates
-                      if backend._normalize_language_code(name) in codes)
+        return with_variant_names(sorted(name for name in candidates
+                                         if backend._normalize_language_code(name) in codes))
     except Exception:  # Optional metadata must not take down discovery.
         logger.debug("Could not resolve language options for %s", backend_id, exc_info=True)
         return None
@@ -3942,6 +3970,25 @@ def language_options(backend_id: str) -> Optional[list[str]]:
                 logger.debug("Could not clean up language metadata instance", exc_info=True)
             finally:
                 atexit.unregister(shutdown)
+
+
+def rendered_dialects(backend_id: str) -> list[str]:
+    """Dialects the engine renders with their own accent (#3143).
+
+    Kokoro's only Portuguese voice set is Brazilian (``p`` = ``pt-br`` in its
+    own table), so it declares pt-BR; a pt-PT pick there still sounds
+    Brazilian and the UI says so. Never loads weights.
+    """
+    try:
+        cls = get_backend_class(backend_id)
+        if backend_id == "mlx-audio":
+            backend = cls()
+            if backend.model_identity() == backend.CURATED_MODELS.get("kokoro"):
+                return ["pt-BR"]
+        return list(getattr(cls, "rendered_dialects", ()) or ())
+    except Exception:  # Optional metadata must not take down discovery.
+        logger.debug("Could not resolve dialects for %s", backend_id, exc_info=True)
+        return []
 
 
 # The language tables shipped by the mlx-audio release this app is tested with

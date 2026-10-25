@@ -912,6 +912,7 @@
     "mirror_failed": "Mô phỏng cách thể hiện thất bại: {{message}}",
     "cinematic_no_llm": "Chất lượng này cần nhà cung cấp LLM. Hãy cấu hình trong Nhà cung cấp LLM để tiếp tục.",
     "dialect_not_applied": "Phương ngữ đã chọn cần LLM để áp dụng — chuyển Engine sang OpenAI/Ollama hoặc chọn chất lượng Cinematic.",
+    "dialect_used": "Công cụ này chỉ dịch sang {{variant}}. Hãy dùng công cụ dịch LLM để áp dụng phương ngữ đã chọn.",
     "translate_errors": "{{errorCount}}/{{totalCount}} phân đoạn không thành công: {{firstError}}",
     "translate_degraded": "Đã dịch toàn bộ {{totalCount}} phân đoạn — {{count}} dùng bản dịch thô vì bước trau chuốt bị bỏ qua ({{reason}})",
     "translated_segments": "Đã dịch {{count}} phân đoạn → {{lang}}",
@@ -3446,6 +3447,8 @@
     "hint": "Thường nên giữ giá trị mặc định. Độ dẫn hướng điều chỉnh ảnh hưởng của lời nhắc; các nút khác thay đổi cách mô hình tạo âm thanh. Mỗi lần chỉ đổi một mục."
   },
   "languagePicker": {
+    "dialectFollowsVoice": "{{model}} chỉ có một mô hình {{language}}, nên giọng vùng miền theo giọng tham chiếu.",
+    "dialectUsed": "{{model}} chỉ nói {{variant}}.",
     "auto": "Tự động",
     "unavailable": "Không hỗ trợ",
     "unsupportedBy": "{{model}} không hỗ trợ",

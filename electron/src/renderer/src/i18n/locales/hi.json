@@ -912,6 +912,7 @@
     "mirror_failed": "अदायगी दोहराना विफल: {{message}}",
     "cinematic_no_llm": "इस गुणवत्ता के लिए LLM प्रदाता चाहिए। जारी रखने के लिए LLM प्रदाता में इसे कॉन्फ़िगर करें।",
     "dialect_not_applied": "चुनी गई बोली लागू करने के लिए LLM चाहिए — इंजन को OpenAI/Ollama पर बदलें या Cinematic गुणवत्ता चुनें।",
+    "dialect_used": "यह इंजन केवल {{variant}} में लिखता है। चुनी गई बोली लागू करने के लिए LLM अनुवाद इंजन का उपयोग करें।",
     "translate_errors": "{{errorCount}}/{{totalCount}} खंड विफल: {{firstError}}",
     "translate_degraded": "सभी {{totalCount}} खंड अनुवादित — {{count}} में सादा अनुवाद उपयोग हुआ क्योंकि परिष्करण चरण छोड़ दिया गया ({{reason}})",
     "translated_segments": "अनूदित {{count}} खंड → {{lang}}",
@@ -3446,6 +3447,8 @@
     "hint": "आमतौर पर डिफ़ॉल्ट मान रखें। मार्गदर्शन निर्देश का प्रभाव तय करता है; बाकी नियंत्रण मॉडल के ध्वनि बनाने के तरीके को बदलते हैं। एक बार में एक ही बदलें।"
   },
   "languagePicker": {
+    "dialectFollowsVoice": "{{model}} में {{language}} का एक ही मॉडल है, इसलिए लहजा संदर्भ आवाज़ के अनुसार होता है।",
+    "dialectUsed": "{{model}} केवल {{variant}} बोलता है।",
     "auto": "स्वतः",
     "unavailable": "समर्थित नहीं",
     "unsupportedBy": "{{model}} द्वारा समर्थित नहीं",

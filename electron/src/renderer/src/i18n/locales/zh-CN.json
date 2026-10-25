@@ -926,6 +926,7 @@
     "mirror_failed": "还原演绎失败：{{message}}",
     "cinematic_no_llm": "此质量需要 LLM 提供商。请在“LLM 提供商”中配置后继续。",
     "dialect_not_applied": "所选方言需要 LLM 才能生效——请将翻译引擎切换为 OpenAI/Ollama，或在 设置 → 凭证 → LLM 端点 中配置 LLM。",
+    "dialect_used": "此引擎只能输出{{variant}}。如需应用所选方言，请使用 LLM 翻译引擎。",
     "translate_errors": "{{errorCount}}/{{totalCount}} 段失败：{{firstError}}",
     "translate_degraded": "全部 {{totalCount}} 个片段已翻译 — 其中 {{count}} 个因润色步骤被跳过而使用直译（{{reason}}）",
     "translated_segments": "已翻译 {{count}} 个片段 → {{lang}}",
@@ -3446,6 +3447,8 @@
     "hint": "通常建议保留默认值。引导强度控制提示词的影响，其他选项改变模型构建声音的方式。每次只调整一项。"
   },
   "languagePicker": {
+    "dialectFollowsVoice": "{{model}} 只有一个{{language}}模型，因此口音取决于参考音色。",
+    "dialectUsed": "{{model}} 仅支持{{variant}}。",
     "auto": "自动",
     "unavailable": "不支持",
     "unsupportedBy": "{{model}} 不支持",
