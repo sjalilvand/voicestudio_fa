@@ -31,6 +31,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -79,7 +80,7 @@ object HomeContributors {
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(4.dp), verticalAlignment=Alignment.CenterVertically) {
-            Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+            Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()).testTag("home.other-contributors"), horizontalArrangement=Arrangement.spacedBy(4.dp)) {
                 HomeContributors.logins.filterNot {it in HomeContributors.coreMaintainers}.forEach {login ->
                     Contributor(login) { uri.openUri("https://github.com/$login") }
                 }
@@ -98,14 +99,14 @@ object HomeContributors {
         else -> "GitHub · @$login"
     }
     val maintainerRole = if(prominent) tr(card?.role ?: "homeUi.coreMaintainer") else null
-    Box(Modifier.heightIn(min=48.dp).widthIn(min=48.dp)
+    Box(Modifier.heightIn(min=48.dp).width(48.dp)
         .clip(MaterialTheme.shapes.small)
         .clickable(role=Role.Button,onClickLabel=label,onClick=click)
         .testTag("home.contributor.$login")
         .semantics {contentDescription=label;if(maintainerRole!=null) stateDescription=maintainerRole},contentAlignment=Alignment.Center) {
         if(all) Box(Modifier.clip(CircleShape).background(role("surfaceRaised")).border(1.dp,role("border"),CircleShape)
             .padding(horizontal=8.dp,vertical=4.dp),contentAlignment=Alignment.Center) {
-            Text(tr("homeUi.all"),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.SemiBold)
+            Text(tr("homeUi.all"),style=MaterialTheme.typography.labelSmall,fontWeight=FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
         } else Box(Modifier.size(if(prominent) 44.dp else 22.dp)) {
             ContributorPortrait(login,if(prominent) 44.dp else 22.dp)
             if(prominent) Box(Modifier.align(Alignment.BottomEnd).size(16.dp).clip(CircleShape)

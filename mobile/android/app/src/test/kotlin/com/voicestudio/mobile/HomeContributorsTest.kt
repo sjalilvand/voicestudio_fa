@@ -23,23 +23,35 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.GraphicsMode
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk=[34],qualifiers="w320dp-h640dp")
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 class HomeContributorsTest {
     @get:Rule val compose=createComposeRule()
     private val app get()=ApplicationProvider.getApplicationContext<Application>()
     private val opened=mutableListOf<String>()
     private val links=object: UriHandler {override fun openUri(uri: String) {opened+=uri}}
-    @Composable private fun Content(dark: Boolean=true,large: Boolean=false,cluster: Boolean=false,hero: Boolean=false) {
+    @Composable private fun Content(dark: Boolean=true,large: Boolean=false,cluster: Boolean=false,hero: Boolean=false,locale: String="en") {
         val density=LocalDensity.current
-        CompositionLocalProvider(LocalL10n provides L10n.load(app,"en"),LocalUriHandler provides links,
+        CompositionLocalProvider(LocalL10n provides L10n.load(app,locale),LocalUriHandler provides links,
             LocalDensity provides Density(density.density,if(large) 2f else 1f)) {
             VoiceStudioTheme(ThemePreferences(mode=if(dark) "dark" else "light")) {
                 if(hero) HomeHero(Modifier.padding(12.dp)) else if(cluster) ContributorCluster() else ContributorStrip()
             }
         }
+    }
+    @Test fun translatedAllButtonKeepsContributorTouchTargetsVisibleAtLargeTextSize() {
+        compose.setContent {Content(large=true,locale="id")}
+        val contributor=compose.onNodeWithTag("home.contributor.kevin9327")
+        val visible=compose.onNodeWithTag("home.other-contributors").fetchSemanticsNode().boundsInRoot
+        assertTrue(visible.width>=with(compose.density) {48.dp.toPx()})
+        contributor.performClick()
+        assertEquals("https://github.com/kevin9327",opened.last())
+        compose.onNodeWithTag("home.contributor.all").assertIsDisplayed().performClick()
+        assertEquals("${HomeContributors.REPOSITORY}/graphs/contributors",opened.last())
     }
     @Test fun homeHeroKeepsTextAndPortraitsParallelAndCompact() {
         compose.setContent {Content(hero=true)}
