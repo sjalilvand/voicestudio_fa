@@ -63,7 +63,8 @@ try {
                   'japanese',
                   'spanish',
                   'italian',
-                  'portuguese',
+                  'portuguese (brazil)',
+                  'portuguese (portugal)',
                   'korean',
                 ],
               },
@@ -110,6 +111,10 @@ try {
       'unsupported languages start collapsed',
     );
     const showAll = menu.getByRole('option', { name: strings.languagePicker.showAll, exact: true });
+    // The row ends the supported list, so narrow one-column layouts virtualize it out of view.
+    await menu.getByRole('listbox').evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+    });
     await showAll.click();
     await menu
       .getByRole('option', { name: strings.languagePicker.hideUnsupported, exact: true })

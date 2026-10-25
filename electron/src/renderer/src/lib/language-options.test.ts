@@ -66,4 +66,11 @@ it('marks regional and script variants with their primary language for grouping'
   expect(traditional.family).toBe('cmn');
   expect(simplified.familyLabel).toBeTruthy();
   expect(german.family).toBeUndefined();
+  const [brazil, portugal] = languageOptions(
+    ['Portuguese (Brazil)', 'Portuguese (Portugal)'],
+    'en',
+    'Auto',
+  );
+  expect([brazil.family, portugal.family]).toEqual(['pt', 'pt']);
+  expect(brazil.familyLabel).toBe('Portuguese');
 });
