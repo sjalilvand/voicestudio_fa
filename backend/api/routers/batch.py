@@ -362,10 +362,9 @@ async def _run_batch_pipeline_leased(job_id: str, job: dict, lease: voice_leases
         return
 
     if not source_lang:
-        raise RuntimeError(
-            "ASR did not return a detected source language. Use interactive dubbing "
-            "and select the source language, or choose an ASR model that reports it."
-        )
+        # Never guess English: translating from the wrong language produces a
+        # confident, wrong dub. Fail with a typed, actionable class instead.
+        raise failure.SourceLanguageRequiredError()
 
     # ── Engine resolution (issue #312 class) ────────────────────────────
     # Batch used to hardcode VoiceStudio regardless of the engine selected in
