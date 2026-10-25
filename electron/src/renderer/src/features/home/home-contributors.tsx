@@ -21,13 +21,13 @@ function openProfile(event: MouseEvent<HTMLAnchorElement>) {
 const MAINTAINER_CARDS: Record<
   string,
   {
-    name: string;
+    name: 'homeUi.maintainerPalash' | 'homeUi.maintainerShimul';
     role: 'homeUi.creatorCoreTeam' | 'homeUi.coreTeam';
     links: CardLink[];
   }
 > = {
   debpalash: {
-    name: 'Palash Debnath',
+    name: 'homeUi.maintainerPalash',
     role: 'homeUi.creatorCoreTeam',
     links: [
       { kind: 'website', handle: 'palash.dev', href: WEBSITE_URL },
@@ -40,7 +40,7 @@ const MAINTAINER_CARDS: Record<
     ],
   },
   velixio: {
-    name: 'Shimul Debnath',
+    name: 'homeUi.maintainerShimul',
     role: 'homeUi.coreTeam',
     links: [
       { kind: 'website', handle: 'shimul.me', href: 'https://shimul.me' },
@@ -119,7 +119,7 @@ export function HomeContributors() {
           <div className="home-contributor-identity">
             <img src={credit.avatar} alt="" width={52} height={52} />
             <div className="min-w-0">
-              <strong>{card.name}</strong>
+              <strong>{t(card.name)}</strong>
               <small>@{credit.login}</small>
               <span className="home-contributor-role">
                 <StarIcon aria-hidden="true" />
