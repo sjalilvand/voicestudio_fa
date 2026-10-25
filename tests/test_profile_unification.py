@@ -120,6 +120,92 @@ def test_design_save_drops_object_object_instruct(app_client, fake_render):
     assert profile["instruct"] == "female, young adult, high pitch"
 
 
+def test_native_voice_design_profile_keeps_full_description(app_client):
+    """Saving a VoxCPM2 voice cannot silently collapse its prose to tags."""
+    from api.routers.generation import _resolve_profile_conditioning
+    from core.db import db_conn
+    from services.voice_design_profiles import profile_instruct
+
+    client, _ = app_client
+    raw = {
+        "description": "A soft-spoken Japanese narrator, a little breathy and introspective.",
+        "picks": {"Pitch": "low pitch"},
+    }
+    r = client.post("/profiles", data={
+        "name": "Native Designer", "kind": "design", "engine": "voxcpm2",
+        "vd_states": json.dumps(_VD), "design_recipe": json.dumps(raw),
+    })
+    assert r.status_code == 200, r.text
+    profile = r.json()
+    assert profile["ref_audio_path"] is None  # no accidental OmniVoice rendering
+    assert profile["instruct"] == "female, young adult, high pitch"
+    stored = json.loads(profile["design_recipe"])
+    assert stored["description"] == raw["description"]
+    assert stored["engine"] == "voxcpm2"
+    assert stored["picks"] == raw["picks"]
+
+    with db_conn() as conn:
+        row = conn.execute("SELECT * FROM voice_profiles WHERE id=?", (profile["id"],)).fetchone()
+    assert profile_instruct(row, "omnivoice") == "female, young adult, high pitch"
+    assert profile_instruct(row, "voxcpm2") == raw["description"] + ", low pitch"
+    cond = _resolve_profile_conditioning(row, engine_id="voxcpm2")
+    assert cond["instruct"] == raw["description"] + ", low pitch"
+    assert cond["ref_audio_path"] is None
+    # The Design workspace sends this same instruction; it must not be
+    # mistaken for a different identity and clear the saved profile link.
+    assert not _resolve_profile_conditioning(
+        row, engine_id="voxcpm2", instruct=cond["instruct"], seed=profile["seed"]
+    )["diverged"]
+
+
+def test_native_profile_preview_uses_its_authoring_engine(app_client, monkeypatch):
+    """A saved VoxCPM2 voice must not silently render an OmniVoice sample."""
+    client, _ = app_client
+    import api.routers.profiles as profiles_router
+
+    recipe = {"description": "a soft warm narrator", "picks": {}}
+    created = client.post("/profiles", data={
+        "name": "Native Preview", "kind": "design", "engine": "voxcpm2",
+        "vd_states": json.dumps(_VD), "design_recipe": json.dumps(recipe),
+    })
+    assert created.status_code == 200, created.text
+    profile_id = created.json()["id"]
+    called = []
+
+    async def fake_render(row, path, engine_id):
+        import wave
+        called.append((row["design_recipe"], engine_id))
+        with wave.open(str(path), "wb") as wav:
+            wav.setnchannels(1)
+            wav.setsampwidth(2)
+            wav.setframerate(24000)
+            wav.writeframes(b"\\x01\\x00" * 24000)
+
+    monkeypatch.setattr(profiles_router, "_render_native_design_sample", fake_render)
+    audio = client.get(f"/profiles/{profile_id}/audio")
+    assert audio.status_code == 200, audio.text[:300] if audio.status_code != 200 else ""
+    assert audio.headers["content-type"].startswith("audio/")
+    assert len(called) == 1 and called[0][1] == "voxcpm2"
+    assert json.loads(called[0][0])["description"] == recipe["description"]
+    profile = client.get(f"/profiles/{profile_id}").json()
+    assert profile["ref_audio_path"] == profile_id + ".wav"
+    assert client.get(f"/profiles/{profile_id}/audio").status_code == 200
+    assert len(called) == 1
+
+
+def test_native_profile_rejects_invalid_recipe_and_reference_only_engine(app_client):
+    client, _ = app_client
+    data = {
+        "name": "Invalid", "kind": "design", "engine": "voxcpm2",
+        "vd_states": json.dumps(_VD),
+    }
+    assert client.post("/profiles", data={**data, "design_recipe": "{broken"}).status_code == 422
+    assert client.post("/profiles", data={
+        **data, "engine": "indextts2",
+        "design_recipe": json.dumps({"description": "low smoky voice", "picks": {}}),
+    }).status_code == 422
+
+
 def test_design_rejects_malformed_vd_states(app_client):
     client, _ = app_client
     r = client.post(
