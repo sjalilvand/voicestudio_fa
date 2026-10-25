@@ -375,7 +375,8 @@
     "inactive": "Inativo",
     "translation": "Tradução",
     "diarisation": "Diarização",
-    "localDevice": "Dispositivo local"
+    "localDevice": "Dispositivo local",
+    "localShort": "Local"
   },
   "paneActions": {
     "collapse": "Recolher painel",

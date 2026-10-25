@@ -373,7 +373,8 @@
     "inactive": "Không hoạt động",
     "translation": "Dịch thuật",
     "diarisation": "Phân tách người nói",
-    "localDevice": "Thiết bị cục bộ"
+    "localDevice": "Thiết bị cục bộ",
+    "localShort": "Cục bộ"
   },
   "paneActions": {
     "collapse": "Thu gọn bảng",

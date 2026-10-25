@@ -373,7 +373,8 @@
     "inactive": "未啟用",
     "translation": "翻譯",
     "diarisation": "說話者分離",
-    "localDevice": "本機裝置"
+    "localDevice": "本機裝置",
+    "localShort": "本機"
   },
   "paneActions": {
     "collapse": "收合面板",

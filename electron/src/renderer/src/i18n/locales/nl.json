@@ -373,7 +373,8 @@
     "inactive": "Inactief",
     "translation": "Vertaling",
     "diarisation": "Diarisatie",
-    "localDevice": "Lokaal apparaat"
+    "localDevice": "Lokaal apparaat",
+    "localShort": "Lokaal"
   },
   "paneActions": {
     "collapse": "Paneel inklappen",

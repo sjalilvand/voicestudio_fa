@@ -377,7 +377,8 @@
     "inactive": "Nieaktywne",
     "translation": "Tłumaczenie",
     "diarisation": "Diaryzacja",
-    "localDevice": "Urządzenie lokalne"
+    "localDevice": "Urządzenie lokalne",
+    "localShort": "Lokalnie"
   },
   "paneActions": {
     "collapse": "Zwiń panel",

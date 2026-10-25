@@ -373,7 +373,8 @@
     "inactive": "Etkin değil",
     "translation": "Çeviri",
     "diarisation": "Konuşmacı ayrıştırma",
-    "localDevice": "Yerel cihaz"
+    "localDevice": "Yerel cihaz",
+    "localShort": "Yerel"
   },
   "paneActions": {
     "collapse": "Paneli daralt",

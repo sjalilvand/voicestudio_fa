@@ -373,7 +373,8 @@
     "inactive": "無効",
     "translation": "翻訳",
     "diarisation": "話者分離",
-    "localDevice": "ローカルデバイス"
+    "localDevice": "ローカルデバイス",
+    "localShort": "ローカル"
   },
   "paneActions": {
     "collapse": "パネルを折りたたむ",

@@ -377,7 +377,8 @@
     "inactive": "Неактивно",
     "translation": "Переклад",
     "diarisation": "Діаризація",
-    "localDevice": "Локальний пристрій"
+    "localDevice": "Локальний пристрій",
+    "localShort": "Локально"
   },
   "paneActions": {
     "collapse": "Згорнути панель",
