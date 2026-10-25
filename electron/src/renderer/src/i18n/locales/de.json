@@ -388,7 +388,9 @@
     "select": "Auswählen",
     "selected": "Ausgewählt",
     "change": "Engine wechseln",
-    "failed": "Die Engine konnte nicht gewechselt werden. Erneut versuchen."
+    "failed": "Die Engine konnte nicht gewechselt werden. Erneut versuchen.",
+    "empty": "Für diese Kategorie gibt es noch keine Engines oder Modelle.",
+    "modelsInstalled": "{{installed}} von {{count}} installiert"
   },
   "modelMaintenance": {
     "download": "Herunterladen",
@@ -3584,6 +3586,10 @@
     "detailsFailed": "Die Lizenzdetails konnten nicht geladen werden. Schließe diesen Dialog und versuche es erneut."
   },
   "mobile": {
+    "home": {
+      "subtitle": "Deine quelloffene, vollständig lokale Alternative zu ElevenLabs — Stimmen klonen und gestalten, Videos synchronisieren, diktieren, transkribieren und Hörbücher in 646 Sprachen erstellen.",
+      "brought_by": "Bereitgestellt von"
+    },
     "tabs": {
       "speak": "Sprechen",
       "voices": "Stimmen",

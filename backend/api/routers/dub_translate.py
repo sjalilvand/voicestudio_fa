@@ -76,6 +76,8 @@ FLORES_CODES = {
     "tg": "tgk_Cyrl", "tk": "tuk_Latn", "tl": "tgl_Latn", "fil": "tgl_Latn",
     "tt": "tat_Cyrl", "uz": "uzn_Latn", "xh": "xho_Latn", "yi": "ydd_Hebr",
     "yo": "yor_Latn", "zu": "zul_Latn",
+    # Translation target only: Whisper cannot transcribe Uyghur (#2810).
+    "ug": "uig_Arab",
 }
 
 
@@ -107,7 +109,7 @@ LANG_NAMES = {
     "ko": "Korean", "zh": "Chinese (Simplified)", "zh-CN": "Chinese (Simplified)", "cmn-Hans": "Chinese (Simplified)",
     "ar": "Arabic", "hi": "Hindi", "tr": "Turkish", "pl": "Polish",
     "nl": "Dutch", "sv": "Swedish", "th": "Thai", "vi": "Vietnamese",
-    "id": "Indonesian", "uk": "Ukrainian",
+    "id": "Indonesian", "uk": "Ukrainian", "ug": "Uyghur",
 }
 
 # Regional dialect hints (#280 item 2). Maps a BCP-47 dialect code to the

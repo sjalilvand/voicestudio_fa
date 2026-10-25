@@ -388,7 +388,9 @@
     "select": "chọn",
     "selected": "Đã chọn",
     "change": "Đổi bộ máy",
-    "failed": "Không thể đổi bộ máy. Hãy thử lại."
+    "failed": "Không thể đổi bộ máy. Hãy thử lại.",
+    "empty": "Chưa có công cụ hoặc mô hình nào cho nhóm này.",
+    "modelsInstalled": "Đã cài {{installed}}/{{count}}"
   },
   "modelMaintenance": {
     "download": "Tải xuống",
@@ -3584,6 +3586,10 @@
     "detailsFailed": "Không thể tải chi tiết giấy phép. Hãy đóng hộp thoại này và thử lại."
   },
   "mobile": {
+    "home": {
+      "subtitle": "Giải pháp thay thế ElevenLabs mã nguồn mở, chạy hoàn toàn trên máy — nhân bản và thiết kế giọng nói, lồng tiếng video, nhập liệu bằng giọng nói, phiên âm và tạo sách nói bằng 646 ngôn ngữ.",
+      "brought_by": "Được mang đến bởi"
+    },
     "tabs": {
       "speak": "Nói",
       "voices": "Giọng nói",

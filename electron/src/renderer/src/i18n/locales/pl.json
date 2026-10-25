@@ -392,7 +392,9 @@
     "select": "Wybierz",
     "selected": "Wybrano",
     "change": "Zmień silnik",
-    "failed": "Nie można zmienić silnika. Spróbuj ponownie."
+    "failed": "Nie można zmienić silnika. Spróbuj ponownie.",
+    "empty": "Brak jeszcze silników i modeli w tej kategorii.",
+    "modelsInstalled": "Zainstalowano {{installed}} z {{count}}"
   },
   "modelMaintenance": {
     "download": "Pobierz",
@@ -3588,6 +3590,10 @@
     "detailsFailed": "Nie udało się wczytać szczegółów licencji. Zamknij to okno i spróbuj ponownie."
   },
   "mobile": {
+    "home": {
+      "subtitle": "Twoja otwartoźródłowa, w pełni lokalna alternatywa dla ElevenLabs — klonuj i projektuj głosy, dubbinguj filmy, dyktuj, transkrybuj i twórz audiobooki w 646 językach.",
+      "brought_by": "Przygotowane dla Ciebie przez"
+    },
     "tabs": {
       "speak": "Mów",
       "voices": "Głosy",

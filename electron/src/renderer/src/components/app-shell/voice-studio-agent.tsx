@@ -497,6 +497,7 @@ export function VoiceStudioAgent() {
         )}
         <div className="agent-workspace-input">
           <textarea
+            dir="auto"
             aria-label={t('agentWorkspace.placeholder')}
             placeholder={t('agentWorkspace.placeholder')}
             value={conversation.draft}

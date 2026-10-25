@@ -758,7 +758,9 @@
     "select": "Select",
     "selected": "Selected",
     "change": "Change engine",
-    "failed": "Could not change the engine. Try again."
+    "failed": "Could not change the engine. Try again.",
+    "empty": "No engines or models for this family yet.",
+    "modelsInstalled": "{{installed}} of {{count}} installed"
   },
   "modelMaintenance": {
     "download": "Download",
@@ -3584,6 +3586,10 @@
     "detailsFailed": "The licence details could not be loaded. Close this dialog and try again."
   },
   "mobile": {
+    "home": {
+      "subtitle": "Open Source fully-local ElevenLabs alternative — voice cloning, voice design, video dubbing, dictation, transcription & audiobook creation in 646 languages.",
+      "brought_by": "Brought to you by"
+    },
     "tabs": {
       "speak": "Speak",
       "voices": "Voices",

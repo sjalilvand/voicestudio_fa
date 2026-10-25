@@ -1,6 +1,7 @@
 import languageCodes from '@shared/language-codes.json';
 import languageRegions from '@shared/language-regions.json';
 import { LANG_CODES } from '@shared/utils/languages';
+import { TARGET_ONLY_LANGUAGES } from './translation-targets';
 import { normalizeSearch, type SearchOption } from '@shared/components/VirtualSearchableSelect';
 import type { QueryClient } from '@tanstack/react-query';
 import type { EnginesResponse } from './api/types';
@@ -9,6 +10,7 @@ import { LANGUAGE_VARIANTS } from './language-variants';
 const codes: Record<string, string> = {
   ...languageCodes,
   ...Object.fromEntries(LANG_CODES.map((item) => [item.label.toLowerCase(), item.code])),
+  ...Object.fromEntries(TARGET_ONLY_LANGUAGES.map((item) => [item.label.toLowerCase(), item.code])),
   // #3143: regional choices carry their BCP-47 tag for names, flags and search.
   ...Object.fromEntries(
     Object.entries(LANGUAGE_VARIANTS).map(([name, variant]) => [

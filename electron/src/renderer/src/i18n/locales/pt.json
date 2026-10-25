@@ -390,7 +390,9 @@
     "select": "Selecione",
     "selected": "Selecionado",
     "change": "Alterar mecanismo",
-    "failed": "Não foi possível alterar o mecanismo. Tente novamente."
+    "failed": "Não foi possível alterar o mecanismo. Tente novamente.",
+    "empty": "Ainda não há motores nem modelos para esta categoria.",
+    "modelsInstalled": "{{installed}} de {{count}} instalados"
   },
   "modelMaintenance": {
     "download": "Baixar",
@@ -3586,6 +3588,10 @@
     "detailsFailed": "Não foi possível carregar os detalhes da licença. Feche esta janela e tente novamente."
   },
   "mobile": {
+    "home": {
+      "subtitle": "Sua alternativa ao ElevenLabs, de código aberto e totalmente local — clone e crie vozes, duble vídeos, dite, transcreva e crie audiolivros em 646 idiomas.",
+      "brought_by": "Oferecido por"
+    },
     "tabs": {
       "speak": "Falar",
       "voices": "Vozes",

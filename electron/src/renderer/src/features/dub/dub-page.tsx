@@ -108,6 +108,7 @@ import {
   variantChoice,
   withVariantChoices,
 } from '@/lib/language-variants';
+import { TRANSLATION_TARGET_LABELS, translationTargetCode } from '@/lib/translation-targets';
 import { cn } from '@/lib/utils';
 import {
   useDubSession,
@@ -156,7 +157,10 @@ import {
 
 const DEFAULT_TRANSLATION_AGENT_KEY = 'voicestudio.defaultTranslationAgent';
 const LIVE_PREVIEW_KEY = 'voicestudio.dubLivePreview';
-const targetOptions = LANG_CODES.map((item) => item.label);
+// Targets include translate-and-speak-only languages (Uyghur, #2810); the
+// source picker stays on what speech recognition can transcribe.
+const targetOptions = TRANSLATION_TARGET_LABELS;
+const sourceOptions = LANG_CODES.map((item) => item.label);
 // #3143: Brazilian and European Portuguese are separate target choices; each
 // maps to the "Portuguese" track plus its dialect.
 const targetChoices = withVariantChoices(targetOptions);
@@ -355,7 +359,7 @@ export function DubPage() {
   useLayoutEffect(() => {
     requestAnimationFrame(() => segmentVirtualizer.measure());
   }, [editingSegmentId, expandedSegmentId, segmentVirtualizer]);
-  const code = LANG_CODES.find((item) => item.label === target)?.code;
+  const code = translationTargetCode(target);
   const batchTargets = multiLangTargets(target, code || '', session.multiTargets || []);
   const agentBatchReady = Boolean(
     session.agentCli &&
@@ -1162,7 +1166,7 @@ export function DubPage() {
                   LANG_CODES.find((item) => item.code === session.sourceLanguage)?.label ||
                   t('dub.num_speakers_auto')
                 }
-                options={[t('dub.num_speakers_auto'), ...targetOptions]}
+                options={[t('dub.num_speakers_auto'), ...sourceOptions]}
                 disabled={busy || Boolean(session.recovery)}
                 onValueChange={(value) =>
                   setDubProduction({
@@ -1358,7 +1362,7 @@ export function DubPage() {
               onValueChange={(choice) => {
                 const variant = LANGUAGE_VARIANTS[choice];
                 const language = variant?.base ?? choice;
-                const selectedCode = LANG_CODES.find((item) => item.label === language)?.code;
+                const selectedCode = translationTargetCode(language);
                 setTarget(language, selectedCode);
                 if (variant) setDubTranslationOptions({ dialect: variant.dialect });
                 else if (!dialectMatchesLang(session.dialect, selectedCode))
@@ -1378,8 +1382,8 @@ export function DubPage() {
               onChange={(languages) =>
                 setDubMultiTargets(
                   languages.flatMap((language) => {
-                    const item = LANG_CODES.find((candidate) => candidate.label === language);
-                    return item ? [{ lang: item.label, code: item.code }] : [];
+                    const itemCode = translationTargetCode(language);
+                    return itemCode ? [{ lang: language, code: itemCode }] : [];
                   }),
                 )
               }
@@ -1474,6 +1478,7 @@ export function DubPage() {
                   {t('dubStyle.label')}
                 </label>
                 <textarea
+                  dir="auto"
                   id="dub-translation-instructions"
                   aria-describedby="dub-translation-instructions-help"
                   rows={4}
@@ -2374,10 +2379,10 @@ export function DubPage() {
                     options={targetOptions}
                     disabled={busy || Boolean(session.recovery)}
                     onValueChange={(language) => {
-                      const lang = LANG_CODES.find((item) => item.label === language);
-                      if (lang)
+                      const langCode = translationTargetCode(language);
+                      if (langCode)
                         editDubSegments(selectedSegmentIds, {
-                          target_lang: lang.code,
+                          target_lang: langCode,
                         });
                     }}
                   />
@@ -2488,9 +2493,7 @@ export function DubPage() {
                                 })
                               }
                             />
-                            <span>
-                              {segmentTimeLabel(segment.start)}
-                            </span>
+                            <span>{segmentTimeLabel(segment.start)}</span>
                           </div>
                           <div className="min-w-0">
                             <div className="flex min-h-6 min-w-0 items-center gap-1">
@@ -2535,6 +2538,7 @@ export function DubPage() {
                                     selectedSegmentId === segment.id && 'text-foreground/72',
                                   )}
                                   title={segment.text_original}
+                                  dir="auto"
                                 >
                                   {segment.text_original}
                                 </p>
@@ -2714,6 +2718,7 @@ export function DubPage() {
                             </div>
                             {editingSegmentId === segment.id ? (
                               <textarea
+                                dir="auto"
                                 data-segment-id={segment.id}
                                 aria-label={t('clone.text_label') + ' ' + (index + 1)}
                                 rows={1}
@@ -2773,7 +2778,9 @@ export function DubPage() {
                                   setEditingSegmentId(segment.id);
                                 }}
                               >
-                                <span className="line-clamp-2">{segment.text}</span>
+                                <span className="line-clamp-2" dir="auto">
+                                  {segment.text}
+                                </span>
                               </button>
                             )}
                             {segment.plan?.suggested_text && (
