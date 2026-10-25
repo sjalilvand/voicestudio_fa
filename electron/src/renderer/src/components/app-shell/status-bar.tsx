@@ -620,7 +620,7 @@ export function StatusBar({
             aria-label={`${deviceLabel}: ${stageText}`}
             className={cn(
               engineLinkClass,
-              'relative h-7 w-full',
+              inline ? 'relative size-8' : 'relative h-7 w-full',
               !compact && !deviceIconOnly && 'justify-start gap-2 px-2',
             )}
           />

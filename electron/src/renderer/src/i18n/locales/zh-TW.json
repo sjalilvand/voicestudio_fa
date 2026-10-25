@@ -374,7 +374,8 @@
   },
   "paneActions": {
     "collapse": "收合面板",
-    "edit": "編輯聲音檔案"
+    "edit": "編輯聲音檔案",
+    "expand": "展開窗格"
   },
   "modelSettings": {
     "models": "模型",

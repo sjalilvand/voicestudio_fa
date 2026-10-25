@@ -296,6 +296,7 @@ export function SecondarySidebar({
           title={`${t('paneActions.expand')} · ${title}`}
           aria-label={title}
           aria-expanded={false}
+          data-slot="secondary-sidebar-expand"
           onClick={() => setCollapsed(false)}
           className="group mx-1 my-2 flex min-h-0 flex-1 flex-col items-center gap-2.5 rounded-lg px-1 py-2 text-muted-foreground outline-none transition-[color,background-color,border-color] hover:bg-accent/65 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
         >
