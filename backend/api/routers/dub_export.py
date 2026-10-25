@@ -84,10 +84,14 @@ BedLevel = Annotated[float, Query(
 
 def _bed_level_tag(bed_level: float) -> str:
     """Cache-name suffix for a non-default bed level ("" at the default, so
-    caches written before #2964 keep their names)."""
+    caches written before #2964 keep their names).
+
+    Uses the exact level (``repr`` round-trips a float), so two accepted
+    levels never share a cached preview mixed at the other one.
+    """
     if bed_level == DEFAULT_BED_LEVEL:
         return ""
-    return f"_bed{round(bed_level * 100)}"
+    return "_bed" + repr(float(bed_level)).replace(".", "p").replace("+", "")
 
 
 def _unique_stamp() -> str:

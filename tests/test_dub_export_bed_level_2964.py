@@ -67,8 +67,17 @@ def test_audio_export_command_carries_the_level(monkeypatch, normalize):
 def test_default_level_keeps_existing_cache_names():
     mod = _module()
     assert mod._bed_level_tag(1.0) == ""
-    assert mod._bed_level_tag(2.0) == "_bed200"
-    assert mod._bed_level_tag(0.0) == "_bed0"
+    assert mod._bed_level_tag(2.0) == "_bed2p0"
+    assert mod._bed_level_tag(0.0) == "_bed0p0"
+
+
+def test_distinct_levels_never_share_a_preview_name():
+    """Rounding to percent made 0, 0.001, 0.002 and 0.004 one cached preview."""
+    mod = _module()
+    levels = [0.0, 0.001, 0.002, 0.004, 0.005, 1.1, 1.104, 4.0]
+    tags = [mod._bed_level_tag(level) for level in levels]
+    assert len(set(tags)) == len(levels)
+    assert all(tag.replace("_", "").replace("-", "").isalnum() for tag in tags)
 
 
 def test_mixed_audio_cache_is_per_level(tmp_path, monkeypatch):
