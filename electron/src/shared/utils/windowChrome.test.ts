@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   MAC_TRAFFIC_LIGHTS,
@@ -16,7 +17,8 @@ describe('macOS window chrome', () => {
   });
 
   it('is the only place the main process takes the light position from', () => {
-    const main = readFileSync(new URL('../../main/index.ts', import.meta.url), 'utf8');
+    // __dirname, not import.meta.url: under jsdom the latter is a Location, not a file URL.
+    const main = readFileSync(join(__dirname, '../../main/index.ts'), 'utf8');
     expect(main).toContain('trafficLightPosition: MAC_TRAFFIC_LIGHTS');
     expect(main).not.toMatch(/trafficLightPosition:\s*\{/);
   });
