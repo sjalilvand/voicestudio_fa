@@ -198,6 +198,12 @@ API (out-of-range values return 422), saved with drafts and projects, and leave
 the defaults untouched until moved. Changing one re-mixes rendered lines without
 re-synthesizing them.
 
+The backend validates `fit_options` before synthesis: `max_audio_only_rate`,
+`audio_rate_cap`, and `video_slow_cap` must be finite and at least 1;
+`gap_guard_s` must be finite and nonnegative. Invalid overrides return HTTP 422.
+Omitted or null values retain the server defaults; a zero gap guard and
+`allow_video_retime: false` remain explicit overrides.
+
 Real export verification: `tests/test_smart_fit_export.py` passes all 43 tests
 with the installed app-managed FFmpeg/ffprobe explicitly supplied. Its seven
 integration cases render synthetic video/audio through retiming and the backend
