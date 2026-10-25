@@ -638,7 +638,9 @@
     "keep_reference": "保留当前参考音频",
     "new_reference": "新参考音频：{{name}}",
     "replace_reference_hint": "保存后将替换此音色的参考样本。由于新片段可能来自其他说话人，已锁定的片段和本人声音验证会被清除。转写留空即可自动转写新片段。",
-    "cannotCloneUseDesign": "此模型无法克隆声音。请在声音设计中描述一个声音，或选择支持克隆的模型。"
+    "cannotCloneUseDesign": "此模型无法克隆声音。请在声音设计中描述一个声音，或选择支持克隆的模型。",
+    "savedTab": "已保存",
+    "recentsTab": "最近"
   },
   "designWorkspace": {
     "title": "设计",

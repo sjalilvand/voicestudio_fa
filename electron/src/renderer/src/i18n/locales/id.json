@@ -624,7 +624,9 @@
     "keep_reference": "Pertahankan referensi saat ini",
     "new_reference": "Referensi baru: {{name}}",
     "replace_reference_hint": "Menyimpan akan mengganti sampel referensi suara ini. Take yang dikunci dan verifikasi suara sendiri dihapus karena klip baru mungkin berasal dari pembicara lain. Biarkan transkrip kosong untuk mentranskripsikan klip baru secara otomatis.",
-    "cannotCloneUseDesign": "Model ini tidak bisa mengkloning suara. Deskripsikan suara di Desain suara, atau pilih model yang bisa mengkloning."
+    "cannotCloneUseDesign": "Model ini tidak bisa mengkloning suara. Deskripsikan suara di Desain suara, atau pilih model yang bisa mengkloning.",
+    "savedTab": "Tersimpan",
+    "recentsTab": "Terbaru"
   },
   "designWorkspace": {
     "title": "Desain",
