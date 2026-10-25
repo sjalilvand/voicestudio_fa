@@ -133,8 +133,12 @@ def apply_lexicon(text: str, lexicon: Optional[dict]) -> str:
     return pattern.sub(_repl, text)
 
 
-def _precedence_keys(lexicon: dict[str, str]) -> list[str]:
-    """Keys whose relative order decides what synthesis receives, in order.
+def _precedence_keys(lexicon: dict[str, str]) -> list[list[str]]:
+    """Groups of keys whose relative order decides what synthesis receives.
+
+    Each group keeps its entry order; independent groups are sorted, so
+    moving one whole group past another (which changes nothing the matcher
+    does) keeps the signature.
 
     ``_compile`` sorts longest-first and lets the later of two equal-length
     keys win, so order only matters between equal-length keys that match the
@@ -146,7 +150,7 @@ def _precedence_keys(lexicon: dict[str, str]) -> list[str]:
     by_len: dict[int, list[str]] = {}
     for key in lexicon:
         by_len.setdefault(len(key), []).append(key)
-    ordered: set[str] = set()
+    group_of: dict[str, str] = {}
     for keys in by_len.values():
         if len(keys) < 2:
             continue
@@ -158,8 +162,13 @@ def _precedence_keys(lexicon: dict[str, str]) -> list[str]:
             m = pattern.fullmatch(key)
             first = int(m.lastgroup[1:]) if m and m.lastgroup else i
             if first != i:
-                ordered.update((keys[first], key))
-    return [k for k in lexicon if k in ordered]
+                group_of[keys[first]] = keys[first]
+                group_of[key] = keys[first]
+    groups: dict[str, list[str]] = {}
+    for key in lexicon:
+        if key in group_of:
+            groups.setdefault(group_of[key], []).append(key)
+    return sorted(groups.values())
 
 
 def lexicon_signature(lexicon: Optional[dict]) -> str:

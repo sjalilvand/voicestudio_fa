@@ -76,6 +76,17 @@ def test_signature_follows_the_matchers_case_rules():
     assert lexicon_signature(a) != lexicon_signature(b)
 
 
+def test_moving_independent_variant_groups_keeps_the_signature():
+    from services.pronunciation import lexicon_signature
+
+    a = {"GIF": "jiff", "gif": "gif", "SQL": "sequel", "sql": "s q l"}
+    b = {"SQL": "sequel", "sql": "s q l", "GIF": "jiff", "gif": "gif"}
+    assert lexicon_signature(a) == lexicon_signature(b)
+    # Order inside a group still decides the winner, so it still counts.
+    c = {"gif": "gif", "GIF": "jiff", "SQL": "sequel", "sql": "s q l"}
+    assert lexicon_signature(a) != lexicon_signature(c)
+
+
 def test_save_and_load_keep_entry_order(tmp_path):
     from services.pronunciation import apply_lexicon, load_lexicon, save_lexicon
 
