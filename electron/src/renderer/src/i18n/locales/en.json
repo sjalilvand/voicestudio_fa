@@ -3013,7 +3013,8 @@
     "balanced": "Balanced",
     "quality": "Quality",
     "hint": "Applies to OmniVoice sampling and Faster-Whisper / NLLB decoding. Other engines keep their current settings.",
-    "auto": "Auto"
+    "auto": "Auto",
+    "autoHint": "Picks the best level for this computer."
   },
   "network": {
     "copied": "Copied",
