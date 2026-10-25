@@ -34,3 +34,15 @@ it('turns spoken punctuation on without needing an LLM', async () => {
   expect(put?.[0]).toBe('/api/settings/dictation-refinement');
   expect(JSON.parse(put?.[1].body)).toEqual({ spoken_punctuation: true });
 });
+it('offers Retry when the settings cannot be loaded', async () => {
+  mock.apiJson.mockRejectedValueOnce(new Error('offline'));
+  mock.apiJson.mockResolvedValue({ spoken_punctuation: false });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={client}>
+      <DictationCleanupSettings />
+    </QueryClientProvider>,
+  );
+  fireEvent.click(await screen.findByRole('button', { name: 'backend.retry' }));
+  expect(await screen.findByRole('switch', { name: 'dictation.spoken_punctuation' })).toBeEnabled();
+});

@@ -11,10 +11,20 @@ import pytest
 os.environ.setdefault("OMNIVOICE_MODEL", "test")
 os.environ.setdefault("OMNIVOICE_DISABLE_FILE_LOG", "1")
 
-from services.dictation_cleanup import (  # noqa: E402
-    join_dictation_pieces,
-    polish_dictation,
-)
+
+
+def polish_dictation(*args, **kwargs):
+    # Resolved at call time so sys.modules swaps by other tests can't leave a
+    # stale module behind.
+    from services.dictation_cleanup import polish_dictation as fn
+
+    return fn(*args, **kwargs)
+
+
+def join_dictation_pieces(pieces):
+    from services.dictation_cleanup import join_dictation_pieces as fn
+
+    return fn(pieces)
 
 
 def _p(text, language=None, spoken=False):
@@ -205,6 +215,11 @@ def test_explicit_language_beats_all_caps_english_guess():
     assert _p("ER IST HIER", "de") == "Er ist hier."
     # No language (or "auto") from an English streaming model: English rules.
     assert _p("UM I THINK SO", "auto") == "I think so."
+
+
+def test_spoken_commands_skip_known_non_english_text():
+    assert _p("le deux colon", "fr", spoken=True) == "Le deux colon."
+    assert _p("hello comma world", None, spoken=True) == "Hello, world."
 
 
 def test_platform_stream_polisher_keeps_plain_polish():

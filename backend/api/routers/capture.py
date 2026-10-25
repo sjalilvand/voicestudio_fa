@@ -292,14 +292,19 @@ async def transcribe_audio(
         # dictation socket (capture_ws) does, so the widget's POST fallback and
         # MCP/CLI callers get the same typed-looking result the WS returns —
         # not the raw "...test" the REST path used to leak. Segments stay raw
-        # (their timings/verbatim recognition are the contract). The same
-        # dictation cleanup (hesitations, stutters, spacing, optional spoken
-        # punctuation) runs first, so both transports type identical text.
-        from services.dictation_cleanup import polish_dictation
+        # (their timings/verbatim recognition are the contract). Hotkey
+        # dictation callers (dictation=true) also get the dictation cleanup
+        # (hesitations, stutters, spacing, optional spoken punctuation) the
+        # socket applies; file transcription, MCP/CLI and voice-clone
+        # reference transcripts keep the words that were spoken.
         from services.text_polish import polish_text
-        full_text = await asyncio.to_thread(
-            polish_dictation, full_text, result.get("language") or language,
-        )
+        if _truthy(dictation) and requested_mode != "reference":
+            from services.dictation_cleanup import polish_dictation
+            full_text = await asyncio.to_thread(
+                polish_dictation, full_text, result.get("language") or language,
+            )
+        else:
+            full_text = polish_text(full_text)
 
         # Calculate audio duration from segments if available. A segment whose
         # timing the engine could not determine carries end=None (sherpa's

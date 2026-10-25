@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiJson } from '@/lib/api/client';
+import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { SettingsSection, SettingsRow } from './settings-layout';
 
@@ -39,6 +40,19 @@ export function DictationCleanupSettings() {
       setBusy(false);
     }
   };
+  if (query.isError)
+    return (
+      <SettingsSection title={t('dictation.cleanup_title')}>
+        <p role="alert" className="p-4 text-sm text-destructive">
+          {t('common.error')}
+        </p>
+        <div className="px-4 pb-4">
+          <Button variant="outline" onClick={() => void query.refetch()}>
+            {t('backend.retry')}
+          </Button>
+        </div>
+      </SettingsSection>
+    );
   if (!query.data) return null;
   return (
     <SettingsSection title={t('dictation.cleanup_title')}>

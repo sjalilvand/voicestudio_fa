@@ -169,7 +169,9 @@ def _clean(text: str, language: str | None, spoken_punctuation: bool) -> tuple[s
     # All-caps output comes from the English streaming models, but an explicit
     # language always wins: "UM CARRO" in Portuguese keeps its "um".
     english = _is_english(language) or (decased and not _language_given(language))
-    if spoken_punctuation:
+    # The command words are English: never rewrite text known to be another
+    # language ("colon" in French dictation stays a word).
+    if spoken_punctuation and (english or not _language_given(language)):
         out = _apply_commands(out)
     out = _remove_fillers(out, english)
     if english:
