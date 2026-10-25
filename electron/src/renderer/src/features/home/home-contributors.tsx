@@ -21,13 +21,13 @@ function openProfile(event: MouseEvent<HTMLAnchorElement>) {
 const MAINTAINER_CARDS: Record<
   string,
   {
-    name: string;
+    name: 'homeUi.maintainerPalash' | 'homeUi.maintainerShimul';
     role: 'homeUi.creatorCoreTeam' | 'homeUi.coreTeam';
     links: CardLink[];
   }
 > = {
   debpalash: {
-    name: 'Palash',
+    name: 'homeUi.maintainerPalash',
     role: 'homeUi.creatorCoreTeam',
     links: [
       { kind: 'website', handle: 'palash.dev', href: WEBSITE_URL },
@@ -40,9 +40,10 @@ const MAINTAINER_CARDS: Record<
     ],
   },
   velixio: {
-    name: 'Velixio',
+    name: 'homeUi.maintainerShimul',
     role: 'homeUi.coreTeam',
     links: [
+      { kind: 'website', handle: 'shimul.me', href: 'https://shimul.me' },
       {
         kind: 'github',
         handle: '@velixio',
@@ -113,43 +114,53 @@ export function HomeContributors() {
           className="home-contributor-popup"
           aria-label={`@${credit.login}`}
         >
+          {/* Banner tinted from the theme's primary colour, so the card follows light and dark themes. */}
+          <div className="home-contributor-banner" aria-hidden="true" />
           <div className="home-contributor-identity">
-            <img src={credit.avatar} alt="" width={40} height={40} />
-            <div>
-              <strong>{card.name}</strong>
-              <small>{t(card.role)}</small>
+            <img src={credit.avatar} alt="" width={52} height={52} />
+            <div className="min-w-0">
+              <strong>{t(card.name)}</strong>
+              <small>@{credit.login}</small>
+              <span className="home-contributor-role">
+                <StarIcon aria-hidden="true" />
+                {t(card.role)}
+              </span>
             </div>
           </div>
-          {card.links.map(({ kind, handle, href }) => {
-            const label =
-              kind === 'website' ? t('homeUi.website') : kind === 'github' ? 'GitHub' : 'X';
-            const KindIcon =
-              kind === 'website' ? GlobeIcon : kind === 'github' ? GitHubIcon : XLogoIcon;
-            return (
-              <a
-                key={kind}
-                data-kind={kind}
-                aria-label={`${label} ${handle}`}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={openProfile}
-              >
-                <KindIcon className="home-contributor-link-icon" aria-hidden="true" />
-                <span className="min-w-0 flex-1">
-                  <strong>{label}</strong>
-                  <small className="truncate">{handle}</small>
-                </span>
-                <span className="home-contributor-follow">
-                  {kind === 'website' ? (
-                    <ArrowUpRightIcon className="size-3.5" aria-hidden="true" />
-                  ) : (
-                    t('homeUi.follow')
-                  )}
-                </span>
-              </a>
-            );
-          })}
+          <div className="home-contributor-links">
+            {card.links.map(({ kind, handle, href }) => {
+              const label =
+                kind === 'website' ? t('homeUi.website') : kind === 'github' ? 'GitHub' : 'X';
+              const KindIcon =
+                kind === 'website' ? GlobeIcon : kind === 'github' ? GitHubIcon : XLogoIcon;
+              return (
+                <a
+                  key={kind}
+                  data-kind={kind}
+                  aria-label={`${label} ${handle}`}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={openProfile}
+                >
+                  <span className="home-contributor-link-icon">
+                    <KindIcon aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <strong>{label}</strong>
+                    <small className="truncate">{handle}</small>
+                  </span>
+                  <span className="home-contributor-follow">
+                    {kind === 'website' ? (
+                      <ArrowUpRightIcon className="size-3.5" aria-hidden="true" />
+                    ) : (
+                      t('homeUi.follow')
+                    )}
+                  </span>
+                </a>
+              );
+            })}
+          </div>
         </PopoverContent>
       </Popover>
     );

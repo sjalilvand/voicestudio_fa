@@ -643,6 +643,27 @@ export function StatusBar({
       {deviceContent}
     </Popover>
   );
+  // Status dot, chip and device name: the readable form, used wherever there is room for text.
+  const labeledDevicePopover = (
+    <Popover open={deviceOpen} onOpenChange={setDeviceOpen}>
+      <PopoverTrigger
+        render={
+          <button
+            type="button"
+            aria-label={`${deviceLabel}: ${stageText}`}
+            className="group/status flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1 text-left outline-none transition-[background-color,box-shadow,backdrop-filter] duration-150 hover:bg-sidebar-accent/65 hover:backdrop-blur-xl hover:shadow-[inset_0_1px_0_rgb(255_255_255/8%),0_5px_14px_rgb(0_0_0/10%)] hover:ring-1 hover:ring-inset hover:ring-sidebar-border/60 focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        }
+      >
+        <span className={cn('size-1.5 shrink-0 rounded-full', stageDot)} aria-hidden="true" />
+        <CpuIcon className="size-3.5 shrink-0" aria-hidden="true" />
+        <span className="min-w-0 flex-1 truncate" role="status">
+          {deviceLabel}
+        </span>
+      </PopoverTrigger>
+      {deviceContent}
+    </Popover>
+  );
   if (compact) {
     return (
       <footer
@@ -659,32 +680,12 @@ export function StatusBar({
   return (
     <footer className="@container/engines max-h-[55dvh] w-full min-w-0 max-w-full overflow-y-auto overscroll-contain border-t border-border/50 px-3 py-1.5 text-[length:var(--text-caption)] text-muted-foreground">
       <div>
-        {!footerLeading && (
-          <div className="flex items-center gap-0.5">
-            <Popover open={deviceOpen} onOpenChange={setDeviceOpen}>
-              <PopoverTrigger
-                render={
-                  <button
-                    type="button"
-                    aria-label={`${deviceLabel}: ${stageText}`}
-                    className="group/status flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1 text-left outline-none transition-[background-color,box-shadow,backdrop-filter] duration-150 hover:bg-sidebar-accent/65 hover:backdrop-blur-xl hover:shadow-[inset_0_1px_0_rgb(255_255_255/8%),0_5px_14px_rgb(0_0_0/10%)] hover:ring-1 hover:ring-inset hover:ring-sidebar-border/60 focus-visible:ring-2 focus-visible:ring-ring"
-                  />
-                }
-              >
-                <span
-                  className={cn('size-1.5 shrink-0 rounded-full', stageDot)}
-                  aria-hidden="true"
-                />
-                <CpuIcon className="size-3.5 shrink-0" aria-hidden="true" />
-                <span className="min-w-0 flex-1 truncate" role="status">
-                  {deviceLabel}
-                </span>
-              </PopoverTrigger>
-              {deviceContent}
-            </Popover>
-            {level !== 'simple' && viewControl}
-          </div>
-        )}
+        {/* The device keeps its own row on every platform, so its name never
+            competes with Settings for the sidebar's width. */}
+        <div className="flex items-center gap-0.5">
+          {labeledDevicePopover}
+          {level !== 'simple' && viewControl}
+        </div>
         {isBackendReachable(status.stage) && (
           <PerformanceProfile
             showHardware={level !== 'simple'}
@@ -715,8 +716,6 @@ export function StatusBar({
         {footerLeading && (
           <div className="sticky bottom-0 mt-1.5 flex items-center gap-1 border-t border-border/50 bg-sidebar pt-1.5">
             {footerLeading}
-            <div className="min-w-0 flex-1">{iconDevicePopover}</div>
-            {level !== 'simple' && viewControl}
           </div>
         )}
       </div>

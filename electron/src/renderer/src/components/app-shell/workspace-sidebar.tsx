@@ -64,21 +64,27 @@ export function WorkspaceSidebar() {
             style={trafficLights ? { paddingTop: MAC_TRAFFIC_LIGHTS_BAND } : undefined}
             className="workspace-titlebar box-content flex h-12 shrink-0 items-center justify-center"
           >
-            {/* The rail can always reopen itself, on every platform: the
-                brand icon alone gave Windows/Linux no local control. */}
+            {/* The brand mark, which turns into the expand icon on hover or
+                focus: the rail can always reopen itself, on every platform. */}
             <Button
               variant="ghost"
               size="icon-sm"
               aria-label={t('clone.toggle_sidebar')}
+              title={t('clone.toggle_sidebar')}
               aria-expanded={false}
               onClick={() => setOpen(true)}
-              className="shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="group/rail-toggle relative shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              {mac ? (
-                <PanelLeftOpenIcon className="size-5" aria-hidden="true" />
-              ) : (
-                <img src={brandIcon} alt="" className="size-6 shrink-0" />
-              )}
+              <img
+                src={brandIcon}
+                alt=""
+                data-slot="rail-brand"
+                className="size-6 shrink-0 transition-opacity duration-150 group-hover/rail-toggle:opacity-0 group-focus-visible/rail-toggle:opacity-0 motion-reduce:transition-none"
+              />
+              <PanelLeftOpenIcon
+                aria-hidden="true"
+                className="absolute inset-0 m-auto size-5 opacity-0 transition-opacity duration-150 group-hover/rail-toggle:opacity-100 group-focus-visible/rail-toggle:opacity-100 motion-reduce:transition-none"
+              />
             </Button>
           </div>
           <WorkspaceNavigation compact />
@@ -169,8 +175,8 @@ export function WorkspaceSidebar() {
                     aria-label={t('nav.settings')}
                     title={t('nav.settings')}
                     className={cn(
-                      buttonVariants({ variant: 'ghost', size: 'icon-xs' }),
-                      'workspace-nav-item',
+                      buttonVariants({ variant: 'ghost', size: 'sm' }),
+                      'workspace-nav-item h-7 shrink-0 gap-1.5 px-2 text-xs',
                     )}
                   >
                     <SettingsIcon
@@ -178,6 +184,7 @@ export function WorkspaceSidebar() {
                       data-tone="settings"
                       data-motion="turn"
                     />
+                    {t('nav.settings')}
                   </Link>
                 ) : undefined
               }
