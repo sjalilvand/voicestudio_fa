@@ -34,7 +34,7 @@ class Host(BaseHTTPRequestHandler):
             self.send_response(302); self.send_header('Location','http://127.0.0.1:1/leak'); self.send_header('Content-Length','0'); self.end_headers(); return
         if self.headers.get('Authorization') != 'Bearer private-session':
             self.send_response(401); self.send_header('Content-Length','0'); self.end_headers(); return
-        total = 16*1024*1024 if self.path.startswith('/large') or self.path == '/cancel' else 65536
+        total = 16*1024*1024 if self.path.startswith('/large') or self.path in ('/cancel','/multi') else 65536
         self.send_response(200)
         if self.path != '/large-unknown': self.send_header('Content-Length',str(total))
         self.end_headers()
@@ -43,7 +43,7 @@ class Host(BaseHTTPRequestHandler):
             while sent < total:
                 chunk=b'x'*min(16384,total-sent)
                 self.wfile.write(chunk); self.wfile.flush(); sent += len(chunk)
-                if total > 65536: time.sleep(.01)
+                if total > 65536 and self.path != '/multi': time.sleep(.01)
         except (BrokenPipeError, ConnectionResetError): pass
 server=ThreadingHTTPServer(('127.0.0.1',0),Host)
 print(server.server_port,flush=True)
@@ -74,6 +74,16 @@ func boundedDownloadCancelsOversizeBeforeBodyCompletes(_ path: String) async thr
     let unauthenticated = APIClient(address: api.address)
     do { _ = try await unauthenticated.download(unauthenticated.request("/exact"),maxBytes: 65536); Issue.record("Missing auth accepted") }
     catch let error as ClientError { #expect(error.key == "mobile.connect.error_api_key") }
+}
+
+@Test func boundedDownloadStreamsMultipleChunksWithoutTruncation() async throws {
+    let host = try BoundedDownloadHost()
+    let api = APIClient(address: try PairingAddress("http://127.0.0.1:\(host.port)"), credentials: Credentials(session: "private-session"))
+    let start = ContinuousClock.now
+    let result = try await api.download(api.request("/multi"),maxBytes: 16*1024*1024)
+    print("Bounded 16 MiB download elapsed: \(start.duration(to: .now))")
+    defer { try? FileManager.default.removeItem(at: result.file) }
+    #expect(try Data(contentsOf: result.file) == Data(repeating: 120,count: 16*1024*1024))
 }
 
 @Test func boundedDownloadPreservesCancellation() async throws {

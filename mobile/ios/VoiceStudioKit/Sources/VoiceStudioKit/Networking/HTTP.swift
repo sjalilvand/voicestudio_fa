@@ -43,23 +43,6 @@ public extension HTTPTransport {
 public final class HostSessionDelegate: NSObject, URLSessionTaskDelegate, Sendable {
     public func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping @Sendable (URLRequest?) -> Void) { completionHandler(nil) }
 }
-/// URLSession writes bounded chunks to its temporary file; cancel as soon as
-/// either Content-Length or received bytes exceeds the caller's storage budget.
-private final class BoundedDownloadDelegate: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
-    let maxBytes: Int64
-    private let lock = NSLock()
-    private var exceeded = false
-    var limitExceeded: Bool { lock.lock(); defer { lock.unlock() }; return exceeded }
-    init(maxBytes: Int) { self.maxBytes = Int64(maxBytes) }
-    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping @Sendable (URLRequest?) -> Void) { completionHandler(nil) }
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
-        if totalBytesWritten > maxBytes || totalBytesExpectedToWrite > maxBytes {
-            lock.lock(); exceeded = true; lock.unlock()
-            downloadTask.cancel()
-        }
-    }
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {}
-}
 public struct URLSessionTransport: HTTPTransport {
     private let session: URLSession
     public init() {
@@ -79,23 +62,36 @@ public struct URLSessionTransport: HTTPTransport {
     }
     public func download(_ request: URLRequest, maxBytes: Int) async throws -> DownloadReply {
         guard maxBytes > 0 else { throw ClientError("mobile.errors.file") }
-        let delegate = BoundedDownloadDelegate(maxBytes: maxBytes)
-        do {
-            let (file, response) = try await session.download(for: request, delegate: delegate)
-            do {
-                try Task.checkCancellation()
-                guard !delegate.limitExceeded, (try file.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? Int.max) <= maxBytes else { throw ClientError("mobile.errors.file") }
-                guard let http = response as? HTTPURLResponse else { throw ClientError("mobile.errors.invalid_response") }
-                let headers = http.allHeaderFields.reduce(into: [String: String]()) { out, field in
-                    if let key = field.key as? String { out[key.lowercased()] = String(describing: field.value) }
-                }
-                return DownloadReply(file: file, status: http.statusCode, headers: headers)
-            } catch { try? FileManager.default.removeItem(at: file); throw error }
-        } catch {
-            try Task.checkCancellation()
-            if delegate.limitExceeded { throw ClientError("mobile.errors.file") }
-            throw error
+        // A download completion handler can suppress progress delegate callbacks.
+        // Read the response stream ourselves so neither declared nor chunked bodies
+        // can consume unbounded temporary storage before validation.
+        let (bytes, response) = try await session.bytes(for: request, delegate: HostSessionDelegate())
+        defer { bytes.task.cancel() }
+        guard let http = response as? HTTPURLResponse else { throw ClientError("mobile.errors.invalid_response") }
+        guard response.expectedContentLength <= Int64(maxBytes) else { throw ClientError("mobile.errors.file") }
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        guard FileManager.default.createFile(atPath: file.path,contents: nil,attributes: [.posixPermissions: 0o600]) else { throw ClientError("mobile.errors.file") }
+        var completed = false
+        defer { if !completed { try? FileManager.default.removeItem(at: file) } }
+        let writer = try FileHandle(forWritingTo: file)
+        defer { try? writer.close() }
+        var chunk = Data(), received = 0
+        chunk.reserveCapacity(65_536)
+        for try await byte in bytes {
+            guard received < maxBytes else { throw ClientError("mobile.errors.file") }
+            received += 1; chunk.append(byte)
+            if chunk.count == 65_536 {
+                try Task.checkCancellation(); try writer.write(contentsOf: chunk)
+                chunk.removeAll(keepingCapacity: true)
+            }
         }
+        try Task.checkCancellation()
+        if !chunk.isEmpty { try writer.write(contentsOf: chunk) }
+        let headers = http.allHeaderFields.reduce(into: [String: String]()) { out, field in
+            if let key = field.key as? String { out[key.lowercased()] = String(describing: field.value) }
+        }
+        completed = true
+        return DownloadReply(file: file, status: http.statusCode, headers: headers)
     }
     public func send(_ request: URLRequest) async throws -> HTTPReply {
         let (data, response) = try await session.data(for: request)
