@@ -996,7 +996,8 @@
     "play": "Reproducir",
     "pause": "Pausar",
     "seek": "Buscar posición",
-    "missing": "Falta el archivo de audio."
+    "missing": "Falta el archivo de audio.",
+    "now_playing": "Reproduciendo"
   },
   "logs": {
     "no_tauri_log": "Aún no hay ningún registro de Tauri en el disco: inicie a través de la compilación de escritorio para producir uno",

@@ -994,7 +994,8 @@
     "play": "Spela upp",
     "pause": "Pausa",
     "seek": "Uppspelningsposition",
-    "missing": "Ljudfilen saknas."
+    "missing": "Ljudfilen saknas.",
+    "now_playing": "Spelas nu"
   },
   "logs": {
     "no_tauri_log": "Ingen Tauri-inloggningsskiva än - starta via skrivbordsbygget för att skapa en",

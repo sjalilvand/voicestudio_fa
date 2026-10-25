@@ -607,7 +607,8 @@
     "unmute": "Unmute",
     "volume": "Volume",
     "exit_fullscreen": "Exit full screen",
-    "unavailable": "Playback unavailable"
+    "unavailable": "Playback unavailable",
+    "now_playing": "Now playing"
   },
   "common": {
     "close": "Close",
