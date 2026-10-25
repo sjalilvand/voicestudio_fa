@@ -253,6 +253,57 @@ def test_a_pytorch_engine_row_is_marked_as_riding_on_pytorch(gpu_report):
     assert entry["device"] == "cpu"
 
 
+def test_an_engine_with_its_own_pytorch_build_keeps_its_routing(gpu_report):
+    """A sidecar in its own venv (IndexTTS) imports its own PyTorch build, so
+    the parent's missing kernels do not decide where it runs."""
+    row = {
+        "id": "indextts",
+        "display_name": "IndexTTS2",
+        "available": True,
+        "gpu_compat": ["cuda", "cpu"],
+        "routing_status": "accelerated",
+        "effective_device": "cuda",
+        "routing_reason": None,
+        "runtime_backend": None,
+        "isolation_mode": "subprocess",
+        "own_torch_build": True,
+    }
+    entry = gpu_report._engine_entry(row, "tts", "kernels_missing")
+    assert entry["code"] == "gpu"
+    assert entry["device"] == "cuda"
+
+
+def test_only_sidecars_with_a_separate_interpreter_get_their_own_build(
+    gpu_report, monkeypatch,
+):
+    import sys
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    from services import asr_backend, tts_backend
+
+    own = SimpleNamespace(venv_python=lambda: Path("/elsewhere/venv/bin/python"))
+    shared = SimpleNamespace(venv_python=lambda: Path(sys.executable))
+    rows = [
+        {"id": "indextts", "isolation_mode": "subprocess"},
+        {"id": "omnivoice-subprocess", "isolation_mode": "subprocess"},
+        {"id": "omnivoice", "isolation_mode": "in-process"},
+    ]
+    monkeypatch.setattr(tts_backend, "list_backends", lambda: [dict(r) for r in rows])
+    monkeypatch.setattr(
+        tts_backend, "_REGISTRY", {"indextts": own, "omnivoice-subprocess": shared},
+    )
+    monkeypatch.setattr(asr_backend, "list_backends", lambda: [])
+    seen: list[list[dict]] = []
+    monkeypatch.setattr(
+        gpu_report, "build_gpu_report",
+        lambda caps, gpus, build, tts, asr: seen.append(tts) or {"engines": [], "gpus": []},
+    )
+    gpu_report.collect_gpu_report()
+    marks = {r["id"]: r.get("own_torch_build") for r in seen[0]}
+    assert marks == {"indextts": True, "omnivoice-subprocess": False, "omnivoice": None}
+
+
 def test_the_message_names_the_probed_card_not_another_one(device_caps, gpu_report, inventory):
     """On a multi-GPU host the inventory's first card of this vendor is not
     necessarily PyTorch's device 0 - the card the kernel check tested. The

@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
 from typing import Any
 
 from core.device_caps import ACCELERATOR_PRIORITY, KERNEL_RISK_MARKER, HostCaps
@@ -184,6 +185,9 @@ def _engine_entry(row: dict, kind: str, host_code: str) -> dict[str, Any]:
             host_code in UNUSABLE_GPU_STATES
             and rides_on_pytorch
             and not row.get("runtime_backend")
+            # A sidecar in its own venv (IndexTTS) has its own PyTorch build,
+            # so the parent's missing kernels say nothing about its device.
+            and not row.get("own_torch_build")
         ):
             # A host whose card PyTorch cannot drive wins over the routing
             # verdict: the engine runs on the CPU whatever the static routing
@@ -275,15 +279,33 @@ def collect_gpu_report() -> dict[str, Any]:
         except Exception:  # noqa: BLE001 - one broken registry must not blank the report
             return []
 
-    def tts():
-        from services.tts_backend import list_backends
+    def own_torch_build(rows_: list[dict], registry) -> list[dict]:
+        """Mark subprocess engines whose interpreter is not this process's.
 
-        return list_backends()
+        Such an engine imports its own PyTorch build, so the host verdict
+        (which describes the parent's build) must not override its routing.
+        """
+        here = Path(sys.executable).resolve()
+        for row in rows_:
+            if row.get("isolation_mode") != "subprocess":
+                continue
+            try:
+                python = Path(registry[row["id"]].venv_python()).resolve()
+            except Exception:  # noqa: BLE001 - unknown interpreter: assume separate
+                row["own_torch_build"] = True
+                continue
+            row["own_torch_build"] = python != here
+        return rows_
+
+    def tts():
+        from services.tts_backend import _REGISTRY, list_backends
+
+        return own_torch_build(list(list_backends()), _REGISTRY)
 
     def asr():
-        from services.asr_backend import list_backends
+        from services.asr_backend import _REGISTRY, list_backends
 
-        return list_backends()
+        return own_torch_build(list(list_backends()), _REGISTRY)
 
     report = build_gpu_report(
         detect_host_caps(), detect_host_gpus(), torch_build(), rows(tts), rows(asr),
