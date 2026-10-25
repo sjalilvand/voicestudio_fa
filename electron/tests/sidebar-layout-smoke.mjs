@@ -253,11 +253,13 @@ try {
     // Labelled, not icon-only: the footer reads as "Settings" and the device name.
     assert.equal((await expandedSettings.innerText()).trim(), 'Settings');
     assert.notEqual((await expandedDevice.innerText()).trim(), '');
+    // The device has its own row above Settings, so its name keeps the full width.
     assert.ok(
       expandedSettingsBounds &&
         expandedDeviceBounds &&
-        expandedDeviceBounds.x > expandedSettingsBounds.x,
-      'expanded macOS Local device must sit right of Settings',
+        expandedDeviceBounds.y + expandedDeviceBounds.height <= expandedSettingsBounds.y + 1 &&
+        expandedDeviceBounds.width >= 120,
+      `expanded macOS Local device must have its own row above Settings: ${JSON.stringify({ expandedSettingsBounds, expandedDeviceBounds })}`,
     );
     await expandedDevice.click();
     await macPage.locator('[data-slot=popover-content][data-open]').waitFor({ state: 'visible' });
