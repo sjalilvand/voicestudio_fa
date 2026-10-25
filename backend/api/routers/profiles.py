@@ -340,12 +340,10 @@ async def update_profile_image(profile_id: str, image: UploadFile = File(...)):
 
 @router.put("/profiles/{profile_id}")
 def update_profile(profile_id: str, patch: ProfileUpdate):
-    """Update selected fields atomically with pending preview publication.
-
-    The edit's input comparison and database update must hold the same write
-    lock as _publish_design_preview: a concurrent render may commit first, or
-    the edit may invalidate its snapshot, but neither can publish stale audio.
-    """
+    """Partial update — only fields set on the payload are changed."""
+    # The input comparison and update hold the same SQLite write lock as
+    # _publish_design_preview: a concurrent render may commit first, or this
+    # edit may invalidate its snapshot, but neither can publish stale audio.
     with db_conn() as conn:
         conn.execute("BEGIN IMMEDIATE")
         existing = conn.execute(
