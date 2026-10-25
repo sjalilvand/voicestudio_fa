@@ -462,7 +462,7 @@ def _import(directory: Path,source: Path,allow_voices: bool):
                 if doc.get('native'):
                     # Foreign render caches remain portable assets; they are not current host output.
                     job['dubbed_tracks'] = {}; state['segHashesByLang'] = {}
-                job['segments_i18n'] = {target['code']:[{**segment,'text':segment.get('translations',{}).get(target['code']) or segment['text_original']} for segment in segments] for target in doc.get('targets',[])}
+                job['segments_i18n'] = {target['code']:{segment['id']:segment.get('translations',{}).get(target['code']) or segment['text_original'] for segment in segments} for target in doc.get('targets',[])}
                 state.update(dubJobId=identifier,dubFilename=source_asset,dubSegments=segments,dubLang=target['name'],dubLangCode=target['code'],dubTracks=[t['code'] for t in doc.get('targets',[])],dubStep='editing',inputType='audio' if doc.get('audioOnly') else 'video')
                 job.update(video_path=source_asset,audio_path=audio,vocals_path=audio,duration=doc['duration'],filename=manifest['title'],segments=segments,dubbed_tracks=job.get('dubbed_tracks') or {},input_type=state['inputType'])
                 conn.execute('INSERT INTO studio_projects (id,name,video_path,audio_path,duration,state_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)',(identifier,manifest['title'],source_asset,audio,doc['duration'],json.dumps(state),time.time(),time.time()))

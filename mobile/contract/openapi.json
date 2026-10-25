@@ -12060,7 +12060,7 @@
   },
   "/dub/transcribe-stream/{job_id}": {
    "get": {
-    "description": "Stream per-chunk segments via SSE, then emit diarized final pass.\n\nPre-flight checks (missing job, missing audio, ASR not loaded) are emitted\nas in-stream `error` events rather than HTTP errors, because EventSource\non the client can't read non-2xx response bodies \u2014 a 503 there surfaces\nas an opaque \"network error\" instead of the actionable message we want.\n\n`num_speakers` is an optional hint passed straight to pyannote. Left unset,\npyannote auto-detects the count \u2014 but its auto-detect can collapse a\nmulti-speaker clip to a single speaker (issue #274). When the user knows\nthe exact count, supplying it forces pyannote to return that many speakers.\nOn paths that can't honor the hint exactly (inline ASR turns, the\nsilence-gap heuristic) it is never silently dropped: the heuristic cycles\nthe requested count and a `warning` SSE event tells the user how far the\nlabels can be trusted.",
+    "description": "Stream per-chunk segments via SSE, then emit diarized final pass.\n\nPre-flight checks (missing job, missing audio, ASR not loaded) are emitted\nas in-stream `error` events rather than HTTP errors, because EventSource\non the client can't read non-2xx response bodies \u2014 a 503 there surfaces\nas an opaque \"network error\" instead of the actionable message we want.\n\n`reanalyze_speakers` explicitly refreshes acoustic labels and source voices\non existing cues without rerunning ASR or replacing edited text/timings.\nOrdinary reconnects continue to replay completed transcription results.\n\n`num_speakers` is an optional hint passed straight to pyannote. Left unset,\npyannote auto-detects the count \u2014 but its auto-detect can collapse a\nmulti-speaker clip to a single speaker (issue #274). When the user knows\nthe exact count, supplying it forces pyannote to return that many speakers.\nOn paths that can't honor the hint exactly (inline ASR turns, the\nsilence-gap heuristic) it is never silently dropped: the heuristic cycles\nthe requested count and a `warning` SSE event tells the user how far the\nlabels can be trusted.",
     "operationId": "dub_transcribe_stream_dub_transcribe_stream__job_id__get",
     "parameters": [
      {
@@ -12095,6 +12095,16 @@
       "schema": {
        "default": true,
        "title": "Per Segment Refs",
+       "type": "boolean"
+      }
+     },
+     {
+      "in": "query",
+      "name": "reanalyze_speakers",
+      "required": false,
+      "schema": {
+       "default": false,
+       "title": "Reanalyze Speakers",
        "type": "boolean"
       }
      }

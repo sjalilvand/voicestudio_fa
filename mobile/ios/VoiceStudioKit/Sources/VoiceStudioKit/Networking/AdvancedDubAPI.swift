@@ -68,7 +68,7 @@ public extension APIClient {
     func computerDubAnalysis(_ job: String,speakers: Int = 0) async throws -> ComputerDubAnalysis {
         guard (0...20).contains(speakers) else { throw ClientError("mobile.dub_advanced.invalid_cast") }
         guard try await computerDiarization().installed else { throw ClientError("mobile.dub_advanced.install_on_computer") }
-        let path = "/dub/transcribe-stream/"+(try Self.component(job))+(speakers == 0 ? "" : "?num_speakers=\(speakers)")
+        let path = "/dub/transcribe-stream/"+(try Self.component(job))+"?reanalyze_speakers=true"+(speakers == 0 ? "" : "&num_speakers=\(speakers)")
         let reply = try await download(request(path), maxBytes: 16_777_216); defer { try? FileManager.default.removeItem(at: reply.file) }
         let handle = try FileHandle(forReadingFrom: reply.file); defer { try? handle.close() }
         let data = try handle.read(upToCount: 16_777_217) ?? Data(); return try ComputerDubAnalysis.parse(data)

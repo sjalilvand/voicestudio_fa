@@ -18,13 +18,29 @@ class AdvancedDubApiTest {
             val analysis=api.computerDubAnalysis("job",2)
             assertEquals("Original speech",analysis.segments.single().text);assertEquals("Speaker 1",analysis.segments.single().speakerId);assertEquals(listOf("Check labels"),analysis.warnings)
             assertEquals("/engines/diarisation",server.takeRequest().path)
-            val request=server.takeRequest();assertEquals("/dub/transcribe-stream/job?num_speakers=2",request.path);assertEquals("Bearer session",request.getHeader("Authorization"))
+            val request=server.takeRequest();assertEquals("/dub/transcribe-stream/job?reanalyze_speakers=true&num_speakers=2",request.path);assertEquals("Bearer session",request.getHeader("Authorization"))
             server.enqueue(MockResponse().setBody("""{"installed":false}"""))
             assertTrue(runCatching {api.computerDubAnalysis("job")}.exceptionOrNull() is ClientFailure)
             assertEquals(3,server.requestCount)
             assertThrows(ClientFailure::class.java) {ComputerDubAnalysis.parse(stream.substringBefore("event: done").toByteArray())}
             assertThrows(ClientFailure::class.java) {ComputerDubAnalysis.parse(stream.replace("Original speech","   ").toByteArray())}
             assertThrows(ClientFailure::class.java) {ComputerDubAnalysis.parse(stream.replace("Original speech","x".repeat(4001)).toByteArray())}
+        } finally {server.shutdown()}
+    }
+    @Test fun repeatedSpeakerDetectionRequestsFreshAnalysisIncludingAutomaticCount(): Unit=runBlocking {
+        val server=MockWebServer().apply {start()}
+        try {
+            val api=VoiceStudioApi(PairingAddress.parse(server.url("/").toString()),token="session")
+            for(speakers in listOf(0,3,0)) {
+                server.enqueue(MockResponse().setBody("""{"installed":true}"""));server.enqueue(MockResponse().setBody(stream))
+                assertEquals("Original speech",api.computerDubAnalysis("job",speakers).segments.single().text)
+                assertEquals("/engines/diarisation",server.takeRequest().path)
+                val request=server.takeRequest()
+                assertEquals("GET",request.method)
+                assertEquals("true",request.requestUrl!!.queryParameter("reanalyze_speakers"))
+                assertEquals(if(speakers==0) null else speakers.toString(),request.requestUrl!!.queryParameter("num_speakers"))
+                assertEquals("Bearer session",request.getHeader("Authorization"))
+            }
         } finally {server.shutdown()}
     }
     @Test fun castingRetranslatesSourceAndBindsStableIdsVoiceAndTimingToSameProvider(): Unit=runBlocking {

@@ -374,8 +374,8 @@ def dub_media_archive(tmp_path, *, native=False):
         out.writeframes(b'\0\0'*24000)
     track = tmp_path/'track.wav'; track.write_bytes(source.read_bytes())
     document = {'duration':1,'source':'assets/source.wav','audioOnly':True,
-                'targets':[{'code':'fr','name':'French'}],
-                'segments':[{'id':'cue','start':0,'end':1,'text':'Source','translations':{'fr':'Traduit'}}],
+                'targets':[{'code':'fr','name':'French'},{'code':'de','name':'German'}],
+                'segments':[{'id':'cue','start':0,'end':1,'text':'Source','translations':{'fr':'Traduit','de':'Second translation'}}],
                 'desktop':{'state':{'dubAudioPath':'asset:assets/track.wav'},'job':{
                     'audio_path':'asset:assets/source.wav','no_vocals_path':'asset:assets/source.wav',
                     'dubbed_tracks':{'fr':{'path':'asset:assets/track.wav','language':'French'}}}}}
@@ -405,6 +405,9 @@ def test_imported_dub_media_preview_and_download_use_owned_job_artifacts(handoff
     assert audio.status_code == 200, audio.text
     assert audio.content == wav
     job = dub_pipeline.get_job(identifier)
+    subtitle = client.get('/dub/srt/'+identifier,params={'lang':'de'})
+    assert subtitle.status_code == 200, subtitle.text
+    assert 'Second translation' in subtitle.text and 'Traduit' not in subtitle.text
     working_dir = routes.DUB_DIR/identifier
     assert working_dir.is_dir()
     if native:

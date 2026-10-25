@@ -68,7 +68,9 @@ maintainer team, matching Electron. The badge has a localized core-maintainer de
   the cast, regenerate a language with the chosen voices and timing mode, and
   export selected tracks, background-preserving mixes, burned subtitles, dual
   captions or karaoke. Speaker analysis, background separation and subtitle burn
-  run on the paired computer. Model downloads remain explicit.
+  run on the paired computer. Detect reruns the installed speaker model on an
+  already-transcribed project without replacing its text, timing, translations
+  or explicit voice choices. Model downloads remain explicit.
 - **Project transfer**: export/import editable `.vsproject` archives on either
   phone or Electron's Projects page. Manuscripts, casts, pronunciation settings,
   dub timelines, translations, references and assets travel together. Imports

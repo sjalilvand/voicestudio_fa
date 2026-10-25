@@ -57,7 +57,7 @@ suspend fun VoiceStudioApi.computerDiarization():ComputerDiarization=withContext
 suspend fun VoiceStudioApi.computerDubAnalysis(job: String,speakers: Int=0):ComputerDubAnalysis=withContext(Dispatchers.IO) {
     require(speakers in 0..20)
     if(!computerDiarization().installed) throw ClientFailure("mobile.dub_advanced.install_on_computer")
-    raw("/dub/transcribe-stream/${VoiceStudioApi.segment(job)}"+(if(speakers==0) "" else "?num_speakers=$speakers")).use {readComputerDubAnalysis(it)}
+    raw("/dub/transcribe-stream/${VoiceStudioApi.segment(job)}?reanalyze_speakers=true"+(if(speakers==0) "" else "&num_speakers=$speakers")).use {readComputerDubAnalysis(it)}
 }
 /** Keep cancellation attached after HTTP headers arrive, including a stalled SSE body read. */
 internal suspend fun readComputerDubAnalysis(response: okhttp3.Response): ComputerDubAnalysis = coroutineScope {

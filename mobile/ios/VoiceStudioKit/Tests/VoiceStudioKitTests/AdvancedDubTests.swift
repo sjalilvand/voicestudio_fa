@@ -29,7 +29,7 @@ private actor AdvancedDubHost: HTTPTransport {
     let result = try await client.computerDubAnalysis("job",speakers: 2)
     #expect(result.segments[0].text == "Original speech"); #expect(result.segments[0].speaker_id == "Speaker 1"); #expect(result.warnings == ["Check the speaker labels"])
     let requests = await host.requests
-    #expect(requests.count == 2); #expect(requests[1].url?.query == "num_speakers=2")
+    #expect(requests.count == 2); #expect(requests[1].url?.query == "reanalyze_speakers=true&num_speakers=2")
     #expect(requests.allSatisfy { $0.value(forHTTPHeaderField: "Authorization") == "Bearer session" })
     let missing = AdvancedDubHost(); await missing.missing()
     let blocked = APIClient(address: client.address,transport: missing)
@@ -38,6 +38,24 @@ private actor AdvancedDubHost: HTTPTransport {
     #expect(throws: (any Error).self) { try ComputerDubAnalysis.parse(Data(computerCastStream.replacingOccurrences(of: "event: done\ndata: {}\n\n",with: "").utf8)) }
     #expect(throws: (any Error).self) { try ComputerDubAnalysis.parse(Data(computerCastStream.replacingOccurrences(of: "Original speech",with: "   ").utf8)) }
     #expect(throws: (any Error).self) { try ComputerDubAnalysis.parse(Data(computerCastStream.replacingOccurrences(of: "Original speech",with: String(repeating: "x",count: 4001)).utf8)) }
+}
+@Test func repeatedComputerSpeakerDetectionRequestsFreshAnalysisIncludingAutomaticCount() async throws {
+    let host = AdvancedDubHost(), client = APIClient(address: try PairingAddress("http://127.0.0.1:3900"),credentials: Credentials(session: "session"),transport: host)
+    for speakers in [0,3,0] {
+        let result = try await client.computerDubAnalysis("job",speakers: speakers)
+        #expect(result.segments[0].text == "Original speech")
+    }
+    let requests = await host.requests
+    #expect(requests.count == 6)
+    for (index,speakers) in [0,3,0].enumerated() {
+        #expect(requests[index*2].url?.path == "/engines/diarisation")
+        let request = requests[index*2+1]
+        let query = try #require(URLComponents(url: request.url!,resolvingAgainstBaseURL: false)?.queryItems)
+        #expect(request.httpMethod == "GET")
+        #expect(query.first { $0.name == "reanalyze_speakers" }?.value == "true")
+        #expect(query.first { $0.name == "num_speakers" }?.value == (speakers == 0 ? nil : String(speakers)))
+        #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer session")
+    }
 }
 @Test func advancedComputerCastingRetranslatesFreshSourceAndSendsStableIdsAndCastProfiles() async throws {
     let host = AdvancedDubHost(), client = APIClient(address: try PairingAddress("http://127.0.0.1:3900"),transport: host)

@@ -379,7 +379,10 @@ Workflows on both platforms. These are native screens; no embedded desktop UI.
   language/default/alternate tracks. ZIP exports cap total bytes at 1 GiB and
   each file at 512 MiB.
 - **Advanced paired dubbing** reuses installed-only diarization and existing host
-  SSE/task receipts. Recasting translates fresh source cues on the same approved
+  SSE/task receipts. Explicit Detect requests `reanalyze_speakers=true` to refresh
+  labels on completed transcripts while preserving cue IDs, text, translations,
+  timing and explicit voice choices; ordinary reconnects replay the saved result.
+  Recasting translates fresh source cues on the same approved
   provider before regeneration; resumed events validate original source text.
   Host export supports selected/default/original tracks, separated background,
   subtitle burn, dual/karaoke captions and existing audio/subtitle/package formats.
