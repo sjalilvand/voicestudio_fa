@@ -387,7 +387,9 @@
     "select": "選択",
     "selected": "選択中",
     "change": "エンジンを変更",
-    "failed": "エンジンを変更できませんでした。再試行してください。"
+    "failed": "エンジンを変更できませんでした。再試行してください。",
+    "empty": "このカテゴリのエンジンやモデルはまだありません。",
+    "modelsInstalled": "{{count}} 個中 {{installed}} 個をインストール済み"
   },
   "modelMaintenance": {
     "download": "ダウンロード",

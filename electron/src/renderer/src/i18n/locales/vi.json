@@ -387,7 +387,9 @@
     "select": "chọn",
     "selected": "Đã chọn",
     "change": "Đổi bộ máy",
-    "failed": "Không thể đổi bộ máy. Hãy thử lại."
+    "failed": "Không thể đổi bộ máy. Hãy thử lại.",
+    "empty": "Chưa có công cụ hoặc mô hình nào cho nhóm này.",
+    "modelsInstalled": "Đã cài {{installed}}/{{count}}"
   },
   "modelMaintenance": {
     "download": "Tải xuống",

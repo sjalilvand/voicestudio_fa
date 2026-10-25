@@ -401,7 +401,9 @@
     "select": "选择",
     "selected": "已选择",
     "change": "更换引擎",
-    "failed": "无法更换引擎，请重试。"
+    "failed": "无法更换引擎，请重试。",
+    "empty": "此类别暂无引擎或模型。",
+    "modelsInstalled": "已安装 {{installed}}/{{count}}"
   },
   "modelMaintenance": {
     "download": "下载",

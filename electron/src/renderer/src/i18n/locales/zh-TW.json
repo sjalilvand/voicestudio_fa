@@ -387,7 +387,9 @@
     "select": "選擇",
     "selected": "已選取",
     "change": "更換引擎",
-    "failed": "無法更換引擎，請重試。"
+    "failed": "無法更換引擎，請重試。",
+    "empty": "此類別尚無引擎或模型。",
+    "modelsInstalled": "已安裝 {{installed}}/{{count}}"
   },
   "modelMaintenance": {
     "download": "下載",

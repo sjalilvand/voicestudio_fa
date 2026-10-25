@@ -185,7 +185,7 @@ export function SetupGate({ children }: { children: ReactNode }) {
                   <PerformanceModelPacks compact={!advanced} />
                   {advanced && (
                     <div className="space-y-4">
-                      <ModelLibrary setup />
+                      <ModelLibrary />
                       <div className="flex flex-wrap gap-1">
                         {modelFamilies.map((value) => (
                           <Button
@@ -198,7 +198,7 @@ export function SetupGate({ children }: { children: ReactNode }) {
                           </Button>
                         ))}
                       </div>
-                      <ModelSettings family={family} showLibrary={false} />
+                      <ModelSettings family={family} />
                     </div>
                   )}
                   {Boolean(status.data?.missing?.length) && (

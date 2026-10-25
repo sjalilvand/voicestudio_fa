@@ -395,7 +395,9 @@
     "select": "اختر",
     "selected": "محدد",
     "change": "تغيير المحرك",
-    "failed": "تعذر تغيير المحرك. حاول مجددًا."
+    "failed": "تعذر تغيير المحرك. حاول مجددًا.",
+    "empty": "لا توجد محركات أو نماذج لهذه الفئة بعد.",
+    "modelsInstalled": "{{installed}} من {{count}} مثبّت"
   },
   "modelMaintenance": {
     "download": "تحميل",
