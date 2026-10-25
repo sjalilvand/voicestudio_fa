@@ -625,7 +625,8 @@
     "replace_reference": "Reemplazar referencia",
     "keep_reference": "Mantener la referencia actual",
     "new_reference": "Nueva referencia: {{name}}",
-    "replace_reference_hint": "Al guardar se reemplaza la muestra de referencia de esta voz. La toma fijada y la verificación de voz propia se borran porque el nuevo clip puede ser de otra persona. Deja la transcripción vacía para transcribir el nuevo clip automáticamente."
+    "replace_reference_hint": "Al guardar se reemplaza la muestra de referencia de esta voz. La toma fijada y la verificación de voz propia se borran porque el nuevo clip puede ser de otra persona. Deja la transcripción vacía para transcribir el nuevo clip automáticamente.",
+    "cannotCloneUseDesign": "Este modelo no puede clonar una voz. Describe una en Diseño de voz o elige un modelo que clone."
   },
   "designWorkspace": {
     "title": "Diseñar",
