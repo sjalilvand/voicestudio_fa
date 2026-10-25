@@ -189,6 +189,12 @@ adds there are root-owned).
   A six-digit share PIN is also available for casual LAN access, but it does
   not authorize administration or dictation; see the
   [API authentication guide](https://github.com/debpalash/VoiceStudio/blob/main/docs/api-auth.md).
+- The share PIN also applies to the host's own browser, which reaches the
+  container from Docker's gateway address. On a host only you use, with the
+  port published on `127.0.0.1`, `-e OMNIVOICE_TRUST_HOST_LOOPBACK=1` lets that
+  browser skip the PIN; other machines still need it. Read the
+  [risks](https://github.com/debpalash/VoiceStudio/blob/main/docs/install/docker.md#trust-host-loopback)
+  first.
 
 > **Security:** Loopback-only publishing is the safe default. Before exposing
 > VoiceStudio on a trusted LAN, configure `OMNIVOICE_API_KEY`. On any untrusted

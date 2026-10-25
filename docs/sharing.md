@@ -31,7 +31,7 @@ to `localhost`, because on that device it is not VoiceStudio.
 ### How the PIN works
 - A fresh 6-digit PIN is generated each time you enable sharing; it is never written to disk.
 - The QR encodes the PIN (`…/?pin=######`) so scanning connects in one step. Typing the bare URL instead prompts for the PIN.
-- Requests from other devices must present the PIN (sent automatically once entered/scanned); requests from this machine never need it.
+- Requests from other devices must present the PIN (sent automatically once entered/scanned); requests from this machine never need it. In Docker the host's own browser does not count as this machine and needs the PIN unless you opt in with `OMNIVOICE_TRUST_HOST_LOOPBACK=1` (see [Docker install](install/docker.md#trust-host-loopback)).
 
 ### Security model
 - **Loopback-only is the default on every launch** — you must explicitly enable sharing each session; it never auto-exposes.

@@ -379,6 +379,45 @@ breaks them).
 > do not expose it directly to the public internet. See [API
 > authentication](../api-auth.md) for the complete access model.
 
+### Share PIN for the host's own browser (opt-in)
+
+<a id="trust-host-loopback"></a>
+
+When network sharing is on, the share PIN also applies to the browser on the
+Docker host itself: Docker forwards a published port through its proxy, so
+`http://127.0.0.1:3900` arrives inside the container from the bridge gateway
+(for example `172.17.0.1`), not from loopback. That is the default and stays
+so. If the host is yours alone, you can let it skip the PIN:
+
+```bash
+docker run -d -p 127.0.0.1:3900:3900 \
+  -e OMNIVOICE_API_KEY="$OMNIVOICE_API_KEY" \
+  -e OMNIVOICE_TRUST_HOST_LOOPBACK=1 \
+  -v voicestudio_data:/app/omnivoice_data \
+  ghcr.io/debpalash/voicestudio:stable
+```
+
+With `OMNIVOICE_TRUST_HOST_LOOPBACK=1`, requests whose socket address is
+exactly the container's default gateway skip the PIN on the main port.
+Everything else is unchanged:
+
+- Other LAN machines, other containers and requests on the LAN-share port
+  still need the PIN.
+- `X-Forwarded-For`, `X-Real-IP` and `Forwarded` headers are never used for
+  this check; Uvicorn only applies them for peers listed in
+  `FORWARDED_ALLOW_IPS` (default `127.0.0.1`).
+- It replaces the PIN only. It does not replace `OMNIVOICE_API_KEY` and never
+  unlocks admin routes.
+
+> **Risk:** anything that can reach the gateway address skips the PIN, which
+> means every local user and process on the host, and anything a host-side
+> proxy forwards. Keep the main port published on `127.0.0.1` only. Docker
+> Desktop (macOS, Windows) does not keep the real client address for
+> published ports, so on `0.0.0.0:3900:3900` it would present LAN clients
+> from the same gateway address, and they would skip the PIN too. Do not set
+> this behind a reverse proxy on the host unless that proxy is listed in
+> `FORWARDED_ALLOW_IPS`.
+
 ## Volume mounts
 
 Persist one path across container restarts:
