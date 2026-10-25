@@ -1595,7 +1595,10 @@
     "aec_description": "從麥克風移除 VoiceStudio 的播放聲音。",
     "aec_row_title": "為聽寫啟用回音消除",
     "aec_experimental": "實驗性",
-    "aec_hint": "可在播放預覽、配音或影片時聽寫，而不會轉錄應用程式本身的聲音。會增加少量音訊處理；若不會在播放時聽寫，請保持關閉。"
+    "aec_hint": "可在播放預覽、配音或影片時聽寫，而不會轉錄應用程式本身的聲音。會增加少量音訊處理；若不會在播放時聽寫，請保持關閉。",
+    "cleanup_title": "文字整理",
+    "spoken_punctuation": "語音標點",
+    "spoken_punctuation_desc": "說 “comma”, “period”, “question mark”, “new line” 即可輸入。僅支援英語。"
   },
   "tools": {
     "title": "工具",

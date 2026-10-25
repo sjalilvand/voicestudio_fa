@@ -1595,7 +1595,10 @@
     "aec_description": "Hilangkan pemutaran VoiceStudio dari mikrofon.",
     "aec_row_title": "Aktifkan pembatalan gema untuk dikte",
     "aec_experimental": "Eksperimental",
-    "aec_hint": "Memungkinkan dikte saat pratinjau, sulih suara, atau video diputar tanpa menyalin audio aplikasi. Memerlukan sedikit pemrosesan; biarkan mati jika Anda tidak mendikte saat pemutaran."
+    "aec_hint": "Memungkinkan dikte saat pratinjau, sulih suara, atau video diputar tanpa menyalin audio aplikasi. Memerlukan sedikit pemrosesan; biarkan mati jika Anda tidak mendikte saat pemutaran.",
+    "cleanup_title": "Pembersihan teks",
+    "spoken_punctuation": "Tanda baca lisan",
+    "spoken_punctuation_desc": "Ucapkan “comma”, “period”, “question mark”, “new line” untuk mengetiknya. Hanya bahasa Inggris."
   },
   "tools": {
     "title": "Alat",

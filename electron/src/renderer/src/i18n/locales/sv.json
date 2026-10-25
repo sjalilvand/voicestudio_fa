@@ -1595,7 +1595,10 @@
     "aec_description": "Ta bort VoiceStudio-uppspelning från mikrofonen.",
     "aec_row_title": "Aktivera ekoreducering för diktering",
     "aec_experimental": "Experimentellt",
-    "aec_hint": "Låter dig diktera medan en förhandsvisning, dubbning eller video spelas utan att appens ljud transkriberas. Lägger till lite bearbetning; lämna av om du inte dikterar under uppspelning."
+    "aec_hint": "Låter dig diktera medan en förhandsvisning, dubbning eller video spelas utan att appens ljud transkriberas. Lägger till lite bearbetning; lämna av om du inte dikterar under uppspelning.",
+    "cleanup_title": "Textstädning",
+    "spoken_punctuation": "Uttalad interpunktion",
+    "spoken_punctuation_desc": "Säg “comma”, “period”, “question mark”, “new line” för att skriva det. Endast engelska."
   },
   "tools": {
     "title": "Verktyg",

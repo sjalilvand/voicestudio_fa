@@ -1595,7 +1595,10 @@
     "aec_description": "마이크에서 VoiceStudio 재생음을 제거합니다.",
     "aec_row_title": "받아쓰기 에코 제거 사용",
     "aec_experimental": "실험 기능",
-    "aec_hint": "미리 듣기, 더빙 또는 동영상 재생 중에 앱 자체 오디오를 받아쓰지 않고 말할 수 있습니다. 약간의 처리가 추가되므로 재생 중 받아쓰지 않는다면 끄세요."
+    "aec_hint": "미리 듣기, 더빙 또는 동영상 재생 중에 앱 자체 오디오를 받아쓰지 않고 말할 수 있습니다. 약간의 처리가 추가되므로 재생 중 받아쓰지 않는다면 끄세요.",
+    "cleanup_title": "텍스트 정리",
+    "spoken_punctuation": "음성 문장 부호",
+    "spoken_punctuation_desc": "“comma”, “period”, “question mark”, “new line”라고 말하면 입력됩니다. 영어만 지원합니다."
   },
   "tools": {
     "title": "도구",

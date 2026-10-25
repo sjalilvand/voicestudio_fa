@@ -1597,7 +1597,10 @@
     "aec_description": "Rimuovi la riproduzione di VoiceStudio dal microfono.",
     "aec_row_title": "Attiva cancellazione dell'eco per la dettatura",
     "aec_experimental": "Sperimentale",
-    "aec_hint": "Consente di dettare durante un'anteprima, un doppiaggio o un video senza trascrivere l'audio dell'app. Aggiunge una lieve elaborazione; lascialo spento se non detti durante la riproduzione."
+    "aec_hint": "Consente di dettare durante un'anteprima, un doppiaggio o un video senza trascrivere l'audio dell'app. Aggiunge una lieve elaborazione; lascialo spento se non detti durante la riproduzione.",
+    "cleanup_title": "Pulizia del testo",
+    "spoken_punctuation": "Punteggiatura dettata",
+    "spoken_punctuation_desc": "Di’ “comma”, “period”, “question mark”, “new line” per scriverla. Solo in inglese."
   },
   "tools": {
     "title": "Strumenti",

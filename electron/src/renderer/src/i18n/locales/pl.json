@@ -1599,7 +1599,10 @@
     "aec_description": "Usuń dźwięk VoiceStudio z mikrofonu.",
     "aec_row_title": "Włącz usuwanie echa dla dyktowania",
     "aec_experimental": "Eksperymentalne",
-    "aec_hint": "Pozwala dyktować podczas odtwarzania podglądu, dubbingu lub filmu bez transkrybowania dźwięku aplikacji. Dodaje niewielkie przetwarzanie; wyłącz, jeśli nie dyktujesz podczas odtwarzania."
+    "aec_hint": "Pozwala dyktować podczas odtwarzania podglądu, dubbingu lub filmu bez transkrybowania dźwięku aplikacji. Dodaje niewielkie przetwarzanie; wyłącz, jeśli nie dyktujesz podczas odtwarzania.",
+    "cleanup_title": "Porządkowanie tekstu",
+    "spoken_punctuation": "Dyktowana interpunkcja",
+    "spoken_punctuation_desc": "Powiedz “comma”, “period”, “question mark”, “new line”, aby to wpisać. Tylko po angielsku."
   },
   "tools": {
     "title": "Narzędzia",
