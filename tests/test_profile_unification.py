@@ -194,6 +194,282 @@ def test_native_profile_preview_uses_its_authoring_engine(app_client, monkeypatc
     assert len(called) == 1
 
 
+def _write_identity_wave(path, amplitude: int) -> None:
+    """Write a valid preview with an identifiable sample value, without TTS."""
+    import wave
+    from pathlib import Path
+
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with wave.open(str(target), "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(24000)
+        wav.writeframes(amplitude.to_bytes(2, "little", signed=True) * 4800)
+
+
+@pytest.mark.asyncio
+async def test_edited_voice_preview_cannot_overwrite_newer_sample(app_client, monkeypatch):
+    """A slow old native preview must not replace a newer edited voice's WAV."""
+    import asyncio
+    from pathlib import Path
+
+    from api.routers import archetypes as archetypes_router
+    from api.routers import profiles as profiles_router
+    from core.db import db_conn
+    from fastapi import HTTPException
+
+    client, cfg = app_client
+    raw = {
+        "description": "A soft, breathy narrator from a future city.",
+        "picks": {"Gender": "female"},
+    }
+    created = client.post("/profiles", data={
+        "name": "Race test native", "kind": "design", "engine": "voxcpm2",
+        "vd_states": json.dumps(_VD), "design_recipe": json.dumps(raw),
+        "instruct": "female, high pitch", "ref_text": "Old scene line",
+    })
+    assert created.status_code == 200, created.text
+    pid = created.json()["id"]
+    sample = Path(cfg.VOICES_DIR) / f"{pid}.wav"
+    # A previous voice's WAV can still exist on disk after its DB link was
+    # cleared; the stale preview must not overwrite the refreshed version.
+    _write_identity_wave(sample, 300)
+    with db_conn() as conn:
+        original = conn.execute(
+            "SELECT * FROM voice_profiles WHERE id=?", (pid,),
+        ).fetchone()
+
+    started = asyncio.Event()
+    release = asyncio.Event()
+    old_calls = []
+    new_calls = []
+
+    async def old_native_render(row, path, engine_id):
+        """Pause the original render while the user changes the profile."""
+        old_calls.append((row["instruct"], engine_id))
+        started.set()
+        await release.wait()
+        _write_identity_wave(path, 600)
+
+    async def new_omnivoice_render(recipe, path, *, prefix):
+        """Finish a replacement preview before the old render is released."""
+        new_calls.append(recipe["instruct"])
+        _write_identity_wave(path, 900)
+        return path
+
+    monkeypatch.setattr(profiles_router, "_render_native_design_sample", old_native_render)
+    monkeypatch.setattr(archetypes_router, "_render_wav_atomic", new_omnivoice_render)
+
+    older = asyncio.create_task(profiles_router._materialize_design_sample(pid, original))
+    try:
+        await asyncio.wait_for(started.wait(), 4)
+        edited = client.put(f"/profiles/{pid}", json={"instruct": "male, low pitch"})
+        assert edited.status_code == 200, edited.text
+        assert edited.json()["design_recipe"] is None
+        assert edited.json()["ref_audio_path"] is None
+        with db_conn() as conn:
+            current = conn.execute(
+                "SELECT * FROM voice_profiles WHERE id=?", (pid,),
+            ).fetchone()
+
+        # Versioned render keys let the current voice render immediately;
+        # it must not join the blocked old preview for this same profile.
+        refreshed = await asyncio.wait_for(
+            profiles_router._materialize_design_sample(pid, current), 4,
+        )
+        assert refreshed == f"{pid}.wav"
+        updated_audio = sample.read_bytes()
+        import wave
+        with wave.open(str(sample), "rb") as wav:
+            assert wav.readframes(1) == (900).to_bytes(2, "little", signed=True)
+        assert old_calls == [("female, high pitch", "voxcpm2")]
+        assert new_calls == ["male, low pitch"]
+
+        release.set()
+        with pytest.raises(HTTPException) as stale:
+            await asyncio.wait_for(older, 4)
+        assert stale.value.status_code == 409
+        assert "changed" in str(stale.value.detail)
+        assert sample.read_bytes() == updated_audio
+
+        with db_conn() as conn:
+            stored = conn.execute(
+                "SELECT * FROM voice_profiles WHERE id=?", (pid,),
+            ).fetchone()
+        assert stored["ref_audio_path"] == f"{pid}.wav"
+        assert stored["instruct"] == "male, low pitch"
+        assert not list(Path(cfg.VOICES_DIR).glob(f".{pid}-preview-*.wav"))
+        assert not sample.with_suffix(".wav.bak").exists()
+    finally:
+        release.set()
+        if not older.done():
+            await older
+
+
+@pytest.mark.parametrize(
+    ("patch", "expect_stale"),
+    [
+        ({"name": "Renamed while previewing"}, False),
+        ({"ref_text": "New scene line"}, True),
+        ({"language": "Japanese"}, True),
+    ],
+)
+@pytest.mark.asyncio
+async def test_preview_tracks_all_voice_inputs_but_not_metadata(
+    app_client, monkeypatch, patch, expect_stale,
+):
+    """Only changes affecting generated speech invalidate an in-flight WAV."""
+    import asyncio
+    from pathlib import Path
+
+    from api.routers import profiles as profiles_router
+    from core.db import db_conn
+    from fastapi import HTTPException
+
+    client, cfg = app_client
+    created = client.post("/profiles", data={
+        "name": "Profile preview input test", "kind": "design", "engine": "voxcpm2",
+        "vd_states": json.dumps(_VD),
+        "design_recipe": json.dumps({"description": "Bright and clear", "picks": {}}),
+        "ref_text": "Original greeting", "language": "English",
+    })
+    assert created.status_code == 200
+    pid = created.json()["id"]
+    with db_conn() as conn:
+        original = conn.execute(
+            "SELECT * FROM voice_profiles WHERE id=?", (pid,),
+        ).fetchone()
+    started, release = asyncio.Event(), asyncio.Event()
+
+    async def render(row, path, engine_id):
+        """Wait until the profile edit is committed before finishing."""
+        started.set()
+        await release.wait()
+        _write_identity_wave(path, 800)
+
+    monkeypatch.setattr(profiles_router, "_render_native_design_sample", render)
+    task = asyncio.create_task(profiles_router._materialize_design_sample(pid, original))
+    try:
+        await asyncio.wait_for(started.wait(), 4)
+        edited = client.put(f"/profiles/{pid}", json=patch)
+        assert edited.status_code == 200, edited.text
+        assert edited.json()["ref_audio_path"] is None
+        release.set()
+        if expect_stale:
+            with pytest.raises(HTTPException) as stale:
+                await asyncio.wait_for(task, 4)
+            assert stale.value.status_code == 409
+            assert not (Path(cfg.VOICES_DIR) / f"{pid}.wav").exists()
+        else:
+            assert await asyncio.wait_for(task, 4) == f"{pid}.wav"
+            assert (Path(cfg.VOICES_DIR) / f"{pid}.wav").exists()
+        with db_conn() as conn:
+            record = conn.execute(
+                "SELECT ref_audio_path FROM voice_profiles WHERE id=?", (pid,),
+            ).fetchone()
+        assert record["ref_audio_path"] == (None if expect_stale else f"{pid}.wav")
+    finally:
+        release.set()
+        if not task.done():
+            await task
+
+
+@pytest.mark.asyncio
+async def test_duplicate_pending_preview_requests_share_one_render(app_client, monkeypatch):
+    """Parallel requests for an unchanged design must render the WAV only once."""
+    import asyncio
+    from pathlib import Path
+
+    from api.routers import profiles as profiles_router
+    from core.db import db_conn
+
+    client, cfg = app_client
+    created = client.post("/profiles", data={
+        "name": "Repeated preview", "kind": "design", "engine": "voxcpm2",
+        "vd_states": json.dumps(_VD),
+        "design_recipe": json.dumps({"description": "Gentle", "picks": {}}),
+    })
+    assert created.status_code == 200
+    pid = created.json()["id"]
+    with db_conn() as conn:
+        row = conn.execute("SELECT * FROM voice_profiles WHERE id=?", (pid,)).fetchone()
+
+    started, release = asyncio.Event(), asyncio.Event()
+    calls = []
+
+    async def render(row, path, engine_id):
+        """Hold the first expensive synthesis until the second joins it."""
+        calls.append(path)
+        started.set()
+        await release.wait()
+        _write_identity_wave(path, 1100)
+
+    monkeypatch.setattr(profiles_router, "_render_native_design_sample", render)
+    first = asyncio.create_task(profiles_router._materialize_design_sample(pid, row))
+    second = None
+    try:
+        await asyncio.wait_for(started.wait(), 4)
+        second = asyncio.create_task(profiles_router._materialize_design_sample(pid, row))
+        await asyncio.sleep(0)
+        release.set()
+        result = await asyncio.wait_for(asyncio.gather(first, second), 4)
+        assert result == [f"{pid}.wav", f"{pid}.wav"]
+        assert len(calls) == 1
+        assert (Path(cfg.VOICES_DIR) / f"{pid}.wav").exists()
+    finally:
+        release.set()
+        pending = [t for t in (first, second) if t is not None and not t.done()]
+        if pending:
+            await asyncio.gather(*pending, return_exceptions=True)
+
+
+@pytest.mark.asyncio
+async def test_deleted_profile_during_http_preview_never_reappears(app_client, monkeypatch):
+    """An HTTP preview underway when a voice is deleted must return 409, not resurrect it."""
+    import asyncio
+    from pathlib import Path
+
+    from api.routers import profiles as profiles_router
+    from httpx import ASGITransport, AsyncClient
+    from main import app
+
+    client, cfg = app_client
+    created = client.post("/profiles", data={
+        "name": "Deleted while previewing", "kind": "design", "engine": "voxcpm2",
+        "vd_states": json.dumps(_VD),
+        "design_recipe": json.dumps({"description": "soft narration", "picks": {}}),
+    })
+    assert created.status_code == 200, created.text
+    pid = created.json()["id"]
+    started, release = asyncio.Event(), asyncio.Event()
+
+    async def render(row, path, engine_id):
+        """Emulate a slow native engine that finishes after profile deletion."""
+        started.set()
+        await release.wait()
+        _write_identity_wave(path, 1000)
+
+    monkeypatch.setattr(profiles_router, "_render_native_design_sample", render)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as http:
+        first = asyncio.create_task(http.get(f"/profiles/{pid}/audio"))
+        try:
+            await asyncio.wait_for(started.wait(), 4)
+            deleted = await http.delete(f"/profiles/{pid}")
+            assert deleted.status_code == 200, deleted.text
+            release.set()
+            stale_response = await asyncio.wait_for(first, 4)
+            assert stale_response.status_code == 409, stale_response.text
+            assert "changed" in stale_response.json()["detail"]
+            assert (await http.get(f"/profiles/{pid}")).status_code == 404
+            assert not (Path(cfg.VOICES_DIR) / f"{pid}.wav").exists()
+            assert not list(Path(cfg.VOICES_DIR).glob(f".{pid}-preview-*.wav"))
+        finally:
+            release.set()
+            if not first.done():
+                await first
+
+
 @pytest.mark.asyncio
 async def test_native_preview_reuses_engine_cache_and_sends_seed(tmp_path, monkeypatch):
     """Pending samples use the shared engine and forward seeds to sidecars."""
