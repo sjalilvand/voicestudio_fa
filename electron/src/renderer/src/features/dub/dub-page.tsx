@@ -18,6 +18,9 @@ import { DubExportPanel } from './dub-export-panel';
 import { DubTimeline } from './dub-timeline';
 import { PasteTranslation } from './paste-translation';
 import { GlossaryPanel } from './glossary-panel';
+import { SegmentFindBar } from './segment-find-bar';
+import { HighlightedText } from './segment-highlight';
+import { isFindBarTarget, useSegmentFind } from './use-segment-find';
 import { CastingBoard } from './casting-board';
 import { DubbingDemo } from './dubbing-demo';
 import { CheckpointBanner, type CheckpointStage } from './checkpoint-banner';
@@ -360,6 +363,16 @@ export function DubPage() {
     requestAnimationFrame(() => segmentVirtualizer.measure());
   }, [editingSegmentId, expandedSegmentId, segmentVirtualizer]);
   const code = translationTargetCode(target);
+  const scrollToSegmentRow = useCallback(
+    (row: number) => segmentVirtualizer.scrollToIndex(row, { align: 'center' }),
+    [segmentVirtualizer],
+  );
+  const find = useSegmentFind({
+    segments: session.segments,
+    targetCode: code,
+    select: setSelectedSegmentId,
+    scrollToRow: scrollToSegmentRow,
+  });
   const batchTargets = multiLangTargets(target, code || '', session.multiTargets || []);
   const agentBatchReady = Boolean(
     session.agentCli &&
@@ -591,6 +604,8 @@ export function DubPage() {
         return;
       const key = event.key.toLowerCase();
       if (key === 'z') {
+        // The find and replace inputs keep their own text undo.
+        if (isFindBarTarget(event.target)) return;
         event.preventDefault();
         if (event.shiftKey) redoDubEdit();
         else undoDubEdit();
@@ -2278,6 +2293,14 @@ export function DubPage() {
                   </div>
                 </div>
               )}
+              {session.segments.length > 0 && (
+                <SegmentFindBar
+                  {...find.bar}
+                  canReplace={find.bar.canReplace && !busy && !session.recovery}
+                  canReplaceAll={find.bar.canReplaceAll && !busy && !session.recovery}
+                  disabled={busy || Boolean(session.recovery)}
+                />
+              )}
               {showCheckpoint && checkpointStage && (
                 <CheckpointBanner
                   stage={checkpointStage}
@@ -2534,13 +2557,21 @@ export function DubPage() {
                               {segment.text_original && segment.text_original !== segment.text ? (
                                 <p
                                   className={cn(
-                                    'min-w-0 flex-1 truncate px-1 text-xs text-muted-foreground/50 transition-colors group-hover/segment:text-muted-foreground/70 group-focus-within/segment:text-foreground/70',
+                                    'min-w-0 flex-1 px-1 text-xs text-muted-foreground/50 transition-colors group-hover/segment:text-muted-foreground/70 group-focus-within/segment:text-foreground/70',
                                     selectedSegmentId === segment.id && 'text-foreground/72',
+                                    // Show the whole line while it holds the active find hit.
+                                    find.holdsActive(segment.id, 'text_original')
+                                      ? 'break-words'
+                                      : 'truncate',
                                   )}
                                   title={segment.text_original}
                                   dir="auto"
                                 >
-                                  {segment.text_original}
+                                  <HighlightedText
+                                    text={segment.text_original}
+                                    query={find.query}
+                                    {...find.activeRange(segment.id, 'text_original')}
+                                  />
                                 </p>
                               ) : (
                                 <span className="min-w-0 flex-1" />
@@ -2778,9 +2809,17 @@ export function DubPage() {
                                   setEditingSegmentId(segment.id);
                                 }}
                               >
-                                <span className="line-clamp-2" dir="auto">
-                                  {segment.text}
-                                </span>
+                                <HighlightedText
+                                  className={
+                                    find.holdsActive(segment.id, 'text')
+                                      ? undefined
+                                      : 'line-clamp-2'
+                                  }
+                                  dir="auto"
+                                  text={segment.text}
+                                  query={find.query}
+                                  {...find.activeRange(segment.id, 'text')}
+                                />
                               </button>
                             )}
                             {segment.plan?.suggested_text && (
