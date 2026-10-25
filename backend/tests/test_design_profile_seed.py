@@ -15,8 +15,6 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from api.routers import archetypes as arch_router
-
 
 def _wav_bytes() -> bytes:
     buf = io.BytesIO()
@@ -42,6 +40,9 @@ def design_client(tmp_path, monkeypatch):
         seeds.append(a.get("seed"))
         Path(out_path).parent.mkdir(parents=True, exist_ok=True)
         Path(out_path).write_bytes(_wav_bytes())
+
+    # Resolved here: another test may purge and re-import the api modules.
+    from api.routers import archetypes as arch_router
 
     monkeypatch.setattr(arch_router, "_render_archetype_wav", render)
     app = FastAPI()
