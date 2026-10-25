@@ -2078,7 +2078,17 @@
     "hint_spawn_blocked": "Sistem operasi atau perangkat lunak keamanan Anda menolak menjalankan mesin lokal. Tambahkan folder runtime VoiceStudio ke pengecualian antivirus (Windows: Keamanan Windows → Perlindungan virus & ancaman → Kelola pengaturan → Pengecualian), pastikan folder itu tidak berada di dalam folder yang disinkronkan ke cloud seperti OneDrive, lalu coba lagi.",
     "hint_smart_app_control": "Smart App Control Windows memblokir mesin lokal. Fitur ini tidak punya pengecualian per aplikasi, jadi pengecualian antivirus tidak akan membantu. Matikan di Keamanan Windows → Kontrol aplikasi & browser → Pengaturan Smart App Control (Windows tidak bisa menyalakannya lagi tanpa reset), atau hubungkan VoiceStudio ke mesin di komputer lain, lalu coba lagi.",
     "hint_slow_start": "Mesin masih memulai saat batas waktu tunggu habis. Komputer lambat, terutama tanpa GPU khusus, dan peluncuran pertama setelah instalasi (antivirus memindai setiap berkas baru) dapat memerlukan beberapa menit. Tutup aplikasi yang boros memori lalu coba lagi; peluncuran berikutnya jauh lebih cepat.",
-    "hint_synced_folder": "Lokasi ini berada di dalam folder yang disinkronkan ke cloud (OneDrive, Dropbox, iCloud Drive, Google Drive). Placeholder khusus daring dan penguncian berkas merusak lingkungan Python. Pindahkan VoiceStudio ke folder lokal biasa (misalnya C:\\VoiceStudio di Windows atau ~/VoiceStudio di macOS dan Linux), lalu siapkan ulang."
+    "hint_synced_folder": "Lokasi ini berada di dalam folder yang disinkronkan ke cloud (OneDrive, Dropbox, iCloud Drive, Google Drive). Placeholder khusus daring dan penguncian berkas merusak lingkungan Python. Pindahkan VoiceStudio ke folder lokal biasa (misalnya C:\\VoiceStudio di Windows atau ~/VoiceStudio di macOS dan Linux), lalu siapkan ulang.",
+    "cause_smart_app_control": "Smart App Control Windows memblokir mesin",
+    "cause_spawn_blocked": "Perangkat lunak keamanan memblokir mesin agar tidak dimulai",
+    "cause_native_crash": "Mesin mogok saat dimulai (kesalahan native)",
+    "cause_missing_env": "Lingkungan Python hilang atau tidak lengkap",
+    "cause_permission": "Tidak ada izin menulis ke folder mesin",
+    "cause_synced_folder": "Folder mesin berada di dalam folder yang disinkronkan ke cloud",
+    "cause_slow_start": "Mesin masih dimulai di komputer yang lambat",
+    "choose_folder": "Pilih folder lain",
+    "copy_diagnostics": "Salin diagnostik",
+    "diagnostics_copied": "Diagnostik disalin"
   },
   "bootstrap": {
     "checking": "Memeriksa lingkungan…",

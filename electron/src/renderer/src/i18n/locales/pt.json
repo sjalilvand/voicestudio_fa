@@ -2080,7 +2080,17 @@
     "hint_spawn_blocked": "O sistema operacional ou o software de segurança recusou-se a iniciar o mecanismo local. Adicione a pasta de runtime do VoiceStudio às exclusões do antivírus (Windows: Segurança do Windows → Proteção contra vírus e ameaças → Gerenciar configurações → Exclusões), verifique se ela não está dentro de uma pasta sincronizada na nuvem, como o OneDrive, e tente novamente.",
     "hint_smart_app_control": "O Controle Inteligente de Aplicativos do Windows bloqueou o motor local. Ele não tem exceções por aplicativo, então uma exclusão no antivírus não ajuda. Desative-o em Segurança do Windows → Controle de aplicativos e navegador → Configurações do Controle Inteligente de Aplicativos (o Windows não consegue reativá-lo sem uma redefinição) ou conecte o VoiceStudio a um motor em outro computador e tente de novo.",
     "hint_slow_start": "O mecanismo ainda estava iniciando quando o tempo de espera acabou. Computadores lentos, principalmente sem GPU dedicada, e a primeira inicialização após uma instalação (o antivírus verifica cada arquivo novo) podem levar vários minutos. Feche aplicativos que consomem muita memória e tente novamente; as próximas inicializações são bem mais rápidas.",
-    "hint_synced_folder": "Este local está dentro de uma pasta sincronizada na nuvem (OneDrive, Dropbox, iCloud Drive, Google Drive). Marcadores somente online e bloqueio de arquivos quebram o ambiente Python. Mova o VoiceStudio para uma pasta local comum (por exemplo, C:\\VoiceStudio no Windows ou ~/VoiceStudio no macOS e no Linux) e configure-o novamente."
+    "hint_synced_folder": "Este local está dentro de uma pasta sincronizada na nuvem (OneDrive, Dropbox, iCloud Drive, Google Drive). Marcadores somente online e bloqueio de arquivos quebram o ambiente Python. Mova o VoiceStudio para uma pasta local comum (por exemplo, C:\\VoiceStudio no Windows ou ~/VoiceStudio no macOS e no Linux) e configure-o novamente.",
+    "cause_smart_app_control": "O Controle Inteligente de Aplicativos do Windows bloqueou o mecanismo",
+    "cause_spawn_blocked": "Um software de segurança impediu o mecanismo de iniciar",
+    "cause_native_crash": "O mecanismo travou ao iniciar (falha nativa)",
+    "cause_missing_env": "O ambiente Python está ausente ou incompleto",
+    "cause_permission": "Sem permissão para gravar na pasta do mecanismo",
+    "cause_synced_folder": "A pasta do mecanismo está dentro de uma pasta sincronizada na nuvem",
+    "cause_slow_start": "O mecanismo ainda está iniciando em um computador lento",
+    "choose_folder": "Escolher outra pasta",
+    "copy_diagnostics": "Copiar diagnóstico",
+    "diagnostics_copied": "Diagnóstico copiado"
   },
   "bootstrap": {
     "checking": "Verificando o ambiente…",

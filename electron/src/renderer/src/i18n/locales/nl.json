@@ -2078,7 +2078,17 @@
     "hint_spawn_blocked": "Je besturingssysteem of beveiligingssoftware weigerde de lokale engine te starten. Voeg de runtimemap van VoiceStudio toe aan de uitzonderingen van je antivirus (Windows: Windows-beveiliging → Virus- en bedreigingsbeveiliging → Instellingen beheren → Uitsluitingen), controleer dat de map niet in een met de cloud gesynchroniseerde map zoals OneDrive staat en probeer het opnieuw.",
     "hint_smart_app_control": "Slimme app-beheer van Windows heeft de lokale engine geblokkeerd. Het kent geen uitzonderingen per app, dus een uitsluiting in je antivirus helpt niet. Zet het uit via Windows-beveiliging → App- en browserbeheer → Instellingen voor Slimme app-beheer (Windows kan het zonder reset niet weer inschakelen), of verbind VoiceStudio met een engine op een andere computer en probeer het opnieuw.",
     "hint_slow_start": "De engine was nog aan het opstarten toen de wachttijd verstreek. Trage computers, vooral zonder aparte GPU, en de eerste start na een installatie (de antivirus scant elk nieuw bestand) kunnen enkele minuten duren. Sluit geheugenintensieve apps en probeer het opnieuw; latere starts gaan veel sneller.",
-    "hint_synced_folder": "Deze locatie staat in een met de cloud gesynchroniseerde map (OneDrive, Dropbox, iCloud Drive, Google Drive). Alleen-online-plaatsaanduidingen en bestandsvergrendeling breken de Python-omgeving. Verplaats VoiceStudio naar een gewone lokale map (bijvoorbeeld C:\\VoiceStudio op Windows of ~/VoiceStudio op macOS en Linux) en stel het opnieuw in."
+    "hint_synced_folder": "Deze locatie staat in een met de cloud gesynchroniseerde map (OneDrive, Dropbox, iCloud Drive, Google Drive). Alleen-online-plaatsaanduidingen en bestandsvergrendeling breken de Python-omgeving. Verplaats VoiceStudio naar een gewone lokale map (bijvoorbeeld C:\\VoiceStudio op Windows of ~/VoiceStudio op macOS en Linux) en stel het opnieuw in.",
+    "cause_smart_app_control": "Slimme app-beheer van Windows heeft de engine geblokkeerd",
+    "cause_spawn_blocked": "Beveiligingssoftware heeft het starten van de engine geblokkeerd",
+    "cause_native_crash": "De engine is tijdens het starten gecrasht (native fout)",
+    "cause_missing_env": "De Python-omgeving ontbreekt of is onvolledig",
+    "cause_permission": "Geen schrijfrechten voor de enginemap",
+    "cause_synced_folder": "De enginemap staat in een met de cloud gesynchroniseerde map",
+    "cause_slow_start": "De engine is nog bezig met starten op een trage computer",
+    "choose_folder": "Andere map kiezen",
+    "copy_diagnostics": "Diagnose kopiëren",
+    "diagnostics_copied": "Diagnose gekopieerd"
   },
   "bootstrap": {
     "checking": "Omgeving controleren…",
