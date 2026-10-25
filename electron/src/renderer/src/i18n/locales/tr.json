@@ -4250,5 +4250,25 @@
       "fix1": "Ayarlar > Günlükler'de arka ucu kontrol edin",
       "fix2": "VoiceStudio'yu yeniden başlatıp tekrar deneyin"
     }
+  },
+  "modelInstall": {
+    "queued": "Başlamayı bekliyor…",
+    "downloading": "İndiriliyor…",
+    "downloadingPct": "İndiriliyor · %{{pct}}",
+    "finishing": "Doğrulanıyor ve kuruluyor…",
+    "cancelling": "İptal ediliyor…",
+    "cancelled": "İndirme iptal edildi",
+    "failed": "İndirme başarısız oldu",
+    "ready": "Kullanıma hazır",
+    "bytes": "{{total}} içinden {{done}}",
+    "speed": "{{rate}}/sn",
+    "eta": "{{time}} kaldı",
+    "downloadAgain": "Yeniden indir",
+    "nextDisk": "Yeterli disk alanı yok. Yer açın veya model klasörünü Ayarlar → Depolama bölümünden taşıyın, ardından yeniden deneyin.",
+    "nextGated": "Bu model Hugging Face erişimi gerektirir. Model sayfasından erişim isteyin, belirtecinizi Ayarlar → Kimlik Bilgileri bölümüne ekleyin, ardından yeniden deneyin.",
+    "nextNetwork": "İndirme sunucusuna ulaşılamadı. Bağlantıyı, proxy'yi veya yansıyı Ayarlar → Ağ bölümünden kontrol edin, ardından yeniden deneyin.",
+    "nextMemory": "Bu cihazın belleği yetmedi. Ayarlar → Performans bölümünden daha hafif bir profil seçin, ardından yeniden deneyin.",
+    "downloads": "İndirmeler",
+    "activeCount": "Süren indirmeler: {{count}}"
   }
 }

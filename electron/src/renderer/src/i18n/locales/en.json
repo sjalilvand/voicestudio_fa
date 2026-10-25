@@ -4250,5 +4250,25 @@
       "fix1": "Check the backend in Settings > Logs",
       "fix2": "Restart VoiceStudio and retry"
     }
+  },
+  "modelInstall": {
+    "queued": "Waiting to start…",
+    "downloading": "Downloading…",
+    "downloadingPct": "Downloading · {{pct}}%",
+    "finishing": "Verifying and installing…",
+    "cancelling": "Cancelling…",
+    "cancelled": "Download cancelled",
+    "failed": "Download failed",
+    "ready": "Ready to use",
+    "bytes": "{{done}} of {{total}}",
+    "speed": "{{rate}}/s",
+    "eta": "{{time}} left",
+    "downloadAgain": "Download again",
+    "nextDisk": "Not enough disk space. Free some up or move the models folder in Settings → Storage, then retry.",
+    "nextGated": "This model needs Hugging Face access. Request it on the model page, add your token in Settings → Credentials, then retry.",
+    "nextNetwork": "The download server couldn't be reached. Check your connection, proxy or mirror in Settings → Network, then retry.",
+    "nextMemory": "This device ran out of memory. Choose a lighter profile in Settings → Performance, then retry.",
+    "downloads": "Downloads",
+    "activeCount": "Downloads in progress: {{count}}"
   }
 }

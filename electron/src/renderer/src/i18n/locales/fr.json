@@ -4252,5 +4252,25 @@
       "fix1": "Vérifiez le backend dans Réglages > Journaux",
       "fix2": "Redémarrez VoiceStudio et réessayez"
     }
+  },
+  "modelInstall": {
+    "queued": "En attente de démarrage…",
+    "downloading": "Téléchargement…",
+    "downloadingPct": "Téléchargement · {{pct}} %",
+    "finishing": "Vérification et installation…",
+    "cancelling": "Annulation…",
+    "cancelled": "Téléchargement annulé",
+    "failed": "Échec du téléchargement",
+    "ready": "Prêt à l'emploi",
+    "bytes": "{{done}} sur {{total}}",
+    "speed": "{{rate}}/s",
+    "eta": "{{time}} restantes",
+    "downloadAgain": "Télécharger à nouveau",
+    "nextDisk": "Espace disque insuffisant. Libérez de l'espace ou déplacez le dossier des modèles dans Paramètres → Stockage, puis réessayez.",
+    "nextGated": "Ce modèle nécessite un accès Hugging Face. Demandez-le sur la page du modèle, ajoutez votre jeton dans Paramètres → Identifiants, puis réessayez.",
+    "nextNetwork": "Le serveur de téléchargement est injoignable. Vérifiez la connexion, le proxy ou le miroir dans Paramètres → Réseau, puis réessayez.",
+    "nextMemory": "Cet appareil manque de mémoire. Choisissez un profil plus léger dans Paramètres → Performances, puis réessayez.",
+    "downloads": "Téléchargements",
+    "activeCount": "Téléchargements en cours : {{count}}"
   }
 }

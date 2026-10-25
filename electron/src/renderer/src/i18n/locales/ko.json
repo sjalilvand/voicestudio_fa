@@ -4250,5 +4250,25 @@
       "fix1": "설정 > 로그에서 백엔드 확인",
       "fix2": "VoiceStudio를 다시 시작한 뒤 재시도"
     }
+  },
+  "modelInstall": {
+    "queued": "시작 대기 중…",
+    "downloading": "다운로드 중…",
+    "downloadingPct": "다운로드 중 · {{pct}}%",
+    "finishing": "확인 및 설치 중…",
+    "cancelling": "취소 중…",
+    "cancelled": "다운로드 취소됨",
+    "failed": "다운로드 실패",
+    "ready": "사용 준비 완료",
+    "bytes": "{{total}} 중 {{done}}",
+    "speed": "{{rate}}/초",
+    "eta": "{{time}} 남음",
+    "downloadAgain": "다시 다운로드",
+    "nextDisk": "디스크 공간이 부족합니다. 공간을 확보하거나 설정 → 저장소에서 모델 폴더를 옮긴 뒤 다시 시도하세요.",
+    "nextGated": "이 모델은 Hugging Face 접근 권한이 필요합니다. 모델 페이지에서 요청하고 설정 → 자격 증명에 토큰을 추가한 뒤 다시 시도하세요.",
+    "nextNetwork": "다운로드 서버에 연결할 수 없습니다. 설정 → 네트워크에서 연결, 프록시 또는 미러를 확인한 뒤 다시 시도하세요.",
+    "nextMemory": "이 기기의 메모리가 부족합니다. 설정 → 성능에서 더 가벼운 프로필을 선택한 뒤 다시 시도하세요.",
+    "downloads": "다운로드",
+    "activeCount": "진행 중인 다운로드: {{count}}"
   }
 }

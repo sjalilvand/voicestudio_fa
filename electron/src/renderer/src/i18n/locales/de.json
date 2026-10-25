@@ -4250,5 +4250,25 @@
       "fix1": "Backend unter Einstellungen > Protokolle prüfen",
       "fix2": "VoiceStudio neu starten und erneut versuchen"
     }
+  },
+  "modelInstall": {
+    "queued": "Wartet auf Start…",
+    "downloading": "Wird heruntergeladen…",
+    "downloadingPct": "Wird heruntergeladen · {{pct}} %",
+    "finishing": "Wird geprüft und installiert…",
+    "cancelling": "Wird abgebrochen…",
+    "cancelled": "Download abgebrochen",
+    "failed": "Download fehlgeschlagen",
+    "ready": "Einsatzbereit",
+    "bytes": "{{done}} von {{total}}",
+    "speed": "{{rate}}/s",
+    "eta": "noch {{time}}",
+    "downloadAgain": "Erneut herunterladen",
+    "nextDisk": "Nicht genug Speicherplatz. Gib Platz frei oder verschiebe den Modellordner unter Einstellungen → Lagerung und versuche es dann erneut.",
+    "nextGated": "Dieses Modell erfordert Zugriff auf Hugging Face. Beantrage ihn auf der Modellseite, füge dein Token unter Einstellungen → Anmeldedaten hinzu und versuche es dann erneut.",
+    "nextNetwork": "Der Download-Server ist nicht erreichbar. Prüfe Verbindung, Proxy oder Mirror unter Einstellungen → Netzwerk und versuche es dann erneut.",
+    "nextMemory": "Dem Gerät ist der Speicher ausgegangen. Wähle unter Einstellungen → Leistung ein leichteres Profil und versuche es dann erneut.",
+    "downloads": "Downloads",
+    "activeCount": "Laufende Downloads: {{count}}"
   }
 }

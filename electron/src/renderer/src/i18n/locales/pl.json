@@ -4256,5 +4256,25 @@
       "fix1": "Sprawdź backend w Ustawienia > Dzienniki",
       "fix2": "Uruchom VoiceStudio ponownie i spróbuj jeszcze raz"
     }
+  },
+  "modelInstall": {
+    "queued": "Oczekiwanie na rozpoczęcie…",
+    "downloading": "Pobieranie…",
+    "downloadingPct": "Pobieranie · {{pct}}%",
+    "finishing": "Weryfikacja i instalacja…",
+    "cancelling": "Anulowanie…",
+    "cancelled": "Pobieranie anulowane",
+    "failed": "Pobieranie nie powiodło się",
+    "ready": "Gotowe do użycia",
+    "bytes": "{{done}} z {{total}}",
+    "speed": "{{rate}}/s",
+    "eta": "pozostało {{time}}",
+    "downloadAgain": "Pobierz ponownie",
+    "nextDisk": "Za mało miejsca na dysku. Zwolnij miejsce lub przenieś folder modeli w Ustawienia → Przechowywanie, a potem spróbuj ponownie.",
+    "nextGated": "Ten model wymaga dostępu w Hugging Face. Poproś o niego na stronie modelu, dodaj token w Ustawienia → Dane uwierzytelniające, a potem spróbuj ponownie.",
+    "nextNetwork": "Nie można połączyć się z serwerem pobierania. Sprawdź połączenie, proxy lub mirror w Ustawienia → Sieć, a potem spróbuj ponownie.",
+    "nextMemory": "Na tym urządzeniu zabrakło pamięci. Wybierz lżejszy profil w Ustawienia → Wydajność, a potem spróbuj ponownie.",
+    "downloads": "Pobieranie",
+    "activeCount": "Trwające pobierania: {{count}}"
   }
 }

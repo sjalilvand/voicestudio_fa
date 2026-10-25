@@ -4252,5 +4252,25 @@
       "fix1": "Revisa el backend en Ajustes > Registros",
       "fix2": "Reinicia VoiceStudio y reintenta"
     }
+  },
+  "modelInstall": {
+    "queued": "Esperando para empezar…",
+    "downloading": "Descargando…",
+    "downloadingPct": "Descargando · {{pct}} %",
+    "finishing": "Verificando e instalando…",
+    "cancelling": "Cancelando…",
+    "cancelled": "Descarga cancelada",
+    "failed": "La descarga falló",
+    "ready": "Listo para usar",
+    "bytes": "{{done}} de {{total}}",
+    "speed": "{{rate}}/s",
+    "eta": "quedan {{time}}",
+    "downloadAgain": "Descargar de nuevo",
+    "nextDisk": "No hay suficiente espacio en disco. Libera espacio o mueve la carpeta de modelos en Ajustes → Almacenamiento y vuelve a intentarlo.",
+    "nextGated": "Este modelo requiere acceso en Hugging Face. Solicítalo en la página del modelo, añade tu token en Ajustes → Credenciales y vuelve a intentarlo.",
+    "nextNetwork": "No se pudo contactar con el servidor de descarga. Revisa la conexión, el proxy o el espejo en Ajustes → Red y vuelve a intentarlo.",
+    "nextMemory": "Este dispositivo se quedó sin memoria. Elige un perfil más ligero en Ajustes → Rendimiento y vuelve a intentarlo.",
+    "downloads": "Descargas",
+    "activeCount": "Descargas en curso: {{count}}"
   }
 }

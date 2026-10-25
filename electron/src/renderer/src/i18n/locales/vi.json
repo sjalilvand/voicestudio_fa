@@ -4250,5 +4250,25 @@
       "fix1": "Kiểm tra backend trong Cài đặt > Nhật ký",
       "fix2": "Khởi động lại VoiceStudio rồi thử lại"
     }
+  },
+  "modelInstall": {
+    "queued": "Đang chờ bắt đầu…",
+    "downloading": "Đang tải xuống…",
+    "downloadingPct": "Đang tải xuống · {{pct}}%",
+    "finishing": "Đang kiểm tra và cài đặt…",
+    "cancelling": "Đang hủy…",
+    "cancelled": "Đã hủy tải xuống",
+    "failed": "Tải xuống thất bại",
+    "ready": "Sẵn sàng sử dụng",
+    "bytes": "{{done}} trên {{total}}",
+    "speed": "{{rate}}/giây",
+    "eta": "còn {{time}}",
+    "downloadAgain": "Tải xuống lại",
+    "nextDisk": "Không đủ dung lượng đĩa. Giải phóng dung lượng hoặc chuyển thư mục mô hình trong Cài đặt → Lưu trữ, rồi thử lại.",
+    "nextGated": "Mô hình này cần quyền truy cập Hugging Face. Hãy yêu cầu trên trang mô hình, thêm token của bạn trong Cài đặt → Xác thực, rồi thử lại.",
+    "nextNetwork": "Không kết nối được máy chủ tải xuống. Kiểm tra kết nối, proxy hoặc mirror trong Cài đặt → Mạng, rồi thử lại.",
+    "nextMemory": "Thiết bị này đã hết bộ nhớ. Chọn hồ sơ nhẹ hơn trong Cài đặt → Hiệu suất, rồi thử lại.",
+    "downloads": "Tải xuống",
+    "activeCount": "Đang tải xuống: {{count}}"
   }
 }
