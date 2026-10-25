@@ -2393,7 +2393,8 @@
     "storage_temp": "Archivos temporales",
     "change": "Cambiar…",
     "reset_default": "Restablecer los valores predeterminados",
-    "region_label": "Región de descarga"
+    "region_label": "Región de descarga",
+    "free_space": "{{free}} GB libres en esta unidad, se necesitan unos {{needed}} GB"
   },
   "asr_missing": {
     "message": "No hay ningún modelo de voz a texto instalado — esta función necesita uno para transcribir audio.",

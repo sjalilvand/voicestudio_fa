@@ -2391,7 +2391,8 @@
     "storage_temp": "Temporäre Dateien",
     "change": "Ändern…",
     "reset_default": "Auf Standard zurücksetzen",
-    "region_label": "Download-Region"
+    "region_label": "Download-Region",
+    "free_space": "{{free}} GB frei auf diesem Laufwerk, etwa {{needed}} GB nötig"
   },
   "asr_missing": {
     "message": "Es ist kein Sprache-zu-Text-Modell installiert — diese Funktion benötigt eines zum Transkribieren.",

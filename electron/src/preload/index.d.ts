@@ -84,6 +84,8 @@ export interface BackendStatus {
   /** Managed Python environment root shown during first-run setup. */
   runtimePath?: string;
   runtimeCustom?: boolean;
+  /** Free GiB on the drive that will hold the runtime, while setup is required. */
+  runtimeFreeGib?: number;
   runtimeRegion?: RuntimeRegion;
   /** Where data, models and temp files go when the location was chosen during setup. */
   runtimeStorage?: { data: string; models: string; temp: string };

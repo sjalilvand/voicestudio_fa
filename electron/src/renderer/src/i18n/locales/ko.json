@@ -2391,7 +2391,8 @@
     "storage_temp": "임시 파일",
     "change": "변경…",
     "reset_default": "기본값으로 재설정",
-    "region_label": "다운로드 지역"
+    "region_label": "다운로드 지역",
+    "free_space": "이 드라이브의 여유 공간은 {{free}}GB이며 약 {{needed}}GB가 필요합니다"
   },
   "asr_missing": {
     "message": "음성 인식 모델이 설치되어 있지 않습니다 — 이 기능으로 오디오를 전사하려면 모델이 필요합니다.",

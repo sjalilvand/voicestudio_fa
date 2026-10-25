@@ -2391,7 +2391,8 @@
     "storage_temp": "一時ファイル",
     "change": "変更…",
     "reset_default": "デフォルトにリセットする",
-    "region_label": "ダウンロード地域"
+    "region_label": "ダウンロード地域",
+    "free_space": "このドライブの空き容量は {{free}} GB、必要な容量は約 {{needed}} GB です"
   },
   "asr_missing": {
     "message": "音声認識モデルがインストールされていません — この機能で文字起こしを行うにはモデルが必要です。",

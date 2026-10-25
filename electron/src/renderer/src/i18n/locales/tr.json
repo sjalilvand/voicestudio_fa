@@ -2391,7 +2391,8 @@
     "storage_temp": "Geçici dosyalar",
     "change": "Değiştir…",
     "reset_default": "Varsayılana sıfırla",
-    "region_label": "İndirme bölgesi"
+    "region_label": "İndirme bölgesi",
+    "free_space": "Bu sürücüde {{free}} GB boş alan var, yaklaşık {{needed}} GB gerekli"
   },
   "asr_missing": {
     "message": "Yüklü bir konuşmadan metne modeli yok — bu özellik sesi yazıya dökmek için bir model gerektirir.",
