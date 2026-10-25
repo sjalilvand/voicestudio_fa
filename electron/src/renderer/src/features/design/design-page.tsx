@@ -212,6 +212,7 @@ export function DesignPage() {
               )}
             </div>
             <textarea
+              dir="auto"
               id="voice-description"
               maxLength={2000}
               disabled={generation.isGenerating}
@@ -501,6 +502,7 @@ export function DesignPage() {
               {t('clone.text_label')}
             </label>
             <textarea
+              dir="auto"
               id="design-script"
               className="min-h-40 flex-1 resize-none bg-transparent text-base leading-7 outline-none"
               value={draft.text}

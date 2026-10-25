@@ -3583,6 +3583,10 @@
     "detailsFailed": "De licentiegegevens konden niet worden geladen. Sluit dit venster en probeer het opnieuw."
   },
   "mobile": {
+    "home": {
+      "subtitle": "Jouw open-source, volledig lokale alternatief voor ElevenLabs — kloon en ontwerp stemmen, dub video’s, dicteer, transcribeer en maak luisterboeken in 646 talen.",
+      "brought_by": "Mogelijk gemaakt door"
+    },
     "tabs": {
       "speak": "Spreken",
       "voices": "Stemmen",

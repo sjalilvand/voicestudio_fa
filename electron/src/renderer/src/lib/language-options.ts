@@ -1,6 +1,7 @@
 import languageCodes from '@shared/language-codes.json';
 import languageRegions from '@shared/language-regions.json';
 import { LANG_CODES } from '@shared/utils/languages';
+import { TARGET_ONLY_LANGUAGES } from './translation-targets';
 import { normalizeSearch, type SearchOption } from '@shared/components/VirtualSearchableSelect';
 import type { QueryClient } from '@tanstack/react-query';
 import type { EnginesResponse } from './api/types';
@@ -8,6 +9,7 @@ import type { EnginesResponse } from './api/types';
 const codes: Record<string, string> = {
   ...languageCodes,
   ...Object.fromEntries(LANG_CODES.map((item) => [item.label.toLowerCase(), item.code])),
+  ...Object.fromEntries(TARGET_ONLY_LANGUAGES.map((item) => [item.label.toLowerCase(), item.code])),
 };
 const codeValues = new Set(Object.values(codes));
 // These display names are accepted by the backend; keep persisted values unchanged.

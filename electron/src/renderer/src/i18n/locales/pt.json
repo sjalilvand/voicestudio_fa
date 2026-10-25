@@ -3585,6 +3585,10 @@
     "detailsFailed": "Não foi possível carregar os detalhes da licença. Feche esta janela e tente novamente."
   },
   "mobile": {
+    "home": {
+      "subtitle": "Sua alternativa ao ElevenLabs, de código aberto e totalmente local — clone e crie vozes, duble vídeos, dite, transcreva e crie audiolivros em 646 idiomas.",
+      "brought_by": "Oferecido por"
+    },
     "tabs": {
       "speak": "Falar",
       "voices": "Vozes",

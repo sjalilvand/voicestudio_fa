@@ -3585,6 +3585,10 @@
     "detailsFailed": "Impossibile caricare i dettagli della licenza. Chiudi questa finestra e riprova."
   },
   "mobile": {
+    "home": {
+      "subtitle": "La tua alternativa a ElevenLabs, open source e completamente locale: clona e crea voci, doppia video, detta, trascrivi e crea audiolibri in 646 lingue.",
+      "brought_by": "Offerto da"
+    },
     "tabs": {
       "speak": "Parla",
       "voices": "Voci",

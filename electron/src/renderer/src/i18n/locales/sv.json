@@ -3583,6 +3583,10 @@
     "detailsFailed": "Licensinformationen kunde inte läsas in. Stäng dialogrutan och försök igen."
   },
   "mobile": {
+    "home": {
+      "subtitle": "Ditt alternativ till ElevenLabs med öppen källkod, helt lokalt — klona och skapa röster, dubba videor, diktera, transkribera och skapa ljudböcker på 646 språk.",
+      "brought_by": "Presenteras av"
+    },
     "tabs": {
       "speak": "Tala",
       "voices": "Röster",
