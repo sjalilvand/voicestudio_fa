@@ -89,21 +89,30 @@ func boundedDownloadCancelsOversizeBeforeBodyCompletes(_ path: String) async thr
 
 private actor BoundRecordingTransport: HTTPTransport {
     private(set) var limits: [Int] = []
-    func send(_ request: URLRequest) async throws -> HTTPReply { throw ClientError("mobile.errors.invalid_response") }
+    func send(_ request: URLRequest) async throws -> HTTPReply {
+        guard request.url?.path == "/engines/diarisation" else { throw ClientError("mobile.errors.invalid_response") }
+        return HTTPReply(data: Data(#"{"installed":true}"#.utf8))
+    }
     func download(_ request: URLRequest,maxBytes: Int) async throws -> DownloadReply {
         limits.append(maxBytes)
         let file = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        try Data([1]).write(to: file)
+        let data: Data
+        if request.url?.path.hasPrefix("/dub/transcribe-stream/") == true {
+            data = Data("event: final\ndata: {\"segments\":[{\"id\":0,\"start\":0,\"end\":1,\"text\":\"Speech\"}]}\n\nevent: done\ndata: {}\n\n".utf8)
+        } else { data = Data([1]) }
+        try data.write(to: file)
         return DownloadReply(file: file,status: 200,headers: [:])
     }
 }
-@Test func voiceAndProjectDownloadsSupplyTheirStorageBudgets() async throws {
+@Test func voiceProjectAndAnalysisDownloadsSupplyTheirStorageBudgets() async throws {
     let transport = BoundRecordingTransport()
     let api = APIClient(address: try PairingAddress("http://127.0.0.1"),transport: transport)
     let voice = try await api.downloadPhoneVoiceBundle("profile")
     defer { try? FileManager.default.removeItem(at: voice) }
     let project = try await api.receiveHandoff(UUID().uuidString.lowercased())
     defer { try? FileManager.default.removeItem(at: project) }
-    #expect(await transport.limits == [64*1024*1024,ProjectArchive.maxBytes+8_388_608])
+    let analysis = try await api.computerDubAnalysis("job")
+    #expect(analysis.segments.count == 1)
+    #expect(await transport.limits == [64*1024*1024,ProjectArchive.maxBytes+8_388_608,16_777_216])
 }
 #endif
