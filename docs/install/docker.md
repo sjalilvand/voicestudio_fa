@@ -18,9 +18,10 @@ The former `ghcr.io/debpalash/omnivoice-studio` path remains a compatible alias.
 
 ## Architecture
 
-The published images are **`linux/amd64` (x86-64) only**, including `:stable`,
-`:latest`, and the ROCm variants. There is no native `linux/arm64` image.
-On an ARM64 host, pulling without an explicit platform can fail with
+The main CUDA/CPU images (`:stable`, `:latest`, ...) and the ROCm variants are
+**`linux/amd64` (x86-64) only**. The one native `linux/arm64` image is the
+NVIDIA CUDA variant for ARM servers, published under its own `-cuda-arm64`
+tags (see below). On an ARM64 host, pulling an un-suffixed tag can fail with
 `no matching manifest for linux/arm64/v8 in the manifest list entries`.
 
 - **Apple Silicon (M-series Macs):** use the [native macOS app](macos.md),
@@ -32,22 +33,11 @@ On an ARM64 host, pulling without an explicit platform can fail with
   below. This is an emulated CPU option, not native
   ARM64 support; inference can be much slower and is not a GPU workaround.
   Without emulation, use an AMD64 server for this Docker deployment.
-- **ARM64 + NVIDIA GPU (DGX Spark / GB10, GH200):** no image is published, but
-  `deploy/Dockerfile` builds natively. Prepare a base image from `ubuntu:24.04`
-  with `python3`, `torch==2.8.0` from the `cu129` PyTorch index (`cu128` has no
-  aarch64 2.8.0), `torchaudio==2.8.0` and `torchvision==0.23.0` installed with
-  `--no-deps`, plus apt `build-essential pkg-config cmake libopus-dev` (`sphn`
-  has no aarch64 wheel and builds against Opus). Then:
-
-  ```bash
-  docker build -f deploy/Dockerfile --build-arg BASE_IMAGE=<your-base> -t voicestudio:arm64-cuda .
-  ```
-
-  The Dockerfile skips the cuDNN 8 compatibility step on aarch64 because NVIDIA
-  ships no aarch64 wheel for it, so CTranslate2-based ASR engines (faster-whisper,
-  WhisperX) report unavailable; PyTorch engines such as OmniVoice, CosyVoice and
-  `pytorch-whisper` use the GPU. This recipe is community-validated on v0.5.6,
-  not a supported or CI-tested image.
+- **ARM64 + NVIDIA GPU (DGX Spark / GB10, GH200, GB200):** use the
+  `:stable-cuda-arm64` image; see
+  [Pull and run (ARM64 NVIDIA GPU)](#pull-and-run-arm64-nvidia-gpu).
+  Jetson boards (L4T/JetPack) are not covered: they need JetPack's own PyTorch
+  builds.
 
 ## Image tags
 
@@ -63,11 +53,15 @@ On an ARM64 host, pulling without an explicit platform can fail with
 > | `:sha-xxxxxxx` | Exact commit — produced by every image build (main, releases, manual runs) |
 > | `:rocm` | **AMD GPU (ROCm) build** of the rolling preview — the ROCm analogue of `:latest` |
 > | `:stable-rocm`, `:0.5.6-rocm`, `:0.5-rocm`, `:sha-xxxxxxx-rocm` | ROCm builds of the corresponding CUDA tags above |
-> | `:beta`, `:0.5.9-beta.1` | Newest beta prerelease and its exact version. A beta never moves `:stable` or `:0.5`; `-rocm` forms exist too (`:beta-rocm`) |
+> | `:cuda-arm64` | **ARM64 NVIDIA GPU build** (`linux/arm64`) of the rolling preview |
+> | `:stable-cuda-arm64`, `:0.5.6-cuda-arm64`, `:0.5-cuda-arm64`, `:sha-xxxxxxx-cuda-arm64` | ARM64 NVIDIA builds of the corresponding CUDA tags above |
+> | `:beta`, `:0.5.9-beta.1` | Newest beta prerelease and its exact version. A beta never moves `:stable` or `:0.5`; `-rocm` and `-cuda-arm64` forms exist too (`:beta-rocm`, `:beta-cuda-arm64`) |
 >
-> Release tags (`:X.Y.Z`, `:X.Y`, `:stable` and their `-rocm` forms) are
-> published only when the GitHub Release is published. Previews come only from
-> `main` (`:latest`, `:main`, `:rocm`); to follow previews, use `:latest`.
+> Release tags (`:X.Y.Z`, `:X.Y`, `:stable` and their `-rocm` and `-cuda-arm64`
+> forms) are published only when the GitHub Release is published. Previews come
+> only from `main` (`:latest`, `:main`, `:rocm`, `:cuda-arm64`); to follow
+> previews, use `:latest`. The `-cuda-arm64` tags start with the first release
+> after they were added; older versions have no arm64 image.
 >
 > **Note on desktop-only controls:** Electron updates, global shortcuts, native
 > file pickers, and runtime management do **not** apply to Docker. To update a
@@ -121,6 +115,41 @@ docker run -d --name omnivoice --gpus all \
 GPU mode requires the
 [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
 on the host.
+
+## Pull and run (ARM64 NVIDIA GPU)
+
+<a id="pull-and-run-arm64-nvidia-gpu"></a>
+
+For ARM servers with an NVIDIA GPU (DGX Spark / GB10, GH200, GB200), use the
+native `linux/arm64` image:
+
+```bash
+docker run -d --name omnivoice --gpus all \
+  -p 127.0.0.1:3900:3900 \
+  -e OMNIVOICE_API_KEY="$OMNIVOICE_API_KEY" \
+  -v omnivoice-data:/app/omnivoice_data \
+  ghcr.io/debpalash/voicestudio:stable-cuda-arm64
+```
+
+It needs the NVIDIA Container Toolkit and a driver that supports CUDA 12.9.
+The image is built from Ubuntu 24.04 with PyTorch 2.8.0 for CUDA 12.9 (PyTorch
+publishes no CUDA 12.8 build of 2.8.0 for aarch64), on GitHub's native arm64
+runners. Differences from the x86-64 CUDA image:
+
+- CTranslate2-based ASR engines (faster-whisper, WhisperX) report unavailable:
+  NVIDIA ships no aarch64 build of the cuDNN 8 libraries they need. Use
+  `pytorch-whisper` for GPU transcription.
+- PyTorch engines such as OmniVoice and CosyVoice use the GPU.
+- Jetson (L4T/JetPack) is not supported.
+
+CI builds this image but cannot run it on a GPU; please report problems with
+your host and `docker logs` output.
+
+To build it yourself on an arm64 host:
+
+```bash
+docker build -f deploy/Dockerfile --build-arg BASE_IMAGE=cuda-arm64-base -t voicestudio:cuda-arm64 .
+```
 
 ## Pull and run (AMD GPU / ROCm)
 
