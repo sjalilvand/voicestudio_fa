@@ -373,7 +373,8 @@
     "inactive": "Tidak aktif",
     "translation": "Terjemahan",
     "diarisation": "Diarisasi",
-    "localDevice": "Perangkat lokal"
+    "localDevice": "Perangkat lokal",
+    "localShort": "Lokal"
   },
   "paneActions": {
     "collapse": "Ciutkan panel",

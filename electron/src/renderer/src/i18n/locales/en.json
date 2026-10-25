@@ -743,7 +743,8 @@
     "inactive": "Inactive",
     "translation": "Translation",
     "diarisation": "Diarisation",
-    "localDevice": "Local device"
+    "localDevice": "Local device",
+    "localShort": "Local"
   },
   "paneActions": {
     "collapse": "Collapse pane",
