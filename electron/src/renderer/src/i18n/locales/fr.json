@@ -2544,9 +2544,9 @@
     "sent_app": "Version et build de l’application",
     "sent_system": "Système, GPU, mémoire et espace disque libre",
     "sent_engines": "Les moteurs actifs",
-    "sent_logs": "Dernières lignes du journal du moteur, sans chemins de fichiers ni jetons",
+    "sent_logs": "Dernières lignes du journal du moteur, sans le chemin de votre dossier personnel ni les jetons",
     "sent_pages": "Noms des pages visitées récemment",
-    "not_sent": "Jamais envoyés : votre audio, vos textes, vos voix ou noms de fichiers.",
+    "not_sent": "Jamais envoyés : votre audio, vos textes ou vos voix. Des noms de fichiers peuvent figurer dans les journaux ou votre description : relisez l’aperçu GitHub avant d’envoyer.",
     "submit": "Ouvrir un ticket GitHub"
   },
   "crash": {

@@ -2546,9 +2546,9 @@
     "sent_app": "Wersja i kompilacja aplikacji",
     "sent_system": "System operacyjny, GPU, pamięć i wolne miejsce na dysku",
     "sent_engines": "Które silniki są aktywne",
-    "sent_logs": "Ostatnie wiersze dziennika silnika, bez ścieżek plików i tokenów",
+    "sent_logs": "Ostatnie wiersze dziennika silnika, bez ścieżki folderu domowego i tokenów",
     "sent_pages": "Nazwy ostatnio odwiedzonych stron",
-    "not_sent": "Nigdy nie wysyłamy: dźwięku, tekstu, głosów ani nazw plików.",
+    "not_sent": "Nigdy nie wysyłamy: dźwięku, tekstu ani głosów. Nazwy plików mogą pojawić się w dziennikach lub opisie, więc przed wysłaniem sprawdź podgląd na GitHubie.",
     "submit": "Otwórz zgłoszenie na GitHubie"
   },
   "crash": {

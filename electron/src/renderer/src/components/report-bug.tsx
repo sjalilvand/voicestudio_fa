@@ -28,6 +28,9 @@ import {
 import { Input } from './ui/input';
 import { ConfirmDialog } from '@/features/clone/confirm-dialog';
 
+/** An unpaired surrogate makes encodeURIComponent throw. */
+const LONE_SURROGATE = /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/g;
+
 type KnownUpdate = { current: string; latest: string };
 
 function reachabilitySection(
@@ -130,7 +133,7 @@ export function ReportBug({ error }: { error?: Error | string }) {
         nativeStatus.status === 'fulfilled' && nativeStatus.value
           ? nativeStatus.value
           : cachedBackend;
-      const summaryText = scrubText(summary).replace(/\s+/g, ' ').trim();
+      const summaryText = scrubText(summary).replace(LONE_SURROGATE, '\ufffd').replace(/\s+/g, ' ').trim();
       const context = [
         `**Summary:** ${summaryText}`,
         `**App:** VoiceStudio ${__APP_VERSION__} (build ${__BUILD_COMMIT__})`,
@@ -242,7 +245,8 @@ export function ReportBug({ error }: { error?: Error | string }) {
         if (tail) diagnosticSection.push('## Current backend log', '', '```', tail, '```', '');
       }
       const url = composeBugReportUrl({
-        title: `[Bug] ${summaryText.slice(0, 100)}`,
+        // By code point: a UTF-16 slice can split an emoji and make encodeURIComponent throw.
+        title: `[Bug] ${Array.from(summaryText).slice(0, 100).join('')}`,
         error,
         ctx: context.join('\n'),
         crashSection,
@@ -272,10 +276,14 @@ export function ReportBug({ error }: { error?: Error | string }) {
             // A failure's own message seeds the one-liner; the user can edit it.
             if (!summary && error)
               setSummary(
-                scrubText(typeof error === 'string' ? error : error.message || String(error))
-                  .replace(/\s+/g, ' ')
-                  .trim()
-                  .slice(0, 80),
+                Array.from(
+                  scrubText(typeof error === 'string' ? error : error.message || String(error))
+                    .replace(LONE_SURROGATE, '\ufffd')
+                    .replace(/\s+/g, ' ')
+                    .trim(),
+                )
+                  .slice(0, 80)
+                  .join(''),
               );
             setShowRequired(false);
             setDialogOpen(true);
