@@ -16,6 +16,16 @@ import { apiJson } from '@/lib/api/client';
 import { router } from '@/router';
 import { getBridge } from './bridge';
 import { Button } from './ui/button';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
+import { Input } from './ui/input';
 import { ConfirmDialog } from '@/features/clone/confirm-dialog';
 
 type KnownUpdate = { current: string; latest: string };
@@ -68,6 +78,9 @@ export function ReportBug({ error }: { error?: Error | string }) {
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const [knownUpdate, setKnownUpdate] = useState<KnownUpdate | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [summary, setSummary] = useState('');
+  const [showRequired, setShowRequired] = useState(false);
   const pending = useRef(false);
   const report = async (skipFreshness = false, staleBuild?: KnownUpdate) => {
     if (pending.current) return;
@@ -117,7 +130,9 @@ export function ReportBug({ error }: { error?: Error | string }) {
         nativeStatus.status === 'fulfilled' && nativeStatus.value
           ? nativeStatus.value
           : cachedBackend;
+      const summaryText = scrubText(summary).replace(/\s+/g, ' ').trim();
       const context = [
+        `**Summary:** ${summaryText}`,
         `**App:** VoiceStudio ${__APP_VERSION__} (build ${__BUILD_COMMIT__})`,
         '**Shell:** Electron',
       ];
@@ -227,6 +242,7 @@ export function ReportBug({ error }: { error?: Error | string }) {
         if (tail) diagnosticSection.push('## Current backend log', '', '```', tail, '```', '');
       }
       const url = composeBugReportUrl({
+        title: `[Bug] ${summaryText.slice(0, 100)}`,
         error,
         ctx: context.join('\n'),
         crashSection,
@@ -252,7 +268,18 @@ export function ReportBug({ error }: { error?: Error | string }) {
           size="sm"
           disabled={busy}
           title={t('reportBug.title')}
-          onClick={() => void report()}
+          onClick={() => {
+            // A failure's own message seeds the one-liner; the user can edit it.
+            if (!summary && error)
+              setSummary(
+                scrubText(typeof error === 'string' ? error : error.message || String(error))
+                  .replace(/\s+/g, ' ')
+                  .trim()
+                  .slice(0, 80),
+              );
+            setShowRequired(false);
+            setDialogOpen(true);
+          }}
         >
           {t(busy ? 'common.loading' : 'reportBug.label')}
         </Button>
@@ -262,6 +289,66 @@ export function ReportBug({ error }: { error?: Error | string }) {
           </p>
         )}
       </div>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>{t('reportBug.label')}</DialogTitle>
+            <DialogDescription>{t('reportBug.title')}</DialogDescription>
+          </DialogHeader>
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!summary.trim()) {
+                setShowRequired(true);
+                return;
+              }
+              setDialogOpen(false);
+              void report();
+            }}
+          >
+            <div className="space-y-1.5">
+              <label htmlFor="report-bug-summary" className="text-sm font-medium">
+                {t('reportBug.summary_label')}
+              </label>
+              <Input
+                id="report-bug-summary"
+                value={summary}
+                maxLength={120}
+                autoFocus
+                aria-required="true"
+                aria-invalid={showRequired && !summary.trim()}
+                aria-describedby={showRequired ? 'report-bug-summary-error' : undefined}
+                placeholder={t('reportBug.summary_placeholder')}
+                onChange={(event) => {
+                  setSummary(event.target.value);
+                  setShowRequired(false);
+                }}
+              />
+              {showRequired ? (
+                <p id="report-bug-summary-error" role="alert" className="text-xs text-destructive">
+                  {t('reportBug.summary_required')}
+                </p>
+              ) : null}
+            </div>
+            <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-xs">
+              <p className="font-medium">{t('reportBug.sent_title')}</p>
+              <ul className="mt-1.5 list-disc space-y-0.5 pl-4 text-muted-foreground">
+                {(['app', 'system', 'engines', 'logs', 'pages'] as const).map((item) => (
+                  <li key={item}>{t(`reportBug.sent_${item}`)}</li>
+                ))}
+              </ul>
+              <p className="mt-2 text-muted-foreground">{t('reportBug.not_sent')}</p>
+            </div>
+            <DialogFooter>
+              <DialogClose render={<Button type="button" variant="outline" />}>
+                {t('common.cancel')}
+              </DialogClose>
+              <Button type="submit">{t('reportBug.submit')}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
       <ConfirmDialog
         open={knownUpdate !== null}
         onOpenChange={(open) => {

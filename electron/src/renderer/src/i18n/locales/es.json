@@ -1876,7 +1876,9 @@
     "deepl_base_url_help": "Punto final de API DeepL personalizado (predeterminado: https://api.deepl.com/v2). Cambio por proxy/autohospedado.",
     "microsoft_base_url_help": "Punto final personalizado de Azure Translator (predeterminado: https://api.cognitive.microsofttranslator.com).",
     "region": "Región",
-    "aws_profile": "Perfil de AWS"
+    "aws_profile": "Perfil de AWS",
+    "deepl_key_placeholder": "DeepL clave de API",
+    "microsoft_key_placeholder": "Microsoft clave de API"
   },
   "about": {
     "architecture": "Arquitectura",
@@ -2080,7 +2082,23 @@
     "hint_spawn_blocked": "Tu sistema operativo o tu software de seguridad se negó a iniciar el motor local. Añade la carpeta del entorno de ejecución de VoiceStudio a las exclusiones de tu antivirus (Windows: Seguridad de Windows → Protección antivirus y contra amenazas → Administrar la configuración → Exclusiones), asegúrate de que no esté dentro de una carpeta sincronizada en la nube como OneDrive y vuelve a intentarlo.",
     "hint_smart_app_control": "El Control inteligente de aplicaciones de Windows bloqueó el motor local. No admite excepciones por aplicación, así que una exclusión del antivirus no sirve. Desactívalo en Seguridad de Windows → Control de aplicaciones y navegador → Configuración del Control inteligente de aplicaciones (Windows no puede volver a activarlo sin restablecer), o conecta VoiceStudio a un motor que se ejecute en otro equipo y vuelve a intentarlo.",
     "hint_slow_start": "El motor aún se estaba iniciando cuando se agotó la espera. Los equipos lentos, sobre todo los que no tienen una GPU dedicada, y el primer inicio tras una instalación (el antivirus analiza cada archivo nuevo) pueden tardar varios minutos. Cierra las aplicaciones que consumen mucha memoria y vuelve a intentarlo; los siguientes inicios son mucho más rápidos.",
-    "hint_synced_folder": "Esta ubicación está dentro de una carpeta sincronizada en la nube (OneDrive, Dropbox, iCloud Drive, Google Drive). Los marcadores de solo en línea y el bloqueo de archivos dañan el entorno de Python. Mueve VoiceStudio a una carpeta local normal (por ejemplo, C:\\VoiceStudio en Windows o ~/VoiceStudio en macOS y Linux) y configúralo de nuevo."
+    "hint_synced_folder": "Esta ubicación está dentro de una carpeta sincronizada en la nube (OneDrive, Dropbox, iCloud Drive, Google Drive). Los marcadores de solo en línea y el bloqueo de archivos dañan el entorno de Python. Mueve VoiceStudio a una carpeta local normal (por ejemplo, C:\\VoiceStudio en Windows o ~/VoiceStudio en macOS y Linux) y configúralo de nuevo.",
+    "cause_smart_app_control": "El Control inteligente de aplicaciones de Windows bloqueó el motor",
+    "cause_spawn_blocked": "Un software de seguridad impidió que el motor se iniciara",
+    "cause_native_crash": "El motor se bloqueó al iniciarse (fallo nativo)",
+    "cause_missing_env": "Falta el entorno de Python o está incompleto",
+    "cause_permission": "No hay permiso para escribir en la carpeta del motor",
+    "cause_synced_folder": "La carpeta del motor está dentro de una carpeta sincronizada en la nube",
+    "cause_slow_start": "El motor aún se está iniciando en un equipo lento",
+    "choose_folder": "Elegir otra carpeta",
+    "copy_diagnostics": "Copiar diagnóstico",
+    "diagnostics_copied": "Diagnóstico copiado",
+    "details": "Detalles",
+    "pill_starting": "Iniciando",
+    "pill_recovering": "Recuperando",
+    "pill_failed": "Error",
+    "pill_repeats": "{{count}} veces seguidas",
+    "offline_bar": "Motor ocupado, reconectando automáticamente"
   },
   "bootstrap": {
     "checking": "Comprobando el entorno…",
@@ -2517,7 +2535,18 @@
     "staleTitle": "Actualización disponible",
     "staleMessage": "Está usando VoiceStudio {{current}}, pero {{latest}} ya está disponible; puede que este error ya esté corregido. ¿Ver la última versión antes de informar?",
     "staleView": "Ver actualización",
-    "staleFileAnyway": "Informar de todos modos"
+    "staleFileAnyway": "Informar de todos modos",
+    "summary_label": "¿Qué salió mal?",
+    "summary_placeholder": "Una línea, por ejemplo: El doblaje se detiene al 40 %",
+    "summary_required": "Añade primero una descripción de una línea.",
+    "sent_title": "Qué se enviará",
+    "sent_app": "Versión y compilación de la app",
+    "sent_system": "Sistema operativo, GPU, memoria y espacio libre en disco",
+    "sent_engines": "Qué motores están activos",
+    "sent_logs": "Últimas líneas del registro del motor, sin rutas de archivo ni tokens",
+    "sent_pages": "Nombres de las páginas visitadas recientemente",
+    "not_sent": "Nunca se envía: tu audio, texto, voces ni nombres de archivo.",
+    "submit": "Abrir incidencia en GitHub"
   },
   "crash": {
     "notice_unclean": "La sesión anterior terminó sin un cierre limpio hace {{ago}}. Suele ser inofensivo: el equipo se suspendió, la app se cerró a la fuerza o se detuvo una VM/contenedor.",

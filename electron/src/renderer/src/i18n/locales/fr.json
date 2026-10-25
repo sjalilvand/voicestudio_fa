@@ -1876,7 +1876,9 @@
     "deepl_base_url_help": "Point de terminaison de l'API DeepL personnalisé (par défaut : https://api.deepl.com/v2). Changer pour proxy/auto-hébergé.",
     "microsoft_base_url_help": "Point de terminaison Azure Translator personnalisé (par défaut : https://api.cognitive.microsofttranslator.com).",
     "region": "Région",
-    "aws_profile": "Profil AWS"
+    "aws_profile": "Profil AWS",
+    "deepl_key_placeholder": "DeepL clé API",
+    "microsoft_key_placeholder": "Microsoft clé API"
   },
   "about": {
     "architecture": "Architecture",
@@ -2080,7 +2082,23 @@
     "hint_spawn_blocked": "Votre système d’exploitation ou votre logiciel de sécurité a refusé de lancer le moteur local. Ajoutez le dossier d’exécution de VoiceStudio aux exclusions de votre antivirus (Windows : Sécurité Windows → Protection contre les virus et menaces → Gérer les paramètres → Exclusions), vérifiez qu’il ne se trouve pas dans un dossier synchronisé dans le cloud comme OneDrive, puis réessayez.",
     "hint_smart_app_control": "Le contrôle intelligent des applications de Windows a bloqué le moteur local. Il n’autorise aucune exception par application, donc une exclusion antivirus ne sert à rien. Désactivez-le dans Sécurité Windows → Contrôle des applications et du navigateur → Paramètres du contrôle intelligent des applications (Windows ne peut pas le réactiver sans réinitialisation), ou connectez VoiceStudio à un moteur exécuté sur un autre ordinateur, puis réessayez.",
     "hint_slow_start": "Le moteur était encore en cours de démarrage lorsque l’attente a expiré. Les ordinateurs lents, surtout sans GPU dédié, et le premier lancement après une installation (l’antivirus analyse chaque nouveau fichier) peuvent demander plusieurs minutes. Fermez les applications gourmandes en mémoire puis réessayez ; les démarrages suivants sont bien plus rapides.",
-    "hint_synced_folder": "Cet emplacement se trouve dans un dossier synchronisé dans le cloud (OneDrive, Dropbox, iCloud Drive, Google Drive). Les espaces réservés en ligne uniquement et le verrouillage des fichiers cassent l’environnement Python. Déplacez VoiceStudio vers un dossier local ordinaire (par exemple C:\\VoiceStudio sous Windows ou ~/VoiceStudio sous macOS et Linux), puis configurez-le à nouveau."
+    "hint_synced_folder": "Cet emplacement se trouve dans un dossier synchronisé dans le cloud (OneDrive, Dropbox, iCloud Drive, Google Drive). Les espaces réservés en ligne uniquement et le verrouillage des fichiers cassent l’environnement Python. Déplacez VoiceStudio vers un dossier local ordinaire (par exemple C:\\VoiceStudio sous Windows ou ~/VoiceStudio sous macOS et Linux), puis configurez-le à nouveau.",
+    "cause_smart_app_control": "Le contrôle intelligent des applications de Windows a bloqué le moteur",
+    "cause_spawn_blocked": "Un logiciel de sécurité a empêché le démarrage du moteur",
+    "cause_native_crash": "Le moteur a planté au démarrage (erreur native)",
+    "cause_missing_env": "L’environnement Python est absent ou incomplet",
+    "cause_permission": "Pas d’autorisation d’écriture dans le dossier du moteur",
+    "cause_synced_folder": "Le dossier du moteur se trouve dans un dossier synchronisé dans le cloud",
+    "cause_slow_start": "Le moteur démarre encore sur un ordinateur lent",
+    "choose_folder": "Choisir un autre dossier",
+    "copy_diagnostics": "Copier le diagnostic",
+    "diagnostics_copied": "Diagnostic copié",
+    "details": "Détails",
+    "pill_starting": "Démarrage",
+    "pill_recovering": "Récupération",
+    "pill_failed": "Échec",
+    "pill_repeats": "{{count}} fois de suite",
+    "offline_bar": "Moteur occupé, reconnexion automatique"
   },
   "bootstrap": {
     "checking": "Vérification de l'environnement…",
@@ -2517,7 +2535,18 @@
     "staleTitle": "Mise à jour disponible",
     "staleMessage": "Vous utilisez VoiceStudio {{current}}, mais {{latest}} est déjà sortie — ce bug y est peut-être déjà corrigé. Voir la dernière version avant de signaler ?",
     "staleView": "Voir la mise à jour",
-    "staleFileAnyway": "Signaler quand même"
+    "staleFileAnyway": "Signaler quand même",
+    "summary_label": "Qu’est-ce qui n’a pas fonctionné ?",
+    "summary_placeholder": "Une ligne, par exemple : le doublage s’arrête à 40 %",
+    "summary_required": "Ajoutez d’abord une description d’une ligne.",
+    "sent_title": "Ce qui sera envoyé",
+    "sent_app": "Version et build de l’application",
+    "sent_system": "Système, GPU, mémoire et espace disque libre",
+    "sent_engines": "Les moteurs actifs",
+    "sent_logs": "Dernières lignes du journal du moteur, sans chemins de fichiers ni jetons",
+    "sent_pages": "Noms des pages visitées récemment",
+    "not_sent": "Jamais envoyés : votre audio, vos textes, vos voix ou noms de fichiers.",
+    "submit": "Ouvrir un ticket GitHub"
   },
   "crash": {
     "notice_unclean": "La session précédente s'est terminée sans arrêt propre il y a {{ago}}. C'est souvent bénin : mise en veille, fermeture forcée ou arrêt d'une VM/d'un conteneur.",

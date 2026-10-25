@@ -1874,7 +1874,9 @@
     "deepl_base_url_help": "Titik akhir API DeepL khusus (default: https://api.deepl.com/v2). Ubah untuk proxy/hosting mandiri.",
     "microsoft_base_url_help": "Titik akhir Azure Translator kustom (default: https://api.cognitive.microsofttranslator.com).",
     "region": "Wilayah",
-    "aws_profile": "Profil AWS"
+    "aws_profile": "Profil AWS",
+    "deepl_key_placeholder": "DeepL kunci API",
+    "microsoft_key_placeholder": "Microsoft kunci API"
   },
   "about": {
     "architecture": "Arsitektur",
@@ -2078,7 +2080,23 @@
     "hint_spawn_blocked": "Sistem operasi atau perangkat lunak keamanan Anda menolak menjalankan mesin lokal. Tambahkan folder runtime VoiceStudio ke pengecualian antivirus (Windows: Keamanan Windows → Perlindungan virus & ancaman → Kelola pengaturan → Pengecualian), pastikan folder itu tidak berada di dalam folder yang disinkronkan ke cloud seperti OneDrive, lalu coba lagi.",
     "hint_smart_app_control": "Smart App Control Windows memblokir mesin lokal. Fitur ini tidak punya pengecualian per aplikasi, jadi pengecualian antivirus tidak akan membantu. Matikan di Keamanan Windows → Kontrol aplikasi & browser → Pengaturan Smart App Control (Windows tidak bisa menyalakannya lagi tanpa reset), atau hubungkan VoiceStudio ke mesin di komputer lain, lalu coba lagi.",
     "hint_slow_start": "Mesin masih memulai saat batas waktu tunggu habis. Komputer lambat, terutama tanpa GPU khusus, dan peluncuran pertama setelah instalasi (antivirus memindai setiap berkas baru) dapat memerlukan beberapa menit. Tutup aplikasi yang boros memori lalu coba lagi; peluncuran berikutnya jauh lebih cepat.",
-    "hint_synced_folder": "Lokasi ini berada di dalam folder yang disinkronkan ke cloud (OneDrive, Dropbox, iCloud Drive, Google Drive). Placeholder khusus daring dan penguncian berkas merusak lingkungan Python. Pindahkan VoiceStudio ke folder lokal biasa (misalnya C:\\VoiceStudio di Windows atau ~/VoiceStudio di macOS dan Linux), lalu siapkan ulang."
+    "hint_synced_folder": "Lokasi ini berada di dalam folder yang disinkronkan ke cloud (OneDrive, Dropbox, iCloud Drive, Google Drive). Placeholder khusus daring dan penguncian berkas merusak lingkungan Python. Pindahkan VoiceStudio ke folder lokal biasa (misalnya C:\\VoiceStudio di Windows atau ~/VoiceStudio di macOS dan Linux), lalu siapkan ulang.",
+    "cause_smart_app_control": "Smart App Control Windows memblokir mesin",
+    "cause_spawn_blocked": "Perangkat lunak keamanan memblokir mesin agar tidak dimulai",
+    "cause_native_crash": "Mesin mogok saat dimulai (kesalahan native)",
+    "cause_missing_env": "Lingkungan Python hilang atau tidak lengkap",
+    "cause_permission": "Tidak ada izin menulis ke folder mesin",
+    "cause_synced_folder": "Folder mesin berada di dalam folder yang disinkronkan ke cloud",
+    "cause_slow_start": "Mesin masih dimulai di komputer yang lambat",
+    "choose_folder": "Pilih folder lain",
+    "copy_diagnostics": "Salin diagnostik",
+    "diagnostics_copied": "Diagnostik disalin",
+    "details": "Detail",
+    "pill_starting": "Memulai",
+    "pill_recovering": "Memulihkan",
+    "pill_failed": "Gagal",
+    "pill_repeats": "{{count}} kali berturut-turut",
+    "offline_bar": "Mesin sibuk, menyambung kembali otomatis"
   },
   "bootstrap": {
     "checking": "Memeriksa lingkungan…",
@@ -2515,7 +2533,18 @@
     "staleTitle": "Pembaruan tersedia",
     "staleMessage": "Anda menggunakan VoiceStudio {{current}}, tetapi {{latest}} sudah dirilis — bug ini mungkin sudah diperbaiki di sana. Lihat rilis terbaru sebelum melapor?",
     "staleView": "Lihat pembaruan",
-    "staleFileAnyway": "Tetap laporkan"
+    "staleFileAnyway": "Tetap laporkan",
+    "summary_label": "Apa yang salah?",
+    "summary_placeholder": "Satu baris, misalnya: Dubbing berhenti di 40%",
+    "summary_required": "Tambahkan deskripsi satu baris terlebih dahulu.",
+    "sent_title": "Yang akan dikirim",
+    "sent_app": "Versi dan build aplikasi",
+    "sent_system": "Sistem operasi, GPU, memori, dan ruang disk kosong",
+    "sent_engines": "Mesin mana yang aktif",
+    "sent_logs": "Baris log mesin terbaru, tanpa jalur file dan token",
+    "sent_pages": "Nama halaman yang baru dikunjungi",
+    "not_sent": "Tidak pernah dikirim: audio, teks, suara, atau nama file Anda.",
+    "submit": "Buka issue GitHub"
   },
   "crash": {
     "notice_unclean": "Sesi sebelumnya berakhir tanpa penutupan yang bersih {{ago}} yang lalu. Ini sering tidak berbahaya — mesin tertidur, aplikasi ditutup paksa, atau VM/kontainer berhenti.",
