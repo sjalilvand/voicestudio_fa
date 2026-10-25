@@ -5,18 +5,14 @@ import {
   useState,
   type CSSProperties,
   type ReactNode,
-} from "react";
-import {
-  PanelLeftCloseIcon,
-  PanelLeftOpenIcon,
-  type LucideIcon,
-} from "lucide-react";
-import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
-import { usePaneResize } from "@/hooks/use-pane-resize";
-import { cn } from "@/lib/utils";
-import { isMac } from "@/components/bridge";
-import { useWindowFullscreen } from "@/hooks/use-window-fullscreen";
+} from 'react';
+import { PanelLeftCloseIcon, PanelLeftOpenIcon, type LucideIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/button';
+import { usePaneResize } from '@/hooks/use-pane-resize';
+import { cn } from '@/lib/utils';
+import { isMac } from '@/components/bridge';
+import { useWindowFullscreen } from '@/hooks/use-window-fullscreen';
 
 /**
  * How far a titlebar row must inset its content to clear the macOS traffic
@@ -31,34 +27,25 @@ function useTrafficLightInset(enabled: boolean) {
     if (!enabled || !row) return setInset(0);
     const measure = () =>
       setInset(
-        Math.max(
-          0,
-          Math.ceil(
-            MAC_TRAFFIC_LIGHTS_INLINE_END - row.getBoundingClientRect().left,
-          ),
-        ),
+        Math.max(0, Math.ceil(MAC_TRAFFIC_LIGHTS_INLINE_END - row.getBoundingClientRect().left)),
       );
     measure();
     // The row moves when a column before it resizes (rail collapse, pane drag).
     const observer = new ResizeObserver(measure);
     const column = row.parentElement;
-    for (
-      let node = column?.previousElementSibling;
-      node;
-      node = node.previousElementSibling
-    ) {
+    for (let node = column?.previousElementSibling; node; node = node.previousElementSibling) {
       observer.observe(node);
     }
     observer.observe(row);
-    window.addEventListener("resize", measure);
+    window.addEventListener('resize', measure);
     return () => {
       observer.disconnect();
-      window.removeEventListener("resize", measure);
+      window.removeEventListener('resize', measure);
     };
   }, [enabled]);
   return [ref, inset] as const;
 }
-import { MAC_TRAFFIC_LIGHTS_INLINE_END } from "@shared/utils/windowChrome";
+import { MAC_TRAFFIC_LIGHTS_INLINE_END } from '@shared/utils/windowChrome';
 
 const WIDTHS = {
   default: { minimum: 248, initial: 280, maximum: 515, reserve: 480 },
@@ -68,11 +55,11 @@ const WIDTHS = {
 
 const VARIANT_STYLES = {
   controls:
-    "[&>section]:shadow-[inset_0_1px_0_color-mix(in_oklab,var(--foreground)_3%,transparent)] [&>details]:shadow-[inset_0_1px_0_color-mix(in_oklab,var(--foreground)_3%,transparent)] [&_summary]:min-h-8 [&_summary]:select-none [&_summary]:items-center [&_summary]:px-0.5 [&_summary]:font-medium [&_summary]:text-foreground/90 [&_summary:hover]:bg-background/35 [&_h2]:text-foreground/90 [&_h3]:text-foreground/90",
+    '[&>section]:shadow-[inset_0_1px_0_color-mix(in_oklab,var(--foreground)_3%,transparent)] [&>details]:shadow-[inset_0_1px_0_color-mix(in_oklab,var(--foreground)_3%,transparent)] [&_summary]:min-h-8 [&_summary]:select-none [&_summary]:items-center [&_summary]:px-0.5 [&_summary]:font-medium [&_summary]:text-foreground/90 [&_summary:hover]:bg-background/35 [&_h2]:text-foreground/90 [&_h3]:text-foreground/90',
   navigation:
-    "[&>button]:h-9 [&>button]:w-full [&>button]:justify-start [&>button]:gap-2.5 [&>button]:rounded-lg [&>button]:px-2.5 [&>button]:font-normal [&>button]:transition-[color,background-color,box-shadow] [&>button:hover]:bg-accent/55 [&>button[aria-pressed=true]]:bg-accent/80 [&>button[aria-pressed=true]]:font-medium [&>button[aria-pressed=true]]:shadow-[inset_2px_0_0_var(--primary)] [&>button>svg]:text-muted-foreground [&>button[aria-pressed=true]>svg]:text-primary",
+    '[&>button]:h-9 [&>button]:w-full [&>button]:justify-start [&>button]:gap-2.5 [&>button]:rounded-lg [&>button]:px-2.5 [&>button]:font-normal [&>button]:transition-[color,background-color,box-shadow] [&>button:hover]:bg-accent/55 [&>button[aria-pressed=true]]:bg-accent/80 [&>button[aria-pressed=true]]:font-medium [&>button[aria-pressed=true]]:shadow-[inset_2px_0_0_var(--primary)] [&>button>svg]:text-muted-foreground [&>button[aria-pressed=true]>svg]:text-primary',
   library:
-    "[&_input]:bg-background/45 [&_input]:shadow-xs [&_button]:outline-none [&_button:focus-visible]:ring-2 [&_button:focus-visible]:ring-ring/40",
+    '[&_input]:bg-background/45 [&_input]:shadow-xs [&_button]:outline-none [&_button:focus-visible]:ring-2 [&_button:focus-visible]:ring-ring/40',
 } as const;
 
 /** Local workspace controls; the global library and navigation remain in the app shell. */
@@ -81,8 +68,8 @@ export function SecondarySidebar({
   icon: Icon,
   children,
   className,
-  size = "default",
-  variant = "controls",
+  size = 'default',
+  variant = 'controls',
   meta,
   footer,
   library,
@@ -94,8 +81,8 @@ export function SecondarySidebar({
   icon: LucideIcon;
   children: ReactNode;
   className?: string;
-  size?: "default" | "wide" | "spacious";
-  variant?: "controls" | "navigation" | "library";
+  size?: 'default' | 'wide' | 'spacious';
+  variant?: 'controls' | 'navigation' | 'library';
   meta?: ReactNode;
   /** Pinned below the scrolling content — never scrolls out of view. */
   footer?: ReactNode;
@@ -108,23 +95,21 @@ export function SecondarySidebar({
   onCollapsedChange?: (collapsed: boolean) => void;
 }) {
   const { t } = useTranslation();
-  const [headerRef, lightsInset] = useTrafficLightInset(
-    isMac() && !useWindowFullscreen(),
-  );
+  const [headerRef, lightsInset] = useTrafficLightInset(isMac() && !useWindowFullscreen());
   const [uncontrolledCollapsed, setUncontrolledCollapsed] = useState(false);
   const collapsed = controlledCollapsed ?? uncontrolledCollapsed;
-  const [view, setView] = useState<"controls" | "library">("controls");
+  const [view, setView] = useState<'controls' | 'library'>('controls');
   const [libraryVisited, setLibraryVisited] = useState(false);
   const tabsId = useId();
-  const chooseView = (next: "controls" | "library") => {
-    if (next === "library") setLibraryVisited(true);
+  const chooseView = (next: 'controls' | 'library') => {
+    if (next === 'library') setLibraryVisited(true);
     setView(next);
   };
-  const showLibrary = library != null && view === "library";
+  const showLibrary = library != null && view === 'library';
   // Notify from the event handler, never from inside a state updater: updaters
   // must stay pure (StrictMode runs them twice, which would double-fire this).
   const setCollapsed = (next: boolean | ((value: boolean) => boolean)) => {
-    const resolved = typeof next === "function" ? next(collapsed) : next;
+    const resolved = typeof next === 'function' ? next(collapsed) : next;
     if (resolved === collapsed) return;
     if (controlledCollapsed === undefined) setUncontrolledCollapsed(resolved);
     onCollapsedChange?.(resolved);
@@ -132,7 +117,7 @@ export function SecondarySidebar({
   const dimensions = WIDTHS[size];
   const resize = usePaneResize({
     storageKey: `voicestudio.secondary-sidebar.${size}`,
-    side: "left",
+    side: 'left',
     ...dimensions,
     enabled: !collapsed,
   });
@@ -146,14 +131,14 @@ export function SecondarySidebar({
       data-collapsed={collapsed || undefined}
       style={
         {
-          "--secondary-sidebar-width": `${resize.width}px`,
+          '--secondary-sidebar-width': `${resize.width}px`,
         } as CSSProperties
       }
       className={cn(
-        "secondary-sidebar relative [--pane-resize-display:flex] @max-[40rem]:[--pane-resize-display:none] flex min-h-0 shrink-0 flex-col border-r border-border/55 bg-[color-mix(in_oklab,var(--muted)_13%,var(--background))] shadow-[inset_-1px_0_0_color-mix(in_oklab,var(--foreground)_2%,transparent)] [container-type:inline-size]",
+        'secondary-sidebar relative [--pane-resize-display:flex] @max-[40rem]:[--pane-resize-display:none] flex min-h-0 shrink-0 flex-col border-r border-border/55 bg-[color-mix(in_oklab,var(--muted)_13%,var(--background))] shadow-[inset_-1px_0_0_color-mix(in_oklab,var(--foreground)_2%,transparent)] [container-type:inline-size]',
         collapsed
-          ? "w-11"
-          : "w-[var(--secondary-sidebar-width)] @max-[40rem]:max-h-[40%] @max-[40rem]:w-full @max-[40rem]:border-r-0 @max-[40rem]:border-b",
+          ? 'w-11'
+          : 'w-[var(--secondary-sidebar-width)] @max-[40rem]:max-h-[40%] @max-[40rem]:w-full @max-[40rem]:border-r-0 @max-[40rem]:border-b',
       )}
     >
       {!collapsed && (
@@ -168,12 +153,10 @@ export function SecondarySidebar({
       <div
         ref={headerRef}
         data-slot="secondary-sidebar-header"
-        style={
-          lightsInset ? { paddingInlineStart: lightsInset + 12 } : undefined
-        }
+        style={lightsInset ? { paddingInlineStart: lightsInset + 12 } : undefined}
         className={cn(
-          "workspace-titlebar flex h-12 shrink-0 items-center gap-2.5 border-b border-border/45 bg-background/30 shadow-[0_1px_0_color-mix(in_oklab,var(--foreground)_2%,transparent)] backdrop-blur-xl",
-          collapsed ? "justify-center px-1" : "px-3",
+          'workspace-titlebar flex h-12 shrink-0 items-center gap-2.5 border-b border-border/45 bg-background/30 shadow-[0_1px_0_color-mix(in_oklab,var(--foreground)_2%,transparent)] backdrop-blur-xl',
+          collapsed ? 'justify-center px-1' : 'px-3',
         )}
       >
         {!collapsed && (
@@ -197,10 +180,8 @@ export function SecondarySidebar({
         <Button
           variant="ghost"
           size="icon-xs"
-          aria-label={t(
-            collapsed ? "paneActions.expand" : "paneActions.collapse",
-          )}
-          title={t(collapsed ? "paneActions.expand" : "paneActions.collapse")}
+          aria-label={t(collapsed ? 'paneActions.expand' : 'paneActions.collapse')}
+          title={t(collapsed ? 'paneActions.expand' : 'paneActions.collapse')}
           aria-expanded={!collapsed}
           onClick={() => setCollapsed((value) => !value)}
           className="text-muted-foreground hover:bg-accent/60 hover:text-foreground"
@@ -217,36 +198,33 @@ export function SecondarySidebar({
           onKeyDown={(event) => {
             if (event.altKey || event.ctrlKey || event.metaKey) return;
             const tabs = [
-              ...event.currentTarget.querySelectorAll<HTMLButtonElement>(
-                '[role="tab"]',
-              ),
+              ...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]'),
             ];
             const current = tabs.findIndex((tab) => tab === event.target);
             if (current < 0) return;
             const forward =
-              getComputedStyle(event.currentTarget).direction === "rtl"
-                ? "ArrowLeft"
-                : "ArrowRight";
-            const backward =
-              forward === "ArrowRight" ? "ArrowLeft" : "ArrowRight";
+              getComputedStyle(event.currentTarget).direction === 'rtl'
+                ? 'ArrowLeft'
+                : 'ArrowRight';
+            const backward = forward === 'ArrowRight' ? 'ArrowLeft' : 'ArrowRight';
             const next =
-              event.key === "Home"
+              event.key === 'Home'
                 ? 0
-                : event.key === "End"
+                : event.key === 'End'
                   ? 1
                   : event.key === forward || event.key === backward
                     ? 1 - current
                     : null;
             if (next === null) return;
             event.preventDefault();
-            chooseView(next === 0 ? "controls" : "library");
+            chooseView(next === 0 ? 'controls' : 'library');
             tabs[next]?.focus();
           }}
         >
           {(
             [
-              ["controls", title],
-              ["library", libraryLabel ?? title],
+              ['controls', title],
+              ['library', libraryLabel ?? title],
             ] as const
           ).map(([value, label]) => (
             <button
@@ -259,10 +237,10 @@ export function SecondarySidebar({
               tabIndex={view === value ? 0 : -1}
               onClick={() => chooseView(value)}
               className={cn(
-                "h-7 min-w-0 flex-1 truncate rounded-md px-2 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                'h-7 min-w-0 flex-1 truncate rounded-md px-2 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
                 view === value
-                  ? "bg-accent/80 text-foreground"
-                  : "text-muted-foreground hover:bg-accent/45 hover:text-foreground",
+                  ? 'bg-accent/80 text-foreground'
+                  : 'text-muted-foreground hover:bg-accent/45 hover:text-foreground',
               )}
             >
               {label}
@@ -276,13 +254,10 @@ export function SecondarySidebar({
           id={`${tabsId}-panel-library`}
           aria-labelledby={`${tabsId}-library`}
           hidden={!showLibrary || collapsed}
-          className={cn(
-            "flex min-h-0 flex-1 flex-col",
-            (!showLibrary || collapsed) && "hidden",
-          )}
+          className={cn('flex min-h-0 flex-1 flex-col', (!showLibrary || collapsed) && 'hidden')}
         >
           {libraryVisited
-            ? typeof library === "function"
+            ? typeof library === 'function'
               ? library(showLibrary && !collapsed)
               : library
             : null}
@@ -290,30 +265,27 @@ export function SecondarySidebar({
       )}
       <div
         hidden={collapsed || showLibrary}
-        role={library != null ? "tabpanel" : undefined}
+        role={library != null ? 'tabpanel' : undefined}
         id={library != null ? `${tabsId}-panel-controls` : undefined}
         aria-labelledby={library != null ? `${tabsId}-controls` : undefined}
         data-slot="secondary-sidebar-content"
         className={cn(
-          "studio-scrollbar min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-3.5 text-[13px] [scroll-padding-block:0.875rem] [scrollbar-gutter:stable] [&>*]:min-w-0 [&>section]:w-full [&>section]:shrink-0 [&_button]:max-w-full [&_h2]:tracking-[-0.012em] [&_h3]:tracking-[-0.01em] [&_input]:max-w-full [&_label]:leading-5 [&_p]:leading-[1.55] [&_summary]:rounded-lg [&_summary]:outline-none [&_summary]:transition-[color,background-color] [&_summary]:duration-150 [&_summary:hover]:text-foreground [&_summary:focus-visible]:ring-2 [&_summary:focus-visible]:ring-ring/35 [&_textarea]:max-w-full",
+          'studio-scrollbar min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-3.5 text-[13px] [scroll-padding-block:0.875rem] [scrollbar-gutter:stable] [&>*]:min-w-0 [&>section]:w-full [&>section]:shrink-0 [&_button]:max-w-full [&_h2]:tracking-[-0.012em] [&_h3]:tracking-[-0.01em] [&_input]:max-w-full [&_label]:leading-5 [&_p]:leading-[1.55] [&_summary]:rounded-lg [&_summary]:outline-none [&_summary]:transition-[color,background-color] [&_summary]:duration-150 [&_summary:hover]:text-foreground [&_summary:focus-visible]:ring-2 [&_summary:focus-visible]:ring-ring/35 [&_textarea]:max-w-full',
           VARIANT_STYLES[variant],
-          (collapsed || showLibrary) && "hidden",
+          (collapsed || showLibrary) && 'hidden',
           className,
         )}
       >
         {children}
       </div>
-      {footer !== undefined &&
-        footer !== null &&
-        !collapsed &&
-        !showLibrary && (
-          <div
-            data-slot="secondary-sidebar-footer"
-            className="flex min-h-0 max-h-[70%] flex-col space-y-3 border-t border-border/55 bg-background/40 p-3.5 text-[13px] backdrop-blur-xl"
-          >
-            {footer}
-          </div>
-        )}
+      {footer !== undefined && footer !== null && !collapsed && !showLibrary && (
+        <div
+          data-slot="secondary-sidebar-footer"
+          className="flex min-h-0 max-h-[70%] flex-col space-y-3 border-t border-border/55 bg-background/40 p-3.5 text-[13px] backdrop-blur-xl"
+        >
+          {footer}
+        </div>
+      )}
       {collapsed && (
         <button
           type="button"
