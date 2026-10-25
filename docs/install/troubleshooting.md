@@ -1014,6 +1014,20 @@ Where the forensics live: `omnivoice.log`, `run_sentinel.json`, and
 Windows, `~/.omnivoice` on Linux, or `$OMNIVOICE_DATA_DIR` — the Docker image
 mounts it as the `omnivoice_data` volume).
 
+### Google Colab: the UI loads but every action fails with 403
+
+The [Colab notebook](../../notebooks/OmniVoice_Studio_Colab.ipynb) opens the UI
+through Colab's port proxy, on a per-session
+`https://<id>-3900-colab.googleusercontent.com` address. The backend refuses
+browser API calls from host names and origins it does not know (DNS-rebinding
+and cross-site protection), so the notebook's launch cell (cell 5) asks Colab
+for that proxy address and starts the backend with exactly that origin in
+`OMNIVOICE_ALLOWED_ORIGINS` and that host in `OMNIVOICE_ALLOWED_HOSTS`. No other
+origin is trusted. If you see 403s, the backend was started some other way or
+by an older copy of the notebook: stop it (`!kill $(lsof -t -i:3900)`), then
+re-run cells 5 and 6 from the browser. Most API routes have no `/api` prefix
+(`/generate`, `/profiles`, …), so `curl …/api/generate` returning 404 is expected.
+
 ## 14d. "Can't reach the local VoiceStudio backend" when the backend never started
 
 **Symptom (older builds):** the app opened, but every action failed with
