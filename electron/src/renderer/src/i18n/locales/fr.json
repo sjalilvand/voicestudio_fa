@@ -4082,7 +4082,8 @@
       "source_language": "Langue source",
       "unsupported": "Ce téléphone ne peut pas exécuter le nœud {{kind}}. Supprimez-le ou remplacez-le sur ordinateur avant l’importation.",
       "unsupported_settings": "Paramètres du flux non pris en charge ou hors limites.",
-      "yes_route": "Chemin Oui"
+      "yes_route": "Chemin Oui",
+      "auto_voice_language": "Les voix enregistrées sur le téléphone détectent la langue du texte. Choisissez Auto pour leur langue de lecture."
     },
     "galleryCopy": {
       "action": "Copier sur ce téléphone",

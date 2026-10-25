@@ -40,6 +40,23 @@ it('keeps incoming edits and settings while allocating a new local project ident
     'Desktop original',
   );
 });
+it('rejects duplicate line identities before edits can affect multiple rows', () => {
+  expect(() =>
+    importedLongformDraft({
+      kind: 'stories',
+      title: 'Duplicates',
+      project: {
+        draft: {
+          ...blankLongformDraft(),
+          lines: [
+            { id: 'same', text: 'First', profileId: null },
+            { id: 'same', text: 'Second', profileId: null },
+          ],
+        },
+      },
+    }),
+  ).toThrow();
+});
 it('rejects malformed incoming documents before persisting them', () => {
   for (const value of [
     null,

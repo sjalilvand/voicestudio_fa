@@ -4080,7 +4080,8 @@
       "source_language": "Ngôn ngữ nguồn",
       "unsupported": "Điện thoại này không thể chạy nút {{kind}}. Xóa hoặc thay nó trên máy tính trước khi nhập.",
       "unsupported_settings": "Cài đặt quy trình không được hỗ trợ hoặc vượt phạm vi.",
-      "yes_route": "Nhánh Có"
+      "yes_route": "Nhánh Có",
+      "auto_voice_language": "Giọng đã lưu trên điện thoại nhận diện ngôn ngữ từ văn bản. Chọn Tự động cho ngôn ngữ đọc."
     },
     "galleryCopy": {
       "action": "Sao chép vào điện thoại này",

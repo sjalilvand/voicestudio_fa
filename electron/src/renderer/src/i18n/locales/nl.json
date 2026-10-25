@@ -4080,7 +4080,8 @@
       "source_language": "Brontaal",
       "unsupported": "Deze telefoon kan de node {{kind}} niet uitvoeren. Verwijder of vervang deze op de desktop vóór het importeren.",
       "unsupported_settings": "Niet-ondersteunde workflowinstellingen of waarden buiten bereik.",
-      "yes_route": "Ja-route"
+      "yes_route": "Ja-route",
+      "auto_voice_language": "Opgeslagen telefoonstemmen herkennen de taal uit de tekst. Kies Auto als spreektaal."
     },
     "galleryCopy": {
       "action": "Naar deze telefoon kopiëren",

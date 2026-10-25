@@ -256,11 +256,16 @@ public enum PhoneProjectHandoff {
     private static func copy(_ source: URL,to destination: URL) throws { if source.standardizedFileURL == destination.standardizedFileURL { return }; try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(),withIntermediateDirectories: true); guard !FileManager.default.fileExists(atPath: destination.path) else { return }; try FileManager.default.copyItem(at: source,to: destination) }
     private static func regularFiles(_ root: URL) throws -> [String:URL] {
         guard FileManager.default.fileExists(atPath: root.path) else { return [:] }
-        guard let items = FileManager.default.enumerator(at: root,includingPropertiesForKeys: [.isRegularFileKey,.isSymbolicLinkKey]) else { throw ClientError("mobile.errors.file") }
+        let canonicalRoot = root.resolvingSymlinksInPath().standardizedFileURL
+        guard let items = FileManager.default.enumerator(at: canonicalRoot,includingPropertiesForKeys: [.isRegularFileKey,.isSymbolicLinkKey]) else { throw ClientError("mobile.errors.file") }
         var files: [String:URL] = [:]
         for case let file as URL in items {
             let values = try file.resourceValues(forKeys: [.isRegularFileKey,.isSymbolicLinkKey]); guard values.isSymbolicLink != true else { throw ClientError("mobile.handoff.invalid") }
-            if values.isRegularFile == true { let name = String(file.path.dropFirst(root.path.count+1)); _ = try ProjectArchive.path(name); files[name] = file }
+            if values.isRegularFile == true {
+                let prefix = canonicalRoot.path+"/", canonicalFile = file.resolvingSymlinksInPath().standardizedFileURL
+                guard canonicalFile.path.hasPrefix(prefix) else { throw ClientError("mobile.handoff.invalid") }
+                let name = String(canonicalFile.path.dropFirst(prefix.count)); _ = try ProjectArchive.path(name); files[name] = canonicalFile
+            }
         }; return files
     }
     private static func selectModels(_ raw: JSONValue?,from models: [PhoneModel]) -> [PhoneModel] {

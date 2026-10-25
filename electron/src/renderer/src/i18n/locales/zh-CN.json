@@ -4080,7 +4080,8 @@
       "source_language": "源语言",
       "unsupported": "此手机无法执行 {{kind}} 节点。请先在桌面版移除或替换它再导入。",
       "unsupported_settings": "工作流设置不受支持或超出范围。",
-      "yes_route": "是路径"
+      "yes_route": "是路径",
+      "auto_voice_language": "手机上保存的声音会从文本检测语言。请将其朗读语言设为自动。"
     },
     "galleryCopy": {
       "action": "复制到此手机",

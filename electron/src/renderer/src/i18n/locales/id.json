@@ -4080,7 +4080,8 @@
       "source_language": "Bahasa sumber",
       "unsupported": "Ponsel ini tidak dapat menjalankan simpul {{kind}}. Hapus atau ganti di desktop sebelum mengimpor.",
       "unsupported_settings": "Pengaturan alur kerja tidak didukung atau di luar rentang.",
-      "yes_route": "Jalur Ya"
+      "yes_route": "Jalur Ya",
+      "auto_voice_language": "Suara tersimpan di ponsel mendeteksi bahasa dari teks. Pilih Otomatis sebagai bahasa ucapan."
     },
     "galleryCopy": {
       "action": "Salin ke ponsel ini",

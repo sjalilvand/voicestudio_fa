@@ -4080,7 +4080,8 @@
       "source_language": "翻訳元の言語",
       "unsupported": "この端末では {{kind}} ノードを実行できません。デスクトップで削除または置換してから読み込んでください。",
       "unsupported_settings": "ワークフローの設定が未対応か範囲外です。",
-      "yes_route": "はいの経路"
+      "yes_route": "はいの経路",
+      "auto_voice_language": "端末に保存した音声はテキストから言語を検出します。読み上げ言語には自動を選んでください。"
     },
     "galleryCopy": {
       "action": "このスマートフォンにコピー",

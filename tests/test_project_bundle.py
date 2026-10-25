@@ -138,3 +138,11 @@ def test_malformed_editable_manuscript_collections_are_rejected(change):
 ])
 def test_export_rejects_invalid_desktop_draft_before_resolving_bindings(draft):
     with pytest.raises(ArchiveError): b.manuscript_document({'mode':'stories','draft':draft})
+
+
+@pytest.mark.parametrize('collection', ['cast','lines'])
+def test_duplicate_desktop_identities_are_rejected_before_unchanged_snapshot_import(collection):
+    manifest = json.loads((FIXTURES/'desktop-book.json').read_text())
+    manifest['document']['desktop']['draft'][collection] = [{'id':'same'},{'id':'same'}]
+    with pytest.raises(ArchiveError): b.validate_manifest(manifest)
+    with pytest.raises(ArchiveError): b.manuscript_document(manifest['document']['desktop'])

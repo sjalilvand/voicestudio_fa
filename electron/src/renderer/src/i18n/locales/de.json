@@ -4080,7 +4080,8 @@
       "source_language": "Quellsprache",
       "unsupported": "Dieses Telefon kann den Knoten {{kind}} nicht ausführen. Entferne oder ersetze ihn vor dem Import am Computer.",
       "unsupported_settings": "Nicht unterstützte oder außerhalb des Bereichs liegende Workflow-Einstellungen.",
-      "yes_route": "Ja-Weg"
+      "yes_route": "Ja-Weg",
+      "auto_voice_language": "Gespeicherte Telefonstimmen erkennen die Sprache aus dem Text. Wähle Auto als Sprache für die Ausgabe."
     },
     "galleryCopy": {
       "action": "Auf dieses Telefon kopieren",

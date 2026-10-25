@@ -10,7 +10,7 @@ import org.junit.Assert.*
 class AdvancedDubApiTest {
     private val stream="event: warning\ndata: {\"detail\":\"Check labels\"}\n\nevent: final\ndata: {\"segments\":[{\"id\":0,\"start\":0,\"end\":1,\"text\":\"Previous translation\",\"text_original\":\"Original speech\",\"speaker_id\":\"Speaker 1\"}],\"cast_sources\":{\"Speaker 1\":{\"kind\":\"speaker\",\"duration\":4}}}\n\nevent: done\ndata: {}\n\n"
     private val engine="""{"active":"argos","engines":[{"id":"argos","category":"offline","installed":true,"ready":true}]}"""
-    @Test fun installedDiarizerStreamsRealWarningsAndRecoversSourceRatherThanPreviousTranslation()=runBlocking {
+    @Test fun installedDiarizerStreamsRealWarningsAndRecoversSourceRatherThanPreviousTranslation(): Unit=runBlocking {
         val server=MockWebServer().apply {start()}
         try {
             val api=VoiceStudioApi(PairingAddress.parse(server.url("/").toString()),token="session")
@@ -27,7 +27,7 @@ class AdvancedDubApiTest {
             assertThrows(ClientFailure::class.java) {ComputerDubAnalysis.parse(stream.replace("Original speech","x".repeat(4001)).toByteArray())}
         } finally {server.shutdown()}
     }
-    @Test fun castingRetranslatesSourceAndBindsStableIdsVoiceAndTimingToSameProvider()=runBlocking {
+    @Test fun castingRetranslatesSourceAndBindsStableIdsVoiceAndTimingToSameProvider(): Unit=runBlocking {
         val server=MockWebServer().apply {start()}
         try {
             val api=VoiceStudioApi(PairingAddress.parse(server.url("/").toString()))
@@ -53,7 +53,7 @@ class AdvancedDubApiTest {
         assertThrows(IllegalArgumentException::class.java) {options.copy(dual=true).path("job")}
         assertTrue(options.copy(kind="ass").path("job").startsWith("/dub/ass/job?"))
     }
-    @Test fun cancellingAfterHeadersClosesAStalledSSEBodyWithoutWaitingForSocketTimeout()=runBlocking {
+    @Test fun cancellingAfterHeadersClosesAStalledSSEBodyWithoutWaitingForSocketTimeout(): Unit=runBlocking {
         val entered=java.util.concurrent.CountDownLatch(1);val closed=java.util.concurrent.CountDownLatch(1)
         val source=object: okio.Source {
             override fun timeout()=okio.Timeout.NONE

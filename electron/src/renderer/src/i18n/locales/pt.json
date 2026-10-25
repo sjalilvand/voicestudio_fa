@@ -4082,7 +4082,8 @@
       "source_language": "Idioma de origem",
       "unsupported": "Este telefone não pode executar o nó {{kind}}. Remova-o ou substitua-o no desktop antes de importar.",
       "unsupported_settings": "Configurações do fluxo não suportadas ou fora do intervalo.",
-      "yes_route": "Rota Sim"
+      "yes_route": "Rota Sim",
+      "auto_voice_language": "As vozes salvas no telefone detectam o idioma pelo texto. Selecione Auto como idioma da fala."
     },
     "galleryCopy": {
       "action": "Copiar para este telefone",

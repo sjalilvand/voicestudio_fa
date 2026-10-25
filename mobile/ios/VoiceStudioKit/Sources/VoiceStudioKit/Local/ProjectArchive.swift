@@ -31,7 +31,8 @@ public enum ProjectArchive {
             var central = Data(), position: UInt32 = 0, total = 0
             for entry in entries {
                 _ = try path(entry.path)
-                let properties = try entry.file.resourceValues(forKeys: [.isRegularFileKey,.isSymbolicLinkKey,.fileSizeKey])
+                var source = entry.file; source.removeAllCachedResourceValues()
+                let properties = try source.resourceValues(forKeys: [.isRegularFileKey,.isSymbolicLinkKey,.fileSizeKey])
                 guard properties.isRegularFile == true, properties.isSymbolicLink != true, let size = properties.fileSize, size <= maxMember else { throw ClientError("mobile.handoff.invalid") }
                 total += size; guard total <= maxBytes else { throw ClientError("mobile.handoff.too_large") }
                 let crc = try checksum(entry.file,expected: size), name = Data(entry.path.utf8)

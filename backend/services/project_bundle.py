@@ -87,6 +87,10 @@ def _validate_desktop_draft(draft):
         for row in draft.get(key,[]):
             if not isinstance(row,dict) or any(row.get(field) is not None and not isinstance(row[field],str) for field in fields):
                 raise ArchiveError(400,'invalid desktop draft row')
+    for key in ('cast','lines'):
+        identities = [row['id'] for row in draft.get(key,[]) if row.get('id') is not None]
+        if any(not identity for identity in identities) or len(set(identities)) != len(identities):
+            raise ArchiveError(400,'duplicate or empty desktop identity')
     if any(not isinstance(voice,str) for voice in draft.get('voiceCast',{}).values()) or draft.get('voice') is not None and not isinstance(draft['voice'],str):
         raise ArchiveError(400,'invalid desktop voice binding')
     memory = draft.get('handoff',{})

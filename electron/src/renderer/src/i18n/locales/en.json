@@ -4080,7 +4080,8 @@
       "source_language": "Source language",
       "unsupported": "This phone cannot execute the {{kind}} node. Remove or replace it on desktop before importing.",
       "unsupported_settings": "Unsupported or out-of-range workflow settings.",
-      "yes_route": "Yes route"
+      "yes_route": "Yes route",
+      "auto_voice_language": "Saved phone voices detect language from the text. Select Auto for their speech language."
     },
     "galleryCopy": {
       "action": "Copy to this phone",

@@ -86,7 +86,8 @@ class ProjectHandoffTest {
         try {ProjectArchive.write(listOf(ProjectArchiveFile("assets/another.txt",source)),archive);fail()} catch(_:IllegalArgumentException) {}
         val link=File(temporary.root,"link.txt");Files.createSymbolicLink(link.toPath(),source.toPath())
         try {ProjectArchive.write(listOf(ProjectArchiveFile("assets/link.txt",link)),File(temporary.root,"link.zip"));fail()} catch(_:IllegalArgumentException) {}
-        val bytes=archive.readBytes();bytes[30+"assets/file.txt".length]=(bytes[30+"assets/file.txt".length].toInt() xor 1).toByte();archive.writeBytes(bytes)
+        val payloadOffset=ProjectArchive.entries(archive).single().offset.toInt()
+        val bytes=archive.readBytes();bytes[payloadOffset]=(bytes[payloadOffset].toInt() xor 1).toByte();archive.writeBytes(bytes)
         val staging=File(temporary.root,"partial")
         try {ProjectArchive.extract(archive,staging);fail()} catch(_:IllegalArgumentException) {}
         assertFalse(staging.exists())

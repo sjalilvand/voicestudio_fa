@@ -4080,7 +4080,8 @@
       "source_language": "Källspråk",
       "unsupported": "Telefonen kan inte köra noden {{kind}}. Ta bort eller ersätt den på datorn före import.",
       "unsupported_settings": "Arbetsflödesinställningar som inte stöds eller ligger utanför intervallet.",
-      "yes_route": "Ja-väg"
+      "yes_route": "Ja-väg",
+      "auto_voice_language": "Sparade telefonröster identifierar språket från texten. Välj Auto som talspråk."
     },
     "galleryCopy": {
       "action": "Kopiera till den här telefonen",

@@ -4080,7 +4080,8 @@
       "source_language": "Kaynak dil",
       "unsupported": "Bu telefon {{kind}} düğümünü çalıştıramaz. İçe aktarmadan önce masaüstünde kaldırın veya değiştirin.",
       "unsupported_settings": "Desteklenmeyen ya da aralık dışı iş akışı ayarları.",
-      "yes_route": "Evet yolu"
+      "yes_route": "Evet yolu",
+      "auto_voice_language": "Telefonda kayıtlı sesler dili metinden algılar. Konuşma dili için Otomatik seçin."
     },
     "galleryCopy": {
       "action": "Bu telefona kopyala",

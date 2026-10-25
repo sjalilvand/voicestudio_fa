@@ -4082,7 +4082,8 @@
       "source_language": "Lingua di origine",
       "unsupported": "Questo telefono non può eseguire il nodo {{kind}}. Rimuovilo o sostituiscilo sul desktop prima di importare.",
       "unsupported_settings": "Impostazioni del flusso non supportate o fuori intervallo.",
-      "yes_route": "Percorso Sì"
+      "yes_route": "Percorso Sì",
+      "auto_voice_language": "Le voci salvate sul telefono rilevano la lingua dal testo. Seleziona Auto come lingua della voce."
     },
     "galleryCopy": {
       "action": "Copia su questo telefono",

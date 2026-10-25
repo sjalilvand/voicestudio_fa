@@ -44,6 +44,11 @@ export function importedLongformDraft(result: ProjectBundleResult): Draft {
     )
   )
     throw invalid();
+  if (
+    new Set(draft.lines.map((line) => line.id)).size !== draft.lines.length ||
+    new Set(draft.cast.map((character) => character.id)).size !== draft.cast.length
+  )
+    throw invalid();
   for (const key of ['importText', 'title', 'language', 'output', 'outputScript'] as const)
     if (draft[key] !== undefined && typeof draft[key] !== 'string') throw invalid();
   if (

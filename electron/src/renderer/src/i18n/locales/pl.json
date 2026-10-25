@@ -4086,7 +4086,8 @@
       "source_language": "Język źródłowy",
       "unsupported": "Ten telefon nie może wykonać węzła {{kind}}. Usuń lub zastąp go na komputerze przed importem.",
       "unsupported_settings": "Nieobsługiwane ustawienia przepływu lub wartości poza zakresem.",
-      "yes_route": "Trasa Tak"
+      "yes_route": "Trasa Tak",
+      "auto_voice_language": "Głosy zapisane w telefonie wykrywają język z tekstu. Wybierz Auto jako język mowy."
     },
     "galleryCopy": {
       "action": "Kopiuj na ten telefon",
