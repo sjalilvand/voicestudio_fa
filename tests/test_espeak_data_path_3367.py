@@ -167,6 +167,16 @@ def test_tampered_cache_copy_is_not_reused(tmp_path):
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX permission bits")
+def test_cache_from_a_group_writable_source_is_reused(tmp_path):
+    ed = _ed()
+    source = Path(_fake_loader(tmp_path).get_data_path())
+    os.chmod(source, 0o775)
+    root = tmp_path / "cache"
+    first = ed._cached_copy(source, root)
+    assert first is not None and ed._cached_copy(source, root) == first
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX permission bits")
 def test_shared_cache_directory_is_not_trusted(tmp_path):
     ed = _ed()
     source = Path(_fake_loader(tmp_path).get_data_path())

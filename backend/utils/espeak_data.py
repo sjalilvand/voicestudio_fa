@@ -136,7 +136,9 @@ def _tree_digest(root: Path) -> str | None:
 def _windows_owned_by_me(path: Path) -> bool | None:
     """Whether the current user owns ``path`` (Windows); ``None`` if unknown."""
     try:
-        from ctypes import wintypes
+        import ctypes.wintypes
+
+        wintypes = ctypes.wintypes
 
         advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)  # type: ignore[attr-defined]
         kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)  # type: ignore[attr-defined]
@@ -251,6 +253,9 @@ def _cached_copy(source: Path, root: Path) -> Path | None:
     try:
         shutil.rmtree(staging, ignore_errors=True)
         shutil.copytree(source, staging)
+        # copytree copies the source folder's mode; a group-writable wheel
+        # folder would make the cache fail _private_dir on every reuse.
+        os.chmod(staging, 0o700)
         try:
             os.replace(staging, target)
         except OSError:
