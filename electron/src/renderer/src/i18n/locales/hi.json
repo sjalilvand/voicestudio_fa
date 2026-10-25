@@ -373,7 +373,8 @@
     "inactive": "निष्क्रिय",
     "translation": "अनुवाद",
     "diarisation": "वक्ता पृथक्करण",
-    "localDevice": "स्थानीय डिवाइस"
+    "localDevice": "स्थानीय डिवाइस",
+    "localShort": "स्थानीय"
   },
   "paneActions": {
     "collapse": "पैनल समेटें",

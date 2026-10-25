@@ -387,7 +387,8 @@
     "inactive": "未启用",
     "translation": "翻译",
     "diarisation": "说话人分离",
-    "localDevice": "本地设备"
+    "localDevice": "本地设备",
+    "localShort": "本地"
   },
   "paneActions": {
     "collapse": "折叠面板",

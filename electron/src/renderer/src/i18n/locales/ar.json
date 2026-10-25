@@ -381,7 +381,8 @@
     "inactive": "غير نشط",
     "translation": "الترجمة",
     "diarisation": "تمييز المتحدثين",
-    "localDevice": "الجهاز المحلي"
+    "localDevice": "الجهاز المحلي",
+    "localShort": "محلي"
   },
   "paneActions": {
     "collapse": "طي اللوحة",

@@ -327,7 +327,7 @@ export function StatusBar({
           : DOT.starting;
   const deviceLabel = status.remote
     ? t('settings.remote_backend_title')
-    : t('engineSidebar.localDevice');
+    : t('engineSidebar.localShort');
   const formatMemory = (used: number, total?: number) =>
     total && total > 0 ? `${used.toFixed(1)} / ${total.toFixed(1)} GB` : `${used.toFixed(1)} GB`;
   const deviceContent = (
@@ -719,6 +719,9 @@ export function StatusBar({
             data-detail-level={level}
             className="max-h-[32dvh] min-w-0 space-y-0.5 overflow-y-auto overscroll-contain"
           >
+            {/* With the device in the footer beside Settings there is no room
+                for the view switch there, so it heads the rows it controls. */}
+            {footerLeading && <div className="flex justify-end">{viewControl}</div>}
             {engineRows(level)}
           </div>
         )}
@@ -728,10 +731,7 @@ export function StatusBar({
             {footerLeading}
             {/* Device beside Settings; on a narrow pane Settings drops to its
                 icon and the device name truncates, so neither is pushed out. */}
-            <div className="flex min-w-0 flex-1 items-center gap-0.5">
-              {labeledDevicePopover}
-              {level !== 'simple' && viewControl}
-            </div>
+            <div className="flex min-w-0 flex-1 items-center gap-0.5">{labeledDevicePopover}</div>
           </div>
         )}
       </div>
