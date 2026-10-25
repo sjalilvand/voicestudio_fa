@@ -8,6 +8,21 @@ and supported choices, rather than producing speech in the wrong language.
 Language names and regional codes are accepted; Auto keeps the engine's default.
 The same validation applies to direct synthesis, dubbing, and batch generation.
 
+## Uyghur
+
+Uyghur (`ug`, ئۇيغۇرچە; listed as "Uighur" below) is spoken by OmniVoice and
+offered in the Clone, Design, Stories and Audiobook pickers when OmniVoice is
+the active engine; engines that do not declare it reject it. It is also a dub
+and batch-dub translation target: NLLB-200 (`uig_Arab`), Google and LLM
+translation support it; Argos needs an installed Uyghur package. Whisper cannot
+transcribe Uyghur, so it is not offered as a dub source language.
+
+## Right-to-left text
+
+Script editors, dub segment text and transcripts set their direction from
+their own text (`dir="auto"`), so Uyghur, Arabic, Hebrew, Persian and Urdu
+scripts read right to left even in a left-to-right interface.
+
 The table below lists each language with its VoiceStudio language ID,
 ISO 639-3 code, and training data duration (hours).
 
