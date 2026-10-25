@@ -388,7 +388,9 @@
     "select": "Selecteer",
     "selected": "Geselecteerd",
     "change": "Engine wijzigen",
-    "failed": "De engine kon niet worden gewijzigd. Probeer opnieuw."
+    "failed": "De engine kon niet worden gewijzigd. Probeer opnieuw.",
+    "empty": "Nog geen engines of modellen voor deze categorie.",
+    "modelsInstalled": "{{installed}} van {{count}} geïnstalleerd"
   },
   "modelMaintenance": {
     "download": "Downloaden",
@@ -3581,6 +3583,10 @@
     "detailsFailed": "De licentiegegevens konden niet worden geladen. Sluit dit venster en probeer het opnieuw."
   },
   "mobile": {
+    "home": {
+      "subtitle": "Jouw open-source, volledig lokale alternatief voor ElevenLabs — kloon en ontwerp stemmen, dub video’s, dicteer, transcribeer en maak luisterboeken in 646 talen.",
+      "brought_by": "Mogelijk gemaakt door"
+    },
     "tabs": {
       "speak": "Spreken",
       "voices": "Stemmen",

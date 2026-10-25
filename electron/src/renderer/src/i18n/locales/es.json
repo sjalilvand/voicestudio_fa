@@ -390,7 +390,9 @@
     "select": "Seleccionar",
     "selected": "Seleccionado",
     "change": "Cambiar motor",
-    "failed": "No se pudo cambiar el motor. Inténtalo de nuevo."
+    "failed": "No se pudo cambiar el motor. Inténtalo de nuevo.",
+    "empty": "Aún no hay motores ni modelos para esta categoría.",
+    "modelsInstalled": "{{installed}} de {{count}} instalados"
   },
   "modelMaintenance": {
     "download": "Descargar",
@@ -3583,6 +3585,10 @@
     "detailsFailed": "No se pudieron cargar los detalles de la licencia. Cierra este diálogo e inténtalo de nuevo."
   },
   "mobile": {
+    "home": {
+      "subtitle": "Tu alternativa a ElevenLabs de código abierto y totalmente local: clona y diseña voces, dobla vídeos, dicta, transcribe y crea audiolibros en 646 idiomas.",
+      "brought_by": "De la mano de"
+    },
     "tabs": {
       "speak": "Hablar",
       "voices": "Voces",

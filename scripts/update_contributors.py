@@ -183,7 +183,7 @@ def imageset_contents(login: str) -> str:
         {"images": [{"filename": f"{login}.png", "idiom": "universal", "scale": "3x"}],
          "info": {"author": "xcode", "version": 1}},
         indent=2,
-    )
+    ) + "\n"  # byte-identical to scripts/export-mobile-contributors.ts
 
 
 def same_pixels(path: Path, png: bytes) -> bool:

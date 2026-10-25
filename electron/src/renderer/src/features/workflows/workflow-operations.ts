@@ -2,12 +2,12 @@ import { apiFetch, apiJson } from '@/lib/api/client';
 import { convertSpeech } from '@/lib/api/convert';
 import { generateClone } from '@/lib/api/generate';
 import { DEFAULT_CLONE_SETTINGS } from '@/lib/store/clone-settings';
-import { LANG_CODES } from '@shared/utils/languages';
+import { translationTargetCode } from '@/lib/translation-targets';
 import { loadWorkflowMedia } from './workflow-run-store';
 import type { WorkflowOperations } from './workflow-runtime';
 
 function languageCode(language?: string) {
-  return LANG_CODES.find((entry) => entry.label === language)?.code || language;
+  return translationTargetCode(language) || language;
 }
 
 export const workflowOperations: WorkflowOperations = {

@@ -388,7 +388,9 @@
     "select": "선택",
     "selected": "선택됨",
     "change": "엔진 변경",
-    "failed": "엔진을 변경하지 못했습니다. 다시 시도하세요."
+    "failed": "엔진을 변경하지 못했습니다. 다시 시도하세요.",
+    "empty": "이 범주에는 아직 엔진이나 모델이 없습니다.",
+    "modelsInstalled": "{{count}}개 중 {{installed}}개 설치됨"
   },
   "modelMaintenance": {
     "download": "다운로드",
@@ -3581,6 +3583,10 @@
     "detailsFailed": "라이선스 세부 정보를 불러오지 못했습니다. 이 대화 상자를 닫고 다시 시도하세요."
   },
   "mobile": {
+    "home": {
+      "subtitle": "오픈 소스로 완전히 로컬에서 실행되는 ElevenLabs의 대안 — 646개 언어로 목소리를 복제하고 디자인하며, 영상 더빙, 받아쓰기, 전사, 오디오북 제작까지.",
+      "brought_by": "제공"
+    },
     "tabs": {
       "speak": "말하기",
       "voices": "음성",

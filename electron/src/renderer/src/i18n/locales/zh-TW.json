@@ -388,7 +388,9 @@
     "select": "選擇",
     "selected": "已選取",
     "change": "更換引擎",
-    "failed": "無法更換引擎，請重試。"
+    "failed": "無法更換引擎，請重試。",
+    "empty": "此類別尚無引擎或模型。",
+    "modelsInstalled": "已安裝 {{installed}}/{{count}}"
   },
   "modelMaintenance": {
     "download": "下載",
@@ -3581,6 +3583,10 @@
     "detailsFailed": "無法載入授權詳細資料。請關閉此對話方塊後再試一次。"
   },
   "mobile": {
+    "home": {
+      "subtitle": "你的開源、完全本機執行的 ElevenLabs 替代方案——複製與設計聲音、影片配音、語音輸入、轉錄和有聲書製作，支援 646 種語言。",
+      "brought_by": "由以下開發者為你呈現"
+    },
     "tabs": {
       "speak": "朗讀",
       "voices": "語音",

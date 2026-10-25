@@ -20,7 +20,7 @@ import avatar13 from './contributors/nvtoan0201-swe.png';
 export const homeCoreMaintainers = ['debpalash', 'velixio'] as const;
 
 export const homeContributors = [
-  { login: 'debpalash', commits: 3813, avatar: avatar0 },
+  { login: 'debpalash', commits: 3855, avatar: avatar0 },
   { login: 'velixio', commits: 727, avatar: avatar1 },
   { login: 'kevin9327', commits: 60, avatar: avatar2 },
   { login: 'jaketame', commits: 42, avatar: avatar3 },
