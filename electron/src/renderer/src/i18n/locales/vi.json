@@ -1874,7 +1874,9 @@
     "deepl_base_url_help": "Điểm cuối API DeepL tùy chỉnh (mặc định: https://api.deepl.com/v2). Thay đổi cho proxy/tự lưu trữ.",
     "microsoft_base_url_help": "Điểm cuối Azure Translator tùy chỉnh (mặc định: https://api.cognitive.microsofttranslator.com).",
     "region": "Khu vực",
-    "aws_profile": "Hồ sơ AWS"
+    "aws_profile": "Hồ sơ AWS",
+    "deepl_key_placeholder": "DeepL khóa API",
+    "microsoft_key_placeholder": "Microsoft khóa API"
   },
   "about": {
     "architecture": "Kiến trúc",
@@ -2054,6 +2056,7 @@
     "setup_access": "Cho phép ghi vào thư mục dữ liệu của ứng dụng rồi thử lại.",
     "setup_unsupported_platform": "Máy Mac Intel này không thể chạy backend AI cục bộ — PyTorch không có wheel cho macOS Intel. Hãy kết nối backend từ xa bên dưới; không cần cài đặt cục bộ.",
     "setup_wrong_architecture": "Đây là bản VoiceStudio cho Intel (x64) đang chạy qua Rosetta trên máy Mac Apple Silicon, nên không thể cài backend AI cục bộ. Hãy thoát ứng dụng, cài đè bản DMG Apple Silicon (arm64) rồi mở lại — giọng nói và dự án của bạn vẫn được giữ nguyên.",
+    "setup_missing_system_library": "Hệ thống Windows này thiếu Microsoft Visual C++ 2015-2022 Redistributable (x64), thành phần mà tiện ích âm thanh của PyTorch cần đến. Hãy cài từ Microsoft rồi nhấn Thử lại.",
     "download_apple_silicon": "Tải bản Apple Silicon",
     "retry": "Thử lại",
     "ready": "Bộ máy sẵn sàng",
@@ -2077,7 +2080,23 @@
     "hint_spawn_blocked": "Hệ điều hành hoặc phần mềm bảo mật của bạn đã từ chối khởi chạy engine cục bộ. Hãy thêm thư mục runtime của VoiceStudio vào danh sách loại trừ của phần mềm diệt virus (Windows: Bảo mật Windows → Bảo vệ khỏi virus và mối đe dọa → Quản lý cài đặt → Loại trừ), đảm bảo thư mục này không nằm trong thư mục đồng bộ đám mây như OneDrive, rồi thử lại.",
     "hint_smart_app_control": "Smart App Control của Windows đã chặn công cụ cục bộ. Tính năng này không có ngoại lệ cho từng ứng dụng nên loại trừ trong phần mềm diệt virus sẽ không giúp được. Hãy tắt nó trong Bảo mật Windows → Kiểm soát ứng dụng và trình duyệt → Cài đặt Smart App Control (Windows không thể bật lại nếu không đặt lại máy), hoặc kết nối VoiceStudio với công cụ chạy trên máy tính khác, rồi thử lại.",
     "hint_slow_start": "Engine vẫn đang khởi động thì hết thời gian chờ. Máy chậm, nhất là máy không có GPU rời, và lần khởi chạy đầu tiên sau khi cài đặt (phần mềm diệt virus quét mọi tệp mới) có thể mất vài phút. Hãy đóng các ứng dụng tốn nhiều bộ nhớ rồi thử lại; những lần khởi động sau nhanh hơn nhiều.",
-    "hint_synced_folder": "Vị trí này nằm trong thư mục đồng bộ đám mây (OneDrive, Dropbox, iCloud Drive, Google Drive). Các tệp giữ chỗ chỉ có trên mạng và việc khóa tệp làm hỏng môi trường Python. Hãy chuyển VoiceStudio sang một thư mục cục bộ thông thường (ví dụ C:\\VoiceStudio trên Windows hoặc ~/VoiceStudio trên macOS và Linux) rồi thiết lập lại."
+    "hint_synced_folder": "Vị trí này nằm trong thư mục đồng bộ đám mây (OneDrive, Dropbox, iCloud Drive, Google Drive). Các tệp giữ chỗ chỉ có trên mạng và việc khóa tệp làm hỏng môi trường Python. Hãy chuyển VoiceStudio sang một thư mục cục bộ thông thường (ví dụ C:\\VoiceStudio trên Windows hoặc ~/VoiceStudio trên macOS và Linux) rồi thiết lập lại.",
+    "cause_smart_app_control": "Smart App Control của Windows đã chặn công cụ",
+    "cause_spawn_blocked": "Phần mềm bảo mật đã chặn công cụ khởi động",
+    "cause_native_crash": "Công cụ bị sập khi khởi động (lỗi gốc)",
+    "cause_missing_env": "Môi trường Python bị thiếu hoặc chưa đầy đủ",
+    "cause_permission": "Không có quyền ghi vào thư mục của công cụ",
+    "cause_synced_folder": "Thư mục của công cụ nằm trong thư mục đồng bộ đám mây",
+    "cause_slow_start": "Công cụ vẫn đang khởi động trên máy chậm",
+    "choose_folder": "Chọn thư mục khác",
+    "copy_diagnostics": "Sao chép chẩn đoán",
+    "diagnostics_copied": "Đã sao chép chẩn đoán",
+    "details": "Chi tiết",
+    "pill_starting": "Đang khởi động",
+    "pill_recovering": "Đang khôi phục",
+    "pill_failed": "Thất bại",
+    "pill_repeats": "{{count}} lần liên tiếp",
+    "offline_bar": "Công cụ đang bận, tự động kết nối lại"
   },
   "bootstrap": {
     "checking": "Đang kiểm tra môi trường…",
@@ -2515,7 +2534,18 @@
     "staleTitle": "Có bản cập nhật",
     "staleMessage": "Bạn đang dùng VoiceStudio {{current}}, nhưng {{latest}} đã ra mắt — lỗi này có thể đã được sửa ở đó. Xem bản phát hành mới nhất trước khi báo cáo?",
     "staleView": "Xem bản cập nhật",
-    "staleFileAnyway": "Vẫn báo cáo"
+    "staleFileAnyway": "Vẫn báo cáo",
+    "summary_label": "Đã xảy ra sự cố gì?",
+    "summary_placeholder": "Một dòng, ví dụ: Lồng tiếng dừng ở 40%",
+    "summary_required": "Hãy thêm mô tả một dòng trước.",
+    "sent_title": "Những gì sẽ được gửi",
+    "sent_app": "Phiên bản và bản dựng của ứng dụng",
+    "sent_system": "Hệ điều hành, GPU, bộ nhớ và dung lượng ổ đĩa trống",
+    "sent_engines": "Các công cụ đang hoạt động",
+    "sent_logs": "Các dòng nhật ký công cụ gần đây, đã xóa đường dẫn tệp và mã thông báo",
+    "sent_pages": "Tên các trang đã xem gần đây",
+    "not_sent": "Không bao giờ gửi: âm thanh, văn bản, giọng nói hoặc tên tệp của bạn.",
+    "submit": "Mở issue trên GitHub"
   },
   "crash": {
     "notice_unclean": "Phiên trước đã kết thúc mà không tắt đúng cách {{ago}} trước. Điều này thường vô hại — máy ngủ, ứng dụng bị buộc đóng, hoặc VM/container bị dừng.",
