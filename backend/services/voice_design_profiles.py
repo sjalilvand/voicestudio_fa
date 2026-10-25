@@ -46,23 +46,32 @@ def recipe_engine(row) -> str:
 
 
 def profile_instruct(row, engine_id: str | None = None) -> str:
-    """Return a design instruction suited to the engine receiving the request.
+    """Choose saved instructions for the receiving engine and profile type.
 
-    OmniVoice always receives validated taxonomy tags, even if a profile was
-    originally designed using free-form text on a different model. Free-form
-    engines receive the complete description and explicit tags from the
-    saved recipe. A legacy row stays unchanged.
+    Tag-only engines always get sanitized OmniVoice taxonomy. For free-form
+    engines, clone profiles keep their original instruction text (including
+    prose imported from legacy voice bundles), while design profiles use
+    their saved native recipe. Legacy designs without a recipe keep their
+    validated tags. Omitting the engine retains the original tag-only default.
     """
     tags = heal_design_instruct(
         _field(row, "instruct"), _field(row, "vd_states")
     )
-    recipe = read_recipe(row)
-    if _field(row, "kind") != "design" or recipe is None or not engine_id:
+    if not engine_id:
         return tags
     from services.tts_backend import get_backend_class
 
     cls = get_backend_class(engine_id)
     if getattr(cls, "instruct_vocabulary", "tags") != "freeform":
+        return tags
+
+    if _field(row, "kind") != "design":
+        # Imported clone profiles may contain genuine style prose; applying
+        # OmniVoice's strict tag whitelist here silently changes their voice.
+        return _field(row, "instruct") or ""
+
+    recipe = read_recipe(row)
+    if recipe is None:
         return tags
 
     desc = recipe["description"].strip()
