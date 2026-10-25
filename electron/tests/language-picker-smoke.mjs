@@ -103,6 +103,20 @@ try {
     const input = menu.getByRole('combobox');
     await input.focus();
     assert.equal(await menu.getByRole('listbox').getAttribute('data-columns'), String(columns));
+    // Unsupported languages start collapsed behind a single row; supported ones lead.
+    assert.equal(
+      await menu.locator('[role=option][aria-disabled=true]').count(),
+      0,
+      'unsupported languages start collapsed',
+    );
+    const showAll = menu.getByRole('option', { name: strings.languagePicker.showAll, exact: true });
+    await showAll.click();
+    await menu
+      .getByRole('option', { name: strings.languagePicker.hideUnsupported, exact: true })
+      .waitFor();
+    assert.ok(await menu.locator('[role=option][aria-disabled=true]').count(), 'expands');
+    assert.equal(await menu.isVisible(), true, 'expanding keeps the menu open');
+    await input.focus();
     const count = await menu.getByRole('option').count();
     assert.ok(count > 0 && count < 80, `virtualized: ${count} mounted options`);
     assert.equal(

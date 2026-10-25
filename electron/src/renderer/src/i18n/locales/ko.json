@@ -3453,7 +3453,11 @@
     "unknown": "지원 언어를 알 수 없음",
     "error": "언어를 확인할 수 없습니다",
     "modelLanguages": "이 모델의 언어",
-    "changeModel": "모델 변경"
+    "changeModel": "모델 변경",
+    "recent": "최근",
+    "available": "사용 가능",
+    "showAll": "모든 언어 보기",
+    "hideUnsupported": "지원되지 않는 언어 숨기기"
   },
   "modelLicense": {
     "title": "모델 이용 조건",

@@ -3461,7 +3461,11 @@
     "unknown": "دعم اللغات غير معروف",
     "error": "تعذر التحقق من اللغات",
     "modelLanguages": "لغات هذا النموذج",
-    "changeModel": "تغيير النموذج"
+    "changeModel": "تغيير النموذج",
+    "recent": "الأخيرة",
+    "available": "المتاحة",
+    "showAll": "عرض كل اللغات",
+    "hideUnsupported": "إخفاء اللغات غير المدعومة"
   },
   "modelLicense": {
     "title": "شروط النموذج",

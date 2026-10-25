@@ -3453,7 +3453,11 @@
     "unknown": "Chưa rõ ngôn ngữ được hỗ trợ",
     "error": "Không thể kiểm tra ngôn ngữ",
     "modelLanguages": "Ngôn ngữ của mô hình này",
-    "changeModel": "Đổi mô hình"
+    "changeModel": "Đổi mô hình",
+    "recent": "Gần đây",
+    "available": "Khả dụng",
+    "showAll": "Hiện tất cả ngôn ngữ",
+    "hideUnsupported": "Ẩn ngôn ngữ không được hỗ trợ"
   },
   "modelLicense": {
     "title": "Điều khoản mô hình",

@@ -3455,7 +3455,11 @@
     "unknown": "Suporte a idiomas desconhecido",
     "error": "Não foi possível verificar os idiomas",
     "modelLanguages": "Idiomas deste modelo",
-    "changeModel": "Alterar modelo"
+    "changeModel": "Alterar modelo",
+    "recent": "Recentes",
+    "available": "Disponíveis",
+    "showAll": "Mostrar todos os idiomas",
+    "hideUnsupported": "Ocultar idiomas não suportados"
   },
   "modelLicense": {
     "title": "Termos do modelo",

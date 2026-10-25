@@ -3,13 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { AlertCircleIcon, LanguagesIcon, XIcon } from 'lucide-react';
 // Shared JSX controls are also consumed by the maintained shared UI modules.
 // @ts-expect-error Shared JSX has no declaration file.
-import SearchableSelect from '@shared/components/SearchableSelect';
-// @ts-expect-error Shared JSX has no declaration file.
 import LanguageFlag from '@shared/components/LanguageFlag';
-import type { SearchOption } from '@shared/components/VirtualSearchableSelect';
+import type { SearchOption } from '@/lib/language-search';
 import { LANGUAGES } from '@/lib/languages';
 import { languageOptions, languageSupported, type LanguageOption } from '@/lib/language-options';
 import { setCloneSetting, useCloneSetting } from '@/lib/store/clone-settings';
+import { LanguageMenu } from './language-menu';
 
 export interface LanguagePickerProps {
   value?: string;
@@ -81,9 +80,7 @@ export function LanguagePicker({
     );
   };
   return (
-    <SearchableSelect
-      virtualized
-      menuPortal
+    <LanguageMenu
       value={language}
       options={entries}
       disabled={disabled}
@@ -91,23 +88,26 @@ export function LanguagePicker({
       buttonClassName={className}
       unavailableLabel={unavailable}
       recentsKey={`voicestudio.language-recents.${recentsScope}.v1`}
-      onChange={(next: string) => {
+      onChange={(next) => {
         if (onValueChange) onValueChange(next);
         else setCloneSetting('language', next);
       }}
       renderOption={renderOption}
-      renderValue={(option: LanguageOption | undefined) => (
-        <>
-          {invalid ? (
-            <AlertCircleIcon className="size-4 text-warning" aria-hidden="true" />
-          ) : option?.code ? (
-            <LanguageFlag code={option.code === 'zh' ? 'cmn-Hans' : option.code} />
-          ) : (
-            <LanguagesIcon className="size-4 text-muted-foreground" aria-hidden="true" />
-          )}
-          <span className="max-w-48 truncate">{option?.label || language}</span>
-        </>
-      )}
+      renderValue={(entry) => {
+        const option = entry as LanguageOption | undefined;
+        return (
+          <>
+            {invalid ? (
+              <AlertCircleIcon className="size-4 text-warning" aria-hidden="true" />
+            ) : option?.code ? (
+              <LanguageFlag code={option.code === 'zh' ? 'cmn-Hans' : option.code} />
+            ) : (
+              <LanguagesIcon className="size-4 text-muted-foreground" aria-hidden="true" />
+            )}
+            <span className="max-w-48 truncate">{option?.label || language}</span>
+          </>
+        );
+      }}
       header={
         <span className="min-w-0 truncate" title={modelLabel}>
           {modelLabel || t('clone.language')}

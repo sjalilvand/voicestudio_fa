@@ -17,6 +17,7 @@ it('updates allowed choices after an engine switch without rewriting the saved l
   const onValueChange = vi.fn();
   const view = render(<EngineLanguagePicker onValueChange={onValueChange} />);
   fireEvent.click(screen.getByRole('button', { name: 'Language' }));
+  // The saved unsupported choice stays visible rather than hiding behind "Show all languages".
   expect(await screen.findByRole('option', { name: 'Japanese' })).toBeDisabled();
   expect(screen.getByRole('option', { name: 'Auto' })).toBeEnabled();
   state.names = null;

@@ -3455,7 +3455,11 @@
     "unknown": "Langues prises en charge inconnues",
     "error": "Impossible de vérifier les langues",
     "modelLanguages": "Langues de ce modèle",
-    "changeModel": "Changer de modèle"
+    "changeModel": "Changer de modèle",
+    "recent": "Récentes",
+    "available": "Disponibles",
+    "showAll": "Afficher toutes les langues",
+    "hideUnsupported": "Masquer les langues non prises en charge"
   },
   "modelLicense": {
     "title": "Conditions du modèle",

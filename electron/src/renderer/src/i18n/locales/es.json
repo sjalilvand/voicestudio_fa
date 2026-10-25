@@ -3455,7 +3455,11 @@
     "unknown": "Compatibilidad de idiomas desconocida",
     "error": "No se pudieron comprobar los idiomas",
     "modelLanguages": "Idiomas de este modelo",
-    "changeModel": "Cambiar modelo"
+    "changeModel": "Cambiar modelo",
+    "recent": "Recientes",
+    "available": "Disponibles",
+    "showAll": "Mostrar todos los idiomas",
+    "hideUnsupported": "Ocultar idiomas no compatibles"
   },
   "modelLicense": {
     "title": "Condiciones del modelo",

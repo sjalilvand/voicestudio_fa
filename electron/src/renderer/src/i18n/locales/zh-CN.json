@@ -3453,7 +3453,11 @@
     "unknown": "支持的语言未知",
     "error": "无法检查语言",
     "modelLanguages": "此模型的语言",
-    "changeModel": "更换模型"
+    "changeModel": "更换模型",
+    "recent": "最近使用",
+    "available": "可用",
+    "showAll": "显示所有语言",
+    "hideUnsupported": "隐藏不支持的语言"
   },
   "modelLicense": {
     "title": "模型条款",

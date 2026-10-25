@@ -3453,7 +3453,11 @@
     "unknown": "Language support unknown",
     "error": "Could not check languages",
     "modelLanguages": "Languages for this model",
-    "changeModel": "Change model"
+    "changeModel": "Change model",
+    "recent": "Recent",
+    "available": "Available",
+    "showAll": "Show all languages",
+    "hideUnsupported": "Hide unsupported languages"
   },
   "modelLicense": {
     "title": "Model terms",

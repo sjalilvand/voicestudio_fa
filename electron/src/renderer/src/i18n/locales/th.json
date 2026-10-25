@@ -3453,7 +3453,11 @@
     "unknown": "ไม่ทราบภาษาที่รองรับ",
     "error": "ตรวจสอบภาษาไม่ได้",
     "modelLanguages": "ภาษาสำหรับโมเดลนี้",
-    "changeModel": "เปลี่ยนโมเดล"
+    "changeModel": "เปลี่ยนโมเดล",
+    "recent": "ล่าสุด",
+    "available": "ใช้ได้",
+    "showAll": "แสดงทุกภาษา",
+    "hideUnsupported": "ซ่อนภาษาที่ไม่รองรับ"
   },
   "modelLicense": {
     "title": "ข้อกำหนดของโมเดล",
