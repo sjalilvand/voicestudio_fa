@@ -148,6 +148,36 @@
   overflow: hidden;
 }
 
+/* Edge glow: a hairline rim lit from the top-left plus a faint halo, both from the theme's primary colour. */
+.home-contributor-popup {
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--primary) 12%, transparent),
+    0 18px 48px -18px color-mix(in oklab, var(--primary) 45%, transparent),
+    0 10px 30px -12px rgb(0 0 0 / 35%);
+}
+
+.home-contributor-popup::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(
+    145deg,
+    color-mix(in oklab, var(--primary) 60%, transparent),
+    transparent 38%,
+    transparent 70%,
+    color-mix(in oklab, var(--primary) 22%, transparent)
+  );
+  pointer-events: none;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
 /* Soft wash of the theme's primary colour behind the portrait. */
 .home-contributor-banner {
   height: 44px;
