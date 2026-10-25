@@ -41,6 +41,9 @@ import com.voicestudio.mobile.features.dub.DubScreen
 import com.voicestudio.mobile.features.dictate.DictateScreen
 import com.voicestudio.mobile.features.settings.SettingsScreen
 import com.voicestudio.mobile.network.ContentReportClient
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 class VoiceStudioApplication:Application()
@@ -52,11 +55,14 @@ class MainActivity:ComponentActivity() {
         super.onCreate(savedInstanceState);enableEdgeToEdge()
         incoming=intent
         val l=L10n.load(this,Locale.getDefault().toLanguageTag())
-        getSystemService(ShortcutManager::class.java).dynamicShortcuts=listOf("speak","dictate").map {route ->
+        val shortcuts=listOf("speak","dictate").map {route ->
             ShortcutInfo.Builder(this,route).setShortLabel(l.t("mobile.integration.shortcut_$route"))
                 .setIcon(Icon.createWithResource(this,android.R.drawable.ic_btn_speak_now))
                 .setIntent(Intent(Intent.ACTION_VIEW,Uri.parse("voicestudio://workspace/$route"),this,MainActivity::class.java)).build()
         }
+        // Publishing shortcuts writes to disk (@WorkerThread), so keep it off the main thread.
+        val manager=getSystemService(ShortcutManager::class.java)
+        lifecycleScope.launch(Dispatchers.IO) {manager.dynamicShortcuts=shortcuts}
         setContent {StudioApp(incomingIntent=incoming,onIncomingConsumed={incoming=null})}
     }
 }
