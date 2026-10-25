@@ -4093,7 +4093,7 @@
     "dub_advanced": {
       "ass": "Phụ đề có kiểu (.ass)",
       "background_hint": "Trộn nền cần một bản âm thanh được máy tính tách riêng.",
-      "cast": "Truyền",
+      "cast": "Dàn diễn viên",
       "cast_checked": "Tôi đã kiểm tra nhãn người nói và giọng",
       "clips": "Clip theo từng đoạn (.zip)",
       "color": "Màu phụ đề",
@@ -4139,8 +4139,8 @@
       "too_large": "Giới hạn tệp: tổng 1 GB, mỗi tệp thành phần 512 MB.",
       "voices_required": "Xác nhận quyền trước khi nhập hoặc gửi bản ghi giọng nói.",
       "compatibility": "Thiết bị này dùng các mô hình tương thích đã cài. Cài đặt riêng của bộ máy và bộ nhớ đệm dựng âm thanh từ thiết bị khác được giữ trong tệp lưu trữ.",
-      "import": "Nhập khẩu",
-      "export": "Xuất khẩu",
+      "import": "Nhập",
+      "export": "Xuất",
       "send": "Gửi"
     }
   },

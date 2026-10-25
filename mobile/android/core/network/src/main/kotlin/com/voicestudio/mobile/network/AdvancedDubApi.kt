@@ -36,7 +36,7 @@ data class ComputerDubAnalysis(val segments: List<Segment>,val warnings: List<St
             if(restored.any {it.text.isBlank()||it.text.length>4000}) throw ClientFailure("mobile.dub_advanced.invalid_cast")
             return ComputerDubAnalysis(restored,warnings,sources)
         }
-        fun sourceVoiceID(speaker: String)="auto:"+speaker.mapNotNull {when {it.isLetterOrDigit()->it;it==' '||it=='-'->'_';else->null}}.joinToString("").ifEmpty {"speaker"}
+        fun sourceVoiceID(speaker: String)="auto:"+speaker.lowercase(java.util.Locale.ROOT).mapNotNull {when {it.isLetterOrDigit()->it;it==' '||it=='-'->'_';else->null}}.joinToString("").ifEmpty {"speaker"}
     }
 }
 data class ComputerDubExport(val kind: String="media",val language: String="",val tracks: List<String> = emptyList(),val original: Boolean=false,val preserveBackground: Boolean=false,val burn: Boolean=false,val dual: Boolean=false,val karaoke: Boolean=false,val audioFormat: String="m4a") {

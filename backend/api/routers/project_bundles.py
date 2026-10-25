@@ -2,9 +2,12 @@
 from __future__ import annotations
 import copy
 import json
+import logging
+import math
 from pathlib import Path
 import shutil
 import time
+import threading
 import uuid
 
 from fastapi import APIRouter, HTTPException, Request
@@ -18,10 +21,76 @@ from core.safe_archive import ArchiveError
 from services import project_bundle as bundles
 
 router = APIRouter(prefix='/project-bundles', tags=['Project handoff'])
+logger = logging.getLogger(__name__)
+EXPORT_RETENTION_SECONDS = 24 * 60 * 60
+MAX_RETAINED_EXPORTS = 20
+MAX_RETAINED_EXPORT_BYTES = 2 * bundles.MAX_TOTAL
+_transfer_lock = threading.RLock()
+_active_transfers: dict[Path, int] = {}
+
+
+class _BundleResponse(FileResponse):
+    """Keep a retained export alive until its last in-flight download finishes."""
+    def __init__(self, path: Path, **kwargs):
+        super().__init__(path, **kwargs)
+        self.directory = path.parent
+        with _transfer_lock:
+            _active_transfers[self.directory] = _active_transfers.get(self.directory, 0) + 1
+
+    async def __call__(self, scope, receive, send):
+        try:
+            await super().__call__(scope, receive, send)
+        finally:
+            with _transfer_lock:
+                count = _active_transfers[self.directory] - 1
+                if count:
+                    _active_transfers[self.directory] = count
+                else:
+                    del _active_transfers[self.directory]
+                _prune_exports()
+
+
+def _valid_index(value):
+    if not isinstance(value,dict):
+        return False
+    created = value.get('createdAt')
+    return isinstance(created,(int,float)) and not isinstance(created,bool) and math.isfinite(created)
+
+
+def _prune_exports():
+    """Only completed outgoing copies expire; imported project assets are permanent."""
+    with _transfer_lock:
+        exports = []
+        for directory in _root().iterdir():
+            if not directory.is_dir() or directory.is_symlink():
+                continue
+            try:
+                if (directory / 'index.json').is_symlink() or (directory / 'project.vsproject').is_symlink():
+                    continue
+                index = json.loads((directory / 'index.json').read_text())
+                if not _valid_index(index) or index.get('incoming') is not False:
+                    continue
+                created = float(index['createdAt'])
+                size = (directory / 'project.vsproject').stat().st_size
+                exports.append((created, directory, size))
+            except (ValueError, TypeError, KeyError, OSError):
+                # In-progress or interrupted writes are not eligible for retention cleanup.
+                continue
+        retained_bytes = 0
+        retained_count = 0
+        for created, directory, size in sorted(exports,reverse=True):
+            keep = (time.time() - created <= EXPORT_RETENTION_SECONDS
+                    and retained_count < MAX_RETAINED_EXPORTS
+                    and retained_bytes + size <= MAX_RETAINED_EXPORT_BYTES)
+            if keep:
+                retained_bytes += size
+                retained_count += 1
+            elif directory not in _active_transfers:
+                shutil.rmtree(directory, ignore_errors=True)
 
 
 def _root() -> Path:
-    root = Path(OUTPUTS_DIR)/'project_handoff'; root.mkdir(parents=True, exist_ok=True); return root
+    root = (Path(OUTPUTS_DIR)/'project_handoff').resolve(); root.mkdir(parents=True, exist_ok=True); return root
 
 
 def _directory(identifier: str) -> Path:
@@ -30,7 +99,17 @@ def _directory(identifier: str) -> Path:
             raise ValueError()
     except ValueError as exc:
         raise HTTPException(400, 'Invalid project bundle id') from exc
-    return _root()/identifier
+    try:
+        return resolve_within(_root(), str(uuid.UUID(identifier)))
+    except UnsafePath as exc:
+        raise HTTPException(400, 'Invalid project bundle path') from exc
+
+
+def _bundle_file(identifier: str, filename: str) -> Path:
+    try:
+        return resolve_within(_directory(identifier), filename)
+    except UnsafePath as exc:
+        raise HTTPException(400, 'Invalid project bundle path') from exc
 
 
 def _asset(value, roots) -> Path:
@@ -38,7 +117,9 @@ def _asset(value, roots) -> Path:
         try:
             path = resolve_within(root, value)
             if path.is_file() and not path.is_symlink(): return path
-        except (UnsafePath, TypeError): pass
+        except (UnsafePath, TypeError):
+            # A relative asset may belong to another explicitly allowed root.
+            continue
     raise ArchiveError(400, 'Project references a missing or unsafe local asset')
 
 
@@ -108,20 +189,20 @@ def _voice_ids(value):
     visit(value); return found
 
 
-def _rewrite_voices(value, mapping):
+def _rewrite_voices(value, mapping, *, strict=True):
     if isinstance(value,dict):
         result = {}
         for key,child in value.items():
             if key in {'native','models'}: result[key] = child; continue
             if key in {'defaultVoice','profileId','voice','voiceID','voice_id','profile_id'} and isinstance(child,str):
-                if child and not child.startswith('preset:') and child not in mapping: raise ArchiveError(400,'A project voice reference is not bundled')
+                if strict and child and not child.startswith('preset:') and child not in mapping: raise ArchiveError(400,'A project voice reference is not bundled')
                 result[key] = mapping.get(child)
             elif key in {'voiceCast','cast'} and isinstance(child,dict):
-                if any(isinstance(v,str) and v and not v.startswith('preset:') and v not in mapping for v in child.values()): raise ArchiveError(400,'A project cast voice is not bundled')
+                if strict and any(isinstance(v,str) and v and not v.startswith('preset:') and v not in mapping for v in child.values()): raise ArchiveError(400,'A project cast voice is not bundled')
                 result[key] = {k:mapping[v] for k,v in child.items() if isinstance(v,str) and v in mapping}
-            else: result[key] = _rewrite_voices(child,mapping)
+            else: result[key] = _rewrite_voices(child,mapping,strict=strict)
         return result
-    if isinstance(value,list): return [_rewrite_voices(child,mapping) for child in value]
+    if isinstance(value,list): return [_rewrite_voices(child,mapping,strict=strict) for child in value]
     return value
 
 
@@ -151,6 +232,57 @@ def _export_voices(document, files):
             locked = _asset(profile['locked_audio_path'],[VOICES_DIR]); name = str(Path(reference).parent/'locked_audio')+locked.suffix.lower(); files[name] = locked; voice['locked'] = name
         voices.append(voice)
     return voices
+
+
+def _automatic_voice(value):
+    return isinstance(value,str) and value.startswith(('auto:', 'auto-seg:'))
+
+
+def _strip_automatic_bindings(value):
+    """Source clips are portable assets, never persistent voice-profile IDs."""
+    if isinstance(value,dict):
+        result = {}
+        for key, child in value.items():
+            if key in {'profile_id','profileId','voiceID','voice_id','voice','defaultVoice'} and _automatic_voice(child):
+                result[key] = None
+            elif key in {'voiceCast','cast'} and isinstance(child,dict):
+                result[key] = {role:voice for role,voice in child.items() if not _automatic_voice(voice)}
+            else:
+                result[key] = _strip_automatic_bindings(child)
+        return result
+    if isinstance(value,list):
+        return [_strip_automatic_bindings(child) for child in value]
+    return value
+
+
+def _source_reference(job, segment, *, consistent=False):
+    # Reuse the renderer's source-speaker selection, including cross-speaker
+    # overrides and consistent-voice mode, instead of exporting a guessed clip.
+    from api.routers.dub_generate import _find_speaker_clone, _speaker_key_for_segment, _ref_within_limit, resolve_consistent_ref
+    from services.speaker_clone import auto_profile_id
+    binding = segment.get('profile_id')
+    segment_id = str(segment['id'])
+    if isinstance(binding,str) and binding.startswith('auto-seg:'):
+        selected = binding[len('auto-seg:'):]
+        if consistent and selected == segment_id:
+            speaker_key = _speaker_key_for_segment(job, selected)
+            reference = resolve_consistent_ref(job,speaker_key) if speaker_key else None
+            if reference:
+                return reference
+        return (job.get('segment_clones') or {}).get(selected)
+    if isinstance(binding,str) and binding.startswith('auto:'):
+        speaker_key = binding[len('auto:'):]
+        if consistent:
+            return resolve_consistent_ref(job,speaker_key)
+        current = _speaker_key_for_segment(job,segment_id)
+        reference = (job.get('segment_clones') or {}).get(segment_id) if current is None or current == speaker_key else None
+        if _ref_within_limit(reference):
+            return reference
+        reference = _find_speaker_clone(job.get('speaker_clones') or {},speaker_key)
+        return reference if _ref_within_limit(reference) else resolve_consistent_ref(job,speaker_key)
+    if not binding:
+        return (job.get('segment_clones') or {}).get(segment_id) or _find_speaker_clone(job.get('speaker_clones') or {},auto_profile_id(segment.get('speaker_id') or 'Speaker 1')[len('auto:'):])
+    return None
 
 
 class BundleExport(BaseModel):
@@ -184,13 +316,18 @@ def export_project_bundle(body: BundleExport):
                 item = dict(seg); item['id'] = str(item.get('id',index)); item['text'] = item.get('text_original') or item.get('text',''); item.setdefault('translations',{})
                 for field in ('speaker','voiceID','reference','referenceText'): item.pop(field,None)
                 if seg.get('speaker_id'): item['speaker'] = str(seg['speaker_id'])
-                if seg.get('profile_id'): item['voiceID'] = seg['profile_id']
+                if _automatic_voice(seg.get('profile_id')):
+                    item.pop('profile_id',None)
+                elif seg.get('profile_id'):
+                    item['voiceID'] = seg['profile_id']
                 if 'gain' in seg: item['muted'] = seg['gain'] == 0
                 language = state.get('dubLangCode')
                 if language and seg.get('text_original') and seg.get('text'):
                     item['translations'] = {**item['translations'],language:seg['text']}
-                reference = (job.get('segment_clones') or {}).get(item['id']) or (job.get('speaker_clones') or {}).get(seg.get('speaker_id'))
-                if isinstance(reference,dict) and reference.get('ref_audio') and not seg.get('profile_id'):
+                reference = _source_reference(job,{**seg,'id':item['id']},consistent=state.get('voiceMatch') == 'consistent')
+                if _automatic_voice(seg.get('profile_id')) and not (isinstance(reference,dict) and reference.get('ref_audio')):
+                    raise ArchiveError(400,'A source voice reference is missing; prepare the source voice before exporting')
+                if isinstance(reference,dict) and reference.get('ref_audio'):
                     path = _asset(reference['ref_audio'],[DUB_DIR,OUTPUTS_DIR,VOICES_DIR])
                     name = next((name for name,existing in files.items() if existing == path),None) or 'assets/references/'+uuid.uuid4().hex+path.suffix.lower()
                     files[name] = path; item['reference'] = name; item['referenceText'] = reference.get('ref_text') or item['text']
@@ -198,13 +335,16 @@ def export_project_bundle(body: BundleExport):
             targets = [{'code':code,'name':code} for code in state.get('dubTracks',[]) if code != 'original']
             if not targets and state.get('dubLangCode'): targets = [{'code':state['dubLangCode'],'name':state.get('dubLang') or state['dubLangCode']}]
             document = copy.deepcopy(memory.get('document',{})) if isinstance(memory,dict) else {}
-            document.update({'duration':project.get('duration') or job.get('duration') or max([0]+[s.get('end',0) for s in segments]),'source':source_name,'segments':segments,'targets':targets,'audioOnly':state.get('inputType') == 'audio','desktop':{'name':project['name'],'state':_collect_paths(state,files,[DUB_DIR,OUTPUTS_DIR,VOICES_DIR]),'job':_collect_paths(job,files,[DUB_DIR,OUTPUTS_DIR,VOICES_DIR])}})
+            document.update({'duration':project.get('duration') or job.get('duration') or max([0]+[s.get('end',0) for s in segments]),'source':source_name,'segments':segments,'targets':targets,'audioOnly':state.get('inputType') == 'audio','desktop':{'name':project['name'],'state':_collect_paths(_strip_automatic_bindings(state),files,[DUB_DIR,OUTPUTS_DIR,VOICES_DIR]),'job':_collect_paths(_strip_automatic_bindings(job),files,[DUB_DIR,OUTPUTS_DIR,VOICES_DIR])}})
             title = project['name']
         else: raise ArchiveError(400,'Unsupported project type')
         manifest = {'format':bundles.FORMAT,'version':1,'kind':body.kind,'title':title,'document':document,'voices':_export_voices(document,files),'assets':[],'createdAt':time.time()}
         manifest = bundles.write_bundle(manifest,files,directory/'project.vsproject')
-        (directory/'index.json').write_text(json.dumps({'id':identifier,'title':manifest['title'],'kind':body.kind,'createdAt':time.time(),'incoming':False}))
-        return FileResponse(directory/'project.vsproject',media_type='application/zip',filename=title+'.vsproject')
+        with _transfer_lock:
+            (directory/'index.json').write_text(json.dumps({'id':identifier,'title':manifest['title'],'kind':body.kind,'createdAt':time.time(),'incoming':False}))
+            response = _BundleResponse(directory/'project.vsproject',media_type='application/zip',filename=title+'.vsproject')
+            _prune_exports()
+        return response
     except ArchiveError as exc:
         shutil.rmtree(directory,ignore_errors=True); raise HTTPException(exc.status,detail={'code':'project_archive_invalid','message':exc.detail}) from exc
     except BaseException:
@@ -247,9 +387,19 @@ def _import(directory: Path,source: Path,allow_voices: bool):
     try:
         with db_conn() as conn:
             mapping = _install_voices(manifest,files,conn,cleanup)
-            manifest = copy.deepcopy(manifest); manifest['document'] = _rewrite_voices(manifest['document'],mapping)
+            manifest = copy.deepcopy(manifest)
+            # Canonical fields are authoritative. A phone may replace every voice,
+            # leaving unused IDs in its opaque desktop snapshot; discard only those.
+            desktop = manifest['document'].pop('desktop', None)
+            manifest['document'] = _rewrite_voices(manifest['document'],mapping)
+            if desktop is not None:
+                manifest['document']['desktop'] = _rewrite_voices(desktop,mapping,strict=False)
             if manifest['kind'] != 'dub':
                 project = _restore_paths(bundles.desktop_manuscript(manifest),files)
+                output = project.get('draft',{}).get('output')
+                if output:
+                    # Electron builds /audio/<output>, whose root is OUTPUTS_DIR.
+                    project['draft']['output'] = resolve_within(OUTPUTS_DIR,output).relative_to(Path(OUTPUTS_DIR).resolve()).as_posix()
                 # Covers must enter the existing audiobook cover directory.
                 cover = project.get('draft',{}).get('cover')
                 if isinstance(cover,dict) and cover.get('path'):
@@ -273,6 +423,8 @@ def _import(directory: Path,source: Path,allow_voices: bool):
                         if reference.suffix == '.pcm':
                             reference = _pcm_wave(reference,directory/('reference-'+uuid.uuid4().hex+'.wav'),max_frames=720000)
                         references[segment['id']] = {'ref_audio':str(reference),'ref_text':value.get('referenceText') or value['text']}
+                        if not value.get('voiceID'):
+                            segment['profile_id'] = 'auto-seg:'+segment['id']
                     segments.append(segment)
                 if references: job['segment_clones'] = references
                 source_asset = str(files[doc['source']]); audio = job.get('audio_path')
@@ -347,22 +499,28 @@ async def import_project_bundle(request: Request,allow_voices: bool = False):
 
 @router.get('')
 def list_project_bundles():
+    _prune_exports()
     items = []
-    for path in _root().glob('*/index.json'):
-        try: items.append(json.loads(path.read_text()))
-        except (ValueError,OSError): pass
+    for directory in _root().iterdir():
+        try:
+            path = _bundle_file(directory.name,'index.json')
+            item = json.loads(path.read_text())
+            if _valid_index(item): items.append(item)
+        except (HTTPException,ValueError,OSError):
+            logger.debug('Skipping unreadable project handoff index', exc_info=True)
     return sorted(items,key=lambda item:item.get('createdAt',0),reverse=True)[:200]
 
 
 @router.get('/{identifier}/document')
 def project_bundle_document(identifier: str):
-    path = _directory(identifier)/'result.json'
+    path = _bundle_file(identifier, 'result.json')
     if not path.is_file(): raise HTTPException(404,'Imported project not found')
     return json.loads(path.read_text())
 
 
 @router.get('/{identifier}')
 def download_project_bundle(identifier: str):
-    path = _directory(identifier)/'project.vsproject'
-    if not path.is_file(): raise HTTPException(404,'Project archive not found')
-    return FileResponse(path,media_type='application/zip',filename=identifier+'.vsproject')
+    with _transfer_lock:
+        path = _bundle_file(identifier, 'project.vsproject')
+        if not path.is_file(): raise HTTPException(404,'Project archive not found')
+        return _BundleResponse(path,media_type='application/zip',filename=identifier+'.vsproject')

@@ -76,4 +76,9 @@ class AdvancedDubApiTest {
         withTimeout(3000) {reading.cancelAndJoin()}
         assertEquals(0L,closed.count);assertTrue(reading.isCancelled)
     }
+    @Test fun sourceSpeakerVoiceIDsMatchBackendLowercasePortableNames() {
+        assertEquals("auto:speaker_1",ComputerDubAnalysis.sourceVoiceID("Speaker 1"))
+        assertEquals("auto:speaker_2",ComputerDubAnalysis.sourceVoiceID("SPEAKER-2!"))
+        assertEquals("auto:speaker",ComputerDubAnalysis.sourceVoiceID("___"))
+    }
 }

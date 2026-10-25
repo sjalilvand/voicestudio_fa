@@ -79,7 +79,7 @@ class PhoneWorkflowWorker(context: Context,params: WorkerParameters): CoroutineW
             }
             val result=File(applicationContext.noBackupFilesDir,"workflow-jobs/$job.result.txt")
             withContext(Dispatchers.IO) {result.writeText(finished.text)}
-            val producer=model(if(selection.startsWith("phone:")) "clone" else "tts")
+            val producer=if(workflow.graph!=null) null else model(if(selection.startsWith("phone:")) "clone" else "tts")
             return Result.success(workDataOf("file" to finished.audio?.absolutePath,"text_file" to result.absolutePath,"percent" to 100,"repo" to producer?.repo,"revision" to producer?.revision))
         } catch(e:CancellationException) {throw e} catch(e:Exception) {return Result.failure(workDataOf("error" to ((e as? ClientFailure)?.key ?: "mobile.errors.file")))}
     }

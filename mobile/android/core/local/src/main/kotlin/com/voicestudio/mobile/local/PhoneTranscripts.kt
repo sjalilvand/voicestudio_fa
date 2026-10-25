@@ -21,7 +21,7 @@ private fun boundedTranscriptTitle(title: String): String {
     return if(value.lastOrNull()?.isHighSurrogate()==true) value.dropLast(1) else value
 }
 class PhoneTranscriptStore(private val root: File) {
-    companion object {private val locks=ConcurrentHashMap<String,Mutex>()}
+    companion object {const val MAX_SOURCE_BYTES=1024L*1024*1024;private val locks=ConcurrentHashMap<String,Mutex>()}
     private fun directory(id: String): File {
         require(UUID.fromString(id).toString()==id)
         val dir=File(root,id);require(!Files.isSymbolicLink(dir.toPath()));return dir
@@ -53,7 +53,7 @@ class PhoneTranscriptStore(private val root: File) {
         val guard=lock(id);check(guard.tryLock());try {check(directory(id).deleteRecursively());Unit} finally {guard.unlock()}
     }
     suspend fun prepare(source: File,title: String,model: PhoneModel,decoder: AudioDecoder=AndroidAudioDecoder(),progress: (Float)->Unit = {}): PhoneTranscript=withContext(Dispatchers.IO) {
-        require(model.capability=="asr");val id=UUID.randomUUID().toString();val dir=directory(id).apply {mkdirs()}
+        require(model.capability=="asr");if(!source.isFile||source.length()>MAX_SOURCE_BYTES) throw ClientFailure("mobile.errors.file");val id=UUID.randomUUID().toString();val dir=directory(id).apply {mkdirs()}
         try {
             val pcm=decoder.decode(source,File(dir,"source.pcm"),14400,progress);val frames=pcm.frames;require(frames>0)
             val value=PhoneTranscript(id=id,title=boundedTranscriptTitle(title),kind="file",modelID=model.id,modelPin=modelPin(model).identity,frames=frames,sourceHash=sha256(pcm.file),complete=false)

@@ -88,6 +88,11 @@ export function importedLongformDraft(result: ProjectBundleResult): Draft {
         throw invalid();
     }
   }
+  if (draft.format !== undefined && draft.format !== 'mp3' && draft.format !== 'm4b')
+    throw invalid();
+  for (const key of ['outputCachedChapters', 'outputFailedChapters'] as const)
+    if (draft[key] !== undefined && (!Number.isSafeInteger(draft[key]) || draft[key]! < 0))
+      throw invalid();
   const defaults = blankLongformDraft();
   return {
     ...defaults,

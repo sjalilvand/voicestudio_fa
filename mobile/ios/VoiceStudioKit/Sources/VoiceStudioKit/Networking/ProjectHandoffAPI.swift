@@ -21,7 +21,7 @@ public extension APIClient {
     }
     func receiveHandoff(_ id: String) async throws -> URL {
         guard let uuid = UUID(uuidString: id), uuid.uuidString.lowercased() == id.lowercased() else { throw ClientError("mobile.handoff.invalid") }
-        let result = try await download(request("/project-bundles/"+id))
+        let result = try await download(request("/project-bundles/"+id), maxBytes: ProjectArchive.maxBytes+8_388_608)
         guard (try result.file.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0) <= ProjectArchive.maxBytes+8_388_608 else { try? FileManager.default.removeItem(at: result.file); throw ClientError("mobile.handoff.too_large") }
         return result.file
     }

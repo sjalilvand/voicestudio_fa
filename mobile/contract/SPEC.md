@@ -393,7 +393,9 @@ Workflows on both platforms. These are native screens; no embedded desktop UI.
   ownership verification are never restored. Bounded extraction rejects unsafe
   paths, links, duplicate entries, unsupported versions and altered content.
   Imports roll back failed writes; disconnected host imports finish their
-  transaction and remain available in the paired inbox.
+  transaction and remain available in the paired inbox. Completed outgoing host
+  archives expire after 24 hours or when pruned to the newest 20 within 2 GiB;
+  active downloads and imported projects/assets are never pruned.
 - **Tools** provides offline ASR/re-synthesis conversion of clips up to 30 seconds,
   optional pitch-preserving duration fitting, and A/B synthesis of two phone
   voices. Conversion aborts on an empty transcript before synthesis; decoded
@@ -425,7 +427,7 @@ Workflows on both platforms. These are native screens; no embedded desktop UI.
   locally. Conversion is limited to 30 seconds; templates remain local.
 - **Transcriptions** saves local and paired live dictation into app-private history.
   Search, original-preserving edits, copy, delete, TXT/JSON and timed SRT/VTT
-  exports are available on both. File transcription decodes up to four hours
+  exports are available on both. File transcription accepts source files up to 1 GiB and decodes up to four hours
   to disk and recognizes bounded 20-second chunks with absolute cue offsets.
   Atomic per-chunk checkpoints bind source SHA-256 and the exact installed model
   pin; cancellation retains completed chunks. Completion removes scratch PCM.

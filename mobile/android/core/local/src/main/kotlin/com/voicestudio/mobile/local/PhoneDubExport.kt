@@ -73,7 +73,9 @@ suspend fun PhoneDubStore.exportPackage(id: String,target: String,kind: DubPacka
             val text=if(ext=="ass") PhoneDubASS.export(cp.segments,target) else DubSubtitles.export(cp.segments,target,ext=="vtt")
             val output=File(root,"subtitles.$ext").apply {writeText(text)};entries+=ProjectArchiveFile(output.name,output)
         }
-        val manifest=File(root,"manifest.json").apply {writeText(LocalJson.encodeToString(DubExportManifest.serializer(),DubExportManifest(kind=kind.name.lowercase(Locale.ROOT),sourceHash=request.sourceHash,language=target,modelPins=request.models,segments=cp.segments)))}
+        // Packages are shareable outputs, not voice-conditioning backups.
+        val publicSegments=cp.segments.map {it.copy(voiceID=null,referenceFile=null,referenceText=null,referenceOrigin=null,referenceNeedsTranscription=false)}
+        val manifest=File(root,"manifest.json").apply {writeText(LocalJson.encodeToString(DubExportManifest.serializer(),DubExportManifest(kind=kind.name.lowercase(Locale.ROOT),sourceHash=request.sourceHash,language=target,modelPins=request.models,segments=publicSegments)))}
         entries+=ProjectArchiveFile("manifest.json",manifest)
         val output=File(workspace,"dub-${kind.name.lowercase(Locale.ROOT)}-${UUID.randomUUID()}.zip")
         ProjectArchive.write(entries,output)

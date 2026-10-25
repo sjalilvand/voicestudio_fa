@@ -4139,8 +4139,8 @@
       "too_large": "Arşiv sınırı: toplam 1 GB, dosya başına 512 MB.",
       "voices_required": "Ses kayıtlarını içe aktarmadan veya göndermeden önce izni onaylayın.",
       "compatibility": "Bu cihaz kurulu uyumlu modelleri kullanır. Motora özgü ayarlar ve diğer cihazların oluşturma önbellekleri arşivde tutulur.",
-      "import": "İthalat",
-      "export": "İhracat",
+      "import": "İçe aktar",
+      "export": "Dışa aktar",
       "send": "Gönder"
     }
   },

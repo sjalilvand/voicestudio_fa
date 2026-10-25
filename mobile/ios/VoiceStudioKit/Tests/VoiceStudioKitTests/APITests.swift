@@ -126,6 +126,7 @@ actor MemoryVault: CredentialVault {
     let forged = URLRequest(url: URL(string: "https://other.example/health")!)
     await #expect(throws: ClientError.self) { try await client.send(forged) }
     await #expect(throws: ClientError.self) { try await client.download(forged) }
+    await #expect(throws: ClientError.self) { try await client.download(forged,maxBytes: 65536) }
     #expect(await host.requests.isEmpty)
 }
 

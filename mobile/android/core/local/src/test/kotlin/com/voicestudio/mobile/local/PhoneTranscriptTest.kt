@@ -30,7 +30,7 @@ class PhoneTranscriptTest {
     }
     @Test fun fileResumesCompletedChunksAndPreservesAbsoluteTimes()=runTest {
         val root=File(temporary.root,"history");val store=PhoneTranscriptStore(root)
-        val record=store.prepare(temporary.root,"Interview",model,decoder)
+        val record=store.prepare(temporary.newFile(),"Interview",model,decoder)
         var calls=0
         val recognize: suspend (LocalAudio)->List<SpeechSegment> ={calls++;if(calls==2) throw CancellationException();listOf(SpeechSegment(0.0,.5,if(calls==1) "First" else "Second"))}
         try {store.run(record.id,model,recognize=recognize);fail()} catch(_:CancellationException) {}
@@ -44,7 +44,7 @@ class PhoneTranscriptTest {
     }
     @Test fun corruptSourceNeverReachesRecognizerAndMarkupEscaped()=runTest {
         val root=File(temporary.root,"history");val store=PhoneTranscriptStore(root)
-        val record=store.prepare(temporary.root,"Interview",model,decoder)
+        val record=store.prepare(temporary.newFile(),"Interview",model,decoder)
         File(root,"${record.id}/source.pcm").writeText("changed")
         try {store.run(record.id,model) {fail("Corrupt input reached recognizer");emptyList()};fail()} catch(_:IllegalArgumentException) {}
         val cue=PhoneTranscript(title="Captions",segments=listOf(SpeechSegment(0.0,1.0,"<b>Hello</b> & goodbye\n\nnext")))
@@ -56,8 +56,16 @@ class PhoneTranscriptTest {
         assertTrue(saved.valid);assertTrue(saved.title.length<=300);assertFalse(saved.title.last().isHighSurrogate());assertEquals("Spoken words",saved.originalText)
         val fallback=store.saveDictation(java.util.UUID.randomUUID().toString()," \n ","\nFirst words")
         assertEquals("First words",fallback.title)
-        val prepared=store.prepare(File("unused"),title,fixtureModel(),decoder)
+        val prepared=store.prepare(temporary.newFile(),title,fixtureModel(),decoder)
         assertTrue(prepared.valid);assertTrue(prepared.title.length<=300)
+    }
+
+    @Test fun oversizedSourceRejectedBeforeDecoder()=runTest {
+        val source=temporary.newFile()
+        java.io.RandomAccessFile(source,"rw").use {it.setLength(PhoneTranscriptStore.MAX_SOURCE_BYTES+1)}
+        val store=PhoneTranscriptStore(File(temporary.root,"history"))
+        try {store.prepare(source,"Too large",model,decoder);fail("Oversized source accepted")} catch(_:com.voicestudio.mobile.network.ClientFailure) {}
+        assertTrue(store.list().isEmpty())
     }
 
 }

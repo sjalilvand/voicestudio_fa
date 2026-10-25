@@ -97,8 +97,15 @@ public extension PhoneDubStore {
                 entries.append(ProjectArchiveFile(path: output.lastPathComponent,file: output))
             }
             struct Manifest: Encodable { let format: String; let version: Int; let kind: String; let sourceHash: String; let language: String; let modelPins: [String:String]; let segments: [PhoneDubSegment]; let originalIsIsolatedBackground: Bool }
+            // Packages contain shareable outputs; voice conditioning stays private.
+            let publicSegments = cp.segments.map { cue in
+                var value = cue
+                value.voiceID = nil; value.referenceFile = nil; value.referenceText = nil
+                value.referenceOrigin = nil; value.referenceNeedsTranscription = nil
+                return value
+            }
             let manifest = root.appendingPathComponent("manifest.json")
-            try PrivateFiles.write(Manifest(format: "voicestudio-dub-export",version: 1,kind: kind.rawValue,sourceHash: request.sourceHash,language: target,modelPins: request.modelPins,segments: cp.segments,originalIsIsolatedBackground: false),to: manifest)
+            try PrivateFiles.write(Manifest(format: "voicestudio-dub-export",version: 1,kind: kind.rawValue,sourceHash: request.sourceHash,language: target,modelPins: request.modelPins,segments: publicSegments,originalIsIsolatedBackground: false),to: manifest)
             entries.append(ProjectArchiveFile(path: "manifest.json",file: manifest))
             let output = workspace.appendingPathComponent("dub-"+kind.rawValue+"-"+UUID().uuidString+".zip")
             try await ProjectArchive.write(entries: entries,to: output)

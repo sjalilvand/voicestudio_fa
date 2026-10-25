@@ -578,9 +578,18 @@ func realAuxiliaryPhoneDubOfflineAndResume() async throws {
     let manifest = try #require(try JSONSerialization.jsonObject(with: Data(contentsOf: files["manifest.json"]!)) as? [String:Any])
     let exportedSegments = try #require(manifest["segments"] as? [[String:Any]])
     #expect(exportedSegments.first?["speaker"] as? String == "../Alex"); #expect(manifest["originalIsIsolatedBackground"] as? Bool == false)
+    for segment in exportedSegments {
+        for key in ["voiceID","referenceFile","referenceText","referenceOrigin","referenceNeedsTranscription"] { #expect(segment[key] == nil) }
+    }
+    #expect(try await store.checkpoint(request.id).segments == complete.segments)
     let stems = try await store.exportPackage(request.id,target: "fr",kind: .stems,workspace: root)
     let stemFiles = try await ProjectArchive.extract(stems,to: root.appendingPathComponent("stems"))
     #expect(try PhoneAudioProcessing.containsSyntheticMarker(stemFiles["dubbed.wav"]!)); #expect(try !PhoneAudioProcessing.containsSyntheticMarker(stemFiles["original.wav"]!))
+    let stemManifest = try #require(try JSONSerialization.jsonObject(with: Data(contentsOf: stemFiles["manifest.json"]!)) as? [String:Any])
+    let stemSegments = try #require(stemManifest["segments"] as? [[String:Any]])
+    for segment in stemSegments {
+        for key in ["voiceID","referenceFile","referenceText","referenceOrigin","referenceNeedsTranscription"] { #expect(segment[key] == nil) }
+    }
     let cache = try await store.file(request.id,complete.renders.first!.file!); try Data("corrupt".utf8).write(to: cache)
     await #expect(throws: (any Error).self) { try await store.exportPackage(request.id,target: "fr",kind: .clips,workspace: root) }
     #expect(try await store.checkpoint(request.id).outputs.map(\.file) == complete.outputs.map(\.file)); #expect(try !ProjectArchive.entries(clips).isEmpty)

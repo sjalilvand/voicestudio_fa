@@ -56,3 +56,14 @@ def test_phone_copy_refuses_large_reference_before_building_archive(export):
     with pytest.raises(HTTPException) as failure:
         routes.export_profile('phone-copy', stored=True)
     assert failure.value.status_code == 413
+
+
+def test_phone_copy_bounds_the_complete_archive(export):
+    routes, audio = export
+    with audio.open('wb') as output:
+        output.truncate(32 * 1024 * 1024)
+    with routes.db_conn() as conn:
+        conn.fetchone()['locked_audio_path'] = audio.name
+    with pytest.raises(HTTPException) as failure:
+        routes.export_profile('phone-copy', stored=True)
+    assert failure.value.status_code == 413

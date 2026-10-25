@@ -31,7 +31,7 @@ public struct ComputerDubAnalysis: Sendable {
     }
     public static func sourceVoiceID(_ speaker: String) -> String {
         var slug = ""
-        for scalar in speaker.unicodeScalars { if CharacterSet.alphanumerics.contains(scalar) { slug.unicodeScalars.append(scalar) } else if scalar == " " || scalar == "-" { slug.append("_") } }
+        for scalar in speaker.lowercased().unicodeScalars { if CharacterSet.alphanumerics.contains(scalar) { slug.unicodeScalars.append(scalar) } else if scalar == " " || scalar == "-" { slug.append("_") } }
         return "auto:"+(slug.isEmpty ? "speaker" : slug)
     }
 }

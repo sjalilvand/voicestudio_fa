@@ -86,3 +86,9 @@ private actor AdvancedDubHost: HTTPTransport {
     var different = a; different.speaker = "Other"
     #expect(throws: (any Error).self) { try PhoneDubEditing.merge([a,different],index: 0) }
 }
+
+@Test func sourceSpeakerVoiceIDsMatchBackendLowercasePortableNames() {
+    #expect(ComputerDubAnalysis.sourceVoiceID("Speaker 1") == "auto:speaker_1")
+    #expect(ComputerDubAnalysis.sourceVoiceID("SPEAKER-2!") == "auto:speaker_2")
+    #expect(ComputerDubAnalysis.sourceVoiceID("___") == "auto:speaker")
+}

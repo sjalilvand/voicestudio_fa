@@ -213,6 +213,8 @@ def export_profile(profile_id: str, stored: bool = False):
                 ext = os.path.splitext(locked_path)[1] or ".wav"
                 zf.write(str(full_locked), f"locked_audio{ext}")
 
+    if stored and buf.tell() > 64 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Voice bundle is too large for a phone copy")
     buf.seek(0)
     safe_name = "".join(
         c if c.isalnum() or c in "-_ " else "" for c in profile.get("name", "voice")

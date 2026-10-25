@@ -32,6 +32,7 @@ private func boundedTranscriptTitle(_ title: String) -> String {
 
 /// Completed text and immutable source/checkpoints stay private to the phone. No model downloads.
 public actor PhoneTranscriptStore {
+    public static let maxSourceBytes = 1024*1024*1024
     private let root: URL
     private var running = Set<String>()
     public init(root: URL) throws { self.root = root; try PrivateFiles.directory(root) }
@@ -74,6 +75,11 @@ public actor PhoneTranscriptStore {
     }
     public func prepare(source: URL,title: String,model: PhoneModel,decoder: any PhoneAudioDecoder = AVPhoneAudioDecoder(),progress: @escaping @Sendable (Double) async -> Void = { _ in }) async throws -> PhoneTranscript {
         guard model.capability == .asr else { throw ClientError("mobile.local.model_incompatible") }
+        guard source.isFileURL else { throw ClientError("mobile.errors.file") }
+        let access = source.startAccessingSecurityScopedResource()
+        defer { if access { source.stopAccessingSecurityScopedResource() } }
+        let info = try source.resourceValues(forKeys: [.fileSizeKey,.isRegularFileKey])
+        guard info.isRegularFile == true, let bytes = info.fileSize, bytes <= Self.maxSourceBytes else { throw ClientError("mobile.errors.file") }
         let id = UUID().uuidString.lowercased(), dir = try directory(id); try PrivateFiles.directory(dir)
         do {
             let pcm = try await decoder.decode(source: source,output: dir.appendingPathComponent("source.pcm"),maxSeconds: 14400,progress: progress)

@@ -34,8 +34,8 @@ maintainer team, matching Electron. The badge has a localized core-maintainer de
 - **Dictate**: tap the mic and watch the transcript appear live. Completed sessions
   are saved in **Transcriptions**, including sessions run on a paired computer.
 - **Transcriptions**: search saved text, edit while retaining the original, copy,
-  delete, and export TXT/JSON or timed SRT/VTT. Import audio/video up to four hours
-  for on-phone transcription. Completed 20-second sections survive interruption;
+  delete, and export TXT/JSON or timed SRT/VTT. Import audio/video up to four hours and 1 GiB
+  for on-phone transcription; compress or split larger source files. Completed 20-second sections survive interruption;
   Resume uses the same installed model and verified source. Subtitle export uses
   the original timed transcript; restore it after text edits to export subtitles.
 - **Models**: download, update or delete the on-device models.
@@ -74,7 +74,10 @@ maintainer team, matching Electron. The badge has a localized core-maintainer de
   dub timelines, translations, references and assets travel together. Imports
   create new copies and require permission for bundled voice recordings. Engine
   settings and foreign caches remain in the archive; rendering uses compatible
-  installed models. Pairing also provides a received-project inbox.
+  installed models. Pairing also provides a received-project inbox. The computer
+  retains outgoing download archives for up to 24 hours, keeping at most the
+  newest 20 within a 2 GiB budget; export again after expiry. Imported projects
+  and their assets are retained.
 - **Tools**: convert an audio clip of up to 30 seconds into a saved voice, with
   optional duration matching, or compare two preset/saved voices reading the same
   text. Record conversion input directly with microphone permission and voice

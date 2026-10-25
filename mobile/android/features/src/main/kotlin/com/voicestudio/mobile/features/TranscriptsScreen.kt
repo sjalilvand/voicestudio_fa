@@ -68,7 +68,7 @@ class TranscriptImportSession(application: Application): AndroidViewModel(applic
     }}
     val importer=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) {uri ->if(uri!=null&&asr!=null&&ready) importerSession.start(vm::fail) {
         val title=withContext(Dispatchers.IO) {mediaDisplayName(context,uri)} ?: java.util.UUID.randomUUID().toString()
-        val source=copyMedia(context,uri,"audio")
+        val source=copyMedia(context,uri,"audio",maxBytes=PhoneTranscriptStore.MAX_SOURCE_BYTES)
         try {val record=vm.phone.transcripts.prepare(source,title,asr,progress={importerSession.progress=it});PhoneTranscriptionWorker.enqueue(context,record);refresh()} finally {source.delete()}
     }}
     LaunchedEffect(Unit) {try {vm.phone.refresh();refresh()} catch(e:CancellationException) {throw e} catch(e:Exception) {vm.fail(e)}}

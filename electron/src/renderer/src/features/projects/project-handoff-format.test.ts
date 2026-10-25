@@ -74,3 +74,36 @@ it('rejects malformed incoming documents before persisting them', () => {
     ).toThrow();
   }
 });
+
+it('rejects invalid imported output formats and chapter counters', () => {
+  for (const fields of [
+    { format: ['m4b'] },
+    { format: 'wav' },
+    { outputCachedChapters: '1' },
+    { outputFailedChapters: -1 },
+    { outputCachedChapters: 0.5 },
+    { outputFailedChapters: Infinity },
+  ]) {
+    expect(() =>
+      importedLongformDraft({
+        kind: 'audiobook',
+        title: 'Bad output',
+        project: { draft: { ...blankLongformDraft(), ...fields } },
+      } as unknown as ProjectBundleResult),
+    ).toThrow();
+  }
+  expect(
+    importedLongformDraft({
+      kind: 'audiobook',
+      title: 'Valid output',
+      project: {
+        draft: {
+          ...blankLongformDraft(),
+          format: 'mp3',
+          outputCachedChapters: 2,
+          outputFailedChapters: 1,
+        },
+      },
+    }),
+  ).toMatchObject({ format: 'mp3', outputCachedChapters: 2, outputFailedChapters: 1 });
+});

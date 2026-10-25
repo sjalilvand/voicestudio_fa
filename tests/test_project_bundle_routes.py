@@ -133,6 +133,7 @@ def test_native_dub_import_keeps_canonical_edits_cast_and_atomic_history(handoff
     assert cue['text'] == 'Texte traduit'
     assert cue['speaker_id'] == 'Alice'
     assert cue['gain'] == 0
+    assert cue['profile_id'] == 'auto-seg:phone-cue'
     assert job['segments'] == state['dubSegments']
     assert Path(job['segment_clones']['phone-cue']['ref_audio']).is_file()
     assert job['segment_clones']['phone-cue']['ref_text'] == 'Reference words'
@@ -177,3 +178,172 @@ def test_imported_filename_cannot_capture_an_unrelated_host_asset(handoff):
     assert collected['extra']['filename'] is None
     assert collected['script'] == 'asset:literal text'
     assert files == {}
+
+
+def test_phone_voice_edit_replaces_stale_desktop_snapshot_bindings(handoff, tmp_path):
+    from services import project_bundle as bundles
+    client, routes, db = handoff
+    source = tmp_path / 'new.wav'; source.write_bytes(b'new reference')
+    project = {'name':'Story','mode':'stories','draft':{
+        'voice':'old-default','cast':[{'id':'alice','name':'Alice','profileId':'old-cast'}],
+        'lines':[{'id':'one','character':'alice','profileId':'old-override','text':'Hello'}]}}
+    document = bundles.manuscript_document(project)
+    document['defaultVoice'] = 'new'
+    document['cast'] = {role:'new' for role in document['cast']}
+    output = tmp_path / 'edit.vsproject'
+    bundles.write_bundle({'kind':'stories','title':'Story','document':document,'voices':[{'id':'new','reference':'voices/new.wav','metadata':{}}]}, {'voices/new.wav':source}, output)
+    response = client.post('/project-bundles/import?allow_voices=true',content=output.read_bytes())
+    assert response.status_code == 200, response.text
+    draft = response.json()['project']['draft']
+    assert draft['voice'] and draft['voice'] == draft['lines'][0]['profileId']
+    assert draft['cast'][0]['profileId'] is None  # Unused, unbundled snapshot bindings are discarded.
+    assert 'old-' not in json.dumps(draft)
+    assert client.post('/project-bundles/export',json={'kind':'stories','project':response.json()['project']}).status_code == 200
+
+
+def test_canonical_missing_voice_is_still_rejected(handoff, tmp_path):
+    from services import project_bundle as bundles
+    client, _, _ = handoff
+    output = tmp_path / 'missing.vsproject'
+    bundles.write_bundle({'kind':'audiobook','title':'Book','document':{'script':'Hello','defaultVoice':'missing','cast':{}},'voices':[]}, {}, output)
+    assert client.post('/project-bundles/import?allow_voices=true',content=output.read_bytes()).status_code == 400
+
+
+def test_rendered_output_import_uses_downloadable_relative_path(handoff, tmp_path):
+    from services import project_bundle as bundles
+    client, routes, _ = handoff
+    source = routes.OUTPUTS_DIR / 'rendered.mp3'; source.write_bytes(b'rendered audio')
+    project = {'name':'Rendered','mode':'audiobook','draft':{'script':'Hello','output':'rendered.mp3'}}
+    exported = client.post('/project-bundles/export',json={'kind':'audiobook','project':project})
+    assert exported.status_code == 200, exported.text
+    imported = client.post('/project-bundles/import',content=exported.content)
+    assert imported.status_code == 200, imported.text
+    output = imported.json()['project']['draft']['output']
+    assert not Path(output).is_absolute()
+    assert (routes.OUTPUTS_DIR / output).read_bytes() == b'rendered audio'
+    from fastapi.staticfiles import StaticFiles
+    client.app.mount('/audio',StaticFiles(directory=routes.OUTPUTS_DIR))
+    assert client.get('/audio/'+output).content == b'rendered audio'
+    assert client.post('/project-bundles/export',json={'kind':'audiobook','project':imported.json()['project']}).status_code == 200
+
+
+@pytest.mark.parametrize('binding,expected,mode', [
+    ('auto:speaker_1','line','per_line'),
+    ('auto:speaker_2','speaker','per_line'),
+    ('auto-seg:other','other','per_line'),
+    ('auto:speaker_1','other','consistent'),
+    ('auto-seg:one','other','consistent'),
+    ('auto:missing',None,'per_line'),
+])
+def test_source_voice_dub_export_resolves_automatic_bindings(handoff, tmp_path, monkeypatch, binding, expected, mode):
+    from services import dub_pipeline, project_bundle as bundles
+    client, routes, db = handoff
+    source = routes.DUB_DIR / 'source.wav'; source.write_bytes(b'source')
+    references = {}
+    for name in ('line','speaker','other'):
+        path = routes.DUB_DIR / (name+'.wav'); path.write_bytes(name.encode())
+        references[name] = {'ref_audio':str(path),'ref_text':name+' transcript'}
+    segment = {'id':'one','start':0,'end':1,'text':'Hello','speaker_id':'Speaker 1','profile_id':binding}
+    state = {'dubJobId':'job','dubSegments':[segment],'dubLangCode':'fr','dubLang':'French','inputType':'audio','voiceMatch':mode}
+    job = {'video_path':str(source),'segments':[segment], 'segment_clones':{'one':references['line'],'other':references['other']}, 'speaker_clones':{'Speaker 1':references['other'],'Speaker 2':references['speaker']}}
+    monkeypatch.setattr(dub_pipeline,'get_job',lambda _:job)
+    with db.db_conn() as conn:
+        conn.execute('INSERT INTO studio_projects (id,name,audio_path,duration,state_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?)',('project','Interview',str(source),1,json.dumps(state),0,0))
+    response = client.post('/project-bundles/export',json={'kind':'dub','project_id':'project'})
+    if expected is None:
+        assert response.status_code == 400
+        assert list(routes._root().iterdir()) == []
+        return
+    assert response.status_code == 200, response.text
+    archive = tmp_path / 'source-voice.vsproject'; archive.write_bytes(response.content)
+    manifest, files = bundles.read_bundle(archive,tmp_path/'source-voice')
+    assert manifest['voices'] == []
+    cue = manifest['document']['segments'][0]
+    assert not cue.get('voiceID') and not cue.get('profile_id')
+    assert files[cue['reference']].read_bytes() == expected.encode()
+    assert cue['referenceText'] == expected+' transcript'
+    assert not routes._voice_ids(manifest['document'])
+    imported = client.post('/project-bundles/import?allow_voices=true',content=response.content)
+    assert imported.status_code == 200, imported.text
+    with db.db_conn() as conn:
+        imported_job = json.loads(conn.execute('SELECT job_data FROM dub_history WHERE id=?',(imported.json()['projectId'],)).fetchone()[0])
+    assert imported_job['segments'][0]['profile_id'] == 'auto-seg:one'
+    assert Path(imported_job['segment_clones']['one']['ref_audio']).read_bytes() == expected.encode()
+
+
+def test_bundle_directory_rejects_symlink_escape(handoff, tmp_path):
+    import uuid
+    client, routes, _ = handoff
+    identifier = str(uuid.uuid4())
+    outside = tmp_path / 'outside'; outside.mkdir()
+    (outside/'project.vsproject').write_bytes(b'private')
+    (routes._root()/identifier).symlink_to(outside, target_is_directory=True)
+    assert client.get('/project-bundles/'+identifier).status_code == 400
+
+
+@pytest.mark.parametrize('limited_by', ['age','count','bytes'])
+def test_export_retention_preserves_imports_and_active_downloads(handoff, monkeypatch, limited_by):
+    import uuid
+    client, routes, _ = handoff
+    now = routes.time.time()
+    def entry(created, incoming=False):
+        identifier = str(uuid.uuid4()); directory = routes._directory(identifier); directory.mkdir()
+        (directory/'index.json').write_text(json.dumps({'id':identifier,'incoming':incoming,'createdAt':created}))
+        (directory/'project.vsproject').write_bytes(b'12345678')
+        return directory
+    older = entry(now-10)
+    latest = entry(now)
+    imported = entry(0,True)
+    if limited_by == 'age':
+        monkeypatch.setattr(routes,'EXPORT_RETENTION_SECONDS',5)
+    elif limited_by == 'count':
+        monkeypatch.setattr(routes,'MAX_RETAINED_EXPORTS',1)
+    else:
+        monkeypatch.setattr(routes,'MAX_RETAINED_EXPORT_BYTES',8)
+    # Hold a real response lease while the body is being sent. Both retention
+    # scans and finally cleanup are exercised without relying on wall time.
+    response = routes.download_project_bundle(older.name)
+    async def send(message):
+        if message['type'] == 'http.response.body':
+            routes.list_project_bundles()
+            assert older.exists() and imported.exists()
+    async def receive():
+        return {'type':'http.request'}
+    asyncio.run(response({'type':'http','method':'GET','headers':[]},receive,send))
+    assert imported.exists()
+    assert not older.exists()
+    assert routes._active_transfers == {}
+    assert latest.exists()
+
+
+def test_retention_ignores_unfinished_exports_and_imported_asset_directories(handoff):
+    import uuid
+    _, routes, _ = handoff
+    unfinished = routes._directory(str(uuid.uuid4())); unfinished.mkdir()
+    (unfinished/'project.vsproject').write_bytes(b'incomplete')
+    malformed = routes._directory(str(uuid.uuid4())); malformed.mkdir()
+    (malformed/'index.json').write_text('[]')
+    routes.list_project_bundles()
+    assert unfinished.exists() and malformed.exists()
+
+
+@pytest.mark.parametrize('filename',['project.vsproject','result.json'])
+def test_bundle_file_rejects_symlink_escape(handoff,tmp_path,filename):
+    import uuid
+    client,routes,_ = handoff
+    directory = routes._directory(str(uuid.uuid4())); directory.mkdir()
+    outside = tmp_path/'private.json'; outside.write_text('{"secret":true}')
+    (directory/filename).symlink_to(outside)
+    url = '/project-bundles/'+directory.name+('/document' if filename=='result.json' else '')
+    assert client.get(url).status_code == 400
+
+
+@pytest.mark.parametrize('index',[[],{}, {'createdAt':'yesterday'}, {'createdAt':None}, {'createdAt':float('nan')}])
+def test_list_skips_malformed_index_before_sorting(handoff,index):
+    import uuid
+    client,routes,_ = handoff
+    directory = routes._directory(str(uuid.uuid4())); directory.mkdir()
+    (directory/'index.json').write_text(json.dumps(index))
+    response = client.get('/project-bundles')
+    assert response.status_code == 200
+    assert response.json() == []
