@@ -161,10 +161,12 @@ export function prepareMacDevElectron({
  * app falls back to another port anyway.
  */
 export function devInstancePorts(env = process.env) {
-  const proxy = Number(env.VOICESTUDIO_ELECTRON_PROXY_PORT) || DEFAULT_ELECTRON_PROXY_PORT;
+  const rawProxy = env.VOICESTUDIO_ELECTRON_PROXY_PORT?.trim();
   const renderer =
     Number(env.OMNIVOICE_UI_PORT || env.VOICESTUDIO_UI_PORT) || DEFAULT_ELECTRON_DEV_PORT;
-  return [proxy, renderer];
+  // `0` lets the OS pick the proxy port (electronProxyPort), so there is none to free.
+  if (rawProxy === '0') return [renderer];
+  return [Number(rawProxy) || DEFAULT_ELECTRON_PROXY_PORT, renderer];
 }
 
 /**
@@ -180,8 +182,11 @@ export async function replacePreviousDevInstance(
   stopApps = stopLeftoverDevApps,
 ) {
   if (env.VOICESTUDIO_ALLOW_MULTIPLE_INSTANCES === '1') return;
-  await clear(devInstancePorts(env));
+  // The app first, through its normal quit path, and only once it has fully
+  // exited the ports: an app still flushing its windows holds the proxy port
+  // longer than clearDevPorts waits.
   await stopApps();
+  await clear(devInstancePorts(env));
 }
 
 /**
@@ -230,16 +235,30 @@ export function devElectronPids(listing, location, windows = process.platform ==
 }
 
 /**
- * A replaced dev app releases its ports as it starts quitting, but Electron's
- * quit does not always finish, leaving a window that holds the single-instance
- * lock. Ask any leftover dev Electron of this checkout to quit, then force it.
+ * SIGTERM enters Electron's normal quit path on macOS and Linux. On Windows
+ * process.kill terminates outright, so the polite step there is taskkill
+ * without /F, which asks the windows to close; SIGKILL stays the fallback.
+ */
+export function signalProcess(pid, signal, platform = process.platform, run = spawnSync) {
+  if (platform === 'win32' && signal === 'SIGTERM') {
+    run('taskkill', ['/PID', String(pid)], { encoding: 'utf8' });
+    return;
+  }
+  process.kill(pid, signal);
+}
+
+/**
+ * Ask this checkout's running dev Electron to quit and wait for it to exit.
+ * Electron's quit does not always finish, which would leave a window holding
+ * the single-instance lock, so it is forced after the timeout.
  */
 export async function stopLeftoverDevApps({
   location = devElectronLocation(),
   list = listProcesses,
-  kill = (pid, signal) => process.kill(pid, signal),
+  kill = signalProcess,
   sleep = (ms) => new Promise((done) => setTimeout(done, ms)),
-  timeoutMs = 8000,
+  // Electron's orderly quit allows 2.5s for window persistence and 5s for teardown.
+  timeoutMs = 12000,
 } = {}) {
   const leftovers = () => devElectronPids(list(), location);
   const signal = (pids, name) => {

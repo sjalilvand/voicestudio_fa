@@ -3,6 +3,7 @@ import {
   devElectronPids,
   devInstancePorts,
   replacePreviousDevInstance,
+  signalProcess,
   stopLeftoverDevApps,
   // @ts-expect-error JavaScript launcher has no separate declaration file.
 } from '../../scripts/dev.mjs';
@@ -13,14 +14,22 @@ describe('bun dev replaces an earlier dev instance', () => {
     expect(
       devInstancePorts({ VOICESTUDIO_UI_PORT: '4100', VOICESTUDIO_ELECTRON_PROXY_PORT: '4200' }),
     ).toEqual([4200, 4100]);
+    // An OS-assigned proxy port has nothing fixed to free.
+    expect(devInstancePorts({ VOICESTUDIO_ELECTRON_PROXY_PORT: '0' })).toEqual([3902]);
   });
 
-  it('frees the ports, then stops leftover dev apps, unless multiple instances are allowed', async () => {
+  it('asks a Windows dev app to close its windows before any forced stop', () => {
+    const run = vi.fn();
+    signalProcess(42, 'SIGTERM', 'win32', run);
+    expect(run).toHaveBeenCalledWith('taskkill', ['/PID', '42'], { encoding: 'utf8' });
+  });
+
+  it('stops the old dev app before freeing the ports, unless multiple instances are allowed', async () => {
     const order: string[] = [];
     const clear = vi.fn(async () => void order.push('clear'));
     const stopApps = vi.fn(async () => void order.push('apps'));
     await replacePreviousDevInstance({}, clear, stopApps);
-    expect(order).toEqual(['clear', 'apps']);
+    expect(order).toEqual(['apps', 'clear']);
     await replacePreviousDevInstance(
       { VOICESTUDIO_ALLOW_MULTIPLE_INSTANCES: '1' },
       clear,

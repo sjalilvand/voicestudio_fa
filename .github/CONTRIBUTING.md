@@ -94,7 +94,9 @@ bun run dev:web     # maintained Electron renderer in a browser + backend
 `bun run dev` keeps one desktop dev instance per checkout: starting it again
 stops the earlier dev app and its dev server (only this checkout's, never an
 installed VoiceStudio or another project) instead of failing with "Port 3902 is
-already in use". Set `VOICESTUDIO_ALLOW_MULTIPLE_INSTANCES=1` to keep both.
+already in use". To run two side by side, start the second one with
+`VOICESTUDIO_ALLOW_MULTIPLE_INSTANCES=1` plus its own ports, for example
+`VOICESTUDIO_UI_PORT=3912 VOICESTUDIO_ELECTRON_PROXY_PORT=3913`.
 
 Product builds read the app name, application ID, and the backend/web/Electron
 development ports from `config/app.json`. Change that manifest instead of
