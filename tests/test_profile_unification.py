@@ -375,6 +375,45 @@ async def test_preview_tracks_all_voice_inputs_but_not_metadata(
             await task
 
 
+@pytest.mark.parametrize(
+    "patch",
+    [{"ref_text": "Corrected transcript"}, {"language": "Japanese"}],
+)
+def test_saved_voice_survives_transcript_or_language_correction(app_client, patch):
+    """Correcting metadata must never discard a rendered reference voice."""
+    from pathlib import Path
+
+    client, cfg = app_client
+    created = client.post("/profiles", data={
+        "name": "Saved voice", "kind": "design", "engine": "voxcpm2",
+        "vd_states": json.dumps(_VD),
+        "design_recipe": json.dumps({"description": "Gentle and warm", "picks": {}}),
+        "ref_text": "Original reference transcript", "language": "English",
+    })
+    assert created.status_code == 200, created.text
+    pid = created.json()["id"]
+    filename = f"{pid}.wav"
+    audio = Path(cfg.VOICES_DIR) / filename
+    _write_identity_wave(audio, 670)
+    from core.db import db_conn
+    with db_conn() as conn:
+        conn.execute(
+            "UPDATE voice_profiles SET ref_audio_path=? WHERE id=?", (filename, pid),
+        )
+
+    updated = client.put(f"/profiles/{pid}", json=patch)
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["ref_audio_path"] == filename
+    assert updated.json()["design_recipe"] is not None
+    assert audio.is_file()
+    assert client.get(f"/profiles/{pid}/audio").status_code == 200
+    with db_conn() as conn:
+        record = conn.execute(
+            "SELECT ref_audio_path FROM voice_profiles WHERE id=?", (pid,),
+        ).fetchone()
+    assert record["ref_audio_path"] == filename
+
+
 @pytest.mark.asyncio
 async def test_duplicate_pending_preview_requests_share_one_render(app_client, monkeypatch):
     """Parallel requests for an unchanged design must render the WAV only once."""

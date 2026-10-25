@@ -384,13 +384,15 @@ def update_profile(profile_id: str, patch: ProfileUpdate):
             params.append(json.dumps(instruct_to_vd_states(edited_instruct)))
             if edited_instruct != (existing["instruct"] or ""):
                 fields.append("design_recipe = NULL")
-        if existing["kind"] == "design" and (
-            (edited_instruct is not None and edited_instruct != (existing["instruct"] or ""))
-            or (patch.language is not None and patch.language.strip() != existing["language"])
-            or (patch.ref_text is not None and patch.ref_text != (existing["ref_text"] or ""))
+        if (
+            existing["kind"] == "design"
+            and edited_instruct is not None
+            and edited_instruct != (existing["instruct"] or "")
         ):
-            # Any input change invalidates the saved sample; the staging
-            # publisher rejects results made from the pre-edit snapshot.
+            # A genuine voice-design edit invalidates its prior sample.
+            # Transcript/language corrections must *not* discard a saved
+            # voice's reference audio. Pending renders still compare their
+            # captured ref_text/language snapshot before publication.
             fields.append("ref_audio_path = NULL")
         if not fields:
             raise HTTPException(
