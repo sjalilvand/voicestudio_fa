@@ -3923,5 +3923,34 @@
       "rate_limited": "Muitas denúncias desta rede. Tente mais tarde.",
       "invalid": "Não foi possível enviar esta denúncia. Atualize o app e tente novamente."
     }
+  },
+  "failureCause": {
+    "details": "Detalhes",
+    "fixes": "Correções sugeridas",
+    "vram": {
+      "title": "A GPU ficou sem memória",
+      "fix1": "Feche outros apps que usam a GPU",
+      "fix2": "Escolha a CPU ou um motor menor"
+    },
+    "model_missing": {
+      "title": "O modelo não foi baixado",
+      "fix1": "Baixe-o no Catálogo de modelos",
+      "fix2": "Use Corrigir para instalá-lo"
+    },
+    "busy": {
+      "title": "O motor está ocupado",
+      "fix1": "Aguarde a tarefa atual terminar",
+      "fix2": "Tente novamente em instantes"
+    },
+    "timeout": {
+      "title": "A geração excedeu o tempo limite",
+      "fix1": "Tente um trecho mais curto",
+      "fix2": "Aumente o tempo limite do proxy"
+    },
+    "bad_response": {
+      "title": "Resposta inesperada do servidor",
+      "fix1": "Verifique o backend em Configurações > Registros",
+      "fix2": "Reinicie o VoiceStudio e tente de novo"
+    }
   }
 }
