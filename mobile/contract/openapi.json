@@ -759,6 +759,28 @@
    },
    "Body_create_profile_profiles_post": {
     "properties": {
+     "design_recipe": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Design Recipe"
+     },
+     "engine": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Engine"
+     },
      "image": {
       "anyOf": [
        {
@@ -13869,6 +13891,7 @@
   },
   "/generate": {
    "post": {
+    "description": "Synthesize a TTS take using the selected engine and optional voice profile.\n\nBoth WAV and streaming-preview paths share engine selection, validated\nprofile conditioning, reference lifetime, seed, watermarking and history.\nFree-form saved designs select their engine-specific stored instructions.",
     "operationId": "generate_speech_generate_post",
     "requestBody": {
      "content": {
@@ -16255,6 +16278,7 @@
   },
   "/profiles/{profile_id}/audio": {
    "get": {
+    "description": "Serve a saved voice sample or lazily render a pending designed voice.\n\nProfile IDs and stored filenames are confined to VOICES_DIR; concurrent\nsample requests share a single synthesis job and never expose partial WAVs.",
     "operationId": "get_profile_audio_profiles__profile_id__audio_get",
     "parameters": [
      {
