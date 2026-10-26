@@ -26,12 +26,17 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def _has_job_events(bind) -> bool:
+    return bool(
+        bind.execute(
+            sa.text("SELECT 1 FROM sqlite_master WHERE type='table' AND name='job_events'")
+        ).fetchone()
+    )
+
+
 def upgrade() -> None:
     bind = op.get_bind()
-    exists = bind.execute(
-        sa.text("SELECT 1 FROM sqlite_master WHERE type='table' AND name='job_events'")
-    ).fetchone()
-    if not exists:
+    if not _has_job_events(bind):
         return  # init_db creates the table and the unique index
     dup_jobs = [
         r[0]
@@ -61,5 +66,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # Alembic-only databases (and the migration tests) never create job_events.
+    if not _has_job_events(op.get_bind()):
+        return
     op.execute("DROP INDEX IF EXISTS idx_job_events_job_seq_unique")
     op.execute("CREATE INDEX IF NOT EXISTS idx_job_events_job_seq ON job_events(job_id, seq)")
