@@ -386,7 +386,8 @@ try {
   const agentRequest = await page.evaluate(() => globalThis.__dubAgentRequests.at(-1));
   assert.equal(agentRequest.agent, 'codex');
   assert.equal(agentRequest.purpose, 'translate');
-  // The spoken language picked above (French) wins over the detected one.
+  // The user picked French under Spoken language before transcribing, and a
+  // deliberate choice wins over the transcript's detected 'en' (#3442).
   assert.equal(agentRequest.sourceLanguage, 'fr');
   assert.equal(agentRequest.targetLanguage, 'Spanish');
   assert.deepEqual(agentRequest.glossary, [{ source: 'VoiceStudio', target: 'VoiceStudio' }]);
