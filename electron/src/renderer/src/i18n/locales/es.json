@@ -595,7 +595,6 @@
     "describe_hint": "Describe la voz, o elige un punto de partida. Cualquiera de los dos completa los detalles de abajo.",
     "describe_unmatched": "No se pudo asignar: {{items}}",
     "describe_no_match": "Aún no se reconocen rasgos de voz; prueba palabras como deep, elderly o British.",
-    "describe_freeform": "Este motor lee tu descripción tal como la escribes. Los detalles de abajo son pistas extra opcionales.",
     "define_by_design": "Por diseño",
     "define_from_audio": "Desde audio",
     "define_voice": "Definir voz",
@@ -2246,10 +2245,7 @@
   "voicePanel": {
     "mode_label": "Modo de dictado",
     "mode_sub": "Alternar: presione una vez para comenzar y nuevamente para detener. Mantener: dictar mientras se mantiene presionada la tecla.",
-    "mode_toggle": "Alternar",
-    "mode_hold": "Espera",
-    "prompt_label": "Pista de vocabulario",
-    "prompt_sub": "Nombres, jerga y grafías que se esperan al dictar. Lo usan Faster Whisper, MLX Whisper y los motores compatibles con OpenAI (se envía a ese servidor junto con el audio); los demás motores lo ignoran."
+    "mode_toggle": "Alternar"
   },
   "trimmer": {
     "title": "Recortar audio de referencia",

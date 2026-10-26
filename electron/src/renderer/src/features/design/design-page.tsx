@@ -18,16 +18,12 @@ import { openTake, useSelectedTake } from '@/lib/store/takes';
 import {
   DESIGN_DRAFT_EVENT,
   STORAGE,
-  applyDescription,
   canResetToDescription,
-  designInstruct,
-  designRecipe,
   designRequestSeed,
   editVoice,
   linkedDesignProfile,
   pickDetail,
   readDraft,
-  replaceRecipe,
   restoreDesignProfile,
   type DesignDraft,
 } from './design-draft';
@@ -79,21 +75,12 @@ export function DesignPage() {
   const [name, setName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [startingOpen, setStartingOpen] = useState(true);
-  const mapper = useDescription((mapped, described) =>
-    // A mapping that lands after the description changed (edited, or the
-    // recipe was replaced from another view) no longer describes this voice.
-    setDraft((current) =>
-      current.description.trim() === described
-        ? applyDescription(current, mapped, described)
-        : current,
-    ),
-  );
+  // CLEAN-ROOM (spec T1-folded §8): ``mapper`` (the useDescription hook wired to the draft) goes here.
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const generation = useGenerateClone();
   const activeEngine = useEngines().activeTts;
-  const freeform = generation.instructVocabulary === 'freeform';
-  const description = draft.description;
+  // CLEAN-ROOM (spec T1-folded §8): ``freeform`` and ``description`` derived values go here.
   const client = useQueryClient();
   const profiles = useProfiles();
   const savedProfilesRef = useRef<HTMLDetailsElement>(null);
@@ -120,18 +107,7 @@ export function DesignPage() {
     }, 250);
     return () => clearTimeout(timer);
   }, [draft]);
-  const change = (category: string, value: string) => {
-    // No mapper.cancel(): a mapping still in flight lands under this pick.
-    const { clearedCategory } = pickDetail(draft, category, value);
-    setDraft((current) => pickDetail(current, category, value).draft);
-    if (clearedCategory) {
-      toast(
-        t('clone.vd_exclusive_cleared', {
-          cleared: t(`clone.cat_${clearedCategory}`),
-        }),
-      );
-    }
-  };
+  // CLEAN-ROOM (spec T1-folded §8): ``change(category, value)`` detail-pick handler goes here.
   const save = async () => {
     if (!name.trim() || saving) return;
     setSaving(true);
@@ -186,64 +162,7 @@ export function DesignPage() {
           tabsInHeader
           className="space-y-3"
         >
-          <section className={cn(DESIGN_CARD, 'space-y-2.5')}>
-            <div className="flex min-h-7 items-center gap-2">
-              <DesignHeading icon={SparklesIcon} htmlFor="voice-description">
-                {t('clone.describe_label')}
-              </DesignHeading>
-              {canResetToDescription(draft) && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  title={t('clone.reset_to_description')}
-                  aria-label={t('clone.reset_to_description')}
-                  className="text-muted-foreground hover:text-foreground"
-                  disabled={generation.isGenerating || mapper.pending}
-                  onClick={() => {
-                    // Reset drops the picks so the description alone decides again.
-                    setDraft((current) => ({ ...current, picks: {}, profileId: null }));
-                    mapper.reset(description);
-                  }}
-                >
-                  <RotateCcwIcon />
-                </Button>
-              )}
-            </div>
-            <Textarea
-              id="voice-description"
-              maxLength={2000}
-              disabled={generation.isGenerating}
-              className="min-h-20 resize-y bg-background/40 leading-5 dark:bg-background/30"
-              value={description}
-              placeholder={t('clone.describe_placeholder')}
-              onChange={(event) => {
-                const value = event.target.value;
-                setDraft((current) => editVoice(current, { description: value }));
-                // Mapping runs for every engine so the details stay in step
-                // with the description when switching back to OmniVoice.
-                mapper.describe(value);
-              }}
-            />
-            <p role="status" className="text-xs text-muted-foreground">
-              {freeform
-                ? t('clone.describe_freeform')
-                : mapper.pending
-                  ? t('preferences.loading')
-                  : !mapper.matched
-                    ? t('clone.describe_no_match')
-                    : mapper.unmatched.length
-                      ? t('clone.describe_unmatched', {
-                          items: mapper.unmatched.join(', '),
-                        })
-                      : t('clone.describe_hint')}
-            </p>
-            {!freeform && mapper.failed && (
-              <Button variant="ghost" size="xs" onClick={() => mapper.describe(description)}>
-                {t('backend.retry')}
-              </Button>
-            )}
-          </section>
+          {/* CLEAN-ROOM (spec T1-folded §8): the voice-description card goes here. */}
           <DesignDisclosure
             icon={BookmarkIcon}
             title={t('clone.saved_profiles')}
@@ -263,16 +182,7 @@ export function DesignPage() {
                       onClick={() => {
                         mapper.cancel();
                         const restored = restoreDesignProfile(profile, draft.seed);
-                        setDraft((current) =>
-                          replaceRecipe(current, {
-                            attrs: restored.attrs,
-                            seed: restored.seed,
-                            profileId: restored.profileId,
-                            description: restored.description,
-                            picks: restored.picks,
-                            mapped: restored.mapped,
-                          }),
-                        );
+                        // CLEAN-ROOM (spec T1-folded §8): replace the draft's recipe with the restored saved voice here.
                         setCloneSetting('language', restored.language);
                       }}
                     >
@@ -328,9 +238,7 @@ export function DesignPage() {
                 attrs={draft.attrs}
                 onSelect={(attrs) => {
                   mapper.cancel();
-                  setDraft((current) =>
-                    replaceRecipe(current, { attrs: mergeDescribedAttrs(attrs) }),
-                  );
+                  // CLEAN-ROOM (spec T1-folded §8): replace the draft's recipe with the chosen personality here.
                 }}
               />
               {PRESETS.map((preset) => {
@@ -499,12 +407,7 @@ export function DesignPage() {
               disabled={generation.isGenerating}
               onUse={(preset) => {
                 mapper.cancel();
-                setDraft((current) =>
-                  replaceRecipe(current, {
-                    text: preset.script || current.text,
-                    attrs: mergeDescribedAttrs(preset.attrs),
-                  }),
-                );
+                // CLEAN-ROOM (spec T1-folded §8): replace the draft's recipe and script with the chosen demo here.
                 setCloneSetting('language', preset.language || 'Auto');
               }}
             />
@@ -540,14 +443,14 @@ export function DesignPage() {
           <DesignComposer
             generation={generation}
             blocker={designBlocker}
-            // Free-form engines take the description itself, not its mapping.
+            // CLEAN-ROOM (spec T1-folded §8): readiness rule for free-form engines is documented in the spec.
             ready={Boolean(draft.text.trim()) && (freeform || !mapper.pending)}
             engineName={activeEngine?.display_name ?? ''}
             onSynthesize={() =>
               void generation.generateDesign({
                 text: draft.text,
-                instruct: designInstruct(draft, generation.instructVocabulary),
-                recipe: designRecipe(draft),
+                // CLEAN-ROOM (spec T1-folded §8): ``instruct`` and ``recipe`` of this request go here.
+                instruct: '',
                 seed: designRequestSeed(draft, activeProfile),
                 profileId: activeProfile?.id ?? null,
               })

@@ -272,46 +272,7 @@ it('attributes generation to an explicitly selected designed voice', async () =>
   );
 });
 
-it.each([
-  ['freeform', 'raspy old female, scottish accent', 'freeform'],
-  [undefined, '', 'tags'],
-] as const)(
-  'forwards design prose only to free-form engines (#2389, %s)',
-  async (vocabulary, sent, expectedVocabulary) => {
-    engine.vocabulary = vocabulary;
-    vi.mocked(generateClone).mockReset().mockRejectedValueOnce(new Error('stop'));
-    function DesignConsumer() {
-      const state = useGenerateClone();
-      return (
-        <button
-          onClick={() =>
-            void state.generateDesign({
-              text: 'Hi',
-              instruct: 'raspy old female, scottish accent',
-              seed: 1,
-            })
-          }
-        >
-          design {state.instructVocabulary}
-        </button>
-      );
-    }
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <GenerationProvider>
-          <DesignConsumer />
-        </GenerationProvider>
-      </QueryClientProvider>,
-    );
-    fireEvent.click(screen.getByText('design ' + expectedVocabulary));
-    await waitFor(() => expect(generateClone).toHaveBeenCalled());
-    expect(generateClone).toHaveBeenCalledWith(
-      expect.objectContaining({ instruct: sent, instructVocabulary: expectedVocabulary }),
-      expect.anything(),
-    );
-    engine.vocabulary = undefined;
-  },
-);
+// CLEAN-ROOM (spec T1-folded §10): test that generateDesign forwards the instruct as written plus the vocabulary only for free-form engines, and the sanitised tag form otherwise.
 
 it.each([
   [false, 'design', false],

@@ -191,12 +191,7 @@ describe('toGenerateForm', () => {
     ).toBe(false);
   });
 
-  it('sends the Voice Design recipe with the take (#2389)', () => {
-    const designRecipe = { description: 'raspy', picks: { Pitch: 'low pitch' } };
-    const form = toGenerateForm({ ...BASE_INPUT, designRecipe });
-    expect(JSON.parse(String(form.get('design_recipe')))).toEqual(designRecipe);
-    expect(toGenerateForm(BASE_INPUT).has('design_recipe')).toBe(false);
-  });
+  // CLEAN-ROOM (spec T1-folded §10): test that the Voice Design recipe is sent as the design_recipe form field only when given.
 
   it('omits emotion on a neutral take and sends text emotion with strength', () => {
     const neutral = toGenerateForm(BASE_INPUT);
@@ -227,16 +222,7 @@ describe('toGenerateForm', () => {
     expect(form.has('emo_alpha')).toBe(false);
   });
 
-  it('sends a free-form engine its description as written (#2389)', () => {
-    const description = ' raspy old female, scottish accent ';
-    expect(
-      toGenerateForm({
-        ...BASE_INPUT,
-        instruct: description,
-        instructVocabulary: 'freeform',
-      }).get('instruct'),
-    ).toBe('raspy old female, scottish accent');
-  });
+  // CLEAN-ROOM (spec T1-folded §10): test that a free-form engine's instruct is sent trimmed but unsanitised.
 });
 
 describe('parseGenerateHeaders', () => {

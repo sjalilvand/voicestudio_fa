@@ -20,7 +20,6 @@ import { useQuery } from '@tanstack/react-query';
 import { apiJson } from '@/lib/api/client';
 import {
   readDraft,
-  replaceRecipe,
   restoreDesignProfile,
   writeDraft,
 } from '@/features/design/design-draft';
@@ -170,16 +169,7 @@ export function HomePage() {
     if (profile.kind === 'design') {
       const current = readDraft();
       const restored = restoreDesignProfile(profile, current.seed);
-      writeDraft(
-        replaceRecipe(current, {
-          attrs: restored.attrs,
-          seed: restored.seed,
-          profileId: restored.profileId,
-          description: restored.description,
-          picks: restored.picks,
-          mapped: restored.mapped,
-        }),
-      );
+      // CLEAN-ROOM (spec T1-folded §7): write the draft with its recipe replaced by the restored saved voice (attrs, seed, profileId).
       patchCloneSettings({ language: restored.language });
       await navigate({ to: '/design' });
       return;

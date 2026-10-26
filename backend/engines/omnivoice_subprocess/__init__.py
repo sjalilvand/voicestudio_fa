@@ -50,7 +50,7 @@ class OmniVoiceSubprocessBackend(SubprocessBackend):
 
     id = "omnivoice-subprocess"
     display_name = "OmniVoice (subprocess-isolated, killable on timeout)"
-    instruct_vocabulary = "tags"
+    # CLEAN-ROOM (spec T1-folded §3): declare instruct_vocabulary = "tags" on this class.
     supports_voice_design = True
     _DEFAULT_SAMPLE_RATE = 24000
     gpu_compat = ("cuda", "rocm", "mps", "cpu")

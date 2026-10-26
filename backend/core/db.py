@@ -75,7 +75,7 @@ _BASE_SCHEMA = """
         generation_time REAL,
         seed INTEGER DEFAULT NULL,
         starred INTEGER DEFAULT 0,
-        design_recipe TEXT DEFAULT NULL,
+        -- CLEAN-ROOM (spec T1-folded §4): design_recipe column of generation_history goes here.
         created_at REAL,
         FOREIGN KEY (profile_id) REFERENCES voice_profiles(id)
     );

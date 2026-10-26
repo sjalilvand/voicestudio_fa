@@ -593,7 +593,6 @@
     "describe_hint": "목소리를 설명하거나 시작점을 선택하세요. 둘 중 무엇을 해도 아래 세부 정보가 채워집니다.",
     "describe_unmatched": "매핑할 수 없음: {{items}}",
     "describe_no_match": "아직 인식된 목소리 특징이 없습니다. deep, elderly, British 같은 단어를 사용해 보세요.",
-    "describe_freeform": "이 엔진은 설명을 작성한 그대로 읽습니다. 아래 세부 항목은 선택적인 추가 단서입니다.",
     "define_by_design": "디자인으로",
     "define_from_audio": "오디오에서",
     "define_voice": "음성 정의",
@@ -2244,10 +2243,7 @@
   "voicePanel": {
     "mode_label": "받아쓰기 모드",
     "mode_sub": "토글: 한 번 누르면 시작되고 다시 누르면 중지됩니다. 길게 누르기: 키를 누르고 있는 동안 음성을 받아씁니다.",
-    "mode_toggle": "토글",
-    "mode_hold": "길게 누르기",
-    "prompt_label": "어휘 힌트",
-    "prompt_sub": "받아쓰기 중 예상되는 이름, 전문 용어, 표기. Faster Whisper, MLX Whisper, OpenAI 호환 엔진만 사용하며(오디오와 함께 해당 서버로 전송됨), 다른 엔진은 무시합니다."
+    "mode_toggle": "토글"
   },
   "trimmer": {
     "title": "참조 오디오 다듬기",

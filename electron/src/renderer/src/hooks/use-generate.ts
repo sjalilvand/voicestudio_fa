@@ -59,8 +59,7 @@ export interface DesignGenerateInput {
   seed?: number;
   language?: string;
   profileId?: string | null;
-  /** Stored with the take so reopening it rebuilds the same draft (#2389). */
-  recipe?: DesignRecipe;
+  // CLEAN-ROOM (spec T1-folded §10): optional ``recipe`` (the Voice Design recipe stored with the take) goes here.
 }
 
 /**
@@ -107,8 +106,7 @@ export interface UseGenerateClone {
    */
   designBlockerFor(profile: Profile | null | undefined): DesignBlocker;
   cloneBlocker: CloneBlocker;
-  /** How the active engine reads `instruct`: OmniVoice tags or as written (#2389). */
-  instructVocabulary: InstructVocabulary;
+  // CLEAN-ROOM (spec T1-folded §10): ``instructVocabulary`` member of the hook result goes here.
 }
 
 /** A saved voice carries its own transcript; send only a manual correction (#3192),
@@ -339,13 +337,8 @@ function useGenerateController(): UseGenerateClone {
         const free =
           design?.instruct ??
           (presetOnly && activeTts?.supports_voice_design === false ? '' : settings.instruct);
-        // Only OmniVoice's closed tag set needs reducing; other engines read
-        // the description natively and would lose whatever the sanitizer drops.
-        const instruct = !free.trim()
-          ? ''
-          : instructVocabulary === 'freeform'
-            ? free.trim()
-            : announceInstructWarnings(free);
+        // CLEAN-ROOM (spec T1-folded §10): free-form engines keep the instruct as written; only tag-vocabulary engines are reduced.
+        const instruct = free.trim() ? announceInstructWarnings(free) : '';
         const input = {
           text: design?.text ?? settings.text,
           seed: design?.seed,
@@ -370,8 +363,7 @@ function useGenerateController(): UseGenerateClone {
                   )
                 : settings.refText,
           instruct,
-          instructVocabulary,
-          designRecipe: design?.recipe,
+          // CLEAN-ROOM (spec T1-folded §10): forward ``instructVocabulary`` and ``designRecipe`` (from ``design?.recipe``) here.
           // IndexTTS2's emotion controls affect the performance, not the
           // reference voice. Never leak stale emotion options to other engines
           // or to the separate Voice Design workspace.
@@ -493,7 +485,7 @@ function useGenerateController(): UseGenerateClone {
     designBlocker,
     designBlockerFor,
     cloneBlocker: blocker,
-    instructVocabulary,
+    // CLEAN-ROOM (spec T1-folded §10): expose ``instructVocabulary`` here.
   };
 }
 

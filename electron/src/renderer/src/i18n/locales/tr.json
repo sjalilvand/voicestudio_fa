@@ -593,7 +593,6 @@
     "describe_hint": "Sesi tanımlayın veya bir başlangıç noktası seçin. Her ikisi de aşağıdaki ayrıntıları doldurur.",
     "describe_unmatched": "Eşlenemedi: {{items}}",
     "describe_no_match": "Henüz ses özelliği tanınmadı — deep, elderly veya British gibi kelimeler deneyin.",
-    "describe_freeform": "Bu motor açıklamanızı yazdığınız gibi okur. Aşağıdaki ayrıntılar isteğe bağlı ek ipuçlarıdır.",
     "define_by_design": "Tasarımla",
     "define_from_audio": "Sesten",
     "define_voice": "Sesi tanımla",
@@ -2244,10 +2243,7 @@
   "voicePanel": {
     "mode_label": "Dikte Modu",
     "mode_sub": "Geçiş: Başlatmak için bir kez, durdurmak için tekrar basın. Basılı tutun: tuş basılı tutulduğunda dikte edin.",
-    "mode_toggle": "Değiştir",
-    "mode_hold": "Basılı tutun",
-    "prompt_label": "Kelime ipucu",
-    "prompt_sub": "Dikte sırasında beklenen adlar, terimler ve yazımlar. Faster Whisper, MLX Whisper ve OpenAI uyumlu motorlar kullanır (sesle birlikte o sunucuya gönderilir); diğer motorlar yok sayar."
+    "mode_toggle": "Değiştir"
   },
   "trimmer": {
     "title": "Referans sesini kırp",

@@ -166,13 +166,11 @@ export function toGenerateForm(input: CloneGenerateInput): FormData {
   }
 
   if (input.instruct) {
-    const instruct =
-      input.instructVocabulary === 'freeform'
-        ? input.instruct.trim()
-        : sanitizeInstruct(input.instruct).instruct;
+    // CLEAN-ROOM (spec T1-folded §10): free-form engines send the instruct trimmed but unsanitised.
+    const instruct = sanitizeInstruct(input.instruct).instruct;
     if (instruct) form.append('instruct', instruct);
   }
-  if (input.designRecipe) form.append('design_recipe', JSON.stringify(input.designRecipe));
+  // CLEAN-ROOM (spec T1-folded §10): append the optional ``design_recipe`` form field (JSON) here.
   if (input.emoVector) {
     form.append('emo_vector', JSON.stringify(input.emoVector));
   } else if (input.emoText?.trim()) {

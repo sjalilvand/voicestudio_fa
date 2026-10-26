@@ -223,54 +223,8 @@ async def _run_with_reference_lease(lease, factory):
             release()
 
 
-_DESIGN_DESCRIPTION_MAX = 2000  # the Voice Design description field's maxLength
-_DESIGN_DETAIL_MAX = 64
-
-
-def _design_recipe_json(raw: Optional[str]) -> Optional[str]:
-    """Validated Voice Design draft to store with a take, or None (#2389).
-
-    ``design_recipe`` is display metadata from the Design page: the description
-    as written and the user's explicit picks. It never affects synthesis, so a
-    malformed or oversized value is dropped instead of failing the take. Only
-    known categories and bounded strings survive, and the stored JSON is
-    re-serialized from the parsed value — the raw form field is never
-    persisted. The details the description maps to are derived here with the
-    same mapper as ``/design/describe``, so they always match the description
-    this take was rendered from, even when the page's own mapping had not
-    landed yet.
-    """
-    if not raw or len(raw) > 4 * _DESIGN_DESCRIPTION_MAX:
-        return None
-    import json
-
-    from core.describe_voice import CATEGORY_ORDER, parse_description
-
-    try:
-        value = json.loads(raw)
-    except ValueError:
-        return None
-    if not isinstance(value, dict):
-        return None
-    description = value.get("description")
-    if not isinstance(description, str) or len(description) > _DESIGN_DESCRIPTION_MAX:
-        return None
-
-    picks = value.get("picks")
-    if not isinstance(picks, dict):
-        return None
-    for category, detail in picks.items():
-        if (
-            category not in CATEGORY_ORDER
-            or not isinstance(detail, str)
-            or len(detail) > _DESIGN_DETAIL_MAX
-        ):
-            return None
-    mapped = parse_description(description)["attrs"]
-    return json.dumps(
-        {"description": description, "picks": picks, "mapped": mapped},
-        ensure_ascii=False,
-    )
+# CLEAN-ROOM (spec T1-folded §4): the Voice Design recipe form-field validator
+# (size constants and ``_design_recipe_json(raw)``) goes here.
 
 
 def _profile_instruct(row, engine_id=None):
@@ -1686,10 +1640,11 @@ async def _finalize_generation(
     def _write_history():
         with db_conn() as conn:
             conn.execute(
-                "INSERT INTO generation_history (id, text, mode, language, instruct, profile_id, audio_path, duration_seconds, generation_time, seed, design_recipe, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                # CLEAN-ROOM (spec T1-folded §4): also persist ``design_recipe`` in this insert.
+                "INSERT INTO generation_history (id, text, mode, language, instruct, profile_id, audio_path, duration_seconds, generation_time, seed, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
                 (audio_id, text[:200], take_mode,
                  language or "Auto", instruct or "", resolved_profile_id,
-                 audio_filename, audio_dur, gen_time, used_seed, design_recipe, time.time())
+                 audio_filename, audio_dur, gen_time, used_seed, time.time())
             )
     try:
         _write_history()
@@ -1816,8 +1771,7 @@ async def generate_speech(
     ref_audio: Optional[UploadFile] = File(None),
     ref_text: Optional[str] = Form(None),
     instruct: Optional[str] = Form(None),
-    # #2389: the Voice Design draft behind this take (description, picks,
-    # mapped details) so reopening it rebuilds the same draft. Metadata only.
+    # CLEAN-ROOM (spec T1-folded §4): describe the ``design_recipe`` form field here.
     design_recipe: Optional[str] = Form(None),
     duration: Optional[float] = Form(None),
     num_step: Optional[int] = Form(None),
@@ -2099,7 +2053,7 @@ async def generate_speech(
     # never sent, so a rejection can name the profile instead of the picker.
     language_from_profile = False
     history_mode = None  # profile.kind when a profile drives; else inferred at insert
-    stored_design_recipe = _design_recipe_json(design_recipe)
+    # CLEAN-ROOM (spec T1-folded §4): validate ``design_recipe`` into the value stored with the take.
     # #1032: profile id to persist an auto-transcribed reference transcript to.
     # Set only for a plain (unlocked) clone profile whose stored ref_text is
     # empty — the case where every /generate re-ran a full ASR model load +
@@ -2542,7 +2496,7 @@ async def generate_speech(
                     ref_audio_path=ref_audio_path, language=language,
                     instruct=instruct, resolved_profile_id=resolved_profile_id,
                     used_seed=used_seed, start_time=start_time, wav_bits=int(wav_bits),
-                    design_recipe=stored_design_recipe,
+                    # CLEAN-ROOM (spec T1-folded §4): forward the validated recipe to ``_finalize_generation``.
                 )
                 # #1330: before `done`, say what the take is missing. Its own
                 # frame rather than a `done` field so a consumer that only
@@ -2699,7 +2653,7 @@ async def generate_speech(
             ref_audio_path=ref_audio_path, language=language, instruct=instruct,
             resolved_profile_id=resolved_profile_id, used_seed=used_seed,
             start_time=start_time, already_marked=False, wav_bits=int(wav_bits), include_wav_bytes=True,
-            design_recipe=stored_design_recipe,
+            # CLEAN-ROOM (spec T1-folded §4): forward the validated recipe to ``_finalize_generation``.
         )
         audio_id = _meta["id"]
         audio_filename = _meta["filename"]

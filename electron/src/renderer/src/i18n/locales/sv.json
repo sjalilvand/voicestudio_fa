@@ -593,7 +593,6 @@
     "describe_hint": "Beskriv rösten, eller välj en utgångspunkt. Endera fyller i detaljerna nedan.",
     "describe_unmatched": "Kunde inte mappa: {{items}}",
     "describe_no_match": "Inga röstdrag har känts igen ännu — prova ord som deep, elderly eller British.",
-    "describe_freeform": "Den här motorn läser din beskrivning som den är skriven. Detaljerna nedan är valfria extra ledtrådar.",
     "define_by_design": "Via design",
     "define_from_audio": "Från ljud",
     "define_voice": "Definiera röst",
@@ -2244,10 +2243,7 @@
   "voicePanel": {
     "mode_label": "Dikteringsläge",
     "mode_sub": "Växla: tryck en gång för att starta, igen för att stoppa. Håll: diktera medan tangenten hålls nedtryckt.",
-    "mode_toggle": "Växla",
-    "mode_hold": "Vänta",
-    "prompt_label": "Ordförrådstips",
-    "prompt_sub": "Förväntade namn, fackord och stavningar vid diktering. Används av Faster Whisper, MLX Whisper och OpenAI-kompatibla motorer (skickas till den servern tillsammans med ljudet); andra motorer ignorerar det."
+    "mode_toggle": "Växla"
   },
   "trimmer": {
     "title": "Trimma referensljud",

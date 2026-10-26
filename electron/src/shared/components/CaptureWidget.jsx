@@ -2110,7 +2110,7 @@ export default function CaptureWidget({ onDismiss }) {
       const formData = new FormData();
       formData.append('audio', blob, `capture.${extension}`);
       formData.append('mode', captureMode);
-      // Hotkey dictation: apply the saved vocabulary hint (file transcription doesn't).
+      // CLEAN-ROOM (spec T1-folded §1): comment documenting the dictation opt-in goes here.
       formData.append('dictation', 'true');
 
       try {

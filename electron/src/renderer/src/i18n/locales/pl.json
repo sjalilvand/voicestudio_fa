@@ -597,7 +597,6 @@
     "describe_hint": "Opisz głos albo wybierz punkt wyjścia. Każde z tych działań wypełni szczegóły poniżej.",
     "describe_unmatched": "Nie udało się dopasować: {{items}}",
     "describe_no_match": "Nie rozpoznano jeszcze cech głosu — spróbuj słów takich jak deep, elderly lub British.",
-    "describe_freeform": "Ten silnik odczytuje opis dokładnie tak, jak go napisano. Szczegóły poniżej to opcjonalne dodatkowe wskazówki.",
     "define_by_design": "Według projektu",
     "define_from_audio": "Z audio",
     "define_voice": "Zdefiniuj głos",
@@ -2252,10 +2251,7 @@
   "voicePanel": {
     "mode_label": "Tryb dyktowania",
     "mode_sub": "Przełącz: naciśnij raz, aby rozpocząć, ponownie, aby zatrzymać. Przytrzymaj: dyktuj, gdy klawisz jest przytrzymywany.",
-    "mode_toggle": "Przełącz",
-    "mode_hold": "Trzymaj",
-    "prompt_label": "Podpowiedź słownictwa",
-    "prompt_sub": "Nazwy, żargon i pisownia oczekiwane podczas dyktowania. Używana przez Faster Whisper, MLX Whisper i silniki zgodne z OpenAI (wysyłana na ten serwer razem z dźwiękiem); pozostałe silniki ją ignorują."
+    "mode_toggle": "Przełącz"
   },
   "trimmer": {
     "title": "Przytnij dźwięk referencyjny",

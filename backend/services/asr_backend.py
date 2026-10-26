@@ -375,25 +375,13 @@ def _decode_audio_16k_mono(audio_path: str):
 
 #: Per-request decode options a backend may accept as keyword arguments on
 #: ``transcribe()``. Callers exposing OpenAI's transcription parameters
-#: (``/v1/audio/transcriptions`` and ``/translations``) and the dictation
-#: vocabulary prompt pass only the ones a backend's signature declares (see
-#: ``transcribe_request_kwargs``), so an engine that cannot honour one is never
+#: (``/v1/audio/transcriptions`` and ``/translations``) pass only the ones a
+#: backend's signature declares, so an engine that cannot honour one is never
 #: handed it and never fails on an unexpected keyword.
 TRANSCRIBE_REQUEST_OPTIONS = ("language", "initial_prompt", "temperature", "task")
 
 
-def transcribe_request_kwargs(backend, options: dict) -> dict:
-    """The subset of per-request decode ``options`` this backend's
-    ``transcribe()`` declares. An engine that can't honour one (e.g. a
-    CTC model has no prompt) is simply not handed it."""
-    try:
-        params = inspect.signature(backend.transcribe).parameters
-    except (TypeError, ValueError):
-        return {}
-    return {
-        k: v for k, v in options.items()
-        if k in TRANSCRIBE_REQUEST_OPTIONS and k in params and v is not None
-    }
+# CLEAN-ROOM (spec T1-folded §2): transcribe_request_kwargs(backend, options) goes here.
 
 
 #: Sequential Whisper decoders (faster-whisper, MLX Whisper) feed each 30 s

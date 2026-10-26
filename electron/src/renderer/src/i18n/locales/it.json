@@ -595,7 +595,6 @@
     "describe_hint": "Descrivi la voce, oppure scegli un punto di partenza. In entrambi i casi i dettagli qui sotto si compilano automaticamente.",
     "describe_unmatched": "Impossibile mappare: {{items}}",
     "describe_no_match": "Nessun tratto vocale riconosciuto — prova parole come deep, elderly o British.",
-    "describe_freeform": "Questo motore legge la tua descrizione così com'è. I dettagli qui sotto sono indicazioni extra facoltative.",
     "define_by_design": "Tramite progettazione",
     "define_from_audio": "Da audio",
     "define_voice": "Definisci la voce",
@@ -2246,10 +2245,7 @@
   "voicePanel": {
     "mode_label": "Modalità dettatura",
     "mode_sub": "Alterna: premere una volta per avviare, un'altra per interrompere. Tieni premuto: detta mentre si tiene premuto il tasto.",
-    "mode_toggle": "Attiva/disattiva",
-    "mode_hold": "Tieni",
-    "prompt_label": "Suggerimento lessicale",
-    "prompt_sub": "Nomi, gergo e grafie attesi durante la dettatura. Usato da Faster Whisper, MLX Whisper e dai motori compatibili con OpenAI (inviato a quel server insieme all’audio); gli altri motori lo ignorano."
+    "mode_toggle": "Attiva/disattiva"
   },
   "trimmer": {
     "title": "Taglia l'audio di riferimento",

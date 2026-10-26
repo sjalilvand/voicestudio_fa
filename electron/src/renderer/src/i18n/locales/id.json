@@ -593,7 +593,6 @@
     "describe_hint": "Deskripsikan suaranya, atau pilih titik awal. Keduanya akan mengisi detail di bawah.",
     "describe_unmatched": "Tidak dapat dipetakan: {{items}}",
     "describe_no_match": "Belum ada ciri suara yang dikenali — coba kata seperti deep, elderly, atau British.",
-    "describe_freeform": "Mesin ini membaca deskripsi Anda apa adanya. Detail di bawah adalah petunjuk tambahan opsional.",
     "define_by_design": "Lewat desain",
     "define_from_audio": "Dari audio",
     "define_voice": "Tentukan suara",
@@ -2244,10 +2243,7 @@
   "voicePanel": {
     "mode_label": "Mode Dikte",
     "mode_sub": "Beralih: tekan sekali untuk memulai, sekali lagi untuk berhenti. Tahan: mendiktekan saat kunci dipegang.",
-    "mode_toggle": "Beralih",
-    "mode_hold": "Tahan",
-    "prompt_label": "Petunjuk kosakata",
-    "prompt_sub": "Nama, istilah, dan ejaan yang diharapkan saat mendikte. Dipakai oleh Faster Whisper, MLX Whisper, dan mesin yang kompatibel dengan OpenAI (dikirim ke server tersebut bersama audio); mesin lain mengabaikannya."
+    "mode_toggle": "Beralih"
   },
   "trimmer": {
     "title": "Pangkas audio referensi",

@@ -51,8 +51,7 @@ export interface HistoryItem {
   generation_time: number | null;
   seed: number | null;
   starred: boolean | number | null;
-  /** JSON `DesignRecipe` for Voice Design takes; null for other takes and older rows (#2389). */
-  design_recipe?: string | null;
+  // CLEAN-ROOM (spec T1-folded §10): optional ``design_recipe`` (string or null) field of a history item goes here.
   /** Epoch seconds (SQLite REAL) on the wire; tolerate ISO strings too. */
   created_at: number | string;
 }
@@ -84,8 +83,7 @@ export interface EngineBackend {
   default_voice?: string | null;
   /** False: needs a reference clip, so Voice Design is unavailable. Null/absent: undeclared. */
   supports_voice_design?: boolean | null;
-  /** "tags" = OmniVoice's closed design vocabulary; "freeform" = sent as written (#2389). */
-  instruct_vocabulary?: InstructVocabulary;
+  // CLEAN-ROOM (spec T1-folded §10): optional ``instruct_vocabulary`` field of an engine entry goes here.
   /** Seconds of a clone reference the engine uses; null when not verified (#2281). */
   max_ref_seconds?: number | null;
   /** How that stretch is chosen from a longer clip. */
@@ -140,17 +138,8 @@ export interface SystemInfo {
   ffmpeg_path?: string;
 }
 
-export type InstructVocabulary = 'tags' | 'freeform';
-
-/**
- * The Voice Design draft sent with a take so reopening it rebuilds the draft.
- * The stored recipe also carries `mapped`, which the backend derives from the
- * description itself.
- */
-export interface DesignRecipe {
-  description: string;
-  picks: Record<string, string>;
-}
+// CLEAN-ROOM (spec T1-folded §10): the ``InstructVocabulary`` union type and the
+// ``DesignRecipe`` interface go here.
 
 // ── Generation (`POST /generate`, classic whole-file path) ─────────────────
 /** Everything the clone form sends. Names are the UI names; `toGenerateForm`
@@ -169,12 +158,9 @@ export interface CloneGenerateInput {
   refAudio?: File | Blob | null;
   refAudioName?: string;
   refText?: string;
-  /** Free-text style; sanitised through the instruct whitelist unless the engine is "freeform". */
+  // CLEAN-ROOM (spec T1-folded §10): documentation for ``instruct`` and the optional
+  // ``instructVocabulary`` / ``designRecipe`` input fields go here.
   instruct?: string;
-  /** How the target engine reads `instruct`; absent means the OmniVoice tag set. */
-  instructVocabulary?: InstructVocabulary;
-  /** Voice Design draft stored with the take; never affects synthesis. */
-  designRecipe?: DesignRecipe;
   /** IndexTTS2 independent emotion conditioning (text or eight weights). */
   emoText?: string;
   emoAlpha?: number;
