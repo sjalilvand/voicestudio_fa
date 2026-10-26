@@ -249,7 +249,10 @@ export function bundledUvPath(resourcesPath: string, platform = process.platform
   return join(resourcesPath, 'tools', platform === 'win32' ? 'uv.exe' : 'uv');
 }
 
-// CLEAN-ROOM (spec T2-folded §12): exported isUnsupportedPlatform(platform?, arch?) goes here.
+/** Whether this host has no installable managed AI runtime. */
+export function isUnsupportedPlatform(platform = process.platform, arch = process.arch): boolean {
+  return platform === 'darwin' && arch === 'x64';
+}
 
 /**
  * Why this host cannot install the local runtime, if it cannot (#2598).
@@ -1048,8 +1051,8 @@ export class BackendSupervisor extends EventEmitter<{
       !app.isPackaged ||
       this.installation ||
       this.cleaningRuntime ||
-      this.stage !== 'setup_required'
-      // CLEAN-ROOM (spec T2-folded §12): also refuse here when the host is an unsupported platform.
+      this.stage !== 'setup_required' ||
+      isUnsupportedPlatform()
     )
       return;
     let project =

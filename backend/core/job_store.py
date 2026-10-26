@@ -97,7 +97,23 @@ def _update_status(job_id: str, status: str, *, finished: bool = False, error: O
 # ── Events ─────────────────────────────────────────────────────────────────
 
 
-# CLEAN-ROOM (spec T2-folded §2): append_event(job_id, payload) -> int goes here.
+def append_event(job_id: str, payload: str) -> int:
+    """Persist an SSE payload and return its per-job sequence number."""
+    with db_conn() as conn:
+        row = conn.execute(
+            "INSERT INTO job_events (job_id, seq, created_at, payload) "
+            "SELECT ?, COALESCE(MAX(seq), 0) + 1, ?, ? "
+            "FROM job_events WHERE job_id = ? RETURNING seq",
+            (job_id, time.time(), payload, job_id),
+        ).fetchone()
+        seq = int(row["seq"])
+        conn.execute(
+            "DELETE FROM job_events WHERE job_id = ? AND seq NOT IN "
+            "(SELECT seq FROM job_events WHERE job_id = ? "
+            "ORDER BY seq DESC LIMIT ?)",
+            (job_id, job_id, _EVENT_CAP_PER_JOB),
+        )
+    return seq
 
 
 def events_since(job_id: str, after_seq: int = 0, limit: int = 1000) -> list[dict]:

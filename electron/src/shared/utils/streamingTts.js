@@ -110,7 +110,222 @@ export const peaksFromChunkList = (chunkArrays, buckets = 240) => {
   return peaks.map((p) => p / top);
 };
 
-// CLEAN-ROOM (spec T2-folded §16): exported createStreamingChunkPlayer({ label, sampleRate, crossfadeMs, onDone }) goes here.
+export function createStreamingChunkPlayer({ label, sampleRate, crossfadeMs = 0, onDone } = {}) {
+  const Context = window.AudioContext || window.webkitAudioContext;
+  let audioClock;
+  try {
+    audioClock = new Context({ sampleRate });
+  } catch {
+    audioClock = new Context();
+  }
+  if (audioClock.state === 'suspended') Promise.resolve(audioClock.resume()).catch(() => {});
+
+  const initialDelay = 0.08;
+  const drainAllowance = 0.05;
+  const restartDelay = 0.02;
+  const lateThreshold = 0.01;
+  const maximumBlend = Math.max(0, crossfadeMs) / 1000;
+  const blocks = [];
+  const liveVoices = new Map();
+  let voiceNumber = 0;
+  let lastVoice = null;
+  let duration = 0;
+  let clockStart = null;
+  let mediaOrigin = 0;
+  let inputComplete = false;
+  let closed = false;
+
+  const displayedTime = () => {
+    if (clockStart === null) return 0;
+    const elapsed = mediaOrigin + audioClock.currentTime - clockStart;
+    return Math.max(0, Math.min(duration, elapsed));
+  };
+
+  const clearVoices = ({ halt }) => {
+    for (const voice of liveVoices.values()) {
+      if (halt) {
+        try {
+          voice.source.stop();
+        } catch {
+          /* Web Audio rejects stop calls for some unstarted sources. */
+        }
+      }
+      try {
+        voice.source.disconnect();
+        voice.level.disconnect();
+      } catch {
+        /* A prior teardown may already have removed the graph. */
+      }
+    }
+    liveVoices.clear();
+    lastVoice = null;
+  };
+
+  const complete = (reason) => {
+    if (closed) return;
+    closed = true;
+    clearInterval(progressTimer);
+    clearVoices({ halt: reason !== 'ended' });
+    playback.release();
+    try {
+      Promise.resolve(audioClock.close()).catch(() => {});
+    } catch {
+      /* The device may have closed this context already. */
+    }
+    try {
+      onDone?.(reason);
+    } catch {
+      /* Completion observers are isolated from playback cleanup. */
+    }
+  };
+
+  const queueBlock = (blockIndex, { skip = 0, blend = true } = {}) => {
+    const block = blocks[blockIndex];
+    const audioBuffer = audioClock.createBuffer(1, block.samples.length, sampleRate);
+    const channel = audioBuffer.getChannelData(0);
+    if (typeof audioBuffer.copyToChannel === 'function')
+      audioBuffer.copyToChannel(block.samples, 0);
+    else channel.set(block.samples);
+
+    const source = audioClock.createBufferSource();
+    const level = audioClock.createGain();
+    source.buffer = audioBuffer;
+    source.connect(level);
+    level.connect(audioClock.destination);
+
+    const timelineTime = block.at + skip - mediaOrigin;
+    const begins = Math.max(clockStart + timelineTime, audioClock.currentTime);
+    if (blend && skip === 0 && lastVoice && lastVoice.until > begins) {
+      const overlap = Math.min(block.fade, lastVoice.until - begins);
+      if (overlap > 0) {
+        const fadeEnds = begins + overlap;
+        lastVoice.level.gain.setValueAtTime(1, begins);
+        lastVoice.level.gain.linearRampToValueAtTime(0, fadeEnds);
+        level.gain.setValueAtTime(0, begins);
+        level.gain.linearRampToValueAtTime(1, fadeEnds);
+      }
+    }
+    source.start(begins, skip);
+    const voice = {
+      source,
+      level,
+      blockIndex,
+      until: begins + block.length - skip,
+    };
+    liveVoices.set(++voiceNumber, voice);
+    lastVoice = voice;
+  };
+
+  const seek = (value) => {
+    if (closed || blocks.length === 0) return;
+    const destination = Math.max(0, Math.min(value, Math.max(0, duration - 0.02)));
+    clearVoices({ halt: true });
+    let containingBlock = 0;
+    blocks.forEach((block, index) => {
+      if (block.at <= destination) containingBlock = index;
+    });
+    mediaOrigin = destination;
+    clockStart = audioClock.currentTime + restartDelay;
+    queueBlock(containingBlock, {
+      skip: destination - blocks[containingBlock].at,
+      blend: false,
+    });
+    for (let index = containingBlock + 1; index < blocks.length; index += 1) {
+      queueBlock(index);
+    }
+    playback.update({ currentTime: destination });
+  };
+
+  const pause = () => {
+    if (closed) return;
+    const at = displayedTime();
+    try {
+      Promise.resolve(audioClock.suspend()).catch(() => {});
+    } catch {
+      /* Pausing remains best effort on older webviews. */
+    }
+    playback.update({ paused: true, currentTime: at });
+  };
+
+  const resume = () => {
+    if (closed) return;
+    try {
+      Promise.resolve(audioClock.resume()).catch(() => {});
+    } catch {
+      /* Resuming remains best effort on older webviews. */
+    }
+    playback.update({ paused: false, currentTime: displayedTime() });
+  };
+
+  const playback = claimTrackedPlayback({
+    source: 'output',
+    label,
+    stop: () => complete('stopped'),
+    seek,
+    pause,
+    resume,
+  });
+
+  const playbackEnd = () => {
+    if (clockStart === null) return audioClock.currentTime;
+    return clockStart + duration - mediaOrigin + drainAllowance;
+  };
+
+  const progressTimer = setInterval(() => {
+    if (closed || audioClock.state !== 'running') return;
+    playback.update({ currentTime: displayedTime() });
+    if (inputComplete && audioClock.currentTime >= playbackEnd()) {
+      playback.update({ currentTime: duration });
+      complete('ended');
+    }
+  }, 250);
+
+  const acceptSamples = (samples) => {
+    if (closed || !samples?.length) return;
+    const previous = blocks.at(-1);
+    const length = samples.length / sampleRate;
+    const fade = previous ? Math.min(maximumBlend, previous.length, length) : 0;
+    const at = previous ? previous.at + previous.length - fade : 0;
+    const block = { samples, length, fade, at };
+    blocks.push(block);
+    duration = at + length;
+
+    if (clockStart === null) {
+      mediaOrigin = 0;
+      clockStart = audioClock.currentTime + initialDelay;
+      queueBlock(0, { blend: false });
+    } else {
+      const due = clockStart + at - mediaOrigin;
+      if (due < audioClock.currentTime - lateThreshold) {
+        mediaOrigin = at;
+        clockStart = audioClock.currentTime + restartDelay;
+      }
+      queueBlock(blocks.length - 1);
+    }
+    playback.update({
+      duration,
+      peaks: peaksFromChunkList(blocks.map((item) => item.samples)),
+    });
+  };
+
+  return {
+    appendPcm16Base64: (b64) => acceptSamples(decodePcm16Base64(b64)),
+    appendPcm16Bytes: (bytes) => acceptSamples(pcm16BytesToFloat32(bytes)),
+    finalize: ({ label: finalLabel } = {}) => {
+      if (closed) return;
+      inputComplete = true;
+      const state = { duration };
+      if (finalLabel !== undefined) state.label = finalLabel;
+      playback.update(state);
+    },
+    fail: () => {
+      if (!closed) complete('error');
+    },
+    get stopped() {
+      return closed;
+    },
+  };
+}
 
 /**
  * Run one streaming generation end-to-end: POST /generate (stream=true),

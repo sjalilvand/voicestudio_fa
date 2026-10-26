@@ -317,6 +317,7 @@ export const GROUPS = [
           'openai',
           'openrouter',
           'orcarouter',
+          'cheaperinference',
           'groq',
           'iflytek',
           'ollama',

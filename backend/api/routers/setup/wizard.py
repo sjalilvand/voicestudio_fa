@@ -477,7 +477,44 @@ def preflight():
             f"Fix write permissions on {cache} or point HF_HOME elsewhere.",
     })
 
-    # CLEAN-ROOM (spec T2-folded §3): Intel-Mac platform gate in preflight goes here.
+    if sys.platform == "darwin" and arch == "x86_64":
+        platform_failure = {
+            "id": "platform",
+            "label": "Local backend support",
+            "status": "fail",
+            "detail": (
+                "PyTorch has no macOS x86_64 distribution, so the on-device "
+                "AI services cannot be installed on an Intel Mac."
+            ),
+            "fix": (
+                "Use a remote backend hosted on Apple Silicon, an NVIDIA system, "
+                "or CPU-only Linux/Windows. Local setup is disabled here; "
+                "docs/install/macos.md explains the supported paths."
+            ),
+        }
+        checks.append(platform_failure)
+        hardware = _detect_gpu()
+        blocked_device = {
+            "os": sys.platform,
+            "arch": arch,
+            "gpu_vendor": hardware["vendor"],
+            "gpu_backend": hardware["backend"],
+            "gpu_available": hardware["available"],
+            "gpu_driver": hardware["driver"],
+            "gpu_device_name": hardware["device_name"],
+            "gpu_family": "cpu",
+            "vram_gb": 0.0,
+            "ram_gb": round(ram, 1),
+            "disk_free_gb": round(free, 1),
+        }
+        return {
+            "ok": False,
+            "has_warnings": False,
+            "checks": checks,
+            "device": blocked_device,
+            "gpu_routing": None,
+            "media_tools": None,
+        }
 
     # ── Windows on ARM (Snapdragon X etc.): the Python runtime is the x64
     # build under Windows' emulation layer (PyTorch publishes no win_arm64

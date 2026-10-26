@@ -140,7 +140,41 @@ def test_version_is_sanitized_for_filenames(tmp_path):
     assert os.path.dirname(backup) == os.path.dirname(str(db))
 
 
-# CLEAN-ROOM (spec T2-folded §17): tests for torn partial snapshots and stale partial removal go here.
+def test_rotation_ignores_and_removes_an_abandoned_copy(tmp_path, monkeypatch):
+    database = tmp_path / "library.sqlite"
+    _make_db(database)
+    complete = tmp_path / "library.sqlite.backup-preview-17-6"
+    incomplete = tmp_path / "library.sqlite.backup-preview-18-7.part-63001"
+    complete.write_bytes(b"ready")
+    incomplete.write_bytes(b"unfinished")
+    monkeypatch.setattr(db_backup, "_pid_alive", lambda _candidate: False)
+
+    before_prune = db_backup.latest_backup(str(database))
+    removed = db_backup.prune_backups(str(database), keep=1)
+
+    assert before_prune is not None and before_prune["path"] == str(complete)
+    assert db_backup.list_backups(str(database)) == [str(complete)]
+    assert removed == [str(incomplete)]
+    assert complete.read_bytes() == b"ready"
+    assert not incomplete.exists()
+
+
+def test_next_snapshot_reaps_only_partials_without_a_live_owner(tmp_path, monkeypatch):
+    database = tmp_path / "library.sqlite"
+    _make_db(database)
+    paths_by_pid = {
+        64011: tmp_path / "library.sqlite.backup-1.2.0-8.part-64011",
+        64012: tmp_path / "library.sqlite.backup-1.2.0-9.part-64012",
+    }
+    for candidate in paths_by_pid.values():
+        candidate.write_text("pending")
+    monkeypatch.setattr(db_backup, "_pid_alive", lambda candidate: candidate == 64012)
+
+    snapshot = db_backup.snapshot_before_migration(str(database), "1.2.1")
+
+    assert paths_by_pid[64012].read_text() == "pending"
+    assert not paths_by_pid[64011].exists()
+    assert db_backup.list_backups(str(database)) == [snapshot]
 
 
 def test_pruning_preserves_non_snapshot_partials(tmp_path, monkeypatch):

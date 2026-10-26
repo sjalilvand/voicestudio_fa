@@ -10,11 +10,13 @@ start once VoiceStudio is open.
 
 | Tool | What it does |
 |---|---|
+| `generate_speech` | Turns text into WAV by default, using the agent-bound voice unless `profile_id` is supplied. An omitted `language` uses the profile language; explicit `Auto` overrides it. In `files` or `both` mode, `format="opus"` or `"ogg"` provides Ogg/Opus at both `audio_url` and `output_path`; ffmpeg must be installed. |
 | `clone_voice` | reference audio (base64, or a `ref_audio_path` under the base path) → new voice profile. Returns a `profile_id` for use with `generate_speech`. |
+| `describe_voice` | Maps free text to design attributes (gender, age, pitch, style, accent) and reports words it could not map, without saving anything. |
+| `design_voice` | Creates a **design** profile from a matching description and returns its `profile_id` for `generate_speech`. Its stable, fixed-seed identity sample renders while saving, or on first use if the engine is not ready. Descriptions mapping to no attribute are refused. |
 | `transcribe` | audio (base64, or an `audio_path` under the base path) → text (646 languages). |
 | `list_voices` / `list_personalities` / `list_languages` | enumerate what's available. |
 | `check_health` | backend status + active GPU device. |
-<!-- CLEAN-ROOM (spec T2-folded §9): table rows for generate_speech (between header and clone_voice) and for describe_voice and design_voice (between clone_voice and transcribe) go here. -->
 
 `list_voices`, `list_personalities`, `transcribe`, and `check_health` return
 JSON-encoded text in their MCP tool responses. The `voice://{profile_id}`

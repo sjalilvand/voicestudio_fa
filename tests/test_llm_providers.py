@@ -39,8 +39,7 @@ def lp(monkeypatch, clean_llm_env):
 
 def test_registry_has_all_providers(lp):
     ids = {p.id for p in lp.all_providers()}
-    # CLEAN-ROOM (spec T2-folded §17): expected-provider ids should again include "cheaperinference" (after "orcarouter").
-    for expected in ("openai", "openrouter", "orcarouter",
+    for expected in ("openai", "openrouter", "orcarouter", "cheaperinference",
                      "groq", "cerebras", "google-ai",
                      "mistral", "cohere", "nvidia", "github-models", "cloudflare",
                      "huggingface", "sambanova", "siliconflow", "ollama",
@@ -117,7 +116,39 @@ def test_orcarouter_provider_contract(lp, monkeypatch):
     assert lp.resolve_model(p) == "orcarouter/test-model"
 
 
-# CLEAN-ROOM (spec T2-folded §17): cheaperinference provider contract test goes here.
+def test_cheaper_inference_catalogue_entry_and_environment_resolution(lp, monkeypatch):
+    provider = lp.get_provider("cheaperinference")
+    declared = {
+        "name": provider.display_name,
+        "endpoint": provider.default_base_url,
+        "model": provider.default_model,
+        "key_names": provider.key_envs,
+        "endpoint_env": provider.base_url_env,
+        "model_env": provider.model_env,
+        "signup": provider.signup_url,
+    }
+    assert declared == {
+        "name": "Cheaper Inference",
+        "endpoint": "https://api.cheaperinference.com/v1",
+        "model": "gpt-5.4-mini",
+        "key_names": ("CHEAPER_INFERENCE_API_KEY",),
+        "endpoint_env": "CHEAPER_INFERENCE_BASE_URL",
+        "model_env": "CHEAPER_INFERENCE_MODEL",
+        "signup": "https://cheaperinference.com/signup",
+    }
+
+    overrides = {
+        "CHEAPER_INFERENCE_API_KEY": "temporary-secret",
+        "CHEAPER_INFERENCE_BASE_URL": "https://router.example/api/v1",
+        "CHEAPER_INFERENCE_MODEL": "vendor/small-chat",
+    }
+    for variable, value in overrides.items():
+        monkeypatch.setenv(variable, value)
+    assert (
+        lp.resolve_api_key(provider),
+        lp.resolve_base_url(provider),
+        lp.resolve_model(provider),
+    ) == ("temporary-secret", "https://router.example/api/v1", "vendor/small-chat")
 
 
 def test_iflytek_provider_contract(lp, monkeypatch):

@@ -95,7 +95,118 @@ it('prioritizes required and curated models across families, with optional downl
   );
 });
 
-// CLEAN-ROOM (spec T2-folded §17): performance-pack tests (compact pack naming; installed pack usable below disk reserve; reserve guard when downloads are needed) go here.
+const makeBalancedCatalogue = (present: boolean) => [
+  {
+    repo_id: performancePackRepos.balanced[0],
+    label: 'Studio synthesizer',
+    role: 'TTS',
+    size_gb: 2.1,
+    installed: present,
+    supported: true,
+  },
+  {
+    repo_id: performancePackRepos.balanced[1],
+    label: 'Rapid recognizer',
+    role: 'ASR',
+    size_gb: 1.4,
+    installed: present,
+    supported: true,
+  },
+  {
+    repo_id: performancePackRepos.balanced[2],
+    label: 'Pocket listener',
+    role: 'ASR',
+    dictation_id: 'pocket',
+    size_gb: 0.3,
+    installed: present,
+    supported: true,
+  },
+  {
+    repo_id: performancePackRepos.balanced[3],
+    label: 'Desk listener',
+    role: 'ASR',
+    dictation_id: 'desk',
+    size_gb: 0.8,
+    installed: present,
+    supported: true,
+  },
+];
+
+const balancedProfile = {
+  global: 'balanced',
+  overrides: {},
+  effective: {},
+  families: [],
+  implemented_families: [],
+  targets: { tts: {} },
+  selections: { tts: { engine: 'fixture-engine', model: null } },
+};
+
+function serveBalancedPack({ installed, freeGb }: { installed: boolean; freeGb: number }) {
+  mock.api.mockImplementation((path: string) => {
+    if (path === '/models')
+      return Promise.resolve({
+        models: makeBalancedCatalogue(installed),
+        disk_free_gb: freeGb,
+        disk_headroom_gb: 10,
+      });
+    if (path === '/models/install/status') return Promise.resolve({ jobs: [] });
+    if (path === '/setup/recommendations')
+      return Promise.resolve({ device: { label: 'Fixture workstation' } });
+    if (path === '/api/settings/performance-profile') return Promise.resolve(balancedProfile);
+    return Promise.resolve({});
+  });
+}
+
+it('keeps distinct model names visible in the compact pack summary', async () => {
+  serveBalancedPack({ installed: false, freeGb: 40 });
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <PerformanceModelPacks compact />
+    </QueryClientProvider>,
+  );
+  const labels = makeBalancedCatalogue(false).map(({ label }) => label);
+  expect(await screen.findByText(labels[0])).toBeVisible();
+  expect(labels.slice(1).every((label) => screen.getByText(label))).toBe(true);
+  expect(screen.getAllByText(/engineSidebar\.dictation/)).toHaveLength(2);
+});
+
+it('permits selecting a complete pack when the disk is nearly full', async () => {
+  serveBalancedPack({ installed: true, freeGb: 0.5 });
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <PerformanceModelPacks />
+    </QueryClientProvider>,
+  );
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  const activate = await screen.findByRole('button', { name: /models\.pack_use/ });
+  fireEvent.click(activate);
+  await waitFor(() =>
+    expect(mock.api).toHaveBeenCalledWith(
+      '/api/settings/performance-profile',
+      expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify({ tier: 'balanced', family: null }),
+      }),
+    ),
+  );
+  expect(activate).toBeEnabled();
+  expect(mock.api).not.toHaveBeenCalledWith('/models/install', expect.anything());
+});
+
+it('disables a pack that still needs downloads when reserve space is missing', async () => {
+  serveBalancedPack({ installed: false, freeGb: 0.5 });
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <PerformanceModelPacks />
+    </QueryClientProvider>,
+  );
+  expect(await screen.findByRole('alert')).toHaveTextContent('models.pack_low_disk');
+  const blockedAction = await screen.findByRole('button', { name: /models\.pack_install/ });
+  fireEvent.click(blockedAction);
+  expect(blockedAction).toBeDisabled();
+  expect(mock.api).not.toHaveBeenCalledWith('/models/install', expect.anything());
+});
 
 it('unloads a resident model before deleting its slash-separated repository', async () => {
   mock.api.mockImplementation((path: string) => {

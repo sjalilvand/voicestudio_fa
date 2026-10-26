@@ -515,7 +515,16 @@ def create_mcp_server(app=None):
             r.raise_for_status()
             return r
 
-    # CLEAN-ROOM (spec T2-folded §6): a helper that POSTs a JSON body to the backend and returns the decoded JSON goes here (inside create_mcp_server, next to the form-POST helper).
+    async def _submit_json(path: str, body: dict):
+        timeout = _post_timeout_s()
+        async with _client(timeout) as client:
+            response = await client.post(path, json=body)
+            response.raise_for_status()
+            decoded = response.json()
+        return decoded
+
+    def _request_failure(exc: Exception) -> str:
+        return json.dumps({"error": f"VoiceStudio backend request failed: {exc}"})
 
     # ── Tools ───────────────────────────────────────────────────────────
 
@@ -537,7 +546,7 @@ def create_mcp_server(app=None):
     @mcp.tool()
     async def generate_speech(
         text: str,
-        # CLEAN-ROOM (spec T2-folded §7): optional `language` parameter goes here (second parameter, after text).
+        language: str | None = None,
         profile_id: str | None = None,
         instruct: str | None = None,
         speed: float = 1.0,
@@ -548,7 +557,9 @@ def create_mcp_server(app=None):
 
         Args:
             text: The text to synthesize into speech.
-            # CLEAN-ROOM (spec T2-folded §7): docstring entry for the optional language argument goes here.
+            language: Target ISO language code or "Auto"; 646 languages are
+                supported. Omit it to use the saved voice language. Passing
+                "Auto" explicitly overrides that saved choice.
             profile_id: ID of a saved voice profile to clone. Omit to use this
                 agent's bound voice (Settings → MCP), else the default voice.
             instruct: Style instruction (e.g. 'whisper', 'excited', 'narrator').
@@ -588,7 +599,8 @@ def create_mcp_server(app=None):
             "speed": str(speed),
             "num_step": str(steps),
         }
-        # CLEAN-ROOM (spec T2-folded §7): forward the optional language to the backend form here.
+        if language:
+            form["language"] = language
         if profile_id:
             form["profile_id"] = profile_id
         if instruct:
@@ -779,7 +791,99 @@ def create_mcp_server(app=None):
             return json.dumps({"error": f"backend request failed: {exc}"})
         return json.dumps({"profile_id": p["id"], "name": p["name"], "kind": p["kind"]})
 
-    # CLEAN-ROOM (spec T2-folded §6): describe_voice and design_voice MCP tools go here.
+    @mcp.tool()
+    async def describe_voice(description: str) -> str:
+        """Preview how a voice description maps onto the design vocabulary.
+
+        Supported choices are gender (male, female); age (child, teenager,
+        young adult, middle-aged, elderly); pitch (very low, low, moderate,
+        high, very high pitch); style (whisper); and English accents
+        (american, british, australian, canadian, indian, japanese, korean,
+        chinese, russian, portuguese accent). For Chinese speech, a dialect
+        overrides the English accent: sichuan, dongbei/northeastern chinese,
+        henan, shaanxi, gansu, guilin, guizhou, jinan, ningxia, qingdao,
+        shijiazhuang, or yunnan. Timbre terms such as "gravelly" and "raspy"
+        and unsupported accents are ignored and returned in ``unmatched``.
+        Use this before ``design_voice`` to inspect the mapping. For voices
+        beyond this vocabulary, use ``clone_voice`` with reference audio.
+        """
+        import httpx
+        try:
+            mapping = await _submit_json("/design/describe", {"description": description})
+        except (httpx.HTTPError, ValueError) as request_error:
+            return _request_failure(request_error)
+        return json.dumps(mapping)
+
+    @mcp.tool()
+    async def design_voice(name: str, description: str, language: str = "Auto") -> str:
+        """Create a stable design voice from a free-text description.
+
+        The description maps to the attributes shown by ``describe_voice``.
+        A description with no matching attribute is refused. The backend
+        attempts to render a fixed-seed identity sample while saving; when the
+        engine is unavailable, the profile remains saved and renders that
+        sample on first use, preserving its identity. Pass the returned
+        ``profile_id`` to ``generate_speech``.
+
+        Args:
+            name: Display name for the saved profile.
+            description: Words to map onto supported design attributes.
+            language: Saved ISO language code or "Auto".
+
+        Returns:
+            JSON containing the profile id, mapped attributes, and unmatched words.
+        """
+        import httpx
+        try:
+            design_map = await _submit_json("/design/describe", {"description": description})
+        except (httpx.HTTPError, ValueError) as request_error:
+            return _request_failure(request_error)
+
+        ignored_words = design_map.get("unmatched", [])
+        if not design_map.get("matched"):
+            return json.dumps({
+                "error": "No supported design trait was found. Check the text with describe_voice first.",
+                "unmatched": ignored_words,
+            })
+        chosen_attrs = design_map.get("attrs", {})
+        profile_fields = {
+            "name": name,
+            "kind": "design",
+            "vd_states": json.dumps(chosen_attrs),
+            "instruct": design_map.get("instruct", ""),
+            "language": language,
+        }
+        try:
+            save_response = await _api_post_form(
+                "/profiles",
+                data=profile_fields,
+                timeout=_post_timeout_s("generate"),
+            )
+        except httpx.HTTPStatusError as status_error:
+            try:
+                backend_detail = status_error.response.json().get("detail")
+            except ValueError:
+                backend_detail = None
+            explanation = (
+                backend_detail
+                or status_error.response.text
+                or f"HTTP {status_error.response.status_code}"
+            )
+            return json.dumps({"error": str(explanation)})
+        except httpx.HTTPError as request_error:
+            return _request_failure(request_error)
+
+        try:
+            saved_profile = save_response.json()
+        except ValueError as decode_error:
+            return _request_failure(decode_error)
+        return json.dumps({
+            "profile_id": saved_profile["id"],
+            "name": saved_profile["name"],
+            "kind": saved_profile["kind"],
+            "attrs": chosen_attrs,
+            "unmatched": ignored_words,
+        })
 
     return mcp
 

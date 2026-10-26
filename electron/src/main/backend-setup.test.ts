@@ -86,6 +86,7 @@ import {
   isExpectedPipeClose,
   managedBackendSpawnOptions,
   bundledUvEnv,
+  isUnsupportedPlatform,
   platformSetupIssue,
 } from './backend';
 import { app } from 'electron';
@@ -872,7 +873,76 @@ it('exposes the current process signal separately from the durable crash journal
   vi.useRealTimers();
 });
 
-// CLEAN-ROOM (spec T2-folded §17): Intel-Mac setup tests (unsupported-platform parking, platform predicate, wrong-architecture issue) go here.
+function impersonateHost(identity: { platform: NodeJS.Platform; arch: string }): void {
+  const originals = new Map(
+    ['platform', 'arch'].map((property) => [
+      property,
+      Object.getOwnPropertyDescriptor(process, property),
+    ]),
+  );
+  for (const [property, value] of Object.entries(identity)) {
+    Object.defineProperty(process, property, { configurable: true, value });
+  }
+  onTestFinished(() => {
+    for (const [property, descriptor] of originals) {
+      if (descriptor) Object.defineProperty(process, property, descriptor);
+    }
+  });
+}
+
+it('leaves an Intel Mac parked without invoking the runtime installer', async () => {
+  impersonateHost({ platform: 'darwin', arch: 'x64' });
+  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('fixture has no backend')));
+  vi.stubEnv('OMNIVOICE_BACKEND_CMD', '');
+  vi.stubEnv('VOICESTUDIO_SKIP_BACKEND', '');
+  const subject = new BackendSupervisor();
+
+  await subject.start();
+  await subject.setupRuntime();
+
+  expect(mocks.install).not.toHaveBeenCalled();
+  expect(subject.status).toMatchObject({
+    stage: 'setup_required',
+    setupIssue: 'unsupported_platform',
+  });
+  expect(isUnsupportedPlatform()).toBe(true);
+  await subject.shutdown();
+});
+
+it.each([
+  ['darwin', 'arm64'],
+  ['win32', 'x64'],
+  ['linux', 'x64'],
+] as const)('does not reject supported host %s/%s', (platform, arch) => {
+  expect(isUnsupportedPlatform(platform, arch)).toBe(false);
+});
+
+it.each([
+  ['darwin', 'x64', false, 'unsupported_platform'],
+  ['darwin', 'x64', true, 'wrong_architecture'],
+  ['darwin', 'arm64', false, undefined],
+  ['win32', 'x64', true, undefined],
+] as const)('maps setup issue for %s/%s translated=%s', (platform, arch, translated, expected) => {
+  expect(platformSetupIssue(platform, arch, translated)).toBe(expected);
+});
+
+it('labels Rosetta separately while keeping installation unavailable', async () => {
+  impersonateHost({ platform: 'darwin', arch: 'x64' });
+  Object.assign(app, { runningUnderARM64Translation: true });
+  onTestFinished(() => {
+    Object.assign(app, { runningUnderARM64Translation: false });
+  });
+  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('fixture has no backend')));
+  vi.stubEnv('OMNIVOICE_BACKEND_CMD', '');
+  vi.stubEnv('VOICESTUDIO_SKIP_BACKEND', '');
+  const subject = new BackendSupervisor();
+  await subject.start();
+  await subject.setupRuntime();
+
+  expect(mocks.install).not.toHaveBeenCalled();
+  expect(subject.status.setupIssue).toBe('wrong_architecture');
+  await subject.shutdown();
+});
 
 it('lets a failed start move the runtime to another folder', async () => {
   vi.stubEnv('OMNIVOICE_BACKEND_CMD', '');

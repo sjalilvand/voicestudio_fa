@@ -28,8 +28,15 @@ const { getPlaybackTrack, stopActivePlayback, seekActivePlayback } =
 // ── Web Audio fakes ─────────────────────────────────────────────────────────
 
 class FakeGainParam {
-  setValueAtTime() {}
-  linearRampToValueAtTime() {}
+  constructor() {
+    this.automation = [];
+  }
+  setValueAtTime(value, time) {
+    this.automation.push(['hold', value, time]);
+  }
+  linearRampToValueAtTime(value, time) {
+    this.automation.push(['linear', value, time]);
+  }
 }
 class FakeGain {
   constructor() {
@@ -54,12 +61,18 @@ class FakeSource {
 }
 class FakeAudioContext {
   static instances = [];
+  static openedWith = [];
+  static unsupportedRate = null;
   constructor(options) {
+    FakeAudioContext.openedWith.push(options ?? null);
+    if (options?.sampleRate === FakeAudioContext.unsupportedRate)
+      throw new Error('unsupported clock');
     this.currentTime = 0;
     this.state = 'running';
-    // CLEAN-ROOM (spec T2-folded §17): fake context exposes a sampleRate matching the requested rate, defaulting when none is requested.
+    this.sampleRate = options?.sampleRate ?? 48000;
     this.destination = {};
     this.started = []; // every source that called start()
+    this.gainNodes = [];
     FakeAudioContext.instances.push(this);
   }
   resume() {
@@ -88,7 +101,9 @@ class FakeAudioContext {
     return new FakeSource(this);
   }
   createGain() {
-    return new FakeGain();
+    const gain = new FakeGain();
+    this.gainNodes.push(gain);
+    return gain;
   }
 }
 
@@ -142,6 +157,8 @@ const ndjsonResponse = (events, headers = {}) => {
 
 beforeEach(() => {
   FakeAudioContext.instances = [];
+  FakeAudioContext.openedWith = [];
+  FakeAudioContext.unsupportedRate = null;
   window.AudioContext = FakeAudioContext;
   apiFetch.mockReset();
 });
@@ -189,7 +206,16 @@ describe('pcm16BytesToFloat32', () => {
   });
 });
 
-// CLEAN-ROOM (spec T2-folded §17): test for appendPcm16Bytes scheduling raw frames on the same gapless timeline goes here.
+it('places websocket bytes immediately after an encoded chunk', () => {
+  const transport = createStreamingChunkPlayer({ sampleRate: 24000 });
+  transport.appendPcm16Base64(chunkEvent(3).pcm);
+  transport.appendPcm16Bytes(new Int16Array(CHUNK_SAMPLES).buffer);
+  const starts = FakeAudioContext.instances[0].started.map((source) => source.startedAt.when);
+
+  expect(starts).toHaveLength(2);
+  expect(starts[1] - starts[0]).toBeCloseTo(CHUNK_SAMPLES / 24000, 5);
+  transport.fail();
+});
 
 describe('peaksFromChunkList', () => {
   it('returns normalized peaks across chunk boundaries', () => {
@@ -467,7 +493,66 @@ describe('streamGenerateSpeech', () => {
 // ── createStreamingChunkPlayer transport ────────────────────────────────────
 
 describe('createStreamingChunkPlayer', () => {
-  // CLEAN-ROOM (spec T2-folded §17): player tests for context-rate fallback, first-chunk anchoring and end-of-playback draining, crossfade on re-anchored late chunks, and no crossfade after an ended source go here.
+  it('falls back to the device clock after a requested rate is refused', () => {
+    FakeAudioContext.unsupportedRate = 24000;
+    const transport = createStreamingChunkPlayer({ sampleRate: 24000 });
+
+    expect(FakeAudioContext.instances).toHaveLength(1);
+    expect(FakeAudioContext.instances[0].sampleRate).toBe(48000);
+    expect(FakeAudioContext.openedWith).toEqual([{ sampleRate: 24000 }, null]);
+    transport.fail();
+  });
+
+  it('counts the lead-in from first data and waits for output drainage', () => {
+    vi.useFakeTimers();
+    try {
+      const completed = vi.fn();
+      const transport = createStreamingChunkPlayer({ sampleRate: 24000, onDone: completed });
+      const clock = FakeAudioContext.instances[0];
+      clock.currentTime = 4;
+      transport.appendPcm16Base64(chunkEvent(0).pcm);
+      transport.finalize();
+
+      expect(getPlaybackTrack().currentTime).toBe(0);
+      expect(clock.started[0].startedAt.when - clock.currentTime).toBeCloseTo(0.08, 5);
+      clock.currentTime = 4.22;
+      vi.advanceTimersByTime(250);
+      expect(completed).not.toHaveBeenCalled();
+      clock.currentTime = 4.24;
+      vi.advanceTimersByTime(250);
+      expect(completed).toHaveBeenLastCalledWith('ended');
+      expect(clock.started.some((source) => source.stopped)).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('uses the surviving tail for a shortened blend after re-anchoring', () => {
+    const transport = createStreamingChunkPlayer({ sampleRate: 24000, crossfadeMs: 50 });
+    transport.appendPcm16Base64(chunkEvent(0).pcm);
+    const clock = FakeAudioContext.instances[0];
+    clock.currentTime = 0.15;
+    transport.appendPcm16Base64(chunkEvent(1).pcm);
+    const ramps = clock.gainNodes
+      .flatMap((node) => node.gain.automation)
+      .filter(([method]) => method === 'linear');
+
+    expect(ramps.map(([, target]) => target).sort()).toEqual([0, 1]);
+    expect(ramps[0][2] - 0.17).toBeCloseTo(0.01, 5);
+    transport.fail();
+  });
+
+  it('starts cleanly when late data arrives after the prior source', () => {
+    const transport = createStreamingChunkPlayer({ sampleRate: 24000, crossfadeMs: 50 });
+    transport.appendPcm16Base64(chunkEvent(0).pcm);
+    const clock = FakeAudioContext.instances[0];
+    clock.currentTime = 3;
+    transport.appendPcm16Base64(chunkEvent(1).pcm);
+
+    expect(clock.started).toHaveLength(2);
+    expect(clock.gainNodes.every((node) => node.gain.automation.length === 0)).toBe(true);
+    transport.fail();
+  });
 
   it('supports seek within the buffered region (reschedules from the target)', () => {
     const player = createStreamingChunkPlayer({
