@@ -1486,6 +1486,18 @@ async def _public_longform_stream(plan, **render_kwargs):
         yield f"data: {json.dumps({'type': 'error', 'error': error})}\n\n"
 
 
+def _longform_response(stream) -> StreamingResponse:
+    """SSE response for a longform render, kept alive through silent chapters
+    so reverse proxies do not cut it (Cloudflare 524, nginx read timeouts)."""
+    from core.stream_keepalive import NO_BUFFER_HEADERS, SSE_KEEPALIVE, with_keepalive
+
+    return StreamingResponse(
+        with_keepalive(stream, SSE_KEEPALIVE),
+        media_type="text/event-stream",
+        headers=NO_BUFFER_HEADERS,
+    )
+
+
 @router.post("/audiobook")
 async def audiobook_synthesize(req: AudiobookRequest, request: Request = None):
     """Synthesize a chapterized audiobook from a script, streaming SSE progress."""
@@ -1494,7 +1506,7 @@ async def audiobook_synthesize(req: AudiobookRequest, request: Request = None):
     # `request` is injected by FastAPI on the HTTP path (the default only applies
     # to a direct in-process call, e.g. a unit test); its disconnect poll is what
     # lets Stop cancel the render mid-book (#1216).
-    return StreamingResponse(
+    return _longform_response(
         _public_longform_stream(
             plan, default_voice=req.default_voice, language=req.language,
             fmt=req.format, bitrate=req.bitrate,
@@ -1503,7 +1515,6 @@ async def audiobook_synthesize(req: AudiobookRequest, request: Request = None):
             job_type="audiobook",
             is_disconnected=request.is_disconnected if request is not None else None,
         ),
-        media_type="text/event-stream",
     )
 
 
@@ -1560,7 +1571,7 @@ async def longform_render(req: LongformRenderRequest, request: Request = None):
         if spans:
             chapters.append(Chapter(title=c.title or f"Chapter {i + 1}", spans=spans))
     plan = AudiobookPlan(chapters=chapters)
-    return StreamingResponse(
+    return _longform_response(
         _public_longform_stream(
             plan, default_voice=req.default_voice, language=req.language,
             fmt=req.format, bitrate=req.bitrate,
@@ -1569,7 +1580,6 @@ async def longform_render(req: LongformRenderRequest, request: Request = None):
             job_type="story",
             is_disconnected=request.is_disconnected if request is not None else None,
         ),
-        media_type="text/event-stream",
     )
 
 
@@ -1655,7 +1665,7 @@ async def resume_longform(job_id: str, request: Request = None):
     # job id), so the already-rendered chapters still hit instantly — only the
     # unrendered ones synthesize. Using a fresh id means the request's job_id
     # never names a work dir / output file (defence-in-depth path-injection).
-    return StreamingResponse(
+    return _longform_response(
         _public_longform_stream(
             plan, default_voice=p.get("default_voice"), language=p.get("language"),
             fmt=p.get("fmt", "m4b"), bitrate=p.get("bitrate", "128k"),
@@ -1667,5 +1677,4 @@ async def resume_longform(job_id: str, request: Request = None):
             on_completed=retire_checkpoint,
             is_disconnected=request.is_disconnected if request is not None else None,
         ),
-        media_type="text/event-stream",
     )

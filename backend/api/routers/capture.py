@@ -175,7 +175,9 @@ async def transcribe_audio(
                 # chain is broken, which then 500s at `.transcribe()`. The
                 # loader degrades to the next healthy engine (#1185).
                 from services.asr_backend import load_active_asr_backend
-                backend = load_active_asr_backend(require_installed=True) if requested_mode == "reference" else load_active_asr_backend()
+                backend = load_active_asr_backend(
+                    require_installed=requested_mode == "reference", warm=True,
+                )
                 result = backend.transcribe(
                     tmp.name, word_timestamps=use_accurate, **_prompt_kwargs(backend),
                 )

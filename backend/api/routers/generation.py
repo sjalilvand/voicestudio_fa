@@ -2621,13 +2621,17 @@ async def generate_speech(
                 if cleanup_ref and ref_lease is not None:
                     ref_lease.finish_request()
 
+        from core.stream_keepalive import NDJSON_KEEPALIVE, NO_BUFFER_HEADERS, with_keepalive
+
         # Routing notice (#21): known before the stream starts.
         _stream_headers = _apply_routing_headers({
             "X-Seed": str(used_seed) if used_seed is not None else "",
-            "Cache-Control": "no-cache",
+            **NO_BUFFER_HEADERS,
         }, _routing_notice)
         return StreamingResponse(
-            _stream_events(),
+            # A chunk can render for minutes without a byte; blank lines keep
+            # proxies (Cloudflare 524) from cutting the stream meanwhile.
+            with_keepalive(_stream_events(), NDJSON_KEEPALIVE),
             media_type="application/x-ndjson",
             headers=_stream_headers,
         )

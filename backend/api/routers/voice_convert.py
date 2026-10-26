@@ -196,7 +196,7 @@ async def _transcribe_source(
         # `load_*`, not `get_*`: the loader runs ensure_loaded() and degrades
         # past an engine whose deep import chain is broken (#1185).
         from services.asr_backend import load_active_asr_backend
-        backend = load_active_asr_backend()
+        backend = load_active_asr_backend(warm=True)
         kwargs = {"word_timestamps": False}
         code = _whisper_language(language)
         # Pin the spoken language: auto-detect on short clips misreads e.g.

@@ -1052,7 +1052,7 @@ async def _transcribe_request(
         explicit_engine = model if _is_asr_engine_id(model) else None
 
         def _run():
-            backend = load_active_asr_backend()
+            backend = load_active_asr_backend(warm=True)
             if explicit_engine and getattr(backend, "id", None) != explicit_engine:
                 raise _ModelNotActive(explicit_engine, getattr(backend, "id", "?"))
             extra = _backend_request_kwargs(backend, options)
