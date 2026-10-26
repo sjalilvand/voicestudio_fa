@@ -23,6 +23,9 @@ def test_release_waits_for_both_phones_at_the_same_tag():
         job = called['jobs'][platform]
         assert 'inputs.release_ref' in job['steps'][0]['with']['ref']
         assert 'inputs.release_ref' in job['if']
+        validation = next(s for s in job['steps'] if s.get('name') == 'Validate release source')
+        assert 'refs/tags/${RELEASE_REF}^{commit}' in validation['run']
+        assert 'package.json' in validation['run']
     steps = jobs['release']['steps']
     collect = next(s['run'] for s in steps if s.get('name') == 'Collect phone binaries')
     for extension in ('apk', 'aab', 'ipa'):
