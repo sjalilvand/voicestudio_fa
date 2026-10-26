@@ -208,7 +208,44 @@ class AgentFitRequest(BaseModel):
     segments: List[AgentFitSegment]
     target_lang: str
 
-# CLEAN-ROOM (spec A §3): ProsodyMirrorSegment, CleanupSegmentsRequest, ProsodyMirrorRequest
+class ProsodyMirrorSegment(BaseModel):
+    id: str = Field(min_length=1, max_length=128)
+    start: float = Field(ge=0, allow_inf_nan=False)
+    end: float = Field(ge=0, allow_inf_nan=False)
+    speaker_id: Optional[str] = Field(default=None, max_length=128)
+
+    @model_validator(mode="after")
+    def _end_after_start(self):
+        if self.end <= self.start:
+            raise ValueError("end must be greater than start")
+        return self
+
+
+class CleanupSegmentsRequest(BaseModel):
+    """The editor's current segments; without them the stored copy is cleaned."""
+
+    segments: List[dict] = Field(max_length=20000)
+
+    @field_validator("segments")
+    @classmethod
+    def _segments_have_timing_and_text(cls, value):
+        for segment in value:
+            missing = [key for key in ("start", "end", "text") if key not in segment]
+            if missing:
+                raise ValueError("each segment needs start, end and text")
+        return value
+
+
+class ProsodyMirrorRequest(BaseModel):
+    segments: List[ProsodyMirrorSegment] = Field(min_length=1, max_length=20000)
+
+    @field_validator("segments")
+    @classmethod
+    def _unique_ids(cls, value):
+        ids = [segment.id for segment in value]
+        if len(set(ids)) != len(ids):
+            raise ValueError("segment ids must be unique")
+        return value
 
 class ParseSubtitleTextRequest(BaseModel):
     """Raw pasted subtitle text (SRT/VTT-ish) to be parsed into timed cues.

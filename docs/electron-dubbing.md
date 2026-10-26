@@ -317,7 +317,40 @@ and skips cuts inside speech that cannot be assigned safely. This improves phras
 timing; it does not promise phoneme-level lip sync or correct inaccurate source
 transcripts automatically.
 
-<!-- CLEAN-ROOM (spec A §7): Mirror source delivery section -->
+### Mirror source delivery
+
+**More → Mirror source delivery** writes short delivery words into the Direction
+field of segments that have none, based on how the original speaker said each line.
+It never touches a direction you typed, and the whole pass is one Undo step.
+
+For every segment it measures the separated vocals (the mix when no vocals exist):
+loudness, speaking rate, pitch level, pitch movement and how much of the line is
+voiced. Each line is then compared with the same speaker's usual delivery, and only
+clear departures become words from the same taxonomy as typed directions. Lines
+close to the speaker's norm get nothing.
+
+| Measured against the speaker's norm | Word |
+| --- | --- |
+| Louder and faster, with higher pitch when pitch is comparable | urgent |
+| Louder and higher or more animated overall | energetic |
+| Quieter and lower or flatter overall | calm |
+| Much louder and slower | announcing |
+| Mostly unvoiced and quieter | whispered (nothing else is added) |
+| Noticeably faster / slower | quick / slow |
+
+Emotion is never inferred; add it yourself in the Direction field.
+
+A speaker with at least three measured lines gets a personal baseline, including
+pitch. Otherwise lines are compared with all measured lines pooled together, and
+pitch is only used in that pooled case when the whole file has a single known
+speaker. Fewer than three measurable lines produce no suggestions. Analysis runs
+locally with no model download. A line longer than a minute is measured from its
+first minute.
+
+The same analysis is available as `POST /dub/prosody-mirror/{job_id}`. It only
+reads the job and never changes it. The request is rejected when the segments
+together cover more than twice the track length plus one minute (typically
+duplicated or overlapping segments).
 
 ### Preserve sound outside dialogue
 

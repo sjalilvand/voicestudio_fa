@@ -540,7 +540,14 @@ def dub_use_downloaded_captions(job_id: str):
 
 
 @router.post("/dub/cleanup-segments/{job_id}")
-def dub_cleanup_segments(*args, **kwargs):  # CLEAN-ROOM (spec A §4): real signature + docstring
+def dub_cleanup_segments(job_id: str, req: Optional[CleanupSegmentsRequest] = None):
+    """Re-run the merge/stitch passes to drop fragments.
+
+    Uses the editor's segments when they are sent, so unsaved edits survive;
+    otherwise the stored ones. The editor's result is returned unsaved (the
+    client applies it as an undoable edit) and the job keeps its stored
+    segments until the next generation.
+    """
     job = _get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")

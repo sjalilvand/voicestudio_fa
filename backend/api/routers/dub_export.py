@@ -1520,7 +1520,49 @@ async def dub_get_onsets(job_id: str):
     return payload
 
 
-# CLEAN-ROOM (spec A §4): POST /dub/prosody-mirror/{job_id}
+@router.post("/dub/prosody-mirror/{job_id}")
+async def dub_prosody_mirror(job_id: str, req: ProsodyMirrorRequest):
+    """Suggest delivery directions from how the source actor spoke each line.
+
+    Read-only: nothing on the job changes.
+    """
+    _job_dir_or_400(job_id)
+    job = _get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    vocals = _optional_dub_artifact(job.get("vocals_path"), job_id)
+    mix = _optional_dub_artifact(job.get("audio_path"), job_id)
+    audio_path = vocals or mix
+    if not audio_path:
+        raise HTTPException(status_code=404, detail="No audio track available for delivery analysis")
+    source = "vocals" if vocals and vocals != mix else "mix"
+
+    spans = [
+        SegmentSpan(
+            id=segment.id,
+            start=segment.start,
+            end=segment.end,
+            speaker_id=segment.speaker_id or "",
+        )
+        for segment in req.segments
+    ]
+    try:
+        results = await asyncio.to_thread(mirror_file, audio_path, spans)
+    except AnalysisBudgetExceeded as exc:
+        logger.warning("Prosody mirror refused: %s", log_safe(exc))
+        raise HTTPException(
+            status_code=413,
+            detail="The segments cover far more audio than the source holds. Remove duplicated or overlapping segments and try again.",
+        ) from exc
+    except (OSError, RuntimeError, ValueError) as exc:
+        logger.warning("Prosody mirror could not read the source audio: %s", log_safe(exc))
+        raise HTTPException(
+            status_code=422,
+            detail="The source audio could not be analysed. Re-import the source and try again.",
+        ) from exc
+    return {"source": source, "segments": [result.to_dict() for result in results]}
+
 
 @router.get("/dub/thumb/{job_id}")
 async def dub_get_thumb(job_id: str):

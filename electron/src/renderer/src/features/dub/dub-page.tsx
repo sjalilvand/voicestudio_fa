@@ -533,6 +533,8 @@ export function DubPage() {
           ? 'dub.translating'
           : session.phase === 'cleaning'
             ? 'dub.clean_up'
+            : session.phase === 'mirroring'
+              ? 'dub.mirror_delivery'
               : session.phase === 'generating'
                 ? 'dub_workflow.generating_dub'
                 : 'common.loading';
@@ -1368,7 +1370,7 @@ export function DubPage() {
                       size: 'icon-sm',
                     })}
                   >
-                    {false /* CLEAN-ROOM (spec A §5) */ ? (
+                    {session.phase === 'cleaning' || session.phase === 'mirroring' ? (
                       <LoaderCircleIcon className="animate-spin" />
                     ) : (
                       <MoreHorizontalIcon />
@@ -1417,7 +1419,42 @@ export function DubPage() {
                           <WandSparklesIcon className="size-4" />
                           {t('dub.clean_up')}
                         </Menu.Item>
-                        {/* CLEAN-ROOM (spec A §5): Mirror source delivery menu item */}
+                        <Menu.Item
+                          disabled={!session.jobId}
+                          onClick={() =>
+                            void mirrorDubSourceDelivery()
+                              .then((outcome) => {
+                                if (!outcome) {
+                                  toast.error(
+                                    t('dub_workflow.mirror_failed', {
+                                      message: dubSession.state.error || t('common.error'),
+                                    }),
+                                  );
+                                } else if (outcome.applied > 0) {
+                                  toast.success(
+                                    t('dub_workflow.mirror_applied', {
+                                      count: outcome.applied,
+                                    }),
+                                  );
+                                } else if (outcome.measured === 0) {
+                                  toast.info(t('dub_workflow.mirror_insufficient'));
+                                } else {
+                                  toast.info(t('dub_workflow.mirror_none'));
+                                }
+                              })
+                              .catch((error) =>
+                                toast.error(
+                                  t('dub_workflow.mirror_failed', {
+                                    message: describeError(error),
+                                  }),
+                                ),
+                              )
+                          }
+                          className="flex cursor-default items-center gap-2 rounded-md px-3 py-2 text-sm outline-none data-disabled:opacity-40 data-highlighted:bg-accent"
+                        >
+                          <AudioWaveformIcon className="size-4" />
+                          {t('dub.mirror_delivery')}
+                        </Menu.Item>
                         <Menu.Item
                           disabled={!canRestoreOriginal}
                           onClick={restoreDubSegments}

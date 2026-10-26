@@ -174,7 +174,8 @@ export interface DubSession {
     | 'generating'
     | 'done'
     | 'importing'
-    /* CLEAN-ROOM (spec A §5): add phases */;
+    | 'cleaning'
+    | 'mirroring';
   segments: DubSegment[];
   sourceLang: string;
   tracks: string[];
@@ -2073,7 +2074,101 @@ export async function importDubSubtitles(file: File) {
   });
 }
 
-/* CLEAN-ROOM (spec A §5): phase-restore helper, cleanupDubSegments, ProsodyMirrorOutcome, mirrorDubSourceDelivery */
+/** run() lands on 'editing' after a failure; in-place actions hand the session
+ * back to whatever phase it was in before they began. */
+function returnToPhase(job: string, origin: DubSession['phase']) {
+  const now = dubSession.state;
+  if (now.jobId === job && now.phase !== origin) patch({ phase: origin });
+}
+
+export async function cleanupDubSegments(): Promise<number | null> {
+  const start = dubSession.state;
+  const job = start.jobId;
+  if (!job || start.segments.length === 0 || !editingAllowed()) return null;
+  const origin = start.phase;
+  let received: DubSegment[] | undefined;
+  const finished = await run('cleaning', async (signal) => {
+    const reply = await apiJson<{ segments: DubSegment[] }>(
+      `/dub/cleanup-segments/${encodeURIComponent(job)}`,
+      { method: 'POST', body: JSON.stringify({ segments: start.segments }), signal },
+    );
+    patch({ phase: origin });
+    if (!signal.aborted && dubSession.state.jobId === job) {
+      received = reply.segments.map((row, i) => ({
+        ...row,
+        id: String(row.id ?? i),
+        text_original: row.text_original ?? row.text,
+      }));
+    }
+  });
+  if (!finished) {
+    returnToPhase(job, origin);
+    return null;
+  }
+  const next = received as DubSegment[] | undefined;
+  if (!next || dubSession.state.jobId !== job) return null;
+  if (!commitSegmentEdit(next)) return null;
+  return Math.max(0, start.segments.length - next.length);
+}
+
+export interface ProsodyMirrorOutcome {
+  applied: number;
+  measured: number;
+  source: 'vocals' | 'mix';
+}
+
+type MirrorRow = { id: string; direction?: string; measured?: boolean };
+type MirrorReply = { source: 'vocals' | 'mix'; segments: MirrorRow[] };
+
+export async function mirrorDubSourceDelivery(): Promise<ProsodyMirrorOutcome | null> {
+  const start = dubSession.state;
+  const job = start.jobId;
+  if (!job || start.segments.length === 0 || !editingAllowed()) return null;
+  const origin = start.phase;
+  const payload = JSON.stringify({
+    segments: start.segments.map(({ id, start: from, end, speaker_id }) => ({
+      id,
+      start: from,
+      end,
+      speaker_id: speaker_id ?? '',
+    })),
+  });
+  let answer: MirrorReply | undefined;
+  const finished = await run('mirroring', async (signal) => {
+    const reply = await apiJson<MirrorReply>(`/dub/prosody-mirror/${encodeURIComponent(job)}`, {
+      method: 'POST',
+      body: payload,
+      signal,
+    });
+    patch({ phase: origin });
+    if (!signal.aborted && dubSession.state.jobId === job) answer = reply;
+  });
+  if (!finished) {
+    returnToPhase(job, origin);
+    return null;
+  }
+  const reply = answer as MirrorReply | undefined;
+  if (!reply || dubSession.state.jobId !== job) return null;
+
+  const words = new Map<string, string>();
+  reply.segments.forEach((row) => {
+    const text = (row.direction ?? '').trim();
+    if (row.measured && text) words.set(String(row.id), text);
+  });
+  const filled = dubSession.state.segments.map((segment) => {
+    const text = words.get(segment.id);
+    return text && !(segment.direction ?? '').trim()
+      ? patchSegment(segment, { direction: text })
+      : segment;
+  });
+  const changes = filled.filter((segment, i) => segment !== dubSession.state.segments[i]).length;
+  const applied = changes > 0 && commitSegmentEdit(filled) ? changes : 0;
+  return {
+    applied,
+    measured: reply.segments.filter((row) => row.measured).length,
+    source: reply.source,
+  };
+}
 
 export function openDubProject(project: DubProject): boolean {
   if (controller || cancelling || dubSession.state.recovery) return false;
