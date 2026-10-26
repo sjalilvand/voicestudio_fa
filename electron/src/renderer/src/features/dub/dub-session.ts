@@ -242,7 +242,6 @@ const persist = () => {
         event: null,
         error: null,
         failure: null,
-        inputIssue: null,
         asrModelMissing: null,
       }),
     );

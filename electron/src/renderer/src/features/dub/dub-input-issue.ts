@@ -6,7 +6,8 @@ import type { PublicFailure } from '@/lib/api/failure';
  * the page shows them on the file row instead of the failure banner, with no
  * diagnostic to copy.
  */
-export type DubInputIssue = 'no_audio' | 'invalid_media' | 'unsupported' | 'empty';
+export const DUB_INPUT_ISSUES = ['no_audio', 'invalid_media', 'unsupported', 'empty'] as const;
+export type DubInputIssue = (typeof DUB_INPUT_ISSUES)[number];
 
 const BY_TOPIC: Record<string, DubInputIssue> = {
   NO_AUDIO_TRACK: 'no_audio',
