@@ -138,7 +138,7 @@ async def _transcribe_source(tmp_path: str, *, source_lease=None) -> dict:
         # `load_*`, not `get_*`: the loader runs ensure_loaded() and degrades
         # past an engine whose deep import chain is broken (#1185).
         from services.asr_backend import load_active_asr_backend
-        backend = load_active_asr_backend()
+        backend = load_active_asr_backend(warm=True)
         return backend.transcribe(tmp_path, word_timestamps=False)
 
     from services.model_manager import _gpu_pool
