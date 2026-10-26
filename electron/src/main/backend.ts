@@ -6,6 +6,8 @@ import { pypiFilesHost } from './pypi-mirror';
 import {
   installRuntime,
   MISSING_SYSTEM_LIBRARY_CODE,
+  OUTDATED_SYSTEM_LIBRARY_CODE,
+  RUNTIME_FILES_LOCKED_CODE,
   promoteLegacyRuntimeCaches,
   runtimeDependenciesReady,
   runtimeDownloadHosts,
@@ -1215,9 +1217,13 @@ export class BackendSupervisor extends EventEmitter<{
               ? 'space'
               : code === MISSING_SYSTEM_LIBRARY_CODE
                 ? 'missing_system_library'
-                : ['EACCES', 'EPERM', 'EROFS'].includes(code || '')
-                  ? 'access'
-                  : undefined;
+                : code === OUTDATED_SYSTEM_LIBRARY_CODE
+                  ? 'outdated_system_library'
+                  : code === RUNTIME_FILES_LOCKED_CODE
+                    ? 'files_locked'
+                    : ['EACCES', 'EPERM', 'EROFS'].includes(code || '')
+                      ? 'access'
+                      : undefined;
         this.setupRequiredGib =
           code === 'ENOSPC' ? (error as { requiredGib?: number }).requiredGib : undefined;
         this.runtimeRepairFailed = this.repairAttempted;
