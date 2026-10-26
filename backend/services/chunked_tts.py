@@ -442,7 +442,14 @@ def join_rendered_chunks(rendered: list, sample_rate: int, *,
     silent-truncation bug (#1330) one branch over. Keeping the decision in one
     function means there is one place that can be wrong, and it is testable.
     """
-    # CLEAN-ROOM (spec H-shivendra-2 §5): split the rendered list into dropped indices and kept chunks in one linear pass
+    def _is_empty(item) -> bool:
+        shape = getattr(item, "shape", None)
+        return item is None or shape is None or shape[-1] == 0
+
+    # One pass to find the empties, one lookup set built once, one pass to keep.
+    dropped = [i for i, item in enumerate(rendered) if _is_empty(item)]
+    empty_idx = set(dropped)
+    kept = [item for i, item in enumerate(rendered) if i not in empty_idx]
     if trim_edges:
         # The engine's own lead-in/tail would otherwise become a hole at every
         # chunk boundary; the caller adds the gaps it actually wants.
@@ -502,4 +509,30 @@ def concatenate_audio_chunks(chunks: list, sample_rate: int,
         return chunks[0]
     chunks = _normalize_chunk_shapes(chunks)
 
-    # CLEAN-ROOM (spec H-shivendra-2 §6): single-allocation linear crossfade join of the chunks, returned as the result
+    crossfade_samples = int(sample_rate * crossfade_ms / 1000)
+
+    # Plan from lengths alone: how much each chunk overlaps what is already
+    # joined, and where it starts in the output.
+    overlaps = []
+    starts = []
+    joined = chunks[0].shape[-1]
+    for chunk in chunks[1:]:
+        n = chunk.shape[-1]
+        ov = max(0, min(crossfade_samples, joined, n))
+        overlaps.append(ov)
+        starts.append(joined - ov)
+        joined += n - ov
+
+    first = chunks[0]
+    out = torch.empty((*first.shape[:-1], joined), dtype=first.dtype, device=first.device)
+    out[..., : first.shape[-1]] = first
+    for chunk, ov, start in zip(chunks[1:], overlaps, starts):
+        chunk = chunk.to(device=out.device, dtype=out.dtype)
+        if ov > 0:
+            fade_out = torch.linspace(1, 0, ov, device=out.device, dtype=out.dtype)
+            fade_in = torch.linspace(0, 1, ov, device=out.device, dtype=out.dtype)
+            out[..., start : start + ov] = (
+                out[..., start : start + ov] * fade_out + chunk[..., :ov] * fade_in
+            )
+        out[..., start + ov : start + chunk.shape[-1]] = chunk[..., ov:]
+    return out

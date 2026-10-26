@@ -2,6 +2,7 @@ import { abortableDelay } from './abortableDelay.ts';
 import { DEFAULT_BACKEND_PORT } from '../app-config.ts';
 import { deploymentMode, type DeploymentMode } from './deploymentMode.ts';
 import { isBrokenEnvironmentOutput } from './backendOutput.ts';
+import { isNativeFaultExit } from './nativeExit.ts';
 /**
  * backendCrash — frontend bridge to the desktop shell's crash forensics
  * (#941, src-tauri/src/crash.rs).
@@ -292,8 +293,9 @@ export function describeCrashExit(
  * misattributed). Everything else keeps the small-GPU VRAM guidance, which is
  * the dominant cause for real GPU aborts.
  */
-// CLEAN-ROOM (spec H-shivendra-2 §8): isNativeFault(marker) export
-
+export function isNativeFault(marker: Pick<BackendCrashMarker, 'exit_code' | 'signal'>): boolean {
+  return isNativeFaultExit({ exitCode: marker.exit_code, signal: marker.signal });
+}
 
 /**
  * True when the captured stderr shows the backend dying while IMPORTING its

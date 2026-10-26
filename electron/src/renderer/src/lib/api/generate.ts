@@ -242,16 +242,17 @@ export interface GenerateOptions {
 export class StreamingPreviewError extends Error {
   readonly retryable: boolean;
   readonly terminal: boolean;
-  // CLEAN-ROOM (spec H-shivendra-2 §12): errorClass field: backend exception class name or null
+  /** Backend exception class name (never a message), or null when absent. */
+  readonly errorClass: string | null;
   constructor(
     message: string,
-    options: { retryable?: boolean; terminal?: boolean } = {},
+    options: { retryable?: boolean; terminal?: boolean; errorClass?: unknown } = {},
   ) {
     super(message);
     this.name = 'StreamingPreviewError';
     this.retryable = options.retryable === true;
     this.terminal = options.terminal === true;
-    // CLEAN-ROOM (spec H-shivendra-2 §12): store errorClass
+    this.errorClass = typeof options.errorClass === 'string' ? options.errorClass : null;
   }
 }
 
@@ -334,7 +335,11 @@ export async function generateCloneStreaming(
           ['[clone_ref_unusable]', '[clone_ref_too_long]', '[clone_ref_no_speech]'].some((marker) =>
             message.includes(marker),
           );
-        // CLEAN-ROOM (spec H-shivendra-2 §12): throw StreamingPreviewError carrying retryable, terminal and errorClass from the frame
+        throw new StreamingPreviewError(message, {
+          retryable: event.retryable,
+          terminal,
+          errorClass: event.error_class,
+        });
       }
     };
     for (;;) {

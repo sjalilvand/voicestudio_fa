@@ -7,10 +7,7 @@ import { clampCrashTail } from '@shared/utils/crashReport';
 import { scrubText } from '@shared/utils/scrub';
 import { formatHostSnapshot, withDeadline } from '@shared/utils/hostSnapshot';
 import { describeExitCode, isNativeFaultExit } from '@shared/utils/nativeExit';
-import {
-  _adaptLastRunCrash,
-  type LastRunCrashRecord,
-} from '@shared/utils/runCrashRecord';
+import { _adaptLastRunCrash, type LastRunCrashRecord } from '@shared/utils/runCrashRecord';
 import { getBackendStatusSnapshot } from '@/hooks/use-backend-status';
 import { apiJson } from '@/lib/api/client';
 import { router } from '@/router';
@@ -115,25 +112,30 @@ export function ReportBug({ error }: { error?: Error | string }) {
         popup.opener = null;
       }
       const signal = AbortSignal.timeout(2500);
-      const [system, engines, previous, nativeStatus, currentLogs, host] = await Promise.allSettled([
-        apiJson<Record<string, unknown>>('/system/info', { signal }),
-        apiJson<{ tts?: { active?: string }; asr?: { active?: string } }>('/engines', { signal }),
-        apiJson<{ record: LastRunCrashRecord | null; acknowledged: boolean }>(
-          '/system/last-run-crash',
-          { signal },
-        ),
-        bridge?.backend?.getStatus?.() ?? Promise.resolve(null),
-        error
-          ? apiJson<{ lines?: unknown[] }>('/system/logs?tail=120', { signal })
-          : Promise.resolve(null),
-        // A stalled network drive must not hold the report hostage.
-        withDeadline(bridge?.backend?.getHostSnapshot?.() ?? Promise.resolve(null), 3000),
-      ]);
+      const [system, engines, previous, nativeStatus, currentLogs, host] = await Promise.allSettled(
+        [
+          apiJson<Record<string, unknown>>('/system/info', { signal }),
+          apiJson<{ tts?: { active?: string }; asr?: { active?: string } }>('/engines', { signal }),
+          apiJson<{ record: LastRunCrashRecord | null; acknowledged: boolean }>(
+            '/system/last-run-crash',
+            { signal },
+          ),
+          bridge?.backend?.getStatus?.() ?? Promise.resolve(null),
+          error
+            ? apiJson<{ lines?: unknown[] }>('/system/logs?tail=120', { signal })
+            : Promise.resolve(null),
+          // A stalled network drive must not hold the report hostage.
+          withDeadline(bridge?.backend?.getHostSnapshot?.() ?? Promise.resolve(null), 3000),
+        ],
+      );
       const backend =
         nativeStatus.status === 'fulfilled' && nativeStatus.value
           ? nativeStatus.value
           : cachedBackend;
-      const summaryText = scrubText(summary).replace(LONE_SURROGATE, '\ufffd').replace(/\s+/g, ' ').trim();
+      const summaryText = scrubText(summary)
+        .replace(LONE_SURROGATE, '\ufffd')
+        .replace(/\s+/g, ' ')
+        .trim();
       const context = [
         `**Summary:** ${summaryText}`,
         `**App:** VoiceStudio ${__APP_VERSION__} (build ${__BUILD_COMMIT__})`,
@@ -180,12 +182,16 @@ export function ReportBug({ error }: { error?: Error | string }) {
             '',
             'Stage: ' + backend.stage,
             'Managed: ' + backend.managed,
-            // CLEAN-ROOM (spec H-shivendra-2 §10): 'Exit code' line for the current backend failure
+            ...(backend.exitCode != null
+              ? ['Exit code: ' + describeExitCode(backend.exitCode)]
+              : []),
             ...(backend.exitSignal ? ['Signal: ' + backend.exitSignal] : []),
             ...(isNativeFaultExit({
               exitCode: backend.exitCode,
               signal: backend.exitSignal,
-            }) ? [t('reportBug.native_fault_cause')] : []),
+            })
+              ? [t('reportBug.native_fault_cause')]
+              : []),
             scrubText(backend.message),
             '',
             '```',
@@ -201,7 +207,11 @@ export function ReportBug({ error }: { error?: Error | string }) {
           '',
           'Detected: ' + new Date(crash.timestamp).toISOString(),
           'Version: ' + crash.version,
-          // CLEAN-ROOM (spec H-shivendra-2 §10): 'Exit code' and 'Signal' lines plus native-fault cause line for the last native backend exit
+          'Exit code: ' + describeExitCode(crash.exitCode, t('common.unknown')),
+          'Signal: ' + (crash.signal ?? '—'),
+          ...(isNativeFaultExit({ exitCode: crash.exitCode, signal: crash.signal })
+            ? [t('reportBug.native_fault_cause')]
+            : []),
           'Uptime (seconds): ' + Math.round(crash.uptimeMs / 1000),
           '```',
           clampCrashTail(scrubText(crash.logTail.join('\n'))),

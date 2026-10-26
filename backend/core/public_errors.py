@@ -246,7 +246,9 @@ def stream_generation_failure(error: BaseException | object) -> dict[str, object
         payload["error_class"] = type(error).__name__
     try:
         enriched = public_exception_response(error, fallback=str(payload["detail"]))
-        # CLEAN-ROOM (spec H-shivendra-2 §4): compute the terminal flag from the diagnosed topic
+        from core.failure import is_terminal_failure_topic
+
+        is_terminal = is_terminal_failure_topic(enriched.get("docs_topic"))
     except Exception:
         return payload
     hint = enriched.get("hint")
@@ -256,7 +258,9 @@ def stream_generation_failure(error: BaseException | object) -> dict[str, object
         topic = enriched.get("docs_topic")
         if topic:
             payload["docs_topic"] = topic
-            # CLEAN-ROOM (spec H-shivendra-2 §4): mark the payload terminal and non-retryable when the diagnosed topic is a terminal class
+            if is_terminal:
+                payload["terminal"] = True
+                payload["retryable"] = False
             try:
                 from core import error_docs_map
 

@@ -454,13 +454,21 @@ _CONTEXT_FREE_HINT_CLASSES = frozenset({
     # global 500 handler, the streaming frame) as the bare "VoiceStudio hit an
     # internal error" even though the error journal already named DISK_FULL.
     "DISK_FULL",
-    # CLEAN-ROOM (spec H-shivendra-2 §2): context-free hint allowlist entries for GPU_ARCH_UNSUPPORTED and WINDOWS_APP_CONTROL_BLOCKED
+    # CUDA's own "no kernel image is available" sentence: only a torch build
+    # lacking kernels for this GPU's architecture produces it.
+    "GPU_ARCH_UNSUPPORTED",
+    # Keyed on the numeric WinError (4551/1260), which no other failure
+    # raises; previously only the non-streaming path surfaced its hint.
+    "WINDOWS_APP_CONTROL_BLOCKED",
     # Matched on SOURCE_LANGUAGE_REQUIRED_MESSAGE, a sentence this app writes
     # itself (SourceLanguageRequiredError), so no foreign text can claim it.
     # It is terminal, and a terminal class without its hint would end a render
     # while explaining nothing.
     "SOURCE_LANGUAGE_REQUIRED",
-    # CLEAN-ROOM (spec H-shivendra-2 §2): context-free hint allowlist entry for AUDIO_IO_FAILED
+    # Keyed on the audio library's name or the audio-write marker in
+    # ``audio_io``; the desktop app already sends this topic to Settings ->
+    # Storage.
+    "AUDIO_IO_FAILED",
     "SOCKS_PROXY_SUPPORT_MISSING",
     "SSL_HANDSHAKE_FAILURE",
     # Its trigger is an exact OpenSSL string, so it cannot be confused with
@@ -503,7 +511,27 @@ _CONTEXT_FREE_HINT_CLASSES = frozenset({
 })
 
 
-# CLEAN-ROOM (spec H-shivendra-2 §3): terminal-failure class set and is_terminal_failure_topic(topic)
+# Classes where retrying the identical request cannot help: the cause is the
+# build, the device choice, an OS policy, or content that is simply absent.
+# Each member must also be in _CONTEXT_FREE_HINT_CLASSES, otherwise a render
+# would be declared final without saying why. Disk space and memory can
+# recover, so AUDIO_IO_FAILED / GPU_OOM / HOST_MEMORY_EXHAUSTED stay out.
+_TERMINAL_FAILURE_CLASSES = frozenset({
+    "GPU_ARCH_UNSUPPORTED",
+    "WINDOWS_APP_CONTROL_BLOCKED",
+    "NO_AUDIO_TRACK",
+    "SOURCE_LANGUAGE_REQUIRED",
+    "ENGINE_DEPENDENCY_MISSING",
+    "REFERENCE_STT_MISSING",
+})
+
+
+def is_terminal_failure_topic(topic: str | None) -> bool:
+    """True when ``topic`` names a failure that a retry will reproduce."""
+    try:
+        return isinstance(topic, str) and topic in _TERMINAL_FAILURE_CLASSES
+    except Exception:
+        return False
 
 
 def append_hint(text: str) -> str:
@@ -667,7 +695,11 @@ def classify(reason: BaseException | str) -> str:
     # it could not write (#1225) — a strictly more specific remedy.
     if (disk_full or is_disk_full_error(low)) and not _is_download_write_refusal(reason, low):
         return "DISK_FULL"
-    # CLEAN-ROOM (spec H-shivendra-2 §1): classify() rule returning GPU_ARCH_UNSUPPORTED
+    # The CUDA runtime's wording for "this torch build has no kernels for the
+    # GPU's compute capability". Placed after the memory/disk classes so real
+    # resource pressure keeps its own class.
+    if "no kernel image is available" in low:
+        return "GPU_ARCH_UNSUPPORTED"
     # Before the errno / "invalid argument" rules: ffmpeg's no-stream failure
     # ends in "Error opening output files: Invalid argument", which is not an
     # OS write refusal and must not be handed the TEMP-folder remedy.

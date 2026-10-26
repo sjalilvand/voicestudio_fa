@@ -38,13 +38,24 @@ export function composeBugReportUrl({
       msg.length > MAX_MSG_CHARS ? `${msg.slice(0, MAX_MSG_CHARS)}\n… (truncated)` : msg;
     let stack = error?.stack ? scrubText(error.stack) : '';
     if (stack.length > MAX_STACK_CHARS) stack = `${stack.slice(0, MAX_STACK_CHARS)}\n… (truncated)`;
-    // CLEAN-ROOM (spec H-shivendra-2 §11): derive the backend error class and failure topic from the error
+    // Backend exception class: an explicit errorClass wins, then the 500
+    // handler's error_type, then the diagnosis-taxonomy error_class.
+    const payload = error?.payload;
+    const pickString = (value) => (typeof value === 'string' && value ? value : '');
+    const rawClass =
+      pickString(error?.errorClass) ||
+      pickString(payload?.error_type) ||
+      pickString(payload?.error_class);
+    const errorClassText = rawClass ? scrubText(rawClass) : '';
+    const rawTopic = pickString(payload?.docs_topic) || pickString(payload?.detail?.docs_topic);
+    const failureTopicText = rawTopic ? scrubText(rawTopic) : '';
     errorSection.push(
       '## Error',
       '',
       '```',
       msgForBody,
-      // CLEAN-ROOM (spec H-shivendra-2 §11): backend error class and failure topic lines
+      ...(errorClassText ? [`Backend error class: ${errorClassText}`] : []),
+      ...(failureTopicText ? [`Backend failure topic: ${failureTopicText}`] : []),
       ...(stack && stack !== msgForBody ? [stack] : []),
       '```',
       '',

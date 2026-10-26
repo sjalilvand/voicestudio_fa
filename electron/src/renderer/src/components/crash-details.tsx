@@ -23,7 +23,9 @@ export function CrashDetails() {
       <div className="space-y-3 pt-3">
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
           <dt className="text-muted-foreground">{t('crash.field_exit')}</dt>
-          {/* CLEAN-ROOM (spec H-shivendra-2 §9): exit-status value cell: signal, else the human-readable exit code, else an em dash */}
+          <dd>
+            {crash.signal ?? (crash.exitCode != null ? describeExitCode(crash.exitCode) : '—')}
+          </dd>
           <dt className="text-muted-foreground">{t('crash.field_when')}</dt>
           <dd>{new Date(crash.timestamp).toLocaleString()}</dd>
           <dt className="text-muted-foreground">{t('crash.field_version')}</dt>
