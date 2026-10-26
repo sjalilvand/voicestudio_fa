@@ -207,7 +207,7 @@ def _count_nuclei(level: np.ndarray, floor_db: float) -> int:
     if env.size < 3:
         return 0
     rising = env[1:-1] > env[:-2]
-    candidates = np.nonzero(rising & (env[1:-1] >= env[2:]))[0] + 1
+    candidates: list[int] = [int(k) + 1 for k in np.flatnonzero(rising & (env[1:-1] >= env[2:]))]
     min_gap = int(round(_NUCLEUS_GAP_S / _HOP_S))
     count = 0
     last = -1
