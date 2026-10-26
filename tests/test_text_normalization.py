@@ -389,6 +389,9 @@ def test_urdu_language_is_outside_num2words_gate():
 
 
 def test_urdu_normalize_for_tts_leaves_no_digits():
+    # Resolved at run time: other suites purge and reload services.* modules.
+    from services.text_normalization import normalize_for_tts
+
     out = normalize_for_tts("سن 1956 میں 10 لوگ", "ur")
     assert out == "سن انیس سو چھپن میں دس لوگ"
     assert not any(ch.isdigit() for ch in out)
