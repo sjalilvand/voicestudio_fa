@@ -1,7 +1,7 @@
 """job_events: one row per (job_id, seq)
 
-Revision ID: 0016_job_events_unique_seq
-Revises: 0015_voice_sync_prep
+Revision ID: 0017_job_events_unique_seq
+Revises: 0016_profile_design_recipe
 Create Date: 2026-10-27 00:00:00.000000
 
 The old ``SELECT MAX(seq)`` + ``INSERT`` writer could give two events of one
@@ -20,8 +20,8 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0016_job_events_unique_seq"
-down_revision: Union[str, None] = "0015_voice_sync_prep"
+revision: str = "0017_job_events_unique_seq"
+down_revision: Union[str, None] = "0016_profile_design_recipe"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
