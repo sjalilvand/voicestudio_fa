@@ -2356,7 +2356,6 @@
     "hf_token_inline_ph": "الصق hf_... الرمز المميز (اختياري)",
     "hf_token_get_short": "احصل على واحدة مجانًا →",
     "hf_token_active_using": "تم العثور على رمز Hugging Face في {{source}} — {{masked}}",
-    "hf_token_replace": "استبدال الرمز المميز…",
     "hf_token_replace_warning": "يستبدل هذا الرمز المحفوظ لهذا التطبيق، ولا يُلغي الرمز القديم."
   },
   "history": {

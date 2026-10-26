@@ -2356,7 +2356,6 @@
     "hf_token_inline_ph": "วางโทเค็น hf_… (ไม่บังคับ)",
     "hf_token_get_short": "รับฟรีหนึ่งรายการ →",
     "hf_token_active_using": "พบโทเค็น Hugging Face ใน {{source}} — {{masked}}",
-    "hf_token_replace": "แทนที่โทเค็น…",
     "hf_token_replace_warning": "การดำเนินการนี้แทนที่โทเค็นที่บันทึกไว้สำหรับแอปนี้ แต่ไม่เพิกถอนโทเค็นเก่า"
   },
   "history": {

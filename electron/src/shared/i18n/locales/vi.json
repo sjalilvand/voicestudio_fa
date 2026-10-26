@@ -2356,7 +2356,6 @@
     "hf_token_inline_ph": "Dán mã thông báo hf_… (tùy chọn)",
     "hf_token_get_short": "Nhận một cái miễn phí →",
     "hf_token_active_using": "Đã tìm thấy token Hugging Face trong {{source}} — {{masked}}",
-    "hf_token_replace": "Thay thế token…",
     "hf_token_replace_warning": "Thao tác này thay thế token đã lưu cho ứng dụng này. Token cũ không bị thu hồi."
   },
   "history": {

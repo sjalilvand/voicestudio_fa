@@ -2356,7 +2356,6 @@
     "hf_token_inline_ph": "hf_… トークンを貼り付けます (オプション)",
     "hf_token_get_short": "1 つ無料で入手 →",
     "hf_token_active_using": "{{source}} に Hugging Face トークンがあります — {{masked}}",
-    "hf_token_replace": "トークンを置き換える…",
     "hf_token_replace_warning": "このアプリに保存されたトークンを置き換えます。古いトークンは失効しません。"
   },
   "history": {

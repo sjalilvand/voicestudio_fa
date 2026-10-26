@@ -248,16 +248,12 @@ def _check_gpu_routing() -> dict:
     host = v.get("host_family", "cpu")
 
     if status == "accelerated":
-        if reason and KERNEL_RISK_MARKER in reason:  # driver/arch caveat — at risk
+        if reason:  # driver/arch caveat — accelerated but at risk
             return _check("gpu_routing", "GPU routing", WARN,
                           f"{engine} -> {dev}: {reason}",
                           "The GPU is selected but may fail at kernel launch — "
                           "update drivers / reinstall torch for this GPU arch.")
-        if reason:  # low-VRAM caveat — not a driver/arch issue
-            return _check("gpu_routing", "GPU routing", WARN,
-                          f"{engine} -> {dev}: {reason}",
-                          "Unload other models before generating, keep the text "
-                          "short, or pick a lighter engine.")
+        # CLEAN-ROOM (spec P-pr1874 §3): separate branch for a non-kernel-risk caveat (low-VRAM advisory) with its own WARN fix hint.
         return _check("gpu_routing", "GPU routing", OK, f"{engine} -> {dev} (accelerated)")
     if status == "cpu_fallback":
         return _check("gpu_routing", "GPU routing", WARN,

@@ -2356,7 +2356,6 @@
     "hf_token_inline_ph": "Wklej token hf_… (opcjonalnie)",
     "hf_token_get_short": "Zdobądź jeden za darmo →",
     "hf_token_active_using": "Znaleziono token Hugging Face w {{source}} — {{masked}}",
-    "hf_token_replace": "Zastąp token…",
     "hf_token_replace_warning": "To zastępuje token zapisany dla tej aplikacji. Nie unieważnia starego tokena."
   },
   "history": {

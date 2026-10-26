@@ -2356,7 +2356,6 @@
     "hf_token_inline_ph": "貼上 hf_… 令牌（可選）",
     "hf_token_get_short": "免費獲得一份 →",
     "hf_token_active_using": "在 {{source}} 中找到 Hugging Face 權杖 — {{masked}}",
-    "hf_token_replace": "更換權杖…",
     "hf_token_replace_warning": "這會取代為此應用程式儲存的權杖，但不會撤銷舊權杖。"
   },
   "history": {

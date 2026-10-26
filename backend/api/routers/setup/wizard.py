@@ -224,8 +224,9 @@ def _detect_gpu() -> dict:
     return info
 
 
-def _probe_network(host: str = "huggingface.co", port: int = 443, timeout: float = 8.0) -> bool:
-    """Tiny TCP connect test. 8s default — high-latency / China paths often exceed 2–3s."""
+# CLEAN-ROOM (spec P-pr1874 §2): connect-timeout default for the network probe is raised (restored to the pre-change value meanwhile).
+def _probe_network(host: str = "huggingface.co", port: int = 443, timeout: float = 2.0) -> bool:
+    """Tiny TCP connect test."""
     import socket
     try:
         with socket.create_connection((host, port), timeout=timeout):
@@ -614,14 +615,11 @@ def preflight():
         _why = gpu_routing.get("routing_reason")
         if _rs == "accelerated" and not _why:
             r_status, r_detail, r_fix = "pass", f"{_eng} → {_dev} (accelerated)", None
-        elif _rs == "accelerated" and KERNEL_RISK_MARKER in (_why or ""):
+        elif _rs == "accelerated":  # driver/arch caveat
             r_status, r_detail, r_fix = "warn", f"{_eng} → {_dev}: {_why}", (
                 "GPU selected but may fail at kernel launch — update drivers / "
                 "reinstall torch for this GPU architecture.")
-        elif _rs == "accelerated":  # low-VRAM caveat — not a driver/arch issue
-            r_status, r_detail, r_fix = "warn", f"{_eng} → {_dev}: {_why}", (
-                "Unload other models before generating, keep the text short, "
-                "or pick a lighter engine.")
+        # CLEAN-ROOM (spec P-pr1874 §3): separate branch for an accelerated route whose caveat is NOT a kernel-launch risk (low-VRAM advisory), with its own fix hint.
         elif _rs == "cpu_fallback":
             r_status, r_detail, r_fix = "warn", (
                 f"{_eng} runs on CPU here: {_why or 'no GPU path for this host'}"), (

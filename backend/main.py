@@ -1300,26 +1300,12 @@ async def lifespan(app: FastAPI):
     if _loop_stall_stop is not None:
         _loop_stall_stop.set()
     # ── Graceful shutdown (SIGTERM from Tauri, Ctrl+C, etc.) ────────────
-    # Retire the run sentinel FIRST, before any bounded wait below (#1895):
-    # once uvicorn has begun graceful shutdown the exit is deliberate by
-    # definition, so the sentinel has already done its job. This is one
-    # os.remove, against a ~50s worst-case tail of bounded waits plus model
-    # unload / free_vram() / gc.collect() below. Measured on macOS: a normal
-    # shutdown takes 5.25s end to end, while the desktop shell allows 2s
-    # (bootstrap.rs terminate_process_tree) before SIGKILL — so the old
-    # placement at the very end was killed every time on any run that had
-    # reached a working state. Doing the deadline-sensitive step first makes
-    # correctness independent of how much of that tail runs, instead of
-    # depending on the shell-side deadline being long enough to cover it.
-    #
+    # CLEAN-ROOM (spec P-pr1874 §4): explanatory comment on why the run sentinel is retired first, before any bounded shutdown wait.
     # Desktop shells that must hard-kill a Windows process tree retire the
     # sentinel through /system/shutdown-intent before termination. This
     # remains the graceful-path fallback for every platform and direct server
     # runs.
-    #
-    # sentinel_cleared feeds the truthful "Shutdown: done."/degraded log at
-    # the end of this function; nothing below re-clears the sentinel, so a
-    # later failure can't mask this result.
+    # CLEAN-ROOM (spec P-pr1874 §4): explanatory comment on sentinel_cleared feeding the final shutdown log.
     try:
         sentinel_cleared = run_sentinel.clear_sentinel()
     except Exception:
@@ -1450,9 +1436,7 @@ async def lifespan(app: FastAPI):
         await close_http_client()
     except Exception:
         pass
-    # Sentinel was already retired at the TOP of this block (#1895) — report
-    # truthfully using that result rather than clearing (or re-checking) it
-    # again here, so a failure in the steps above can't mask it as "done."
+    # CLEAN-ROOM (spec P-pr1874 §4): explanatory comment that the sentinel was already retired at the top of shutdown and the final log reports that result.
     if sentinel_cleared:
         logger.info("Shutdown: done.")
     else:

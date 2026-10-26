@@ -2356,7 +2356,6 @@
     "hf_token_inline_ph": "hf_… jetonunu yapıştırın (isteğe bağlı)",
     "hf_token_get_short": "Ücretsiz bir tane alın →",
     "hf_token_active_using": "{{source}} içinde Hugging Face belirteci bulundu — {{masked}}",
-    "hf_token_replace": "Jetonu değiştir…",
     "hf_token_replace_warning": "Bu uygulama için kaydedilen belirteci değiştirir. Eski belirteci iptal etmez."
   },
   "history": {

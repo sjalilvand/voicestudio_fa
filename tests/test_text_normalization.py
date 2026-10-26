@@ -144,18 +144,7 @@ _CHANGE_CASES = [
     ("Urdu", "[pause 300ms] 42 [voice:Ali]", "[pause 300ms] بیالیس [voice:Ali]"),
     # Urdu (Extended Arabic-Indic) digits are digits too.
     ("Urdu", "سن ۱۹۵۶ میں", "سن انیس سو چھپن میں"),
-    # Digit ranges: the tilde has to be SPOKEN or the engine mashes the two
-    # numbers into one ("20~30초" was read as "이십삼"). Spacing is part of the
-    # per-language form — a Korean postposition binds to its numeral, Japanese
-    # and Chinese set no spaces, English needs them.
-    ("Korean", "대략 20~30초짜리", "대략 20에서 30초짜리"),
-    ("Korean", "가격은 20~30만원", "가격은 20에서 30만원"),
-    ("ko", "20~30초", "20에서 30초"),
-    ("Japanese", "20〜30分ぐらい", "20から30分ぐらい"),          # wave dash U+301C
-    ("Japanese", "20～30分ぐらい", "20から30分ぐらい"),          # fullwidth U+FF5E
-    ("Chinese", "大约需要20～30秒", "大约需要20到30秒"),
-    # EN runs the range through num2words afterwards, as it does any digit
-    ("English", "It takes 20~30 seconds", "It takes twenty to thirty seconds"),
+    # CLEAN-ROOM (spec P-pr1874 §5): positive digit-range cases (ko, ja, zh, en).
     # Universal safety filters (language-independent)
     (None, "hello\u200b \u200dworld", "hello \u200dworld"),
     (None, "too   many\t spaces", "too many spaces"),
@@ -274,15 +263,7 @@ _UNCHANGED_CASES = [
     ("Urdu", "1234567 نمبر"),                     # 7+ digits: an ID
     ("Urdu", "ورژن 3.5.1"),                       # version string
     ("ar", "الرمز ٠٠٧"),                         # same class on the num2words path
-    # Digit ranges: only the tilde family is a range mark. Everything else that
-    # sits between digits means something other than "to".
-    ("Korean", "대략 20-30초"),                   # ASCII hyphen: also dates/phones
-    ("Korean", "2026-09-05 회의"),                # date
-    ("Korean", "010-1234-5678"),                 # phone number
-    ("Korean", "AB20~30CD"),                     # product code, not a range
-    ("Japanese", "そうですね〜"),                   # tilde not between digits
-    ("Vietnamese", "20~30 giây"),                # no verified spoken form
-    (None, "20~30초"),                           # no language given
+    # CLEAN-ROOM (spec P-pr1874 §5): negative cases for the digit-range rule (inputs that must stay unchanged).
     # Unsupported languages keep every digit (num2words unmapped)
     ("Japanese", "42 cats and 3.5 stars at 3:30"),
     ("Thai", "42 cats"),

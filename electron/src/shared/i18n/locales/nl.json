@@ -2356,7 +2356,6 @@
     "hf_token_inline_ph": "Plak het hf_…-token (optioneel)",
     "hf_token_get_short": "Ontvang er één gratis →",
     "hf_token_active_using": "Hugging Face-token gevonden in {{source}} — {{masked}}",
-    "hf_token_replace": "Token vervangen…",
     "hf_token_replace_warning": "Dit vervangt het token dat voor deze app is opgeslagen. Het oude token wordt niet ingetrokken."
   },
   "history": {

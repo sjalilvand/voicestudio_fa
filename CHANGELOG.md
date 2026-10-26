@@ -1521,7 +1521,6 @@ v0.5.3 is also the final Tauri update. The Tauri updater will not switch you to 
 - A failure with no stage attached no longer borrows another stage's advice, so a text-to-speech error stops telling you the video server dropped the download (#1943)
 - A generation failure that the app cannot classify now names the backend error class, so two unrelated faults stop arriving as the same untriageable report (#1800)
 - Transcriptions dictation wakes the desktop recorder, presents one contextual start action, and centers its microphone icon with the label (#1902)
-- Colab transcription and dubbing now include an explicit ASR model setup step (#1922) — thanks @nidhi-singh02!
 - Apple Silicon now shows one canonical OmniVoice choice in the engine picker while retaining its automatic crash-isolated sidecar runtime (#1913)
 - Validate current-user Windows installers under a standard account on hosted runners (#1883)
 - Model downloads survive a flaky connection instead of restarting from zero (#1940)
@@ -1671,7 +1670,6 @@ v0.5.3 is also the final Tauri update. The Tauri updater will not switch you to 
 - Timed-out voice engines finish process cleanup before retrying, and old timeout callbacks cannot kill replacement engines (#1872)
 - Fast macOS process exits no longer turn a completed shutdown into a permission error (#1809)
 - The bootstrap splash no longer shows fabricated first-run install steps on a warm start or repair sync — a step now renders done only once it was actually observed (#1894)
-- A deliberate, clean quit killed by the desktop shell's short shutdown grace no longer gets reported as a crash on next launch — the run sentinel now clears before the slower shutdown steps instead of after (#1895)
 - Model Catalogue engine rows stack into one column on narrow shells instead of clipping actions off-screen (#1891)
 - Simplified Chinese locale completed: all 486 missing keys translated and the parity ratchet tightened to zero (#1877) — thanks @yearth!
 - The generation compute-time budget is now a Settings control (Performance & Device) instead of an env-var-only setting the timeout error recommended with no UI path — the error copy points there too, and long CPU/MPS renders get an upfront heads-up before they start (#1787)
