@@ -5,7 +5,7 @@
 //
 //   node scripts/perf/renderer-baseline.mjs
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { gzipSync } from 'node:zlib';
@@ -13,6 +13,8 @@ import { gzipSync } from 'node:zlib';
 const repo = resolve(import.meta.dirname, '../..');
 const electron = join(repo, 'electron');
 const out = mkdtempSync(join(tmpdir(), 'vs-perf-'));
+// The build is only measured, never kept: remove it however the script exits.
+process.on('exit', () => rmSync(out, { recursive: true, force: true }));
 
 execFileSync(
   'bunx',
