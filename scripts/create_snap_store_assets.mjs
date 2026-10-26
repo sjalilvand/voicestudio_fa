@@ -54,7 +54,7 @@ function validateBanner(path) {
   if (
     dimensions.width < 720 ||
     dimensions.width > 4320 ||
-    Math.abs(dimensions.width / dimensions.height - 3) > 0.01
+    dimensions.width !== 3 * dimensions.height
   ) {
     throw new RangeError(`Snap Store banner must be 3:1, 720x240 to 4320x1440: ${path}`);
   }

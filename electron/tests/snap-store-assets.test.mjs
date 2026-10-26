@@ -40,26 +40,44 @@ test('derives a bounded Snap Store media set from canonical listing assets', () 
   );
 });
 
-test('rejects a banner that is not 3:1', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'voicestudio-snap-banner-'));
-  const assets = JSON.parse(
-    readFileSync(new URL('../../store/assets.json', import.meta.url), 'utf8'),
-  );
-  mkdirSync(join(dir, 'store'));
-  writeFileSync(
-    join(dir, 'store/assets.json'),
-    JSON.stringify({ ...assets, snapBannerSource: assets.iconSource }),
-  );
-  for (const path of [assets.iconSource, ...assets.screenshots.map((item) => item.source)]) {
-    mkdirSync(dirname(join(dir, path)), { recursive: true });
-    copyFileSync(new URL(`../../${path}`, import.meta.url), join(dir, path));
-  }
-  assert.throws(
-    () =>
-      createSnapStoreAssets({
-        assetsPath: join(dir, 'store/assets.json'),
-        outputDir: join(dir, 'out'),
-      }),
-    /banner must be 3:1/,
-  );
-});
+/** A PNG signature and IHDR header: all the banner validator reads. */
+function pngHeader(width, height) {
+  const header = Buffer.alloc(24);
+  Buffer.from('89504e470d0a1a0a', 'hex').copy(header);
+  header.writeUInt32BE(13, 8);
+  header.write('IHDR', 12, 'ascii');
+  header.writeUInt32BE(width, 16);
+  header.writeUInt32BE(height, 20);
+  return header;
+}
+
+for (const [label, size] of [
+  ['square', null],
+  ['almost 3:1 (722x240)', [722, 240]],
+]) {
+  test(`rejects a banner that is not exactly 3:1: ${label}`, () => {
+    const dir = mkdtempSync(join(tmpdir(), 'voicestudio-snap-banner-'));
+    const assets = JSON.parse(
+      readFileSync(new URL('../../store/assets.json', import.meta.url), 'utf8'),
+    );
+    mkdirSync(join(dir, 'store'));
+    let snapBannerSource = assets.iconSource;
+    if (size) {
+      snapBannerSource = 'store/banner-test.png';
+      writeFileSync(join(dir, snapBannerSource), pngHeader(...size));
+    }
+    writeFileSync(join(dir, 'store/assets.json'), JSON.stringify({ ...assets, snapBannerSource }));
+    for (const path of [assets.iconSource, ...assets.screenshots.map((item) => item.source)]) {
+      mkdirSync(dirname(join(dir, path)), { recursive: true });
+      copyFileSync(new URL(`../../${path}`, import.meta.url), join(dir, path));
+    }
+    assert.throws(
+      () =>
+        createSnapStoreAssets({
+          assetsPath: join(dir, 'store/assets.json'),
+          outputDir: join(dir, 'out'),
+        }),
+      /banner must be 3:1/,
+    );
+  });
+}
