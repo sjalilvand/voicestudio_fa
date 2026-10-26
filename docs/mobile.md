@@ -349,7 +349,12 @@ to production automatically.
 - **Run it:** the desktop release runs both phone builds automatically. For recovery,
   Actions → `mobile-release` → Run workflow, set `release_ref` to the release tag
   and `signed_ios=false` for sideload artifacts without Apple signing. Manual
-  runs produce artifacts; attach verified files to the existing release.
+  runs produce artifacts. Rename them to `VoiceStudio-X.Y.Z-android.apk`,
+  `VoiceStudio-X.Y.Z-android.aab` and `VoiceStudio-X.Y.Z-ios-unsigned.ipa` before
+  attaching missing files to the existing release. Preserve existing published
+  binaries. Add the new files' SHA-256 digests to the shared `SHA256SUMS.txt`,
+  preserving existing entries, and update the release download links and signing
+  status. Verify the uploaded asset digests against the checksum manifest.
   Legacy `mobile-v*` tags still draft a separate prerelease.
 - **Downloads for everyone:** the shared release holds the signed APK and AAB,
   an unsigned IPA for sideloading, and `SHA256SUMS.txt`. Manual builds with

@@ -39,4 +39,6 @@ def test_sideload_ipa_does_not_depend_on_apple_signing():
     signing = next(i for i,s in enumerate(steps) if s.get('name') == 'Write App Store Connect API key')
     assert unsigned < signing
     for name in ('Write App Store Connect API key', 'Archive', 'Export IPA'):
-        assert 'inputs.signed_ios' in next(s for s in steps if s.get('name') == name)['if']
+        condition = next(s for s in steps if s.get('name') == name)['if']
+        assert 'inputs.signed_ios' in condition
+        assert "startsWith(github.ref, 'refs/tags/mobile-v')" in condition, 'tag-push callers must not force store signing'
