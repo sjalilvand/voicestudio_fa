@@ -118,20 +118,19 @@ export function writeDraft(draft: DesignDraft) {
 }
 
 /**
- * Another voice takes over the workspace (a saved voice, preset, personality
- * or demo). Only a saved voice stays linked. The old description belonged to
- * the previous voice and would contradict the new one on a free-form engine,
- * so it goes, and the new details become explicit picks.
+ * Replace a Voice Design draft with a saved profile, preset, or new recipe.
+ * Any description and picks supplied by the source are preserved. If omitted,
+ * they reset instead of leaking another voice's earlier free-form directions.
  */
 export function replaceRecipe(current: DesignDraft, recipe: Partial<DesignDraft>): DesignDraft {
-  const next = { ...current, ...recipe };
-  return {
-    ...next,
+  const next = {
+    ...current,
+    ...recipe,
     profileId: recipe.profileId ?? null,
-    description: '',
-    mapped: {},
-    picks: explicitPicks(next.attrs),
+    description: recipe.description ?? '',
+    mapped: recipe.mapped ?? {},
   };
+  return { ...next, picks: recipe.picks ?? explicitPicks(next.attrs) };
 }
 
 /**
@@ -324,7 +323,7 @@ export function restoreDesignProfile(
 ): Pick<DesignDraft, 'attrs' | 'seed' | 'profileId' | 'description' | 'picks' | 'mapped'> & {
   language: string;
 } {
-  const recipe = parseRecipe(profile.design_recipe);
+  const recipe = parseStoredRecipe(profile.design_recipe);
   const editedAttrs = instructToVdStates(profile.instruct ?? '');
   let attrs = editedAttrs;
   if (profile.vd_states) {
@@ -355,6 +354,6 @@ export function restoreDesignProfile(
             { value, description },
           ]),
         )
-      : explicitDetails(merged),
+      : explicitPicks(merged),
   };
 }
