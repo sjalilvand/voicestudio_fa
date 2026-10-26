@@ -145,7 +145,9 @@ it('says when interrupted renders cannot be checked and retries on request', asy
     jobs: [{ job_id: 's1', type: 'story', title: 'Tale', chapters_done: 3, total_chapters: 8 }],
   });
   render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
       <RenderRecovery mode="stories" active={false} disabled={false} onResume={vi.fn()} />
     </QueryClientProvider>,
   );
