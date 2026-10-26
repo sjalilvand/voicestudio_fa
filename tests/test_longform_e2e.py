@@ -53,6 +53,16 @@ def _stub_build_synth(*, fail_on=None, exc=None):
     return _factory
 
 
+async def _until_event(stream, kind):
+    """Advance an SSE render to its next ``kind`` frame. Per-chunk
+    ``progress`` frames (#3417) may come first."""
+    while True:
+        frame = await anext(stream)
+        if f'"type": "{kind}"' in frame:
+            return frame
+        assert '"type": "progress"' in frame, frame
+
+
 def _plan(*chapters):
     """chapters: (title, body) pairs → AudiobookPlan."""
     from services.audiobook import AudiobookPlan, Chapter, Span
@@ -204,7 +214,7 @@ def test_overlapping_render_cannot_evict_another_jobs_mux_inputs(tmp_path, monke
         first = audiobook._render_longform_sse(_plan(("One", "First book.")), default_voice=None)
         try:
             assert '"type": "started"' in await anext(first)
-            assert '"type": "chapter"' in await anext(first)
+            await _until_event(first, "chapter")
             second = [json.loads(frame.removeprefix("data:")) async for frame in
                       audiobook._render_longform_sse(_plan(("Two", "Second book.")), default_voice=None)]
             assert second[-1]["type"] == "done", second
@@ -308,7 +318,7 @@ def test_closing_render_keeps_progress_without_leaking_cache_pins(tmp_path, monk
         )
         try:
             assert '"type": "started"' in await anext(stream)
-            assert '"type": "chapter"' in await anext(stream)
+            await _until_event(stream, "chapter")
         finally:
             await stream.aclose()
 
