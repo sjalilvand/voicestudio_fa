@@ -1693,7 +1693,7 @@ async def dub_transcribe_stream(
                                 )
                                 if done:
                                     break
-                                yield b": loading speech recognition\n\n"
+                                yield b": asr-load keepalive\n\n"
                             _asr_backend = fut.result()
                             _loaded_asr["backend"] = _asr_backend
                         except ASRModelMissingError as exc:
@@ -1704,7 +1704,7 @@ async def dub_transcribe_stream(
                             preflight_payload = exc.detail()
                         except Exception as exc:
                             logger.error(
-                                "ASR backend initialisation failed (%s)",
+                                "ASR backend initialization failed (%s)",
                                 type(exc).__name__,
                             )
                             from core.failure import build_failure
@@ -1715,7 +1715,7 @@ async def dub_transcribe_stream(
                             )
                             hint = f" — {failure['hint']}" if failure.get("hint") else ""
                             preflight_error = (
-                                f"ASR backend initialisation failed: {failure['reason']}{hint}"
+                                f"ASR backend initialization failed: {failure['reason']}{hint}"
                             )
                     scene_cuts = job.get("scene_cuts") or []
 
