@@ -15,8 +15,6 @@ from pathlib import Path
 
 import pytest
 
-from core.failure import _HINTS, classify
-
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / "electron/src/shared/utils/failureCatalog.ts"
 LOCALES = ROOT / "electron/src/renderer/src/i18n/locales"
@@ -41,6 +39,8 @@ def _lookup(catalog: dict, dotted: str):
 
 
 def test_catalog_covers_every_backend_failure_class():
+    from core.failure import _HINTS  # resolved at run time, never a stale module
+
     backend = set(_HINTS) | {"HF_MIRROR_UNREACHABLE"}
     assert backend - set(_ENTRIES) == set(), "add these classes to failureCatalog.ts"
     assert set(_ENTRIES) - backend == set(), "catalog names classes the backend never sends"
@@ -73,6 +73,7 @@ def test_owned_text_signatures_match_the_backend_sentences():
     and that sentence must still classify to the same class."""
     from core.failure import (
         INVALID_MEDIA_FILE_MESSAGE,
+        classify,
         NO_AUDIO_TRACK_MESSAGE,
         SOURCE_LANGUAGE_REQUIRED_MESSAGE,
     )

@@ -137,16 +137,23 @@ def test_classified_400_is_structured_for_localization(client, monkeypatch, mess
     async def fake_model():
         return _Model()
 
+    reached = []
+
     def reject(*_a, **_k):
+        reached.append(True)
         raise ValueError(message)
 
     monkeypatch.setattr(gen, "get_model", fake_model)
     monkeypatch.setattr(gen, "_run_inference", reject)
     r = client.post("/generate", data={"text": "hello", "engine": "omnivoice"})
-    if r.status_code == 400 and isinstance(r.json().get("detail"), dict):
-        assert r.json()["detail"]["docs_topic"] == topic
-    else:  # the route short-circuited before inference on this host
+    if not reached:  # the route short-circuited before inference on this host
         pytest.skip(f"route answered {r.status_code} before reaching inference")
+    # Inference ran and failed: a plain-text 400 here is a regression.
+    assert r.status_code == 400, r.text
+    detail = r.json().get("detail")
+    assert isinstance(detail, dict), detail
+    assert detail["docs_topic"] == topic
+    assert detail["hint"] and detail["message"]
 
 
 def test_prepare_reference_passage_ranks_once_and_cleans_up(tmp_path, monkeypatch):
