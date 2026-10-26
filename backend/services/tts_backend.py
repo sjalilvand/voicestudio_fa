@@ -25,6 +25,7 @@ import os
 import re
 import contextlib
 import threading
+import uuid
 import time
 from abc import ABC, abstractmethod
 from collections import OrderedDict
@@ -2784,6 +2785,9 @@ def _outetts_speaker_dir() -> str:
     return os.path.join(DATA_DIR, "outetts_speakers")
 
 
+_outetts_speaker_lock = threading.Lock()
+
+
 def _outetts_speaker_file(ref_audio: str) -> str:
     """Path to an OuteTTS speaker profile for ``ref_audio``, built at most once.
 
@@ -2793,23 +2797,36 @@ def _outetts_speaker_file(ref_audio: str) -> str:
     """
     import hashlib
 
-    st = os.stat(ref_audio)
+    try:
+        st = os.stat(ref_audio)
+    except OSError as e:
+        raise TTSInputError("The reference audio file is missing or unreadable.") from e
     digest = hashlib.sha256(
         f"{os.path.abspath(ref_audio)}|{st.st_size}|{st.st_mtime_ns}".encode()
     ).hexdigest()[:32]
     path = os.path.join(_outetts_speaker_dir(), f"{digest}.json")
     if os.path.isfile(path):
         return path
-    whisper_dir = _outetts_whisper_dir()
-    from mlx_audio.tts.models.outetts.audio_processor import AudioProcessor
+    # One build per clip at a time (parallel GPU workers can ask for the same
+    # clip), each writing its own temporary file so a replace never races.
+    with _outetts_speaker_lock:
+        if os.path.isfile(path):
+            return path
+        whisper_dir = _outetts_whisper_dir()
+        from mlx_audio.tts.models.outetts.audio_processor import AudioProcessor
 
-    processor = AudioProcessor()
-    speaker = processor.create_speaker_from_whisper(
-        _outetts_reference_array(ref_audio), whisper_model=whisper_dir,
-    )
-    tmp = f"{path}.{os.getpid()}.tmp"
-    processor.save_speaker(speaker, tmp)
-    os.replace(tmp, path)
+        processor = AudioProcessor()
+        speaker = processor.create_speaker_from_whisper(
+            _outetts_reference_array(ref_audio), whisper_model=whisper_dir,
+        )
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        tmp = f"{path}.{os.getpid()}.{uuid.uuid4().hex}.tmp"
+        try:
+            processor.save_speaker(speaker, tmp)
+            os.replace(tmp, path)
+        finally:
+            with contextlib.suppress(OSError):
+                os.remove(tmp)
     return path
 
 

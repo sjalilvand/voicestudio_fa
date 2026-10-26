@@ -944,3 +944,31 @@ def test_mlx_audio_dia_receives_speaker_tagged_text():
     assert seen["ref_text"] == "[S1] Earlier words."
     backend.generate("[S1] Hi. [S2] Hey.")
     assert seen["text"] == "[S1] Hi. [S2] Hey."
+
+
+def test_outetts_missing_reference_is_an_input_error(monkeypatch, tmp_path):
+    monkeypatch.setattr(tts_backend, "_outetts_speaker_dir", lambda: str(tmp_path))
+    with pytest.raises(tts_backend.TTSInputError):
+        tts_backend._outetts_speaker_file(str(tmp_path / "gone.wav"))
+
+
+def test_outetts_concurrent_calls_build_the_speaker_once(monkeypatch, tmp_path):
+    import threading
+
+    built = []
+    _fake_outetts_processor(monkeypatch, built)
+    monkeypatch.setattr(tts_backend, "_outetts_speaker_dir", lambda: str(tmp_path))
+    monkeypatch.setattr(tts_backend, "_outetts_whisper_dir", lambda: "/local/whisper")
+    ref = tmp_path / "ref.wav"
+    ref.write_bytes(b"a")
+    results = []
+    threads = [
+        threading.Thread(target=lambda: results.append(tts_backend._outetts_speaker_file(str(ref))))
+        for _ in range(4)
+    ]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert len(built) == 1 and len(set(results)) == 1
+    assert not [p for p in tmp_path.iterdir() if p.name.endswith(".tmp")]
