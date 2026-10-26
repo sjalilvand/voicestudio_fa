@@ -282,16 +282,21 @@ def test_only_sidecars_with_a_separate_interpreter_get_their_own_build(
 
     from services import asr_backend, tts_backend
 
-    own = SimpleNamespace(venv_python=lambda: Path("/elsewhere/venv/bin/python"))
-    shared = SimpleNamespace(venv_python=lambda: Path(sys.executable))
+    def _no_resolve():  # #3104 review: Settings must not resolve/bootstrap venvs
+        raise AssertionError("the GPU report called venv_python()")
+
+    own = SimpleNamespace(shares_parent_torch=lambda: False, venv_python=_no_resolve)
+    shared = SimpleNamespace(shares_parent_torch=lambda: True, venv_python=_no_resolve)
+    broken = SimpleNamespace(venv_python=_no_resolve)  # no cheap answer: separate
     rows = [
         {"id": "indextts", "isolation_mode": "subprocess"},
         {"id": "omnivoice-subprocess", "isolation_mode": "subprocess"},
         {"id": "omnivoice", "isolation_mode": "in-process"},
+        {"id": "legacy-sidecar", "isolation_mode": "subprocess"},
     ]
     monkeypatch.setattr(tts_backend, "list_backends", lambda: [dict(r) for r in rows])
     monkeypatch.setattr(
-        tts_backend, "_REGISTRY", {"indextts": own, "omnivoice-subprocess": shared},
+        tts_backend, "_REGISTRY", {"indextts": own, "omnivoice-subprocess": shared, "legacy-sidecar": broken},
     )
     monkeypatch.setattr(asr_backend, "list_backends", lambda: [])
     seen: list[list[dict]] = []
@@ -301,7 +306,38 @@ def test_only_sidecars_with_a_separate_interpreter_get_their_own_build(
     )
     gpu_report.collect_gpu_report()
     marks = {r["id"]: r.get("own_torch_build") for r in seen[0]}
-    assert marks == {"indextts": True, "omnivoice-subprocess": False, "omnivoice": None}
+    assert marks == {
+        "indextts": True, "omnivoice-subprocess": False, "omnivoice": None,
+        "legacy-sidecar": True,
+    }
+
+
+@pytest.mark.parametrize(("module", "cls_name", "env_var"), [
+    ("engines.omnivoice_subprocess", "OmniVoiceSubprocessBackend", None),
+    ("services.subprocess_asr", "IsolatedFasterWhisperBackend", None),
+    ("engines.pockettts", "PocketTTSBackend", "OMNIVOICE_POCKETTTS_DIR"),
+    ("engines.supertonic3.backend", "Supertonic3Backend", "OMNIVOICE_SUPERTONIC3_DIR"),
+])
+def test_shares_parent_torch_agrees_with_venv_python(module, cls_name, env_var, monkeypatch):
+    """The cheap answer the GPU report reads must match the interpreter the
+    sidecar actually launches with."""
+    import importlib
+    import sys
+    from pathlib import Path
+
+    cls = getattr(importlib.import_module(module), cls_name)
+    if env_var:
+        monkeypatch.delenv(env_var, raising=False)
+    assert cls.shares_parent_torch() is (Path(cls.venv_python()) == Path(sys.executable))
+
+
+def test_a_resolver_backed_sidecar_reports_its_own_build_without_resolving():
+    """IndexTTS's venv_python() probes imports or bootstraps a venv; the base
+    contract answers without it."""
+    import importlib
+
+    cls = importlib.import_module("engines.indextts").IndexTTS2Backend
+    assert cls.shares_parent_torch() is False
 
 
 def test_the_message_names_the_probed_card_not_another_one(device_caps, gpu_report, inventory):

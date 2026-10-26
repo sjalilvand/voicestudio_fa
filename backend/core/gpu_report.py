@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import os
 import sys
-from pathlib import Path
 from typing import Any
 
 from core.device_caps import ACCELERATOR_PRIORITY, KERNEL_RISK_MARKER, HostCaps
@@ -284,17 +283,18 @@ def collect_gpu_report() -> dict[str, Any]:
 
         Such an engine imports its own PyTorch build, so the host verdict
         (which describes the parent's build) must not override its routing.
+        Asks the cheap ``shares_parent_torch()`` and never ``venv_python()``,
+        which for some engines (IndexTTS) probes imports or bootstraps a venv:
+        opening Settings must not start an engine setup.
         """
-        here = Path(sys.executable).resolve()
         for row in rows_:
             if row.get("isolation_mode") != "subprocess":
                 continue
             try:
-                python = Path(registry[row["id"]].venv_python()).resolve()
+                shares = bool(registry[row["id"]].shares_parent_torch())
             except Exception:  # noqa: BLE001 - unknown interpreter: assume separate
-                row["own_torch_build"] = True
-                continue
-            row["own_torch_build"] = python != here
+                shares = False
+            row["own_torch_build"] = not shares
         return rows_
 
     def tts():
