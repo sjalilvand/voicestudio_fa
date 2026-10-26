@@ -25,6 +25,8 @@ describe('apiFailureGuidance', () => {
   });
 
   it('returns nothing for an unclassified failure', () => {
-    expect(apiFailureGuidance(new ApiError(400, 'x', { detail: 'plain' } as never))).toBeUndefined();
+    expect(
+      apiFailureGuidance(new ApiError(400, 'x', { detail: 'plain' } as never)),
+    ).toBeUndefined();
   });
 });
