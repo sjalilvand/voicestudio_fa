@@ -28,12 +28,60 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from abc import ABC, abstractmethod
 from typing import Iterator, Optional
 
 logger = logging.getLogger("omnivoice.llm")
 
-# CLEAN-ROOM (spec D-josemercado §6): reasoning-block stripping (_strip_reasoning and helpers) and the reasoning_effort rejection memo.
+_REASONING_NAMES = r"think|thinking|reasoning"
+_OPEN_REASONING_TAG = re.compile(rf"<({_REASONING_NAMES})>", re.IGNORECASE)
+_CLOSE_REASONING_TAG = re.compile(rf"</({_REASONING_NAMES})>", re.IGNORECASE)
+_REASONING_EFFORT_REJECTED: set[str] = set()
+
+
+def _conversation_text(messages: list[dict]) -> str:
+    parts: list[str] = []
+    for turn in messages:
+        value = turn.get("content")
+        if isinstance(value, str):
+            parts.append(value)
+    return "\n".join(parts)
+
+
+def _reasoning_option_was_rejected(exc: Exception) -> bool:
+    provider_message = str(exc).casefold()
+    return any(
+        term in provider_message
+        for term in ("reasoning_effort", "reasoning effort")
+    )
+
+
+def _strip_reasoning(raw: str, prompt: str = "") -> str:
+    """Discard reasoning markup only when it occupies the reply prefix."""
+    answer = raw
+    first_closer = _CLOSE_REASONING_TAG.search(answer)
+    if first_closer is not None:
+        prefix = answer[:first_closer.start()]
+        closer = first_closer.group(0).casefold()
+        is_prefilled = _OPEN_REASONING_TAG.search(prefix) is None
+        repeats_input = answer.casefold().count(closer) <= prompt.casefold().count(closer)
+        if is_prefilled and not repeats_input:
+            answer = answer[first_closer.end():]
+
+    while True:
+        candidate = answer.lstrip()
+        opening = _OPEN_REASONING_TAG.match(candidate)
+        if opening is None:
+            break
+        tag_name = opening.group(1)
+        after_open = candidate[opening.end():]
+        closing = re.search(rf"</{re.escape(tag_name)}>", after_open, re.IGNORECASE)
+        if closing is None:
+            return ""
+        answer = after_open[closing.end():]
+
+    return answer.strip()
 
 
 class LLMBackend(ABC):
@@ -55,9 +103,44 @@ class LLMBackend(ABC):
     @abstractmethod
     def model_name(self) -> str: ...
 
-    # CLEAN-ROOM (spec D-josemercado §7): abstract LLMBackend.chat signature (with the reasoning_effort parameter) and its contract docstring.
+    @abstractmethod
+    def chat(self, *, system: str, user: str, timeout: Optional[float] = None,
+             temperature: Optional[float] = None,
+             reasoning_effort: Optional[str] = None) -> str:
+        """One-shot chat completion. Returns the assistant content string.
+        Raises on failure — callers decide whether to fallback gracefully.
+        ``temperature`` is only sent to the provider when set — callers that
+        leave it None keep the provider default (existing behavior).
+        ``reasoning_effort`` hints that latency-sensitive work should skip or
+        shorten model thinking; backends without that capability may ignore it.
+        """
+        ...
 
-    # CLEAN-ROOM (spec D-josemercado §8): LLMBackend.chat_messages default (message-list fallback over chat).
+    def chat_messages(self, *, messages: list[dict], timeout: Optional[float] = None,
+                      temperature: Optional[float] = None,
+                      reasoning_effort: Optional[str] = None) -> str:
+        """Adapt message turns for a two-message backend.
+
+        Backends that need complete few-shot conversations must override this.
+        """
+        begins_with_system = bool(messages and messages[0].get("role") == "system")
+        system_text = messages[0]["content"] if begins_with_system else ""
+        user_text = messages[-1]["content"] if messages else ""
+        retained_turns = 2 if system_text else 1
+        omitted_turns = max(len(messages) - retained_turns, 0)
+        if omitted_turns:
+            logger.warning(
+                "%s omitted %d intermediate turn(s) from its two-message request",
+                type(self).__name__,
+                omitted_turns,
+            )
+        return self.chat(
+            system=system_text,
+            user=user_text,
+            timeout=timeout,
+            temperature=temperature,
+            reasoning_effort=reasoning_effort,
+        )
 
     def chat_messages_stream(self, *, messages: list[dict], timeout: Optional[float] = None,
                              temperature: Optional[float] = None) -> Iterator[str]:
@@ -91,7 +174,15 @@ class OpenAICompatBackend(LLMBackend):
         from services import llm_providers
         return llm_providers.active_provider()
 
-    # CLEAN-ROOM (spec D-josemercado §9): OpenAICompatBackend._base_url helper.
+    def _base_url(self) -> Optional[str]:
+        try:
+            provider = self._resolve_provider()
+            if provider is not None:
+                from services import llm_providers
+                return llm_providers.resolve_base_url(provider)
+            return os.environ.get("TRANSLATE_BASE_URL") or None
+        except Exception:
+            return None
 
     @classmethod
     def is_available(cls) -> tuple[bool, str]:
@@ -135,7 +226,69 @@ class OpenAICompatBackend(LLMBackend):
         self._client = create_client(p)
         return self._client
 
-    # CLEAN-ROOM (spec D-josemercado §10): OpenAICompatBackend.chat and OpenAICompatBackend.chat_messages.
+    def chat(self, *, system: str, user: str, timeout: Optional[float] = None,
+             temperature: Optional[float] = None,
+             reasoning_effort: Optional[str] = None) -> str:
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ]
+        return self.chat_messages(
+            messages=messages,
+            timeout=timeout,
+            temperature=temperature,
+            reasoning_effort=reasoning_effort,
+        )
+
+    def chat_messages(self, *, messages: list[dict], timeout: Optional[float] = None,
+                      temperature: Optional[float] = None,
+                      reasoning_effort: Optional[str] = None) -> str:
+        """Complete a structured conversation without flattening few-shot turns.
+
+        Inline examples are often echoed by small local models, so examples
+        remain earlier chat turns. Temperature is omitted unless selected;
+        Cinematic and Autofit use 0.2 to avoid drift from provider defaults.
+        Latency-sensitive callers may pass ``reasoning_effort="none"`` to
+        avoid long reasoning pauses.
+        """
+        if timeout is None:
+            try:
+                timeout = float(os.environ.get("OMNIVOICE_LLM_TIMEOUT", "45"))
+            except ValueError:
+                timeout = 45.0
+        selected_model = self.model_name
+        route_signature = f"{self._base_url() or ''}|{selected_model}"
+        optional_fields = {}
+        if temperature is not None:
+            optional_fields["temperature"] = temperature
+        if reasoning_effort is not None and route_signature not in _REASONING_EFFORT_REJECTED:
+            optional_fields["reasoning_effort"] = reasoning_effort
+
+        client = self._get_client()
+        try:
+            response = client.chat.completions.create(
+                model=selected_model,
+                timeout=timeout,
+                messages=messages,
+                **optional_fields,
+            )
+        except Exception as exc:
+            sent_reasoning_hint = "reasoning_effort" in optional_fields
+            if not sent_reasoning_hint or not _reasoning_option_was_rejected(exc):
+                raise
+            _REASONING_EFFORT_REJECTED.add(route_signature)
+            logger.debug("Disabling the reasoning hint for endpoint %s", route_signature)
+            optional_fields.pop("reasoning_effort")
+            response = client.chat.completions.create(
+                model=selected_model,
+                timeout=timeout,
+                messages=messages,
+                **optional_fields,
+            )
+
+        reply_text = response.choices[0].message.content or ""
+        source_text = _conversation_text(messages)
+        return _strip_reasoning(reply_text, prompt=source_text)
 
     def chat_messages_stream(self, *, messages: list[dict], timeout: Optional[float] = None,
                              temperature: Optional[float] = None) -> Iterator[str]:

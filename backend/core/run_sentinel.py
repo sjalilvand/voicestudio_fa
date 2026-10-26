@@ -375,7 +375,10 @@ def detect_unclean_shutdown(now: float | None = None) -> Optional[dict]:
                 # (second --reload worker, second container on a shared
                 # volume). Its sentinel is not evidence of anything — leave
                 # it alone and don't write ours over it.
-                # CLEAN-ROOM (spec D-josemercado §2): log the foreign-live-instance notice at informational level, not warning.
+                logger.info(
+                    "run_sentinel.json belongs to a live process (pid %s) — another instance shares this data dir; skipping crash detection and sentinel ownership for this run.",
+                    pid,
+                )
                 _state["foreign_live"] = True
                 return None
 

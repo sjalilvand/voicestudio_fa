@@ -21,11 +21,14 @@ users.
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 import time
+import urllib.request
 from dataclasses import dataclass
 from typing import Optional
+from urllib.parse import urlsplit
 
 logger = logging.getLogger("omnivoice.llm_providers")
 
@@ -321,10 +324,108 @@ def _cached_discovery(pid: str) -> tuple[bool, Optional[str]]:
     return True, value
 
 
-# CLEAN-ROOM (spec D-josemercado §11): LM Studio native loaded-model probe (_LMSTUDIO_PROBE_TIMEOUT_S, _probe_lmstudio_loaded_model).
+_LMSTUDIO_PROBE_TIMEOUT_S = 3.0
 
 
-# CLEAN-ROOM (spec D-josemercado §12): discover_model(p) -- model discovery for placeholder-default providers.
+class _RejectRedirects(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _probe_lmstudio_loaded_model(
+    base_url: str, api_key: str = "local"
+) -> Optional[str]:
+    """Return a typed, resident LM Studio chat model without following redirects."""
+    if not base_url:
+        return None
+    try:
+        parsed = urlsplit(base_url)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            return None
+        root = base_url.rstrip("/")
+        if root.endswith("/v1"):
+            root = root[:-3]
+        headers = {"User-Agent": "VoiceStudio LM Studio model probe"}
+        if api_key and api_key != "local":
+            headers["Authorization"] = f"Bearer {api_key}"
+        request = urllib.request.Request(
+            f"{root}/api/v0/models", headers=headers, method="GET"
+        )
+        opener = urllib.request.build_opener(_RejectRedirects())
+        # The configured URL is validated above and redirects are disabled.
+        with opener.open(request, timeout=_LMSTUDIO_PROBE_TIMEOUT_S) as response:  # nosec B310
+            payload = json.load(response)
+        entries = payload["data"]
+        if not isinstance(entries, list):
+            return None
+        loaded_ids = [
+            entry["id"]
+            for entry in entries
+            if isinstance(entry, dict)
+            and entry.get("state") == "loaded"
+            and entry.get("type") in {"llm", "vlm"}
+            and isinstance(entry.get("id"), str)
+            and entry["id"]
+        ]
+        return sorted(loaded_ids)[0] if loaded_ids else None
+    except Exception as exc:
+        logger.debug("LM Studio loaded-model probe failed: %s", exc)
+        return None
+
+
+def discover_model(p: Provider) -> Optional[str]:
+    """Best-effort model discovery with positive and negative caching."""
+    hit, cached = _cached_discovery(p.id)
+    if hit:
+        return cached
+    base_url = resolve_base_url(p)
+    if not base_url:
+        return None
+
+    if p.id == "lmstudio":
+        loaded = _probe_lmstudio_loaded_model(base_url, resolve_api_key(p) or "local")
+        ttl = DISCOVERY_TTL_S if loaded else DISCOVERY_FAILURE_TTL_S
+        _DISCOVERED_MODEL[p.id] = (loaded, time.monotonic() + ttl)
+        return loaded
+
+    try:
+        from openai import OpenAI
+
+        client = OpenAI(
+            api_key=resolve_api_key(p) or "local",
+            base_url=base_url,
+            max_retries=0,
+        )
+        listed = client.models.list(timeout=5)
+        records = getattr(listed, "data", listed)
+        ids = [record.id for record in records if isinstance(getattr(record, "id", None), str)]
+    except Exception as exc:
+        logger.debug("Model discovery failed for %s: %s", p.id, exc)
+        _DISCOVERED_MODEL[p.id] = (None, time.monotonic() + DISCOVERY_FAILURE_TTL_S)
+        return None
+
+    candidates = [
+        model_id for model_id in ids
+        if "embed" not in model_id.lower() and "bert" not in model_id.lower()
+    ]
+    if not candidates:
+        _DISCOVERED_MODEL[p.id] = (None, time.monotonic() + DISCOVERY_FAILURE_TTL_S)
+        return None
+    preferred = [
+        model_id for model_id in candidates
+        if "qwen" in model_id.lower() or "llama" in model_id.lower()
+    ]
+    chosen = sorted(preferred or candidates)[0]
+    if len(ids) > 1:
+        logger.info(
+            "%s has %d models loaded and no model is set in Settings; using %r. "
+            "Pick one in Settings → LLM Providers to choose deliberately.",
+            p.display_name,
+            len(ids),
+            chosen,
+        )
+    _DISCOVERED_MODEL[p.id] = (chosen, time.monotonic() + DISCOVERY_TTL_S)
+    return chosen
 
 
 def configured_model(p: Provider) -> str:
@@ -348,8 +449,12 @@ def resolve_model(p: Provider) -> str:
     Discovery sits between the user's choice and the built-in default so it can
     never override an explicit setting, and only runs for providers whose
     default is a placeholder — everyone else keeps a pure, offline resolution.
+
+    For LM Studio, discovery reports the model currently resident in memory,
+    rather than choosing the first advertised id. It remains below a stored
+    Settings choice, and its cache prevents repeating a network probe for every
+    segment in a large dub.
     """
-    # CLEAN-ROOM (spec D-josemercado §13): the docstring of resolve_model lost a paragraph on LM Studio discovery; reinstate fresh wording.
     explicit = configured_model(p)
     if explicit:
         return explicit

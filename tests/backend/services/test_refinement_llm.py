@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from types import SimpleNamespace
 
 import pytest
 
@@ -230,4 +231,136 @@ def test_config_invalid_json_falls_back_to_defaults(stored_config):
     assert cfg["auto"] is True and cfg["smart_cleanup"] is True
 
 
-# CLEAN-ROOM (spec D-josemercado §18): reasoning_effort / reasoning-block tests removed; see spec.
+def test_refine_transcript_requests_no_reasoning(monkeypatch):
+    seen = []
+
+    class Backend:
+        def chat_messages(self, **kwargs):
+            seen.append(kwargs)
+            return "  Tidied.  "
+
+    monkeypatch.setattr(refinement, "_skill_llm", lambda: Backend())
+    assert refinement.refine_transcript("um tidied") == "Tidied."
+    assert seen[0]["reasoning_effort"] == "none"
+
+
+def _reply(content):
+    return SimpleNamespace(
+        choices=[SimpleNamespace(message=SimpleNamespace(content=content))]
+    )
+
+
+def _openai_backend(monkeypatch, create):
+    from services.llm_backend import OpenAICompatBackend
+
+    backend = OpenAICompatBackend()
+    client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=create))
+    )
+    monkeypatch.setattr(backend, "_get_client", lambda: client)
+    monkeypatch.setattr(backend, "_resolve_provider", lambda: None)
+    monkeypatch.setenv("TRANSLATE_MODEL", "fixture-model")
+    monkeypatch.setenv("TRANSLATE_BASE_URL", "http://fixture/v1")
+    return backend
+
+
+def test_openai_backend_removes_leading_reasoning(monkeypatch):
+    backend = _openai_backend(
+        monkeypatch, lambda **kwargs: _reply("<think>work</think>Answer")
+    )
+    assert backend.chat_messages(messages=[{"role": "user", "content": "Q"}]) == "Answer"
+
+
+@pytest.mark.parametrize(
+    "raw",
+    ["<think>work</think>", "<reasoning>unfinished", "hidden</think>"],
+)
+def test_reasoning_only_returns_empty(raw):
+    from services.llm_backend import _strip_reasoning
+
+    assert _strip_reasoning(raw) == ""
+
+
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        ("<thinking>notes</thinking> Result", "Result"),
+        ("<think>a</think><reasoning>b</reasoning>Result", "Result"),
+        ("private</think>Result", "Result"),
+        ("private</thinking>Result", "Result"),
+        ("Use <think> to start a block.", "Use <think> to start a block."),
+        ("Answer <thinking>x</thinking> remains", "Answer <thinking>x</thinking> remains"),
+    ],
+)
+def test_reasoning_stripping_boundaries(raw, expected):
+    from services.llm_backend import _strip_reasoning
+
+    assert _strip_reasoning(raw) == expected
+
+
+def test_prefilled_close_is_kept_when_copied_from_prompt():
+    from services.llm_backend import _strip_reasoning
+
+    assert _strip_reasoning("literal </THINK> answer", "copy </think>") == "literal </THINK> answer"
+    assert _strip_reasoning(
+        "notes </think> literal </think> answer", "copy </THINK>"
+    ) == "literal </think> answer"
+
+
+def test_reasoning_effort_rejection_retries_and_is_memoized(monkeypatch):
+    from services.llm_backend import _REASONING_EFFORT_REJECTED
+
+    _REASONING_EFFORT_REJECTED.clear()
+    calls = []
+
+    def create(**kwargs):
+        calls.append(kwargs)
+        if "reasoning_effort" in kwargs:
+            raise RuntimeError("400 unknown field reasoning_effort")
+        return _reply("ok")
+
+    first = _openai_backend(monkeypatch, create)
+    assert first.chat_messages(messages=[], reasoning_effort="none") == "ok"
+    second = _openai_backend(monkeypatch, create)
+    assert second.chat_messages(messages=[], reasoning_effort="none") == "ok"
+    assert len(calls) == 3
+    assert "reasoning_effort" not in calls[-1]
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        RuntimeError("400 unsupported temperature"),
+        RuntimeError("502 bad gateway"),
+        TypeError("client bug"),
+    ],
+)
+def test_unrelated_client_failures_are_not_retried(monkeypatch, error):
+    from services.llm_backend import _REASONING_EFFORT_REJECTED
+
+    _REASONING_EFFORT_REJECTED.clear()
+    calls = []
+
+    def create(**kwargs):
+        calls.append(kwargs)
+        raise error
+
+    backend = _openai_backend(monkeypatch, create)
+    with pytest.raises(type(error), match=str(error)):
+        backend.chat_messages(messages=[], reasoning_effort="none", temperature=0.2)
+    assert len(calls) == 1
+    assert not _REASONING_EFFORT_REJECTED
+
+
+def test_refinement_propagates_internal_type_error_without_retry(monkeypatch):
+    calls = []
+
+    class Backend:
+        def chat_messages(self, **kwargs):
+            calls.append(kwargs)
+            raise TypeError("internal client failure")
+
+    monkeypatch.setattr(refinement, "_skill_llm", lambda: Backend())
+    with pytest.raises(TypeError, match="internal client failure"):
+        refinement.refine_transcript("hello")
+    assert len(calls) == 1

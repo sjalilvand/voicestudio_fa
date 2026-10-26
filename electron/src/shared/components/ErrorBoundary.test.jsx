@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 
@@ -73,4 +73,60 @@ describe('ErrorBoundary deeplink button', () => {
   });
 });
 
-// CLEAN-ROOM (spec D-josemercado §22): ErrorBoundary stale-module-graph reload tests.
+describe('stale module graph', () => {
+  const crash = (message) =>
+    render(
+      <ErrorBoundary name="lazy-view">
+        <Boom message={message} />
+      </ErrorBoundary>,
+    );
+
+  let reloadPage;
+
+  beforeEach(() => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    reloadPage = vi.spyOn(window.location, 'reload').mockImplementation(() => {});
+    sessionStorage.clear();
+  });
+
+  afterEach(() => {
+    sessionStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  it.each([
+    ['Safari wording', 'Importing a module script failed.'],
+    ['Chromium wording', 'Failed to fetch dynamically imported module: /assets/page.js'],
+  ])('refreshes once for %s', (_label, message) => {
+    crash(message);
+
+    expect(sessionStorage.getItem('ov_stale_chunk_reload')).not.toBeNull();
+    expect(reloadPage).toHaveBeenCalledOnce();
+  });
+
+  it('leaves a later boundary rendered instead of entering a reload loop', () => {
+    const initialFailure = crash('Error loading dynamically imported module');
+    initialFailure.unmount();
+
+    crash('Failed to load module script: stale.js');
+
+    expect(screen.getByText(/failed to load module script: stale\.js/i)).toBeInTheDocument();
+    expect(reloadPage).toHaveBeenCalledOnce();
+  });
+
+  it('treats a stale timestamp as a permanent guard for the current tab', () => {
+    sessionStorage.setItem('ov_stale_chunk_reload', String(Date.now() - 60_000));
+
+    crash('Importing a module script failed');
+
+    expect(reloadPage).not.toHaveBeenCalled();
+  });
+
+  it('renders an unrelated exception without recording a refresh', () => {
+    crash('ordinary render failure');
+
+    expect(screen.getByText('ordinary render failure')).toBeInTheDocument();
+    expect(sessionStorage.getItem('ov_stale_chunk_reload')).toBeNull();
+    expect(reloadPage).not.toHaveBeenCalled();
+  });
+});

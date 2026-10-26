@@ -29,7 +29,50 @@ const SPEC_PATH = '/openapi.json';
 
 const ScalarApiReference = lazy(() => import('./ScalarApiReference'));
 
-// CLEAN-ROOM (spec D-josemercado §21): `fetchSpec` -- spec fetch with same-origin fallback.
+async function fetchSpec() {
+  try {
+    const response = await apiFetch(SPEC_PATH);
+    return await response.json();
+  } catch (err) {
+    if (typeof window === 'undefined' || !['http:', 'https:'].includes(window.location.protocol)) {
+      throw err;
+    }
+
+    const base = new URL(API, window.location.href);
+    const localHosts = new Set(['localhost', '127.0.0.1', '[::1]']);
+    const sameOrigin = base.origin === window.location.origin;
+    const knownDevProxy =
+      import.meta.env.DEV &&
+      localHosts.has(window.location.hostname) &&
+      base.protocol === 'http:' &&
+      localHosts.has(base.hostname) &&
+      base.port === String(DEFAULT_BACKEND_PORT);
+    if (!sameOrigin && !knownDevProxy) throw err;
+
+    const headers = new Headers();
+    const adminSession = getAdminSession(API);
+    if (adminSession) headers.set('Authorization', `Bearer ${adminSession.token}`);
+    try {
+      const pin = sessionStorage.getItem('ov_pin');
+      if (pin) headers.set('X-OmniVoice-Pin', pin);
+    } catch {
+      // Storage can be unavailable in embedded browser views.
+    }
+
+    let response;
+    try {
+      response = await fetch(SPEC_PATH, {
+        cache: 'no-store',
+        credentials: 'include',
+        headers,
+      });
+    } catch {
+      throw err;
+    }
+    if (!response.ok) throw err;
+    return await response.json();
+  }
+}
 
 function LoadingState({ label }) {
   return (
@@ -51,7 +94,17 @@ export default function OpenApiPanel() {
   const [phase, setPhase] = useState('loading');
   const [spec, setSpec] = useState(null);
 
-  // CLEAN-ROOM (spec D-josemercado §21): `load` -- the spec fetch with phase handling (loading/ready/error).
+  const load = useCallback(async () => {
+    setPhase('loading');
+    try {
+      setSpec(await fetchSpec());
+      setPhase('ready');
+    } catch {
+      // Both the normal request retries and the constrained fallback failed.
+      setSpec(null);
+      setPhase('error');
+    }
+  }, []);
 
   useEffect(() => {
     load();

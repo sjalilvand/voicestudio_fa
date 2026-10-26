@@ -6,7 +6,33 @@ import { openExternal } from '../api/external';
 import { buildIssueSearchUrl, openBugReport } from '../utils/bugReport';
 import { Button } from '../ui';
 
-// CLEAN-ROOM (spec D-josemercado §19): stale module graph recovery (detect failed lazy-chunk import, reload once per tab).
+const RELOAD_ATTEMPT_SESSION_SLOT = 'ov_stale_chunk_reload';
+const MODULE_LOAD_FAILURE_WORDINGS = [
+  /importing a module script failed/i,
+  /failed to fetch dynamically imported module/i,
+  /error loading dynamically imported module/i,
+  /failed to load module script/i,
+];
+
+function refreshAfterChunkLoss(error) {
+  const detail = String(error?.message ?? error);
+  const isMissingModule = MODULE_LOAD_FAILURE_WORDINGS.some((wording) => wording.test(detail));
+  if (!isMissingModule) return false;
+
+  let reloadIsArmed;
+  try {
+    reloadIsArmed = sessionStorage.getItem(RELOAD_ATTEMPT_SESSION_SLOT) === null;
+    if (reloadIsArmed) {
+      sessionStorage.setItem(RELOAD_ATTEMPT_SESSION_SLOT, `${Date.now()}`);
+    }
+  } catch {
+    return false;
+  }
+
+  if (!reloadIsArmed) return false;
+  window.location.reload();
+  return true;
+}
 
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -22,7 +48,7 @@ export default class ErrorBoundary extends React.Component {
     // Surface via console.error so it reaches our ring buffer (Settings > Logs > Frontend).
     // eslint-disable-next-line no-console
     console.error(`[ErrorBoundary:${this.props.name || 'anon'}]`, error, info?.componentStack);
-    // CLEAN-ROOM (spec D-josemercado §19): invoke the stale-chunk recovery from here.
+    refreshAfterChunkLoss(error);
   }
 
   reset = () => this.setState({ error: null });
