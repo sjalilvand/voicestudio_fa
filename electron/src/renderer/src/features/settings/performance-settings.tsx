@@ -602,23 +602,19 @@ function CompileSetting() {
         signal,
       }),
   });
-  // CLEAN-ROOM (spec O-shivendra-3 §9): the torch.compile toggle must be live on every platform; this restored win32 gating is a placeholder.
-  const windows = query.data?.platform === 'win32';
+  const isLoading = query.isPending;
+  // #2135 made this a host-independent recovery control, including Linux CUDA.
   return (
     <SettingsSection icon={CpuIcon} title={t('settings.perf_title')}>
       <SettingsRow
         id="torch-compile"
         title={t('settings.perf_torch_compile')}
-        description={
-          query.data
-            ? t(windows ? 'settings.perf_torch_compile_note' : 'settings.perf_torch_compile_na')
-            : undefined
-        }
+        description={query.data === undefined ? undefined : t('settings.perf_torch_compile_note')}
       >
         <Switch
           aria-label={t('settings.perf_torch_compile')}
           checked={!!query.data?.enabled}
-          disabled={!windows || action.busy || query.isPending}
+          disabled={isLoading || action.busy}
           onCheckedChange={(enabled) =>
             void action.run(async () => {
               const state = await apiJson('/api/settings/perf/torch-compile-disabled', {

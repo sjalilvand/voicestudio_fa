@@ -1954,7 +1954,49 @@ _TORCH_COMPILE_MODE = "reduce-overhead"
 # would not.
 _CUDAGRAPH_COMPILE_MODES = frozenset({"reduce-overhead", "max-autotune"})
 
-# CLEAN-ROOM (spec O-shivendra-3 §4): pre-Ampere CUDA-graph downgrade: minimum-capability constant, force-override env constant, and the per-GPU compile-mode resolver function.
+_GRAPH_CAPTURE_FLOOR = (8, 0)
+_GRAPH_CAPTURE_OVERRIDE = "OMNIVOICE_FORCE_CUDAGRAPH"
+
+
+def _resolved_compile_mode(requested: str = _TORCH_COMPILE_MODE) -> str:
+    """Choose graph capture only when the active CUDA device is known suitable."""
+    if requested not in _CUDAGRAPH_COMPILE_MODES:
+        return requested
+
+    override = os.getenv(_GRAPH_CAPTURE_OVERRIDE, "").strip().casefold()
+    if override in {"yes", "1", "on", "true"}:
+        logger.warning(
+            "%s keeps compile mode %r; CUDA graph safety has not been established for this adapter.",
+            _GRAPH_CAPTURE_OVERRIDE, requested,
+        )
+        return requested
+
+    torch_runtime = sys.modules.get("torch")
+    if torch_runtime is None:
+        return requested
+    try:
+        cuda = torch_runtime.cuda
+        if not cuda.is_available():
+            return requested
+        compute_level = tuple(cuda.get_device_capability(0))
+    except Exception as probe_error:
+        logger.debug("CUDA capability lookup did not complete: %s", probe_error, exc_info=True)
+        return requested
+
+    if compute_level >= _GRAPH_CAPTURE_FLOOR:
+        return requested
+    try:
+        adapter = str(cuda.get_device_name(0))
+    except Exception:
+        adapter = "unnamed CUDA adapter"
+    sm_tag = f"sm_{compute_level[0]}{compute_level[1]}"
+    floor_tag = f"sm_{_GRAPH_CAPTURE_FLOOR[0]}{_GRAPH_CAPTURE_FLOOR[1]}"
+    logger.info(
+        "%s reports %s, below the %s CUDA-graph floor. Using torch.compile mode 'default' "
+        "so kernels stay compiled without capture; %s=1 opts back into %r.",
+        adapter, sm_tag, floor_tag, _GRAPH_CAPTURE_OVERRIDE, requested,
+    )
+    return "default"
 
 _compiled_inference_executor: "ThreadPoolExecutor | None" = None
 _compiled_inference_thread_ident: "int | None" = None
@@ -2857,9 +2899,9 @@ def _load_model_sync():
 
             if not flashinfer_applied and should_torch_compile(device):
                 _set_loading("compiling", "Compiling model (torch.compile)…")
-                # CLEAN-ROOM (spec O-shivendra-3 §4): choose the compile mode per GPU via the mode-resolver; until reimplemented the fixed default mode is used.
+                compile_mode = _resolved_compile_mode()
                 try:
-                    _model.llm = torch.compile(_model.llm, mode=_TORCH_COMPILE_MODE)
+                    _model.llm = torch.compile(_model.llm, mode=compile_mode)
                 except Exception as compile_exc:
                     # #278: compile is an optimization, never a point of
                     # failure — keep the eager model and remember the failure
@@ -2876,7 +2918,7 @@ def _load_model_sync():
                     # archs, #278). Wrap generate so that falls back to eager
                     # instead of failing the generation.
                     _install_compile_fallback(_model)
-                    if _TORCH_COMPILE_MODE in _CUDAGRAPH_COMPILE_MODES:
+                    if compile_mode in _CUDAGRAPH_COMPILE_MODES:
                         # #315: reduce-overhead uses CUDA graphs, whose
                         # captured state is thread-local. Pin all inference to
                         # one dedicated thread so a later render dispatched to
@@ -2887,9 +2929,9 @@ def _load_model_sync():
                         logger.info(
                             "torch.compile mode %r uses CUDA graphs — compiled-model "
                             "inference pinned to a single dedicated thread (#315).",
-                            _TORCH_COMPILE_MODE,
+                            compile_mode,
                         )
-                    logger.info("torch.compile applied (mode=%r).", _TORCH_COMPILE_MODE)
+                    logger.info("torch.compile applied (mode=%r).", compile_mode)
         except Exception as e:
             logger.info("torch.compile skipped: %s", e)
 

@@ -47,7 +47,8 @@ def compile_friendly_env(monkeypatch):
     monkeypatch.setattr("services.settings_store.get_text", lambda key, default="0": "0")
     monkeypatch.setattr(engine_env, "_compile_runtime_failure", None)
     monkeypatch.delenv("OMNIVOICE_FORCE_TORCH_COMPILE", raising=False)
-    # CLEAN-ROOM (spec O-shivendra-3 §11): clear the compile-disable env vars in this fixture.
+    for name in ("TORCH_COMPILE_DISABLE", "TORCHDYNAMO_DISABLE", "TORCHINDUCTOR_DISABLE"):
+        monkeypatch.delenv(name, raising=False)
 
 
 def _fake_torch(monkeypatch, cuda):
@@ -120,4 +121,48 @@ def test_skips_after_runtime_failure_marked(monkeypatch, compile_friendly_env):
     assert engine_env.should_torch_compile("cuda") is True
     engine_env.mark_compile_runtime_failure("AssertionError: cudagraph_trees")
     assert engine_env.should_torch_compile("cuda") is False
-# CLEAN-ROOM (spec O-shivendra-3 §11): tests that compile-disable env vars gate should_torch_compile.
+
+@pytest.mark.parametrize(
+    ("variable", "setting"),
+    [
+        ("TORCH_COMPILE_DISABLE", " TRUE "),
+        ("TORCHDYNAMO_DISABLE", "on"),
+        ("TORCHINDUCTOR_DISABLE", "1"),
+    ],
+)
+def test_any_supported_environment_opt_out_wins(
+    monkeypatch, compile_friendly_env, variable, setting
+):
+    _fake_torch(monkeypatch, _FakeCuda(capability=(8, 9)))
+    monkeypatch.setenv(variable, setting)
+    assert engine_env.compile_opt_out_name() == variable
+    assert not engine_env.should_torch_compile("cuda")
+
+
+def test_non_opt_out_values_leave_compilation_available(monkeypatch, compile_friendly_env):
+    _fake_torch(monkeypatch, _FakeCuda(capability=(9, 0)))
+    for variable, setting in zip(
+        ("TORCH_COMPILE_DISABLE", "TORCHDYNAMO_DISABLE", "TORCHINDUCTOR_DISABLE"),
+        ("off", "0", "not-enabled"),
+    ):
+        monkeypatch.setenv(variable, setting)
+    assert engine_env.compile_opt_out_name() is None
+    assert engine_env.should_torch_compile("cuda")
+
+
+@pytest.mark.parametrize(
+    ("setting", "opted_out"),
+    [(value, True) for value in ("1", "true", "TRUE", "yes", "on")]
+    + [(value, False) for value in ("", "0", "false", "no", "off")],
+)
+def test_primary_switch_parsing(monkeypatch, compile_friendly_env, setting, opted_out):
+    _fake_torch(monkeypatch, _FakeCuda(capability=(9, 0)))
+    monkeypatch.setenv("TORCH_COMPILE_DISABLE", setting)
+    assert (not engine_env.should_torch_compile("cuda")) is opted_out
+
+
+def test_compile_disable_env_outranks_force(monkeypatch, compile_friendly_env):
+    _fake_torch(monkeypatch, _FakeCuda(capability=(12, 1)))
+    monkeypatch.setenv("OMNIVOICE_FORCE_TORCH_COMPILE", "yes")
+    monkeypatch.setenv("TORCHDYNAMO_DISABLE", "true")
+    assert not engine_env.should_torch_compile("cuda")

@@ -363,7 +363,15 @@ peak memory footprint that exceeds free VRAM. Windows-only quirk.
 
 **Linked issue:** [#65](https://github.com/debpalash/VoiceStudio/issues/65)
 
-<!-- CLEAN-ROOM (spec O-shivendra-3 §6): troubleshooting section 5a, backend dies on first generate on older NVIDIA GPUs. -->
+## 5a. Backend exits on the first `/generate` on an older NVIDIA GPU
+
+**Symptom:** the backend starts, `/health` identifies the GPU, and model preload succeeds, but the first generation ends with `RemoteDisconnected` or “remote end closed.” Later requests get `ConnectionRefused`, often without a Python traceback. Tesla T4 machines, including common Colab hosts, are a typical example.
+
+**Cause:** CUDA-graph capture in the graph-oriented compile mode can abort the process natively on pre-Ampere GPUs such as Turing sm_75 and Volta sm_70.
+
+**Fix:** update VoiceStudio. Compile mode is selected from the detected GPU, and devices below sm_80 keep compiled kernels without graph capture. If the crash remains, enable **Settings → Performance → Disable torch.compile**, or set `TORCH_COMPILE_DISABLE=1` before a CLI/source launch. Both in-process and sidecar engines honour this on every platform.
+
+For diagnosis, the backend arms Python's fatal-signal handler early and writes the dying thread stack to `backend_err.log`; attach that file to a report. Set `OMNIVOICE_DISABLE_FAULTHANDLER=1` to turn this diagnostic off. For additional containment, select **OmniVoice (subprocess-isolated)** under **Settings → Engines**, or launch with `OMNIVOICE_TTS_BACKEND=omnivoice-subprocess`. A native engine failure then becomes an HTTP error and the parent respawns the sidecar. See [#2135](https://github.com/debpalash/VoiceStudio/issues/2135).
 
 ## 5b. RTX 50-series (Blackwell, sm_120): backend crashes during `ml_imports`
 

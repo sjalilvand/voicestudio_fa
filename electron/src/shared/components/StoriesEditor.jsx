@@ -182,7 +182,7 @@ export default function StoriesEditor({ profiles = [] }) {
   }, []);
 
   const [activeTrack, setActiveTrack] = useState(null);
-  // CLEAN-ROOM (spec O-shivendra-3 §7): preview generation counter ref.
+  const previewEpochRef = useRef(0);
   const playingPreviewRef = useRef(null);
   const [activeTab, setActiveTab] = useState('script');
   const [splitOpen, setSplitOpen] = useState(false);
@@ -394,7 +394,33 @@ export default function StoriesEditor({ profiles = [] }) {
     setTracks((prev) => [...prev, makeTrack('narrator', `# ${t('stories.chapterN', { n })}`)]);
   }, [tracks, setTracks, t]);
 
-  // CLEAN-ROOM (spec O-shivendra-3 §7): clearScript callback (confirm, invalidate previews, stop playback, suppress sample reseed, clear tracks and split text, toast).
+  const clearScript = useCallback(async () => {
+    const hasImportedDraft = splitText.trim().length > 0;
+    const entriesToRemove = tracks.length + Number(hasImportedDraft);
+    if (entriesToRemove === 0) return;
+    const accepted = await askConfirm(
+      t('stories.clearConfirm', { count: entriesToRemove }),
+      t('stories.clearScript'),
+    );
+    if (!accepted) return;
+
+    previewEpochRef.current += 1;
+    stopActivePlayback();
+    playingPreviewRef.current = null;
+    sampleBootstrapRef.current = true;
+    try {
+      localStorage.setItem(DEFAULT_SAMPLE_KEY, '1');
+    } catch {
+      // The in-memory guard above still prevents reseeding for this mount.
+    }
+    setTracks((liveTracks) => {
+      for (const item of liveTracks) releasePreview(item);
+      return [];
+    });
+    setSplitText('');
+    setSplitOpen(false);
+    toast.success(t('stories.cleared'));
+  }, [setTracks, splitText, t, tracks.length]);
 
   // ── Paste & auto-split ───────────────────────────────────────────────────
   const applySplit = useCallback(() => {
@@ -476,7 +502,10 @@ export default function StoriesEditor({ profiles = [] }) {
     async (track) => {
       const raw = (track.text || '').trim();
       if (!raw) return;
-      // CLEAN-ROOM (spec O-shivendra-3 §7): preview staleness check (generation counter captured at start + track removed from the store).
+      const startingEpoch = previewEpochRef.current;
+      const previewWasInvalidated = () =>
+        startingEpoch !== previewEpochRef.current ||
+        !useAppStore.getState().storyTracks.some((candidate) => candidate.id === track.id);
       const playback = { id: track.id };
       const releasePlayback = () => {
         if (playingPreviewRef.current === playback) playingPreviewRef.current = null;
@@ -490,7 +519,7 @@ export default function StoriesEditor({ profiles = [] }) {
       if (!hasStoryMarkers(raw)) {
         try {
           const blob = await fetchChunkBlob(raw, pid, spd);
-          // CLEAN-ROOM (spec O-shivendra-3 §7): abandon when the preview is stale after the single-chunk fetch.
+          if (previewWasInvalidated()) return;
           const url = URL.createObjectURL(blob);
           setTracks((prev) =>
             prev.map((tk) => {
@@ -525,7 +554,7 @@ export default function StoriesEditor({ profiles = [] }) {
             seg.type === 'chunk' ? await fetchChunkBlob(seg.text, seg.profileId, spd) : null,
           );
         }
-        // CLEAN-ROOM (spec O-shivendra-3 §7): abandon when the preview is stale after the chunk synthesis loop.
+        if (previewWasInvalidated()) return;
         let cursor = 0;
         const finish = () => {
           setTracks((prev) =>
@@ -537,7 +566,7 @@ export default function StoriesEditor({ profiles = [] }) {
           );
         };
         const step = () => {
-          // CLEAN-ROOM (spec O-shivendra-3 §7): abandon the marker-preview step chain when the preview is stale.
+          if (previewWasInvalidated()) return;
           while (cursor < parsed.length) {
             const seg = parsed[cursor];
             const blob = chunkBlobs[cursor];
@@ -796,7 +825,16 @@ export default function StoriesEditor({ profiles = [] }) {
                 <Bookmark size={13} aria-hidden="true" />
                 {t('stories.addChapter')}
               </Button>
-              {/* CLEAN-ROOM (spec O-shivendra-3 §7): ghost small "Clear script" button with trash icon after the Add chapter button; disabled when no lines and no pending split text; tooltip hint. */}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={clearScript}
+                disabled={!tracks.length && !splitText.trim()}
+                title={t('stories.clearScriptHint')}
+              >
+                <Trash2 size={13} aria-hidden="true" />
+                {t('stories.clearScript')}
+              </Button>
             </div>
           )}
         </div>

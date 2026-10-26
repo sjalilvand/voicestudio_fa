@@ -19,7 +19,7 @@ Device choices come from the backend's detected families plus Auto. The chosen p
 
 Settings > Performance > Memory management also has the opt-in **Move the voice model to system RAM after generation** toggle (#2618, off by default), backed by `GET`/`PUT /api/settings/perf/offload-after-generation`. It applies from the next generation without a restart. The toggle is locked and explained when `OMNIVOICE_OFFLOAD_AFTER_GENERATION` pins it, and its description says when there's no GPU to free. Behaviour is described in [the performance guide](performance.md#offload-to-ram-after-generation).
 
-<!-- CLEAN-ROOM (spec O-shivendra-3 §6): paragraph on the torch.compile toggle being selectable everywhere plus generation-budget and hardware-readout behaviour. -->
+The torch.compile workaround is selectable on every platform since [#2135](https://github.com/debpalash/VoiceStudio/issues/2135), because compiled-kernel failures are not confined to Windows. Generation budgets retain separate GPU and CPU limits, accept positive values through 21,600 seconds, and preserve edits while data refetches. When an external environment value overrides a budget, the UI identifies the override instead of suggesting a saved value will apply after restart. RAM and VRAM readouts poll only while this view is mounted.
 
 During synthesis, the fixed-width primary action polls the existing model-status contract and names the active runtime phase: starting the AI runtime, loading weights, warming speech recognition, optimizing the model, generating, or receiving audio. Model-load percentage and elapsed time share the reserved status line, and the progress track switches from model loading to streamed audio delivery without moving the controls.
 

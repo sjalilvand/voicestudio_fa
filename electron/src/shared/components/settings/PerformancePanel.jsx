@@ -1,19 +1,14 @@
 /**
  * Settings → Performance panel (Wave 2 INST-12 UI half).
  *
- * Toggles the `Disable torch.compile (Windows)` setting that backend
- * engine launchers read via `services.engine_env.build_engine_env()`.
- *
- * The toggle is disabled (with an explainer tooltip) on non-Windows
- * platforms — torch.compile OOMs the same Triton kernel cache
- * differently on macOS / Linux, so toggling it there would just slow
- * the engine for no gain (issue #65).
+ * Toggles the `Disable torch.compile` setting read by
+ * `services.engine_env.build_engine_env()`, on every platform since #2135.
  *
  * Endpoints:
  *   GET /api/settings/perf/torch-compile-disabled
  *     → {"enabled": bool, "platform": "darwin"|"linux"|"win32"}
  *   PUT /api/settings/perf/torch-compile-disabled
- *     body {"enabled": bool}  (loopback-only)
+ *     body {"enabled": bool}  (loopback-only; GET returns enabled + platform)
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import { Cpu } from 'lucide-react';
@@ -22,11 +17,9 @@ import { apiJson, apiFetch } from '../../api/client';
 import { SettingsSection, SettingRow, SettingsToggle } from './primitives';
 import RestartBadge from './RestartBadge';
 
-// CLEAN-ROOM (spec O-shivendra-3 §9): the torch.compile toggle must be live on every platform; this restored win32 gating is a placeholder.
 export default function PerformancePanel() {
   const { t } = useTranslation();
   const [enabled, setEnabled] = useState(false);
-  const [platform, setPlatform] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -37,7 +30,6 @@ export default function PerformancePanel() {
     try {
       const data = await apiJson('/api/settings/perf/torch-compile-disabled');
       setEnabled(Boolean(data?.enabled));
-      setPlatform(data?.platform ?? null);
     } catch (e) {
       setError(
         e?.message ||
@@ -51,8 +43,6 @@ export default function PerformancePanel() {
   useEffect(() => {
     refresh();
   }, [refresh]);
-
-  const isWindows = platform === 'win32';
 
   const onToggle = async (next) => {
     setSaving(true);
@@ -77,7 +67,7 @@ export default function PerformancePanel() {
   };
 
   const toggleLabel = t('settings.perf_torch_compile', {
-    defaultValue: 'Disable torch.compile (Windows)',
+    defaultValue: 'Disable torch.compile',
   });
 
   return (
@@ -95,31 +85,25 @@ export default function PerformancePanel() {
             <RestartBadge />
           </>
         }
-        subtitle={
-          !isWindows
-            ? platform === null
-              ? '…'
-              : t('settings.perf_torch_compile_na', {
-                  defaultValue: 'Windows only — not needed on this platform',
-                })
-            : undefined
-        }
-        note={
-          isWindows
-            ? t('settings.perf_torch_compile_note', {
-                defaultValue: 'Falls back to eager mode — fixes Triton OOM on <16 GB GPUs.',
-              })
-            : undefined
-        }
+        note={t('settings.perf_torch_compile_note', {
+          defaultValue: 'Uses eager execution to avoid compiler and GPU graph failures.',
+        })}
         hint={
           <Trans
             i18nKey="settings.perf_torch_compile_hint"
-            defaults="Workaround for <issueLink>#65</issueLink> — Windows users may hit Triton / <code>torch.compile</code> OOM during model load on GPUs with less than 16 GB VRAM. Enabling this sets <code>TORCH_COMPILE_DISABLE=1</code> on engine subprocesses, which falls back to eager mode. macOS and Linux are unaffected."
+            defaults="Sets <code>TORCH_COMPILE_DISABLE=1</code> for the engine and uses slower, dependable eager mode. Enable it when loading or generation reports Triton / <code>torch.compile</code> errors, or when the backend exits during generation. See <issueLink>#65</issueLink> for Windows OOMs below 16 GB VRAM and <crashLink>#2135</crashLink> for CUDA-graph crashes on older NVIDIA GPUs."
             components={{
               // Trans injects the link text ("#65") from the translation string.
               issueLink: (
                 <a
                   href="https://github.com/debpalash/VoiceStudio/issues/65"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              ),
+              crashLink: (
+                <a
+                  href="https://github.com/debpalash/VoiceStudio/issues/2135"
                   target="_blank"
                   rel="noopener noreferrer"
                 />
@@ -132,7 +116,7 @@ export default function PerformancePanel() {
           <SettingsToggle
             checked={enabled}
             onChange={onToggle}
-            disabled={!isWindows || saving || loading}
+            disabled={saving || loading}
             aria-label={toggleLabel}
             data-testid="torch-compile-toggle"
           />

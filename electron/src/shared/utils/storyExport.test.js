@@ -8,6 +8,8 @@ import {
   formatTimecode,
   tracksByCharacter,
   buildCueSheet,
+  cuesFromChapters,
+  cueSheetFilename,
 } from './storyExport';
 
 function fakeBuffer(samples, sampleRate = 24000) {
@@ -80,7 +82,12 @@ describe('chapter helpers', () => {
         { time: 0, title: 'Intro' },
         { time: 65, title: 'Two' },
       ]),
-    ).toBe('00:00:00 Intro\n00:01:05 Two');
+    ).toBe('00:00:00\tIntro\n00:01:05\tTwo');
+  });
+  it('collapses every field and line break in titles', () => {
+    expect(buildCueSheet([{ time: 0, title: ' A\t\n\r\v\f\u0085\u2028\u2029B ' }])).toBe(
+      '00:00:00\tA B',
+    );
   });
 });
 
@@ -97,4 +104,79 @@ describe('tracksByCharacter', () => {
     expect(groups[1].tracks).toHaveLength(1);
   });
 });
-// CLEAN-ROOM (spec O-shivendra-3 §10): describe blocks for cuesFromChapters and cueSheetFilename go here.
+describe('cuesFromChapters', () => {
+  it('places each heading at the accumulated millisecond boundary', () => {
+    const result = cuesFromChapters([
+      { title: 'Lighthouse', duration_ms: 2345 },
+      { title: 'Low Tide', duration_ms: 655 },
+      { title: 'Open Water' },
+    ]);
+    expect(result.map(({ time }) => time)).toEqual([0, 2.345, 3]);
+    expect(result.map(({ title }) => title)).toEqual(['Lighthouse', 'Low Tide', 'Open Water']);
+  });
+  it('treats unusable lengths as zero rather than corrupting later offsets', () => {
+    const malformed = [-4, NaN, 'unknown', Infinity].map((duration_s) => ({ duration_s }));
+    malformed.push({ duration_ms: -Infinity });
+    const offsets = cuesFromChapters([...malformed, { title: 'Safe shore' }]).map(
+      (cue) => cue.time,
+    );
+    expect(new Set(offsets)).toEqual(new Set([0]));
+    expect(offsets.every(Number.isFinite)).toBe(true);
+  });
+  it('accumulates fractional seconds through integer milliseconds', () => {
+    const sequence = Array.from({ length: 8 }, () => ({ duration_s: 0.125 }));
+    const finalCue = cuesFromChapters([...sequence, { title: 'Exactly one second' }]).at(-1);
+    expect(finalCue).toEqual({ time: 1, title: 'Exactly one second' });
+    expect(buildCueSheet([finalCue])).toBe('00:00:01\tExactly one second');
+  });
+  it('chooses exact milliseconds before legacy seconds', () => {
+    const result = cuesFromChapters([
+      { duration_ms: '2750', duration_s: 100 },
+      { duration_ms: '', duration_s: '1.5' },
+      { duration_ms: null, duration_s: 0.25 },
+      { title: 'Checkpoint' },
+    ]);
+    expect(result.at(-1)?.time).toBe(4.5);
+  });
+  it('allows an audiobook timeline to pass the 24-hour boundary', () => {
+    const later = cuesFromChapters([{ duration_ms: 93_600_875 }, { title: 'Day two' }])[1];
+    expect(later.time).toBe(93_600.875);
+    expect(buildCueSheet([later])).toBe('26:00:00\tDay two');
+  });
+  it('normalizes supplied headings and delegates missing names', () => {
+    const named = cuesFromChapters(
+      [{ title: '  Dawn  ' }, {}, { title: 'North\nStar' }],
+      (position) => `Segment-${position}`,
+    );
+    expect(named.map((cue) => cue.title)).toEqual(['Dawn', 'Segment-2', 'North Star']);
+    expect(cuesFromChapters([{}])).toMatchObject([{ title: 'Chapter 1' }]);
+  });
+  it.each([null, undefined, []])('accepts empty input %j', (value) => {
+    expect(cuesFromChapters(value)).toEqual([]);
+  });
+  it('needs no placeholders for chapters already removed by its caller', () => {
+    const deliveredOnly = [{ title: 'Before', duration_ms: 875 }, { title: 'After' }];
+    expect(cuesFromChapters(deliveredOnly).at(-1)).toEqual({ time: 0.875, title: 'After' });
+  });
+});
+
+describe('cueSheetFilename', () => {
+  it.each([
+    ['/tmp/sea-story.m4b', 'sea-story.txt'],
+    ['C:\\audio\\episode-07.MP3', 'episode-07.txt'],
+    ['ARCHIVE.M4B', 'ARCHIVE.txt'],
+    ['mixdown.wav', 'cuesheet.txt'],
+    ['extensionless', 'cuesheet.txt'],
+    ['', 'cuesheet.txt'],
+    [null, 'cuesheet.txt'],
+  ])('maps %j to %s', (input, expected) => {
+    expect(cueSheetFilename(input)).toBe(expected);
+  });
+  it('handles a hostile-length name without nonlinear work', () => {
+    const stem = 'z'.repeat(80_000);
+    const name = `${stem}.mp3`;
+    const started = performance.now();
+    expect(cueSheetFilename(name)).toBe(`${stem}.txt`);
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+});

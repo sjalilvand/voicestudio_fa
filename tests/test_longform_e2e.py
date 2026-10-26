@@ -557,7 +557,47 @@ def test_partial_failure_isolates_bad_chapter(tmp_path, monkeypatch):
     assert (out / done["output"]).exists()  # the surviving chapter still muxed
 
 
-# CLEAN-ROOM (spec O-shivendra-3 §3): e2e test that per-chapter duration_ms reproduces the embedded chapter start offsets.
+def test_delivered_chapter_timings_match_muxed_metadata_after_a_failure(tmp_path, monkeypatch):
+    out = tmp_path / "outputs"
+    out.mkdir()
+    chapter_text = [
+        ("Overture", "alpha"),
+        ("Broken bridge", "reject-this"),
+        ("Crossing", "gamma"),
+        ("Homeward", "delta"),
+    ]
+    events = _collect_events(
+        _plan(*chapter_text),
+        monkeypatch,
+        out,
+        fmt="m4b",
+        fail_on=lambda text: text.startswith("reject"),
+    )
+    chapters = [event for event in events if event["type"] == "chapter"]
+    assert [(event["index"], event["title"]) for event in chapters] == [
+        (0, "Overture"),
+        (2, "Crossing"),
+        (3, "Homeward"),
+    ]
+    timing_error = [
+        abs(event["duration_ms"] - round(1000 * event["duration_s"]))
+        for event in chapters
+    ]
+    assert all(type(event["duration_ms"]) is int for event in chapters)
+    assert max(timing_error) <= 5
+    total_ms = sum(map(lambda event: event["duration_ms"], chapters))
+    done = next(event for event in events if event["type"] == "done")
+    assert done["duration_s"] == pytest.approx(total_ms / 1000, abs=0.005)
+    if _FFPROBE:
+        embedded = _ffprobe(str(out / done["output"])).get("chapters", [])
+        assert [item["tags"]["title"] for item in embedded] == [
+            event["title"] for event in chapters
+        ]
+        expected_starts = [0]
+        for event in chapters[:-1]:
+            expected_starts.append(expected_starts[-1] + event["duration_ms"])
+        actual_starts = [round(float(item["start_time"]) * 1000) for item in embedded]
+        assert actual_starts == expected_starts
 
 def test_all_chapters_fail_emits_error_and_no_file(tmp_path, monkeypatch):
     out = tmp_path / "outputs"

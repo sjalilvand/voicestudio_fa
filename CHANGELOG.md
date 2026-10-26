@@ -1140,7 +1140,7 @@ This release also lets you replace a saved clone's reference sample, clones long
 - Edit a saved voice clone's reference sample: play it, replace it by upload or recording, and save back to the same voice (#2282) — thanks @Cengokill!
 - Answer Twilio phone calls in a saved voice: off by default, signed webhooks and single-use stream tokens, with a local phone-quality test (#2291)
 - Malayalam dubs and audiobooks speak numbers, percentages, and decimals in Malayalam instead of reading raw digits (#2280) — thanks @nikhilkilivayil!
-<!-- CLEAN-ROOM (spec O-shivendra-3 §3): Added entry for the chapter cue sheet download. -->
+- Download a TAB-separated chapter cue sheet after Stories or Audiobook renders, with M4B-matching timestamps that give MP3 files portable chapter markers (#2278) — thanks @shivsin25!
 - The OpenAI Agents integration page gives a copyable snippet that runs the Agents SDK voice pipeline on VoiceStudio (#2290)
 - The OpenAI-compatible API adds `GET /v1/models` and `POST /v1/audio/translations` (multilingual Whisper models; turbo models are refused) (#2290)
 - Speech requests accept `stream_format` (`audio` or `sse`) and OpenAI's `{"id": ...}` voice object (#2290)

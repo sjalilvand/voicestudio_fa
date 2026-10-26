@@ -107,7 +107,9 @@ None of them are required — the defaults are chosen for the common case.
 | `OMNIVOICE_GPU_QUEUE_TIMEOUT_S` | `1800` | How long a job may sit in the GPU queue before it's reported as a saturated pool (a retryable condition — nothing ran). Waiting is normal on 1-worker machines; lower this only if you'd rather fail fast than queue. |
 | `OMNIVOICE_PROGRESS_EXTENSION_CAP_S` | `1800` | Extra time a job that keeps reporting progress (a model download heartbeat, a finished chunk) may run past its budget — the larger of this and three times the job's own budget. A job that goes silent still stops at its budget. Replaces the old name `OMNIVOICE_MODEL_LOAD_TIMEOUT_S`, which is still accepted but deprecated; it is unrelated to the cold-load ceiling `OMNIVOICE_MODEL_LOAD_TIMEOUT`. The app waits out the backend's longest default budget before it gives up on a request itself. |
 
-<!-- CLEAN-ROOM (spec O-shivendra-3 §6): torch.compile paragraph and per-GPU compile-mode paragraph. -->
+`torch.compile` is controlled by capability probes, not an operating-system allowlist. It is attempted only for CUDA when Triton can be imported and the GPU architecture is supported; CPU, MPS, and ordinary Windows installations without a Triton wheel use eager execution. **Settings → Performance → Disable torch.compile** is available on every host for partial Triton installs or GPUs whose compiled kernels fail. The environment alternatives `TORCH_COMPILE_DISABLE=1`, `TORCHDYNAMO_DISABLE=1`, and `TORCHINDUCTOR_DISABLE=1` apply to both the in-process model and subprocess engines. See the [Windows troubleshooting guide](install/windows.md#torch-compile-oom).
+
+On Ampere (sm_80) and newer CUDA devices, the compile mode is `reduce-overhead`, which uses CUDA graphs. Turing and Volta devices such as the Tesla T4 use `default`: Inductor kernels remain compiled, but graph capture is omitted because it could terminate the backend ([#2135](https://github.com/debpalash/VoiceStudio/issues/2135)). `OMNIVOICE_FORCE_CUDAGRAPH=1` restores the graph mode for controlled benchmarking.
 
 ## Warnings before a slow generation
 

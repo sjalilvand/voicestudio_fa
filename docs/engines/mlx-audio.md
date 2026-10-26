@@ -98,7 +98,7 @@ app's model download flow rather than installing into an unrelated system Python
   the model's callable signature does not accept them; supported voice,
   reference and language inputs, plus voice-design instructions (`instruct`),
   remain in the same request.
-<!-- CLEAN-ROOM (spec O-shivendra-3 §5): bullet explaining cloning works only with the csm model and the refusal message behaviour. -->
+- Of the curated choices, only `csm` is confirmed to consume a reference clip; the other models disregard reference audio. MLX-Audio therefore advertises cloning only when CSM is selected, and dub and batch jobs use that capability flag. Starting a dub, batch, or voice-conversion job with another model is refused with an error that names the active model and directs you to **CSM (voice cloning)** in Model Catalogue; switching engines remains an alternative. See [#2201](https://github.com/debpalash/VoiceStudio/issues/2201).
 - Voice design (text description → voice) is available through the
   Qwen3-TTS VoiceDesign model.
 - Language support is per-model (Kokoro ~8 languages, others vary). An

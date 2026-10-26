@@ -28,7 +28,32 @@ _TORCH_COMPILE_KEY = "perf.torch_compile_disabled"
 # (e.g. a brand-new architecture running through PTX forward-compat).
 _FORCE_COMPILE_ENV = "OMNIVOICE_FORCE_TORCH_COMPILE"
 
-# CLEAN-ROOM (spec O-shivendra-3 §2): compile-disable env var list, truthy set, env-opt-out helper and settings-DB-path helper.
+_COMPILE_OPT_OUT_VARIABLES = (
+    "TORCH_COMPILE_DISABLE",
+    "TORCHDYNAMO_DISABLE",
+    "TORCHINDUCTOR_DISABLE",
+)
+_OPT_OUT_VALUES = {"yes", "true", "on", "1"}
+
+
+def compile_opt_out_name() -> Optional[str]:
+    """Name the first parent-process switch requesting eager execution."""
+    for variable in _COMPILE_OPT_OUT_VARIABLES:
+        setting = os.getenv(variable)
+        if setting is not None and setting.strip().casefold() in _OPT_OUT_VALUES:
+            return variable
+    return None
+
+
+def _settings_db_path() -> str:
+    """Produce a privacy-filtered identifier for the settings store."""
+    try:
+        from core.config import DB_PATH
+        from core.scrub import scrub_text
+
+        return scrub_text(str(DB_PATH))
+    except Exception:
+        return "<unknown>"
 
 # #278: set (with a reason) the first time torch.compile — or *running* the
 # compiled model — fails at runtime in this process. Once set, every later
@@ -252,7 +277,10 @@ def should_torch_compile(device: str) -> bool:
     """
     if device != "cuda":
         return False
-    # CLEAN-ROOM (spec O-shivendra-3 §2): env-var compile opt-out gate, evaluated before the Triton check.
+    environment_switch = compile_opt_out_name()
+    if environment_switch:
+        logger.info("%s requests eager execution; torch.compile will not run.", environment_switch)
+        return False
     if importlib.util.find_spec("triton") is None:
         logger.info("torch.compile skipped: Triton unavailable — using eager mode.")
         return False
@@ -260,9 +288,15 @@ def should_torch_compile(device: str) -> bool:
         from services import settings_store
 
         if settings_store.get_text(_TORCH_COMPILE_KEY, "0") == "1":
-            # CLEAN-ROOM (spec O-shivendra-3 §2): info log (including the settings DB path) that compile is skipped due to Settings.
+            logger.info(
+                "Performance settings in %s select eager execution; skipping torch.compile.",
+                _settings_db_path(),
+            )
             return False
-        # CLEAN-ROOM (spec O-shivendra-3 §2): debug log naming the settings DB when the toggle is not set.
+        logger.debug(
+            "Compile remains eligible because %s is off in settings database %s.",
+            _TORCH_COMPILE_KEY, _settings_db_path(),
+        )
     except Exception:
         logger.exception("should_torch_compile: settings read failed; proceeding")
     if _compile_runtime_failure is not None:
@@ -341,7 +375,6 @@ def build_engine_env(
         except Exception:
             logger.exception("build_engine_env: token resolver failed (non-fatal)")
 
-    # CLEAN-ROOM (spec O-shivendra-3 §2): the settings-toggle -> TORCH_COMPILE_DISABLE injection below applies on every platform.
     try:
         from services import settings_store
 
@@ -350,6 +383,12 @@ def build_engine_env(
     except Exception:
         logger.exception("build_engine_env: torch_compile_disabled read failed")
 
-    # CLEAN-ROOM (spec O-shivendra-3 §2): forward a parent-process compile-disable env opt-out to the engine subprocess env.
+    inherited_opt_out = compile_opt_out_name()
+    if inherited_opt_out and env.get("TORCH_COMPILE_DISABLE") != "1":
+        env["TORCH_COMPILE_DISABLE"] = "1"
+        logger.debug(
+            "Engine child receives TORCH_COMPILE_DISABLE because the parent set %s.",
+            inherited_opt_out,
+        )
 
     return env

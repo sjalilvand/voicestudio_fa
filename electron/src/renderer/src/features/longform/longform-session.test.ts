@@ -37,7 +37,42 @@ it('resumes a manifest without submitting edited script and accepts only termina
   expect(longformSession.state.drafts.audiobook.output).toBe('new.m4b');
   expect(longformSession.state.failed).toBe(1);
 });
-// CLEAN-ROOM (spec O-shivendra-3 §3): test case for exact chapter milliseconds kept on rendered chapters; and (§8) test case for live per-chunk progress events.
+it('stores exact timing on delivered chapters and leaves errors untimed', async () => {
+  fetchMock.mockResolvedValue(
+    eventResponse([
+      { type: 'started', chapters: 3 },
+      { type: 'chapter', index: 0, title: 'Ember', duration_s: 2.71, duration_ms: 2718 },
+      { type: 'chapter_error', index: 1, title: 'Ash', error: 'synthesis stopped' },
+      { type: 'chapter', index: 2, title: 'Flame', duration_s: 0.75, cached: true },
+      { type: 'done', output: 'edition.m4b', failed_chapters: [1] },
+    ]),
+  );
+  await renderLongform('audiobook');
+  expect(longformSession.state.drafts.audiobook.outputChapters).toEqual([
+    { title: 'Ember', status: 'done', duration_s: 2.71, duration_ms: 2718 },
+    { title: 'Ash', status: 'failed', error: 'synthesis stopped' },
+    { title: 'Flame', status: 'cached', duration_s: 0.75 },
+  ]);
+});
+
+it('maps progress telemetry and timestamps the most recent activity', async () => {
+  fetchMock.mockResolvedValue(
+    eventResponse([
+      { type: 'started', chapters: 1 },
+      { type: 'progress', fraction: 0.625, eta_s: 19, rtf: 0.82, chunk_s: 3.125 },
+      { type: 'done', output: 'edition.m4b', failed_chapters: [] },
+    ]),
+  );
+  await renderLongform('audiobook');
+  expect(longformSession.state.progress).toMatchObject({
+    fraction: 0.625,
+    etaS: 19,
+    rtf: 0.82,
+    chunkS: 3.125,
+  });
+  expect(longformSession.state.startedAt).toEqual(expect.any(Number));
+  expect(longformSession.state.lastActivityAt).toBe(longformSession.state.progress?.receivedAt);
+});
 it('stop aborts the network request and blocks duplicate renders', async () => {
   fetchMock.mockImplementation(
     (_url, options) =>

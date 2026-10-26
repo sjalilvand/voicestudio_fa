@@ -1,10 +1,12 @@
-"""Tests for backend/api/routers/settings.py perf endpoints + engine_env helper.
+"""Tests for performance settings and subprocess compile-disable propagation.
 
 Covers INST-12 (Disable torch.compile Windows toggle):
   - GET /api/settings/perf/torch-compile-disabled returns the default + platform.
   - PUT round-trips through the settings_store (persisted as text "1"/"0").
   - PUT from a non-loopback origin is rejected with 403 (threat T-02-04).
-  (INST-12 test intro lines on engine_env behaviour removed; see spec §11.)
+  - The saved flag injects TORCH_COMPILE_DISABLE=1 on every platform.
+  - A parent compile opt-out reaches child environments.
+  - With neither source, the variable is absent.
 """
 from __future__ import annotations
 
@@ -122,7 +124,40 @@ def test_env_injection_when_enabled_on_windows(monkeypatch, tmp_path):
     assert env.get("TORCH_COMPILE_DISABLE") == "1"
 
 
-# CLEAN-ROOM (spec O-shivendra-3 §11): tests for env injection on non-Windows platforms and for parent env opt-out propagating to the child env.
+@pytest.mark.parametrize("platform", ["darwin", "linux"])
+def test_env_injection_when_enabled_on_other_platforms(monkeypatch, tmp_path, platform):
+    from huggingface_hub import constants
+    monkeypatch.setattr(constants, "HF_TOKEN_PATH", str(tmp_path / "hf-token"))
+    monkeypatch.setattr(constants, "HF_STORED_TOKENS_PATH", str(tmp_path / "stored_tokens"))
+    monkeypatch.setenv("OMNIVOICE_DATA_DIR", str(tmp_path))
+    for mod in list(sys.modules):
+        if mod == "core" or mod.startswith("core.") or mod == "services" or mod.startswith("services."):
+            del sys.modules[mod]
+    from core import db as _db
+    _db.init_db()
+    from services import engine_env, settings_store, token_resolver
+    settings_store.set_text("perf.torch_compile_disabled", "1")
+    monkeypatch.setattr(token_resolver, "resolve", lambda **kw: None)
+    monkeypatch.setattr(sys, "platform", platform)
+    assert engine_env.build_engine_env(base_env={})["TORCH_COMPILE_DISABLE"] == "1"
+
+
+def test_parent_compile_opt_out_propagates(monkeypatch, tmp_path):
+    from huggingface_hub import constants
+    monkeypatch.setattr(constants, "HF_TOKEN_PATH", str(tmp_path / "hf-token"))
+    monkeypatch.setattr(constants, "HF_STORED_TOKENS_PATH", str(tmp_path / "stored_tokens"))
+    monkeypatch.setenv("OMNIVOICE_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("TORCH_COMPILE_DISABLE", "1")
+    for mod in list(sys.modules):
+        if mod == "core" or mod.startswith("core.") or mod == "services" or mod.startswith("services."):
+            del sys.modules[mod]
+    from core import db as _db
+    _db.init_db()
+    from services import engine_env, settings_store, token_resolver
+    settings_store.set_text("perf.torch_compile_disabled", "0")
+    monkeypatch.setattr(token_resolver, "resolve", lambda **kw: None)
+    monkeypatch.setattr(sys, "platform", "linux")
+    assert engine_env.build_engine_env(base_env={})["TORCH_COMPILE_DISABLE"] == "1"
 
 
 def test_no_env_injection_when_disabled(monkeypatch, tmp_path):
@@ -142,6 +177,7 @@ def test_no_env_injection_when_disabled(monkeypatch, tmp_path):
     settings_store.set_text("perf.torch_compile_disabled", "0")
     monkeypatch.setattr(token_resolver, "resolve", lambda **kw: None)
     monkeypatch.setattr(sys, "platform", "win32")
-    # CLEAN-ROOM (spec O-shivendra-3 §11): clear the three compile-disable env vars before building the env, so ambient env cannot satisfy the assertion.
+    for name in ("TORCH_COMPILE_DISABLE", "TORCHDYNAMO_DISABLE", "TORCHINDUCTOR_DISABLE"):
+        monkeypatch.delenv(name, raising=False)
     env = engine_env.build_engine_env(base_env={})
     assert "TORCH_COMPILE_DISABLE" not in env

@@ -168,7 +168,7 @@ def set_performance_profile(body: _PerformanceProfileBody):
 
 
 class _TorchCompileBody(BaseModel):
-    enabled: bool  # CLEAN-ROOM (spec O-shivendra-3 §2): Field description text for the request body.
+    enabled: bool = Field(..., description="True disables torch.compile and selects eager execution")
 
 
 def _torch_compile_state() -> dict:
@@ -181,13 +181,13 @@ def _torch_compile_state() -> dict:
 
 @router.get("/perf/torch-compile-disabled")
 def get_torch_compile_disabled():
-    # CLEAN-ROOM (spec O-shivendra-3 §2): docstring describing the GET response (toggle + platform, live on every host).
+    """Return the cross-platform compile-disable toggle and runtime platform."""
     return _torch_compile_state()
 
 
 @router.put("/perf/torch-compile-disabled")
 def set_torch_compile_disabled(body: _TorchCompileBody):
-    # CLEAN-ROOM (spec O-shivendra-3 §2): docstring saying the toggle is honoured by both engine-env builders and the in-process gate, on every platform.
+    """Persist the toggle used by subprocess environments and in-process compile gates on every host."""
     from services import settings_store
 
     try:

@@ -102,10 +102,49 @@ export function tracksByCharacter(tracks) {
   return groups;
 }
 
-/** Build a chapter cue sheet string from {time,title} cues. */
-export function buildCueSheet(chapters) {
-  // CLEAN-ROOM (spec O-shivendra-3 §10): this keeps the pre-existing space-separated shape; reimplement per spec (tab separator, title sanitising), and add cuesFromChapters and cueSheetFilename here.
-  return (chapters || []).map((c) => `${formatTimecode(c.time)} ${c.title}`).join('\n');
+const CUE_FIELD_BREAK = /[\t\n\r\v\f\u0085\u2028\u2029]+/g;
+
+function cueTitle(value) {
+  return String(value ?? '')
+    .replace(CUE_FIELD_BREAK, ' ')
+    .trim();
+}
+
+function numericDuration(value) {
+  if (value == null || (typeof value === 'string' && !value.trim())) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+/** Convert ordered cues to a tab-delimited, newline-separated text document. */
+export function buildCueSheet(cues) {
+  const rows = [];
+  for (const cue of cues ?? []) rows.push(`${formatTimecode(cue.time)}\t${cueTitle(cue.title)}`);
+  return rows.join('\n');
+}
+
+export function cuesFromChapters(chapters, fallbackTitle = (position) => `Chapter ${position}`) {
+  const result = [];
+  let cursorMs = 0;
+  for (const [index, chapter] of (chapters ?? []).entries()) {
+    const suppliedTitle = cueTitle(chapter?.title);
+    result.push({
+      title: suppliedTitle || cueTitle(fallbackTitle(index + 1)),
+      time: cursorMs / 1000,
+    });
+    const milliseconds = numericDuration(chapter?.duration_ms);
+    const seconds = numericDuration(chapter?.duration_s);
+    const contribution = milliseconds === undefined ? (seconds ?? 0) * 1000 : milliseconds;
+    cursorMs += Math.max(0, Math.round(contribution));
+  }
+  return result;
+}
+
+export function cueSheetFilename(output) {
+  const segments = String(output ?? '').split(/[\\/]/);
+  const leaf = segments.at(-1) ?? '';
+  const audioSuffix = /\.(?:m4b|mp3)$/i;
+  return audioSuffix.test(leaf) ? leaf.replace(audioSuffix, '.txt') : 'cuesheet.txt';
 }
 
 /**

@@ -467,7 +467,14 @@ class TTSBackend(ABC):
     max_ref_seconds: Optional[float] = None
     ref_strategy: Optional[str] = None
 
-    # CLEAN-ROOM (spec O-shivendra-3 §5): base-class cloning_model_keys attribute and cloning_model_labels classmethod.
+    #: Curated model-picker keys that accept reference audio for adapters whose
+    #: cloning capability depends on the selected model.
+    cloning_model_keys: tuple[str, ...] = ()
+
+    @classmethod
+    def cloning_model_labels(cls) -> tuple[str, ...]:
+        """Expose the declared keys using their default picker text."""
+        return tuple(cls.cloning_model_keys)
 
     #: GPU/accelerator targets the engine can run on. Surfaced via the
     #: Engine Compatibility Matrix (Plan 02-04 / ENGINE-06) so users can
@@ -2840,6 +2847,12 @@ class MLXAudioBackend(TTSBackend):
     gpu_compat = ("mps", "cpu")
     # generate() seeds mlx's RNG from the request's seed.
     supports_generation_seed = True
+    cloning_model_keys = ("csm",)
+
+    @classmethod
+    def cloning_model_labels(cls) -> tuple[str, ...]:
+        labels = _MLX_AUDIO_MODEL_LABELS
+        return tuple(labels.get(model_key, model_key) for model_key in cls.cloning_model_keys)
 
     # A curated subset surfaced by default — the full mlx-audio roster is
     # larger but these cover the useful tiers: small multilingual (Kokoro),
@@ -2972,8 +2985,7 @@ class MLXAudioBackend(TTSBackend):
         curated set, only CSM (`mlx-community/csm-1b-8bit`) is confirmed to
         accept a reference prompt — default False for every other model,
         curated or user-supplied, until positively confirmed."""
-        # CLEAN-ROOM (spec O-shivendra-3 §5): derive from the declared cloning model keys; and declare the cloning_model_keys list + cloning_model_labels classmethod here.
-        return self._model_id == self.CURATED_MODELS.get("csm")
+        return self._curated_key() in self.cloning_model_keys
 
     def _ensure_loaded(self):
         if self._model is not None:
@@ -4328,7 +4340,35 @@ def _installed_kokoro_language_options() -> list[str]:
 
 
 
-# CLEAN-ROOM (spec O-shivendra-3 §5): cloning_unavailable_detail(engine_id, backend, cloning_purpose) -> str goes here.
+def cloning_unavailable_detail(engine_id: str, backend, cloning_purpose: str) -> str:
+    """Explain a cloning refusal, including a model change when applicable."""
+    adapter_type = backend.__class__
+    class_capability = getattr(adapter_type, "supports_cloning", True)
+    picker_names: tuple[str, ...]
+    try:
+        label_method = getattr(adapter_type, "cloning_model_labels")
+        picker_names = tuple(filter(None, map(str, label_method())))
+    except Exception:
+        picker_names = ()
+
+    alternatives = ", ".join(cloning_capable_engine_ids())
+    if picker_names and not isinstance(class_capability, bool):
+        try:
+            current_model = str(backend.model_identity() or "").strip()
+        except Exception:
+            current_model = ""
+        model_suffix = f" (currently {current_model})" if current_model else ""
+        return (
+            f"'{engine_id}' supports reference voices, but its selected model{model_suffix} does not. "
+            f"That prevents {cloning_purpose} from retaining each speaker. Choose "
+            f"{' or '.join(picker_names)} for this engine in Model Catalogue; the remaining settings "
+            f"can stay as they are. You can instead choose one of these engines: {alternatives}."
+        )
+    return (
+        f"The active TTS engine '{engine_id}' doesn't support voice cloning, "
+        f"so {cloning_purpose} can't preserve speaker voices. Switch to one "
+        f"of: {alternatives} in Model Catalogue, or use OmniVoice for this job."
+    )
 
 
 def cloning_capable_engine_ids() -> list[str]:
@@ -4795,13 +4835,7 @@ async def resolve_generation_backend(
     backend = get_active_tts_backend(model=_model)
 
     if require_cloning and not getattr(backend, "supports_cloning", True):
-        # CLEAN-ROOM (spec O-shivendra-3 §5): use the shared cloning-unavailable message builder here; until then this keeps the original engine-level wording.
-        raise ValueError(
-            f"The active TTS engine '{engine_id}' doesn't support voice cloning, "
-            f"so {cloning_purpose} can't preserve speaker voices. Switch to one "
-            f"of: {', '.join(cloning_capable_engine_ids())} in "
-            "Model Catalogue, or use OmniVoice for this job."
-        )
+        raise ValueError(cloning_unavailable_detail(engine_id, backend, cloning_purpose))
 
     return backend
 

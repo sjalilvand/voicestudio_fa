@@ -6,17 +6,19 @@ import {
   FingerprintIcon,
   ImportIcon,
   LanguagesIcon,
-  // CLEAN-ROOM (spec O-shivendra-3 §7): trash icon import for the Clear script button.
+  Trash2Icon,
 } from 'lucide-react';
 import { AudioLinesIcon } from 'lucide-react';
 import { SecondarySidebar } from '@/components/workspace-sidebar';
 import { WorkspaceHeader } from '@/components/app-shell/workspace-header';
 import { PipelineFailure } from '@/components/pipeline-failure';
 import { importToText } from '@shared/utils/importStory';
-// CLEAN-ROOM (spec O-shivendra-3 §3): imports for the cue-sheet builder and the native local-file save helper.
+import { cueSheetFor } from './cue-sheet';
+import { saveLocalFile } from '@/lib/local-export';
 import { StoryEditor } from './story-editor';
 import { StoryCast } from './story-cast';
-// CLEAN-ROOM (spec O-shivendra-3 §7): imports for the clear-script helpers and ConfirmDialog.
+import { clearedScriptPatch, scriptSize } from './story-clear';
+import { ConfirmDialog } from '../clone/confirm-dialog';
 import { AudiobookMarkupToolbar } from './audiobook-markup-toolbar';
 import { ChapterOutline } from './chapter-outline';
 import { storyVoicesReady } from './story-inputs';
@@ -37,7 +39,7 @@ import { duplicateWords } from './book-options';
 import { useMemo, useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { DownloadIcon, SparklesIcon } from 'lucide-react';
+import { DownloadIcon, ListIcon, SparklesIcon } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
@@ -83,11 +85,16 @@ export function LongformPage({ mode }: { mode: Mode }) {
   const [localError, setLocalError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [warningsDismissed, setWarningsDismissed] = useState(false);
-  // CLEAN-ROOM (spec O-shivendra-3 §7): open/closed state for the clear-script confirm dialog.
+  const [scriptResetRequested, setScriptResetRequested] = useState(false);
   const [scriptCaret, setScriptCaret] = useState(0);
   const audiobookInput = useRef<HTMLTextAreaElement>(null);
   const locked = !!session.active || importing;
-  // CLEAN-ROOM (spec O-shivendra-3 §7): scriptLines = how many items a clear would remove.
+  const resetEntryCount = scriptSize(mode, draft);
+  const resetIsUnavailable = locked || resetEntryCount < 1;
+  const resetMessage =
+    mode === 'audiobook'
+      ? t('stories.clearConfirmScript')
+      : t('stories.clearConfirm', { count: resetEntryCount });
   const set = (value: Parameters<typeof editLongform>[1]) => editLongform(mode, value);
   const usable =
     mode === 'audiobook'
@@ -191,7 +198,20 @@ export function LongformPage({ mode }: { mode: Mode }) {
       setExporting(false);
     }
   };
-  // CLEAN-ROOM (spec O-shivendra-3 §3): derive the cue sheet from the draft and provide a handler that saves it with the native save helper.
+  const downloadableCues = cueSheetFor(draft.outputChapters, draft.output, (n) =>
+    t('audiobook.chapter_n', { n }),
+  );
+  const saveCueSheet = async () => {
+    if (downloadableCues === null) return;
+    setLocalError(null);
+    const { body, filename } = downloadableCues;
+    try {
+      const textFile = new Blob([body], { type: 'text/plain;charset=utf-8' });
+      await saveLocalFile(textFile, filename);
+    } catch (cause) {
+      setLocalError(describeError(cause));
+    }
+  };
   return (
     <div className="flex h-full min-h-0 flex-col">
       <WorkspaceHeader>
@@ -369,7 +389,24 @@ export function LongformPage({ mode }: { mode: Mode }) {
                   }}
                 />
               </label>
-              {/* CLEAN-ROOM (spec O-shivendra-3 §7): Clear script button and its ConfirmDialog sit here, after the Import control. */}
+              <Button
+                variant="ghost"
+                size="sm"
+                title={t('stories.clearScriptHint')}
+                disabled={resetIsUnavailable}
+                onClick={() => setScriptResetRequested(true)}
+              >
+                <Trash2Icon />
+                {t('stories.clearScript')}
+              </Button>
+              <ConfirmDialog
+                open={scriptResetRequested}
+                onOpenChange={(nextOpen) => setScriptResetRequested(nextOpen)}
+                title={t('stories.clearScript')}
+                description={resetMessage}
+                confirmLabel={t('stories.clearScript')}
+                onConfirm={() => set(clearedScriptPatch(mode))}
+              />
               {mode === 'audiobook' && !draft.script.trim() && (
                 <Button
                   variant="ghost"
@@ -485,7 +522,13 @@ export function LongformPage({ mode }: { mode: Mode }) {
                       </p>
                     )}
                   </div>
-                    {/* CLEAN-ROOM (spec O-shivendra-3 §3): a Download cue sheet button, shown only when a cue sheet exists, sits beside the Download button. */}
+                  <div className="flex items-center gap-1">
+                    {downloadableCues !== null && (
+                      <Button variant="ghost" size="sm" onClick={() => void saveCueSheet()}>
+                        <ListIcon />
+                        {t('audiobook.download_cues')}
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
@@ -495,6 +538,7 @@ export function LongformPage({ mode }: { mode: Mode }) {
                       <DownloadIcon />
                       {t('audiobook.download')}
                     </Button>
+                  </div>
                 </div>
                 {mode === 'audiobook' ? (
                   <SyncedAudiobookPlayer

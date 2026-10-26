@@ -4,11 +4,25 @@ interface Track {
   profileId?: string | null;
   speed?: number | null;
 }
-// CLEAN-ROOM (spec O-shivendra-3 §10): Cue and RenderedChapter interfaces go here.
+export interface Cue {
+  title: string;
+  time: number;
+}
+export interface RenderedChapter {
+  duration_ms?: number | string;
+  duration_s?: number | string;
+  title?: string;
+}
+
 export function isChapterLine(text: string): boolean;
 export function chapterTitle(text: string): string;
 export function formatTimecode(sec: number): string;
-// CLEAN-ROOM (spec O-shivendra-3 §10): declarations for buildCueSheet, cuesFromChapters and cueSheetFilename go here.
+export function buildCueSheet(cues: Cue[] | null | undefined): string;
+export function cueSheetFilename(output: string | null | undefined): string;
+export function cuesFromChapters(
+  chapters: readonly RenderedChapter[] | null | undefined,
+  fallbackTitle?: (n: number) => string,
+): Cue[];
 export function exportStoryAudio<T extends Track>(
   tracks: T[],
   resolve: (track: T) => { profileId: string | null; speed: number | null },

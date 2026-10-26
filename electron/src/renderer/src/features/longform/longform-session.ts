@@ -36,7 +36,7 @@ export interface AudiobookRenderChapter {
   title: string;
   status: string;
   duration_s?: number;
-  // CLEAN-ROOM (spec O-shivendra-3 §3): optional exact-millisecond duration field.
+  duration_ms?: number;
   error?: string;
 }
 export interface Draft extends BookOptions {
@@ -171,6 +171,11 @@ export const useLongformSession = () => useStore(longformSession);
 /** Fences document imports that finish after a new dub replaces the Stories draft. */
 export const storiesImportEpoch = { current: 0 };
 const patch = (value: Partial<Session>) => longformSession.setState((s) => ({ ...s, ...value }));
+const optionalFiniteNumber = (value: unknown): number | undefined => {
+  if (value === null || value === undefined) return undefined;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : undefined;
+};
 /** Mirror the live render into the app-wide activity store (notifications, other page). */
 function publishActivity() {
   const s = longformSession.state;
@@ -333,14 +338,14 @@ export async function renderLongform(mode: Mode, resumeId?: string) {
         }
         if (event.type === 'chapter' || event.type === 'chapter_error') {
           const index = Number(event.index);
-          if (Number.isInteger(index) && index >= 0 && index < outputChapters.length)
-            outputChapters[index] = {
+          if (Number.isInteger(index) && index >= 0 && index < outputChapters.length) {
+            const exactMilliseconds = optionalFiniteNumber(event.duration_ms);
+            const chapterUpdate: AudiobookRenderChapter = {
               title: typeof event.title === 'string' ? event.title : '',
               status: event.type === 'chapter_error' ? 'failed' : event.cached ? 'cached' : 'done',
               ...(Number.isFinite(Number(event.duration_s))
                 ? { duration_s: Number(event.duration_s) }
                 : {}),
-              // CLEAN-ROOM (spec O-shivendra-3 §3): keep a finite duration_ms from the chapter event as an optional field.
               ...(event.type === 'chapter_error'
                 ? {
                     error:
@@ -352,6 +357,9 @@ export async function renderLongform(mode: Mode, resumeId?: string) {
                   }
                 : {}),
             };
+            if (exactMilliseconds !== undefined) chapterUpdate.duration_ms = exactMilliseconds;
+            outputChapters[index] = chapterUpdate;
+          }
           patch({
             lastActivityAt: Date.now(),
             completed: Number(event.index) + 1,
