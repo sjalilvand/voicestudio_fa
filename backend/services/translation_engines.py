@@ -52,12 +52,7 @@ REGISTRY: dict[str, dict] = {
         "id": "argos",
         "display_name": "Argos (Local, Fast)",
         "pip_package": "argostranslate",
-        # `argostranslate.translate`, not the bare package: the translator runs
-        # on CTranslate2, and the bare package imports fine on a host whose
-        # kernel rejects CTranslate2's native library (#692) — so a shallow
-        # probe advertised Argos as ready and every translate 500'd. Probe the
-        # module that actually pulls the native dep (same lesson as #1185).
-        "probe_module": "argostranslate.translate",
+        "probe_module": "argostranslate",  # CLEAN-ROOM (spec B §3): set the right probe module
         "category": "offline",
         "needs_key": False,
         "builtin": True,
@@ -173,18 +168,7 @@ def _probe(entry: dict, *, import_check: bool = True) -> tuple[bool, str | None]
         if entry.get("id") == "nllb":
             return _nllb_weights_probe()
         return True, None
-    if mod.startswith("argostranslate"):
-        # Repair CTranslate2's exec-stack request before the import that would
-        # be rejected by it (#692) — otherwise Argos, the default offline
-        # engine, is unusable on kernels that refuse an executable stack.
-        try:
-            from core.execstack import ensure_ctranslate2_loadable
-
-            ok, detail = ensure_ctranslate2_loadable()
-            if not ok:
-                return False, detail
-        except Exception as e:  # noqa: BLE001 — a broken repair must not hide the engine
-            logger.debug("exec-stack repair unavailable (%s) — probing anyway", e)
+    # CLEAN-ROOM (spec B §3): Argos exec-stack repair before import
     try:
         importlib.import_module(mod)
         if entry.get("id") == "nllb":
@@ -195,11 +179,7 @@ def _probe(entry: dict, *, import_check: bool = True) -> tuple[bool, str | None]
         return True, None
     except ImportError as e:
         return False, f"import {mod!r} failed: {e}"
-    except Exception as e:  # noqa: BLE001
-        # A native library that refuses to load raises OSError, not ImportError
-        # (#692). An availability probe must report "unusable here", never take
-        # the engine list down with it.
-        return False, f"import {mod!r} failed ({type(e).__name__}): {e}"
+    # CLEAN-ROOM (spec B §3): catch native load failures
 
 
 def install_command(engine: "str | dict | None") -> str | None:

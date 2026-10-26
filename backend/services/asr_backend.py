@@ -292,24 +292,7 @@ def _ctranslate2_cudnn_ok() -> tuple[bool, str]:
         return True, "ready"
 
 
-def _ctranslate2_execstack_ok() -> tuple[bool, str]:
-    """Make CTranslate2 importable on kernels that refuse an executable stack.
-
-    ctranslate2 ≤4.4.0 — the version whisperx 3.4.5 pins, and 3.4.5 is the
-    newest release that supports the Python 3.11 we ship — marks its native
-    library's stack ``RWE``. Kernels that refuse the request fail the dlopen
-    with "cannot enable executable stack", killing whisperx, faster-whisper
-    *and* Argos translation (#692). :mod:`core.execstack` clears that one bit
-    in place, so call this BEFORE importing either engine; it cheaply rechecks the library and
-    only writes when the library would otherwise refuse to load.
-    """
-    try:
-        from core.execstack import ensure_ctranslate2_loadable
-
-        return ensure_ctranslate2_loadable()
-    except Exception as e:  # noqa: BLE001 — a broken repair must not block ASR
-        logger.debug("exec-stack repair unavailable (%s) — continuing", e)
-        return True, "repair probe unavailable"
+# CLEAN-ROOM (spec B §3): CTranslate2 exec-stack helper
 
 
 def _decode_audio_16k_mono(audio_path: str):
@@ -777,9 +760,7 @@ class WhisperXBackend(ASRBackend):
 
         if reason := pipeline_error():
             return False, reason
-        ct2_ok, ct2_detail = _ctranslate2_execstack_ok()
-        if not ct2_ok:
-            return False, f"whisperx cannot load CTranslate2: {ct2_detail}"
+        # CLEAN-ROOM (spec B §3): whisperx probe check
         try:
             prepare_audio_imports()
             import whisperx  # noqa: F401
@@ -812,14 +793,7 @@ class WhisperXBackend(ASRBackend):
         # → speechbrain, or a stray k2_fsa redirect import aborts ASR on Windows
         # (#630/#611/#647). No-op on macOS/Linux and when speechbrain is absent.
         _harden_speechbrain_lazy_imports()
-        # #692: repair CTranslate2's exec-stack request before the import that
-        # would be rejected by it. Memoized, so this is free after the probe.
-        ct2_ok, ct2_detail = _ctranslate2_execstack_ok()
-        if not ct2_ok:
-            # ImportError (not RuntimeError): this IS a native-import failure,
-            # and the sentinel lets load_active_asr_backend degrade to the next
-            # engine instead of failing ASR wholesale (#1185).
-            raise ImportError(f"whisperx cannot load CTranslate2: {ct2_detail}")
+        # CLEAN-ROOM (spec B §3): whisperx load check
         prepare_audio_imports()
         import whisperx
         # #723: re-check the CUDA pick against *currently free* VRAM — the TTS
@@ -1180,9 +1154,7 @@ class FasterWhisperBackend(ASRBackend):
 
         if (status := availability_status()) is not None:
             return status
-        ct2_ok, ct2_detail = _ctranslate2_execstack_ok()
-        if not ct2_ok:
-            return False, f"faster-whisper cannot load CTranslate2: {ct2_detail}"
+        # CLEAN-ROOM (spec B §3): faster-whisper probe check
         try:
             from core.windows_rocm.ct2 import prepare_import
 
@@ -1200,9 +1172,7 @@ class FasterWhisperBackend(ASRBackend):
     def _ensure_model(self):
         if self._model is not None:
             return
-        ct2_ok, ct2_detail = _ctranslate2_execstack_ok()  # #692, see WhisperX
-        if not ct2_ok:
-            raise ImportError(f"faster-whisper cannot load CTranslate2: {ct2_detail}")
+        # CLEAN-ROOM (spec B §3): faster-whisper load check
         from core.windows_rocm.ct2 import prepare_import
 
         prepare_import()
@@ -1635,26 +1605,7 @@ class PyTorchWhisperBackend(ASRBackend):
                 f"PyTorch Whisper ASR initialization failed: {type(e).__name__}: {e}"
             ) from e
 
-    #: Batch sizes to try on CUDA, largest first. The VRAM preflight only sizes
-    #: the *weights*; generation adds an encoder/decoder workspace that scales
-    #: with the batch, and `return_timestamps="word"` keeps every layer's
-    #: cross-attention for the whole batch — gigabytes at batch 16. A card with
-    #: room for the model can therefore still OOM at the first transcribe, which
-    #: used to lose that chunk entirely (the dub retried the same batch size and
-    #: gave up, leaving a hole in the transcript). Step down, then use CPU.
-    _CUDA_BATCH_LADDER = (16, 4, 1)
-    _CUDA_BATCH_LADDER_WORD_TS = (8, 2, 1)
-
-    @staticmethod
-    def _is_oom(exc: BaseException) -> bool:
-        try:
-            import torch
-
-            if isinstance(exc, torch.cuda.OutOfMemoryError):
-                return True
-        except Exception:  # noqa: BLE001 — classification must not raise
-            pass
-        return "out of memory" in str(exc).lower()
+    # CLEAN-ROOM (spec B §3): CUDA batch ladders and OOM classifier
 
     def _rebuild_on_cpu(self) -> None:
         """Move the existing pipeline to CPU without resolving any model files."""
@@ -1693,67 +1644,10 @@ class PyTorchWhisperBackend(ASRBackend):
             audio_np, sr = _decode_audio_16k_mono(audio_path), 16000
         if audio_np.ndim > 1:
             audio_np = audio_np.mean(axis=1)
-
-        def _run(batch_size: int):
-            return self._pipe(
-                {"array": audio_np, "sampling_rate": sr},
-                return_timestamps="word" if word_timestamps else True,
-                chunk_length_s=15,
-                batch_size=batch_size,
-                **({"generate_kwargs": generate_kwargs} if generate_kwargs else {}),
-            )
-
-        if self._on_cuda():
-            ladder = (
-                self._CUDA_BATCH_LADDER_WORD_TS if word_timestamps
-                else self._CUDA_BATCH_LADDER
-            )
-            for i, bs in enumerate(ladder):
-                try:
-                    result = _run(bs)
-                    break
-                except Exception as e:  # noqa: BLE001 — only OOM is retryable
-                    if not self._is_oom(e):
-                        raise
-                    try:
-                        import torch
-
-                        torch.cuda.empty_cache()
-                    except Exception:  # noqa: BLE001
-                        pass
-                    if i + 1 < len(ladder):
-                        logger.warning(
-                            "PyTorch Whisper CUDA OOM at batch_size=%d — "
-                            "retrying at %d. Free VRAM (Flush models, close "
-                            "other GPU apps) for full-speed ASR.",
-                            bs, ladder[i + 1],
-                        )
-                        continue
-                    # Smallest batch still OOMs: finish on CPU rather than
-                    # return an empty chunk the caller cannot distinguish
-                    # from silence.
-                    logger.warning(
-                        "PyTorch Whisper CUDA OOM even at batch_size=1 — "
-                        "transcribing on CPU (slower, same model). Detail: %s", e,
-                    )
-                    self._rebuild_on_cpu()
-                    result = _run(2)
-        else:
-            result = _run(2)
+        # CLEAN-ROOM (spec B §3): pipeline run with CUDA OOM ladder and CPU finish
         return result if isinstance(result, dict) else {"chunks": [], "raw": result}
 
-    def _on_cuda(self) -> bool:
-        """Whether the built pipeline actually sits on a CUDA device.
-
-        `torch.cuda.is_available()` is the wrong question: `_pick_device()` may
-        have chosen CPU on a CUDA host (low free VRAM), and a CPU pipeline must
-        not be handed a CUDA-sized batch.
-        """
-        try:
-            device = getattr(self._pipe, "device", None)
-            return "cuda" in str(device).lower()
-        except Exception:  # noqa: BLE001
-            return False
+    # CLEAN-ROOM (spec B §3): CUDA-device check
 
 
 # ── NeMo Parakeet TDT (NVIDIA — Open ASR Leaderboard SOTA, 25 langs) ────────

@@ -61,11 +61,7 @@ A 6 GB card with nothing else loaded runs the default model on the GPU
 ([#2041](https://github.com/debpalash/VoiceStudio/issues/2041)). Disable
 the check with `OMNIVOICE_ASR_VRAM_PREFLIGHT=0`.
 
-The preflight sizes the weights; the generation workspace grows with the
-batch on top. If a transcribe still hits a CUDA out-of-memory, the engine
-steps the batch down (16 → 4 → 1, or 8 → 2 → 1 with word timestamps) and
-finishes on the CPU rather than dropping the chunk — no silent holes in a
-dub transcript.
+<!-- CLEAN-ROOM (spec B §4): OOM ladder paragraph -->
 
 ## Quirks
 
