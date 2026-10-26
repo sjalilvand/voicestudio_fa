@@ -234,7 +234,9 @@ def generation_kwargs(text: str, **options) -> dict:
     return {
         "text": f"({control}){text}" if control else text,
         "cfg_value": options.get("guidance_scale", 2.0),
-        # CLEAN-ROOM (spec R2-medium §2): the max_len entry of the returned generation kwargs
+        # Without an explicit cap VoxCPM uses its own 4096 default and a short
+        # request can run for minutes.
+        "max_len": max_len,
         "inference_timesteps": inference_timesteps,
         # Upstream retries a "bad case" up to three whole generations, which
         # could keep one desktop request running for many minutes.

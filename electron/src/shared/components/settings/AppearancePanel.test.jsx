@@ -150,4 +150,17 @@ describe('AppearancePanel — navigation style picker', () => {
   });
 });
 
-// CLEAN-ROOM (spec R2-medium §7): theme selection tests (localized Auto/Light labels)
+describe('AppearancePanel — theme dots', () => {
+  it('exposes the System Auto and Light themes as named radios', () => {
+    render(<AppearancePanel />);
+    const expected = [
+      ['System Auto', 'auto'],
+      ['Light', 'light'],
+    ];
+    for (const [name, id] of expected) {
+      const radio = screen.getByRole('radio', { name });
+      expect(radio).toBeInTheDocument();
+      expect(radio).toHaveAttribute('data-radio-value', id);
+    }
+  });
+});

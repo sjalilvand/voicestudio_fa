@@ -25,7 +25,12 @@ const THEMES = [
   { id: 'solarized', label: 'Solarized', dot: '#268bd2' },
   { id: 'rose-pine', label: 'Rosé Pine', dot: '#ebbcba' },
   { id: 'catppuccin', label: 'Catppuccin', dot: '#cba6f7' },
-  // CLEAN-ROOM (spec R2-medium §5): the "light" theme entry
+  {
+    id: 'light',
+    labelKey: 'settings.theme_light',
+    defaultLabel: 'Light',
+    dot: '#1d6b9f',
+  },
 ];
 
 /**
@@ -211,7 +216,7 @@ export default function AppearancePanel() {
                 style={{ '--dot-color': th.dot }}
                 onClick={() => setTheme(th.id)}
                 onKeyDown={(e) => radioGroupKeyDown(e, themeIds, theme, setTheme)}
-                /* CLEAN-ROOM (spec R2-medium §6): hover title for theme dots, localized when a label key exists */
+                title={th.labelKey ? t(th.labelKey, { defaultValue: th.defaultLabel }) : th.label}
                 aria-label={
                   th.labelKey ? t(th.labelKey, { defaultValue: th.defaultLabel }) : th.label
                 }

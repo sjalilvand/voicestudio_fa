@@ -100,7 +100,23 @@ def test_style_clone_does_not_use_continuation_prompt(monkeypatch, tmp_path):
     }
 
 
-# CLEAN-ROOM (spec R2-medium §10): test: generation kwargs bound work for short/long text, step clamping
+def test_generation_kwargs_cap_token_budget_and_default_steps(monkeypatch):
+    sidecar = _load_sidecar(monkeypatch, [])
+
+    short = sidecar.generation_kwargs("hello", num_step="not a number")
+    assert short["max_len"] == 256
+    assert short["inference_timesteps"] == 10
+    assert short["retry_badcase"] is False
+    assert short["retry_badcase_max_times"] == 1
+
+    assert sidecar.generation_kwargs("x" * 2000)["max_len"] == 4096
+
+
+def test_generation_kwargs_clamp_step_count(monkeypatch):
+    sidecar = _load_sidecar(monkeypatch, [])
+    steps = {n: sidecar.generation_kwargs("hi", num_step=n)["inference_timesteps"]
+             for n in (100, 32, -5)}
+    assert steps == {100: 64, 32: 32, -5: 1}
 
 
 def test_a_reference_without_its_transcript_is_not_a_prompt(monkeypatch, tmp_path):
@@ -121,7 +137,26 @@ def test_loads_the_configured_checkpoint_without_the_denoiser(monkeypatch):
     assert calls[0] == {"from_pretrained": "local/ckpt", "load_denoiser": False, "optimize": False}
 
 
-# CLEAN-ROOM (spec R2-medium §11): test: sidecar receive timeout parsing and bounds
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        (None, 900.0),
+        ("garbage", 900.0),
+        ("nan", 900.0),
+        ("inf", 900.0),
+        ("5", 30.0),
+        ("29.9", 30.0),
+        ("240", 240.0),
+    ],
+)
+def test_recv_timeout_env_is_parsed_and_floored(monkeypatch, raw, expected):
+    from engines.voxcpm2_subprocess import VoxCPM2SubprocessBackend
+
+    if raw is None:
+        monkeypatch.delenv("OMNIVOICE_VOXCPM2_RECV_TIMEOUT_S", raising=False)
+    else:
+        monkeypatch.setenv("OMNIVOICE_VOXCPM2_RECV_TIMEOUT_S", raw)
+    assert VoxCPM2SubprocessBackend().recv_timeout_s == expected
 
 
 def test_rejects_a_url_reference(monkeypatch):
@@ -219,7 +254,28 @@ def test_the_sidecar_class_prepares_the_reference_and_trims_the_tail(monkeypatch
     assert tuple(out.shape) == (1, 10)
 
 
-# CLEAN-ROOM (spec R2-medium §12): test: output not at 48 kHz is resampled
+def test_audio_from_a_non_48k_model_is_resampled_before_sending(monkeypatch):
+    fake_torch = types.ModuleType("torch")
+    fake_torch.float32 = np.float32
+    fake_torch.as_tensor = lambda wav, dtype=None: np.asarray(wav, dtype=dtype)
+    fake_torchaudio = types.ModuleType("torchaudio")
+    fake_functional = types.SimpleNamespace(
+        resample=lambda wav, src, dst: np.zeros(int(len(wav) * dst / src), dtype=np.float32)
+    )
+    fake_torchaudio.functional = fake_functional
+    monkeypatch.setitem(sys.modules, "torch", fake_torch)
+    monkeypatch.setitem(sys.modules, "torchaudio", fake_torchaudio)
+
+    sidecar = _load_sidecar(monkeypatch, [])
+    sidecar._handle_synthesize({"text": "warm up"}, io.BytesIO())  # loads the model
+    sidecar._MODEL.sample_rate = 24000
+
+    out = io.BytesIO()
+    sidecar._handle_synthesize({"text": "hello"}, out)
+
+    last = _frames(out)[-1]
+    assert last["sample_rate"] == 48000
+    assert last["n_samples"] == 960  # 480 samples at 24 kHz -> 960 at 48 kHz
 
 
 def test_a_failed_install_leaves_voxcpm2_in_process(monkeypatch, tmp_path):
@@ -235,7 +291,61 @@ def test_a_failed_install_leaves_voxcpm2_in_process(monkeypatch, tmp_path):
     assert tts_backend.get_backend_class("voxcpm2") is tts_backend.VoxCPM2Backend
 
 
-# CLEAN-ROOM (spec R2-medium §13): test: sidecar and in-process adapters map every native mode identically
+_MODE_CASES = [
+    ("hello", {"description": "calm voice"}, "(calm voice)hello", False),
+    ("hello", {"description": "calm voice", "instruct": "slowly"}, "(calm voice, slowly)hello", False),
+    ("hello", {"ref_audio": "/ref.wav", "ref_text": "the clip", "instruct": "whisper"},
+     "(whisper)hello", False),
+    ("(shout)hello", {"ref_audio": "/ref.wav", "ref_text": "the clip"}, "(shout)hello", False),
+    ("hello", {"ref_audio": "/ref.wav", "ref_text": "the clip"}, "hello", True),
+    ("hello", {"ref_audio": "/ref.wav", "ref_text": "the clip", "instruct": "  "}, "hello", True),
+    ("hello", {"ref_text": "the clip"}, "hello", False),
+]
+
+
+@pytest.mark.parametrize("text, options, final_text, continuing", _MODE_CASES)
+def test_sidecar_and_in_process_adapter_drive_voxcpm_identically(
+    monkeypatch, text, options, final_text, continuing
+):
+    from services import tts_backend
+
+    seen = []
+
+    class StrictModel:
+        sample_rate = 48000
+
+        def generate(self, text, cfg_value, max_len, inference_timesteps, reference_wav_path,
+                     prompt_wav_path, prompt_text, retry_badcase, retry_badcase_max_times):
+            assert retry_badcase is False and retry_badcase_max_times == 1
+            seen.append({
+                "text": text, "cfg_value": cfg_value, "max_len": max_len,
+                "inference_timesteps": inference_timesteps,
+                "reference_wav_path": reference_wav_path,
+                "prompt_wav_path": prompt_wav_path, "prompt_text": prompt_text,
+            })
+            return np.zeros(480, dtype=np.float32)
+
+    sidecar = _load_sidecar(monkeypatch, [])
+    sidecar._MODEL = StrictModel()
+    sidecar._handle_synthesize({"text": text, **options}, io.BytesIO())
+
+    monkeypatch.setattr(tts_backend, "_prepare_voxcpm_ref", lambda path: path)
+    engine = tts_backend.VoxCPM2Backend()
+    engine._model = StrictModel()
+    engine.generate(text, **options)
+
+    assert engine.supports_voice_design
+    assert len(seen) == 2
+    via_sidecar, in_process = seen
+    assert via_sidecar == in_process
+    assert via_sidecar["text"] == final_text
+    assert via_sidecar["reference_wav_path"] == options.get("ref_audio")
+    if continuing:
+        assert via_sidecar["prompt_wav_path"] == options["ref_audio"]
+        assert via_sidecar["prompt_text"] == options["ref_text"]
+    else:
+        assert via_sidecar["prompt_wav_path"] is None
+        assert via_sidecar["prompt_text"] is None
 
 
 def test_generation_emits_heartbeats_so_a_slow_render_is_not_killed(monkeypatch):

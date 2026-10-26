@@ -1392,7 +1392,11 @@ async def lifespan(app: FastAPI):
     # (still importing, not yet mid weight-download) finish cleanly before we
     # report done; a load that's genuinely deep into a multi-GB download still
     # times out — _reset_gpu_pool() below abandons it either way.
-    # CLEAN-ROOM (spec R2-medium §3): comment explaining the shutdown task-wait bound (value below stays)
+    # Why 20 s: a cold `transformers` import on a slow disk or a first launch
+    # can take longer than a few seconds. Cancelling the asyncio task leaves the
+    # OS thread running, so a short bound would print "done" while that thread
+    # is still alive. Threads can't be killed, so no finite bound removes this;
+    # 20 s just narrows the window.
     await _cancel_and_await_tasks(
         getattr(app.state, "idle_task", None),
         getattr(app.state, "worker_task", None),

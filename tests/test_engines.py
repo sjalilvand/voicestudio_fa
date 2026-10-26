@@ -623,7 +623,27 @@ def test_mlx_audio_generate_omits_ref_text_without_ref_audio():
     assert "ref_text" not in captured
 
 
-# CLEAN-ROOM (spec R2-medium §8): test: MLX audio design path (no reference) must not forward ref_text/ref_audio
+def test_mlx_audio_instruct_only_call_leaves_reference_args_out():
+    pytest.importorskip("mlx_audio", reason="needs the mlx_audio package (macOS arm64 only)")
+    import numpy as np
+
+    class RecordingModel:
+        def __init__(self):
+            self.kwargs = None
+
+        def generate(self, **kwargs):
+            self.kwargs = kwargs
+            yield types.SimpleNamespace(audio=np.ones(8, dtype=np.float32))
+
+    engine = tts_backend.MLXAudioBackend()
+    engine._ensure_loaded = lambda: None
+    engine._model = RecordingModel()
+
+    engine.generate("a line of speech without any cloning inputs")
+
+    assert engine._model.kwargs is not None
+    forbidden = {"ref_text", "ref_audio"} & set(engine._model.kwargs)
+    assert not forbidden
 
 
 @pytest.mark.parametrize("language", ["Auto", "auto", " AUTO ", " ", "", None])

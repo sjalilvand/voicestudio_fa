@@ -1404,9 +1404,22 @@ class MLXWhisperBackend(ASRBackend):
             "MLX Whisper transcribing %s (model=%s, word_timestamps=%s)",
             audio_path, self._model_name, word_timestamps,
         )
-        # CLEAN-ROOM (spec R2-medium §4): decode the audio once with the validated ffmpeg decoder, transcribe the decoded
-        # array with mlx_whisper, then forced-align using the same array.
-        raise NotImplementedError("CLEAN-ROOM (spec R2-medium §4): MLXWhisperBackend.transcribe decode/transcribe/align")
+        # Decode here, once, with the validated ffmpeg: handed a path,
+        # mlx_whisper runs a bare `ffmpeg` from PATH, which a from-source
+        # install may not have (same fix WhisperX got in #479).
+        audio = _decode_audio_16k_mono(audio_path)
+        result = mlx_whisper.transcribe(
+            audio,
+            path_or_hf_repo=_local_model_source(self._model_name),
+            word_timestamps=word_timestamps,
+            **whisper_request_options(language, initial_prompt, temperature, task),
+        )
+        if word_timestamps and result.get("segments"):
+            # wav2vec2 alignment gives ~10-30 ms word edges vs Whisper's
+            # 100-300 ms, which matters for dub lip-sync. Reuses `audio`.
+            result["segments"] = forced_align(
+                result["segments"], audio, result.get("language", "en"),
+            )
         # Normalise to the `chunks` shape the rest of the pipeline expects.
         if "segments" in result:
             result["chunks"] = [
