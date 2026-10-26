@@ -69,7 +69,16 @@ import {
   detachDubProject,
 } from '../dub/dub-session';
 import { projectPayload, type DubProject } from './project-format';
-import { RenderDetails, renderRecipe, type RenderRecord } from './render-details';
+
+// CLEAN-ROOM (spec G-jaketame-1 §8): the RenderRecord type (now with an optional summary) and
+// the RenderDetails / renderRecipe helpers belong in './render-details'.
+interface RenderRecord {
+  job_id: string;
+  title?: string;
+  output: string;
+  type?: 'story' | 'audiobook';
+  created_at?: number | string;
+}
 
 type LibraryKind =
   | 'dub'
@@ -385,10 +394,8 @@ export function ProjectsPage() {
         id: render.job_id,
         name: render.title || render.output,
         kind: render.type === 'story' ? 'stories' : 'audiobooks',
-        // Voice · speed · engine · length: what tells two renders of a book apart.
-        subtitle:
-          renderRecipe(render) ||
-          t(render.type === 'story' ? 'projects.story' : 'projects.audiobook'),
+        // CLEAN-ROOM (spec G-jaketame-1 §8): prefer a one-line recipe of the render here.
+        subtitle: t(render.type === 'story' ? 'projects.story' : 'projects.audiobook'),
         updatedAt: timestamp(render.created_at),
         render,
       });
@@ -778,16 +785,7 @@ export function ProjectsPage() {
                             </span>
                           )}
                         </p>
-                        {row.render && (
-                          <details className="mt-1.5">
-                            <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
-                              {t('projects.render_details')}
-                            </summary>
-                            <div className="mt-2">
-                              <RenderDetails render={row.render} />
-                            </div>
-                          </details>
-                        )}
+                        {/* CLEAN-ROOM (spec G-jaketame-1 §8): the expandable "how it was made" details belong here. */}
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">

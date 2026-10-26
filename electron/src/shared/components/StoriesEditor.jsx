@@ -46,7 +46,6 @@ import { useTranslation } from 'react-i18next';
 import { Button, Menu } from '../ui';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import VoiceSelector from './VoiceSelector';
-import SearchableSelect from './SearchableSelect';
 import { useAppStore } from '../store';
 import { recordValueMoment } from '../utils/donationMoments';
 import {
@@ -57,12 +56,7 @@ import {
 } from '../utils/storyTokens';
 import { parseScript } from '../utils/parseScript';
 import { importToText } from '../utils/importStory';
-import {
-  DEFAULT_SPLIT_MODE,
-  DEFAULT_SPLIT_MAX,
-  SPLIT_MODES,
-  splitStoryText,
-} from '../utils/splitStoryText';
+import { splitIntoChunks } from '../utils/splitStoryText';
 import { readTextFile } from '../utils/readTextFile';
 import { generateSpeech, audioUrl } from '../api/generate';
 import { playBlobAudio } from '../utils/media';
@@ -189,8 +183,8 @@ export default function StoriesEditor({ profiles = [] }) {
   const [activeTab, setActiveTab] = useState('script');
   const [splitOpen, setSplitOpen] = useState(false);
   const [splitText, setSplitText] = useState('');
-  const [splitMode, setSplitMode] = useState(DEFAULT_SPLIT_MODE);
-  const [splitMax, setSplitMax] = useState(DEFAULT_SPLIT_MAX.sentences);
+  // CLEAN-ROOM (spec G-jaketame-1 §9): the selected split preset state belongs here.
+  const [splitMax, setSplitMax] = useState(180);
   const [exporting, setExporting] = useState(false);
   const [exportPct, setExportPct] = useState(0);
   const [expandedLine, setExpandedLine] = useState(null);
@@ -426,12 +420,12 @@ export default function StoriesEditor({ profiles = [] }) {
 
   // ── Paste & auto-split ───────────────────────────────────────────────────
   const applySplit = useCallback(() => {
-    const chunks = splitStoryText(splitText, splitMode, splitMax);
+    const chunks = splitIntoChunks(splitText, splitMax);
     if (!chunks.length) return;
     setTracks((prev) => [...prev, ...chunks.map((tx) => makeTrack('narrator', tx))]);
     setSplitText('');
     setSplitOpen(false);
-  }, [splitText, splitMode, splitMax, setTracks]);
+  }, [splitText, splitMax, setTracks]);
 
   const setVoiceForSelection = useCallback(
     (trackId, voiceId) => {
@@ -1054,48 +1048,30 @@ export default function StoriesEditor({ profiles = [] }) {
                 />
                 <div className="flex items-center gap-[12px] flex-wrap">
                   <label className="flex items-center gap-[6px] [font-size:var(--text-xs)] text-fg-muted">
-                    {t('stories.splitMode')}
-                    <SearchableSelect
-                      value={splitMode}
-                      onChange={setSplitMode}
-                      options={SPLIT_MODES.map((mode) => ({
-                        value: mode,
-                        label: t(`stories.split_${mode}`),
-                      }))}
-                      ariaLabel={t('stories.splitMode')}
-                      menuPortal
-                      size="sm"
+                    {t('stories.maxChars')}
+                    <input
+                      type="number"
+                      min={60}
+                      max={1000}
+                      step={10}
+                      value={splitMax}
+                      onChange={(e) => setSplitMax(parseInt(e.target.value, 10) || 180)}
+                      name="story-segment-length"
+                      inputMode="numeric"
+                      className="w-[64px] px-[6px] py-[4px] bg-bg-elev-2 border border-border rounded-sm text-fg [font-family:var(--font-mono)] [font-size:var(--text-xs)]"
                     />
                   </label>
-                  {splitMode === 'sentences' && (
-                    <label className="flex items-center gap-[6px] [font-size:var(--text-xs)] text-fg-muted">
-                      {t('stories.maxChars')}
-                      <input
-                        type="number"
-                        min={60}
-                        max={1000}
-                        step={10}
-                        value={splitMax}
-                        onChange={(e) =>
-                          setSplitMax(parseInt(e.target.value, 10) || DEFAULT_SPLIT_MAX.sentences)
-                        }
-                        name="story-segment-length"
-                        inputMode="numeric"
-                        className="w-[64px] px-[6px] py-[4px] bg-bg-elev-2 border border-border rounded-sm text-fg [font-family:var(--font-mono)] [font-size:var(--text-xs)]"
-                      />
-                    </label>
-                  )}
+                  {/* CLEAN-ROOM (spec G-jaketame-1 §9): the split-preset selector (Sentences,
+                      Paragraphs, Chapters) belongs here; max-chars shows only for Sentences. */}
                   <span className="flex-1 [font-size:var(--text-xs)] text-fg-subtle">
-                    {!splitText
-                      ? t('stories.pasteAbove')
-                      : splitMode === 'sentences'
-                        ? t('stories.segmentsHint', {
-                            count: splitStoryText(splitText, splitMode, splitMax).length,
-                            max: splitMax,
-                          })
-                        : t('stories.lines', {
-                            count: splitStoryText(splitText, splitMode).length,
-                          })}
+                    {splitText
+                      ? t('stories.segmentsHint', {
+                          count: splitIntoChunks(splitText, splitMax).length,
+                          max: splitMax,
+                        })
+                      : t('stories.pasteAbove')}
+                    {/* CLEAN-ROOM (spec G-jaketame-1 §9): the status text for non-Sentences presets
+                        (a plain line count) belongs here. */}
                   </span>
                   <Button
                     size="sm"

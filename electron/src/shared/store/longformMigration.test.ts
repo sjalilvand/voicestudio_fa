@@ -71,9 +71,6 @@ describe('long-form v5 migration', () => {
               seed: Number.POSITIVE_INFINITY,
               varyRepeats: 'yes',
               emoText: 'calm',
-              lineGapMs: 0,
-              paragraphGapMs: '600',
-              trimEdges: false,
               unknown: true,
             },
           },
@@ -93,10 +90,7 @@ describe('long-form v5 migration', () => {
       varyRepeats: false,
       emoText: 'calm',
       emoAlpha: null,
-      // Seamless-join knobs survive a reload; 0 / false are real values.
-      lineGapMs: 0,
-      paragraphGapMs: null,
-      trimEdges: false,
+      // CLEAN-ROOM (spec G-jaketame-1 §14): expectations for the join override fields belong here.
     });
   });
 });

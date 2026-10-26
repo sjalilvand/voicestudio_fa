@@ -32,17 +32,8 @@ describe('overridesToRequest — only touched values reach the wire (#1208 D2/D3
     expect(overridesToRequest(DEFAULT_OVERRIDES, 'Auto')).toEqual({});
   });
 
-  it('seamless-join gaps ride along only once touched, and 0 / off are real values', () => {
-    expect(
-      overridesToRequest({ ...DEFAULT_OVERRIDES, lineGapMs: 0, trimEdges: false }, 'Auto'),
-    ).toEqual({
-      line_gap_ms: 0,
-      trim_edges: false,
-    });
-    expect(overridesToRequest({ ...DEFAULT_OVERRIDES, paragraphGapMs: 900 }, 'Auto')).toEqual({
-      paragraph_gap_ms: 900,
-    });
-  });
+  // CLEAN-ROOM (spec G-jaketame-1 §14): the test that join overrides reach the request only
+  // once touched (0 and off are real values) belongs here.
 
   it('language is sent when a non-Auto pick is made (fixes the D5 omission)', () => {
     expect(overridesToRequest(DEFAULT_OVERRIDES, 'Spanish')).toEqual({ language: 'Spanish' });

@@ -4,11 +4,6 @@ export function storyToSpans(
   globalSpeed?: number | null,
 ): {
   title: string;
-  spans: {
-    voice_id: string | null;
-    text: string;
-    pause_ms_after: number;
-    speed?: number | null;
-    join?: 'continue' | 'paragraph';
-  }[];
+  // CLEAN-ROOM (spec G-jaketame-1 §4): the span type also carries an optional `join` marker.
+  spans: { voice_id: string | null; text: string; pause_ms_after: number; speed?: number | null }[];
 }[];

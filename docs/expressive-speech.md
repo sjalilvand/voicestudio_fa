@@ -111,25 +111,7 @@ IndexTTS2 emotion (also available in Voice Cloning; see below), and **Vary repea
 that gives every identical line its own take instead of replaying one recording
 (off by default, so books stay byte-reproducible unless you ask for variety).
 
-It also owns the **joins**. Every engine pads each rendered line with its own
-lead-in and tail silence (GPT-SoVITS ≈ 70 ms / 300 ms, others similar); joined
-raw, a book reads as a string of separate takes. By default the renderer trims
-that padding (**Trim engine silence**, −40 dBFS with 40 ms kept at each edge)
-and inserts deliberate silence instead: **Gap between lines** (250 ms) between
-consecutive lines that carry no `[pause]` of their own — an explicit `[pause]`
-replaces the gap rather than adding to it — and **Gap between paragraphs**
-(350 ms) at a blank line inside one line of script. A line that inline markup
-(`[slow]`, `[emphasis]`, `[spell]`) splits into several renders is still one
-line: no gap lands in the middle of it (and a blank line sitting on that split
-still gets the paragraph gap). A `[voice:NAME]` change is a line boundary and
-gets the line gap, blank line or not — the paragraph gap is for breaks inside
-one voice's text. With the paragraph gap at 0 a line is
-rendered in one engine call exactly as before, so setting both gaps to 0 and
-turning trimming off gives the pre-existing hard joins (and their cache keys)
-back, including cached renders with seed or emotion overrides. A chapter may
-request at most 15 minutes of added join silence; larger requests fail before
-synthesis or cache reads. Reduce the gaps or split the chapter to proceed.
-Accepted gaps retain their exact duration on fresh renders and cache reuse.
+<!-- CLEAN-ROOM (spec G-jaketame-1 §2, §13): the paragraph documenting the joins (edge trim, line/paragraph gaps, join budget, legacy equivalence) belongs here. -->
 
 **Longform-only tags.** Audiobook and Stories additionally parse SSML-lite —
 `[slow]…[/slow]`, `[fast]…[/fast]`, `[emphasis]…[/emphasis]`, `[spell]` —

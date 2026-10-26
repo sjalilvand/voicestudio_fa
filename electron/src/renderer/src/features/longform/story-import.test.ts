@@ -1,9 +1,6 @@
 import { expect, it } from 'vitest';
 import { importToText } from '@shared/utils/importStory';
-import {
-  splitIntoChunks,
-  splitStoryText,
-} from '@shared/utils/splitStoryText';
+import { splitIntoChunks } from '@shared/utils/splitStoryText';
 it('removes SRT metadata and retains spoken lines', () => {
   expect(
     importToText(
@@ -19,28 +16,8 @@ it('splits locally with bounded chunks and stable text order', () => {
   expect(chunks.join(' ')).toBe(text);
   expect(splitIntoChunks('', 500)).toEqual([]);
 });
-it('split presets give one line per paragraph or per chapter, headings kept separate', () => {
-  const book = '# One\nFirst para.\n\nSecond para.\n# Two\nLast.';
-  expect(splitStoryText(book, 'paragraphs')).toEqual([
-    '# One',
-    'First para.',
-    'Second para.',
-    '# Two',
-    'Last.',
-  ]);
-  expect(splitStoryText(book, 'chapters')).toEqual([
-    '# One',
-    'First para.\n\nSecond para.',
-    '# Two',
-    'Last.',
-  ]);
-  expect(splitStoryText(book, 'sentences', 500)).toEqual([
-    '# One',
-    'First para.\n\nSecond para.',
-    '# Two',
-    'Last.',
-  ]);
-});
+// CLEAN-ROOM (spec G-jaketame-1 §14): the test of the split presets (paragraph and chapter
+// lines with headings kept separate) belongs here.
 
 it('decodes a UTF-16 manuscript before extracting subtitle speech', async () => {
   const { readTextFile } = await import('@shared/utils/readTextFile');

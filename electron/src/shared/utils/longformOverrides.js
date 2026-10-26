@@ -8,10 +8,8 @@ export const DEFAULT_OVERRIDES = {
   varyRepeats: false,
   emoText: '',
   emoAlpha: null,
-  // Seamless joins: null = the server default (zero gaps / trim off, preserving legacy renders).
-  lineGapMs: null,
-  paragraphGapMs: null,
-  trimEdges: null,
+  // CLEAN-ROOM (spec G-jaketame-1 §6): lineGapMs, paragraphGapMs and trimEdges defaults
+  // (all null = unset) belong here.
 };
 
 /**
@@ -36,8 +34,6 @@ export function overridesToRequest(overrides, language) {
     body.emo_text = emo;
     if (o.emoAlpha != null) body.emo_alpha = o.emoAlpha;
   }
-  if (o.lineGapMs != null) body.line_gap_ms = o.lineGapMs;
-  if (o.paragraphGapMs != null) body.paragraph_gap_ms = o.paragraphGapMs;
-  if (o.trimEdges != null) body.trim_edges = o.trimEdges;
+  // CLEAN-ROOM (spec G-jaketame-1 §6): emit line_gap_ms, paragraph_gap_ms, trim_edges here.
   return body;
 }

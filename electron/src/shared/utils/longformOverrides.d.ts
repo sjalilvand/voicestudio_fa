@@ -8,9 +8,7 @@ export interface Overrides {
   varyRepeats: boolean;
   emoText: string;
   emoAlpha: number | null;
-  lineGapMs: number | null;
-  paragraphGapMs: number | null;
-  trimEdges: boolean | null;
+  // CLEAN-ROOM (spec G-jaketame-1 §6): lineGapMs, paragraphGapMs and trimEdges belong here.
 }
 export const DEFAULT_OVERRIDES: Overrides;
 export function overridesToRequest(

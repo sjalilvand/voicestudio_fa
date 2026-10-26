@@ -64,9 +64,7 @@ export interface LongformOverrides {
   varyRepeats: boolean;
   emoText: string;
   emoAlpha: number | null;
-  lineGapMs: number | null;
-  paragraphGapMs: number | null;
-  trimEdges: boolean | null;
+  // CLEAN-ROOM (spec G-jaketame-1 §6): lineGapMs, paragraphGapMs and trimEdges belong here.
 }
 
 export const DEFAULT_OVERRIDES: LongformOverrides = {
@@ -79,9 +77,7 @@ export const DEFAULT_OVERRIDES: LongformOverrides = {
   varyRepeats: false,
   emoText: '',
   emoAlpha: null,
-  lineGapMs: null,
-  paragraphGapMs: null,
-  trimEdges: null,
+  // CLEAN-ROOM (spec G-jaketame-1 §6): lineGapMs, paragraphGapMs and trimEdges defaults.
 };
 
 /** A re-uploadable cover reference. localStorage can't hold the File/blob, so

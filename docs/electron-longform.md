@@ -26,7 +26,8 @@ Production overrides now expose synthesis steps, guidance, sampling temperatures
 
 Run `electron/tests/longform-live.mjs` with `VOICESTUDIO_LIVE_PROFILE` set to a local saved profile for an explicit real-render check. It verifies the active model is already installed before synthesis. The real run exposed missing JSON request headers in the shared client and array-shaped failed-chapter results; regression tests now cover both.
 
-Stories now includes named characters with saved voice assignments, character selection per line, explicit per-line voice overrides, shared/global speed and per-line speed overrides. The book-wide speed sits in the setup card beside voice and language (not inside the Cast card); it counts the lines that carry their own speed and hands them back to the book-wide value in one click. Voice resolution and chapter compilation reuse the Tauri helpers. Lines move up/down with keyboard-accessible buttons; chapter insertion uses the same heading grammar. A story with every spoken span assigned can render without an unnecessary default-voice selection. Removed profiles block rendering rather than silently changing the voice.
+Stories now includes named characters with saved voice assignments, character selection per line, explicit per-line voice overrides, shared/global speed and per-line speed overrides. Voice resolution and chapter compilation reuse the Tauri helpers. Lines move up/down with keyboard-accessible buttons; chapter insertion uses the same heading grammar. A story with every spoken span assigned can render without an unnecessary default-voice selection. Removed profiles block rendering rather than silently changing the voice.
+<!-- CLEAN-ROOM (spec G-jaketame-1 §10): a sentence on the book-wide speed placement and the per-line override reset belongs in the paragraph above. -->
 
 Stories Auto-cast accepts tagged dialogue, screenplay text and attributed prose. The shared local parser appends lines, reuses existing characters/voices, and assigns available profiles to new speakers. Distinct names that normalize to the same identifier remain separate characters. No network or LLM call is involved.
 
@@ -60,7 +61,7 @@ Stories and Audiobook offer **Clear script** with confirmation. Stories removes 
 
 The pinned chapter tracker scrolls within the available setup-pane height, keeping Stop reachable in compact windows. Collapsing setup moves the controls into the editor; they remain visible while scrolling long scripts.
 SRT and WebVTT manuscript imports preserve spoken numbers, including countdowns and numeric-only cues; cue indices, timestamps, the `WEBVTT` header, NOTE/STYLE/REGION blocks and cue identifiers are removed.
-Finished renders in Projects identify themselves: the row shows the book's title and a one-line recipe (voice · speed · engine · length), and **How it was made** expands to voice, speed, engine, language, format, size and the non-default settings. Renders made before this was recorded say so instead of showing a bare filename.
+<!-- CLEAN-ROOM (spec G-jaketame-1 §8, §13): the Projects paragraph about render title, recipe line and expandable details belongs here. -->
 
 Render history includes effective sampling settings (including performance-tier defaults). Non-finite request values are rejected; older malformed numeric details are sanitized so Projects and completion events remain readable.
 

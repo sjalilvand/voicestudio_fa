@@ -36,7 +36,6 @@ from core.render_trace import call as trace_call, stage as trace_stage
 
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
-from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -116,16 +115,8 @@ class ExpressiveMixin(BaseModel):
     # GPU-pool worker with an absurd step count or otherwise feed the sampler
     # nonsense. Ranges are generous supersets of the Voice-page controls; unset
     # (None) still means "use the longform default", unchanged. (#1208)
-    # Seamless joins: trim each render's own lead-in/tail, then add deliberate
-    # silence between lines (unless a [pause] says otherwise) and at blank
-    # lines inside a line. Bounded so a request cannot pad a book with hours
-    # of silence. Send 0 / false for the pre-existing hard joins.
-    line_gap_ms: int = Field(default=0, ge=0, le=5000)
-    # 350, not more: the trim keeps each paragraph's natural decay (~0.3-0.4 s of
-    # near-silence), so the HEARD break is gap + decay. Measured on a full chapter
-    # against a professional read, 600 put 26 breaks over a second; 300-400 matched.
-    paragraph_gap_ms: int = Field(default=0, ge=0, le=5000)
-    trim_edges: bool = False
+    # CLEAN-ROOM (spec G-jaketame-1 §5): the three seamless-join request fields
+    # (line gap, paragraph gap, trim edges) belong here, with their bounds.
     num_step: int | None = Field(default=None, ge=1, le=512)
     guidance_scale: float | None = Field(default=None, ge=0.0, le=20.0)
     position_temperature: float | None = Field(default=None, ge=0.0, le=100.0)
@@ -151,9 +142,7 @@ def _expressive_opts(req: "ExpressiveMixin") -> ExpressiveOptions:
         emo_text=(req.emo_text or None),
         emo_alpha=req.emo_alpha,
         vary_repeats=bool(req.vary_repeats),
-        line_gap_ms=int(req.line_gap_ms),
-        paragraph_gap_ms=int(req.paragraph_gap_ms),
-        trim_edges=bool(req.trim_edges),
+        # CLEAN-ROOM (spec G-jaketame-1 §5): lower the join fields into the options here.
     )
 
 
@@ -355,40 +344,9 @@ def _voice_profile_exists(profile_id: str | None) -> bool:
     return row is not None
 
 
-def _render_summary(chapters, default_voice, voice_map, language, fmt, opts) -> dict:
-    """The finished render's summary: resolve the voices it used to profile names."""
-    from core.db import db_conn
-    from services.longform_render import render_summary
-    from services.tts_backend import OmniVoiceBackend, active_backend_id, get_backend_class
-
-    ids: list[str] = []
-    for chapter in chapters:
-        for span in chapter.spans:
-            pid = _map_span_voice(span.voice_id, default_voice, voice_map)
-            if pid and pid not in ids:
-                ids.append(pid)
-    names: dict[str, str] = {}
-    if ids:
-        marks = ",".join("?" * len(ids))
-        with db_conn() as conn:
-            rows = conn.execute(f"SELECT id, name FROM voice_profiles WHERE id IN ({marks})", ids).fetchall()  # nosec B608 — placeholders only
-        names = {row["id"]: row["name"] for row in rows}
-    # Options that differ from the defaults — by VALUE, so an explicit seed=0 or
-    # postprocess_output=False is recorded, and an untouched default is not.
-    defaults = ExpressiveOptions().to_manifest()
-    chosen = (opts or ExpressiveOptions()).to_manifest()
-    engine_id = active_backend_id()
-    cls = get_backend_class(engine_id)
-    if cls is OmniVoiceBackend or getattr(cls, "supports_native_omnivoice_controls", False):
-        # Record effective tier values as well as explicit overrides: two
-        # requests with identical synthesis settings must have identical details.
-        chosen.update(_omnivoice_sampling_kwargs(opts or ExpressiveOptions()))
-    return render_summary(
-        chapters,
-        voices=[{"id": pid, "name": names.get(pid, "")} for pid in ids],
-        engine_id=engine_id, language=language, fmt=fmt,
-        options={k: v for k, v in chosen.items() if v != defaults.get(k)},
-    )
+# CLEAN-ROOM (spec G-jaketame-1 §7): the _render_summary() helper (builds the
+# finished render's summary from the plan, voice map, language, format and options)
+# belongs here.
 
 
 def _map_span_voice(
@@ -718,13 +676,11 @@ def _chapter_cache_inputs(chapter, sr, engine_id, resolve, cache_dir, lexicon=No
     opts = opts or ExpressiveOptions()
 
     spans = [Span(voice_id=s.voice_id, text=normalize_for_tts(s.text, language),
-                  pause_ms_after=s.pause_ms_after, speed=getattr(s, "speed", None),
-                  join=getattr(s, "join", None))
+                  pause_ms_after=s.pause_ms_after, speed=getattr(s, "speed", None))
              for s in chapter.spans]
-    # `join` enters the tuple only when set, so a plan without inline-markup
-    # splits keeps its pre-existing chapter cache key.
+    # CLEAN-ROOM (spec G-jaketame-1 §4): each span's ``join`` marker is carried into
+    # the Span here and appended to the chapter-cache tuple only when set.
     spans_tuples = [(s.voice_id, s.text, s.pause_ms_after, getattr(s, "speed", None))
-                    + ((s.join,) if s.join else ())
                     for s in spans]
     # A voice's signature names its reference audio by its path INSIDE the
     # data dir, not the absolute path (#2279): the same profile must key the
@@ -913,8 +869,9 @@ def _render_chapter_cached(chapter, synth, sr, engine_id, resolve, cache_dir, le
                     "audio file is gone (evicted or deleted)", str(chapter.title)[:80])
 
     audio, dur = synthesize_chapter(spans, synth, sr, lexicon=lexicon,
-                                    segment_cache=seg_cache, on_progress=on_progress,
-                                    **opts.join_kwargs())
+                                    segment_cache=seg_cache, on_progress=on_progress)
+    # CLEAN-ROOM (spec G-jaketame-1 §2, §3): the options' join settings are passed on to
+    # the chapter renderer at the call above.
     # Invisible provenance mark on the assembled chapter (#1169), tensor stage,
     # before the WAV lands in the cache — this single site covers every
     # longform front door (/audiobook, /longform/render [Stories],
@@ -1068,8 +1025,8 @@ async def _render_longform_sse(
 
     # Persist a durable resume manifest (plan + params) so an interrupted render
     # can be resumed later even without the original script. Best-effort.
-    title = (metadata or {}).get("title") or (plan.chapters[0].title if plan.chapters else "")
     try:
+        title = (metadata or {}).get("title") or (plan.chapters[0].title if plan.chapters else "")
         longform_resume.write_manifest(longform_resume.build_manifest(
             job_id=job_id, job_type=job_type, title=title,
             plan_chapters=[
@@ -1411,18 +1368,8 @@ async def _render_longform_sse(
         done = {"type": "done", "output": out_name,
                 "chapters": len(chapter_files), "duration_s": round(total_s, 2),
                 "cached_chapters": cached_n, "failed_chapters": failed}
-        # Say what this render IS, so the library can show more than a filename
-        # (#2233). Additive keys; best-effort — a summary never fails a render.
-        if title:
-            done["title"] = str(title)[:200]
-        try:
-            # Only what is IN the file: chapters that failed are not summarised,
-            # and the language is the one synthesis actually used.
-            rendered = [c for i, c in enumerate(plan.chapters) if i not in set(failed)]
-            done["summary"] = _render_summary(
-                rendered, default_voice, voice_map, resolved_lang, fmt, opts)
-        except Exception:
-            logger.warning("longform: could not build the render summary", exc_info=True)
+        # CLEAN-ROOM (spec G-jaketame-1 §7): the optional ``title`` and ``summary``
+        # keys of this ``done`` event are added here (best-effort).
         # Loudness verdict only when a preset was requested — off/None paths keep
         # the exact legacy `done` shape (additive, old clients unaffected).
         if norm in LOUDNESS_PRESETS:
@@ -1526,8 +1473,7 @@ class LongformSpan(BaseModel):
     text: str
     pause_ms_after: int = 0
     speed: float | None = None
-    # Set by the parser only where inline markup split one run of text.
-    join: Literal["continue", "paragraph"] | None = None
+    # CLEAN-ROOM (spec G-jaketame-1 §4): the optional ``join`` field of a request span belongs here.
 
 
 class LongformChapter(BaseModel):
@@ -1565,8 +1511,7 @@ async def longform_render(req: LongformRenderRequest, request: Request = None):
         # Keep a span if it has text to speak OR a pause to render (pause-only
         # spans carry inter-line silence with empty text).
         spans = [Span(voice_id=s.voice_id, text=(s.text or "").strip(),
-                      pause_ms_after=max(0, int(s.pause_ms_after)), speed=s.speed,
-                      join=s.join)
+                      pause_ms_after=max(0, int(s.pause_ms_after)), speed=s.speed)
                  for s in c.spans if ((s.text and s.text.strip()) or s.pause_ms_after > 0)]
         if spans:
             chapters.append(Chapter(title=c.title or f"Chapter {i + 1}", spans=spans))

@@ -14,12 +14,8 @@ const knobs = [
   { key: 'posTemp', label: 'pos_temp', min: 0, max: 10, step: 0.5, value: 5 },
   { key: 'classTemp', label: 'class_temp', min: 0, max: 2, step: 0.1, value: 0 },
 ] as const;
-// Seamless joins: engine padding is trimmed at every line/paragraph edge and
-// these deliberate gaps go in instead. Server defaults shown when unset.
-const gaps = [
-  { key: 'lineGapMs', label: 'line_gap', max: 2000, value: 0 },
-  { key: 'paragraphGapMs', label: 'paragraph_gap', max: 3000, value: 0 },
-] as const;
+// CLEAN-ROOM (spec G-jaketame-1 §6): the table describing the two gap sliders (key,
+// label key, max, default) belongs here.
 export function ProductionSettings({
   value,
   disabled,
@@ -29,12 +25,7 @@ export function ProductionSettings({
   disabled: boolean;
   onChange: (value: Overrides) => void;
 }) {
-  const { t, i18n } = useTranslation();
-  const milliseconds = new Intl.NumberFormat(i18n.resolvedLanguage || i18n.language, {
-    style: 'unit',
-    unit: 'millisecond',
-    unitDisplay: 'short',
-  });
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const engines = useQuery({
     queryKey: ['longform-tts-capabilities'],
@@ -93,37 +84,8 @@ export function ProductionSettings({
           onCheckedChange={(varyRepeats) => onChange({ ...value, varyRepeats })}
         />
       </label>
-      <p className="text-xs text-muted-foreground">{t('audiobook.joins_help')}</p>
-      {gaps.map((gap) => (
-        <label key={gap.key} className="block space-y-2 text-xs">
-          <span className="flex justify-between text-muted-foreground">
-            <span>{t('audiobook.' + gap.label)}</span>
-            <span className="tabular-nums">{milliseconds.format(value[gap.key] ?? gap.value)}</span>
-          </span>
-          <input
-            aria-label={t('audiobook.' + gap.label)}
-            type="range"
-            className="w-full accent-primary"
-            min={0}
-            max={gap.max}
-            step={50}
-            value={value[gap.key] ?? gap.value}
-            disabled={disabled}
-            onChange={(event) => onChange({ ...value, [gap.key]: Number(event.target.value) })}
-          />
-        </label>
-      ))}
-      <label
-        className="flex items-center justify-between gap-2 text-xs"
-        title={t('audiobook.trim_edges_help')}
-      >
-        {t('audiobook.trim_edges')}
-        <Switch
-          disabled={disabled}
-          checked={value.trimEdges ?? false}
-          onCheckedChange={(trimEdges) => onChange({ ...value, trimEdges })}
-        />
-      </label>
+      {/* CLEAN-ROOM (spec G-jaketame-1 §6): the seamless-join controls (help text, two gap
+          sliders, trim-silence switch) belong here. */}
       <label className="block space-y-1 text-xs">
         {t('audiobook.seed')}
         <Input
