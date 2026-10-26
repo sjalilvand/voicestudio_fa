@@ -1338,7 +1338,7 @@ def is_os_write_refusal(reason: Optional[str]) -> bool:
     or removed drive, a read-only folder, an antivirus/cloud-sync lock) rather
     than a network or format failure. Signature match only; never raises."""
     low = (reason or "").lower()
-    return any(sig in low for sig in _OS_WRITE_REFUSAL_SIGNATURES)
+    return any(sig in low for sig in _OS_WRITE_REFUSAL_SIGNATURES) or is_disk_full_error(low)
 
 
 def describe_path_target(path: str) -> str:

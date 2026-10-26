@@ -71,9 +71,20 @@ def test_memory_classes_keep_precedence(failure):
     assert failure.classify(MemoryError()) == "HOST_MEMORY_EXHAUSTED"
 
 
-def test_a_video_download_keeps_its_folder_specific_class(failure):
-    """#1225: the download class names the job folder — a sharper remedy."""
-    reason = "Unable to download video: [Errno 28] No space left on device"
+@pytest.mark.parametrize(
+    "spelling",
+    [
+        "[Errno 28] No space left on device",
+        "[Errno 122] Disk quota exceeded",
+        "[Errno 69] Disc quota exceeded",
+        "[WinError 112] There is not enough space on the disk",
+        "[WinError 39] The disk is full",
+    ],
+)
+def test_a_video_download_keeps_its_folder_specific_class(failure, spelling):
+    """#1225: the download class names the job folder — a sharper remedy —
+    whichever disk-full spelling the OS used."""
+    reason = f"Unable to download video: {spelling}"
     assert failure.classify(reason) == "VIDEO_DOWNLOAD_OS_ERROR"
 
 
@@ -132,7 +143,7 @@ def test_journal_and_taxonomy_agree(failure):
     assert journal.classify_exception(ENOSPC) == failure.classify(ENOSPC) == "DISK_FULL"
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def client():
     from fastapi.testclient import TestClient
     from main import app
