@@ -74,16 +74,7 @@ _install_accept_guard()
 from core.omnivoice_path import ensure_omnivoice_importable
 ensure_omnivoice_importable(_backend_dir)
 
-# Triton is unavailable on Windows — disable torch.compile / dynamo / inductor
-# to prevent TritonMissing errors at inference time. Must be set before torch
-# is imported (it is lazily imported in services/model_manager.py). Uses
-# setdefault so an explicit user-set value is never overridden, and is guarded
-# to win32 so cross-platform default behavior is unchanged.
-if sys.platform == "win32":
-    os.environ.setdefault("TORCH_COMPILE_DISABLE", "1")
-    os.environ.setdefault("TORCHDYNAMO_DISABLE", "1")
-    os.environ.setdefault("TORCHINDUCTOR_DISABLE", "1")
-
+# CLEAN-ROOM (spec S-small §2): Windows torch.compile/dynamo/inductor disable env defaults
 # The Intel Fortran runtime bundled with MKL (under numpy/scipy) installs a
 # console CTRL handler that aborts the whole process with `forrtl: error
 # (200): program aborting due to window-CLOSE event` when a Windows console

@@ -561,10 +561,7 @@ class OmniVoice(PreTrainedModel):
         for _lg in _quiet_loggers:
             _lg.setLevel(logging.WARNING)
 
-        # Disable tqdm on non-TTY (e.g., Tauri backend) to prevent OSError on Windows
-        _prev_tqdm = os.environ.get("TQDM_DISABLE")
-        if sys.stdout is not None and not sys.stdout.isatty():
-            os.environ["TQDM_DISABLE"] = "1"
+        # CLEAN-ROOM (spec S-small §10): disable tqdm on non-TTY stdout before loading
 
         try:
             model = super().from_pretrained(
@@ -615,11 +612,7 @@ class OmniVoice(PreTrainedModel):
         finally:
             for _lg, _lvl in _prev_levels:
                 _lg.setLevel(_lvl)
-            # Restore TQDM_DISABLE state
-            if _prev_tqdm is None:
-                os.environ.pop("TQDM_DISABLE", None)
-            else:
-                os.environ["TQDM_DISABLE"] = _prev_tqdm
+            # CLEAN-ROOM (spec S-small §10): restore tqdm environment state
 
         return model
 
