@@ -23,7 +23,7 @@ from services.tts_backend import (
     TTSBackend, active_backend_id, ensure_active_engine_licence, resolve_generation_backend,
 )
 from services.dub_batching import batch_timeout_s, native_batch_width
-from services.audio_dsp import apply_mastering, normalize_audio, apply_effects_chain, get_effect_chain
+from services.audio_dsp import apply_mastering, normalize_audio, apply_effects_chain, get_effect_chain, trim_speech_padding
 from services.audio_io import atomic_save_wav, audio_info, _safe_torchaudio_save
 from services.ffmpeg_utils import (
     find_ffmpeg,
@@ -567,9 +567,148 @@ async def dub_generate(job_id: str, req: DubRequest):
                 return f"data: {json.dumps({'type': 'error', 'error_code': 'dub_source_changed', 'error': _SOURCE_CHANGED_MESSAGE})}\n\n"
             return None
 
-        # CLEAN-ROOM (spec J-small-1 §11.1): _install_staged_segments() publication helper.
+        def _install_staged_segments() -> None:
+            """Promote this render's staged speech into the shared segment cache.
 
-        # CLEAN-ROOM (spec J-small-1 §11.2-11.3): audio-release throttling, scratch mix WAV storage, entry length/load helpers and the staged memmap WAV writer.
+            Only called under ``_dub_jobs_lock`` from the publication step, so
+            speech from a render that was cancelled, replaced or failed never
+            becomes visible to previews or partial regeneration.
+            """
+            lang_hashes = _seg_hashes_by_lang(job).setdefault(lang_code, {})
+            num_steps = job.setdefault("seg_num_step", {})
+            for _idx, _rate, sid, fingerprint, step in _pending_seg_writes:
+                staged = _staged.get(sid)
+                if staged is None:
+                    # The durable write failed; the cache keeps what its
+                    # existing fingerprint describes.
+                    continue
+                staged_path, cache_path = staged
+                try:
+                    os.replace(staged_path, cache_path)
+                except OSError as err:
+                    # e.g. a preview still holds the file open on Windows.
+                    logger.warning("could not install cached speech for %s: %s", sid, err)
+                    continue
+                if fingerprint is not None:
+                    lang_hashes[sid] = fingerprint
+                else:
+                    lang_hashes.pop(sid, None)
+                num_steps[sid] = step
+            # Flat mirror for the `done` event, dub history and older frontends.
+            job["seg_hashes"] = dict(lang_hashes)
+            if _natural_dur_records:
+                durs = job.setdefault("seg_natural_durs_by_lang", {}).setdefault(lang_code, {})
+                durs.update(_natural_dur_records)
+
+        from services.model_manager import release_device_cache
+
+        _RELEASE_EVERY = 16
+        _release_state = {"calls": 0}
+
+        def _release_audio_tensors(*_objs) -> None:
+            """Throttled, best-effort device cache release.
+
+            ``release_device_cache`` stalls the device, so doing it for every
+            segment would serialise the GPU loop; only every 16th call runs
+            it. The arguments exist for call-site symmetry and are ignored: a
+            local ``del`` cannot free the caller's own reference.
+            """
+            _release_state["calls"] += 1
+            if _release_state["calls"] % _RELEASE_EVERY:
+                return
+            try:
+                release_device_cache()
+            except Exception as err:  # noqa: BLE001
+                logger.debug("device cache release skipped: %s", err)
+
+        # Scratch ``mix_*`` WAVs that only exist as assembly input.
+        _mix_temp_paths: list[str] = []
+
+        def _store_mix_wav(start: float, end: float, wav: torch.Tensor, sr: int, seg_key: str):
+            """Spill audio to a job-dir WAV and return its ``all_segment_wavs`` entry."""
+            if wav.shape[-1] <= 0:
+                # atomic_save_wav refuses empty audio; assembly accepts an
+                # in-memory zero-length entry instead.
+                return (start, end, torch.zeros(1, 0), sr)
+            path = dub_seg_path(job_id, seg_key)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            atomic_save_wav(path, wav.detach().cpu(), sr)
+            if str(seg_key).startswith("mix_"):
+                _mix_temp_paths.append(path)
+            _release_audio_tensors(wav)
+            return (start, end, path, sr)
+
+        def _entry_num_samples(entry) -> int:
+            source = entry[2]
+            if isinstance(source, torch.Tensor):
+                return int(source.shape[-1])
+            try:
+                return int(audio_info(source).num_frames)
+            except Exception:  # noqa: BLE001 — header unreadable, decode instead
+                from services.audio_io import load_audio
+
+                decoded, _ = load_audio(source)
+                length = int(decoded.shape[-1])
+                del decoded
+                _release_audio_tensors()
+                return length
+
+        def _load_entry_wav(entry, target_sr: int) -> torch.Tensor:
+            source = entry[2]
+            if isinstance(source, torch.Tensor):
+                return source
+            from services.audio_io import load_audio
+
+            wav, file_sr = load_audio(source)
+            if file_sr != target_sr:
+                import torchaudio
+
+                wav = torchaudio.functional.resample(wav, file_sr, target_sr)
+            return wav
+
+        def _speech_unusable(audio: torch.Tensor) -> bool:
+            """True for empty, non-finite or effectively silent audio."""
+            if not audio.numel():
+                return True
+            if audio.abs().max().item() <= 1e-6:
+                return True
+            return not bool(torch.isfinite(audio).all())
+
+        def _write_memmap_wav_staged(target_path: str, samples, sample_rate: int) -> str:
+            """Write a mono float32 memmap as 16-bit PCM into ``stage_dir``; return the temp path.
+
+            The caller publishes it with ``os.replace``. No watermark is
+            applied: the track is assembled from segment WAVs that were already
+            marked, and marking again would double-mark it.
+            """
+            import wave
+
+            import numpy as np
+
+            fd, tmp_path = tempfile.mkstemp(
+                prefix=f".{os.path.basename(target_path)}.", suffix=".wav", dir=stage_dir
+            )
+            os.close(fd)
+            try:
+                step = max(sample_rate * 30, 1)
+                with wave.open(tmp_path, "wb") as out:
+                    out.setnchannels(1)
+                    out.setsampwidth(2)
+                    out.setframerate(sample_rate)
+                    for offset in range(0, len(samples), step):
+                        block = np.array(samples[offset:offset + step], dtype=np.float32)
+                        if block.size == 0:
+                            continue
+                        block = np.nan_to_num(block, nan=0.0, posinf=1.0, neginf=-1.0)
+                        block = np.clip(block, -1.0, 1.0)
+                        out.writeframes((block * 32767.0).astype("<i2").tobytes())
+            except BaseException:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+                raise
+            return tmp_path
 
 
         # Phase 4.1 — partial regen. If `regen_only` is set, we only run TTS
@@ -629,7 +768,9 @@ async def dub_generate(job_id: str, req: DubRequest):
         # job's manifest describing the audio it actually has.
         seg_order = [seg_ids[k] if k < len(seg_ids) else f"seg_{k}" for k in range(len(req.segments))]
 
-        # CLEAN-ROOM (spec J-small-1 §11.4): comment about per-segment metadata being kept while audio goes to disk.
+        # Only metadata (fingerprints, step counts) waits for the post-loop
+        # persist; segment audio goes to disk as soon as it is rendered and
+        # the render keeps just the paths.
         _pending_seg_writes: list[tuple] = []
 
         # Calibration records for the pre-synthesis duration planner
@@ -704,7 +845,15 @@ async def dub_generate(job_id: str, req: DubRequest):
             seg_duration = seg.end - seg.start
             if seg_duration <= 0.05 or not seg.text.strip():
                 sr = backend.sample_rate
-                # CLEAN-ROOM (spec J-small-1 §11.5): silence entry for zero/negative or empty slots.
+                silence = torch.zeros((1, max(0, int(seg_duration * sr))))
+                all_segment_wavs.append(
+                    _store_mix_wav(seg.start, seg.end, silence, sr, f"mix_{seg_id}")
+                )
+                try:
+                    del silence
+                except Exception:  # noqa: BLE001
+                    pass
+                _release_audio_tensors()
                 sync_scores.append(1.0)
                 continue
 
@@ -724,7 +873,51 @@ async def dub_generate(job_id: str, req: DubRequest):
                         if os.path.exists(_legacy):
                             seg_wav_path = _legacy
                             break
-                # CLEAN-ROOM (spec J-small-1 §11.6): reuse of an existing cached segment WAV during partial regeneration.
+                if os.path.exists(seg_wav_path):
+                    _t_reuse = time.perf_counter()
+                    try:
+                        from services.audio_io import load_audio
+
+                        if strategy != "strict_slot":
+                            try:
+                                info = audio_info(seg_wav_path)
+                            except Exception:  # noqa: BLE001
+                                info = None
+                            if (
+                                info is not None
+                                and info.sample_rate == backend.sample_rate
+                                and _cached_payload_intact(seg_wav_path, info)
+                            ):
+                                # Durable file is used in place, no scratch copy.
+                                all_segment_wavs.append(
+                                    (seg.start, seg.end, seg_wav_path, backend.sample_rate)
+                                )
+                                sync_scores.append(
+                                    round(info.num_frames / info.sample_rate / max(seg_duration, 0.01), 3)
+                                )
+                                _t_cache += time.perf_counter() - _t_reuse
+                                continue
+                        cached, cached_sr = load_audio(seg_wav_path)
+                        if cached_sr != backend.sample_rate:
+                            import torchaudio
+
+                            cached = torchaudio.functional.resample(cached, cached_sr, backend.sample_rate)
+                        ratio = round(
+                            cached.shape[-1] / backend.sample_rate / max(seg_duration, 0.01), 3
+                        )
+                        all_segment_wavs.append(
+                            _store_mix_wav(seg.start, seg.end, cached, backend.sample_rate, f"mix_{seg_id}")
+                        )
+                        try:
+                            del cached
+                        except Exception:  # noqa: BLE001
+                            pass
+                        _release_audio_tensors()
+                        sync_scores.append(ratio)
+                        _t_cache += time.perf_counter() - _t_reuse
+                        continue
+                    except Exception as err:  # noqa: BLE001
+                        logger.warning("cached speech for %s unreadable: %s", seg_id, err)
                 yield f"data: {json.dumps({'type': 'error', 'segment': i, 'segment_id': seg_id, 'error_code': 'dub_speech_missing', 'error': 'Cached speech could not be read. Regenerate this segment before exporting.'})}\n\n"
                 return
 
@@ -1241,12 +1434,33 @@ async def dub_generate(job_id: str, req: DubRequest):
                     except Exception as e:
                         yield f"data: {json.dumps({'type': 'warning', 'segment': i, 'message': f'RVC skipped: {str(e)[:120]}'})}\n\n"
 
-                # CLEAN-ROOM (spec J-small-1 §11.7): comment describing the watermark-exactly-once policy for fresh synthesis.
+                # Watermark policy: fresh TTS output is marked exactly once,
+                # here, just before it is persisted. That WAV is both the
+                # downloadable segment and the assembly input, so the final
+                # track inherits the mark. Cached reuse is already marked and
+                # silence has nothing to mark, so nothing else marks again.
                 audio_tensor = mark_synthetic(audio_tensor, backend.sample_rate,
                                               context="dub_generate.segment")
 
                 seg_wav_path = _staged_seg_path(seg_id)
-                # CLEAN-ROOM (spec J-small-1 §11.8): stage the per-segment WAV; on success record it for assembly and publication, on failure fall back to a scratch mix copy.
+                try:
+                    atomic_save_wav(seg_wav_path, audio_tensor, backend.sample_rate)
+                    _staged[seg_id] = (seg_wav_path, _seg_lang_path(seg_id))
+                    all_segment_wavs.append(
+                        (seg.start, seg.end, seg_wav_path, backend.sample_rate)
+                    )
+                except Exception as write_err:  # noqa: BLE001
+                    # Nothing is registered for publication; the render goes on
+                    # with a scratch copy so one failed write cannot abort it.
+                    logger.warning("could not stage speech for %s: %s", seg_id, write_err)
+                    all_segment_wavs.append(
+                        _store_mix_wav(seg.start, seg.end, audio_tensor, backend.sample_rate, f"mix_{seg_id}")
+                    )
+                try:
+                    del audio_tensor
+                except Exception:  # noqa: BLE001
+                    pass
+                _release_audio_tensors()
             except Exception as e:
                 # A task-stream error bypasses the global exception handler.
                 # Never publish engine exception text here: allocator errors
@@ -1264,7 +1478,7 @@ async def dub_generate(job_id: str, req: DubRequest):
 
         yield f"data: {json.dumps({'type': 'assembling'})}\n\n"
 
-        # CLEAN-ROOM (spec J-small-1 §11.9): section heading comment only.
+        # ── Batch metadata phase ──
         # Per-segment WAVs were staged during the loop to keep RAM bounded and
         # stay staged through assembly: the cache behind previews and partial
         # regeneration receives them, with their fingerprints, only when the
@@ -1299,7 +1513,28 @@ async def dub_generate(job_id: str, req: DubRequest):
 
         if strategy == "stretch_video":
             cursor = 0.0
-            # CLEAN-ROOM (spec J-small-1 §11.10): stretch_video per-segment layout loop (new_layout and video_stretch_plan).
+            # Pull each slot's sample count first, then lay the slots end to end.
+            counts = [_entry_num_samples(e) for e in all_segment_wavs]
+            slots = [
+                (e[0], e[1], n / e[3] if n > 0 else None)
+                for e, n in zip(all_segment_wavs, counts)
+            ]
+            for idx, (slot_start, slot_end, spoken_s) in enumerate(slots):
+                length_s = spoken_s if spoken_s is not None else max(0, slot_end - slot_start)
+                if idx == 0:
+                    cursor = slot_start  # keeps the lead-in before the first line
+                else:
+                    cursor += max(0, slot_start - slots[idx - 1][1])
+                span = (cursor, cursor + length_s)
+                new_layout.append(span)
+                video_stretch_plan.append(dict(zip(
+                    ("orig_start", "orig_end", "new_start", "new_end"),
+                    (round(v, 4) for v in (slot_start, slot_end, *span)),
+                )))
+                video_stretch_plan[-1]["stretch_ratio"] = round(
+                    length_s / max(1e-3, slot_end - slot_start), 4
+                )
+                cursor = span[1]
             # Preserve the trailing tail (anything after the last seg in the
             # original video) at 1.0× rate.
             if all_segment_wavs:
@@ -1326,7 +1561,18 @@ async def dub_generate(job_id: str, req: DubRequest):
                     else _underrun_min_rate()
                 ),
             )
-            # CLEAN-ROOM (spec J-small-1 §11.11): smart_fit planning call producing fit_plan from the written segments and their natural durations.
+            plan_segments = [
+                {
+                    "id": seg_order[k] if k < len(seg_order) else f"seg_{k}",
+                    "start": entry[0],
+                    "end": entry[1],
+                }
+                for k, entry in enumerate(all_segment_wavs)
+            ]
+            natural_durations = [
+                _entry_num_samples(entry) / entry[3] for entry in all_segment_wavs
+            ]
+            fit_plan = plan_fit(plan_segments, natural_durations, orig_total_dur, fit_params)
             total_samples = int(fit_plan.total_duration * sr)
         else:
             total_samples = int(orig_total_dur * sr)
@@ -1337,7 +1583,186 @@ async def dub_generate(job_id: str, req: DubRequest):
         fitted_cues: list[dict] = []
 
         track_path = os.path.join(DUB_DIR, job_id, f"dubbed_{lang_code}.wav")
-        # CLEAN-ROOM (spec J-small-1 §11.12): create the track directory and assemble the final dub track (disk-backed mix buffer, per-segment placement, staged WAV write, cleanup).
+        import gc
+
+        import numpy as np
+
+        os.makedirs(os.path.dirname(track_path), exist_ok=True)
+        mix_samples = max(total_samples, 1)
+        # The mix lives in a float32 scratch file so RAM stays flat however
+        # long the video is.
+        mix_fd, mix_file = tempfile.mkstemp(
+            prefix=f".{os.path.basename(track_path)}.mix.", suffix=".f32",
+            dir=os.path.dirname(track_path),
+        )
+        os.close(mix_fd)
+        mix_audio = None
+        try:
+            with open(mix_file, "r+b") as handle:
+                handle.truncate(mix_samples * 4)
+            mix_audio = np.memmap(mix_file, dtype=np.float32, mode="r+", shape=(mix_samples,))
+
+            def _linear_resize(tensor, target):
+                return torch.nn.functional.interpolate(
+                    tensor.unsqueeze(0), size=target, mode="linear", align_corners=False
+                ).squeeze(0)
+
+            for i, (start, end, wav_path, _entry_sr) in enumerate(all_segment_wavs):
+                seg_req = req.segments[i] if i < len(req.segments) else None
+                gain = getattr(seg_req, "gain", None) if seg_req is not None else None
+                gain = min(2.0, max(0.0, float(gain if gain is not None else 1.0)))
+
+                try:
+                    wav = _load_entry_wav((start, end, wav_path, sr), sr)
+                except Exception as err:  # noqa: BLE001
+                    logger.error("could not read speech for segment %s: %s", i, err)
+                    yield f"data: {json.dumps({'type': 'error', 'segment': i, 'error_code': 'dub_speech_missing', 'error': 'A speech segment could not be read. Regenerate it and try again.'})}\n\n"
+                    return
+
+                if seg_req is not None and seg_req.text.strip():
+                    if _speech_unusable(wav):
+                        yield f"data: {json.dumps({'type': 'error', 'segment': i, 'error_code': 'dub_speech_missing', 'error': 'A speech segment is empty or silent. Regenerate it and try again.'})}\n\n"
+                        return
+                    wav = trim_speech_padding(wav, sr)
+
+                adjusted = wav * gain
+                if adjusted.dim() > 1 and adjusted.shape[0] > 1:
+                    adjusted = adjusted.mean(dim=0, keepdim=True)
+                wl = adjusted.shape[-1]
+                natural_dur = wl / sr if wl > 0 else 0.0
+                orig_dur = max(0, end - start)
+
+                if strategy == "stretch_video":
+                    place_at, _ = new_layout[i]
+                    fit_status.append({
+                        "status": "video_stretched",
+                        "stretch_ratio": round(natural_dur / max(orig_dur, 1e-3), 3),
+                    })
+                elif strategy == "smart_fit":
+                    planned = fit_plan.segments[i]
+                    place_at = planned.new_start
+                    if abs(planned.audio_rate - 1.0) > 1e-6 and wl > 0:
+                        target = max(1, round(wl / planned.audio_rate))
+                        try:
+                            adjusted = await _pitch_preserving_stretch(adjusted, target, sr)
+                        except Exception as err:  # noqa: BLE001
+                            logger.warning("pitch-preserving stretch failed (%s); using linear resize", err)
+                            adjusted = _linear_resize(adjusted, target)
+                        wl = adjusted.shape[-1]
+                    planned_slot = int(max(0, planned.new_end - planned.new_start) * sr)
+                    if planned_slot > 0 and wl > planned_slot + int(sr * 0.02):
+                        yield f"data: {json.dumps({'type': 'error', 'segment': i, 'error_code': 'dub_timing_overflow', 'error': 'The speech is longer than the fitting limits allow. Shorten the translation or relax the caps.'})}\n\n"
+                        return
+                    extras = (
+                        ("audio_rate", planned.audio_rate, abs(planned.audio_rate - 1.0) > 1e-6),
+                        ("video_ratio", planned.video_ratio, planned.video_ratio > 1.0 + 1e-6),
+                        ("overflow_s", planned.overflow_s, planned.overflow_s > 0),
+                    )
+                    fit_status.append(
+                        {"status": planned.status,
+                         **{key: round(val, 3) for key, val, wanted in extras if wanted}}
+                    )
+                    fitted_cues.append({
+                        "id": planned.seg_id,
+                        "start": round(place_at, 4),
+                        "end": round(place_at + wl / sr, 4),
+                    })
+                elif strategy == "concise":
+                    place_at = start
+                    effective_end = end
+                    if i + 1 < len(all_segment_wavs):
+                        gap = all_segment_wavs[i + 1][0] - end
+                        if gap > GAP_OVERFLOW_BUFFER_S:
+                            effective_end += min(gap - GAP_OVERFLOW_BUFFER_S, GAP_OVERFLOW_MAX_S)
+                    effective_end += overflow_budget_s
+                    slot_samples = int(max(0, effective_end - start) * sr)
+                    if slot_samples > 0 and wl > slot_samples:
+                        yield f"data: {json.dumps({'type': 'error', 'segment': i, 'segment_id': seg_order[i], 'error_code': 'dub_timing_overflow', 'error': 'The speech does not fit its time slot. Shorten the text or adjust the timing.'})}\n\n"
+                        return
+                    fit_status.append({"status": "fits"})
+                else:
+                    place_at = start
+                    slot_samples = int(max(0, end - start) * sr)
+                    slowed_rate = None
+                    if slot_fit != "off" and slot_samples > 0 and wl > slot_samples:
+                        if slot_fit == "time_stretch":
+                            try:
+                                adjusted = await _pitch_preserving_stretch(adjusted, slot_samples, sr)
+                            except Exception as err:  # noqa: BLE001
+                                logger.warning("pitch-preserving stretch failed (%s); using linear resize", err)
+                                adjusted = _linear_resize(adjusted, slot_samples)
+                        elif slot_fit == "trim":
+                            adjusted = adjusted[..., :slot_samples]
+                        wl = adjusted.shape[-1]
+                    elif slot_fit == "time_stretch" and slot_samples > 0 and 0 < wl < slot_samples:
+                        wl_before = wl
+                        try:
+                            adjusted = await _pitch_preserving_stretch(adjusted, slot_samples, sr)
+                            slowed_rate = wl_before / slot_samples
+                        except Exception as err:  # noqa: BLE001
+                            logger.warning("underrun slow-down failed (%s); keeping natural rate", err)
+                        wl = adjusted.shape[-1]
+                    if slowed_rate is not None:
+                        fit_status.append({"status": "audio_slowed", "audio_rate": round(slowed_rate, 3)})
+                    else:
+                        fit_status.append({
+                            "status": "fits",
+                            "compression_applied": slot_fit == "time_stretch" and wl != int(natural_dur * sr),
+                        })
+
+                fade_samples = int(0.015 * sr)
+                if fade_samples > 0 and wl > fade_samples * 2:
+                    ramp = torch.linspace(0.0, 1.0, fade_samples, device=adjusted.device)
+                    adjusted[0, :fade_samples] *= ramp
+                    adjusted[0, -fade_samples:] *= ramp.flip(0)
+
+                s = int(place_at * sr)
+                if s < 0:
+                    adjusted = adjusted[..., -s:]
+                    wl = adjusted.shape[-1]
+                    s = 0
+                e = min(s + wl, total_samples)
+                if s < total_samples and e > s:
+                    block = adjusted[0, : e - s].detach().cpu().float().clamp(-1.0, 1.0).numpy()
+                    mix_audio[s:e] += block
+
+                try:
+                    del wav, adjusted
+                except Exception:  # noqa: BLE001
+                    pass
+                _release_audio_tensors()
+
+            _t_save_0 = time.perf_counter()
+            mix_audio.flush()
+            track_tmp = _write_memmap_wav_staged(track_path, mix_audio[:mix_samples], sr)
+            _t_save = time.perf_counter() - _t_save_0
+            _t_mix = _t_save_0 - _t_loop_end
+        finally:
+            try:
+                if mix_audio is not None:
+                    mix_audio.flush()
+                    mmap_handle = getattr(mix_audio, "_mmap", None)
+                    if mmap_handle is not None:
+                        mmap_handle.close()
+            except Exception:  # noqa: BLE001
+                pass
+            try:
+                del mix_audio
+            except Exception:  # noqa: BLE001
+                pass
+            try:
+                gc.collect()
+            except Exception:  # noqa: BLE001
+                pass
+            try:
+                os.unlink(mix_file)
+            except OSError:
+                pass
+            for scratch in _mix_temp_paths:
+                try:
+                    os.unlink(scratch)
+                except OSError:
+                    pass
         # ── Publication ───────────────────────────────────────────────
         # The finished track and its segment speech replace the previous ones
         # only if nothing has cancelled or superseded this render; otherwise
@@ -1352,7 +1777,7 @@ async def dub_generate(job_id: str, req: DubRequest):
                 # (longer) timeline, so we record its actual duration here too — the
                 # mux step needs this to know whether to use the original video as-is
                 # or stretch it per the plan.
-                # CLEAN-ROOM (spec J-small-1 §11.13): published track duration in seconds, zero when the track has no samples.
+                track_dur = total_samples / sr if total_samples > 0 else 0.0
                 job["dubbed_tracks"][lang_code] = {
                     "path": track_path,
                     "language": req.language,

@@ -20,7 +20,9 @@ Design rules (load-bearing):
   * **Per-language.** Numbers go through ``num2words`` only for languages it
     supports (``_NUM2WORDS_LANGS``; the request's ``language`` is a full
     display name from electron/src/shared/languages.json or an ISO-ish code — both
-    resolve via :func:`_num2words_lang`). CLEAN-ROOM (spec J-small-1 §4.8): docstring sentence about native verbalizers.
+    resolve via :func:`_num2words_lang`). A language num2words does not
+    know may be listed in ``_NATIVE_VERBALIZERS`` and spoken by its own small
+    module (Malayalam today); any other language keeps its digits.
     Clock times / ordinals / currency are English-only (their spoken form is
     language-specific); decimals only for locales whose num2words rendering
     was vetted. CJK scripts pass through the safety filters untouched — no
@@ -57,6 +59,7 @@ never raises — normalization is never allowed to break synthesis.
 
 from __future__ import annotations
 
+import importlib
 import logging
 import os
 import re
@@ -78,7 +81,7 @@ ENV_VAR = "OMNIVOICE_TEXT_NORMALIZATION"
 
 _FULL_NAME_TO_CODE = {
     "english": "en",
-    # CLEAN-ROOM (spec J-small-1 §4.4): display-name entry mapping Malayalam to its ISO code.
+    "malayalam": "ml",
     "urdu": "ur",
     "german": "de",
     "spanish": "es",
@@ -563,7 +566,26 @@ def _in_span(m: re.Match, spans: list[tuple[int, int]]) -> bool:
 _ORDINAL_SUFFIX = {1: "st", 2: "nd", 3: "rd"}
 
 
-# CLEAN-ROOM (spec J-small-1 §4.1): helpers _glued_to_mark(m) and _leading_zero(raw).
+def _glued_to_mark(m: re.Match) -> bool:
+    """Is a combining mark (Unicode category M*) directly next to this match?
+
+    Regex word boundaries ignore marks, so a number stuck to a vowel sign or a
+    virama looks standalone to them; it is really part of a written word.
+    """
+    text = m.string
+    neighbours = []
+    if m.start() > 0:
+        neighbours.append(text[m.start() - 1])
+    if m.end() < len(text):
+        neighbours.append(text[m.end()])
+    return any(unicodedata.category(c)[0] == "M" for c in neighbours)
+
+
+def _leading_zero(raw: str) -> bool:
+    """Zero-padded identifiers such as "007" (any script's zero digit) are codes, not quantities."""
+    if len(raw) < 2:
+        return False
+    return unicodedata.digit(raw[0], -1) == 0
 
 
 def _correct_ordinal_suffix(n: int) -> str:
@@ -587,7 +609,9 @@ def _numbers_to_words(text: str, lang: str, locale: Optional[str] = None) -> str
 
     def _safe(m: re.Match, render: Callable[[re.Match], str], *, clock: bool = False) -> str:
         # Any num2words hiccup leaves this occurrence untouched.
-        # CLEAN-ROOM (spec J-small-1 §4.2): guard skipping tokens glued to a combining mark or with a leading zero (clock times exempt from the zero rule).
+        whole = m.group(1).partition(".")[0]
+        if _glued_to_mark(m) or (_leading_zero(whole) and not clock):
+            return m.group(0)
         try:
             return render(m)
         except Exception:  # noqa: BLE001 — conservative: never mangle
@@ -679,7 +703,8 @@ def _numbers_to_words(text: str, lang: str, locale: Optional[str] = None) -> str
 
     def _integer(m: re.Match) -> str:
         raw = m.group(1)
-        # CLEAN-ROOM (spec J-small-1 §4.3): leading-zero guard for integer tokens.
+        if _leading_zero(raw):
+            return m.group(0)
         if _in_span(m, grouped):
             return m.group(0)
         n = int(raw)
@@ -698,8 +723,51 @@ def _numbers_to_words(text: str, lang: str, locale: Optional[str] = None) -> str
     return _INTEGER_RE.sub(lambda m: _safe(m, _integer), text)
 
 
-# CLEAN-ROOM (spec J-small-1 §4.5-4.6): native verbalizer registry, _native_lang and _numbers_to_words_native.
-# (main, signed @maatitechnologies-hue #2989: registry also maps "ur" -> services.number_words_ur)
+# ── Languages with their own number-word module ─────────────────────────────
+#
+# For languages that num2words cannot do, a plain module supplies
+# cardinal(int), decimal(int, str) and percent(str). The token patterns and
+# bracket masking are shared with the num2words route; a token that fails to
+# render is simply left as written.
+
+_NATIVE_VERBALIZERS = {
+    "ml": "services.number_words_ml",
+    "ur": "services.number_words_ur",
+}
+
+
+def _native_lang(language: Optional[str]) -> Optional[str]:
+    code = _plain_lang_code(language)
+    return code if code in _NATIVE_VERBALIZERS else None
+
+
+def _numbers_to_words_native(text: str, lang: str) -> str:
+    try:
+        words = importlib.import_module(_NATIVE_VERBALIZERS[lang])
+    except Exception:  # noqa: BLE001
+        return text
+
+    def rewrite(pattern: re.Pattern, speak: Callable[[re.Match], str], source: str) -> str:
+        def one(m: re.Match) -> str:
+            head = m.group(1).partition(".")[0]
+            if _glued_to_mark(m) or _leading_zero(head):
+                return m.group(0)
+            try:
+                return speak(m)
+            except Exception:  # noqa: BLE001
+                return m.group(0)
+
+        return pattern.sub(one, source)
+
+    # Percentages and decimals first, so the integer pass never sees their digits.
+    steps = (
+        (_PERCENT_RE, lambda m: words.percent(m.group(1))),
+        (_DECIMAL_RE, lambda m: words.decimal(int(m.group(1)), m.group(2))),
+        (_INTEGER_RE, lambda m: words.cardinal(int(m.group(1)))),
+    )
+    for pattern, speak in steps:
+        text = rewrite(pattern, speak, text)
+    return text
 
 
 # ── Public API ───────────────────────────────────────────────────────────────
@@ -721,7 +789,9 @@ def normalize_text(text: str, language: Optional[str] = None) -> str:
             out = _outside_brackets(out, lambda t: _expand_abbreviations(t, lang))
         locale = _num2words_locale(language, lang)
         out = _outside_brackets(out, lambda t: _numbers_to_words(t, lang, locale))
-    # CLEAN-ROOM (spec J-small-1 §4.7): fallback branch for languages with a native verbalizer.
+    elif _native_lang(language):
+        own = _native_lang(language)
+        out = _outside_brackets(out, lambda t: _numbers_to_words_native(t, own))
     return out
 
 

@@ -109,7 +109,20 @@ _CHANGE_CASES = [
     # English keeps reading separate numbers: "2 100" is not a group there.
     ("English", "room 2 100 meters away", "room two one hundred meters away"),
     ("Russian", "у меня 42 кота", "у меня сорок два кота"),
-    # CLEAN-ROOM (spec J-small-1 §6): Malayalam change-cases.
+    # Malayalam: no num2words locale, so these go through number_words_ml.
+    ("Malayalam", "എനിക്ക് 5 പൂച്ചകൾ", "എനിക്ക് അഞ്ച് പൂച്ചകൾ"),
+    ("Malayalam", "വീട് നമ്പർ 21", "വീട് നമ്പർ ഇരുപത്തിയൊന്ന്"),
+    ("Malayalam", "ആകെ 150 പേർ", "ആകെ നൂറ്റിയൻപത് പേർ"),
+    ("Malayalam", "വർഷം 2026 ആണ്", "വർഷം രണ്ടായിരത്തി ഇരുപത്തിയാറ് ആണ്"),
+    ("Malayalam", "വില 150000 ആണ്", "വില ഒരു ലക്ഷത്തി അൻപതിനായിരം ആണ്"),
+    ("Malayalam", "വില 100000 ആണ്", "വില ഒരു ലക്ഷം ആണ്"),
+    ("Malayalam", "ഫലം 50% ആണ്", "ഫലം അൻപത് ശതമാനം ആണ്"),
+    ("Malayalam", "അളവ് 3.14 ആണ്", "അളവ് മൂന്ന് ദശാംശം ഒന്ന് നാല് ആണ്"),
+    ("ml", "എനിക്ക് 5 പൂച്ചകൾ", "എനിക്ക് അഞ്ച് പൂച്ചകൾ"),
+    ("ml-IN", "എനിക്ക് 5 പൂച്ചകൾ", "എനിക്ക് അഞ്ച് പൂച്ചകൾ"),
+    ("Malayalam", "[pause 300ms] 7 പേർ", "[pause 300ms] ഏഴ് പേർ"),
+    ("Malayalam", "[voice:A3] 7 പേർ", "[voice:A3] ഏഴ് പേർ"),
+    ("Malayalam", "എനിക്ക് ൫ പൂച്ചകൾ", "എനിക്ക് അഞ്ച് പൂച്ചകൾ"),
     # Urdu goes through the native verbalizer too (num2words has no ur
     # locale): an irregular 0-99 table, سو / ہزار / لاکھ, and 1100-1999 read in
     # hundreds the way Urdu speakers say years ("انیس سو چھپن", not the
@@ -238,7 +251,19 @@ _UNCHANGED_CASES = [
     ("French", "soit 1 234 % du total"),
     ("French", "une baisse de -1 234% du total"),  # a sign stays on the run
     ("French", "soit -12 500 euros"),
-    # CLEAN-ROOM (spec J-small-1 §6): unchanged-cases for Malayalam / native-digit boundaries (separators, ranges, leading zeros, long IDs, brackets, combining marks).
+    # Malayalam / native-digit boundaries: all stay as written.
+    ("Malayalam", "വില 1,000 ആണ്"),
+    ("Malayalam", "പേജ് 3-5 കാണുക"),
+    ("Malayalam", "കോഡ് 007 ആണ്"),
+    ("Malayalam", "കോഡ് ൦൦൭ ആണ്"),
+    ("Malayalam", "ഐഡി 1234567 ആണ്"),
+    ("Malayalam", "[pause 300ms]"),
+    ("Malayalam", "[voice:A3]"),
+    ("Malayalam", "5ാം ദിവസം"),            # vowel sign glued after the digits
+    ("Malayalam", "ക്5 ദിവസം"),             # virama glued before the digits
+    ("Malayalam", "ദിവസം5 കഴിഞ്ഞു"),         # consonant + digits word
+    # Arabic-Indic zero-prefixed code on the num2words path.
+    ("ar", "الرمز \u0660\u0660\u0667 هنا"),
     # Urdu native path keeps the same conservative boundaries
     ("Urdu", "1,000 روپے"),                       # thousands separator
     ("Urdu", "صفحہ 3-5 پڑھیں"),                   # range
@@ -319,7 +344,33 @@ def test_cjk_passthrough_untouched():
         assert normalize_text(s, None) == s
 
 
-# CLEAN-ROOM (spec J-small-1 §6): tests for the native verbalizer full integer range and native-language resolution.
+def test_malayalam_cardinal_covers_whole_range():
+    from services import number_words_ml
+
+    for n in range(1_000_000):
+        words = number_words_ml.cardinal(n)
+        assert words
+        assert not any(ch.isdigit() for ch in words)
+        assert "\u200d" not in words and "\u200c" not in words
+
+
+def test_malayalam_cardinal_rejects_bad_input():
+    from services import number_words_ml
+
+    for bad in (-1, 1_000_000):
+        with pytest.raises(ValueError):
+            number_words_ml.cardinal(bad)
+    for bad in (True, 1.5, "3"):
+        with pytest.raises(TypeError):
+            number_words_ml.cardinal(bad)
+
+
+def test_native_language_resolution():
+    assert text_normalization._native_lang("Malayalam") == "ml"
+    assert text_normalization._native_lang("ml-IN") == "ml"
+    assert text_normalization._native_lang("English") is None
+    assert text_normalization._num2words_lang("Malayalam") is None
+    assert text_normalization._num2words_lang("ml") is None
 
 
 def test_urdu_verbalizer_covers_full_integer_range():

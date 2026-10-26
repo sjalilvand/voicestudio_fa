@@ -263,7 +263,69 @@ def test_smart_fit_api_preserves_valid_options_and_defaults(
 # flips torch's default dtype to float16 and leaks it into later tests. The
 # fixture save/restores the dtype and logs the setter's captured stack trace
 # so the CI log names the culprit call chain (see conftest.py).
-# CLEAN-ROOM (spec J-small-1 §10): two tests (watermark policy of per-segment WAV and final track; zero/negative-duration segments). The first needs the torch_dtype_isolation usefixtures decorator.
+@pytest.mark.usefixtures("torch_dtype_isolation")
+def test_fresh_speech_is_watermarked_exactly_once(patched_generate, monkeypatch):
+    import torchaudio
+
+    import api.routers.dub_generate as dg
+    import services.watermark as watermark
+
+    run, _model, job, job_dir = patched_generate
+    job["duration"] = 35.0
+    mark_lengths: list[int] = []
+    probe_at = 80_000
+
+    def _fake_mark(wav, sr, **_kw):
+        n = wav.shape[-1]
+        mark_lengths.append(n)
+        out = wav.clone()
+        out[..., n - probe_at - 500:n - probe_at + 500] = -0.9
+        return out
+
+    def _fake_detect(waveform, sample_rate):
+        found = bool((waveform < -0.5).any())
+        return {"is_watermarked": found, "confidence": 1.0 if found else 0.0,
+                "message_bits": "", "is_omnivoice": found}
+
+    monkeypatch.setattr(dg, "mark_synthetic", _fake_mark)
+    monkeypatch.setattr(watermark, "detect_watermark", _fake_detect)
+
+    done = _done(run(_body(
+        [{"start": 1.0, "end": 34.0, "text": "33.0:long line"}],
+        timing_strategy="concise",
+    )))
+    assert done["segments_processed"] == 1
+
+    track, sr = torchaudio.load(str(job_dir / "dubbed_es.wav"))
+    assert track.shape[-1] == int(35.0 * sr)
+    assert watermark.detect_watermark(track, sr)["is_watermarked"]
+    # The probe lands in the second 30 s chunk of the final track.
+    assert int(1.0 * sr) + int(33.0 * SR) - probe_at > 30 * sr
+
+    seg, seg_sr = torchaudio.load(str(job_dir / "seg_es_0.wav"))
+    assert watermark.detect_watermark(seg, seg_sr)["is_watermarked"]
+
+    # One mark call, on the 33 s fresh segment: the 35 s track is not re-marked.
+    assert mark_lengths == [int(33.0 * SR)]
+
+
+def test_zero_and_negative_duration_segments_do_not_break_assembly(patched_generate):
+    import torchaudio
+
+    run, _model, job, job_dir = patched_generate
+    job["duration"] = 5.0
+    segs = [
+        {"start": 0.0, "end": 1.0, "text": "0.5:hola"},
+        {"start": 2.0, "end": 2.0, "text": ""},
+        {"start": 3.0, "end": 4.0, "text": "   "},
+        {"start": 4.5, "end": 4.0, "text": ""},
+    ]
+    done = _done(run(_body(segs, timing_strategy="concise")))
+    assert done["segments_processed"] == 4
+
+    track, sr = torchaudio.load(str(job_dir / "dubbed_es.wav"))
+    assert track.shape[-1] == int(5.0 * sr)
+    assert not list(job_dir.glob("seg_mix_*.wav"))
 
 
 def test_smart_fit_audio_only_stretch_keeps_original_duration(patched_generate):

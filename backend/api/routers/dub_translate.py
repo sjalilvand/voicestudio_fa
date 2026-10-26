@@ -39,7 +39,7 @@ TRANSLATE_CODES = {
     "ru": "ru", "ja": "ja", "ko": "ko", "zh": "zh-CN", "cmn-Hans": "zh-CN",
     "ar": "ar", "hi": "hi", "tr": "tr", "pl": "pl", "nl": "nl", "sv": "sv",
     "th": "th", "vi": "vi", "id": "id", "uk": "uk",
-    # CLEAN-ROOM (spec J-small-1 §12): Malayalam entry in TRANSLATE_CODES.
+    "ml": "ml",
 }
 
 FLORES_CODES = {

@@ -4079,7 +4079,7 @@
         "type": "null"
        }
       ],
-      "description": "OmniVoice GGUF extension: long-form internal chunk duration.",
+      "description": "Seconds of speech per internal chunk for long texts; read by the OmniVoice GGUF engine only. Outside the OpenAI spec.",
       "title": "Chunk Duration"
      },
      "chunk_threshold": {
@@ -4092,12 +4092,12 @@
         "type": "null"
        }
       ],
-      "description": "OmniVoice GGUF extension: long-form internal chunk threshold.",
+      "description": "Length above which the OmniVoice GGUF engine starts splitting long texts into chunks. Outside the OpenAI spec.",
       "title": "Chunk Threshold"
      },
      "denoise": {
       "default": true,
-      "description": "VoiceStudio extension: prepend denoise control when supported.",
+      "description": "Set false to skip the denoise step on engines that offer one. Outside the OpenAI spec; VoiceStudio only.",
       "title": "Denoise",
       "type": "boolean"
      },
@@ -4123,7 +4123,7 @@
         "type": "null"
        }
       ],
-      "description": "VoiceStudio extension: target output duration in seconds.",
+      "description": "Aim for this many seconds of audio (seconds, must be positive). Outside the OpenAI spec; used by VoiceStudio engines that can honour it.",
       "title": "Duration"
      },
      "guidance_scale": {
@@ -4205,7 +4205,7 @@
      },
      "preprocess_prompt": {
       "default": true,
-      "description": "VoiceStudio extension: trim/preprocess reference prompt when supported.",
+      "description": "Set false to use the reference clip untouched instead of preprocessing it, where the engine supports that. Outside the OpenAI spec; VoiceStudio only.",
       "title": "Preprocess Prompt",
       "type": "boolean"
      },
@@ -4232,7 +4232,7 @@
         "type": "null"
        }
       ],
-      "description": "VoiceStudio extension: deterministic sampling seed.",
+      "description": "Fixes the random seed so the same request can be reproduced. Outside the OpenAI spec; VoiceStudio only.",
       "title": "Seed"
      },
      "speed": {

@@ -299,7 +299,33 @@ class SpeechRequest(BaseModel):
         "E.g. 'young female, warm tone, slight British accent'.",
     )
     instruct: Optional[str] = Field(default=None, description="Style instruction for the TTS engine.")
-    # CLEAN-ROOM (spec J-small-1 §7.1): VoiceStudio extension fields duration, seed, denoise, preprocess_prompt, chunk_duration, chunk_threshold.
+    duration: Optional[float] = Field(
+        default=None,
+        gt=0,
+        description="Aim for this many seconds of audio (seconds, must be positive). Outside the OpenAI spec; used by VoiceStudio engines that can honour it.",
+    )
+    seed: Optional[int] = Field(
+        default=None,
+        description="Fixes the random seed so the same request can be reproduced. Outside the OpenAI spec; VoiceStudio only.",
+    )
+    denoise: bool = Field(
+        default=True,
+        description="Set false to skip the denoise step on engines that offer one. Outside the OpenAI spec; VoiceStudio only.",
+    )
+    preprocess_prompt: bool = Field(
+        default=True,
+        description="Set false to use the reference clip untouched instead of preprocessing it, where the engine supports that. Outside the OpenAI spec; VoiceStudio only.",
+    )
+    chunk_duration: Optional[float] = Field(
+        default=None,
+        ge=0,
+        description="Seconds of speech per internal chunk for long texts; read by the OmniVoice GGUF engine only. Outside the OpenAI spec.",
+    )
+    chunk_threshold: Optional[float] = Field(
+        default=None,
+        ge=0,
+        description="Length above which the OmniVoice GGUF engine starts splitting long texts into chunks. Outside the OpenAI spec.",
+    )
     # #1014: these two were silently DISCARDED before (pydantic ignores
     # undeclared fields) — a 200 OK that quietly dropped the caller's quality
     # knobs. Declared now and passed through, matching the native /generate
@@ -651,8 +677,13 @@ async def create_speech(req: SpeechRequest):
     # Build kwargs for the backend's generate() method
     kw: dict = {
         "speed": req.speed,
+        "denoise": req.denoise,
+        "preprocess_prompt": req.preprocess_prompt,
     }
-    # CLEAN-ROOM (spec J-small-1 §7.2): forward duration, seed, chunk_duration and chunk_threshold when provided.
+    for opt in ("duration", "seed", "chunk_duration", "chunk_threshold"):
+        given = getattr(req, opt)
+        if given is not None:
+            kw[opt] = given
     if req.num_step is not None:
         kw["num_step"] = req.num_step
     if req.guidance_scale is not None:
@@ -687,7 +718,9 @@ async def create_speech(req: SpeechRequest):
                 stored_instruct = profile_instruct(row, backend.id)
                 if stored_instruct:
                     kw["instruct"] = stored_instruct
-            # CLEAN-ROOM (spec J-small-1 §7.3): profile seed fallback when the request has no seed.
+            # A profile's remembered seed keeps repeat requests for it reproducible.
+            if req.seed is None and row["seed"] is not None:
+                kw["seed"] = row["seed"]
         else:
             # Not a profile — forward as an engine preset name.
             kw["voice"] = voice

@@ -835,7 +835,15 @@ def _make_backend_class():
               * ``ref_audio`` (str/Path) — speaker reference WAV for cloning.
               * ``ref_text`` (str) — transcript of ``ref_audio``.
               * ``language`` (str) — ISO code or omnivoice-tts lang label.
-              * CLEAN-ROOM (spec J-small-1 §8.1): docstring entries for instruct, duration, seed, denoise, preprocess_prompt, chunk_duration, chunk_threshold.
+              * ``instruct`` (str) — free-text speaking-style hint.
+              * ``duration`` (float) — desired output length in seconds.
+              * ``seed`` (int) — RNG seed, to make a run repeatable.
+              * ``denoise`` (bool, default True) — False asks the binary to
+                skip denoising.
+              * ``preprocess_prompt`` (bool, default True) — False feeds the
+                reference clip through unprocessed.
+              * ``chunk_duration`` / ``chunk_threshold`` (float) — tuning of
+                how the binary splits long inputs.
             """
             import soundfile as sf  # local import keeps module import cheap
             import torch
@@ -846,18 +854,30 @@ def _make_backend_class():
             fd, out_str = tempfile.mkstemp(prefix="omnivoice-gguf-", suffix=".wav")
             os.close(fd)
             out_path = Path(out_str)
-            # CLEAN-ROOM (spec J-small-1 §8.3): temp transcript path state.
+            ref_text_file: Optional[Path] = None
 
             try:
-                # CLEAN-ROOM (spec J-small-1 §8.3): write ref_text to a temporary transcript file when ref_audio and ref_text are both given.
+                # The binary reads the prompt transcript from a file, so stage one.
+                ref_text = kw.get("ref_text")
+                if kw.get("ref_audio") and ref_text:
+                    tfd, tname = tempfile.mkstemp(prefix="gguf-prompt-transcript-", suffix=".transcript")
+                    os.close(tfd)
+                    ref_text_file = Path(tname)
+                    ref_text_file.write_text(str(ref_text), encoding="utf-8")
                 argv = self._build_argv(
                     base=base_path,
                     tokenizer=tok_path,
                     out_path=out_path,
                     ref_audio=kw.get("ref_audio"),
-                    # CLEAN-ROOM (spec J-small-1 §8.3): ref_text argument is the temp transcript file path.
+                    ref_text=str(ref_text_file) if ref_text_file else None,
                     language=kw.get("language"),
-                    # CLEAN-ROOM (spec J-small-1 §8.2): pass instruct, duration, seed, denoise, preprocess_prompt, chunk_duration, chunk_threshold through to _build_argv.
+                    instruct=kw.get("instruct"),
+                    duration=kw.get("duration"),
+                    seed=kw.get("seed"),
+                    denoise=kw.get("denoise", True),
+                    preprocess_prompt=kw.get("preprocess_prompt", True),
+                    chunk_duration=kw.get("chunk_duration"),
+                    chunk_threshold=kw.get("chunk_threshold"),
                 )
                 self._run_subprocess(argv, stdin_text=text)
                 wav, sr = sf.read(str(out_path))
@@ -866,7 +886,11 @@ def _make_backend_class():
                     out_path.unlink()
                 except OSError:
                     pass
-                # CLEAN-ROOM (spec J-small-1 §8.3): clean up the temporary transcript file.
+                if ref_text_file is not None:
+                    try:
+                        ref_text_file.unlink()
+                    except OSError:
+                        pass
 
             # soundfile returns (n,) for mono or (n, c) for multichannel.
             # OmniVoice/Higgs Audio v2 is mono → (n,). Wrap to (1, n).
@@ -891,7 +915,13 @@ def _make_backend_class():
             ref_audio: Optional[str],
             ref_text: Optional[str],
             language: Optional[str],
-            # CLEAN-ROOM (spec J-small-1 §8.4): keyword parameters instruct, duration, seed, denoise, preprocess_prompt, chunk_duration, chunk_threshold.
+            instruct: Optional[str] = None,
+            duration: Optional[float] = None,
+            seed: Optional[int] = None,
+            denoise: bool = True,
+            preprocess_prompt: bool = True,
+            chunk_duration: Optional[float] = None,
+            chunk_threshold: Optional[float] = None,
         ) -> list[str]:
             """Compose argv from typed Path objects only (T-04-02)."""
             argv: list[str] = [
@@ -903,7 +933,22 @@ def _make_backend_class():
             lang = _iso_to_omnivoice_lang(language)
             if lang:
                 argv += ["--lang", lang]
-            # CLEAN-ROOM (spec J-small-1 §8.4): argv flags for instruct, duration, seed, denoise, preprocess_prompt, chunk_duration, chunk_threshold.
+            valued = (
+                ("--instruct", instruct or None, str),
+                ("--duration", duration, lambda v: str(float(v))),
+                ("--seed", seed, lambda v: str(int(v))),
+                ("--chunk-duration", chunk_duration, lambda v: str(float(v))),
+                ("--chunk-threshold", chunk_threshold, lambda v: str(float(v))),
+            )
+            for flag, value, render in valued:
+                if value is not None:
+                    argv.extend((flag, render(value)))
+            for flag, switched_off in (
+                ("--no-denoise", denoise is False),
+                ("--no-preprocess-prompt", preprocess_prompt is False),
+            ):
+                if switched_off:
+                    argv.append(flag)
             if ref_audio:
                 # Two-stage validation (defense in depth):
                 #   (a) Reject anything outside the project's voices /
@@ -937,7 +982,7 @@ def _make_backend_class():
                     )
                 argv += ["--ref-wav", str(ref_path)]
                 if ref_text:
-                    # CLEAN-ROOM (spec J-small-1 §8.5): note that --ref-text takes a transcript FILE path.
+                    # By this point ref_text is a path to the staged transcript file.
                     argv += ["--ref-text", str(ref_text)]
             return argv
 
