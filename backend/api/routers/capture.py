@@ -42,8 +42,11 @@ def _timing(value):
 
 def _truthy(value: Optional[str]) -> bool:
     """Parse a multipart form flag. Treats '1'/'true'/'yes'/'on'/'auto'
-    (any case) as on; everything else — including None — as off."""
-    return (value or "").strip().lower() in {"1", "true", "yes", "on", "auto"}
+    (any case) as on; everything else — including None, and the ``Form``
+    default a direct (non-HTTP) call leaves in place — as off."""
+    if not isinstance(value, str):
+        return False
+    return value.strip().lower() in {"1", "true", "yes", "on", "auto"}
 
 
 @router.post("/transcribe")

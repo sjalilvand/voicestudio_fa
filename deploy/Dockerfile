@@ -169,7 +169,7 @@ RUN if [ "$GPU_FLAVOR" = "cuda" ] && [ "$(uname -m)" != "aarch64" ]; then \
         target="$(python3 -c "import sys; print(f'{sys.prefix}/lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages/cudnn8_compat')")" \
         && uv pip install --python "$(command -v python3)" --no-cache --no-deps \
             --target "$target" nvidia-cudnn-cu12==8.9.7.29 \
-        && python3 -c "import glob, sys; found = [f for f in glob.glob(sys.argv[1] + '/nvidia/cudnn/lib/*') if '.so.8' in f]; assert found, 'cuDNN 8 libraries missing from ' + sys.argv[1]; print(f'cuDNN 8 compat: {len(found)} libraries in ' + sys.argv[1])" "$target"; \
+        && CUDNN8_TARGET="$target" python3 -c "import glob, os; t = os.environ['CUDNN8_TARGET']; found = [f for f in glob.glob(t + '/nvidia/cudnn/lib/*') if '.so.8' in f]; assert found, 'cuDNN 8 libraries missing from ' + t; print(f'cuDNN 8 compat: {len(found)} libraries in ' + t)"; \
     else \
         echo "cuDNN 8 compat skipped (GPU_FLAVOR=$GPU_FLAVOR, arch=$(uname -m))"; \
     fi
