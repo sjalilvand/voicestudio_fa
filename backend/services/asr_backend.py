@@ -396,6 +396,16 @@ def transcribe_request_kwargs(backend, options: dict) -> dict:
     }
 
 
+#: Sequential Whisper decoders (faster-whisper, MLX Whisper) feed each 30 s
+#: window the previous window's text by default. On long audio one
+#: hallucinated window is then repeated through the rest of the file, so we
+#: decode every window on its own. Clips under 30 s are a single window, so
+#: short dictation and reference clips decode exactly as before. WhisperX and
+#: the batched/transformers pipelines already decode windows independently.
+#: The ASR sidecar (engines/_asr_sidecar/main.py) applies the same option.
+WHISPER_LONG_FORM_OPTIONS = {"condition_on_previous_text": False}
+
+
 def whisper_request_options(language, initial_prompt, temperature, task) -> dict:
     """Whisper-family decode kwargs for the options that were actually set."""
     opts: dict = {}
@@ -1287,6 +1297,7 @@ class FasterWhisperBackend(ASRBackend):
             word_timestamps=word_timestamps,
             vad_filter=True,  # built-in Silero VAD — cleaner segment starts
             **asr_decode_defaults(),
+            **WHISPER_LONG_FORM_OPTIONS,
             **whisper_request_options(language, initial_prompt, temperature, task),
         )
         segments = list(segments_iter)
@@ -1409,6 +1420,7 @@ class MLXWhisperBackend(ASRBackend):
             audio,
             path_or_hf_repo=_local_model_source(self._model_name),
             word_timestamps=word_timestamps,
+            **WHISPER_LONG_FORM_OPTIONS,
             **whisper_request_options(language, initial_prompt, temperature, task),
         )
         # Forced alignment, same as WhisperX (#1127). On Apple Silicon this
