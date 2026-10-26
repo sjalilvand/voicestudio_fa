@@ -1768,8 +1768,8 @@
     "addLine": "Zeile hinzufügen",
     "addChapter": "Kapitel hinzufügen",
     "clearConfirm": "Alle {{count}} Skripteinträge und noch nicht übernommene importierte Texte löschen? Dies kann nicht rückgängig gemacht werden.",
-    "clearScript": "Skript löschen",
-    "clearScriptHint": "Besetzung behalten, jedoch Kapitel und Textzeilen löschen",
+    "clearScript": "Skript leeren",
+    "clearScriptHint": "Entfernt alles aus dem Skript: sämtliche Zeilen und Kapitel",
     "clearConfirmScript": "Dieses vollständige Manuskript endgültig löschen?",
     "chapterN": "Kapitel {{n}}",
     "stems": "Figurenspuren",
@@ -1842,9 +1842,7 @@
     "toneChip": "Ton & Tempo: {{speed}}",
     "lineVoice": "Zeilenstimme",
     "chapterHeading": "Kapiteltitel",
-    "lineActions": "Zeilenaktionen",
-    "clearScript": "Skript leeren",
-    "clearScriptHint": "Entfernt alles aus dem Skript: sämtliche Zeilen und Kapitel"
+    "lineActions": "Zeilenaktionen"
   },
   "audiobook": {
     "cast": "Besetzung",

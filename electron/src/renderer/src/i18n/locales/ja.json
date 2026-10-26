@@ -1769,7 +1769,7 @@
     "addChapter": "章を追加",
     "clearConfirm": "台本の全{{count}}項目と未処理のインポート済みテキストを削除しますか？この操作は取り消せません。",
     "clearScript": "台本を空にする",
-    "clearScriptHint": "割り当てた声は残し、章と台詞をすべて消します",
+    "clearScriptHint": "スクリプトの中身をすべて削除します (全行と全章)",
     "clearConfirmScript": "この原稿を全文、完全に消去しますか？",
     "chapterN": "第 {{n}} 章",
     "stems": "キャラクター別音声",
@@ -1842,8 +1842,7 @@
     "toneChip": "トーンと速度: {{speed}}",
     "lineVoice": "行の音声",
     "chapterHeading": "章タイトル",
-    "lineActions": "行の操作",
-    "clearScriptHint": "スクリプトの中身をすべて削除します (全行と全章)"
+    "lineActions": "行の操作"
   },
   "audiobook": {
     "cast": "キャスト",

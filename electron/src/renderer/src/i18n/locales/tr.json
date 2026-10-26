@@ -1768,8 +1768,8 @@
     "addLine": "Satır Ekle",
     "addChapter": "Bölüm Ekle",
     "clearConfirm": "{{count}} senaryo girdisinin tamamı ve bekleyen içe aktarılmış metin silinsin mi? Bu işlem geri alınamaz.",
-    "clearScript": "Senaryoyu boşalt",
-    "clearScriptHint": "Atanan sesleri korur; bölümleri ve satırları siler",
+    "clearScript": "Betiği boşalt",
+    "clearScriptHint": "Betiğin tamamını siler: tüm satırlar ve tüm bölümler",
     "clearConfirmScript": "Bu el yazmasının tamamı kalıcı olarak silinsin mi?",
     "chapterN": "Bölüm {{n}}",
     "stems": "Karakter ses kanalları",
@@ -1842,9 +1842,7 @@
     "toneChip": "Ton ve hız: {{speed}}",
     "lineVoice": "Satır sesi",
     "chapterHeading": "Bölüm başlığı",
-    "lineActions": "Satır işlemleri",
-    "clearScript": "Betiği boşalt",
-    "clearScriptHint": "Betiğin tamamını siler: tüm satırlar ve tüm bölümler"
+    "lineActions": "Satır işlemleri"
   },
   "audiobook": {
     "cast": "Kadro",

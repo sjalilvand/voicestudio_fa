@@ -379,13 +379,12 @@
     "theme_light": "Sáng",
     "reduce_motion": "Giảm chuyển động",
     "reduce_motion_desc": "Dừng hoạt ảnh nền và hiệu ứng chuyển tiếp. Cài đặt hệ thống vẫn có hiệu lực riêng; mục này bổ sung thêm.",
-    "perf_torch_compile": "Dùng chế độ eager",
+    "perf_torch_compile": "Tắt torch.compile",
     "perf_torch_compile_note": "Chạy mô hình không dùng kernel đã biên dịch khi Triton thiếu ổn định.",
     "perf_torch_compile_hint": "Bật sau khi Triton hoặc <code>torch.compile</code> gặp sự cố, kể cả khi backend thoát lúc tạo âm thanh. VoiceStudio sẽ truyền <code>TORCH_COMPILE_DISABLE=1</code> và ưu tiên độ ổn định hơn tốc độ biên dịch. <issueLink>#65</issueLink> dành cho Windows có VRAM dưới 16 GB; <crashLink>#2135</crashLink> theo dõi lỗi đồ thị CUDA trên NVIDIA cũ.",
     "llmp_cli_help": "Dùng CLI đã cài và phiên đăng nhập qua cùng bộ chạy với tính năng sửa bằng tác nhân. Để trống Mô hình để dùng mặc định của CLI. Phản hồi có thể chậm hơn; phí tính theo tài khoản CLI.",
     "llmp_sdk_help": "Nhà cung cấp gốc dùng LiteLLM. Với nhà cung cấp khác, nhập provider/model. Bedrock dùng khóa API hoặc hồ sơ AWS; Vertex dùng ID tài khoản làm dự án và thông tin xác thực Google. URL cơ sở là tùy chọn.",
-    "llmp_cli_auth": "Quyền truy cập tài khoản CLI bị từ chối. Kiểm tra đăng nhập, gói đăng ký và mô hình đã chọn.",
-    "perf_torch_compile": "Tắt torch.compile"
+    "llmp_cli_auth": "Quyền truy cập tài khoản CLI bị từ chối. Kiểm tra đăng nhập, gói đăng ký và mô hình đã chọn."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -452,7 +451,7 @@
     "addChapter": "Thêm chương",
     "clearConfirm": "Xóa toàn bộ {{count}} mục kịch bản và văn bản đã nhập đang chờ xử lý? Không thể hoàn tác thao tác này.",
     "clearScript": "Làm trống kịch bản",
-    "clearScriptHint": "Giữ các giọng đã gán, đồng thời xóa chương và lời thoại",
+    "clearScriptHint": "Xóa toàn bộ nội dung kịch bản: mọi dòng và mọi chương",
     "cleared": "Đã làm trống kịch bản",
     "chapterN": "Chương {{n}}",
     "stems": "thân cây",
@@ -509,8 +508,7 @@
     "exportFailed": "Xuất không thành công - kiểm tra xem chương trình phụ trợ có đang chạy không.",
     "global_speed": "Tốc độ",
     "global_speed_hint": "Tốc độ đọc cho tất cả các dòng mà không cần ghi đè tốc độ riêng",
-    "deleteProjectConfirm": "Xóa vĩnh viễn dự án này?",
-    "clearScriptHint": "Xóa toàn bộ nội dung kịch bản: mọi dòng và mọi chương"
+    "deleteProjectConfirm": "Xóa vĩnh viễn dự án này?"
   },
   "common": {
     "stop": "Dừng lại",

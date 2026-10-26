@@ -1364,7 +1364,7 @@
     "perf_title": "性能",
     "generate_timeout_cpu_note": "当生成运行在 CPU 上时使用。一旦在此处保存，该值将始终控制 CPU 生成——与上面的加速预算无关。",
     "device_family_rocm": "AMD GPU (ROCm)",
-    "perf_torch_compile": "使用即时模式",
+    "perf_torch_compile": "关闭 torch.compile",
     "offload_after_generation": "生成后将语音模型移至系统内存",
     "offload_after_generation_note": "生成完成后释放显存，供本地 LLM 等其他应用使用。下次生成时会将模型移回，需要多花几秒。适用于内置的 OmniVoice 引擎。",
     "offload_after_generation_cpu": "此设备使用 CPU 生成，模型本就在系统内存中，此设置不起作用。",
@@ -1497,8 +1497,7 @@
     "gpu_report_engine_pinned_cpu": "CPU：计算设备已固定为 CPU",
     "gpu_report_engine_no_family_path": "CPU：没有适用于你的 GPU 类型的路径",
     "gpu_report_engine_no_gpu": "CPU：没有可用的 GPU",
-    "gpu_report_engine_needs_accelerator": "需要此电脑没有的 GPU（{{needs}}）",
-    "perf_torch_compile": "关闭 torch.compile"
+    "gpu_report_engine_needs_accelerator": "需要此电脑没有的 GPU（{{needs}}）"
   },
   "gallery": {
     "title": "VoiceStudio 音色库",
@@ -1770,7 +1769,7 @@
     "addChapter": "添加章节",
     "clearConfirm": "清除全部 {{count}} 个脚本条目及待处理的导入文本？此操作无法撤销。",
     "clearScript": "抹除脚本",
-    "clearScriptHint": "保留已分配的声音，同时删除章节和全部台词",
+    "clearScriptHint": "清除脚本中的全部内容：所有行和所有章节",
     "clearConfirmScript": "要永久抹除这份完整手稿吗？",
     "chapterN": "第 {{n}} 章",
     "stems": "角色分轨",
@@ -1843,8 +1842,7 @@
     "toneChip": "语气与语速：{{speed}}",
     "lineVoice": "本行声音",
     "chapterHeading": "章节标题",
-    "lineActions": "行操作",
-    "clearScriptHint": "清除脚本中的全部内容：所有行和所有章节"
+    "lineActions": "行操作"
   },
   "audiobook": {
     "cast": "配音角色",

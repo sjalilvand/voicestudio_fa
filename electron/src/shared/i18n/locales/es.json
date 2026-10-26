@@ -379,13 +379,12 @@
     "theme_light": "Claro",
     "reduce_motion": "Reducir movimiento",
     "reduce_motion_desc": "Detiene las animaciones de fondo y las transiciones. Tu ajuste del sistema se respeta por sí solo; esto se suma.",
-    "perf_torch_compile": "Usar modo inmediato",
+    "perf_torch_compile": "Desactivar torch.compile",
     "perf_torch_compile_note": "Ejecuta el modelo sin núcleos compilados si Triton resulta inestable.",
     "perf_torch_compile_hint": "Activa esta opción tras un fallo de Triton o <code>torch.compile</code>, incluso si el backend se cierra al crear audio. VoiceStudio enviará <code>TORCH_COMPILE_DISABLE=1</code> y priorizará la estabilidad frente a la velocidad compilada. <issueLink>#65</issueLink> trata Windows con menos de 16 GB de VRAM; <crashLink>#2135</crashLink> recoge fallos de gráficos CUDA en NVIDIA antiguas.",
     "llmp_cli_help": "Usa la CLI instalada y su sesión mediante el mismo ejecutor que la reparación con agente. Deja Modelo vacío para usar el predeterminado. Puede ser más lento; el coste corresponde a tu cuenta de la CLI.",
     "llmp_sdk_help": "Los proveedores nativos usan LiteLLM. Para otros, introduce provider/model. Bedrock usa una clave API o perfil AWS; Vertex usa el ID de cuenta como proyecto y credenciales de Google. La URL base es opcional.",
-    "llmp_cli_auth": "Se rechazó el acceso de la cuenta CLI. Revisa la sesión, la suscripción y el modelo seleccionado.",
-    "perf_torch_compile": "Desactivar torch.compile"
+    "llmp_cli_auth": "Se rechazó el acceso de la cuenta CLI. Revisa la sesión, la suscripción y el modelo seleccionado."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -452,7 +451,7 @@
     "addChapter": "Agregar capítulo",
     "clearConfirm": "¿Borrar las {{count}} entradas del guion y cualquier texto importado pendiente? Esta acción no se puede deshacer.",
     "clearScript": "Vaciar el guion",
-    "clearScriptHint": "Conserva las voces asignadas y borra capítulos y líneas",
+    "clearScriptHint": "Quita todo del guion: todas las líneas y todos los capítulos",
     "cleared": "Guion vaciado",
     "chapterN": "Capítulo {{n}}",
     "stems": "Tallos",
@@ -509,8 +508,7 @@
     "exportFailed": "Falló la exportación: verifique que el backend se esté ejecutando.",
     "global_speed": "Velocidad",
     "global_speed_hint": "Velocidad de lectura para todas las líneas sin su propia anulación de velocidad",
-    "deleteProjectConfirm": "¿Eliminar este proyecto permanentemente?",
-    "clearScriptHint": "Quita todo del guion: todas las líneas y todos los capítulos"
+    "deleteProjectConfirm": "¿Eliminar este proyecto permanentemente?"
   },
   "common": {
     "stop": "Detener",

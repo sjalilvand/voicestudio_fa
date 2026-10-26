@@ -1516,7 +1516,7 @@
     "perf_title": "Performance",
     "generate_timeout_cpu_note": "Used when generation runs on the CPU. Once saved here, this always governs CPU-family generation — independent of the accelerated budget above.",
     "device_family_rocm": "AMD GPU (ROCm)",
-    "perf_torch_compile": "Use eager mode",
+    "perf_torch_compile": "Turn off torch.compile",
     "offload_after_generation": "Move the voice model to system RAM after generation",
     "offload_after_generation_note": "Frees GPU memory for other apps, such as a local LLM, once generation finishes. The next generation moves the model back, which adds a few seconds. Applies to the built-in OmniVoice engine.",
     "offload_after_generation_cpu": "Generation runs on the CPU here, so the model already lives in system RAM and this has no effect.",
@@ -1649,8 +1649,7 @@
     "gpu_report_engine_pinned_cpu": "CPU: compute device pinned to CPU",
     "gpu_report_engine_no_family_path": "CPU: no path for your GPU type",
     "gpu_report_engine_no_gpu": "CPU: no GPU available",
-    "gpu_report_engine_needs_accelerator": "Needs a GPU ({{needs}}) this machine does not have",
-    "perf_torch_compile": "Turn off torch.compile"
+    "gpu_report_engine_needs_accelerator": "Needs a GPU ({{needs}}) this machine does not have"
   },
   "gallery": {
     "title": "VoiceStudio Gallery",
@@ -1909,7 +1908,7 @@
     "addChapter": "Add Chapter",
     "clearConfirm": "Clear all {{count}} script entries and any pending imported text? This cannot be undone.",
     "clearScript": "Erase script",
-    "clearScriptHint": "Keep assigned voices, but delete the script’s chapters and lines",
+    "clearScriptHint": "Remove everything from the script: all lines and all chapters",
     "clearConfirmScript": "Permanently erase this complete manuscript?",
     "chapterN": "Chapter {{n}}",
     "stems": "Stems",
@@ -1982,8 +1981,7 @@
     "toneChip": "Tone & speed: {{speed}}",
     "lineVoice": "Line voice",
     "chapterHeading": "Chapter title",
-    "lineActions": "Line actions",
-    "clearScriptHint": "Remove everything from the script: all lines and all chapters"
+    "lineActions": "Line actions"
   },
   "audiobook": {
     "cast": "Cast",

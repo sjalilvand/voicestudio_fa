@@ -379,13 +379,12 @@
     "theme_light": "Terang",
     "reduce_motion": "Kurangi gerakan",
     "reduce_motion_desc": "Menghentikan animasi latar dan transisi. Pengaturan sistem Anda tetap berlaku sendiri; ini menambahnya.",
-    "perf_torch_compile": "Gunakan mode eager",
+    "perf_torch_compile": "Nonaktifkan torch.compile",
     "perf_torch_compile_note": "Menjalankan model tanpa kernel terkompilasi saat Triton tidak stabil.",
     "perf_torch_compile_hint": "Nyalakan setelah kegagalan Triton atau <code>torch.compile</code>, termasuk jika backend keluar ketika membuat audio. VoiceStudio lalu mengirim <code>TORCH_COMPILE_DISABLE=1</code> dan mendahulukan kestabilan daripada kecepatan kompilasi. <issueLink>#65</issueLink> membahas Windows dengan VRAM di bawah 16 GB; <crashLink>#2135</crashLink> melacak gangguan grafik CUDA pada NVIDIA lama.",
     "llmp_cli_help": "Menggunakan CLI terpasang dan loginnya melalui pelaksana yang sama dengan perbaikan agen. Kosongkan Model untuk bawaan CLI. Respons mungkin lebih lambat; biaya mengikuti akun CLI.",
     "llmp_sdk_help": "Penyedia native memakai LiteLLM. Untuk penyedia lain, masukkan provider/model. Bedrock memakai kunci API atau profil AWS; Vertex memakai ID akun sebagai proyek dan kredensial Google. URL dasar opsional.",
-    "llmp_cli_auth": "Akses akun CLI ditolak. Periksa login, langganan, dan model yang dipilih.",
-    "perf_torch_compile": "Nonaktifkan torch.compile"
+    "llmp_cli_auth": "Akses akun CLI ditolak. Periksa login, langganan, dan model yang dipilih."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -451,8 +450,8 @@
     "addLine": "Tambahkan Baris",
     "addChapter": "Tambahkan Bab",
     "clearConfirm": "Hapus semua {{count}} entri naskah dan teks impor yang tertunda? Tindakan ini tidak dapat dibatalkan.",
-    "clearScript": "Hapus isi naskah",
-    "clearScriptHint": "Pertahankan suara terpilih, lalu hapus bab dan semua baris",
+    "clearScript": "Kosongkan skrip",
+    "clearScriptHint": "Menghapus seluruh isi skrip: semua baris dan semua bab",
     "cleared": "Isi naskah dihapus",
     "chapterN": "Bab {{n}}",
     "stems": "Batang",
@@ -509,9 +508,7 @@
     "exportFailed": "Ekspor gagal — periksa apakah backend sedang berjalan.",
     "global_speed": "Kecepatan",
     "global_speed_hint": "Kecepatan membaca untuk semua lini tanpa mengesampingkan kecepatannya sendiri",
-    "deleteProjectConfirm": "Hapus proyek ini secara permanen?",
-    "clearScript": "Kosongkan skrip",
-    "clearScriptHint": "Menghapus seluruh isi skrip: semua baris dan semua bab"
+    "deleteProjectConfirm": "Hapus proyek ini secara permanen?"
   },
   "common": {
     "stop": "Berhenti",

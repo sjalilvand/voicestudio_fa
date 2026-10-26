@@ -1769,7 +1769,7 @@
     "addChapter": "新增章節",
     "clearConfirm": "清除全部 {{count}} 個腳本項目及待處理的匯入文字？此操作無法復原。",
     "clearScript": "抹除腳本",
-    "clearScriptHint": "保留已指派的聲音，同時刪除章節和所有台詞",
+    "clearScriptHint": "清除指令碼中的全部內容：所有行與所有章節",
     "clearConfirmScript": "要永久抹除這份完整手稿嗎？",
     "chapterN": "第{{n}}章",
     "stems": "角色分軌",
@@ -1842,8 +1842,7 @@
     "toneChip": "語氣與語速：{{speed}}",
     "lineVoice": "本行聲音",
     "chapterHeading": "章節標題",
-    "lineActions": "行操作",
-    "clearScriptHint": "清除指令碼中的全部內容：所有行與所有章節"
+    "lineActions": "行操作"
   },
   "audiobook": {
     "cast": "配音角色",

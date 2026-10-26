@@ -1364,7 +1364,7 @@
     "perf_title": "성능",
     "generate_timeout_cpu_note": "생성이 CPU에서 실행될 때 사용됩니다. 여기에 저장하면 위의 가속 예산과 관계없이 이 값이 항상 CPU 생성을 관리합니다.",
     "device_family_rocm": "AMD GPU (ROCm)",
-    "perf_torch_compile": "Eager 모드 사용",
+    "perf_torch_compile": "torch.compile 끄기",
     "offload_after_generation": "생성 후 음성 모델을 시스템 RAM으로 이동",
     "offload_after_generation_note": "생성이 끝나면 로컬 LLM 같은 다른 앱이 쓸 수 있도록 GPU 메모리를 비웁니다. 다음 생성 때 모델을 다시 옮기므로 몇 초가 더 걸립니다. 내장 OmniVoice 엔진에 적용됩니다.",
     "offload_after_generation_cpu": "이 기기에서는 CPU로 생성하므로 모델이 이미 시스템 RAM에 있어 이 설정은 효과가 없습니다.",
@@ -1497,8 +1497,7 @@
     "gpu_report_engine_pinned_cpu": "CPU: 연산 장치가 CPU로 고정됨",
     "gpu_report_engine_no_family_path": "CPU: 사용 중인 GPU 종류에 맞는 경로 없음",
     "gpu_report_engine_no_gpu": "CPU: 사용 가능한 GPU 없음",
-    "gpu_report_engine_needs_accelerator": "이 컴퓨터에 없는 GPU({{needs}})가 필요함",
-    "perf_torch_compile": "torch.compile 끄기"
+    "gpu_report_engine_needs_accelerator": "이 컴퓨터에 없는 GPU({{needs}})가 필요함"
   },
   "gallery": {
     "title": "VoiceStudio 갤러리",
@@ -1770,7 +1769,7 @@
     "addChapter": "장 추가",
     "clearConfirm": "대본 항목 {{count}}개와 처리 대기 중인 가져온 텍스트를 모두 지울까요? 이 작업은 되돌릴 수 없습니다.",
     "clearScript": "대본 비우기",
-    "clearScriptHint": "지정된 음성은 남기고 모든 장과 대사를 없앱니다",
+    "clearScriptHint": "스크립트의 모든 줄과 챕터를 전부 지웁니다",
     "clearConfirmScript": "이 원고 전체를 영구적으로 지울까요?",
     "chapterN": "{{n}}장",
     "stems": "캐릭터별 음원",
@@ -1843,8 +1842,7 @@
     "toneChip": "톤 및 속도: {{speed}}",
     "lineVoice": "줄 음성",
     "chapterHeading": "챕터 제목",
-    "lineActions": "줄 작업",
-    "clearScriptHint": "스크립트의 모든 줄과 챕터를 전부 지웁니다"
+    "lineActions": "줄 작업"
   },
   "audiobook": {
     "cast": "캐스트",

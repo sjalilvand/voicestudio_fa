@@ -1771,7 +1771,7 @@
     "addChapter": "Adicionar capítulo",
     "clearConfirm": "Limpar todas as {{count}} entradas do roteiro e qualquer texto importado pendente? Esta ação não pode ser desfeita.",
     "clearScript": "Esvaziar roteiro",
-    "clearScriptHint": "Mantém as vozes escolhidas e apaga capítulos e falas",
+    "clearScriptHint": "Apaga tudo do roteiro: todas as linhas e todos os capítulos",
     "clearConfirmScript": "Apagar permanentemente este manuscrito inteiro?",
     "chapterN": "Capítulo {{n}}",
     "stems": "Faixas por personagem",
@@ -1844,9 +1844,7 @@
     "toneChip": "Tom e velocidade: {{speed}}",
     "lineVoice": "Voz da linha",
     "chapterHeading": "Título do capítulo",
-    "lineActions": "Ações da linha",
-    "clearScript": "Esvaziar roteiro",
-    "clearScriptHint": "Apaga tudo do roteiro: todas as linhas e todos os capítulos"
+    "lineActions": "Ações da linha"
   },
   "audiobook": {
     "cast": "Elenco",

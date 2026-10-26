@@ -379,13 +379,12 @@
     "theme_light": "Hell",
     "reduce_motion": "Bewegung reduzieren",
     "reduce_motion_desc": "Stoppt Hintergrundanimationen und Übergänge. Die Systemeinstellung gilt weiterhin für sich; dies kommt hinzu.",
-    "perf_torch_compile": "Eager-Modus verwenden",
+    "perf_torch_compile": "torch.compile abschalten",
     "perf_torch_compile_note": "Führt Modelle ohne kompilierte Kernel aus, falls Triton instabil ist.",
     "perf_torch_compile_hint": "Schalten Sie dies nach Fehlern von Triton oder <code>torch.compile</code> ein, auch wenn das Backend bei der Audioerzeugung endet. VoiceStudio übergibt dann <code>TORCH_COMPILE_DISABLE=1</code> und bevorzugt Stabilität statt Kompiliergeschwindigkeit. Windows mit weniger als 16 GB VRAM behandelt <issueLink>#65</issueLink>; ältere NVIDIA-CUDA-Graph-Probleme stehen in <crashLink>#2135</crashLink>.",
     "llmp_cli_help": "Verwendet die installierte CLI und deren Anmeldung über denselben Prozess wie die Agentenreparatur. Modell leer lassen für den CLI-Standard. Antworten können langsamer sein; Kosten fallen beim CLI-Konto an.",
     "llmp_sdk_help": "Native Anbieter verwenden LiteLLM. Für andere Anbieter provider/model eingeben. Bedrock nutzt API-Schlüssel oder AWS-Profil; Vertex die Konto-ID als Projekt und Google-Anmeldedaten. Basis-URL ist optional.",
-    "llmp_cli_auth": "CLI-Kontozugriff wurde abgelehnt. Anmeldung, Abonnement und gewähltes Modell prüfen.",
-    "perf_torch_compile": "torch.compile abschalten"
+    "llmp_cli_auth": "CLI-Kontozugriff wurde abgelehnt. Anmeldung, Abonnement und gewähltes Modell prüfen."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -451,8 +450,8 @@
     "addLine": "Zeile hinzufügen",
     "addChapter": "Kapitel hinzufügen",
     "clearConfirm": "Alle {{count}} Skripteinträge und noch nicht übernommene importierte Texte löschen? Dies kann nicht rückgängig gemacht werden.",
-    "clearScript": "Skript löschen",
-    "clearScriptHint": "Besetzung behalten, jedoch Kapitel und Textzeilen löschen",
+    "clearScript": "Skript leeren",
+    "clearScriptHint": "Entfernt alles aus dem Skript: sämtliche Zeilen und Kapitel",
     "cleared": "Skript gelöscht",
     "chapterN": "Kapitel {{n}}",
     "stems": "Stiele",
@@ -509,9 +508,7 @@
     "exportFailed": "Der Export ist fehlgeschlagen. Überprüfen Sie, ob das Backend ausgeführt wird.",
     "global_speed": "Geschwindigkeit",
     "global_speed_hint": "Lesegeschwindigkeit für alle Zeilen ohne eigene Geschwindigkeitsüberschreibung",
-    "deleteProjectConfirm": "Dieses Projekt dauerhaft löschen?",
-    "clearScript": "Skript leeren",
-    "clearScriptHint": "Entfernt alles aus dem Skript: sämtliche Zeilen und Kapitel"
+    "deleteProjectConfirm": "Dieses Projekt dauerhaft löschen?"
   },
   "common": {
     "stop": "Stopp",

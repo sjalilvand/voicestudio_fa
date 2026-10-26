@@ -379,13 +379,12 @@
     "theme_light": "فاتح",
     "reduce_motion": "تقليل الحركة",
     "reduce_motion_desc": "يوقف الرسوم المتحركة في الخلفية والانتقالات. إعداد النظام يظل ساريًا بذاته؛ وهذا يضاف إليه.",
-    "perf_torch_compile": "استخدام الوضع الفوري",
+    "perf_torch_compile": "إيقاف torch.compile",
     "perf_torch_compile_note": "يشغّل النموذج بلا نوى مترجمة عندما يكون Triton غير مستقر.",
     "perf_torch_compile_hint": "فعّل هذا الخيار بعد فشل Triton أو <code>torch.compile</code>، بما في ذلك خروج الخلفية أثناء إنشاء الصوت. عندها يمرر VoiceStudio القيمة <code>TORCH_COMPILE_DISABLE=1</code> ويفضّل الثبات على سرعة الترجمة. تتناول <issueLink>#65</issueLink> أجهزة Windows ذات VRAM أقل من 16 غ.ب، ويتابع <crashLink>#2135</crashLink> أعطال رسوم CUDA على NVIDIA القديمة.",
     "llmp_cli_help": "يستخدم أداة CLI المثبتة وتسجيل دخولها عبر مشغّل إصلاح الوكيل نفسه. اترك النموذج فارغًا لاستخدام الافتراضي. قد تكون الاستجابات أبطأ وتُحتسب الرسوم على حساب CLI.",
     "llmp_sdk_help": "تستخدم الخدمات الأصلية LiteLLM. للخدمات الأخرى أدخل provider/model. يستخدم Bedrock مفتاح API أو ملف AWS؛ ويستخدم Vertex معرّف الحساب كمشروع وبيانات اعتماد Google. عنوان URL الأساسي اختياري.",
-    "llmp_cli_auth": "رُفض وصول حساب CLI. تحقق من تسجيل الدخول والاشتراك والنموذج المحدد.",
-    "perf_torch_compile": "إيقاف torch.compile"
+    "llmp_cli_auth": "رُفض وصول حساب CLI. تحقق من تسجيل الدخول والاشتراك والنموذج المحدد."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -452,7 +451,7 @@
     "addChapter": "إضافة الفصل",
     "clearConfirm": "هل تريد مسح جميع عناصر النص البالغ عددها {{count}} وأي نص مستورد معلّق؟ لا يمكن التراجع عن هذا الإجراء.",
     "clearScript": "إفراغ النص",
-    "clearScriptHint": "يُبقي الأصوات المعيّنة ويحذف الفصول والأسطر",
+    "clearScriptHint": "يزيل كل شيء من النص: جميع الأسطر وجميع الفصول",
     "cleared": "أُفرغ النص",
     "chapterN": "الفصل {{n}}",
     "stems": "ينبع",
@@ -509,8 +508,7 @@
     "exportFailed": "فشل التصدير — تحقق من تشغيل الواجهة الخلفية.",
     "global_speed": "السرعة",
     "global_speed_hint": "سرعة القراءة لجميع الخطوط دون تجاوز السرعة الخاصة بها",
-    "deleteProjectConfirm": "هل تريد حذف هذا المشروع نهائيًا؟",
-    "clearScriptHint": "يزيل كل شيء من النص: جميع الأسطر وجميع الفصول"
+    "deleteProjectConfirm": "هل تريد حذف هذا المشروع نهائيًا؟"
   },
   "common": {
     "stop": "توقف",

@@ -147,7 +147,7 @@
     "addChapter": "添加章节",
     "clearConfirm": "清除全部 {{count}} 个脚本条目及待处理的导入文本？此操作无法撤销。",
     "clearScript": "抹除脚本",
-    "clearScriptHint": "保留已分配的声音，同时删除章节和全部台词",
+    "clearScriptHint": "清除脚本中的全部内容：所有行和所有章节",
     "cleared": "脚本已抹除",
     "chapterN": "第 {{n}} 章",
     "stems": "分轨",
@@ -204,8 +204,7 @@
     "exportFailed": "导出失败 — 请检查后端是否运行。",
     "global_speed": "速度",
     "global_speed_hint": "所有台词的朗读速度（未单独设置语速的台词）",
-    "deleteProjectConfirm": "永久删除此项目？",
-    "clearScriptHint": "清除脚本中的全部内容：所有行和所有章节"
+    "deleteProjectConfirm": "永久删除此项目？"
   },
   "common": {
     "stop": "停止",
@@ -819,7 +818,7 @@
     "history_retention_save_failed": "保存失败",
     "history_retention_invalid": "请输入 0 或更大的数",
     "perf_title": "性能",
-    "perf_torch_compile": "使用即时模式",
+    "perf_torch_compile": "关闭 torch.compile",
     "perf_torch_compile_na": "仅限 Windows——本平台无需",
     "perf_torch_compile_note": "Triton 不稳定时，不使用已编译内核运行模型。",
     "perf_torch_compile_hint": "Triton 或 <code>torch.compile</code> 失败后请开启；后端在生成音频时退出也适用。VoiceStudio 随后会传入 <code>TORCH_COMPILE_DISABLE=1</code>，优先保证稳定而非编译速度。显存低于 16 GB 的 Windows 问题见 <issueLink>#65</issueLink>；旧款 NVIDIA 的 CUDA 图问题见 <crashLink>#2135</crashLink>。",
@@ -876,8 +875,7 @@
     "reduce_motion_desc": "停止背景动画和过渡效果。系统设置本身仍然生效，此项在其基础上叠加。",
     "llmp_cli_help": "通过与代理修复相同的运行器使用已安装的 CLI 及其登录。模型留空将使用 CLI 默认值。响应可能较慢，费用按 CLI 账户计收。",
     "llmp_sdk_help": "原生提供商使用 LiteLLM。其他提供商请输入 provider/model。Bedrock 使用 API 密钥或 AWS 配置；Vertex 将账户 ID 用作项目，并使用 Google 应用凭据。基础 URL 为可选项。",
-    "llmp_cli_auth": "CLI 账户访问被拒绝。请检查登录、订阅和所选模型。",
-    "perf_torch_compile": "关闭 torch.compile"
+    "llmp_cli_auth": "CLI 账户访问被拒绝。请检查登录、订阅和所选模型。"
   },
   "about": {
     "app": "应用",

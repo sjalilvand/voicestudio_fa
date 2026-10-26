@@ -379,13 +379,12 @@
     "theme_light": "Clair",
     "reduce_motion": "Réduire les animations",
     "reduce_motion_desc": "Arrête les animations d’arrière-plan et les transitions. Le réglage système reste actif de son côté ; ceci s’y ajoute.",
-    "perf_torch_compile": "Utiliser le mode eager",
+    "perf_torch_compile": "Désactiver torch.compile",
     "perf_torch_compile_note": "Exécute le modèle sans noyaux compilés lorsque Triton est instable.",
     "perf_torch_compile_hint": "Activez cette option après un échec Triton ou <code>torch.compile</code>, y compris si le backend quitte pendant la création audio. VoiceStudio fournit alors <code>TORCH_COMPILE_DISABLE=1</code> et privilégie la fiabilité à la vitesse compilée. <issueLink>#65</issueLink> concerne Windows avec moins de 16 Go de VRAM ; <crashLink>#2135</crashLink> suit les pannes de graphes CUDA des anciennes NVIDIA.",
     "llmp_cli_help": "Utilise la CLI installée et sa connexion via le même exécuteur que la réparation par agent. Laissez Modèle vide pour la valeur par défaut. Les réponses peuvent être plus lentes ; les frais dépendent du compte CLI.",
     "llmp_sdk_help": "Les fournisseurs natifs utilisent LiteLLM. Pour les autres, saisissez provider/model. Bedrock utilise une clé API ou un profil AWS ; Vertex utilise l’ID de compte comme projet et les identifiants Google. L’URL de base est facultative.",
-    "llmp_cli_auth": "L’accès au compte CLI a été refusé. Vérifiez la connexion, l’abonnement et le modèle choisi.",
-    "perf_torch_compile": "Désactiver torch.compile"
+    "llmp_cli_auth": "L’accès au compte CLI a été refusé. Vérifiez la connexion, l’abonnement et le modèle choisi."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -451,7 +450,7 @@
     "addLine": "Ajouter une ligne",
     "addChapter": "Ajouter un chapitre",
     "clearConfirm": "Effacer les {{count}} entrées du script et tout texte importé en attente ? Cette action est irréversible.",
-    "clearScriptHint": "Conserve les voix attribuées, mais efface les chapitres et les lignes",
+    "clearScriptHint": "Supprime tout le script : toutes les lignes et tous les chapitres",
     "cleared": "Script vidé",
     "chapterN": "Chapitre {{n}}",
     "stems": "Tiges",
@@ -509,8 +508,7 @@
     "global_speed": "Vitesse",
     "global_speed_hint": "Vitesse de lecture pour toutes les lignes sans leur propre priorité de vitesse",
     "deleteProjectConfirm": "Supprimer définitivement ce projet ?",
-    "clearScript": "Vider le script",
-    "clearScriptHint": "Supprime tout le script : toutes les lignes et tous les chapitres"
+    "clearScript": "Vider le script"
   },
   "common": {
     "stop": "Arrêter",

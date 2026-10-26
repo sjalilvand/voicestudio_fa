@@ -379,13 +379,12 @@
     "theme_light": "Ljust",
     "reduce_motion": "Minska rörelse",
     "reduce_motion_desc": "Stoppar bakgrundsanimationer och övergångar. Systeminställningen gäller ändå; det här läggs till.",
-    "perf_torch_compile": "Använd eager-läge",
+    "perf_torch_compile": "Stäng av torch.compile",
     "perf_torch_compile_note": "Kör modellen utan kompilerade kärnor när Triton är instabilt.",
     "perf_torch_compile_hint": "Slå på detta efter fel i Triton eller <code>torch.compile</code>, även när backend stängs under ljudskapandet. VoiceStudio skickar då <code>TORCH_COMPILE_DISABLE=1</code> och väljer stabilitet framför kompilerad hastighet. <issueLink>#65</issueLink> gäller Windows med mindre än 16 GB VRAM; <crashLink>#2135</crashLink> följer CUDA-grafproblem på äldre NVIDIA-kort.",
     "llmp_cli_help": "Använder installerad CLI och dess inloggning via samma körning som agentreparation. Lämna Modell tomt för CLI-standard. Svaren kan vara långsammare; kostnader följer ditt CLI-konto.",
     "llmp_sdk_help": "Inbyggda leverantörer använder LiteLLM. Ange provider/model för andra. Bedrock använder API-nyckel eller AWS-profil; Vertex använder konto-ID som projekt och Google-autentisering. Bas-URL är valfri.",
-    "llmp_cli_auth": "Åtkomst till CLI-kontot nekades. Kontrollera inloggning, prenumeration och vald modell.",
-    "perf_torch_compile": "Stäng av torch.compile"
+    "llmp_cli_auth": "Åtkomst till CLI-kontot nekades. Kontrollera inloggning, prenumeration och vald modell."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -452,7 +451,7 @@
     "addChapter": "Lägg till kapitel",
     "clearConfirm": "Rensa alla {{count}} manusposter och eventuell väntande importerad text? Detta kan inte ångras.",
     "clearScript": "Töm manus",
-    "clearScriptHint": "Behåll tilldelade röster men radera kapitel och rader",
+    "clearScriptHint": "Tömmer hela manuset: alla rader och alla kapitel",
     "cleared": "Manuset tömdes",
     "chapterN": "Kapitel {{n}}",
     "stems": "Stammar",
@@ -509,8 +508,7 @@
     "exportFailed": "Exporten misslyckades – kontrollera att backend körs.",
     "global_speed": "Hastighet",
     "global_speed_hint": "Läshastighet för alla linjer utan egen hastighetsöverstyrning",
-    "deleteProjectConfirm": "Ta bort projektet permanent?",
-    "clearScriptHint": "Tömmer hela manuset: alla rader och alla kapitel"
+    "deleteProjectConfirm": "Ta bort projektet permanent?"
   },
   "common": {
     "stop": "Sluta",

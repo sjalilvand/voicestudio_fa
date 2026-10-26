@@ -1768,8 +1768,8 @@
     "addLine": "Tambahkan Baris",
     "addChapter": "Tambahkan Bab",
     "clearConfirm": "Hapus semua {{count}} entri naskah dan teks impor yang tertunda? Tindakan ini tidak dapat dibatalkan.",
-    "clearScript": "Hapus isi naskah",
-    "clearScriptHint": "Pertahankan suara terpilih, lalu hapus bab dan semua baris",
+    "clearScript": "Kosongkan skrip",
+    "clearScriptHint": "Menghapus seluruh isi skrip: semua baris dan semua bab",
     "clearConfirmScript": "Hapus permanen seluruh manuskrip ini?",
     "chapterN": "Bab {{n}}",
     "stems": "Trek per karakter",
@@ -1842,9 +1842,7 @@
     "toneChip": "Nada & kecepatan: {{speed}}",
     "lineVoice": "Suara baris",
     "chapterHeading": "Judul bab",
-    "lineActions": "Tindakan baris",
-    "clearScript": "Kosongkan skrip",
-    "clearScriptHint": "Menghapus seluruh isi skrip: semua baris dan semua bab"
+    "lineActions": "Tindakan baris"
   },
   "audiobook": {
     "cast": "Pemeran",

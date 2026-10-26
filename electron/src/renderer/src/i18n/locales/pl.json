@@ -1772,8 +1772,8 @@
     "addLine": "Dodaj linię",
     "addChapter": "Dodaj rozdział",
     "clearConfirm": "Wyczyścić wszystkie {{count}} wpisów scenariusza i oczekujący zaimportowany tekst? Tej operacji nie można cofnąć.",
-    "clearScript": "Usuń treść scenariusza",
-    "clearScriptHint": "Zachowaj przypisane głosy, lecz usuń rozdziały i wiersze",
+    "clearScript": "Wyczyść skrypt",
+    "clearScriptHint": "Usuwa całą zawartość skryptu: wszystkie wiersze i rozdziały",
     "clearConfirmScript": "Trwale wymazać cały ten rękopis?",
     "chapterN": "Rozdział {{n}}",
     "stems": "Ścieżki postaci",
@@ -1846,9 +1846,7 @@
     "toneChip": "Ton i tempo: {{speed}}",
     "lineVoice": "Głos linii",
     "chapterHeading": "Tytuł rozdziału",
-    "lineActions": "Akcje linii",
-    "clearScript": "Wyczyść skrypt",
-    "clearScriptHint": "Usuwa całą zawartość skryptu: wszystkie wiersze i rozdziały"
+    "lineActions": "Akcje linii"
   },
   "audiobook": {
     "cast": "Obsada",

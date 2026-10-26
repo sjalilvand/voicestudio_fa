@@ -1769,7 +1769,7 @@
     "addChapter": "Hoofdstuk toevoegen",
     "clearConfirm": "Alle {{count}} scriptitems en nog niet verwerkte geïmporteerde tekst wissen? Dit kan niet ongedaan worden gemaakt.",
     "clearScript": "Script leegmaken",
-    "clearScriptHint": "Behoud toegewezen stemmen en wis de hoofdstukken en regels",
+    "clearScriptHint": "Verwijdert alles uit het script: alle regels en alle hoofdstukken",
     "clearConfirmScript": "Dit hele manuscript definitief wissen?",
     "chapterN": "Hoofdstuk {{n}}",
     "stems": "Sporen per personage",
@@ -1842,9 +1842,7 @@
     "toneChip": "Toon en snelheid: {{speed}}",
     "lineVoice": "Regelstem",
     "chapterHeading": "Hoofdstuktitel",
-    "lineActions": "Regelacties",
-    "clearScript": "Script leegmaken",
-    "clearScriptHint": "Verwijdert alles uit het script: alle regels en alle hoofdstukken"
+    "lineActions": "Regelacties"
   },
   "audiobook": {
     "cast": "Cast",

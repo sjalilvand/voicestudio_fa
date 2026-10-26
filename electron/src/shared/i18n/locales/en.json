@@ -207,7 +207,7 @@
     "addChapter": "Add Chapter",
     "clearConfirm": "Clear all {{count}} script entries and any pending imported text? This cannot be undone.",
     "clearScript": "Erase script",
-    "clearScriptHint": "Keep assigned voices, but delete the script’s chapters and lines",
+    "clearScriptHint": "Remove everything from the script: all lines and all chapters",
     "cleared": "Script erased",
     "chapterN": "Chapter {{n}}",
     "stems": "Stems",
@@ -264,8 +264,7 @@
     "minutes": "~{{count}} min",
     "chars": "{{count}} chars",
     "exportFailed": "Export failed — check the backend is running.",
-    "deleteProjectConfirm": "Delete this project permanently?",
-    "clearScriptHint": "Remove everything from the script: all lines and all chapters"
+    "deleteProjectConfirm": "Delete this project permanently?"
   },
   "nav": {
     "launchpad": "Launchpad",
@@ -944,7 +943,7 @@
     "history_retention_save_failed": "Could not save",
     "history_retention_invalid": "Enter 0 or more",
     "perf_title": "Performance",
-    "perf_torch_compile": "Use eager mode",
+    "perf_torch_compile": "Turn off torch.compile",
     "perf_torch_compile_na": "Windows only — not needed on this platform",
     "perf_torch_compile_note": "Runs without compiled kernels when Triton or graph capture is unstable.",
     "perf_torch_compile_hint": "Turn this on after a Triton or <code>torch.compile</code> failure, including a backend exit while audio is being made. VoiceStudio then supplies <code>TORCH_COMPILE_DISABLE=1</code> and favors reliability over compiled speed. Windows systems with under 16 GB VRAM are covered by <issueLink>#65</issueLink>; older NVIDIA CUDA-graph failures are tracked in <crashLink>#2135</crashLink>.",
@@ -999,8 +998,7 @@
     "reduce_motion_desc": "Stops background animation and transitions. Your system setting is honoured on its own; this adds to it.",
     "llmp_cli_help": "Uses the installed CLI and its login, through the same runner as Repair with an agent. Leave Model blank for the CLI default. CLI responses may be slower; paid usage follows your CLI account.",
     "llmp_sdk_help": "Native providers use LiteLLM. For other providers, enter provider/model. Bedrock uses an API key or AWS profile; Vertex uses Account ID as project and Google application credentials. Base URL is optional.",
-    "llmp_cli_auth": "CLI account access was rejected. Check your login, subscription, and selected model.",
-    "perf_torch_compile": "Turn off torch.compile"
+    "llmp_cli_auth": "CLI account access was rejected. Check your login, subscription, and selected model."
   },
   "about": {
     "app": "App",

@@ -379,13 +379,12 @@
     "theme_light": "Chiaro",
     "reduce_motion": "Riduci le animazioni",
     "reduce_motion_desc": "Ferma le animazioni di sfondo e le transizioni. L’impostazione di sistema resta valida da sola; questa si aggiunge.",
-    "perf_torch_compile": "Usa modalità eager",
+    "perf_torch_compile": "Disattiva torch.compile",
     "perf_torch_compile_note": "Esegue il modello senza kernel compilati quando Triton è instabile.",
     "perf_torch_compile_hint": "Attiva l’opzione dopo un errore Triton o <code>torch.compile</code>, anche se il backend si chiude mentre crea l’audio. VoiceStudio passerà <code>TORCH_COMPILE_DISABLE=1</code>, privilegiando l’affidabilità rispetto alla velocità compilata. <issueLink>#65</issueLink> riguarda Windows con meno di 16 GB di VRAM; <crashLink>#2135</crashLink> segue i guasti dei grafi CUDA su NVIDIA meno recenti.",
     "llmp_cli_help": "Usa la CLI installata e il suo accesso tramite lo stesso esecutore della riparazione con agente. Lascia Modello vuoto per il valore predefinito. Le risposte possono essere più lente; i costi dipendono dall’account CLI.",
     "llmp_sdk_help": "I provider nativi usano LiteLLM. Per gli altri inserisci provider/model. Bedrock usa una chiave API o un profilo AWS; Vertex usa l’ID account come progetto e le credenziali Google. L’URL di base è facoltativo.",
-    "llmp_cli_auth": "Accesso all’account CLI rifiutato. Controlla accesso, abbonamento e modello selezionato.",
-    "perf_torch_compile": "Disattiva torch.compile"
+    "llmp_cli_auth": "Accesso all’account CLI rifiutato. Controlla accesso, abbonamento e modello selezionato."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -451,7 +450,7 @@
     "addLine": "Aggiungi linea",
     "addChapter": "Aggiungi capitolo",
     "clearConfirm": "Cancellare tutte le {{count}} voci del copione e il testo importato in sospeso? Questa azione non può essere annullata.",
-    "clearScriptHint": "Mantiene le voci assegnate, eliminando capitoli e battute",
+    "clearScriptHint": "Elimina tutto dallo script: ogni riga e ogni capitolo",
     "cleared": "Copione svuotato",
     "chapterN": "Capitolo {{n}}",
     "stems": "Steli",
@@ -509,8 +508,7 @@
     "global_speed": "Velocità",
     "global_speed_hint": "Velocità di lettura per tutte le linee senza il proprio override di velocità",
     "deleteProjectConfirm": "Eliminare definitivamente questo progetto?",
-    "clearScript": "Svuota script",
-    "clearScriptHint": "Elimina tutto dallo script: ogni riga e ogni capitolo"
+    "clearScript": "Svuota script"
   },
   "common": {
     "stop": "Fermati",

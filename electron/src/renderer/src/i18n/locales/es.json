@@ -1771,7 +1771,7 @@
     "addChapter": "Agregar capítulo",
     "clearConfirm": "¿Borrar las {{count}} entradas del guion y cualquier texto importado pendiente? Esta acción no se puede deshacer.",
     "clearScript": "Vaciar el guion",
-    "clearScriptHint": "Conserva las voces asignadas y borra capítulos y líneas",
+    "clearScriptHint": "Quita todo del guion: todas las líneas y todos los capítulos",
     "clearConfirmScript": "¿Quieres borrar definitivamente el manuscrito completo?",
     "chapterN": "Capítulo {{n}}",
     "stems": "Pistas por personaje",
@@ -1844,8 +1844,7 @@
     "toneChip": "Tono y velocidad: {{speed}}",
     "lineVoice": "Voz de la línea",
     "chapterHeading": "Título del capítulo",
-    "lineActions": "Acciones de la línea",
-    "clearScriptHint": "Quita todo del guion: todas las líneas y todos los capítulos"
+    "lineActions": "Acciones de la línea"
   },
   "audiobook": {
     "cast": "Reparto",

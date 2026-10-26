@@ -379,13 +379,12 @@
     "theme_light": "ライト",
     "reduce_motion": "視差効果を減らす",
     "reduce_motion_desc": "背景アニメーションとトランジションを停止します。システム設定は単独で有効なままで、これはそれに加わります。",
-    "perf_torch_compile": "Eager モードを使う",
+    "perf_torch_compile": "torch.compile を無効にする",
     "perf_torch_compile_note": "Triton が不安定な場合、コンパイル済みカーネルを使わず実行します。",
     "perf_torch_compile_hint": "Triton または <code>torch.compile</code> が失敗したときや、音声作成中にバックエンドが終了したときにオンにします。VoiceStudio は <code>TORCH_COMPILE_DISABLE=1</code> を渡し、コンパイル速度より安定性を優先します。VRAM 16 GB 未満の Windows は <issueLink>#65</issueLink>、旧型 NVIDIA の CUDA グラフ問題は <crashLink>#2135</crashLink> を確認してください。",
     "llmp_cli_help": "インストール済みCLIとそのログインを、エージェント修復と同じ実行機能で使用します。モデルを空欄にするとCLIの既定値を使います。応答が遅くなる場合があり、料金はCLIアカウントに従います。",
     "llmp_sdk_help": "ネイティブプロバイダーにはLiteLLMを使います。その他はprovider/modelを入力してください。BedrockはAPIキーまたはAWSプロファイル、VertexはアカウントIDをプロジェクトとしてGoogle認証情報を使用します。ベースURLは任意です。",
-    "llmp_cli_auth": "CLIアカウントのアクセスが拒否されました。ログイン、契約、選択したモデルを確認してください。",
-    "perf_torch_compile": "torch.compile を無効にする"
+    "llmp_cli_auth": "CLIアカウントのアクセスが拒否されました。ログイン、契約、選択したモデルを確認してください。"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -452,7 +451,7 @@
     "addChapter": "章を追加",
     "clearConfirm": "台本の全{{count}}項目と未処理のインポート済みテキストを削除しますか？この操作は取り消せません。",
     "clearScript": "台本を空にする",
-    "clearScriptHint": "割り当てた声は残し、章と台詞をすべて消します",
+    "clearScriptHint": "スクリプトの中身をすべて削除します (全行と全章)",
     "cleared": "台本を空にしました",
     "chapterN": "第 {{n}} 章",
     "stems": "茎",
@@ -509,8 +508,7 @@
     "exportFailed": "エクスポートに失敗しました — バックエンドが実行中であることを確認してください。",
     "global_speed": "速度",
     "global_speed_hint": "独自の速度オーバーライドを行わないすべての行の読み取り速度",
-    "deleteProjectConfirm": "このプロジェクトを完全に削除しますか？",
-    "clearScriptHint": "スクリプトの中身をすべて削除します (全行と全章)"
+    "deleteProjectConfirm": "このプロジェクトを完全に削除しますか？"
   },
   "common": {
     "stop": "停止",

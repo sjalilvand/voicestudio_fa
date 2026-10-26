@@ -379,13 +379,12 @@
     "theme_light": "Jasny",
     "reduce_motion": "Ogranicz ruch",
     "reduce_motion_desc": "Zatrzymuje animacje tła i przejścia. Ustawienie systemowe działa samo z siebie; to je uzupełnia.",
-    "perf_torch_compile": "Użyj trybu eager",
+    "perf_torch_compile": "Wyłącz torch.compile",
     "perf_torch_compile_note": "Uruchamia model bez skompilowanych jąder, gdy Triton działa niestabilnie.",
     "perf_torch_compile_hint": "Włącz po awarii Triton lub <code>torch.compile</code>, również gdy backend zamyka się podczas tworzenia dźwięku. VoiceStudio przekaże <code>TORCH_COMPILE_DISABLE=1</code> i wybierze stabilność zamiast szybkości kompilacji. <issueLink>#65</issueLink> dotyczy Windows z VRAM poniżej 16 GB, a <crashLink>#2135</crashLink> starszych kart NVIDIA i grafów CUDA.",
     "llmp_cli_help": "Używa zainstalowanego CLI i jego logowania przez ten sam mechanizm co naprawa z agentem. Puste pole Model oznacza domyślny model CLI. Odpowiedzi mogą być wolniejsze; koszty obciążają konto CLI.",
     "llmp_sdk_help": "Natywni dostawcy używają LiteLLM. Dla innych wpisz provider/model. Bedrock używa klucza API lub profilu AWS; Vertex używa identyfikatora konta jako projektu i danych logowania Google. Bazowy URL jest opcjonalny.",
-    "llmp_cli_auth": "Odrzucono dostęp do konta CLI. Sprawdź logowanie, subskrypcję i wybrany model.",
-    "perf_torch_compile": "Wyłącz torch.compile"
+    "llmp_cli_auth": "Odrzucono dostęp do konta CLI. Sprawdź logowanie, subskrypcję i wybrany model."
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -451,8 +450,8 @@
     "addLine": "Dodaj linię",
     "addChapter": "Dodaj rozdział",
     "clearConfirm": "Wyczyścić wszystkie {{count}} wpisów scenariusza i oczekujący zaimportowany tekst? Tej operacji nie można cofnąć.",
-    "clearScript": "Usuń treść scenariusza",
-    "clearScriptHint": "Zachowaj przypisane głosy, lecz usuń rozdziały i wiersze",
+    "clearScript": "Wyczyść skrypt",
+    "clearScriptHint": "Usuwa całą zawartość skryptu: wszystkie wiersze i rozdziały",
     "cleared": "Treść scenariusza usunięta",
     "chapterN": "Rozdział {{n}}",
     "stems": "Łodygi",
@@ -509,9 +508,7 @@
     "exportFailed": "Eksport nie powiódł się — sprawdź, czy backend działa.",
     "global_speed": "Prędkość",
     "global_speed_hint": "Prędkość odczytu dla wszystkich linii bez własnego sterowania prędkością",
-    "deleteProjectConfirm": "Usunąć ten projekt na stałe?",
-    "clearScript": "Wyczyść skrypt",
-    "clearScriptHint": "Usuwa całą zawartość skryptu: wszystkie wiersze i rozdziały"
+    "deleteProjectConfirm": "Usunąć ten projekt na stałe?"
   },
   "common": {
     "stop": "Zatrzymaj się",

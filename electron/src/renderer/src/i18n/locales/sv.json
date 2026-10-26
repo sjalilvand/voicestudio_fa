@@ -1769,7 +1769,7 @@
     "addChapter": "Lägg till kapitel",
     "clearConfirm": "Rensa alla {{count}} manusposter och eventuell väntande importerad text? Detta kan inte ångras.",
     "clearScript": "Töm manus",
-    "clearScriptHint": "Behåll tilldelade röster men radera kapitel och rader",
+    "clearScriptHint": "Tömmer hela manuset: alla rader och alla kapitel",
     "clearConfirmScript": "Radera hela detta manuskript permanent?",
     "chapterN": "Kapitel {{n}}",
     "stems": "Spår per karaktär",
@@ -1842,8 +1842,7 @@
     "toneChip": "Ton och tempo: {{speed}}",
     "lineVoice": "Radens röst",
     "chapterHeading": "Kapiteltitel",
-    "lineActions": "Radåtgärder",
-    "clearScriptHint": "Tömmer hela manuset: alla rader och alla kapitel"
+    "lineActions": "Radåtgärder"
   },
   "audiobook": {
     "cast": "Rollbesättning",

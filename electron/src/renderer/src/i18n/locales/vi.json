@@ -1769,7 +1769,7 @@
     "addChapter": "Thêm chương",
     "clearConfirm": "Xóa toàn bộ {{count}} mục kịch bản và văn bản đã nhập đang chờ xử lý? Không thể hoàn tác thao tác này.",
     "clearScript": "Làm trống kịch bản",
-    "clearScriptHint": "Giữ các giọng đã gán, đồng thời xóa chương và lời thoại",
+    "clearScriptHint": "Xóa toàn bộ nội dung kịch bản: mọi dòng và mọi chương",
     "clearConfirmScript": "Xóa vĩnh viễn toàn bộ bản thảo này?",
     "chapterN": "Chương {{n}}",
     "stems": "Bản âm thanh theo nhân vật",
@@ -1842,8 +1842,7 @@
     "toneChip": "Ngữ điệu và tốc độ: {{speed}}",
     "lineVoice": "Giọng của dòng",
     "chapterHeading": "Tiêu đề chương",
-    "lineActions": "Thao tác dòng",
-    "clearScriptHint": "Xóa toàn bộ nội dung kịch bản: mọi dòng và mọi chương"
+    "lineActions": "Thao tác dòng"
   },
   "audiobook": {
     "cast": "Dàn giọng",
