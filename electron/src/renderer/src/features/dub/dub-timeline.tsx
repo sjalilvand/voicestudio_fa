@@ -278,7 +278,7 @@ export function DubTimeline({
       setEditMode(false);
       return;
     }
-    if (event.key.toLowerCase() === 's') {
+    if (event.key.toLowerCase() === 's' && !(event.metaKey || event.ctrlKey || event.altKey)) {
       event.preventDefault();
       event.stopPropagation();
       const adjustEnd = event.shiftKey;
