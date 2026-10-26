@@ -12,7 +12,21 @@ const OWNER_EXIT_TIMEOUT: Duration = Duration::from_secs(120);
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct CleanupPlan {
-    paths: Vec<PathBuf>,
+    paths: Vec<CleanupTarget>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CleanupTarget {
+    path: PathBuf,
+    kind: CleanupKind,
+}
+
+#[derive(Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+enum CleanupKind {
+    App,
+    Models,
 }
 
 fn home_dir() -> Option<PathBuf> {
@@ -25,7 +39,7 @@ fn home_dir() -> Option<PathBuf> {
         .map(PathBuf::from)
 }
 
-fn has_signature(path: &Path) -> bool {
+fn has_signature(path: &Path, allow_model_cache: bool) -> bool {
     [
         "omnivoice.db",
         "prefs.json",
@@ -36,28 +50,55 @@ fn has_signature(path: &Path) -> bool {
     ]
     .iter()
     .any(|name| path.join(name).exists())
+        || (allow_model_cache
+            && (path.join("hub").is_dir()
+                || fs::read_dir(path).is_ok_and(|entries| {
+                    entries.filter_map(Result::ok).any(|entry| {
+                        entry.file_name().to_string_lossy().starts_with("models--")
+                    })
+                })))
 }
 
-fn recognizably_owned(path: &Path, home: Option<&Path>) -> bool {
+fn exact_managed_layout(path: &Path) -> bool {
+    const APP_NAMES: [&str; 4] = [
+        "OmniVoice", ".omnivoice", "VoiceStudio", "com.debpalash.omnivoice-studio",
+    ];
+    const CHILDREN: [&str; 9] = [
+        "data", "logs", "runtime", "shell", "project", ".uv-cache", ".python", ".tmp", "tmp",
+    ];
+    let parts: Vec<_> = path.components().map(|part| part.as_os_str()).collect();
+    let Some(leaf) = parts.last().and_then(|part| part.to_str()) else { return false };
+    if APP_NAMES.iter().any(|name| leaf.eq_ignore_ascii_case(name)) {
+        return true;
+    }
+    let parent_is_app = parts.get(parts.len().saturating_sub(2))
+        .and_then(|part| part.to_str())
+        .is_some_and(|parent| APP_NAMES.iter().any(|name| parent.eq_ignore_ascii_case(name)));
+    let runtime_grandparent_is_app = parts.get(parts.len().saturating_sub(3))
+        .and_then(|part| part.to_str())
+        .is_some_and(|parent| APP_NAMES.iter().any(|name| parent.eq_ignore_ascii_case(name)))
+        && parts.get(parts.len().saturating_sub(2))
+            .and_then(|part| part.to_str())
+            .is_some_and(|parent| parent.eq_ignore_ascii_case("runtime"));
+    (parent_is_app || runtime_grandparent_is_app)
+        && CHILDREN.iter().any(|name| leaf.eq_ignore_ascii_case(name))
+}
+
+fn exact_model_layout(path: &Path) -> bool {
+    let leaf = path.file_name().and_then(|part| part.to_str());
+    let parent = path.parent().and_then(Path::file_name).and_then(|part| part.to_str());
+    matches!((leaf, parent), (Some(leaf), Some(parent))
+        if (leaf.eq_ignore_ascii_case("huggingface") && parent.eq_ignore_ascii_case(".cache"))
+            || (leaf.eq_ignore_ascii_case("hub") && parent.eq_ignore_ascii_case("huggingface")))
+}
+
+fn recognizably_owned(path: &Path, home: Option<&Path>, kind: &CleanupKind) -> bool {
     if !path.is_absolute() || path.parent().is_none() || home == Some(path) {
         return false;
     }
-    const OWNED: [&str; 6] = [
-        "OmniVoice",
-        "omnivoice",
-        ".omnivoice",
-        "VoiceStudio",
-        "com.debpalash.omnivoice-studio",
-        "huggingface",
-    ];
-    path.components()
-        .filter_map(|component| component.as_os_str().to_str())
-        .any(|component| {
-            OWNED
-                .iter()
-                .any(|owned| component.eq_ignore_ascii_case(owned))
-        })
-        || has_signature(path)
+    exact_managed_layout(path)
+        || (*kind == CleanupKind::Models && exact_model_layout(path))
+        || has_signature(path, *kind == CleanupKind::Models)
 }
 
 #[cfg(target_os = "windows")]
@@ -130,9 +171,10 @@ pub fn run(owner_pid: u32, plan_path: &Path) -> io::Result<()> {
     let home = home_dir().and_then(|path| fs::canonicalize(path).ok());
     let mut seen = HashSet::new();
     let mut paths = Vec::new();
-    for path in plan.paths {
-        let canonical = fs::canonicalize(&path)?;
-        if !recognizably_owned(&canonical, home.as_deref()) || !seen.insert(canonical.clone()) {
+    for target in plan.paths {
+        let canonical = fs::canonicalize(&target.path)?;
+        if !recognizably_owned(&canonical, home.as_deref(), &target.kind)
+            || !seen.insert(canonical.clone()) {
             return Err(io::Error::new(
                 io::ErrorKind::PermissionDenied,
                 "Unsafe cleanup target",
@@ -169,10 +211,10 @@ mod tests {
         let signed = root.join("custom-data");
         fs::create_dir_all(&signed).unwrap();
         fs::write(signed.join("omnivoice.db"), b"db").unwrap();
-        assert!(recognizably_owned(&signed, home_dir().as_deref()));
-        assert!(!recognizably_owned(Path::new("."), home_dir().as_deref()));
+        assert!(recognizably_owned(&signed, home_dir().as_deref(), &CleanupKind::App));
+        assert!(!recognizably_owned(Path::new("."), home_dir().as_deref(), &CleanupKind::App));
         if let Some(home) = home_dir() {
-            assert!(!recognizably_owned(&home, Some(&home)));
+            assert!(!recognizably_owned(&home, Some(&home), &CleanupKind::App));
         }
         fs::remove_dir_all(root).unwrap();
     }
@@ -186,12 +228,39 @@ mod tests {
         fs::write(target.join("omnivoice.db"), b"db").unwrap();
         fs::write(
             &plan,
-            serde_json::to_vec(&serde_json::json!({ "paths": [&target] })).unwrap(),
+            serde_json::to_vec(&serde_json::json!({
+                "paths": [{ "path": &target, "kind": "app" }]
+            })).unwrap(),
         )
         .unwrap();
         run(u32::MAX, &plan).unwrap();
         assert!(!target.exists());
         assert!(!plan.exists());
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn validation_rejects_lookalike_ancestors_and_model_markers_for_app_targets() {
+        let root = std::env::temp_dir().join(format!("native-validation-{}", std::process::id()));
+        let lookalike = root.join("VoiceStudio").join("personal").join("documents");
+        let cache = root.join("external-cache");
+        fs::create_dir_all(&lookalike).unwrap();
+        fs::create_dir_all(cache.join("models--owner--model")).unwrap();
+        assert!(!recognizably_owned(&lookalike, None, &CleanupKind::App));
+        assert!(!recognizably_owned(&cache, None, &CleanupKind::App));
+        assert!(recognizably_owned(&cache, None, &CleanupKind::Models));
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn validation_does_not_authorize_a_marker_file_as_a_cleanup_root() {
+        let root = std::env::temp_dir().join(format!("native-marker-{}", std::process::id()));
+        let signed = root.join("custom-data");
+        let marker = signed.join("omnivoice.db");
+        fs::create_dir_all(&signed).unwrap();
+        fs::write(&marker, b"db").unwrap();
+        assert!(recognizably_owned(&signed, None, &CleanupKind::App));
+        assert!(!recognizably_owned(&marker, None, &CleanupKind::App));
         fs::remove_dir_all(root).unwrap();
     }
 }
