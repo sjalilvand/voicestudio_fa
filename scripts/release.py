@@ -381,6 +381,17 @@ Release plan
 def open_release_pr(version: str, tag: str) -> None:
     """Bump, fold the changelog and open the release pull request from release/<tag>."""
     branch = f"release/{tag}"
+    local = sh("git", "rev-parse", "--verify", "--quiet", f"refs/heads/{branch}",
+               capture=True, check=False)
+    if local or sh("git", "ls-remote", "--heads", "origin", branch, capture=True):
+        # An earlier run already committed the bump (its push or pull request
+        # step failed): finish that run instead of bumping a second time.
+        if local:
+            sh("git", "switch", branch)
+        else:
+            sh("git", "switch", "-c", branch, "--track", f"origin/{branch}")
+        publish_release_branch(branch, version, tag)
+        return
     sh("git", "switch", "-c", branch)
     try:
         bump_files(ROOT, version)
@@ -405,11 +416,18 @@ def open_release_pr(version: str, tag: str) -> None:
         )
     sh("git", "add", *RELEASE_FILES)
     sh("git", "commit", "-m", f"chore(release): {tag}")
+    publish_release_branch(branch, version, tag)
+
+
+def publish_release_branch(branch: str, version: str, tag: str) -> None:
+    """Push the release branch and open its pull request unless one is open already."""
     sh("git", "push", "-u", "origin", branch)
-    sh("gh", "pr", "create", "--base", "main", "--head", branch,
-       "--title", f"chore(release): {tag}",
-       "--body", f"Release commit from `scripts/release.py`: {version} in the three version "
-                 "files, uv.lock, and the CHANGELOG section folded from changelog.d.")
+    if not sh("gh", "pr", "list", "--head", branch, "--state", "open",
+              "--json", "number", "--jq", ".[].number", capture=True):
+        sh("gh", "pr", "create", "--base", "main", "--head", branch,
+           "--title", f"chore(release): {tag}",
+           "--body", f"Release commit from `scripts/release.py`: {version} in the three version "
+                     "files, uv.lock, and the CHANGELOG section folded from changelog.d.")
     sh("git", "switch", "main")
     print(f"\nOpened the release pull request from {branch}. Once it merges, run "
           f"`make release` again with {version}: it tags main and starts the build.")

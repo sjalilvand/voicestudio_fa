@@ -114,7 +114,7 @@ def test_generated_changelog_passes_the_release_notes_extraction(release, versio
     assert section and section[1].strip()
 
 
-def _drive(release, monkeypatch, answers, *, dry_run, secrets_missing=(), branch="main", fail_on=None, calls=None, guessed=False, clean=False, main_version="0.5.7"):
+def _drive(release, monkeypatch, answers, *, dry_run, secrets_missing=(), branch="main", fail_on=None, calls=None, guessed=False, clean=False, main_version="0.5.7", remote_branch="", open_pr=""):
     """Run release() with scripted prompts and every side effect recorded, not run."""
     import argparse
 
@@ -132,6 +132,12 @@ def _drive(release, monkeypatch, answers, *, dry_run, secrets_missing=(), branch
             return "34"
         if cmd[:2] == ("git", "status"):
             return "" if clean else " M package.json"
+        if cmd[:2] == ("git", "ls-remote") and "--heads" in cmd:
+            calls.append(cmd)
+            return remote_branch
+        if cmd[:3] == ("gh", "pr", "list"):
+            calls.append(cmd)
+            return open_pr
         calls.append(cmd)
         if fail_on and fail_on in cmd:
             import subprocess
@@ -349,6 +355,25 @@ def test_a_new_version_opens_a_release_pull_request_and_never_pushes_main(releas
     assert not any(c[:2] == ("git", "tag") for c in calls)
     assert not any(c[0] == "dispatch" for c in calls)
     assert "run `make release` again" in capsys.readouterr().out
+
+
+def test_a_rerun_after_a_failed_pull_request_step_finishes_it_without_bumping_again(release, monkeypatch):
+    """The push landed but `gh pr create` failed: the rerun reuses the branch."""
+    tag = "v0.5.7-beta.1"
+    branch = f"release/{tag}"
+    calls = _drive(release, monkeypatch, ["beta", "", "draft", tag], dry_run=False,
+                   remote_branch=f"abc123\trefs/heads/{branch}")
+    assert ("git", "switch", "-c", branch, "--track", f"origin/{branch}") in calls
+    assert not any(c[0] in {"bump", "write"} or c[:2] == ("git", "commit") for c in calls)
+    assert ("git", "push", "-u", "origin", branch) in calls
+    assert any(c[:3] == ("gh", "pr", "create") for c in calls)
+
+
+def test_an_open_release_pull_request_is_not_opened_twice(release, monkeypatch):
+    tag = "v0.5.7-beta.1"
+    calls = _drive(release, monkeypatch, ["beta", "", "draft", tag], dry_run=False,
+                   remote_branch=f"abc123\trefs/heads/release/{tag}", open_pr="3500")
+    assert not any(c[:3] == ("gh", "pr", "create") for c in calls)
 
 
 def test_release_folds_fragments_into_unreleased_before_the_section_is_made(release):
