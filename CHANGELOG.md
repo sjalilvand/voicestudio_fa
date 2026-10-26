@@ -1263,10 +1263,16 @@ Already using Electron? Install over your existing app and keep your data. If pr
 - More reliable Electron setup, dictation, and actionable crash reports (#2221, #2245, #2123, #2262)
 - Preserve dialogue, timing, and background audio through dubbing and subtitle imports (#2222, #2224, #2242)
 
+### Changed
+
+- Settings keeps the main sidebar in place and lists its sections in a column beside it (#2209) — thanks @jaketame!
+- The main navigation now sits right under the sidebar header, above the voice library (#2210) — thanks @jaketame!
+
 ### Added
 
 - Claude Code and Cursor integration pages offer MCP setup for the current backend, and duplicate catalog routes are consolidated (#2257)
 
+- Settings, Appearance: a Keep sidebar expanded switch stops the sidebar shrinking to a rail beside a workspace panel (#2211) — thanks @jaketame!
 - Stories and Audiobook: a Clear script button empties the whole script — every line and chapter, imported or typed — in one confirmed step instead of one trash icon at a time; the cast is kept (#2203) — thanks @jaketame!
 - Stories' Paste & Split can now split by Sentences, Paragraphs (the new default) or whole Chapters, so a single narrator is no longer chopped into one take per sentence (#2217) — thanks @jaketame!
 
@@ -1285,6 +1291,7 @@ Already using Electron? Install over your existing app and keep your data. If pr
 - Source Electron launches reuse the prepared Python runtime instead of downloading dependencies inside the startup timeout (#2184)
 - Clone, Stories and Audiobook disable unsupported output-language choices for engines with a declared language list (#2104)
 
+- Generate, the chapter tracker and render status stay pinned in the setup pane, and a disabled Generate says why (#2229) — thanks @jaketame!
 - EPUB import no longer turns an unmarked teaser page, a "Works by" list, a publisher's address page or a stray footnotes page into chapters — the book's declared start and its contents decide what is front and back matter (#2228) — thanks @jaketame!
 - Retry temporary media-tool installation locks and report failed cleanup instead of hiding it (#2214) — thanks @baoyu0!
 
@@ -1299,6 +1306,8 @@ Already using Electron? Install over your existing app and keep your data. If pr
 - Repair dots.tts dependency pins and paths containing spaces, with OpenFst build guidance for source installs (#2101) — thanks @martinezpl!
 
 - Reject unsupported synthesis languages before model loading, including named picker choices and per-item batch languages (#2219) — thanks @rollroyces!
+- EPUB import skips print page numbers and cover, title, dedication, copyright and contents pages, and names chapters from the table of contents (#2208) — thanks @jaketame!
+- A long script no longer draws over the progress panel and the Generate/Stop footer (#2213) — thanks @jaketame!
 - Keep macOS dictation keyboard operations on the main thread to prevent paste-delivery crashes (#2123)
 - Prevent reference voice cloning from silently downloading a second speech recognizer (#2116)
 - Dubbing from a video's downloaded rolling captions speaks each line once while preserving intentional repeated dialogue (#2222) — thanks @kevin9327!
@@ -1515,6 +1524,7 @@ v0.5.3 is also the final Tauri update. The Tauri updater will not switch you to 
 - The OmniVoice picker on Apple Silicon has one entry, backed automatically by the isolated worker (#1913)
 - Unstable links no longer discard already-fetched model ranges between download attempts (#1940)
 - Windows development startup can reclaim VoiceStudio ports from its own abandoned processes (#1941)
+- Colab transcription and dubbing now include an explicit step to install the speech-to-text model, with clearer errors when it is missing (#1922) — thanks @nidhi-singh02!
 - Validate current-user Windows installers under a standard account on hosted runners (#1883)
 - The desktop app builds and opens from a fresh clone again (#1818) — thanks @flutterkage2k!
 - GPUs with less VRAM than the engine needs no longer get half the compute-time budget a CPU gets (#1806) — thanks @VishvakR!
@@ -1661,6 +1671,7 @@ v0.5.3 is also the final Tauri update. The Tauri updater will not switch you to 
 - Timed-out voice engines finish process cleanup before retrying, and old timeout callbacks cannot kill replacement engines (#1872)
 - Fast macOS process exits no longer turn a completed shutdown into a permission error (#1809)
 - The bootstrap splash no longer shows fabricated first-run install steps on a warm start or repair sync — a step now renders done only once it was actually observed (#1894)
+- Quitting on purpose is no longer reported as a crash on the next launch when the shell cuts the shutdown short, because the run sentinel now clears before the slower shutdown steps (#1895)
 - Model Catalogue engine rows stack into one column on narrow shells instead of clipping actions off-screen (#1891)
 - Simplified Chinese locale completed: all 486 missing keys translated and the parity ratchet tightened to zero (#1877) — thanks @yearth!
 - The generation compute-time budget is now a Settings control (Performance & Device) instead of an env-var-only setting the timeout error recommended with no UI path — the error copy points there too, and long CPU/MPS renders get an upfront heads-up before they start (#1787)
