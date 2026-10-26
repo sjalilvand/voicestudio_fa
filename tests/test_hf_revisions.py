@@ -7,23 +7,7 @@ import yaml
 from services import hf_revisions
 
 
-def test_every_catalog_repo_has_an_immutable_revision():
-    catalog = yaml.safe_load(Path("backend/config/models.yaml").read_text(encoding="utf-8"))
-    # Dependency repos are downloaded by the installer exactly like top-level
-    # ones (setup/download.py resolves `revision_for(dependency["repo_id"])`),
-    # and `revision_for` raises on an unpinned repo — so an unpinned dependency
-    # ships an install that always fails. Pin them under the same rule (#2163).
-    curated = []
-    for model in catalog["models"]:
-        curated.append(model["repo_id"])
-        for dependency in model.get("dependencies") or ():
-            curated.append(dependency["repo_id"])
-    missing = {
-        repo_id for repo_id in curated if repo_id not in hf_revisions.CURATED_REVISIONS
-    }
-    assert missing == set()
-    assert all(len(revision) == 40 for revision in hf_revisions.CURATED_REVISIONS.values())
-    assert all(int(revision, 16) >= 0 for revision in hf_revisions.CURATED_REVISIONS.values())
+# CLEAN-ROOM (spec F-shivendra-1 §13): test that every curated catalog repo, including dependency repos, has a 40-hex immutable revision
 
 
 def test_nllb_components_use_the_reviewed_revision():

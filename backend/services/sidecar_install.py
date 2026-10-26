@@ -1805,17 +1805,12 @@ def _step_fetch_weights(spec: SidecarSpec, job: dict) -> None:
         # other model download in the app — see setup/download.py): the
         # source checkout is unpinned upstream `main` anyway, and hf_hub
         # checksum-verifies each artifact. Hence the B615 waiver below.
-        # Unwrap to the bearer string: snapshot_download takes `token: str |
-        # None`, and a ResolvedToken record is ignored in favour of ambient
-        # discovery, so gated engine weights 401 for a user whose token lives
-        # in VoiceStudio's settings rather than HF's own cache (#2163).
-        _resolved = resolve_token()
+        # CLEAN-ROOM (spec F-shivendra-1 §11): resolve the HF bearer token as a plain string before building the kwargs
         endpoint = endpoint_race.effective_endpoint()
         kwargs: dict = {
             "repo_id": spec.weights_repo_id,
             "local_dir": str(wdir),
-            # Hugging Face hosts only — a mirror never receives the token.
-            "token": token_for_endpoint(endpoint, _resolved.token if _resolved else None),
+            # CLEAN-ROOM (spec F-shivendra-1 §11): "token" entry goes here (bearer string or None, mirror rule)
         }
         if spec.weights_revision:
             kwargs["revision"] = spec.weights_revision

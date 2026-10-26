@@ -401,7 +401,8 @@ def _resolve_profile_conditioning(row, *, ref_text=None, instruct=None,
     out = {
         "ref_audio_path": None, "ref_text": ref_text, "instruct": instruct,
         "seed": seed, "language": language, "kind": None,
-        "persist_ref_text": False, "language_from_profile": False,
+        "persist_ref_text": False,
+        # CLEAN-ROOM (spec F-shivendra-1 §1): "language_from_profile": False key goes here
         # True when the request edits a design profile rather than
         # re-rendering it: its saved sample no longer describes the voice.
         "diverged": False,
@@ -488,12 +489,7 @@ def _resolve_profile_conditioning(row, *, ref_text=None, instruct=None,
             prof_lang = None
         if prof_lang and prof_lang != "Auto":
             out["language"] = prof_lang
-            # #2156: record that the caller never asked for this language. The
-            # Older clients omit `language` while their picker reads "Auto", so a
-            # profile-filled language must not be reported back as if the user
-            # had picked it — an engine that can't speak it would otherwise
-            # tell them to "leave language as Auto", which is what they did.
-            out["language_from_profile"] = True
+            # CLEAN-ROOM (spec F-shivendra-1 §2): mark out["language_from_profile"] = True here
     return out
 
 
@@ -1439,17 +1435,7 @@ _LANGUAGE_REJECTION_SIGNATURES = (
     "unsupported language code",
 )
 
-# Engine-specific rejections that ALREADY name the engine and what it supports,
-# so #1257's generic rewrite deliberately leaves them alone — re-wrapping them
-# only nests "Engine's own message:" twice. They still have to be recognised as
-# language rejections for #2156's provenance check, which cares about the
-# *cause* of the language, not the quality of the wording.
-_SELF_DESCRIBING_LANGUAGE_REJECTIONS = (
-    # services/tts_backend.py: "…doesn't support language='Persian'. Kokoro
-    # supports: …" — mlx-audio's Kokoro, the engine reported in #2156.
-    "doesn't support language",
-    "does not support language",
-)
+# CLEAN-ROOM (spec F-shivendra-1 §3): _SELF_DESCRIBING_LANGUAGE_REJECTIONS tuple goes here
 
 #: `unsupported language: xx` / `unsupported language 'xx'` — but not
 #: `unsupported language model ...`.
@@ -1460,40 +1446,10 @@ _LANGUAGE_REJECTION_RE = re.compile(
 )
 
 
-def _is_language_rejection(text: str) -> bool:
-    """True when an engine failure is about the LANGUAGE it was handed.
-
-    Matched on the message, not the type: the engines multiplex third-party
-    libraries that each raise their own class. Covers the self-describing
-    wordings too — #1257's rewrite skips those, but #2156 still needs to know a
-    language was refused so it can say where that language came from.
-    """
-    low = text.lower()
-    return (
-        any(sig in low for sig in _LANGUAGE_REJECTION_SIGNATURES)
-        or any(sig in low for sig in _SELF_DESCRIBING_LANGUAGE_REJECTIONS)
-        or bool(_LANGUAGE_REJECTION_RE.search(text))
-    )
+# CLEAN-ROOM (spec F-shivendra-1 §5): _is_language_rejection(text) goes here
 
 
-def _profile_language_rejection_detail(exc: BaseException, language) -> str:
-    """The 400 body for a language the *voice profile* supplied, not the user.
-
-    #2156: the UI omits `language` while its picker reads "Auto", and #533
-    fills that gap from the selected profile. When the active engine can't
-    speak the profile's language the engine's own message tells the user to
-    "leave language as 'Auto'" — which is exactly what they did, so the advice
-    cannot be acted on. Name the real source and the remedies that exist.
-    """
-    return (
-        f"This voice profile is saved with the language '{language}', and the "
-        f"active engine can't speak it. The language picker being on \"Auto\" "
-        f"does not override that — Auto fills the language in from the "
-        f"profile. Set this voice profile's language to one the engine "
-        f"supports, pick a supported language explicitly for this render, or "
-        f"switch engine in Model Catalogue (the VoiceStudio engine has the "
-        f"widest coverage). Engine's own message: {exc}"
-    )
+# CLEAN-ROOM (spec F-shivendra-1 §6): _profile_language_rejection_detail(exc, language) goes here
 
 
 def _language_rejection_payload(exc, language, *, from_profile):
@@ -1509,60 +1465,13 @@ def _language_rejection_payload(exc, language, *, from_profile):
     return failure
 
 
-def _language_rejection_http_error(exc: BaseException, language, *, from_profile):
-    """The 400 a refused language deserves, wherever the refusal was raised.
-
-    A language an engine cannot speak is never retryable. This keeps the
-    profile-aware error construction in one place for classic and streaming
-    responses.
-    """
-    root = _root_language_error(exc)
-    detail = (
-        _profile_language_rejection_detail(root, language)
-        if from_profile else str(exc)
-    )
-    if from_profile:
-        detail = {"code": "profile_language_rejected", "language": language, "message": detail}
-    return HTTPException(status_code=400, detail=detail)
+# CLEAN-ROOM (spec F-shivendra-1 §7): _language_rejection_http_error(exc, language, *, from_profile) goes here
 
 
-def _language_rejection_or(e: BaseException, backend, language):
-    """``e`` rewritten with engine context when it's a language rejection.
-
-    Returns ``e`` unchanged otherwise, so this is safe to wrap any failure in.
-    Deliberately narrower than :func:`_is_language_rejection`: a message that
-    already names its engine and the languages it supports is left alone rather
-    than nested inside a second "Engine's own message:".
-    """
-    text = str(e)
-    low = text.lower()
-    if any(sig in low for sig in _SELF_DESCRIBING_LANGUAGE_REJECTIONS):
-        return e
-    if not any(sig in low for sig in _LANGUAGE_REJECTION_SIGNATURES) and not (
-        _LANGUAGE_REJECTION_RE.search(text)
-    ):
-        return e
-    engine = getattr(backend, "display_name", None) or getattr(
-        type(backend), "id", type(backend).__name__
-    )
-    requested = f" '{language}'" if language else ""
-    rewritten = ValueError(
-        f"The {engine} engine can't speak{requested}. VoiceStudio offers every "
-        f"language its default engine supports, but each engine covers a "
-        f"different set — pick one this engine supports, or switch engine in "
-        f"Model Catalogue (the VoiceStudio engine has the widest coverage) "
-        f"and generate again. Engine's own message: {e}"
-    )
-    # Keep the engine's own text reachable. #2156's profile message quotes the
-    # engine once; without this it would quote THIS wrapper, repeating both the
-    # engine-switch remedy and "Engine's own message:" twice.
-    rewritten.engine_language_error = e
-    return rewritten
+# CLEAN-ROOM (spec F-shivendra-1 §8): _language_rejection_or(e, backend, language) goes here
 
 
-def _root_language_error(exc: BaseException) -> BaseException:
-    """The engine's own rejection, unwrapping :func:`_language_rejection_or`."""
-    return getattr(exc, "engine_language_error", exc)
+# CLEAN-ROOM (spec F-shivendra-1 §9): _root_language_error(exc) goes here
 
 
 def _persist_profile_ref_text(profile_id: str, ref_text: str) -> None:
@@ -2095,8 +2004,7 @@ async def generate_speech(
     ref_lease = None
     used_seed = seed
     resolved_profile_id = None
-    # #2156: True once a profile's stored language fills a language the caller
-    # never sent, so a rejection can name the profile instead of the picker.
+    # CLEAN-ROOM (spec F-shivendra-1 §4): language_from_profile flag defined (default False) for this request
     language_from_profile = False
     history_mode = None  # profile.kind when a profile drives; else inferred at insert
     stored_design_recipe = _design_recipe_json(design_recipe)
@@ -2132,7 +2040,7 @@ async def generate_speech(
             instruct = _cond["instruct"]
             used_seed = _cond["seed"]
             language = _cond["language"]
-            language_from_profile = _cond["language_from_profile"]
+            # CLEAN-ROOM (spec F-shivendra-1 §4): language_from_profile = _cond["language_from_profile"]
             if _cond["persist_ref_text"]:
                 persist_ref_text_profile_id = profile_id
     elif ref_audio is not None:
@@ -2769,15 +2677,7 @@ async def generate_speech(
         raise HTTPException(status_code=503, detail=str(e)) from e
     except ValueError as e:
         logger.error("Validation failed: %s", e)
-        # #2156: the language the engine refused was never chosen by the user —
-        # it came from the selected voice profile because the picker was on
-        # "Auto". The engine's own remedy ("leave language as 'Auto'") is then
-        # unfollowable, so say where the language actually came from. Only this
-        # scope knows that; the engine adapters never see the provenance.
-        if language_from_profile and _is_language_rejection(str(e)):
-            raise _language_rejection_http_error(
-                e, language, from_profile=True
-            ) from e
+        # CLEAN-ROOM (spec F-shivendra-1 §4): when language_from_profile and the failure is a language rejection, raise the profile-aware 400 here
         # Most ValueErrors here are VoiceStudio's own validation messages and
         # are exactly what the user should read. A few are raw library text
         # naming parameters and files the user cannot act on — those get the

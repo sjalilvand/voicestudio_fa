@@ -278,19 +278,9 @@ def _segmented_snapshot(repo_id: str, *, endpoint: "str | None", revision: str) 
     from services.segmented_download import DownloadCancelled, segmented_download
     from services.token_resolver import resolve as _resolve_token
 
-    # `resolve()` returns a ResolvedToken record, not the bearer string, and
-    # every consumer below is typed `token: str | None`. Handing over the
-    # record fails silently rather than loudly (#2163): huggingface_hub's
-    # build_hf_headers ignores a non-str token and falls back to its own
-    # ambient discovery, so a token held only in VoiceStudio's settings sends
-    # NO Authorization header at all and every gated file 401s; our own
-    # segmented_download interpolates it into `f"Bearer {token}"` and sends a
-    # malformed header carrying the raw secret. Unwrap once, here.
-    _resolved = _resolve_token()
-    # Mirrors never receive the token; False also stops huggingface_hub from
-    # sending one it finds on its own.
-    hub_token = token_for_endpoint(endpoint, _resolved.token if _resolved else None)
-    token = hub_token or None
+    # CLEAN-ROOM (spec F-shivendra-1 §10): resolve the HF bearer token as a plain string (or None), applying the mirror rule
+    hub_token = None  # placeholder until §10 is reimplemented (anonymous)
+    token = None
     api = HfApi(endpoint=endpoint, token=hub_token)
     info = api.repo_info(repo_id, repo_type="model", revision=revision)
     commit = info.sha
