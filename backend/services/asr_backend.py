@@ -373,15 +373,31 @@ def _decode_audio_16k_mono(audio_path: str):
 # ── Protocol ────────────────────────────────────────────────────────────────
 
 
-#: Per-request decode options a backend may accept as keyword arguments on
-#: ``transcribe()``. Callers exposing OpenAI's transcription parameters
-#: (``/v1/audio/transcriptions`` and ``/translations``) pass only the ones a
-#: backend's signature declares, so an engine that cannot honour one is never
-#: handed it and never fails on an unexpected keyword.
+#: Optional decode settings that ``transcribe()`` may take as keyword arguments.
+#: The OpenAI transcription routes and the dictation vocabulary prompt both
+#: filter their settings through ``transcribe_request_kwargs`` below, so an
+#: engine only ever receives the options its own signature names.
 TRANSCRIBE_REQUEST_OPTIONS = ("language", "initial_prompt", "temperature", "task")
 
 
-# CLEAN-ROOM (spec T1-folded §2): transcribe_request_kwargs(backend, options) goes here.
+def transcribe_request_kwargs(backend, options: dict) -> dict:
+    """Pick the entries of ``options`` that ``backend.transcribe`` can take.
+
+    An entry survives when its name is a known request option, appears as a
+    named parameter in the transcribe signature, and carries a value other
+    than None. If the signature cannot be read, nothing is passed.
+    """
+    try:
+        declared = inspect.signature(backend.transcribe).parameters
+    except (TypeError, ValueError):
+        return {}
+    return {
+        name: value
+        for name, value in options.items()
+        if name in TRANSCRIBE_REQUEST_OPTIONS
+        and name in declared
+        and value is not None
+    }
 
 
 #: Sequential Whisper decoders (faster-whisper, MLX Whisper) feed each 30 s

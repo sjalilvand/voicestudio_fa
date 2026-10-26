@@ -74,7 +74,10 @@ async def transcribe_audio(
               through when no LLM backend is configured. The raw ``text``
               is always returned; ``refined_text`` is added only when the
               LLM actually changed something.
-        # CLEAN-ROOM (spec T1-folded §1): docstring entry for the ``dictation`` flag goes here.
+        dictation: Opt-in flag for hotkey-dictation callers. When true, the
+              saved vocabulary hint is passed to engines that accept a
+              prompt. Off by default (file transcription, MCP/CLI stay
+              unbiased) and ignored in 'reference' mode.
 
         diarize: Opt-in speaker identification ('accurate' mode only, which
               is the mode with segment timings). Each segment gains a
@@ -150,7 +153,13 @@ async def transcribe_audio(
                 detail={**missing, "message": asr_model_missing_detail(missing)},
             )
 
-        # CLEAN-ROOM (spec T1-folded §1): per-request vocabulary-prompt kwargs helper goes here.
+        apply_hint = _truthy(dictation) and requested_mode != "reference"
+
+        def _hint_kwargs(backend) -> dict:
+            if not apply_hint:
+                return {}
+            from api.routers.dictation import dictation_transcribe_kwargs
+            return dictation_transcribe_kwargs(backend)
 
         def _run():
             if reference_fallback:
@@ -165,16 +174,18 @@ async def transcribe_audio(
                 # loader degrades to the next healthy engine (#1185).
                 from services.asr_backend import load_active_asr_backend
                 backend = load_active_asr_backend(require_installed=True) if requested_mode == "reference" else load_active_asr_backend()
-                # CLEAN-ROOM (spec T1-folded §1): pass the vocabulary-prompt kwargs to this call.
-                result = backend.transcribe(tmp.name, word_timestamps=use_accurate)
+                result = backend.transcribe(
+                    tmp.name, word_timestamps=use_accurate, **_hint_kwargs(backend)
+                )
             else:
                 # Fast mode (default): use the fastest available engine
                 # (MLX Turbo on Apple Silicon). Skip word_timestamps for
                 # ~30% latency reduction — dictation doesn't need them.
                 from services.asr_backend import get_capture_asr_backend
                 backend = get_capture_asr_backend()
-                # CLEAN-ROOM (spec T1-folded §1): pass the vocabulary-prompt kwargs to this call.
-                result = backend.transcribe(tmp.name, word_timestamps=False)
+                result = backend.transcribe(
+                    tmp.name, word_timestamps=False, **_hint_kwargs(backend)
+                )
             sherpa_model_id = getattr(getattr(backend, "spec", None), "id", None)
             return result, backend.id, sherpa_model_id
 
@@ -239,7 +250,8 @@ async def transcribe_audio(
                 def _run_fallback():
                     from services.asr_backend import get_capture_asr_backend
 
-                    # CLEAN-ROOM (spec T1-folded §1): the rescue decode must stay prompt-free.
+                    # No hint here: this text decides whether a sherpa model is
+                    # demoted, and a prompted Whisper can echo the hint on noise.
                     fallback = get_capture_asr_backend(skip_sherpa=True)
                     return (
                         fallback.transcribe(tmp.name, word_timestamps=False),

@@ -593,6 +593,7 @@
     "describe_hint": "Beschrijf de stem, of kies een startpunt. Beide vullen de details hieronder in.",
     "describe_unmatched": "Kon niet toewijzen: {{items}}",
     "describe_no_match": "Nog geen stemkenmerken herkend — probeer woorden als deep, elderly of British.",
+    "describe_freeform": "Je beschrijving gaat woord voor woord naar deze engine, en de detailkeuzes hieronder voegen alleen optionele hints toe.",
     "define_by_design": "Via ontwerp",
     "define_from_audio": "Vanuit audio",
     "define_voice": "Stem definiëren",
@@ -2243,7 +2244,10 @@
   "voicePanel": {
     "mode_label": "Dicteermodus",
     "mode_sub": "Schakelen: druk één keer om te starten, nogmaals om te stoppen. Vasthouden: dicteren terwijl de toets ingedrukt wordt gehouden.",
-    "mode_toggle": "Schakel"
+    "mode_toggle": "Schakel",
+    "mode_hold": "Ingedrukt houden",
+    "prompt_label": "Eigen woorden en spellingen",
+    "prompt_sub": "Noteer namen, technische termen of spellingen die je denkt uit te spreken. Faster Whisper, MLX Whisper en OpenAI-compatibele engines maken er gebruik van; een OpenAI-compatibele server krijgt deze tekst samen met je audio. Alle andere engines laten het links liggen."
   },
   "trimmer": {
     "title": "Referentie-audio trimmen",

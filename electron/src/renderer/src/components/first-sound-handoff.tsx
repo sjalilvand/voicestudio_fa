@@ -2,12 +2,9 @@ import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useGenerateClone } from '@/hooks/use-generate';
 import { router } from '@/router';
-import { readDraft, writeDraft } from '@/features/design/design-draft';
+import { readDraft, replaceRecipe, writeDraft } from '@/features/design/design-draft';
 import defaults from '@shared/utils/firstSound.json';
-import {
-  instructToVdStates,
-  mergeDescribedAttrs,
-} from '@shared/utils/voiceInstruct';
+import { instructToVdStates, mergeDescribedAttrs } from '@shared/utils/voiceInstruct';
 import { pickDesignSeed } from '@shared/utils/seed';
 import { FIRST_SOUND_EVENT } from '@/lib/first-sound';
 
@@ -36,7 +33,14 @@ export function FirstSoundHandoff() {
       running.current = true;
       const text = t('demo.clone_prompt');
       const seed = pickDesignSeed(false, null);
-      // CLEAN-ROOM (spec T1-folded §7): write the draft with its recipe replaced by the first-sound demo (text, attrs, seed, no profile).
+      writeDraft(
+        replaceRecipe(readDraft(), {
+          text,
+          attrs: mergeDescribedAttrs(instructToVdStates(defaults.instruct)),
+          seed,
+          profileId: null,
+        }),
+      );
       await router.navigate({ to: '/design' });
       try {
         await generateDesign({

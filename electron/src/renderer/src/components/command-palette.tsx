@@ -40,6 +40,7 @@ import {
 import {
   designDraftFromTake,
   readDraft,
+  replaceRecipe,
   restoreDesignProfile,
   writeDraft,
 } from '@/features/design/design-draft';
@@ -256,7 +257,13 @@ export function CommandPalette() {
         if (profile.kind === 'design') {
           const current = readDraft();
           const restored = restoreDesignProfile(profile, current.seed);
-          // CLEAN-ROOM (spec T1-folded §7): write the draft with its recipe replaced by the restored saved voice (attrs, seed, profileId).
+          writeDraft(
+            replaceRecipe(current, {
+              attrs: restored.attrs,
+              seed: restored.seed,
+              profileId: restored.profileId,
+            }),
+          );
           patchCloneSettings({ language: restored.language });
           await navigate({ to: '/design' });
           return;

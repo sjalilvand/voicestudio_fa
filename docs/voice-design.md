@@ -136,7 +136,20 @@ for Chinese — the model auto-fixes mismatches).
 
 - **Accent vs Dialect**: English accents are only applied to English speech, Chinese dialects are only applied to Chinese speech.
 
-<!-- CLEAN-ROOM (spec T1-folded §6): an "Other engines" subsection goes here. It explains that free-text engines receive the description as typed (with picked details appended) and that the catalogue reports instruct_vocabulary. The paragraph below belongs under it. -->
+### Other engines
+
+OmniVoice reads a fixed list of attributes (the tables above). Some engines
+instead read free text: Qwen3-TTS VoiceDesign through MLX-Audio, VoxCPM2 and
+audio.cpp. They get the description exactly as you typed it, so a trait that
+is not on the OmniVoice list (a mood, a setting, a character) still reaches
+the model. Details you pick by hand in the app are added after the
+description as extra cues. Details the app only inferred from your wording are
+not sent a second time, since the description already says them.
+
+The engine catalogue tells clients which reading applies through
+`instruct_vocabulary`: `"tags"` for the OmniVoice family and `"freeform"` for
+every other engine.
+
 
 IndexTTS2, MOSS-TTS v1.5, MOSS-TTS-Nano, dots.tts, Confucius4, GPT-SoVITS,
 Supertonic-3, OmniVoice GGUF, PocketTTS, KittenTTS and Sherpa-ONNX take their
@@ -150,7 +163,14 @@ instruction, which those engines can't read, so the preset take still runs. The 
 for these engines, `true` for engines that design, and `null` when an engine
 doesn't declare it.
 
-<!-- CLEAN-ROOM (spec T1-folded §6): a paragraph on how picked details, the description, Reset to description, saved voices/starting points and accent/dialect tokens interact goes here. -->
+On every engine, a detail you pick stays in force until the description says
+something different about that same detail. **Reset to description** drops all
+of your picks so the written description decides again; it appears only once
+a pick or a saved voice is overriding a written description. Choosing a saved
+voice or a starting point replaces the description. Accent and Chinese dialect
+details keep their model tokens in the request (the Sichuan dialect token, for
+example), while the app shows them in your interface language.
+
 
 An open take lists the language it was rendered in. When the composer is set
 to a different language, the take says which one new takes will use, and the
@@ -171,7 +191,11 @@ Engines with their own random generator (VoxCPM2, CosyVoice, audio.cpp,
 MLX-Audio and the OmniVoice sidecar, plus OmniVoice GGUF for cloning) receive
 it with each request.
 
-<!-- CLEAN-ROOM (spec T1-folded §6): a paragraph on reopening a take (what is restored, where it is stored, older takes) goes here. -->
+Reopening a take brings back the description, the picks and the details it
+was made with. These are kept with the take in your local history. A take
+made before this was stored comes back with its full instruction as the
+description and looks the same as it did.
+
 
 Gallery previews reject silent output and near-pure tonal buzz. The quality
 check measures short audio frames rather than the whole clip, so longer or

@@ -518,6 +518,7 @@
     "describe_hint": "Describe the voice, or pick a starting point. Either one fills in the details below.",
     "describe_unmatched": "Couldn't map: {{items}}",
     "describe_no_match": "No voice traits recognized yet — try words like deep, elderly, or British.",
+    "describe_freeform": "Your description goes to this engine word for word, and the detail pickers below only add optional hints.",
     "auto_kicker": "· auto",
     "cat_Gender": "Gender",
     "cat_Age": "Age",
@@ -2329,7 +2330,10 @@
   "voicePanel": {
     "mode_label": "Dictation Mode",
     "mode_sub": "Toggle: press once to start, again to stop. Hold: dictate while the key is held.",
-    "mode_toggle": "Toggle"
+    "mode_toggle": "Toggle",
+    "mode_hold": "Push and hold",
+    "prompt_label": "Custom words and spellings",
+    "prompt_sub": "List any names, technical terms or spellings you expect to say. Faster Whisper, MLX Whisper and OpenAI-compatible engines make use of it; an OpenAI-compatible server receives this text together with your audio. Every other engine disregards it."
   },
   "trimmer": {
     "title": "Trim reference audio",

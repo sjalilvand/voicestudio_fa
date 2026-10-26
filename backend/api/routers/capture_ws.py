@@ -525,8 +525,10 @@ async def ws_transcribe(websocket: WebSocket):
 
             # Transcribe current buffer
             try:
-                # CLEAN-ROOM (spec T1-folded §1): opt the live dictation socket (not the API stream path) into the vocabulary prompt.
-                text = await _transcribe_buffer(audio_chunks[:], pcm_sr=pcm_sr)
+                # Only the dictation socket carries the vocabulary hint, never the public stream API.
+                text = await _transcribe_buffer(
+                    audio_chunks[:], pcm_sr=pcm_sr, dictation=not is_platform_stream,
+                )
                 if text and text != partial_text:
                     partial_text = text
                     await _safe_send({
@@ -556,8 +558,9 @@ async def ws_transcribe(websocket: WebSocket):
     # Final transcription on complete buffer — skip if client already gone.
     if total_bytes > MIN_FINAL_BUFFER_BYTES:
         try:
-            # CLEAN-ROOM (spec T1-folded §1): same opt-in for the final transcription.
-            result = await _transcribe_buffer_full(audio_chunks, pcm_sr=pcm_sr)
+            result = await _transcribe_buffer_full(
+                audio_chunks, pcm_sr=pcm_sr, dictation=not is_platform_stream,
+            )
             # Dictation v2: deterministic polish so the pasted final reads
             # like typed text (leading capital, terminal punctuation).
             if is_platform_stream:
@@ -1235,9 +1238,14 @@ def _result_text(result: dict | None) -> str:
     return ""
 
 
-async def _transcribe_buffer(chunks: list[bytes], *, pcm_sr: int | None = None) -> str:
-    """Transcribe the buffered audio so far and return the text."""
-    # CLEAN-ROOM (spec T1-folded §1): add the opt-in ``dictation`` keyword parameter to this helper.
+async def _transcribe_buffer(
+    chunks: list[bytes], *, pcm_sr: int | None = None, dictation: bool = False,
+) -> str:
+    """Transcribe the buffered audio so far and return the text.
+
+    ``dictation=True`` passes the saved vocabulary hint to engines that take a
+    prompt; every other caller gets an unbiased decode.
+    """
 
     tmp = _pcm16_to_wav(b"".join(chunks), pcm_sr) if pcm_sr else _chunks_to_wav(chunks)
     if tmp is None:
@@ -1249,8 +1257,11 @@ async def _transcribe_buffer(chunks: list[bytes], *, pcm_sr: int | None = None) 
 
         def _run():
             backend = get_capture_asr_backend()
-            # CLEAN-ROOM (spec T1-folded §1): apply the dictation vocabulary prompt kwargs here when opted in.
-            result = backend.transcribe(tmp, word_timestamps=False)
+            hint = {}
+            if dictation:
+                from api.routers.dictation import dictation_transcribe_kwargs
+                hint = dictation_transcribe_kwargs(backend)
+            result = backend.transcribe(tmp, word_timestamps=False, **hint)
             return _result_text(result)
 
         # Bound dictation transcribes (#730): a wedged whisperx/CTranslate2 call
@@ -1267,9 +1278,13 @@ async def _transcribe_buffer(chunks: list[bytes], *, pcm_sr: int | None = None) 
 
 async def _transcribe_buffer_full(
     chunks: list[bytes], *, pcm_sr: int | None = None, skip_sherpa: bool = False,
+    dictation: bool = False,
 ) -> dict:
-    """Transcribe the whole buffer and return text, segments and timing."""
-    # CLEAN-ROOM (spec T1-folded §1): add the opt-in ``dictation`` keyword parameter to this helper.
+    """Transcribe the whole buffer and return text, segments and timing.
+
+    ``dictation=True`` hands the saved vocabulary hint to engines that accept
+    one. The default (used by the silent-model rescue and other callers) never does.
+    """
     tmp = _pcm16_to_wav(b"".join(chunks), pcm_sr) if pcm_sr else _chunks_to_wav(chunks)
     if tmp is None:
         return {"text": "", "segments": [], "language": "unknown",
@@ -1282,8 +1297,11 @@ async def _transcribe_buffer_full(
         def _run():
             backend = get_capture_asr_backend(skip_sherpa=skip_sherpa)
             t0 = time.perf_counter()
-            # CLEAN-ROOM (spec T1-folded §1): apply the dictation vocabulary prompt kwargs here when opted in.
-            result = backend.transcribe(tmp, word_timestamps=False)
+            hint = {}
+            if dictation:
+                from api.routers.dictation import dictation_transcribe_kwargs
+                hint = dictation_transcribe_kwargs(backend)
+            result = backend.transcribe(tmp, word_timestamps=False, **hint)
             elapsed = round(time.perf_counter() - t0, 2)
 
             segments = result.get("segments", [])

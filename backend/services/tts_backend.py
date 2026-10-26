@@ -277,7 +277,12 @@ class TTSBackend(ABC):
     #: so this is a discoverability hint, not an enforcement gate.
     supports_emotion: bool = False
 
-    # CLEAN-ROOM (spec T1-folded §3): the ``instruct_vocabulary`` class attribute (default "freeform") goes here.
+    #: How this engine reads the ``instruct`` text of a request. ``"tags"`` is
+    #: a closed list of voice-design attributes (the OmniVoice family) and
+    #: anything else must be filtered out; ``"freeform"`` means the text is
+    #: used as written or ignored. Reported by ``list_backends()`` so clients
+    #: know whether to sanitise before sending.
+    instruct_vocabulary: Literal["tags", "freeform"] = "freeform"
 
     def ensure_ready(self) -> None:
         """Load model weights now (blocking), so callers can separate the
@@ -1718,7 +1723,7 @@ class OmniVoiceBackend(TTSBackend):
 
     id = "omnivoice"
     display_name = "VoiceStudio (k2-fsa/OmniVoice, 600+ languages)"
-    # CLEAN-ROOM (spec T1-folded §3): declare instruct_vocabulary = "tags" on this class.
+    instruct_vocabulary = "tags"
     supports_voice_design = True
     gpu_compat = ("cuda", "rocm", "mps", "cpu")
     # Derived from the pool's own per-job budget (_GPU_VRAM_PER_JOB_GB = 5.0 in
@@ -3993,7 +3998,8 @@ def list_backends(*, include_hidden: bool = False) -> list[dict]:
           "gpu_compat":     list[str],              # subset of {cuda, rocm, mps, vulkan, xpu, npu, cpu}
           "supports_cloning": Optional[bool],       # True/False from the class attr; None when
                                                     #   model-dependent (property, e.g. mlx-audio)
-          # CLEAN-ROOM (spec T1-folded §3): document the instruct_vocabulary entry here.
+          "instruct_vocabulary": "tags" | "freeform",  # how ``instruct`` is read: closed OmniVoice
+                                                    #   attribute list vs text used as written
           "supports_voice_design": Optional[bool],  # False = needs a reference clip;
                                                     #   None = undeclared (design allowed)
           "preset_voices":  list[str],              # built-in voice ids a request may pick (``voice``); [] = none
@@ -4117,7 +4123,7 @@ def list_backends(*, include_hidden: bool = False) -> list[dict]:
             # Graded-emotion capability (#1208) — drives the Audiobook emotion
             # panel's engine gate. Class attr, defaults False.
             "supports_emotion": bool(getattr(cls, "supports_emotion", False)),
-            # CLEAN-ROOM (spec T1-folded §3): the "instruct_vocabulary" catalogue entry goes here.
+            "instruct_vocabulary": getattr(cls, "instruct_vocabulary", "freeform"),
             # Voice Design gate: False hides Design for reference-only engines.
             "supports_voice_design": voice_design_support(cls),
             # Reference-length truth (#2281): how much of a clone clip the

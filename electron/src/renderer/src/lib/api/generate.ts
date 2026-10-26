@@ -128,6 +128,15 @@ export function sanitizeInstruct(free: string): SanitizedInstruct {
 
 // ── Request ────────────────────────────────────────────────────────────────
 
+/** The `instruct` field to send, or '' for none. Free-form engines keep the user's wording. */
+function instructField(input: CloneGenerateInput): string {
+  const written = input.instruct ?? '';
+  if (!written) return '';
+  return input.instructVocabulary === 'freeform'
+    ? written.trim()
+    : sanitizeInstruct(written).instruct;
+}
+
 /** Multipart body for `POST /generate` (classic whole-file path). */
 export function toGenerateForm(input: CloneGenerateInput): FormData {
   const form = new FormData();
@@ -165,12 +174,11 @@ export function toGenerateForm(input: CloneGenerateInput): FormData {
     form.append('ref_text', input.refText ?? '');
   }
 
-  if (input.instruct) {
-    // CLEAN-ROOM (spec T1-folded §10): free-form engines send the instruct trimmed but unsanitised.
-    const instruct = sanitizeInstruct(input.instruct).instruct;
-    if (instruct) form.append('instruct', instruct);
+  const instruct = instructField(input);
+  if (instruct) form.append('instruct', instruct);
+  if (input.designRecipe !== undefined) {
+    form.append('design_recipe', JSON.stringify(input.designRecipe));
   }
-  // CLEAN-ROOM (spec T1-folded §10): append the optional ``design_recipe`` form field (JSON) here.
   if (input.emoVector) {
     form.append('emo_vector', JSON.stringify(input.emoVector));
   } else if (input.emoText?.trim()) {

@@ -191,7 +191,12 @@ describe('toGenerateForm', () => {
     ).toBe(false);
   });
 
-  // CLEAN-ROOM (spec T1-folded §10): test that the Voice Design recipe is sent as the design_recipe form field only when given.
+  it('attaches the design recipe as JSON only when one is given', () => {
+    const recipe = { description: 'a calm narrator', picks: { Pitch: 'low pitch' } };
+    const withRecipe = toGenerateForm({ ...BASE_INPUT, designRecipe: recipe });
+    expect(JSON.parse(String(withRecipe.get('design_recipe')))).toEqual(recipe);
+    expect(toGenerateForm(BASE_INPUT).has('design_recipe')).toBe(false);
+  });
 
   it('omits emotion on a neutral take and sends text emotion with strength', () => {
     const neutral = toGenerateForm(BASE_INPUT);
@@ -222,7 +227,25 @@ describe('toGenerateForm', () => {
     expect(form.has('emo_alpha')).toBe(false);
   });
 
-  // CLEAN-ROOM (spec T1-folded §10): test that a free-form engine's instruct is sent trimmed but unsanitised.
+  it('keeps a free-form engine instruct as written, trimmed', () => {
+    const prose = 'a tired lighthouse keeper, gravelly, speaking slowly';
+    const form = toGenerateForm({
+      ...BASE_INPUT,
+      profileId: 'p1',
+      instruct: `  ${prose}  `,
+      instructVocabulary: 'freeform',
+    });
+    expect(form.get('instruct')).toBe(prose);
+    // The tag engines still drop it.
+    expect(
+      toGenerateForm({
+        ...BASE_INPUT,
+        profileId: 'p1',
+        instruct: prose,
+        instructVocabulary: 'tags',
+      }).has('instruct'),
+    ).toBe(false);
+  });
 });
 
 describe('parseGenerateHeaders', () => {

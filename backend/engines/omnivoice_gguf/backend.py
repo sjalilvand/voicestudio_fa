@@ -513,7 +513,7 @@ def _make_backend_class():
 
         id = "omnivoice-gguf"
         display_name = "OmniVoice (GGUF, hardware-adaptive)"
-        # CLEAN-ROOM (spec T1-folded §3): declare instruct_vocabulary = "tags" on this class.
+        instruct_vocabulary = "tags"
         gpu_compat = ("cuda", "vulkan", "mps", "cpu")
 
         supports_voice_design = False

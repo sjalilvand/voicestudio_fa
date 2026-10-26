@@ -608,6 +608,7 @@
     "describe_hint": "描述这个声音，或选择一个起点——两者都会自动填好下方的详情。",
     "describe_unmatched": "无法识别：{{items}}",
     "describe_no_match": "尚未识别出声音特征——试试 deep、elderly、British 或「中年」「低音调」等词。",
+    "describe_freeform": "你的描述会逐字交给该引擎，下面的细节选择器只是额外加入一些可选提示。",
     "define_by_design": "通过设计",
     "define_from_audio": "从音频",
     "define_voice": "定义声音",
@@ -2243,7 +2244,10 @@
   "voicePanel": {
     "mode_label": "听写模式",
     "mode_sub": "切换：按一次启动，再按一次停止。按住：按住按键时听写。",
-    "mode_toggle": "切换"
+    "mode_toggle": "切换",
+    "mode_hold": "按住不放",
+    "prompt_label": "自定义词语与写法",
+    "prompt_sub": "把你打算说到的人名、专业术语或写法列出来。Faster Whisper、MLX Whisper 和兼容 OpenAI 的引擎会用到它；兼容 OpenAI 的服务器会连同音频一起收到这段文字。其余引擎都不会使用。"
   },
   "trimmer": {
     "title": "修剪参考音频",

@@ -18,12 +18,16 @@ import { openTake, useSelectedTake } from '@/lib/store/takes';
 import {
   DESIGN_DRAFT_EVENT,
   STORAGE,
+  applyDescription,
   canResetToDescription,
+  designInstruct,
+  designRecipe,
   designRequestSeed,
   editVoice,
   linkedDesignProfile,
   pickDetail,
   readDraft,
+  replaceRecipe,
   restoreDesignProfile,
   type DesignDraft,
 } from './design-draft';
@@ -75,12 +79,20 @@ export function DesignPage() {
   const [name, setName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [startingOpen, setStartingOpen] = useState(true);
-  // CLEAN-ROOM (spec T1-folded §8): ``mapper`` (the useDescription hook wired to the draft) goes here.
+  // Results are keyed by the text they were computed for; if the text has since
+  // moved on (typed over, or swapped out elsewhere) the result is stale: ignore it.
+  const mapper = useDescription((mapped, described) => {
+    setDraft((current) => {
+      if (current.description.trim() !== described) return current;
+      return applyDescription(current, mapped, described);
+    });
+  });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const generation = useGenerateClone();
   const activeEngine = useEngines().activeTts;
-  // CLEAN-ROOM (spec T1-folded §8): ``freeform`` and ``description`` derived values go here.
+  const freeform = generation.instructVocabulary === 'freeform';
+  const description = draft.description;
   const client = useQueryClient();
   const profiles = useProfiles();
   const savedProfilesRef = useRef<HTMLDetailsElement>(null);
@@ -107,7 +119,22 @@ export function DesignPage() {
     }, 250);
     return () => clearTimeout(timer);
   }, [draft]);
-  // CLEAN-ROOM (spec T1-folded §8): ``change(category, value)`` detail-pick handler goes here.
+  const change = (category: string, value: string) => {
+    // A running mapping is left alone; its result is merged beneath this pick.
+    setDraft((current) => pickDetail(current, category, value).draft);
+    const reset = pickDetail(draft, category, value).clearedCategory;
+    if (reset === null) return;
+    toast.info(t('clone.vd_exclusive_cleared', { cleared: t('clone.cat_' + reset) }));
+  };
+  const descriptionStatus = freeform
+    ? t('clone.describe_freeform')
+    : mapper.pending
+      ? t('preferences.loading')
+      : !mapper.matched
+        ? t('clone.describe_no_match')
+        : mapper.unmatched.length
+          ? t('clone.describe_unmatched', { items: mapper.unmatched.join(', ') })
+          : t('clone.describe_hint');
   const save = async () => {
     if (!name.trim() || saving) return;
     setSaving(true);
@@ -162,7 +189,60 @@ export function DesignPage() {
           tabsInHeader
           className="space-y-3"
         >
-          {/* CLEAN-ROOM (spec T1-folded §8): the voice-description card goes here. */}
+          <section className={cn(DESIGN_CARD, 'space-y-2.5')}>
+            <div className="flex min-h-7 items-center gap-2">
+              <DesignHeading icon={SparklesIcon} htmlFor="voice-description">
+                {t('clone.describe_label')}
+              </DesignHeading>
+              {canResetToDescription(draft) && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  title={t('clone.reset_to_description')}
+                  aria-label={t('clone.reset_to_description')}
+                  disabled={generation.isGenerating || mapper.pending}
+                  onClick={() => {
+                    setDraft((current) => ({ ...current, picks: {}, profileId: null }));
+                    mapper.reset(description);
+                  }}
+                >
+                  <RotateCcwIcon />
+                </Button>
+              )}
+            </div>
+            <Textarea
+              id="voice-description"
+              rows={3}
+              maxLength={2000}
+              className="min-h-20 resize-y text-sm"
+              disabled={generation.isGenerating}
+              value={description}
+              placeholder={t('clone.describe_placeholder')}
+              onChange={(event) => {
+                const value = event.target.value;
+                setDraft((current) => editVoice(current, { description: value }));
+                // Always map, even for a free-form engine, so the details stay
+                // in step for when the user switches back to OmniVoice.
+                mapper.describe(value);
+              }}
+            />
+            <div className="flex items-center gap-2">
+              <p role="status" className="min-w-0 flex-1 text-xs text-muted-foreground">
+                {descriptionStatus}
+              </p>
+              {!freeform && mapper.failed && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  onClick={() => mapper.describe(description)}
+                >
+                  {t('backend.retry')}
+                </Button>
+              )}
+            </div>
+          </section>
           <DesignDisclosure
             icon={BookmarkIcon}
             title={t('clone.saved_profiles')}
@@ -182,7 +262,13 @@ export function DesignPage() {
                       onClick={() => {
                         mapper.cancel();
                         const restored = restoreDesignProfile(profile, draft.seed);
-                        // CLEAN-ROOM (spec T1-folded §8): replace the draft's recipe with the restored saved voice here.
+                        setDraft((current) =>
+                          replaceRecipe(current, {
+                            attrs: restored.attrs,
+                            seed: restored.seed,
+                            profileId: restored.profileId,
+                          }),
+                        );
                         setCloneSetting('language', restored.language);
                       }}
                     >
@@ -238,7 +324,9 @@ export function DesignPage() {
                 attrs={draft.attrs}
                 onSelect={(attrs) => {
                   mapper.cancel();
-                  // CLEAN-ROOM (spec T1-folded §8): replace the draft's recipe with the chosen personality here.
+                  setDraft((current) =>
+                    replaceRecipe(current, { attrs: mergeDescribedAttrs(attrs) }),
+                  );
                 }}
               />
               {PRESETS.map((preset) => {
@@ -407,7 +495,12 @@ export function DesignPage() {
               disabled={generation.isGenerating}
               onUse={(preset) => {
                 mapper.cancel();
-                // CLEAN-ROOM (spec T1-folded §8): replace the draft's recipe and script with the chosen demo here.
+                setDraft((current) =>
+                  replaceRecipe(current, {
+                    text: preset.script || current.text,
+                    attrs: mergeDescribedAttrs(preset.attrs),
+                  }),
+                );
                 setCloneSetting('language', preset.language || 'Auto');
               }}
             />
@@ -443,14 +536,15 @@ export function DesignPage() {
           <DesignComposer
             generation={generation}
             blocker={designBlocker}
-            // CLEAN-ROOM (spec T1-folded §8): readiness rule for free-form engines is documented in the spec.
+            // Free-form engines take the description itself, so a mapping still
+            // in flight does not hold them back.
             ready={Boolean(draft.text.trim()) && (freeform || !mapper.pending)}
             engineName={activeEngine?.display_name ?? ''}
             onSynthesize={() =>
               void generation.generateDesign({
                 text: draft.text,
-                // CLEAN-ROOM (spec T1-folded §8): ``instruct`` and ``recipe`` of this request go here.
-                instruct: '',
+                instruct: designInstruct(draft, generation.instructVocabulary),
+                recipe: designRecipe(draft),
                 seed: designRequestSeed(draft, activeProfile),
                 profileId: activeProfile?.id ?? null,
               })

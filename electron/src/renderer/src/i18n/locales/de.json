@@ -593,6 +593,7 @@
     "describe_hint": "Beschreibe die Stimme oder wähle einen Ausgangspunkt. Beides füllt die Details unten aus.",
     "describe_unmatched": "Nicht zuordenbar: {{items}}",
     "describe_no_match": "Noch keine Stimmmerkmale erkannt — versuche Wörter wie deep, elderly oder British.",
+    "describe_freeform": "Deine Beschreibung geht Wort für Wort an diese Engine; die Detailauswahl darunter liefert nur optionale Zusatzhinweise.",
     "define_by_design": "Per Design",
     "define_from_audio": "Aus Audio",
     "define_voice": "Stimme definieren",
@@ -2243,7 +2244,10 @@
   "voicePanel": {
     "mode_label": "Diktiermodus",
     "mode_sub": "Umschalten: Einmal drücken, um zu starten, erneut drücken, um zu stoppen. Halten: Diktieren, während die Taste gedrückt gehalten wird.",
-    "mode_toggle": "Umschalten"
+    "mode_toggle": "Umschalten",
+    "mode_hold": "Gedrückt halten",
+    "prompt_label": "Eigene Wörter und Schreibweisen",
+    "prompt_sub": "Trag Namen, Fachbegriffe oder Schreibweisen ein, die du voraussichtlich sagen wirst. Faster Whisper, MLX Whisper und OpenAI-kompatible Engines nutzen das; ein OpenAI-kompatibler Server bekommt den Text zusammen mit deinem Audio. Alle übrigen Engines übergehen es."
   },
   "trimmer": {
     "title": "Referenzaudio zuschneiden",

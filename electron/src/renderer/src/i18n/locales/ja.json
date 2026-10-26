@@ -593,6 +593,7 @@
     "describe_hint": "声を説明するか、起点を選んでください。どちらでも下の詳細が自動入力されます。",
     "describe_unmatched": "対応付けできません: {{items}}",
     "describe_no_match": "まだ声の特徴を認識できていません。deep、elderly、British などの単語を試してください。",
+    "describe_freeform": "入力した説明はこのエンジンへ一語一語そのまま渡され、下の詳細セレクターは任意のヒントを足すだけです。",
     "define_by_design": "デザインで",
     "define_from_audio": "音声から",
     "define_voice": "音声の定義",
@@ -2243,7 +2244,10 @@
   "voicePanel": {
     "mode_label": "ディクテーションモード",
     "mode_sub": "トグル: 1 回押すと開始し、もう一度押すと停止します。 Hold: キーを押したままにします。",
-    "mode_toggle": "トグル"
+    "mode_toggle": "トグル",
+    "mode_hold": "押し続ける",
+    "prompt_label": "独自の単語と表記",
+    "prompt_sub": "話す予定の名前、専門用語、表記を書いておいてください。Faster Whisper、MLX Whisper、OpenAI 互換エンジンで使われ、OpenAI 互換サーバーにはこのテキストが音声とあわせて届きます。そのほかのエンジンでは使われません。"
   },
   "trimmer": {
     "title": "リファレンスオーディオをトリミングする",

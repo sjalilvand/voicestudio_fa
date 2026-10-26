@@ -52,6 +52,6 @@ it('newest description wins even if an old request ignores cancellation', async 
   await act(async () =>
     resolves[0]({ attrs: { Age: 'child' }, matched: ['child'], unmatched: [] }),
   );
-  // CLEAN-ROOM (spec T1-folded §9): assert the apply callback's call (attrs plus the description they belong to).
+  expect(apply.mock.calls).toEqual([[{ Age: 'elderly' }, 'new']]);
   expect(result.current.unmatched).toEqual(['raspy']);
 });

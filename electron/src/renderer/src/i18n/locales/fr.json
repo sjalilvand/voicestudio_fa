@@ -595,6 +595,7 @@
     "describe_hint": "Décrivez la voix, ou choisissez un point de départ. L'un ou l'autre renseigne les détails ci-dessous.",
     "describe_unmatched": "Impossible d'associer : {{items}}",
     "describe_no_match": "Aucun trait vocal reconnu pour l'instant — essayez des mots comme deep, elderly ou British.",
+    "describe_freeform": "Votre description parvient à ce moteur mot pour mot, et les sélecteurs de détails ci-dessous n'ajoutent que des indices facultatifs.",
     "define_by_design": "Par conception",
     "define_from_audio": "À partir de l'audio",
     "define_voice": "Définir la voix",
@@ -2245,7 +2246,10 @@
   "voicePanel": {
     "mode_label": "Mode dictée",
     "mode_sub": "Basculer : appuyez une fois pour démarrer, une nouvelle fois pour arrêter. Maintenir : dicter pendant que la touche est maintenue.",
-    "mode_toggle": "Basculer"
+    "mode_toggle": "Basculer",
+    "mode_hold": "Appui prolongé",
+    "prompt_label": "Mots et orthographes personnalisés",
+    "prompt_sub": "Indiquez les noms, termes techniques ou orthographes que vous pensez prononcer. Faster Whisper, MLX Whisper et les moteurs compatibles OpenAI s'en servent ; un serveur compatible OpenAI reçoit ce texte en même temps que votre audio. Tous les autres moteurs le laissent de côté."
   },
   "trimmer": {
     "title": "Couper l'audio de référence",

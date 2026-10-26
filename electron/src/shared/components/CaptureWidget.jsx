@@ -2110,7 +2110,8 @@ export default function CaptureWidget({ onDismiss }) {
       const formData = new FormData();
       formData.append('audio', blob, `capture.${extension}`);
       formData.append('mode', captureMode);
-      // CLEAN-ROOM (spec T1-folded §1): comment documenting the dictation opt-in goes here.
+      // Marks this upload as hotkey dictation so the server may apply the saved
+      // vocabulary hint; file transcription never sets it.
       formData.append('dictation', 'true');
 
       try {

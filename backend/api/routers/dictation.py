@@ -5,7 +5,7 @@ Exposes the seven sherpa-onnx dictation models and the dictation prefs the
 frontend dictation UI binds to.
 
     GET  /dictation/models   → the 7 models + install state (frontend model list)
-    GET  /dictation/prefs    → { enabled, mode, model_id } (CLEAN-ROOM spec T1-folded §1: plus the vocabulary-prompt field)
+    GET  /dictation/prefs    → { enabled, mode, model_id, prompt }
     POST /dictation/prefs    → persist any subset of those prefs
 
 Install state reuses the same HF-cache check the model store uses, so a model
@@ -15,8 +15,11 @@ Prefs are stored in the shared ``prefs.json`` store under the ``dictation.*``
 namespace (``dictation.enabled``, ``dictation.mode``, ``dictation.model_id``),
 mirroring how the ASR/TTS engine picks persist.
 
-CLEAN-ROOM (spec T1-folded §1): module documentation of the vocabulary prompt
-pref (``dictation.prompt``) goes here.
+``dictation.prompt`` is an optional vocabulary hint (names, jargon, preferred
+spellings). Whisper-style engines receive it on the live dictation socket and
+on ``/transcribe`` calls that opt in; engines that cannot take a prompt never
+see it, and the silent-model rescue decodes without it. It is read for every
+transcription, so changing it never reloads the capture engine.
 """
 from __future__ import annotations
 
@@ -38,13 +41,35 @@ logger = logging.getLogger("omnivoice.dictation")
 PREF_ENABLED = "dictation.enabled"
 PREF_MODE = "dictation.mode"
 PREF_MODEL_ID = "dictation.model_id"
-# CLEAN-ROOM (spec T1-folded §1): PREF_PROMPT pref-key constant goes here.
+PREF_PROMPT = "dictation.prompt"
 
 _DEFAULT_ENABLED = True
 _DEFAULT_MODE = "toggle"
 _VALID_MODES = ("toggle", "hold")
-# CLEAN-ROOM (spec T1-folded §1): MAX_PROMPT_CHARS, dictation_prompt() and
-# dictation_transcribe_kwargs(backend) go here.
+# Bound on the stored hint text (characters; not a token budget).
+MAX_PROMPT_CHARS = 1000
+
+
+def dictation_prompt() -> str:
+    """Return the stored vocabulary hint ready for use.
+
+    Anything that is not text counts as unset. Text is trimmed and clipped to
+    ``MAX_PROMPT_CHARS``, so a hand-edited ``prefs.json`` cannot exceed the cap.
+    """
+    value = prefs.get(PREF_PROMPT, "")
+    return value.strip()[:MAX_PROMPT_CHARS] if isinstance(value, str) else ""
+
+
+def dictation_transcribe_kwargs(backend) -> dict:
+    """Keyword arguments that give ``backend.transcribe`` the stored hint.
+
+    Returns ``{}`` when no hint is stored or the engine's ``transcribe`` does
+    not name an ``initial_prompt`` parameter.
+    """
+    from services.asr_backend import transcribe_request_kwargs
+
+    hint = dictation_prompt()
+    return transcribe_request_kwargs(backend, {"initial_prompt": hint if hint else None})
 
 
 def _read_prefs() -> dict:
@@ -58,7 +83,7 @@ def _read_prefs() -> dict:
         "enabled": bool(prefs.get(PREF_ENABLED, _DEFAULT_ENABLED)),
         "mode": mode,
         "model_id": mid,
-        # CLEAN-ROOM (spec T1-folded §1): "prompt" entry of the prefs payload goes here.
+        "prompt": dictation_prompt(),
     }
 
 
@@ -119,7 +144,7 @@ class DictationPrefsUpdate(BaseModel):
     enabled: Optional[bool] = None
     mode: Optional[str] = None
     model_id: Optional[str] = None
-    # CLEAN-ROOM (spec T1-folded §1): optional "prompt" field of the update model goes here.
+    prompt: Optional[str] = None
 
 
 @router.post("/dictation/prefs", dependencies=[Depends(require_local)])
@@ -133,7 +158,14 @@ def set_dictation_prefs(req: DictationPrefsUpdate):
                 status_code=400,
                 detail=f"mode must be one of {_VALID_MODES}",
             )
-    # CLEAN-ROOM (spec T1-folded §1): trim and length-validate the optional prompt here.
+    prompt = None
+    if req.prompt is not None:
+        prompt = req.prompt.strip()
+        if len(prompt) > MAX_PROMPT_CHARS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"prompt must be at most {MAX_PROMPT_CHARS} characters",
+            )
     if req.model_id is not None:
         if not sd.is_sherpa_model(req.model_id):
             raise HTTPException(
@@ -147,7 +179,7 @@ def set_dictation_prefs(req: DictationPrefsUpdate):
     # request fails without claiming that settings which are not active were
     # saved. A reset is safe even when a later preference write fails; the old
     # persisted selection is simply loaded again on next capture.
-    # CLEAN-ROOM (spec T1-folded §1): a prompt-only update must not reset the loaded capture engine.
+    # The prompt is read per transcription, so only the other prefs need a reset.
     if (req.enabled, req.mode, req.model_id) != (None, None, None):
         try:
             from services import asr_backend
@@ -172,5 +204,6 @@ def set_dictation_prefs(req: DictationPrefsUpdate):
         sd.clear_demotion(canonical)
     if req.enabled is not None:
         prefs.set_(PREF_ENABLED, bool(req.enabled))
-    # CLEAN-ROOM (spec T1-folded §1): persist the validated prompt here.
+    if prompt is not None:
+        prefs.set_(PREF_PROMPT, prompt)
     return _read_prefs()

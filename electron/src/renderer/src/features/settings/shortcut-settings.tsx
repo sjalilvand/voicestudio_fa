@@ -11,10 +11,7 @@ import {
   nativeShortcutKey,
   useDictationPreferences,
 } from '@/hooks/use-native-dictation';
-import {
-  keyEventToAccelerator,
-  isPureModifierEvent,
-} from '@shared/utils/shortcutAccelerator';
+import { keyEventToAccelerator, isPureModifierEvent } from '@shared/utils/shortcutAccelerator';
 import { SettingsSection, SettingsRow } from './settings-layout';
 
 export function ShortcutSettings() {
@@ -33,7 +30,12 @@ export function ShortcutSettings() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
   const [verifiedShortcut, setVerifiedShortcut] = useState<string | null>(null);
-  // CLEAN-ROOM (spec T1-folded §1): local state for the vocabulary-prompt field goes here.
+  // `hintDraft` is null whenever the field simply mirrors the stored hint, so a
+  // refreshed stored value shows through; it holds text only for a real, unsaved edit.
+  const [hintDraft, setHintDraft] = useState<string | null>(null);
+  const [hintSaveFailed, setHintSaveFailed] = useState(false);
+  const storedHint = prefs.data?.prompt ?? '';
+  const hint = hintDraft ?? storedHint;
   useEffect(() => api?.onShortcutPressed?.(setVerifiedShortcut), [api]);
   useEffect(() => {
     if (!recording) return;
@@ -97,7 +99,23 @@ export function ShortcutSettings() {
       setBusy(false);
     }
   };
-  // CLEAN-ROOM (spec T1-folded §1): the handler that saves the vocabulary prompt goes here.
+  const storeHint = async () => {
+    setBusy(true);
+    setHintSaveFailed(false);
+    const request = apiJson('/dictation/prefs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: hint }),
+    });
+    try {
+      await request;
+      await client.invalidateQueries({ queryKey: dictationPreferencesKey });
+      setHintDraft(null);
+    } catch {
+      setHintSaveFailed(true);
+    }
+    setBusy(false);
+  };
   return (
     <>
       <DictationDemo />
@@ -120,7 +138,35 @@ export function ShortcutSettings() {
             </Button>
           ))}
         </SettingsRow>
-        {/* CLEAN-ROOM (spec T1-folded §1): the vocabulary-prompt settings row goes here. */}
+        <SettingsRow
+          id="dictation-prompt"
+          title={t('voicePanel.prompt_label')}
+          description={t('voicePanel.prompt_sub')}
+        >
+          <Textarea
+            aria-labelledby="dictation-prompt"
+            className="@2xl:w-80"
+            maxLength={1000}
+            value={hint}
+            // Frozen during a save so keystrokes are not lost when the draft resets.
+            disabled={busy || !prefs.data}
+            onChange={({ target }) =>
+              setHintDraft(target.value === storedHint ? null : target.value)
+            }
+          />
+          <Button
+            size="sm"
+            disabled={busy || !prefs.data || hint.trim() === storedHint}
+            onClick={() => void storeHint()}
+          >
+            {t('common.save')}
+          </Button>
+          {hintSaveFailed && (
+            <p role="alert" className="text-xs text-destructive">
+              {t('common.error')}
+            </p>
+          )}
+        </SettingsRow>
         {api && (
           <>
             <SettingsRow id="dictation-shortcut" title={t('capture.active_shortcut')}>

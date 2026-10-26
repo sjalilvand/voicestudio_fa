@@ -593,6 +593,7 @@
     "describe_hint": "Mô tả giọng nói, hoặc chọn một điểm khởi đầu. Cả hai cách đều tự điền chi tiết bên dưới.",
     "describe_unmatched": "Không thể ánh xạ: {{items}}",
     "describe_no_match": "Chưa nhận ra đặc điểm giọng nói nào — hãy thử các từ như deep, elderly hoặc British.",
+    "describe_freeform": "Mô tả của bạn được chuyển cho công cụ này từng chữ một, còn các bộ chọn chi tiết bên dưới chỉ thêm gợi ý tùy chọn.",
     "define_by_design": "Theo thiết kế",
     "define_from_audio": "Từ âm thanh",
     "define_voice": "Xác định giọng nói",
@@ -2243,7 +2244,10 @@
   "voicePanel": {
     "mode_label": "Chế độ đọc chính tả",
     "mode_sub": "Chuyển đổi: nhấn một lần để bắt đầu, một lần nữa để dừng. Giữ: ra lệnh trong khi phím được giữ.",
-    "mode_toggle": "Chuyển đổi"
+    "mode_toggle": "Chuyển đổi",
+    "mode_hold": "Nhấn và giữ",
+    "prompt_label": "Từ và cách viết tùy chỉnh",
+    "prompt_sub": "Hãy ghi ra các tên, thuật ngữ chuyên ngành hoặc cách viết mà bạn dự định nói. Faster Whisper, MLX Whisper và các công cụ tương thích OpenAI sẽ tận dụng; máy chủ tương thích OpenAI nhận văn bản này cùng với âm thanh của bạn. Mọi công cụ khác đều không xét đến."
   },
   "trimmer": {
     "title": "Cắt âm thanh tham chiếu",

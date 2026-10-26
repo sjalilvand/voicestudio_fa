@@ -593,6 +593,7 @@
     "describe_hint": "描述這個聲音，或選擇一個起點——兩者都會自動填好下方的詳情。",
     "describe_unmatched": "無法辨識：{{items}}",
     "describe_no_match": "尚未辨識出聲音特徵——試試 deep、elderly 或 British 等詞。",
+    "describe_freeform": "你的描述會逐字交給此引擎，下方的細節選擇器只是額外加入一些選用提示。",
     "define_by_design": "以設計",
     "define_from_audio": "從音訊",
     "define_voice": "定義聲音",
@@ -2243,7 +2244,10 @@
   "voicePanel": {
     "mode_label": "聽寫模式",
     "mode_sub": "切換：按一次啟動，再按一次停止。按住：按住按鍵時聽寫。",
-    "mode_toggle": "切換"
+    "mode_toggle": "切換",
+    "mode_hold": "按住不放",
+    "prompt_label": "自訂詞語與寫法",
+    "prompt_sub": "把你打算說到的人名、專業術語或寫法列出來。Faster Whisper、MLX Whisper 與相容 OpenAI 的引擎會用到它；相容 OpenAI 的伺服器會連同音訊一起收到這段文字。其餘引擎都不會採用。"
   },
   "trimmer": {
     "title": "修剪參考音訊",

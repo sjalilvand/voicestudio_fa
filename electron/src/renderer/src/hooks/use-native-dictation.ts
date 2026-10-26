@@ -11,7 +11,7 @@ export function useDictationPreferences(enabled = true) {
     queryKey: dictationPreferencesKey,
     enabled,
     queryFn: () =>
-      apiJson<{ mode: 'hold' | 'toggle'; enabled: boolean }>('/dictation/prefs'),
+      apiJson<{ enabled: boolean; mode: 'hold' | 'toggle'; prompt?: string }>('/dictation/prefs'),
     refetchInterval: 10000,
   });
 }
