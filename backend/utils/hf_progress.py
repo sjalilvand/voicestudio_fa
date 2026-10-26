@@ -21,6 +21,7 @@ import contextvars
 import itertools
 import logging
 import threading
+import time
 from typing import Callable, Optional
 
 logger = logging.getLogger("omnivoice.hf_progress")
@@ -119,7 +120,42 @@ def emit(event: ProgressEvent) -> None:
     _emit(event)
 
 
-# CLEAN-ROOM (spec R1-medium §9): SafeFileWrapper class
+class SafeFileWrapper:
+    """File proxy that prevents display failures from aborting downloads."""
+
+    _is_safe_wrapper = True
+
+    def __init__(self, fp):
+        object.__setattr__(self, "_target_stream", fp)
+
+    def write(self, s):
+        try:
+            return self._target_stream.write(s)
+        except (OSError, UnicodeError):
+            return None
+
+    def flush(self):
+        flush = getattr(self._target_stream, "flush", None)
+        if flush is None:
+            return None
+        try:
+            return flush()
+        except OSError:
+            return None
+
+    def __getattr__(self, name):
+        from operator import attrgetter
+
+        destination = vars(self)["_target_stream"]
+        return attrgetter(name)(destination)
+
+
+def _safe_progress_stream(candidate):
+    if candidate is None:
+        return None
+    if getattr(candidate, "_is_safe_wrapper", False):
+        return candidate
+    return SafeFileWrapper(candidate)
 
 def install() -> None:
     """Monkey-patch `huggingface_hub`'s tqdm so every download reports to our
@@ -155,8 +191,40 @@ def install() -> None:
 
             _last_emit_time: float = 0.0
 
-            # CLEAN-ROOM (spec R1-medium §10a): TrackedTqdm.status_printer
-            # CLEAN-ROOM (spec R1-medium §10b): TrackedTqdm.__init__
+            @staticmethod
+            def status_printer(file):
+                output_stream = _safe_progress_stream(file)
+                try:
+                    printer = original.status_printer(output_stream)
+                except Exception:
+                    def printer(_message):
+                        return None
+                return printer
+
+            def __init__(self, *args, **kwargs):
+                if "file" in kwargs:
+                    kwargs["file"] = _safe_progress_stream(kwargs["file"])
+                try:
+                    super().__init__(*args, **kwargs)
+                except OSError:
+                    pass
+                inherited_stream = getattr(self, "fp", None)
+                protected_stream = _safe_progress_stream(inherited_stream)
+                if protected_stream is not inherited_stream:
+                    self.fp = protected_stream
+                self._last_emit_time = time.monotonic()
+                try:
+                    desc = getattr(self, "desc", None)
+                    total = int(getattr(self, "total", 0) or 0)
+                    _emit({
+                        "filename": str(desc or "download"),
+                        "downloaded": 0,
+                        "total": total,
+                        "pct": 0.0,
+                        "phase": "start",
+                    })
+                except Exception:
+                    pass
 
             def _emit_progress(self):
                 """Emit current state as a progress event."""
@@ -207,11 +275,44 @@ def install() -> None:
                 except Exception:
                     pass
 
-            # CLEAN-ROOM (spec R1-medium §10c): TrackedTqdm.update
+            def update(self, n=1):
+                try:
+                    result = super().update(n)
+                except OSError:
+                    result = None
+                now = time.monotonic()
+                if now - self._last_emit_time >= 0.3:
+                    self._last_emit_time = now
+                    try:
+                        self._emit_progress()
+                    except Exception:
+                        pass
+                return result
 
-            # CLEAN-ROOM (spec R1-medium §10d): TrackedTqdm.display
+            def display(self, msg=None, pos=None):
+                now = time.monotonic()
+                if now - self._last_emit_time >= 0.5:
+                    self._last_emit_time = now
+                    try:
+                        self._emit_progress()
+                    except Exception:
+                        pass
+                try:
+                    return super().display(msg, pos)
+                except OSError:
+                    return None
 
-            # CLEAN-ROOM (spec R1-medium §10e): TrackedTqdm.close
+            def close(self):
+                total = getattr(self, "total", None)
+                if isinstance(total, int) and total > 0:
+                    try:
+                        self._feed_sink(total, total, complete=True)
+                    except Exception:
+                        pass
+                try:
+                    return super().close()
+                except OSError:
+                    return None
 
         # Stash the original for inspection / uninstall, then swap.
         hf_tqdm_module._omnivoice_original_tqdm = original  # type: ignore[attr-defined]

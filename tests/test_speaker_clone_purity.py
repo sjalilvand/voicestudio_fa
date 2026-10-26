@@ -12,6 +12,11 @@ These tests pin the three guards:
 Pure tests over a synthetic vocals wav — no model, no main import.
 """
 
+import asyncio
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
+from queue import Queue
+from threading import Semaphore
+
 import numpy as np
 import pytest
 import soundfile as sf
@@ -26,6 +31,7 @@ from services.speaker_clone import (
     refine_ref_text,
     refine_ref_texts,
 )
+from services.asr_backend import ASRTimeoutError, run_transcribe_guarded
 
 SR = 16000
 
@@ -249,4 +255,55 @@ class TestRefineRefTexts:
         assert clones["Speaker 2"]["ref_text"] == "buenos dias"
 
 
-# CLEAN-ROOM (spec R1-medium §36): wedged-refine guard tests and their hanging fake backend
+class _PausedRecognizer:
+    def __init__(self):
+        self.arrivals = Queue(maxsize=1)
+        self.permission = Semaphore(0)
+
+    def transcribe(self, path, *, word_timestamps=True):
+        self.arrivals.put_nowait(path)
+        self.permission.acquire()
+        return {"chunks": [{"text": "replacement text"}], "language": "en"}
+
+    def wait_until_called(self):
+        return self.arrivals.get(timeout=1)
+
+    def resume(self):
+        self.permission.release()
+
+
+def test_refine_ref_texts_has_no_internal_wall_clock_timeout():
+    recognizer = _PausedRecognizer()
+    originals = {"Speaker 1": {"ref_audio": "/tmp/pause.wav", "ref_text": "source"}}
+    worker = ThreadPoolExecutor(max_workers=1)
+    pending = worker.submit(refine_ref_texts, originals, recognizer)
+    assert recognizer.wait_until_called() == "/tmp/pause.wav"
+    try:
+        with pytest.raises(FutureTimeoutError):
+            pending.result(timeout=0.02)
+    finally:
+        recognizer.resume()
+        worker.shutdown(wait=False)
+
+
+def test_guarded_refine_times_out_without_changing_original_text():
+    recognizer = _PausedRecognizer()
+    originals = {"Speaker 1": {"ref_audio": "/tmp/guard.wav", "ref_text": "unchanged"}}
+    worker = ThreadPoolExecutor(max_workers=1)
+
+    async def guarded_call():
+        return await run_transcribe_guarded(
+            worker,
+            lambda: refine_ref_texts(originals, recognizer),
+            what="blocked reference-text check",
+            timeout=0.02,
+        )
+
+    try:
+        with pytest.raises(ASRTimeoutError):
+            asyncio.run(guarded_call())
+        assert recognizer.wait_until_called() == "/tmp/guard.wav"
+        assert originals["Speaker 1"]["ref_text"] == "unchanged"
+    finally:
+        recognizer.resume()
+        worker.shutdown(wait=False)

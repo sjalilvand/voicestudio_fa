@@ -26,7 +26,7 @@ const ONSET_STRIP_H = 8; // px — non-interactive onset tick strip
 const KB_STEP_S = 0.01; // ←/→ nudge
 const KB_STEP_BIG_S = 0.1; // Ctrl+←/→ nudge
 const DRAG_DEADZONE_PX = 3;
-// CLEAN-ROOM (spec R1-medium §22a): segment-count threshold above which the lane virtualizes
+const VIRTUALIZE_ABOVE = 200;
 
 const fmt = (t) => formatTimestamp(t, { decimals: 2 });
 
@@ -476,7 +476,7 @@ export default function SegmentTrack({
 
   const innerWidth = Math.max(viewWidth, Math.ceil(duration * pxPerSec));
   const playheadX = currentTime * pxPerSec - effScroll;
-  // CLEAN-ROOM (spec R1-medium §22b): segments to render: all of them at or below the threshold, otherwise the visible window
+  const windowed = effSegments.length <= VIRTUALIZE_ABOVE ? effSegments : effSegments.slice(lo, hi);
   // Scroll offset baked into each box's `left` (viewport coordinates) instead
   // of a `translateX` on the lane — an animated lane transform is composited
   // by Chromium and flashes on some Windows GPU/WebView2 drivers (#373). In
@@ -487,7 +487,7 @@ export default function SegmentTrack({
 
   return (
     <div
-      /* CLEAN-ROOM (spec R1-medium §23): lane host className */
+      className={`seg-track relative w-full select-none mt-[2px] shrink-0 flex-none min-h-[50px] ${disabled ? 'is-disabled' : ''}`}
       ref={hostRef}
     >
       <canvas

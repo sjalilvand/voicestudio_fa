@@ -1,6 +1,7 @@
 import os
 import re
 import errno
+import functools
 import uuid
 import asyncio
 import logging
@@ -1109,7 +1110,146 @@ def _clamp_num_speakers(value) -> Optional[int]:
     return value if 1 <= value <= 20 else None
 
 
-# CLEAN-ROOM (spec R1-medium §11): phrase-embedding speaker recovery helper (module-level function)
+def _phrase_windows(phrases):
+    windows = []
+    for candidate in phrases:
+        spoken_text = str(candidate.get("text") or "").strip()
+        try:
+            bounds = (float(candidate.get("start")), float(candidate.get("end")))
+        except (TypeError, ValueError):
+            continue
+        if spoken_text and bounds[1] - bounds[0] >= 0.75:
+            windows.append((*bounds, spoken_text))
+    return windows
+
+
+def _embed_phrase_windows(diar_pipe, audio_target, windows):
+    import numpy as np
+    from pyannote.core import Segment
+
+    rows = []
+    lengths = []
+    for begin, finish, _text in windows:
+        span_length = finish - begin
+        samples, _rate = diar_pipe._audio.crop(
+            audio_target,
+            Segment(begin, finish),
+            duration=span_length,
+            mode="pad",
+        )
+        encoded = diar_pipe._embedding(samples[None])
+        if hasattr(encoded, "detach"):
+            encoded = encoded.detach().cpu().numpy()
+        flattened = np.asarray(encoded).ravel()
+        if not np.all(np.isfinite(flattened)):
+            return None
+        rows.append(flattened)
+        lengths.append(span_length)
+    return np.stack(rows), lengths
+
+
+def _partition_phrase_voices(feature_rows, lengths):
+    import numpy as np
+    from sklearn.cluster import AgglomerativeClustering
+
+    membership = AgglomerativeClustering(
+        n_clusters=2,
+        metric="cosine",
+        linkage="average",
+    ).fit_predict(feature_rows)
+    groups = tuple(np.unique(membership))
+    if len(groups) != 2:
+        return None
+
+    for group in groups:
+        positions = np.flatnonzero(membership == group)
+        occupied = sum(lengths[int(position)] for position in positions)
+        if positions.size < 2 or occupied < 1.5:
+            return None
+
+    safe_lengths = np.clip(
+        np.linalg.norm(feature_rows, axis=1, keepdims=True), 1e-8, None
+    )
+    normalized = feature_rows / safe_lengths
+    cosine_grid = normalized @ normalized.T
+    matching = []
+    opposing = []
+    for row, column in zip(*np.triu_indices(len(membership), k=1)):
+        collection = matching if membership[row] == membership[column] else opposing
+        collection.append(float(cosine_grid[row, column]))
+    if not matching or not opposing:
+        return None
+    return membership, float(np.mean(matching) - np.mean(opposing))
+
+
+def _recover_from_phrase_embeddings(
+    diar_pipe,
+    diarized_segments,
+    *,
+    phrases,
+    requested_speakers,
+    audio_target,
+    segments,
+    words,
+):
+    current_ids = set(filter(None, (row.get("speaker_id") for row in diarized_segments)))
+    if len(current_ids) > 1:
+        return None
+
+    windows = _phrase_windows(phrases)
+    if len(windows) < 4:
+        return None
+
+    try:
+        intended_count = int(requested_speakers) if requested_speakers else 2
+    except (TypeError, ValueError):
+        return None
+    if intended_count != 2:
+        return None
+
+    if getattr(diar_pipe, "_embedding", None) is None:
+        return None
+    if getattr(diar_pipe, "_audio", None) is None:
+        return None
+
+    try:
+        embedded = _embed_phrase_windows(diar_pipe, audio_target, windows)
+        if embedded is None:
+            return None
+        partition = _partition_phrase_voices(*embedded)
+        if partition is None:
+            return None
+        assignments, separation = partition
+
+        required_gap = 0.12 if requested_speakers == 2 else 0.18
+        if separation < required_gap:
+            logger.info(
+                "Voice-span regrouping declined: score %.3f did not reach %.3f",
+                separation,
+                required_gap,
+            )
+            return None
+
+        public_names = {}
+        acoustic_turns = []
+        for (begin, finish, _text), membership in zip(windows, assignments):
+            group = int(membership)
+            if group not in public_names:
+                public_names[group] = f"Speaker {len(public_names) + 1}"
+            acoustic_turns.append(
+                {"start": begin, "end": finish, "speaker": public_names[group]}
+            )
+
+        untouched_inputs = [row.copy() for row in segments]
+        relabelled = assign_speakers_from_turns(untouched_inputs, acoustic_turns)
+        rebuilt = resplit_segments_by_turns(relabelled, words, acoustic_turns)
+        output_ids = set(filter(None, (row.get("speaker_id") for row in rebuilt)))
+        if len(output_ids) < 2:
+            return None
+        return rebuilt, separation
+    except Exception:
+        logger.exception("Could not evaluate phrase-level voice grouping")
+        return None
 
 
 async def _reanalyze_speakers(job_id: str, job: dict, num_speakers: Optional[int], cancelled):
@@ -1528,7 +1668,55 @@ async def dub_transcribe_stream(
                     if _missing is not None:
                         preflight_error = asr_model_missing_detail(_missing)
                         preflight_payload = _missing
-                    # CLEAN-ROOM (spec R1-medium §15): preflight: when no earlier preflight failure, load the active ASR backend with keepalive and typed error handling
+                    if _missing is None:
+                        try:
+                            loop = asyncio.get_running_loop()
+                            try:
+                                await loop.run_in_executor(_cpu_pool, offload_tts_for_asr)
+                                _tts_offloaded["v"] = True
+                            except Exception as exc:
+                                logger.warning("Could not free TTS memory before ASR load: %s", exc)
+
+                            fut = loop.run_in_executor(
+                                _gpu_pool,
+                                functools.partial(
+                                    load_active_asr_backend,
+                                    asr_pipe=getattr(_model, "_asr_pipe", None),
+                                ),
+                            )
+                            fut.add_done_callback(
+                                lambda completed: completed.cancelled() or completed.exception()
+                            )
+                            while True:
+                                done, _ = await asyncio.wait(
+                                    {fut}, timeout=ASR_LOAD_KEEPALIVE_S
+                                )
+                                if done:
+                                    break
+                                yield b": loading speech recognition\n\n"
+                            _asr_backend = fut.result()
+                            _loaded_asr["backend"] = _asr_backend
+                        except ASRModelMissingError as exc:
+                            preflight_error = asr_model_missing_detail(exc.payload)
+                            preflight_payload = exc.payload
+                        except ModelLicenceNotAccepted as exc:
+                            preflight_error = str(exc)
+                            preflight_payload = exc.detail()
+                        except Exception as exc:
+                            logger.error(
+                                "ASR backend initialisation failed (%s)",
+                                type(exc).__name__,
+                            )
+                            from core.failure import build_failure
+                            failure = build_failure(
+                                exc,
+                                stage="transcribe-preflight",
+                                include_diagnostic=False,
+                            )
+                            hint = f" — {failure['hint']}" if failure.get("hint") else ""
+                            preflight_error = (
+                                f"ASR backend initialisation failed: {failure['reason']}{hint}"
+                            )
                     scene_cuts = job.get("scene_cuts") or []
 
         if preflight_error:
@@ -1599,7 +1787,7 @@ async def dub_transcribe_stream(
         # Words (global-timeline) retained so diarization can re-split a segment
         # that spans two speakers' turns at the word boundary (#486).
         all_words: list = []
-        # CLEAN-ROOM (spec R1-medium §12): per-transcript list collecting the ASR backend's raw phrase spans (before segment merging)
+        raw_phrases: list[dict] = []
         detected_lang = None
         next_seg_id = 0
         chunk_errors: list[str] = []
@@ -1683,7 +1871,11 @@ async def dub_transcribe_stream(
                     timeout=transcribe_timeout_s,
                     timeout_env=transcribe_timeout_env,
                 ))
-                # CLEAN-ROOM (spec R1-medium §16): wait for the chunk transcribe task in 5 s polls, yielding an SSE ping event on each empty poll
+                while True:
+                    done, _ = await asyncio.wait({task}, timeout=5.0)
+                    if done:
+                        break
+                    yield _sse_event("ping", {})
                 try:
                     part = task.result()
                 except ASRTimeoutError:
@@ -1730,7 +1922,16 @@ async def dub_transcribe_stream(
             if detected_lang is None and part.get("language"):
                 detected_lang = part["language"]
             asr_speaker_turns.extend(part.get("speaker_turns") or [])
-            # CLEAN-ROOM (spec R1-medium §13): collect valid raw phrase spans from each chunk result into the phrase list
+            for item in part.get("chunks") or []:
+                try:
+                    timestamp = item.get("timestamp")
+                    start = float(timestamp[0])
+                    end = float(timestamp[1])
+                except (TypeError, ValueError, IndexError):
+                    continue
+                text = (item.get("text") or "").strip()
+                if text and end > start:
+                    raw_phrases.append({"start": start, "end": end, "text": text})
             chunk_segs = segment_transcript(part, duration=t1, scene_cuts=scene_cuts)
             # Same word source segment_transcript used (already global-timeline),
             # kept for the post-diarization speaker re-split (#486).
@@ -2038,7 +2239,23 @@ async def dub_transcribe_stream(
                 # turns at the word boundary (single-speaker segments pass
                 # through unchanged).
                 resplit = label_segments_by_diarization(all_segments, all_words, diar)
-                # CLEAN-ROOM (spec R1-medium §14): call phrase-embedding recovery after diarization labelling; on success return its segments with labels_source 'phrase_embeddings'
+                recovered = _recover_from_phrase_embeddings(
+                    diar_pipe,
+                    resplit,
+                    phrases=raw_phrases,
+                    requested_speakers=num_speakers,
+                    audio_target=asr_audio_target,
+                    segments=all_segments,
+                    words=all_words,
+                )
+                if recovered is not None:
+                    recovered_segments, separation = recovered
+                    logger.info(
+                        "Recovered a rapid two-speaker exchange from %d phrases (separation %.3f)",
+                        len(raw_phrases),
+                        separation,
+                    )
+                    return recovered_segments, None, "phrase_embeddings"
                 return resplit, None, "audiocpp-sortformer" if isinstance(diar_pipe, NativeSortformer) else "pyannote"
             except Exception as e:
                 logger.exception("Diarization failed")
@@ -2155,13 +2372,37 @@ async def dub_transcribe_stream(
                 # removing that older history entry — after which every
                 # single-segment regen silently rendered in the default voice.
                 _clone_dir = _ref_run_dir(os.path.dirname(vocals_for_clone))
-                # CLEAN-ROOM (spec R1-medium §17): dispatch per-speaker clone extraction to the CPU pool
+                fut_clones = loop.run_in_executor(
+                    _cpu_pool,
+                    lambda: extract_speaker_clones(
+                        vocals_for_clone,
+                        final_segs,
+                        _clone_dir,
+                        labels_source=labels_source,
+                    ),
+                )
                 async for _ping in _ping_while(fut_clones):
                     yield _ping
                 clones = fut_clones.result()
                 if clones:
                     from services.speaker_clone import refine_ref_texts
-                    # CLEAN-ROOM (spec R1-medium §18): guarded per-speaker ref-text refine: bounded by run_transcribe_guarded, keep original clones on ASRTimeoutError
+                    try:
+                        refine_task = asyncio.ensure_future(run_transcribe_guarded(
+                            _gpu_pool,
+                            lambda: _asr_work.run(
+                                lambda: refine_ref_texts(clones, _asr_backend)
+                            ),
+                            what="speaker clone reference text refinement",
+                        ))
+                        async for _ping in _ping_while(refine_task):
+                            yield _ping
+                        clones = refine_task.result()
+                    except ASRTimeoutError as exc:
+                        logger.warning(
+                            "Speaker clone reference-text refinement timed out; "
+                            "keeping the original ref_text values: %s",
+                            exc,
+                        )
             # Wave 3.2: per-segment clone refs. Cut each long-enough segment's
             # own reference from the vocals so the dub of each line matches the
             # prosody of its source line. Short lines fall back to the
@@ -2191,7 +2432,23 @@ async def dub_transcribe_stream(
                     seg_clones = fut_seg_refs.result()
                     if seg_clones:
                         from services.speaker_clone import refine_ref_texts
-                        # CLEAN-ROOM (spec R1-medium §19): guarded per-segment ref-text refine: same bound and fallback as the per-speaker one
+                        try:
+                            refine_task = asyncio.ensure_future(run_transcribe_guarded(
+                                _gpu_pool,
+                                lambda: _asr_work.run(
+                                    lambda: refine_ref_texts(seg_clones, _asr_backend)
+                                ),
+                                what="segment clone reference text refinement",
+                            ))
+                            async for _ping in _ping_while(refine_task):
+                                yield _ping
+                            seg_clones = refine_task.result()
+                        except ASRTimeoutError as exc:
+                            logger.warning(
+                                "Segment clone reference-text refinement timed out; "
+                                "keeping the original ref_text values: %s",
+                                exc,
+                            )
                         commit["segment_clones"] = seg_clones
                 except Exception as e:
                     logger.warning("per-segment clone refs skipped: %s", e)
@@ -2458,7 +2715,37 @@ async def dub_transcribe(job_id: str, num_speakers: Optional[int] = None):
         # then dies at `.transcribe()`. The loader degrades (#1185).
         from services.asr_backend import load_active_asr_backend
         _asr = load_active_asr_backend(asr_pipe=getattr(_model, "_asr_pipe", None))
-        # CLEAN-ROOM (spec R1-medium §20): legacy transcribe: run the active ASR backend, fall back to preloaded PyTorch pipeline, always unload backend
+        try:
+            logger.info("Transcribing full audio with ASR backend %s", _asr.id)
+            try:
+                result = _asr.transcribe(asr_audio_target, word_timestamps=True)
+                detected_lang = result.get("language")
+            except Exception as exc:
+                logger.exception("ASR backend %s failed during full-audio transcription", _asr.id)
+                fallback_pipe = getattr(_model, "_asr_pipe", None)
+                if fallback_pipe is None:
+                    backend_name = str(getattr(_asr, "id", "selected ASR"))
+                    raise RuntimeError(
+                        f"Transcription with {backend_name} failed ({exc}). "
+                        "The in-memory PyTorch Whisper fallback cannot run because "
+                        "it was not preloaded."
+                    ) from exc
+                audio, sample_rate = sf.read(asr_audio_target, dtype="float32")
+                if audio.ndim > 1:
+                    audio = audio.mean(axis=1)
+                batch_size = 16 if torch.cuda.is_available() else 1
+                result = fallback_pipe(
+                    {"array": audio, "sampling_rate": sample_rate},
+                    return_timestamps=True,
+                    chunk_length_s=15,
+                    batch_size=batch_size,
+                )
+                detected_lang = result.get("language") if isinstance(result, dict) else None
+        finally:
+            try:
+                _asr.unload()
+            except Exception as exc:
+                logger.warning("ASR backend unload failed: %s", exc)
 
         detected.update(_source_language_state(job, detected_lang))
 

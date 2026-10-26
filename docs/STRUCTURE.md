@@ -9,21 +9,46 @@ VoiceStudio/
 │
 ├── README.md ⟵ user-facing overview (translations: docs/readme/README_CN.md, README_JA.md)
 ├── CHANGELOG.md                 ⟵ release history; Electron releases use the tagged section
-├── CLEAN-ROOM (spec R1-medium §33a): root files entries (agent contract, license files, python manifest)
+├── CLAUDE.md / AGENTS.md        ⟵ matching copies of the agent operating rules
+├── LICENSE / LICENSE-NOTICE.md / SPONSORS.md   ⟵ legal terms, required notices, supporters
+│
+├── pyproject.toml               ⟵ Python metadata plus the pytest and lint settings
 ├── uv.lock                      ⟵ Python lockfile
 ├── package.json                 ⟵ monorepo manifest (Bun workspaces + Turborepo) and THE app
 │                                   version (pyproject.toml + backend/core/version.py mirror it)
 ├── bun.lock                     ⟵ JS lockfile — repo-root, covers the electron/ workspace
 ├── turbo.json                   ⟵ turborepo pipeline
 │
-├── CLEAN-ROOM (spec R1-medium §33b): root config entries (review bots, skills lock, secret scan, submodules, python version)
+├── .coderabbit.yaml / greptile.json   ⟵ bot-review setup; CLAUDE.md supplies both rule sets
+├── skills-lock.json             ⟵ records the origin and digest of each .agents/skills/ copy
+├── .gitleaks.toml               ⟵ repository secret-detection policy
+├── .gitmodules                  ⟵ registers omnivoice-gallery
+├── .python-version              ⟵ interpreter selection for Python tooling
 ├── .dockerignore                ⟵ Docker build context filter
 ├── alembic.ini                  ⟵ DB migration config (stays at root by alembic convention)
 │
-├── CLEAN-ROOM (spec R1-medium §33c): .gitignore entry
+├── .gitignore                   ⟵ excludes a checkout-local .env; Settings persists user choices in
+│                                   ~/.config/omnivoice/env through backend/core/user_env.py
 │
 ├── backend/                     ⟵ FastAPI server
-│   CLEAN-ROOM (spec R1-medium §33d): backend/ subtree entries
+│   ├── main.py                  sole process entry; its annotated startup sequence must retain its order
+│   ├── api/routers/             44 routers, auto-included; HTTP/WS adaptation stays thin here
+│   │   └── setup/               setup-wizard endpoints and model acquisition
+│   ├── core/                    shared infrastructure: configuration, persistence, job/event plumbing,
+│   │                            auth and CSRF, safe paths, analytics consent, version and diagnostics
+│   ├── services/                108 modules of business logic spanning speech, dubbing, DSP, GPU dispatch,
+│   │                            engine selection and loaded-model ownership
+│   ├── engines/                 per-engine adapters: audiocpp, confucius4, cosyvoice_gguf,
+│   │                            cosyvoice_subprocess, dots_tts, indextts, moss_tts_nano_subprocess,
+│   │                            moss_tts_v15, omnivoice_gguf, omnivoice_subprocess, pockettts,
+│   │                            supertonic3, voxcpm2_subprocess, whisper_cpp, _asr_sidecar, _echo
+│   ├── schemas/                 Pydantic types at the request/response boundary
+│   ├── config/models.yaml       catalogue of selectable models
+│   ├── migrations/versions/     mandatory Alembic home for database evolution
+│   ├── plugins/                 extension landing area; contract lives in services/plugin_sdk.py
+│   ├── mcp_shim/                MCP launch surface documented by docs/mcp.md
+│   ├── speech_client/           client entry for the speech sidecar
+│   └── tests/                   separately collected backend test session (details below)
 │
 ├── electron/                    ⟵ the only desktop app and web UI (Electron + React 19)
 │   ├── src/main/                lifecycle, backend supervisor, runtime setup, updater, native IPC
@@ -51,21 +76,50 @@ VoiceStudio/
 │   ├── training/
 │   └── utils/
 │
-├── CLEAN-ROOM (spec R1-medium §33e): tests/ subtree entries and scripts/ header + installer entry
-│   ├── install.sh / install.ps1 shell + PowerShell installers served at voicestudio.sh/install
-│   ├── dev-backend.mjs          `bun run dev:api` backend supervisor
-│   ├── setup.py                 `bun run setup:api` post-sync platform setup (incl. ROCm opt-in)
-│   ├── electron-smoke-test.mjs  `bun run smoke-test` packaged-app launch check
-│   ├── prepare_electron_release.py, check_electron_release_assets.py   release asset gates
-│   CLEAN-ROOM (spec R1-medium §33f): scripts/ tail, bin/, skills dirs, deploy/ subtree entries
-│   ├── dockerhub-overview.md    synced to the Docker Hub overview page at release
-│   └── install-worker/          live voicestudio.sh/install Cloudflare worker; bundles
-│                                scripts/install.sh + install.ps1 (docs/install/script.md)
+├── tests/                       ⟵ default pytest collection selected by pyproject.toml `testpaths`
+│   ├── conftest.py              redirects OMNIVOICE_DATA_DIR to disposable state for the whole session
+│   ├── backend/ / scripts/      path-shaped coverage for those source areas
+│   ├── smoke/                   quick end-to-end gates; isolated CI job runs with HF_HUB_OFFLINE=1
+│   ├── evals/                   evals.yml-driven output-quality checks
+│   ├── probe/ / fixtures/       diagnostic probes and reusable inputs
+│   └── frontend/                retained node:test suite for utilities and developer tooling
 │
-├── docs/                        ⟵ developer docs, screenshots, branding
-│   ├── ROADMAP.md               where this project is going
-│   ├── STRUCTURE.md             you are here
-│   CLEAN-ROOM (spec R1-medium §33g): docs/ subtree, examples/, notebooks/, omnivoice-gallery/ entries
+├── scripts/                     ⟵ development, packaging and release commands (sh, Python, mjs)
+│   ├── install.sh / install.ps1 installers delivered from voicestudio.sh/install
+│   ├── dev-backend.mjs          supervisor behind `bun run dev:api`
+│   ├── setup.py                 platform finishing step for `bun run setup:api`, including ROCm opt-in
+│   ├── electron-smoke-test.mjs  packaged-launch probe invoked by `bun run smoke-test`
+│   ├── prepare_electron_release.py, check_electron_release_assets.py   artifact verification
+│   ├── check-docs-drift.py      checks docs-drift.yml against authoritative docs/features.yaml
+│   └── build-omnivoice-tts.sh   produces the sidecars stored under bin/
+│
+├── bin/                         ⟵ one precompiled omnivoice-tts sidecar for each supported platform
+├── .agents/skills/              ⟵ real-file canonical skills whose revisions are locked in skills-lock.json
+├── skills/                      ⟵ distributable voicestudio and voicestudio-maintainer skill packages
+│
+├── deploy/                      ⟵ container delivery plus the hosted installer worker
+│   ├── Dockerfile               CUDA baseline; BASE_IMAGE and GPU_FLAVOR let CI build ROCm too
+│   ├── docker-compose.yml       local one-command stack
+│   ├── torch-constraints.txt    image-specific torch-family lock
+│   ├── dockerhub-overview.md    release-synchronised Docker Hub description
+│   └── install-worker/          Cloudflare worker serving voicestudio.sh/install; embeds both installers
+│                                from scripts/ (see docs/install/script.md)
+│
+├── docs/                        ⟵ engineering references, product imagery and brand material
+│   ├── STRUCTURE.md             this map
+│   ├── ROADMAP.md               planned direction
+│   ├── RELEASING.md             complete multi-channel shipping checklist
+│   ├── features.yaml            source inventory consumed by docs-drift.yml
+│   ├── adr/                     durable architectural decisions
+│   ├── agents/                  tracker, triage-role and domain instructions for agents
+│   ├── engines/ dubbing/ install/ setup/ migration/ features/ playbooks/ specs/
+│   ├── media/ screenshots/      supporting media and captured UI
+│   ├── preview.png / logo.*     repository preview and logo assets
+│   └── languages.md training.md data_preparation.md evaluation.md voice-design.md
+│
+├── examples/                    ⟵ executable samples and inputs, including agentic/ and config/
+├── notebooks/                   ⟵ contains OmniVoice_Studio_Colab.ipynb
+├── omnivoice-gallery/           ⟵ submodule that publishes the voice gallery
 │
 ├── omnivoice_data/              ⟵ Docker bind-mount target (gitignored)
 │                                   DB + HF cache live here when running via compose
@@ -80,13 +134,21 @@ VoiceStudio/
 
 1. **Nothing at the root is a runtime artifact.** Outputs, temp files, local DBs, crash logs — all go to `~/Library/Application Support/OmniVoice/` (or the OS equivalent), *never* into the repo. The one exception is `omnivoice_data/`, which exists as a bind-mount anchor for Docker.
 
-<!-- CLEAN-ROOM (spec R1-medium §33h): rule 2 of the root rules -->
+2. **No ad-hoc scripts or tests at the root.** Put one-off debugging tools in `scripts/`; tests belong in one of the three homes below.
 
 3. **Each subdirectory owns one concern.** If you can't describe what goes in a directory in one sentence, it's wrong.
 
 4. **Every package has a manifest.** `backend/`, `electron/`, `omnivoice/` each have their own deps declared via `pyproject.toml` / `package.json` — they are independently testable. The JS lockfile is the **repo-root** `bun.lock` (Bun workspace), and `deploy/Dockerfile` installs from it with `--frozen-lockfile`.
 
-<!-- CLEAN-ROOM (spec R1-medium §33i): the 'Where tests live' section -->
+## Where tests live
+
+The single `test` job in `ci.yml` invokes three independent runners. Keeping their collection boundaries separate is intentional.
+
+| Home | Runner | Why it's separate |
+|---|---|---|
+| `tests/` | `pytest tests/` (also the `testpaths` default) | Primary Python collection. Its fixture redirects `OMNIVOICE_DATA_DIR` to temporary storage, preventing contact with developer data (#878). |
+| `backend/tests/` | `pytest backend/tests/`; CI step: “Run pytest (backend/tests, isolated)” | Validates the backend's bare-import mode in a fresh session and uses its own disposable data root. Collection-time `sys.modules` fakes are forbidden because they escape their file and contaminate combined runs. |
+| `electron/src/**/*.test.{ts,tsx}` | `bun run test` using Vitest/jsdom; CI enters through `bun run check:electron` | UI tests sit with implementation. Packaged and workflow smoke coverage belongs to `electron/tests/`; older helper/dev-script `node:test` cases live at `tests/frontend/` and use `bun run test:frontend`. |
 
 ## What lives where
 
@@ -94,13 +156,14 @@ VoiceStudio/
 |---|---|
 | User-facing product code | `backend/`, `electron/` |
 | The TTS model (independent of the studio) | `omnivoice/` |
-| CLEAN-ROOM (spec R1-medium §33j): row | engine adapter location |
+| New TTS/ASR engine adapter | `backend/engines/<engine>/` |
 | Everything executable but not user-facing | `scripts/` |
-| CLEAN-ROOM (spec R1-medium §33k): rows | prebuilt sidecars; python tests |
+| Prebuilt platform sidecars | `bin/` |
+| Python tests | `tests/` (or `backend/tests/` when isolation is required) |
 | Electron / UI unit tests | next to the module, as `*.test.ts(x)` |
 | Developer + user docs (Markdown) | `docs/` |
 | Architecture decision records (ADRs) | `docs/adr/` |
-| CLEAN-ROOM (spec R1-medium §33l): row | agent docs |
+| Agent-facing documentation | `docs/agents/` |
 | Runnable demos and sample data | `examples/` |
 | Runtime data (never committed) | `~/Library/Application Support/OmniVoice/` on Mac |
 
@@ -124,10 +187,9 @@ Removed in the 2026-07-12 cleanup pass (all preserved in git history):
 | Dir | Why it was there | Where it went |
 |---|---|---|
 | `.planning/` (74 files) | GSD-era planning archive: phases, quick plans, issue clusters. The GSD workflow was retired 2026-07-08. | Deleted; the four load-bearing decision docs moved to `docs/adr/`. |
-| CLEAN-ROOM (spec R1-medium §33m): row | .planning/ removal |
 | `design/` | ASCII mockups of the pre-React target UX, superseded by the shipped app. | Deleted. |
 | `research/` | Archived legacy Gradio UI + April-2026 competitor notes. | Deleted. |
-| CLEAN-ROOM (spec R1-medium §33n): row | .agents/ removal |
+| `.agents/` | Previously belonged to a retired third-party agent tool. | Removed, then recreated for canonical skill copies pinned by `skills-lock.json`. |
 
 ## Scaling path (proposed, not yet executed)
 
@@ -160,6 +222,6 @@ Migrate when adding the second `apps/*` or the second `packages/*`. Not before.
 ## Conventions
 
 - **Filenames:** snake_case for Python, kebab-case or PascalCase for JS/TS components, lowercase for Markdown.
-- CLEAN-ROOM (spec R1-medium §33o): test-mirroring convention bullet
 - **One-off scripts** go into `scripts/` with a descriptive name, not `test_*.py` at the root.
 - **New top-level directories** require a PR that updates *this file*.
+- **Test placement:** mirrored suites follow source paths (`tests/backend/` mirrors `api/`, `core/`, `engines/` and `services/`; for example, `backend/services/ffmpeg_utils.py` maps to `tests/backend/services/test_ffmpeg_utils.py`). Otherwise backend-wide tests are flat in `tests/backend/`, cross-cutting tests are flat in `tests/`, and React component tests are colocated with their component.

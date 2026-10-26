@@ -254,10 +254,13 @@ def test_capture_preload_defaults_on(monkeypatch):
     import main
     monkeypatch.delenv("OMNIVOICE_PRELOAD_CAPTURE_ASR", raising=False)
     assert main._env_flag("OMNIVOICE_PRELOAD_CAPTURE_ASR", default=True)
-    monkeypatch.setenv("OMNIVOICE_PRELOAD_CAPTURE_ASR", "0")
-    assert not main._env_flag("OMNIVOICE_PRELOAD_CAPTURE_ASR", default=True)
-    monkeypatch.setenv("OMNIVOICE_PRELOAD_CAPTURE_ASR", "1")
-    assert main._env_flag("OMNIVOICE_PRELOAD_CAPTURE_ASR", default=True)
+    assert not main._env_flag("OMNIVOICE_PRELOAD_CAPTURE_ASR", default=False)
+    for value in ("1", " true ", "TRUE", "yes", "on"):
+        monkeypatch.setenv("OMNIVOICE_PRELOAD_CAPTURE_ASR", value)
+        assert main._env_flag("OMNIVOICE_PRELOAD_CAPTURE_ASR", default=False)
+    for value in ("", "0", "false", "disabled", "garbage"):
+        monkeypatch.setenv("OMNIVOICE_PRELOAD_CAPTURE_ASR", value)
+        assert not main._env_flag("OMNIVOICE_PRELOAD_CAPTURE_ASR", default=True)
 
 
 def test_capture_preload_delay_default_and_override(monkeypatch):

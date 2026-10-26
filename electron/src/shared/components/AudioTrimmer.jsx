@@ -65,7 +65,7 @@ export default function AudioTrimmer({ file, maxSeconds = 15, onConfirm, onCance
   const [startInput, setStartInput] = useState('0.00');
   const [endInput, setEndInput] = useState('0.00');
 
-  // CLEAN-ROOM (spec R1-medium §21a): audio metadata state (duration and sample rate of the decoded file)
+  const [audioMeta, setAudioMeta] = useState(null);
   useEffect(() => {
     stateRef.current = {
       start,
@@ -96,16 +96,16 @@ export default function AudioTrimmer({ file, maxSeconds = 15, onConfirm, onCance
         const buf = await decodeToMonoLowRate(file, 22050);
         if (cancelled) return;
         bufferRef.current = buf;
-        // CLEAN-ROOM (spec R1-medium §21b): store the decoded file's duration and sample rate in that state
+        setAudioMeta({ duration: buf.duration, sampleRate: buf.sampleRate });
         // Prime with a coarse synchronous pass so waveform shows something instantly.
         peaksRef.current = computePeaksFromChannel(buf.getChannelData(0), 1024);
         setViewEnd(buf.duration);
-        // CLEAN-ROOM (spec R1-medium §21c): initial trim end = min(file duration, maxSeconds)
+        setEnd(Math.min(buf.duration, maxSeconds));
         setStart(0);
         setCursor(0);
         setViewStart(0);
         setDecoding(false);
-        // CLEAN-ROOM (spec R1-medium §21d): mark the trimmer ready once the first waveform pass is shown
+        setReady(true);
         // Refine peaks asynchronously without blocking UI.
         const refined = await computePeaksAsync(
           buf.getChannelData(0),

@@ -1173,7 +1173,7 @@ export default function useDubWorkflow({
           guidance_scale: cfg,
           speed,
           preview,
-          // CLEAN-ROOM (spec R1-medium §28a): timing_strategy request field with default fallback
+          timing_strategy: timingStrategy || 'strict_slot',
           // Voice-identity mode for auto-clone bindings (per_line default =
           // unchanged behaviour; consistent = one reference per speaker).
           voice_match: voiceMatch || 'per_line',

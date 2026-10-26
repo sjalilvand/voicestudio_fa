@@ -1081,7 +1081,14 @@ class WhisperXBackend(ASRBackend):
         # "ffmpeg" PATH lookup which yields [WinError 193] -> "no segments" on
         # Windows (#479). Same 16 kHz mono s16le array whisperx expects.
         audio = _decode_audio_16k_mono(audio_path)
-        # CLEAN-ROOM (spec R1-medium §6): WhisperXBackend.transcribe: call the pipeline, treat IndexError as an empty result
+        try:
+            result = self._asr.transcribe(
+                audio,
+                **whisper_request_options(language, None, None, task),
+            )
+        except IndexError:
+            logger.info("whisperx found no speech segments")
+            result = {"segments": [], "language": language or "en"}
         lang = result.get("language", "en")
 
         # Forced alignment when available — drastically improves word boundary

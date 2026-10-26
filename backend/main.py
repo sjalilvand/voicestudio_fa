@@ -322,7 +322,8 @@ install_redaction_filter()
 install_access_log_filter()
 install_asyncio_transport_filter()
 
-# CLEAN-ROOM (spec R1-medium §2): quiet the huggingface_hub HTTP logger
+# Anonymous Hub requests can produce noisy advisory messages during startup.
+logging.getLogger("huggingface_hub.utils._http").setLevel(logging.ERROR)
 # Silence httpx INFO — every HF Hub API call logs a line; the SSE stream
 # already surfaces download progress to the UI.
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -415,7 +416,15 @@ from core.csrf import SAFE_HTTP_METHODS, cookie_csrf_allowed, origin_allowed
 # registers the routers on the app.
 
 
-# CLEAN-ROOM (spec R1-medium §3): _env_flag(name, default) boolean env helper
+def _env_flag(name: str, default: bool = False) -> bool:
+    missing = object()
+    configured = os.environ.get(name, missing)
+    if configured is missing:
+        return default
+    accepted = {word: True for word in ("1", "true", "yes", "on")}
+    return accepted.get(configured.strip().casefold(), False)
+
+
 # Eager mode runs the heavy phases inline at module import — today's exact
 # behavior — and exists for the ~100 lifespan-less `TestClient(app)` call
 # sites that expect `from main import app` to yield the fully-built app.
@@ -1107,7 +1116,15 @@ async def _phase_b(app: FastAPI) -> None:
     # Dictation v2: capture ASR warms in the background BY DEFAULT (~30s
     # post-boot, skipped under 4 GB free RAM at warm time).
     app.state.capture_preload_task = None  # only assigned when it runs (#1000 class)
-    if _env_flag("OMNIVOICE_PRELOAD_CAPTURE_ASR", default=True):
+    capture_warmup_requested = _env_flag(
+        "OMNIVOICE_PRELOAD_CAPTURE_ASR", default=True
+    )
+    if not capture_warmup_requested:
+        logger.info(
+            "Background capture recognition is off; dictation will initialise "
+            "its recogniser when it is first used."
+        )
+    if capture_warmup_requested:
         async def _preload_capture_asr():
             await asyncio.sleep(_capture_preload_delay_s())
             await _await_profile_reconcile(app)
@@ -1139,7 +1156,6 @@ async def _phase_b(app: FastAPI) -> None:
             except Exception as e:
                 logger.warning("Capture ASR preload skipped: %s", e)
         app.state.capture_preload_task = asyncio.create_task(_preload_capture_asr())
-    # CLEAN-ROOM (spec R1-medium §4): else-branch of capture ASR preload: log that preload is disabled
 
     # Watermark: warm the AudioSeal generator in the background so the first
     # mark_synthetic doesn't serialize the audioseal import + model load
@@ -2294,7 +2310,17 @@ if __name__ == "__main__":
             # and get their own advice; they never set ``bind_error``.
             self.denied_error: "OSError | None" = None
 
-        # CLEAN-ROOM (spec R1-medium §5): _BindErrorWatcher.filter method
+        def filter(self, record: logging.LogRecord) -> bool:
+            message = record.msg
+            if not isinstance(message, OSError):
+                return True
+            errno = getattr(message, "errno", None)
+            windows_error = getattr(message, "winerror", None)
+            if errno in (48, 98, 10048) or windows_error == 10048:
+                self.bind_error = message
+            elif errno == 13 or windows_error == 10013:
+                self.denied_error = message
+            return True
 
     # #1223: uvicorn does NOT let a bind failure reach the caller — it logs the
     # raw errno and raises SystemExit(1) from inside its startup, so an
