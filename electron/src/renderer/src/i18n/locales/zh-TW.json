@@ -2199,7 +2199,6 @@
     "downloading_uv": "正在下載 uv（Python 包管理器）…",
     "installing_deps": "正在安裝依賴項…",
     "dependencies_resolved": "已解析 {{count}} 個相依項目",
-    "remaining_amount": "剩餘約 {{amount}}",
     "download_rate": "{{rate}}/秒",
     "eta": "剩餘約 {{time}}",
     "downloads_complete": "下載完成 · 正在安裝套件",

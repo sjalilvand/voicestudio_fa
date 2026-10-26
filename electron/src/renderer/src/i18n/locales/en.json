@@ -2285,7 +2285,6 @@
     "downloading_uv": "Downloading uv (Python package manager)…",
     "installing_deps": "Installing…",
     "dependencies_resolved": "{{count}} dependencies resolved",
-    "remaining_amount": "~{{amount}} remaining",
     "download_rate": "{{rate}}/s",
     "eta": "~{{time}} left",
     "downloads_complete": "Downloads complete · installing packages",

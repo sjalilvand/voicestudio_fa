@@ -2199,7 +2199,6 @@
     "downloading_uv": "กำลังดาวน์โหลด uv (ตัวจัดการแพ็กเกจ Python)…",
     "installing_deps": "กำลังติดตั้งแพ็กเกจที่จำเป็น…",
     "dependencies_resolved": "แก้ไขการพึ่งพาแล้ว {{count}} รายการ",
-    "remaining_amount": "เหลือประมาณ {{amount}}",
     "download_rate": "{{rate}}/วินาที",
     "eta": "เหลือประมาณ {{time}}",
     "downloads_complete": "ดาวน์โหลดเสร็จแล้ว · กำลังติดตั้งแพ็กเกจ",

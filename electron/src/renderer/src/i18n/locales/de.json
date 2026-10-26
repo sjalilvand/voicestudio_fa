@@ -2199,7 +2199,6 @@
     "downloading_uv": "uv (Python Paket-Manager) wird heruntergeladen…",
     "installing_deps": "Abhängigkeiten…",
     "dependencies_resolved": "{{count}} Abhängigkeiten aufgelöst",
-    "remaining_amount": "~{{amount}} verbleibend",
     "download_rate": "{{rate}}/s",
     "eta": "~{{time}} verbleibend",
     "downloads_complete": "Downloads abgeschlossen · Pakete werden installiert",

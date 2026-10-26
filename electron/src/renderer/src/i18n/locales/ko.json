@@ -2199,7 +2199,6 @@
     "downloading_uv": "uv(Python 패키지 관리자) 다운로드 중…",
     "installing_deps": "종속성…",
     "dependencies_resolved": "종속성 {{count}}개 해결됨",
-    "remaining_amount": "약 {{amount}} 남음",
     "download_rate": "{{rate}}/초",
     "eta": "약 {{time}} 남음",
     "downloads_complete": "다운로드 완료 · 패키지 설치 중",
