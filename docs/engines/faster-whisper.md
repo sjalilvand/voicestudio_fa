@@ -55,7 +55,13 @@ transcription.
   process, so the engine checks up front and reports itself unavailable
   instead ([#1371](https://github.com/debpalash/VoiceStudio/issues/1371)).
   pytorch-whisper covers that case on torch's bundled cuDNN 9.
-<!-- CLEAN-ROOM (spec B §4): quirk bullet -->
+- **Kernel refuses executable stacks.** CTranslate2 4.4.0 and older ship
+  libraries that request an executable stack, which some Linux kernels reject
+  at load time (whisperx pins one of these versions on Python 3.11). VoiceStudio
+  clears that flag in the library file automatically the first time it probes
+  the engine. If the file is read-only, the engine is reported unavailable
+  along with the `patchelf --clear-execstack <library>` command to run once
+  ([#692](https://github.com/debpalash/VoiceStudio/issues/692)).
 - CTranslate2's GPU teardown can rarely segfault the process at unload. If
   you hit that, switch to the crash-isolated variant —
   [faster-whisper-isolated](faster-whisper-isolated.md)

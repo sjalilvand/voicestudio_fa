@@ -880,7 +880,29 @@ async def dub_translate(req: TranslateRequest):
                     f"switch the Engine dropdown to another provider."
                 )
                 return JSONResponse(status_code=400, content={"error": friendly})
-            # CLEAN-ROOM (spec B §3): Argos CTranslate2 repair + runtime check
+            # Importing argostranslate.translate loads CTranslate2's native
+            # library, which hardened kernels may reject (#692). Try an
+            # in-place repair, then verify the import so the user gets an
+            # actionable 400 instead of an opaque failure mid-translate.
+            try:
+                from core.execstack import ensure_ctranslate2_loadable
+
+                ensure_ctranslate2_loadable()
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("CTranslate2 repair before Argos failed: %s", exc)
+            try:
+                import argostranslate.translate  # noqa: F401
+            except Exception:  # noqa: BLE001
+                friendly = (
+                    f"Offline translation with '{provider}' is unavailable: its "
+                    f"CTranslate2 backend failed to start on this machine. Pick "
+                    f"NLLB (local) or an online provider in the Engine dropdown, "
+                    f"or reinstall the backend, and try again."
+                )
+                return JSONResponse(
+                    status_code=400,
+                    content={"error": friendly, "detail": {"code": "argos_runtime_unavailable", "message": friendly}},
+                )
 
             target_codes = list(dict.fromkeys(
                 seg.target_lang if seg.target_lang else req.target_lang

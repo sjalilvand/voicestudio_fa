@@ -61,7 +61,11 @@ A 6 GB card with nothing else loaded runs the default model on the GPU
 ([#2041](https://github.com/debpalash/VoiceStudio/issues/2041)). Disable
 the check with `OMNIVOICE_ASR_VRAM_PREFLIGHT=0`.
 
-<!-- CLEAN-ROOM (spec B §4): OOM ladder paragraph -->
+If a GPU run still runs out of memory (the preflight only sizes the model
+weights, not activations), the backend retries the same audio with smaller
+batches instead of failing: 16, then 4, then 1, or 8, then 2, then 1 when word
+timestamps are requested. If even batch size 1 does not fit, the pipeline moves
+to the CPU and finishes there, so no chunk is dropped.
 
 ## Quirks
 
