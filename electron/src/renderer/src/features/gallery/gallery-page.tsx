@@ -184,14 +184,14 @@ export function GalleryPage() {
         <div
           role="group"
           aria-label={t('nav.gallery')}
-          className="flex min-w-0 items-center gap-0.5 rounded-lg bg-muted/40 p-0.5 ring-1 ring-inset ring-border/50"
+          className="flex min-w-0 items-center gap-0.5 overflow-x-auto rounded-lg bg-muted/40 p-0.5 ring-1 ring-inset ring-border/50"
         >
           {(['archetypes', 'community', 'imports'] as const).map((value) => (
             <Button
               key={value}
               size="sm"
               variant={zone === value ? 'secondary' : 'ghost'}
-              className="h-6"
+              className="h-6 shrink-0"
               aria-pressed={zone === value}
               disabled={saving !== null}
               onClick={() => setZone(value)}
