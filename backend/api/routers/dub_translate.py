@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import time
 import asyncio
 import logging
@@ -346,7 +347,40 @@ def _dialect_flags(req, applied: bool) -> dict:
     return flags
 
 
-# CLEAN-ROOM (spec S-small §1): script-based source-language guess and _resolve_source_lang (called from the translate route)
+def _guess_lang_from_text(segments) -> str | None:
+    """Infer a likely source language from scripts in the first few captions."""
+    text = " ".join(str(getattr(segment, "text", "") or "") for segment in (segments or ())[:8])
+    script_codes = (
+        (r"[\u3040-\u30ff]", "ja"),
+        (r"[\uac00-\ud7a3\u1100-\u11ff]", "ko"),
+        (r"[\u4e00-\u9fff]", "zh"),
+        (r"[\u0400-\u04ff]", "ru"),
+        (r"[\u0600-\u06ff]", "ar"),
+    )
+    for pattern, code in script_codes:
+        if re.search(pattern, text):
+            return code
+    return None
+
+
+def _resolve_source_lang(req: TranslateRequest) -> str | None:
+    """Choose an explicit, job-derived, or text-inferred source language."""
+    requested = getattr(req, "source_lang", None)
+    if requested:
+        return requested
+
+    job_id = getattr(req, "job_id", None)
+    if job_id:
+        job = _get_job(job_id)
+        if job:
+            if job.get("source_lang_override"):
+                return job["source_lang_override"]
+            if job.get("source_lang"):
+                return job["source_lang"]
+            if job.get("source_lang_detection_missing"):
+                return None
+
+    return _guess_lang_from_text(getattr(req, "segments", None)) or "en"
 
 
 def _resolve_translation_context(req, client, model_name: str, timeout: float,

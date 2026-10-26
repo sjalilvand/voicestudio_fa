@@ -112,7 +112,8 @@ Prerequisites:
   sudo dnf install gcc gcc-c++ make pkgconf-pkg-config alsa-lib-devel libxdo-devel \
     libXtst-devel libX11-devel libxkbcommon-devel wayland-devel openssl-devel
 
-  # CLEAN-ROOM (spec S-small §7): Arch package install command
+  # Arch
+  sudo pacman -S --needed base-devel alsa-lib xdotool libxtst libx11 libxkbcommon wayland openssl
   ```
 
   `bun run dist` also needs `readelf` (binutils) and `zsyncmake` (zsync) to

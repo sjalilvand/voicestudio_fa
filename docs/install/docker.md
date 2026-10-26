@@ -16,7 +16,24 @@ weights download from Hugging Face when you install a model.
 and [`palashdeb/omnivoice-studio` on Docker Hub](https://hub.docker.com/r/palashdeb/omnivoice-studio) — same images, same tags.
 The former `ghcr.io/debpalash/omnivoice-studio` path remains a compatible alias.
 
-<!-- CLEAN-ROOM (spec S-small §6): Architecture section -->
+## Architecture
+
+The standard CUDA/CPU images and all ROCm variants are `linux/amd64`. The only
+native `linux/arm64` image is the NVIDIA CUDA build, identified by
+`-cuda-arm64` tags. On an ARM64 machine, pulling an unsuffixed tag may fail
+with `no matching manifest for linux/arm64/v8`.
+
+- **Apple Silicon:** use the [native macOS app](macos.md). Linux containers
+  cannot use an Apple GPU through MPS or MLX.
+- **AMD64 emulation on ARM64:** if Docker supports emulation, put
+  `--platform linux/amd64` before the image name in both `docker pull` and
+  `docker run` from the CPU instructions below. This is emulated CPU execution,
+  not native ARM64 support or a GPU workaround, and it can be much slower. Use
+  an AMD64 server when emulation is unavailable.
+- **ARM64 with an NVIDIA GPU:** run `:stable-cuda-arm64` as described in
+  [Pull and run (ARM64 NVIDIA GPU)](#pull-and-run-arm64-nvidia-gpu). Jetson
+  devices using L4T/JetPack are outside this image's support because they need
+  JetPack-specific PyTorch packages.
 
 ## Image tags
 
@@ -308,7 +325,25 @@ docker compose -f deploy/docker-compose.yml --profile rocm up -d
 > docker compose -f deploy/docker-compose.yml --profile cpu up -d
 > ```
 >
-> <!-- CLEAN-ROOM (spec S-small §6): PowerShell variant of the ARM64 Compose emulation instructions -->
+> In PowerShell, set both the administrator key and target platform for the
+> current session before issuing the same Compose commands. This uses .NET and
+> does not require Python on the host:
+>
+> ```powershell
+> $randomBytes = [byte[]]::new(32)
+> $generator = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+> try {
+>   $generator.GetBytes($randomBytes)
+> } finally {
+>   $generator.Dispose()
+> }
+> # URL-safe encoding matters when the key is supplied through ?api_key=,
+> # where an unescaped plus sign would otherwise decode as a space.
+> $env:OMNIVOICE_API_KEY = [Convert]::ToBase64String($randomBytes).Replace('+', '-').Replace('/', '_').TrimEnd('=')
+> $env:DOCKER_DEFAULT_PLATFORM = 'linux/amd64'
+> docker compose -f deploy/docker-compose.yml --profile cpu pull
+> docker compose -f deploy/docker-compose.yml --profile cpu up -d
+> ```
 >
 > Either way the setting lives only in that shell and the processes it starts.
 > The [architecture limits](#architecture) still apply: this is emulated CPU

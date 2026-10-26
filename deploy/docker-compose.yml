@@ -41,7 +41,7 @@ services:
       - HF_HOME=/app/omnivoice_data/huggingface
       - HF_TOKEN=${HF_TOKEN:-}
       - OMNIVOICE_DATA_DIR=/app/omnivoice_data
-# CLEAN-ROOM (spec S-small §4): PYTHONPATH env entry (cpu service)
+      - PYTHONPATH=/app/backend
       - PYTHONUNBUFFERED=1
       # The image's uvicorn ENTRYPOINT binds 0.0.0.0 *inside* the container so
       # the host-side port mapping above can forward traffic in. The 127.0.0.1
@@ -81,7 +81,7 @@ services:
       - HF_HOME=/app/omnivoice_data/huggingface
       - HF_TOKEN=${HF_TOKEN:-}
       - OMNIVOICE_DATA_DIR=/app/omnivoice_data
-# CLEAN-ROOM (spec S-small §4): PYTHONPATH env entry (cpu-less second service)
+      - PYTHONPATH=/app/backend
       - PYTHONUNBUFFERED=1
       # Container-internal 0.0.0.0 bind comes from the image ENTRYPOINT — same
       # as the CPU service above. The host-side `127.0.0.1:3900:3900` mapping
@@ -134,7 +134,7 @@ services:
       - HF_HOME=/app/omnivoice_data/huggingface
       - HF_TOKEN=${HF_TOKEN:-}
       - OMNIVOICE_DATA_DIR=/app/omnivoice_data
-# CLEAN-ROOM (spec S-small §4): PYTHONPATH env entry (gpu service)
+      - PYTHONPATH=/app/backend
       - PYTHONUNBUFFERED=1
       # See the CPU service above — relaxed loopback origin gate for the
       # headless Docker deployment.

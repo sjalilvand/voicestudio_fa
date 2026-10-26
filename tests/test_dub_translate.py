@@ -1,5 +1,6 @@
 """Unit tests for dub_translate — no network, pure helpers + monkeypatched translator."""
 import asyncio
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
@@ -249,6 +250,57 @@ def test_resolve_source_lang_priority(monkeypatch):
     # No job, no explicit → default en
     assert dub_translate._resolve_source_lang(Req()) == 'en'
     assert dub_translate._resolve_source_lang(Req(jid='missing')) == 'en'
+
+
+def test_source_language_request_and_job_precedence(monkeypatch):
+    from api.routers import dub_translate
+
+    job = {
+        'source_lang_override': 'pt',
+        'source_lang': 'de',
+        'source_lang_detection_missing': True,
+    }
+    monkeypatch.setattr(dub_translate, '_get_job', lambda _: job)
+
+    request = SimpleNamespace(source_lang=None, job_id='dub-1', segments=[])
+    assert dub_translate._resolve_source_lang(request) == 'pt'
+    request.source_lang = 'fr'
+    assert dub_translate._resolve_source_lang(request) == 'fr'
+
+    request.source_lang = None
+    job['source_lang_override'] = None
+    job['source_lang'] = None
+    assert dub_translate._resolve_source_lang(request) is None
+
+
+@pytest.mark.parametrize(
+    'text, expected',
+    [
+        ('\u304b\u306a\u4ea4\u3058\u308a', 'ja'),
+        ('\ud55c\uae00 \ubb38\uc7a5', 'ko'),
+        ('\u4e2d\u6587\u53e5\u5b50', 'zh'),
+        ('Пример текста', 'ru'),
+        ('نص عربي', 'ar'),
+        ('ordinary Latin words', 'en'),
+    ],
+)
+def test_source_language_script_fallback(text, expected):
+    from api.routers import dub_translate
+
+    request = SimpleNamespace(segments=[SimpleNamespace(text=text)])
+    assert dub_translate._resolve_source_lang(request) == expected
+
+
+def test_source_language_guess_checks_only_first_eight_segments():
+    from api.routers import dub_translate
+
+    request = SimpleNamespace(
+        segments=[SimpleNamespace(text='plain') for _ in range(8)]
+        + [SimpleNamespace(text='Кириллица')]
+    )
+    assert dub_translate._resolve_source_lang(request) == 'en'
+    request.segments = []
+    assert dub_translate._resolve_source_lang(request) == 'en'
 
 
 class _FakeSeg:

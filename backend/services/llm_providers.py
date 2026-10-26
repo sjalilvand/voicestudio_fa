@@ -80,7 +80,10 @@ _PROVIDERS: tuple[Provider, ...] = (
              model_env="OPENROUTER_MODEL",
              signup_url="https://openrouter.ai/keys",
              notes="One key, hundreds of models incl. free tiers."),
-# CLEAN-ROOM (spec S-small §3): OrcaRouter provider entry in _PROVIDERS
+    Provider("orcarouter", "OrcaRouter", "https://api.orcarouter.ai/v1",
+             "openai/gpt-5.5", key_envs=("ORCAROUTER_API_KEY",),
+             base_url_env="ORCAROUTER_BASE_URL", model_env="ORCAROUTER_MODEL",
+             signup_url="https://www.orcarouter.ai"),
     Provider("cheaperinference", "Cheaper Inference",
              "https://api.cheaperinference.com/v1", "gpt-5.4-mini",
              key_envs=("CHEAPER_INFERENCE_API_KEY",),

@@ -74,7 +74,17 @@ _install_accept_guard()
 from core.omnivoice_path import ensure_omnivoice_importable
 ensure_omnivoice_importable(_backend_dir)
 
-# CLEAN-ROOM (spec S-small §2): Windows torch.compile/dynamo/inductor disable env defaults
+# Windows builds have no Triton, so torch compilation would fail only when
+# inference begins. Set the opt-outs before model_manager can import torch,
+# while preserving any values the user already supplied.
+if sys.platform == "win32":
+    for _compile_opt_out in (
+        "TORCH_COMPILE_DISABLE",
+        "TORCHDYNAMO_DISABLE",
+        "TORCHINDUCTOR_DISABLE",
+    ):
+        os.environ.setdefault(_compile_opt_out, "1")
+
 # The Intel Fortran runtime bundled with MKL (under numpy/scipy) installs a
 # console CTRL handler that aborts the whole process with `forrtl: error
 # (200): program aborting due to window-CLOSE event` when a Windows console

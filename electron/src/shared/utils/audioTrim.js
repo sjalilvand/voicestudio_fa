@@ -190,7 +190,20 @@ export function selectionPlayhead(startSec, endSec, elapsedSec, loop) {
   return Math.min(endSec, startSec + e);
 }
 
-// CLEAN-ROOM (spec S-small §9): MIN_LOOP_SEC constant and loopWindow() export
+export const MIN_LOOP_SEC = 0.01;
+
+// Web Audio falls back to looping the complete buffer when its loop points
+// collapse or reverse. Always return a positive window for non-empty audio.
+export function loopWindow(startSec, endSec, durationSec) {
+  const duration = Math.max(0, durationSec);
+  let loopStart = clamp(startSec, 0, duration);
+  const segment = Math.max(MIN_LOOP_SEC, endSec - loopStart);
+  const loopEnd = Math.min(duration, loopStart + segment);
+  if (loopEnd - loopStart < Math.min(MIN_LOOP_SEC, duration)) {
+    loopStart = Math.max(0, loopEnd - Math.min(MIN_LOOP_SEC, duration));
+  }
+  return { loopStart, loopEnd, seg: loopEnd - loopStart };
+}
 
 export function sliceToMono(buffer, startSec, endSec) {
   const sr = buffer.sampleRate;

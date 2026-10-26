@@ -1586,6 +1586,8 @@ v0.5.3 is also the final Tauri update. The Tauri updater will not switch you to 
 
 ### Docs
 
+- PowerShell Docker setup now creates its administrator key with .NET cryptography, without requiring Python on the host (#1993) — thanks @yangfan-yf-yf!
+- Docker quick starts now identify the AMD64-only images and direct Apple Silicon users to the accelerated native macOS app (#1921) — thanks @yangfan-yf-yf!
 - The torch upgrade an RTX 50-series card needs is written down, with the second pin file the resolver checks and the command that proves the kernels are there (#1931)
 - audio.cpp (Breeze-TTS-2) is now a documented opt-in engine: prebuilt binary install, explicit GGUF download, voice modes, and the weights' research/non-commercial terms (#1891)
 - `docs/STRUCTURE.md` describes the tree as it is today, and a test now keeps its counts honest (#1981) — thanks @Dawcraft!
@@ -1986,6 +1988,7 @@ v0.5.3 is also the final Tauri update. The Tauri updater will not switch you to 
 - ffmpeg failures report the failure instead of ffmpeg's build configuration. (#1309)
 - A cut TLS connection is explained in words rather than as `_ssl.c:1016`. (#1301)
 - `torch.compile` is skipped when the torch library path contains a space, instead of failing in the linker on every load. (#1266)
+- macOS Preview updates no longer fail signature validation: the feed is rebuilt from release artifacts and every signature is verified (#1327) — thanks @Pinkers01!
 - macOS Preview updates work again — the updater bundle had been colliding with itself since early July. (#1281)
 - A dub whose transcription stream is cut by a reverse proxy now says so, instead of blaming the ASR model. (#1317)
 - The dev backend going quiet under `--reload` is named as auto-reload rather than reported as a crash. (#1261)

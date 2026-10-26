@@ -316,7 +316,7 @@ export const GROUPS = [
           'api key',
           'openai',
           'openrouter',
-          // CLEAN-ROOM (spec S-small §8): orcarouter search keyword
+          'orcarouter',
           'cheaper inference',
           'groq',
           'iflytek',
