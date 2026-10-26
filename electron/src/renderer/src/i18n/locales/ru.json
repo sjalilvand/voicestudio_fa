@@ -1851,6 +1851,8 @@
     "insert_reactions": "Реакции",
     "stats_one": "{{count}} глава · {{words}} слов · {{runtime}} прибл. длительность",
     "stats_other": "{{count}} глав · {{words}} слов · {{runtime}} прибл. длительность",
+    "stats_few": "{{count}} главы · {{words}} слов · {{runtime}} прибл. длительность",
+    "stats_many": "{{count}} глав · {{words}} слов · {{runtime}} прибл. длительность",
     "warnings_title": "Перед созданием",
     "warn_unknown_voice": "Неизвестный голос «{{name}}» — будет использован голос по умолчанию",
     "warn_empty_chapter": "В главе «{{title}}» нет произносимого текста",

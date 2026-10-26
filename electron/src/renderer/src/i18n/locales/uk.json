@@ -1851,6 +1851,8 @@
     "insert_reactions": "Реакції",
     "stats_one": "{{count}} розділ · {{words}} слів · {{runtime}} приблизна тривалість",
     "stats_other": "{{count}} розділів · {{words}} слів · {{runtime}} приблизна тривалість",
+    "stats_few": "{{count}} розділи · {{words}} слів · {{runtime}} приблизна тривалість",
+    "stats_many": "{{count}} розділів · {{words}} слів · {{runtime}} приблизна тривалість",
     "warnings_title": "Перед створенням",
     "warn_unknown_voice": "Невідомий голос «{{name}}» — буде використано голос за замовчуванням",
     "warn_empty_chapter": "У розділі «{{title}}» немає тексту для озвучення",

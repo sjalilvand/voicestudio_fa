@@ -1851,6 +1851,8 @@
     "insert_reactions": "Reakcje",
     "stats_one": "{{count}} rozdz. · {{words}} słów · {{runtime}} szac. czasu",
     "stats_other": "{{count}} rozdz. · {{words}} słów · {{runtime}} szac. czasu",
+    "stats_few": "{{count}} rozdz. · {{words}} słów · {{runtime}} szac. czasu",
+    "stats_many": "{{count}} rozdz. · {{words}} słów · {{runtime}} szac. czasu",
     "warnings_title": "Przed utworzeniem",
     "warn_unknown_voice": "Nieznany głos „{{name}}” — zostanie użyty domyślny",
     "warn_empty_chapter": "Rozdział „{{title}}” nie zawiera tekstu do przeczytania",
