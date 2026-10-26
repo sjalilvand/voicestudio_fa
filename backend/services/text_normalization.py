@@ -730,6 +730,8 @@ def _numbers_to_words(text: str, lang: str, locale: Optional[str] = None) -> str
 # bracket masking are shared with the num2words route; a token that fails to
 # render is simply left as written.
 
+# Urdu (ur) followed for the same reason: OmniVoice read "1956" as "انیس سو سپنس", while
+# the sentence spelled out in Urdu words came back with 0% CER.
 _NATIVE_VERBALIZERS = {
     "ml": "services.number_words_ml",
     "ur": "services.number_words_ur",

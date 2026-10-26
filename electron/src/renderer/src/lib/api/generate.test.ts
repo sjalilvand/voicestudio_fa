@@ -2,6 +2,7 @@ import i18n from 'i18next';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   CLONE_MAX_SECONDS,
+  StreamingPreviewError,
   REF_HARD_MAX_SECONDS,
   generateClone,
   generateCloneStreaming,
@@ -466,4 +467,93 @@ it('localizes streamed profile language refusals and prevents classic fallback',
   }
 });
 
-// CLEAN-ROOM (spec H-shivendra-2 §13): tests for errorClass propagation and localized topic recovery on stream error frames
+function streamReturns(frame: Record<string, unknown>) {
+  const line = JSON.stringify({ type: 'error', ...frame }) + '\n';
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => new Response(line, { headers: { 'content-type': 'application/x-ndjson' } })),
+  );
+}
+
+async function failedStream() {
+  return (await generateCloneStreaming(BASE_INPUT).then(
+    () => null,
+    (e: unknown) => e,
+  )) as StreamingPreviewError;
+}
+
+describe('error frames and the backend exception class', () => {
+  it('records a string class and keeps the frame retryable', async () => {
+    streamReturns({ detail: 'Generation failed.', error_class: 'KeyError', retryable: true });
+    const err = await failedStream();
+    expect(err).toBeInstanceOf(StreamingPreviewError);
+    expect(err.errorClass).toBe('KeyError');
+    expect(err.retryable).toBe(true);
+  });
+
+  it('records any string verbatim, including an empty one', async () => {
+    streamReturns({ detail: 'x', error_class: '' });
+    expect((await failedStream()).errorClass).toBe('');
+  });
+
+  it('stores null when the class is missing or not a string', async () => {
+    const frames: Array<Record<string, unknown>> = [
+      { detail: 'x' },
+      { detail: 'x', error_class: null },
+      { detail: 'x', error_class: 7.5 },
+      { detail: 'x', error_class: true },
+      { detail: 'x', error_class: ['KeyError'] },
+    ];
+    for (const frame of frames) {
+      streamReturns(frame);
+      expect((await failedStream()).errorClass).toBeNull();
+    }
+  });
+
+  const TOPICS = [
+    { topic: 'AUDIO_IO_FAILED', key: 'tts_errors.audio_io_failed', terminal: false },
+    { topic: 'GPU_ARCH_UNSUPPORTED', key: 'tts_errors.gpu_arch_unsupported', terminal: true },
+    {
+      topic: 'WINDOWS_APP_CONTROL_BLOCKED',
+      key: 'tts_errors.windows_app_control_blocked',
+      terminal: true,
+    },
+  ];
+  for (const { topic, key, terminal } of TOPICS) {
+    it(`${topic} is shown in the user's language`, async () => {
+      const t = vi.spyOn(i18n, 't').mockReturnValue(`translated:${topic}`);
+      try {
+        streamReturns({
+          detail: 'raw english',
+          docs_topic: topic,
+          error_class: 'OSError',
+          retryable: !terminal,
+          terminal,
+        });
+        const err = await failedStream();
+        expect(t).toHaveBeenCalledWith(key);
+        expect(err.message).toBe(`translated:${topic}`);
+        expect(err.errorClass).toBe('OSError');
+        expect(err.terminal).toBe(terminal);
+        expect(shouldFallbackToClassic(err)).toBe(false);
+      } finally {
+        t.mockRestore();
+      }
+    });
+  }
+});
+
+it('sends the saved profile and its reference text on the streaming route', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => new Response('', { headers: { 'content-type': 'application/x-ndjson' } })),
+  );
+  await generateCloneStreaming({
+    ...BASE_INPUT,
+    profileId: 'saved-voice',
+    refText: 'Reference words',
+  }).catch((e) => e);
+  const form = vi.mocked(fetch).mock.calls[0][1]?.body as FormData;
+  expect(form.get('profile_id')).toBe('saved-voice');
+  expect(form.get('ref_text')).toBe('Reference words');
+});
