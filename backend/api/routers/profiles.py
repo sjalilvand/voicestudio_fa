@@ -138,9 +138,10 @@ async def create_profile(
 
     kind='clone'  — requires `ref_audio` (the user's reference recording).
     kind='design' — requires `vd_states` (JSON of category picks); the server
-                    renders a deterministic sample WAV (seed 42, same path as
-                    archetype materialization) and stores it as the profile's
-                    reference so the voice identity is stable across runs.
+                    renders a deterministic sample WAV with the submitted seed
+                    (42 when none, same path as archetype materialization) and
+                    stores it as the profile's reference so the voice identity
+                    is stable across runs.
     """
     name = name.strip()
     if not name:
@@ -254,6 +255,8 @@ async def create_profile(
         from services.model_manager import get_model_status
         audio_path = os.path.join(VOICES_DIR, f"{profile_id}.wav")
         audio_filename = None
+        used_seed = seed if seed is not None else _DESIGN_SEED
+        # Never render native prose through OmniVoice even if its own model is loaded.
         if design_engine == "omnivoice" and get_model_status()["loaded"]:
             try:
                 await _render_archetype_wav(
@@ -261,6 +264,7 @@ async def create_profile(
                         "language": language,
                         "sample_script": ref_text,  # optional custom sample line
                         "instruct": instruct,
+                        "seed": used_seed,
                     },
                     Path(audio_path),
                     allow_model_load=False,
@@ -275,7 +279,6 @@ async def create_profile(
                 if os.path.exists(audio_path):
                     with contextlib.suppress(OSError):
                         os.remove(audio_path)
-        used_seed = seed if seed is not None else _DESIGN_SEED
 
     try:
         if portrait:
@@ -842,6 +845,8 @@ async def get_profile_audio(profile_id: str):
         return Response("Profile not found", status_code=404)
     with db_conn() as conn:
         row = conn.execute(
+            # Native free-form rendering needs design_recipe, vd_states and
+            # lock flags in addition to the legacy preview fields.
             "SELECT * FROM voice_profiles WHERE id=?",
             (profile_id,),
         ).fetchone()
@@ -850,8 +855,8 @@ async def get_profile_audio(profile_id: str):
     audio_file = row["locked_audio_path"] or row["ref_audio_path"]
     if not audio_file:
         # A design profile saved before the engine was ready (issue #476) has no
-        # identity sample yet. Render it lazily now — the deterministic seed-42
-        # sample is reproducible, so a deferred render matches a save-time one.
+        # identity sample yet. Render it lazily now — the sample is deterministic
+        # for the stored seed, so a deferred render matches a save-time one.
         rendered = await _materialize_design_sample(profile_id, row)
         if rendered is None:
             return Response("No audio available", status_code=404)
@@ -1021,7 +1026,7 @@ async def _materialize_design_sample(profile_id: str, row) -> Optional[str]:
     render_key = f"{audio_path}:{hashlib.sha256(repr(expected).encode('utf-8')).hexdigest()}"
 
     async def _materialize() -> None:
-        """Render to an unlinked staging file, then publish under the DB lock."""
+        """Render into staging, then publish only if the design is still current."""
         from services.voice_design_profiles import recipe_engine
 
         staged = Path(audio_path).with_name(
@@ -1035,6 +1040,7 @@ async def _materialize_design_sample(profile_id: str, row) -> Optional[str]:
                         "language": row["language"] or "Auto",
                         "sample_script": row["ref_text"] or "",
                         "instruct": row["instruct"] or "",
+                        "seed": row["seed"],
                     },
                     staged,
                     prefix=f".{profile_id}-",
@@ -1150,10 +1156,15 @@ async def lock_profile(
             restore, finalize = _install_staged(staged_path, locked_path)
 
             ref_text = history["text"][:100] if history["text"] else ""
+            # A design voice's saved seed is its identity (#3254): locking must
+            # not replace it with the take's seed, or unlocking would lose it.
+            lock_seed = seed
+            if profile["kind"] == "design" and profile["seed"] is not None:
+                lock_seed = profile["seed"]
 
             conn.execute(
                 "UPDATE voice_profiles SET locked_audio_path=?, seed=?, is_locked=1, ref_text=? WHERE id=?",
-                (locked_filename, seed, ref_text, profile_id)
+                (locked_filename, lock_seed, ref_text, profile_id)
             )
             conn.commit()
         except BaseException:
@@ -1182,7 +1193,8 @@ async def unlock_profile(profile_id: str):
                 )
 
             conn.execute(
-                "UPDATE voice_profiles SET locked_audio_path='', seed=NULL, is_locked=0 WHERE id=?",
+                "UPDATE voice_profiles SET locked_audio_path='', "
+                "seed=CASE WHEN kind='design' THEN seed ELSE NULL END, is_locked=0 WHERE id=?",
                 (profile_id,)
             )
         # Retire only after the row change committed (a rolled-back unlock must

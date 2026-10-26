@@ -1185,6 +1185,42 @@
       "title": "Effect Preset",
       "type": "string"
      },
+     "emo_alpha": {
+      "anyOf": [
+       {
+        "maximum": 1.0,
+        "minimum": 0.0,
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Emo Alpha"
+     },
+     "emo_text": {
+      "anyOf": [
+       {
+        "maxLength": 500,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Emo Text"
+     },
+     "emo_vector": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Emo Vector"
+     },
      "engine": {
       "anyOf": [
        {
@@ -1718,6 +1754,42 @@
      "audio"
     ],
     "title": "Body_upload_voice_clip_gallery_upload_post",
+    "type": "object"
+   },
+   "BundleExport": {
+    "properties": {
+     "kind": {
+      "title": "Kind",
+      "type": "string"
+     },
+     "project": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Project"
+     },
+     "project_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Project Id"
+     }
+    },
+    "required": [
+     "kind"
+    ],
+    "title": "BundleExport",
     "type": "object"
    },
    "ChoicesBody": {
@@ -2302,6 +2374,7 @@
      "audio_rate_cap": {
       "anyOf": [
        {
+        "minimum": 1.0,
         "type": "number"
        },
        {
@@ -2313,6 +2386,7 @@
      "gap_guard_s": {
       "anyOf": [
        {
+        "minimum": 0.0,
         "type": "number"
        },
        {
@@ -2324,6 +2398,7 @@
      "max_audio_only_rate": {
       "anyOf": [
        {
+        "minimum": 1.0,
         "type": "number"
        },
        {
@@ -2348,6 +2423,7 @@
      "video_slow_cap": {
       "anyOf": [
        {
+        "minimum": 1.0,
         "type": "number"
        },
        {
@@ -5509,6 +5585,17 @@
        }
       ],
       "title": "Smart Cleanup"
+     },
+     "spoken_punctuation": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Spoken Punctuation"
      }
     },
     "title": "_RefinementBody",
@@ -9753,6 +9840,22 @@
      },
      {
       "in": "query",
+      "name": "pack",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Pack"
+      }
+     },
+     {
+      "in": "query",
       "name": "limit",
       "required": false,
       "schema": {
@@ -10529,6 +10632,20 @@
       }
      },
      {
+      "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+      "in": "query",
+      "name": "bed_level",
+      "required": false,
+      "schema": {
+       "default": 1.0,
+       "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+       "maximum": 4.0,
+       "minimum": 0.0,
+       "title": "Bed Level",
+       "type": "number"
+      }
+     },
+     {
       "in": "header",
       "name": "X-VoiceStudio-Path-Authorization",
       "required": false,
@@ -10595,6 +10712,20 @@
       }
      },
      {
+      "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+      "in": "query",
+      "name": "bed_level",
+      "required": false,
+      "schema": {
+       "default": 1.0,
+       "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+       "maximum": 4.0,
+       "minimum": 0.0,
+       "title": "Bed Level",
+       "type": "number"
+      }
+     },
+     {
       "in": "header",
       "name": "X-VoiceStudio-Path-Authorization",
       "required": false,
@@ -10658,6 +10789,20 @@
        "default": true,
        "title": "Preserve Bg",
        "type": "boolean"
+      }
+     },
+     {
+      "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+      "in": "query",
+      "name": "bed_level",
+      "required": false,
+      "schema": {
+       "default": 1.0,
+       "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+       "maximum": 4.0,
+       "minimum": 0.0,
+       "title": "Bed Level",
+       "type": "number"
       }
      },
      {
@@ -10737,6 +10882,20 @@
       }
      },
      {
+      "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+      "in": "query",
+      "name": "bed_level",
+      "required": false,
+      "schema": {
+       "default": 1.0,
+       "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+       "maximum": 4.0,
+       "minimum": 0.0,
+       "title": "Bed Level",
+       "type": "number"
+      }
+     },
+     {
       "in": "query",
       "name": "bitrate",
       "required": false,
@@ -10803,6 +10962,20 @@
        "description": "Mix background noise into dubbed tracks",
        "title": "Preserve Bg",
        "type": "boolean"
+      }
+     },
+     {
+      "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+      "in": "query",
+      "name": "bed_level",
+      "required": false,
+      "schema": {
+       "default": 1.0,
+       "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+       "maximum": 4.0,
+       "minimum": 0.0,
+       "title": "Bed Level",
+       "type": "number"
       }
      },
      {
@@ -10934,6 +11107,20 @@
        "description": "Mix background noise into dubbed tracks",
        "title": "Preserve Bg",
        "type": "boolean"
+      }
+     },
+     {
+      "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+      "in": "query",
+      "name": "bed_level",
+      "required": false,
+      "schema": {
+       "default": 1.0,
+       "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+       "maximum": 4.0,
+       "minimum": 0.0,
+       "title": "Bed Level",
+       "type": "number"
       }
      },
      {
@@ -11564,6 +11751,20 @@
        "title": "Preserve Bg",
        "type": "boolean"
       }
+     },
+     {
+      "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+      "in": "query",
+      "name": "bed_level",
+      "required": false,
+      "schema": {
+       "default": 1.0,
+       "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+       "maximum": 4.0,
+       "minimum": 0.0,
+       "title": "Bed Level",
+       "type": "number"
+      }
      }
     ],
     "responses": {
@@ -11620,6 +11821,20 @@
        "default": true,
        "title": "Preserve Bg",
        "type": "boolean"
+      }
+     },
+     {
+      "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+      "in": "query",
+      "name": "bed_level",
+      "required": false,
+      "schema": {
+       "default": 1.0,
+       "description": "Background level when preserve_bg=1: 1.0 keeps the original level, 0 mutes it, up to 4.0.",
+       "maximum": 4.0,
+       "minimum": 0.0,
+       "title": "Bed Level",
+       "type": "number"
       }
      }
     ],
@@ -12046,7 +12261,7 @@
   },
   "/dub/transcribe-stream/{job_id}": {
    "get": {
-    "description": "Stream per-chunk segments via SSE, then emit diarized final pass.\n\nPre-flight checks (missing job, missing audio, ASR not loaded) are emitted\nas in-stream `error` events rather than HTTP errors, because EventSource\non the client can't read non-2xx response bodies \u2014 a 503 there surfaces\nas an opaque \"network error\" instead of the actionable message we want.\n\n`num_speakers` is an optional hint passed straight to pyannote. Left unset,\npyannote auto-detects the count \u2014 but its auto-detect can collapse a\nmulti-speaker clip to a single speaker (issue #274). When the user knows\nthe exact count, supplying it forces pyannote to return that many speakers.\nOn paths that can't honor the hint exactly (inline ASR turns, the\nsilence-gap heuristic) it is never silently dropped: the heuristic cycles\nthe requested count and a `warning` SSE event tells the user how far the\nlabels can be trusted.",
+    "description": "Stream per-chunk segments via SSE, then emit diarized final pass.\n\nPre-flight checks (missing job, missing audio, ASR not loaded) are emitted\nas in-stream `error` events rather than HTTP errors, because EventSource\non the client can't read non-2xx response bodies \u2014 a 503 there surfaces\nas an opaque \"network error\" instead of the actionable message we want.\n\n`reanalyze_speakers` explicitly refreshes acoustic labels and source voices\non existing cues without rerunning ASR or replacing edited text/timings.\nOrdinary reconnects continue to replay completed transcription results.\n\n`num_speakers` is an optional hint passed straight to pyannote. Left unset,\npyannote auto-detects the count \u2014 but its auto-detect can collapse a\nmulti-speaker clip to a single speaker (issue #274). When the user knows\nthe exact count, supplying it forces pyannote to return that many speakers.\nOn paths that can't honor the hint exactly (inline ASR turns, the\nsilence-gap heuristic) it is never silently dropped: the heuristic cycles\nthe requested count and a `warning` SSE event tells the user how far the\nlabels can be trusted.",
     "operationId": "dub_transcribe_stream_dub_transcribe_stream__job_id__get",
     "parameters": [
      {
@@ -12081,6 +12296,16 @@
       "schema": {
        "default": true,
        "title": "Per Segment Refs",
+       "type": "boolean"
+      }
+     },
+     {
+      "in": "query",
+      "name": "reanalyze_speakers",
+      "required": false,
+      "schema": {
+       "default": false,
+       "title": "Reanalyze Speakers",
        "type": "boolean"
       }
      }
@@ -13891,7 +14116,7 @@
   },
   "/generate": {
    "post": {
-    "description": "Synthesize a TTS take using the selected engine and optional voice profile.\n\nBoth WAV and streaming-preview paths share engine selection, validated\nprofile conditioning, reference lifetime, seed, watermarking and history.\nFree-form saved designs select their engine-specific stored instructions.",
+    "description": "Generate a voice take through the selected TTS engine.\n\nValidate engine-specific emotion conditioning before loading models,\nresolve saved voice references, and send the same controls through\nclassic WAV and streaming generation.",
     "operationId": "generate_speech_generate_post",
     "requestBody": {
      "content": {
@@ -14732,6 +14957,16 @@
        "title": "Profile Id",
        "type": "string"
       }
+     },
+     {
+      "in": "query",
+      "name": "stored",
+      "required": false,
+      "schema": {
+       "default": false,
+       "title": "Stored",
+       "type": "boolean"
+      }
      }
     ],
     "responses": {
@@ -15292,7 +15527,7 @@
   },
   "/models/install/cancel": {
    "post": {
-    "description": "Request cancellation of an in-flight install (FDL-11).\n\nBest-effort: stops further retry attempts and marks the row cancelled. A\nsingle in-flight snapshot_download/Xet fetch isn't interruptible mid-file\nin hf_hub 1.7.2, so an already-streaming file finishes; the cancel takes\neffect at the next retry boundary. Clears the cooldown so the user can\nimmediately restart.",
+    "description": "Request cancellation of an in-flight install (FDL-11).\n\nReturns at once; the worker stops the transfer at its next chunk (or the\nnext boundary before any byte flows), removes the partial data it wrote\nand reports ``install_cancelled``. ``/models/install/status`` shows the\njob as ``cancelling`` until then. Clears the cooldown so the user can\nrestart immediately.",
     "operationId": "cancel_install_models_install_cancel_post",
     "requestBody": {
      "content": {
@@ -16039,7 +16274,7 @@
     "summary": "List Profiles"
    },
    "post": {
-    "description": "Create a voice profile (spec: docs/specs/voice-studio-unification.md \u00a75).\n\nkind='clone'  \u2014 requires `ref_audio` (the user's reference recording).\nkind='design' \u2014 requires `vd_states` (JSON of category picks); the server\n                renders a deterministic sample WAV (seed 42, same path as\n                archetype materialization) and stores it as the profile's\n                reference so the voice identity is stable across runs.",
+    "description": "Create a voice profile (spec: docs/specs/voice-studio-unification.md \u00a75).\n\nkind='clone'  \u2014 requires `ref_audio` (the user's reference recording).\nkind='design' \u2014 requires `vd_states` (JSON of category picks); the server\n                renders a deterministic sample WAV with the submitted seed\n                (42 when none, same path as archetype materialization) and\n                stores it as the profile's reference so the voice identity\n                is stable across runs.",
     "operationId": "create_profile_profiles_post",
     "requestBody": {
      "content": {
@@ -16644,6 +16879,185 @@
      }
     },
     "summary": "Get Profile Usage"
+   }
+  },
+  "/project-bundles": {
+   "get": {
+    "operationId": "list_project_bundles_project_bundles_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "summary": "List Project Bundles",
+    "tags": [
+     "Project handoff"
+    ]
+   }
+  },
+  "/project-bundles/export": {
+   "post": {
+    "operationId": "export_project_bundle_project_bundles_export_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/BundleExport"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Export Project Bundle",
+    "tags": [
+     "Project handoff"
+    ]
+   }
+  },
+  "/project-bundles/import": {
+   "post": {
+    "operationId": "import_project_bundle_project_bundles_import_post",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "allow_voices",
+      "required": false,
+      "schema": {
+       "default": false,
+       "title": "Allow Voices",
+       "type": "boolean"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Import Project Bundle",
+    "tags": [
+     "Project handoff"
+    ]
+   }
+  },
+  "/project-bundles/{identifier}": {
+   "get": {
+    "operationId": "download_project_bundle_project_bundles__identifier__get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "identifier",
+      "required": true,
+      "schema": {
+       "title": "Identifier",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Download Project Bundle",
+    "tags": [
+     "Project handoff"
+    ]
+   }
+  },
+  "/project-bundles/{identifier}/document": {
+   "get": {
+    "operationId": "project_bundle_document_project_bundles__identifier__document_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "identifier",
+      "required": true,
+      "schema": {
+       "title": "Identifier",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Project Bundle Document",
+    "tags": [
+     "Project handoff"
+    ]
    }
   },
   "/projects": {
@@ -17713,6 +18127,23 @@
      }
     },
     "summary": "Clear Tauri Logs"
+   }
+  },
+  "/system/network/check": {
+   "get": {
+    "description": "Self-check for LAN sharing: bind address, port and per-address listener probe.",
+    "operationId": "network_check_system_network_check_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "summary": "Network Check"
    }
   },
   "/system/network/disable": {
