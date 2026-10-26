@@ -3416,10 +3416,8 @@ class GPTSoVITSBackend(TTSBackend):
                     "python api_v2.py -a 127.0.0.1 -p 9880 -c "
                     "GPT_SoVITS/configs/tts_infer.yaml"
                 )
-            return False, (
-                f"GPT-SoVITS server at {url} returned HTTP {exc.status}. "
-                "Check the server logs and access configuration."
-            )
+            # CLEAN-ROOM (spec N-jaketame-2 §4): availability message for any other HTTP status from the probe.
+            raise NotImplementedError("clean-room reimplementation pending")
         except Exception:
             # Connection refused / DNS failure / unsafe endpoint / etc.
             return False, (
@@ -3451,41 +3449,9 @@ class GPTSoVITSBackend(TTSBackend):
         }
         text_lang = lang_map.get(language.lower() if language else "en", "en")
 
-        # api_v2 takes a JSON body to /tts (api.py v1 took a query string
-        # at the root URL with different field names). The two protocols do
-        # not share a schema, so sending v1-shaped params to an api_v2
-        # server produces a 404 and a silent failure.
-        body: dict[str, object] = {
-            "text": text,
-            "text_lang": text_lang,
-            "text_split_method": "cut0",
-            "media_type": "wav",
-            "streaming_mode": False,
-        }
-        # api_v2 has no server-side default reference (api.py's -dr/-dt/-dl
-        # flags are v1 only) and answers 400 without one, so a plain TTS
-        # request — no voice profile — needs the clip from the environment.
-        # Profiles store the desired output language, not the reference's
-        # spoken language. Let api_v2 detect the reference transcript language
-        # independently, including mixed-language clips, instead of forcing
-        # it through the target language's phonemizer.
-        prompt_lang = "auto"
-        if not ref_audio:
-            ref_audio = os.environ.get("OMNIVOICE_GPTSOVITS_REF_AUDIO") or None
-            ref_text = os.environ.get("OMNIVOICE_GPTSOVITS_REF_TEXT", "") if ref_audio else ""
-            prompt_lang = lang_map.get(
-                os.environ.get("OMNIVOICE_GPTSOVITS_REF_LANG", "").lower(), "auto"
-            )
-        if not ref_audio:
-            raise TTSInputError(
-                "GPT-SoVITS (api_v2) needs a reference clip for every request: "
-                "pick a voice profile, or set OMNIVOICE_GPTSOVITS_REF_AUDIO (path "
-                "readable by the server) and OMNIVOICE_GPTSOVITS_REF_TEXT (its "
-                "transcript) as the default voice."
-            )
-        body["ref_audio_path"] = ref_audio
-        body["prompt_text"] = ref_text or ""
-        body["prompt_lang"] = prompt_lang
+        # CLEAN-ROOM (spec N-jaketame-2 §5): build the api_v2 request body `body` (JSON fields,
+        # reference-clip fallback from the environment, reference-language handling, missing-reference error).
+        raise NotImplementedError("clean-room reimplementation pending")
 
         speed = kw.get("speed", 1.0)
         if speed != 1.0:

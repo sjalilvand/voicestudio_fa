@@ -1263,16 +1263,13 @@ Already using Electron? Install over your existing app and keep your data. If pr
 - More reliable Electron setup, dictation, and actionable crash reports (#2221, #2245, #2123, #2262)
 - Preserve dialogue, timing, and background audio through dubbing and subtitle imports (#2222, #2224, #2242)
 
-### Changed
-
-- The main sidebar (navigation, voice library, status) stays in place on Settings instead of being swapped for a separate panel; the Settings sections now sit in a column beside it (#2209) — thanks @jaketame!
-- The main navigation sits directly under the sidebar header, above the voice library, so it no longer moves with the library's height (#2210) — thanks @jaketame!
+<!-- CLEAN-ROOM (spec N-jaketame-2 §23): Changed section with two sidebar entries. -->
 
 ### Added
 
 - Claude Code and Cursor integration pages offer MCP setup for the current backend, and duplicate catalog routes are consolidated (#2257)
 
-- Settings → Appearance → Keep sidebar expanded: stops the sidebar shrinking to a rail when Projects, Transcribe, Tools or another workspace opens its own panel on a narrower window (#2211) — thanks @jaketame!
+<!-- CLEAN-ROOM (spec N-jaketame-2 §23): Added entry, Keep sidebar expanded setting. -->
 - Stories and Audiobook: a Clear script button empties the whole script — every line and chapter, imported or typed — in one confirmed step instead of one trash icon at a time; the cast is kept (#2203) — thanks @jaketame!
 - Stories' Paste & Split can now split by Sentences, Paragraphs (the new default) or whole Chapters, so a single narrator is no longer chopped into one take per sentence (#2217) — thanks @jaketame!
 
@@ -1291,7 +1288,7 @@ Already using Electron? Install over your existing app and keep your data. If pr
 - Source Electron launches reuse the prepared Python runtime instead of downloading dependencies inside the startup timeout (#2184)
 - Clone, Stories and Audiobook disable unsupported output-language choices for engines with a declared language list (#2104)
 
-- Stories and Audiobook: Generate, the chapter tracker and the render status are pinned in the setup pane instead of sitting below the last line of the script, and a disabled Generate now says why (#2229) — thanks @jaketame!
+<!-- CLEAN-ROOM (spec N-jaketame-2 §23): Fixed entry, pinned Generate panel. -->
 - EPUB import no longer turns an unmarked teaser page, a "Works by" list, a publisher's address page or a stray footnotes page into chapters — the book's declared start and its contents decide what is front and back matter (#2228) — thanks @jaketame!
 - Retry temporary media-tool installation locks and report failed cleanup instead of hiding it (#2214) — thanks @baoyu0!
 
@@ -1306,8 +1303,7 @@ Already using Electron? Install over your existing app and keep your data. If pr
 - Repair dots.tts dependency pins and paths containing spaces, with OpenFst build guidance for source installs (#2101) — thanks @martinezpl!
 
 - Reject unsupported synthesis languages before model loading, including named picker choices and per-item batch languages (#2219) — thanks @rollroyces!
-- EPUB import narrates the book, not its print furniture: page numbers no longer glue onto words or appear as lone lines, cover/title/dedication/copyright/contents pages are skipped, and chapters are titled from the book's table of contents (#2208) — thanks @jaketame!
-- Stories: a long script no longer paints over the generation progress panel and the Generate/Stop footer while an audiobook renders (#2213) — thanks @jaketame!
+<!-- CLEAN-ROOM (spec N-jaketame-2 §23): two Fixed entries, EPUB print-furniture import and long-script overlap. -->
 - Keep macOS dictation keyboard operations on the main thread to prevent paste-delivery crashes (#2123)
 - Prevent reference voice cloning from silently downloading a second speech recognizer (#2116)
 - Dubbing from a video's downloaded rolling captions speaks each line once while preserving intentional repeated dialogue (#2222) — thanks @kevin9327!

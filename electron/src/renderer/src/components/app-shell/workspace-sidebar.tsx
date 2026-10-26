@@ -26,10 +26,7 @@ export function WorkspaceSidebar() {
     version: appVersion(),
   });
   const { libraryOpen } = useWorkspace();
-  // One source of truth for "rail or full sidebar": the header toggle and the
-  // sidebar's own buttons used to keep separate copies of this state.
-  const { compact, compactViewport, forceExpanded, secondaryWorkspace, setOpen } =
-    useWorkspaceSidebarState();
+  // CLEAN-ROOM (spec N-jaketame-2 §11): obtain compact, compactViewport, forceExpanded, secondaryWorkspace and setOpen from the shared sidebar-state hook.
   const sidebarResize = usePaneResize({
     storageKey: 'voicestudio.nav-width',
     side: 'left',
@@ -64,28 +61,7 @@ export function WorkspaceSidebar() {
             style={trafficLights ? { paddingTop: MAC_TRAFFIC_LIGHTS_BAND } : undefined}
             className="workspace-titlebar box-content flex h-12 shrink-0 items-center justify-center"
           >
-            {/* The brand mark, which turns into the expand icon on hover or
-                focus: the rail can always reopen itself, on every platform. */}
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={t('clone.toggle_sidebar')}
-              title={t('clone.toggle_sidebar')}
-              aria-expanded={false}
-              onClick={() => setOpen(true)}
-              className="group/rail-toggle relative shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <img
-                src={brandIcon}
-                alt=""
-                data-slot="rail-brand"
-                className="size-6 shrink-0 transition-opacity duration-150 group-hover/rail-toggle:opacity-0 group-focus-visible/rail-toggle:opacity-0 motion-reduce:transition-none"
-              />
-              <PanelLeftOpenIcon
-                aria-hidden="true"
-                className="absolute inset-0 m-auto size-5 opacity-0 transition-opacity duration-150 group-hover/rail-toggle:opacity-100 group-focus-visible/rail-toggle:opacity-100 motion-reduce:transition-none"
-              />
-            </Button>
+            {/* CLEAN-ROOM (spec N-jaketame-2 §11): rail toggle button (brand mark that reveals an expand icon). */}
           </div>
           <WorkspaceNavigation compact />
           {!mac && <StatusBar compact />}
@@ -149,25 +125,14 @@ export function WorkspaceSidebar() {
                 </span>
               </span>
             </Link>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={t('common.close')}
-              onClick={() => setOpen(false)}
-            >
-              <PanelLeftIcon />
-            </Button>
+            {/* CLEAN-ROOM (spec N-jaketame-2 §11): close/collapse button in the expanded sidebar header. */}
           </header>
           <div
             {...sidebarResize.separatorProps}
             aria-label={t('app.name')}
             className="absolute inset-y-0 right-0 z-20 w-2 cursor-col-resize touch-none outline-none hover:bg-primary/15 focus-visible:bg-primary/30"
           />
-          {/* Navigation first, like the compact rail: it stays at a fixed
-              position under the header instead of riding the library's height. */}
-          <div className="min-h-0 min-w-0 overflow-y-auto">
-            <WorkspaceNavigation />
-          </div>
+          {/* CLEAN-ROOM (spec N-jaketame-2 §11): navigation wrapper directly under the header. */}
           <div className="flex min-w-0 shrink-0 flex-col border-t border-border/50">
             <StatusBar
               footerLeading={

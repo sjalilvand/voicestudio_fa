@@ -52,13 +52,13 @@ EPUB decompression limits include required metadata as well as navigation and ch
 
 ### Long-script layout
 
-The Stories editor grows with the manuscript inside the page scroll container. Generate/Stop, the chapter tracker and the render status live in a footer pinned to the setup pane, so the primary action and its progress stay visible however long the script is; with the setup pane collapsed the same panel sticks to the bottom of the editor instead. When Generate is unavailable the panel states the one reason (import running, engine not ready, no spoken lines or script, a line with no voice and no default voice, a duplicated pronunciation word) rather than only greying the button.
+<!-- CLEAN-ROOM (spec N-jaketame-2 §24): Long-script layout paragraph. -->
 
 ### Clear a script
 
 Stories and Audiobook offer **Clear script** with confirmation. Stories removes all lines, chapter markers and pending import text while retaining the cast; Audiobook clears its manuscript. The web Stories editor clears pending pasted text too, stops playback, ignores late preview results and releases preview audio when clearing, removing or replacing lines. Confirmation also names pending imported text. Clearing an imported script does not recreate the demo story.
 
-The pinned chapter tracker scrolls within the available setup-pane height, keeping Stop reachable in compact windows. Collapsing setup moves the controls into the editor; they remain visible while scrolling long scripts.
+<!-- CLEAN-ROOM (spec N-jaketame-2 §24): paragraph on the pinned tracker scrolling and collapsed-setup behaviour. -->
 SRT and WebVTT manuscript imports preserve spoken numbers, including countdowns and numeric-only cues; cue indices, timestamps, the `WEBVTT` header, NOTE/STYLE/REGION blocks and cue identifiers are removed.
 Finished renders in Projects identify themselves: the row shows the book's title and a one-line recipe (voice · speed · engine · length), and **How it was made** expands to voice, speed, engine, language, format, size and the non-default settings. Renders made before this was recorded say so instead of showing a bare filename.
 

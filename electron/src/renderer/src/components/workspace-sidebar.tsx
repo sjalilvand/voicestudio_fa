@@ -71,11 +71,11 @@ export function SecondarySidebar({
   size = 'default',
   variant = 'controls',
   meta,
-  footer,
+  // CLEAN-ROOM (spec N-jaketame-2 §12): `footer` prop (destructured).
   library,
   libraryLabel,
   collapsed: controlledCollapsed,
-  onCollapsedChange,
+  // CLEAN-ROOM (spec N-jaketame-2 §12): `onCollapsedChange` prop (destructured).
   tabsInHeader = false,
 }: {
   title: string;
@@ -85,15 +85,13 @@ export function SecondarySidebar({
   size?: 'default' | 'wide' | 'spacious';
   variant?: 'controls' | 'navigation' | 'library';
   meta?: ReactNode;
-  /** Pinned below the scrolling content — never scrolls out of view. */
-  footer?: ReactNode;
+  // CLEAN-ROOM (spec N-jaketame-2 §12): optional `footer?: ReactNode` prop type.
   /** Saved items beside the controls. A render callback receives visibility so retained panes can cancel hidden work. */
   library?: ReactNode | ((active: boolean) => ReactNode);
   libraryLabel?: string;
   /** Controls the collapsed state when the parent owns a shared pane shortcut. */
   collapsed?: boolean;
-  /** Lets the page re-home the footer's content while the pane is collapsed. */
-  onCollapsedChange?: (collapsed: boolean) => void;
+  // CLEAN-ROOM (spec N-jaketame-2 §12): optional `onCollapsedChange?: (collapsed: boolean) => void` prop type.
   /**
    * Show the controls/library tabs in the header row instead of the title, for
    * pages whose title bar and tabs already name the workspace.
@@ -114,14 +112,7 @@ export function SecondarySidebar({
     setView(next);
   };
   const showLibrary = library != null && view === 'library';
-  // Notify from the event handler, never from inside a state updater: updaters
-  // must stay pure (StrictMode runs them twice, which would double-fire this).
-  const setCollapsed = (next: boolean | ((value: boolean) => boolean)) => {
-    const resolved = typeof next === 'function' ? next(collapsed) : next;
-    if (resolved === collapsed) return;
-    if (controlledCollapsed === undefined) setUncontrolledCollapsed(resolved);
-    onCollapsedChange?.(resolved);
-  };
+  // CLEAN-ROOM (spec N-jaketame-2 §12): `setCollapsed` setter (accepts a value or updater), controlled/uncontrolled aware, notifying the parent.
   const headerTabs = tabsInHeader && library != null;
   const tabList = (className: string) => (
     <div
@@ -290,14 +281,7 @@ export function SecondarySidebar({
       >
         {children}
       </div>
-      {footer !== undefined && footer !== null && !collapsed && !showLibrary && (
-        <div
-          data-slot="secondary-sidebar-footer"
-          className="flex min-h-0 max-h-[70%] flex-col space-y-3 border-t border-border/55 p-3.5 text-[13px]"
-        >
-          {footer}
-        </div>
-      )}
+      {/* CLEAN-ROOM (spec N-jaketame-2 §12): pinned footer region. */}
       {collapsed && (
         <button
           type="button"

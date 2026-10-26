@@ -117,33 +117,7 @@ export function LongformPage({ mode }: { mode: Mode }) {
         : [],
     [draft.script, draft.voiceCast, mode, profiles],
   );
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const blocker = generateBlocker({
-    mode,
-    busyElsewhere: Boolean(session.active) && session.active !== mode,
-    importing,
-    tts: ttsBlocker,
-    usable,
-    voicesReady,
-    duplicateLexicon: duplicateWords(draft.lexicon),
-  });
-  const generatePanel = (
-    <div className="flex min-h-0 flex-col gap-3">
-      <RenderRecovery
-        mode={mode}
-        active={Boolean(session.active)}
-        disabled={locked || ttsBlocker !== null}
-        onResume={(jobId) => void renderLongform(mode, jobId)}
-      />
-      <GeneratePanel
-        mode={mode}
-        session={session}
-        blocker={blocker}
-        onGenerate={() => void renderLongform(mode)}
-        onStop={stopLongform}
-      />
-    </div>
-  );
+  // CLEAN-ROOM (spec N-jaketame-2 §16): `sidebarCollapsed` state, the `blocker` computation and the `generatePanel` element (RenderRecovery + GeneratePanel).
   const importFile = async (file: File) => {
     const importEpoch = storiesImportEpoch.current;
     setImporting(true);
@@ -228,7 +202,7 @@ export function LongformPage({ mode }: { mode: Mode }) {
           icon={mode === 'stories' ? AudioLinesIcon : BookOpenTextIcon}
           size="wide"
           variant="controls"
-          footer={generatePanel}
+          // CLEAN-ROOM (spec N-jaketame-2 §16): pinned footer prop on the setup pane.
           library={
             <div className="studio-scrollbar min-h-0 flex-1 overflow-y-auto p-3.5 text-[13px]">
               <ProjectSettings
@@ -242,7 +216,7 @@ export function LongformPage({ mode }: { mode: Mode }) {
             </div>
           }
           libraryLabel={t('projects.title')}
-          onCollapsedChange={setSidebarCollapsed}
+          // CLEAN-ROOM (spec N-jaketame-2 §16): collapse-change prop on the setup pane.
           className="space-y-3"
         >
           <div className="space-y-4 rounded-xl border border-border/60 bg-muted/20 p-3">
@@ -497,12 +471,7 @@ export function LongformPage({ mode }: { mode: Mode }) {
                 </Link>
               </div>
             )}
-            {sidebarCollapsed && (
-              // The setup pane is collapsed: keep Generate and the tracker in reach.
-              <div className="sticky bottom-0 z-10 -mx-2 shrink-0 rounded-xl border border-border/60 bg-background/90 p-3 backdrop-blur-xl">
-                {generatePanel}
-              </div>
-            )}
+            {/* CLEAN-ROOM (spec N-jaketame-2 §16): sticky generate panel shown in the editor column while the setup pane is collapsed. */}
             {draft.output && (
               <section className="shrink-0 space-y-3 border-t border-border/50 pt-4">
                 <div className="flex items-center justify-between">

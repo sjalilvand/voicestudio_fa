@@ -30,9 +30,7 @@ export function AppShell() {
         {shellOnly ? (
           <>
             <CommandPalette />
-            {/* The main sidebar (navigation, library, status) stays where it is
-                on Settings too, so the app never swaps its left column. */}
-            <WorkspaceSidebar />
+            {/* CLEAN-ROOM (spec N-jaketame-2 §10): the main sidebar element rendered in the Settings/Pro shell-only branch. */}
             <SettingsWorkspace
               data-slot="workspace-content"
               role={pathname === '/settings/openapi' ? 'main' : undefined}

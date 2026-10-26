@@ -14,7 +14,7 @@ const SECONDARY_ROUTES = new Set([
   '/design',
   '/transcriptions',
   '/calls',
-  '/settings',
+  // CLEAN-ROOM (spec N-jaketame-2 §9): the Settings route belongs in this set.
 ]);
 // Voice-section routes whose context pane is the shared library (ContextSidebar).
 export const LIBRARY_ROUTES = new Set(['/', '/clone']);
@@ -51,15 +51,12 @@ function useCompactViewport(): boolean {
 }
 
 export function useWorkspaceSidebarState() {
-  const { libraryOpen, expandedLibraryContext, autoCollapseSidebar } = useWorkspace();
+  // CLEAN-ROOM (spec N-jaketame-2 §9): read libraryOpen, expandedLibraryContext and the auto-collapse preference from the workspace store.
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const compactViewport = useCompactViewport();
   const compactContext = `${pathname}:${compactViewport}`;
   const forceExpanded = expandedLibraryContext === compactContext;
-  // Auto-collapse is a preference (Settings → Appearance → Keep sidebar
-  // expanded): off keeps the full navigation beside a section's own pane.
-  const autoCollapse =
-    autoCollapseSidebar !== false && (routeHasSecondarySidebar(pathname) || compactViewport);
+  // CLEAN-ROOM (spec N-jaketame-2 §9): `autoCollapse` flag combining the preference, section-pane routes and a narrow viewport.
   const compact = !libraryOpen || (autoCollapse && !forceExpanded);
   const setOpen = (open: boolean) =>
     setWorkspace({ libraryOpen: open, expandedLibraryContext: open ? compactContext : null });
