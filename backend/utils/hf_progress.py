@@ -119,26 +119,7 @@ def emit(event: ProgressEvent) -> None:
     _emit(event)
 
 
-class SafeFileWrapper:
-    def __init__(self, fp):
-        self.fp = fp
-        self._is_safe_wrapper = True
-    def write(self, s):
-        try:
-            self.fp.write(s)
-        except (OSError, UnicodeError):
-            # OSError: EPIPE from a dead parent shell (the wrapper's original
-            # job). UnicodeError (#1155): a library print of user text hitting
-            # a non-UTF-8 stream — cp1252 stdout on Windows — must not abort
-            # the operation that printed. Logs are best-effort; work is not.
-            pass
-    def flush(self):
-        try:
-            getattr(self.fp, 'flush', lambda: None)()
-        except OSError:
-            pass
-    def __getattr__(self, name):
-        return getattr(self.fp, name)
+# CLEAN-ROOM (spec R1-medium §9): SafeFileWrapper class
 
 def install() -> None:
     """Monkey-patch `huggingface_hub`'s tqdm so every download reports to our
@@ -174,40 +155,8 @@ def install() -> None:
 
             _last_emit_time: float = 0.0
 
-            @staticmethod
-            def status_printer(file):
-                if file is not None and not getattr(file, "_is_safe_wrapper", False):
-                    file = SafeFileWrapper(file)
-                try:
-                    return original.status_printer(file)
-                except Exception:
-                    return lambda s: None
-
-            def __init__(self, *args, **kwargs):
-                if 'file' in kwargs and kwargs['file'] is not None and not getattr(kwargs['file'], "_is_safe_wrapper", False):
-                    kwargs['file'] = SafeFileWrapper(kwargs['file'])
-                try:
-                    super().__init__(*args, **kwargs)
-                except OSError:
-                    pass
-
-                if hasattr(self, 'fp') and getattr(self, 'fp', None) is not None and not getattr(self.fp, "_is_safe_wrapper", False):
-                    self.fp = SafeFileWrapper(self.fp)
-
-                import time as _t
-                self._last_emit_time = _t.monotonic()
-                try:
-                    desc = getattr(self, "desc", None)
-                    total = int(getattr(self, "total", 0) or 0)
-                    _emit({
-                        "filename": str(desc or "download"),
-                        "downloaded": 0,
-                        "total": total,
-                        "pct": 0.0,
-                        "phase": "start",
-                    })
-                except Exception:
-                    pass
+            # CLEAN-ROOM (spec R1-medium §10a): TrackedTqdm.status_printer
+            # CLEAN-ROOM (spec R1-medium §10b): TrackedTqdm.__init__
 
             def _emit_progress(self):
                 """Emit current state as a progress event."""
@@ -258,47 +207,11 @@ def install() -> None:
                 except Exception:
                     pass
 
-            def update(self, n=1):
-                try:
-                    super().update(n)
-                except OSError:
-                    pass
-                import time as _t
-                now = _t.monotonic()
-                # Throttle: emit at most every 0.3s to avoid flooding SSE
-                if (now - self._last_emit_time) >= 0.3:
-                    self._last_emit_time = now
-                    self._emit_progress()
+            # CLEAN-ROOM (spec R1-medium §10c): TrackedTqdm.update
 
-            def display(self, msg=None, pos=None):
-                """tqdm calls display() on its refresh cycle; piggyback for
-                periodic emits even when update() intervals are large."""
-                import time as _t
-                now = _t.monotonic()
-                if (now - self._last_emit_time) >= 0.5:
-                    self._last_emit_time = now
-                    self._emit_progress()
-                try:
-                    return super().display(msg, pos)
-                except OSError:
-                    pass
+            # CLEAN-ROOM (spec R1-medium §10d): TrackedTqdm.display
 
-            def close(self):
-                # Credit the file's full size to the aggregator on close. Under
-                # Xet a per-file byte bar often never increments `n` (Xet fetches
-                # chunks out-of-band), so completion is the only reliable signal
-                # that the file's bytes landed. Harmless for classic LFS bars
-                # (n already == total).
-                try:
-                    total = int(getattr(self, "total", 0) or 0)
-                    if total > 0:
-                        self._feed_sink(total, total, complete=True)
-                except Exception:
-                    pass
-                try:
-                    super().close()
-                except OSError:
-                    pass
+            # CLEAN-ROOM (spec R1-medium §10e): TrackedTqdm.close
 
         # Stash the original for inspection / uninstall, then swap.
         hf_tqdm_module._omnivoice_original_tqdm = original  # type: ignore[attr-defined]

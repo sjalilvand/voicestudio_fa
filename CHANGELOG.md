@@ -1979,7 +1979,7 @@ v0.5.3 is also the final Tauri update. The Tauri updater will not switch you to 
 - A TLS connection cut during generation is explained as the dropped download it is, instead of falling through as an unrecognized error carrying `_ssl.c:1016`. (#1335)
 - Windows "paging file is too small" no longer suggests the Flush button, which cannot help. It now names the virtual-memory setting to change, and says plainly that it is not a network problem. (#1334)
 - A port conflict that resolves itself while the backend is dying no longer reports a bare "Backend died (exit code 1)" — the conflict is named even when the other process has already let the port go. (#1364, #1223)
-- Fresh installs failing to import `transformers.HiggsAudioV2TokenizerModel` with "RuntimeError: operator torchvision::nms does not exist" are fixed by pinning `torchvision==0.23.0` to match `torch 2.8.0` — thanks @HanzlahCh! (#1358, #1357)
+<!-- CLEAN-ROOM (spec R1-medium §32): changelog entry for the torchvision pin fix -->
 - ...and that pin now actually reaches Colab and Docker: both install with `uv pip install`, which ignores the pyproject setting the pin lived in, so the torch trio could still drift apart. It is passed explicitly now. (#1357)
 - Every RTX 40-series card (4060–4090) was declared unsupported and silently run on the CPU. The compatibility gate demanded an exact `sm_89` match, but PyTorch ships `sm_86` kernels that already cover Ada. (#1285)
 - Under-provisioned hardware is now flagged **before** a synthesis starts instead of after the full compute budget expires. (#1240, #1246, #1248, #1277, #1283, #1284)

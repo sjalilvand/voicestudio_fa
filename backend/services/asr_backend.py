@@ -1081,19 +1081,7 @@ class WhisperXBackend(ASRBackend):
         # "ffmpeg" PATH lookup which yields [WinError 193] -> "no segments" on
         # Windows (#479). Same 16 kHz mono s16le array whisperx expects.
         audio = _decode_audio_16k_mono(audio_path)
-        try:
-            # whisperx's pipeline takes language/task per call; prompt and
-            # temperature are fixed load-time asr_options, so this backend
-            # does not advertise them (the OpenAI route passes only what a
-            # backend's signature accepts).
-            result = self._asr.transcribe(
-                audio, **whisper_request_options(language, None, None, task),
-            )
-        except IndexError:
-            # WhisperX pipeline crashes with IndexError if VAD produces 0 segments
-            logger.info("whisperx transcribe threw IndexError (likely 0 VAD segments). Returning empty result.")
-            result = {"segments": [], "language": language or "en"}
-            
+        # CLEAN-ROOM (spec R1-medium §6): WhisperXBackend.transcribe: call the pipeline, treat IndexError as an empty result
         lang = result.get("language", "en")
 
         # Forced alignment when available — drastically improves word boundary

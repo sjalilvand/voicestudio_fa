@@ -2079,21 +2079,7 @@ def _set_loading(sub_stage: str, detail: str = "", error: str | None = None, pro
         logger.debug("Could not publish model status", exc_info=True)
 
 
-def _env_flag(name: str, default: bool = False) -> bool:
-    value = os.environ.get(name)
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
-
-
-def should_preload_tts_asr() -> bool:
-    """Whether VoiceStudio.from_pretrained should attach PyTorch Whisper.
-
-    The default is intentionally false. On Apple Silicon, eager TTS + ASR
-    loading can overcommit unified memory and leave desktop startup stuck
-    at the model-loading stage. ASR backends still load on demand.
-    """
-    return _env_flag("OMNIVOICE_PRELOAD_TTS_ASR")
+# CLEAN-ROOM (spec R1-medium §7): _env_flag helper and should_preload_tts_asr()
 
 
 def _is_incomplete_cache_error(exc: BaseException) -> bool:
@@ -2652,11 +2638,7 @@ def _load_model_sync():
         checkpoint = resolve_omnivoice_checkpoint()
         _set_loading("loading_weights", f"Loading TTS weights on {device}…")
         logger.info("Loading VoiceStudio model on device: %s", device)
-        preload_asr = should_preload_tts_asr()
-        if preload_asr:
-            logger.info("Preloading PyTorch Whisper after TTS model load.")
-        else:
-            logger.info("Skipping PyTorch Whisper preload; ASR will load on demand.")
+        # CLEAN-ROOM (spec R1-medium §8): decide whether to preload PyTorch Whisper and log the choice
         _preflight_truncated_weights(checkpoint)
 
         def _load():

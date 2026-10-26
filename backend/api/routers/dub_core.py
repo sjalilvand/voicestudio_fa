@@ -1109,116 +1109,7 @@ def _clamp_num_speakers(value) -> Optional[int]:
     return value if 1 <= value <= 20 else None
 
 
-def _recover_from_phrase_embeddings(
-    diar_pipe,
-    diarized_segments: list[dict],
-    *,
-    phrases: list[dict],
-    requested_speakers: int | None,
-    audio_target: str,
-    segments: list[dict],
-    words: list,
-):
-    """Recover rapid turns when pyannote collapses a two-speaker exchange.
-
-    Uses ASR phrase boundaries and the embedding/audio components already
-    loaded by speaker-diarization-3.1. Weak or imbalanced clusters are rejected
-    so ordinary single-speaker recordings remain untouched. Returns
-    ``(segments, separation)`` or ``None``.
-    """
-    present = {
-        str(seg.get("speaker_id")) for seg in diarized_segments
-        if seg.get("speaker_id")
-    }
-    if len(present) > 1:
-        return None
-    usable_phrases = [
-        phrase for phrase in phrases
-        if phrase.get("text")
-        and float(phrase.get("end", 0.0)) - float(phrase.get("start", 0.0)) >= 0.75
-    ]
-    if len(usable_phrases) < 4:
-        return None
-    requested = int(requested_speakers) if requested_speakers else 2
-    if requested != 2:
-        return None
-    embedding = getattr(diar_pipe, "_embedding", None)
-    audio = getattr(diar_pipe, "_audio", None)
-    if embedding is None or audio is None:
-        return None
-    try:
-        import numpy as np
-        from pyannote.core import Segment as _PyannoteSegment
-        from sklearn.cluster import AgglomerativeClustering
-
-        vectors = []
-        durations = []
-        for phrase in usable_phrases:
-            start, end = float(phrase["start"]), float(phrase["end"])
-            duration = end - start
-            waveform, _ = audio.crop(
-                audio_target, _PyannoteSegment(start, end),
-                duration=duration, mode="pad",
-            )
-            vector = np.asarray(embedding(waveform[None])).reshape(-1)
-            if not np.isfinite(vector).all():
-                return None
-            vectors.append(vector)
-            durations.append(duration)
-        matrix = np.vstack(vectors)
-        labels = np.asarray(AgglomerativeClustering(
-            n_clusters=2, metric="cosine", linkage="average",
-        ).fit_predict(matrix))
-        if len(set(labels.tolist())) != 2:
-            return None
-
-        counts = [int(np.sum(labels == cluster)) for cluster in (0, 1)]
-        cluster_durations = [
-            float(sum(duration for duration, label in zip(durations, labels) if label == cluster))
-            for cluster in (0, 1)
-        ]
-        if min(counts) < 2 or min(cluster_durations) < 1.5:
-            return None
-
-        normalized = matrix / np.maximum(np.linalg.norm(matrix, axis=1, keepdims=True), 1e-8)
-        similarities = normalized @ normalized.T
-        within, cross = [], []
-        for left in range(len(labels)):
-            for right in range(left + 1, len(labels)):
-                target = within if labels[left] == labels[right] else cross
-                target.append(float(similarities[left, right]))
-        if not within or not cross:
-            return None
-        separation = float(np.mean(within) - np.mean(cross))
-        min_separation = 0.12 if requested_speakers == 2 else 0.18
-        if separation < min_separation:
-            logger.info(
-                "phrase-embedding speaker recovery rejected (separation=%.3f < %.3f)",
-                separation, min_separation,
-            )
-            return None
-
-        speaker_map = {}
-        turns = []
-        for phrase, label in zip(usable_phrases, labels.tolist()):
-            if label not in speaker_map:
-                speaker_map[label] = f"Speaker {len(speaker_map) + 1}"
-            turns.append({
-                "start": float(phrase["start"]),
-                "end": float(phrase["end"]),
-                "speaker": speaker_map[label],
-            })
-        # Assignment mutates segment dictionaries. Work on copies so a recovery
-        # rejected by the final two-speaker check cannot leak partial labels
-        # into the ordinary pyannote result.
-        assigned = assign_speakers_from_turns([dict(item) for item in segments], turns)
-        recovered = resplit_segments_by_turns(assigned, words, turns)
-        if len({item.get("speaker_id") for item in recovered if item.get("speaker_id")}) < 2:
-            return None
-        return recovered, separation
-    except Exception:
-        logger.exception("phrase-embedding speaker recovery failed")
-        return None
+# CLEAN-ROOM (spec R1-medium §11): phrase-embedding speaker recovery helper (module-level function)
 
 
 async def _reanalyze_speakers(job_id: str, job: dict, num_speakers: Optional[int], cancelled):
@@ -1637,85 +1528,7 @@ async def dub_transcribe_stream(
                     if _missing is not None:
                         preflight_error = asr_model_missing_detail(_missing)
                         preflight_payload = _missing
-                    if _missing is None:
-                        try:
-                            # Free recoverable TTS VRAM before ASR chooses its
-                            # device. Probing first falsely routed Whisper to
-                            # CPU even when this offload made CUDA viable.
-                            try:
-                                await asyncio.get_running_loop().run_in_executor(
-                                    _cpu_pool, offload_tts_for_asr
-                                )
-                                _tts_offloaded["v"] = True
-                            except Exception as e:
-                                logger.warning("offload_tts_for_asr failed (continuing): %s", e)
-                            # The PyTorch-Whisper backend lazily builds its own pipeline
-                            # when no preloaded `_asr_pipe` is present (issue #255), so it
-                            # no longer needs OMNIVOICE_PRELOAD_TTS_ASR=1.
-                            #
-                            # Select + eagerly load in ONE call so a real load failure
-                            # (e.g. WhisperX: missing weights, CTranslate2/cuDNN
-                            # mismatch, the torch-2.6 weights-only VAD regression)
-                            # surfaces once, with its actual cause, as a clean preflight
-                            # `error` event — instead of being buried in N cryptic
-                            # per-chunk failures and retried on every chunk (#578) —
-                            # and so a backend whose deep import chain is rotted (e.g.
-                            # `No module named 'lightning_fabric'` from a partial
-                            # install, #1185) is marked unavailable and skipped in
-                            # favor of the next engine instead of failing ASR init
-                            # wholesale. Run in a thread so the (blocking) load
-                            # doesn't stall the event loop.
-                            import functools
-                            _load_fut = asyncio.get_running_loop().run_in_executor(
-                                _gpu_pool,
-                                functools.partial(
-                                    load_active_asr_backend,
-                                    asr_pipe=getattr(_model, "_asr_pipe", None),
-                                ),
-                            )
-                            # On client disconnect the ASGI server cancels this
-                            # generator mid-wait; the executor load keeps
-                            # running (and still caches its result). Retrieve
-                            # its eventual exception so asyncio never logs
-                            # "Task exception was never retrieved" into the
-                            # crash forensics log.
-                            _load_fut.add_done_callback(
-                                lambda f: f.cancelled() or f.exception()
-                            )
-                            # Keepalive while the load runs (#1196): a first-run
-                            # load may download weights for minutes, and a
-                            # byte-silent stream gets severed by Chrome's
-                            # ~5 min no-response cap or a reverse proxy's idle
-                            # timeout — which the UI can only render as the
-                            # generic "stream dropped" guess. SSE comment
-                            # lines are invisible to EventSource, so no client
-                            # changes are needed.
-                            while True:
-                                _done, _ = await asyncio.wait(
-                                    {_load_fut}, timeout=ASR_LOAD_KEEPALIVE_S
-                                )
-                                if _done:
-                                    break
-                                yield b": asr-load keepalive\n\n"
-                            _asr_backend = _load_fut.result()
-                            _loaded_asr["backend"] = _asr_backend
-                        except ASRModelMissingError as e:
-                            # A broken primary fell through to a fallback whose
-                            # weights aren't installed — same typed payload
-                            # (and download CTA) as the initial preflight.
-                            preflight_error = asr_model_missing_detail(e.payload)
-                            preflight_payload = e.payload
-                        except ModelLicenceNotAccepted as e:
-                            # Typed payload → the client's acceptance dialog (#2689).
-                            preflight_error = str(e)
-                            preflight_payload = e.detail()
-                        except Exception as e:
-                            logger.error("Transcription preflight ASR load failed")
-                            from core.failure import build_failure
-                            f = build_failure(e, stage="transcribe-preflight", include_diagnostic=False)
-                            preflight_error = "ASR backend initialization failed: " + f["reason"] + (
-                                f" — {f['hint']}" if f.get("hint") else ""
-                            )
+                    # CLEAN-ROOM (spec R1-medium §15): preflight: when no earlier preflight failure, load the active ASR backend with keepalive and typed error handling
                     scene_cuts = job.get("scene_cuts") or []
 
         if preflight_error:
@@ -1786,12 +1599,7 @@ async def dub_transcribe_stream(
         # Words (global-timeline) retained so diarization can re-split a segment
         # that spans two speakers' turns at the word boundary (#486).
         all_words: list = []
-        # Preserve the ASR backend's natural phrase boundaries before
-        # segment_transcript merges short neighboring phrases. Pyannote 3.1
-        # occasionally collapses rapid exchanges into one dominant speaker; in
-        # that narrow case these phrase spans give its own WeSpeaker embedding
-        # model clean candidate utterances for a conservative recovery pass.
-        asr_phrase_segments: list[dict] = []
+        # CLEAN-ROOM (spec R1-medium §12): per-transcript list collecting the ASR backend's raw phrase spans (before segment merging)
         detected_lang = None
         next_seg_id = 0
         chunk_errors: list[str] = []
@@ -1875,11 +1683,7 @@ async def dub_transcribe_stream(
                     timeout=transcribe_timeout_s,
                     timeout_env=transcribe_timeout_env,
                 ))
-                while True:
-                    done, _pending = await asyncio.wait({task}, timeout=5.0)
-                    if done:
-                        break
-                    yield _sse_event("ping", {})
+                # CLEAN-ROOM (spec R1-medium §16): wait for the chunk transcribe task in 5 s polls, yielding an SSE ping event on each empty poll
                 try:
                     part = task.result()
                 except ASRTimeoutError:
@@ -1926,17 +1730,7 @@ async def dub_transcribe_stream(
             if detected_lang is None and part.get("language"):
                 detected_lang = part["language"]
             asr_speaker_turns.extend(part.get("speaker_turns") or [])
-            for _phrase in part.get("chunks", []) or []:
-                _pts = _phrase.get("timestamp") or (None, None)
-                _ptext = (_phrase.get("text") or "").strip()
-                try:
-                    _ps, _pe = float(_pts[0]), float(_pts[1])
-                except (TypeError, ValueError, IndexError):
-                    continue
-                if _ptext and _pe > _ps:
-                    asr_phrase_segments.append({
-                        "start": _ps, "end": _pe, "text": _ptext,
-                    })
+            # CLEAN-ROOM (spec R1-medium §13): collect valid raw phrase spans from each chunk result into the phrase list
             chunk_segs = segment_transcript(part, duration=t1, scene_cuts=scene_cuts)
             # Same word source segment_transcript used (already global-timeline),
             # kept for the post-diarization speaker re-split (#486).
@@ -2244,23 +2038,7 @@ async def dub_transcribe_stream(
                 # turns at the word boundary (single-speaker segments pass
                 # through unchanged).
                 resplit = label_segments_by_diarization(all_segments, all_words, diar)
-                recovered = _recover_from_phrase_embeddings(
-                    diar_pipe,
-                    resplit,
-                    phrases=asr_phrase_segments,
-                    requested_speakers=num_speakers,
-                    audio_target=asr_audio_target,
-                    segments=all_segments,
-                    words=all_words,
-                )
-                if recovered is not None:
-                    recovered_segments, separation = recovered
-                    logger.info(
-                        "Recovered rapid two-speaker exchange from ASR phrase embeddings "
-                        "(phrases=%d, separation=%.3f).",
-                        len(asr_phrase_segments), separation,
-                    )
-                    return recovered_segments, None, "phrase_embeddings"
+                # CLEAN-ROOM (spec R1-medium §14): call phrase-embedding recovery after diarization labelling; on success return its segments with labels_source 'phrase_embeddings'
                 return resplit, None, "audiocpp-sortformer" if isinstance(diar_pipe, NativeSortformer) else "pyannote"
             except Exception as e:
                 logger.exception("Diarization failed")
@@ -2377,37 +2155,13 @@ async def dub_transcribe_stream(
                 # removing that older history entry — after which every
                 # single-segment regen silently rendered in the default voice.
                 _clone_dir = _ref_run_dir(os.path.dirname(vocals_for_clone))
-                fut_clones = loop.run_in_executor(
-                    _cpu_pool, lambda: extract_speaker_clones(
-                        vocals_for_clone, final_segs,
-                        _clone_dir,
-                        labels_source=labels_source,
-                    ),
-                )
+                # CLEAN-ROOM (spec R1-medium §17): dispatch per-speaker clone extraction to the CPU pool
                 async for _ping in _ping_while(fut_clones):
                     yield _ping
                 clones = fut_clones.result()
                 if clones:
                     from services.speaker_clone import refine_ref_texts
-                    # Bound the re-transcribe like every other ASR dispatch in
-                    # this file (#730): a wedged transcribe would otherwise hold
-                    # the GPU-pool worker forever and starve later work into a
-                    # "can't reach backend". On timeout the guard resets the pool
-                    # and raises — keep the original (unrefined) clones, matching
-                    # refine_ref_text's own "failure is a strict no-op" fallback.
-                    try:
-                        fut_refine = asyncio.ensure_future(run_transcribe_guarded(
-                            _gpu_pool,
-                            lambda: _asr_work.run(lambda: refine_ref_texts(clones, _asr_backend)),
-                            what="Dub clone ref-text refine",
-                        ))
-                        async for _ping in _ping_while(fut_refine):
-                            yield _ping
-                        clones = fut_refine.result()
-                    except ASRTimeoutError as e:
-                        logger.warning(
-                            "clone ref-text refine timed out; keeping original ref_text: %s", e
-                        )
+                    # CLEAN-ROOM (spec R1-medium §18): guarded per-speaker ref-text refine: bounded by run_transcribe_guarded, keep original clones on ASRTimeoutError
             # Wave 3.2: per-segment clone refs. Cut each long-enough segment's
             # own reference from the vocals so the dub of each line matches the
             # prosody of its source line. Short lines fall back to the
@@ -2437,21 +2191,7 @@ async def dub_transcribe_stream(
                     seg_clones = fut_seg_refs.result()
                     if seg_clones:
                         from services.speaker_clone import refine_ref_texts
-                        # Same guard as the per-speaker refine above (#730):
-                        # keep the original seg_clones on a wedge/timeout.
-                        try:
-                            fut_refine = asyncio.ensure_future(run_transcribe_guarded(
-                                _gpu_pool,
-                                lambda: _asr_work.run(lambda: refine_ref_texts(seg_clones, _asr_backend)),
-                                what="Dub segment ref-text refine",
-                            ))
-                            async for _ping in _ping_while(fut_refine):
-                                yield _ping
-                            seg_clones = fut_refine.result()
-                        except ASRTimeoutError as e:
-                            logger.warning(
-                                "segment ref-text refine timed out; keeping original ref_text: %s", e
-                            )
+                        # CLEAN-ROOM (spec R1-medium §19): guarded per-segment ref-text refine: same bound and fallback as the per-speaker one
                         commit["segment_clones"] = seg_clones
                 except Exception as e:
                     logger.warning("per-segment clone refs skipped: %s", e)
@@ -2718,32 +2458,7 @@ async def dub_transcribe(job_id: str, num_speakers: Optional[int] = None):
         # then dies at `.transcribe()`. The loader degrades (#1185).
         from services.asr_backend import load_active_asr_backend
         _asr = load_active_asr_backend(asr_pipe=getattr(_model, "_asr_pipe", None))
-        try:
-            try:
-                logger.info("Transcribing full audio via %s ...", _asr.id)
-                result = _asr.transcribe(asr_audio_target, word_timestamps=True)
-                detected_lang = result.get("language")
-            except Exception as e:
-                logger.exception("ASR backend %s failed", _asr.id)
-                if getattr(_model, "_asr_pipe", None) is None:
-                    raise RuntimeError(
-                        f"ASR backend {_asr.id} failed and PyTorch Whisper fallback is not preloaded: {e}"
-                    ) from e
-                # Last-resort fallback — in-memory pytorch whisper via the TTS
-                # model's pipeline when explicitly preloaded.
-                audio_np, sr = sf.read(asr_audio_target, dtype="float32")
-                if audio_np.ndim > 1: audio_np = audio_np.mean(axis=1)
-                bs = 16 if torch.cuda.is_available() else 1
-                result = _model._asr_pipe(
-                    {"array": audio_np, "sampling_rate": sr},
-                    return_timestamps=True, chunk_length_s=15, batch_size=bs,
-                )
-                detected_lang = (result.get("language") if isinstance(result, dict) else None)
-        finally:
-            try:
-                _asr.unload()
-            except Exception as e:
-                logger.warning("Failed to unload ASR backend: %s", e)
+        # CLEAN-ROOM (spec R1-medium §20): legacy transcribe: run the active ASR backend, fall back to preloaded PyTorch pipeline, always unload backend
 
         detected.update(_source_language_state(job, detected_lang))
 

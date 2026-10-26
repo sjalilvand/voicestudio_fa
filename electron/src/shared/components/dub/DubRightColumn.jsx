@@ -124,7 +124,7 @@ export default function DubRightColumn({
     ...(burnSubs ? [{ label: t('dub.burn_subs'), Icon: Captions }] : []),
   ];
   return (
-    <div className="studio-panel dub-panel-col dub-panel-right">
+    <div /* CLEAN-ROOM (spec R1-medium §25): right panel className */>
       <div className="dub-output-settings">
         <button
           type="button"

@@ -322,8 +322,7 @@ install_redaction_filter()
 install_access_log_filter()
 install_asyncio_transport_filter()
 
-# Silence HF Hub unauthenticated warnings unless specifically requested.
-logging.getLogger("huggingface_hub.utils._http").setLevel(logging.ERROR)
+# CLEAN-ROOM (spec R1-medium §2): quiet the huggingface_hub HTTP logger
 # Silence httpx INFO — every HF Hub API call logs a line; the SSE stream
 # already surfaces download progress to the UI.
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -416,13 +415,7 @@ from core.csrf import SAFE_HTTP_METHODS, cookie_csrf_allowed, origin_allowed
 # registers the routers on the app.
 
 
-def _env_flag(name: str, default: bool = False) -> bool:
-    value = os.environ.get(name)
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
-
-
+# CLEAN-ROOM (spec R1-medium §3): _env_flag(name, default) boolean env helper
 # Eager mode runs the heavy phases inline at module import — today's exact
 # behavior — and exists for the ~100 lifespan-less `TestClient(app)` call
 # sites that expect `from main import app` to yield the fully-built app.
@@ -1146,8 +1139,7 @@ async def _phase_b(app: FastAPI) -> None:
             except Exception as e:
                 logger.warning("Capture ASR preload skipped: %s", e)
         app.state.capture_preload_task = asyncio.create_task(_preload_capture_asr())
-    else:
-        logger.info("Capture ASR preload disabled; dictation ASR will load on first use.")
+    # CLEAN-ROOM (spec R1-medium §4): else-branch of capture ASR preload: log that preload is disabled
 
     # Watermark: warm the AudioSeal generator in the background so the first
     # mark_synthetic doesn't serialize the audioseal import + model load
@@ -2302,18 +2294,7 @@ if __name__ == "__main__":
             # and get their own advice; they never set ``bind_error``.
             self.denied_error: "OSError | None" = None
 
-        def filter(self, record: logging.LogRecord) -> bool:
-            msg = record.msg
-            if isinstance(msg, OSError) and (
-                msg.errno in (48, 98, 10048)
-                or getattr(msg, "winerror", None) == 10048
-            ):
-                self.bind_error = msg
-            elif isinstance(msg, OSError) and (
-                msg.errno == 13 or getattr(msg, "winerror", None) == 10013
-            ):
-                self.denied_error = msg
-            return True
+        # CLEAN-ROOM (spec R1-medium §5): _BindErrorWatcher.filter method
 
     # #1223: uvicorn does NOT let a bind failure reach the caller — it logs the
     # raw errno and raises SystemExit(1) from inside its startup, so an

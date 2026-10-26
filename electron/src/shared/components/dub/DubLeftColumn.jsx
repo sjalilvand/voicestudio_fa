@@ -252,7 +252,7 @@ export default function DubLeftColumn({
   }
 
   return (
-    <div className="studio-panel dub-panel-col dub-panel-left">
+    <div /* CLEAN-ROOM (spec R1-medium §24): left panel className */>
       {hasDubbedTrack && (
         <div
           className="dub-lang-switch"

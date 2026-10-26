@@ -318,7 +318,7 @@ export const createPrefsSlice: StateCreator<PrefsSlice, [], [], PrefsSlice> = (s
   glossaryVisible: true,
   reviewMode: 'on',
   showHeaderLiveStats: false,
-  timingStrategy: 'strict_slot',
+  // CLEAN-ROOM (spec R1-medium §28b): timingStrategy default value
   fitOptions: null,
   voiceMatch: 'per_line',
   dubLivePreview: false,

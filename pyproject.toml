@@ -36,7 +36,7 @@ classifiers = [
 dependencies = [
     "torch>=2.4",
     "torchaudio>=2.4",
-    "torchvision>=0.19",
+    # CLEAN-ROOM (spec R1-medium §30a): torchvision runtime dependency entry
     "transformers>=5.10.0",
     "accelerate",
     "pydub",
@@ -277,11 +277,7 @@ torchaudio = [
   { index = "pytorch-cuda", group = "cuda", marker = "platform_machine != 'aarch64' and platform_machine != 'arm64' and (sys_platform == 'linux' or sys_platform == 'win32')" },
   { index = "pytorch-cpu", group = "cpu", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and sys_platform == 'linux') or sys_platform == 'win32'" },
 ]
-torchvision = [
-  { index = "pypi", marker = "(sys_platform != 'linux' and sys_platform != 'win32') or ((platform_machine == 'aarch64' or platform_machine == 'arm64') and sys_platform == 'linux')" },
-  { index = "pytorch-cuda", group = "cuda", marker = "platform_machine != 'aarch64' and platform_machine != 'arm64' and (sys_platform == 'linux' or sys_platform == 'win32')" },
-  { index = "pytorch-cpu", group = "cpu", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and sys_platform == 'linux') or sys_platform == 'win32'" },
-]
+# CLEAN-ROOM (spec R1-medium §30b): torchvision entry in [tool.uv.sources]
 
 [[tool.uv.index]]
 name = "pypi"
@@ -316,7 +312,7 @@ constraint-dependencies = [
     "starlette>=1.3.1",
     "torch==2.8.0",
     "torchaudio==2.8.0",
-    "torchvision==0.23.0",
+    # CLEAN-ROOM (spec R1-medium §30c): torchvision exact-version constraint
 ]
 # gradio caps pillow below 13 (still in 6.30), but Pillow's security fixes for
 # the FlashPix/JPEG heap overflows and bundled libopenjp2 start at 13.0.0.

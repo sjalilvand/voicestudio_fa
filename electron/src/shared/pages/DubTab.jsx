@@ -641,7 +641,7 @@ export default function DubTab(props) {
   }, [dubJobId, qcRunning, previewMode, dubGenNonce, setDubSegments, t]);
 
   return (
-    <div className="dub-workspace flex-1 flex flex-col min-h-0 min-w-0 [container-type:inline-size] [container-name:dub-shell]">
+    <div /* CLEAN-ROOM (spec R1-medium §26): workspace root className */>
       {/* Pipeline spine — shown once a file/job is in play so the user always
           knows which stage they're at (Upload → … → Export). In the editor view
           it's inlined onto the DubHeader row (see below), so only render the
@@ -712,7 +712,7 @@ export default function DubTab(props) {
 
       {/* ── After transcription: side-by-side editor ── */}
       {dubJobId && (dubStep === 'editing' || dubStep === 'generating' || dubStep === 'done') && (
-        <div className="dub-editor flex-1 flex flex-col min-h-0 min-w-0">
+        <div /* CLEAN-ROOM (spec R1-medium §27): editor wrapper className */>
           <DubHeader
             t={t}
             dubFilename={dubFilename}

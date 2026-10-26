@@ -1375,7 +1375,7 @@ def delete_profile(profile_id: str):
             paths.append(portrait_path)
         # Commit the database change before removing assets: a failed write or
         # commit must leave the rolled-back profile's files usable.
-        conn.execute("UPDATE generation_history SET profile_id = NULL WHERE profile_id=?", (profile_id,))
+        # CLEAN-ROOM (spec R1-medium §1): null out generation_history.profile_id for the deleted profile
         conn.execute("DELETE FROM voice_profiles WHERE id=?", (profile_id,))
     failed_assets = []
     for path in dict.fromkeys(paths):
