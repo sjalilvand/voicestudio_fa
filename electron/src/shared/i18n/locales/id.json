@@ -503,7 +503,12 @@
     "exportFailed": "Ekspor gagal — periksa apakah backend sedang berjalan.",
     "global_speed": "Kecepatan",
     "global_speed_hint": "Kecepatan membaca untuk semua lini tanpa mengesampingkan kecepatannya sendiri",
-    "deleteProjectConfirm": "Hapus proyek ini secara permanen?"
+    "deleteProjectConfirm": "Hapus proyek ini secara permanen?",
+    "splitMode": "Pisahkan per",
+    "split_sentences": "Kalimat",
+    "split_paragraphs": "Paragraf",
+    "split_chapters": "Bab",
+    "splitModeHint": "Setiap baris dibaca sebagai rekaman tersendiri. Untuk satu narator, Paragraf atau Bab terdengar lebih mengalir."
   },
   "common": {
     "stop": "Berhenti",
@@ -2542,7 +2547,11 @@
     "emotion_help": "Emosi berjenjang — diterapkan hanya oleh mesin IndexTTS2.",
     "emotion_text": "Deskripsi emosi",
     "emotion_text_ph": "mis. terdengar lelah dan sedih",
-    "emotion_alpha": "Kekuatan emosi"
+    "emotion_alpha": "Kekuatan emosi",
+    "line_gap": "Jeda antarbaris",
+    "paragraph_gap": "Jeda antarparagraf",
+    "trim_edges": "Pangkas keheningan mesin",
+    "trim_edges_help": "Memotong keheningan yang ditambahkan tiap mesin sebelum dan sesudah baris, lalu menyambungnya. Matikan untuk hasil mentah."
   },
   "voicePanel": {
     "title": "Suara",

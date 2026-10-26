@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { SlidersHorizontalIcon } from 'lucide-react';
 import { SettingsSection } from './settings-section';
+import { JoinControls } from './join-controls';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -14,8 +15,6 @@ const knobs = [
   { key: 'posTemp', label: 'pos_temp', min: 0, max: 10, step: 0.5, value: 5 },
   { key: 'classTemp', label: 'class_temp', min: 0, max: 2, step: 0.1, value: 0 },
 ] as const;
-// CLEAN-ROOM (spec G-jaketame-1 §6): the table describing the two gap sliders (key,
-// label key, max, default) belongs here.
 export function ProductionSettings({
   value,
   disabled,
@@ -84,8 +83,7 @@ export function ProductionSettings({
           onCheckedChange={(varyRepeats) => onChange({ ...value, varyRepeats })}
         />
       </label>
-      {/* CLEAN-ROOM (spec G-jaketame-1 §6): the seamless-join controls (help text, two gap
-          sliders, trim-silence switch) belong here. */}
+      <JoinControls value={value} disabled={disabled} onChange={onChange} />
       <label className="block space-y-1 text-xs">
         {t('audiobook.seed')}
         <Input

@@ -1715,7 +1715,17 @@
     "delete_selected": "Usuń zaznaczone ({{count}})",
     "deleted_count": "Usunięto: {{count}}",
     "delete_warning": "Tej operacji nie można cofnąć. Projekty i transkrypcje zostaną usunięte. Usunięcie głosów lub nagrań usuwa też ich zapisany dźwięk. Wyeksportowane pliki i ukończone rendery audio pozostaną.",
-    "draft_changed": "Szkic zmienił się podczas wczytywania tego projektu. Potwierdź ponownie, aby go zastąpić."
+    "draft_changed": "Szkic zmienił się podczas wczytywania tego projektu. Potwierdź ponownie, aby go zastąpić.",
+    "render_details": "Jak powstało",
+    "render_voice": "Głos",
+    "render_speed": "Tempo",
+    "render_engine": "Silnik",
+    "render_language": "Język",
+    "render_format": "Format",
+    "render_size_label": "Rozmiar",
+    "render_size": "{{chapters}} rozdz. · {{lines}} wierszy · {{words}} słów",
+    "render_settings": "Ustawienia",
+    "render_no_details": "Dla tej pozycji nie zapisano szczegółów: powstała, zanim zaczęto je rejestrować."
   },
   "projectActions": {
     "delete": "Usunąć „{{name}}”? Tej czynności nie można cofnąć.",
@@ -1829,7 +1839,14 @@
     "toneChip": "Ton i tempo: {{speed}}",
     "lineVoice": "Głos linii",
     "chapterHeading": "Tytuł rozdziału",
-    "lineActions": "Akcje linii"
+    "lineActions": "Akcje linii",
+    "splitMode": "Podziel według",
+    "split_sentences": "Zdania",
+    "split_paragraphs": "Akapity",
+    "split_chapters": "Rozdziały",
+    "splitModeHint": "Każdy wiersz jest czytany jako osobne nagranie. Przy jednym narratorze Akapity lub Rozdziały brzmią płynniej.",
+    "global_speed_overrides": "{{count}} wierszy ma własne tempo",
+    "global_speed_apply": "Zastosuj tempo książki do wszystkich"
   },
   "audiobook": {
     "cast": "Obsada",
@@ -1958,7 +1975,11 @@
     "emotion_text": "Opis emocji",
     "emotion_text_ph": "np. brzmi wyczerpany i smutny",
     "emotion_alpha": "Siła emocji",
-    "lex_duplicate": "Użyj jednej wymowy dla każdego słowa."
+    "lex_duplicate": "Użyj jednej wymowy dla każdego słowa.",
+    "line_gap": "Przerwa między wierszami",
+    "paragraph_gap": "Przerwa między akapitami",
+    "trim_edges": "Przytnij ciszę silnika",
+    "trim_edges_help": "Usuwa ciszę, którą każdy silnik dodaje przed wierszem i po nim, a potem łączy nagrania. Wyłącz, aby uzyskać surowe nagrania."
   },
   "credentials": {
     "microsoft_key": "Klucz tłumacza Microsoft",

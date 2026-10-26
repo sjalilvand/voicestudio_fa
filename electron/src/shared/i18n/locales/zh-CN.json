@@ -199,7 +199,12 @@
     "exportFailed": "导出失败 — 请检查后端是否运行。",
     "global_speed": "速度",
     "global_speed_hint": "所有台词的朗读速度（未单独设置语速的台词）",
-    "deleteProjectConfirm": "永久删除此项目？"
+    "deleteProjectConfirm": "永久删除此项目？",
+    "splitMode": "拆分依据",
+    "split_sentences": "句子",
+    "split_paragraphs": "段落",
+    "split_chapters": "章节",
+    "splitModeHint": "每一行都会作为独立的一遍朗读。只有一位讲述者时，按段落或章节拆分听起来更自然。"
   },
   "common": {
     "stop": "停止",
@@ -2978,7 +2983,11 @@
     "emotion_help": "分层情感 — 仅由 IndexTTS2 引擎应用。",
     "emotion_text": "情感描述",
     "emotion_text_ph": "例如：听起来疲惫而悲伤",
-    "emotion_alpha": "情感强度"
+    "emotion_alpha": "情感强度",
+    "line_gap": "行间停顿",
+    "paragraph_gap": "段落间停顿",
+    "trim_edges": "裁掉引擎静音",
+    "trim_edges_help": "先裁掉各引擎在每行前后添加的静音，再拼接。需要原始输出时请关闭。"
   },
   "voicePanel": {
     "title": "语音",

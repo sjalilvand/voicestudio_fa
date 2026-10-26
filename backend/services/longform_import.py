@@ -17,6 +17,7 @@ import logging
 import posixpath
 import re
 import zipfile
+from typing import Optional
 from html.parser import HTMLParser
 from xml.etree import ElementTree as ET
 from urllib.parse import unquote, urlsplit
@@ -323,7 +324,9 @@ _BODY_TYPES = frozenset({"bodymatter", "chapter", "part", "prologue", "epilogue"
 _ANCILLARY_TITLE = re.compile(
     r"^\s*(cover|half[ -]?title|title[ -]?page|copyright|dedication|contents|"
     r"table of contents|acknowledg\w*|about the (author|illustrator|book)|"
-    r"also (by|available)|praise for|imprint|colophon|newsletter|look out for)\b",
+    r"also (by|available)|praise for|imprint|colophon|newsletter|look out for|"
+    r"(other )?(works|books|titles) by|about the publisher|"
+    r"footnotes?|endnotes?)\b",
     re.I,
 )
 
@@ -336,10 +339,27 @@ def _is_ancillary(types: set[str], title: str) -> bool:
     return bool(title and _ANCILLARY_TITLE.match(title))
 
 
+def _landmarks_start(navs, nav_dir: str, type_attribute: str, local_name) -> Optional[str]:
+    """Member path of the first ``bodymatter`` link inside an EPUB 3 ``landmarks`` nav."""
+    for nav in navs:
+        if "landmarks" not in nav.get(type_attribute, "").split():
+            continue
+        for link in nav.iter():
+            if local_name(link) != "a" or not link.get("href"):
+                continue
+            if "bodymatter" in link.get(type_attribute, "").split():
+                return _member_path(nav_dir, link.get("href")) or None
+    return None
+
+
 def _toc_titles(
     zf: zipfile.ZipFile, base: str, nav_hrefs: list[str], names: set[str], budget: _ReadBudget
-) -> dict[str, str]:
+) -> tuple[dict[str, str], Optional[str]]:
     """Map each spine document (full zip path) to its table-of-contents label.
+
+    Returns ``(titles, body_start)``. ``body_start`` is the member path the EPUB 3
+    ``landmarks`` list marks as ``bodymatter`` (where the book proper begins), or
+    ``None`` when the navigation declares no such entry.
 
     Publishers label sections better than their headings do ("Chapter One:
     A New Arrival" versus an ``<h1>`` holding only "A New Arrival"). Reads
@@ -351,6 +371,7 @@ def _toc_titles(
     """
     nav_titles: dict[str, str] = {}  # EPUB 3 nav — authoritative
     ncx_titles: dict[str, str] = {}  # EPUB 2 NCX — fallback
+    body_start: Optional[str] = None
     for href in nav_hrefs:
         full = _member_path(base, href)
         if full not in names:
@@ -387,19 +408,36 @@ def _toc_titles(
                 for anchor in scope.iter():
                     if local_name(anchor) == "a" and anchor.get("href"):
                         pairs.append((anchor.get("href"), "".join(anchor.itertext())))
-            # CLEAN-ROOM (spec G-jaketame-1 §11): the EPUB 3 landmarks scan that finds
-            # the publisher's declared "book starts here" target belongs here.
+            if body_start is None:
+                body_start = _landmarks_start(navs, nav_dir, type_attribute, local_name)
         for src, label in pairs:
             path = _member_path(nav_dir, src)
             label = " ".join(label.split())
             if path and label:
                 target.setdefault(path, label)
     titles = {**ncx_titles, **nav_titles}
-    return {k: v for k, v in titles.items() if v}
+    return {k: v for k, v in titles.items() if v}, body_start
 
 
-# CLEAN-ROOM (spec G-jaketame-1 §11): the front-matter word ceiling constant and the
-# front-matter boundary finder belong here.
+#: An unlisted, unmarked page this short (or shorter) is treated as publisher
+#: furniture (teaser, epigraph, blurb) rather than a chapter.
+_FRONT_MATTER_MAX_WORDS = 400
+
+
+def _book_start_index(sections: list, toc: dict[str, str], declared: Optional[str]) -> int:
+    """Index of the first section that belongs to the book proper.
+
+    The publisher's declared start wins when it is one of the sections; else the
+    first section the table of contents lists under a non-ancillary label; else 0.
+    """
+    if declared is not None:
+        for i, section in enumerate(sections):
+            if section[0] == declared:
+                return i
+    for i, (path, types, _heading, _body) in enumerate(sections):
+        if path in toc and not _is_ancillary(types, toc[path]):
+            return i
+    return 0
 
 
 class _ReadBudget:
@@ -450,6 +488,32 @@ def _read_member(zf: zipfile.ZipFile, name: str, budget: _ReadBudget, *, require
     return raw
 
 
+def _narrated(sections: list, toc: dict[str, str], declared: Optional[str]):
+    """Yield ``(title, body)`` for the sections a narrator should read.
+
+    Drops ancillary pages, unlisted teaser/publisher pages that precede the book
+    start, and stray unlisted pages once listed back matter has begun.
+    """
+    first = _book_start_index(sections, toc, declared)
+    back_matter = False
+    for pos, (path, types, heading, body) in enumerate(sections):
+        label = toc.get(path) or heading
+        in_toc = path in toc
+        if _is_ancillary(types, label):
+            back_matter = back_matter or (pos > first and in_toc)
+            continue
+        loose = not in_toc and not (types & _BODY_TYPES)
+        short = len(body.split()) <= _FRONT_MATTER_MAX_WORDS
+        if loose and short and pos < first:
+            publisher_like = re.match(r"\s*(novels|published) by\b", heading, re.I)
+            if not heading or publisher_like:
+                continue
+        if back_matter and loose and short and not heading:
+            continue
+        back_matter = False
+        yield label, body
+
+
 def epub_to_chapter_script(
     data: bytes,
     *,
@@ -489,11 +553,15 @@ def epub_to_chapter_script(
                 nav_hrefs.append(href)
 
     names = set(zf.namelist())
-    toc = _toc_titles(zf, base, nav_hrefs, names, budget)
-    # CLEAN-ROOM (spec G-jaketame-1 §11): reading the EPUB 2 guide "text" reference as a
-    # declared reading start belongs here.
+    toc, declared_start = _toc_titles(zf, base, nav_hrefs, names, budget)
+    if declared_start is None:
+        # EPUB 2: <guide><reference type="text" href=...> names the reading start.
+        for reference in opf.findall(".//opf:guide/opf:reference", _OPF_NS):
+            if (reference.get("type") or "").lower() == "text" and reference.get("href"):
+                declared_start = _member_path(base, reference.get("href")) or None
+                break
 
-    blocks: list[str] = []
+    sections: list[tuple[str, set[str], str, str]] = []
     for ref in opf.findall(".//opf:spine/opf:itemref", _OPF_NS):
         href = manifest.get(ref.get("idref") or "")
         if not href or href in nav_hrefs:
@@ -513,14 +581,12 @@ def epub_to_chapter_script(
         types, title, body = _html_extract(_decode_epub_entry(raw))
         if not body.strip():
             continue  # nav docs, empty pages
-        title = toc.get(full) or title
-        if _is_ancillary(types, title):
-            continue  # cover, title page, dedication, copyright, contents, …
-        # CLEAN-ROOM (spec G-jaketame-1 §11): the structural front/back matter rules for
-        # unmarked teaser pages and stray back-matter pages belong here, before the
-        # chapter block is emitted.
-        title = title or f"Chapter {len(blocks) + 1}"
-        blocks.append(f"# {title}\n\n{body}")
+        sections.append((full, types, title, body))
+
+    blocks = [
+        f"# {title or f'Chapter {n}'}\n\n{body}"
+        for n, (title, body) in enumerate(_narrated(sections, toc, declared_start), start=1)
+    ]
 
     if not blocks:
         raise ValueError("no readable chapters found in the EPUB")

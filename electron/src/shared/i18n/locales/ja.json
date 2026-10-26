@@ -503,7 +503,12 @@
     "exportFailed": "エクスポートに失敗しました — バックエンドが実行中であることを確認してください。",
     "global_speed": "速度",
     "global_speed_hint": "独自の速度オーバーライドを行わないすべての行の読み取り速度",
-    "deleteProjectConfirm": "このプロジェクトを完全に削除しますか？"
+    "deleteProjectConfirm": "このプロジェクトを完全に削除しますか？",
+    "splitMode": "分割の単位",
+    "split_sentences": "文",
+    "split_paragraphs": "段落",
+    "split_chapters": "章",
+    "splitModeHint": "各行は個別のテイクとして読み上げられます。語り手が一人なら、段落や章のほうが自然につながります。"
   },
   "common": {
     "stop": "停止",
@@ -2542,7 +2547,11 @@
     "emotion_help": "段階的な感情 — IndexTTS2 エンジンによってのみ適用されます。",
     "emotion_text": "感情の説明",
     "emotion_text_ph": "例 疲れているように聞こえ、悲しい",
-    "emotion_alpha": "感情の強さ"
+    "emotion_alpha": "感情の強さ",
+    "line_gap": "行間の間隔",
+    "paragraph_gap": "段落間の間隔",
+    "trim_edges": "エンジンの無音をカット",
+    "trim_edges_help": "各エンジンが行の前後に付ける無音を切り取ってから結合します。未加工の出力が必要なときはオフにしてください。"
   },
   "voicePanel": {
     "title": "声",

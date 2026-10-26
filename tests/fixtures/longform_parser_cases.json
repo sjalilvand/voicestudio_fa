@@ -1166,7 +1166,8 @@
             "voice_id": "v1",
             "text": "x",
             "pause_ms_after": 0,
-            "speed": 1.15
+            "speed": 1.15,
+            "join": "continue"
           },
           {
             "voice_id": "v1",
@@ -1473,5 +1474,132 @@
     "input": "   ",
     "default_voice": "v1",
     "expected": []
+  },
+  {
+    "name": "join_markup_midline_then_pause_line",
+    "input": "The gate [fast]creaked open[/fast] slowly.[pause 2s]\nLater, quiet.",
+    "default_voice": "narr",
+    "expected": [
+      {
+        "title": "Chapter 1",
+        "spans": [
+          {
+            "voice_id": "narr",
+            "text": "The gate",
+            "pause_ms_after": 0,
+            "speed": null,
+            "join": "continue"
+          },
+          {
+            "voice_id": "narr",
+            "text": "creaked open",
+            "pause_ms_after": 0,
+            "speed": 1.15,
+            "join": "continue"
+          },
+          {
+            "voice_id": "narr",
+            "text": "slowly.",
+            "pause_ms_after": 2000,
+            "speed": null
+          },
+          {
+            "voice_id": "narr",
+            "text": "Later, quiet.",
+            "pause_ms_after": 0,
+            "speed": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "join_paragraph_break_at_markup_edge",
+    "input": "Dawn came.\n\n[slow]Nobody stirred.[/slow] Then a bell.",
+    "default_voice": "narr",
+    "expected": [
+      {
+        "title": "Chapter 1",
+        "spans": [
+          {
+            "voice_id": "narr",
+            "text": "Dawn came.",
+            "pause_ms_after": 0,
+            "speed": null,
+            "join": "paragraph"
+          },
+          {
+            "voice_id": "narr",
+            "text": "Nobody stirred.",
+            "pause_ms_after": 0,
+            "speed": 0.85,
+            "join": "continue"
+          },
+          {
+            "voice_id": "narr",
+            "text": "Then a bell.",
+            "pause_ms_after": 0,
+            "speed": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "join_lone_newline_at_markup_edge",
+    "input": "Rain fell\n[emphasis]hard[/emphasis]\nall night",
+    "default_voice": "narr",
+    "expected": [
+      {
+        "title": "Chapter 1",
+        "spans": [
+          {
+            "voice_id": "narr",
+            "text": "Rain fell",
+            "pause_ms_after": 0,
+            "speed": null,
+            "join": "continue"
+          },
+          {
+            "voice_id": "narr",
+            "text": "hard",
+            "pause_ms_after": 0,
+            "speed": 0.92,
+            "join": "continue"
+          },
+          {
+            "voice_id": "narr",
+            "text": "all night",
+            "pause_ms_after": 0,
+            "speed": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "join_blank_line_hidden_in_empty_spell_segment",
+    "input": "[fast]left[/fast][spell]\n  \n[/spell][slow]right[/slow]",
+    "default_voice": "narr",
+    "expected": [
+      {
+        "title": "Chapter 1",
+        "spans": [
+          {
+            "voice_id": "narr",
+            "text": "left",
+            "pause_ms_after": 0,
+            "speed": 1.15,
+            "join": "paragraph"
+          },
+          {
+            "voice_id": "narr",
+            "text": "right",
+            "pause_ms_after": 0,
+            "speed": 0.85
+          }
+        ]
+      }
+    ]
   }
 ]

@@ -744,8 +744,35 @@ def test_off_path_emits_no_loudness_block(tmp_path, monkeypatch):
     assert "loudness" not in events[-1]  # legacy done shape preserved
 
 
-# CLEAN-ROOM (spec G-jaketame-1 §14): end-to-end tests for the done event's title and
-# summary belong here.
+def _done_of(events):
+    assert events[-1]["type"] == "done"
+    return events[-1]
+
+
+def test_done_summary_describes_the_render_but_never_quotes_it(tmp_path, monkeypatch):
+    out = tmp_path / "outputs"
+    out.mkdir()
+    done = _done_of(_collect_events(_plan(("Ch A", "quiet harbour lights")), monkeypatch, out,
+                                    fmt="mp3", metadata={"title": "Harbour"}))
+    assert done["title"] == "Harbour"
+    detail = done["summary"]
+    assert {k: detail[k] for k in ("lines", "words", "format", "speeds", "chapter_titles")} == {
+        "lines": 1, "words": 3, "format": "mp3", "speeds": [1.0], "chapter_titles": ["Ch A"],
+    }
+    assert "harbour lights" not in json.dumps(done)
+
+
+def test_done_title_defaults_to_first_chapter_and_summary_errors_are_swallowed(
+        tmp_path, monkeypatch):
+    from api.routers import audiobook
+    out = tmp_path / "outputs"
+    out.mkdir()
+    plan = _plan(("Intro", "x"))
+    assert _done_of(_collect_events(plan, monkeypatch, out, fmt="mp3"))["title"] == "Intro"
+    monkeypatch.setattr(audiobook, "_render_summary",
+                        lambda *a, **k: (_ for _ in ()).throw(KeyError("nope")))
+    again = _done_of(_collect_events(plan, monkeypatch, out, fmt="mp3"))
+    assert "summary" not in again and again["output"]
 
 
 def test_done_summary_from_old_manifest_is_strict_json(tmp_path, monkeypatch):

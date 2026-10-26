@@ -1711,7 +1711,17 @@
     "delete_selected": "Xóa mục đã chọn ({{count}})",
     "deleted_count": "Đã xóa: {{count}}",
     "delete_warning": "Không thể hoàn tác. Dự án và bản chép lời sẽ bị xóa. Xóa giọng nói hoặc bản thu cũng xóa âm thanh đã lưu của chúng. Tệp đã xuất và âm thanh kết xuất hoàn tất được giữ lại.",
-    "draft_changed": "Bản nháp của bạn đã thay đổi trong khi tải dự án này. Xác nhận lại để thay thế bản nháp."
+    "draft_changed": "Bản nháp của bạn đã thay đổi trong khi tải dự án này. Xác nhận lại để thay thế bản nháp.",
+    "render_details": "Cách tạo ra",
+    "render_voice": "Giọng đọc",
+    "render_speed": "Tốc độ",
+    "render_engine": "Công cụ",
+    "render_language": "Ngôn ngữ",
+    "render_format": "Định dạng",
+    "render_size_label": "Quy mô",
+    "render_size": "{{chapters}} chương · {{lines}} dòng · {{words}} từ",
+    "render_settings": "Cài đặt",
+    "render_no_details": "Mục này không lưu chi tiết: nó được tạo trước khi chi tiết được ghi lại."
   },
   "projectActions": {
     "delete": "Xóa “{{name}}”? Không thể hoàn tác thao tác này.",
@@ -1825,7 +1835,14 @@
     "toneChip": "Ngữ điệu và tốc độ: {{speed}}",
     "lineVoice": "Giọng của dòng",
     "chapterHeading": "Tiêu đề chương",
-    "lineActions": "Thao tác dòng"
+    "lineActions": "Thao tác dòng",
+    "splitMode": "Tách theo",
+    "split_sentences": "Câu",
+    "split_paragraphs": "Đoạn",
+    "split_chapters": "Chương",
+    "splitModeHint": "Mỗi dòng được đọc thành một bản thu riêng. Với một người đọc, Đoạn hoặc Chương nghe mượt hơn.",
+    "global_speed_overrides": "{{count}} dòng có tốc độ riêng",
+    "global_speed_apply": "Dùng tốc độ của sách cho tất cả"
   },
   "audiobook": {
     "cast": "Dàn giọng",
@@ -1950,7 +1967,11 @@
     "emotion_text": "Mô tả cảm xúc",
     "emotion_text_ph": "ví dụ: nghe vẻ mệt mỏi và buồn",
     "emotion_alpha": "Độ mạnh của cảm xúc",
-    "lex_duplicate": "Chỉ dùng một cách phát âm cho mỗi từ."
+    "lex_duplicate": "Chỉ dùng một cách phát âm cho mỗi từ.",
+    "line_gap": "Khoảng nghỉ giữa các dòng",
+    "paragraph_gap": "Khoảng nghỉ giữa các đoạn",
+    "trim_edges": "Cắt khoảng lặng của công cụ",
+    "trim_edges_help": "Cắt khoảng lặng mà mỗi công cụ thêm trước và sau một dòng rồi mới ghép lại. Tắt để lấy bản thô."
   },
   "credentials": {
     "microsoft_key": "Khóa dịch của Microsoft",

@@ -1713,7 +1713,17 @@
     "delete_selected": "Eliminar selección ({{count}})",
     "deleted_count": "Eliminados: {{count}}",
     "delete_warning": "Esta acción no se puede deshacer. Se eliminan los proyectos y las transcripciones. Al eliminar voces o tomas también se borra su audio guardado. Se conservan los archivos exportados y el audio de los renderizados terminados.",
-    "draft_changed": "Tu borrador cambió mientras se cargaba este proyecto. Confirma de nuevo para reemplazarlo."
+    "draft_changed": "Tu borrador cambió mientras se cargaba este proyecto. Confirma de nuevo para reemplazarlo.",
+    "render_details": "Cómo se hizo",
+    "render_voice": "Voz",
+    "render_speed": "Velocidad",
+    "render_engine": "Motor",
+    "render_language": "Idioma",
+    "render_format": "Formato",
+    "render_size_label": "Tamaño",
+    "render_size": "{{chapters}} capítulos · {{lines}} líneas · {{words}} palabras",
+    "render_settings": "Ajustes",
+    "render_no_details": "De este no se guardaron detalles: se generó antes de que se registraran."
   },
   "projectActions": {
     "delete": "¿Eliminar «{{name}}»? No se puede deshacer.",
@@ -1827,7 +1837,14 @@
     "toneChip": "Tono y velocidad: {{speed}}",
     "lineVoice": "Voz de la línea",
     "chapterHeading": "Título del capítulo",
-    "lineActions": "Acciones de la línea"
+    "lineActions": "Acciones de la línea",
+    "splitMode": "Dividir por",
+    "split_sentences": "Frases",
+    "split_paragraphs": "Párrafos",
+    "split_chapters": "Capítulos",
+    "splitModeHint": "Cada línea se lee como una toma independiente. Con un solo narrador, Párrafos o Capítulos suenan más fluidos.",
+    "global_speed_overrides": "{{count}} líneas usan su propia velocidad",
+    "global_speed_apply": "Aplicar la velocidad del libro a todas"
   },
   "audiobook": {
     "cast": "Reparto",
@@ -1952,7 +1969,11 @@
     "emotion_text": "Descripción de emoción",
     "emotion_text_ph": "p. ej. suena agotado y triste",
     "emotion_alpha": "Intensidad emocional",
-    "lex_duplicate": "Usa una sola pronunciación por palabra."
+    "lex_duplicate": "Usa una sola pronunciación por palabra.",
+    "line_gap": "Pausa entre líneas",
+    "paragraph_gap": "Pausa entre párrafos",
+    "trim_edges": "Recortar el silencio del motor",
+    "trim_edges_help": "Elimina el silencio que cada motor añade antes y después de una línea y luego las une. Desactívalo para obtener audio sin procesar."
   },
   "credentials": {
     "microsoft_key": "Clave del traductor de Microsoft",

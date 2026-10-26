@@ -1274,7 +1274,7 @@ Already using Electron? Install over your existing app and keep your data. If pr
 
 - Settings → Appearance → Keep sidebar expanded: stops the sidebar shrinking to a rail when Projects, Transcribe, Tools or another workspace opens its own panel on a narrower window (#2211) — thanks @jaketame!
 - Stories and Audiobook: a Clear script button empties the whole script — every line and chapter, imported or typed — in one confirmed step instead of one trash icon at a time; the cast is kept (#2203) — thanks @jaketame!
-<!-- CLEAN-ROOM (spec G-jaketame-1 §9): changelog entry for the Paste & Split presets -->
+- Stories' Paste & Split can cut pasted text by sentence, paragraph or chapter, and chapter headings always stay as separate lines (#2217) — thanks @jaketame!
 
 ### Fixed
 
@@ -1292,7 +1292,7 @@ Already using Electron? Install over your existing app and keep your data. If pr
 - Clone, Stories and Audiobook disable unsupported output-language choices for engines with a declared language list (#2104)
 
 - Stories and Audiobook: Generate, the chapter tracker and the render status are pinned in the setup pane instead of sitting below the last line of the script, and a disabled Generate now says why (#2229) — thanks @jaketame!
-<!-- CLEAN-ROOM (spec G-jaketame-1 §11): changelog entry for EPUB front/back matter detection -->
+- EPUB import no longer turns untagged excerpts, epigraphs, blurbs and trailing footnote or advert pages into chapters, and still keeps genuine prologues (#2228) — thanks @jaketame!
 - Retry temporary media-tool installation locks and report failed cleanup instead of hiding it (#2214) — thanks @baoyu0!
 
 - The desktop app points the backend at the `uv` it already ships, so one-click engine installs stop failing preflight with "uv was not found" on a clean install — the packaged binary sits in the app's own resources directory, which is on no `PATH`, and a GUI launch inherits none of the shell's `PATH` additions either (#2221, #2215) — thanks @shivsin25 for the fix and @baoyu0 for the diagnosis!
@@ -1300,9 +1300,9 @@ Already using Electron? Install over your existing app and keep your data. If pr
 - VoxCPM2 voice design uses its native control format, and style requests no longer inherit the reference transcript’s delivery (#2093) — thanks @nevilbutani and @martinezpl!
 - Dubbing background preservation and long exports work with newer FFmpeg builds that removed the legacy filter-file option (#2236) — thanks @quan0pek!
 
-<!-- CLEAN-ROOM (spec G-jaketame-1 §10): changelog entry for the book-wide speed control -->
-<!-- CLEAN-ROOM (spec G-jaketame-1 §8): changelog entry for render title and details in Projects -->
-<!-- CLEAN-ROOM (spec G-jaketame-1 §2): changelog entry for seamless joins -->
+- Stories moves the whole-book speed into the setup card, tells you how many lines override it, and lets you clear those overrides at once (#2230) — thanks @jaketame!
+- Finished renders in Projects carry their title, a short voice · speed · engine · length summary and a foldout listing how they were made (#2233) — thanks @jaketame!
+- Audiobook and Stories renders gain optional silence trimming plus adjustable pauses between lines and paragraphs, capped per chapter; leaving them at zero keeps existing audio unchanged (#2216) — thanks @jaketame!
 - Repair dots.tts dependency pins and paths containing spaces, with OpenFst build guidance for source installs (#2101) — thanks @martinezpl!
 
 - Reject unsupported synthesis languages before model loading, including named picker choices and per-item batch languages (#2219) — thanks @rollroyces!

@@ -1711,7 +1711,17 @@
     "delete_selected": "Auswahl löschen ({{count}})",
     "deleted_count": "Gelöscht: {{count}}",
     "delete_warning": "Dies kann nicht rückgängig gemacht werden. Projekte und Transkripte werden entfernt. Beim Löschen von Stimmen oder Aufnahmen wird auch deren gespeichertes Audio gelöscht. Exportierte Dateien und fertig gerendertes Audio bleiben erhalten.",
-    "draft_changed": "Dein Entwurf wurde beim Laden dieses Projekts geändert. Bestätige erneut, um ihn zu ersetzen."
+    "draft_changed": "Dein Entwurf wurde beim Laden dieses Projekts geändert. Bestätige erneut, um ihn zu ersetzen.",
+    "render_details": "So wurde es erstellt",
+    "render_voice": "Stimme",
+    "render_speed": "Tempo",
+    "render_engine": "Engine",
+    "render_language": "Sprache",
+    "render_format": "Format",
+    "render_size_label": "Umfang",
+    "render_size": "{{chapters}} Kapitel · {{lines}} Zeilen · {{words}} Wörter",
+    "render_settings": "Einstellungen",
+    "render_no_details": "Zu diesem Eintrag wurden keine Details gespeichert: Er entstand, bevor Details aufgezeichnet wurden."
   },
   "projectActions": {
     "delete": "„{{name}}“ löschen? Dies kann nicht rückgängig gemacht werden.",
@@ -1825,7 +1835,14 @@
     "toneChip": "Ton & Tempo: {{speed}}",
     "lineVoice": "Zeilenstimme",
     "chapterHeading": "Kapiteltitel",
-    "lineActions": "Zeilenaktionen"
+    "lineActions": "Zeilenaktionen",
+    "splitMode": "Aufteilen nach",
+    "split_sentences": "Sätze",
+    "split_paragraphs": "Absätze",
+    "split_chapters": "Kapitel",
+    "splitModeHint": "Jede Zeile wird als eigene Aufnahme gesprochen. Für einen einzelnen Sprecher klingen Absätze oder Kapitel flüssiger.",
+    "global_speed_overrides": "{{count}} Zeilen haben ein eigenes Tempo",
+    "global_speed_apply": "Buchtempo für alle übernehmen"
   },
   "audiobook": {
     "cast": "Besetzung",
@@ -1950,7 +1967,11 @@
     "emotion_text": "Emotionsbeschreibung",
     "emotion_text_ph": "z.B. klingt erschöpft und traurig",
     "emotion_alpha": "Emotionale Stärke",
-    "lex_duplicate": "Verwende nur eine Aussprache pro Wort."
+    "lex_duplicate": "Verwende nur eine Aussprache pro Wort.",
+    "line_gap": "Pause zwischen Zeilen",
+    "paragraph_gap": "Pause zwischen Absätzen",
+    "trim_edges": "Stille der Engine kürzen",
+    "trim_edges_help": "Schneidet die Stille, die jede Engine vor und nach einer Zeile einfügt, und fügt dann zusammen. Für Rohaufnahmen ausschalten."
   },
   "credentials": {
     "microsoft_key": "Microsoft-Übersetzerschlüssel",

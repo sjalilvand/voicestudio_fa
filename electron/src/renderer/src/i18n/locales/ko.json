@@ -1711,7 +1711,17 @@
     "delete_selected": "선택 항목 삭제 ({{count}})",
     "deleted_count": "삭제됨: {{count}}",
     "delete_warning": "이 작업은 되돌릴 수 없습니다. 프로젝트와 전사 내용이 삭제됩니다. 음성이나 테이크를 삭제하면 저장된 오디오도 삭제됩니다. 내보낸 파일과 완료된 렌더링 오디오는 유지됩니다.",
-    "draft_changed": "프로젝트를 불러오는 동안 초안이 변경되었습니다. 바꾸려면 다시 확인하세요."
+    "draft_changed": "프로젝트를 불러오는 동안 초안이 변경되었습니다. 바꾸려면 다시 확인하세요.",
+    "render_details": "만든 방식",
+    "render_voice": "음성",
+    "render_speed": "속도",
+    "render_engine": "엔진",
+    "render_language": "언어",
+    "render_format": "형식",
+    "render_size_label": "규모",
+    "render_size": "{{chapters}}개 장 · {{lines}}줄 · {{words}}단어",
+    "render_settings": "설정",
+    "render_no_details": "이 항목은 세부 정보가 저장되지 않았습니다. 세부 정보를 기록하기 전에 생성되었습니다."
   },
   "projectActions": {
     "delete": "“{{name}}”을(를) 삭제할까요? 되돌릴 수 없습니다.",
@@ -1825,7 +1835,14 @@
     "toneChip": "톤 및 속도: {{speed}}",
     "lineVoice": "줄 음성",
     "chapterHeading": "챕터 제목",
-    "lineActions": "줄 작업"
+    "lineActions": "줄 작업",
+    "splitMode": "나누는 기준",
+    "split_sentences": "문장",
+    "split_paragraphs": "문단",
+    "split_chapters": "장",
+    "splitModeHint": "각 줄은 별도의 테이크로 읽힙니다. 화자가 한 명이라면 문단이나 장 단위가 더 자연스럽습니다.",
+    "global_speed_overrides": "{{count}}줄이 자체 속도를 사용 중",
+    "global_speed_apply": "책 속도를 모든 줄에 적용"
   },
   "audiobook": {
     "cast": "캐스트",
@@ -1950,7 +1967,11 @@
     "emotion_text": "감정 설명",
     "emotion_text_ph": "예: 지쳐 보이고 슬픈 소리",
     "emotion_alpha": "감정의 강도",
-    "lex_duplicate": "단어마다 발음을 하나만 지정하세요."
+    "lex_duplicate": "단어마다 발음을 하나만 지정하세요.",
+    "line_gap": "줄 사이 간격",
+    "paragraph_gap": "문단 사이 간격",
+    "trim_edges": "엔진 무음 잘라내기",
+    "trim_edges_help": "엔진이 줄 앞뒤에 붙이는 무음을 잘라낸 뒤 이어 붙입니다. 가공되지 않은 결과가 필요하면 끄세요."
   },
   "credentials": {
     "microsoft_key": "마이크로소프트 번역기 키",

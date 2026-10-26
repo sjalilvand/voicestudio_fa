@@ -1,7 +1,7 @@
 import { StoryStems } from './story-stems';
 import { previewStoryLine } from './story-preview';
 import { storyVoicesReady } from './story-inputs';
-import { splitIntoChunks } from '@shared/utils/splitStoryText';
+import { DEFAULT_SPLIT_MODE, splitStoryText, type SplitMode } from '@shared/utils/splitStoryText';
 import { useEffect, useRef, useState } from 'react';
 import { buildAutoCast } from '@shared/utils/autoCast';
 import { SAMPLE_STORY_CAST, SAMPLE_STORY_LINES, SAMPLE_STORY_NAME } from '@shared/data/sampleStory';
@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { BookOpenTextIcon, ChevronRightIcon, PlusIcon, SparklesIcon } from 'lucide-react';
 import { StoryBlock } from './story-block';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { SplitPresetPicker } from './split-preset-picker';
 import { PipelineFailure } from '@/components/pipeline-failure';
 import { describeError } from '@/lib/api/client';
 import { reorder } from '@shared/utils/storyReorder';
@@ -94,8 +94,8 @@ export function StoryEditor({
   };
   const script = draft.importText;
   const setScript = (importText: string) => onChange({ importText });
-  // CLEAN-ROOM (spec G-jaketame-1 §9): the selected split preset state belongs here.
-  const [maximum, setMaximum] = useState(500);
+  const [preset, setPreset] = useState<SplitMode>(DEFAULT_SPLIT_MODE);
+  const [charLimit, setCharLimit] = useState(500);
   const [inputOpen, setInputOpen] = useState(Boolean(script));
   useEffect(() => {
     if (script) setInputOpen(true);
@@ -222,7 +222,7 @@ export function StoryEditor({
               variant="ghost"
               disabled={disabled || !script.trim()}
               onClick={() => {
-                const parts = splitIntoChunks(script, maximum);
+                const parts = splitStoryText(script, preset, charLimit);
                 onChange({
                   lines: [
                     ...draft.lines,
@@ -239,26 +239,15 @@ export function StoryEditor({
             >
               {t('stories.splitIntoTracks')}
             </Button>
-            <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
-              {t('stories.maxChars')}
-              <Input
-                type="number"
-                min="40"
-                max="2000"
-                step="10"
-                className="h-8 w-20"
-                disabled={disabled}
-                value={maximum}
-                onChange={(e) =>
-                  setMaximum(Math.max(40, Math.min(2000, Number(e.target.value) || 40)))
-                }
-              />
-            </label>
-            {/* CLEAN-ROOM (spec G-jaketame-1 §9): the split-preset selector (Sentences,
-                Paragraphs, Chapters) belongs here, with the max-chars field shown only for
-                Sentences. */}
+            <SplitPresetPicker
+              preset={preset}
+              onPreset={setPreset}
+              charLimit={charLimit}
+              onCharLimit={setCharLimit}
+              disabled={disabled}
+            />
           </div>
-          {/* CLEAN-ROOM (spec G-jaketame-1 §9): a one-line hint under the split controls belongs here. */}
+          <p className="text-xs text-muted-foreground">{t('stories.splitModeHint')}</p>
           {notice && (
             <p role="status" className="text-xs text-muted-foreground">
               {notice}

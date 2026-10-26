@@ -34,8 +34,9 @@ _HEADING_RE = re.compile(r"^[ \t]*#[ \t]+(\S.*)$", re.MULTILINE)
 # match attempts across ``finditer`` (the ReDoS source). A voice name never
 # contains a bracket; the value is stripped in code. Empty → default voice.
 _VOICE_RE = re.compile(r"\[voice:([^\]\[]*)\]")
-# CLEAN-ROOM (spec G-jaketame-1 §4): the blank-line pattern used to detect a
-# paragraph break on a markup boundary belongs here.
+# A blank line: two newlines with only spaces/tabs/CR between. One character
+# class, no nesting, so matching stays linear in the input length.
+_BLANK_LINE_RE = re.compile(r"\n[ \t\r]*\n")
 
 
 def _normalize(text: Optional[str]) -> str:
@@ -45,6 +46,32 @@ def _normalize(text: Optional[str]) -> str:
     if not text:
         return ""
     return text.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def _kept_segments(segments: list[dict], default_speed: Optional[float]) -> list[dict]:
+    """Keep segments that still have spoken text; say how each meets the next kept one.
+
+    ``join`` is ``"paragraph"`` when a blank line lies in the whitespace between two
+    kept segments (the first's trailing space, any dropped blank segments, the
+    second's leading space), else ``"continue"``; the last kept segment has none.
+    """
+    from services.ssml_lite import spell_out
+
+    kept = []
+    for idx, seg in enumerate(segments):
+        spoken = (spell_out(seg["text"]) if seg["spell"] else seg["text"]).strip()
+        if spoken:
+            speed = seg["speed"] if seg["speed"] is not None else default_speed
+            kept.append({"at": idx, "text": spoken, "speed": speed})
+    for cur, nxt in zip(kept, kept[1:]):
+        first = segments[cur["at"]]["text"]
+        second = segments[nxt["at"]]["text"]
+        between = "".join(segments[k]["text"] for k in range(cur["at"] + 1, nxt["at"]))
+        gap = first[len(first.rstrip()):] + between + second[:len(second) - len(second.lstrip())]
+        cur["join"] = "paragraph" if _BLANK_LINE_RE.search(gap) else "continue"
+    if kept:
+        kept[-1]["join"] = None
+    return kept
 
 
 def _parse_chapter_body(
@@ -70,36 +97,29 @@ def _parse_chapter_body(
         last = m.end()
     runs.append((cur_voice, body[last:]))
 
-    from services.ssml_lite import parse_ssml_lite, spell_out
+    from services.ssml_lite import parse_ssml_lite
 
     for voice, run_text in runs:
         for span_text, pause_ms in parse_pause_markers(run_text):
             t = span_text.strip()
             if not t and pause_ms == 0:
                 continue  # pure whitespace between markers — nothing to render
-            # CLEAN-ROOM (spec G-jaketame-1 §4): the segment loop below also tracks the
-            # whitespace between kept segments (blank line = paragraph break) and
-            # marks each non-final span's ``join`` ("continue" or "paragraph").
-            rendered: list[tuple[str, Optional[float]]] = []
-            for seg in (parse_ssml_lite(t) if t else []):
-                st = (spell_out(seg["text"]) if seg["spell"] else seg["text"]).strip()
-                if st:
-                    # Inline SSML speed overrides the per-line default; a plain
-                    # segment inherits default_speed.
-                    sp = seg["speed"] if seg["speed"] is not None else default_speed
-                    rendered.append((st, sp))
+            rendered = _kept_segments(parse_ssml_lite(t) if t else [], default_speed)
             if not rendered:
                 # Only-markers / empty text but a real pause → carry the silence.
                 if pause_ms > 0:
                     spans.append({"voice_id": voice, "text": "",
                                   "pause_ms_after": pause_ms, "speed": None})
                 continue
-            for j, (st, sp) in enumerate(rendered):
-                spans.append({
-                    "voice_id": voice, "text": st,
+            for j, piece in enumerate(rendered):
+                span = {
+                    "voice_id": voice, "text": piece["text"],
                     "pause_ms_after": pause_ms if j == len(rendered) - 1 else 0,
-                    "speed": sp,
-                })
+                    "speed": piece["speed"],
+                }
+                if piece["join"]:
+                    span["join"] = piece["join"]
+                spans.append(span)
     return spans
 
 

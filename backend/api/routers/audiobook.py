@@ -30,6 +30,7 @@ import time
 import uuid
 
 from collections.abc import Awaitable, Callable
+from typing import Literal
 
 from core import voice_leases
 from core.render_trace import call as trace_call, stage as trace_stage
@@ -115,8 +116,11 @@ class ExpressiveMixin(BaseModel):
     # GPU-pool worker with an absurd step count or otherwise feed the sampler
     # nonsense. Ranges are generous supersets of the Voice-page controls; unset
     # (None) still means "use the longform default", unchanged. (#1208)
-    # CLEAN-ROOM (spec G-jaketame-1 §5): the three seamless-join request fields
-    # (line gap, paragraph gap, trim edges) belong here, with their bounds.
+    # Join settings (ms of silence between lines / paragraphs, edge trimming).
+    # Zero / false keep the legacy hard joins.
+    line_gap_ms: int = Field(default=0, ge=0, le=5000)
+    paragraph_gap_ms: int = Field(default=0, ge=0, le=5000)
+    trim_edges: bool = False
     num_step: int | None = Field(default=None, ge=1, le=512)
     guidance_scale: float | None = Field(default=None, ge=0.0, le=20.0)
     position_temperature: float | None = Field(default=None, ge=0.0, le=100.0)
@@ -142,7 +146,9 @@ def _expressive_opts(req: "ExpressiveMixin") -> ExpressiveOptions:
         emo_text=(req.emo_text or None),
         emo_alpha=req.emo_alpha,
         vary_repeats=bool(req.vary_repeats),
-        # CLEAN-ROOM (spec G-jaketame-1 §5): lower the join fields into the options here.
+        line_gap_ms=int(req.line_gap_ms),
+        paragraph_gap_ms=int(req.paragraph_gap_ms),
+        trim_edges=bool(req.trim_edges),
     )
 
 
@@ -344,9 +350,51 @@ def _voice_profile_exists(profile_id: str | None) -> bool:
     return row is not None
 
 
-# CLEAN-ROOM (spec G-jaketame-1 §7): the _render_summary() helper (builds the
-# finished render's summary from the plan, voice map, language, format and options)
-# belongs here.
+def _summary_voice_rows(chapters, default_voice, voice_map) -> list[dict]:
+    """``{"id","name"}`` for each distinct profile used, in order of first use."""
+    from core.db import db_conn
+
+    used = dict.fromkeys(
+        pid
+        for chapter in chapters
+        for span in chapter.spans
+        if (pid := _map_span_voice(span.voice_id, default_voice, voice_map))
+    )
+    if not used:
+        return []
+    placeholders = ", ".join("?" * len(used))
+    query = f"SELECT id, name FROM voice_profiles WHERE id IN ({placeholders})"  # nosec B308 B608 - placeholders only
+    with db_conn() as conn:
+        found = dict(tuple(row)[:2] for row in conn.execute(query, tuple(used)).fetchall())
+    return [{"id": pid, "name": found.get(pid) or ""} for pid in used]
+
+
+def _summary_options(opts, backend_cls) -> dict:
+    """Settings that differ from a default render, using effective engine values."""
+    from services.tts_backend import OmniVoiceBackend
+
+    chosen = opts or ExpressiveOptions()
+    recorded = chosen.to_manifest()
+    if backend_cls is OmniVoiceBackend or getattr(backend_cls, "supports_native_omnivoice_controls", False):
+        recorded.update(_omnivoice_sampling_kwargs(chosen))
+    defaults = ExpressiveOptions().to_manifest()
+    return {k: v for k, v in recorded.items() if k not in defaults or defaults[k] != v}
+
+
+def _render_summary(chapters, default_voice, voice_map, language, fmt, opts) -> dict:
+    """Content-free description of a finished render (voices, engine, settings)."""
+    from services.longform_render import render_summary
+    from services.tts_backend import active_backend_id, get_backend_class
+
+    engine = active_backend_id()
+    return render_summary(
+        chapters,
+        voices=_summary_voice_rows(chapters, default_voice, voice_map),
+        engine_id=engine,
+        language=language,
+        fmt=fmt,
+        options=_summary_options(opts, get_backend_class(engine)),
+    )
 
 
 def _map_span_voice(
@@ -676,11 +724,12 @@ def _chapter_cache_inputs(chapter, sr, engine_id, resolve, cache_dir, lexicon=No
     opts = opts or ExpressiveOptions()
 
     spans = [Span(voice_id=s.voice_id, text=normalize_for_tts(s.text, language),
-                  pause_ms_after=s.pause_ms_after, speed=getattr(s, "speed", None))
+                  pause_ms_after=s.pause_ms_after, speed=getattr(s, "speed", None),
+                  join=getattr(s, "join", None))
              for s in chapter.spans]
-    # CLEAN-ROOM (spec G-jaketame-1 §4): each span's ``join`` marker is carried into
-    # the Span here and appended to the chapter-cache tuple only when set.
+    # `join` joins the key tuple only when set, so plain scripts keep old keys.
     spans_tuples = [(s.voice_id, s.text, s.pause_ms_after, getattr(s, "speed", None))
+                    + ((s.join,) if s.join else ())
                     for s in spans]
     # A voice's signature names its reference audio by its path INSIDE the
     # data dir, not the absolute path (#2279): the same profile must key the
@@ -869,9 +918,8 @@ def _render_chapter_cached(chapter, synth, sr, engine_id, resolve, cache_dir, le
                     "audio file is gone (evicted or deleted)", str(chapter.title)[:80])
 
     audio, dur = synthesize_chapter(spans, synth, sr, lexicon=lexicon,
-                                    segment_cache=seg_cache, on_progress=on_progress)
-    # CLEAN-ROOM (spec G-jaketame-1 §2, §3): the options' join settings are passed on to
-    # the chapter renderer at the call above.
+                                    segment_cache=seg_cache, on_progress=on_progress,
+                                    **opts.join_kwargs())
     # Invisible provenance mark on the assembled chapter (#1169), tensor stage,
     # before the WAV lands in the cache — this single site covers every
     # longform front door (/audiobook, /longform/render [Stories],
@@ -1025,8 +1073,8 @@ async def _render_longform_sse(
 
     # Persist a durable resume manifest (plan + params) so an interrupted render
     # can be resumed later even without the original script. Best-effort.
+    title = (metadata or {}).get("title") or (plan.chapters[0].title if plan.chapters else "")
     try:
-        title = (metadata or {}).get("title") or (plan.chapters[0].title if plan.chapters else "")
         longform_resume.write_manifest(longform_resume.build_manifest(
             job_id=job_id, job_type=job_type, title=title,
             plan_chapters=[
@@ -1368,8 +1416,14 @@ async def _render_longform_sse(
         done = {"type": "done", "output": out_name,
                 "chapters": len(chapter_files), "duration_s": round(total_s, 2),
                 "cached_chapters": cached_n, "failed_chapters": failed}
-        # CLEAN-ROOM (spec G-jaketame-1 §7): the optional ``title`` and ``summary``
-        # keys of this ``done`` event are added here (best-effort).
+        if title:
+            done["title"] = str(title)[:200]
+        try:
+            done["summary"] = _render_summary(
+                [c for i, c in enumerate(plan.chapters) if i not in failed],
+                default_voice, voice_map, resolved_lang, fmt, opts)
+        except Exception:  # noqa: BLE001 - the summary is optional detail
+            logger.warning("[%s] render summary skipped", job_id, exc_info=True)
         # Loudness verdict only when a preset was requested — off/None paths keep
         # the exact legacy `done` shape (additive, old clients unaffected).
         if norm in LOUDNESS_PRESETS:
@@ -1473,7 +1527,7 @@ class LongformSpan(BaseModel):
     text: str
     pause_ms_after: int = 0
     speed: float | None = None
-    # CLEAN-ROOM (spec G-jaketame-1 §4): the optional ``join`` field of a request span belongs here.
+    join: Literal["continue", "paragraph"] | None = None
 
 
 class LongformChapter(BaseModel):
@@ -1511,7 +1565,8 @@ async def longform_render(req: LongformRenderRequest, request: Request = None):
         # Keep a span if it has text to speak OR a pause to render (pause-only
         # spans carry inter-line silence with empty text).
         spans = [Span(voice_id=s.voice_id, text=(s.text or "").strip(),
-                      pause_ms_after=max(0, int(s.pause_ms_after)), speed=s.speed)
+                      pause_ms_after=max(0, int(s.pause_ms_after)), speed=s.speed,
+                      join=s.join)
                  for s in c.spans if ((s.text and s.text.strip()) or s.pause_ms_after > 0)]
         if spans:
             chapters.append(Chapter(title=c.title or f"Chapter {i + 1}", spans=spans))

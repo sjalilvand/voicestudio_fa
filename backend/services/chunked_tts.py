@@ -94,8 +94,45 @@ def _effective_max_chars(text: str, max_chars: int) -> int:
     return max_chars
 
 
-# CLEAN-ROOM (spec G-jaketame-1 §1): the edge-silence trim defaults, the
-# trim_edge_silence() helper and the split_paragraphs() helper belong here.
+DEFAULT_TRIM_THRESHOLD_DB = -40.0
+DEFAULT_TRIM_KEEP_MS = 40
+
+_PARAGRAPH_BREAK = re.compile(r"\n[ \t]*\n+")
+
+
+def trim_edge_silence(audio, sample_rate, *, threshold_db=DEFAULT_TRIM_THRESHOLD_DB,
+                      keep_ms=DEFAULT_TRIM_KEEP_MS):
+    """Cut the quiet lead-in and tail an engine adds around a render.
+
+    Works on the last axis of a 1-D or (channels, samples) tensor. A short
+    margin (``keep_ms``) of quiet audio is left on each side so the speech does
+    not start or stop abruptly. Silent or empty input comes back untouched, and
+    so does audio with nothing to cut (the same object).
+    """
+    if audio is None or audio.shape[-1] == 0:
+        return audio
+    level = 10 ** (threshold_db / 20)
+    magnitude = audio.abs()
+    if magnitude.dim() > 1:
+        magnitude = magnitude.reshape(-1, magnitude.shape[-1]).amax(dim=0)
+    loud = (magnitude > level).nonzero()
+    if loud.numel() == 0:
+        return audio
+    margin = int(sample_rate * keep_ms / 1000)
+    total = audio.shape[-1]
+    start = max(0, int(loud[0].item()) - margin)
+    end = min(total, int(loud[-1].item()) + 1 + margin)
+    if start == 0 and end == total:
+        return audio
+    return audio[..., start:end]
+
+
+def split_paragraphs(text) -> List[str]:
+    """Break text into paragraphs at blank lines; a lone newline stays inside."""
+    if not text:
+        return []
+    parts = (p.strip() for p in _PARAGRAPH_BREAK.split(text))
+    return [p for p in parts if p]
 
 
 def split_text_into_chunks(text: str, max_chars: int = DEFAULT_MAX_CHUNK_CHARS) -> List[str]:
@@ -388,7 +425,7 @@ def report_dropped_chunks(dropped: list, total: int, texts=None, sink=None) -> N
 
 def join_rendered_chunks(rendered: list, sample_rate: int, *,
                          crossfade_ms: int = DEFAULT_CROSSFADE_MS,
-                         texts=None, sink=None):
+                         texts=None, sink=None, trim_edges: bool = False):
     """Join what a multi-chunk render produced, reporting whatever it lost.
 
     ``None`` when nothing rendered — the caller's dead-render handling owns
@@ -409,8 +446,8 @@ def join_rendered_chunks(rendered: list, sample_rate: int, *,
     dropped = [i for i, item in enumerate(rendered) if _is_empty(item)]
     empty_idx = set(dropped)
     kept = [item for i, item in enumerate(rendered) if i not in empty_idx]
-    # CLEAN-ROOM (spec G-jaketame-1 §1): the optional ``trim_edges`` parameter of
-    # this function and its edge-trim step on the kept chunks belong here.
+    if trim_edges:
+        kept = [trim_edge_silence(r, sample_rate) for r in kept]
     if not kept:
         if dropped:
             report_dropped_chunks(dropped, len(rendered), texts, sink)

@@ -503,7 +503,12 @@
     "exportFailed": "Exporteren mislukt. Controleer of de backend actief is.",
     "global_speed": "Snelheid",
     "global_speed_hint": "Leessnelheid voor alle lijnen zonder hun eigen snelheidsoverschrijving",
-    "deleteProjectConfirm": "Dit project permanent verwijderen?"
+    "deleteProjectConfirm": "Dit project permanent verwijderen?",
+    "splitMode": "Splitsen op",
+    "split_sentences": "Zinnen",
+    "split_paragraphs": "Alinea’s",
+    "split_chapters": "Hoofdstukken",
+    "splitModeHint": "Elke regel wordt als aparte opname voorgelezen. Met één verteller klinken Alinea’s of Hoofdstukken vloeiender."
   },
   "common": {
     "stop": "Stop",
@@ -2542,7 +2547,11 @@
     "emotion_help": "Gegradueerde emotie — alleen toegepast door de IndexTTS2-engine.",
     "emotion_text": "Emotie beschrijving",
     "emotion_text_ph": "bijv. klinkt uitgeput en verdrietig",
-    "emotion_alpha": "Emotie sterkte"
+    "emotion_alpha": "Emotie sterkte",
+    "line_gap": "Pauze tussen regels",
+    "paragraph_gap": "Pauze tussen alinea’s",
+    "trim_edges": "Stilte van de engine wegknippen",
+    "trim_edges_help": "Knipt de stilte die elke engine voor en na een regel toevoegt weg en voegt daarna samen. Zet uit voor ruwe opnames."
   },
   "voicePanel": {
     "title": "Stem",

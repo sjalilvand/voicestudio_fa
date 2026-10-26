@@ -210,8 +210,72 @@ def test_route_survives_leaked_module_world_purge(monkeypatch):
     )
 
 
-# CLEAN-ROOM (spec G-jaketame-1 §14): tests for the render summary (library pass-through,
-# malformed/non-finite persisted summaries, render_summary content) belong here.
+def _library_item(done_extra: dict) -> dict:
+    job_id = _uid("sum")
+    _seed_done(job_id, type="story",
+               done_payload={"type": "done", "output": f"{job_id}.m4b", "chapters": 1,
+                             "duration_s": 5.0, **done_extra})
+    items = [i for i in build_longform_library(job_store.list_jobs, job_store.events_since)
+             if i["job_id"] == job_id]
+    assert len(items) == 1
+    return items[0]
+
+
+def test_library_passes_a_clean_summary_through_and_omits_a_missing_one():
+    summary = {"engine": "omnivoice", "voices": [{"id": "v1", "name": "Mara"}],
+               "language": "en", "format": "m4b", "lines": 4, "words": 20,
+               "speeds": [1.0, 1.25], "options": {"seed": 0, "vary_repeats": False},
+               "chapter_titles": ["One"]}
+    assert _library_item({"summary": summary})["summary"] == summary
+    assert "summary" not in _library_item({})
+    assert "summary" not in _library_item({"summary": "text"})
+
+
+def test_clean_summary_drops_malformed_and_non_finite_entries():
+    from api.routers.longform_jobs import _clean_summary
+
+    assert _clean_summary(None) is None and _clean_summary([1]) is None
+    cleaned = _clean_summary({
+        "engine": None, "voices": ["x", {"id": 7, "name": None}], "language": 5,
+        "format": "mp3", "lines": "3", "words": "many",
+        "speeds": [True, "1", float("nan"), float("inf"), 1.234, 2],
+        "options": {"a": 1, "b": float("inf"), "c": [1], "d": False, 9: "x", "e": None},
+        "chapter_titles": ["ok", 3, None],
+    })
+    assert cleaned == {
+        "engine": "", "voices": [{"id": "7", "name": ""}], "language": "5",
+        "format": "mp3", "lines": 3, "words": 0, "speeds": [1.23, 2.0],
+        "options": {"a": 1, "d": False, "9": "x"}, "chapter_titles": ["ok"],
+    }
+    wrong = _clean_summary({"voices": 1, "speeds": 1, "options": 1, "chapter_titles": 1})
+    assert wrong["voices"] == [] and wrong["speeds"] == []
+    assert wrong["options"] == {} and wrong["chapter_titles"] == []
+
+
+def test_render_summary_counts_content_free_facts():
+    from types import SimpleNamespace as NS
+    from services.longform_render import render_summary
+
+    chapters = [
+        NS(title="One", spans=[NS(text="hello there world", speed=None),
+                               NS(text="   ", speed=0.5),
+                               NS(text="again", speed=1.256)]),
+        NS(title="Two", spans=[NS(text="more", speed=0), NS(text="nan", speed=float("nan"))]),
+    ]
+    out = render_summary(chapters, voices=[{"id": "v", "name": None}, {"id": "w"}],
+                         engine_id="eng", language=None, fmt="mp3",
+                         options={"seed": 0, "flag": False, "gone": None,
+                                  "nested": {"x": float("nan")}})
+    assert out["engine"] == "eng" and out["language"] == "" and out["format"] == "mp3"
+    assert out["lines"] == 4 and out["words"] == 3 + 1 + 1 + 1
+    assert out["speeds"] == [1.0, 1.26]
+    assert out["voices"] == [{"id": "v", "name": ""}, {"id": "w", "name": ""}]
+    assert out["options"] == {"seed": 0, "flag": False, "nested": {"x": None}}
+    assert out["chapter_titles"] == ["One", "Two"]
+    many = [NS(title=f"T{i}", spans=[]) for i in range(100)]
+    assert len(render_summary(many, voices=[])["chapter_titles"]) == 60
+    assert set(out) == {"engine", "voices", "language", "format", "lines", "words",
+                        "speeds", "options", "chapter_titles"}
 
 
 @pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
@@ -241,3 +305,27 @@ def test_summary_records_effective_tier_settings(monkeypatch):
 def test_summary_oversized_speed_is_ignored():
     from api.routers.longform_jobs import _clean_summary
     assert _clean_summary({"speeds": [10 ** 1000, 1.2]})["speeds"] == [1.2]
+
+
+def test_summary_voice_rows_resolve_names_in_first_use_order(monkeypatch):
+    import contextlib
+    import sqlite3
+    from types import SimpleNamespace as NS
+    from api.routers import audiobook as router
+
+    mem = sqlite3.connect(":memory:")
+    mem.execute("CREATE TABLE voice_profiles (id TEXT, name TEXT)")
+    mem.execute("INSERT INTO voice_profiles VALUES ('p2', 'Second'), ('p1', 'First')")
+
+    @contextlib.contextmanager
+    def fake_conn():
+        yield mem
+
+    monkeypatch.setattr("core.db.db_conn", fake_conn)
+    monkeypatch.setattr(router, "_map_span_voice", lambda vid, default, vmap: vid or default)
+    chapters = [NS(spans=[NS(voice_id="p1"), NS(voice_id=None), NS(voice_id="ghost")]),
+                NS(spans=[NS(voice_id="p2"), NS(voice_id="p1")])]
+    rows = router._summary_voice_rows(chapters, "p2", None)
+    assert rows == [{"id": "p1", "name": "First"}, {"id": "p2", "name": "Second"},
+                    {"id": "ghost", "name": ""}]
+    assert router._summary_voice_rows([], None, None) == []

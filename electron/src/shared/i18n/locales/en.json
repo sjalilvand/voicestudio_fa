@@ -259,7 +259,12 @@
     "minutes": "~{{count}} min",
     "chars": "{{count}} chars",
     "exportFailed": "Export failed — check the backend is running.",
-    "deleteProjectConfirm": "Delete this project permanently?"
+    "deleteProjectConfirm": "Delete this project permanently?",
+    "splitMode": "Split by",
+    "split_sentences": "Sentences",
+    "split_paragraphs": "Paragraphs",
+    "split_chapters": "Chapters",
+    "splitModeHint": "Each line is read as its own take. For a single narrator, Paragraphs or Chapters flow more naturally."
   },
   "nav": {
     "launchpad": "Launchpad",
@@ -390,7 +395,11 @@
     "emotion_help": "Graded emotion — applied by the IndexTTS2 engine only.",
     "emotion_text": "Emotion description",
     "emotion_text_ph": "e.g. sounds exhausted and sad",
-    "emotion_alpha": "Emotion strength"
+    "emotion_alpha": "Emotion strength",
+    "line_gap": "Gap between lines",
+    "paragraph_gap": "Gap between paragraphs",
+    "trim_edges": "Trim engine silence",
+    "trim_edges_help": "Cuts the silence each engine adds before and after a line, then joins. Turn off for raw renders."
   },
   "launchpad": {
     "greeting": "hello there",

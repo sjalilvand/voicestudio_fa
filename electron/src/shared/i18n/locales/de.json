@@ -503,7 +503,12 @@
     "exportFailed": "Der Export ist fehlgeschlagen. Überprüfen Sie, ob das Backend ausgeführt wird.",
     "global_speed": "Geschwindigkeit",
     "global_speed_hint": "Lesegeschwindigkeit für alle Zeilen ohne eigene Geschwindigkeitsüberschreibung",
-    "deleteProjectConfirm": "Dieses Projekt dauerhaft löschen?"
+    "deleteProjectConfirm": "Dieses Projekt dauerhaft löschen?",
+    "splitMode": "Aufteilen nach",
+    "split_sentences": "Sätze",
+    "split_paragraphs": "Absätze",
+    "split_chapters": "Kapitel",
+    "splitModeHint": "Jede Zeile wird als eigene Aufnahme gesprochen. Für einen einzelnen Sprecher klingen Absätze oder Kapitel flüssiger."
   },
   "common": {
     "stop": "Stopp",
@@ -2542,7 +2547,11 @@
     "emotion_help": "Abgestufte Emotion — nur vom IndexTTS2-Engine angewendet.",
     "emotion_text": "Emotionsbeschreibung",
     "emotion_text_ph": "z.B. klingt erschöpft und traurig",
-    "emotion_alpha": "Emotionale Stärke"
+    "emotion_alpha": "Emotionale Stärke",
+    "line_gap": "Pause zwischen Zeilen",
+    "paragraph_gap": "Pause zwischen Absätzen",
+    "trim_edges": "Stille der Engine kürzen",
+    "trim_edges_help": "Schneidet die Stille, die jede Engine vor und nach einer Zeile einfügt, und fügt dann zusammen. Für Rohaufnahmen ausschalten."
   },
   "voicePanel": {
     "title": "Stimme",

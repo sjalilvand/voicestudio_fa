@@ -111,7 +111,25 @@ IndexTTS2 emotion (also available in Voice Cloning; see below), and **Vary repea
 that gives every identical line its own take instead of replaying one recording
 (off by default, so books stay byte-reproducible unless you ask for variety).
 
-<!-- CLEAN-ROOM (spec G-jaketame-1 §2, §13): the paragraph documenting the joins (edge trim, line/paragraph gaps, join budget, legacy equivalence) belongs here. -->
+**Joins between lines.** Every engine pads each render with its own lead-in and
+tail, from tens to hundreds of milliseconds, so the pauses you hear between lines
+are whatever the engine happened to add. The Audiobook and Stories production
+controls make that explicit: **Trim engine silence** cuts everything quieter than
+-40 dBFS from both ends of each render (keeping 40 ms), **Gap between lines**
+and **Gap between paragraphs** then insert exactly the silence you choose, up to
+5 seconds each. With both gaps at zero and trimming off, joins are the old hard
+joins and cache keys are unchanged, including renders that use a seed or
+emotion override, so existing books are not re-rendered. An explicit `[pause]`
+replaces the line gap after its line instead of adding to it. Markup that splits
+one line (`[slow]`, `[fast]`, `[emphasis]`, `[spell]`) is still one line: there
+is no gap inside it, except that a blank line at the split gets the paragraph gap.
+A `[voice:NAME]` change is a line boundary and gets the line gap. A paragraph gap
+above zero renders the paragraphs of a line as separate engine calls; at zero a
+line is one call, exactly as before. The join stage adds at most 15 minutes of
+silence to a chapter; a request beyond that fails before any synthesis or cache
+read, with a message to lower the gaps or split the chapter. Values around 250 ms
+for lines and 350 ms for paragraphs suit most narration, but they are explicit
+choices: the defaults are 0.
 
 **Longform-only tags.** Audiobook and Stories additionally parse SSML-lite —
 `[slow]…[/slow]`, `[fast]…[/fast]`, `[emphasis]…[/emphasis]`, `[spell]` —

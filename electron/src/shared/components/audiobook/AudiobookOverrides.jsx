@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Settings2, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 import { DEFAULT_OVERRIDES } from '../../store/longformSlice';
+import JoinOptions from './JoinOptions';
 
 // Longform render defaults the sliders display when a knob is UNSET (null) —
 // the documented audiobook/longform preset. A null value means "not overridden"
@@ -24,7 +25,6 @@ const CHIP =
 export default function AudiobookOverrides({ t, overrides, onChange, emotionSupported = false }) {
   const [open, setOpen] = useState(false);
   const o = overrides;
-
   return (
     <div className="audiobook-tab__field flex flex-col gap-[6px]">
       <div className="flex items-center justify-between">
@@ -152,8 +152,7 @@ export default function AudiobookOverrides({ t, overrides, onChange, emotionSupp
             </label>
           </div>
 
-          {/* CLEAN-ROOM (spec G-jaketame-1 §6): the seamless-join controls (help text, line-gap
-              slider, paragraph-gap slider, trim-silence checkbox) belong here. */}
+          <JoinOptions t={t} overrides={o} onChange={onChange} />
 
           {emotionSupported && (
             <div className="flex flex-col gap-[6px] pt-[6px] [border-top:1px_solid_rgba(255,255,255,0.06)]">
@@ -192,6 +191,12 @@ export default function AudiobookOverrides({ t, overrides, onChange, emotionSupp
   );
 }
 
+const JOIN_FIELDS = [
+  ['lineGapMs', 'line_gap_ms'],
+  ['paragraphGapMs', 'paragraph_gap_ms'],
+  ['trimEdges', 'trim_edges'],
+];
+
 /**
  * Lower the persisted overrides (+ language) into the snake_case request fields
  * the backend expects. Only NON-default values are emitted, so an untouched
@@ -214,6 +219,9 @@ export function overridesToRequest(overrides, language) {
     body.emo_text = emo;
     if (o.emoAlpha != null) body.emo_alpha = o.emoAlpha;
   }
-  // CLEAN-ROOM (spec G-jaketame-1 §6): emit line_gap_ms, paragraph_gap_ms, trim_edges here.
+  for (const [field, wire] of JOIN_FIELDS) {
+    // `0` and `false` are deliberate; only an unset (null/undefined) knob is skipped.
+    if (o[field] !== null && o[field] !== undefined) body[wire] = o[field];
+  }
   return body;
 }

@@ -503,7 +503,12 @@
     "exportFailed": "Falha na exportação – verifique se o back-end está em execução.",
     "global_speed": "Velocidade",
     "global_speed_hint": "Velocidade de leitura para todas as linhas sem sua própria substituição de velocidade",
-    "deleteProjectConfirm": "Excluir este projeto permanentemente?"
+    "deleteProjectConfirm": "Excluir este projeto permanentemente?",
+    "splitMode": "Dividir por",
+    "split_sentences": "Frases",
+    "split_paragraphs": "Parágrafos",
+    "split_chapters": "Capítulos",
+    "splitModeHint": "Cada linha é lida como uma gravação separada. Com um único narrador, Parágrafos ou Capítulos soam mais naturais."
   },
   "common": {
     "stop": "Pare",
@@ -2542,7 +2547,11 @@
     "emotion_help": "Emoção graduada — aplicada apenas pelo mecanismo IndexTTS2.",
     "emotion_text": "Descrição da emoção",
     "emotion_text_ph": "ex.: soa exausto e triste",
-    "emotion_alpha": "Força emocional"
+    "emotion_alpha": "Força emocional",
+    "line_gap": "Pausa entre linhas",
+    "paragraph_gap": "Pausa entre parágrafos",
+    "trim_edges": "Cortar o silêncio do motor",
+    "trim_edges_help": "Remove o silêncio que cada motor acrescenta antes e depois de uma linha e depois junta tudo. Desative para renders brutos."
   },
   "voicePanel": {
     "title": "Voz",

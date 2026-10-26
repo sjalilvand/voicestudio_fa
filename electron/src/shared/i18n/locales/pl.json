@@ -503,7 +503,12 @@
     "exportFailed": "Eksport nie powiódł się — sprawdź, czy backend działa.",
     "global_speed": "Prędkość",
     "global_speed_hint": "Prędkość odczytu dla wszystkich linii bez własnego sterowania prędkością",
-    "deleteProjectConfirm": "Usunąć ten projekt na stałe?"
+    "deleteProjectConfirm": "Usunąć ten projekt na stałe?",
+    "splitMode": "Podziel według",
+    "split_sentences": "Zdania",
+    "split_paragraphs": "Akapity",
+    "split_chapters": "Rozdziały",
+    "splitModeHint": "Każdy wiersz jest czytany jako osobne nagranie. Przy jednym narratorze Akapity lub Rozdziały brzmią płynniej."
   },
   "common": {
     "stop": "Zatrzymaj się",
@@ -2542,7 +2547,11 @@
     "emotion_help": "Stopniowana emocja — zastosowana tylko przez silnik IndexTTS2.",
     "emotion_text": "Opis emocji",
     "emotion_text_ph": "np. brzmi wyczerpany i smutny",
-    "emotion_alpha": "Siła emocji"
+    "emotion_alpha": "Siła emocji",
+    "line_gap": "Przerwa między wierszami",
+    "paragraph_gap": "Przerwa między akapitami",
+    "trim_edges": "Przytnij ciszę silnika",
+    "trim_edges_help": "Usuwa ciszę, którą każdy silnik dodaje przed wierszem i po nim, a potem łączy nagrania. Wyłącz, aby uzyskać surowe nagrania."
   },
   "voicePanel": {
     "title": "Głos",

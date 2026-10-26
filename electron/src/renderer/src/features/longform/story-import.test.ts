@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import { importToText } from '@shared/utils/importStory';
-import { splitIntoChunks } from '@shared/utils/splitStoryText';
+import { splitIntoChunks, splitStoryText } from '@shared/utils/splitStoryText';
 it('removes SRT metadata and retains spoken lines', () => {
   expect(
     importToText(
@@ -16,8 +16,32 @@ it('splits locally with bounded chunks and stable text order', () => {
   expect(chunks.join(' ')).toBe(text);
   expect(splitIntoChunks('', 500)).toEqual([]);
 });
-// CLEAN-ROOM (spec G-jaketame-1 §14): the test of the split presets (paragraph and chapter
-// lines with headings kept separate) belongs here.
+it('splits by paragraph or chapter and keeps each heading as its own line', () => {
+  const text =
+    'Prologue words.\r\n\r\n# One\nFirst para\nstill first.\n\nSecond para.\n## Not a chapter\n# Two\nOnly body';
+  expect(splitStoryText(text, 'paragraphs')).toEqual([
+    'Prologue words.',
+    '# One',
+    'First para\nstill first.',
+    'Second para.\n## Not a chapter',
+    '# Two',
+    'Only body',
+  ]);
+  expect(splitStoryText(text, 'chapters')).toEqual([
+    'Prologue words.',
+    '# One',
+    'First para\nstill first.\n\nSecond para.\n## Not a chapter',
+    '# Two',
+    'Only body',
+  ]);
+  // One block without a blank line falls back to its single newlines.
+  expect(splitStoryText('a\nb\nc', 'paragraphs')).toEqual(['a', 'b', 'c']);
+  expect(splitStoryText('One. Two. Three.', 'sentences', 40)).toEqual(['One. Two. Three.']);
+  expect(splitStoryText('# Heading\nBody here.', 'sentences')).toEqual(['# Heading', 'Body here.']);
+  for (const mode of ['sentences', 'paragraphs', 'chapters'] as const) {
+    expect(splitStoryText('  \n ', mode)).toEqual([]);
+  }
+});
 
 it('decodes a UTF-16 manuscript before extracting subtitle speech', async () => {
   const { readTextFile } = await import('@shared/utils/readTextFile');

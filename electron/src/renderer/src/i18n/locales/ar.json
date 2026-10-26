@@ -1719,7 +1719,17 @@
     "delete_selected": "حذف المحدد ({{count}})",
     "deleted_count": "تم الحذف: {{count}}",
     "delete_warning": "لا يمكن التراجع عن هذا الإجراء. تُحذف المشاريع والنصوص. حذف الأصوات أو التسجيلات يحذف أيضًا الصوت المخزن لها. تُحفظ الملفات المصدّرة وصوت العروض المكتملة.",
-    "draft_changed": "تغيّرت مسودتك أثناء تحميل هذا المشروع. أكّد مرة أخرى لاستبدالها."
+    "draft_changed": "تغيّرت مسودتك أثناء تحميل هذا المشروع. أكّد مرة أخرى لاستبدالها.",
+    "render_details": "كيف أُنشئ",
+    "render_voice": "الصوت",
+    "render_speed": "السرعة",
+    "render_engine": "المحرّك",
+    "render_language": "اللغة",
+    "render_format": "الصيغة",
+    "render_size_label": "الحجم",
+    "render_size": "{{chapters}} فصول · {{lines}} أسطر · {{words}} كلمات",
+    "render_settings": "الإعدادات",
+    "render_no_details": "لم تُحفظ تفاصيل لهذا العنصر: فقد أُنشئ قبل بدء تسجيل التفاصيل."
   },
   "projectActions": {
     "delete": "هل تريد حذف «{{name}}»؟ لا يمكن التراجع عن ذلك.",
@@ -1833,7 +1843,14 @@
     "toneChip": "النبرة والسرعة: {{speed}}",
     "lineVoice": "صوت السطر",
     "chapterHeading": "عنوان الفصل",
-    "lineActions": "إجراءات السطر"
+    "lineActions": "إجراءات السطر",
+    "splitMode": "التقسيم حسب",
+    "split_sentences": "الجُمل",
+    "split_paragraphs": "الفقرات",
+    "split_chapters": "الفصول",
+    "splitModeHint": "يُقرأ كل سطر كتسجيل مستقل. مع راوٍ واحد تبدو الفقرات أو الفصول أكثر سلاسة.",
+    "global_speed_overrides": "{{count}} أسطر لها سرعتها الخاصة",
+    "global_speed_apply": "استخدام سرعة الكتاب للجميع"
   },
   "audiobook": {
     "cast": "طاقم الأصوات",
@@ -1966,7 +1983,11 @@
     "emotion_text": "وصف العاطفة",
     "emotion_text_ph": "على سبيل المثال يبدو متعباً وحزيناً",
     "emotion_alpha": "قوة العاطفة",
-    "lex_duplicate": "احتفظ بنطق واحد لكل كلمة."
+    "lex_duplicate": "احتفظ بنطق واحد لكل كلمة.",
+    "line_gap": "الفاصل بين الأسطر",
+    "paragraph_gap": "الفاصل بين الفقرات",
+    "trim_edges": "قصّ صمت المحرّك",
+    "trim_edges_help": "يقصّ الصمت الذي يضيفه كل محرّك قبل السطر وبعده ثم يدمج المقاطع. أوقفه للحصول على مخرجات خام."
   },
   "credentials": {
     "microsoft_key": "مفتاح مترجم مايكروسوفت",

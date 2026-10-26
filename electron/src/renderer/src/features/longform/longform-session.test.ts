@@ -185,8 +185,21 @@ it('sends identical explicit production overrides to preview and full render', (
   }
 });
 
-// CLEAN-ROOM (spec G-jaketame-1 §14): the test that join overrides reach both the preview and
-// the full-render request bodies only once touched belongs here.
+it.each([
+  ['full render', (d: Parameters<typeof renderBody>[1]) => renderBody('audiobook', d)],
+  ['chapter preview', (d: Parameters<typeof renderBody>[1]) => chapterPreviewBody(d, 1)],
+])('%s: join knobs appear on the wire only after being set', (_name, build) => {
+  const pristine = longformSession.state.drafts.audiobook;
+  const untouched = build(pristine) as Record<string, unknown>;
+  expect(['line_gap_ms', 'paragraph_gap_ms', 'trim_edges'].filter((k) => k in untouched)).toEqual(
+    [],
+  );
+  const tuned = build({
+    ...pristine,
+    overrides: { ...pristine.overrides, lineGapMs: 200, paragraphGapMs: 0, trimEdges: true },
+  }) as Record<string, unknown>;
+  expect(tuned).toMatchObject({ line_gap_ms: 200, paragraph_gap_ms: 0, trim_edges: true });
+});
 
 it('does not recreate a cleared draft during pagehide persistence', async () => {
   editLongform('stories', { script: 'Must stay deleted' });

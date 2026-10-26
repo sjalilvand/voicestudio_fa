@@ -503,7 +503,12 @@
     "exportFailed": "Dışa aktarma başarısız oldu — arka ucun çalıştığını kontrol edin.",
     "global_speed": "Hız",
     "global_speed_hint": "Kendi hız geçersiz kılma özelliği olmadan tüm satırlar için okuma hızı",
-    "deleteProjectConfirm": "Bu proje kalıcı olarak silinsin mi?"
+    "deleteProjectConfirm": "Bu proje kalıcı olarak silinsin mi?",
+    "splitMode": "Bölme ölçütü",
+    "split_sentences": "Cümleler",
+    "split_paragraphs": "Paragraflar",
+    "split_chapters": "Bölümler",
+    "splitModeHint": "Her satır ayrı bir kayıt olarak okunur. Tek anlatıcı için Paragraflar veya Bölümler daha akıcı olur."
   },
   "common": {
     "stop": "Durdur",
@@ -2542,7 +2547,11 @@
     "emotion_help": "Dereceli duygu — yalnızca IndexTTS2 motoru tarafından uygulanır.",
     "emotion_text": "Duygu açıklaması",
     "emotion_text_ph": "örn. tükenmiş ve üzgün geliyor",
-    "emotion_alpha": "Duygu gücü"
+    "emotion_alpha": "Duygu gücü",
+    "line_gap": "Satırlar arası boşluk",
+    "paragraph_gap": "Paragraflar arası boşluk",
+    "trim_edges": "Motor sessizliğini kırp",
+    "trim_edges_help": "Her motorun satırdan önce ve sonra eklediği sessizliği keser, sonra birleştirir. Ham çıktı için kapatın."
   },
   "voicePanel": {
     "title": "Ses",

@@ -1711,7 +1711,17 @@
     "delete_selected": "Ta bort markerade ({{count}})",
     "deleted_count": "Borttagna: {{count}}",
     "delete_warning": "Detta kan inte ångras. Projekt och transkriptioner tas bort. När röster eller tagningar tas bort raderas även deras sparade ljud. Exporterade filer och färdigrenderat ljud behålls.",
-    "draft_changed": "Ditt utkast ändrades medan projektet laddades. Bekräfta igen för att ersätta det."
+    "draft_changed": "Ditt utkast ändrades medan projektet laddades. Bekräfta igen för att ersätta det.",
+    "render_details": "Så skapades den",
+    "render_voice": "Röst",
+    "render_speed": "Hastighet",
+    "render_engine": "Motor",
+    "render_language": "Språk",
+    "render_format": "Format",
+    "render_size_label": "Storlek",
+    "render_size": "{{chapters}} kapitel · {{lines}} rader · {{words}} ord",
+    "render_settings": "Inställningar",
+    "render_no_details": "Inga detaljer sparades för den här: den skapades innan detaljer registrerades."
   },
   "projectActions": {
     "delete": "Ta bort ”{{name}}”? Detta kan inte ångras.",
@@ -1825,7 +1835,14 @@
     "toneChip": "Ton och tempo: {{speed}}",
     "lineVoice": "Radens röst",
     "chapterHeading": "Kapiteltitel",
-    "lineActions": "Radåtgärder"
+    "lineActions": "Radåtgärder",
+    "splitMode": "Dela upp efter",
+    "split_sentences": "Meningar",
+    "split_paragraphs": "Stycken",
+    "split_chapters": "Kapitel",
+    "splitModeHint": "Varje rad läses som en egen inspelning. Med en enda berättare flyter Stycken eller Kapitel bättre.",
+    "global_speed_overrides": "{{count}} rader har egen hastighet",
+    "global_speed_apply": "Använd bokens hastighet för alla"
   },
   "audiobook": {
     "cast": "Rollbesättning",
@@ -1950,7 +1967,11 @@
     "emotion_text": "Emotionsbeskrivning",
     "emotion_text_ph": "t.ex. låter uttömd och ledsen",
     "emotion_alpha": "Emotionsstyrka",
-    "lex_duplicate": "Ange ett uttal per ord."
+    "lex_duplicate": "Ange ett uttal per ord.",
+    "line_gap": "Paus mellan rader",
+    "paragraph_gap": "Paus mellan stycken",
+    "trim_edges": "Trimma motorns tystnad",
+    "trim_edges_help": "Klipper bort tystnaden som varje motor lägger före och efter en rad och fogar sedan ihop. Stäng av för råa renderingar."
   },
   "credentials": {
     "microsoft_key": "Microsoft Translator-nyckel",

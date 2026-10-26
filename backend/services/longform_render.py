@@ -845,8 +845,12 @@ def build_render_cmd(
     return local_inputs_only(cmd, tool="ffmpeg")
 
 
-# CLEAN-ROOM (spec G-jaketame-1 §7): the "render summary" section header and the
-# cap on kept chapter titles belong here.
+# ── Render summary ───────────────────────────────────────────────────────────
+# A content-free note on how a finished render was made (settings and counts,
+# never script text), shown later in the Projects list.
+
+#: At most this many chapter titles are kept in a summary.
+_SUMMARY_MAX_TITLES = 60
 
 
 def _summary_json_value(value):
@@ -860,5 +864,45 @@ def _summary_json_value(value):
     return value
 
 
-# CLEAN-ROOM (spec G-jaketame-1 §7): render_summary() belongs here, after
-# _summary_json_value().
+def render_summary(chapters, *, voices, engine_id="", language=None, fmt="",
+                   options=None) -> dict:
+    """Describe a finished render without including any of its text.
+
+    ``chapters`` are objects with ``title`` and ``spans`` (``text``, ``speed``).
+    Only non-blank spans count as lines. ``options`` keeps every entry that is
+    not ``None`` (a seed of 0 or an explicit False is a real choice).
+    """
+    lines = 0
+    words = 0
+    speeds: set = set()
+    for chapter in chapters:
+        for span in chapter.spans:
+            text = (span.text or "").strip()
+            if not text:
+                continue
+            lines += 1
+            words += len(text.split())
+            raw = getattr(span, "speed", None)
+            rate = 1.0 if not raw else raw
+            try:
+                rate = float(rate)
+            except (TypeError, ValueError):
+                continue
+            if math.isfinite(rate):
+                speeds.add(round(rate, 2))
+    voice_list = []
+    for v in voices or []:
+        if isinstance(v, dict):
+            voice_list.append({"id": str(v.get("id") or ""), "name": str(v.get("name") or "")})
+    return {
+        "engine": engine_id or "",
+        "voices": voice_list,
+        "language": language or "",
+        "format": fmt or "",
+        "lines": lines,
+        "words": words,
+        "speeds": sorted(speeds),
+        "options": {str(k): _summary_json_value(v)
+                    for k, v in (options or {}).items() if v is not None},
+        "chapter_titles": [str(c.title) for c in list(chapters)[:_SUMMARY_MAX_TITLES]],
+    }

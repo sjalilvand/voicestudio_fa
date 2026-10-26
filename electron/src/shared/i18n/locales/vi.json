@@ -503,7 +503,12 @@
     "exportFailed": "Xuất không thành công - kiểm tra xem chương trình phụ trợ có đang chạy không.",
     "global_speed": "Tốc độ",
     "global_speed_hint": "Tốc độ đọc cho tất cả các dòng mà không cần ghi đè tốc độ riêng",
-    "deleteProjectConfirm": "Xóa vĩnh viễn dự án này?"
+    "deleteProjectConfirm": "Xóa vĩnh viễn dự án này?",
+    "splitMode": "Tách theo",
+    "split_sentences": "Câu",
+    "split_paragraphs": "Đoạn",
+    "split_chapters": "Chương",
+    "splitModeHint": "Mỗi dòng được đọc thành một bản thu riêng. Với một người đọc, Đoạn hoặc Chương nghe mượt hơn."
   },
   "common": {
     "stop": "Dừng lại",
@@ -2542,7 +2547,11 @@
     "emotion_help": "Cảm xúc dần dần — chỉ được áp dụng bởi công cụ IndexTTS2.",
     "emotion_text": "Mô tả cảm xúc",
     "emotion_text_ph": "ví dụ: nghe vẻ mệt mỏi và buồn",
-    "emotion_alpha": "Độ mạnh của cảm xúc"
+    "emotion_alpha": "Độ mạnh của cảm xúc",
+    "line_gap": "Khoảng nghỉ giữa các dòng",
+    "paragraph_gap": "Khoảng nghỉ giữa các đoạn",
+    "trim_edges": "Cắt khoảng lặng của công cụ",
+    "trim_edges_help": "Cắt khoảng lặng mà mỗi công cụ thêm trước và sau một dòng rồi mới ghép lại. Tắt để lấy bản thô."
   },
   "voicePanel": {
     "title": "Giọng nói",

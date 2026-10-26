@@ -87,8 +87,54 @@ def _coerce_float(value, default: float = 0.0) -> float:
         return default
 
 
-# CLEAN-ROOM (spec G-jaketame-1 §7): the _clean_summary() helper (coerces a persisted
-# render summary to the safe client-facing shape) belongs here.
+def _clean_summary(raw) -> Optional[dict]:
+    """Reduce a stored render summary to a fixed, safe shape.
+
+    The summary lives in a persisted event, so nothing in it is trusted:
+    anything of the wrong type is dropped rather than passed to the client.
+    """
+    if not isinstance(raw, dict):
+        return None
+
+    def text(value) -> str:
+        return str(value) if value else ""
+
+    voices = []
+    if isinstance(raw.get("voices"), list):
+        for v in raw["voices"]:
+            if isinstance(v, dict):
+                voices.append({"id": text(v.get("id")), "name": text(v.get("name"))})
+
+    speeds = []
+    if isinstance(raw.get("speeds"), list):
+        for v in raw["speeds"]:
+            if isinstance(v, bool) or not isinstance(v, (int, float)):
+                continue
+            try:
+                number = float(v)
+            except OverflowError:
+                continue
+            if math.isfinite(number):
+                speeds.append(round(number, 2))
+
+    options = {}
+    if isinstance(raw.get("options"), dict):
+        for key, v in raw["options"].items():
+            if isinstance(v, (str, int, bool)) or (isinstance(v, float) and math.isfinite(v)):
+                options[str(key)] = v
+
+    titles = raw.get("chapter_titles")
+    return {
+        "engine": text(raw.get("engine")),
+        "voices": voices,
+        "language": text(raw.get("language")),
+        "format": text(raw.get("format")),
+        "lines": _coerce_int(raw.get("lines")),
+        "words": _coerce_int(raw.get("words")),
+        "speeds": speeds,
+        "options": options,
+        "chapter_titles": [t for t in titles if isinstance(t, str)] if isinstance(titles, list) else [],
+    }
 
 
 def build_longform_library(
@@ -105,7 +151,7 @@ def build_longform_library(
     * ``events_since(job_id)`` → that job's persisted SSE events.
 
     Returns ``[{job_id, type, title?, output, duration_s, chapters,
-    created_at}]``. Jobs that aren't a longform type, or whose ``done`` event /
+    created_at, summary?}]``. Jobs that aren't a longform type, or whose ``done`` event /
     output filename can't be recovered, are silently skipped — the library only
     ever lists things the user can actually re-download.
     """
@@ -167,8 +213,9 @@ def build_longform_library(
                         title = None
             if title:
                 item["title"] = title
-            # CLEAN-ROOM (spec G-jaketame-1 §7): the optional sanitised ``summary``
-            # of the done event is attached to the item here.
+            summary = _clean_summary(done.get("summary"))
+            if summary is not None:
+                item["summary"] = summary
             out.append(item)
         except Exception:
             # Per-row isolation: one bad row never sinks the whole list.

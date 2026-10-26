@@ -17,6 +17,7 @@ import { cueSheetFor } from './cue-sheet';
 import { saveLocalFile } from '@/lib/local-export';
 import { StoryEditor } from './story-editor';
 import { StoryCast } from './story-cast';
+import { StorySpeed } from './story-speed';
 import { clearedScriptPatch, scriptSize } from './story-clear';
 import { ConfirmDialog } from '../clone/confirm-dialog';
 import { AudiobookMarkupToolbar } from './audiobook-markup-toolbar';
@@ -278,7 +279,9 @@ export function LongformPage({ mode }: { mode: Mode }) {
                 </Button>
               ))}
             </div>
-            {/* CLEAN-ROOM (spec G-jaketame-1 §10): the book-wide speed control (stories mode only) belongs here. */}
+            {mode === 'stories' ? (
+              <StorySpeed draft={draft} disabled={locked} onChange={set} />
+            ) : null}
             <div className="space-y-2">
               <h2 className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                 <LanguagesIcon className="size-4" aria-hidden="true" />

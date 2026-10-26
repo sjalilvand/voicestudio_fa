@@ -503,7 +503,12 @@
     "exportFailed": "匯出失敗 — 檢查後端是否正在運作。",
     "global_speed": "速度",
     "global_speed_hint": "所有線路的讀取速度，沒有自己的速度覆蓋",
-    "deleteProjectConfirm": "要永久刪除此專案嗎？"
+    "deleteProjectConfirm": "要永久刪除此專案嗎？",
+    "splitMode": "拆分依據",
+    "split_sentences": "句子",
+    "split_paragraphs": "段落",
+    "split_chapters": "章節",
+    "splitModeHint": "每一行都會當作獨立的一遍朗讀。只有一位敘述者時，依段落或章節拆分聽起來更自然。"
   },
   "common": {
     "stop": "停止",
@@ -2542,7 +2547,11 @@
     "emotion_help": "分層情感 — 僅由 IndexTTS2 引擎應用。",
     "emotion_text": "情感描述",
     "emotion_text_ph": "例如 聽起來很疲勞和悲傷",
-    "emotion_alpha": "情感強度"
+    "emotion_alpha": "情感強度",
+    "line_gap": "行間停頓",
+    "paragraph_gap": "段落間停頓",
+    "trim_edges": "裁掉引擎靜音",
+    "trim_edges_help": "先裁掉各引擎在每行前後加入的靜音，再接合。需要原始輸出時請關閉。"
   },
   "voicePanel": {
     "title": "語音",

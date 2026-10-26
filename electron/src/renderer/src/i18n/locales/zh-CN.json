@@ -1711,7 +1711,17 @@
     "delete_selected": "删除所选项（{{count}}）",
     "deleted_count": "已删除：{{count}}",
     "delete_warning": "此操作无法撤销。项目和转录文本将被删除。删除声音或录音也会删除其保存的音频。导出的文件和已完成渲染的音频将保留。",
-    "draft_changed": "加载此项目时，你的草稿已更改。请再次确认以替换草稿。"
+    "draft_changed": "加载此项目时，你的草稿已更改。请再次确认以替换草稿。",
+    "render_details": "制作方式",
+    "render_voice": "声音",
+    "render_speed": "语速",
+    "render_engine": "引擎",
+    "render_language": "语言",
+    "render_format": "格式",
+    "render_size_label": "规模",
+    "render_size": "{{chapters}} 章 · {{lines}} 行 · {{words}} 词",
+    "render_settings": "设置",
+    "render_no_details": "此项没有保存详情：它生成于开始记录详情之前。"
   },
   "projectActions": {
     "delete": "删除“{{name}}”？此操作无法撤销。",
@@ -1825,7 +1835,14 @@
     "toneChip": "语气与语速：{{speed}}",
     "lineVoice": "本行声音",
     "chapterHeading": "章节标题",
-    "lineActions": "行操作"
+    "lineActions": "行操作",
+    "splitMode": "拆分依据",
+    "split_sentences": "句子",
+    "split_paragraphs": "段落",
+    "split_chapters": "章节",
+    "splitModeHint": "每一行都会作为独立的一遍朗读。只有一位讲述者时，按段落或章节拆分听起来更自然。",
+    "global_speed_overrides": "{{count}} 行使用自己的语速",
+    "global_speed_apply": "对所有行应用全书语速"
   },
   "audiobook": {
     "cast": "配音角色",
@@ -1950,7 +1967,11 @@
     "emotion_text": "情感描述",
     "emotion_text_ph": "例如：听起来疲惫而悲伤",
     "emotion_alpha": "情感强度",
-    "lex_duplicate": "每个词只保留一种发音。"
+    "lex_duplicate": "每个词只保留一种发音。",
+    "line_gap": "行间停顿",
+    "paragraph_gap": "段落间停顿",
+    "trim_edges": "裁掉引擎静音",
+    "trim_edges_help": "先裁掉各引擎在每行前后添加的静音，再拼接。需要原始输出时请关闭。"
   },
   "credentials": {
     "microsoft_key": "Microsoft Translator 密钥",

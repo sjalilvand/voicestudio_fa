@@ -1711,7 +1711,17 @@
     "delete_selected": "Selectie verwijderen ({{count}})",
     "deleted_count": "Verwijderd: {{count}}",
     "delete_warning": "Dit kan niet ongedaan worden gemaakt. Projecten en transcripties worden verwijderd. Bij het verwijderen van stemmen of opnamen wordt ook hun opgeslagen audio verwijderd. Geëxporteerde bestanden en voltooide audiorenders blijven bewaard.",
-    "draft_changed": "Je concept is gewijzigd tijdens het laden van dit project. Bevestig opnieuw om het te vervangen."
+    "draft_changed": "Je concept is gewijzigd tijdens het laden van dit project. Bevestig opnieuw om het te vervangen.",
+    "render_details": "Hoe het is gemaakt",
+    "render_voice": "Stem",
+    "render_speed": "Snelheid",
+    "render_engine": "Engine",
+    "render_language": "Taal",
+    "render_format": "Formaat",
+    "render_size_label": "Omvang",
+    "render_size": "{{chapters}} hoofdstukken · {{lines}} regels · {{words}} woorden",
+    "render_settings": "Instellingen",
+    "render_no_details": "Voor dit item zijn geen details bewaard: het is gemaakt voordat details werden vastgelegd."
   },
   "projectActions": {
     "delete": "‘{{name}}’ verwijderen? Dit kan niet ongedaan worden gemaakt.",
@@ -1825,7 +1835,14 @@
     "toneChip": "Toon en snelheid: {{speed}}",
     "lineVoice": "Regelstem",
     "chapterHeading": "Hoofdstuktitel",
-    "lineActions": "Regelacties"
+    "lineActions": "Regelacties",
+    "splitMode": "Splitsen op",
+    "split_sentences": "Zinnen",
+    "split_paragraphs": "Alinea’s",
+    "split_chapters": "Hoofdstukken",
+    "splitModeHint": "Elke regel wordt als aparte opname voorgelezen. Met één verteller klinken Alinea’s of Hoofdstukken vloeiender.",
+    "global_speed_overrides": "{{count}} regels hebben een eigen snelheid",
+    "global_speed_apply": "Boeksnelheid op alles toepassen"
   },
   "audiobook": {
     "cast": "Cast",
@@ -1950,7 +1967,11 @@
     "emotion_text": "Emotie beschrijving",
     "emotion_text_ph": "bijv. klinkt uitgeput en verdrietig",
     "emotion_alpha": "Emotie sterkte",
-    "lex_duplicate": "Gebruik één uitspraak per woord."
+    "lex_duplicate": "Gebruik één uitspraak per woord.",
+    "line_gap": "Pauze tussen regels",
+    "paragraph_gap": "Pauze tussen alinea’s",
+    "trim_edges": "Stilte van de engine wegknippen",
+    "trim_edges_help": "Knipt de stilte die elke engine voor en na een regel toevoegt weg en voegt daarna samen. Zet uit voor ruwe opnames."
   },
   "credentials": {
     "microsoft_key": "Microsoft Translator-sleutel",

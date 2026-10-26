@@ -1863,7 +1863,17 @@
     "delete_selected": "Delete selected ({{count}})",
     "deleted_count": "Deleted: {{count}}",
     "delete_warning": "This cannot be undone. Projects and transcripts are removed. Deleting voices or takes also removes their stored audio. Exported files and finished render audio are kept.",
-    "draft_changed": "Your draft changed while this project was loading. Confirm again to replace it."
+    "draft_changed": "Your draft changed while this project was loading. Confirm again to replace it.",
+    "render_details": "How it was made",
+    "render_voice": "Voice",
+    "render_speed": "Speed",
+    "render_engine": "Engine",
+    "render_language": "Language",
+    "render_format": "Format",
+    "render_size_label": "Size",
+    "render_size": "{{chapters}} chapters · {{lines}} lines · {{words}} words",
+    "render_settings": "Settings",
+    "render_no_details": "No details were kept for this one: it was rendered before details were recorded."
   },
   "projectActions": {
     "delete": "Delete “{{name}}”? This cannot be undone.",
@@ -1964,7 +1974,14 @@
     "toneChip": "Tone & speed: {{speed}}",
     "lineVoice": "Line voice",
     "chapterHeading": "Chapter title",
-    "lineActions": "Line actions"
+    "lineActions": "Line actions",
+    "splitMode": "Split by",
+    "split_sentences": "Sentences",
+    "split_paragraphs": "Paragraphs",
+    "split_chapters": "Chapters",
+    "splitModeHint": "Each line is read as its own take. For a single narrator, Paragraphs or Chapters flow more naturally.",
+    "global_speed_overrides": "{{count}} lines use their own speed",
+    "global_speed_apply": "Use book speed for all"
   },
   "audiobook": {
     "cast": "Cast",
@@ -2089,7 +2106,11 @@
     "emotion_text": "Emotion description",
     "emotion_text_ph": "e.g. sounds exhausted and sad",
     "emotion_alpha": "Emotion strength",
-    "lex_duplicate": "Keep one pronunciation per word."
+    "lex_duplicate": "Keep one pronunciation per word.",
+    "line_gap": "Gap between lines",
+    "paragraph_gap": "Gap between paragraphs",
+    "trim_edges": "Trim engine silence",
+    "trim_edges_help": "Cuts the silence each engine adds before and after a line, then joins. Turn off for raw renders."
   },
   "credentials": {
     "microsoft_key": "Microsoft Translator Key",

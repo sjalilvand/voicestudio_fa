@@ -1711,7 +1711,17 @@
     "delete_selected": "Seçilenleri sil ({{count}})",
     "deleted_count": "Silinen: {{count}}",
     "delete_warning": "Bu işlem geri alınamaz. Projeler ve dökümler kaldırılır. Sesleri veya kayıtları silmek, saklanan ses dosyalarını da siler. Dışa aktarılan dosyalar ve tamamlanmış işleme sesleri korunur.",
-    "draft_changed": "Bu proje yüklenirken taslağınız değişti. Değiştirmek için yeniden onaylayın."
+    "draft_changed": "Bu proje yüklenirken taslağınız değişti. Değiştirmek için yeniden onaylayın.",
+    "render_details": "Nasıl oluşturuldu",
+    "render_voice": "Ses",
+    "render_speed": "Hız",
+    "render_engine": "Motor",
+    "render_language": "Dil",
+    "render_format": "Biçim",
+    "render_size_label": "Boyut",
+    "render_size": "{{chapters}} bölüm · {{lines}} satır · {{words}} sözcük",
+    "render_settings": "Ayarlar",
+    "render_no_details": "Bu kayıt için ayrıntı saklanmadı: ayrıntılar kaydedilmeye başlanmadan önce oluşturuldu."
   },
   "projectActions": {
     "delete": "“{{name}}” silinsin mi? Bu işlem geri alınamaz.",
@@ -1825,7 +1835,14 @@
     "toneChip": "Ton ve hız: {{speed}}",
     "lineVoice": "Satır sesi",
     "chapterHeading": "Bölüm başlığı",
-    "lineActions": "Satır işlemleri"
+    "lineActions": "Satır işlemleri",
+    "splitMode": "Bölme ölçütü",
+    "split_sentences": "Cümleler",
+    "split_paragraphs": "Paragraflar",
+    "split_chapters": "Bölümler",
+    "splitModeHint": "Her satır ayrı bir kayıt olarak okunur. Tek anlatıcı için Paragraflar veya Bölümler daha akıcı olur.",
+    "global_speed_overrides": "{{count}} satırın kendi hızı var",
+    "global_speed_apply": "Kitap hızını tümüne uygula"
   },
   "audiobook": {
     "cast": "Kadro",
@@ -1950,7 +1967,11 @@
     "emotion_text": "Duygu açıklaması",
     "emotion_text_ph": "örn. tükenmiş ve üzgün geliyor",
     "emotion_alpha": "Duygu gücü",
-    "lex_duplicate": "Her sözcük için tek bir telaffuz kullanın."
+    "lex_duplicate": "Her sözcük için tek bir telaffuz kullanın.",
+    "line_gap": "Satırlar arası boşluk",
+    "paragraph_gap": "Paragraflar arası boşluk",
+    "trim_edges": "Motor sessizliğini kırp",
+    "trim_edges_help": "Her motorun satırdan önce ve sonra eklediği sessizliği keser, sonra birleştirir. Ham çıktı için kapatın."
   },
   "credentials": {
     "microsoft_key": "Microsoft Çevirmen Anahtarı",

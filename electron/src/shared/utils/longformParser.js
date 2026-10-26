@@ -89,8 +89,36 @@ function parseVoiceRuns(body, defaultVoice) {
   return runs;
 }
 
-// CLEAN-ROOM (spec G-jaketame-1 §4): the blank-line (paragraph break) pattern, mirroring
-// the Python parser's, belongs here.
+// A blank line: two newlines with only spaces/tabs between (single class, linear time).
+const BLANK_LINE_RE = /\n[ \t]*\n/;
+
+const trailingSpace = (x) => x.slice(x.trimEnd().length);
+const leadingSpace = (x) => x.slice(0, x.length - x.trimStart().length);
+
+/**
+ * Keep the segments that still have spoken text and say, for each kept one, how it meets
+ * the next kept one: 'paragraph' when a blank line lies in the whitespace between them
+ * (its own trailing space, any dropped blank segments, the next one's leading space),
+ * otherwise 'continue'. The final kept segment has no join.
+ */
+function keptSegments(segments, defaultSpeed) {
+  const kept = [];
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i];
+    const spoken = (seg.spell ? spellOut(seg.text) : seg.text).trim();
+    if (spoken) {
+      kept.push({ index: i, text: spoken, speed: seg.speed != null ? seg.speed : defaultSpeed });
+    }
+  }
+  return kept.map((item, k) => {
+    const next = kept[k + 1];
+    if (!next) return { ...item, join: null };
+    let gap = trailingSpace(segments[item.index].text);
+    for (let m = item.index + 1; m < next.index; m++) gap += segments[m].text;
+    gap += leadingSpace(segments[next.index].text);
+    return { ...item, join: BLANK_LINE_RE.test(gap) ? 'paragraph' : 'continue' };
+  });
+}
 
 /**
  * Voice→pause→SSML layering for ONE chapter body (no chapter split). The
@@ -103,26 +131,21 @@ export function parseChapterBody(body, { defaultVoice = null, defaultSpeed = nul
     for (const [spanText, pauseMs] of parsePauseMarkers(runText)) {
       const t = (spanText || '').trim();
       if (!t && pauseMs === 0) continue;
-      // CLEAN-ROOM (spec G-jaketame-1 §4): the segment loop below also tracks the
-      // whitespace between kept segments and marks each non-final span's `join`
-      // ('continue' | 'paragraph'), mirroring the Python parser.
-      const rendered = [];
-      for (const seg of t ? parseSsmlLite(t) : []) {
-        const st = (seg.spell ? spellOut(seg.text) : seg.text).trim();
-        if (st) rendered.push([st, seg.speed != null ? seg.speed : defaultSpeed]);
-      }
+      const rendered = keptSegments(t ? parseSsmlLite(t) : [], defaultSpeed);
       if (!rendered.length) {
         if (pauseMs > 0) {
           spans.push({ voice_id: voice, text: '', pause_ms_after: pauseMs, speed: null });
         }
         continue;
       }
-      rendered.forEach(([st, sp], j) => {
+      rendered.forEach(({ text, speed, join }, j) => {
+        const last = j === rendered.length - 1;
         spans.push({
           voice_id: voice,
-          text: st,
-          pause_ms_after: j === rendered.length - 1 ? pauseMs : 0,
-          speed: sp,
+          text,
+          pause_ms_after: last ? pauseMs : 0,
+          speed,
+          ...(join ? { join } : {}),
         });
       });
     }

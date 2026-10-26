@@ -69,16 +69,7 @@ import {
   detachDubProject,
 } from '../dub/dub-session';
 import { projectPayload, type DubProject } from './project-format';
-
-// CLEAN-ROOM (spec G-jaketame-1 §8): the RenderRecord type (now with an optional summary) and
-// the RenderDetails / renderRecipe helpers belong in './render-details'.
-interface RenderRecord {
-  job_id: string;
-  title?: string;
-  output: string;
-  type?: 'story' | 'audiobook';
-  created_at?: number | string;
-}
+import { RenderDisclosure, renderRecipe, type RenderRecord } from './render-details';
 
 type LibraryKind =
   | 'dub'
@@ -394,8 +385,8 @@ export function ProjectsPage() {
         id: render.job_id,
         name: render.title || render.output,
         kind: render.type === 'story' ? 'stories' : 'audiobooks',
-        // CLEAN-ROOM (spec G-jaketame-1 §8): prefer a one-line recipe of the render here.
-        subtitle: t(render.type === 'story' ? 'projects.story' : 'projects.audiobook'),
+        subtitle:
+          renderRecipe(render) || t(`projects.${render.type === 'story' ? 'story' : 'audiobook'}`),
         updatedAt: timestamp(render.created_at),
         render,
       });
@@ -785,7 +776,7 @@ export function ProjectsPage() {
                             </span>
                           )}
                         </p>
-                        {/* CLEAN-ROOM (spec G-jaketame-1 §8): the expandable "how it was made" details belong here. */}
+                        {row.render ? <RenderDisclosure render={row.render} /> : null}
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">

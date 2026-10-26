@@ -731,7 +731,12 @@
     "exportFailed": "내보내기 실패 - 백엔드가 실행 중인지 확인하세요.",
     "global_speed": "속도",
     "global_speed_hint": "자체 속도 재정의 없이 모든 라인에 대한 읽기 속도",
-    "deleteProjectConfirm": "이 프로젝트를 영구적으로 삭제할까요?"
+    "deleteProjectConfirm": "이 프로젝트를 영구적으로 삭제할까요?",
+    "splitMode": "나누는 기준",
+    "split_sentences": "문장",
+    "split_paragraphs": "문단",
+    "split_chapters": "장",
+    "splitModeHint": "각 줄은 별도의 테이크로 읽힙니다. 화자가 한 명이라면 문단이나 장 단위가 더 자연스럽습니다."
   },
   "common": {
     "stop": "중지",
@@ -2936,7 +2941,11 @@
     "emotion_help": "단계별 감정 — IndexTTS2 엔진에서만 적용됩니다.",
     "emotion_text": "감정 설명",
     "emotion_text_ph": "예: 지쳐 보이고 슬픈 소리",
-    "emotion_alpha": "감정의 강도"
+    "emotion_alpha": "감정의 강도",
+    "line_gap": "줄 사이 간격",
+    "paragraph_gap": "문단 사이 간격",
+    "trim_edges": "엔진 무음 잘라내기",
+    "trim_edges_help": "엔진이 줄 앞뒤에 붙이는 무음을 잘라낸 뒤 이어 붙입니다. 가공되지 않은 결과가 필요하면 끄세요."
   },
   "voicePanel": {
     "title": "음성",

@@ -8,9 +8,17 @@ export const DEFAULT_OVERRIDES = {
   varyRepeats: false,
   emoText: '',
   emoAlpha: null,
-  // CLEAN-ROOM (spec G-jaketame-1 §6): lineGapMs, paragraphGapMs and trimEdges defaults
-  // (all null = unset) belong here.
+  lineGapMs: null,
+  paragraphGapMs: null,
+  trimEdges: null,
 };
+
+// Override field -> request field, for the join settings.
+const JOIN_FIELDS = [
+  ['lineGapMs', 'line_gap_ms'],
+  ['paragraphGapMs', 'paragraph_gap_ms'],
+  ['trimEdges', 'trim_edges'],
+];
 
 /**
  * Lower the persisted overrides (+ language) into the snake_case request fields
@@ -34,6 +42,9 @@ export function overridesToRequest(overrides, language) {
     body.emo_text = emo;
     if (o.emoAlpha != null) body.emo_alpha = o.emoAlpha;
   }
-  // CLEAN-ROOM (spec G-jaketame-1 §6): emit line_gap_ms, paragraph_gap_ms, trim_edges here.
+  for (const [field, wire] of JOIN_FIELDS) {
+    // `0` and `false` are deliberate; only an unset (null/undefined) knob is skipped.
+    if (o[field] !== null && o[field] !== undefined) body[wire] = o[field];
+  }
   return body;
 }
