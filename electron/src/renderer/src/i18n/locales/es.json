@@ -1844,7 +1844,8 @@
     "toneChip": "Tono y velocidad: {{speed}}",
     "lineVoice": "Voz de la línea",
     "chapterHeading": "Título del capítulo",
-    "lineActions": "Acciones de la línea"
+    "lineActions": "Acciones de la línea",
+    "clearScriptHint": "Quita todo del guion: todas las líneas y todos los capítulos"
   },
   "audiobook": {
     "cast": "Reparto",
@@ -1965,7 +1966,15 @@
     "emotion_text": "Descripción de emoción",
     "emotion_text_ph": "p. ej. suena agotado y triste",
     "emotion_alpha": "Intensidad emocional",
-    "lex_duplicate": "Usa una sola pronunciación por palabra."
+    "lex_duplicate": "Usa una sola pronunciación por palabra.",
+    "cache_location_hint": "El audio se guarda en {{cachePath}}; el archivo de recuperación es {{manifestPath}}",
+    "open_cache_failed": "No se pudo abrir la carpeta con los capítulos guardados",
+    "open_chapter_cache": "Abrir carpeta de capítulos guardados",
+    "recovery_hint": "Los capítulos ya generados se conservan tal cual. Al reanudar solo se genera lo que falta.",
+    "recovery_progress": "{{done}} de {{total}} capítulos completados",
+    "recovery_title": "Reanudar un audiolibro sin terminar",
+    "resume_failed": "No se pudo reanudar este audiolibro: {{message}}",
+    "untitled": "Sin título"
   },
   "credentials": {
     "microsoft_key": "Clave del traductor de Microsoft",
@@ -2687,7 +2696,8 @@
     "unexpected": "Error inesperado: {{message}}",
     "backend_shutting_down": "VoiceStudio se está cerrando. Vuelve a abrir la aplicación e inténtalo de nuevo.",
     "crash_broken_env": "Murió mientras cargaba sus propias dependencias de Python, así que no es cuestión de memoria ni de tu GPU: el entorno está incompleto o quedó a medio actualizar. Usa «Limpiar y reintentar» en Configuración → Registros → Backend, que lo reconstruye desde cero y lo repara sin tocar tus voces ni tus proyectos. Si sigue fallando, los detalles del fallo indican el paquete exacto que no se pudo importar.",
-    "crash_vram_default": "En GPU más pequeñas, la causa habitual es quedarse sin VRAM al cargar el modelo ASR junto con el modelo TTS: libera primero el modelo TTS de la memoria, o elige un modelo ASR más pequeño en Catálogo de modelos → Modelos."
+    "crash_vram_default": "En GPU más pequeñas, la causa habitual es quedarse sin VRAM al cargar el modelo ASR junto con el modelo TTS: libera primero el modelo TTS de la memoria, o elige un modelo ASR más pequeño en Catálogo de modelos → Modelos.",
+    "stream_cut_backend_alive": "Empieza por lo que hay entre el navegador y la app, como un proxy inverso o un balanceador de carga. En esta ruta desactiva el almacenamiento en búfer de la respuesta (proxy_buffering off; X-Accel-Buffering: no) y aumenta el tiempo de espera de lectura. La transmisión se cortó mientras el backend seguía activo, así que la app no se cayó. Suele ocurrir tras un proxy en una instalación alojada o en contenedores; ejecutar la app de escritorio directamente o usar localhost te dirá si el proxy es el responsable."
   },
   "segmentEditing": {
     "more": "Más acciones",

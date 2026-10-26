@@ -1497,7 +1497,8 @@
     "gpu_report_engine_pinned_cpu": "CPU：计算设备已固定为 CPU",
     "gpu_report_engine_no_family_path": "CPU：没有适用于你的 GPU 类型的路径",
     "gpu_report_engine_no_gpu": "CPU：没有可用的 GPU",
-    "gpu_report_engine_needs_accelerator": "需要此电脑没有的 GPU（{{needs}}）"
+    "gpu_report_engine_needs_accelerator": "需要此电脑没有的 GPU（{{needs}}）",
+    "perf_torch_compile": "关闭 torch.compile"
   },
   "gallery": {
     "title": "VoiceStudio 音色库",
@@ -1842,7 +1843,8 @@
     "toneChip": "语气与语速：{{speed}}",
     "lineVoice": "本行声音",
     "chapterHeading": "章节标题",
-    "lineActions": "行操作"
+    "lineActions": "行操作",
+    "clearScriptHint": "清除脚本中的全部内容：所有行和所有章节"
   },
   "audiobook": {
     "cast": "配音角色",
@@ -1967,7 +1969,11 @@
     "emotion_text": "情感描述",
     "emotion_text_ph": "例如：听起来疲惫而悲伤",
     "emotion_alpha": "情感强度",
-    "lex_duplicate": "每个词只保留一种发音。"
+    "lex_duplicate": "每个词只保留一种发音。",
+    "cache_location_hint": "音频保存在 {{cachePath}}，恢复文件为 {{manifestPath}}",
+    "recovery_hint": "已生成的章节会原样保留，继续时只会生成缺失的部分。",
+    "recovery_progress": "已完成 {{done}}/{{total}} 章",
+    "resume_failed": "无法继续这本有声书：{{message}}"
   },
   "credentials": {
     "microsoft_key": "Microsoft Translator 密钥",
@@ -2689,7 +2695,8 @@
     "unexpected": "意外错误：{{message}}",
     "backend_shutting_down": "VoiceStudio 正在关闭。请重新打开应用后再试。",
     "crash_broken_env": "它在加载自身的 Python 依赖时退出，因此与内存或显卡无关——运行环境不完整，或更新到一半就停下了。请在 设置 → 日志 → 后端 中使用“清理并重试”，它会从头重建环境并就地修复，不会动你的声音或项目。如果之后仍然失败，崩溃详情会指出无法导入的具体软件包。",
-    "crash_vram_default": "在较小的 GPU 上，常见原因是在 TTS 模型仍占用显存时加载 ASR 模型，导致显存（VRAM）不足：请先卸载 TTS 模型，或在 模型库 → 模型 中选择更小的 ASR 模型。"
+    "crash_vram_default": "在较小的 GPU 上，常见原因是在 TTS 模型仍占用显存时加载 ASR 模型，导致显存（VRAM）不足：请先卸载 TTS 模型，或在 模型库 → 模型 中选择更小的 ASR 模型。",
+    "stream_cut_backend_alive": "请先检查浏览器与应用之间的环节，例如反向代理或负载均衡器。针对此路由关闭响应缓冲（proxy_buffering off; X-Accel-Buffering: no），并调大读取超时。流中断时后端仍在运行，说明应用并未崩溃。这通常出现在托管或容器化部署的代理之后；直接运行桌面应用或改用 localhost，可以判断问题是否出在代理上。"
   },
   "segmentEditing": {
     "more": "更多操作",

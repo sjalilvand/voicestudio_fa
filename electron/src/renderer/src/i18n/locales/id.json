@@ -1842,7 +1842,9 @@
     "toneChip": "Nada & kecepatan: {{speed}}",
     "lineVoice": "Suara baris",
     "chapterHeading": "Judul bab",
-    "lineActions": "Tindakan baris"
+    "lineActions": "Tindakan baris",
+    "clearScript": "Kosongkan skrip",
+    "clearScriptHint": "Menghapus seluruh isi skrip: semua baris dan semua bab"
   },
   "audiobook": {
     "cast": "Pemeran",
@@ -1963,7 +1965,15 @@
     "emotion_text": "Deskripsi emosi",
     "emotion_text_ph": "mis. terdengar lelah dan sedih",
     "emotion_alpha": "Kekuatan emosi",
-    "lex_duplicate": "Gunakan satu pelafalan untuk setiap kata."
+    "lex_duplicate": "Gunakan satu pelafalan untuk setiap kata.",
+    "cache_location_hint": "Audio disimpan di {{cachePath}}; berkas pemulihan ada di {{manifestPath}}",
+    "open_cache_failed": "Folder berisi bab tersimpan tidak dapat dibuka",
+    "open_chapter_cache": "Buka folder bab tersimpan",
+    "recovery_hint": "Bab yang sudah dirender dibiarkan apa adanya. Melanjutkan hanya membuat bagian yang masih kurang.",
+    "recovery_progress": "{{done}} dari {{total}} bab selesai",
+    "recovery_title": "Lanjutkan buku audio yang belum selesai",
+    "resume_failed": "Buku audio ini tidak dapat dilanjutkan: {{message}}",
+    "untitled": "Tanpa judul"
   },
   "credentials": {
     "microsoft_key": "Kunci Penerjemah Microsoft",
@@ -2685,7 +2695,8 @@
     "unexpected": "Kesalahan tak terduga: {{message}}",
     "backend_shutting_down": "VoiceStudio sedang ditutup. Buka kembali aplikasinya lalu coba lagi.",
     "crash_broken_env": "Ia mati saat memuat dependensi Python-nya sendiri, jadi ini bukan soal memori atau GPU Anda — lingkungannya tidak lengkap atau tertinggal setengah diperbarui. Gunakan \"Bersihkan & Coba Lagi\" di Pengaturan → Log → Backend, yang membangunnya ulang dari nol dan memperbaikinya di tempat, tanpa menyentuh suara atau proyek Anda. Jika masih gagal, detail crash menyebutkan paket persis yang gagal diimpor.",
-    "crash_vram_default": "Pada GPU yang lebih kecil, penyebab umumnya adalah kehabisan VRAM saat memuat model ASR di atas model TTS: kosongkan model TTS terlebih dahulu, atau pilih model ASR yang lebih kecil di Katalog model → Model."
+    "crash_vram_default": "Pada GPU yang lebih kecil, penyebab umumnya adalah kehabisan VRAM saat memuat model ASR di atas model TTS: kosongkan model TTS terlebih dahulu, atau pilih model ASR yang lebih kecil di Katalog model → Model.",
+    "stream_cut_backend_alive": "Mulailah dengan memeriksa perantara antara peramban dan aplikasi, seperti reverse proxy atau load balancer. Untuk rute ini, matikan buffering respons (proxy_buffering off; X-Accel-Buffering: no) dan perpanjang batas waktu baca. Aliran terputus sementara backend tetap berjalan, jadi aplikasi tidak mengalami crash. Ini paling sering terjadi di balik proxy pada pemasangan yang di-hosting atau berbasis kontainer; menjalankan aplikasi desktop secara langsung atau lewat localhost akan menunjukkan apakah proxy penyebabnya."
   },
   "segmentEditing": {
     "more": "Lebih banyak tindakan",

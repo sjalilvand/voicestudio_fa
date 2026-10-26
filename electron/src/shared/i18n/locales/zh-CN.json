@@ -204,7 +204,8 @@
     "exportFailed": "导出失败 — 请检查后端是否运行。",
     "global_speed": "速度",
     "global_speed_hint": "所有台词的朗读速度（未单独设置语速的台词）",
-    "deleteProjectConfirm": "永久删除此项目？"
+    "deleteProjectConfirm": "永久删除此项目？",
+    "clearScriptHint": "清除脚本中的全部内容：所有行和所有章节"
   },
   "common": {
     "stop": "停止",
@@ -875,7 +876,8 @@
     "reduce_motion_desc": "停止背景动画和过渡效果。系统设置本身仍然生效，此项在其基础上叠加。",
     "llmp_cli_help": "通过与代理修复相同的运行器使用已安装的 CLI 及其登录。模型留空将使用 CLI 默认值。响应可能较慢，费用按 CLI 账户计收。",
     "llmp_sdk_help": "原生提供商使用 LiteLLM。其他提供商请输入 provider/model。Bedrock 使用 API 密钥或 AWS 配置；Vertex 将账户 ID 用作项目，并使用 Google 应用凭据。基础 URL 为可选项。",
-    "llmp_cli_auth": "CLI 账户访问被拒绝。请检查登录、订阅和所选模型。"
+    "llmp_cli_auth": "CLI 账户访问被拒绝。请检查登录、订阅和所选模型。",
+    "perf_torch_compile": "关闭 torch.compile"
   },
   "about": {
     "app": "应用",

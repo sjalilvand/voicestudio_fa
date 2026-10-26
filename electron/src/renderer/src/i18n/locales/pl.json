@@ -1846,7 +1846,9 @@
     "toneChip": "Ton i tempo: {{speed}}",
     "lineVoice": "Głos linii",
     "chapterHeading": "Tytuł rozdziału",
-    "lineActions": "Akcje linii"
+    "lineActions": "Akcje linii",
+    "clearScript": "Wyczyść skrypt",
+    "clearScriptHint": "Usuwa całą zawartość skryptu: wszystkie wiersze i rozdziały"
   },
   "audiobook": {
     "cast": "Obsada",
@@ -1971,7 +1973,15 @@
     "emotion_text": "Opis emocji",
     "emotion_text_ph": "np. brzmi wyczerpany i smutny",
     "emotion_alpha": "Siła emocji",
-    "lex_duplicate": "Użyj jednej wymowy dla każdego słowa."
+    "lex_duplicate": "Użyj jednej wymowy dla każdego słowa.",
+    "cache_location_hint": "Dźwięk zapisano w {{cachePath}}; plik odzyskiwania to {{manifestPath}}",
+    "open_cache_failed": "Nie udało się otworzyć folderu z zapisanymi rozdziałami",
+    "open_chapter_cache": "Otwórz folder z zapisanymi rozdziałami",
+    "recovery_hint": "Rozdziały, które już powstały, zostają bez zmian. Wznowienie utworzy tylko brakujące części.",
+    "recovery_progress": "Ukończono {{done}} z {{total}} rozdziałów",
+    "recovery_title": "Wznów niedokończony audiobook",
+    "resume_failed": "Nie udało się wznowić tego audiobooka: {{message}}",
+    "untitled": "Bez tytułu"
   },
   "credentials": {
     "microsoft_key": "Klucz tłumacza Microsoft",
@@ -2693,7 +2703,8 @@
     "unexpected": "Nieoczekiwany błąd: {{message}}",
     "backend_shutting_down": "VoiceStudio się zamyka. Otwórz aplikację ponownie i spróbuj jeszcze raz.",
     "crash_broken_env": "Zakończył się podczas ładowania własnych zależności Pythona, więc nie chodzi o pamięć ani o kartę graficzną — środowisko jest niekompletne albo zostało zaktualizowane w połowie. Użyj „Wyczyść i ponów” w Ustawienia → Logi → Backend: odbudowuje je od zera i naprawia w miejscu, nie ruszając twoich głosów ani projektów. Jeśli nadal się nie udaje, szczegóły awarii wskazują pakiet, którego nie dało się zaimportować.",
-    "crash_vram_default": "Na mniejszych GPU zwykłą przyczyną jest brak pamięci VRAM podczas ładowania modelu ASR obok już załadowanego modelu TTS: najpierw zwolnij model TTS albo wybierz mniejszy model ASR w Katalogu modeli → Modele."
+    "crash_vram_default": "Na mniejszych GPU zwykłą przyczyną jest brak pamięci VRAM podczas ładowania modelu ASR obok już załadowanego modelu TTS: najpierw zwolnij model TTS albo wybierz mniejszy model ASR w Katalogu modeli → Modele.",
+    "stream_cut_backend_alive": "Zacznij od tego, co leży między przeglądarką a aplikacją, np. od zwrotnego proxy lub load balancera. Dla tej trasy wyłącz buforowanie odpowiedzi (proxy_buffering off; X-Accel-Buffering: no) i wydłuż limit czasu odczytu. Strumień został przerwany, gdy backend nadal działał, więc aplikacja się nie zawiesiła. Zwykle winne jest proxy w instalacji hostowanej lub kontenerowej; uruchomienie aplikacji desktopowej bezpośrednio albo przez localhost pokaże, czy przyczyną jest proxy."
   },
   "segmentEditing": {
     "more": "Więcej akcji",

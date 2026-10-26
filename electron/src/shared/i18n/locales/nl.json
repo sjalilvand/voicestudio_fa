@@ -384,7 +384,8 @@
     "perf_torch_compile_hint": "Zet dit aan na een fout van Triton of <code>torch.compile</code>, ook als de backend stopt tijdens het maken van audio. VoiceStudio geeft dan <code>TORCH_COMPILE_DISABLE=1</code> door en kiest betrouwbaarheid boven compilatiesnelheid. <issueLink>#65</issueLink> behandelt Windows met minder dan 16 GB VRAM; <crashLink>#2135</crashLink> volgt CUDA-grafiekproblemen op oudere NVIDIA-kaarten.",
     "llmp_cli_help": "Gebruikt de geïnstalleerde CLI en aanmelding via dezelfde uitvoerder als agentreparatie. Laat Model leeg voor de CLI-standaard. Antwoorden kunnen trager zijn; kosten vallen onder je CLI-account.",
     "llmp_sdk_help": "Native providers gebruiken LiteLLM. Voer voor andere providers provider/model in. Bedrock gebruikt een API-sleutel of AWS-profiel; Vertex gebruikt Account-ID als project en Google-inloggegevens. Basis-URL is optioneel.",
-    "llmp_cli_auth": "Toegang tot het CLI-account is geweigerd. Controleer je aanmelding, abonnement en gekozen model."
+    "llmp_cli_auth": "Toegang tot het CLI-account is geweigerd. Controleer je aanmelding, abonnement en gekozen model.",
+    "perf_torch_compile": "torch.compile uitschakelen"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -508,7 +509,9 @@
     "exportFailed": "Exporteren mislukt. Controleer of de backend actief is.",
     "global_speed": "Snelheid",
     "global_speed_hint": "Leessnelheid voor alle lijnen zonder hun eigen snelheidsoverschrijving",
-    "deleteProjectConfirm": "Dit project permanent verwijderen?"
+    "deleteProjectConfirm": "Dit project permanent verwijderen?",
+    "clearScript": "Script leegmaken",
+    "clearScriptHint": "Verwijdert alles uit het script: alle regels en alle hoofdstukken"
   },
   "common": {
     "stop": "Stop",

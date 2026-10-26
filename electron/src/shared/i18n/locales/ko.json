@@ -350,7 +350,7 @@
     "device_family_gpu": "GPU",
     "device_load_failed": "장치 설정을 불러오지 못했습니다",
     "llmp_active_env_pin": "LLM 선택이 LLM_DEFAULT_PROVIDER 또는 OMNIVOICE_LLM_BACKEND에 의해 고정되어 있습니다.",
-    "perf_torch_compile": "Eager 모드 사용",
+    "perf_torch_compile": "torch.compile 끄기",
     "perf_torch_compile_hint": "Triton 또는 <code>torch.compile</code> 실패 뒤에, 오디오 생성 중 백엔드가 종료된 경우에도 켜세요. VoiceStudio는 <code>TORCH_COMPILE_DISABLE=1</code>을 전달하고 컴파일 속도보다 안정성을 우선합니다. VRAM 16GB 미만 Windows는 <issueLink>#65</issueLink>, 구형 NVIDIA CUDA 그래프 문제는 <crashLink>#2135</crashLink>를 확인하세요.",
     "perf_torch_compile_note": "Triton이 불안정하면 컴파일된 커널 없이 모델을 실행합니다.",
     "usage_voices": "음성",
@@ -735,7 +735,7 @@
     "resetInlineVoice": "줄의 음성으로 초기화",
     "characters": "문자 {{count}}개",
     "clearScript": "대본 비우기",
-    "clearScriptHint": "지정된 음성은 남기고 모든 장과 대사를 없앱니다",
+    "clearScriptHint": "스크립트의 모든 줄과 챕터를 전부 지웁니다",
     "cleared": "대본을 비웠습니다"
   },
   "common": {

@@ -1842,7 +1842,8 @@
     "toneChip": "トーンと速度: {{speed}}",
     "lineVoice": "行の音声",
     "chapterHeading": "章タイトル",
-    "lineActions": "行の操作"
+    "lineActions": "行の操作",
+    "clearScriptHint": "スクリプトの中身をすべて削除します (全行と全章)"
   },
   "audiobook": {
     "cast": "キャスト",
@@ -1965,7 +1966,13 @@
     "emotion_text": "感情の説明",
     "emotion_text_ph": "例 疲れているように聞こえ、悲しい",
     "emotion_alpha": "感情の強さ",
-    "lex_duplicate": "各単語の発音は1つだけ指定してください。"
+    "lex_duplicate": "各単語の発音は1つだけ指定してください。",
+    "cache_location_hint": "音声は {{cachePath}} に保存され、復旧用ファイルは {{manifestPath}} です",
+    "open_cache_failed": "保存済みの章のフォルダーを開けませんでした",
+    "recovery_hint": "生成済みの章はそのまま残ります。再開すると、足りない部分だけが作られます。",
+    "recovery_progress": "{{total}} 章中 {{done}} 章が完了",
+    "recovery_title": "未完了のオーディオブックを再開",
+    "resume_failed": "このオーディオブックを再開できませんでした: {{message}}"
   },
   "credentials": {
     "microsoft_key": "Microsoft トランスレータ キー",
@@ -2687,7 +2694,8 @@
     "unexpected": "予期しないエラー: {{message}}",
     "backend_shutting_down": "VoiceStudio を終了しています。アプリを開き直してからもう一度お試しください。",
     "crash_broken_env": "自身の Python 依存関係を読み込んでいる最中に停止しました。メモリや GPU の問題ではなく、環境が不完全か、更新が中途半端なまま残っています。設定 → ログ → バックエンド の「クリーンアップして再試行」を実行してください。環境をゼロから作り直してその場で修復し、音声やプロジェクトには手を触れません。それでも失敗する場合は、クラッシュ詳細に読み込めなかったパッケージ名が出ています。",
-    "crash_vram_default": "小さめの GPU では、TTS モデルを読み込んだまま ASR モデルを読み込む際に VRAM が不足するのがよくある原因です。先に TTS モデルをアンロードするか、モデルカタログ → モデル でより小さい ASR モデルを選んでください。"
+    "crash_vram_default": "小さめの GPU では、TTS モデルを読み込んだまま ASR モデルを読み込む際に VRAM が不足するのがよくある原因です。先に TTS モデルをアンロードするか、モデルカタログ → モデル でより小さい ASR モデルを選んでください。",
+    "stream_cut_backend_alive": "まず、ブラウザーとアプリの間にあるリバースプロキシやロードバランサーを確認してください。このルートではレスポンスのバッファリングを無効にし (proxy_buffering off; X-Accel-Buffering: no)、読み取りタイムアウトを延ばします。バックエンドは動いたままストリームだけが切れたため、アプリはクラッシュしていません。ホスト型やコンテナー環境のプロキシが原因であることが多く、デスクトップアプリを直接起動するか localhost を使えば、プロキシが原因かどうか切り分けられます。"
   },
   "segmentEditing": {
     "more": "さらなるアクション",

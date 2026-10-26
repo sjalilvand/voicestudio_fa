@@ -1842,7 +1842,9 @@
     "toneChip": "Ton & Tempo: {{speed}}",
     "lineVoice": "Zeilenstimme",
     "chapterHeading": "Kapiteltitel",
-    "lineActions": "Zeilenaktionen"
+    "lineActions": "Zeilenaktionen",
+    "clearScript": "Skript leeren",
+    "clearScriptHint": "Entfernt alles aus dem Skript: sämtliche Zeilen und Kapitel"
   },
   "audiobook": {
     "cast": "Besetzung",
@@ -1963,7 +1965,15 @@
     "emotion_text": "Emotionsbeschreibung",
     "emotion_text_ph": "z.B. klingt erschöpft und traurig",
     "emotion_alpha": "Emotionale Stärke",
-    "lex_duplicate": "Verwende nur eine Aussprache pro Wort."
+    "lex_duplicate": "Verwende nur eine Aussprache pro Wort.",
+    "cache_location_hint": "Audiodateien liegen in {{cachePath}}, die Wiederherstellungsdatei ist {{manifestPath}}",
+    "open_cache_failed": "Der Ordner mit den gespeicherten Kapiteln konnte nicht geöffnet werden",
+    "open_chapter_cache": "Ordner mit gespeicherten Kapiteln öffnen",
+    "recovery_hint": "Bereits erzeugte Kapitel bleiben unverändert. Beim Fortsetzen wird nur das erzeugt, was noch fehlt.",
+    "recovery_progress": "{{done}} von {{total}} Kapiteln fertig",
+    "recovery_title": "Unfertiges Hörbuch fortsetzen",
+    "resume_failed": "Dieses Hörbuch konnte nicht fortgesetzt werden: {{message}}",
+    "untitled": "Ohne Titel"
   },
   "credentials": {
     "microsoft_key": "Microsoft-Übersetzerschlüssel",
@@ -2685,7 +2695,8 @@
     "unexpected": "Unerwarteter Fehler: {{message}}",
     "backend_shutting_down": "VoiceStudio wird beendet. Öffnen Sie die App erneut und versuchen Sie es noch einmal.",
     "crash_broken_env": "Er ist beim Laden seiner eigenen Python-Abhängigkeiten gestorben — es geht also weder um Speicher noch um Ihre GPU, sondern um eine unvollständige oder halb aktualisierte Umgebung. Nutzen Sie „Bereinigen & Wiederholen“ unter Einstellungen → Logs → Backend: Das baut sie von Grund auf neu und repariert sie an Ort und Stelle, ohne Ihre Stimmen oder Projekte anzurühren. Schlägt es danach weiter fehl, nennen die Absturzdetails das Paket, das sich nicht importieren ließ.",
-    "crash_vram_default": "Auf kleineren GPUs ist die übliche Ursache, dass beim Laden des ASR-Modells zusätzlich zum TTS-Modell der VRAM ausgeht: Entladen Sie zuerst das TTS-Modell, oder wählen Sie unter Modellkatalog → Modelle ein kleineres ASR-Modell."
+    "crash_vram_default": "Auf kleineren GPUs ist die übliche Ursache, dass beim Laden des ASR-Modells zusätzlich zum TTS-Modell der VRAM ausgeht: Entladen Sie zuerst das TTS-Modell, oder wählen Sie unter Modellkatalog → Modelle ein kleineres ASR-Modell.",
+    "stream_cut_backend_alive": "Prüfen Sie zuerst, was zwischen Browser und App liegt, etwa einen Reverse-Proxy oder Load-Balancer. Deaktivieren Sie für diese Route das Puffern der Antwort (proxy_buffering off; X-Accel-Buffering: no) und erhöhen Sie das Lese-Timeout. Der Stream wurde getrennt, während das Backend weiterlief, die App ist also nicht abgestürzt. Meist steckt ein Proxy in einer gehosteten oder containerisierten Installation dahinter; starten Sie die Desktop-App direkt oder nutzen Sie localhost, um den Proxy als Ursache auszuschließen."
   },
   "segmentEditing": {
     "more": "Weitere Aktionen",

@@ -1842,7 +1842,9 @@
     "toneChip": "Ton ve hız: {{speed}}",
     "lineVoice": "Satır sesi",
     "chapterHeading": "Bölüm başlığı",
-    "lineActions": "Satır işlemleri"
+    "lineActions": "Satır işlemleri",
+    "clearScript": "Betiği boşalt",
+    "clearScriptHint": "Betiğin tamamını siler: tüm satırlar ve tüm bölümler"
   },
   "audiobook": {
     "cast": "Kadro",
@@ -1963,7 +1965,15 @@
     "emotion_text": "Duygu açıklaması",
     "emotion_text_ph": "örn. tükenmiş ve üzgün geliyor",
     "emotion_alpha": "Duygu gücü",
-    "lex_duplicate": "Her sözcük için tek bir telaffuz kullanın."
+    "lex_duplicate": "Her sözcük için tek bir telaffuz kullanın.",
+    "cache_location_hint": "Ses {{cachePath}} içinde saklanıyor; kurtarma dosyası {{manifestPath}}",
+    "open_cache_failed": "Kayıtlı bölümlerin bulunduğu klasör açılamadı",
+    "open_chapter_cache": "Kayıtlı bölümler klasörünü aç",
+    "recovery_hint": "Daha önce oluşturulan bölümler olduğu gibi kalır. Devam edildiğinde yalnızca eksik olanlar üretilir.",
+    "recovery_progress": "{{total}} bölümden {{done}} tanesi tamamlandı",
+    "recovery_title": "Yarım kalan bir sesli kitaba devam et",
+    "resume_failed": "Bu sesli kitaba devam edilemedi: {{message}}",
+    "untitled": "Başlıksız"
   },
   "credentials": {
     "microsoft_key": "Microsoft Çevirmen Anahtarı",
@@ -2685,7 +2695,8 @@
     "unexpected": "Beklenmeyen hata: {{message}}",
     "backend_shutting_down": "VoiceStudio kapanıyor. Uygulamayı yeniden açıp tekrar dene.",
     "crash_broken_env": "Kendi Python bağımlılıklarını yüklerken sonlandı; yani sorun bellek ya da ekran kartınız değil — ortam eksik veya yarım güncellenmiş durumda. Ayarlar → Günlükler → Arka uç bölümündeki \"Temizle ve Yeniden Dene\" seçeneğini kullanın: ortamı sıfırdan yeniden kurar ve seslerinize ya da projelerinize dokunmadan yerinde onarır. Yine de başarısız olursa, çökme ayrıntıları içe aktarılamayan paketin adını verir.",
-    "crash_vram_default": "Küçük GPU'larda en yaygın neden, TTS modeli yüklüyken ASR modelini de yüklerken VRAM'in tükenmesidir: önce TTS modelini bellekten kaldırın veya Model kataloğu → Modeller bölümünden daha küçük bir ASR modeli seçin."
+    "crash_vram_default": "Küçük GPU'larda en yaygın neden, TTS modeli yüklüyken ASR modelini de yüklerken VRAM'in tükenmesidir: önce TTS modelini bellekten kaldırın veya Model kataloğu → Modeller bölümünden daha küçük bir ASR modeli seçin.",
+    "stream_cut_backend_alive": "Önce tarayıcı ile uygulama arasında duran şeye bakın; örneğin bir ters proxy ya da yük dengeleyici. Bu rota için yanıt arabelleğini kapatın (proxy_buffering off; X-Accel-Buffering: no) ve okuma zaman aşımını artırın. Arka uç çalışmaya devam ederken akış koptu, yani uygulama çökmedi. Çoğunlukla barındırılan veya konteynerli bir kurulumda proxy'den kaynaklanır; masaüstü uygulamasını doğrudan açmak ya da localhost kullanmak proxy'nin suçlu olup olmadığını gösterir."
   },
   "segmentEditing": {
     "more": "Daha fazla işlem",

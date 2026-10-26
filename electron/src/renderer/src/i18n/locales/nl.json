@@ -1842,7 +1842,9 @@
     "toneChip": "Toon en snelheid: {{speed}}",
     "lineVoice": "Regelstem",
     "chapterHeading": "Hoofdstuktitel",
-    "lineActions": "Regelacties"
+    "lineActions": "Regelacties",
+    "clearScript": "Script leegmaken",
+    "clearScriptHint": "Verwijdert alles uit het script: alle regels en alle hoofdstukken"
   },
   "audiobook": {
     "cast": "Cast",
@@ -1963,7 +1965,15 @@
     "emotion_text": "Emotie beschrijving",
     "emotion_text_ph": "bijv. klinkt uitgeput en verdrietig",
     "emotion_alpha": "Emotie sterkte",
-    "lex_duplicate": "Gebruik één uitspraak per woord."
+    "lex_duplicate": "Gebruik één uitspraak per woord.",
+    "cache_location_hint": "Audio staat in {{cachePath}}; het herstelbestand is {{manifestPath}}",
+    "open_cache_failed": "De map met de opgeslagen hoofdstukken kon niet worden geopend",
+    "open_chapter_cache": "Map met opgeslagen hoofdstukken openen",
+    "recovery_hint": "Hoofdstukken die al zijn gegenereerd blijven ongewijzigd. Bij hervatten wordt alleen aangemaakt wat nog ontbreekt.",
+    "recovery_progress": "{{done}} van {{total}} hoofdstukken klaar",
+    "recovery_title": "Een onvoltooid luisterboek hervatten",
+    "resume_failed": "Dit luisterboek kon niet worden hervat: {{message}}",
+    "untitled": "Zonder titel"
   },
   "credentials": {
     "microsoft_key": "Microsoft Translator-sleutel",
@@ -2685,7 +2695,8 @@
     "unexpected": "Onverwachte fout: {{message}}",
     "backend_shutting_down": "VoiceStudio wordt afgesloten. Open de app opnieuw en probeer het nog eens.",
     "crash_broken_env": "Hij stierf tijdens het laden van zijn eigen Python-afhankelijkheden, dus dit gaat niet over geheugen of je GPU — de omgeving is onvolledig of half bijgewerkt blijven staan. Gebruik \"Wissen & Opnieuw proberen\" bij Instellingen → Logs → Backend: dat bouwt hem helemaal opnieuw op en repareert hem ter plekke, zonder je stemmen of projecten aan te raken. Blijft het misgaan, dan noemen de crashdetails het pakket dat niet te importeren was.",
-    "crash_vram_default": "Op kleinere GPU's is de gebruikelijke oorzaak dat het VRAM-geheugen opraakt bij het laden van het ASR-model bovenop het TTS-model: ontlaad eerst het TTS-model, of kies een kleiner ASR-model in Modelcatalogus → Modellen."
+    "crash_vram_default": "Op kleinere GPU's is de gebruikelijke oorzaak dat het VRAM-geheugen opraakt bij het laden van het ASR-model bovenop het TTS-model: ontlaad eerst het TTS-model, of kies een kleiner ASR-model in Modelcatalogus → Modellen.",
+    "stream_cut_backend_alive": "Kijk eerst naar wat er tussen de browser en de app zit, zoals een reverse proxy of load balancer. Schakel voor deze route het bufferen van antwoorden uit (proxy_buffering off; X-Accel-Buffering: no) en verhoog de leestime-out. De stream werd verbroken terwijl de backend bleef draaien, dus de app is niet gecrasht. Meestal ligt het aan een proxy bij een gehoste of gecontaineriseerde installatie; start de desktop-app rechtstreeks of gebruik localhost om te zien of de proxy de oorzaak is."
   },
   "segmentEditing": {
     "more": "Meer acties",

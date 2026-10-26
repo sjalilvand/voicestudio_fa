@@ -384,7 +384,8 @@
     "perf_torch_compile_hint": "Ative após uma falha do Triton ou <code>torch.compile</code>, inclusive se o backend sair durante a criação do áudio. O VoiceStudio passa <code>TORCH_COMPILE_DISABLE=1</code> e prioriza estabilidade em vez da velocidade compilada. <issueLink>#65</issueLink> aborda Windows com menos de 16 GB de VRAM; <crashLink>#2135</crashLink> acompanha grafos CUDA em NVIDIA antigas.",
     "llmp_cli_help": "Usa a CLI instalada e sua sessão pelo mesmo executor do reparo com agente. Deixe Modelo vazio para usar o padrão da CLI. As respostas podem ser mais lentas; os custos seguem sua conta da CLI.",
     "llmp_sdk_help": "Provedores nativos usam LiteLLM. Para outros, insira provider/model. Bedrock usa chave de API ou perfil AWS; Vertex usa o ID da conta como projeto e credenciais do Google. A URL base é opcional.",
-    "llmp_cli_auth": "O acesso à conta CLI foi recusado. Verifique o login, a assinatura e o modelo selecionado."
+    "llmp_cli_auth": "O acesso à conta CLI foi recusado. Verifique o login, a assinatura e o modelo selecionado.",
+    "perf_torch_compile": "Desativar torch.compile"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -508,7 +509,9 @@
     "exportFailed": "Falha na exportação – verifique se o back-end está em execução.",
     "global_speed": "Velocidade",
     "global_speed_hint": "Velocidade de leitura para todas as linhas sem sua própria substituição de velocidade",
-    "deleteProjectConfirm": "Excluir este projeto permanentemente?"
+    "deleteProjectConfirm": "Excluir este projeto permanentemente?",
+    "clearScript": "Esvaziar roteiro",
+    "clearScriptHint": "Apaga tudo do roteiro: todas as linhas e todos os capítulos"
   },
   "common": {
     "stop": "Pare",

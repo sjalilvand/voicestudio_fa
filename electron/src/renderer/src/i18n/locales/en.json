@@ -1649,7 +1649,8 @@
     "gpu_report_engine_pinned_cpu": "CPU: compute device pinned to CPU",
     "gpu_report_engine_no_family_path": "CPU: no path for your GPU type",
     "gpu_report_engine_no_gpu": "CPU: no GPU available",
-    "gpu_report_engine_needs_accelerator": "Needs a GPU ({{needs}}) this machine does not have"
+    "gpu_report_engine_needs_accelerator": "Needs a GPU ({{needs}}) this machine does not have",
+    "perf_torch_compile": "Turn off torch.compile"
   },
   "gallery": {
     "title": "VoiceStudio Gallery",
@@ -1981,7 +1982,8 @@
     "toneChip": "Tone & speed: {{speed}}",
     "lineVoice": "Line voice",
     "chapterHeading": "Chapter title",
-    "lineActions": "Line actions"
+    "lineActions": "Line actions",
+    "clearScriptHint": "Remove everything from the script: all lines and all chapters"
   },
   "audiobook": {
     "cast": "Cast",
@@ -2102,7 +2104,15 @@
     "emotion_text": "Emotion description",
     "emotion_text_ph": "e.g. sounds exhausted and sad",
     "emotion_alpha": "Emotion strength",
-    "lex_duplicate": "Keep one pronunciation per word."
+    "lex_duplicate": "Keep one pronunciation per word.",
+    "cache_location_hint": "Audio is stored in {{cachePath}}; the recovery file is {{manifestPath}}",
+    "open_cache_failed": "Couldn't open the folder holding the saved chapters",
+    "open_chapter_cache": "Open saved chapters folder",
+    "recovery_hint": "Chapters already rendered are kept as they are. Resuming only generates what is still missing.",
+    "recovery_progress": "{{done}}/{{total}} chapters complete",
+    "recovery_title": "Resume an audiobook that didn't finish",
+    "resume_failed": "This audiobook couldn't be resumed: {{message}}",
+    "untitled": "No title"
   },
   "credentials": {
     "microsoft_key": "Microsoft Translator Key",
@@ -2752,7 +2762,8 @@
     "unexpected": "Unexpected error: {{message}}",
     "backend_shutting_down": "VoiceStudio is shutting down. Reopen the app and try again.",
     "crash_broken_env": "It died while loading its own Python dependencies, so this is not about memory or your GPU — the environment is incomplete or was left half-updated. Use \"Clean & Retry\" in Settings → Logs → Backend, which rebuilds it from scratch; that repairs it in place, without touching your voices or projects. If it still fails afterwards, the crash details name the exact package that would not import.",
-    "crash_vram_default": "On smaller GPUs the usual cause is running out of VRAM while loading the ASR model on top of the TTS model: flush the TTS model first, or pick a smaller ASR model in Model Catalogue → Models."
+    "crash_vram_default": "On smaller GPUs the usual cause is running out of VRAM while loading the ASR model on top of the TTS model: flush the TTS model first, or pick a smaller ASR model in Model Catalogue → Models.",
+    "stream_cut_backend_alive": "Start with whatever sits between the browser and the app, such as a reverse proxy or load balancer. For this route, disable response buffering (proxy_buffering off; X-Accel-Buffering: no) and lengthen the read timeout. The stream was severed while the backend kept running, so the app did not crash. This most often happens behind a proxy on a hosted or containerized setup; launching the desktop app directly, or using localhost, will tell you whether the proxy is responsible."
   },
   "segmentEditing": {
     "more": "More actions",

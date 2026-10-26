@@ -384,7 +384,8 @@
     "perf_torch_compile_hint": "Slå på detta efter fel i Triton eller <code>torch.compile</code>, även när backend stängs under ljudskapandet. VoiceStudio skickar då <code>TORCH_COMPILE_DISABLE=1</code> och väljer stabilitet framför kompilerad hastighet. <issueLink>#65</issueLink> gäller Windows med mindre än 16 GB VRAM; <crashLink>#2135</crashLink> följer CUDA-grafproblem på äldre NVIDIA-kort.",
     "llmp_cli_help": "Använder installerad CLI och dess inloggning via samma körning som agentreparation. Lämna Modell tomt för CLI-standard. Svaren kan vara långsammare; kostnader följer ditt CLI-konto.",
     "llmp_sdk_help": "Inbyggda leverantörer använder LiteLLM. Ange provider/model för andra. Bedrock använder API-nyckel eller AWS-profil; Vertex använder konto-ID som projekt och Google-autentisering. Bas-URL är valfri.",
-    "llmp_cli_auth": "Åtkomst till CLI-kontot nekades. Kontrollera inloggning, prenumeration och vald modell."
+    "llmp_cli_auth": "Åtkomst till CLI-kontot nekades. Kontrollera inloggning, prenumeration och vald modell.",
+    "perf_torch_compile": "Stäng av torch.compile"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -508,7 +509,8 @@
     "exportFailed": "Exporten misslyckades – kontrollera att backend körs.",
     "global_speed": "Hastighet",
     "global_speed_hint": "Läshastighet för alla linjer utan egen hastighetsöverstyrning",
-    "deleteProjectConfirm": "Ta bort projektet permanent?"
+    "deleteProjectConfirm": "Ta bort projektet permanent?",
+    "clearScriptHint": "Tömmer hela manuset: alla rader och alla kapitel"
   },
   "common": {
     "stop": "Sluta",

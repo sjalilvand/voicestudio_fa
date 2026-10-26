@@ -1842,7 +1842,8 @@
     "toneChip": "語氣與語速：{{speed}}",
     "lineVoice": "本行聲音",
     "chapterHeading": "章節標題",
-    "lineActions": "行操作"
+    "lineActions": "行操作",
+    "clearScriptHint": "清除指令碼中的全部內容：所有行與所有章節"
   },
   "audiobook": {
     "cast": "配音角色",
@@ -1967,7 +1968,11 @@
     "emotion_text": "情感描述",
     "emotion_text_ph": "例如 聽起來很疲勞和悲傷",
     "emotion_alpha": "情感強度",
-    "lex_duplicate": "每個詞只保留一種發音。"
+    "lex_duplicate": "每個詞只保留一種發音。",
+    "cache_location_hint": "音訊儲存在 {{cachePath}}，復原檔案為 {{manifestPath}}",
+    "recovery_hint": "已產生的章節會原樣保留，繼續時只會產生缺少的部分。",
+    "recovery_progress": "已完成 {{done}}/{{total}} 章",
+    "resume_failed": "無法繼續這本有聲書：{{message}}"
   },
   "credentials": {
     "microsoft_key": "微軟翻譯金鑰",
@@ -2689,7 +2694,8 @@
     "unexpected": "未預期的錯誤：{{message}}",
     "backend_shutting_down": "VoiceStudio 正在關閉。請重新開啟應用程式後再試。",
     "crash_broken_env": "它在載入自身的 Python 相依套件時結束，因此與記憶體或顯示卡無關——執行環境不完整，或更新到一半就停住了。請在 設定 → 系統日誌 → 後端 中使用「清理並重試」，它會從頭重建環境並就地修復，不會動到你的聲音或專案。若之後仍然失敗，當機詳情會指出無法匯入的確切套件。",
-    "crash_vram_default": "在較小的 GPU 上，常見原因是在 TTS 模型仍載入時再載入 ASR 模型，導致顯示記憶體（VRAM）不足：請先卸載 TTS 模型，或在 模型庫 → 模型 中選擇較小的 ASR 模型。"
+    "crash_vram_default": "在較小的 GPU 上，常見原因是在 TTS 模型仍載入時再載入 ASR 模型，導致顯示記憶體（VRAM）不足：請先卸載 TTS 模型，或在 模型庫 → 模型 中選擇較小的 ASR 模型。",
+    "stream_cut_backend_alive": "請先檢查瀏覽器與應用程式之間的環節，例如反向代理或負載平衡器。針對此路由關閉回應緩衝（proxy_buffering off; X-Accel-Buffering: no），並調高讀取逾時。串流中斷時後端仍在執行，表示應用程式並未當機。這通常出現在代管或容器化部署的代理之後；直接執行桌面應用程式或改用 localhost，可以判斷問題是否出在代理上。"
   },
   "segmentEditing": {
     "more": "更多行動",

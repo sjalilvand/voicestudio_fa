@@ -384,7 +384,8 @@
     "perf_torch_compile_hint": "Triton veya <code>torch.compile</code> arızasından sonra, ses hazırlanırken backend kapanırsa da bunu açın. VoiceStudio böylece <code>TORCH_COMPILE_DISABLE=1</code> iletir ve derleme hızından önce kararlılığı seçer. 16 GB altında VRAM bulunan Windows için <issueLink>#65</issueLink>, eski NVIDIA CUDA grafik sorunları için <crashLink>#2135</crashLink> bölümüne bakın.",
     "llmp_cli_help": "Yüklü CLI'yi ve oturumunu, aracıyla onarımla aynı çalıştırıcı üzerinden kullanır. CLI varsayılanı için Model'i boş bırakın. Yanıtlar yavaş olabilir; ücretler CLI hesabınıza yansır.",
     "llmp_sdk_help": "Yerel sağlayıcı bağdaştırıcıları LiteLLM kullanır. Diğerleri için provider/model girin. Bedrock API anahtarı veya AWS profili; Vertex ise proje olarak hesap kimliği ve Google kimlik bilgileri kullanır. Temel URL isteğe bağlıdır.",
-    "llmp_cli_auth": "CLI hesabına erişim reddedildi. Oturumunuzu, aboneliğinizi ve seçilen modeli kontrol edin."
+    "llmp_cli_auth": "CLI hesabına erişim reddedildi. Oturumunuzu, aboneliğinizi ve seçilen modeli kontrol edin.",
+    "perf_torch_compile": "torch.compile'ı kapat"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -508,7 +509,9 @@
     "exportFailed": "Dışa aktarma başarısız oldu — arka ucun çalıştığını kontrol edin.",
     "global_speed": "Hız",
     "global_speed_hint": "Kendi hız geçersiz kılma özelliği olmadan tüm satırlar için okuma hızı",
-    "deleteProjectConfirm": "Bu proje kalıcı olarak silinsin mi?"
+    "deleteProjectConfirm": "Bu proje kalıcı olarak silinsin mi?",
+    "clearScript": "Betiği boşalt",
+    "clearScriptHint": "Betiğin tamamını siler: tüm satırlar ve tüm bölümler"
   },
   "common": {
     "stop": "Durdur",

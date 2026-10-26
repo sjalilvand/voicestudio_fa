@@ -264,7 +264,8 @@
     "minutes": "~{{count}} min",
     "chars": "{{count}} chars",
     "exportFailed": "Export failed — check the backend is running.",
-    "deleteProjectConfirm": "Delete this project permanently?"
+    "deleteProjectConfirm": "Delete this project permanently?",
+    "clearScriptHint": "Remove everything from the script: all lines and all chapters"
   },
   "nav": {
     "launchpad": "Launchpad",
@@ -998,7 +999,8 @@
     "reduce_motion_desc": "Stops background animation and transitions. Your system setting is honoured on its own; this adds to it.",
     "llmp_cli_help": "Uses the installed CLI and its login, through the same runner as Repair with an agent. Leave Model blank for the CLI default. CLI responses may be slower; paid usage follows your CLI account.",
     "llmp_sdk_help": "Native providers use LiteLLM. For other providers, enter provider/model. Bedrock uses an API key or AWS profile; Vertex uses Account ID as project and Google application credentials. Base URL is optional.",
-    "llmp_cli_auth": "CLI account access was rejected. Check your login, subscription, and selected model."
+    "llmp_cli_auth": "CLI account access was rejected. Check your login, subscription, and selected model.",
+    "perf_torch_compile": "Turn off torch.compile"
   },
   "about": {
     "app": "App",
