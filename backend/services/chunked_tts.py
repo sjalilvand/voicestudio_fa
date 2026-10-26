@@ -404,7 +404,13 @@ def report_dropped_chunks(dropped: list, total: int, texts=None, sink=None) -> N
                 pass
         detail = ""
         if named:
-            detail = " — no audio for: " + "; ".join(repr(t[:80]) for t in named)
+            # The log is user-shareable diagnostics: scrub the whole sentence
+            # before truncating so a cut cannot split a secret past the
+            # scrubber. The sink keeps the raw text for the user's own view.
+            from core.scrub import scrub_text
+
+            detail = " — no audio for: " + "; ".join(
+                repr(scrub_text(t)[:80]) for t in named)
         logger.warning(
             "Dropped %d of %d rendered chunk(s): the engine returned no audio "
             "for them, so the output is missing that text%s. This is silent in "

@@ -329,3 +329,23 @@ def test_long_pause_spans_are_chunked_through_engine(client, monkeypatch):
     assert all(t.endswith(_UR_STOP) for t, _ in fake.calls)
     assert " ".join(t for t, _ in fake.calls).split() == (span + " " + span).split()
     assert [kw.get("seed") for _, kw in fake.calls] == [7 + i for i in range(len(fake.calls))]
+
+
+def test_dropped_chunk_log_scrubs_secrets_and_home_paths(monkeypatch, caplog):
+    """Dropped-sentence text reaches the shareable log scrubbed; the caller's
+    sink still gets the raw text for the user (#3021)."""
+    import logging
+
+    from services.chunked_tts import report_dropped_chunks
+
+    secret = "s3cr3t-value-0123456789abcdef"
+    monkeypatch.setenv("MY_API_TOKEN", secret)
+    text = f"key {secret} at /Users/alice/notes.txt"
+    sink: list = []
+    with caplog.at_level(logging.WARNING):
+        report_dropped_chunks([0], 1, texts=[text], sink=sink)
+    logged = caplog.text
+    assert secret not in logged
+    assert "/Users/alice" not in logged
+    assert "Dropped 1 of 1" in logged
+    assert sink == [text]
