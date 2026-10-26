@@ -19,7 +19,7 @@ export default function GlossaryPanel({
   targetLang,
   segments = [],
   onChange,
-  onClose,
+  // CLEAN-ROOM (spec C-summersec §14): optional onClose prop (collapse handler) belongs in this destructured props list.
 }) {
   const { t } = useTranslation();
   const [terms, setTerms] = useState([]);
@@ -46,7 +46,7 @@ export default function GlossaryPanel({
       setTerms(rows);
       pushChange(rows);
     } catch (e) {
-      toast.error(t('glossary.load_error', { message: e.message }));
+      toast.error('' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key glossary.load_error */);
     } finally {
       setLoading(false);
     }
@@ -96,7 +96,7 @@ export default function GlossaryPanel({
   };
 
   const onClearAuto = async () => {
-    if (!confirm(t('glossary.clear_auto_confirm'))) return;
+    if (!confirm('' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key glossary.clear_auto_confirm */)) return;
     try {
       await clearGlossary(projectId, true);
       await reload();
@@ -124,12 +124,12 @@ export default function GlossaryPanel({
       setTerms(res.terms);
       pushChange(res.terms);
       if (res.inserted === 0) {
-        toast(t('glossary.auto_empty'), { icon: 'ℹ️' });
+        toast('' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key glossary.auto_empty */, { icon: 'ℹ️' });
       } else {
-        toast.success(t('glossary.auto_added', { count: res.inserted }));
+        toast.success('' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key glossary.auto_added */);
       }
     } catch (e) {
-      toast.error(t('glossary.auto_error', { message: e.message }));
+      toast.error('' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key glossary.auto_error */);
     } finally {
       setExtracting(false);
     }
@@ -147,8 +147,8 @@ export default function GlossaryPanel({
         <>
           <BookOpen size={15} aria-hidden="true" /> {t('glossary.title')}
           <span className="ml-[var(--space-3)] text-[length:var(--text-xs)] font-medium text-[var(--color-fg-subtle)]">
-            {t('glossary.count', { count: terms.length })}
-            {autoCount > 0 && <> · {t('glossary.auto_count', { count: autoCount })}</>}
+            {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key glossary.count */}
+            {autoCount > 0 && <> · {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key glossary.auto_count */}</>}
           </span>
         </>
       }
@@ -161,31 +161,21 @@ export default function GlossaryPanel({
             onClick={onAutoExtract}
             loading={extracting}
             disabled={!projectId || !targetLang || !segments.length}
-            title={t('glossary.auto_title')}
+            title={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key glossary.auto_title */}
           >
-            {t('glossary.auto_btn')}
+            {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key glossary.auto_btn */}
           </Button>
           {autoCount > 0 && (
             <Button
               variant="ghost"
               size="sm"
               onClick={onClearAuto}
-              title={t('glossary.clear_auto_title')}
+              title={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key glossary.clear_auto_title */}
             >
-              {t('glossary.clear_auto_btn')}
+              {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key glossary.clear_auto_btn */}
             </Button>
           )}
-          {onClose && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              title={t('glossary.close')}
-              aria-label={t('glossary.close')}
-            >
-              <ChevronUp size={14} />
-            </Button>
-          )}
+          {/* CLEAN-ROOM (spec C-summersec §14): optional collapse button shown when onClose is provided. */}
         </>
       }
     >
@@ -207,9 +197,9 @@ export default function GlossaryPanel({
                 <table className="w-full border-collapse text-[length:var(--text-sm)] [&_td]:border-b [&_td]:border-b-transparent [&_td]:px-[6px] [&_td]:py-[3px] [&_td]:text-left [&_td]:align-middle [&_th]:border-b [&_th]:border-b-transparent [&_th]:px-[6px] [&_th]:py-[3px] [&_th]:text-left [&_th]:align-middle [&_th]:text-[length:var(--text-xs)] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-[0.04em] [&_th]:text-[var(--color-fg-subtle)]">
                   <thead>
                     <tr>
-                      <th>{t('glossary.source')}</th>
-                      <th>{t('glossary.target')}</th>
-                      <th>{t('glossary.note')}</th>
+                      <th>{'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key glossary.source */}</th>
+                      <th>{'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key glossary.target */}</th>
+                      <th>{'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key glossary.note */}</th>
                       <th
                         className="w-[60px]"
                         aria-label={`${t('glossary.auto_badge')} / ${t('glossary.manual_badge')}`}
@@ -388,7 +378,7 @@ function GlossaryRow({ term, onUpdate, onDelete }) {
         >
           <Pencil size={12} />
         </Button>
-        <Button variant="danger" iconSize="sm" onClick={onDelete} title={t('common.delete')}>
+        <Button variant="danger" iconSize="sm" onClick={onDelete} title={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key common.delete */}>
           <Trash2 size={10} />
         </Button>
       </td>

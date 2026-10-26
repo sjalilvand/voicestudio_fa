@@ -39,11 +39,11 @@ import { absoluteTime, timeAgo } from '../utils/relativeTime';
  */
 
 const STATUS_TONE = {
-  queued: { tone: 'neutral', icon: Circle, label: 'batch.status_queued' },
-  running: { tone: 'brand', icon: Activity, label: 'batch.status_running' },
-  done: { tone: 'success', icon: CheckCircle, label: 'batch.status_done' },
-  failed: { tone: 'danger', icon: AlertCircle, label: 'batch.status_failed' },
-  cancelled: { tone: 'warn', icon: Square, label: 'batch.status_cancelled' },
+  queued: { tone: 'neutral', icon: Circle, label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.status_queued */ },
+  running: { tone: 'brand', icon: Activity, label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.status_running */ },
+  done: { tone: 'success', icon: CheckCircle, label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.status_done */ },
+  failed: { tone: 'danger', icon: AlertCircle, label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.status_failed */ },
+  cancelled: { tone: 'warn', icon: Square, label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.status_cancelled */ },
 };
 
 // Per-status card border accent (was .batch-queue__card--{status} in CSS).
@@ -53,21 +53,21 @@ const CARD_BORDER = {
 };
 
 const STAGE_LABELS = {
-  extract: 'batch.stage_extract',
-  transcribe: 'batch.stage_transcribe',
-  translate: 'batch.stage_translate',
-  generate: 'batch.stage_generate',
-  mix: 'batch.stage_mix',
-  done: 'batch.stage_complete',
+  extract: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.stage_extract */,
+  transcribe: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.stage_transcribe */,
+  translate: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.stage_translate */,
+  generate: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.stage_generate */,
+  mix: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.stage_mix */,
+  done: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.stage_complete */,
 };
 
 export default function BatchQueue({ onBack }) {
   const { t } = useTranslation();
   const TABS = useMemo(
     () => [
-      { id: 'active', label: t('batch.active'), icon: Activity },
-      { id: 'done', label: t('batch.completed'), icon: CheckCircle },
-      { id: 'failed', label: t('batch.failed'), icon: AlertCircle },
+      { id: 'active', label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.active */, icon: Activity },
+      { id: 'done', label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.completed */, icon: CheckCircle },
+      { id: 'failed', label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.failed */, icon: AlertCircle },
     ],
     [t],
   );
@@ -162,7 +162,7 @@ export default function BatchQueue({ onBack }) {
         }
       }
       if (success > 0) {
-        toast.success(t('batch.enqueued', { count: success }));
+        toast.success('' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.enqueued */);
         setTab('active');
         reload();
       }
@@ -182,7 +182,7 @@ export default function BatchQueue({ onBack }) {
     async (id) => {
       try {
         await cancelBatchJob(id);
-        toast.success(t('batch.job_cancelled'));
+        toast.success('' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.job_cancelled */);
         reload();
       } catch (e) {
         toastErrorWithReport(t('batch.cancel_failed', { message: e.message }), e);
@@ -195,7 +195,7 @@ export default function BatchQueue({ onBack }) {
     async (id) => {
       try {
         await deleteBatchJob(id);
-        toast.success(t('batch.job_deleted'));
+        toast.success('' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.job_deleted */);
         reload();
       } catch (e) {
         toastErrorWithReport(t('batch.delete_failed', { message: e.message }), e);
@@ -228,7 +228,7 @@ export default function BatchQueue({ onBack }) {
           loading={loading}
           leading={<RefreshCw size={11} />}
         >
-          {t('batch.refresh')}
+          {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.refresh */}
         </Button>
         <Button
           variant="primary"
@@ -236,7 +236,7 @@ export default function BatchQueue({ onBack }) {
           onClick={() => setAddOpen(true)}
           leading={<PlusIcon size={11} />}
         >
-          {t('batch.add_videos')}
+          {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.add_videos */}
         </Button>
       </div>
 
@@ -246,12 +246,12 @@ export default function BatchQueue({ onBack }) {
         <Panel variant="flat" padding="lg" className="batch-queue__empty text-center text-fg-muted">
           <div>
             <p>
-              {tab === 'active' && t('batch.no_active')}
-              {tab === 'done' && t('batch.no_completed')}
-              {tab === 'failed' && t('batch.no_failed')}
+              {tab === 'active' && '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.no_active */}
+              {tab === 'done' && '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.no_completed */}
+              {tab === 'failed' && '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.no_failed */}
             </p>
             <p className="batch-queue__empty-sub text-[var(--text-sm)] text-fg-subtle">
-              {tab === 'active' && t('batch.drop_hint')}
+              {tab === 'active' && '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.drop_hint */}
               {tab === 'done' && 'Nothing has completed recently.'}
               {tab === 'failed' && 'No failed jobs — enjoy the silence.'}
             </p>
@@ -299,7 +299,7 @@ function JobCard({ job, onCancel, onDelete, t }) {
 
   const progress = job.progress;
   const stageLabelKey = progress ? STAGE_LABELS[progress.stage] || progress.stage : null;
-  const stageLabel = stageLabelKey ? t(stageLabelKey) : null;
+  const stageLabel = stageLabelKey ? '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key dynamic key */ : null;
   const pct = progress?.percent ?? 0;
 
   return (
@@ -310,7 +310,7 @@ function JobCard({ job, onCancel, onDelete, t }) {
     >
       <div className="batch-queue__card-head flex flex-wrap items-center gap-[var(--space-3)] mb-[var(--space-2)]">
         <Badge tone={st.tone} dot>
-          <StIcon size={10} /> {t(st.label)}
+          <StIcon size={10} /> {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key dynamic key */}
         </Badge>
         <span className="batch-queue__card-filename inline-flex items-center gap-[var(--space-2)] font-mono text-[var(--text-xs)] font-semibold text-fg">
           <Film size={10} /> {job.filename}
@@ -371,7 +371,7 @@ function JobCard({ job, onCancel, onDelete, t }) {
       {/* Duration for completed jobs */}
       {duration != null && (
         <div className="batch-queue__card-meta mt-[var(--space-1)] text-[var(--text-xs)] text-fg-muted">
-          {t('batch.completed_in', { duration: formatDuration(duration) })}
+          {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.completed_in */}
         </div>
       )}
 
@@ -407,7 +407,7 @@ function JobCard({ job, onCancel, onDelete, t }) {
             onClick={() => onCancel(job.id)}
             leading={<XCircle size={10} />}
           >
-            {t('batch.cancel')}
+            {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.cancel */}
           </Button>
         )}
         {(job.status === 'done' || job.status === 'failed' || job.status === 'cancelled') && (
@@ -417,7 +417,7 @@ function JobCard({ job, onCancel, onDelete, t }) {
             onClick={() => onDelete(job.id)}
             leading={<Trash2 size={10} />}
           >
-            {t('batch.delete')}
+            {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key batch.delete */}
           </Button>
         )}
       </div>

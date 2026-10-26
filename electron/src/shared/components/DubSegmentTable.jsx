@@ -292,7 +292,7 @@ export default function DubSegmentTable({
       <Table.Toolbar
         search={query}
         onSearch={setQuery}
-        searchPlaceholder={t('segment.search_placeholder')}
+        searchPlaceholder={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key segment.search_placeholder */}
         meta={meta}
       >
         <DubToggle
@@ -326,7 +326,7 @@ export default function DubSegmentTable({
               type="checkbox"
               checked={allFilteredSelected}
               onChange={(e) => (e.target.checked ? onSelectAll(filtered) : onClearSelection())}
-              title={t('segment.select_all_title')}
+              title={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key segment.select_all_title */}
             />
           </span>
         }

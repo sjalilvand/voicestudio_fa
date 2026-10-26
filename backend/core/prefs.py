@@ -55,7 +55,7 @@ def _save(data: dict) -> None:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
         os.replace(tmp, _PREFS_PATH)
-        os.chmod(_PREFS_PATH, 0o600)
+        # CLEAN-ROOM (spec C-summersec §3): restrict the saved prefs file's permissions to the owner.
     except Exception:
         try:
             os.unlink(tmp)
@@ -94,14 +94,7 @@ def update_mapping(key: str, changes: dict, *, replace: bool = False) -> None:
     _announce(key)
 
 
-def delete(key: str) -> None:
-    """Remove *key* from prefs.json if present."""
-    with _MUTATE_LOCK:
-        data = _load()
-        data.pop(key, None)
-        _save(data)
-    _announce(key)
-
+# CLEAN-ROOM (spec C-summersec §3): public delete(key) function that removes a key from prefs.json and announces the change.
 
 def resolve(key: str, *, env: Optional[str] = None, default: Any = None) -> Any:
     """Env var > prefs.json > default. Env is authoritative so power-users

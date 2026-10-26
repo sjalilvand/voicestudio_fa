@@ -243,38 +243,8 @@ from logging.handlers import RotatingFileHandler
 # at the bottom of this module — same order, same side effects, so the
 # ~100 lifespan-less TestClient call sites see today's fully-built app.
 
+# CLEAN-ROOM (spec C-summersec §1): rotating log-file handler class that tolerates Windows rename/lock failures during rollover.
 
-class _WindowsSafeRotatingFileHandler(RotatingFileHandler):
-    def doRollover(self):
-        _log = logging.getLogger("omnivoice.api")
-        try:
-            super().doRollover()
-        except PermissionError:
-            for i in range(self.backupCount - 1, 0, -1):
-                sfn = self.rotation_filename("%s.%d" % (self.baseFilename, i))
-                dfn = self.rotation_filename("%s.%d" % (self.baseFilename, i + 1))
-                if os.path.exists(sfn):
-                    try:
-                        from utils.fsops import safe_replace
-                        safe_replace(sfn, dfn)
-                    except OSError as e:
-                        _log.warning("log rotation rename failed: %s", e)
-            dfn = self.rotation_filename(self.baseFilename + ".1")
-            if os.path.exists(dfn):
-                try:
-                    os.remove(dfn)
-                except OSError as e:
-                    _log.warning("log rotation remove failed: %s", e)
-            try:
-                self.rotate(self.baseFilename, dfn)
-            except PermissionError:
-                _log.warning("log rotation rotate failed (PermissionError)")
-            if self.stream:
-                try:
-                    self.stream.close()
-                except Exception:
-                    pass
-                self.stream = self._open()
 
 _LOG_FMT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 
@@ -340,7 +310,7 @@ if not os.environ.get("OMNIVOICE_DISABLE_FILE_LOG"):
     )  # local import — avoids circular import at module top
 
     try:
-        _file_handler = _WindowsSafeRotatingFileHandler(
+        _file_handler = RotatingFileHandler(  # CLEAN-ROOM (spec C-summersec §1): use the Windows-tolerant handler here
             _LOG_PATH,
             maxBytes=2 * 1024 * 1024,
             backupCount=3,
@@ -627,11 +597,7 @@ def _phase_a_build_inner() -> None:
     # already provided, so a Settings control can tell the user their saved
     # value is being shadowed instead of silently promising it will apply
     # (core.prefs.is_env_shadowed — #1787 review fix).
-    try:
-        from core.prefs import _load as _load_all_prefs, restore_env
-        restore_env(_load_all_prefs())
-    except Exception:
-        pass  # prefs.json missing or broken — fine on first run
+    # CLEAN-ROOM (spec C-summersec §2): restore persisted env prefs at startup, tolerating a missing or broken prefs file.
     # MIOpen's default find mode runs an exhaustive algorithm search the first
     # time it sees each convolution *shape*, and shape-varying vocoders pay it
     # again on nearly every call — ~18 s per new BigVGAN input shape on an

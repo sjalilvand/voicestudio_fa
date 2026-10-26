@@ -388,13 +388,13 @@ export default function SetupWizard({ onReady }) {
                 variant="primary"
                 onClick={() => setStep(1)}
                 disabled={!preflightOk}
-                title={preflightOk ? '' : t('setup.resolve_blockers')}
+                title={preflightOk ? '' : '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key setup.resolve_blockers */}
               >
                 {preflightOk
                   ? pre?.has_warnings
                     ? t('setup.continue_warn')
                     : t('setup.continue_ok')
-                  : t('setup.continue_blocked')}
+                  : '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key setup.continue_blocked */}
               </Button>
             </div>
           </div>
@@ -436,7 +436,7 @@ export default function SetupWizard({ onReady }) {
                 variant="primary"
                 onClick={() => setStep(step + 1)}
                 disabled={!modelsReady}
-                title={modelsReady ? '' : t('setup.install_required_models')}
+                title={modelsReady ? '' : '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key setup.install_required_models */}
               >
                 {modelsReady ? t('setup.models_ready') : t('setup.waiting_models')}
               </Button>
@@ -516,9 +516,9 @@ export default function SetupWizard({ onReady }) {
                 variant="ghost"
                 size="sm"
                 onClick={() => revealPath(cachePath)}
-                title={t('setup.open_finder')}
+                title={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key setup.open_finder */}
               >
-                {t('setup.open')}
+                {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key setup.open */}
               </Button>
             )}
           </span>

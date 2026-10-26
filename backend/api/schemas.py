@@ -75,9 +75,7 @@ class SystemInfoResponse(BaseModel):
     vram_total_gb: float = 0.0
     disk_free_gb: float = 0.0
     error: str | None = None
-    ffmpeg_ok: bool = False
-    ffmpeg_path: str = ""
-    proxy_url: str = ""
+    # CLEAN-ROOM (spec C-summersec §4): ffmpeg availability / path and proxy URL response fields.
     share_enabled: bool = False
     share_port: int | None = None
     lan_addresses: list[str] = []

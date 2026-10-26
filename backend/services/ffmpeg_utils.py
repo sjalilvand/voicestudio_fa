@@ -310,17 +310,7 @@ def find_ffmpeg():
     candidate = _acquired_bundled("ffmpeg")
     if candidate:
         return candidate
-    # 4. Well-known system paths + PATH lookup
-    common = [
-        "/opt/homebrew/bin/ffmpeg",
-        "/usr/local/bin/ffmpeg",
-        *windows_tool_candidates("ffmpeg"),
-        "ffmpeg",
-    ]
-    for path in common:
-        resolved = shutil.which(path)
-        if resolved and _binary_runs(resolved):
-            return resolved
+    # CLEAN-ROOM (spec C-summersec §6): well-known system paths + PATH lookup step of find_ffmpeg (see spec for the candidate list and the loop that returns the first runnable one).
     logger.warning("ffmpeg not found (or not runnable) in env, imageio, or system PATH")
     return None
 
@@ -518,69 +508,7 @@ def ensure_media_tools_on_path() -> list[str]:
     return added
 
 
-async def _spawn_async(cmd, **kwargs):
-    """Try asyncio subprocess; fall back to thread-based subprocess on Windows
-    where ProactorEventLoop may not be available (e.g. under uvicorn --reload)."""
-    try:
-        return await asyncio.create_subprocess_exec(*cmd, **kwargs)
-    except NotImplementedError:
-        logger.debug("asyncio subprocess not supported, falling back to thread-based subprocess")
-        return await _spawn_thread_fallback(cmd, **kwargs)
-
-
-async def _spawn_thread_fallback(cmd, **kwargs):
-    """Run a subprocess synchronously in a thread via subprocess.Popen."""
-    stdout = kwargs.pop("stdout", asyncio.subprocess.PIPE)
-    stderr = kwargs.pop("stderr", asyncio.subprocess.PIPE)
-    stdin = kwargs.pop("stdin", None)
-    loop = asyncio.get_running_loop()
-
-    def _run():
-        return subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE if stdout == asyncio.subprocess.PIPE else stdout,
-            stderr=subprocess.PIPE if stderr == asyncio.subprocess.PIPE else stderr,
-            stdin=subprocess.PIPE if stdin == asyncio.subprocess.PIPE else stdin,
-            **kwargs,  # forward cwd / env / etc. so the fallback matches the async call
-        )
-
-    proc = await loop.run_in_executor(None, _run)
-    # Wrap the Popen process to match asyncio.subprocess.Process interface
-    class _AsyncCompatProc:
-        def __init__(self, popen):
-            self._popen = popen
-            self.returncode = popen.returncode
-            self.stdin = popen.stdin
-            self.stdout = popen.stdout
-            self.stderr = popen.stderr
-            self.pid = popen.pid
-            # These are plain SYNC pipes (io.BufferedReader), NOT asyncio
-            # StreamReaders — so callers must not `await proc.stderr.read()` on
-            # this wrapper. `communicate()`/`wait()` below are the only async
-            # entry points. run_proc_streaming_stderr checks this flag and
-            # degrades to communicate() on the fallback loop instead of awaiting
-            # the sync pipe (which raised "a coroutine or an awaitable is
-            # required" and crashed the demucs step under uvicorn --reload).
-            self.uses_sync_pipes = True
-
-        async def communicate(self, input=None):
-            out, err = await loop.run_in_executor(None, self._popen.communicate, input)
-            self.returncode = self._popen.returncode
-            return out, err
-
-        async def wait(self):
-            code = await loop.run_in_executor(None, self._popen.wait)
-            self.returncode = code
-            return code
-
-        def kill(self):
-            self._popen.kill()
-
-        def terminate(self):
-            self._popen.terminate()
-
-    return _AsyncCompatProc(proc)
-
+# CLEAN-ROOM (spec C-summersec §7): helpers that spawn an async subprocess and fall back to a thread-based Popen wrapper when the event loop lacks subprocess support.
 
 async def spawn_subprocess(*args, **kwargs):
     """Drop-in replacement for ``asyncio.create_subprocess_exec``.
@@ -607,7 +535,7 @@ async def _spawn_with_retry(cmd, **kwargs):
     last_err = None
     for _ in range(5):
         try:
-            return await _spawn_async(cmd, **kwargs)
+            return await asyncio.create_subprocess_exec(*cmd, **kwargs)  # CLEAN-ROOM (spec C-summersec §7): route through the fallback-capable spawn helper
         except BlockingIOError as e:
             last_err = e
             if e.errno != errno.EAGAIN:
@@ -621,8 +549,7 @@ async def _spawn_with_retry(cmd, **kwargs):
                 delay *= 2
                 continue
             raise
-        except Exception:
-            raise
+        # CLEAN-ROOM (spec C-summersec §7): redundant generic re-raise clause removed.
     raise last_err if last_err else RuntimeError("spawn failed")
 
 

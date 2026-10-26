@@ -148,7 +148,7 @@ export default function ExportModal({
   }, [open, onClose]);
 
   const allTracks = useMemo(() => {
-    const out = [{ code: 'original', label: t('exportModal.original'), kind: 'original' }];
+    const out = [{ code: 'original', label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.original */, kind: 'original' }];
     (dubTracks || []).forEach((t) => out.push({ code: t, label: t.toUpperCase(), kind: 'dub' }));
     return out;
   }, [dubTracks, t]);
@@ -256,7 +256,7 @@ export default function ExportModal({
   };
 
   const runMap = {
-    video: { fn: runVideo, can: canVideo, label: t('exportModal.export_mp4') },
+    video: { fn: runVideo, can: canVideo, label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.export_mp4 */ },
     audio: {
       fn: runAudio,
       can: canAudio,
@@ -265,8 +265,8 @@ export default function ExportModal({
           ? t('exportModal.export_n_audio', { count: selectedDubs.length })
           : t('exportModal.export_audio'),
     },
-    subs: { fn: runSubs, can: canSubs, label: t('exportModal.export_subtitles') },
-    pkg: { fn: null, can: false, label: t('exportModal.export') },
+    subs: { fn: runSubs, can: canSubs, label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.export_subtitles */ },
+    pkg: { fn: null, can: false, label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.export */ },
   };
   const active = runMap[tab];
 
@@ -292,7 +292,7 @@ export default function ExportModal({
             aria-hidden="true"
           />
           <span className="inline-flex items-center gap-[var(--space-2)]">
-            <Download size={13} /> {t('exportModal.export')}
+            <Download size={13} /> {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.export */}
             {filename && (
               <span className="ml-[var(--space-2)] max-w-[260px] overflow-hidden text-ellipsis whitespace-nowrap [font-family:var(--chrome-font-mono)] text-[length:var(--text-sm)] text-[var(--chrome-fg-muted)]">
                 · {filename}
@@ -322,7 +322,7 @@ export default function ExportModal({
                 onClick={() => applyPreset(k)}
                 title={t('exportModal.preset_title', { tab: v.tab, label: t(v.labelKey) })}
               >
-                <Zap size={9} /> {t(v.labelKey)}
+                <Zap size={9} /> {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key dynamic key */}
               </button>
             ))}
           </div>
@@ -343,20 +343,20 @@ export default function ExportModal({
               className={tabCls(tab === 'video')}
               onClick={() => setTab('video')}
             >
-              <Film size={10} /> {t('exportModal.tab_video')}
+              <Film size={10} /> {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.tab_video */}
             </button>
             <button
               type="button"
               className={tabCls(tab === 'audio')}
               onClick={() => setTab('audio')}
             >
-              <Volume2 size={10} /> {t('exportModal.tab_audio')}
+              <Volume2 size={10} /> {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.tab_audio */}
             </button>
             <button type="button" className={tabCls(tab === 'subs')} onClick={() => setTab('subs')}>
-              <FileText size={10} /> {t('exportModal.tab_subs')}
+              <FileText size={10} /> {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.tab_subs */}
             </button>
             <button type="button" className={tabCls(tab === 'pkg')} onClick={() => setTab('pkg')}>
-              <Package size={10} /> {t('exportModal.tab_pkg')}
+              <Package size={10} /> {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.tab_pkg */}
             </button>
           </div>
 
@@ -364,7 +364,7 @@ export default function ExportModal({
           <div className="export-fields">
             {tab === 'video' && (
               <div className="grid grid-cols-2 gap-x-[var(--space-5)] gap-y-[var(--space-4)]">
-                <Field label={t('exportModal.container')}>
+                <Field label={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.container */}>
                   <Segmented
                     size="sm"
                     value={videoFormat}
@@ -395,14 +395,14 @@ export default function ExportModal({
                     ]}
                   />
                 </Field>
-                <Field label={t('exportModal.bg_audio')}>
+                <Field label={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.bg_audio */}>
                   <DubToggle
                     label={t('exportModal.mix_bg_video')}
                     checked={preserveBg}
                     onChange={setPreserveBg}
                   />
                 </Field>
-                <Field label={t('exportModal.subs_in_video')}>
+                <Field label={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.subs_in_video */}>
                   <DubToggle
                     label={t('exportModal.hardsub')}
                     checked={burnSubs}
@@ -443,19 +443,19 @@ export default function ExportModal({
 
             {tab === 'audio' && (
               <div className="grid grid-cols-2 gap-x-[var(--space-5)] gap-y-[var(--space-4)]">
-                <Field label={t('exportModal.format')}>
+                <Field label={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.format */}>
                   <Segmented
                     size="sm"
                     value={audioFormat}
                     onChange={setAudioFormat}
                     items={[
-                      { value: 'wav', label: t('exportModal.wav_lossless') },
-                      { value: 'mp3', label: t('exportModal.mp3_compressed') },
+                      { value: 'wav', label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.wav_lossless */ },
+                      { value: 'mp3', label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.mp3_compressed */ },
                     ]}
                   />
                 </Field>
                 {audioFormat === 'mp3' && (
-                  <Field label={t('exportModal.bitrate')}>
+                  <Field label={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.bitrate */}>
                     <Segmented
                       size="sm"
                       value={mp3Bitrate}
@@ -469,14 +469,14 @@ export default function ExportModal({
                     />
                   </Field>
                 )}
-                <Field label={t('exportModal.what_to_export')}>
+                <Field label={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.what_to_export */}>
                   <Segmented
                     size="sm"
                     value={audioBatch}
                     onChange={setAudioBatch}
                     items={[
-                      { value: 'each', label: t('exportModal.export_each_dub') },
-                      { value: 'primary', label: t('exportModal.export_single_lang') },
+                      { value: 'each', label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.export_each_dub */ },
+                      { value: 'primary', label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.export_single_lang */ },
                     ]}
                   />
                   {audioBatch === 'primary' && (
@@ -493,7 +493,7 @@ export default function ExportModal({
                     />
                   )}
                 </Field>
-                <Field label={t('exportModal.bg_audio')}>
+                <Field label={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.bg_audio */}>
                   <DubToggle
                     label={t('exportModal.mix_bg_audio')}
                     checked={preserveBg}
@@ -505,7 +505,7 @@ export default function ExportModal({
 
             {tab === 'subs' && (
               <div className="grid grid-cols-2 gap-x-[var(--space-5)] gap-y-[var(--space-4)]">
-                <Field label={t('exportModal.format')}>
+                <Field label={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.format */}>
                   <Segmented
                     size="sm"
                     value={subsFormat}
@@ -513,22 +513,22 @@ export default function ExportModal({
                     items={[
                       { value: 'srt', label: 'SRT' },
                       { value: 'vtt', label: 'VTT' },
-                      { value: 'both', label: t('exportModal.both') },
+                      { value: 'both', label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.both */ },
                     ]}
                   />
                 </Field>
-                <Field label={t('exportModal.layout')}>
+                <Field label={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.layout */}>
                   <Segmented
                     size="sm"
                     value={subsDual ? 'dual' : 'single'}
                     onChange={(v) => setSubsDual(v === 'dual')}
                     items={[
-                      { value: 'single', label: t('exportModal.single_line') },
-                      { value: 'dual', label: t('exportModal.dual_subs') },
+                      { value: 'single', label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.single_line */ },
+                      { value: 'dual', label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.dual_subs */ },
                     ]}
                   />
                 </Field>
-                <Field label={t('exportModal.languages')}>
+                <Field label={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.languages */}>
                   <Segmented
                     size="sm"
                     value={subsBatch}
@@ -556,21 +556,21 @@ export default function ExportModal({
                 <PkgCard
                   icon={<Package size={14} />}
                   title={t('exportModal.pkg_clips_title')}
-                  body={t('exportModal.pkg_clips_body')}
+                  body={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.pkg_clips_body */}
                   onClick={runClips}
                   cta={t('exportModal.pkg_clips_cta')}
                 />
                 <PkgCard
                   icon={<Layers size={14} />}
                   title={t('exportModal.pkg_stems_title')}
-                  body={t('exportModal.pkg_stems_body')}
+                  body={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.pkg_stems_body */}
                   onClick={runStems}
                   cta={t('exportModal.pkg_stems_cta')}
                 />
                 <PkgCard
                   icon={<Music size={14} />}
                   title={t('exportModal.pkg_audio_title')}
-                  body={t('exportModal.pkg_audio_body', { count: (dubTracks || []).length })}
+                  body={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.pkg_audio_body */}
                   onClick={() => setTab('audio')}
                   cta={t('exportModal.pkg_audio_cta')}
                   ghost
@@ -622,7 +622,7 @@ export default function ExportModal({
                   onClick={active.fn}
                   disabled={!active.can}
                   leading={<Download size={11} />}
-                  title={active.can ? '' : t('exportModal.nothing_selected')}
+                  title={active.can ? '' : '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key exportModal.nothing_selected */}
                 >
                   {active.label}
                 </Button>

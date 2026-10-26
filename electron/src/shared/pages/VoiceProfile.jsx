@@ -46,7 +46,7 @@ export default function VoiceProfile({ voiceId, onBack, onOpenProject, onDeleted
   const [saving, setSaving] = useState(false);
 
   // Try-it panel
-  const [testText, setTestText] = useState(t('voice_profile.test_text'));
+  const [testText, setTestText] = useState('' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key voice_profile.test_text */);
   const [testGenerating, setTestGenerating] = useState(false);
   const [testAudioUrl, setTestAudioUrl] = useState(null);
 
@@ -159,7 +159,7 @@ export default function VoiceProfile({ voiceId, onBack, onOpenProject, onDeleted
 
   const saveEdits = async () => {
     if (!draft.name.trim()) {
-      toast.error(t('voice_profile.needs_name'));
+      toast.error('' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key voice_profile.needs_name */);
       return;
     }
     setSaving(true);
@@ -167,7 +167,7 @@ export default function VoiceProfile({ voiceId, onBack, onOpenProject, onDeleted
       const next = await updateProfile(voiceId, draft);
       setProfile(next);
       setEditing(false);
-      toast.success(t('voice_profile.saved'));
+      toast.success('' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key voice_profile.saved */);
     } catch (e) {
       toastErrorWithReport(t('voice_profile.save_failed', { message: e.message }), e);
     } finally {
@@ -186,10 +186,10 @@ export default function VoiceProfile({ voiceId, onBack, onOpenProject, onDeleted
   };
 
   const onDelete = async () => {
-    if (!(await askConfirm(t('voice_profile.delete_confirm', { name: profile.name })))) return;
+    if (!(await askConfirm('' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key voice_profile.delete_confirm */))) return;
     try {
       await deleteProfile(voiceId);
-      toast.success(t('voice_profile.deleted'));
+      toast.success('' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key voice_profile.deleted */);
       onDeleted?.();
     } catch (e) {
       toastErrorWithReport(t('voice_profile.delete_failed', { message: e.message }), e);
@@ -197,13 +197,13 @@ export default function VoiceProfile({ voiceId, onBack, onOpenProject, onDeleted
   };
 
   const onUnlock = async () => {
-    if (!(await askConfirm(t('voice_profile.unlock_confirm')))) return;
+    if (!(await askConfirm('' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key voice_profile.unlock_confirm */))) return;
     try {
       await unlockProfile(voiceId);
       await reload();
-      toast.success(t('voice_profile.unlocked'));
+      toast.success('' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key voice_profile.unlocked */);
     } catch (e) {
-      toast.error(t('voice_profile.unlock_failed', { message: e.message }));
+      toast.error('' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key voice_profile.unlock_failed */);
     }
   };
 
@@ -241,14 +241,14 @@ export default function VoiceProfile({ voiceId, onBack, onOpenProject, onDeleted
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-[var(--space-4)] px-[var(--space-6)] py-[var(--space-5)] text-fg-muted [font-size:var(--text-md)]">
         <Sparkles className="animate-spin text-brand" size={24} />
-        <span>{t('common.loading')}</span>
+        <span>{'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key common.loading */}</span>
       </div>
     );
   }
   if (!profile) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-[var(--space-4)] px-[var(--space-6)] py-[var(--space-5)] text-fg-muted [font-size:var(--text-md)]">
-        <p>{t('voice_profile.not_found')}</p>
+        <p>{'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key voice_profile.not_found */}</p>
         <Button variant="subtle" onClick={onBack} leading={<ArrowLeft size={12} />}>
           {t('common.back')}
         </Button>
