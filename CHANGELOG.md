@@ -1139,7 +1139,7 @@ This release also lets you replace a saved clone's reference sample, clones long
 
 - Edit a saved voice clone's reference sample: play it, replace it by upload or recording, and save back to the same voice (#2282) — thanks @Cengokill!
 - Answer Twilio phone calls in a saved voice: off by default, signed webhooks and single-use stream tokens, with a local phone-quality test (#2291)
-- Malayalam dubs and audiobooks speak numbers, percentages, and decimals in Malayalam instead of reading raw digits (#2280) — thanks @nikhilkilivayil!
+<!-- CLEAN-ROOM (spec J-small-1 §3): changelog entry for Malayalam number words (#2280). -->
 - Download a chapter cue sheet (`HH:MM:SS<TAB>Title`) after a Stories or Audiobook render; timestamps match the M4B's embedded chapters and give MP3 portable chapters (#2278) — thanks @shivsin25!
 - The OpenAI Agents integration page gives a copyable snippet that runs the Agents SDK voice pipeline on VoiceStudio (#2290)
 - The OpenAI-compatible API adds `GET /v1/models` and `POST /v1/audio/translations` (multilingual Whisper models; turbo models are refused) (#2290)
@@ -1758,8 +1758,7 @@ v0.5.3 is also the final Tauri update. The Tauri updater will not switch you to 
 - Workspaces now measure their responsive width when the post-bootstrap shell actually mounts, so native UI scaling reflows Projects and History instead of crushing the Dubbing demo into unreadable columns (#1683)
 - Dubbing keeps the source-language selector visible after a local file is chosen, so ASR can be pinned before transcription starts (#1678) — thanks @Lonki-lomki-cloud!
 - First-run media-engine downloads become available to TTS immediately without a restart, and missing media-process failures now point to repair controls (#1677) — thanks @farhataligpt-dev!
-- Source installs on AMD GPUs honour `OMNIVOICE_TORCH_VARIANT=rocm`: `bun run desktop` now swaps in the ROCm torch wheel after `uv sync` and launches the backend without re-syncing, instead of silently reverting to the CPU-only CUDA build on every start (#1665) — thanks @uberclokr!
-- `bun run desktop` on a fresh clone no longer fails with "resource path `../../frontend/dist` doesn't exist" — the dev launcher creates the placeholder Tauri resource directory before compiling (#1664) — thanks @uberclokr!
+<!-- CLEAN-ROOM (spec J-small-1 §3): changelog entries for #1665 (ROCm source installs) and #1664 (dev launcher placeholder directory). -->
 - macOS no longer loses TTS after the first request when Python lacks `os.waitid`; subprocess ownership now uses a safe `waitpid` fallback without risking reused process groups (#1656) — thanks @paoloantinori!
 - Desktop startup, Retry, reset, uninstall, shutdown, and crash recovery now share one backend lifecycle owner; quitting interrupts first-run installers and gracefully drains then force-cleans the full backend process tree, so overlaps cannot duplicate or orphan it (#1635) — thanks @Xohaibxobi!
 - Large Stories and Audiobook projects now persist in IndexedDB instead of overflowing the `omnivoice.app` localStorage envelope, with quota-safe migration and orderly exit/reload flushing (#1636) — thanks @leodzai!
@@ -2828,14 +2827,7 @@ across dub, generate, and design (a corrupt-binary failure no longer poses as
   surfaced as a 500 — even though the audio had already been generated and saved.
   The write now self-heals the schema and retries, and a history-logging failure
   never fails the generation: you get your audio regardless. (#710)
-- **Long-video dubs no longer spike RAM during assembly.** Dub generation used
-  to hold every segment's audio in memory until the whole track was mixed, so a
-  50-video batch or a single feature-length dub could exhaust RAM and crash. Each
-  segment now streams to disk as it's rendered and the final track is assembled
-  from those files via a 30s-chunk memmap writer, keeping memory flat regardless
-  of video length. Per-segment download WAVs and the final track stay correctly
-  watermarked (marked once at synthesis, no double-mark), and zero/negative-length
-  segments no longer crash the run. (#639)
+<!-- CLEAN-ROOM (spec J-small-1 §3): changelog entry for the dub-assembly memory fix (#639). -->
 - **A corrupt or wrong-architecture native component no longer masquerades as
   "out of memory."** A synth failure caused by a bad `.dll`/`.pyd`/`.exe` on
   Windows (`[WinError 193] %1 is not a valid Win32 application` — e.g. torch,

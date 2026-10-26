@@ -299,33 +299,7 @@ class SpeechRequest(BaseModel):
         "E.g. 'young female, warm tone, slight British accent'.",
     )
     instruct: Optional[str] = Field(default=None, description="Style instruction for the TTS engine.")
-    duration: Optional[float] = Field(
-        default=None,
-        gt=0,
-        description="VoiceStudio extension: target output duration in seconds.",
-    )
-    seed: Optional[int] = Field(
-        default=None,
-        description="VoiceStudio extension: deterministic sampling seed.",
-    )
-    denoise: bool = Field(
-        default=True,
-        description="VoiceStudio extension: prepend denoise control when supported.",
-    )
-    preprocess_prompt: bool = Field(
-        default=True,
-        description="VoiceStudio extension: trim/preprocess reference prompt when supported.",
-    )
-    chunk_duration: Optional[float] = Field(
-        default=None,
-        ge=0,
-        description="OmniVoice GGUF extension: long-form internal chunk duration.",
-    )
-    chunk_threshold: Optional[float] = Field(
-        default=None,
-        ge=0,
-        description="OmniVoice GGUF extension: long-form internal chunk threshold.",
-    )
+    # CLEAN-ROOM (spec J-small-1 §7.1): VoiceStudio extension fields duration, seed, denoise, preprocess_prompt, chunk_duration, chunk_threshold.
     # #1014: these two were silently DISCARDED before (pydantic ignores
     # undeclared fields) — a 200 OK that quietly dropped the caller's quality
     # knobs. Declared now and passed through, matching the native /generate
@@ -677,17 +651,8 @@ async def create_speech(req: SpeechRequest):
     # Build kwargs for the backend's generate() method
     kw: dict = {
         "speed": req.speed,
-        "denoise": req.denoise,
-        "preprocess_prompt": req.preprocess_prompt,
     }
-    if req.duration is not None:
-        kw["duration"] = req.duration
-    if req.seed is not None:
-        kw["seed"] = req.seed
-    if req.chunk_duration is not None:
-        kw["chunk_duration"] = req.chunk_duration
-    if req.chunk_threshold is not None:
-        kw["chunk_threshold"] = req.chunk_threshold
+    # CLEAN-ROOM (spec J-small-1 §7.2): forward duration, seed, chunk_duration and chunk_threshold when provided.
     if req.num_step is not None:
         kw["num_step"] = req.num_step
     if req.guidance_scale is not None:
@@ -722,8 +687,7 @@ async def create_speech(req: SpeechRequest):
                 stored_instruct = profile_instruct(row, backend.id)
                 if stored_instruct:
                     kw["instruct"] = stored_instruct
-            if req.seed is None and row["seed"] is not None:
-                kw["seed"] = row["seed"]
+            # CLEAN-ROOM (spec J-small-1 §7.3): profile seed fallback when the request has no seed.
         else:
             # Not a profile — forward as an engine preset name.
             kw["voice"] = voice
