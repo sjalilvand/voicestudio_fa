@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import useTTS from '../hooks/useTTS';
 import { useAppStore } from '../store';
 import { playBlobAudio } from '../utils/media';
 import {
+  StreamingPreviewError,
   streamGenerateSpeech,
   supportsStreamingPreview,
 } from '../utils/streamingTts';
@@ -123,5 +124,66 @@ describe('useTTS delivery path', () => {
     expect(generateSpeech).not.toHaveBeenCalled();
   });
 
-  // CLEAN-ROOM (spec I-psiberfunk §7): tests: real stream progress exposed separately from the elapsed timer; progress cleared before classic fallback.
+  it('exposes streamed progress apart from the elapsed timer and clears it afterwards', async () => {
+    let reportProgress;
+    let finish;
+    vi.mocked(streamGenerateSpeech).mockImplementationOnce((_fd, opts) => {
+      reportProgress = opts.onProgress;
+      return new Promise((resolve) => {
+        finish = () => resolve({ id: 'x', audio_path: 'x.wav' });
+      });
+    });
+    const { result } = renderHook(() => useTTS(hookProps()));
+    expect(result.current.generationProgress).toBeNull();
+
+    let run;
+    act(() => {
+      run = result.current.handleGenerate();
+    });
+    await waitFor(() => expect(reportProgress).toBeTypeOf('function'));
+    act(() => reportProgress(37));
+
+    expect(result.current.isGenerating).toBe(true);
+    expect(result.current.generationProgress).toBe(37);
+    expect(String(result.current.generationTime)).not.toContain('%');
+
+    await act(async () => {
+      finish();
+      await run;
+    });
+    expect(result.current.isGenerating).toBe(false);
+    expect(result.current.generationProgress).toBeNull();
+  });
+
+  it('drops streamed progress when it falls back to the classic request', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.mocked(streamGenerateSpeech).mockImplementationOnce(async (_fd, opts) => {
+      opts.onProgress(80);
+      throw new StreamingPreviewError('stream dropped');
+    });
+    let releaseClassic;
+    vi.mocked(generateSpeech).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          releaseClassic = () =>
+            resolve({
+              body: { getReader: () => ({ read: async () => ({ done: true, value: undefined }) }) },
+              headers: { get: () => null },
+            });
+        }),
+    );
+    const { result } = renderHook(() => useTTS(hookProps()));
+    let run;
+    act(() => {
+      run = result.current.handleGenerate();
+    });
+    await waitFor(() => expect(generateSpeech).toHaveBeenCalledTimes(1));
+    expect(result.current.isGenerating).toBe(true);
+    expect(result.current.generationProgress).toBeNull();
+
+    await act(async () => {
+      releaseClassic();
+      await run;
+    });
+  });
 });

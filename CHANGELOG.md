@@ -1520,7 +1520,7 @@ v0.5.3 is also the final Tauri update. The Tauri updater will not switch you to 
 - The Engines menu's Transcription tab picks the dictation model under Sherpa-ONNX, and that choice now also drives Sherpa transcription (#1952)
 - A failure with no stage attached no longer borrows another stage's advice, so a text-to-speech error stops telling you the video server dropped the download (#1943)
 - A generation failure that the app cannot classify now names the backend error class, so two unrelated faults stop arriving as the same untriageable report (#1800)
-- CLEAN-ROOM (spec I-psiberfunk §11): changelog entry (#1902)
+- Dictation on the Transcriptions page now wakes the desktop recorder, offers a single start action that fits the moment, and centres the microphone icon beside its label (#1902)
 - Colab transcription and dubbing now include an explicit ASR model setup step (#1922) — thanks @nidhi-singh02!
 - Apple Silicon now shows one canonical OmniVoice choice in the engine picker while retaining its automatic crash-isolated sidecar runtime (#1913)
 - Validate current-user Windows installers under a standard account on hosted runners (#1883)
@@ -1615,7 +1615,7 @@ v0.5.3 is also the final Tauri update. The Tauri updater will not switch you to 
 - A port-3900 conflict now names who is actually holding it, and gives the command that ends an orphaned backend, instead of telling you to quit an app that has no window (#1933) — thanks @Chang-Jin-Lee!
 - Windows desktop launches no longer freeze at "Loading ML runtime (PyTorch)": the parent-liveness watchdog polls the stdin pipe instead of leaving a read pending, which deadlocked numpy's OpenBLAS initializer (#1952, #1955)
 - `bun desktop-prod` and `bun desktop-fresh` find Rust and uv from a terminal opened before they were installed, as `bun desktop` already did; a missing Rust toolchain fails up front with the install steps (#1952)
-- CLEAN-ROOM (spec I-psiberfunk §11): changelog entry (#1907)
+- The synthesis progress bar no longer invents a percentage from elapsed time; it stays indeterminate until the generation path reports real progress (#1907) — thanks @psiberfunk!
 - The Backend log tab keeps showing history across a log rollover, instead of going nearly empty until new lines arrive (#1920)
 - Clearing the logs now empties the rotated log files too, so it frees the space it appears to (#1920)
 - An error thrown by a browser extension no longer offers to file itself as a VoiceStudio bug (#1901)
@@ -1670,7 +1670,7 @@ v0.5.3 is also the final Tauri update. The Tauri updater will not switch you to 
 - Release retries replace their own partially uploaded installers without colliding with existing assets (#1871)
 - Timed-out voice engines finish process cleanup before retrying, and old timeout callbacks cannot kill replacement engines (#1872)
 - Fast macOS process exits no longer turn a completed shutdown into a permission error (#1809)
-- CLEAN-ROOM (spec I-psiberfunk §11): changelog entry (#1894)
+- The setup splash no longer lists install steps that never ran on a warm start or repair sync; a step shows as done only once it was actually observed (#1894)
 - A deliberate, clean quit killed by the desktop shell's short shutdown grace no longer gets reported as a crash on next launch — the run sentinel now clears before the slower shutdown steps instead of after (#1895)
 - Model Catalogue engine rows stack into one column on narrow shells instead of clipping actions off-screen (#1891)
 - Simplified Chinese locale completed: all 486 missing keys translated and the parity ratchet tightened to zero (#1877) — thanks @yearth!

@@ -73,7 +73,7 @@ export default function CloneDesignTab(props) {
     setVdStates,
     isGenerating,
     generationTime,
-    // CLEAN-ROOM (spec I-psiberfunk §8): receives generationProgress from props.
+    generationProgress,
     applyPreset,
     insertTag,
     handleSaveProfile,
@@ -596,7 +596,7 @@ export default function CloneDesignTab(props) {
                 isGenerating={isGenerating}
                 handleGenerate={handleGenerate}
                 generationTime={generationTime}
-                /* CLEAN-ROOM (spec I-psiberfunk §8): pass generationProgress to ActionBar */
+                generationProgress={generationProgress}
                 wasGeneratingRef={wasGeneratingRef}
               />
             )}

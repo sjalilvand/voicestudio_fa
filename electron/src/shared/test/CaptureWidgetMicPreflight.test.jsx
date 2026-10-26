@@ -126,7 +126,17 @@ describe('CaptureWidget — mic permission pre-flight (Tauri)', () => {
     window.__TAURI_INTERNALS__ = {};
   });
 
-  // CLEAN-ROOM (spec I-psiberfunk §9): test that the error-state pill title carries the detailed error message.
+  it('puts the detailed denial hint in the error label hover title', async () => {
+    stubInvoke({ mic: 'denied' });
+    installGum(async () => {
+      throw notFound();
+    });
+    render(<CaptureWidget />);
+    pressShortcut();
+
+    const label = await screen.findByText(/Mic access denied/);
+    expect(label.getAttribute('title')).toMatch(/audio group/);
+  });
 
   it('OS-denied → guided error pill with Open Settings, getUserMedia never called', async () => {
     stubInvoke({ mic: 'denied' });

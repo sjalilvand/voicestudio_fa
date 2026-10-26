@@ -120,7 +120,15 @@ const STEPS = [
   'starting_backend',
 ];
 
-// CLEAN-ROOM (spec I-psiberfunk §1): list of install-work stage names.
+// Stages that mean real install work is underway. `awaiting_setup` counts: Rust
+// found no venv, so work is about to start even though FirstRunSetup (not the
+// step list) is what renders for it.
+const INSTALL_WORK_STAGES = [
+  'downloading_uv',
+  'creating_venv',
+  'installing_deps',
+  'awaiting_setup',
+];
 
 // How many log lines the <pre> shows. `logs` state holds exactly this tail and
 // nothing more, so the per-event array copy stays bounded no matter how long a
@@ -458,7 +466,8 @@ export function BootstrapSplash({ stage, message, attempt = 0 }) {
   const [progress, setProgress] = useState(null);
   const [region, setRegionState] = useState('auto');
   const [retrying, setRetrying] = useState(false);
-  // CLEAN-ROOM (spec I-psiberfunk §1): polled-stage state.
+  // Stages the status poll has reported during the current attempt.
+  const [polledStages, setPolledStages] = useState(() => new Set([stage]));
   // Every line of this bootstrap. `logs` above is only the rendered tail.
   const [totalLines, setTotalLines] = useState(0);
   const allLogsRef = useRef([]);
@@ -470,7 +479,20 @@ export function BootstrapSplash({ stage, message, attempt = 0 }) {
   const prevProgRef = useRef(null); // {bytes, t} — last progress event
   const rateRef = useRef(0); // EMA bytes/sec across events
 
-  // CLEAN-ROOM (spec I-psiberfunk §1): observed-stage set (union of polled stages and stage-tagged log lines of the current attempt).
+  // A stage counts as observed when the poll reported it OR a stage-tagged log
+  // line of this attempt proves it ran. Polling is ~1/s, so a quick stage can
+  // slip between two ticks; its log lines are separate evidence. Lines are
+  // matched on attempt id equality, so a retry never inherits proof from a
+  // previous run.
+  const observedStages = useMemo(() => {
+    const seen = new Set(polledStages);
+    for (const entry of allLogsRef.current) {
+      if (entry.stage && entry.attempt === attempt) seen.add(entry.stage);
+    }
+    return seen;
+    // allLogsRef is a ref; totalLines is the signal that it changed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [polledStages, totalLines, attempt]);
 
   const label = t(`bootstrap.${stage}`, STAGE_LABEL[stage]);
   const stepIndex = Math.max(0, STEPS.indexOf(stage));
@@ -489,14 +511,21 @@ export function BootstrapSplash({ stage, message, attempt = 0 }) {
     setLogs([]);
   };
 
-  // CLEAN-ROOM (spec I-psiberfunk §1): installWorkSeen derivation and the retry-reset helper.
+  const installWorkSeen = INSTALL_WORK_STAGES.some((s) => observedStages.has(s));
+
+  // Fresh-run presentation reset for a user-requested retry. Where an attempt
+  // begins is decided by Rust (#1900); this only clears what is on screen.
+  const beginAttempt = () => {
+    resetLogs();
+    setPolledStages(new Set());
+  };
 
   const handleRetry = async () => {
     if (retrying) return;
     setRetrying(true);
     try {
       const { invoke } = await import('@tauri-apps/api/core');
-      // CLEAN-ROOM (spec I-psiberfunk §4): clear visible retry state before invoking the command.
+      beginAttempt();
       await invoke('retry_bootstrap');
     } catch (e) {
       console.error('retry failed', e);
@@ -511,7 +540,7 @@ export function BootstrapSplash({ stage, message, attempt = 0 }) {
     setRetrying(true);
     try {
       const { invoke } = await import('@tauri-apps/api/core');
-      // CLEAN-ROOM (spec I-psiberfunk §4): clear visible retry state before invoking the command.
+      beginAttempt();
       await invoke('clean_and_retry_bootstrap');
     } catch (e) {
       console.error('clean retry failed', e);
@@ -520,7 +549,21 @@ export function BootstrapSplash({ stage, message, attempt = 0 }) {
     }
   };
 
-  // CLEAN-ROOM (spec I-psiberfunk §2): effect that records the current stage as observed and resets the observed set when the attempt id changes.
+  // Track observed stages. Within an attempt the set only grows; a new attempt
+  // id (compared by equality alone) starts it over from the current stage.
+  useEffect(() => {
+    if (prevAttemptRef.current !== attempt) {
+      prevAttemptRef.current = attempt;
+      setPolledStages(new Set([stage]));
+      return;
+    }
+    setPolledStages((prev) => {
+      if (prev.has(stage)) return prev;
+      const next = new Set(prev);
+      next.add(stage);
+      return next;
+    });
+  }, [stage, attempt]);
 
   // Load persisted region on mount.
   useEffect(() => {
@@ -702,7 +745,7 @@ export function BootstrapSplash({ stage, message, attempt = 0 }) {
           data-tauri-drag-region
         >
           <Waveform />
-          {/* CLEAN-ROOM (spec I-psiberfunk §3): journey rail, rendered only when install work has been observed. */}
+          {installWorkSeen && <JourneyRail t={t} />}
           <div className="mt-2 flex flex-wrap items-end justify-between gap-6">
             <div className="min-w-0">
               {/* Version rides beside the app name — same masthead across all
@@ -824,7 +867,11 @@ export function BootstrapSplash({ stage, message, attempt = 0 }) {
           </section>
         ) : (
           <section className="fr-rise flex flex-col gap-2.5" style={{ '--rise': 1 }}>
-            {/* CLEAN-ROOM (spec I-psiberfunk §3): "Installing" heading, shown only when install work has been observed. */}
+            {installWorkSeen && (
+              <h2 className="m-0 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-fg-muted">
+                {t('firstrun.installing_title', 'Installing')}
+              </h2>
+            )}
             {/* Overall journey meter. */}
             <Progress
               value={overallPct}
@@ -832,8 +879,68 @@ export function BootstrapSplash({ stage, message, attempt = 0 }) {
               size="md"
               aria-valuenow={Math.round(overallPct)}
             />
-            {/* CLEAN-ROOM (spec I-psiberfunk §3): step list (ordered list over STEPS), shown only when install work has been observed; per-step done state per spec. */}
-            {/* CLEAN-ROOM (spec I-psiberfunk §3): resume note, shown only when install work has been observed. */}
+            {installWorkSeen && (
+              <ol className="m-0 flex list-none flex-col gap-1.5 p-0">
+                {STEPS.map((s, i) => {
+                  const active = i === stepIndex;
+                  // Never infer "done" from list position: warm starts and repair
+                  // syncs skip the earlier stages entirely.
+                  const done = !active && observedStages.has(s);
+                  const total = stageProgress?.bytes_total ?? stageProgress?.total_bytes;
+                  const bytesDone = stageProgress?.bytes_done;
+                  const hasTotal = total > 0;
+                  const showEta =
+                    hasTotal && rateRef.current > 0 && bytesDone != null && bytesDone < total;
+                  return (
+                    <li
+                      key={s}
+                      data-step={s}
+                      data-state={done ? 'done' : active ? 'active' : 'pending'}
+                      className="flex items-center gap-2.5 text-sm"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          'h-2 w-2 shrink-0 rounded-full',
+                          done && 'bg-success',
+                          active && 'animate-pulse bg-primary',
+                          !done && !active && 'bg-fg-subtle/40',
+                        )}
+                      />
+                      <span
+                        className={cn(
+                          done && 'text-fg-muted',
+                          active && 'font-semibold text-fg',
+                          !done && !active && 'text-fg-subtle/60',
+                        )}
+                      >
+                        {t(`bootstrap.${s}`, STAGE_LABEL[s])}
+                      </span>
+                      {active && stageProgress && (
+                        <span className="ml-auto font-mono text-[0.64rem] tabular-nums text-fg-muted">
+                          {formatBytes(bytesDone)}
+                          {hasTotal && ` / ${formatBytes(total)}`}
+                          {pctFromBytes != null && ` (${Math.round(pctFromBytes)}%)`}
+                          {showEta &&
+                            ` · ${t('firstrun.eta_left', {
+                              eta: formatEta((total - bytesDone) / rateRef.current),
+                              defaultValue: '~{{eta}} left',
+                            })}`}
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+            {installWorkSeen && (
+              <p className="m-0 text-xs leading-snug text-fg-subtle">
+                {t(
+                  'firstrun.resume_note',
+                  'Interrupted downloads pick up where they left off. You can close the app safely.',
+                )}
+              </p>
+            )}
           </section>
         )}
 

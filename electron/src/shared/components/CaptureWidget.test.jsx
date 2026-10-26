@@ -1480,7 +1480,13 @@ describe('CaptureWidget', () => {
     expect(screen.queryByText(/Listening/)).not.toBeInTheDocument();
   });
 
-  // CLEAN-ROOM (spec I-psiberfunk §9): test that the setup label exposes its full text as a title.
+  it('exposes the full Accessibility setup text as the label hover title', async () => {
+    mocks.holder.a11y = false;
+    render(withI18n(<CaptureWidget />));
+
+    const label = await screen.findByText(/Allow Accessibility/);
+    expect(label).toHaveAttribute('title', 'Allow Accessibility so dictation can type for you');
+  });
 
   it('clears the Accessibility setup pill after the native grant changes', async () => {
     vi.useFakeTimers();

@@ -101,6 +101,7 @@ function baseProps(overrides = {}) {
     handleSaveProfile: NOOP,
     handleSaveDesignProfile: NOOP,
     handleGenerate: NOOP,
+    generationProgress: null,
     startRecording: NOOP,
     stopRecording: NOOP,
     ingestRefAudio: NOOP,
@@ -121,7 +122,13 @@ function renderDesignTab(overrides = {}) {
 }
 
 describe('CloneDesignTab — Voice Design panel redesign regressions', () => {
-  // CLEAN-ROOM (spec I-psiberfunk §8): test that measurable generation progress reaches the action bar.
+  it('forwards measurable generation progress to the action bar', () => {
+    renderDesignTab({ isGenerating: true, generationProgress: 63 });
+    const bars = screen
+      .getAllByRole('progressbar')
+      .filter((b) => b.getAttribute('aria-valuenow') === '63');
+    expect(bars).toHaveLength(1);
+  });
 
   it.each([
     ['recording is active', { isRecording: true }],

@@ -65,7 +65,7 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
   const [pendingTrimFile, setPendingTrimFile] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationTime, setGenerationTime] = useState(0);
-  // CLEAN-ROOM (spec I-psiberfunk §10): generation progress state (number 0-100 or null).
+  const [generationProgress, setGenerationProgress] = useState(null);
   const timerRef = useRef(null);
   const textAreaRef = useRef(null);
 
@@ -122,8 +122,11 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
     addBreadcrumb(`generate:start (${defineMethod})`);
     setIsGenerating(true);
     setGenerationTime(0);
-    // CLEAN-ROOM (spec I-psiberfunk §10): reset progress to null at generation start.
-    // CLEAN-ROOM (spec I-psiberfunk §10): elapsed-time timer (maintainer: sets generationTime every 100 ms).
+    setGenerationProgress(null);
+    const startedAt = Date.now();
+    timerRef.current = setInterval(() => {
+      setGenerationTime(((Date.now() - startedAt) / 1000).toFixed(1));
+    }, 100);
     let abortTimer = null;
     try {
       const formData = new FormData();
@@ -280,7 +283,7 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
           }
         }
       };
-      // CLEAN-ROOM (spec I-psiberfunk §10): define setProgressPct(pct), which records real progress (used by remaining call sites).
+      const setProgressPct = (pct) => setGenerationProgress(pct);
 
       // Streaming preview (feat: streaming-tts-preview): playback starts from
       // the FIRST synthesized chunk while the rest is still rendering, via
@@ -326,7 +329,7 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
             'Streaming preview failed mid-stream; falling back to the classic generate:',
             err?.message || err,
           );
-          // CLEAN-ROOM (spec I-psiberfunk §10): reset progress to null before the classic fallback.
+          setGenerationProgress(null);
           addBreadcrumb('generate:stream-fallback');
         }
       }
@@ -382,7 +385,7 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
       if (abortTimer) clearTimeout(abortTimer);
       clearInterval(timerRef.current);
       setIsGenerating(false);
-      // CLEAN-ROOM (spec I-psiberfunk §10): reset progress to null when generation ends.
+      setGenerationProgress(null);
     }
   }, [
     text,
@@ -417,7 +420,7 @@ export default function useTTS({ selectedProfile, setSelectedProfile, loadHistor
     setPendingTrimFile,
     isGenerating,
     generationTime,
-    // CLEAN-ROOM (spec I-psiberfunk §10): return generationProgress from the hook.
+    generationProgress,
     textAreaRef,
     ingestRefAudio,
     insertTag,

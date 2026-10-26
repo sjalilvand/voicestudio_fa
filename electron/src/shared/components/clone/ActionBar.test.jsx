@@ -35,6 +35,7 @@ const baseProps = {
   isGenerating: false,
   handleGenerate: setter,
   generationTime: 0,
+  generationProgress: null,
   wasGeneratingRef: { current: false },
 };
 
@@ -98,5 +99,19 @@ describe('ActionBar', () => {
     expect(screen.getByRole('slider', { name: 'clone.steps' })).toBeInTheDocument();
   });
 
-  // CLEAN-ROOM (spec I-psiberfunk §7): tests for the generation progress bar (indeterminate and determinate).
+  it('shows an indeterminate bar while generating without a reported percentage', () => {
+    render(<ActionBar {...baseProps} isGenerating generationProgress={null} />);
+    const bar = screen.getByRole('progressbar');
+    expect(bar).not.toHaveAttribute('aria-valuenow');
+  });
+
+  it('shows a determinate bar at the reported percentage', () => {
+    render(<ActionBar {...baseProps} isGenerating generationProgress={42} />);
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '42');
+  });
+
+  it('renders no progress bar when idle', () => {
+    render(<ActionBar {...baseProps} generationProgress={42} />);
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+  });
 });
