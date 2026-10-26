@@ -2197,7 +2197,6 @@
     "downloading_uv": "uv (Python paket yöneticisi) indiriliyor…",
     "installing_deps": "Bağımlılıklar…",
     "dependencies_resolved": "{{count}} bağımlılık çözüldü",
-    "remaining_amount": "~{{amount}} kaldı",
     "download_rate": "{{rate}}/sn",
     "eta": "~{{time}} kaldı",
     "downloads_complete": "İndirmeler tamamlandı · paketler kuruluyor",

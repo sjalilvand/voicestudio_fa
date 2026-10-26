@@ -2197,7 +2197,6 @@
     "downloading_uv": "Laddar ner uv (Python-pakethanterare)…",
     "installing_deps": "Installerar…",
     "dependencies_resolved": "{{count}} beroenden lösta",
-    "remaining_amount": "~{{amount}} återstår",
     "download_rate": "{{rate}}/s",
     "eta": "~{{time}} återstår",
     "downloads_complete": "Hämtningen är klar · installerar paket",

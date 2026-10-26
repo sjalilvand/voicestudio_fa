@@ -2209,7 +2209,6 @@
     "downloading_uv": "جاري تنزيل uv (مدير حزم بايثون)…",
     "installing_deps": "جاري…",
     "dependencies_resolved": "{{count}} تبعية محلولة",
-    "remaining_amount": "متبقٍ نحو {{amount}}",
     "download_rate": "{{rate}}/ث",
     "eta": "متبقٍ نحو {{time}}",
     "downloads_complete": "اكتمل التنزيل · جارٍ تثبيت الحزم",

@@ -2197,7 +2197,6 @@
     "downloading_uv": "uv (पायथन पैकेज मैनेजर) डाउनलोड हो रहा है…",
     "installing_deps": "निर्भरताएँ…",
     "dependencies_resolved": "{{count}} निर्भरताएँ हल हुईं",
-    "remaining_amount": "~{{amount}} शेष",
     "download_rate": "{{rate}}/से",
     "eta": "~{{time}} शेष",
     "downloads_complete": "डाउनलोड पूरे · पैकेज इंस्टॉल हो रहे हैं",

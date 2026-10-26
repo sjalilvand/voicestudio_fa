@@ -2199,7 +2199,6 @@
     "downloading_uv": "Descargando uv (gestor de paquetes de Python)…",
     "installing_deps": "Instalando…",
     "dependencies_resolved": "{{count}} dependencias resueltas",
-    "remaining_amount": "quedan ~{{amount}}",
     "download_rate": "{{rate}}/s",
     "eta": "quedan ~{{time}}",
     "downloads_complete": "Descargas completadas · instalando paquetes",

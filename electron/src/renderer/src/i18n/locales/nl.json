@@ -2197,7 +2197,6 @@
     "downloading_uv": "uv (Python pakketbeheerder) downloaden…",
     "installing_deps": "Afhankelijkheden…",
     "dependencies_resolved": "{{count}} afhankelijkheden opgelost",
-    "remaining_amount": "~{{amount}} resterend",
     "download_rate": "{{rate}}/s",
     "eta": "~{{time}} resterend",
     "downloads_complete": "Downloads voltooid · pakketten installeren",

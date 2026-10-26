@@ -2197,7 +2197,6 @@
     "downloading_uv": "uv（Pythonパッケージマネージャー）をダウンロード中…",
     "installing_deps": "依存関係のインストール中…",
     "dependencies_resolved": "{{count}} 件の依存関係を解決済み",
-    "remaining_amount": "残り約 {{amount}}",
     "download_rate": "{{rate}}/秒",
     "eta": "残り約 {{time}}",
     "downloads_complete": "ダウンロード完了 · パッケージをインストール中",

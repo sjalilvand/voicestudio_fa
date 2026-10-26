@@ -2197,7 +2197,6 @@
     "downloading_uv": "Đang tải xuống uv (trình quản lý gói Python)…",
     "installing_deps": "Đang…",
     "dependencies_resolved": "Đã giải quyết {{count}} phần phụ thuộc",
-    "remaining_amount": "Còn khoảng {{amount}}",
     "download_rate": "{{rate}}/giây",
     "eta": "Còn khoảng {{time}}",
     "downloads_complete": "Đã tải xong · đang cài đặt gói",

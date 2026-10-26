@@ -2203,7 +2203,6 @@
     "downloading_uv": "Завантаження uv (пакетного менеджера Python)…",
     "installing_deps": "Встановлення…",
     "dependencies_resolved": "Розв’язано залежностей: {{count}}",
-    "remaining_amount": "Залишилося ~{{amount}}",
     "download_rate": "{{rate}}/с",
     "eta": "Залишилося ~{{time}}",
     "downloads_complete": "Завантаження завершено · встановлення пакетів",

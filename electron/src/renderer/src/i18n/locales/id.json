@@ -2197,7 +2197,6 @@
     "downloading_uv": "Mengunduh uv (pengelola paket Python)…",
     "installing_deps": "Memasang…",
     "dependencies_resolved": "{{count}} dependensi diselesaikan",
-    "remaining_amount": "tersisa ~{{amount}}",
     "download_rate": "{{rate}}/d",
     "eta": "tersisa ~{{time}}",
     "downloads_complete": "Unduhan selesai · memasang paket",
