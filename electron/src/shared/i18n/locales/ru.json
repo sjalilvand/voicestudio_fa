@@ -2356,6 +2356,7 @@
     "hf_token_inline_ph": "Вставьте токен hf_… (необязательно)",
     "hf_token_get_short": "Получите один бесплатно →",
     "hf_token_active_using": "Токен Hugging Face найден в {{source}} — {{masked}}",
+    "hf_token_replace": "Сменить токен…",
     "hf_token_replace_warning": "Это заменяет токен, сохранённый для приложения. Старый токен не отзывается."
   },
   "history": {

@@ -113,7 +113,55 @@ def test_unclean_shutdown_yields_crash_record(sentinel_env, monkeypatch):
     assert acked is False, "a fresh crash record must be unacknowledged"
 
 
-# CLEAN-ROOM (spec P-pr1874 §4): lifespan-shutdown regression test (sentinel already cleared even if a later shutdown step raises; no crash reported next start).
+@pytest.fixture()
+def pristine_backend(monkeypatch):
+    """Import ``main`` and friends from scratch; put the old modules back after."""
+    roots = {"main", "core", "api", "services"}
+
+    def belongs(name):
+        return name in roots or name.split(".", 1)[0] in roots
+
+    stash = {k: v for k, v in sys.modules.items() if belongs(k)}
+    for k in stash:
+        del sys.modules[k]
+    try:
+        yield
+    finally:
+        for k in [k for k in sys.modules if belongs(k)]:
+            del sys.modules[k]
+        sys.modules.update(stash)
+
+
+def test_shutdown_retires_sentinel_before_slow_teardown(pristine_backend, monkeypatch, tmp_path):
+    """#1895: the shell SIGKILLs a quitting backend after ~2 s. A teardown step
+    that dies partway must not strand the sentinel, or the next launch would
+    invent a crash."""
+    import asyncio
+
+    import main as backend_main
+    from core import run_sentinel as sentinel
+
+    monkeypatch.setattr(sentinel, "SENTINEL_PATH", str(tmp_path / "run_sentinel.json"))
+    monkeypatch.setattr(sentinel, "CRASH_RECORD_PATH", str(tmp_path / "last_run_crash.json"))
+    monkeypatch.setattr(sentinel, "LOG_PATH", str(tmp_path / "omnivoice.log"))
+    sentinel._reset_for_tests()
+
+    def explode():
+        raise RuntimeError("teardown blew up")
+
+    monkeypatch.setattr(backend_main, "model_loads_begin_shutdown", explode)
+
+    async def start_and_stop():
+        async with backend_main.lifespan(FastAPI()):
+            pass
+
+    try:
+        with pytest.raises(RuntimeError, match="teardown blew up"):
+            asyncio.run(start_and_stop())
+        assert not Path(sentinel.SENTINEL_PATH).exists()
+        assert sentinel.detect_unclean_shutdown() is None
+    finally:
+        sentinel._reset_for_tests()
 
 
 def test_live_pid_means_second_instance_not_a_crash(sentinel_env):

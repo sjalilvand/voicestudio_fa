@@ -2356,6 +2356,7 @@
     "hf_token_inline_ph": "Coller le jeton hf_… (facultatif)",
     "hf_token_get_short": "Obtenez-en un gratuitement →",
     "hf_token_active_using": "Jeton Hugging Face trouvé dans {{source}} — {{masked}}",
+    "hf_token_replace": "Remplacer…",
     "hf_token_replace_warning": "Cela remplace le jeton enregistré pour cette application, sans révoquer l’ancien jeton."
   },
   "history": {

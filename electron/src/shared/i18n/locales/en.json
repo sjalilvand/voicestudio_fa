@@ -3083,6 +3083,7 @@
     "hf_token_inline_ph": "Paste hf_… token (optional)",
     "hf_token_get_short": "Get one free →",
     "hf_token_active_using": "Hugging Face token found in {{source}} — {{masked}}",
+    "hf_token_replace": "Replace…",
     "hf_token_replace_warning": "This replaces the token saved for this app. It does not revoke the old token."
   },
   "history": {

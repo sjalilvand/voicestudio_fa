@@ -2356,6 +2356,7 @@
     "hf_token_inline_ph": "Tempel hf_… token (opsional)",
     "hf_token_get_short": "Dapatkan satu gratis →",
     "hf_token_active_using": "Token Hugging Face ditemukan di {{source}} — {{masked}}",
+    "hf_token_replace": "Ganti…",
     "hf_token_replace_warning": "Ini mengganti token yang disimpan untuk aplikasi ini. Token lama tidak dicabut."
   },
   "history": {

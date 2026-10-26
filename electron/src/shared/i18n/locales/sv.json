@@ -2356,6 +2356,7 @@
     "hf_token_inline_ph": "Klistra in hf_… token (valfritt)",
     "hf_token_get_short": "Få en gratis →",
     "hf_token_active_using": "Hugging Face-token hittades i {{source}} — {{masked}}",
+    "hf_token_replace": "Byt ut…",
     "hf_token_replace_warning": "Detta ersätter token som sparats för denna app. Den gamla token återkallas inte."
   },
   "history": {

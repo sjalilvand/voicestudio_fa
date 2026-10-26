@@ -63,6 +63,7 @@ import logging
 import os
 import re
 import unicodedata
+from functools import partial
 from typing import Callable, Optional
 
 logger = logging.getLogger("omnivoice.text_normalization")
@@ -117,7 +118,12 @@ _FULL_NAME_TO_CODE = {
     "vietnamese": "vi",
     "kazakh": "kz",
     "standard arabic": "ar",
-    # CLEAN-ROOM (spec P-pr1874 §5): ko/ja/zh full-name entries (korean, japanese, chinese, mandarin chinese) for the plain-code resolver.
+    # ko/ja/zh are not in _NUM2WORDS_LANGS, so these stay inert for num2words;
+    # only _plain_lang_code (range speaking) resolves them.
+    "korean": "ko",
+    "japanese": "ja",
+    "chinese": "zh",
+    "mandarin chinese": "zh",
 }
 
 # ISO codes whose num2words locale name differs.
@@ -217,7 +223,68 @@ def _num2words_locale(language: Optional[str], lang: str) -> str:
     return lang
 
 
-# CLEAN-ROOM (spec P-pr1874 §5): _plain_lang_code resolver and the tilde digit-range rule (form table, regex, _speak_number_ranges) go here.
+def _plain_lang_code(language: Optional[str]) -> Optional[str]:
+    """Resolve a request language to a bare ISO code (no num2words vetting).
+
+    Mirrors :func:`_num2words_lang` minus its membership check, so ko, ja, zh,
+    th and vi resolve as well. Unusable or ``auto`` input gives ``None``.
+    """
+    key = (str(language).strip().lower()) if language else ""
+    if key in ("", "auto"):
+        return None
+    if key in _FULL_NAME_TO_CODE:
+        return _FULL_NAME_TO_CODE[key]
+    hit = _ISO_CODE_RE.match(key)
+    if hit is None:
+        return None
+    raw = hit.group(1)
+    return _ISO_ALIASES.get(raw, raw)
+
+
+# ── Spoken digit ranges ("20~30") ────────────────────────────────────────────
+#
+# A tilde between two numbers gets swallowed by some engines: OmniVoice voiced
+# a Korean "20~30" as the single number 23. Where we know the natural linking
+# word we say it; elsewhere the text is left alone. The ASCII hyphen is never
+# treated as a range mark, since it also writes dates, phones and part codes.
+
+# language -> (word between the endpoints, space before it, space after it)
+_RANGE_JOINERS = {
+    "ko": ("에서", False, True),
+    "ja": ("から", False, False),
+    "zh": ("到", False, False),
+    "en": ("to", True, True),
+}
+
+_TILDES = "~\u301c\uff5e"
+_NUM = r"[+-]?(?:\d{1,6}(?:\.\d{1,6})?|\.\d{1,6})"
+_GLUE = r"\d.,A-Za-z+\-" + _TILDES  # neighbours that make a number part of something bigger
+_RANGE_RE = re.compile(
+    rf"(?<![{_GLUE}])(?P<lo>{_NUM})\s*[{_TILDES}]\s*(?P<hi>{_NUM})(?![{_GLUE}])"
+)
+
+
+def _is_chained(text: str, hit: re.Match) -> bool:
+    """True if another tilde sits next to this match, ignoring whitespace."""
+    left = text[: hit.start()].rstrip()[-1:]
+    right = text[hit.end():].lstrip()[:1]
+    return bool(left and left in _TILDES) or bool(right and right in _TILDES)
+
+
+def _speak_number_ranges(text: str, lang: Optional[str]) -> str:
+    """Spell out ``<number><tilde><number>`` for languages with a known joiner.
+
+    Unsupported languages and malformed chains (``1~2~3``) are returned as is.
+    """
+    joiner = _RANGE_JOINERS.get(lang or "")
+    if joiner is None or not text:
+        return text
+    hits = list(_RANGE_RE.finditer(text))
+    if not hits or any(_is_chained(text, h) for h in hits):
+        return text
+    word, pad_before, pad_after = joiner
+    glue = (" " if pad_before else "") + word + (" " if pad_after else "")
+    return _RANGE_RE.sub(lambda h: h.group("lo") + glue + h.group("hi"), text)
 
 
 # ── Universal safety filters (all languages) ─────────────────────────────────
@@ -656,7 +723,10 @@ _NATIVE_VERBALIZERS = {
 }
 
 
-# CLEAN-ROOM (spec P-pr1874 §5): _native_lang(language) -> Optional[str] (native-verbalizer code or None) built on the plain-code resolver.
+def _native_lang(language: Optional[str]) -> Optional[str]:
+    """Language code if a hand-written verbalizer exists for it, else ``None``."""
+    code = _plain_lang_code(language)
+    return code if code in _NATIVE_VERBALIZERS else None
 
 
 def _numbers_to_words_native(text: str, lang: str) -> str:
@@ -697,7 +767,11 @@ def normalize_text(text: str, language: Optional[str] = None) -> str:
     if not text:
         return text or ""
     out = _safety_filters(text)
-    # CLEAN-ROOM (spec P-pr1874 §5): before the num2words gate, speak tilde digit ranges for the request language (ko/ja/zh/en), independent of that gate.
+    # Runs outside the num2words gate: ko/ja/zh keep their digits but still
+    # need the tilde spoken.
+    spoken_as = _plain_lang_code(language)
+    if spoken_as in _RANGE_JOINERS:
+        out = _outside_brackets(out, partial(_speak_number_ranges, lang=spoken_as))
     lang = _num2words_lang(language)
     if lang:
         if lang in _ABBREV_COMPILED:

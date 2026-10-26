@@ -41,7 +41,73 @@ class ColabWebBuildTests(unittest.TestCase):
             self.run_build([False, False])
 
 
-# CLEAN-ROOM (spec P-pr1874 §8): ASR-setup test class (setup cell contents, rerun behaviour, failure resets ready flag, gating of cells 13 and 18, ordering, prefetch-before-launch) goes here.
+class ColabAsrSetupTests(unittest.TestCase):
+    """Cell 12a installs the ASR model; cells 13 and 18 refuse to run without it."""
+
+    REPO = "Systran/faster-whisper-large-v3"
+
+    def cells(self):
+        return json.loads(NOTEBOOK.read_text(encoding="utf-8"))["cells"]
+
+    def source_index(self, predicate):
+        for i, c in enumerate(self.cells()):
+            if c["cell_type"] == "code" and predicate("".join(c["source"])):
+                return i
+        self.fail("no matching code cell")
+
+    def code_source(self, marker):
+        cells = self.cells()
+        return "".join(cells[self.source_index(lambda s: s.startswith(marker))]["source"])
+
+    def run_setup(self, snapshot_download, namespace=None):
+        fake = types.ModuleType("huggingface_hub")
+        fake.snapshot_download = snapshot_download
+        ns = namespace if namespace is not None else {}
+        with patch.dict("sys.modules", {"huggingface_hub": fake}):
+            exec(self.code_source("# ── 12a."), ns)
+        return ns
+
+    def test_setup_downloads_the_default_model_into_the_shared_cache(self):
+        calls = []
+        ns = self.run_setup(lambda *a, **kw: calls.append((a, kw)) or "/cache/snap")
+        self.assertEqual(len(calls), 1)
+        args, kwargs = calls[0]
+        self.assertEqual(kwargs.get("repo_id", args[0] if args else None), self.REPO)
+        self.assertNotIn("local_dir", kwargs)
+        self.assertIs(ns["ASR_MODEL_READY"], True)
+
+    def test_setup_can_be_rerun(self):
+        calls = []
+        ns = self.run_setup(lambda **kw: calls.append(kw) or "/cache/snap")
+        self.run_setup(lambda **kw: calls.append(kw) or "/cache/snap", ns)
+        self.assertEqual(len(calls), 2)
+        self.assertIs(ns["ASR_MODEL_READY"], True)
+
+    def test_failed_download_propagates_and_clears_the_flag(self):
+        def broken(**kwargs):
+            raise OSError("network down")
+        ns = {"ASR_MODEL_READY": True}
+        with self.assertRaises(OSError):
+            self.run_setup(broken, ns)
+        self.assertIs(ns["ASR_MODEL_READY"], False)
+
+    def test_transcription_and_dubbing_need_the_setup_cell(self):
+        for marker in ("# ── 13.", "# ── 18."):
+            with self.subTest(cell=marker):
+                with self.assertRaisesRegex(SystemExit, "12a"):
+                    exec(self.code_source(marker), {})
+
+    def test_setup_cell_runs_before_transcription_cell(self):
+        setup = self.source_index(lambda s: s.startswith("# ── 12a."))
+        transcribe = self.source_index(lambda s: s.startswith("# ── 13."))
+        dub = self.source_index(lambda s: s.startswith("# ── 18."))
+        self.assertLess(setup, transcribe)
+        self.assertLess(setup, dub)
+
+    def test_prefetch_cell_runs_before_backend_launch(self):
+        prefetch = self.source_index(lambda s: f"hf download {self.REPO}" in s)
+        launch = self.source_index(lambda s: s.startswith("# ── 5. Launch the backend"))
+        self.assertLess(prefetch, launch)
 
 
 

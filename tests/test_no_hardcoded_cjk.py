@@ -59,7 +59,7 @@ _ALLOWED_FILES = {
     "backend/services/segmentation.py",
     "backend/services/sentence_chunker.py",       # streaming-TTS terminator tables (Patter port, Wave 1.4)
     "backend/services/subtitle_segmenter.py",
-    # CLEAN-ROOM (spec P-pr1874 §5): allowlist entry for backend/services/text_normalization.py with a fresh justification (functional CJK range words).
+    "backend/services/text_normalization.py",     # per-language connective words spoken in place of a digit-range tilde
     "backend/core/http_headers.py",               # docstring quotes the CJK filename that 500'd the header (#1262)
     "electron/src/shared/components/DubSegmentRow.jsx",
     "electron/src/shared/components/StoriesEditor.jsx",

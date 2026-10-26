@@ -2356,6 +2356,7 @@
     "hf_token_inline_ph": "hf_...टोकन चिपकाएँ (वैकल्पिक)",
     "hf_token_get_short": "एक निःशुल्क प्राप्त करें →",
     "hf_token_active_using": "{{source}} में Hugging Face टोकन मिला — {{masked}}",
+    "hf_token_replace": "बदलें…",
     "hf_token_replace_warning": "यह इस ऐप के लिए सहेजे गए टोकन को बदलता है। पुराना टोकन रद्द नहीं होता।"
   },
   "history": {

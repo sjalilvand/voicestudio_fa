@@ -1300,12 +1300,17 @@ async def lifespan(app: FastAPI):
     if _loop_stall_stop is not None:
         _loop_stall_stop.set()
     # ── Graceful shutdown (SIGTERM from Tauri, Ctrl+C, etc.) ────────────
-    # CLEAN-ROOM (spec P-pr1874 §4): explanatory comment on why the run sentinel is retired first, before any bounded shutdown wait.
+    # Retire the run sentinel BEFORE any teardown work. Once graceful shutdown
+    # starts, the exit is intentional. The desktop shell only allows a short
+    # grace period (~2 s) before SIGKILL, yet a normal teardown takes several
+    # seconds; clearing the sentinel last meant a clean quit that got killed
+    # mid-teardown looked like a crash on the next launch (#1895).
     # Desktop shells that must hard-kill a Windows process tree retire the
     # sentinel through /system/shutdown-intent before termination. This
     # remains the graceful-path fallback for every platform and direct server
     # runs.
-    # CLEAN-ROOM (spec P-pr1874 §4): explanatory comment on sentinel_cleared feeding the final shutdown log.
+    # The result is only consumed by the final log line below; nothing later
+    # re-checks the sentinel, so a late failure cannot undo this.
     try:
         sentinel_cleared = run_sentinel.clear_sentinel()
     except Exception:
@@ -1436,7 +1441,7 @@ async def lifespan(app: FastAPI):
         await close_http_client()
     except Exception:
         pass
-    # CLEAN-ROOM (spec P-pr1874 §4): explanatory comment that the sentinel was already retired at the top of shutdown and the final log reports that result.
+    # The sentinel was retired at the top of shutdown; report that outcome here.
     if sentinel_cleared:
         logger.info("Shutdown: done.")
     else:

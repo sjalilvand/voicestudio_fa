@@ -253,8 +253,41 @@ def _is_blank_audio(audio_tensor) -> bool:
         return False
 
 
-# CLEAN-ROOM (spec P-pr1874 §1): framed spectral-flatness measurement (_spectral_flatness) and its frame constants go here.
+_WIN_LEN = 1024
+_WIN_STEP = _WIN_LEN // 2
+_LOG_FLOOR = 1e-12
+_PAUSE_FRACTION = 1e-4  # frames below this share of the loudest one are pauses
 
+
+def _spectral_flatness(audio_tensor) -> Optional[float]:
+    """Average spectral flatness over speech-carrying windows, or ``None``.
+
+    Flatness of one window is geometric mean / arithmetic mean of its power
+    spectrum: close to 0 for a tone, towards 1 for noise. Windowing the clip
+    (instead of one transform over all of it) keeps the number independent of
+    duration; pauses are dropped so their noise floor doesn't pull it up.
+    Too-short, non-finite or otherwise unmeasurable audio yields ``None``,
+    and so does any error: this check must never stop a render.
+    """
+    try:
+        import torch
+
+        x = torch.as_tensor(audio_tensor).detach().to("cpu", dtype=torch.float32)
+        if x.ndim > 1:
+            x = x.mean(dim=0)
+        x = x.flatten()
+        if x.numel() < _WIN_LEN or not bool(torch.isfinite(x).all()):
+            return None
+        windows = x.unfold(0, _WIN_LEN, _WIN_STEP) * torch.hann_window(_WIN_LEN)
+        spectra = torch.fft.rfft(windows, dim=1).abs().square() + _LOG_FLOOR
+        loudness = spectra.sum(dim=1)
+        spectra = spectra[loudness > loudness.max() * _PAUSE_FRACTION]
+        if spectra.shape[0] == 0:
+            return None
+        flat = torch.exp(spectra.log().mean(dim=1)) / spectra.mean(dim=1)
+        return float(flat.mean())
+    except Exception:  # never let the checker itself block a render
+        return None
 
 
 def _is_unusable_audio(audio_tensor) -> bool:

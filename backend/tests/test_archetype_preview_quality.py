@@ -41,7 +41,31 @@ def _white_noise() -> "torch.Tensor":
     return 0.5 * (torch.rand(N, generator=g) * 2 - 1)
 
 
-# CLEAN-ROOM (spec P-pr1874 §1): two-partial inharmonic buzz signal helper used by flatness tests.
+def _two_partial_buzz(f1: float = 200.0, f2: float = 310.0) -> "torch.Tensor":
+    """Two unrelated sinusoids: a loud, inharmonic, still purely tonal buzz."""
+    t = torch.arange(N, dtype=torch.float32) / SR
+    sig = torch.sin(2 * math.pi * f1 * t) + 0.6 * torch.sin(2 * math.pi * f2 * t)
+    return 0.7 * sig / sig.abs().max()
+
+
+def test_flatness_ordering_tone_speech_noise():
+    tone = arch._spectral_flatness(_pure_tone())
+    speech = arch._spectral_flatness(_speech_like())
+    noise = arch._spectral_flatness(_white_noise())
+    assert tone < arch._DEGENERATE_FLATNESS < speech < noise
+
+
+def test_flatness_none_for_short_or_non_finite_input():
+    assert arch._spectral_flatness(torch.ones(16)) is None
+    bad = _speech_like().clone()
+    bad[100] = float("nan")
+    assert arch._spectral_flatness(bad) is None
+
+
+def test_flatness_multichannel_is_mono_mixed():
+    stereo = torch.stack([_speech_like(), _speech_like()])
+    assert arch._spectral_flatness(stereo) == pytest.approx(
+        arch._spectral_flatness(_speech_like()), rel=1e-4)
 
 
 def _speech_like() -> "torch.Tensor":
@@ -90,7 +114,15 @@ def test_speech_like_is_usable():
     assert arch._is_unusable_audio(_speech_like()) is False
 
 
-# CLEAN-ROOM (spec P-pr1874 §1): test that the degenerate-flatness threshold sits with a wide margin above measured tonal signals.
+@pytest.mark.parametrize("make", [
+    lambda: _pure_tone(220.0),
+    lambda: _pure_tone(440.0),
+    _two_partial_buzz,
+])
+def test_tonal_signals_sit_far_below_threshold(make):
+    sig = make()
+    assert arch._spectral_flatness(sig) * 10 <= arch._DEGENERATE_FLATNESS
+    assert arch._is_unusable_audio(sig) is True
 
 _SAMPLES = Path(__file__).resolve().parents[1] / "assets" / "samples"
 _SPEECH_FIXTURES = [
@@ -119,7 +151,13 @@ def test_real_shipped_speech_clears_quality_floor(fixture):
     assert flatness is not None
     assert flatness > arch._DEGENERATE_FLATNESS * 10
     assert arch._is_unusable_audio(speech) is False
-# CLEAN-ROOM (spec P-pr1874 §1): test that spectral flatness is independent of clip length.
+
+def test_flatness_does_not_depend_on_clip_length():
+    clip = _speech_like()
+    short = arch._spectral_flatness(clip)
+    long = arch._spectral_flatness(torch.cat([clip] * 4))
+    assert abs(long - short) / short < 0.02
+
 
 
 # ── Constants didn't regress ────────────────────────────────────────────────
