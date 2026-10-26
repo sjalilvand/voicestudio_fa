@@ -34,10 +34,16 @@ export function useFollowLatestTake() {
   // different take before the history catches up cancels the follow, so the
   // user's choice (and any half-filled save form on it) is never replaced.
   const pending = useRef<{ render: string; from: string } | null>(null);
+  // The selection the last run saw. A render that lands in the same run as a
+  // new selection never follows: the user's pick wins.
+  const seenOpen = useRef(open?.id ?? null);
   useEffect(() => {
+    const openId = open?.id ?? null;
+    const picked = openId !== seenOpen.current;
+    seenOpen.current = openId;
     if (latest !== seen.current) {
       seen.current = latest;
-      pending.current = latest && open ? { render: latest, from: open.id } : null;
+      pending.current = latest && openId && !picked ? { render: latest, from: openId } : null;
     }
     if (pending.current && pending.current.from !== open?.id) pending.current = null;
     const next = nextOpenTake(open, pending.current?.render ?? null, history);

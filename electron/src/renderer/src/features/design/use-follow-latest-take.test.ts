@@ -58,3 +58,13 @@ it('drops the follow when the user opens another take before the history catches
   rerender();
   expect(state.openTake).not.toHaveBeenCalled();
 });
+
+it('keeps a take chosen in the same update as a new render', () => {
+  const { rerender } = renderHook(() => useFollowLatestTake());
+  state.open = take('chosen');
+  state.latest = 'new';
+  rerender();
+  state.history = [take('new'), take('chosen'), ...state.history];
+  rerender();
+  expect(state.openTake).not.toHaveBeenCalled();
+});
