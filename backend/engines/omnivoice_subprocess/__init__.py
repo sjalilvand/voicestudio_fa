@@ -101,6 +101,10 @@ class OmniVoiceSubprocessBackend(SubprocessBackend):
         return True, "ready"
 
     @classmethod
+    def shares_parent_torch(cls) -> bool:
+        return True
+
+    @classmethod
     def venv_python(cls) -> Path:
         # Same interpreter as the parent: this engine isolates for crash
         # recovery, not dependency pins, so it needs no dedicated venv.
