@@ -452,7 +452,7 @@
     "mode_fast": "Snabb",
     "mode_fast_desc": "Använder den valda dikteringsmodellen med låg latens.",
     "mode_accurate": "Exakt",
-    "mode_accurate_desc": "Använder den valda ASR-modellen med detaljerade tidsstämplar.",
+    "mode_accurate_desc": "Använder den valda tal-till-text-modellen med detaljerade tidsstämplar.",
     "title": "Transkriptioner",
     "entries": "{{count}} poster",
     "search_placeholder": "Sök efter transkriptioner...",
@@ -479,7 +479,8 @@
     "identify_speakers": "Identifiera talare",
     "speakers_unavailable": "Talaridentifiering är inte tillgänglig. Transkriptionen sparades utan talaretiketter.",
     "missing_model": "Ingen tal-till-text-modell är installerad — den här funktionen behöver en för att transkribera ljud.",
-    "original_transcript": "Ursprunglig transkription"
+    "original_transcript": "Ursprunglig transkription",
+    "active_model": "Modell: {{model}}"
   },
   "engineRuntime": {
     "ready": "Klar",
@@ -808,7 +809,6 @@
     "install_disabled_title": "Installationer är inaktiverade i paketerade versioner",
     "needs_install_suffix": "- behöver installeras",
     "glossary_title": "Fäst översättningar för återkommande termer (namn, varumärkesord, jargong)",
-    "glossary_btn": "+ Ordlista ({{count}})",
     "selected_count": "{{count}} har valts",
     "set_voice": "Ställ in röst...",
     "clear_voice": "⊘ Standard",
@@ -931,7 +931,12 @@
     "input_issue_unsupported": "Filtypen stöds inte – välj en video- eller ljudfil",
     "input_issue_empty": "Filen är tom – välj en annan fil",
     "file_actions": "Filåtgärder",
-    "translator_agent": "Agent"
+    "translator_agent": "Agent",
+    "segment_count_one": "{{count}} segment",
+    "segment_count_other": "{{count}} segment",
+    "glossary_terms_one": "Ordlista · {{count}} term",
+    "glossary_terms_other": "Ordlista · {{count}} termer",
+    "glossary_label": "Ordlista"
   },
   "dub_workflow": {
     "preparing_audio": "Förbereder ljud...",
@@ -1533,7 +1538,7 @@
     "more_actions": "Fler åtgärder",
     "use_in_stories": "Använd i Berättelser",
     "set_audiobook_default": "Ange som standardröst för Ljudbok",
-    "open_designer": "Öppna i Designer",
+    "open_designer": "Öppna i Designa",
     "no_matches": "Inga röster matchar dessa filter.",
     "load_more": "Ladda mer",
     "saved_as_profile": "Lade till \"{{name}}\" till dina röster.",
@@ -1555,7 +1560,7 @@
     "trim_load_failed": "Det gick inte att ladda ljudet för trimning: {{message}}",
     "delete": "Ta bort",
     "community_empty": "Inga communityröster har laddats ännu — anslut till internet och öppna igen, eller bli först med att skicka in en.",
-    "community_explainer": "Designade förinställningar och inspelade röster som delas av communityn, laddade från omnivoice-gallery.",
+    "community_explainer": "Designade förinställningar och inspelade röster som delas av communityn.",
     "no_designer": "Inspelad röst — använd \"Använd röst\" i stället.",
     "no_preview": "Ingen förhandsgranskning — lägg till den med \"Använd röst\" för att höra den.",
     "submit_failed": "Det gick inte att öppna inskickningsformuläret.",
@@ -1681,7 +1686,9 @@
     "probe_placeholder": "/Users/you/Movies/sample.mp4",
     "probe_failed": "Sond misslyckades: {{message}}",
     "parse_failed": "Analysen misslyckades: {{message}}",
-    "fit_failed": "Anpassningen misslyckades: {{message}}"
+    "fit_failed": "Anpassningen misslyckades: {{message}}",
+    "placeholder_direction": "t.ex. Viska det som en hemlighet och låt sedan förväntan växa.",
+    "placeholder_rate_fit": "Klistra in den översatta raden för att jämföra med dess tidsfönster."
   },
   "projects": {
     "title": "Projekt",
@@ -1727,7 +1734,9 @@
     "delete_selected": "Ta bort markerade ({{count}})",
     "deleted_count": "Borttagna: {{count}}",
     "delete_warning": "Detta kan inte ångras. Projekt och transkriptioner tas bort. När röster eller tagningar tas bort raderas även deras sparade ljud. Exporterade filer och färdigrenderat ljud behålls.",
-    "draft_changed": "Ditt utkast ändrades medan projektet laddades. Bekräfta igen för att ersätta det."
+    "draft_changed": "Ditt utkast ändrades medan projektet laddades. Bekräfta igen för att ersätta det.",
+    "all_projects": "Alla projekt",
+    "library_group": "Bibliotek"
   },
   "projectActions": {
     "delete": "Ta bort ”{{name}}”? Detta kan inte ångras.",
@@ -1752,7 +1761,9 @@
     "tagline": "Lokal röstkloning. Inget lämnar din maskin.",
     "coming_soon": "Kommer snart",
     "switch_to_light": "Byt till ljustema",
-    "switch_to_dark": "Byt till mörkt tema"
+    "switch_to_dark": "Byt till mörkt tema",
+    "not_found_title": "Sidan hittades inte",
+    "not_found_body": "Den här adressen matchar ingen sida i VoiceStudio."
   },
   "stories": {
     "title": "Redaktör för berättelser",
@@ -1805,13 +1816,13 @@
     "splitModeHint": "Varje rad läses som en egen tagning. För en enda berättare flyter stycken eller hela kapitel bättre än meningar.",
     "emptyText": "Börja din berättelse genom att lägga till dialog- och berättarrader. Tilldela varje karaktär en röst i rollen.",
     "addFirst": "Lägg till första raden",
-    "linePlaceholder": "Gå in i dialog eller berättarröst... använd [paus 0,5s] för en tyst paus",
+    "linePlaceholder": "Gå in i dialog eller berättarröst... använd [pause 0.5s] för en tyst paus",
     "text": "text",
     "defaultVoice": "Standard",
     "inlineVoice": "Ställ in inline röst",
     "inlineVoiceHint": "Byt röst för den markerade texten (eller infoga en knapp vid markören)",
     "resetInlineVoice": "Återställ till linjeröst",
-    "insertPause": "Sätt in en [paus 0,5s] paus",
+    "insertPause": "Sätt in en [pause 0.5s] paus",
     "preview": "Förhandsgranska den här raden",
     "removeLine": "Ta bort linjen",
     "tune": "Ton och hastighet",
@@ -1849,7 +1860,8 @@
     "toneChip": "Ton och tempo: {{speed}}",
     "lineVoice": "Radens röst",
     "chapterHeading": "Kapiteltitel",
-    "lineActions": "Radåtgärder"
+    "lineActions": "Radåtgärder",
+    "recovery_title": "Avbruten berättelse"
   },
   "audiobook": {
     "cast": "Rollbesättning",
@@ -1873,7 +1885,6 @@
     "stats_one": "{{count}} kapitel · {{words}} ord · {{runtime}} uppskattad speltid",
     "stats_other": "{{count}} kapitel · {{words}} ord · {{runtime}} uppskattad speltid",
     "warnings_title": "Innan du skapar",
-    "warn_unknown_voice": "Okänd röst ‘{{name}}’ — standardrösten används",
     "warn_empty_chapter": "Kapitlet ”{{title}}” saknar uppläst text",
     "warn_unknown_tag": "Okänd tagg {{tag}} — den läses upp",
     "untitled": "Namnlös ljudbok",
@@ -1885,7 +1896,7 @@
     "tab_book": "Bok",
     "subtitle": "Skriv eller importera din berättelse, tilldela varje roll en röst och exportera en finslipad ljudbok med riktiga kapitel.",
     "script": "Manus",
-    "script_placeholder": "# Kapitel ett\nDet var en gång... [paus 500ms] slutet.\n\n# Kapitel två\n[voice:berättare] Och så fortsatte det.",
+    "script_placeholder": "# Kapitel ett\nDet var en gång... [pause 0.5s] slutet.\n\n# Kapitel två\n[voice:berättare] Och så fortsatte det.",
     "default_voice": "Standardröst",
     "engine_default": "Standard för motor",
     "preview_plan": "Förhandsgranska plan",
@@ -1961,7 +1972,7 @@
     "lex_add": "Lägg till ord",
     "lex_remove": "Ta bort",
     "markup_help": "Markeringsreferens",
-    "markup_hint": "# Kapiteltitel · [voice:NAME] byt röst · [pause 500ms] / [pause 1s] · [slow]…[/slow] · [fast]…[/fast] · [emphasis]…[/emphasis] · [spell]…[/spell] · Reaktioner (VoiceStudio): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
+    "markup_hint": "# Kapiteltitel · [voice:NAME] byt röst · [pause 0.5s] · [slow]…[/slow] · [fast]…[/fast] · [emphasis]…[/emphasis] · [spell]…[/spell] · Reaktioner (VoiceStudio): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
     "language": "Språk",
     "expressive": "Produktionsåsidosättanden",
     "reset": "Återställ",
@@ -1978,7 +1989,10 @@
     "emotion_text": "Emotionsbeskrivning",
     "emotion_text_ph": "t.ex. låter uttömd och ledsen",
     "emotion_alpha": "Emotionsstyrka",
-    "lex_duplicate": "Ange ett uttal per ord."
+    "lex_duplicate": "Ange ett uttal per ord.",
+    "recovery_busy": "En annan rendering pågår. Återuppta när den är klar.",
+    "cast_note_one": "{{names}} har ingen röst än och läses med huvudrösten. Välj en under Rollbesättning.",
+    "cast_note_other": "{{names}} har inga röster än och läses med huvudrösten. Välj röster under Rollbesättning."
   },
   "credentials": {
     "microsoft_key": "Microsoft Translator-nyckel",
@@ -2374,7 +2388,8 @@
     "generating_voice_a": "Genererar röst A...",
     "generating_voice_b": "Genererar röst B...",
     "comparison_complete": "Jämförelsen klar!",
-    "play_failed": "Uppspelning misslyckades: {{message}}"
+    "play_failed": "Uppspelning misslyckades: {{message}}",
+    "test_phrase_placeholder": "Skriv en mening som båda rösterna läser."
   },
   "demo": {
     "clone_coachmark": "Det här är en guidad demo - prova den föreslagna uppmaningen eller skriv din egen.",
@@ -2881,7 +2896,8 @@
     "plan_impossible": "Ryms inte +{{seconds}}s",
     "plan_impossible_title": "Beräknat tal ≈{{est}}s, tillgänglig tid {{avail}}s. Cirka {{seconds}}s överskrider vad anpassningen klarar och ljudet skulle klippas. Korta texten före generering.",
     "plan_tight": "Ryms precis",
-    "plan_tight_title": "Beräknat tal ≈{{est}}s, tillgänglig tid {{avail}}s. Smart anpassning kan lösa detta med hörbart snabbare tal eller långsammare video. Korta texten för ett bättre resultat."
+    "plan_tight_title": "Beräknat tal ≈{{est}}s, tillgänglig tid {{avail}}s. Smart anpassning kan lösa detta med hörbart snabbare tal eller långsammare video. Korta texten för ett bättre resultat.",
+    "replace_toggle": "Sök och ersätt"
   },
   "update": {
     "checking": "Söker efter uppdateringar…",
@@ -2959,8 +2975,6 @@
     "translate_hint": "Skumma måltexten. Överlånga linjer får fart; du kan också redigera direkt.",
     "done_title": "Dubbningen är klar",
     "done_hint": "Granska timing och synkroniseringsförhållanden. Justera vilken linje som helst och tryck på \"Regen ändrad\" för en snabb delvis redo.",
-    "segment_one": "{{count}} segment",
-    "segment_other": "{{count}} segment",
     "dismiss_title": "Avvisa — kommer inte att dyka upp igen för det här steget förrän du laddar om",
     "timing_review_one": "{{count}} segment behöver tidsgranskning",
     "timing_review_other": "{{count}} segment behöver tidsgranskas",
@@ -4420,5 +4434,20 @@
     "nextMemory": "Enheten fick slut på minne. Välj en lättare profil under Inställningar → Prestanda och försök sedan igen.",
     "downloads": "Nedladdningar",
     "activeCount": "Pågående nedladdningar: {{count}}"
+  },
+  "disabledReason": {
+    "files_required": "Lägg först till minst en video.",
+    "languages_required": "Välj minst ett målspråk.",
+    "language_required": "Välj ett målspråk först.",
+    "translation_not_ready": "Konfigurera en översättningsmotor först.",
+    "recovery_pending": "Återuppta eller avbryt det avbrutna steget först.",
+    "segments_required": "Transkribera videon först.",
+    "text_required": "Skriv in text först.",
+    "path_required": "Ange först den fullständiga sökvägen till en fil.",
+    "slot_required": "Ange ett tidsfönster längre än 0 sekunder.",
+    "voices_required": "Välj båda rösterna först.",
+    "generating": "Vänta tills den aktuella tagningen är klar.",
+    "name_required": "Ange ett namn först.",
+    "audio_missing": "Den här tagningen har ingen ljudfil att spara."
   }
 }

@@ -452,7 +452,7 @@
     "mode_fast": "Nhanh",
     "mode_fast_desc": "Sử dụng mô hình đọc chính tả có độ trễ thấp đã chọn.",
     "mode_accurate": "Chính xác",
-    "mode_accurate_desc": "Sử dụng mô hình ASR đã chọn với dấu thời gian chi tiết.",
+    "mode_accurate_desc": "Dùng mô hình chuyển giọng nói thành văn bản đã chọn, kèm mốc thời gian chi tiết.",
     "title": "Phiên âm",
     "entries": "{{count}} mục",
     "search_placeholder": "Tìm kiếm bản chép lời…",
@@ -479,7 +479,8 @@
     "identify_speakers": "Nhận diện người nói",
     "speakers_unavailable": "Không thể nhận diện người nói. Bản chép lời đã được lưu mà không có nhãn người nói.",
     "missing_model": "Chưa cài đặt mô hình chuyển giọng nói thành văn bản — tính năng này cần một mô hình để phiên âm.",
-    "original_transcript": "Bản chép lời gốc"
+    "original_transcript": "Bản chép lời gốc",
+    "active_model": "Mô hình: {{model}}"
   },
   "engineRuntime": {
     "ready": "Sẵn sàng",
@@ -808,7 +809,6 @@
     "install_disabled_title": "Cài đặt bị vô hiệu hóa trong các bản dựng đóng gói",
     "needs_install_suffix": "- cần cài đặt",
     "glossary_title": "Ghim bản dịch cho các thuật ngữ định kỳ (tên, từ thương hiệu, biệt ngữ)",
-    "glossary_btn": "+ Bảng thuật ngữ ({{count}})",
     "selected_count": "{{count}} đã chọn",
     "set_voice": "Đặt giọng nói…",
     "clear_voice": "⊘ Mặc định",
@@ -931,7 +931,12 @@
     "input_issue_unsupported": "Loại tệp không được hỗ trợ — hãy chọn tệp video hoặc âm thanh",
     "input_issue_empty": "Tệp này trống — hãy chọn tệp khác",
     "file_actions": "Thao tác tệp",
-    "translator_agent": "Tác tử"
+    "translator_agent": "Tác tử",
+    "segment_count_one": "{{count}} đoạn",
+    "segment_count_other": "{{count}} đoạn",
+    "glossary_terms_one": "Bảng thuật ngữ · {{count}} thuật ngữ",
+    "glossary_terms_other": "Bảng thuật ngữ · {{count}} thuật ngữ",
+    "glossary_label": "Bảng thuật ngữ"
   },
   "dub_workflow": {
     "preparing_audio": "Đang chuẩn bị âm thanh…",
@@ -1533,7 +1538,7 @@
     "more_actions": "Thao tác khác",
     "use_in_stories": "Dùng trong Kịch bản",
     "set_audiobook_default": "Đặt làm giọng mặc định cho Sách nói",
-    "open_designer": "Mở trong Trình thiết kế",
+    "open_designer": "Mở trong Thiết kế",
     "no_matches": "Không có giọng nói nào phù hợp với các bộ lọc này.",
     "load_more": "Tải thêm",
     "saved_as_profile": "Đã thêm \"{{name}}\" vào giọng nói của bạn.",
@@ -1555,7 +1560,7 @@
     "trim_load_failed": "Không thể tải âm thanh để cắt: {{message}}",
     "delete": "Xóa",
     "community_empty": "Chưa tải được giọng nói cộng đồng nào — hãy kết nối internet rồi mở lại, hoặc trở thành người đầu tiên gửi một giọng nói.",
-    "community_explainer": "Các cài đặt trước được thiết kế và giọng nói ghi âm do cộng đồng chia sẻ, được tải từ omnivoice-gallery.",
+    "community_explainer": "Các cài đặt sẵn đã thiết kế và giọng nói ghi âm do cộng đồng chia sẻ.",
     "no_designer": "Giọng nói ghi âm — hãy dùng \"Sử dụng giọng nói\" thay thế.",
     "no_preview": "Không có bản xem trước — thêm bằng \"Sử dụng giọng nói\" để nghe thử.",
     "submit_failed": "Không thể mở biểu mẫu gửi.",
@@ -1681,7 +1686,9 @@
     "probe_placeholder": "/Users/bạn/Phim/sample.mp4",
     "probe_failed": "Thăm dò không thành công: {{message}}",
     "parse_failed": "Phân tích cú pháp không thành công: {{message}}",
-    "fit_failed": "Lắp không thành công: {{message}}"
+    "fit_failed": "Lắp không thành công: {{message}}",
+    "placeholder_direction": "ví dụ: Thì thầm như một bí mật, rồi để sự hào hứng dâng lên.",
+    "placeholder_rate_fit": "Dán dòng đã dịch để so với khoảng thời gian của nó."
   },
   "projects": {
     "title": "Dự án",
@@ -1727,7 +1734,9 @@
     "delete_selected": "Xóa mục đã chọn ({{count}})",
     "deleted_count": "Đã xóa: {{count}}",
     "delete_warning": "Không thể hoàn tác. Dự án và bản chép lời sẽ bị xóa. Xóa giọng nói hoặc bản thu cũng xóa âm thanh đã lưu của chúng. Tệp đã xuất và âm thanh kết xuất hoàn tất được giữ lại.",
-    "draft_changed": "Bản nháp của bạn đã thay đổi trong khi tải dự án này. Xác nhận lại để thay thế bản nháp."
+    "draft_changed": "Bản nháp của bạn đã thay đổi trong khi tải dự án này. Xác nhận lại để thay thế bản nháp.",
+    "all_projects": "Tất cả dự án",
+    "library_group": "Thư viện"
   },
   "projectActions": {
     "delete": "Xóa “{{name}}”? Không thể hoàn tác thao tác này.",
@@ -1752,7 +1761,9 @@
     "tagline": "Nhân bản giọng nói địa phương. Không có gì rời khỏi máy của bạn.",
     "coming_soon": "Sắp ra mắt",
     "switch_to_light": "Chuyển sang giao diện nhẹ nhàng",
-    "switch_to_dark": "Chuyển sang chủ đề tối"
+    "switch_to_dark": "Chuyển sang chủ đề tối",
+    "not_found_title": "Không tìm thấy trang",
+    "not_found_body": "Địa chỉ này không khớp với trang nào trong VoiceStudio."
   },
   "stories": {
     "title": "Biên tập truyện",
@@ -1805,13 +1816,13 @@
     "splitModeHint": "Mỗi dòng được đọc như một lần thu riêng. Với một người đọc, đoạn văn hoặc cả chương nghe liền mạch hơn câu.",
     "emptyText": "Bắt đầu câu chuyện của bạn bằng cách thêm lời thoại và lời kể. Gán cho mỗi nhân vật một giọng nói trong Cast.",
     "addFirst": "Thêm dòng đầu tiên",
-    "linePlaceholder": "Nhập đoạn hội thoại hoặc tường thuật… sử dụng [tạm dừng 0,5 giây] để nghỉ im lặng",
+    "linePlaceholder": "Nhập đoạn hội thoại hoặc tường thuật… sử dụng [pause 0.5s] để nghỉ im lặng",
     "text": "văn bản",
     "defaultVoice": "Mặc định",
     "inlineVoice": "Đặt giọng nói nội tuyến",
     "inlineVoiceHint": "Chuyển giọng nói cho văn bản được đánh dấu (hoặc chèn một công tắc ở con trỏ)",
     "resetInlineVoice": "Đặt lại về giọng nói",
-    "insertPause": "Chèn dấu ngắt [tạm dừng 0,5 giây]",
+    "insertPause": "Chèn dấu ngắt [pause 0.5s]",
     "preview": "Xem trước dòng này",
     "removeLine": "Xóa dòng",
     "tune": "Giai điệu & tốc độ",
@@ -1849,7 +1860,8 @@
     "toneChip": "Ngữ điệu và tốc độ: {{speed}}",
     "lineVoice": "Giọng của dòng",
     "chapterHeading": "Tiêu đề chương",
-    "lineActions": "Thao tác dòng"
+    "lineActions": "Thao tác dòng",
+    "recovery_title": "Truyện bị gián đoạn"
   },
   "audiobook": {
     "cast": "Dàn giọng",
@@ -1873,7 +1885,6 @@
     "stats_one": "{{count}} chương · {{words}} từ · {{runtime}} thời lượng ước tính",
     "stats_other": "{{count}} chương · {{words}} từ · {{runtime}} thời lượng ước tính",
     "warnings_title": "Trước khi tạo",
-    "warn_unknown_voice": "Giọng không xác định ‘{{name}}’ — sẽ dùng giọng mặc định",
     "warn_empty_chapter": "Chương “{{title}}” không có nội dung để đọc",
     "warn_unknown_tag": "Thẻ không nhận dạng {{tag}} — sẽ được đọc to",
     "untitled": "Sách nói không tiêu đề",
@@ -1885,7 +1896,7 @@
     "tab_book": "Sách",
     "subtitle": "Viết hoặc nhập câu chuyện, chọn giọng cho từng vai, rồi xuất sách nói hoàn chỉnh với các chương thực sự.",
     "script": "kịch bản",
-    "script_placeholder": "# Chương Một\nNgày xửa ngày xưa… [tạm dừng 500ms] đoạn cuối.\n\n# Chương hai\n[giọng:người kể chuyện] Và cứ thế mọi chuyện tiếp tục.",
+    "script_placeholder": "# Chương Một\nNgày xửa ngày xưa… [pause 0.5s] đoạn cuối.\n\n# Chương hai\n[voice:người kể chuyện] Và cứ thế mọi chuyện tiếp tục.",
     "default_voice": "Giọng nói mặc định",
     "engine_default": "Mặc định công cụ",
     "preview_plan": "Xem trước kế hoạch",
@@ -1961,7 +1972,7 @@
     "lex_add": "Thêm từ",
     "lex_remove": "Xóa",
     "markup_help": "Tham chiếu đánh dấu",
-    "markup_hint": "# Tiêu đề chương · [voice:NAME] chuyển giọng nói · [pause 500ms] / [pause 1s] · [slow]…[/slow] · [fast]…[/fast] · [emphasis]…[/emphasis] · [spell]…[/spell] · Phản ứng (VoiceStudio): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
+    "markup_hint": "# Tiêu đề chương · [voice:NAME] chuyển giọng nói · [pause 0.5s] · [slow]…[/slow] · [fast]…[/fast] · [emphasis]…[/emphasis] · [spell]…[/spell] · Phản ứng (VoiceStudio): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
     "language": "Ngôn ngữ",
     "expressive": "Ghi đè sản xuất",
     "reset": "Đặt lại",
@@ -1978,7 +1989,10 @@
     "emotion_text": "Mô tả cảm xúc",
     "emotion_text_ph": "ví dụ: nghe vẻ mệt mỏi và buồn",
     "emotion_alpha": "Độ mạnh của cảm xúc",
-    "lex_duplicate": "Chỉ dùng một cách phát âm cho mỗi từ."
+    "lex_duplicate": "Chỉ dùng một cách phát âm cho mỗi từ.",
+    "recovery_busy": "Đang có một lượt kết xuất khác. Hãy tiếp tục khi nó xong.",
+    "cast_note_one": "{{names}} chưa được chọn giọng nên sẽ đọc bằng giọng chính. Hãy chọn giọng trong mục Vai.",
+    "cast_note_other": "{{names}} chưa được chọn giọng nên sẽ đọc bằng giọng chính. Hãy chọn giọng trong mục Vai."
   },
   "credentials": {
     "microsoft_key": "Khóa dịch của Microsoft",
@@ -2374,7 +2388,8 @@
     "generating_voice_a": "Đang tạo giọng nói và...",
     "generating_voice_b": "Đang tạo giọng nói B...",
     "comparison_complete": "So sánh hoàn tất!",
-    "play_failed": "Chơi không thành công: {{message}}"
+    "play_failed": "Chơi không thành công: {{message}}",
+    "test_phrase_placeholder": "Nhập một câu để cả hai giọng cùng đọc."
   },
   "demo": {
     "clone_coachmark": "Đây là bản demo có hướng dẫn — hãy thử lời nhắc gợi ý hoặc viết lời nhắc của riêng bạn.",
@@ -2881,7 +2896,8 @@
     "plan_impossible": "Không vừa +{{seconds}}giây",
     "plan_impossible_title": "Lời nói dự kiến ≈{{est}}giây, thời gian có sẵn {{avail}}giây. Khoảng {{seconds}}giây vượt quá khả năng điều chỉnh nên âm thanh sẽ bị cắt. Hãy rút ngắn văn bản trước khi tạo.",
     "plan_tight": "Vừa sát giới hạn",
-    "plan_tight_title": "Lời nói dự kiến ≈{{est}}giây, thời gian có sẵn {{avail}}giây. Căn chỉnh thông minh có thể bù bằng cách tăng tốc giọng nói rõ rệt hoặc làm chậm video. Hãy rút ngắn văn bản để có kết quả tốt hơn."
+    "plan_tight_title": "Lời nói dự kiến ≈{{est}}giây, thời gian có sẵn {{avail}}giây. Căn chỉnh thông minh có thể bù bằng cách tăng tốc giọng nói rõ rệt hoặc làm chậm video. Hãy rút ngắn văn bản để có kết quả tốt hơn.",
+    "replace_toggle": "Tìm và thay thế"
   },
   "update": {
     "checking": "Đang kiểm tra bản cập nhật…",
@@ -2959,8 +2975,6 @@
     "translate_hint": "Đọc lướt văn bản mục tiêu. Các dòng quá dài được tăng tốc độ; bạn cũng có thể chỉnh sửa trực tiếp.",
     "done_title": "Lồng tiếng hoàn tất",
     "done_hint": "Xem lại tỷ lệ thời gian và đồng bộ hóa. Tinh chỉnh bất kỳ dòng nào và nhấn \"Regen đã thay đổi\" để làm lại một phần nhanh chóng.",
-    "segment_one": "Đoạn {{count}}",
-    "segment_other": "{{count}} phân đoạn",
     "dismiss_title": "Loại bỏ - sẽ không xuất hiện lại ở giai đoạn này cho đến khi tải lại",
     "timing_review_one": "{{count}} đoạn cần kiểm tra thời gian",
     "timing_review_other": "{{count}} đoạn cần kiểm tra thời gian",
@@ -4420,5 +4434,20 @@
     "nextMemory": "Thiết bị này đã hết bộ nhớ. Chọn hồ sơ nhẹ hơn trong Cài đặt → Hiệu suất, rồi thử lại.",
     "downloads": "Tải xuống",
     "activeCount": "Đang tải xuống: {{count}}"
+  },
+  "disabledReason": {
+    "files_required": "Hãy thêm ít nhất một video trước.",
+    "languages_required": "Chọn ít nhất một ngôn ngữ đích.",
+    "language_required": "Hãy chọn ngôn ngữ đích trước.",
+    "translation_not_ready": "Hãy thiết lập công cụ dịch trước.",
+    "recovery_pending": "Hãy tiếp tục hoặc hủy bước bị gián đoạn trước.",
+    "segments_required": "Hãy chép lời video trước.",
+    "text_required": "Hãy nhập văn bản trước.",
+    "path_required": "Hãy nhập đường dẫn đầy đủ tới tệp trước.",
+    "slot_required": "Hãy nhập khoảng thời gian dài hơn 0 giây.",
+    "voices_required": "Hãy chọn cả hai giọng trước.",
+    "generating": "Hãy đợi bản hiện tại hoàn tất.",
+    "name_required": "Hãy nhập tên trước.",
+    "audio_missing": "Bản này không có tệp âm thanh để lưu."
   }
 }

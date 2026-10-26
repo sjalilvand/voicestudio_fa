@@ -452,7 +452,7 @@
     "mode_fast": "Hızlı",
     "mode_fast_desc": "Seçilen düşük gecikmeli dikte modelini kullanır.",
     "mode_accurate": "Kesin",
-    "mode_accurate_desc": "Seçilen ASR modelini ayrıntılı zaman damgalarıyla birlikte kullanır.",
+    "mode_accurate_desc": "Seçili konuşmadan metne modelini ayrıntılı zaman damgalarıyla kullanır.",
     "title": "Transkripsiyonlar",
     "entries": "{{count}} girişler",
     "search_placeholder": "Transkripsiyonları ara…",
@@ -479,7 +479,8 @@
     "identify_speakers": "Konuşmacıları belirle",
     "speakers_unavailable": "Konuşmacı belirleme kullanılamıyor. Transkript konuşmacı etiketleri olmadan kaydedildi.",
     "missing_model": "Yüklü bir konuşmadan metne modeli yok — bu özellik sesi yazıya dökmek için bir model gerektirir.",
-    "original_transcript": "Orijinal transkript"
+    "original_transcript": "Orijinal transkript",
+    "active_model": "Model: {{model}}"
   },
   "engineRuntime": {
     "ready": "Hazır",
@@ -808,7 +809,6 @@
     "install_disabled_title": "Paketlenmiş yapılarda yüklemeler devre dışı bırakıldı",
     "needs_install_suffix": "— kurulumu gerekiyor",
     "glossary_title": "Tekrarlanan terimler (isimler, marka kelimeleri, jargon) için çevirileri sabitleyin",
-    "glossary_btn": "+ Sözlük ({{count}})",
     "selected_count": "{{count}} seçildi",
     "set_voice": "Sesi ayarla…",
     "clear_voice": "⊘ Varsayılan",
@@ -931,7 +931,12 @@
     "input_issue_unsupported": "Desteklenmeyen dosya türü — bir video veya ses dosyası seçin",
     "input_issue_empty": "Bu dosya boş — başka bir dosya seçin",
     "file_actions": "Dosya işlemleri",
-    "translator_agent": "Ajan"
+    "translator_agent": "Ajan",
+    "segment_count_one": "{{count}} bölüm",
+    "segment_count_other": "{{count}} bölüm",
+    "glossary_terms_one": "Sözlük · {{count}} terim",
+    "glossary_terms_other": "Sözlük · {{count}} terim",
+    "glossary_label": "Sözlük"
   },
   "dub_workflow": {
     "preparing_audio": "Ses hazırlanıyor…",
@@ -1533,7 +1538,7 @@
     "more_actions": "Daha fazla işlem",
     "use_in_stories": "Hikayelerde kullan",
     "set_audiobook_default": "Sesli kitap için varsayılan ses olarak ayarla",
-    "open_designer": "Designer'da aç",
+    "open_designer": "Tasarla'da aç",
     "no_matches": "Bu filtrelerle eşleşen ses yok.",
     "load_more": "Daha fazlasını yükle",
     "saved_as_profile": "Seslerinize \"{{name}}\" eklendi.",
@@ -1555,7 +1560,7 @@
     "trim_load_failed": "Kırpma için ses yüklenemedi: {{message}}",
     "delete": "Sil",
     "community_empty": "Henüz topluluk sesi yüklenmedi — internete bağlanıp yeniden açın veya ilk gönderen siz olun.",
-    "community_explainer": "Topluluk tarafından paylaşılan tasarlanmış ön ayarlar ve kayıtlı sesler; omnivoice-gallery'den yüklenir.",
+    "community_explainer": "Topluluk tarafından paylaşılan tasarlanmış ön ayarlar ve kayıtlı sesler.",
     "no_designer": "Kayıtlı ses — bunun yerine \"Sesi kullan\"ı kullanın.",
     "no_preview": "Önizleme yok — duymak için \"Sesi kullan\" ile ekleyin.",
     "submit_failed": "Gönderim formu açılamadı.",
@@ -1681,7 +1686,9 @@
     "probe_placeholder": "/Kullanıcılar/siz/Filmler/sample.mp4",
     "probe_failed": "Prob başarısız oldu: {{message}}",
     "parse_failed": "Ayrıştırma başarısız oldu: {{message}}",
-    "fit_failed": "Sığdırma başarısız oldu: {{message}}"
+    "fit_failed": "Sığdırma başarısız oldu: {{message}}",
+    "placeholder_direction": "örn. Bir sır gibi fısılda, sonra heyecanı artır.",
+    "placeholder_rate_fit": "Süre aralığıyla karşılaştırmak için çevrilmiş satırı yapıştırın."
   },
   "projects": {
     "title": "Projeler",
@@ -1727,7 +1734,9 @@
     "delete_selected": "Seçilenleri sil ({{count}})",
     "deleted_count": "Silinen: {{count}}",
     "delete_warning": "Bu işlem geri alınamaz. Projeler ve dökümler kaldırılır. Sesleri veya kayıtları silmek, saklanan ses dosyalarını da siler. Dışa aktarılan dosyalar ve tamamlanmış işleme sesleri korunur.",
-    "draft_changed": "Bu proje yüklenirken taslağınız değişti. Değiştirmek için yeniden onaylayın."
+    "draft_changed": "Bu proje yüklenirken taslağınız değişti. Değiştirmek için yeniden onaylayın.",
+    "all_projects": "Tüm projeler",
+    "library_group": "Kitaplık"
   },
   "projectActions": {
     "delete": "“{{name}}” silinsin mi? Bu işlem geri alınamaz.",
@@ -1752,7 +1761,9 @@
     "tagline": "Yerel ses klonlama. Hiçbir şey makinenizden ayrılmaz.",
     "coming_soon": "Yakında gelecek",
     "switch_to_light": "Açık temaya geç",
-    "switch_to_dark": "Koyu temaya geç"
+    "switch_to_dark": "Koyu temaya geç",
+    "not_found_title": "Sayfa bulunamadı",
+    "not_found_body": "Bu adres VoiceStudio'daki hiçbir sayfayla eşleşmiyor."
   },
   "stories": {
     "title": "Hikaye Düzenleyici",
@@ -1805,13 +1816,13 @@
     "splitModeHint": "Her satır ayrı bir çekim olarak okunur. Tek anlatıcı için paragraflar veya tüm bölümler cümlelerden daha akıcıdır.",
     "emptyText": "Hikayenize diyalog ve anlatım satırları ekleyerek başlayın. Cast'ta her karaktere bir ses atayın.",
     "addFirst": "İlk Satırı Ekle",
-    "linePlaceholder": "Diyaloğa veya anlatıma girin… sessiz bir ara için [0,5 saniye duraklat] kullanın",
+    "linePlaceholder": "Diyaloğa veya anlatıma girin… sessiz bir ara için [pause 0.5s] kullanın",
     "text": "metin",
     "defaultVoice": "Varsayılan",
     "inlineVoice": "Satır içi sesi ayarla",
     "inlineVoiceHint": "Vurgulanan metnin sesini değiştirin (veya imlece bir anahtar ekleyin)",
     "resetInlineVoice": "Hat sesine sıfırla",
-    "insertPause": "Bir [0,5 saniyelik duraklatma] molası ekleyin",
+    "insertPause": "Bir [pause 0.5s] molası ekleyin",
     "preview": "Bu satırı önizleyin",
     "removeLine": "Satırı kaldır",
     "tune": "Ton ve hız",
@@ -1849,7 +1860,8 @@
     "toneChip": "Ton ve hız: {{speed}}",
     "lineVoice": "Satır sesi",
     "chapterHeading": "Bölüm başlığı",
-    "lineActions": "Satır işlemleri"
+    "lineActions": "Satır işlemleri",
+    "recovery_title": "Yarıda kalan hikâye"
   },
   "audiobook": {
     "cast": "Kadro",
@@ -1873,7 +1885,6 @@
     "stats_one": "{{count}} bölüm · {{words}} kelime · {{runtime}} tahmini süre",
     "stats_other": "{{count}} bölüm · {{words}} kelime · {{runtime}} tahmini süre",
     "warnings_title": "Oluşturmadan önce",
-    "warn_unknown_voice": "Bilinmeyen ses ‘{{name}}’ — varsayılan kullanılacak",
     "warn_empty_chapter": "“{{title}}” bölümünde seslendirilecek metin yok",
     "warn_unknown_tag": "Tanınmayan etiket {{tag}} — sesli okunacak",
     "untitled": "Adsız sesli kitap",
@@ -1885,7 +1896,7 @@
     "tab_book": "Kitap",
     "subtitle": "Hikâyenizi yazın veya içe aktarın, her rolü seslendirin ve gerçek bölümleri olan tamamlanmış bir sesli kitap dışa aktarın.",
     "script": "Senaryo",
-    "script_placeholder": "# Birinci Bölüm\nBir varmış bir yokmuş… [500ms durakla] son.\n\n# İkinci Bölüm\n[ses:anlatıcı] Ve böyle devam etti.",
+    "script_placeholder": "# Birinci Bölüm\nBir varmış bir yokmuş… [pause 0.5s] son.\n\n# İkinci Bölüm\n[voice:anlatıcı] Ve böyle devam etti.",
     "default_voice": "Varsayılan ses",
     "engine_default": "Motor varsayılanı",
     "preview_plan": "Önizleme planı",
@@ -1961,7 +1972,7 @@
     "lex_add": "Kelime ekle",
     "lex_remove": "Kaldır",
     "markup_help": "İşaretleme referansı",
-    "markup_hint": "# Bölüm başlığı · [voice:NAME] sesi değiştir · [pause 500ms] / [pause 1s] · [slow]…[/slow] · [fast]…[/fast] · [emphasis]…[/emphasis] · [spell]…[/spell] · Tepkiler (VoiceStudio): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
+    "markup_hint": "# Bölüm başlığı · [voice:NAME] sesi değiştir · [pause 0.5s] · [slow]…[/slow] · [fast]…[/fast] · [emphasis]…[/emphasis] · [spell]…[/spell] · Tepkiler (VoiceStudio): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
     "language": "Dil",
     "expressive": "Prodüksiyon geçersiz kılmalar",
     "reset": "Sıfırla",
@@ -1978,7 +1989,10 @@
     "emotion_text": "Duygu açıklaması",
     "emotion_text_ph": "örn. tükenmiş ve üzgün geliyor",
     "emotion_alpha": "Duygu gücü",
-    "lex_duplicate": "Her sözcük için tek bir telaffuz kullanın."
+    "lex_duplicate": "Her sözcük için tek bir telaffuz kullanın.",
+    "recovery_busy": "Başka bir işleme sürüyor. Bittiğinde devam edin.",
+    "cast_note_one": "{{names}} için henüz ses seçilmedi, ana sesle okunur. Oyuncular bölümünden bir ses seçin.",
+    "cast_note_other": "{{names}} için henüz ses seçilmedi, ana sesle okunurlar. Oyuncular bölümünden ses seçin."
   },
   "credentials": {
     "microsoft_key": "Microsoft Çevirmen Anahtarı",
@@ -2374,7 +2388,8 @@
     "generating_voice_a": "Ses Oluşturuluyor...",
     "generating_voice_b": "Ses B oluşturuluyor...",
     "comparison_complete": "Karşılaştırma tamamlandı!",
-    "play_failed": "Oynatma başarısız oldu: {{message}}"
+    "play_failed": "Oynatma başarısız oldu: {{message}}",
+    "test_phrase_placeholder": "İki sesin de okuyacağı bir cümle yazın."
   },
   "demo": {
     "clone_coachmark": "Bu rehberli bir demodur; önerilen istemi deneyin veya kendinizinkini yazın.",
@@ -2881,7 +2896,8 @@
     "plan_impossible": "Sığmayacak +{{seconds}}sn",
     "plan_impossible_title": "Tahmini konuşma ≈{{est}}sn, kullanılabilir süre {{avail}}sn. Yaklaşık {{seconds}}sn hiçbir uyarlamayla karşılanamaz ve ses kesilir. Üretmeden önce metni kısaltın.",
     "plan_tight": "Zar zor sığıyor",
-    "plan_tight_title": "Tahmini konuşma ≈{{est}}sn, kullanılabilir süre {{avail}}sn. Akıllı uyarlama, sesi belirgin biçimde hızlandırarak veya videoyu yavaşlatarak bunu karşılayabilir. Daha iyi sonuç için metni kısaltın."
+    "plan_tight_title": "Tahmini konuşma ≈{{est}}sn, kullanılabilir süre {{avail}}sn. Akıllı uyarlama, sesi belirgin biçimde hızlandırarak veya videoyu yavaşlatarak bunu karşılayabilir. Daha iyi sonuç için metni kısaltın.",
+    "replace_toggle": "Bul ve değiştir"
   },
   "update": {
     "checking": "Güncellemeler denetleniyor…",
@@ -2959,8 +2975,6 @@
     "translate_hint": "Hedef metni gözden geçirin. Aşırı uzunluktaki hatların hızı artırılıyor; doğrudan da düzenleyebilirsiniz.",
     "done_title": "Dublaj tamamlandı",
     "done_hint": "Zamanlamayı ve senkronizasyon oranlarını inceleyin. Herhangi bir satırda ince ayar yapın ve hızlı bir kısmi yineleme için \"Yenileme değişti\" tuşuna basın.",
-    "segment_one": "{{count}} segmenti",
-    "segment_other": "{{count}} segment",
     "dismiss_title": "Reddet — yeniden yüklenene kadar bu aşamada yeniden görünmeyecek",
     "timing_review_one": "{{count}} bölümün zamanlaması incelenmeli",
     "timing_review_other": "{{count}} bölümün zamanlaması incelenmeli",
@@ -4420,5 +4434,20 @@
     "nextMemory": "Bu cihazın belleği yetmedi. Ayarlar → Performans bölümünden daha hafif bir profil seçin, ardından yeniden deneyin.",
     "downloads": "İndirmeler",
     "activeCount": "Süren indirmeler: {{count}}"
+  },
+  "disabledReason": {
+    "files_required": "Önce en az bir video ekleyin.",
+    "languages_required": "En az bir hedef dil seçin.",
+    "language_required": "Önce bir hedef dil seçin.",
+    "translation_not_ready": "Önce bir çeviri motoru kurun.",
+    "recovery_pending": "Önce yarıda kalan adımı sürdürün veya iptal edin.",
+    "segments_required": "Önce videoyu yazıya dökün.",
+    "text_required": "Önce bir metin girin.",
+    "path_required": "Önce bir dosyanın tam yolunu girin.",
+    "slot_required": "0 saniyeden uzun bir süre girin.",
+    "voices_required": "Önce iki sesi de seçin.",
+    "generating": "Geçerli çekim bitene kadar bekleyin.",
+    "name_required": "Önce bir ad girin.",
+    "audio_missing": "Bu çekimin kaydedilecek ses dosyası yok."
   }
 }

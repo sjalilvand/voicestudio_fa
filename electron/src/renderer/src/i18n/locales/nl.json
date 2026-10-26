@@ -452,7 +452,7 @@
     "mode_fast": "Snel",
     "mode_fast_desc": "Gebruikt het geselecteerde dicteermodel met lage latentie.",
     "mode_accurate": "Nauwkeurig",
-    "mode_accurate_desc": "Gebruikt het geselecteerde ASR-model met gedetailleerde tijdstempels.",
+    "mode_accurate_desc": "Gebruikt het gekozen spraak-naar-tekstmodel met gedetailleerde tijdstempels.",
     "title": "Transcripties",
     "entries": "{{count}} vermeldingen",
     "search_placeholder": "Transcripties zoeken…",
@@ -479,7 +479,8 @@
     "identify_speakers": "Sprekers herkennen",
     "speakers_unavailable": "Sprekerherkenning is niet beschikbaar. Het transcript is opgeslagen zonder sprekerlabels.",
     "missing_model": "Er is geen spraak-naar-tekstmodel geïnstalleerd — deze functie heeft er een nodig om audio te transcriberen.",
-    "original_transcript": "Oorspronkelijk transcript"
+    "original_transcript": "Oorspronkelijk transcript",
+    "active_model": "Model: {{model}}"
   },
   "engineRuntime": {
     "ready": "Klaar",
@@ -808,7 +809,6 @@
     "install_disabled_title": "Installaties zijn uitgeschakeld in verpakte builds",
     "needs_install_suffix": "- moet worden geïnstalleerd",
     "glossary_title": "Pinvertalingen voor terugkerende termen (namen, merkwoorden, jargon)",
-    "glossary_btn": "+ Woordenlijst ({{count}})",
     "selected_count": "{{count}} geselecteerd",
     "set_voice": "Stem instellen…",
     "clear_voice": "⊘ Standaard",
@@ -931,7 +931,12 @@
     "input_issue_unsupported": "Bestandstype niet ondersteund — kies een video- of audiobestand",
     "input_issue_empty": "Dit bestand is leeg — kies een ander bestand",
     "file_actions": "Bestandsacties",
-    "translator_agent": "Agent"
+    "translator_agent": "Agent",
+    "segment_count_one": "{{count}} segment",
+    "segment_count_other": "{{count}} segmenten",
+    "glossary_terms_one": "Woordenlijst · {{count}} term",
+    "glossary_terms_other": "Woordenlijst · {{count}} termen",
+    "glossary_label": "Woordenlijst"
   },
   "dub_workflow": {
     "preparing_audio": "Audio voorbereiden…",
@@ -1533,7 +1538,7 @@
     "more_actions": "Meer acties",
     "use_in_stories": "In Verhalen gebruiken",
     "set_audiobook_default": "Instellen als standaardstem voor Audioboek",
-    "open_designer": "Openen in Ontwerper",
+    "open_designer": "Openen in Ontwerpen",
     "no_matches": "Er zijn geen stemmen die overeenkomen met deze filters.",
     "load_more": "Laad meer",
     "saved_as_profile": "\"{{name}}\" toegevoegd aan je stemmen.",
@@ -1555,7 +1560,7 @@
     "trim_load_failed": "Kan audio voor bijsnijden niet laden: {{message}}",
     "delete": "Verwijderen",
     "community_empty": "Nog geen community-stemmen geladen — maak verbinding met internet en open opnieuw, of wees de eerste die er een indient.",
-    "community_explainer": "Ontworpen presets en opgenomen stemmen gedeeld door de community, geladen vanuit de omnivoice-gallery.",
+    "community_explainer": "Ontworpen presets en opgenomen stemmen gedeeld door de community.",
     "no_designer": "Opgenomen stem — gebruik in plaats daarvan \"Gebruik stem\".",
     "no_preview": "Geen voorbeeld — voeg de stem toe met \"Gebruik stem\" om hem te horen.",
     "submit_failed": "Het indieningsformulier kon niet worden geopend.",
@@ -1681,7 +1686,9 @@
     "probe_placeholder": "/Gebruikers/jij/Films/sample.mp4",
     "probe_failed": "Sonde mislukt: {{message}}",
     "parse_failed": "Parseren mislukt: {{message}}",
-    "fit_failed": "Passen mislukt: {{message}}"
+    "fit_failed": "Passen mislukt: {{message}}",
+    "placeholder_direction": "bijv. Fluister het als een geheim en laat de opwinding dan groeien.",
+    "placeholder_rate_fit": "Plak de vertaalde regel om hem met zijn tijdsvak te vergelijken."
   },
   "projects": {
     "title": "Projecten",
@@ -1727,7 +1734,9 @@
     "delete_selected": "Selectie verwijderen ({{count}})",
     "deleted_count": "Verwijderd: {{count}}",
     "delete_warning": "Dit kan niet ongedaan worden gemaakt. Projecten en transcripties worden verwijderd. Bij het verwijderen van stemmen of opnamen wordt ook hun opgeslagen audio verwijderd. Geëxporteerde bestanden en voltooide audiorenders blijven bewaard.",
-    "draft_changed": "Je concept is gewijzigd tijdens het laden van dit project. Bevestig opnieuw om het te vervangen."
+    "draft_changed": "Je concept is gewijzigd tijdens het laden van dit project. Bevestig opnieuw om het te vervangen.",
+    "all_projects": "Alle projecten",
+    "library_group": "Bibliotheek"
   },
   "projectActions": {
     "delete": "‘{{name}}’ verwijderen? Dit kan niet ongedaan worden gemaakt.",
@@ -1752,7 +1761,9 @@
     "tagline": "Lokaal stemklonen. Niets verlaat uw machine.",
     "coming_soon": "Binnenkort beschikbaar",
     "switch_to_light": "Schakel over naar het lichtthema",
-    "switch_to_dark": "Schakel over naar een donker thema"
+    "switch_to_dark": "Schakel over naar een donker thema",
+    "not_found_title": "Pagina niet gevonden",
+    "not_found_body": "Dit adres hoort bij geen enkele pagina in VoiceStudio."
   },
   "stories": {
     "title": "Verhalen-editor",
@@ -1805,13 +1816,13 @@
     "splitModeHint": "Elke regel wordt als een eigen opname gelezen. Voor één verteller lopen alinea's of hele hoofdstukken beter dan zinnen.",
     "emptyText": "Begin je verhaal door dialoog- en verhaallijnen toe te voegen. Geef elk personage een stem in de cast.",
     "addFirst": "Eerste regel toevoegen",
-    "linePlaceholder": "Voer een dialoog of verhaal in... gebruik [pauze 0,5s] voor een stille pauze",
+    "linePlaceholder": "Voer een dialoog of verhaal in... gebruik [pause 0.5s] voor een stille pauze",
     "text": "tekst",
     "defaultVoice": "Standaard",
     "inlineVoice": "Inline stem instellen",
     "inlineVoiceHint": "Wissel van stem voor de gemarkeerde tekst (of plaats een schakelaar bij de cursor)",
     "resetInlineVoice": "Terugzetten naar lijnstem",
-    "insertPause": "Voeg een pauze van [pauze 0,5s] in",
+    "insertPause": "Voeg een pauze van [pause 0.5s] in",
     "preview": "Bekijk een voorbeeld van deze regel",
     "removeLine": "Lijn verwijderen",
     "tune": "Toon en snelheid",
@@ -1849,7 +1860,8 @@
     "toneChip": "Toon en snelheid: {{speed}}",
     "lineVoice": "Regelstem",
     "chapterHeading": "Hoofdstuktitel",
-    "lineActions": "Regelacties"
+    "lineActions": "Regelacties",
+    "recovery_title": "Onderbroken verhaal"
   },
   "audiobook": {
     "cast": "Cast",
@@ -1873,7 +1885,6 @@
     "stats_one": "{{count}} hoofdstuk · {{words}} woorden · {{runtime}} geschatte speelduur",
     "stats_other": "{{count}} hoofdstukken · {{words}} woorden · {{runtime}} geschatte speelduur",
     "warnings_title": "Voordat je aanmaakt",
-    "warn_unknown_voice": "Onbekende stem ‘{{name}}’ — de standaardstem wordt gebruikt",
     "warn_empty_chapter": "Hoofdstuk “{{title}}” bevat geen gesproken tekst",
     "warn_unknown_tag": "Onbekende tag {{tag}} — deze wordt voorgelezen",
     "untitled": "Luisterboek zonder titel",
@@ -1885,7 +1896,7 @@
     "tab_book": "Boek",
     "subtitle": "Schrijf of importeer je verhaal, wijs elke stem toe en exporteer een verzorgd luisterboek met echte hoofdstukken.",
     "script": "Script",
-    "script_placeholder": "# Hoofdstuk één\nEr was eens… [pauze 500 ms] het einde.\n\n# Hoofdstuk twee\n[stem:verteller] En zo ging het verder.",
+    "script_placeholder": "# Hoofdstuk één\nEr was eens… [pause 0.5s] het einde.\n\n# Hoofdstuk twee\n[voice:verteller] En zo ging het verder.",
     "default_voice": "Standaardstem",
     "engine_default": "Standaard motor",
     "preview_plan": "Voorbeeldplan",
@@ -1961,7 +1972,7 @@
     "lex_add": "Woord toevoegen",
     "lex_remove": "Verwijderen",
     "markup_help": "Opmaakreferentie",
-    "markup_hint": "# Hoofdstuktitel · [voice:NAME] wisselstem · [pause 500ms] / [pause 1s] · [slow]…[/slow] · [fast]…[/fast] · [emphasis]…[/emphasis] · [spell]…[/spell] · Reacties (VoiceStudio): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
+    "markup_hint": "# Hoofdstuktitel · [voice:NAME] wisselstem · [pause 0.5s] · [slow]…[/slow] · [fast]…[/fast] · [emphasis]…[/emphasis] · [spell]…[/spell] · Reacties (VoiceStudio): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
     "language": "Taal",
     "expressive": "Productie-overrides",
     "reset": "Opnieuw instellen",
@@ -1978,7 +1989,10 @@
     "emotion_text": "Emotie beschrijving",
     "emotion_text_ph": "bijv. klinkt uitgeput en verdrietig",
     "emotion_alpha": "Emotie sterkte",
-    "lex_duplicate": "Gebruik één uitspraak per woord."
+    "lex_duplicate": "Gebruik één uitspraak per woord.",
+    "recovery_busy": "Er loopt al een andere render. Hervat zodra die klaar is.",
+    "cast_note_one": "{{names}} heeft nog geen stem en wordt met de hoofdstem gelezen. Kies er een onder Cast.",
+    "cast_note_other": "{{names}} hebben nog geen stem en worden met de hoofdstem gelezen. Kies stemmen onder Cast."
   },
   "credentials": {
     "microsoft_key": "Microsoft Translator-sleutel",
@@ -2374,7 +2388,8 @@
     "generating_voice_a": "Stem genereren...",
     "generating_voice_b": "Stem B genereren...",
     "comparison_complete": "Vergelijking voltooid!",
-    "play_failed": "Afspelen mislukt: {{message}}"
+    "play_failed": "Afspelen mislukt: {{message}}",
+    "test_phrase_placeholder": "Typ een zin die beide stemmen voorlezen."
   },
   "demo": {
     "clone_coachmark": "Dit is een begeleide demo. Probeer de voorgestelde prompt of schrijf er zelf een.",
@@ -2881,7 +2896,8 @@
     "plan_impossible": "Past niet +{{seconds}}s",
     "plan_impossible_title": "Verwachte spraak ≈{{est}}s bij {{avail}}s beschikbare tijd. Ongeveer {{seconds}}s kan niet worden opgevangen; de audio zou worden afgekapt. Kort de tekst in vóór het genereren.",
     "plan_tight": "Past maar net",
-    "plan_tight_title": "Verwachte spraak ≈{{est}}s bij {{avail}}s beschikbare tijd. Slim passend maken kan dit opvangen door hoorbaar snellere spraak of tragere video. Kort de tekst in voor een beter resultaat."
+    "plan_tight_title": "Verwachte spraak ≈{{est}}s bij {{avail}}s beschikbare tijd. Slim passend maken kan dit opvangen door hoorbaar snellere spraak of tragere video. Kort de tekst in voor een beter resultaat.",
+    "replace_toggle": "Zoeken en vervangen"
   },
   "update": {
     "checking": "Controleren op updates…",
@@ -2959,8 +2975,6 @@
     "translate_hint": "Blader door de doeltekst. Lijnen die te lang zijn, krijgen een snelheidsboost; u kunt ook rechtstreeks bewerken.",
     "done_title": "Dubben voltooid",
     "done_hint": "Controleer de timing en synchronisatieverhoudingen. Pas een willekeurige regel aan en druk op \"Regen gewijzigd\" voor een snelle gedeeltelijke herhaling.",
-    "segment_one": "{{count}} segment",
-    "segment_other": "{{count}} segmenten",
     "dismiss_title": "Afsluiten — verschijnt pas opnieuw in deze fase als u opnieuw laadt",
     "timing_review_one": "{{count}} segment moet op timing worden gecontroleerd",
     "timing_review_other": "{{count}} segmenten vereisen controle van de timing",
@@ -4420,5 +4434,20 @@
     "nextMemory": "Dit apparaat heeft te weinig geheugen. Kies een lichter profiel via Instellingen → Prestaties en probeer het opnieuw.",
     "downloads": "Downloads",
     "activeCount": "Lopende downloads: {{count}}"
+  },
+  "disabledReason": {
+    "files_required": "Voeg eerst minstens één video toe.",
+    "languages_required": "Kies minstens één doeltaal.",
+    "language_required": "Kies eerst een doeltaal.",
+    "translation_not_ready": "Stel eerst een vertaalengine in.",
+    "recovery_pending": "Hervat of annuleer eerst de onderbroken stap.",
+    "segments_required": "Transcribeer eerst de video.",
+    "text_required": "Voer eerst tekst in.",
+    "path_required": "Voer eerst het volledige pad naar een bestand in.",
+    "slot_required": "Voer een tijdsvak langer dan 0 seconden in.",
+    "voices_required": "Kies eerst beide stemmen.",
+    "generating": "Wacht tot de huidige opname klaar is.",
+    "name_required": "Voer eerst een naam in.",
+    "audio_missing": "Deze opname heeft geen audiobestand om op te slaan."
   }
 }
