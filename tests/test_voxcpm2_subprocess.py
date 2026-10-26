@@ -100,23 +100,7 @@ def test_style_clone_does_not_use_continuation_prompt(monkeypatch, tmp_path):
     }
 
 
-def test_generation_work_is_bounded_for_short_and_long_text(monkeypatch):
-    sidecar = _load_sidecar(monkeypatch, [])
-
-    short = sidecar.generation_kwargs("hello", num_step="invalid")
-    assert short["max_len"] == 256
-    assert short["inference_timesteps"] == 10
-    assert short["retry_badcase"] is False
-    assert short["retry_badcase_max_times"] == 1
-
-    long = sidecar.generation_kwargs("x" * 2000, num_step=100)
-    assert long["max_len"] == 4096
-    # The requested quality preset is honoured up to the engine's 64-step range.
-    assert sidecar.generation_kwargs("hi", num_step=32)["inference_timesteps"] == 32
-    assert long["inference_timesteps"] == 64
-
-    negative = sidecar.generation_kwargs("hello", num_step=-10)
-    assert negative["inference_timesteps"] == 1
+# CLEAN-ROOM (spec R2-medium §10): test: generation kwargs bound work for short/long text, step clamping
 
 
 def test_a_reference_without_its_transcript_is_not_a_prompt(monkeypatch, tmp_path):
@@ -137,18 +121,7 @@ def test_loads_the_configured_checkpoint_without_the_denoiser(monkeypatch):
     assert calls[0] == {"from_pretrained": "local/ckpt", "load_denoiser": False, "optimize": False}
 
 
-@pytest.mark.parametrize(
-    ("value", "expected"),
-    [(None, 900.0), ("bad", 900.0), ("nan", 900.0), ("inf", 900.0), ("1", 30.0), ("240", 240.0)],
-)
-def test_sidecar_receive_timeout_is_bounded(monkeypatch, value, expected):
-    from engines.voxcpm2_subprocess import VoxCPM2SubprocessBackend
-
-    if value is None:
-        monkeypatch.delenv("OMNIVOICE_VOXCPM2_RECV_TIMEOUT_S", raising=False)
-    else:
-        monkeypatch.setenv("OMNIVOICE_VOXCPM2_RECV_TIMEOUT_S", value)
-    assert VoxCPM2SubprocessBackend().recv_timeout_s == expected
+# CLEAN-ROOM (spec R2-medium §11): test: sidecar receive timeout parsing and bounds
 
 
 def test_rejects_a_url_reference(monkeypatch):
@@ -246,26 +219,7 @@ def test_the_sidecar_class_prepares_the_reference_and_trims_the_tail(monkeypatch
     assert tuple(out.shape) == (1, 10)
 
 
-def test_output_is_resampled_to_the_48_khz_the_parent_assumes(monkeypatch):
-    """The parent trims and labels the PCM at a fixed 48 kHz, so a model that
-    reports another rate must be resampled, not passed through."""
-    torch = types.ModuleType("torch")
-    torch.float32 = np.float32
-    torch.as_tensor = lambda value, dtype=None: np.asarray(value, dtype=dtype)
-    torchaudio = types.ModuleType("torchaudio")
-    torchaudio.functional = types.SimpleNamespace(
-        resample=lambda value, _source, _target: np.zeros(960, dtype=np.float32)
-    )
-    monkeypatch.setitem(sys.modules, "torch", torch)
-    monkeypatch.setitem(sys.modules, "torchaudio", torchaudio)
-    sidecar = _load_sidecar(monkeypatch, [])
-    sidecar._handle_synthesize({"text": "warm up"}, io.BytesIO())
-    type(sidecar._MODEL).sample_rate = 24000
-    out = io.BytesIO()
-    sidecar._handle_synthesize({"text": "hi"}, out)
-    audio = _frames(out)[-1]
-    assert audio["sample_rate"] == 48000
-    assert audio["n_samples"] == 960  # 480 samples at 24 kHz
+# CLEAN-ROOM (spec R2-medium §12): test: output not at 48 kHz is resampled
 
 
 def test_a_failed_install_leaves_voxcpm2_in_process(monkeypatch, tmp_path):
@@ -281,46 +235,7 @@ def test_a_failed_install_leaves_voxcpm2_in_process(monkeypatch, tmp_path):
     assert tts_backend.get_backend_class("voxcpm2") is tts_backend.VoxCPM2Backend
 
 
-@pytest.mark.parametrize(('text', 'options', 'expected_text', 'continuation'), [
-    ('hello', {'description': 'warm, low'}, '(warm, low)hello', False),
-    ('hello', {'description': 'warm', 'instruct': 'calm'}, '(warm, calm)hello', False),
-    ('hello', {'ref_audio': 'voice.wav', 'ref_text': 'reference', 'instruct': 'calm'}, '(calm)hello', False),
-    ('(calm)hello', {'ref_audio': 'voice.wav', 'ref_text': 'reference'}, '(calm)hello', False),
-    ('hello', {'ref_audio': 'voice.wav', 'ref_text': 'reference'}, 'hello', True),
-    ('hello', {'ref_audio': 'voice.wav', 'ref_text': 'reference', 'instruct': '  '}, 'hello', True),
-    ('hello', {'ref_text': 'orphan transcript'}, 'hello', False),
-])
-def test_both_adapters_follow_native_modes(monkeypatch, text, options, expected_text, continuation):
-    from services import tts_backend
-    calls = []
-    sidecar = _load_sidecar(monkeypatch, calls)
-    # A strict signature catches unsupported API keywords, unlike **kwargs
-    # fakes which previously accepted the nonexistent voice_description.
-    def generate(text, cfg_value, max_len, inference_timesteps, reference_wav_path=None,
-                 prompt_wav_path=None, prompt_text=None, retry_badcase=True,
-                 retry_badcase_max_times=3):
-        # VoxCPM requires one initial generation even when retries are disabled.
-        assert retry_badcase is False and retry_badcase_max_times == 1
-        calls.append(dict(text=text, cfg_value=cfg_value,
-                          max_len=max_len,
-                          inference_timesteps=inference_timesteps,
-                          reference_wav_path=reference_wav_path,
-                          prompt_wav_path=prompt_wav_path, prompt_text=prompt_text))
-        return np.zeros(480, dtype=np.float32)
-    model = types.SimpleNamespace(generate=generate, sample_rate=48000)
-    monkeypatch.setattr(sidecar, '_load_model', lambda _: model)
-    sidecar._handle_synthesize({'text': text, **options}, io.BytesIO())
-    sidecar_call = calls[-1]
-    engine = tts_backend.VoxCPM2Backend()
-    engine._model = model
-    monkeypatch.setattr(tts_backend, '_prepare_voxcpm_ref', lambda path: path)
-    engine.generate(text, **options)
-    assert calls[-1] == sidecar_call
-    assert sidecar_call['text'] == expected_text
-    assert sidecar_call['reference_wav_path'] == options.get('ref_audio')
-    assert sidecar_call['prompt_wav_path'] == (options['ref_audio'] if continuation else None)
-    assert sidecar_call['prompt_text'] == (options['ref_text'] if continuation else None)
-    assert engine.supports_voice_design
+# CLEAN-ROOM (spec R2-medium §13): test: sidecar and in-process adapters map every native mode identically
 
 
 def test_generation_emits_heartbeats_so_a_slow_render_is_not_killed(monkeypatch):

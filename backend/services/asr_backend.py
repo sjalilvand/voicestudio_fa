@@ -1404,39 +1404,9 @@ class MLXWhisperBackend(ASRBackend):
             "MLX Whisper transcribing %s (model=%s, word_timestamps=%s)",
             audio_path, self._model_name, word_timestamps,
         )
-        # Decode once here, rather than handing mlx_whisper a path. Given a
-        # path it calls whisper.audio.load_audio, which shells out to a bare
-        # "ffmpeg" PATH lookup -- the same lookup the WhisperX backend was
-        # moved off in #479, and one that cannot find the bundled
-        # imageio-ffmpeg binary because that is named ffmpeg-<plat>-vN. On a
-        # clean from-source install with no system ffmpeg this fails the whole
-        # request with [Errno 2] No such file or directory: ffmpeg.
-        #
-        # The aligner below already used the validated decoder, so this was one
-        # call site out of two in the same method. Reusing that decode also
-        # stops the file being decoded twice per transcription.
-        audio = _decode_audio_16k_mono(audio_path)
-        result = mlx_whisper.transcribe(
-            audio,
-            path_or_hf_repo=_local_model_source(self._model_name),
-            word_timestamps=word_timestamps,
-            **WHISPER_LONG_FORM_OPTIONS,
-            **whisper_request_options(language, initial_prompt, temperature, task),
-        )
-        # Forced alignment, same as WhisperX (#1127). On Apple Silicon this
-        # backend replaces WhisperX for dubbing — CTranslate2 has no Metal
-        # build, so WhisperX transcribes on the CPU while this runs the *same*
-        # whisper-large-v3 on the GPU. But lip-sync accuracy depends on
-        # wav2vec2 word boundaries, not just on being fast, so we keep them:
-        # Whisper's own timestamps are ±100-300 ms, the aligner's are ±10-30 ms.
-        # Degrades gracefully — a language with no aligner keeps MLX's native
-        # word timings rather than failing.
-        if word_timestamps and result.get("segments"):
-            result["segments"] = forced_align(
-                result["segments"],
-                audio,
-                result.get("language", "en"),
-            )
+        # CLEAN-ROOM (spec R2-medium §4): decode the audio once with the validated ffmpeg decoder, transcribe the decoded
+        # array with mlx_whisper, then forced-align using the same array.
+        raise NotImplementedError("CLEAN-ROOM (spec R2-medium §4): MLXWhisperBackend.transcribe decode/transcribe/align")
         # Normalise to the `chunks` shape the rest of the pipeline expects.
         if "segments" in result:
             result["chunks"] = [

@@ -2006,7 +2006,7 @@ v0.5.3 is also the final Tauri update. The Tauri updater will not switch you to 
 - Generation that silently dropped the end of the input now says so. When an engine returns no audio for part of the text the result sounds clean and is simply short, so the only way to notice was to read along; the backend log now names the sentences that produced nothing. (#1330)
 - Dubbing: a re-rendered line that quietly came back in a default voice instead of the cloned one now says why in the backend log — the clone clips are extracted per job and a saved dub outlives them, so regenerating after cleanup loses the reference with no error. (#1331)
 - RTX 40-series GPUs are used again instead of being sent to the CPU. (#1289)
-- Apple Silicon: transcription no longer needs a system ffmpeg, as the docs always said — thanks @gambletan! (#1436)
+<!-- CLEAN-ROOM (spec R2-medium §1): changelog entry for the Apple Silicon transcription no-system-ffmpeg fix (#1436) -->
 - A failed audiobook chapter says why, instead of turning red and saying nothing. (#1325)
 
 ### CI

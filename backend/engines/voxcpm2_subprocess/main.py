@@ -234,7 +234,7 @@ def generation_kwargs(text: str, **options) -> dict:
     return {
         "text": f"({control}){text}" if control else text,
         "cfg_value": options.get("guidance_scale", 2.0),
-        "max_len": max_len,
+        # CLEAN-ROOM (spec R2-medium §2): the max_len entry of the returned generation kwargs
         "inference_timesteps": inference_timesteps,
         # Upstream retries a "bad case" up to three whole generations, which
         # could keep one desktop request running for many minutes.

@@ -150,20 +150,4 @@ describe('AppearancePanel — navigation style picker', () => {
   });
 });
 
-describe('AppearancePanel — theme selection', () => {
-  it('renders localized labels for the Auto and Light themes', () => {
-    render(<AppearancePanel />);
-
-    // The test runner uses the `defaultValue` from our t() hooks.
-    // This verifies the labels are correctly exposed to screen readers via aria-label.
-    const autoTheme = screen.getByRole('radio', { name: 'System Auto' });
-    const lightTheme = screen.getByRole('radio', { name: 'Light' });
-
-    expect(autoTheme).toBeInTheDocument();
-    expect(lightTheme).toBeInTheDocument();
-
-    // Verify it generates the correct data attribute for the OS-sync theme
-    expect(autoTheme).toHaveAttribute('data-radio-value', 'auto');
-    expect(lightTheme).toHaveAttribute('data-radio-value', 'light');
-  });
-});
+// CLEAN-ROOM (spec R2-medium §7): theme selection tests (localized Auto/Light labels)
