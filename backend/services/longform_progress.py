@@ -142,16 +142,19 @@ class RenderProgress:
         now = self._clock() if now is None else now
 
         def _r(v: float | None, nd: int = 1) -> float | None:
-            return None if v is None else round(v, nd)
+            # A positive measurement never reads as 0: a fast chunk (under
+            # 0.05 s) used to report chunk_s 0.0, which says "no time at all".
+            if v is None:
+                return None
+            r = round(v, nd)
+            return 10.0 ** -nd if v > 0 and r == 0 else r
 
         return {
             "chapter": self.chapter,
             "fraction": round(self.fraction(), 4),
             "eta_s": _r(self.eta_seconds()),
             "rtf": _r(self.realtime_factor(), 3),
-            # Millisecond precision: a fast engine's chunk (tens of ms) must
-            # not round to 0.0, which reads as "no baseline" downstream.
-            "chunk_s": _r(self.chunk_seconds(), 3),
+            "chunk_s": _r(self.chunk_seconds()),
             "elapsed_s": _r(now - self._started),
         }
 
