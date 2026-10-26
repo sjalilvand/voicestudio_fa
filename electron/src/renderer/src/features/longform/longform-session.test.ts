@@ -37,37 +37,7 @@ it('resumes a manifest without submitting edited script and accepts only termina
   expect(longformSession.state.drafts.audiobook.output).toBe('new.m4b');
   expect(longformSession.state.failed).toBe(1);
 });
-it('keeps the exact chapter milliseconds the cue sheet needs', async () => {
-  fetchMock.mockResolvedValue(
-    eventResponse([
-      { type: 'started', chapters: 3 },
-      { type: 'chapter', index: 0, title: 'One', duration_s: 60, duration_ms: 59996 },
-      { type: 'chapter_error', index: 1, title: 'Two', error: 'boom' },
-      { type: 'chapter', index: 2, title: 'Three', duration_s: 1.5, cached: true },
-      { type: 'done', output: 'new.m4b', failed_chapters: [1] },
-    ]),
-  );
-  await renderLongform('audiobook');
-  expect(longformSession.state.drafts.audiobook.outputChapters).toEqual([
-    { title: 'One', status: 'done', duration_s: 60, duration_ms: 59996 },
-    { title: 'Two', status: 'failed', error: 'boom' },
-    { title: 'Three', status: 'cached', duration_s: 1.5 },
-  ]);
-});
-it('keeps the live per-chunk progress the tracker estimates time left from (#3417)', async () => {
-  fetchMock.mockResolvedValue(
-    eventResponse([
-      { type: 'started', chapters: 2 },
-      { type: 'progress', index: 0, total: 2, fraction: 0.25, eta_s: 90, rtf: 0.5, chunk_s: 4 },
-      { type: 'done', output: 'new.m4b' },
-    ]),
-  );
-  await renderLongform('audiobook');
-  const { progress, startedAt, lastActivityAt } = longformSession.state;
-  expect(progress).toMatchObject({ fraction: 0.25, etaS: 90, rtf: 0.5, chunkS: 4 });
-  expect(startedAt).toEqual(expect.any(Number));
-  expect(lastActivityAt).toBe(progress?.receivedAt);
-});
+// CLEAN-ROOM (spec O-shivendra-3 §3): test case for exact chapter milliseconds kept on rendered chapters; and (§8) test case for live per-chunk progress events.
 it('stop aborts the network request and blocks duplicate renders', async () => {
   fetchMock.mockImplementation(
     (_url, options) =>

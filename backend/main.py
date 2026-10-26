@@ -10,14 +10,9 @@ _backend_dir = os.path.dirname(os.path.abspath(__file__))
 if _backend_dir not in sys.path:
     sys.path.insert(0, _backend_dir)
 
-# #2135: arm fatal-signal tracebacks before anything heavy is imported, so a
-# native crash inside torch/CUDA leaves a named frame in backend_err.log
-# instead of a silently vanished process. See core/crash_diagnostics.py.
-from core.crash_diagnostics import enable_fault_handler  # noqa: E402
+# CLEAN-ROOM (spec O-shivendra-3 §1): import the fatal-signal diagnostics function before heavy imports.
 from core.app_config import PRODUCT_NAME  # noqa: E402
-
-enable_fault_handler()
-
+# CLEAN-ROOM (spec O-shivendra-3 §1): call the fatal-signal diagnostics arming function here.
 # PyInstaller re-executes this entry module when the frozen backend binary is
 # launched. Nested operation supervisors therefore dispatch here, before math,
 # logging, FastAPI, torch, or any application initialization. Source launches

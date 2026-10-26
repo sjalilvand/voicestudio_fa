@@ -36,8 +36,7 @@ export interface AudiobookRenderChapter {
   title: string;
   status: string;
   duration_s?: number;
-  /** Exact length in the embedded m4b chapters; sent by newer backends only. */
-  duration_ms?: number;
+  // CLEAN-ROOM (spec O-shivendra-3 §3): optional exact-millisecond duration field.
   error?: string;
 }
 export interface Draft extends BookOptions {
@@ -341,9 +340,7 @@ export async function renderLongform(mode: Mode, resumeId?: string) {
               ...(Number.isFinite(Number(event.duration_s))
                 ? { duration_s: Number(event.duration_s) }
                 : {}),
-              ...(event.duration_ms != null && Number.isFinite(Number(event.duration_ms))
-                ? { duration_ms: Number(event.duration_ms) }
-                : {}),
+              // CLEAN-ROOM (spec O-shivendra-3 §3): keep a finite duration_ms from the chapter event as an optional field.
               ...(event.type === 'chapter_error'
                 ? {
                     error:

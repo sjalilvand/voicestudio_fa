@@ -182,9 +182,7 @@ export default function StoriesEditor({ profiles = [] }) {
   }, []);
 
   const [activeTrack, setActiveTrack] = useState(null);
-  // Bumped by clearScript so a preview that was still generating when the
-  // script went away never plays or writes audio back for a deleted line.
-  const previewGenRef = useRef(0);
+  // CLEAN-ROOM (spec O-shivendra-3 §7): preview generation counter ref.
   const playingPreviewRef = useRef(null);
   const [activeTab, setActiveTab] = useState('script');
   const [splitOpen, setSplitOpen] = useState(false);
@@ -396,33 +394,7 @@ export default function StoriesEditor({ profiles = [] }) {
     setTracks((prev) => [...prev, makeTrack('narrator', `# ${t('stories.chapterN', { n })}`)]);
   }, [tracks, setTracks, t]);
 
-  // Clear every line and chapter at once (an import can add hundreds; the
-  // per-line trash icon was the only way to undo one). Cast is kept.
-  const clearScript = useCallback(async () => {
-    const count = tracks.length + (splitText.trim() ? 1 : 0);
-    if (!count) return;
-    const ok = await askConfirm(t('stories.clearConfirm', { count }), t('stories.clearScript'));
-    if (!ok) return;
-    // Invalidate previews still generating for lines that are about to go,
-    // and stop whatever is playing (#2203 review).
-    previewGenRef.current += 1;
-    stopActivePlayback();
-    // An empty script is exactly what the first-run bootstrap below treats as
-    // "pristine", so mark the sample as shown or it would reseed the demo.
-    sampleBootstrapRef.current = true;
-    try {
-      localStorage.setItem(DEFAULT_SAMPLE_KEY, '1');
-    } catch {
-      // Storage unavailable: the ref alone covers this mounted session.
-    }
-    setTracks((prev) => {
-      prev.forEach(releasePreview);
-      return [];
-    });
-    setSplitText('');
-    setSplitOpen(false);
-    toast.success(t('stories.cleared'));
-  }, [tracks.length, splitText, setTracks, t]);
+  // CLEAN-ROOM (spec O-shivendra-3 §7): clearScript callback (confirm, invalidate previews, stop playback, suppress sample reseed, clear tracks and split text, toast).
 
   // ── Paste & auto-split ───────────────────────────────────────────────────
   const applySplit = useCallback(() => {
@@ -504,10 +476,7 @@ export default function StoriesEditor({ profiles = [] }) {
     async (track) => {
       const raw = (track.text || '').trim();
       if (!raw) return;
-      const gen = previewGenRef.current;
-      const stale = () =>
-        previewGenRef.current !== gen ||
-        !useAppStore.getState().storyTracks.some((tk) => tk.id === track.id);
+      // CLEAN-ROOM (spec O-shivendra-3 §7): preview staleness check (generation counter captured at start + track removed from the store).
       const playback = { id: track.id };
       const releasePlayback = () => {
         if (playingPreviewRef.current === playback) playingPreviewRef.current = null;
@@ -521,7 +490,7 @@ export default function StoriesEditor({ profiles = [] }) {
       if (!hasStoryMarkers(raw)) {
         try {
           const blob = await fetchChunkBlob(raw, pid, spd);
-          if (stale()) return;
+          // CLEAN-ROOM (spec O-shivendra-3 §7): abandon when the preview is stale after the single-chunk fetch.
           const url = URL.createObjectURL(blob);
           setTracks((prev) =>
             prev.map((tk) => {
@@ -556,7 +525,7 @@ export default function StoriesEditor({ profiles = [] }) {
             seg.type === 'chunk' ? await fetchChunkBlob(seg.text, seg.profileId, spd) : null,
           );
         }
-        if (stale()) return;
+        // CLEAN-ROOM (spec O-shivendra-3 §7): abandon when the preview is stale after the chunk synthesis loop.
         let cursor = 0;
         const finish = () => {
           setTracks((prev) =>
@@ -568,7 +537,7 @@ export default function StoriesEditor({ profiles = [] }) {
           );
         };
         const step = () => {
-          if (stale()) return;
+          // CLEAN-ROOM (spec O-shivendra-3 §7): abandon the marker-preview step chain when the preview is stale.
           while (cursor < parsed.length) {
             const seg = parsed[cursor];
             const blob = chunkBlobs[cursor];
@@ -827,16 +796,7 @@ export default function StoriesEditor({ profiles = [] }) {
                 <Bookmark size={13} aria-hidden="true" />
                 {t('stories.addChapter')}
               </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={clearScript}
-                disabled={!tracks.length && !splitText.trim()}
-                title={t('stories.clearScriptHint')}
-              >
-                <Trash2 size={13} aria-hidden="true" />
-                {t('stories.clearScript')}
-              </Button>
+              {/* CLEAN-ROOM (spec O-shivendra-3 §7): ghost small "Clear script" button with trash icon after the Add chapter button; disabled when no lines and no pending split text; tooltip hint. */}
             </div>
           )}
         </div>

@@ -107,25 +107,7 @@ None of them are required — the defaults are chosen for the common case.
 | `OMNIVOICE_GPU_QUEUE_TIMEOUT_S` | `1800` | How long a job may sit in the GPU queue before it's reported as a saturated pool (a retryable condition — nothing ran). Waiting is normal on 1-worker machines; lower this only if you'd rather fail fast than queue. |
 | `OMNIVOICE_PROGRESS_EXTENSION_CAP_S` | `1800` | Extra time a job that keeps reporting progress (a model download heartbeat, a finished chunk) may run past its budget — the larger of this and three times the job's own budget. A job that goes silent still stops at its budget. Replaces the old name `OMNIVOICE_MODEL_LOAD_TIMEOUT_S`, which is still accepted but deprecated; it is unrelated to the cold-load ceiling `OMNIVOICE_MODEL_LOAD_TIMEOUT`. The app waits out the backend's longest default budget before it gives up on a request itself. |
 
-**torch.compile** is probe-based, not platform-based: it's attempted only
-where the runtime check says it can work (a CUDA device with Triton importable
-and a supported GPU architecture) and skipped automatically everywhere else —
-MPS, CPU, and the typical Windows install (Triton ships no Windows wheel).
-The one user-facing control is Settings → Performance → "Disable
-torch.compile", available on every platform, for the setup where the probe
-passes but the compile attempt itself misbehaves — a partial Triton install,
-or a GPU whose compiled kernels crash the engine. Setting
-`TORCH_COMPILE_DISABLE=1` (or `TORCHDYNAMO_DISABLE=1`) in the environment does
-the same thing and is honoured by both the in-process engine and every engine
-subprocess. See [Windows install notes](install/windows.md).
-
-On CUDA the compile **mode** is chosen per GPU: Ampere (sm_80) and newer use
-`reduce-overhead`, which captures CUDA graphs; older cards (Turing/Volta, e.g.
-the Tesla T4) fall back to the plain `default` mode, because graph capture was
-observed to abort the whole backend process there
-([#2135](https://github.com/debpalash/VoiceStudio/issues/2135)). They still get
-compiled Inductor kernels. `OMNIVOICE_FORCE_CUDAGRAPH=1` restores the
-cudagraph mode if you want to benchmark it.
+<!-- CLEAN-ROOM (spec O-shivendra-3 §6): torch.compile paragraph and per-GPU compile-mode paragraph. -->
 
 ## Warnings before a slow generation
 

@@ -1281,15 +1281,12 @@ async def _render_longform_sse(
                     task.add_done_callback(
                         lambda t: t.cancelled() or t.exception())
             chapter_files.append(wav_path)
-            dur_ms = int(round(dur * 1000))
-            chapters_meta.append((chapter.title, dur_ms))
+            chapters_meta.append((chapter.title, int(round(dur * 1000))))
             cached_n += 1 if was_cached else 0
-            # `duration_ms` (additive; old clients ignore it) is exactly what
-            # the embedded m4b chapters are built from, so a client summing it
-            # reproduces their START offsets; `duration_s` is display-rounded.
             ev = {"type": "chapter", "index": i, "total": total,
                   "title": chapter.title, "duration_s": round(dur, 2),
-                  "duration_ms": dur_ms, "cached": was_cached}
+                  "cached": was_cached}
+            # CLEAN-ROOM (spec O-shivendra-3 §3): the additive exact-millisecond duration field on the chapter event.
             if seg_stats is not None:
                 # Additive fields (old clients ignore them): segment-level
                 # reuse inside a re-rendered chapter.
