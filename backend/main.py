@@ -711,16 +711,7 @@ def _phase_a_build_inner() -> None:
     # failure in that phase takes the whole backend down — the desktop app sits
     # on "starting backend" forever and /health stays 503.
     #
-    # That is not a hypothetical version: #1931 came from an sm_120 (Blackwell)
-    # user whose torch import crashed on Windows and who fixed it by moving to
-    # torch 2.9.1, which brings torchaudio 2.9 with it. Someone already working
-    # around one problem then hit a hard startup crash on a line that does
-    # nothing (#1931).
-    #
-    # The pin is not missing sm_120 kernels: torch 2.8.0 from the cu128 index
-    # lists sm_120 in get_arch_list(). CU128_ARCHS in
-    # tests/test_cuda_arch_compat.py records the same list, captured verbatim
-    # from a real cu128 build in #1285.
+    # CLEAN-ROOM (spec K-pr2170 §6): explanatory comment about why the torchaudio backend call is guarded (comment only, no behaviour).
     # The bare hasattr guard (no `torchaudio is not None` prefix) is what
     # tests/test_torchaudio_legacy_backend_1931.py asserts, and it is safe
     # either way: hasattr(None, ...) is False, so the call is skipped when

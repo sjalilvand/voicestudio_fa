@@ -533,15 +533,7 @@ class _PlainBackend(SubprocessBackend):
         return ["multi"]
 
 
-def test_base_default_recv_timeout_covers_a_generation():
-    # A sidecar that does not choose gets a deadline that outlasts the
-    # wall-clock budget its own job was granted (#2103).
-    from services.subprocess_backend import GENERATE_RECV_TIMEOUT_S
-    assert SubprocessBackend.recv_timeout_s == GENERATE_RECV_TIMEOUT_S == 600.0
-    assert _PlainBackend().recv_timeout_s == 600.0
-    # The ping budget itself is unchanged: health_check() still wants 60s.
-    assert RECV_TIMEOUT_S == 60.0
-
+# CLEAN-ROOM (spec K-pr2170 §19): test(s) for base recv_timeout_s default; see spec.
 
 def test_sidecar_spawn_delegates_all_containment_to_nested_owner(monkeypatch, tmp_path):
     from services import subprocess_backend as backend_module

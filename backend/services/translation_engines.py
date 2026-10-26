@@ -30,19 +30,7 @@ logger = logging.getLogger("omnivoice.translation_engines")
 
 _NLLB_REPO_ID = "facebook/nllb-200-distilled-600M"
 _ARGOS_INSTALL_LOCK = threading.Lock()
-_ARGOS_LANG_ALIASES = {
-    "cmn": "zh",
-    "zho": "zh",
-    "in": "id",
-    "iw": "he",
-    "fil": "tl",
-}
-# Human names (and the UI's own labels) that are not ISO 639-1 tokens.
-_ARGOS_NAME_ALIASES = {
-    "chinese": "zh",
-    "chinese (simplified)": "zh",
-    "mandarin": "zh",
-}
+# CLEAN-ROOM (spec K-pr2170 §14): Argos language alias tables.
 
 
 # Engine ID → registry entry. Keyed by the `provider` string sent from the
@@ -366,37 +354,7 @@ def is_ready(engine_id: str, *, import_check: bool = True) -> bool:
     return installed and configured
 
 
-def argos_lang_code(value: str) -> str:
-    """Return the base language token used by Argos package metadata.
-
-    Accepts ISO 639-1 codes (e.g. ``"zh"``), BCP-47 tags with a region or script
-    suffix (e.g. ``"zh-CN"``, ``"cmn-Hans"``), human names from the dub UI's own
-    label list (e.g. ``"Chinese"``, ``"Mandarin"``), legacy / deprecated ISO
-    639-1 codes still seen in older corpora (``"in"``→``"id"`` for Indonesian,
-    ``"iw"``→``"he"`` for Hebrew), and ISO 639-2/T (e.g. ``"zho"``→``"zh"``,
-    ``"fil"``→``"tl"`` for Tagalog). Empty or whitespace-only input raises
-    ``ValueError`` so the caller sees an actionable error instead of a
-    silently-empty language token.
-    """
-    raw = str(value or "").strip()
-    key = raw.lower()
-    parts = key.replace("_", "-").split("-")
-    if key == "chinese (traditional)" or (
-        parts[0] in {"zh", "zho", "cmn"} and
-        any(part in {"hant", "tw", "hk", "mo"} for part in parts[1:])
-    ):
-        raise ValueError("Argos does not provide Traditional Chinese; choose NLLB for this script")
-    named = _ARGOS_NAME_ALIASES.get(key)
-    if named:
-        return named
-    code = parts[0]
-    code = _ARGOS_LANG_ALIASES.get(code, code)
-    named = _ARGOS_NAME_ALIASES.get(code)
-    if named:
-        return named
-    if not re.fullmatch(r"[a-z]{2,3}", code):
-        raise ValueError("Choose a valid source and target language")
-    return code
+# CLEAN-ROOM (spec K-pr2170 §14): argos_lang_code(value: str) -> str normaliser.
 
 
 def _configure_argos_cache() -> None:

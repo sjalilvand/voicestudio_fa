@@ -99,13 +99,7 @@ def _unique_stamp() -> str:
     return f"{time.strftime('%Y%m%dT%H%M%S')}-{uuid.uuid4().hex[:8]}"
 
 
-#: Seconds of silence on a `/tasks/stream` before a keepalive comment goes out.
-#: A task that is busy but quiet — ffmpeg on a long video, a slow TTS segment,
-#: a job queued behind another — leaves the stream byte-silent, and byte-silent
-#: SSE gets severed by the desktop webview, Chrome's ~5 min cap or a proxy's
-#: idle timeout (#1196, #2108). Comments are invisible to every consumer.
-TASK_STREAM_KEEPALIVE_S = 15.0
-
+# CLEAN-ROOM (spec K-pr2170 §4): task-stream keepalive interval constant (seconds).
 
 def _job_dir_or_400(job_id: str) -> str:
     if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", job_id or ""):
@@ -303,11 +297,7 @@ async def stream_task(task_id: str, after_seq: int = 0):
         await task_manager.add_listener(task_id, q)
         try:
             while True:
-                try:
-                    evt = await asyncio.wait_for(q.get(), timeout=TASK_STREAM_KEEPALIVE_S)
-                except asyncio.TimeoutError:
-                    yield ": keepalive\n\n"
-                    continue
+                # CLEAN-ROOM (spec K-pr2170 §5): wait for the next queue event with a timeout; on timeout emit a keepalive SSE comment and continue.
                 if evt is None:
                     break
                 yield evt

@@ -199,16 +199,7 @@ def mark_flashinfer_runtime_failure(reason: str) -> None:
 def _cuda_arch_supported_for_compile() -> "tuple[bool, str]":
     """Check the GPU's architecture against this torch build's arch list.
 
-    A new GPU architecture routinely breaks torch.compile/Triton before
-    upstream support lands (issue #278): the eager model runs via PTX
-    forward-compat, but Inductor/Triton kernel compilation targets the new arch
-    directly and fails mid-generation. Blackwell sm_120 was that case; it no
-    longer is on the pinned torch 2.8.0+cu128, where this probe can return
-    supported; independent compiler/runtime failures still need eager fallback. If the device's arch tag is
-    absent from this build's arch list we treat compile as unsupported and use
-    eager. The comparison is delegated to ``core.device_caps.arch_unsupported``
-    so it stays CUDA/ROCm-aware — a ROCm build lists ``gfx…`` names, and the
-    old ``sm_`` comparison here disabled compile on every AMD host (#1228).
+    # CLEAN-ROOM (spec K-pr2170 §10): docstring paragraph explaining why/when compile support is probed.
 
     Returns ``(supported, reason)``. Fails open — any probe error returns
     ``(True, "")`` so a weird torch build never silently loses the
