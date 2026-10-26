@@ -7,7 +7,21 @@ import yaml
 from services import hf_revisions
 
 
-# CLEAN-ROOM (spec F-shivendra-1 §13): test that every curated catalog repo, including dependency repos, has a 40-hex immutable revision
+def test_catalog_repos_and_dependencies_all_have_full_sha_pins():
+    cfg = Path(__file__).resolve().parents[1] / "backend" / "config" / "models.yaml"
+    data = yaml.safe_load(cfg.read_text(encoding="utf-8"))
+    entries = data["models"] if isinstance(data, dict) else data
+    repos = set()
+    for entry in entries:
+        if entry.get("repo_id"):
+            repos.add(entry["repo_id"])
+        for dep in entry.get("dependencies") or []:
+            repos.add(dep["repo_id"])
+    unpinned = sorted(repos - set(hf_revisions.CURATED_REVISIONS))
+    assert not unpinned, f"catalogue repos without a pinned revision: {unpinned}"
+    for repo, rev in hf_revisions.CURATED_REVISIONS.items():
+        assert len(rev) == 40, repo
+        int(rev, 16)  # raises ValueError if not hex
 
 
 def test_nllb_components_use_the_reviewed_revision():

@@ -624,7 +624,48 @@ def test_weights_step_downloads_via_endpoint_autoselect(monkeypatch):
     assert si._weights_present(spec)
 
 
-# CLEAN-ROOM (spec F-shivendra-1 §15): tests that the weights download passes a plain bearer string (or None) as the snapshot_download token
+class _DownloadRecorder:
+    """Stand-in for snapshot_download that remembers the kwargs it was given."""
+
+    def __init__(self):
+        self.received = None
+
+    def __call__(self, **kwargs):
+        self.received = kwargs
+        target = Path(kwargs["local_dir"])
+        target.mkdir(parents=True, exist_ok=True)
+        (target / "config.yaml").write_text("ok\n")
+        (target / "model.safetensors").write_bytes(bytes(6 * 1024 * 1024))
+
+
+def _fetch_weights_with_resolver(monkeypatch, resolver_result):
+    import huggingface_hub
+    from services import endpoint_race
+
+    recorder = _DownloadRecorder()
+    monkeypatch.setattr(huggingface_hub, "snapshot_download", recorder)
+    monkeypatch.setattr(endpoint_race, "effective_endpoint", lambda: None)
+    monkeypatch.setattr("services.token_resolver.resolve", lambda: resolver_result)
+    spec = _mk_spec(weights_repo_id="Example/Weights")
+    job = si._new_job(spec.engine_id)
+    si._job_step(job, "fetch_weights")["state"] = "running"
+    si._step_fetch_weights(spec, job)
+    return recorder.received
+
+
+def test_fetch_weights_unwraps_resolved_token_record(monkeypatch):
+    from services.token_resolver import ResolvedToken
+
+    secret = "hf_zq81-sidecar-test-value"
+    got = _fetch_weights_with_resolver(
+        monkeypatch, ResolvedToken(token=secret, source="app", username="sam"))
+    assert type(got["token"]) is str
+    assert got["token"] == secret
+
+
+def test_fetch_weights_forwards_none_when_nothing_resolves(monkeypatch):
+    got = _fetch_weights_with_resolver(monkeypatch, None)
+    assert got.get("token", "missing") is None
 
 
 def test_weights_revision_is_pinned_and_old_marker_forces_upgrade(monkeypatch):

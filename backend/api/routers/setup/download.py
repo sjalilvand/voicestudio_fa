@@ -278,9 +278,12 @@ def _segmented_snapshot(repo_id: str, *, endpoint: "str | None", revision: str) 
     from services.segmented_download import DownloadCancelled, segmented_download
     from services.token_resolver import resolve as _resolve_token
 
-    # CLEAN-ROOM (spec F-shivendra-1 §10): resolve the HF bearer token as a plain string (or None), applying the mirror rule
-    hub_token = None  # placeholder until §10 is reimplemented (anonymous)
-    token = None
+    # resolve() yields a record, not a string: unwrap it so every consumer
+    # below sees a bearer string or a real None. Mirrors get False, never a token.
+    _record = _resolve_token()
+    _bearer = getattr(_record, "token", None) if _record else None
+    hub_token = token_for_endpoint(endpoint, _bearer)
+    token = hub_token or None
     api = HfApi(endpoint=endpoint, token=hub_token)
     info = api.repo_info(repo_id, repo_type="model", revision=revision)
     commit = info.sha

@@ -402,7 +402,8 @@ def _resolve_profile_conditioning(row, *, ref_text=None, instruct=None,
         "ref_audio_path": None, "ref_text": ref_text, "instruct": instruct,
         "seed": seed, "language": language, "kind": None,
         "persist_ref_text": False,
-        # CLEAN-ROOM (spec F-shivendra-1 §1): "language_from_profile": False key goes here
+        # True only when `language` was taken from the profile row, not the request.
+        "language_from_profile": False,
         # True when the request edits a design profile rather than
         # re-rendering it: its saved sample no longer describes the voice.
         "diverged": False,
@@ -489,7 +490,7 @@ def _resolve_profile_conditioning(row, *, ref_text=None, instruct=None,
             prof_lang = None
         if prof_lang and prof_lang != "Auto":
             out["language"] = prof_lang
-            # CLEAN-ROOM (spec F-shivendra-1 §2): mark out["language_from_profile"] = True here
+            out["language_from_profile"] = True
     return out
 
 
@@ -1435,7 +1436,12 @@ _LANGUAGE_REJECTION_SIGNATURES = (
     "unsupported language code",
 )
 
-# CLEAN-ROOM (spec F-shivendra-1 §3): _SELF_DESCRIBING_LANGUAGE_REJECTIONS tuple goes here
+# Messages that already name the engine and list what it does support; wrapping
+# them with generic advice would only repeat the same thing twice.
+_SELF_DESCRIBING_LANGUAGE_REJECTIONS = (
+    "doesn't support language",
+    "does not support language",
+)
 
 #: `unsupported language: xx` / `unsupported language 'xx'` — but not
 #: `unsupported language model ...`.
@@ -1446,10 +1452,37 @@ _LANGUAGE_REJECTION_RE = re.compile(
 )
 
 
-# CLEAN-ROOM (spec F-shivendra-1 §5): _is_language_rejection(text) goes here
+def _classify_language_failure(message: str) -> str:
+    """Sort an engine failure message: "self_describing", "generic" or "other"."""
+    folded = message.casefold()
+    for needle in _SELF_DESCRIBING_LANGUAGE_REJECTIONS:
+        if needle in folded:
+            return "self_describing"
+    for needle in _LANGUAGE_REJECTION_SIGNATURES:
+        if needle in folded:
+            return "generic"
+    return "generic" if _LANGUAGE_REJECTION_RE.search(message) else "other"
 
 
-# CLEAN-ROOM (spec F-shivendra-1 §6): _profile_language_rejection_detail(exc, language) goes here
+def _is_language_rejection(text: str) -> bool:
+    """True when an engine failure message is about the language it was handed."""
+    return _classify_language_failure(text) != "other"
+
+
+def _profile_language_rejection_detail(exc: BaseException, language) -> str:
+    """Message for a refusal of a language that came from the voice profile."""
+    parts = [
+        f"This voice profile is saved with the language '{language}', which "
+        "the active engine refuses.",
+        "Leaving the picker on Auto does not override that, because Auto "
+        "falls back to the language stored on the profile.",
+        "Either edit the profile and give it a language the engine supports, "
+        "select a supported language yourself for this render, or "
+        "switch engine in Model Catalogue (the VoiceStudio engine has the "
+        "widest language coverage).",
+        f"Engine's own message: {exc}",
+    ]
+    return " ".join(parts)
 
 
 def _language_rejection_payload(exc, language, *, from_profile):
@@ -1465,13 +1498,42 @@ def _language_rejection_payload(exc, language, *, from_profile):
     return failure
 
 
-# CLEAN-ROOM (spec F-shivendra-1 §7): _language_rejection_http_error(exc, language, *, from_profile) goes here
+def _language_rejection_http_error(exc, language, *, from_profile) -> HTTPException:
+    """Build (not raise) the 400 for a language refusal."""
+    root = _root_language_error(exc)
+    if not from_profile:
+        return HTTPException(status_code=400, detail=str(exc))
+    return HTTPException(status_code=400, detail={
+        "code": "profile_language_rejected",
+        "language": language,
+        "message": _profile_language_rejection_detail(root, language),
+    })
 
 
-# CLEAN-ROOM (spec F-shivendra-1 §8): _language_rejection_or(e, backend, language) goes here
+def _language_rejection_or(e: BaseException, backend, language):
+    """Return `e`, or a ValueError carrying engine-aware advice (#1257)."""
+    if _classify_language_failure(str(e)) != "generic":
+        return e
+    engine_name = next(
+        (n for n in (getattr(backend, "display_name", None),
+                     getattr(type(backend), "id", None)) if n),
+        type(backend).__name__,
+    )
+    quoted = f" '{language}'" if language else ""
+    friendly = ValueError(
+        f"{engine_name} rejected the requested language{quoted}. Engines "
+        "each cover their own set of languages: choose one this engine "
+        "supports, or switch engine in Model Catalogue (the VoiceStudio "
+        "engine has the widest coverage), then regenerate. "
+        f"Engine's own message: {e}"
+    )
+    friendly.engine_language_error = e
+    return friendly
 
 
-# CLEAN-ROOM (spec F-shivendra-1 §9): _root_language_error(exc) goes here
+def _root_language_error(exc: BaseException) -> BaseException:
+    """The engine's original error, unwrapping `_language_rejection_or`."""
+    return getattr(exc, "engine_language_error", exc)
 
 
 def _persist_profile_ref_text(profile_id: str, ref_text: str) -> None:
@@ -2004,7 +2066,7 @@ async def generate_speech(
     ref_lease = None
     used_seed = seed
     resolved_profile_id = None
-    # CLEAN-ROOM (spec F-shivendra-1 §4): language_from_profile flag defined (default False) for this request
+    # True when `language` was filled from the selected profile (not the request).
     language_from_profile = False
     history_mode = None  # profile.kind when a profile drives; else inferred at insert
     stored_design_recipe = _design_recipe_json(design_recipe)
@@ -2040,7 +2102,7 @@ async def generate_speech(
             instruct = _cond["instruct"]
             used_seed = _cond["seed"]
             language = _cond["language"]
-            # CLEAN-ROOM (spec F-shivendra-1 §4): language_from_profile = _cond["language_from_profile"]
+            language_from_profile = _cond["language_from_profile"]
             if _cond["persist_ref_text"]:
                 persist_ref_text_profile_id = profile_id
     elif ref_audio is not None:
@@ -2677,7 +2739,9 @@ async def generate_speech(
         raise HTTPException(status_code=503, detail=str(e)) from e
     except ValueError as e:
         logger.error("Validation failed: %s", e)
-        # CLEAN-ROOM (spec F-shivendra-1 §4): when language_from_profile and the failure is a language rejection, raise the profile-aware 400 here
+        if language_from_profile and _is_language_rejection(str(e)):
+            raise _language_rejection_http_error(
+                e, language, from_profile=True) from e
         # Most ValueErrors here are VoiceStudio's own validation messages and
         # are exactly what the user should read. A few are raw library text
         # naming parameters and files the user cannot act on — those get the

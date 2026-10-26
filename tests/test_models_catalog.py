@@ -43,7 +43,27 @@ def test_every_repo_id_is_well_formed():
         assert rid and _REPO_RE.match(rid), f"malformed repo_id: {rid!r}"
 
 
-# CLEAN-ROOM (spec F-shivendra-1 §14): catalogue invariant tests for config_only entries and dependency declarations
+def _non_blank_list(value):
+    return (
+        isinstance(value, list) and bool(value)
+        and all(isinstance(x, str) and x.strip() for x in value)
+    )
+
+
+def test_config_only_entries_name_their_required_files():
+    for m in _models():
+        if m.get("config_only"):
+            assert _non_blank_list(m.get("config_required_files")), (
+                f"{m.get('repo_id')!r} is config_only but lists no config_required_files"
+            )
+
+
+def test_dependency_entries_are_well_formed():
+    for m in _models():
+        for dep in m.get("dependencies") or []:
+            where = f"{m.get('repo_id')!r} dependency {dep!r}"
+            assert _REPO_RE.match(str(dep.get("repo_id") or "")), where
+            assert _non_blank_list(dep.get("required_files")), where
 
 
 def test_required_fields_present():

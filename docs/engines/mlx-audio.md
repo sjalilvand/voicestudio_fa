@@ -108,7 +108,19 @@ app's model download flow rather than installing into an unrelated system Python
   ([#2201](https://github.com/debpalash/VoiceStudio/issues/2201)).
 - Voice design (text description → voice) is available through the
   Qwen3-TTS VoiceDesign model.
-<!-- CLEAN-ROOM (spec F-shivendra-1 §12): language-support bullets go here (per-model language support; Auto does not bypass a profile's saved language) -->
+- Which languages work depends on the model you load. Kokoro handles about
+  eight; the rest vary. If Kokoro is handed a language outside its set, the
+  error lists the ones it accepts
+  ([#977](https://github.com/debpalash/VoiceStudio/issues/977)). Pick one of
+  those, or run the text through a multilingual engine instead.
+- Setting the picker to Auto does not sidestep a refusal. Auto sends no
+  language at all, so a selected voice profile supplies its own saved one
+  ([#533](https://github.com/debpalash/VoiceStudio/issues/533)). A profile
+  stored as Persian would still be passed to Kokoro and rejected, and the
+  message now points at the profile as the origin
+  ([#2156](https://github.com/debpalash/VoiceStudio/issues/2156)). Edit the
+  profile's language, or choose a supported language directly for that
+  generation.
 
 ## Platform notes
 
