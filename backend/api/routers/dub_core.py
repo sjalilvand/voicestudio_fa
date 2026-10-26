@@ -30,8 +30,12 @@ from services.dub_language import (
     detected_source_language as _detected_source_lang,
 )
 from services.model_manager import get_model, _gpu_pool, _cpu_pool, get_diarization_pipeline, offload_tts_for_asr, restore_tts_after_asr, should_preload_tts_asr, release_device_cache
-# CLEAN-ROOM (spec E-lauragpt §1): ASR_TRANSCRIBE_TIMEOUT_S must also be imported here from services.asr_backend
-from services.asr_backend import ASRTimeoutError, reset_pool_after_wedge, run_transcribe_guarded
+from services.asr_backend import (
+    ASR_TRANSCRIBE_TIMEOUT_S,
+    ASRTimeoutError,
+    reset_pool_after_wedge,
+    run_transcribe_guarded,
+)
 from services.audio_io import _safe_soundfile_write
 from services.diarization_runtime import ensure_selected_accepted as _ensure_diarisation_accepted
 from services.ffmpeg_utils import find_ffmpeg, local_inputs_only
@@ -1744,7 +1748,22 @@ async def dub_transcribe_stream(
             return
 
         total = float(len(audio_np)) / float(sr) if sr else 0.0
-        # CLEAN-ROOM (spec E-lauragpt §1): whole-recording vs chunked planning (chunk length, timeout, chunk count) and the `start` SSE event
+        # Some backends (FunASR with a speaker model) only label speakers
+        # consistently within one transcribe() call, so they get the entire
+        # recording as a single chunk instead of fixed-size slices.
+        whole_file_mode = bool(getattr(_asr_backend, "requires_full_audio_for_speaker_consistency", False))
+        if whole_file_mode and total > 0:
+            chunk_len = total
+        else:
+            chunk_len = TRANSCRIBE_CHUNK_S
+        if whole_file_mode:
+            chunk_timeout = ASR_TRANSCRIBE_TIMEOUT_S
+            chunk_timeout_env = "OMNIVOICE_ASR_TRANSCRIBE_TIMEOUT_S"
+        else:
+            chunk_timeout = TRANSCRIBE_CHUNK_TIMEOUT_S
+            chunk_timeout_env = "OMNIVOICE_TRANSCRIBE_CHUNK_TIMEOUT_S"
+        chunks_n = max(1, math.ceil(total / chunk_len)) if total > 0 else 1
+        yield _sse_event("start", {"duration": total, "chunks": chunks_n, "chunk_s": chunk_len})
 
         all_segments: list[dict] = []
         # Words (global-timeline) retained so diarization can re-split a segment
@@ -1768,7 +1787,8 @@ async def dub_transcribe_stream(
             if job.get("aborted"):
                 yield _sse_event("aborted", {})
                 return
-            # CLEAN-ROOM (spec E-lauragpt §7): per-chunk start/end second offsets (t0, t1)
+            t0 = i * chunk_len
+            t1 = min(total, t0 + chunk_len)
             s_from = int(t0 * sr)
             s_to = int(t1 * sr)
             chunk_arr = audio_np[s_from:s_to]
@@ -1835,7 +1855,8 @@ async def dub_transcribe_stream(
                 task = asyncio.ensure_future(run_transcribe_guarded(
                     _gpu_pool, lambda: _asr_work.run(_transcribe_chunk),
                     what=f"Dub chunk {i + 1}/{chunks_n}",
-                    # CLEAN-ROOM (spec E-lauragpt §8): timeout / timeout_env keyword args for run_transcribe_guarded
+                    timeout=chunk_timeout,
+                    timeout_env=chunk_timeout_env,
                 ))
                 while True:
                     done, _pending = await asyncio.wait({task}, timeout=5.0)
@@ -1851,7 +1872,10 @@ async def dub_transcribe_stream(
                     # Windows access violation in #1669. Stop this transcript;
                     # the worker remains honestly occupied until it exits.
                     timed_out = True
-                    # CLEAN-ROOM (spec E-lauragpt §9): error log for chunk timeout (index, total, timeout used, attempt, job)
+                    logger.error(
+                        "Transcribe chunk %d/%d exceeded %.0fs limit (attempt %d/%d, job=%s)",
+                        i + 1, chunks_n, chunk_timeout, _attempt, _CHUNK_TRANSCRIBE_ATTEMPTS, log_safe(job_id),
+                    )
                     from core.public_errors import stream_failure
                     failure = stream_failure("transcription_timeout")
                     part = {
@@ -2067,7 +2091,9 @@ async def dub_transcribe_stream(
             # The active ASR backend already diarized inline (FunASR cam++):
             # its turns are the fast path and skip pyannote entirely (#182) —
             # but ONLY when the user didn't set an explicit speaker count.
-            # CLEAN-ROOM (spec E-lauragpt §10): comment on inline-turn vs explicit speaker count (describe in own words)
+            # An explicit speaker count can't be pushed through the shared ASR
+            # contract to inline turns, so in that case prefer pyannote. If pyannote
+            # fails to load we still keep the inline turns and tell the user.
             diar_pipe = None
             err_sentinel = None
             if asr_speaker_turns:

@@ -2,6 +2,11 @@
 
 Tests the pure output-normaliser (no funasr install needed) + registration.
 """
+import sys
+import types
+
+import pytest
+
 from services.asr_backend import _normalize_funasr, FunASRBackend, list_backends
 
 
@@ -21,7 +26,18 @@ def test_normalize_sentence_info_with_timestamps_and_speaker():
     assert out["segments"][1]["speaker"] == "Speaker 2"
 
 
-# CLEAN-ROOM (spec E-lauragpt §11): alternate sentence-text key normalisation test
+def test_sentence_info_using_sentence_field_is_read():
+    res = [{
+        "sentence_info": [
+            {"sentence": "<|zh|><|HAPPY|><|Speech|><|woitn|>Good morning everyone",
+             "start": 1340, "end": 3875, "spk": 2},
+            {"sentence": "<|zh|><|Speech|>See you later", "start": 4000, "end": 5120, "spk": 0},
+        ],
+    }]
+    out = _normalize_funasr(res)
+    assert [c["text"] for c in out["chunks"]] == ["Good morning everyone", "See you later"]
+    assert out["chunks"][0]["timestamp"] == (1.34, 3.875)
+    assert [x["speaker"] for x in out["segments"]] == ["Speaker 3", "Speaker 1"]
 
 
 def test_normalize_single_utterance_fallback():
@@ -41,7 +57,54 @@ def test_is_available_reports_install_hint_when_absent():
         assert "funasr" in msg.lower()
 
 
-# CLEAN-ROOM (spec E-lauragpt §12): speaker-model load/generate option tests
+class _KwRecorder:
+    """Stands in for funasr.AutoModel and records constructor kwargs."""
+    last = None
+
+    def __init__(self, **kw):
+        type(self).last = dict(kw)
+
+
+def _load_with(monkeypatch, spk):
+    _KwRecorder.last = None
+    monkeypatch.setitem(sys.modules, "funasr", types.SimpleNamespace(AutoModel=_KwRecorder))
+    backend = FunASRBackend()
+    backend._spk_model = spk
+    backend._ensure_model()
+    return _KwRecorder.last
+
+
+def test_vad_segment_mode_requested_with_speaker_model(monkeypatch):
+    opts = _load_with(monkeypatch, "cam++")
+    assert (opts["spk_model"], opts["spk_mode"]) == ("cam++", "vad_segment")
+
+
+def test_plain_load_without_speaker_model_has_no_spk_options(monkeypatch):
+    opts = _load_with(monkeypatch, "")
+    assert not {"spk_mode", "spk_model"} & set(opts)
+
+
+class _GenRecorder:
+    def __init__(self):
+        self.calls = []
+
+    def generate(self, **kw):
+        self.calls.append(kw)
+        return []
+
+
+def test_timestamps_requested_iff_speaker_model_active():
+    for spk, want in (("cam++", True), ("", False)):
+        rec = _GenRecorder()
+        backend = FunASRBackend()
+        backend._spk_model = spk
+        backend._model = rec
+        backend.transcribe("clip.wav")
+        (kw,) = rec.calls
+        assert kw["input"] == "clip.wav"
+        assert ("output_timestamp" in kw) is want
+        if want:
+            assert kw["output_timestamp"] is True
 
 
 def test_registered_in_picker():

@@ -431,7 +431,9 @@ def whisper_checkpoint_translates(model_name: str | None) -> bool:
 class ASRBackend(ABC):
     id: str = "base"
     display_name: str = "Base ASR"
-    # CLEAN-ROOM (spec E-lauragpt §2): ASRBackend whole-recording class attribute
+    # True when speaker labels are only consistent within a single
+    # transcribe() call; callers must then submit the whole recording at once.
+    requires_full_audio_for_speaker_consistency: bool = False
     # Accelerator families this backend can use, in preference order; always
     # includes a fallback. Subset of {cuda, rocm, mps, xpu, cpu}. Mirrors the
     # TTSBackend.gpu_compat contract so engine_routing.resolve_routing() can
@@ -2281,8 +2283,8 @@ def _normalize_funasr(res) -> dict:
     for s in item.get("sentence_info") or []:
         if not isinstance(s, dict):
             continue
-        # CLEAN-ROOM (spec E-lauragpt §6): sentence text lookup accepting an alternate key
-        txt = _clean_funasr_text(s.get("text", ""))
+        # FunASR 1.3.1 vad mode names the text field "sentence".
+        txt = _clean_funasr_text(s.get("text") or s.get("sentence") or "")
         if not txt:
             continue
         seg = {"text": txt, "start": _ms_to_s(s.get("start", 0)) or 0.0, "end": _ms_to_s(s.get("end"))}
@@ -2321,7 +2323,10 @@ class FunASRBackend(ASRBackend):
         self._spk_model = os.environ.get("ASR_FUNASR_SPK", "cam++")
         self._model = None
 
-    # CLEAN-ROOM (spec E-lauragpt §3): FunASRBackend whole-recording flag property
+    @property
+    def requires_full_audio_for_speaker_consistency(self) -> bool:
+        # Speaker clusters from the cam++ model are per call, so whole-file input is needed.
+        return bool(self._spk_model)
 
     @classmethod
     def is_available(cls) -> tuple[bool, str]:
@@ -2338,15 +2343,20 @@ class FunASRBackend(ASRBackend):
         kwargs = {"model": self._model_name, "vad_model": self._vad_model, "disable_update": True}
         if self._spk_model:
             kwargs["spk_model"] = self._spk_model
-            # CLEAN-ROOM (spec E-lauragpt §4): extra AutoModel option when the speaker model is on
+            # FunASR 1.3.1's default speaker mode wants a separate punctuation
+            # model and fails with SenseVoice loaded alone; segment by VAD instead.
+            kwargs["spk_mode"] = "vad_segment"
         logger.info("FunASR loading %s (vad=%s, spk=%s)", self._model_name, self._vad_model, self._spk_model or "off")
         self._model = AutoModel(**kwargs)
 
     def transcribe(self, audio_path: str, *, word_timestamps: bool = True) -> dict:
         self._ensure_model()
         logger.info("FunASR transcribing %s", audio_path)
-        # CLEAN-ROOM (spec E-lauragpt §5): speaker-model transcribe options; restore the plain generate call below once reimplemented
-        res = self._model.generate(input=audio_path, cache={}, language="auto", use_itn=True)
+        gen_kwargs = {"input": audio_path, "cache": {}, "language": "auto", "use_itn": True}
+        if self._spk_model:
+            # VAD-segment speaker mode builds sentence info from timestamps.
+            gen_kwargs["output_timestamp"] = True
+        res = self._model.generate(**gen_kwargs)
         return _normalize_funasr(res)
 
     def unload(self) -> None:
