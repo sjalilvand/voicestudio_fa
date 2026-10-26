@@ -1,6 +1,6 @@
 import { abortableDelay } from './abortableDelay.ts';
 import { DEFAULT_BACKEND_PORT } from '../app-config.ts';
-// CLEAN-ROOM (spec K-pr2170 §27): import of the deployment-mode helper (trivial import).
+import { deploymentMode, type DeploymentMode } from './deploymentMode.ts';
 import { isNativeFaultExit } from './nativeExit.ts';
 import { isBrokenEnvironmentOutput } from './backendOutput.ts';
 /**
@@ -468,7 +468,8 @@ export async function streamDropError(
     intervalMs?: number;
     sleep?: (ms: number) => Promise<void>;
     probeAlive?: () => Promise<boolean>;
-    // CLEAN-ROOM (spec K-pr2170 §27): optional deployment-mode override in the options bag.
+    // Overrides the detected deployment mode (tests).
+    mode?: DeploymentMode;
   } = {},
 ): Promise<Error> {
   // #1119: the shell learns the backend died from a ~2 s POLL — it must notice
@@ -496,7 +497,21 @@ export async function streamDropError(
     // out the SSE connection.
     const probeAlive = opts.probeAlive ?? _probeBackendAlive;
     if (await probeAlive()) {
-      // CLEAN-ROOM (spec K-pr2170 §27): local-deployment branch of the backend-alive diagnosis.
+      // A reverse proxy can only sit in front of a served page. The desktop
+      // webview and `bun run dev` talk to 127.0.0.1 directly, so proxy or
+      // buffering advice would send those users after something that does not
+      // exist.
+      if ((opts.mode ?? deploymentMode()) !== 'server') {
+        return new Error(
+          i18next.t('errors.stream_cut_backend_alive_local', {
+            defaultValue:
+              'Wait a few minutes, then reopen the job from its history; if it is not there, read the ' +
+              'backend log under Settings → Logs → Backend. The connection dropped mid-job after a long ' +
+              'quiet step, but the backend is still running and normally completes the work, so this ' +
+              'was not a crash.',
+          }),
+        );
+      }
       return new Error(
         i18next.t('errors.stream_cut_backend_alive', {
           defaultValue:

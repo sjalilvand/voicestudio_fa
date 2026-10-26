@@ -414,7 +414,28 @@ def _safe_torchaudio_save(
     encoding = "PCM_F" if bits_per_sample == 32 else "PCM_S"
 
     fmt = (format or "wav").lower()
-    # CLEAN-ROOM (spec K-pr2170 §9): fallback when torchaudio failed to import (torchaudio is None): write via soundfile.
+    if torchaudio is None:
+        # torchaudio never loaded (missing TorchCodec libraries or a broken
+        # wheel). The tensor is already normalised above, so hand it straight
+        # to libsndfile.
+        if fmt == "wav":
+            subtype = "FLOAT" if bits_per_sample == 32 else ("PCM_24" if bits_per_sample == 24 else "PCM_16")
+        elif fmt == "flac":
+            subtype = "PCM_24" if bits_per_sample == 24 else "PCM_16"
+        elif fmt == "ogg":
+            subtype = "VORBIS"
+        elif fmt == "mp3":
+            subtype = "MPEG_LAYER_III"
+        else:
+            subtype = "PCM_16"
+        try:
+            _safe_soundfile_write(
+                path_or_buf, tensor.t().contiguous().numpy(), sample_rate,
+                subtype=subtype, format=fmt.upper(),
+            )
+        except Exception as e:
+            raise _describe_write_failure(e, path_or_buf) from e
+        return
     try:
         _ensure_audio_parent(path_or_buf)
         if fmt == "wav":
@@ -458,7 +479,39 @@ def _safe_torchaudio_save(
                     fmt, e,
                 )
                 torchaudio.save(path_or_buf, tensor, sample_rate, format=fmt)
-    # CLEAN-ROOM (spec K-pr2170 §8): fallback clause when torchaudio.save needs TorchCodec: rewind buffer, write via soundfile.
+    except (ImportError, RuntimeError) as e:
+        # Only a TorchCodec loading problem is worth a second route; any other
+        # RuntimeError is a genuine write failure.
+        if isinstance(e, RuntimeError) and "could not load libtorchcodec" not in str(e).lower():
+            raise _describe_write_failure(e, path_or_buf) from e
+        # torchaudio >= 2.9 sends save() through TorchCodec, which needs the
+        # FFmpeg shared libraries (unavoidable on arm64 CUDA hosts). libsndfile
+        # can write the same containers without them.
+        logger.warning(
+            "torchaudio.save needs TorchCodec / FFmpeg shared libraries (%s); "
+            "writing through soundfile instead", e,
+        )
+        if hasattr(path_or_buf, "seek") and hasattr(path_or_buf, "truncate"):
+            try:
+                path_or_buf.seek(0)
+                path_or_buf.truncate(0)
+            except (OSError, io.UnsupportedOperation):
+                pass  # best effort: a half-written buffer would corrupt the output
+        if fmt == "wav":
+            subtype = "FLOAT" if bits_per_sample == 32 else "PCM_16"
+        elif fmt == "ogg":
+            subtype = "VORBIS"
+        elif fmt == "mp3":
+            subtype = "MPEG_LAYER_III"
+        else:
+            subtype = "PCM_16"
+        try:
+            _safe_soundfile_write(
+                path_or_buf, tensor.t().contiguous().numpy(), sample_rate,
+                subtype=subtype, format=fmt.upper(),
+            )
+        except Exception as e2:
+            raise _describe_write_failure(e2, path_or_buf) from e2
     except Exception as e:
         # #1221: libsndfile reports OS-level write failures as a bare
         # "LibsndfileError: System error." — no path, no errno, nothing the
@@ -516,7 +569,39 @@ def _describe_write_failure(e: Exception, path_or_buf: PathOrBuf) -> Exception:
         return e
 
 
-# CLEAN-ROOM (spec K-pr2170 §7): _safe_soundfile_write helper (signature and behaviour in spec).
+def _safe_soundfile_write(
+    path: PathOrBuf,
+    samples: Any,
+    sample_rate: int,
+    *,
+    subtype: str = "PCM_16",
+    format: str | None = None,
+) -> None:
+    """Audited ``soundfile.write``: refuses empty input, sanitises dtype and range.
+
+    ``samples`` is soundfile-shaped: ``(samples,)`` or ``(samples, channels)``
+    (the transpose of torchaudio's layout). ``format`` names the container
+    (``"WAV"``, ``"FLAC"``, ``"OGG"``, ``"MP3"``); ``None`` infers it from the
+    file extension, which only works for paths, so buffers must pass it.
+    """
+    import soundfile as sf
+
+    if not isinstance(samples, np.ndarray):
+        samples = np.asarray(samples)
+    if samples.size == 0:
+        raise ValueError(
+            "_safe_soundfile_write refuses to write an empty array — a "
+            "zero-length file is the silent-corruption mode of #48."
+        )
+    if samples.dtype not in (np.float32, np.float64, np.int16, np.int32):
+        samples = samples.astype(np.float32)
+    samples = np.ascontiguousarray(samples)
+    if not samples.flags.writeable:
+        samples = samples.copy()
+    if samples.dtype.kind == "f":
+        np.clip(samples, -1.0, 1.0, out=samples)
+    _ensure_audio_parent(path)
+    sf.write(path, samples, sample_rate, subtype=subtype, format=format)
 
 
 def atomic_save_wav(

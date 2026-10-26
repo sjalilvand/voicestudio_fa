@@ -406,7 +406,25 @@ ready. The desktop app sits on "starting backend", `/health` returns 503, and
 `/startup/progress` shows `ml_imports` active. From source you see `import
 torch` die with a native access violation rather than a Python traceback.
 
-<!-- CLEAN-ROOM (spec K-pr2170 §25): Section 5b: cause paragraph, the arch-list verification command, and the fix paragraph; write fresh. -->
+**Cause:** unknown so far. The pinned `torch 2.8.0+cu128` build advertises
+`sm_120` in `torch.cuda.get_arch_list()`, and on some Blackwell cards it runs
+CUDA fine. The Windows machines in #1931 fault inside `import torch` itself,
+natively, before Python gets a chance to raise; upgrading the torch trio to
+2.9.x made that stop.
+
+**See what your build ships:**
+
+```bash
+uv run python -c "import torch; print(torch.__version__, torch.cuda.get_arch_list())"
+```
+
+With `sm_120` listed, kernels exist for your GPU and the crash comes from
+somewhere else in torch's native start-up. If the command itself dies, that is
+the symptom described above. The upgrade is the known workaround in both cases.
+
+**Fix:** bump `torch`, `torchaudio` and `torchvision` to 2.9.x in one step. A
+partial bump leaves them mismatched and fails with `RuntimeError: operator
+torchvision::nms does not exist` (covered in the next section).
 
 Edit **both** pin lists, keeping them identical:
 
@@ -445,7 +463,13 @@ which VoiceStudio used to call unguarded — that turned this upgrade into a
 different hard startup crash (`AttributeError` inside `ml_imports`). It is
 guarded now, so the upgrade path above is clean on a current checkout.
 
-<!-- CLEAN-ROOM (spec K-pr2170 §25): Section 5b: "keeping the change" paragraph; write fresh. -->
+**Keeping the change:** the pins are shared project files, so a `git pull` that
+touches them may conflict with your edit or silently replace it. Re-apply the
+edit after pulling until the default pin moves. It has not moved because a newer
+torch can stop shipping kernels for older GPUs, and which architectures go
+differs per release and CUDA variant: the pinned 2.8.0+cu128 starts its list at
+`sm_70`, while the cu128 list captured in #1285 still included `sm_61`. The
+default only changes once newer torch is verified on those older cards.
 
 **Linked issue:** [#1931](https://github.com/debpalash/VoiceStudio/issues/1931)
 — thanks to the reporter for the full diagnosis, including the verification
@@ -1295,7 +1319,14 @@ retrying.
 and the backend log ends inside the `ml_imports` phase — often with a native
 crash (exit code `0xffffffff` / `-1073741819`) rather than a Python traceback.
 
-<!-- CLEAN-ROOM (spec K-pr2170 §26): RTX 50-series section: cause paragraph and the lead-in sentence of the fix; write fresh. -->
+**Cause.** Unknown so far. The pinned torch build does ship `sm_120` kernels,
+and some of these cards run CUDA on it. On the Windows machines in #1931,
+`import torch` crashes natively before VoiceStudio can inspect anything, so all
+the app can show is that the backend never started. Moving to torch 2.9.x fixed
+it for those users.
+
+**Fix.** Upgrade to torch 2.9.x. From a source checkout, run these steps in the
+project folder:
 
 1. Edit `pyproject.toml` → `[tool.uv] constraint-dependencies` and raise the
    torch constraint to `torch==2.9.1+cu128` (matching `torchaudio` /

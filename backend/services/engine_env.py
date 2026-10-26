@@ -199,7 +199,14 @@ def mark_flashinfer_runtime_failure(reason: str) -> None:
 def _cuda_arch_supported_for_compile() -> "tuple[bool, str]":
     """Check the GPU's architecture against this torch build's arch list.
 
-    # CLEAN-ROOM (spec K-pr2170 §10): docstring paragraph explaining why/when compile support is probed.
+    The probe asks ``core.device_caps.arch_unsupported`` whether the device's
+    arch tag appears in the arch list of the torch build that is running. That
+    helper understands both CUDA (``sm_NN``) and ROCm (``gfx...``) naming; a
+    plain ``sm_`` comparison once switched compile off on AMD hosts (#1228).
+    When the arch is missing from the list, compile is reported unsupported and
+    eager execution is used. An arch that is listed (Blackwell ``sm_120`` on the
+    pinned torch 2.8.0+cu128, for one) counts as supported; unrelated compiler
+    or runtime failures are still caught by the eager fallback in model_manager.
 
     Returns ``(supported, reason)``. Fails open — any probe error returns
     ``(True, "")`` so a weird torch build never silently loses the

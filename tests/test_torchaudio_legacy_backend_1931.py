@@ -6,7 +6,9 @@ AttributeError inside the ``ml_imports`` startup phase, and a failure there
 takes the whole backend with it: the desktop app sits on "starting backend"
 forever and /health stays 503.
 
-CLEAN-ROOM (spec K-pr2170 §6): docstring paragraph (rationale); write fresh.
+The failure only exists on a newer torchaudio than the one the test environment
+pins, so no runtime check can catch it here; the guard has to be proven by
+reading the source instead.
 
 Checked at the source level because reproducing it needs a real torchaudio 2.9
 in the environment, which the pinned test env does not have. Guarding the

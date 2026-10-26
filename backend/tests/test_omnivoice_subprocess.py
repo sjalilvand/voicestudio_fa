@@ -533,7 +533,14 @@ class _PlainBackend(SubprocessBackend):
         return ["multi"]
 
 
-# CLEAN-ROOM (spec K-pr2170 §19): test(s) for base recv_timeout_s default; see spec.
+def test_base_generate_deadline_is_the_generate_constant_not_the_ping_budget():
+    from services.subprocess_backend import GENERATE_RECV_TIMEOUT_S
+
+    assert GENERATE_RECV_TIMEOUT_S == 600.0
+    assert _PlainBackend.recv_timeout_s == GENERATE_RECV_TIMEOUT_S
+    assert _PlainBackend().recv_timeout_s == GENERATE_RECV_TIMEOUT_S
+    assert SubprocessBackend.recv_timeout_s == GENERATE_RECV_TIMEOUT_S
+    assert RECV_TIMEOUT_S == 60.0
 
 def test_sidecar_spawn_delegates_all_containment_to_nested_owner(monkeypatch, tmp_path):
     from services import subprocess_backend as backend_module

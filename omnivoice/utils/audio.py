@@ -195,7 +195,19 @@ def load_audio(audio_path: str, sampling_rate: int):
         Loaded prompt waveform with target sampling rate,
         PyTorch tensor of shape (1, T)
     """
-    # CLEAN-ROOM (spec K-pr2170 §28): load waveform with torchaudio (soundfile backend) and fall back to pydub on failure; see spec.
+    try:
+        waveform, prompt_sampling_rate = torchaudio.load(
+            audio_path, backend="soundfile"
+        )
+    except (ImportError, RuntimeError, OSError):
+        # torchaudio >= 2.9 sends load() through TorchCodec, which raises
+        # ImportError when the FFmpeg shared libraries are absent (and ignores
+        # backend="soundfile"). pydub decodes through the ffmpeg binary instead.
+        from pydub import AudioSegment
+
+        aseg = AudioSegment.from_file(audio_path)
+        waveform = audiosegment_to_tensor(aseg)
+        prompt_sampling_rate = aseg.frame_rate
 
     if prompt_sampling_rate != sampling_rate:
         waveform = torchaudio.functional.resample(

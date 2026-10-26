@@ -711,7 +711,9 @@ def _phase_a_build_inner() -> None:
     # failure in that phase takes the whole backend down — the desktop app sits
     # on "starting backend" forever and /health stays 503.
     #
-    # CLEAN-ROOM (spec K-pr2170 §6): explanatory comment about why the torchaudio backend call is guarded (comment only, no behaviour).
+    # The pinned torch cu128 build lists sm_120 in its arch list, so this call is
+    # not about GPU support; it is guarded because newer torchaudio releases no
+    # longer define the function at all.
     # The bare hasattr guard (no `torchaudio is not None` prefix) is what
     # tests/test_torchaudio_legacy_backend_1931.py asserts, and it is safe
     # either way: hasattr(None, ...) is False, so the call is skipped when

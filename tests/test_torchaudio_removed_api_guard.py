@@ -6,9 +6,11 @@ unguarded it raises `AttributeError` inside the `ml_imports` startup phase, and
 a failure there takes the whole backend down: the desktop app sits on "starting
 backend" forever and `/health` stays 503.
 
-CLEAN-ROOM (spec K-pr2170 §6): docstring paragraph (rationale); write fresh.
+The rule this file enforces: any torchaudio attribute that a newer release has
+deleted may only be touched inside an `if hasattr(torchaudio, "...")` block.
 
-CLEAN-ROOM (spec K-pr2170 §6): docstring paragraph about why the guard test exists; write fresh.
+A pinned test environment cannot reproduce the crash, so this scans every
+backend module for such calls and fails when one is not guarded.
 """
 
 import ast
@@ -77,4 +79,8 @@ def test_no_unguarded_removed_torchaudio_api():
         if bad:
             offenders[str(path.relative_to(BACKEND.parent))] = bad
     assert not offenders
-    # CLEAN-ROOM (spec K-pr2170 §6): assertion failure message naming offenders; write fresh.
+    assert not offenders, (
+        "torchaudio APIs removed in 2.9 are called without a guard "
+        f"(file -> [(line, attribute)]): {offenders}. Wrap each call in "
+        '`if hasattr(torchaudio, "<name>"):`.'
+    )

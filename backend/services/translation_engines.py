@@ -30,7 +30,23 @@ logger = logging.getLogger("omnivoice.translation_engines")
 
 _NLLB_REPO_ID = "facebook/nllb-200-distilled-600M"
 _ARGOS_INSTALL_LOCK = threading.Lock()
-# CLEAN-ROOM (spec K-pr2170 §14): Argos language alias tables.
+# UI labels that name a language instead of coding it, mapped to Argos' token.
+_ARGOS_NAME_ALIASES = {
+    "chinese": "zh",
+    "chinese (simplified)": "zh",
+    "mandarin": "zh",
+}
+# Other ISO 639 spellings (three-letter or retired two-letter) mapped to the
+# token Argos package metadata uses.
+_ARGOS_CODE_ALIASES = {
+    "cmn": "zh",
+    "zho": "zh",
+    "in": "id",   # retired Indonesian code
+    "iw": "he",   # retired Hebrew code
+    "fil": "tl",  # Filipino is packaged as Tagalog
+}
+_ARGOS_CHINESE_CODES = frozenset({"zh", "zho", "cmn"})
+_ARGOS_TRADITIONAL_SUBTAGS = frozenset({"hant", "tw", "hk", "mo"})
 
 
 # Engine ID → registry entry. Keyed by the `provider` string sent from the
@@ -354,7 +370,31 @@ def is_ready(engine_id: str, *, import_check: bool = True) -> bool:
     return installed and configured
 
 
-# CLEAN-ROOM (spec K-pr2170 §14): argos_lang_code(value: str) -> str normaliser.
+def argos_lang_code(value: str) -> str:
+    """Reduce a UI label or locale tag to the base code Argos packages use.
+
+    ``zh-CN``, ``cmn_Hans``, ``Mandarin`` and ``zho`` all become ``zh``;
+    region and script suffixes are dropped. Raises ``ValueError`` for
+    Traditional Chinese (Argos has no such model) and for anything that does
+    not reduce to a two- or three-letter code.
+    """
+    text = str(value or "").strip().lower()
+    parts = text.replace("_", "-").split("-")
+    if text == "chinese (traditional)" or (
+        parts[0] in _ARGOS_CHINESE_CODES
+        and any(tag in _ARGOS_TRADITIONAL_SUBTAGS for tag in parts[1:])
+    ):
+        raise ValueError(
+            "Argos has no Traditional Chinese model; pick NLLB for Traditional "
+            "Chinese, or choose Simplified Chinese for Argos."
+        )
+    if text in _ARGOS_NAME_ALIASES:
+        return _ARGOS_NAME_ALIASES[text]
+    code = _ARGOS_CODE_ALIASES.get(parts[0], parts[0])
+    code = _ARGOS_NAME_ALIASES.get(code, code)
+    if not re.fullmatch(r"[a-z]{2,3}", code):
+        raise ValueError("Choose a valid source and target language")
+    return code
 
 
 def _configure_argos_cache() -> None:

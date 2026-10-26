@@ -13,7 +13,33 @@ def test_translate_codes_cover_popular_iso():
         assert code in TRANSLATE_CODES, f"{code} missing from TRANSLATE_CODES"
 
 
-# CLEAN-ROOM (spec K-pr2170 §23): tests for argos_lang_code normalisation and rejection; see spec.
+_ARGOS_CASES = {
+    "plain codes": [("en", "en"), ("zh", "zh"), ("ja", "ja")],
+    "region or script tags": [("pt-BR", "pt"), ("zh-CN", "zh"), ("cmn-Hans", "zh"), ("EN-gb", "en")],
+    "ui names": [("Chinese", "zh"), ("chinese (simplified)", "zh"), ("MANDARIN", "zh")],
+    "iso 639-3": [("zho", "zh"), ("cmn", "zh")],
+    "retired codes": [("in", "id"), ("iw", "he"), ("fil", "tl")],
+    "padding": [(" de ", "de"), ("\tfr\n", "fr"), ("\n es-MX \t", "es")],
+}
+
+
+@pytest.mark.parametrize(
+    "raw,want",
+    [pair for group in _ARGOS_CASES.values() for pair in group],
+)
+def test_argos_lang_code_maps_to_base_code(raw, want):
+    from services.translation_engines import argos_lang_code
+
+    assert argos_lang_code(raw) == want
+
+
+@pytest.mark.parametrize("raw", ["", " \t\n", "Chinese (", "q", "12", "en us", "english!"])
+def test_argos_lang_code_rejects_what_is_not_a_language(raw):
+    from services.translation_engines import argos_lang_code
+
+    with pytest.raises(ValueError) as caught:
+        argos_lang_code(raw)
+    assert str(caught.value) == "Choose a valid source and target language"
 
 
 def test_flores_codes_cover_core_languages():
@@ -923,7 +949,22 @@ async def test_argos_native_loader_error_does_not_expose_paths(monkeypatch):
     assert json.loads(response.body)['detail']['code'] == 'argos_runtime_unavailable'
 
 
-# CLEAN-ROOM (spec K-pr2170 §23): tests for argos_lang_code Traditional-Chinese rejection and underscore locales; see spec.
+@pytest.mark.parametrize("raw", [
+    "chinese (traditional)", "Chinese (Traditional)", "zh-Hant-TW", "zh_Hant", "ZH-tw",
+    "cmn-Hant", "zho-HK", "zh_MO",
+])
+def test_argos_lang_code_points_traditional_chinese_to_nllb(raw):
+    from services.translation_engines import argos_lang_code
+
+    with pytest.raises(ValueError, match="Traditional Chinese.*NLLB"):
+        argos_lang_code(raw)
+
+
+@pytest.mark.parametrize("raw", ["zh_CN", "zh_Hans", "cmn_Hans", "zho_CN"])
+def test_argos_lang_code_underscore_simplified_locales_are_chinese(raw):
+    from services.translation_engines import argos_lang_code
+
+    assert argos_lang_code(raw) == "zh"
 
 
 @pytest.mark.asyncio

@@ -1725,7 +1725,11 @@ def _is_compile_runtime_failure(exc: BaseException) -> bool:
     as an AssertionError out of torch/_inductor/cudagraph_trees.py. An
     architecture missing from the running torch build's arch list is rejected
     earlier by should_torch_compile(), before this runtime fallback applies.
-    # CLEAN-ROOM (spec K-pr2170 §11): docstring paragraph about Dynamo/FX trace errors being compile-stack errors.
+
+    The Dynamo error about FX symbolically tracing a dynamo-optimized function
+    (quoted in #278) is raised on any device, CPU included. It is a compile-stack
+    error, so this function reports it as a compile failure and the eager retry
+    happens, but it says nothing about whether the GPU architecture is supported.
     Walks the exception chain and checks (a) the exception type's module,
     (b) the message, (c) the traceback file paths — the cudagraph case is a
     bare AssertionError, so the traceback check is load-bearing.

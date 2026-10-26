@@ -1002,7 +1002,12 @@ _CHUNK_TRANSCRIBE_ATTEMPTS = max(1, int(os.environ.get("OMNIVOICE_TRANSCRIBE_CHU
 #: by Chrome's ~5 min no-response cap and by reverse-proxy idle timeouts,
 #: which the UI can only report as the generic "stream dropped" guess.
 ASR_LOAD_KEEPALIVE_S = float(os.environ.get("OMNIVOICE_ASR_LOAD_KEEPALIVE_S", "15.0"))
-# CLEAN-ROOM (spec K-pr2170 §1): constant for the post-transcript ping interval (seconds).
+#: Seconds between `ping` SSE events while a step that runs after the transcript
+#: exists (diarisation, clone extraction, reference-text refinement, model
+#: unload) is busy on an executor. Those steps can take minutes, and a stream
+#: that stays byte-silent that long is cut by the desktop webview or a proxy.
+#: Looked up at call time by `_ping_while`, so tests may patch it.
+POST_ASR_PING_S = 5.0
 
 
 _sse_event = dub_pipeline.sse_event
@@ -1037,7 +1042,33 @@ class _ASRWorkLifetime:
             return fn()
 
 
-# CLEAN-ROOM (spec K-pr2170 §2): async generator helper that yields ping SSE events while a future runs; see spec.
+async def _ping_while(fut):
+    """Yield a ``ping`` SSE event every ``POST_ASR_PING_S`` until ``fut`` is done.
+
+    ``fut`` is an executor future or task that is already running. This helper
+    only waits; the caller reads ``fut.result()`` afterwards, so the work's own
+    exception or cancellation surfaces there unchanged.
+
+    If the consumer leaves early (``aclose()``, disconnect, cancellation) while
+    the work is still running, the work is cancelled, as awaiting it directly
+    would have done. The cleanup below never awaits, so it is safe under
+    ``GeneratorExit``.
+    """
+    try:
+        while not fut.done():
+            # asyncio.wait neither cancels `fut` on timeout nor raises its error.
+            finished, _ = await asyncio.wait({fut}, timeout=POST_ASR_PING_S)
+            if not finished:
+                yield _sse_event("ping", {})
+    finally:
+        if not fut.done():
+            def _mark_retrieved(f):
+                # Reading the state keeps asyncio from logging "never retrieved".
+                if not f.cancelled():
+                    f.exception()
+
+            fut.add_done_callback(_mark_retrieved)
+            fut.cancel()
 _prep_event_helper = dub_pipeline.prep_event  # alias; we keep the module-local _prep_event below for the inline one-liner shape
 
 #: User-facing warning emitted when auto voice cloning is skipped because the
@@ -2265,7 +2296,9 @@ async def dub_transcribe_stream(
                 )
 
         fut_diar = loop.run_in_executor(_gpu_pool, lambda: _asr_work.run(_diarize))
-        # CLEAN-ROOM (spec K-pr2170 §3): ping-while-waiting on the diarization future, then unpack its result into final_segs, diar_warning, labels_source.
+        async for _ping in _ping_while(fut_diar):
+            yield _ping
+        final_segs, diar_warning, labels_source = fut_diar.result()
         if job.get("aborted") or task_manager.is_cancelled(job_id):
             yield _sse_event("aborted", {})
             return
@@ -2313,6 +2346,7 @@ async def dub_transcribe_stream(
                 build_cast_sources,
                 extract_speaker_clones,
             )
+            from services import speaker_clone as _speaker_clone_mod
             vocals_for_clone = job.get("vocals_path") or asr_audio_target
             clones = {}
             if labels_source == "heuristic":
@@ -2348,7 +2382,25 @@ async def dub_transcribe_stream(
                         labels_source=labels_source,
                     ),
                 )
-                # CLEAN-ROOM (spec K-pr2170 §3): speaker clone extraction awaited with pings, then optional guarded reference-text refinement (per-speaker).
+                async for _ping in _ping_while(fut_clones):
+                    yield _ping
+                clones = fut_clones.result()
+                if clones:
+                    # Re-read each reference clip's text; bounded by the guard
+                    # so a wedged ASR cannot hold a GPU-pool worker forever.
+                    fut_refine = asyncio.ensure_future(run_transcribe_guarded(
+                        _gpu_pool,
+                        lambda: _asr_work.run(
+                            lambda: _speaker_clone_mod.refine_ref_texts(clones, _asr_backend)
+                        ),
+                        what="Dub speaker reference text",
+                    ))
+                    async for _ping in _ping_while(fut_refine):
+                        yield _ping
+                    try:
+                        clones = fut_refine.result()
+                    except ASRTimeoutError as e:
+                        logger.warning("speaker reference refinement timed out, keeping originals: %s", e)
             # Wave 3.2: per-segment clone refs. Cut each long-enough segment's
             # own reference from the vocals so the dub of each line matches the
             # prosody of its source line. Short lines fall back to the
@@ -2366,7 +2418,30 @@ async def dub_transcribe_stream(
                     # with the older job they were written next to (both
                     # reviewers, on the first version of this fix).
                     _seg_clone_dir = _ref_run_dir(os.path.dirname(vocals_for_clone))
-                    # CLEAN-ROOM (spec K-pr2170 §3): per-segment reference extraction awaited with pings, then guarded refinement, then record segment_clones on commit.
+                    fut_seg_refs = loop.run_in_executor(
+                        _cpu_pool, lambda: extract_segment_refs(
+                            vocals_for_clone, final_segs, _seg_clone_dir,
+                            seg_ids=seg_ids_for_clone,
+                        ),
+                    )
+                    async for _ping in _ping_while(fut_seg_refs):
+                        yield _ping
+                    seg_clones = fut_seg_refs.result()
+                    if seg_clones:
+                        fut_seg_refine = asyncio.ensure_future(run_transcribe_guarded(
+                            _gpu_pool,
+                            lambda: _asr_work.run(
+                                lambda: _speaker_clone_mod.refine_ref_texts(seg_clones, _asr_backend)
+                            ),
+                            what="Dub segment reference text",
+                        ))
+                        async for _ping in _ping_while(fut_seg_refine):
+                            yield _ping
+                        try:
+                            seg_clones = fut_seg_refine.result()
+                        except ASRTimeoutError as e:
+                            logger.warning("segment reference refinement timed out, keeping originals: %s", e)
+                        commit["segment_clones"] = seg_clones
                 except Exception as e:
                     logger.warning("per-segment clone refs skipped: %s", e)
 
@@ -2442,14 +2517,21 @@ async def dub_transcribe_stream(
         # (CodeRabbit review, #1198 — normal-completion half).
         if _asr_backend:
             try:
-                # CLEAN-ROOM (spec K-pr2170 §3): await ASR unload with pings.
-                pass
+                fut_unload = loop.run_in_executor(
+                    _gpu_pool, lambda: _asr_work.cleanup(_asr_backend.unload)
+                )
+                async for _ping in _ping_while(fut_unload):
+                    yield _ping
+                fut_unload.result()
             except Exception as e:
                 logger.warning("Failed to unload ASR backend: %s", e)
             # Unload attempted once — don't retry from gen()'s finally.
             _loaded_asr["backend"] = None
 
-        # CLEAN-ROOM (spec K-pr2170 §3): await TTS restore with pings.
+        fut_restore = loop.run_in_executor(_cpu_pool, restore_tts_after_asr)
+        async for _ping in _ping_while(fut_restore):
+            yield _ping
+        fut_restore.result()
         # Debt paid — don't make gen()'s finally repeat it.
         _tts_offloaded["v"] = False
 

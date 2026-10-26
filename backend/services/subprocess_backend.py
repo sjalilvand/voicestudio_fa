@@ -44,7 +44,7 @@ import contextlib
 import collections
 import json
 import logging
-# CLEAN-ROOM (spec K-pr2170 §15): import of the math module (trivial import, retype as needed).
+import math
 import os
 import struct
 import subprocess
@@ -103,10 +103,17 @@ SPAWN_READY_TIMEOUT_S = 30.0
 _STDERR_TAIL_LINES = 12
 _STDERR_TAIL_CHARS = 800
 
-# CLEAN-ROOM (spec K-pr2170 §15): doc comment for RECV_TIMEOUT_S (constant itself stays).
+# Silence budget for ping/health-check reads (header only, best effort). It
+# bounds a hung sidecar in health_check(), so it has to stay short; generate()
+# uses GENERATE_RECV_TIMEOUT_S instead.
 RECV_TIMEOUT_S = 60.0
 
-# CLEAN-ROOM (spec K-pr2170 §15): module constant GENERATE_RECV_TIMEOUT_S plus its explanatory comment.
+# Floor for generate()'s per-frame silence deadline when an engine does not pick
+# its own. It must never undercut model_manager.generate_timeout_s (300 s on an
+# accelerator, 600 s on CPU), so it sits at the CPU figure. A literal on purpose:
+# model_manager is only imported lazily here and its value is env-driven; a test
+# keeps the two aligned.
+GENERATE_RECV_TIMEOUT_S = 600.0
 
 
 # ── Idle sidecar reaping (parity Action 13) ─────────────────────────────────
@@ -377,7 +384,10 @@ class SubprocessBackend(TTSBackend):
     # Default sample rate; subclasses override.
     _DEFAULT_SAMPLE_RATE = 24000
 
-    # CLEAN-ROOM (spec K-pr2170 §15): class attribute recv_timeout_s on SubprocessBackend with its explanatory comment.
+    # Seconds of sidecar silence generate() tolerates before killing it. The
+    # old default was the 60 s ping budget, which cut engines off mid-sentence
+    # (#2103). Engines may override with a class attribute or a property.
+    recv_timeout_s: float = GENERATE_RECV_TIMEOUT_S
 
     # ── instance state (initialised in __init__) ───────────────────────────
 
@@ -604,9 +614,48 @@ class SubprocessBackend(TTSBackend):
         tail = self._stderr_tail_text()
         return f"{reason}. Last stderr: {tail}" if tail else f"{reason} (no stderr output)"
 
-    # CLEAN-ROOM (spec K-pr2170 §16): method _effective_recv_timeout_s(self, text) -> float.
+    def _effective_recv_timeout_s(self, text: str) -> float:
+        """How long generate() lets this sidecar stay silent for ``text``.
 
-    # CLEAN-ROOM (spec K-pr2170 §17): method _generate_failure_reason(self, elapsed_s, deadline_s) -> str.
+        Engines that declare ``recv_timeout_s`` themselves (on any subclass
+        between the concrete class and ``SubprocessBackend``) are trusted as
+        is, even when the figure is lower than the shared budget. For the rest
+        the answer is the flat default, raised to the length-scaled budget from
+        model_manager when that is bigger. The scaled figure is only a hint, so
+        any problem computing it leaves the flat default in force.
+        """
+        flat = self.recv_timeout_s
+        declared_by_engine = any(
+            "recv_timeout_s" in vars(klass)
+            for klass in type(self).__mro__[: type(self).__mro__.index(SubprocessBackend)]
+        )
+        if declared_by_engine:
+            return flat
+        try:
+            from services.model_manager import generate_timeout_s
+
+            scaled = float(
+                generate_timeout_s(text, engine=self, _include_sidecar_grace=False)
+            )
+        except Exception:
+            return flat
+        return flat if not math.isfinite(scaled) else max(flat, scaled)
+
+    def _generate_failure_reason(self, elapsed_s: float, deadline_s: float) -> str:
+        """Error text for a sidecar that vanished while generate() waited on it."""
+        if self._last_recv_timed_out:
+            head = (
+                f"The {self.id} sidecar sent nothing for {deadline_s:g}s "
+                f"(request age {elapsed_s:.0f}s), so VoiceStudio stopped it. "
+                f"This engine may simply need longer on this hardware: retry, "
+                f"or give it a larger receive timeout (see Troubleshooting)"
+            )
+        else:
+            head = f"{self.id} sidecar closed pipe mid-generate"
+        stderr_tail = self._stderr_tail_text()
+        if stderr_tail:
+            head += f". Last stderr: {stderr_tail}"
+        return head
 
     def _stderr_tail_text(self) -> str:
         """The sidecar's last stderr lines, scrubbed for a user-visible error."""
@@ -778,7 +827,16 @@ class SubprocessBackend(TTSBackend):
                         msg[k] = v
                 if getattr(self, "supports_float_transport", False):
                     msg["audio_format"] = "f32le"
-                # CLEAN-ROOM (spec K-pr2170 §18): compute per-request deadline, note start time, send the request, receive first frame with that deadline; on RuntimeError/OSError reap the unusable process and re-raise.
+                deadline_s = self._effective_recv_timeout_s(text)
+                started_at = time.monotonic()
+                try:
+                    self._send(msg)
+                    reply = self._recv_with_timeout(deadline_s)
+                except (RuntimeError, OSError):
+                    # A broken stream cannot be reused; reap before the lock is
+                    # released so an immediate retry cannot race poll().
+                    self._reap_unusable_process(proc)
+                    raise
                 # A cold sidecar may emit non-terminal {"op": "progress"} frames
                 # (during a model load, etc.) before the terminal audio frame.
                 # Each recv re-arms the watchdog, so a long-but-active load
@@ -809,8 +867,17 @@ class SubprocessBackend(TTSBackend):
                             report_model_load_activity()
                     except Exception:
                         pass  # the heartbeat is best-effort; never fail a synth over it
-                    # CLEAN-ROOM (spec K-pr2170 §18): receive the next frame with the same deadline; on RuntimeError/OSError reap and re-raise.
-                # CLEAN-ROOM (spec K-pr2170 §18): on EOF (empty reply): build a failure reason distinguishing deadline-kill from crash, reap the process, raise RuntimeError with it.
+                    try:
+                        reply = self._recv_with_timeout(deadline_s)
+                    except (RuntimeError, OSError):
+                        self._reap_unusable_process(proc)
+                        raise
+                if not reply:
+                    reason = self._generate_failure_reason(
+                        time.monotonic() - started_at, deadline_s
+                    )
+                    self._reap_unusable_process(proc)
+                    raise RuntimeError(reason)
             if reply.get("op") == "error":
                 stage = str(reply.get("stage") or "unknown")
                 message = str(reply.get("message") or "unknown sidecar error")

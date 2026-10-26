@@ -394,4 +394,81 @@ def test_atomic_save_wav_delegates_to_safe_helper(tmp_path):
     assert abs(decoded).max() > 0.5
 
 
-# CLEAN-ROOM (spec K-pr2170 §21): tests for the soundfile fallback of _safe_torchaudio_save; see spec.
+@pytest.fixture
+def torchaudio_save_fails(monkeypatch):
+    """Make torchaudio.save raise whatever the test asks for; returns the setter."""
+    from services import audio_io
+
+    state = {"exc": ImportError("no torchcodec here"), "scribble": b""}
+
+    def failing_save(target, *args, **kwargs):
+        if state["scribble"] and hasattr(target, "write"):
+            target.write(state["scribble"])
+        raise state["exc"]
+
+    monkeypatch.setattr(audio_io.torchaudio, "save", failing_save)
+    return state
+
+
+def _decode(buf_or_path):
+    if isinstance(buf_or_path, io.BytesIO):
+        buf_or_path = io.BytesIO(buf_or_path.getvalue())
+    return sf.read(buf_or_path, dtype="float32")
+
+
+def test_import_error_from_save_still_yields_a_pcm16_wav_on_disk(tmp_path, torchaudio_save_fails):
+    out = tmp_path / "nested" / "take.wav"
+    _safe_torchaudio_save(out, _sine_tensor(), 24000)
+    assert sf.info(str(out)).subtype == "PCM_16"
+    audio, rate = _decode(out)
+    assert (len(audio), rate) == (24000, 24000)
+    assert float(np.abs(audio).max()) > 0.2
+
+
+@pytest.mark.parametrize("fmt,magic", [("wav", b"RIFF"), ("flac", b"fLaC")])
+def test_buffers_get_their_container_when_save_is_unavailable(torchaudio_save_fails, fmt, magic):
+    sink = io.BytesIO()
+    _safe_torchaudio_save(sink, _sine_tensor(sample_rate=22050), 22050, format=fmt)
+    assert sink.getvalue().startswith(magic)
+    audio, rate = _decode(sink)
+    assert (len(audio), rate) == (22050, 22050)
+
+
+def test_garbage_left_by_the_failed_attempt_is_discarded(torchaudio_save_fails):
+    torchaudio_save_fails["scribble"] = b"half-written-junk" * 10
+    sink = io.BytesIO()
+    _safe_torchaudio_save(sink, _sine_tensor(), 24000, format="wav")
+    assert sink.getvalue().startswith(b"RIFF")
+    assert len(_decode(sink)[0]) == 24000
+
+
+@pytest.mark.parametrize("text", [
+    "Could not load libtorchcodec: libavutil.so.58 not found",
+    "COULD NOT LOAD LIBTORCHCODEC",
+])
+def test_torchcodec_loading_runtime_errors_use_the_fallback(tmp_path, torchaudio_save_fails, text):
+    torchaudio_save_fails["exc"] = RuntimeError(text)
+    out = tmp_path / "x.wav"
+    _safe_torchaudio_save(out, _sine_tensor(), 24000)
+    assert sf.info(str(out)).frames == 24000
+
+
+def test_unrelated_runtime_errors_are_not_swallowed(tmp_path, torchaudio_save_fails):
+    torchaudio_save_fails["exc"] = RuntimeError("encoder exploded")
+    out = tmp_path / "x.wav"
+    with pytest.raises(RuntimeError, match="encoder exploded"):
+        _safe_torchaudio_save(out, _sine_tensor(), 24000)
+    assert not out.exists()
+
+
+@pytest.mark.parametrize("fmt", ["wav", "flac", "ogg", "mp3"])
+def test_without_torchaudio_module_soundfile_does_the_write(tmp_path, monkeypatch, fmt):
+    from services import audio_io
+
+    if fmt.upper() not in sf.available_formats():
+        pytest.skip(f"libsndfile lacks {fmt}")
+    monkeypatch.setattr(audio_io, "torchaudio", None)
+    out = tmp_path / f"direct.{fmt}"
+    _safe_torchaudio_save(out, _sine_tensor(), 24000, format=fmt)
+    info = sf.info(str(out))
+    assert info.samplerate == 24000 and info.frames > 0

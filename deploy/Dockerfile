@@ -157,7 +157,22 @@ RUN python3 -c "import os, torch, torchaudio, torchvision; \
     import torchvision.ops; torchvision.ops.nms; \
     print('torchvision C++ ops resolve against this torch')"
 
-# CLEAN-ROOM (spec K-pr2170 §24): Docker step: side-load cuDNN 8 compat libraries for CTranslate2 (CUDA flavor, non-aarch64 only), with explanatory comment.
+# CTranslate2 (WhisperX, faster-whisper) is linked against cuDNN 8 while the
+# CUDA base image ships cuDNN 9. When libcudnn_ops_infer.so.8 is missing the
+# whole backend process aborts instead of raising (#1371). scripts/setup.py
+# side-loads cuDNN 8 for source installs (#2050); the image needs the same,
+# placed where backend/core/cudnn8.py looks.
+# Skipped for ROCm (no cuDNN there) and for aarch64: nvidia-cudnn-cu12==8.9.7.29
+# has no aarch64 wheel (DGX Spark / GH200 builds, #2831), so CTranslate2 ASR
+# stays unavailable on those images.
+RUN if [ "$GPU_FLAVOR" = "cuda" ] && [ "$(uname -m)" != "aarch64" ]; then \
+        target="$(python3 -c "import sys; print(f'{sys.prefix}/lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages/cudnn8_compat')")" \
+        && uv pip install --python "$(command -v python3)" --no-cache --no-deps \
+            --target "$target" nvidia-cudnn-cu12==8.9.7.29 \
+        && python3 -c "import glob, sys; found = [f for f in glob.glob(sys.argv[1] + '/nvidia/cudnn/lib/*') if '.so.8' in f]; assert found, 'cuDNN 8 libraries missing from ' + sys.argv[1]; print(f'cuDNN 8 compat: {len(found)} libraries in ' + sys.argv[1])" "$target"; \
+    else \
+        echo "cuDNN 8 compat skipped (GPU_FLAVOR=$GPU_FLAVOR, arch=$(uname -m))"; \
+    fi
 # Copy application source
 COPY backend/ ./backend/
 COPY omnivoice/ ./omnivoice/

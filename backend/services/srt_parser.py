@@ -45,7 +45,15 @@ def _ts_to_seconds(h: str, m: str, s: str, ms: str) -> float:
     return int(h or 0) * 3600 + int(m) * 60 + int(s) + int(ms) / 1000.0
 
 
-# CLEAN-ROOM (spec K-pr2170 §12): predicate for a bare ASCII SubRip cue-index line.
+def _is_index_line(line: str) -> bool:
+    """True when ``line`` is nothing but ASCII digits (a SubRip cue number).
+
+    Deliberately narrower than ``str.isdigit()``, which also accepts
+    Arabic-Indic, Devanagari and full-width numerals. Those are spoken text in
+    their own scripts and must never be mistaken for a cue index.
+    """
+    stripped = line.strip()
+    return bool(stripped) and all("0" <= ch <= "9" for ch in stripped)
 @dataclass
 class SrtParseResult:
     segments: list[dict]
@@ -114,9 +122,41 @@ def parse_srt(content: str) -> SrtParseResult:
     # timing line (or end of file). This is robust to missing index
     # numbers and to spec deviations in the blank-line separator.
     matches = list(_TIMING_RE.finditer(text))
-    # CLEAN-ROOM (spec K-pr2170 §13): initial cue index taken from the line just before the first timing line.
+    # Running cue number, when the file numbers its cues: seeded from the line
+    # right before the first timing line.
+    head = text[:matches[0].start()].strip() if matches else ""
+    first_marker = head.split("\n")[-1].strip() if head else ""
+    cue_index = int(first_marker) if _is_index_line(first_marker) and len(first_marker) <= 12 else None
     for i, m in enumerate(matches):
-        # CLEAN-ROOM (spec K-pr2170 §13): slice each cue body, WebVTT trimming, and trailing next-cue index reclaim.
+        has_next = i + 1 < len(matches)
+        body = text[m.end():matches[i + 1].start() if has_next else len(text)]
+        next_index = None
+        if is_webvtt:
+            # Whatever follows the first blank separator (identifiers, NOTE and
+            # STYLE blocks) is not dialogue, numeric or not.
+            body = re.split(r"\n[^\S\n]*\n", body, maxsplit=1)[0]
+        elif has_next:
+            # The last line of this body is the NEXT cue's number when the file
+            # numbers its cues. Plain line inspection (no backtracking regex)
+            # because the text is user-uploaded.
+            pieces = body.split("\n")
+            if pieces and not pieces[-1].strip(" \t"):
+                pieces.pop()
+            marker = pieces[-1].strip(" \t") if pieces else ""
+            expected = cue_index + 1 if cue_index is not None else i + 2
+            before = pieces[:-1]
+            has_dialogue = any(piece.strip() for piece in before)
+            separated = len(pieces) > 2 and not pieces[-2].strip(" \t")
+            if (
+                marker
+                and _is_index_line(marker)
+                and marker.lstrip("0") == str(expected)
+                and (has_dialogue or separated)
+                and (cue_index is not None or separated)
+            ):
+                body = "\n".join(before)
+                next_index = expected
+        cue_index = next_index
         try:
             start = _ts_to_seconds(m.group(1), m.group(2), m.group(3), m.group(4))
             end = _ts_to_seconds(m.group(5), m.group(6), m.group(7), m.group(8))

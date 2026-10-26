@@ -244,7 +244,58 @@ def test_paste_endpoint_returns_webvtt_cues():
     assert res.status_code == 200, res.text
     assert [(c["start"], c["text"]) for c in res.json()["segments"]] == [(1.0, "Hola"), (3.0, "Adios")]
 
-# CLEAN-ROOM (spec K-pr2170 §12): tests for numeric-only dialogue vs cue indices; see spec.
+def _texts(srt: str):
+    result = parse_srt(srt)
+    return [seg["text"] for seg in result.segments], result.skipped_cues
+
+
+def test_final_cue_that_is_only_a_year_is_kept():
+    srt = (
+        "1\n00:00:01,000 --> 00:00:02,000\nIt happened in\n\n"
+        "2\n00:00:03,000 --> 00:00:04,000\n1999\n"
+    )
+    assert _texts(srt) == (["It happened in", "1999"], 0)
+
+
+def test_indexless_file_keeps_trailing_number_line_in_multiline_cue():
+    srt = (
+        "00:00:01,000 --> 00:00:02,000\nCall me on\n555\n\n"
+        "00:00:03,000 --> 00:00:04,000\nBye\n"
+    )
+    assert _texts(srt)[0] == ["Call me on\n555", "Bye"]
+
+
+def test_missing_blank_line_reclaims_only_one_index():
+    srt = (
+        "1\n00:00:01,000 --> 00:00:02,000\nTotal\n42\n2\n"
+        "00:00:03,000 --> 00:00:04,000\nNext\n"
+    )
+    assert _texts(srt)[0] == ["Total\n42", "Next"]
+
+
+def test_numeric_countdown_as_last_cue_stays_multiline():
+    srt = (
+        "1\n00:00:01,000 --> 00:00:02,000\nReady\n\n"
+        "2\n00:00:03,000 --> 00:00:06,000\n3\n2\n1\n"
+    )
+    assert _texts(srt)[0] == ["Ready", "3\n2\n1"]
+
+
+@pytest.mark.parametrize("numeral", ["\u0663", "\u0967\u0968", "\uff12\uff13"])
+def test_non_ascii_numerals_are_dialogue(numeral):
+    srt = (
+        "1\n00:00:01,000 --> 00:00:02,000\nOne\n" + numeral + "\n\n"
+        "2\n00:00:03,000 --> 00:00:04,000\nTwo\n"
+    )
+    assert _texts(srt)[0] == ["One\n" + numeral, "Two"]
+
+
+def test_numeric_cue_followed_by_cue_does_not_absorb_next_index():
+    srt = (
+        "1\n00:00:01,000 --> 00:00:02,000\n2024\n\n"
+        "2\n00:00:03,000 --> 00:00:04,000\nNext\n"
+    )
+    assert _texts(srt) == (["2024", "Next"], 0)
 
 
 @pytest.mark.parametrize("first_index", ["", "1\n"])

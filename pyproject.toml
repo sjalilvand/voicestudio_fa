@@ -63,7 +63,12 @@ dependencies = [
     # Directly used by video_context; 12.1 adds get_flattened_data(), the
     # replacement for getdata() ahead of its Pillow 14 removal.
     "pillow>=12.1.0",
-    # CLEAN-ROOM (spec K-pr2170 §29): pedalboard dependency entry (version range matters; see spec).
+    # Effects-chain API needs 0.9.14+. Linux x86_64 wheels from 0.9.21 are
+    # built with -march=native (upstream spotify/pedalboard#454), so
+    # `import pedalboard` dies with SIGILL on CPUs lacking the builder's SIMD
+    # set (#2052). 0.9.20 is the last good wheel; revisit once upstream ships
+    # portable builds.
+    "pedalboard>=0.9.14,<0.9.21",
     # Primary ASR — cross-platform, CTranslate2-based under the hood. WhisperX
     # adds wav2vec2 forced alignment (±10-30 ms word timing vs Whisper's own
     # ±100-300 ms) which directly improves lip-sync on the dub pipeline.

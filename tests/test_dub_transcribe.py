@@ -866,7 +866,146 @@ class TestTranscribeRoute:
         assert near_cut, f"no segment boundary near scene cut 5.5; got {[(s['start'], s['end']) for s in segs]}"
 
 
-# CLEAN-ROOM (spec K-pr2170 §22): tests for post-transcript ping events and _ping_while; see spec.
+def test_stream_pings_while_reference_text_refinement_runs(tmp_path, monkeypatch):
+    """The quiet stretch after the segments event must not be byte-silent."""
+    import asyncio
+    import time
+    from concurrent.futures import ThreadPoolExecutor
+    from api.routers import dub_core as dc
+    from services import asr_backend, speaker_clone
+
+    class Backend:
+        id = "fake"
+        def ensure_loaded(self): pass
+        def transcribe(self, *a, **kw):
+            return {"chunks": [{"text": "Hello there.", "timestamp": (0.0, 0.8)}],
+                    "segments": [], "language": "en"}
+        def unload(self): pass
+
+    async def model():
+        result = MagicMock()
+        result._asr_pipe = MagicMock()
+        return result
+
+    def fake_refs(vocals, segs, out_dir, seg_ids=None):
+        return {str(i): {"ref_audio": "x.wav", "ref_text": "raw"} for i in (seg_ids or [])}
+
+    def slow_refine(clones, backend):
+        time.sleep(0.4)
+        for entry in clones.values():
+            entry["ref_text"] = "refined"
+        return clones
+
+    monkeypatch.setattr(dc, "get_model", model)
+    monkeypatch.setattr(asr_backend, "get_active_asr_backend", lambda *a, **kw: Backend())
+    monkeypatch.setattr(dc, "get_diarization_pipeline", lambda **kw: (None, None))
+    monkeypatch.setattr(dc, "offload_tts_for_asr", lambda: None)
+    monkeypatch.setattr(dc, "restore_tts_after_asr", lambda: None)
+    monkeypatch.setattr(speaker_clone, "extract_segment_refs", fake_refs)
+    monkeypatch.setattr(speaker_clone, "refine_ref_texts", slow_refine)
+    monkeypatch.setattr(dc, "POST_ASR_PING_S", 0.02)
+
+    audio = tmp_path / "ping.wav"
+    _make_wav(audio, seconds=1.0)
+    job_id = "ping_refine"
+    dc._dub_jobs[job_id] = {"audio_path": str(audio), "vocals_path": None, "scene_cuts": []}
+
+    async def collect():
+        response = await dc.dub_transcribe_stream(job_id)
+        out = []
+        async for chunk in response.body_iterator:
+            out.append(chunk.decode() if isinstance(chunk, (bytes, bytearray)) else str(chunk))
+        return "".join(out)
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            monkeypatch.setattr(dc, "_gpu_pool", pool)
+            monkeypatch.setattr(dc, "_cpu_pool", pool)
+            body = asyncio.run(asyncio.wait_for(collect(), timeout=20))
+    finally:
+        dc._dub_jobs.pop(job_id, None)
+
+    last_segments = body.rindex("event: segments")
+    final = body.index("event: final")
+    assert "event: ping" in body[last_segments:final], body
+    assert body.index("event: done") > final
+
+
+@pytest.fixture
+def fast_pings(monkeypatch):
+    from api.routers import dub_core as dc
+
+    monkeypatch.setattr(dc, "POST_ASR_PING_S", 0.01)
+    return dc
+
+
+def test_closing_ping_stream_early_propagates_cancel_to_the_work(fast_pings):
+    dc = fast_pings
+    record = []
+
+    async def scenario():
+        async def long_job():
+            try:
+                await asyncio.sleep(60)
+            except asyncio.CancelledError:
+                record.append("interrupted")
+                raise
+
+        job = asyncio.ensure_future(long_job())
+        pings = dc._ping_while(job)
+        assert bytes(await pings.__anext__()).startswith(b"event: ping")
+        await pings.aclose()
+        done, _ = await asyncio.wait({job}, timeout=2)
+        return job in done and job.cancelled()
+
+    import asyncio
+    assert asyncio.run(scenario()) is True
+    assert record == ["interrupted"]
+
+
+def test_ping_stream_over_completed_future_is_empty_and_leaves_result(fast_pings):
+    import asyncio
+
+    async def scenario():
+        fut = asyncio.get_running_loop().create_future()
+        fut.set_result({"answer": 42})
+        emitted = []
+        async for item in fast_pings._ping_while(fut):
+            emitted.append(item)
+        return emitted, fut.result()
+
+    assert asyncio.run(scenario()) == ([], {"answer": 42})
+
+
+def test_error_surfacing_after_consumer_left_is_not_reported_as_unretrieved(fast_pings):
+    import asyncio
+    import gc
+
+    complaints = []
+
+    async def scenario():
+        asyncio.get_running_loop().set_exception_handler(
+            lambda _loop, ctx: complaints.append(str(ctx.get("message")))
+        )
+
+        async def stubborn():
+            try:
+                await asyncio.sleep(60)
+            except asyncio.CancelledError:
+                raise ValueError("raised while shutting down")
+
+        job = asyncio.ensure_future(stubborn())
+        stream = fast_pings._ping_while(job)
+        await stream.__anext__()
+        await stream.aclose()
+        await asyncio.sleep(0.05)
+        assert job.done()
+        del job, stream
+        gc.collect()
+        await asyncio.sleep(0.01)
+
+    asyncio.run(scenario())
+    assert not any("never retrieved" in c for c in complaints), complaints
 
 
 def test_stream_cleanup_waits_for_native_work_and_rejects_late_work():
