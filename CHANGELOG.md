@@ -234,6 +234,8 @@ This release also adds an opt-in Beta update channel, a bottom player for takes,
 
 ### Fixed
 
+- The Sherpa-ONNX engine loads Piper voices (such as Turkish) and lexicon-based VITS models instead of reporting "No model.onnx" (#3373) — thanks @MehmetinLove!
+- The desktop Sherpa-ONNX engine no longer asks you to accept licences for phone-only models (#3373) — thanks @MehmetinLove!
 - Runtime setup on a Mac asks for 5 GiB of free space instead of 9, since Mac builds download no CUDA libraries (#3503)
 - Dubbing keeps one-word replies and lines between speaker turns with the right speaker, and no line clones from audio with two voices (#3500)
 - Radeon RX 9060 / 9070 (RDNA4) owners on Linux are no longer told to remap their card onto RX 7000 kernels; the ROCm build runs them natively, and the AMD docs now cover RDNA4 and the Windows ROCm setup (#3418, #3499)
