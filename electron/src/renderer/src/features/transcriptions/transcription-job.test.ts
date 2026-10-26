@@ -3,9 +3,9 @@ import { loadTranscriptions } from '@shared/utils/transcriptionsStore';
 
 const apiJson = vi.fn();
 const toast = { success: vi.fn(), error: vi.fn(), warning: vi.fn() };
-vi.mock('@/lib/api/client', () => ({
+vi.mock('@/lib/api/client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/api/client')>()),
   apiJson: (...args: unknown[]) => apiJson(...args),
-  describeError: (error: unknown) => (error instanceof Error ? error.message : String(error)),
 }));
 vi.mock('sonner', () => ({ toast }));
 
@@ -68,7 +68,7 @@ it('cancel aborts the request and saves nothing', async () => {
 it('reports a failure while away and keeps it for the page', async () => {
   respond(() => Promise.reject(new Error('boom')));
   expect(await job.startTranscription(audio, 'fast')).toBe('failed');
-  expect(job.transcriptionJob.state.error).toBe('boom');
+  expect(job.transcriptionJob.state.error?.detail).toBe('boom');
   expect(toast.error).toHaveBeenCalledOnce();
 });
 

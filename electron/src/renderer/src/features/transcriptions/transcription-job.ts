@@ -2,11 +2,12 @@ import { Store } from '@tanstack/store';
 import { useStore } from '@tanstack/react-store';
 import i18next from 'i18next';
 import { toast } from 'sonner';
-import { apiJson, describeError } from '@/lib/api/client';
+import { apiJson } from '@/lib/api/client';
 import { beginAppActivity } from '@/lib/app-activity';
 import { recordActionBreadcrumb } from '@/lib/report-breadcrumb';
 import { runRendererTask } from '@/lib/global-error-recovery';
 import { addTranscription, type TranscriptEntry } from '@shared/utils/transcriptionsStore';
+import { transcriptionFailureFrom, type TranscriptionFailureState } from './transcription-failure';
 
 export type TranscriptionMode = 'fast' | 'accurate';
 export type TranscriptionOutcome = 'saved' | 'not-ready' | 'failed' | 'cancelled' | 'busy';
@@ -14,7 +15,7 @@ export type TranscriptionOutcome = 'saved' | 'not-ready' | 'failed' | 'cancelled
 interface JobState {
   running: boolean;
   file: File | null;
-  error: string | null;
+  error: TranscriptionFailureState | null;
   /** Id of the newest entry this job saved, so a remounted page can select it. */
   savedId: number | null;
 }
@@ -89,11 +90,14 @@ export async function startTranscription(
     }).catch(() => ({ auto: false }));
     if (ctl.signal.aborted) return (outcome = 'cancelled');
     body.set('refine', String(refinement.auto));
-    const result = await apiJson<Partial<TranscriptEntry> & { diarization_error?: string }>('/transcribe', {
-      method: 'POST',
-      body,
-      signal: ctl.signal,
-    });
+    const result = await apiJson<Partial<TranscriptEntry> & { diarization_error?: string }>(
+      '/transcribe',
+      {
+        method: 'POST',
+        body,
+        signal: ctl.signal,
+      },
+    );
     if (ctl.signal.aborted) return (outcome = 'cancelled');
     const saved = addTranscription(result);
     if (result.diarization_error) toast.warning(i18next.t('transcriptions.speakers_unavailable'));
@@ -108,11 +112,11 @@ export async function startTranscription(
     return outcome;
   } catch (error) {
     if (ctl.signal.aborted) return (outcome = 'cancelled');
-    const message = describeError(error);
-    transcriptionJob.setState((state) => ({ ...state, error: message }));
+    const failure = transcriptionFailureFrom(error);
+    transcriptionJob.setState((state) => ({ ...state, error: failure }));
     if (!viewing) {
       toast.error(i18next.t('transcriptions.failed'), {
-        description: message,
+        description: failure.guidance ?? failure.detail,
         action: { label: i18next.t('common.open'), onClick: openTranscriptions },
       });
     }

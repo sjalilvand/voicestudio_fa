@@ -42,11 +42,7 @@ import { useRecording } from '@/hooks/use-recording';
 import { useDictationSelection } from '@/hooks/use-dictation-selection';
 import { useEngines } from '@/hooks/use-engines';
 import { apiJson, describeError } from '@/lib/api/client';
-import {
-  TranscriptionFailure,
-  transcriptionFailureFrom,
-  type TranscriptionFailureState,
-} from './transcription-failure';
+import { TranscriptionFailure } from './transcription-failure';
 import { setCloneSetting } from '@/lib/store/clone-settings';
 import { cn } from '@/lib/utils';
 import {
