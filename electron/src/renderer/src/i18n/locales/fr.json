@@ -1884,6 +1884,7 @@
     "recovery_title": "Livre audio interrompu",
     "recovery_progress": "{{done}} chapitres sur {{total}} sont mis en cache",
     "recovery_hint": "Reprendre réutilise les chapitres terminés et ne synthétise que ce qui reste.",
+    "recovery_load_failed": "Impossible de vérifier les rendus interrompus.",
     "resume": "Reprendre",
     "open_chapter_cache": "Ouvrir le cache des chapitres",
     "cache_location_hint": "Cache audio des chapitres : {{cachePath}} · Manifeste de reprise : {{manifestPath}}",

@@ -1884,6 +1884,7 @@
     "recovery_title": "Audiolibro interrotto",
     "recovery_progress": "{{done}} capitoli su {{total}} sono nella cache",
     "recovery_hint": "La ripresa riutilizza i capitoli completati e sintetizza solo ciò che resta.",
+    "recovery_load_failed": "Impossibile verificare i rendering interrotti.",
     "resume": "Riprendi",
     "open_chapter_cache": "Apri cache dei capitoli",
     "cache_location_hint": "Cache audio dei capitoli: {{cachePath}} · Manifest di ripresa: {{manifestPath}}",

@@ -1882,6 +1882,7 @@
     "recovery_title": "बाधित ऑडियोबुक",
     "recovery_progress": "{{total}} में से {{done}} अध्याय कैश हैं",
     "recovery_hint": "जारी रखने पर पूरे हो चुके अध्याय फिर से उपयोग होंगे और केवल शेष को संश्लेषित किया जाएगा।",
+    "recovery_load_failed": "रुके हुए रेंडर की जाँच नहीं हो सकी।",
     "resume": "जारी रखें",
     "open_chapter_cache": "अध्याय कैश खोलें",
     "cache_location_hint": "अध्याय ऑडियो कैश: {{cachePath}} · फिर से शुरू करने का मेनिफ़ेस्ट: {{manifestPath}}",

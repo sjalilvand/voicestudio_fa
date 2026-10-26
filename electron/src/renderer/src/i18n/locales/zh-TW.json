@@ -1882,6 +1882,7 @@
     "recovery_title": "已中斷的有聲書",
     "recovery_progress": "{{total}} 章中有 {{done}} 章已快取",
     "recovery_hint": "繼續時會重複使用已完成的章節，只合成剩餘內容。",
+    "recovery_load_failed": "無法檢查中斷的轉譯。",
     "resume": "繼續",
     "open_chapter_cache": "開啟章節快取",
     "cache_location_hint": "章節音訊快取：{{cachePath}} · 繼續資訊清單：{{manifestPath}}",

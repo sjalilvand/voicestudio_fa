@@ -1884,6 +1884,7 @@
     "recovery_title": "Audiolivro interrompido",
     "recovery_progress": "{{done}} de {{total}} capítulos estão em cache",
     "recovery_hint": "Retomar reutiliza os capítulos concluídos e sintetiza apenas o que falta.",
+    "recovery_load_failed": "Não foi possível verificar renderizações interrompidas.",
     "resume": "Retomar",
     "open_chapter_cache": "Abrir cache dos capítulos",
     "cache_location_hint": "Cache de áudio dos capítulos: {{cachePath}} · Manifesto de retomada: {{manifestPath}}",

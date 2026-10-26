@@ -1888,6 +1888,7 @@
     "recovery_title": "Перервана аудіокнига",
     "recovery_progress": "У кеші {{done}} з {{total}} розділів",
     "recovery_hint": "Продовження повторно використовує готові розділи й синтезує лише те, що залишилося.",
+    "recovery_load_failed": "Не вдалося перевірити перервані рендери.",
     "resume": "Продовжити",
     "open_chapter_cache": "Відкрити кеш розділів",
     "cache_location_hint": "Кеш аудіо розділів: {{cachePath}} · Маніфест відновлення: {{manifestPath}}",

@@ -1882,6 +1882,7 @@
     "recovery_title": "中断されたオーディオブック",
     "recovery_progress": "{{total}}章中{{done}}章がキャッシュされています",
     "recovery_hint": "再開すると完了済みの章を再利用し、残りだけを合成します。",
+    "recovery_load_failed": "中断されたレンダリングを確認できませんでした。",
     "resume": "再開",
     "open_chapter_cache": "章のキャッシュを開く",
     "cache_location_hint": "章の音声キャッシュ: {{cachePath}} · 再開マニフェスト: {{manifestPath}}",

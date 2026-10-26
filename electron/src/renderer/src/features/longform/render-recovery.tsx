@@ -49,6 +49,19 @@ export function RenderRecovery({
   useEffect(() => {
     if (!active) void refetch();
   }, [active, refetch]);
+  if (!active && query.isError) {
+    return (
+      <div
+        role="alert"
+        className="flex shrink-0 items-center justify-between gap-2 rounded-lg border border-border/60 bg-muted/20 p-2.5 text-xs"
+      >
+        <p>{t('audiobook.recovery_load_failed')}</p>
+        <Button size="sm" variant="outline" onClick={() => void refetch()}>
+          {t('common.retry')}
+        </Button>
+      </div>
+    );
+  }
   const jobs = active ? [] : recoveriesFor(mode, query.data?.jobs);
   if (!jobs.length) return null;
   return (

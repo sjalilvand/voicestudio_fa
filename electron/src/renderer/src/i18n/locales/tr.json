@@ -1882,6 +1882,7 @@
     "recovery_title": "Kesintiye uğrayan sesli kitap",
     "recovery_progress": "{{total}} bölümün {{done}} tanesi önbelleğe alındı",
     "recovery_hint": "Devam et, tamamlanan bölümleri yeniden kullanır ve yalnızca kalanı sentezler.",
+    "recovery_load_failed": "Yarıda kalan işlemeler denetlenemedi.",
     "resume": "Devam et",
     "open_chapter_cache": "Bölüm önbelleğini aç",
     "cache_location_hint": "Bölüm sesi önbelleği: {{cachePath}} · Devam bildirimi: {{manifestPath}}",

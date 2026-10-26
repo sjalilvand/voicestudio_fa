@@ -1882,6 +1882,7 @@
     "recovery_title": "Unterbrochenes Hörbuch",
     "recovery_progress": "{{done}} von {{total}} Kapiteln sind zwischengespeichert",
     "recovery_hint": "Beim Fortsetzen werden fertige Kapitel wiederverwendet und nur der Rest erzeugt.",
+    "recovery_load_failed": "Unterbrochene Renderings konnten nicht geprüft werden.",
     "resume": "Fortsetzen",
     "open_chapter_cache": "Kapitel-Zwischenspeicher öffnen",
     "cache_location_hint": "Kapitel-Audio-Zwischenspeicher: {{cachePath}} · Fortsetzungsmanifest: {{manifestPath}}",

@@ -138,3 +138,21 @@ it('offers interrupted Stories renders, which the backend files as "story"', asy
   );
   expect(screen.queryByText('Tale')).toBeNull();
 });
+
+it('says when interrupted renders cannot be checked and retries on request', async () => {
+  apiJsonMock.mockRejectedValueOnce(new Error('backend offline'));
+  apiJsonMock.mockResolvedValue({
+    jobs: [{ job_id: 's1', type: 'story', title: 'Tale', chapters_done: 3, total_chapters: 8 }],
+  });
+  render(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <RenderRecovery mode="stories" active={false} disabled={false} onResume={vi.fn()} />
+    </QueryClientProvider>,
+  );
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    "Couldn't check for interrupted renders.",
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+  expect(await screen.findByText('Tale')).toBeVisible();
+  expect(screen.queryByRole('alert')).toBeNull();
+});

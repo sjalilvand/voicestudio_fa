@@ -1884,6 +1884,7 @@
     "recovery_title": "Audiolibro interrumpido",
     "recovery_progress": "{{done}} de {{total}} capítulos están en caché",
     "recovery_hint": "Al reanudar se reutilizan los capítulos terminados y solo se sintetiza lo que falta.",
+    "recovery_load_failed": "No se pudo comprobar si hay renderizados interrumpidos.",
     "resume": "Reanudar",
     "open_chapter_cache": "Abrir caché de capítulos",
     "cache_location_hint": "Caché de audio de capítulos: {{cachePath}} · Manifiesto de reanudación: {{manifestPath}}",

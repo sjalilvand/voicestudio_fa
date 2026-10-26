@@ -1894,6 +1894,7 @@
     "recovery_title": "كتاب صوتي متوقف",
     "recovery_progress": "تم تخزين {{done}} من أصل {{total}} فصلاً مؤقتًا",
     "recovery_hint": "تُعيد الاستئناف استخدام الفصول المكتملة ولا تُنشئ إلا ما تبقى.",
+    "recovery_load_failed": "تعذّر التحقق من وجود عمليات عرض متوقفة.",
     "resume": "استئناف",
     "open_chapter_cache": "فتح ذاكرة التخزين المؤقت للفصول",
     "cache_location_hint": "ذاكرة التخزين المؤقت لصوت الفصول: {{cachePath}} · بيان الاستئناف: {{manifestPath}}",
