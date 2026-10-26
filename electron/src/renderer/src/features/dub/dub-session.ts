@@ -47,6 +47,7 @@ import {
 } from '@shared/utils/segmentParts';
 import { commitMoveResize } from '@shared/utils/timeline';
 import type { PasteTranslationRow } from '@shared/utils/pasteTranslations';
+import { getDubTranslationError } from './transcript-issues';
 import type {
   DubAgentTranslationRequest,
   DubAgentTranslationResult,
@@ -637,9 +638,7 @@ export function applyDubTranslationRows(targetCode: string, rows: PasteTranslati
   let changed = false;
   const next = dubSession.state.segments.map((segment) => {
     const text = mapped.get(segment.id);
-    const failed =
-      segment.translate_errors?.[targetCode] ||
-      (!segment.translate_errors && segment.translate_error);
+    const failed = getDubTranslationError(segment, targetCode);
     if (!text || (segment.text === text && segment.translations?.[targetCode] === text && !failed))
       return segment;
     changed = true;
