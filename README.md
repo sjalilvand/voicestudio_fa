@@ -96,6 +96,9 @@ Or download from [Releases](https://github.com/debpalash/VoiceStudio/releases/la
 
 **[macOS](docs/install/macos.md) · [Windows](docs/install/windows.md) · [Linux](docs/install/linux.md) · [Docker](docs/install/docker.md) · [Android and iPhone](docs/mobile.md#install)**
 
+> [!NOTE]
+> On macOS, a "VoiceStudio is damaged and can't be opened" message does not mean the download is corrupt. It is Gatekeeper rejecting a quarantined, un-notarized app. Follow the [Gatekeeper section](docs/install/macos.md#gatekeeper-quarantine) of the macOS guide.
+
 | Hardware | Support |
 |---|---|
 | NVIDIA GPU (Windows / Linux) | CUDA acceleration |
