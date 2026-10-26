@@ -563,7 +563,26 @@ def _is_retryable_download_error(exc: BaseException) -> bool:
     return is_hf_connectivity_error(str(exc))
 
 
-# CLEAN-ROOM (spec L-pr1958 §3): pure retry-policy helper for the segmented accelerator, plus a helper that words the outcome for the log.
+def _segmented_retry_plan(exc: Exception, attempt: int, max_attempts: int) -> tuple[bool, bool]:
+    """Return ``(disable, retry)`` for a segmented-transfer failure.
+
+    Transient disconnects re-enter the accelerator so its range manifest can
+    resume; falling through immediately would use a separate incomplete file.
+    The penultimate attempt disables and retries, reserving the last attempt
+    for the plain downloader. A terminal or non-transient failure hands over
+    immediately because no useful accelerator retry remains.
+    """
+    if not _is_retryable_download_error(exc) or attempt >= max_attempts:
+        return True, False
+    return attempt >= max_attempts - 1, True
+
+
+def _segmented_retry_log_phrase(disable: bool, retry: bool) -> str:
+    if not disable and retry:
+        return "accelerator retained; the next attempt resumes its range manifest"
+    if disable and retry:
+        return "accelerator exhausted; retrying once more before the plain downloader takes over"
+    return "accelerator disabled; falling back to the plain downloader now"
 
 
 @router.post("/models/install")
@@ -794,7 +813,7 @@ async def install_model(req: InstallModelRequest):
 
             _max_attempts = 5
             _attempt = 0
-            # CLEAN-ROOM (spec L-pr1958 §3): per-install state recording whether the accelerator has been disabled.
+            _segmented_disabled = False
             while True:
                 if req.repo_id in _cancelled:
                     raise _InstallCancelled()
@@ -808,7 +827,7 @@ async def install_model(req: InstallModelRequest):
                     # compromise a correct install (see _segmented_retry_plan).
                     _snapshot_path = None
                     if (
-                        _attempt == 1  # CLEAN-ROOM (spec L-pr1958 §3): accelerator eligibility must follow the retry policy, not only the first attempt
+                        not _segmented_disabled
                         and not allow_patterns
                         and _segmented_enabled()
                         and not _xet_active()
@@ -826,11 +845,17 @@ async def install_model(req: InstallModelRequest):
                                 raise _InstallCancelled() from _seg_err
                             if is_disk_full_error(_seg_err):
                                 raise  # the plain path would hit the same wall
-                            # CLEAN-ROOM (spec L-pr1958 §3): apply the retry policy (keep / exhaust / disable the accelerator, re-raise for the outer retry) and log its outcome.
-                            logger.info(
-                                "segmented download for %s failed (%s); falling back to snapshot_download",
-                                req.repo_id, _seg_err,
+                            _disable, _retry = _segmented_retry_plan(
+                                _seg_err, _attempt, _max_attempts,
                             )
+                            _segmented_disabled = _segmented_disabled or _disable
+                            logger.info(
+                                "segmented download for %s failed (%s); %s",
+                                req.repo_id, _seg_err,
+                                _segmented_retry_log_phrase(_disable, _retry),
+                            )
+                            if _retry:
+                                raise
                             _snapshot_path = None
                     if _snapshot_path is None:
                         _snapshot_path = snapshot_download(**dl_kwargs)  # nosec B615 -- immutable revision_for pin

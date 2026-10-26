@@ -2,7 +2,7 @@
 
 import { spawnSync } from "node:child_process";
 import { readFileSync, readlinkSync } from "node:fs";
-import { dirname, resolve, sep } from "node:path";
+import path, { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DEFAULT_BACKEND_PORT, DEFAULT_WEB_PORT } from "../config/app-config.mjs";
 
@@ -70,8 +70,7 @@ function normalized(value, windows = process.platform === "win32") {
     return String(value || "")
       .replaceAll("/", "\\")
       .toLowerCase();
-  // CLEAN-ROOM (spec L-pr1958 §5): POSIX normalisation must not depend on the host platform.
-  return resolve(String(value || ""));
+  return path.posix.resolve(String(value || ""));
 }
 
 // The retired Tauri shell's reverse-DNS identifier. A backend a final Tauri
@@ -105,7 +104,7 @@ export function belongsToCheckout(
   checkoutRoot = CHECKOUT_ROOT,
 ) {
   const root = normalized(checkoutRoot, windows);
-  const prefix = `${root}${windows ? "\\" : sep}`; // CLEAN-ROOM (spec L-pr1958 §5): separator must not depend on the host platform
+  const prefix = `${root}${windows ? "\\" : path.posix.sep}`;
   const ownedPath = (value) => {
     if (!value) return false;
     const path = normalized(value, windows);
@@ -188,45 +187,74 @@ function inspectMac(pid) {
 }
 
 function inspectWindows(pid) {
-  const script = [
-    `$p = Get-CimInstance Win32_Process -Filter 'ProcessId = ${pid}'`,
-    "if ($null -ne $p) {",
-    // CLEAN-ROOM (spec L-pr1958 §5): report the creation time in a byte-stable, re-comparable form.
-    "  $p | Select-Object ProcessId,ExecutablePath,CommandLine,CreationDate | ConvertTo-Json -Compress",
+  const powershell = [
+    `$item = Get-CimInstance -ClassName Win32_Process -Filter 'ProcessId = ${pid}'`,
+    "if ($item) {",
+    "  [pscustomobject]@{",
+    "    ProcessId = $item.ProcessId",
+    "    ExecutablePath = $item.ExecutablePath",
+    "    CommandLine = $item.CommandLine",
+    "    CreationDate = $item.CreationDate.ToUniversalTime().ToString('o')",
+    "  } | ConvertTo-Json -Compress",
     "}",
   ].join("; ");
-  const result = spawnSync(
+  const inspection = spawnSync(
     "powershell.exe",
-    ["-NoProfile", "-NonInteractive", "-Command", script],
-    {
-      encoding: "utf8",
-    },
+    ["-NoProfile", "-NonInteractive", "-Command", powershell],
+    { encoding: "utf8" },
   );
-  if (result.error) throw result.error;
-  if (result.status !== 0) throw new Error(`Could not inspect process ${pid}`);
-  if (!result.stdout.trim()) return null;
-  const info = JSON.parse(result.stdout);
+  if (inspection.error) throw inspection.error;
+  if (inspection.status !== 0) throw new Error(`Windows process inspection failed for pid ${pid}`);
+  const json = inspection.stdout.trim();
+  if (!json) return null;
+  const info = JSON.parse(json);
   return {
-    identity: `windows:${info.CreationDate}`, // CLEAN-ROOM (spec L-pr1958 §5): use the stable creation-time form
+    identity: `windows:${info.CreationDate}`,
     owned: belongsToCheckout("", info.CommandLine, info.ExecutablePath, true),
   };
 }
 
-// CLEAN-ROOM (spec L-pr1958 §5): stopWindowsProcess(pid, force, identity, run) - instance-bound Windows termination.
+export function stopWindowsProcess(pid, force, identity, run = spawnSync) {
+  const fingerprint = String(identity ?? "").replace(/^windows:/, "").replaceAll("'", "''");
+  const powershell = [
+    `$target = Get-CimInstance -ClassName Win32_Process -Filter 'ProcessId = ${pid}'`,
+    "if (-not $target) { exit 0 }",
+    "$stamp = $target.CreationDate.ToUniversalTime().ToString('o')",
+    `if ($stamp -ne '${fingerprint}') { exit 3 }`,
+    "$termination = Invoke-CimMethod -InputObject $target -MethodName Terminate",
+    "if ($termination.ReturnValue -ne 0) {",
+    "  Write-Output $termination.ReturnValue",
+    "  exit 4",
+    "}",
+  ].join("; ");
+  const stopped = run(
+    "powershell.exe",
+    ["-NoProfile", "-NonInteractive", "-Command", powershell],
+    { encoding: "utf8" },
+  );
+  if (stopped?.error) throw stopped.error;
+  if (stopped?.status === 3) return;
+  if (stopped?.status === 4) {
+    const cimCode = String(stopped.stdout ?? "").trim();
+    throw new Error(`Windows refused to terminate pid ${pid} (CIM return value ${cimCode})`);
+  }
+  if (stopped?.status !== 0) {
+    throw new Error(`PowerShell could not terminate pid ${pid}`);
+  }
+}
 
 function systemOperations() {
   const windows = process.platform === "win32";
   return {
-    // CLEAN-ROOM (spec L-pr1958 §5): Windows must be able to stop a verified listener.
-    canStop: !windows,
+    canStop: true,
     // macOS exposes process start time to ps at one-second resolution. That is
     // sufficient for a graceful stop, but not safe proof for SIGKILL escalation.
     canForce: process.platform !== "darwin",
     listeners: windows ? windowsListeners : unixListeners,
     inspect: windows ? inspectWindows : process.platform === "darwin" ? inspectMac : inspectLinux,
-    stop(pid, force) {
-      // CLEAN-ROOM (spec L-pr1958 §5): on Windows call the instance-bound stop with the inspected identity.
-      stopUnixProcess(pid, force);
+    stop(pid, force, identity) {
+      if (windows) stopWindowsProcess(pid, force, identity);
+      else stopUnixProcess(pid, force);
     },
     sleep(ms) {
       return new Promise((done) => setTimeout(done, ms));

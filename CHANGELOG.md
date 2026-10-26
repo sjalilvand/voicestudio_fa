@@ -1521,7 +1521,9 @@ v0.5.3 is also the final Tauri update. The Tauri updater will not switch you to 
 - A failure with no stage attached no longer borrows another stage's advice, so a text-to-speech error stops telling you the video server dropped the download (#1943)
 - A generation failure that the app cannot classify now names the backend error class, so two unrelated faults stop arriving as the same untriageable report (#1800)
 - Transcriptions dictation wakes the desktop recorder, presents one contextual start action, and centers its microphone icon with the label (#1902)
-<!-- CLEAN-ROOM (spec L-pr1958 §7): Highlights entries for the OmniVoice picker, flaky-connection downloads and Windows dev recovery. -->
+- The OmniVoice picker on Apple Silicon has one entry, backed automatically by the isolated worker (#1913)
+- Unstable links no longer discard already-fetched model ranges between download attempts (#1940)
+- Windows development startup can reclaim VoiceStudio ports from its own abandoned processes (#1941)
 - Validate current-user Windows installers under a standard account on hosted runners (#1883)
 - The desktop app builds and opens from a fresh clone again (#1818) — thanks @flutterkage2k!
 - GPUs with less VRAM than the engine needs no longer get half the compute-time budget a CPU gets (#1806) — thanks @VishvakR!
@@ -1617,14 +1619,19 @@ v0.5.3 is also the final Tauri update. The Tauri updater will not switch you to 
 - Clearing the logs now empties the rotated log files too, so it frees the space it appears to (#1920)
 - An error thrown by a browser extension no longer offers to file itself as a VoiceStudio bug (#1901)
 - Clearing the desktop logs no longer wipes the backend's stderr, which is the only record a native crash leaves behind and is meant to survive a respawn (#1510)
-- CLEAN-ROOM (spec L-pr1958 §7): Fixed entries for audiobook timeouts and audiobook recovery. (#1958)
+- Audiobook chapter deadlines now account for both host speed and narration length (#1910) — thanks @psiberfunk!
+- The Audiobook tab can continue an interrupted book from completed chapters and reveal their storage folder (#1911) — thanks @psiberfunk!
 - System-check details and storage paths beginning with a number or a slash no longer render with their leading text moved to the end of the line (#1848) — thanks @psiberfunk!
 - An unavailable engine's row now links to that engine's guide, so the generic "check installation and configuration" message has somewhere to send you (#1866) — thanks @psiberfunk!
 - The backend log now records which engine failed a health check and whether its probe raised, instead of a line that identified neither (#1866) — thanks @psiberfunk!
 - The first-run Activity log counts every line instead of freezing at 200 while the install is still running, and Copy now hands back the whole run rather than the last 200 lines (#1847) — thanks @psiberfunk!
 - A first-run failure that happened early in a long install keeps its specific advice, instead of falling back to the generic retry hint once the log scrolled past 200 lines (#1847) — thanks @psiberfunk!
 - Opening the log panel no longer clips the Launchpad's heading and slides the feature cards up over it — the page scrolls instead of squashing itself (#1859) — thanks @psiberfunk!
-- CLEAN-ROOM (spec L-pr1958 §7): Fixed entries for segmented downloads, accelerator retries and the Windows dev scripts. (#1958)
+- Resumable model transfers commit progress in ranges no larger than 16 MB (#1940)
+- Transient transfer retries keep the accelerator and its saved range map available (#1940)
+- Windows backend reloads end the uv and uvicorn process tree together (#1941)
+- Development port cleanup verifies a Windows process fingerprint before terminating it (#1941)
+- POSIX checkout paths are compared with POSIX normalization even from a Windows host (#1941)
 - Install documentation help now prints correctly on Windows consoles using legacy encodings (#1815) — thanks @dajiaohuang!
 - Saved transcriptions with missing or invalid timestamps now remain readable (#1799) — thanks @yunaremaia and @tvbht!
 - Transcribing with an engine that reports no segment end no longer fails with a server error; the null timing is passed through the way the segment list already expects (#1904) — thanks @aeroglu!

@@ -14,7 +14,12 @@ import httpx
 import pytest
 
 import services.segmented_download as sd
-from services.segmented_download import segmented_download, DownloadCancelled
+from services.segmented_download import (
+    DownloadCancelled,
+    _MAX_SEGMENT_BYTES,
+    _plan_segments,
+    segmented_download,
+)
 
 
 PAYLOAD = bytes((i % 256) for i in range(1_000_000))  # 1 MB deterministic body
@@ -111,7 +116,95 @@ def test_on_bytes_reports_total(tmp_path):
     assert sum(seen) == len(PAYLOAD)
 
 
-# CLEAN-ROOM (spec L-pr1958 §3): tests for bounded segment planning, concurrency cap, and manifest resume after a dropped connection.
+def test_planner_tiles_a_large_object_with_checkpoint_sized_ranges():
+    object_size = 777 * 1024 * 1024 + 23
+    ranges = _plan_segments(object_size, 8)
+
+    assert len(ranges) > 8
+    assert max(end - start + 1 for start, end in ranges) <= _MAX_SEGMENT_BYTES
+    cursor = 0
+    for start, end in ranges:
+        assert start == cursor
+        cursor = end + 1
+    assert cursor == object_size
+
+
+def test_planner_does_not_fragment_a_subminimum_object():
+    object_size = 913_777
+    assert _plan_segments(object_size, 32) == [(0, object_size - 1)]
+
+
+def test_range_pool_never_exceeds_requested_width(monkeypatch, tmp_path):
+    payload = bytes(range(91))
+    monkeypatch.setattr(sd, "_MIN_SEGMENT_BYTES", 13)
+    monkeypatch.setattr(sd, "_MAX_SEGMENT_BYTES", 13)
+    activity = {"now": 0, "high_water": 0}
+    all_workers_arrived = asyncio.Event()
+
+    async def handler(request):
+        if request.method == "HEAD":
+            return httpx.Response(200, headers={"content-length": str(len(payload)), "accept-ranges": "bytes"})
+        lo, hi = map(int, request.headers["range"].replace("bytes=", "").split("-"))
+        activity["now"] += 1
+        activity["high_water"] = max(activity["high_water"], activity["now"])
+        if activity["now"] == 4:
+            all_workers_arrived.set()
+        await all_workers_arrived.wait()
+        activity["now"] -= 1
+        return httpx.Response(
+            206,
+            headers={"Content-Range": f"bytes {lo}-{hi}/{len(payload)}"},
+            content=payload[lo:hi + 1],
+        )
+
+    async def run():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            await segmented_download(
+                "https://origin.invalid/weights", str(tmp_path / "pooled.bin"),
+                expected_size=len(payload), num_connections=4, client=client,
+            )
+
+    asyncio.run(run())
+    assert activity["high_water"] == 4
+    assert (tmp_path / "pooled.bin").read_bytes() == payload
+
+
+def test_second_invocation_uses_ranges_committed_before_disconnect(monkeypatch, tmp_path):
+    payload = bytes(range(55))
+    monkeypatch.setattr(sd, "_MIN_SEGMENT_BYTES", 11)
+    monkeypatch.setattr(sd, "_MAX_SEGMENT_BYTES", 11)
+    transferred = 0
+    link_is_flaky = True
+
+    async def handler(request):
+        nonlocal transferred
+        if request.method == "HEAD":
+            return httpx.Response(200, headers={"content-length": "55", "accept-ranges": "bytes"})
+        lo, hi = map(int, request.headers["range"].replace("bytes=", "").split("-"))
+        if link_is_flaky and lo > 0:
+            raise httpx.RemoteProtocolError("fixture closed the stream")
+        body = payload[lo:hi + 1]
+        transferred += len(body)
+        return httpx.Response(
+            206,
+            headers={"Content-Range": f"bytes {lo}-{hi}/55"},
+            content=body,
+        )
+
+    async def download():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            return await segmented_download(
+                "https://origin.invalid/archive", str(tmp_path / "resumed.bin"),
+                expected_size=55, num_connections=1, client=client,
+            )
+
+    with pytest.raises(httpx.RemoteProtocolError):
+        asyncio.run(download())
+    assert (tmp_path / "resumed.bin.part.done").is_file()
+    link_is_flaky = False
+    asyncio.run(download())
+    assert (tmp_path / "resumed.bin").read_bytes() == payload
+    assert len(payload) <= transferred < 2 * len(payload)
 
 
 def test_failed_segment_cancels_and_awaits_sibling_writers():

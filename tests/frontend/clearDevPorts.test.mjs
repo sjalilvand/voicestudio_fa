@@ -8,6 +8,7 @@ import {
   isUninspectableProcessError,
   parseSsListeners,
   parseWindowsListeners,
+  stopWindowsProcess,
   stopUnixProcess,
 } from "../../scripts/clear-dev-ports.mjs";
 
@@ -156,7 +157,33 @@ test("waits for the listener to disappear after force stop", async () => {
   assert.equal(sleeps, 12);
 });
 
-// CLEAN-ROOM (spec L-pr1958 §5): tests for stopWindowsProcess - identity re-check before terminate, recycled pid left alone, failure surfaced, non-zero Terminate return value surfaced.
+test("Windows termination rechecks identity before terminating", () => {
+  let script = "";
+  stopWindowsProcess(42, false, "windows:2026-01-02T03:04:05.0000000Z", (_cmd, args) => {
+    script = args.at(-1);
+    return { status: 0, stdout: "" };
+  });
+  assert.match(script, /ProcessId = 42/);
+  assert.match(script, /2026-01-02T03:04:05\.0000000Z/);
+  assert.ok(script.indexOf("$stamp -ne") < script.indexOf("Invoke-CimMethod"));
+  assert.match(script, /ReturnValue/);
+});
+
+test("Windows termination ignores a recycled pid and surfaces failures", () => {
+  assert.doesNotThrow(() => stopWindowsProcess(42, false, "windows:x", () => ({ status: 3 })));
+  assert.throws(() => stopWindowsProcess(42, false, "windows:x", () => ({ status: 1 })), /42/);
+  assert.throws(
+    () => stopWindowsProcess(42, false, "windows:x", () => ({ status: 4, stdout: "2\n" })),
+    /return value 2/,
+  );
+});
+
+test("POSIX ownership uses POSIX separators regardless of host", () => {
+  assert.equal(
+    belongsToCheckout("", "bun /repo/app/scripts/dev.mjs", "", false, "/repo/app"),
+    true,
+  );
+});
 
 // #1974: a backend the Tauri shell spawned lives under a per-app directory
 // named after the bundle id, not under the git checkout. The ownership test

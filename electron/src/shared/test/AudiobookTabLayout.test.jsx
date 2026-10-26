@@ -24,6 +24,8 @@ vi.mock('../api/audiobook', () => ({
   audiobookUploadCover: vi.fn(),
   audiobookPreviewChapter: vi.fn(),
   audiobookImport: vi.fn(),
+  audiobookListJobs: vi.fn().mockResolvedValue({ jobs: [] }),
+  audiobookResume: vi.fn(),
 }));
 
 import AudiobookTab from '../pages/AudiobookTab';

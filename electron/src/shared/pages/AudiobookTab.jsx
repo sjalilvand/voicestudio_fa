@@ -7,6 +7,7 @@ import {
   audiobookUploadCover,
   audiobookPreviewChapter,
   audiobookImport,
+  audiobookResume,
 } from '../api/audiobook';
 import { audioUrl } from '../api/generate';
 import { useEngines } from '../api/hooks';
@@ -23,7 +24,7 @@ import AudiobookHero from '../components/audiobook/AudiobookHero';
 import AudiobookScriptPanel from '../components/audiobook/AudiobookScriptPanel';
 import AudiobookVoicesPanel from '../components/audiobook/AudiobookVoicesPanel';
 import AudiobookBookPanel from '../components/audiobook/AudiobookBookPanel';
-// CLEAN-ROOM (spec L-pr1958 §4): import the recovery card component.
+import AudiobookRecovery from '../components/audiobook/AudiobookRecovery';
 import { useAudiobookLexicon } from '../hooks/useAudiobookLexicon';
 import { parseCastNames, validateScript } from '../utils/audiobookScript';
 import { SAMPLE_AUDIOBOOK_SCRIPT } from '../data/sampleAudiobook';
@@ -274,6 +275,69 @@ export default function AudiobookTab({ profiles = [] }) {
     [text, defaultVoice, lex, overrides, language, voiceMapArg],
   );
 
+  const consumeAudiobookStream = useCallback(
+    async (response, snapshotScript) => {
+      await consumeLongformStream(
+        response,
+        (evt) => {
+          if (evt.type === 'started') {
+            chaptersRef.current = Array.from({ length: evt.chapters }, (_, i) => ({
+              title: '',
+              status: i === 0 ? 'rendering' : 'pending',
+            }));
+            setChapters(chaptersRef.current);
+          } else if (evt.type === 'chapter') {
+            chaptersRef.current = chaptersRef.current.map((chapter, index) =>
+              index === evt.index
+                ? {
+                    ...chapter,
+                    title: evt.title,
+                    status: evt.cached ? 'cached' : 'done',
+                    duration_s: evt.duration_s,
+                  }
+                : index === evt.index + 1 && chapter.status === 'pending'
+                  ? { ...chapter, status: 'rendering' }
+                  : chapter,
+            );
+            setChapters(chaptersRef.current);
+          } else if (evt.type === 'chapter_error') {
+            chaptersRef.current = chaptersRef.current.map((chapter, index) =>
+              index === evt.index
+                ? {
+                    ...chapter,
+                    title: evt.title,
+                    status: 'failed',
+                    error: evt.reason || evt.error || '',
+                  }
+                : index === evt.index + 1 && chapter.status === 'pending'
+                  ? { ...chapter, status: 'rendering' }
+                  : chapter,
+            );
+            setChapters(chaptersRef.current);
+          } else if (evt.type === 'assembling') {
+            setAssembling(true);
+          } else if (evt.type === 'stopped') {
+            setStopped(true);
+          } else if (evt.type === 'done') {
+            if (snapshotScript === undefined) setOutput(evt.output);
+            else setOutputSnapshot(evt.output, snapshotScript, chaptersRef.current);
+            setDone({
+              cached_chapters: evt.cached_chapters || 0,
+              failed_chapters: evt.failed_chapters || [],
+            });
+          } else if (evt.type === 'error') {
+            setError(evt.error || 'synthesis failed');
+          }
+        },
+        {
+          isAborted: () => abortRef.current,
+          signal: abortControllerRef.current?.signal,
+        },
+      );
+    },
+    [setOutput, setOutputSnapshot],
+  );
+
   const onCreate = useCallback(async () => {
     setError('');
     setOutput('');
@@ -315,63 +379,7 @@ export default function AudiobookTab({ profiles = [] }) {
         },
         { signal: controller.signal },
       );
-      await consumeLongformStream(
-        res,
-        (evt) => {
-          if (evt.type === 'started') {
-            // Seed the per-chapter list; chapter 0 starts rendering immediately.
-            chaptersRef.current = Array.from({ length: evt.chapters }, (_, i) => ({
-              title: '',
-              status: i === 0 ? 'rendering' : 'pending',
-            }));
-            setChapters(chaptersRef.current);
-          } else if (evt.type === 'chapter') {
-            // A chapter finished (cached vs freshly rendered per evt.cached); the
-            // next pending chapter becomes the one rendering. duration_s feeds
-            // the synced-lyrics player's chapter timeline.
-            chaptersRef.current = chaptersRef.current.map((c, j) =>
-              j === evt.index
-                ? {
-                    ...c,
-                    title: evt.title,
-                    status: evt.cached ? 'cached' : 'done',
-                    duration_s: evt.duration_s,
-                  }
-                : j === evt.index + 1 && c.status === 'pending'
-                  ? { ...c, status: 'rendering' }
-                  : c,
-            );
-            setChapters(chaptersRef.current);
-          } else if (evt.type === 'chapter_error') {
-            chaptersRef.current = chaptersRef.current.map((c, j) =>
-              j === evt.index
-                ? {
-                    ...c,
-                    title: evt.title,
-                    status: 'failed',
-                    error: evt.reason || evt.error || '',
-                  }
-                : j === evt.index + 1 && c.status === 'pending'
-                  ? { ...c, status: 'rendering' }
-                  : c,
-            );
-            setChapters(chaptersRef.current);
-          } else if (evt.type === 'assembling') {
-            setAssembling(true);
-          } else if (evt.type === 'stopped') {
-            setStopped(true);
-          } else if (evt.type === 'done') {
-            setOutputSnapshot(evt.output, text, chaptersRef.current);
-            setDone({
-              cached_chapters: evt.cached_chapters || 0,
-              failed_chapters: evt.failed_chapters || [],
-            });
-          } else if (evt.type === 'error') {
-            setError(evt.error || 'synthesis failed');
-          }
-        },
-        { isAborted: () => abortRef.current, signal: controller.signal },
-      );
+      await consumeAudiobookStream(res, text);
       // consumeLongformStream returns (never throws) on a caller-initiated stop.
       if (abortRef.current) setStopped(true);
     } catch (e) {
@@ -395,10 +403,51 @@ export default function AudiobookTab({ profiles = [] }) {
     overrides,
     language,
     voiceMapArg,
-    setOutputSnapshot,
+    consumeAudiobookStream,
   ]);
 
-  // CLEAN-ROOM (spec L-pr1958 §4): onResume(jobId) - resume an interrupted render and stream its events through the same consumer as a fresh render.
+  const prepareRecoveredRender = useCallback(() => {
+    abortRef.current = false;
+    chaptersRef.current = [];
+    setChapters([]);
+    setOutput('');
+    setError('');
+    setDone(null);
+    setStopped(false);
+    setAssembling(false);
+    setGenerating(true);
+  }, [setOutput]);
+
+  const onResume = useCallback(
+    async (jobId) => {
+      prepareRecoveredRender();
+      const resumeController = new AbortController();
+      abortControllerRef.current = resumeController;
+      let streamOpened = false;
+
+      try {
+        const stream = await audiobookResume(jobId, { signal: resumeController.signal });
+        streamOpened = true;
+        await consumeAudiobookStream(stream);
+        if (abortRef.current) setStopped(true);
+      } catch (problem) {
+        const wasStopped = abortRef.current || problem?.name === 'AbortError';
+        if (wasStopped) {
+          setStopped(true);
+        } else {
+          const reason = problem?.message ?? String(problem);
+          setError(t('audiobook.resume_failed', { message: reason }));
+        }
+      } finally {
+        setGenerating(false);
+        setAssembling(false);
+        if (abortControllerRef.current === resumeController) abortControllerRef.current = null;
+      }
+
+      return streamOpened;
+    },
+    [consumeAudiobookStream, prepareRecoveredRender, t],
+  );
 
   // Stop = abort the fetch (cancels the request → backend disconnect) AND flip
   // the isAborted flag the stream consumer polls, so the read loop releases too.
@@ -457,7 +506,7 @@ export default function AudiobookTab({ profiles = [] }) {
         onStop={onStop}
       />
 
-      {/* CLEAN-ROOM (spec L-pr1958 §4): recovery card goes here, under the hero. */}
+      <AudiobookRecovery t={t} generating={generating} onResume={onResume} />
 
       <Tabs
         value={bookTab}

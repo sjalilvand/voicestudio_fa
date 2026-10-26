@@ -18,15 +18,16 @@ lands, the app forces the **classic LFS path**, which streams through the
 standard progress reporter and gives accurate downloaded/remaining/speed.
 
 To keep that path **fast** despite Xet being off, the app runs a built-in
-**multi-connection (segmented) downloader on by default** — it fetches each file
-over parallel byte-ranges (IDM/uGet style), so the legacy-LFS path is no longer
-single-stream. It reports real live speed/ETA and **falls back to the normal
-download on any error**, so it can never compromise a correct install. Adding a
+**multi-connection (segmented) downloader on by default**. It keeps up to eight
+byte ranges in flight, caps each range at 16 MB, and records every completed
+range in a resume manifest. After a dropped connection, only unfinished ranges
+are fetched again: the install retries the accelerator and resumes that
+manifest. An origin without range support remains a single stream within the
+accelerator. A non-transient failure or the final attempt disables acceleration
+for the rest of that install and lets plain `snapshot_download` take over. Adding a
 free Hugging Face token (first-run setup, or Settings → Credentials) makes this
 faster still — authenticated downloads get higher rate limits and fewer stalls.
 To force the old single-stream path, set `OMNIVOICE_SEGMENTED_DOWNLOAD=0`.
-
-<!-- CLEAN-ROOM (spec L-pr1958 §3): user-facing explanation of bounded range size, in-flight limit, manifest resume, retry behaviour and when the accelerator is disabled. -->
 
 State is reported at **Settings → About** / `GET /system/info`:
 

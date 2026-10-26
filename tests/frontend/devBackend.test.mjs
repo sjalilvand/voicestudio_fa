@@ -19,6 +19,7 @@ import {
   buildExitBanner,
   createBackendSupervisor,
   isBackendSourceChange,
+  killProcessTree,
   resolveDataDir,
   tailFile,
   uvRunArgs,
@@ -38,7 +39,7 @@ test('CPU/CUDA/ROCm restarts skip sync while preserving bind-host and port overr
   }
 });
 
-function supervisorHarness() {  // CLEAN-ROOM (spec L-pr1958 §6): harness must accept dependency overrides
+function supervisorHarness(overrides = {}) {
   const children = [];
   const timers = [];
   const exits = [];
@@ -78,6 +79,7 @@ function supervisorHarness() {  // CLEAN-ROOM (spec L-pr1958 §6): harness must 
     exit: (code) => exits.push(code),
     report: (message) => reports.push(message),
     dataDir: () => '/missing-test-data',
+    ...overrides,
   });
 
   return {
@@ -311,4 +313,66 @@ test('failure to spawn uv exits immediately instead of looping', () => {
   assert.match(reports[0], /could not start uv: uv is missing/);
 });
 
-// CLEAN-ROOM (spec L-pr1958 §6): tests for process-tree stop (windows vs elsewhere), taskkill-failure fallback, and a forced tree-kill reload restarting instead of reporting a crash.
+test('process tree shutdown chooses the platform-specific mechanism', () => {
+  const windows = { pid: 43210, signals: [], kill(signal) { this.signals.push(signal); } };
+  const launches = [];
+  const windowsResult = killProcessTree(windows, 'SIGINT', {
+    platform: 'win32',
+    run(command, args, options) {
+      launches.push({ command, args, options });
+      return { status: 0, error: null };
+    },
+  });
+  assert.deepEqual(
+    { result: windowsResult, directSignals: windows.signals, launch: launches[0] },
+    {
+      result: 'taskkill',
+      directSignals: [],
+      launch: {
+        command: 'taskkill',
+        args: ['/pid', '43210', '/T', '/F'],
+        options: { stdio: 'ignore' },
+      },
+    },
+  );
+
+  const posixSignals = [];
+  const posixResult = killProcessTree(
+    { pid: 91, kill: (signal) => posixSignals.push(signal) },
+    'SIGHUP',
+    { platform: 'darwin', run: () => assert.fail('taskkill must not run') },
+  );
+  assert.deepEqual([posixResult, posixSignals], ['signal', ['SIGHUP']]);
+});
+
+test('an unavailable taskkill path delegates to ChildProcess.kill', () => {
+  for (const failedResult of [{ status: 7 }, { status: 0, error: new Error('missing') }, undefined]) {
+    const seen = [];
+    const method = killProcessTree(
+      { pid: 314, kill: (signal) => seen.push(signal) },
+      'SIGTERM',
+      { platform: 'win32', run: () => failedResult },
+    );
+    assert.deepEqual({ method, seen }, { method: 'fallback', seen: ['SIGTERM'] });
+  }
+});
+
+test('a nonzero taskkill reload exit starts a replacement without crash handling', () => {
+  const treeKills = [];
+  const rig = supervisorHarness({
+    killBackend(process, signal) {
+      treeKills.push([process, signal]);
+      return 'taskkill';
+    },
+  });
+  rig.supervisor.start();
+  rig.watchers[0].onChange('backend/routes/catalogue.py');
+  rig.runNextTimer();
+  const original = rig.children[0];
+  original.emit('exit', 5, null);
+
+  assert.equal(treeKills[0][1], 'SIGTERM');
+  assert.equal(rig.children.length, 2);
+  assert.equal(rig.reports.filter((entry) => entry.includes('BACKEND DIED')).length, 0);
+  assert.deepEqual(rig.exits, []);
+});

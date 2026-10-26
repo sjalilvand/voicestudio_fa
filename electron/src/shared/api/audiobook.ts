@@ -125,7 +125,31 @@ export async function audiobookGenerate(
   });
 }
 
-// CLEAN-ROOM (spec L-pr1958 §4): ResumableAudiobookJob type, audiobookListJobs() and audiobookResume(jobId, opts) client functions.
+export interface ResumableAudiobookJob {
+  job_id: string;
+  type: 'audiobook' | 'longform';
+  status: string;
+  title: string;
+  total_chapters: number;
+  chapters_done: number;
+  created_at: number | null;
+}
+
+/** Read the server's inventory of saved long-form work. */
+export async function audiobookListJobs(): Promise<{ jobs: ResumableAudiobookJob[] }> {
+  return (await apiFetch('/audiobook/jobs', { method: 'GET' })).json();
+}
+
+/** Ask the backend to continue one render; consumers read events from the response body. */
+export async function audiobookResume(
+  jobId: string,
+  opts: { signal?: AbortSignal } = {},
+): Promise<Response> {
+  const route = ['/audiobook/resume', encodeURIComponent(jobId)].join('/');
+  const requestOptions: RequestInit = { method: 'POST' };
+  if (opts.signal) requestOptions.signal = opts.signal;
+  return apiFetch(route, requestOptions);
+}
 
 /** Upload a cover image; returns the server-side path to pass as `cover_path`. */
 export async function audiobookUploadCover(file: File): Promise<{ path: string }> {

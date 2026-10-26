@@ -376,7 +376,67 @@ def test_engine_catalogue_reports_effective_mps_isolation(monkeypatch):
     assert row["isolation_mode"] == "subprocess"
 
 
-# CLEAN-ROOM (spec L-pr1958 §2): tests for MPS catalogue hiding of the compatibility sidecar, active_routing preserving it, and non-MPS hosts keeping it listed.
+def _catalogue_host(monkeypatch, family, registry):
+    from core.device_caps import HostCaps
+    from services import tts_backend
+
+    families = (family,) if family == "cpu" else (family, "cpu")
+    monkeypatch.setattr(tts_backend, "_REGISTRY", registry)
+    monkeypatch.setattr(
+        "core.device_caps.detect_host_caps",
+        lambda: HostCaps(family=family, available_families=families),
+    )
+    monkeypatch.setattr(
+        OmniVoiceSubprocessBackend,
+        "is_available",
+        classmethod(lambda cls: (True, "sidecar healthy")),
+    )
+
+
+def test_mps_public_inventory_has_one_omnivoice_identity(monkeypatch):
+    registry = {
+        "omnivoice": OmniVoiceBackend,
+        "omnivoice-subprocess": OmniVoiceSubprocessBackend,
+    }
+    _catalogue_host(monkeypatch, "mps", registry)
+
+    public_ids = tuple(item["id"] for item in list_backends())
+    internal_ids = tuple(item["id"] for item in list_backends(include_hidden=True))
+
+    assert public_ids == ("omnivoice",)
+    assert internal_ids == tuple(registry)
+    assert get_backend_class("omnivoice") is OmniVoiceMPSSubprocessBackend
+    assert get_backend_class("omnivoice-subprocess") is OmniVoiceSubprocessBackend
+
+
+def test_active_routing_preserves_hidden_mps_compatibility_id(monkeypatch):
+    from services import tts_backend
+
+    _catalogue_host(
+        monkeypatch,
+        "mps",
+        {"omnivoice-subprocess": OmniVoiceSubprocessBackend},
+    )
+    monkeypatch.setattr(tts_backend, "active_backend_id", lambda: "omnivoice-subprocess")
+    route = tts_backend.active_routing()
+    assert route is not None
+    assert route["engine"] == "omnivoice-subprocess"
+    assert (route["available"], route["effective_device"]) == (True, "mps")
+    assert (route["routing_status"], route["routing_reason"]) == ("accelerated", None)
+
+
+@pytest.mark.parametrize(
+    "family",
+    [pytest.param("cuda", id="nvidia"), pytest.param("cpu", id="software")],
+)
+def test_non_mps_inventory_does_not_suppress_compatibility_choice(monkeypatch, family):
+    entries = {
+        "omnivoice": OmniVoiceBackend,
+        "omnivoice-subprocess": OmniVoiceSubprocessBackend,
+    }
+    _catalogue_host(monkeypatch, family, entries)
+    visible = {row["id"]: row for row in list_backends()}
+    assert visible.keys() == entries.keys()
 
 
 def test_mps_startup_does_not_preload_native_model(monkeypatch):

@@ -30,7 +30,7 @@ from services.hf_auth import host_gets_auth as _host_gets_auth
 
 _DEFAULT_CONNECTIONS = 8
 _MIN_SEGMENT_BYTES = 4 * 1024 * 1024   # don't split below this — overhead > gain
-# CLEAN-ROOM (spec L-pr1958 §3): upper bound on the size of a single byte-range segment.
+_MAX_SEGMENT_BYTES = 16 * 1024 * 1024
 _READ_CHUNK = 1024 * 1024
 
 
@@ -64,10 +64,10 @@ async def _resolve(client: httpx.AsyncClient, url: str, token: Optional[str], ma
 
 
 def _plan_segments(size: int, num_connections: int) -> list[tuple[int, int]]:
-    # CLEAN-ROOM (spec L-pr1958 §3): docstring for the planner (segment cap, connections vs segments).
+    """Plan contiguous ranges, limiting resumable work independently of concurrency."""
     n = max(1, min(num_connections, max(1, size // _MIN_SEGMENT_BYTES)))
     step = -(-size // n)  # ceil
-    # CLEAN-ROOM (spec L-pr1958 §3): clamp the step between the minimum and maximum segment size.
+    step = max(_MIN_SEGMENT_BYTES, min(step, _MAX_SEGMENT_BYTES))
     segs = []
     start = 0
     while start < size:
@@ -154,7 +154,7 @@ async def segmented_download(
             _preallocate(part, size)
             segments = [s for s in _plan_segments(size, num_connections) if s not in done]
             lock = asyncio.Lock()
-            # CLEAN-ROOM (spec L-pr1958 §3): concurrency limiter so at most num_connections segments are in flight.
+            semaphore = asyncio.Semaphore(max(1, num_connections))
 
             async def _fetch(seg: tuple[int, int]):
                 start, end = seg
@@ -187,10 +187,12 @@ async def segmented_download(
                     done.add(seg)
                     _save_done(part, size, done)
 
-            # CLEAN-ROOM (spec L-pr1958 §3): wrapper that runs one segment under the concurrency limiter.
+            async def _limited_fetch(seg: tuple[int, int]):
+                async with semaphore:
+                    await _fetch(seg)
 
             if segments:
-                await _gather_or_cancel([_fetch(s) for s in segments])
+                await _gather_or_cancel([_limited_fetch(s) for s in segments])
 
         # ── verify ──────────────────────────────────────────────────────
         actual = os.path.getsize(part)

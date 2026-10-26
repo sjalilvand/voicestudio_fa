@@ -44,12 +44,23 @@ _FAMILIES = {
 }
 
 
-# CLEAN-ROOM (spec L-pr1958 §2): catalogue-visible active-id helper (maps the hidden MPS compatibility id to the canonical one).
+def _visible_active_backend(family: str, selected_id: str) -> str:
+    should_translate = family == "tts" and selected_id == "omnivoice-subprocess"
+    if not should_translate:
+        return selected_id
+    try:
+        from core.device_caps import detect_host_caps
+        host_family = detect_host_caps().family
+    except Exception:
+        return selected_id
+    return "omnivoice" if host_family == "mps" else selected_id
 
 
 def _family_payload(family: str, module):
     """Public inventory plus whether an environment pin owns this family."""
-    active = module.active_backend_id()  # CLEAN-ROOM (spec L-pr1958 §2): use the catalogue-visible active id
+    configured_id = module.active_backend_id()
+    # Older MPS preferences point at a valid but deliberately unlisted alias.
+    active = _visible_active_backend(family, configured_id)
     model = None
     if family == "asr":
         model = asr_backend._offline_asr_repo(active)
@@ -899,8 +910,9 @@ def select_engine(req: SelectEngineRequest):
     if not family:
         raise HTTPException(400, f"Unknown family: {req.family}. Expected one of tts/asr/llm.")
     module, pref_key = family
-    # CLEAN-ROOM (spec L-pr1958 §2): TTS validation must also accept the hidden compatibility id.
-    available = {b["id"]: b for b in module.list_backends()}
+    catalogue_options = {"include_hidden": True} if req.family == "tts" else {}
+    rows = module.list_backends(**catalogue_options)
+    available = {b["id"]: b for b in rows}
     if req.backend_id not in available:
         raise HTTPException(400, f"Unknown {req.family} backend: {req.backend_id!r}")
     entry = available[req.backend_id]

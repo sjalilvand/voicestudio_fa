@@ -3973,9 +3973,12 @@ def preset_voices_of(cls) -> list[str]:
     return [v for v in voices if isinstance(v, str)]
 
 
-# CLEAN-ROOM (spec L-pr1958 §2): list_backends gains a keyword-only include_hidden flag and docs for it.
-def list_backends() -> list[dict]:
+def list_backends(*, include_hidden: bool = False) -> list[dict]:
     """Enumerate every registered backend with its availability state.
+
+    On MPS, the explicit ``omnivoice-subprocess`` compatibility entry is
+    omitted unless ``include_hidden`` is true. Internal callers validating or
+    retaining that stored id must opt in to hidden entries.
 
     Per-entry shape (ENGINE-05 + ENGINE-06):
 
@@ -4035,7 +4038,8 @@ def list_backends() -> list[dict]:
 
     out: list[dict] = []
     for bid, cls in _REGISTRY.items():
-        # CLEAN-ROOM (spec L-pr1958 §2): skip the hidden compatibility row on MPS unless include_hidden.
+        if not include_hidden and caps.family == "mps" and bid == "omnivoice-subprocess":
+            continue
         cls = _effective_backend_class(bid, cls, caps.family)
         try:
             ok, msg = cls.is_available()
@@ -4427,8 +4431,7 @@ def active_routing() -> dict | None:
     """
     try:
         active = active_backend_id()
-        # CLEAN-ROOM (spec L-pr1958 §2): routing must still see the hidden compatibility row.
-        for b in list_backends():
+        for b in list_backends(include_hidden=True):
             if b.get("id") == active:
                 return {
                     "engine": active,

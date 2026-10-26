@@ -21,7 +21,7 @@
 // the Windows CreateProcess PATH search — no shell needed).
 // ──────────────────────────────────────────────────────────────────────────
 
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, watch } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
@@ -67,7 +67,22 @@ export const CRASH_RESTART_LIMIT = 3;
 export const CRASH_RESTART_WINDOW_MS = 60_000;
 export const SOURCE_RELOAD_DEBOUNCE_MS = 250;
 
-// CLEAN-ROOM (spec L-pr1958 §6): killProcessTree(child, sig, { platform, run }) - stop the backend and its descendants; returns "signal" | "fallback" | "taskkill".
+export function killProcessTree(
+  child,
+  sig,
+  { platform = process.platform, run = spawnSync } = {},
+) {
+  if (platform === "win32") {
+    const taskkillArgs = ["/pid", `${child.pid}`, "/T", "/F"];
+    const attempt = run("taskkill", taskkillArgs, { stdio: "ignore" });
+    const treeWasStopped = attempt != null && attempt.error == null && attempt.status === 0;
+    if (treeWasStopped) return "taskkill";
+    child.kill(sig);
+    return "fallback";
+  }
+  child.kill(sig);
+  return "signal";
+}
 
 export function isBackendSourceChange(filename) {
   return typeof filename === "string" && filename.toLowerCase().endsWith(".py");
@@ -143,7 +158,7 @@ export function createBackendSupervisor({
   spawnBackend = () => spawn("uv", uvRunArgs(), { stdio: "inherit" }),
   watchBackend = (onChange) =>
     watch("backend", { recursive: true }, (_event, filename) => onChange(filename?.toString())),
-  // CLEAN-ROOM (spec L-pr1958 §6): injectable killBackend(proc, sig) dependency, defaulting to the process-tree stop.
+  killBackend = (proc, sig) => killProcessTree(proc, sig),
   schedule = setTimeout,
   cancelSchedule = clearTimeout,
   now = Date.now,
@@ -156,7 +171,7 @@ export function createBackendSupervisor({
   let restartTimer = null;
   let reloadTimer = null;
   let reloadRequested = false;
-  // CLEAN-ROOM (spec L-pr1958 §6): flag remembering that the requested reload was served by a forced tree kill.
+  let forcedReloadKill = false;
   let watcher = null;
   let crashTimes = [];
   let requestedExitCode = null;
@@ -187,7 +202,7 @@ export function createBackendSupervisor({
       return;
     }
     try {
-      child.kill(sig);
+      killBackend(child, sig);
     } catch {
       exit(requestedExitCode ?? 0);
     }
@@ -202,9 +217,10 @@ export function createBackendSupervisor({
       reloadRequested = true;
       report(`[dev-backend] ${filename} changed; reloading backend…`);
       try {
-        child.kill("SIGTERM");
+        forcedReloadKill = killBackend(child, "SIGTERM") === "taskkill";
       } catch {
         reloadRequested = false;
+        forcedReloadKill = false;
       }
     }, SOURCE_RELOAD_DEBOUNCE_MS);
   }
@@ -258,7 +274,8 @@ export function createBackendSupervisor({
 
       if (reloadRequested) {
         reloadRequested = false;
-        const expectedReloadExit = code === 0 || signal === "SIGTERM";
+        const expectedReloadExit = code === 0 || signal === "SIGTERM" || forcedReloadKill;
+        forcedReloadKill = false;
         if (expectedReloadExit) {
           start();
           return;

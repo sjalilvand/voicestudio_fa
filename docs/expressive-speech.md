@@ -18,7 +18,11 @@ ignores.
 | Emotion ("excited", "sad", graded intensity) | IndexTTS2's **Voice Cloning → Emotion** controls, Audiobook Production Overrides, or `/generate` / `/ws/tts` APIs; CosyVoice 3 also accepts instruct | Opt-in engines only |
 | The same take again | Pin the seed / lock the profile | Default engine |
 
-<!-- CLEAN-ROOM (spec L-pr1958 §4): section heading and intro paragraph for recovering an interrupted audiobook; the paragraph that follows it (cache keying) is maintainer text and stays. -->
+## Recovering an interrupted audiobook
+
+Leaving the Audiobook tab interrupts synthesis at a chapter boundary. When you
+return, the recovery card can reuse completed chapters and render only the
+remainder; **Open chapter cache** reveals the cached audio folder.
 
 Cached chapters are matched by their script, voice and render settings, not by where the data folder lives, so they stay reusable after the folder is moved (in **Settings → Storage** or by hand) or the machine loses power. One exception: chapters cached by an earlier version render once more if the folder is moved by hand before this version has been launched from the old location. When a chapter you expected to reuse renders again, the backend log names the input that changed (for example a voice's reference text or the pronunciation lexicon); the diagnostic bundle includes that log.
 

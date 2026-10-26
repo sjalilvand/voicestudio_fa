@@ -37,6 +37,8 @@ vi.mock('../api/audiobook', () => ({
   audiobookUploadCover: vi.fn(),
   audiobookPreviewChapter: vi.fn(),
   audiobookImport: vi.fn(),
+  audiobookListJobs: vi.fn().mockResolvedValue({ jobs: [] }),
+  audiobookResume: vi.fn(),
   audiobookGenerate: vi.fn((_body, opts) => {
     gen.capturedSignal = opts?.signal;
     let n = 0;

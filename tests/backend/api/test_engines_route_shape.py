@@ -18,9 +18,11 @@ fully importable.
 """
 from __future__ import annotations
 
+import asyncio
 import re
 import sys
 
+import httpx
 import pytest
 
 
@@ -295,7 +297,64 @@ def test_indextts2_entry_has_subprocess_isolation_mode(fresh_app):
     assert by_id["indextts2"]["isolation_mode"] == "subprocess"
 
 
-# CLEAN-ROOM (spec L-pr1958 §2): tests for the in-process OmniVoice isolation row on a non-MPS host and the MPS picker hiding the compatibility sidecar while /engines/select still accepts it.
+def _pin_omnivoice_inventory(monkeypatch, engines, *, with_alias):
+    from engines.omnivoice_subprocess import OmniVoiceSubprocessBackend
+    from services import model_manager
+
+    registry = {"omnivoice": engines.tts_backend.OmniVoiceBackend}
+    if with_alias:
+        registry["omnivoice-subprocess"] = OmniVoiceSubprocessBackend
+    monkeypatch.setattr(engines.tts_backend, "_REGISTRY", registry)
+    monkeypatch.setattr(model_manager, "resolve_omnivoice_checkpoint", lambda: "fixture/model")
+    for backend in registry.values():
+        monkeypatch.setattr(
+            backend,
+            "is_available",
+            classmethod(lambda cls: (True, "fixture ready")),
+        )
+
+
+def _asgi_request(app, method, path, **kwargs):
+    async def make_request():
+        transport = httpx.ASGITransport(app=app, client=("127.0.0.1", 48152))
+        async with httpx.AsyncClient(transport=transport, base_url="http://local.test") as client:
+            return await client.request(method, path, **kwargs)
+
+    return asyncio.run(make_request())
+
+
+def test_cpu_api_describes_canonical_omnivoice_as_in_process(fresh_app, monkeypatch):
+    from api.routers import engines
+
+    _force_host(monkeypatch, "cpu")
+    _pin_omnivoice_inventory(monkeypatch, engines, with_alias=False)
+    response = _asgi_request(fresh_app, "GET", "/engines")
+    canonical = {row["id"]: row for row in response.json()["tts"]["backends"]}["omnivoice"]
+    assert (response.status_code, canonical["isolation_mode"]) == (200, "in-process")
+
+
+def test_mps_api_hides_alias_but_accepts_it_for_selection(fresh_app, monkeypatch):
+    from api.routers import engines
+
+    _force_host(monkeypatch, "mps")
+    monkeypatch.delenv("OMNIVOICE_TTS_BACKEND", raising=False)
+    _pin_omnivoice_inventory(monkeypatch, engines, with_alias=True)
+    monkeypatch.setattr(engines.tts_backend, "active_backend_id", lambda: "omnivoice-subprocess")
+    catalogue = _asgi_request(fresh_app, "GET", "/engines/tts").json()
+    ids = [entry["id"] for entry in catalogue["backends"]]
+    assert ids == ["omnivoice"]
+    assert (catalogue["active"], catalogue["backends"][0]["isolation_mode"]) == (
+        "omnivoice",
+        "subprocess",
+    )
+
+    selection = _asgi_request(
+        fresh_app,
+        "POST",
+        "/engines/select",
+        json={"backend_id": "omnivoice-subprocess", "family": "tts"},
+    )
+    assert (selection.status_code, selection.json()["active"]) == (200, "omnivoice-subprocess")
 
 
 def test_gpu_compat_omnivoice_variants_include_rocm(fresh_app, monkeypatch):
