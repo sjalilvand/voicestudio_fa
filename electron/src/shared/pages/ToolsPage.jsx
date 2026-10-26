@@ -64,11 +64,11 @@ function DirectorTool() {
       <p className="tools-card__desc m-0 mb-[var(--space-4)] text-[var(--text-base)] leading-[1.5] text-fg-muted">
         {t('tools.directorial_desc')}
       </p>
-      <Field label={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key tools.direction */}>
+      <Field label={t('tools.direction')}>
         <Textarea rows={2} value={text} onChange={(e) => setText(e.target.value)} />
       </Field>
       <Button variant="primary" size="sm" loading={busy} onClick={run}>
-        {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key tools.parse */}
+        {t('tools.parse')}
       </Button>
       {result && (
         <div className="tools-card__out mt-[var(--space-4)] rounded-sm [border:1px_solid_var(--color-border)] bg-bg-elev-2 p-[var(--space-4)] text-[var(--text-sm)]">
@@ -91,11 +91,11 @@ function DirectorTool() {
             <strong>{t('tools.rate_bias')}</strong> <code>{result.rate_bias?.toFixed?.(2)}</code>
           </div>
           <details>
-            <summary>{'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key tools.tokens */}</summary>
+            <summary>{t('tools.tokens')}</summary>
             <pre>{JSON.stringify(result.tokens, null, 2)}</pre>
           </details>
           <details>
-            <summary>{'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key tools.taxonomy */}</summary>
+            <summary>{t('tools.taxonomy')}</summary>
             <pre>{JSON.stringify(result.taxonomy, null, 2)}</pre>
           </details>
         </div>
@@ -143,7 +143,7 @@ function RateFitTool() {
       <p className="tools-card__desc m-0 mb-[var(--space-4)] text-[var(--text-base)] leading-[1.5] text-fg-muted">
         {t('tools.speech_rate_desc')}
       </p>
-      <Field label={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key tools.translated_line */}>
+      <Field label={t('tools.translated_line')}>
         <Textarea rows={2} value={text} onChange={(e) => setText(e.target.value)} />
       </Field>
       <div className="tools-card__row mb-[var(--space-4)] grid grid-cols-[1fr_1fr] gap-[var(--space-4)]">
@@ -155,7 +155,7 @@ function RateFitTool() {
         </Field>
       </div>
       <Button variant="primary" size="sm" loading={busy} onClick={run}>
-        {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key tools.fit */}
+        {t('tools.fit')}
       </Button>
       {result && (
         <div className="tools-card__out mt-[var(--space-4)] rounded-sm [border:1px_solid_var(--color-border)] bg-bg-elev-2 p-[var(--space-4)] text-[var(--text-sm)]">
@@ -213,7 +213,7 @@ function ProbeTool() {
       <p className="tools-card__desc m-0 mb-[var(--space-4)] text-[var(--text-base)] leading-[1.5] text-fg-muted">
         {t('tools.probe_desc')}
       </p>
-      <Field label={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key tools.absolute_path */}>
+      <Field label={t('tools.absolute_path')}>
         <Input
           size="sm"
           value={path}
@@ -222,14 +222,14 @@ function ProbeTool() {
         />
       </Field>
       <Button variant="primary" size="sm" loading={busy} onClick={run} disabled={!path.trim()}>
-        {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key tools.probe */}
+        {t('tools.probe')}
       </Button>
       {result && (
         <details
           open
           className="tools-card__out mt-[var(--space-4)] rounded-sm [border:1px_solid_var(--color-border)] bg-bg-elev-2 p-[var(--space-4)] text-[var(--text-sm)]"
         >
-          <summary>{'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key tools.result */}</summary>
+          <summary>{t('tools.result')}</summary>
           <pre>{JSON.stringify(result, null, 2)}</pre>
         </details>
       )}

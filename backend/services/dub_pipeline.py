@@ -1581,7 +1581,7 @@ async def ingest_pipeline(
                 # same cause from ffmpeg's own wording.
                 await asyncio.to_thread(raise_for_audio_extract_failure, stderr, video_path)
                 msg = _media_process_error("FFmpeg", p.returncode, stderr, paths=(video_path, audio_path, job_dir))
-                # CLEAN-ROOM (spec C-summersec §12): raise a generic exception carrying the composed message.
+                raise Exception(msg)
             os.replace(extract_path, audio_path)
             # Second, FULL-QUALITY extraction for source separation. audio.wav
             # is deliberately 16 kHz mono — that's what ASR wants — but Demucs

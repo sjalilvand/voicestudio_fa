@@ -36,7 +36,8 @@ def _load_nllb_component(factory):
 
 TRANSLATE_CODES = {
     "en": "en", "es": "es", "fr": "fr", "de": "de", "it": "it", "pt": "pt",
-    # CLEAN-ROOM (spec C-summersec §9): entries for ru, ja, ko, zh, cmn-Hans, ar, hi, tr, pl, nl, sv.
+    "ru": "ru", "ja": "ja", "ko": "ko", "zh": "zh-CN", "cmn-Hans": "zh-CN",
+    "ar": "ar", "hi": "hi", "tr": "tr", "pl": "pl", "nl": "nl", "sv": "sv",
     "th": "th", "vi": "vi", "id": "id", "uk": "uk",
     "ml": "ml",
 }
@@ -44,7 +45,8 @@ TRANSLATE_CODES = {
 FLORES_CODES = {
     "en": "eng_Latn", "es": "spa_Latn", "fr": "fra_Latn", "de": "deu_Latn",
     "it": "ita_Latn", "pt": "por_Latn", "ru": "rus_Cyrl", "ja": "jpn_Jpan",
-    # CLEAN-ROOM (spec C-summersec §9): entries for ko, zh, zh-CN, cmn-Hans, ar.
+    "ko": "kor_Hang", "zh": "zho_Hans", "zh-CN": "zho_Hans",
+    "cmn-Hans": "zho_Hans", "ar": "arb_Arab",
     "hi": "hin_Deva", "tr": "tur_Latn", "pl": "pol_Latn", "nl": "nld_Latn",
     "sv": "swe_Latn", "th": "tha_Thai", "vi": "vie_Latn", "id": "ind_Latn",
     "uk": "ukr_Cyrl",
@@ -106,7 +108,8 @@ def _nllb_language(code: str) -> str | None:
 LANG_NAMES = {
     "en": "English", "es": "Spanish", "fr": "French", "de": "German",
     "it": "Italian", "pt": "Portuguese", "ru": "Russian", "ja": "Japanese",
-    # CLEAN-ROOM (spec C-summersec §9): entries for ko, zh, zh-CN, cmn-Hans.
+    "ko": "Korean", "zh": "Chinese (Simplified)",
+    "zh-CN": "Chinese (Simplified)", "cmn-Hans": "Chinese (Simplified)",
     "ar": "Arabic", "hi": "Hindi", "tr": "Turkish", "pl": "Polish",
     "nl": "Dutch", "sv": "Swedish", "th": "Thai", "vi": "Vietnamese",
     "id": "Indonesian", "uk": "Ukrainian", "ug": "Uyghur",
@@ -864,7 +867,18 @@ async def dub_translate(req: TranslateRequest):
 
         # Offline Argos Translate
         if provider == "argos" or provider == "libretranslate":
-            # CLEAN-ROOM (spec C-summersec §10): 400 JSON error when the argostranslate package is not importable.
+            try:
+                import argostranslate  # noqa: F401
+            except ImportError:
+                from services.translation_engines import install_command
+                cmd = install_command("argos") or "uv pip install argostranslate"
+                message = (
+                    f"The selected '{provider}' engine requires the optional "
+                    f"`argostranslate` Python package, but this backend does not have it. "
+                    f"Run `{cmd}` and restart the server, or choose another provider "
+                    f"from the Engine dropdown."
+                )
+                return JSONResponse(status_code=400, content={"error": message})
             # Importing argostranslate.translate loads CTranslate2's native
             # library, which hardened kernels may reject (#692). Try an
             # in-place repair, then verify the import so the user gets an
@@ -977,7 +991,18 @@ async def dub_translate(req: TranslateRequest):
 
         src_arg = TRANSLATE_CODES.get(src_lang, src_lang) or "auto"
 
-        # CLEAN-ROOM (spec C-summersec §11): proxy bypass settings, paid-provider key lookups (_deepl_key/_msft_key, used further below) and the per-segment translator factory (_build_translator, used further below).
+        direct_proxies = {"http": None, "https": None}
+        _deepl_key = os.environ.get("DEEPL_API_KEY") or api_key
+        _msft_key = os.environ.get("MICROSOFT_API_KEY") or api_key
+
+        def _build_translator(src, tgt):
+            if provider in PAID_PROVIDERS:
+                return ApiTranslator(provider, src, tgt, api_key=api_key)
+            if provider == "mymemory":
+                from deep_translator import MyMemoryTranslator
+                return MyMemoryTranslator(source=src, target=tgt, proxies=direct_proxies)
+            from deep_translator import GoogleTranslator
+            return GoogleTranslator(source=src, target=tgt, proxies=direct_proxies)
 
         def _translate_single(seg):
             seg_lc = (

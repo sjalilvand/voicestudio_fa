@@ -523,7 +523,9 @@ async def run_pip(args: list[str], timeout: float = 600.0) -> tuple[int, str]:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
         )
-    # CLEAN-ROOM (spec C-summersec §8): handle an event loop without subprocess support by falling back to a thread-based runner.
+    except NotImplementedError:
+        logger.debug("Async process launching is unavailable; running the installer in a worker thread")
+        return await _run_installer_in_thread(cmd, timeout)
     except FileNotFoundError as e:
         return 1, f"installer not found: {e}"
     try:
@@ -538,5 +540,23 @@ async def run_pip(args: list[str], timeout: float = 600.0) -> tuple[int, str]:
     return proc.returncode or 0, out
 
 
-# CLEAN-ROOM (spec C-summersec §8): thread-based fallback runner for the pip/uv installer command.
+async def _run_installer_in_thread(cmd: list[str], timeout: float) -> tuple[int, str]:
+    loop = asyncio.get_running_loop()
+    factory = functools.partial(
+        subprocess.Popen,
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    proc = await loop.run_in_executor(None, factory)
+    try:
+        stdout, _ = await loop.run_in_executor(
+            None, functools.partial(proc.communicate, timeout=timeout)
+        )
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        await loop.run_in_executor(None, proc.communicate)
+        return 1, f"pip timed out after {timeout:.0f}s"
+    out = stdout.decode(errors="replace") if stdout else ""
+    return proc.returncode or 0, out
 

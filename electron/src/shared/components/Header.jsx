@@ -342,12 +342,12 @@ export default function Header({
             <Button
               variant="ghost"
               size="sm"
-              title={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key common.reload */}
+              title={t('common.reload')}
               onClick={() => void reloadAfterApplicationPersistence()}
               leading={<RefreshCw size={9} />}
               className="shrink-0"
             >
-              {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key common.reload */}
+              {t('common.reload')}
             </Button>
           )}
         </div>

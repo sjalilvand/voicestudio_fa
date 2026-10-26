@@ -252,7 +252,8 @@ export interface PrefsSlice {
   autoPlayPreview: boolean;
   setAutoPlayPreview: (on: boolean) => void;
 
-  // CLEAN-ROOM (spec C-summersec §16): persisted locale field and its setter in the slice's state type.
+  locale: string;
+  setLocale: (l: string) => void;
   /**
    * True once the user has made an EXPLICIT UI-language choice — via the
    * Settings → General picker or the first-run "Switch to English?" offer.

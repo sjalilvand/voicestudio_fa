@@ -244,7 +244,7 @@ export default function Launchpad({
               type="button"
               onClick={() => setIsCompareModalOpen(true)}
               className="inline-flex items-center gap-[6px] border-0 py-[6px] px-[12px] [font-family:var(--font-sans)] text-[0.72rem] font-medium [letter-spacing:0.01em] text-[color:var(--chrome-fg-muted)] bg-transparent rounded-[var(--chrome-radius-pill)] cursor-pointer shrink-0 [transition:background_var(--dur-fast),color_var(--dur-fast)] hover:bg-[var(--chrome-accent-bg)] hover:text-[color:var(--chrome-accent)]"
-              title={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key launchpad.ab_compare_title */}
+              title={t('launchpad.ab_compare_title')}
             >
               <Scale size={12} strokeWidth={1.5} /> {t('launchpad.ab_compare')}
             </button>

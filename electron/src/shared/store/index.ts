@@ -184,7 +184,7 @@ export const useAppStore = create<AppStore>()(
         uiScaleConfigured: s.uiScaleConfigured,
         // Rail vs titlebar tabs — a chrome preference, so it sticks like scale.
         navStyle: s.navStyle,
-        // CLEAN-ROOM (spec C-summersec §16): persist the locale preference.
+        locale: s.locale,
         // Explicit-choice + first-run-offer flags must survive restarts, or the
         // one-time "Switch to English?" offer would re-nag on every launch.
         localeChosen: s.localeChosen,

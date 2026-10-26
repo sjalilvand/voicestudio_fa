@@ -128,14 +128,14 @@ export default function Projects({
   const { t } = useTranslation();
 
   const FILTERS = [
-    { id: 'all', label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key projects.all */, Icon: FolderOpen },
-    { id: 'dubs', label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key projects.dub_projects */, Icon: Film },
+    { id: 'all', label: t('projects.all'), Icon: FolderOpen },
+    { id: 'dubs', label: t('projects.dub_projects'), Icon: Film },
     { id: 'stories', label: t('projects.stories'), Icon: BookOpen },
-    { id: 'profiles', label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key projects.voice_profiles */, Icon: Fingerprint },
-    { id: 'transcripts', label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key projects.transcripts */, Icon: Mic },
+    { id: 'profiles', label: t('projects.voice_profiles'), Icon: Fingerprint },
+    { id: 'transcripts', label: t('projects.transcripts'), Icon: Mic },
     { id: 'audiobooks', label: t('projects.audiobooks'), Icon: BookMarked },
-    { id: 'history', label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key projects.history */, Icon: Music },
-    { id: 'exports', label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key projects.exports */, Icon: Download },
+    { id: 'history', label: t('projects.history'), Icon: Music },
+    { id: 'exports', label: t('projects.exports'), Icon: Download },
   ];
 
   // Finished Audiobook + Story renders (server-side longform library).
@@ -209,7 +209,7 @@ export default function Projects({
         type: 'profiles',
         id: pr.id,
         title: pr.name || pr.id,
-        subtitle: kind === 'design' ? '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key projects.designed_voice */ : '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key projects.cloned_voice */,
+        subtitle: kind === 'design' ? t('projects.designed_voice') : t('projects.cloned_voice'),
         ts: toMillis(pr.updated_at || pr.created_at) ?? 0,
         accent: kind === 'design' ? '#8ec07c' : '#d3869b',
         Icon: kind === 'design' ? Wand2 : Fingerprint,
@@ -220,7 +220,7 @@ export default function Projects({
       list.push({
         type: 'history',
         id: h.filename || h.id || String(Math.random()),
-        title: (h.text || h.prompt || h.filename || '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key projects.generated_audio */).slice(0, 80),
+        title: (h.text || h.prompt || h.filename || t('projects.generated_audio')).slice(0, 80),
         subtitle: h.language || h.voice || '',
         // #epoch-bug regression site: generation_history rows carry created_at
         // in Unix SECONDS — feeding them to a ms-based diff rendered every
@@ -235,7 +235,7 @@ export default function Projects({
       list.push({
         type: 'exports',
         id: e.path || e.id,
-        title: e.path?.split('/').pop() || e.filename || '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key projects.export */,
+        title: e.path?.split('/').pop() || e.filename || t('projects.export'),
         subtitle: e.mode || '',
         ts: toMillis(e.created_at) ?? 0,
         accent: '#fabd2f',
@@ -266,7 +266,7 @@ export default function Projects({
       list.push({
         type: 'transcripts',
         id: tr.id || String(Math.random()),
-        title: (tr.text || '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key projects.transcription */).slice(0, 120),
+        title: (tr.text || t('projects.transcription')).slice(0, 120),
         subtitle: [tr.language, tr.duration_s ? `${Math.round(tr.duration_s)}s` : '']
           .filter(Boolean)
           .join(' · '),
@@ -322,7 +322,7 @@ export default function Projects({
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key projects.search_placeholder */}
+              placeholder={t('projects.search_placeholder')}
               spellCheck={false}
               className="min-w-0 flex-1 border-0 bg-transparent text-[12px] [font-family:inherit] text-[var(--chrome-fg)] outline-none placeholder:text-[var(--chrome-fg-dim)]"
             />

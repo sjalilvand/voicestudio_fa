@@ -95,6 +95,29 @@ if (i18n.language) {
   if (i18n.language !== 'en') void loadLocale(i18n.language);
 }
 
-// CLEAN-ROOM (spec C-summersec §15): exported LANGUAGES list of selectable UI languages (code + native label).
+// Native language names belong here rather than in individual components.
+export const LANGUAGES = [
+  { code: 'en', label: 'English' },
+  { code: 'zh-CN', label: '简体中文' },
+  { code: 'es', label: 'Español' },
+  { code: 'fr', label: 'Français' },
+  { code: 'de', label: 'Deutsch' },
+  { code: 'ja', label: '日本語' },
+  { code: 'pt', label: 'Português' },
+  { code: 'it', label: 'Italiano' },
+  { code: 'ru', label: 'Русский' },
+  { code: 'ko', label: '한국어' },
+  { code: 'hi', label: 'हिन्दी' },
+  { code: 'tr', label: 'Türkçe' },
+  { code: 'pl', label: 'Polski' },
+  { code: 'nl', label: 'Nederlands' },
+  { code: 'sv', label: 'Svenska' },
+  { code: 'th', label: 'ไทย' },
+  { code: 'vi', label: 'Tiếng Việt' },
+  { code: 'id', label: 'Bahasa Indonesia' },
+  { code: 'uk', label: 'Українська' },
+  { code: 'ar', label: 'العربية' },
+  { code: 'zh-TW', label: '繁體中文' },
+];
 
 export default i18n;

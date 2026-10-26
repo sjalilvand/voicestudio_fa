@@ -280,7 +280,7 @@ function DubSegmentRow({
         onClick={(e) => onSelect(seg.id, idx, e.shiftKey)}
         disabled={disabled}
         className="seg-select cursor-pointer justify-self-center"
-        title={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key segment.select_title */}
+        title={t('segment.select_title')}
       />
       <span className="seg-text-col">
         <span className="flex items-center gap-[2px] min-w-0">
@@ -304,7 +304,7 @@ function DubSegmentRow({
             disabled={disabled}
             title={
               seg.translate_error
-                ? '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key segment.translate_error_title */
+                ? t('segment.translate_error_title', { error: seg.translate_error })
                 : seg.translate_degraded
                   ? t('segment.translate_degraded_title', { reason: seg.translate_degraded })
                   : overBudget
@@ -357,7 +357,7 @@ function DubSegmentRow({
             <button
               onClick={() => onRestore(seg.id)}
               disabled={disabled}
-              title={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key segment.restore_title */}
+              title={t('segment.restore_title')}
               className="bg-transparent border-none text-[#83a598] cursor-pointer p-0 text-[0.52rem]"
             >
               ↺
@@ -495,10 +495,10 @@ function DubSegmentRow({
           onClick={(e) => e.stopPropagation()}
           disabled={disabled}
           list={speakerOptions.length ? speakerListId : undefined}
-          placeholder={speakerOptions.length ? '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key segment.speaker_pick */ : ''}
+          placeholder={speakerOptions.length ? t('segment.speaker_pick') : ''}
           title={
             speakerOptions.length
-              ? '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key segment.speaker_title_detected */
+              ? t('segment.speaker_title_detected')
               : t('segment.speaker_title_custom')
           }
         />
@@ -517,7 +517,7 @@ function DubSegmentRow({
           disabled={disabled}
           onChange={(e) => onEditField(seg.id, 'target_lang', e.target.value)}
         >
-          <option value="">{'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key segment.lang_default */}</option>
+          <option value="">{t('segment.lang_default')}</option>
           {LANG_CODES.map((lc) => (
             <option key={lc.code} value={lc.code}>
               {lc.code.toUpperCase()}
@@ -569,7 +569,7 @@ function DubSegmentRow({
           <button
             className="segment-play"
             disabled={disabled}
-            title={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key segment.preview_title */}
+            title={t('segment.preview_title')}
             onClick={(e) => onPreview(seg, e)}
           >
             {previewLoading ? <Loader className="spinner" size={14} /> : <Headphones size={14} />}
@@ -580,14 +580,14 @@ function DubSegmentRow({
             items={[
               {
                 id: 'direct',
-                label: seg.direction ? '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key segment.edit_direction */ : '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key segment.set_direction */,
+                label: seg.direction ? t('segment.edit_direction') : t('segment.set_direction'),
                 icon: Sparkles,
                 onSelect: () => onDirect?.(seg),
               },
               'separator',
               {
                 id: 'split',
-                label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key segment.split_label */,
+                label: t('segment.split_label'),
                 icon: Scissors,
                 shortcut: '⌘D',
                 onSelect: () => {
@@ -615,7 +615,7 @@ function DubSegmentRow({
               },
               {
                 id: 'merge',
-                label: '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key segment.merge_label */,
+                label: t('segment.merge_label'),
                 icon: Merge,
                 shortcut: '⌘M',
                 disabled: !canMerge,

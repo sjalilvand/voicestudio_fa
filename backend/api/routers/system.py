@@ -7,7 +7,7 @@ import psutil
 import asyncio
 import logging
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, Query, Request
-from core.prefs import set_ as prefs_set  # CLEAN-ROOM (spec C-summersec §3): the delete helper import (as prefs_delete, used near line 774) is restored by the implementer
+from core.prefs import delete as prefs_delete, set_ as prefs_set
 from services import network_share
 from services import tailscale as _tailscale
 from api.schemas import SysinfoResponse, SystemInfoResponse, ModelStatusResponse
@@ -339,7 +339,7 @@ def system_info():
     and a 500 here blocks the entire UI from rendering system details.
     """
     try:
-        # CLEAN-ROOM (spec C-summersec §4): resolve the ffmpeg location for the response.
+        _ffmpeg_path = find_ffmpeg()
         from services import model_manager as _mm
         from services import asr_backend as _asr_backend
         from core import prefs as _prefs_mod
@@ -388,7 +388,9 @@ def system_info():
             "gpu_name": _GPU_NAME,
             "vram_total_gb": _VRAM_TOTAL_GB,
             "disk_free_gb": _disk_free_gb(),
-            # CLEAN-ROOM (spec C-summersec §4): ffmpeg_ok / ffmpeg_path / proxy_url response entries.
+            "ffmpeg_ok": bool(_ffmpeg_path),
+            "ffmpeg_path": _ffmpeg_path or "",
+            "proxy_url": os.environ.get("HTTP_PROXY") or os.environ.get("http_proxy") or "",
             "share_enabled": network_share.get_state().enabled,
             "share_port": network_share.get_state().share_port,
             "lan_addresses": network_share.get_state().lan_addresses,
@@ -426,7 +428,7 @@ def system_info():
             "gpu_name": _GPU_NAME,
             "vram_total_gb": _VRAM_TOTAL_GB,
             "disk_free_gb": _disk_free_gb(),
-            # CLEAN-ROOM (spec C-summersec §4): proxy_url entry for the fallback response.
+            "proxy_url": "",
             "share_enabled": network_share.get_state().enabled,
             "share_port": network_share.get_state().share_port,
             "lan_addresses": network_share.get_state().lan_addresses,
@@ -1180,7 +1182,11 @@ async def ack_crash():
 
 
 PERSISTENT_KEYS = {
-    # CLEAN-ROOM (spec C-summersec §5): proxy and translation-provider keys belong in this set.
+    "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY",
+    "http_proxy", "https_proxy", "all_proxy",
+    "TRANSLATE_BASE_URL", "TRANSLATE_API_KEY", "TRANSLATE_MODEL",
+    "DEEPL_API_KEY", "DEEPL_BASE_URL",
+    "MICROSOFT_API_KEY", "MICROSOFT_BASE_URL",
     "GOOGLE_TRANSLATE_API_KEY", "MICROSOFT_REGION", "AWS_PROFILE", "AWS_REGION",
     # The LAN-share port is the only persisted port: the backend binds that
     # listener itself. OMNIVOICE_PORT and OMNIVOICE_UI_PORT are deliberately
@@ -1257,8 +1263,16 @@ def _authorized_sidecar_dir(value, authorization) -> str:
 
 @router.post("/system/set-env")
 async def set_env_var(body: dict):
-    # CLEAN-ROOM (spec C-summersec §5): endpoint docstring (the maintainer's router-gate paragraph is quoted in the spec).
-    # CLEAN-ROOM (spec C-summersec §5): ALLOWED_KEYS (the set of keys this endpoint accepts) is defined here and used below.
+    """Set an environment variable for the running backend.
+
+    Keys in ``PERSISTENT_KEYS`` are saved in prefs.json and restored during
+    startup in main.py. HF_TOKEN is saved by
+    ``token_resolver.persist_hub_token()`` and cleared through the shared
+    token-file helper. Other accepted keys affect only this process.
+
+    The loopback-origin gate that previously lived inline here is now applied at the router level via `dependencies=[Depends(require_admin)]` on `router` — see the top of this file. Every route on this router is gated, including this one. The 403 body and behavior are unchanged.
+    """
+    ALLOWED_KEYS = PERSISTENT_KEYS | {"HF_TOKEN", "TRANSLATE_API_KEY"}
     key = body.get("key", "")
     value = body.get("value", "")
 
@@ -1336,7 +1350,18 @@ async def set_env_var(body: dict):
 
     # HF_TOKEN persistence is handled above via persist_hub_token()/
     # clear_hf_cli_tokens() — it never touches prefs.json. Everything else in
-    # CLEAN-ROOM (spec C-summersec §5): persist non-HF_TOKEN persistent keys to prefs.json (or the secret store) and remove them on clear.
+    # the persistent set is stored after the process environment is updated.
+    if key != "HF_TOKEN" and key in PERSISTENT_KEYS:
+        prefs_key = "env." + key
+        from services.translation_apis import SECRET_ENV_KEYS
+        if key in SECRET_ENV_KEYS:
+            from services import settings_store
+            settings_store.set_secret("translation_env." + key, value or None)
+            prefs_delete(prefs_key)
+        elif value:
+            prefs_set(prefs_key, value)
+        else:
+            prefs_delete(prefs_key)
 
     # #1787 review fix: tell the caller up front when the value just saved is
     # being shadowed by an external env var — set at THIS process's startup,

@@ -409,7 +409,7 @@ export default function DubTab(props) {
     // told the user to install it in the first place.
     setDubError('');
     setEngineInstalling(engineId);
-    const progressToast = toast.loading('' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key dub.install_progress */);
+    const progressToast = toast.loading(t('dub.install_progress', { engine: engineId }));
     try {
       const res = await installTranslationEngine(engineId);
       await refreshEngines();
@@ -420,9 +420,9 @@ export default function DubTab(props) {
           duration: 7000,
         });
       } else if (res.status === 'already_installed') {
-        toast('' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key dub.install_already */, { icon: 'ℹ️', id: progressToast });
+        toast(t('dub.install_already', { engine: engineId }), { icon: 'ℹ️', id: progressToast });
       } else {
-        toast.success('' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key dub.install_ok */, { id: progressToast });
+        toast.success(t('dub.install_ok', { engine: engineId }), { id: progressToast });
       }
     } catch (err) {
       toast.dismiss(progressToast);
@@ -445,8 +445,8 @@ export default function DubTab(props) {
   // Glossary: hide behind a chip when empty, auto-open once terms exist.
   const glossaryTermCount = useAppStore((s) => s.glossaryTerms.length);
   const [glossaryOpen, setGlossaryOpen] = useState(false);
-  // CLEAN-ROOM (spec C-summersec §14): user-collapsible glossary state; glossaryVisible is derived from it.
-  const glossaryVisible = glossaryOpen || glossaryTermCount > 0;
+  const [glossaryHidden, setGlossaryHidden] = useState(false);
+  const glossaryVisible = glossaryOpen || (glossaryTermCount > 0 && !glossaryHidden);
 
   // Phase 4.3 — between-stage checkpoint banner.
   const reviewMode = useAppStore((s) => s.reviewMode);

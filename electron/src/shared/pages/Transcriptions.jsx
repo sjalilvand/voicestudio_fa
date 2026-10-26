@@ -145,7 +145,7 @@ export default function TranscriptionsPage() {
     a.download = `transcriptions_${new Date().toISOString().slice(0, 10)}.txt`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success('' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key transcriptions.exported */);
+    toast.success(t('transcriptions.exported'));
   }, [transcriptions]);
 
   // toMillis keeps this unit-safe (ISO strings today; seconds/ms tolerated)
@@ -155,9 +155,9 @@ export default function TranscriptionsPage() {
     if (ms == null) return null;
     const d = new Date(ms);
     const diff = Date.now() - ms;
-    if (diff < 60000) return '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key transcriptions.just_now */;
-    if (diff < 3600000) return '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key transcriptions.m_ago */;
-    if (diff < 86400000) return '' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key transcriptions.h_ago */;
+    if (diff < 60000) return t('transcriptions.just_now');
+    if (diff < 3600000) return t('transcriptions.m_ago', { count: Math.floor(diff / 60000) });
+    if (diff < 86400000) return t('transcriptions.h_ago', { count: Math.floor(diff / 3600000) });
     return d.toLocaleDateString(undefined, {
       month: 'short',
       day: 'numeric',
@@ -177,7 +177,7 @@ export default function TranscriptionsPage() {
         <div className="txn-header__left flex items-center gap-[12px]">
           <h1 className="txn-header__title flex items-center gap-[8px] text-[var(--text-xl)] font-semibold text-fg">
             <FileText size={20} />
-            {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key transcriptions.title */}
+            {t('transcriptions.title')}
           </h1>
           <span className="txn-header__count rounded-[var(--radius-pill)] [border:1px_solid_var(--color-border)] bg-bg-elev-1 px-[10px] py-[2px] text-[var(--text-xs)] text-fg-subtle">
             {t('transcriptions.entries', { count: transcriptions.length })}
@@ -202,10 +202,10 @@ export default function TranscriptionsPage() {
             />
             <input
               className="w-[220px] bg-bg-elev-1 [border:1px_solid_var(--color-border)] rounded-[var(--radius-md)] text-fg [font-size:var(--text-sm)] [font-family:var(--font-sans)] [padding:6px_10px_6px_30px] [transition:border-color_0.15s] focus:border-brand focus:outline-none placeholder:text-fg-subtle"
-              placeholder={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key transcriptions.search_placeholder */}
+              placeholder={t('transcriptions.search_placeholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              aria-label={'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key transcriptions.search_placeholder */}
+              aria-label={t('transcriptions.search_placeholder')}
             />
           </div>
           {transcriptions.length > 0 && (
@@ -216,7 +216,7 @@ export default function TranscriptionsPage() {
                 onClick={exportAll}
                 title={t('transcriptions.export_title')}
               >
-                <Download size={13} /> {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key transcriptions.export */}
+                <Download size={13} /> {t('transcriptions.export')}
               </Button>
               <Button
                 size="sm"
@@ -224,7 +224,7 @@ export default function TranscriptionsPage() {
                 onClick={clearAll}
                 title={t('transcriptions.clear_title')}
               >
-                <Trash2 size={13} /> {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key transcriptions.clear */}
+                <Trash2 size={13} /> {t('transcriptions.clear')}
               </Button>
             </>
           )}
@@ -366,10 +366,10 @@ export default function TranscriptionsPage() {
               </span>
               <div className="txn-detail__actions flex gap-[4px]">
                 <Button size="sm" variant="ghost" onClick={() => copyText(selected.text)}>
-                  <Copy size={12} /> {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key transcriptions.copy */}
+                  <Copy size={12} /> {t('transcriptions.copy')}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => deleteEntry(selected.id)}>
-                  <Trash2 size={12} /> {'' /* CLEAN-ROOM (spec C-summersec §13): i18n text, key transcriptions.delete */}
+                  <Trash2 size={12} /> {t('transcriptions.delete')}
                 </Button>
               </div>
             </div>
