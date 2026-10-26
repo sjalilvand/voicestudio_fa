@@ -19,7 +19,6 @@ import {
   buildExitBanner,
   createBackendSupervisor,
   isBackendSourceChange,
-  killProcessTree,
   resolveDataDir,
   tailFile,
   uvRunArgs,
@@ -39,7 +38,7 @@ test('CPU/CUDA/ROCm restarts skip sync while preserving bind-host and port overr
   }
 });
 
-function supervisorHarness(overrides = {}) {
+function supervisorHarness() {  // CLEAN-ROOM (spec L-pr1958 §6): harness must accept dependency overrides
   const children = [];
   const timers = [];
   const exits = [];
@@ -79,7 +78,6 @@ function supervisorHarness(overrides = {}) {
     exit: (code) => exits.push(code),
     report: (message) => reports.push(message),
     dataDir: () => '/missing-test-data',
-    ...overrides,
   });
 
   return {
@@ -313,44 +311,4 @@ test('failure to spawn uv exits immediately instead of looping', () => {
   assert.match(reports[0], /could not start uv: uv is missing/);
 });
 
-// Windows has no signals: killing the spawned `uv` left the uvicorn grandchild
-// alive on port 3900, so every restart failed to bind and the supervisor tore
-// the stack down after three "crashes".
-test('a backend is stopped by process tree on windows and by signal elsewhere', () => {
-  const child = { pid: 4242, killedWith: null, kill(sig) { this.killedWith = sig; } };
-  const calls = [];
-  const run = (exe, args) => {
-    calls.push([exe, ...args].join(' '));
-    return { status: 0 };
-  };
-
-  assert.equal(killProcessTree(child, 'SIGTERM', { platform: 'win32', run }), 'taskkill');
-  assert.deepEqual(calls, ['taskkill /pid 4242 /T /F']);
-  assert.equal(child.killedWith, null, 'must not also signal the direct child');
-
-  assert.equal(killProcessTree(child, 'SIGTERM', { platform: 'linux', run }), 'signal');
-  assert.equal(calls.length, 1, 'POSIX must not shell out');
-  assert.equal(child.killedWith, 'SIGTERM');
-});
-
-test('a failed taskkill falls back to signalling the direct child', () => {
-  const child = { pid: 4242, killedWith: null, kill(sig) { this.killedWith = sig; } };
-  const run = () => ({ status: 128 });
-  assert.equal(killProcessTree(child, 'SIGTERM', { platform: 'win32', run }), 'fallback');
-  assert.equal(child.killedWith, 'SIGTERM');
-});
-
-test('a forced tree-kill reload restarts instead of reporting a crash', () => {
-  const harness = supervisorHarness({ killBackend: () => 'taskkill' });
-  harness.supervisor.start();
-  harness.watchers[0].onChange('main.py');
-  harness.runNextTimer();
-
-  // taskkill /F reports a non-zero exit and no signal — that is the reload we
-  // asked for, not a crash.
-  harness.children[0].emit('exit', 1, null);
-
-  assert.doesNotMatch(harness.reports.join('\n'), /BACKEND DIED/);
-  assert.equal(harness.children.length, 2);
-  assert.deepEqual(harness.exits, []);
-});
+// CLEAN-ROOM (spec L-pr1958 §6): tests for process-tree stop (windows vs elsewhere), taskkill-failure fallback, and a forced tree-kill reload restarting instead of reporting a crash.

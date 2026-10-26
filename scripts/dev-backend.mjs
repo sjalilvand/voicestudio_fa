@@ -21,7 +21,7 @@
 // the Windows CreateProcess PATH search — no shell needed).
 // ──────────────────────────────────────────────────────────────────────────
 
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { existsSync, readFileSync, watch } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
@@ -67,28 +67,7 @@ export const CRASH_RESTART_LIMIT = 3;
 export const CRASH_RESTART_WINDOW_MS = 60_000;
 export const SOURCE_RELOAD_DEBOUNCE_MS = 250;
 
-/**
- * Stop a spawned backend and everything it started.
- *
- * We spawn `uv`, which spawns uvicorn as its own child. Windows has no signals:
- * `child.kill()` maps to TerminateProcess on the DIRECT child only, so killing
- * `uv` orphaned the uvicorn grandchild — which kept holding port 3900. The next
- * spawn then failed to bind ([Errno 10048]), which the supervisor counted as a
- * crash, and three of those tore the whole dev stack down. `taskkill /T` walks
- * the tree; POSIX keeps plain signal delivery.
- */
-export function killProcessTree(child, sig, { platform = process.platform, run = spawnSync } = {}) {
-  if (platform !== "win32") {
-    child.kill(sig);
-    return "signal";
-  }
-  const result = run("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" });
-  if (!result || result.error || result.status !== 0) {
-    child.kill(sig); // taskkill unavailable or the process already exited
-    return "fallback";
-  }
-  return "taskkill";
-}
+// CLEAN-ROOM (spec L-pr1958 §6): killProcessTree(child, sig, { platform, run }) - stop the backend and its descendants; returns "signal" | "fallback" | "taskkill".
 
 export function isBackendSourceChange(filename) {
   return typeof filename === "string" && filename.toLowerCase().endsWith(".py");
@@ -164,7 +143,7 @@ export function createBackendSupervisor({
   spawnBackend = () => spawn("uv", uvRunArgs(), { stdio: "inherit" }),
   watchBackend = (onChange) =>
     watch("backend", { recursive: true }, (_event, filename) => onChange(filename?.toString())),
-  killBackend = (proc, sig) => killProcessTree(proc, sig),
+  // CLEAN-ROOM (spec L-pr1958 §6): injectable killBackend(proc, sig) dependency, defaulting to the process-tree stop.
   schedule = setTimeout,
   cancelSchedule = clearTimeout,
   now = Date.now,
@@ -177,10 +156,7 @@ export function createBackendSupervisor({
   let restartTimer = null;
   let reloadTimer = null;
   let reloadRequested = false;
-  // True when the reload we asked for was served by a forced tree-kill, which
-  // reports a non-zero exit and no signal. Only then may such an exit be read
-  // as "the reload we asked for" instead of "it crashed mid-reload".
-  let reloadKillForced = false;
+  // CLEAN-ROOM (spec L-pr1958 §6): flag remembering that the requested reload was served by a forced tree kill.
   let watcher = null;
   let crashTimes = [];
   let requestedExitCode = null;
@@ -211,7 +187,7 @@ export function createBackendSupervisor({
       return;
     }
     try {
-      killBackend(child, sig);
+      child.kill(sig);
     } catch {
       exit(requestedExitCode ?? 0);
     }
@@ -226,7 +202,7 @@ export function createBackendSupervisor({
       reloadRequested = true;
       report(`[dev-backend] ${filename} changed; reloading backend…`);
       try {
-        reloadKillForced = killBackend(child, "SIGTERM") === "taskkill";
+        child.kill("SIGTERM");
       } catch {
         reloadRequested = false;
       }
@@ -282,9 +258,7 @@ export function createBackendSupervisor({
 
       if (reloadRequested) {
         reloadRequested = false;
-        const expectedReloadExit =
-          code === 0 || signal === "SIGTERM" || reloadKillForced;
-        reloadKillForced = false;
+        const expectedReloadExit = code === 0 || signal === "SIGTERM";
         if (expectedReloadExit) {
           start();
           return;

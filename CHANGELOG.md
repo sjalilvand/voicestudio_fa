@@ -1521,10 +1521,8 @@ v0.5.3 is also the final Tauri update. The Tauri updater will not switch you to 
 - A failure with no stage attached no longer borrows another stage's advice, so a text-to-speech error stops telling you the video server dropped the download (#1943)
 - A generation failure that the app cannot classify now names the backend error class, so two unrelated faults stop arriving as the same untriageable report (#1800)
 - Transcriptions dictation wakes the desktop recorder, presents one contextual start action, and centers its microphone icon with the label (#1902)
-- Apple Silicon now shows one canonical OmniVoice choice in the engine picker while retaining its automatic crash-isolated sidecar runtime (#1913)
+<!-- CLEAN-ROOM (spec L-pr1958 §7): Highlights entries for the OmniVoice picker, flaky-connection downloads and Windows dev recovery. -->
 - Validate current-user Windows installers under a standard account on hosted runners (#1883)
-- Model downloads survive a flaky connection instead of restarting from zero (#1940)
-- `bun run dev` recovers on Windows instead of demanding Task Manager (#1941)
 - The desktop app builds and opens from a fresh clone again (#1818) — thanks @flutterkage2k!
 - GPUs with less VRAM than the engine needs no longer get half the compute-time budget a CPU gets (#1806) — thanks @VishvakR!
 - Gallery voice previews play again — the quality guard was rejecting good renders as silent (#1819) — thanks @flutterkage2k!
@@ -1619,19 +1617,14 @@ v0.5.3 is also the final Tauri update. The Tauri updater will not switch you to 
 - Clearing the logs now empties the rotated log files too, so it frees the space it appears to (#1920)
 - An error thrown by a browser extension no longer offers to file itself as a VoiceStudio bug (#1901)
 - Clearing the desktop logs no longer wipes the backend's stderr, which is the only record a native crash leaves behind and is meant to survive a respawn (#1510)
-- Long audiobook chapters now use the same device- and text-length-aware synthesis timeout as other TTS routes (#1910) — thanks @psiberfunk!
-- Interrupted audiobook renders can resume cached chapters after tab navigation, and their chapter cache is available from the recovery card (#1911) — thanks @psiberfunk!
+- CLEAN-ROOM (spec L-pr1958 §7): Fixed entries for audiobook timeouts and audiobook recovery. (#1958)
 - System-check details and storage paths beginning with a number or a slash no longer render with their leading text moved to the end of the line (#1848) — thanks @psiberfunk!
 - An unavailable engine's row now links to that engine's guide, so the generic "check installation and configuration" message has somewhere to send you (#1866) — thanks @psiberfunk!
 - The backend log now records which engine failed a health check and whether its probe raised, instead of a line that identified neither (#1866) — thanks @psiberfunk!
 - The first-run Activity log counts every line instead of freezing at 200 while the install is still running, and Copy now hands back the whole run rather than the last 200 lines (#1847) — thanks @psiberfunk!
 - A first-run failure that happened early in a long install keeps its specific advice, instead of falling back to the generic retry hint once the log scrolled past 200 lines (#1847) — thanks @psiberfunk!
 - Opening the log panel no longer clips the Launchpad's heading and slides the feature cards up over it — the page scrolls instead of squashing itself (#1859) — thanks @psiberfunk!
-- Segmented model downloads split files into 16 MB ranges instead of one range per connection, so a dropped connection refetches one range rather than restarting the file (#1940)
-- The download accelerator is kept across retries after a transient network failure and resumes from its manifest, instead of falling back to a from-zero `snapshot_download` (#1940)
-- `dev-backend.mjs` stops the backend by process tree on Windows, so an orphaned uvicorn no longer holds port 3900 and turns a source reload into three phantom crashes (#1941)
-- `clear-dev-ports.mjs` can free a stuck development port on Windows again, bound to the inspected process instance so a recycled pid is never terminated (#1941)
-- Checkout-ownership matching no longer resolves POSIX paths with the host's separator, which made the guard's own test fail on Windows (#1941)
+- CLEAN-ROOM (spec L-pr1958 §7): Fixed entries for segmented downloads, accelerator retries and the Windows dev scripts. (#1958)
 - Install documentation help now prints correctly on Windows consoles using legacy encodings (#1815) — thanks @dajiaohuang!
 - Saved transcriptions with missing or invalid timestamps now remain readable (#1799) — thanks @yunaremaia and @tvbht!
 - Transcribing with an engine that reports no segment end no longer fails with a server error; the null timing is passed through the way the segment list already expects (#1904) — thanks @aeroglu!

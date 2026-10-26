@@ -940,9 +940,7 @@ async def _run_chapter(chapter, *, default_voice, language, opts, voice_map,
 
     ``on_progress`` is called from the GPU thread after every chunk (#3417)."""
     from services import gpu_gateway
-    from services.model_manager import generate_timeout_s
-    from services.tts_backend import get_backend_class
-
+    # CLEAN-ROOM (spec L-pr1958 §1): per-chapter synthesis timeout helpers are imported here.
     # Resolve and pin every take before rendering starts.  The former routing
     # setup did this even for local jobs; keeping it explicit prevents a
     # concurrent re-lock/sweep from deleting a take before the local resolver
@@ -957,11 +955,7 @@ async def _run_chapter(chapter, *, default_voice, language, opts, voice_map,
     )
     if reserve_cache is not None:
         await asyncio.to_thread(reserve_cache, sr, engine_id, resolve)
-    try:
-        timeout_engine = get_backend_class(engine_id)
-    except ValueError:
-        timeout_engine = None
-    text = "\n".join(span.text for span in chapter.spans)
+    # CLEAN-ROOM (spec L-pr1958 §1): resolve the engine class and chapter text for the timeout.
     return await gpu_gateway.run(
         local=gpu_gateway.LocalCall(
             fn=lambda: _render_chapter_cached(
@@ -969,7 +963,7 @@ async def _run_chapter(chapter, *, default_voice, language, opts, voice_map,
                 language, opts, voice_map, cache_lease, on_progress=on_progress,
             ),
             what="Audiobook chapter",
-            timeout=generate_timeout_s(text, engine=timeout_engine),
+            # CLEAN-ROOM (spec L-pr1958 §1): pass the computed timeout to the local call.
         )
     )
 

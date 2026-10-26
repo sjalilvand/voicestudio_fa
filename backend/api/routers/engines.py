@@ -44,23 +44,12 @@ _FAMILIES = {
 }
 
 
-def _catalogue_active_id(family: str, module) -> str:
-    """Return the active id represented by the public engine catalogue."""
-    active = module.active_backend_id()
-    if family != "tts" or active != "omnivoice-subprocess":
-        return active
-
-    from core.device_caps import detect_host_caps
-
-    try:
-        return "omnivoice" if detect_host_caps().family == "mps" else active
-    except Exception:
-        return active
+# CLEAN-ROOM (spec L-pr1958 §2): catalogue-visible active-id helper (maps the hidden MPS compatibility id to the canonical one).
 
 
 def _family_payload(family: str, module):
     """Public inventory plus whether an environment pin owns this family."""
-    active = _catalogue_active_id(family, module)
+    active = module.active_backend_id()  # CLEAN-ROOM (spec L-pr1958 §2): use the catalogue-visible active id
     model = None
     if family == "asr":
         model = asr_backend._offline_asr_repo(active)
@@ -109,8 +98,6 @@ def _family_payload(family: str, module):
                     )
                     backend["license_accepted"] = False
     return {
-        # MPS hides the explicit compatibility row, so legacy configs report
-        # the visible canonical equivalent as active to picker consumers.
         "active": active,
         "active_model": model,
         "env_override": bool(os.environ.get(f"OMNIVOICE_{family.upper()}_BACKEND")),
@@ -912,15 +899,8 @@ def select_engine(req: SelectEngineRequest):
     if not family:
         raise HTTPException(400, f"Unknown family: {req.family}. Expected one of tts/asr/llm.")
     module, pref_key = family
-    # MPS intentionally hides the redundant explicit OmniVoice sidecar from
-    # the picker, but existing scripts and saved preferences may still submit
-    # that supported compatibility id directly.
-    rows = (
-        module.list_backends(include_hidden=True)
-        if req.family == "tts"
-        else module.list_backends()
-    )
-    available = {b["id"]: b for b in rows}
+    # CLEAN-ROOM (spec L-pr1958 §2): TTS validation must also accept the hidden compatibility id.
+    available = {b["id"]: b for b in module.list_backends()}
     if req.backend_id not in available:
         raise HTTPException(400, f"Unknown {req.family} backend: {req.backend_id!r}")
     entry = available[req.backend_id]

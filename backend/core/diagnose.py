@@ -207,7 +207,8 @@ def _check_ram() -> dict:
 def _check_engines() -> dict:
     try:
         from services.tts_backend import list_backends, active_backend_id
-        backends = list_backends(include_hidden=True)
+        # CLEAN-ROOM (spec L-pr1958 §2): enumerate including the hidden compatibility row.
+        backends = list_backends()
         active = active_backend_id()
     except Exception as e:
         return _check("engines", "TTS engines", WARN, f"could not enumerate: {e}")
@@ -397,11 +398,8 @@ def run_diagnostics(include_network: bool = True, deep: bool = False) -> dict:
         try:
             module = importlib.import_module(f"services.{family}_backend")
             active = module.active_backend_id()
-            rows = (
-                module.list_backends(include_hidden=True)
-                if family == "tts"
-                else module.list_backends()
-            )
+            # CLEAN-ROOM (spec L-pr1958 §2): TTS enumeration includes the hidden compatibility row.
+            rows = module.list_backends()
             row = next((item for item in rows if item.get("id") == active), None)
             if row is not None:
                 engine_execution.append({
