@@ -494,7 +494,10 @@ export async function resolveSpawnPlan(
   // deadline and repeat that download after every restart (#2184).
   const portArg = ['--port', String(port)];
   const python = venvPython(root);
-  const setup = `Open a terminal in ${root}, run \`bun run setup:api\`, wait for it to finish, then restart.`;
+  // Only a source checkout reaches this point: an installed app returned above
+  // with its app-managed runtime, which the setup screen repairs in-app (#3480).
+  // Retry re-runs this check, so a finished setup needs no app restart.
+  const setup = `Open a terminal in ${root}, run \`bun run setup:api\`, wait for it to finish, then press Retry.`;
   if (!existsSync(python)) {
     // Not a source checkout and not a packaged app (a copied folder, a
     // download of the wrong archive): setup:api does not exist there (#2988).
