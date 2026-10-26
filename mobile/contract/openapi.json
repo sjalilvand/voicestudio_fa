@@ -1845,7 +1845,7 @@
     "type": "object"
    },
    "CleanupSegmentsRequest": {
-    "description": "The editor's current segments; without them the job's stored copy is\ncleaned, which misses every edit made since transcription.",
+    "description": "The editor's current segments; without them the stored copy is cleaned.",
     "properties": {
      "segments": {
       "items": {
@@ -3526,7 +3526,6 @@
     "type": "object"
    },
    "ProsodyMirrorRequest": {
-    "description": "Segments as the editor currently holds them: splits, merges and timing\nedits are client-side until generation, so the job's stored copy is stale.",
     "properties": {
      "segments": {
       "items": {
@@ -10573,7 +10572,7 @@
   },
   "/dub/cleanup-segments/{job_id}": {
    "post": {
-    "description": "Re-run merge/stitch passes to drop fragments.\n\nCleans the editor's segments when sent, so unsaved text, timing and\ndirection edits survive; otherwise the job's stored segments. The\neditor's result is returned without being stored: it is an undoable edit\nlike any other, and the job keeps the segments its existing audio and\nsubtitle exports were generated from until the next generation.",
+    "description": "Re-run the merge/stitch passes to drop fragments.\n\nUses the editor's segments when they are sent, so unsaved edits survive;\notherwise the stored ones. The editor's result is returned unsaved (the\nclient applies it as an undoable edit) and the job keeps its stored\nsegments until the next generation.",
     "operationId": "dub_cleanup_segments_dub_cleanup_segments__job_id__post",
     "parameters": [
      {
@@ -11945,7 +11944,7 @@
   },
   "/dub/prosody-mirror/{job_id}": {
    "post": {
-    "description": "Suggest per-segment directions that mirror the source delivery.\n\nMeasures each line on the Demucs vocals track (the mix when separation\ndid not run) against its speaker's baseline and returns taxonomy\ndirections the editor can apply to lines without one. Read-only: nothing\nabout the job changes.",
+    "description": "Suggest delivery directions from how the source actor spoke each line.\n\nRead-only: nothing on the job changes.",
     "operationId": "dub_prosody_mirror_dub_prosody_mirror__job_id__post",
     "parameters": [
      {

@@ -661,9 +661,9 @@ async def dub_generate(job_id: str, req: DubRequest):
 
             wav, file_sr = load_audio(source)
             if file_sr != target_sr:
-                import torchaudio
+                import torchaudio.functional as AF
 
-                wav = torchaudio.functional.resample(wav, file_sr, target_sr)
+                wav = AF.resample(wav, file_sr, target_sr)
             return wav
 
         def _speech_unusable(audio: torch.Tensor) -> bool:
@@ -899,9 +899,9 @@ async def dub_generate(job_id: str, req: DubRequest):
                                 continue
                         cached, cached_sr = load_audio(seg_wav_path)
                         if cached_sr != backend.sample_rate:
-                            import torchaudio
+                            import torchaudio.functional as AF
 
-                            cached = torchaudio.functional.resample(cached, cached_sr, backend.sample_rate)
+                            cached = AF.resample(cached, cached_sr, backend.sample_rate)
                         ratio = round(
                             cached.shape[-1] / backend.sample_rate / max(seg_duration, 0.01), 3
                         )
