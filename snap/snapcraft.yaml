@@ -11,7 +11,8 @@ summary: Local voice cloning, voice design, dubbing and dictation on your comput
 description: |
   VoiceStudio is an open-source, fully local studio for voice cloning, voice
   design, video dubbing, audiobooks and real-time dictation. Models run on
-  your own machine; nothing leaves it without your explicit yes.
+  your own machine, with no account or API key; model downloads and other
+  network features run when you start them.
 license: AGPL-3.0-only
 website: https://voicestudio.sh
 source-code: https://github.com/debpalash/VoiceStudio
