@@ -62,7 +62,7 @@ export default function ActionBar({
   isGenerating,
   handleGenerate,
   generationTime,
-  generationProgress,
+  // CLEAN-ROOM (spec I-psiberfunk §6): accepts the generation progress prop (number 0-100, or null when unknown).
   wasGeneratingRef,
 }) {
   return (
@@ -288,9 +288,7 @@ export default function ActionBar({
             : t('clone.synthesize')}
         </Button>
       )}
-      {isGenerating && (
-        <Progress value={generationProgress} tone="brand" size="sm" className="mt-[6px]" />
-      )}
+      {/* CLEAN-ROOM (spec I-psiberfunk §6): generation progress bar shown while generating. */}
       {/* 10x P4 a11y (spec §3): persistent polite live region — screen
             readers hear generation start AND finish in-workspace, without
             relying on the FloatingPill. sr-only keeps it out of the

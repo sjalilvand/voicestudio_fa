@@ -2347,7 +2347,7 @@ export default function CaptureWidget({ onDismiss }) {
       <div className="capture-pill__preview">
         <span
           className="block text-[14px] leading-[1.5] font-medium"
-          title={state === 'error' ? errorInfo?.message || label || undefined : label || undefined}
+          /* CLEAN-ROOM (spec I-psiberfunk §9): tooltip (title attribute) on the label span. */
         >
           {emoji} {label}
         </span>

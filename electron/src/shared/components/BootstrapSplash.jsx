@@ -120,12 +120,7 @@ const STEPS = [
   'starting_backend',
 ];
 
-// Stages that only occur when there is actual first-run/repair work to do.
-// `awaiting_setup` renders its own screen (FirstRunSetup) rather than the
-// step list below, but it still counts as "install work observed" (#1894):
-// reaching it means Rust found no venv and is about to do real work, so the
-// journey chrome should already be armed by the time the step list appears.
-const INSTALL_STAGES = ['downloading_uv', 'creating_venv', 'installing_deps', 'awaiting_setup'];
+// CLEAN-ROOM (spec I-psiberfunk §1): list of install-work stage names.
 
 // How many log lines the <pre> shows. `logs` state holds exactly this tail and
 // nothing more, so the per-event array copy stays bounded no matter how long a
@@ -463,10 +458,7 @@ export function BootstrapSplash({ stage, message, attempt = 0 }) {
   const [progress, setProgress] = useState(null);
   const [region, setRegionState] = useState('auto');
   const [retrying, setRetrying] = useState(false);
-  // Stages actually seen during the CURRENT bootstrap attempt (see the
-  // tracking effect below). Drives "done" ticks and journey visibility off
-  // observed reality instead of list position (#1894).
-  const [polledStages, setPolledStages] = useState(() => new Set([stage]));
+  // CLEAN-ROOM (spec I-psiberfunk §1): polled-stage state.
   // Every line of this bootstrap. `logs` above is only the rendered tail.
   const [totalLines, setTotalLines] = useState(0);
   const allLogsRef = useRef([]);
@@ -478,33 +470,7 @@ export function BootstrapSplash({ stage, message, attempt = 0 }) {
   const prevProgRef = useRef(null); // {bytes, t} — last progress event
   const rateRef = useRef(0); // EMA bytes/sec across events
 
-  // The union of what we polled and what actually logged.
-  //
-  // Neither source alone is complete. `bootstrap_status` is sampled ~1/s, so
-  // a stage that starts and finishes between samples is never polled — on a
-  // fast disk `creating_venv` routinely does. Stage-tagged `bootstrap-log`
-  // lines close that gap: the Rust side emits them as the work happens, so a
-  // line tagged with a stage is proof that stage ran, whether or not the
-  // poll ever saw it.
-  //
-  // Lines are scoped to the current attempt so a retry cannot inherit the
-  // previous one's evidence. The attempt is the id Rust stamps on both the
-  // status reply and every log line (#1900) — an exact match, rather than a
-  // clock comparison against a boundary this side had to guess at. (The
-  // VISIBLE log is left alone: clearing it on a restart nobody asked for
-  // would destroy the user's context, cf. #1847.)
-  const observedStages = useMemo(() => {
-    const seen = new Set(polledStages);
-    for (const entry of allLogsRef.current) {
-      if (entry?.stage && entry.attempt === attempt) seen.add(entry.stage);
-    }
-    return seen;
-    // totalLines is the render signal for allLogsRef, which is a ref and so
-    // cannot itself be a dependency. Reading the full run rather than the
-    // rendered tail is the point: a stage whose only evidence scrolled out of
-    // the capped tail would otherwise read as never having run (#1847).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [polledStages, totalLines, attempt]);
+  // CLEAN-ROOM (spec I-psiberfunk §1): observed-stage set (union of polled stages and stage-tagged log lines of the current attempt).
 
   const label = t(`bootstrap.${stage}`, STAGE_LABEL[stage]);
   const stepIndex = Math.max(0, STEPS.indexOf(stage));
@@ -523,30 +489,14 @@ export function BootstrapSplash({ stage, message, attempt = 0 }) {
     setLogs([]);
   };
 
-  // True once any genuine install stage has been observed this session. On a
-  // warm start the Rust stage jumps straight from `checking` to
-  // `starting_backend` — nothing here ever fires — so the first-run install
-  // chrome (journey rail, "Installing" heading, step list) stays suppressed
-  // instead of fabricating completed work (#1894).
-  const installWorkSeen = INSTALL_STAGES.some((s) => observedStages.has(s));
-
-  // Clear the splash for a retry the user just asked for. The attempt
-  // BOUNDARY is no longer this side's business (#1900) — Rust bumps its
-  // attempt id inside `respawn_backend`, before the stage moves, and the
-  // reset effect below follows that. What is left here is presentation: empty
-  // the visible log and the polled-stage set so the user watches a fresh run
-  // start, instead of the failed one's output sitting under a spinner.
-  const beginAttempt = () => {
-    resetLogs();
-    setPolledStages(new Set());
-  };
+  // CLEAN-ROOM (spec I-psiberfunk §1): installWorkSeen derivation and the retry-reset helper.
 
   const handleRetry = async () => {
     if (retrying) return;
     setRetrying(true);
     try {
       const { invoke } = await import('@tauri-apps/api/core');
-      beginAttempt();
+      // CLEAN-ROOM (spec I-psiberfunk §4): clear visible retry state before invoking the command.
       await invoke('retry_bootstrap');
     } catch (e) {
       console.error('retry failed', e);
@@ -561,7 +511,7 @@ export function BootstrapSplash({ stage, message, attempt = 0 }) {
     setRetrying(true);
     try {
       const { invoke } = await import('@tauri-apps/api/core');
-      beginAttempt();
+      // CLEAN-ROOM (spec I-psiberfunk §4): clear visible retry state before invoking the command.
       await invoke('clean_and_retry_bootstrap');
     } catch (e) {
       console.error('clean retry failed', e);
@@ -570,33 +520,7 @@ export function BootstrapSplash({ stage, message, attempt = 0 }) {
     }
   };
 
-  // Record `stage` as observed the moment it's seen, and reset when a new
-  // attempt begins.
-  //
-  // Sticky WITHIN an attempt: the functional updater bails out (same Set
-  // reference) once a stage is recorded, so it never un-observes and never
-  // loops. But NOT across attempts — a Retry restarts the bootstrap from
-  // `checking`, and what the previous attempt did says nothing about what
-  // this one will do. Without the reset, stages the new attempt skips would
-  // still render as completed, which is the very fabrication this change
-  // exists to remove.
-  //
-  // A new attempt is a fact Rust reports, not something this side infers from
-  // a sampled stage (#1900). Every real restart bumps the id — both retry
-  // commands via `respawn_backend`, and the supervisor's own venv rebuild — so
-  // the id changing IS the boundary, whether or not the poll ever sampled the
-  // restart stage. The heuristics this replaces (arriving at
-  // `checking`/`awaiting_setup`, leaving `failed`) could miss a Rust-initiated
-  // restart by up to a poll interval and discard that attempt's earliest
-  // evidence. Equality on an id cannot.
-  useEffect(() => {
-    if (prevAttemptRef.current !== attempt) {
-      prevAttemptRef.current = attempt;
-      setPolledStages(new Set([stage]));
-      return;
-    }
-    setPolledStages((p) => (p.has(stage) ? p : new Set(p).add(stage)));
-  }, [stage, attempt]);
+  // CLEAN-ROOM (spec I-psiberfunk §2): effect that records the current stage as observed and resets the observed set when the attempt id changes.
 
   // Load persisted region on mount.
   useEffect(() => {
@@ -778,10 +702,7 @@ export function BootstrapSplash({ stage, message, attempt = 0 }) {
           data-tauri-drag-region
         >
           <Waveform />
-          {/* Suppressed until real install work is observed — otherwise a
-              warm start (or a repair sync) shows "Setup done / Installing
-              active" for work that never happened (#1894). */}
-          {installWorkSeen && <JourneyRail t={t} />}
+          {/* CLEAN-ROOM (spec I-psiberfunk §3): journey rail, rendered only when install work has been observed. */}
           <div className="mt-2 flex flex-wrap items-end justify-between gap-6">
             <div className="min-w-0">
               {/* Version rides beside the app name — same masthead across all
@@ -903,16 +824,7 @@ export function BootstrapSplash({ stage, message, attempt = 0 }) {
           </section>
         ) : (
           <section className="fr-rise flex flex-col gap-2.5" style={{ '--rise': 1 }}>
-            {/* Heading, step list and resume note only make sense once real
-                install work has actually been observed — otherwise a warm
-                start or a repair sync narrates a first-run install that
-                never happened (#1894). The live stage label in the masthead
-                and the progress meter below stay visible either way. */}
-            {installWorkSeen && (
-              <h2 className="m-0 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-fg-muted">
-                {t('firstrun.installing_title', 'Installing')}
-              </h2>
-            )}
+            {/* CLEAN-ROOM (spec I-psiberfunk §3): "Installing" heading, shown only when install work has been observed. */}
             {/* Overall journey meter. */}
             <Progress
               value={overallPct}
@@ -920,69 +832,8 @@ export function BootstrapSplash({ stage, message, attempt = 0 }) {
               size="md"
               aria-valuenow={Math.round(overallPct)}
             />
-            {installWorkSeen && (
-              <ol className="m-0 mt-1 flex list-none flex-col gap-2 p-0">
-                {STEPS.map((s, i) => {
-                  const activeStep = i === stepIndex;
-                  // Done only if this stage was actually observed AND it isn't
-                  // the one currently in progress — list POSITION alone lies on
-                  // a warm start or a repair sync, where earlier stages in the
-                  // fixed STEPS order are skipped by Rust entirely (#1894).
-                  const done = !activeStep && observedStages.has(s);
-                  return (
-                    <li
-                      key={s}
-                      className={cn(
-                        'flex min-w-0 items-center gap-2 text-sm',
-                        !done && !activeStep && 'opacity-45',
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          'h-1.5 w-1.5 shrink-0 rounded-full',
-                          done
-                            ? 'bg-success shadow-[0_0_5px_1px_color-mix(in_srgb,var(--color-success)_50%,transparent)]'
-                            : activeStep
-                              ? 'bg-primary shadow-[0_0_6px_1px_var(--color-brand-glow)] fr-pulse'
-                              : 'bg-fg-subtle/40',
-                        )}
-                        aria-hidden="true"
-                      />
-                      <span className={cn(activeStep && 'font-semibold', done && 'text-fg-muted')}>
-                        {t(`bootstrap.${s}`, STAGE_LABEL[s])}
-                      </span>
-                      {activeStep && stageProgress && (
-                        <span className="ml-auto whitespace-nowrap font-mono text-[0.64rem] tabular-nums text-fg-muted">
-                          {formatBytes(stageProgress.bytes_done)}
-                          {stageProgress.bytes_total > 0
-                            ? ` / ${formatBytes(stageProgress.bytes_total)}`
-                            : ''}
-                          {pctFromBytes != null ? ` (${pctFromBytes}%)` : ''}
-                          {stageProgress.bytes_total > 0 &&
-                            rateRef.current > 0 &&
-                            stageProgress.bytes_done < stageProgress.bytes_total &&
-                            ` · ${t('firstrun.eta_left', {
-                              eta: formatEta(
-                                (stageProgress.bytes_total - stageProgress.bytes_done) /
-                                  rateRef.current,
-                              ),
-                              defaultValue: '~{{eta}} left',
-                            })}`}
-                        </span>
-                      )}
-                    </li>
-                  );
-                })}
-              </ol>
-            )}
-            {installWorkSeen && (
-              <p className="m-0 text-xs text-fg-subtle">
-                {t(
-                  'firstrun.resume_note',
-                  'Interrupted downloads resume automatically — closing the app is safe.',
-                )}
-              </p>
-            )}
+            {/* CLEAN-ROOM (spec I-psiberfunk §3): step list (ordered list over STEPS), shown only when install work has been observed; per-step done state per spec. */}
+            {/* CLEAN-ROOM (spec I-psiberfunk §3): resume note, shown only when install work has been observed. */}
           </section>
         )}
 
