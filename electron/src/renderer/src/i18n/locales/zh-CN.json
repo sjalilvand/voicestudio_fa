@@ -486,6 +486,8 @@
     "m_ago": "{{count}} 分钟前",
     "h_ago": "{{count}} 小时前",
     "failed": "转录失败：",
+    "identify_speakers": "识别说话人",
+    "speakers_unavailable": "说话人识别不可用。转录文本已保存，但没有说话人标签。",
     "missing_model": "尚未安装语音转文字模型 — 此功能需要一个模型来转写音频。",
     "original_transcript": "原始转录"
   },
@@ -1046,6 +1048,11 @@
     "details": "详情"
   },
   "dubWorkspace": {
+    "transcriptIssues": "转录问题",
+    "issueCount": "已标记片段：{{total}}",
+    "issuePosition": "第 {{current}} 个问题，共 {{total}} 个",
+    "previousIssue": "上一个问题",
+    "nextIssue": "下一个问题",
     "title": "配音",
     "start": "开始",
     "end": "结束",

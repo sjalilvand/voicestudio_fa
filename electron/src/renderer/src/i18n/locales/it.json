@@ -473,6 +473,8 @@
     "m_ago": "{{count}}m fa",
     "h_ago": "{{count}}h fa",
     "failed": "Trascrizione non riuscita",
+    "identify_speakers": "Identifica i parlanti",
+    "speakers_unavailable": "L'identificazione dei parlanti non è disponibile. La trascrizione è stata salvata senza etichette dei parlanti.",
     "missing_model": "Nessun modello di riconoscimento vocale è installato — questa funzione ne richiede uno per trascrivere l'audio.",
     "original_transcript": "Trascrizione originale"
   },
@@ -1033,6 +1035,11 @@
     "unknown": "sconosciuto"
   },
   "dubWorkspace": {
+    "transcriptIssues": "Problemi della trascrizione",
+    "issueCount": "Segmenti segnalati: {{total}}",
+    "issuePosition": "Problema {{current}} di {{total}}",
+    "previousIssue": "Problema precedente",
+    "nextIssue": "Problema successivo",
     "title": "Doppiaggio",
     "start": "Inizia",
     "end": "Fine",
