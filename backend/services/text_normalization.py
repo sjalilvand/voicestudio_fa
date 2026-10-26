@@ -545,9 +545,10 @@ _DATE_MONTH_RE = {
 # Space-grouped thousands ("1 234", "10 000", "1 234,5", "12 500 %") in the
 # locales that also group with a period. The run is kept as written, like
 # "1,000" in English; without this the percent and integer rules read the
-# trailing or leading group on its own.
+# trailing or leading group on its own. A leading minus ("-1 234 %") belongs
+# to the run; the lookbehind still rejects it after a word ("a-1 234").
 _SPACE_GROUP_RE = re.compile(
-    r"(?<![\w.,:/$%-])\d{1,3}(?: \d{3})+(?:,\d+)?(?:\s?%)?(?![\w:/%-])(?![.,]\d)"
+    r"(?<![\w.,:/$%-])-?\d{1,3}(?: \d{3})+(?:,\d+)?(?:\s?%)?(?![\w:/%-])(?![.,]\d)"
 )
 
 
