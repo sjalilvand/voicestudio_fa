@@ -767,6 +767,27 @@ describe('packaged runtime setup', () => {
     await expect(failure).rejects.toThrow(/OneDrive.*press Retry/s);
     expect(existsSync(join(project, '.incoming-backend'))).toBe(false);
   });
+  it.each(['darwin', 'linux'] as const)(
+    'keeps a %s permission error as-is instead of the Windows lock guidance',
+    async (platform) => {
+      const { bundle, project } = await fixture();
+      await stageRuntimeSources(bundle, project);
+      const denied = async () => {
+        throw Object.assign(new Error('EACCES: permission denied, rename'), { code: 'EACCES' });
+      };
+      const deniedCp = (async (...args: Parameters<typeof cp>) => {
+        if (args[1] === join(project, 'backend')) {
+          throw Object.assign(new Error('EACCES: permission denied, open'), { code: 'EACCES' });
+        }
+        return cp(...args);
+      }) as typeof cp;
+      const failure = stageRuntimeSources(bundle, project, denied, {
+        fs: { cp: deniedCp, rm },
+        retry: { platform, sleep: async () => {} },
+      });
+      await expect(failure).rejects.toMatchObject({ code: 'EACCES' });
+    },
+  );
   it('still fails on a rename error that is not a lock', async () => {
     const { bundle, project } = await fixture();
     const broken = async () => {

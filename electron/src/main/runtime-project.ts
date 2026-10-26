@@ -903,7 +903,11 @@ export async function stageRuntimeSources(
       }
       if (!swapped) await persist(() => mirrorInPlace(pending, target, fs));
     } catch (error) {
-      if (isLocked(error)) throw runtimeFilesLockedError(target, error);
+      // Only Windows file locks get the OneDrive/antivirus guidance; elsewhere
+      // EPERM/EACCES is a real permission problem with its own guidance.
+      if (isLocked(error) && (retry.platform ?? process.platform) === 'win32') {
+        throw runtimeFilesLockedError(target, error);
+      }
       throw error;
     } finally {
       await fs.rm(pending, { recursive: true, force: true }).catch(() => {});
