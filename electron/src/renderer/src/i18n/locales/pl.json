@@ -1877,7 +1877,6 @@
     "warn_unknown_voice": "Nieznany głos „{{name}}” — zostanie użyty domyślny",
     "warn_empty_chapter": "Rozdział „{{title}}” nie zawiera tekstu do przeczytania",
     "warn_unknown_tag": "Nierozpoznany znacznik {{tag}} — zostanie odczytany na głos",
-    "untitled": "Książka audio bez tytułu",
     "dismiss": "Odrzuć",
     "output": "Wyjście",
     "title": "Książka audio",
@@ -1902,15 +1901,8 @@
       "voice": "Niektóre linie nie mają głosu. Wybierz głos domyślny lub przypisz głos do każdej linii.",
       "lexicon": "Lista wymowy zawiera to samo słowo dwa razy. Usuń jeden z wpisów."
     },
-    "recovery_title": "Przerwana książka audio",
-    "recovery_progress": "{{done}} z {{total}} rozdziałów jest w pamięci podręcznej",
-    "recovery_hint": "Wznowienie wykorzystuje ukończone rozdziały i syntezuje tylko to, co pozostało.",
     "recovery_load_failed": "Nie udało się sprawdzić przerwanych renderowań.",
     "resume": "Wznów",
-    "open_chapter_cache": "Otwórz pamięć podręczną rozdziałów",
-    "cache_location_hint": "Pamięć podręczna dźwięku rozdziałów: {{cachePath}} · Manifest wznowienia: {{manifestPath}}",
-    "resume_failed": "Nie można wznowić książki audio: {{message}}",
-    "open_cache_failed": "Nie można otworzyć pamięci podręcznej rozdziałów",
     "progress_summary": "Synteza {{current}} z {{total}} rozdziałów",
     "show_progress": "Pokaż postęp",
     "eta": "~{{time}} pozostało",
@@ -2701,8 +2693,7 @@
     "unexpected": "Nieoczekiwany błąd: {{message}}",
     "backend_shutting_down": "VoiceStudio się zamyka. Otwórz aplikację ponownie i spróbuj jeszcze raz.",
     "crash_broken_env": "Zakończył się podczas ładowania własnych zależności Pythona, więc nie chodzi o pamięć ani o kartę graficzną — środowisko jest niekompletne albo zostało zaktualizowane w połowie. Użyj „Wyczyść i ponów” w Ustawienia → Logi → Backend: odbudowuje je od zera i naprawia w miejscu, nie ruszając twoich głosów ani projektów. Jeśli nadal się nie udaje, szczegóły awarii wskazują pakiet, którego nie dało się zaimportować.",
-    "crash_vram_default": "Na mniejszych GPU zwykłą przyczyną jest brak pamięci VRAM podczas ładowania modelu ASR obok już załadowanego modelu TTS: najpierw zwolnij model TTS albo wybierz mniejszy model ASR w Katalogu modeli → Modele.",
-    "stream_cut_backend_alive": "Strumień urwał się przedwcześnie, ale backend nadal działa — a więc nie uległ awarii. W konfiguracji serwerowej lub kontenerowej zwykle oznacza to, że odwrotne proxy albo load balancer buforuje połączenie lub przerywa je po limicie czasu: wyłącz buforowanie odpowiedzi dla tej trasy (nginx: proxy_buffering off; X-Accel-Buffering: no) i zwiększ jego limit czasu odczytu. Uruchomienie aplikacji desktopowej bezpośrednio albo na localhost bez proxy pozwoli to potwierdzić."
+    "crash_vram_default": "Na mniejszych GPU zwykłą przyczyną jest brak pamięci VRAM podczas ładowania modelu ASR obok już załadowanego modelu TTS: najpierw zwolnij model TTS albo wybierz mniejszy model ASR w Katalogu modeli → Modele."
   },
   "segmentEditing": {
     "more": "Więcej akcji",

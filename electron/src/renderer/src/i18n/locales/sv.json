@@ -1869,7 +1869,6 @@
     "warn_unknown_voice": "Okänd röst ‘{{name}}’ — standardrösten används",
     "warn_empty_chapter": "Kapitlet ”{{title}}” saknar uppläst text",
     "warn_unknown_tag": "Okänd tagg {{tag}} — den läses upp",
-    "untitled": "Namnlös ljudbok",
     "dismiss": "Avfärda",
     "output": "Utdata",
     "title": "Ljudbok",
@@ -1894,15 +1893,8 @@
       "voice": "Vissa rader saknar röst. Välj en standardröst eller tilldela en till varje rad.",
       "lexicon": "Uttalslistan innehåller samma ord två gånger. Ta bort en av posterna."
     },
-    "recovery_title": "Avbruten ljudbok",
-    "recovery_progress": "{{done}} av {{total}} kapitel är cachade",
-    "recovery_hint": "Fortsätt återanvänder färdiga kapitel och syntetiserar bara det som återstår.",
     "recovery_load_failed": "Det gick inte att söka efter avbrutna renderingar.",
     "resume": "Fortsätt",
-    "open_chapter_cache": "Öppna kapitelcache",
-    "cache_location_hint": "Cache för kapitelljud: {{cachePath}} · Återupptagningsmanifest: {{manifestPath}}",
-    "resume_failed": "Det gick inte att fortsätta ljudboken: {{message}}",
-    "open_cache_failed": "Det gick inte att öppna kapitelcachen",
     "progress_summary": "Syntetiserar {{current}} av {{total}} kapitel",
     "show_progress": "Visa förlopp",
     "eta": "~{{time}} kvar",
@@ -2693,8 +2685,7 @@
     "unexpected": "Oväntat fel: {{message}}",
     "backend_shutting_down": "VoiceStudio stängs av. Öppna appen igen och försök på nytt.",
     "crash_broken_env": "Den dog när den läste in sina egna Python-beroenden, så det handlar varken om minne eller om din GPU — miljön är ofullständig eller halvuppdaterad. Använd ”Rensa & Försök igen” under Inställningar → Loggar → Backend, som bygger om den från grunden och reparerar den på plats utan att röra dina röster eller projekt. Misslyckas det ändå anger kraschdetaljerna exakt vilket paket som inte gick att importera.",
-    "crash_vram_default": "På mindre GPU:er är den vanliga orsaken att VRAM-minnet tar slut när ASR-modellen läses in ovanpå TTS-modellen: ladda ur TTS-modellen först, eller välj en mindre ASR-modell under Modellkatalog → Modeller.",
-    "stream_cut_backend_alive": "Strömmen avbröts i förtid, men backend körs fortfarande — den kraschade alltså inte. I en serverad eller containerbaserad miljö beror det oftast på en omvänd proxy eller lastbalanserare som buffrar anslutningen eller bryter den efter en tidsgräns: stäng av svarsbuffring för den här rutten (nginx: proxy_buffering off; X-Accel-Buffering: no) och höj dess tidsgräns för läsning. Att köra skrivbordsappen direkt, eller på localhost utan proxy, bekräftar det."
+    "crash_vram_default": "På mindre GPU:er är den vanliga orsaken att VRAM-minnet tar slut när ASR-modellen läses in ovanpå TTS-modellen: ladda ur TTS-modellen först, eller välj en mindre ASR-modell under Modellkatalog → Modeller."
   },
   "segmentEditing": {
     "more": "Fler åtgärder",

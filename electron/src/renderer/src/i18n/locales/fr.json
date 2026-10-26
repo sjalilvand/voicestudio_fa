@@ -1871,7 +1871,6 @@
     "warn_unknown_voice": "Voix inconnue « {{name}} » — la voix par défaut sera utilisée",
     "warn_empty_chapter": "Le chapitre « {{title}} » ne contient aucun texte parlé",
     "warn_unknown_tag": "Balise non reconnue {{tag}} — elle sera lue à voix haute",
-    "untitled": "Livre audio sans titre",
     "dismiss": "Ignorer",
     "output": "Sortie",
     "title": "Livre audio",
@@ -1896,15 +1895,8 @@
       "voice": "Certaines lignes n'ont pas de voix. Choisissez une voix par défaut ou attribuez-en une à chaque ligne.",
       "lexicon": "La liste de prononciation contient deux fois le même mot. Supprimez l'une des entrées."
     },
-    "recovery_title": "Livre audio interrompu",
-    "recovery_progress": "{{done}} chapitres sur {{total}} sont mis en cache",
-    "recovery_hint": "Reprendre réutilise les chapitres terminés et ne synthétise que ce qui reste.",
     "recovery_load_failed": "Impossible de vérifier les rendus interrompus.",
     "resume": "Reprendre",
-    "open_chapter_cache": "Ouvrir le cache des chapitres",
-    "cache_location_hint": "Cache audio des chapitres : {{cachePath}} · Manifeste de reprise : {{manifestPath}}",
-    "resume_failed": "Impossible de reprendre le livre audio : {{message}}",
-    "open_cache_failed": "Impossible d'ouvrir le cache des chapitres",
     "progress_summary": "Synthèse de {{current}} sur {{total}} chapitres",
     "show_progress": "Voir la progression",
     "eta": "~{{time}} restant",
@@ -2695,8 +2687,7 @@
     "unexpected": "Erreur inattendue : {{message}}",
     "backend_shutting_down": "VoiceStudio est en cours de fermeture. Rouvrez l’application et réessayez.",
     "crash_broken_env": "Il est mort en chargeant ses propres dépendances Python : ce n'est donc ni la mémoire ni votre GPU, mais un environnement incomplet ou à moitié mis à jour. Utilisez « Nettoyer et réessayer » dans Paramètres → Journaux → Backend, qui le reconstruit de zéro et le répare sur place, sans toucher à vos voix ni à vos projets. Si l'échec persiste, les détails du plantage nomment le paquet qui refusait de s'importer.",
-    "crash_vram_default": "Sur les GPU plus modestes, la cause habituelle est un manque de VRAM lors du chargement du modèle ASR en plus du modèle TTS : déchargez d'abord le modèle TTS, ou choisissez un modèle ASR plus petit dans Catalogue de modèles → Modèles.",
-    "stream_cut_backend_alive": "Le flux s'est terminé prématurément, mais le backend tourne toujours — il n'a donc pas planté. Dans une installation servie ou conteneurisée, c'est généralement un reverse proxy ou un répartiteur de charge qui met la connexion en tampon ou la coupe par timeout : désactivez la mise en tampon des réponses pour cette route (nginx: proxy_buffering off; X-Accel-Buffering: no) et augmentez son délai de lecture. Lancer l'application de bureau directement, ou sur localhost sans proxy, permettra de le confirmer."
+    "crash_vram_default": "Sur les GPU plus modestes, la cause habituelle est un manque de VRAM lors du chargement du modèle ASR en plus du modèle TTS : déchargez d'abord le modèle TTS, ou choisissez un modèle ASR plus petit dans Catalogue de modèles → Modèles."
   },
   "segmentEditing": {
     "more": "Plus d’actions",

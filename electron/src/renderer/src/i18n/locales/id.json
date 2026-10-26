@@ -1869,7 +1869,6 @@
     "warn_unknown_voice": "Suara tidak dikenal ‘{{name}}’ — akan memakai default",
     "warn_empty_chapter": "Bab “{{title}}” tidak memiliki teks untuk dibacakan",
     "warn_unknown_tag": "Tag tidak dikenal {{tag}} — akan dibacakan",
-    "untitled": "Buku audio tanpa judul",
     "dismiss": "Tutup",
     "output": "Keluaran",
     "title": "Buku Audio",
@@ -1894,15 +1893,8 @@
       "voice": "Ada baris tanpa suara. Pilih suara default atau tetapkan suara untuk tiap baris.",
       "lexicon": "Daftar pengucapan memuat kata yang sama dua kali. Hapus salah satu entrinya."
     },
-    "recovery_title": "Buku audio terputus",
-    "recovery_progress": "{{done}} dari {{total}} bab telah di-cache",
-    "recovery_hint": "Lanjutkan menggunakan kembali bab yang selesai dan hanya menyintesis sisanya.",
     "recovery_load_failed": "Tidak dapat memeriksa render yang terhenti.",
     "resume": "Lanjutkan",
-    "open_chapter_cache": "Buka cache bab",
-    "cache_location_hint": "Cache audio bab: {{cachePath}} · Manifes lanjutan: {{manifestPath}}",
-    "resume_failed": "Tidak dapat melanjutkan buku audio: {{message}}",
-    "open_cache_failed": "Tidak dapat membuka cache bab",
     "progress_summary": "Mensintesis {{current}} dari {{total}} bab",
     "show_progress": "Lihat progres",
     "eta": "~{{time}} tersisa",
@@ -2693,8 +2685,7 @@
     "unexpected": "Kesalahan tak terduga: {{message}}",
     "backend_shutting_down": "VoiceStudio sedang ditutup. Buka kembali aplikasinya lalu coba lagi.",
     "crash_broken_env": "Ia mati saat memuat dependensi Python-nya sendiri, jadi ini bukan soal memori atau GPU Anda — lingkungannya tidak lengkap atau tertinggal setengah diperbarui. Gunakan \"Bersihkan & Coba Lagi\" di Pengaturan → Log → Backend, yang membangunnya ulang dari nol dan memperbaikinya di tempat, tanpa menyentuh suara atau proyek Anda. Jika masih gagal, detail crash menyebutkan paket persis yang gagal diimpor.",
-    "crash_vram_default": "Pada GPU yang lebih kecil, penyebab umumnya adalah kehabisan VRAM saat memuat model ASR di atas model TTS: kosongkan model TTS terlebih dahulu, atau pilih model ASR yang lebih kecil di Katalog model → Model.",
-    "stream_cut_backend_alive": "Stream berakhir lebih awal, tetapi backend masih berjalan — jadi backend tidak mogok. Pada penyiapan server atau kontainer, ini biasanya karena reverse proxy atau load balancer yang mem-buffer atau memutus koneksi karena batas waktu: nonaktifkan buffering respons untuk rute ini (nginx: proxy_buffering off; X-Accel-Buffering: no) dan naikkan batas waktu bacanya. Menjalankan aplikasi desktop secara langsung, atau di localhost tanpa proxy, akan memastikannya."
+    "crash_vram_default": "Pada GPU yang lebih kecil, penyebab umumnya adalah kehabisan VRAM saat memuat model ASR di atas model TTS: kosongkan model TTS terlebih dahulu, atau pilih model ASR yang lebih kecil di Katalog model → Model."
   },
   "segmentEditing": {
     "more": "Lebih banyak tindakan",

@@ -1895,13 +1895,9 @@
       "lexicon": "发音列表中同一个词出现了两次。请删除其中一条。"
     },
     "recovery_title": "已中断的有声读物",
-    "recovery_progress": "{{total}} 章中有 {{done}} 章已缓存",
-    "recovery_hint": "继续时会复用已完成的章节，只合成剩余内容。",
     "recovery_load_failed": "无法检查中断的渲染。",
     "resume": "继续",
     "open_chapter_cache": "打开章节缓存",
-    "cache_location_hint": "章节音频缓存：{{cachePath}} · 续传清单：{{manifestPath}}",
-    "resume_failed": "无法继续有声读物：{{message}}",
     "open_cache_failed": "无法打开章节缓存",
     "progress_summary": "正在合成第 {{current}}/{{total}} 章",
     "show_progress": "查看进度",
@@ -2693,8 +2689,7 @@
     "unexpected": "意外错误：{{message}}",
     "backend_shutting_down": "VoiceStudio 正在关闭。请重新打开应用后再试。",
     "crash_broken_env": "它在加载自身的 Python 依赖时退出，因此与内存或显卡无关——运行环境不完整，或更新到一半就停下了。请在 设置 → 日志 → 后端 中使用“清理并重试”，它会从头重建环境并就地修复，不会动你的声音或项目。如果之后仍然失败，崩溃详情会指出无法导入的具体软件包。",
-    "crash_vram_default": "在较小的 GPU 上，常见原因是在 TTS 模型仍占用显存时加载 ASR 模型，导致显存（VRAM）不足：请先卸载 TTS 模型，或在 模型库 → 模型 中选择更小的 ASR 模型。",
-    "stream_cut_backend_alive": "音频流提前结束，但后端仍在运行——因此它并没有崩溃。在服务器或容器化部署中，这通常是反向代理或负载均衡器在缓冲连接或使其超时：请为此路由禁用响应缓冲（nginx: proxy_buffering off; X-Accel-Buffering: no）并调高读取超时。直接运行桌面应用，或在没有代理的 localhost 上运行，即可确认。"
+    "crash_vram_default": "在较小的 GPU 上，常见原因是在 TTS 模型仍占用显存时加载 ASR 模型，导致显存（VRAM）不足：请先卸载 TTS 模型，或在 模型库 → 模型 中选择更小的 ASR 模型。"
   },
   "segmentEditing": {
     "more": "更多操作",

@@ -1871,7 +1871,6 @@
     "warn_unknown_voice": "Voz desconhecida «{{name}}» — a padrão será usada",
     "warn_empty_chapter": "O capítulo «{{title}}» não tem texto falado",
     "warn_unknown_tag": "Tag não reconhecida {{tag}} — será lida em voz alta",
-    "untitled": "Audiolivro sem título",
     "dismiss": "Dispensar",
     "output": "Saída",
     "title": "Audiolivro",
@@ -1896,15 +1895,8 @@
       "voice": "Algumas linhas estão sem voz. Escolha uma voz padrão ou atribua uma a cada linha.",
       "lexicon": "A lista de pronúncia tem a mesma palavra duas vezes. Apague uma das entradas."
     },
-    "recovery_title": "Audiolivro interrompido",
-    "recovery_progress": "{{done}} de {{total}} capítulos estão em cache",
-    "recovery_hint": "Retomar reutiliza os capítulos concluídos e sintetiza apenas o que falta.",
     "recovery_load_failed": "Não foi possível verificar renderizações interrompidas.",
     "resume": "Retomar",
-    "open_chapter_cache": "Abrir cache dos capítulos",
-    "cache_location_hint": "Cache de áudio dos capítulos: {{cachePath}} · Manifesto de retomada: {{manifestPath}}",
-    "resume_failed": "Não foi possível retomar o audiolivro: {{message}}",
-    "open_cache_failed": "Não foi possível abrir o cache dos capítulos",
     "progress_summary": "Sintetizando {{current}} de {{total}} capítulos",
     "show_progress": "Ver progresso",
     "eta": "~{{time}} restante",
@@ -2695,8 +2687,7 @@
     "unexpected": "Erro inesperado: {{message}}",
     "backend_shutting_down": "O VoiceStudio está sendo encerrado. Reabra o aplicativo e tente novamente.",
     "crash_broken_env": "Ele morreu enquanto carregava as próprias dependências de Python, então não é questão de memória nem da sua GPU — o ambiente está incompleto ou ficou atualizado pela metade. Use \"Limpar e Repetir\" em Configurações → Logs → Backend, que o reconstrói do zero e o repara no lugar, sem tocar nas suas vozes ou projetos. Se continuar falhando, os detalhes da falha nomeiam o pacote exato que não importava.",
-    "crash_vram_default": "Em GPUs menores, a causa habitual é ficar sem VRAM ao carregar o modelo ASR junto com o modelo TTS: descarregue primeiro o modelo TTS, ou escolha um modelo ASR menor em Catálogo de modelos → Modelos.",
-    "stream_cut_backend_alive": "O stream terminou mais cedo, mas o backend continua em execução — portanto, não travou. Em uma instalação servida ou em contêiner, isso geralmente é um proxy reverso ou balanceador de carga fazendo buffer da conexão ou encerrando-a por tempo limite: desative o buffering de resposta para esta rota (nginx: proxy_buffering off; X-Accel-Buffering: no) e aumente o tempo limite de leitura. Executar o aplicativo desktop diretamente, ou em localhost sem proxy, confirmará isso."
+    "crash_vram_default": "Em GPUs menores, a causa habitual é ficar sem VRAM ao carregar o modelo ASR junto com o modelo TTS: descarregue primeiro o modelo TTS, ou escolha um modelo ASR menor em Catálogo de modelos → Modelos."
   },
   "segmentEditing": {
     "more": "Mais ações",

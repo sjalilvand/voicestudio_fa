@@ -2008,7 +2008,6 @@
     "warn_unknown_voice": "Unknown voice ‘{{name}}’ — will use the default",
     "warn_empty_chapter": "Chapter “{{title}}” has no spoken text",
     "warn_unknown_tag": "Unrecognized tag {{tag}} — it will be read aloud",
-    "untitled": "Untitled audiobook",
     "dismiss": "Dismiss",
     "output": "Output",
     "title": "Audiobook",
@@ -2038,15 +2037,8 @@
       "voice": "Some lines have no voice. Pick a default voice or assign one per line.",
       "lexicon": "The pronunciation list contains the same word twice. Delete one entry."
     },
-    "recovery_title": "Interrupted audiobook",
-    "recovery_progress": "{{done}} of {{total}} chapters are cached",
-    "recovery_hint": "Resume reuses finished chapters and synthesizes only what remains.",
     "recovery_load_failed": "Couldn't check for interrupted renders.",
     "resume": "Resume",
-    "open_chapter_cache": "Open chapter cache",
-    "cache_location_hint": "Chapter audio cache: {{cachePath}} · Resume manifest: {{manifestPath}}",
-    "resume_failed": "Could not resume the audiobook: {{message}}",
-    "open_cache_failed": "Could not open the chapter cache",
     "progress_summary": "Synthesizing {{current}} of {{total}} chapters",
     "show_progress": "Show progress",
     "eta": "~{{time}} left",
@@ -2760,8 +2752,7 @@
     "unexpected": "Unexpected error: {{message}}",
     "backend_shutting_down": "VoiceStudio is shutting down. Reopen the app and try again.",
     "crash_broken_env": "It died while loading its own Python dependencies, so this is not about memory or your GPU — the environment is incomplete or was left half-updated. Use \"Clean & Retry\" in Settings → Logs → Backend, which rebuilds it from scratch; that repairs it in place, without touching your voices or projects. If it still fails afterwards, the crash details name the exact package that would not import.",
-    "crash_vram_default": "On smaller GPUs the usual cause is running out of VRAM while loading the ASR model on top of the TTS model: flush the TTS model first, or pick a smaller ASR model in Model Catalogue → Models.",
-    "stream_cut_backend_alive": "The stream ended early, but the backend is still running — so it did not crash. In a served or containerised setup this is usually a reverse proxy or load balancer buffering or timing out the connection: disable response buffering for this route (nginx: proxy_buffering off; X-Accel-Buffering: no) and raise its read timeout. Running the desktop app directly, or on localhost without a proxy, will confirm it."
+    "crash_vram_default": "On smaller GPUs the usual cause is running out of VRAM while loading the ASR model on top of the TTS model: flush the TTS model first, or pick a smaller ASR model in Model Catalogue → Models."
   },
   "segmentEditing": {
     "more": "More actions",

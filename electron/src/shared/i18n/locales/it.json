@@ -450,7 +450,6 @@
     "addLine": "Aggiungi linea",
     "addChapter": "Aggiungi capitolo",
     "clearConfirm": "Cancellare tutte le {{count}} voci del copione e il testo importato in sospeso? Questa azione non può essere annullata.",
-    "clearScript": "Svuota copione",
     "clearScriptHint": "Mantiene le voci assegnate, eliminando capitoli e battute",
     "cleared": "Copione svuotato",
     "chapterN": "Capitolo {{n}}",

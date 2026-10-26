@@ -1869,7 +1869,6 @@
     "warn_unknown_voice": "Bilinmeyen ses ‘{{name}}’ — varsayılan kullanılacak",
     "warn_empty_chapter": "“{{title}}” bölümünde seslendirilecek metin yok",
     "warn_unknown_tag": "Tanınmayan etiket {{tag}} — sesli okunacak",
-    "untitled": "Adsız sesli kitap",
     "dismiss": "Kapat",
     "output": "Çıktı",
     "title": "Sesli kitap",
@@ -1894,15 +1893,8 @@
       "voice": "Bazı satırların sesi yok. Varsayılan bir ses seçin ya da her satıra bir ses atayın.",
       "lexicon": "Telaffuz listesinde aynı sözcük iki kez geçiyor. Kayıtlardan birini silin."
     },
-    "recovery_title": "Kesintiye uğrayan sesli kitap",
-    "recovery_progress": "{{total}} bölümün {{done}} tanesi önbelleğe alındı",
-    "recovery_hint": "Devam et, tamamlanan bölümleri yeniden kullanır ve yalnızca kalanı sentezler.",
     "recovery_load_failed": "Yarıda kalan işlemeler denetlenemedi.",
     "resume": "Devam et",
-    "open_chapter_cache": "Bölüm önbelleğini aç",
-    "cache_location_hint": "Bölüm sesi önbelleği: {{cachePath}} · Devam bildirimi: {{manifestPath}}",
-    "resume_failed": "Sesli kitap sürdürülemedi: {{message}}",
-    "open_cache_failed": "Bölüm önbelleği açılamadı",
     "progress_summary": "{{total}} bölümden {{current}} tanesi sentezleniyor",
     "show_progress": "İlerlemeyi göster",
     "eta": "~{{time}} kaldı",
@@ -2693,8 +2685,7 @@
     "unexpected": "Beklenmeyen hata: {{message}}",
     "backend_shutting_down": "VoiceStudio kapanıyor. Uygulamayı yeniden açıp tekrar dene.",
     "crash_broken_env": "Kendi Python bağımlılıklarını yüklerken sonlandı; yani sorun bellek ya da ekran kartınız değil — ortam eksik veya yarım güncellenmiş durumda. Ayarlar → Günlükler → Arka uç bölümündeki \"Temizle ve Yeniden Dene\" seçeneğini kullanın: ortamı sıfırdan yeniden kurar ve seslerinize ya da projelerinize dokunmadan yerinde onarır. Yine de başarısız olursa, çökme ayrıntıları içe aktarılamayan paketin adını verir.",
-    "crash_vram_default": "Küçük GPU'larda en yaygın neden, TTS modeli yüklüyken ASR modelini de yüklerken VRAM'in tükenmesidir: önce TTS modelini bellekten kaldırın veya Model kataloğu → Modeller bölümünden daha küçük bir ASR modeli seçin.",
-    "stream_cut_backend_alive": "Akış erken sona erdi ama arka uç hâlâ çalışıyor — yani çökmedi. Sunucu veya konteyner kurulumlarında bunun nedeni genellikle bir ters vekilin (reverse proxy) ya da yük dengeleyicinin bağlantıyı arabelleğe alması veya zaman aşımına uğratmasıdır: bu yol için yanıt arabelleğe almayı kapatın (nginx: proxy_buffering off; X-Accel-Buffering: no) ve okuma zaman aşımını artırın. Masaüstü uygulamasını doğrudan ya da vekil olmadan localhost üzerinde çalıştırmak bunu doğrular."
+    "crash_vram_default": "Küçük GPU'larda en yaygın neden, TTS modeli yüklüyken ASR modelini de yüklerken VRAM'in tükenmesidir: önce TTS modelini bellekten kaldırın veya Model kataloğu → Modeller bölümünden daha küçük bir ASR modeli seçin."
   },
   "segmentEditing": {
     "more": "Daha fazla işlem",
