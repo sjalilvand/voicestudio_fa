@@ -130,15 +130,7 @@ async def transcribe_audio(
             purpose="transcribe" if use_active_asr else "dictation",
             require_installed=requested_mode == "reference",
         )
-        if missing is not None and not use_active_asr:
-            transcribe_missing = await asyncio.to_thread(
-                asr_model_missing_error,
-                purpose="transcribe",
-                require_installed=True,
-            )
-            if transcribe_missing is None:
-                missing = None
-                use_active_asr = True
+        # CLEAN-ROOM (spec D-josemercado §1): dictation-mode fallback to an installed transcribe engine when no dictation model is present.
         # The selected offline engine's weights are absent, but a reference
         # transcript does not need that engine: generate transcribes through
         # any installed recognizer, so the preview must too (#2929/#2678).
