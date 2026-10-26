@@ -180,9 +180,7 @@ export function ReportBug({ error }: { error?: Error | string }) {
             '',
             'Stage: ' + backend.stage,
             'Managed: ' + backend.managed,
-            ...(backend.exitCode != null
-              ? ['Exit code: ' + describeExitCode(backend.exitCode)]
-              : []),
+            // CLEAN-ROOM (spec H-shivendra-2 §10): 'Exit code' line for the current backend failure
             ...(backend.exitSignal ? ['Signal: ' + backend.exitSignal] : []),
             ...(isNativeFaultExit({
               exitCode: backend.exitCode,
@@ -203,18 +201,7 @@ export function ReportBug({ error }: { error?: Error | string }) {
           '',
           'Detected: ' + new Date(crash.timestamp).toISOString(),
           'Version: ' + crash.version,
-          // A bare NTSTATUS is not triageable: 3221225477 and -1073741819 are
-          // the same access violation, reported differently by Node and Rust,
-          // and neither reads as a segfault (#2250). Name it, and say outright
-          // that a native fault leaves no Python traceback so nobody hunts for
-          // one that was never written.
-          'Exit code: ' + describeExitCode(crash.exitCode, t('common.unknown')),
-          'Signal: ' + (crash.signal ?? '—'),
-          ...(isNativeFaultExit({ exitCode: crash.exitCode, signal: crash.signal })
-            ? [
-                t('reportBug.native_fault_cause'),
-              ]
-            : []),
+          // CLEAN-ROOM (spec H-shivendra-2 §10): 'Exit code' and 'Signal' lines plus native-fault cause line for the last native backend exit
           'Uptime (seconds): ' + Math.round(crash.uptimeMs / 1000),
           '```',
           clampCrashTail(scrubText(crash.logTail.join('\n'))),

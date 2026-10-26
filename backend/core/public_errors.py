@@ -245,10 +245,8 @@ def stream_generation_failure(error: BaseException | object) -> dict[str, object
         # a Python type, not user text, and no substring of `error` is copied.
         payload["error_class"] = type(error).__name__
     try:
-        from core.failure import is_terminal_failure_topic
-
         enriched = public_exception_response(error, fallback=str(payload["detail"]))
-        terminal = is_terminal_failure_topic(enriched.get("docs_topic"))
+        # CLEAN-ROOM (spec H-shivendra-2 §4): compute the terminal flag from the diagnosed topic
     except Exception:
         return payload
     hint = enriched.get("hint")
@@ -258,14 +256,7 @@ def stream_generation_failure(error: BaseException | object) -> dict[str, object
         topic = enriched.get("docs_topic")
         if topic:
             payload["docs_topic"] = topic
-            # #2177: a build mismatch, a device selection or an OS policy does
-            # not change between two renders of the same text. Marking these
-            # terminal stops the floor message's "try again" from being the
-            # only advice, and stops the client re-rendering the whole passage
-            # on the classic path to reach the identical failure.
-            if terminal:
-                payload["terminal"] = True
-                payload["retryable"] = False
+            # CLEAN-ROOM (spec H-shivendra-2 §4): mark the payload terminal and non-retryable when the diagnosed topic is a terminal class
             try:
                 from core import error_docs_map
 

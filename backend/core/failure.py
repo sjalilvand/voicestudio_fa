@@ -454,29 +454,13 @@ _CONTEXT_FREE_HINT_CLASSES = frozenset({
     # global 500 handler, the streaming frame) as the bare "VoiceStudio hit an
     # internal error" even though the error journal already named DISK_FULL.
     "DISK_FULL",
-    # #2177: CUDA's own "no kernel image is available for execution" — a driver
-    # sentence no other failure produces, and the one class a streaming render
-    # on an unsupported card hits every single time. The non-streaming path has
-    # named this since #756; the streaming frame could only answer with the
-    # floor message, so the report arrived as a bare RuntimeError.
-    "GPU_ARCH_UNSUPPORTED",
-    # #1227's trigger is the numeric WinError (4551/1260), locale-independent
-    # and unmistakable — the same reasoning that already admits
-    # WINDOWS_UNTRUSTED_MOUNT (448) and WINDOWS_PAGING_FILE_TOO_SMALL (1455).
-    # Left out when those two were added, so a blocked load reached a streaming
-    # render with no way to learn an Application Control policy caused it.
-    "WINDOWS_APP_CONTROL_BLOCKED",
+    # CLEAN-ROOM (spec H-shivendra-2 §2): context-free hint allowlist entries for GPU_ARCH_UNSUPPORTED and WINDOWS_APP_CONTROL_BLOCKED
     # Matched on SOURCE_LANGUAGE_REQUIRED_MESSAGE, a sentence this app writes
     # itself (SourceLanguageRequiredError), so no foreign text can claim it.
     # It is terminal, and a terminal class without its hint would end a render
     # while explaining nothing.
     "SOURCE_LANGUAGE_REQUIRED",
-    # Matched on the library name or ``audio_io.AUDIO_WRITE_FAILED_MARKER`` — a
-    # marker chosen over generic wording precisely so an unrelated open cannot
-    # claim the audio remedy. The desktop app already routes this topic to
-    # Settings → Storage, a recovery that could never fire while the hint was
-    # dropped before reaching the client.
-    "AUDIO_IO_FAILED",
+    # CLEAN-ROOM (spec H-shivendra-2 §2): context-free hint allowlist entry for AUDIO_IO_FAILED
     "SOCKS_PROXY_SUPPORT_MISSING",
     "SSL_HANDSHAKE_FAILURE",
     # Its trigger is an exact OpenSSL string, so it cannot be confused with
@@ -519,32 +503,7 @@ _CONTEXT_FREE_HINT_CLASSES = frozenset({
 })
 
 
-#: Classes that cannot succeed on a retry of the same request. The failure is in
-#: the build, the device selection or an OS policy — none of which a second
-#: render changes — so the stream frame marks them terminal rather than
-#: inviting the "try again" the floor message ends with. #2177's reporter ran
-#: the same generation twice, ninety seconds apart, to the same result.
-#:
-#: `terminal` also stops the client re-rendering the whole text on the classic
-#: path (``shouldFallbackToClassic``), which for these classes would fail
-#: identically after paying for the render twice.
-_TERMINAL_FAILURE_CLASSES = frozenset({
-    "GPU_ARCH_UNSUPPORTED",
-    "WINDOWS_APP_CONTROL_BLOCKED",
-    # The same file has no audio on every retry.
-    "NO_AUDIO_TRACK",
-    # The same transcript reports no language on every retry.
-    "SOURCE_LANGUAGE_REQUIRED",
-    # A missing package or a missing transcript model does not appear between
-    # two renders of the same request.
-    "ENGINE_DEPENDENCY_MISSING",
-    "REFERENCE_STT_MISSING",
-})
-
-
-def is_terminal_failure_topic(topic: str | None) -> bool:
-    """Whether repeating the same render cannot repair the diagnosed cause."""
-    return topic in _TERMINAL_FAILURE_CLASSES
+# CLEAN-ROOM (spec H-shivendra-2 §3): terminal-failure class set and is_terminal_failure_topic(topic)
 
 
 def append_hint(text: str) -> str:
@@ -708,15 +667,7 @@ def classify(reason: BaseException | str) -> str:
     # it could not write (#1225) — a strictly more specific remedy.
     if (disk_full or is_disk_full_error(low)) and not _is_download_write_refusal(reason, low):
         return "DISK_FULL"
-    # #2177: the GPU's compute capability isn't in this torch build's arch list,
-    # so CUDA refuses to launch kernels. Checked after the OOM branch so real
-    # memory pressure is never relabelled, and matched on CUDA's own sentence —
-    # nothing else produces it, which is what makes the hint safe to attach on
-    # the context-free surfaces. ``generation.py`` already re-raises this class
-    # with the same remedy; without a topic the streaming frame could only show
-    # "Generation failed. Check the selected engine and try again."
-    if "no kernel image is available" in low:
-        return "GPU_ARCH_UNSUPPORTED"
+    # CLEAN-ROOM (spec H-shivendra-2 §1): classify() rule returning GPU_ARCH_UNSUPPORTED
     # Before the errno / "invalid argument" rules: ffmpeg's no-stream failure
     # ends in "Error opening output files: Invalid argument", which is not an
     # OS write refusal and must not be handed the TEMP-folder remedy.

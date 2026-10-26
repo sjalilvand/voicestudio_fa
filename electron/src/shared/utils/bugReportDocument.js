@@ -38,28 +38,13 @@ export function composeBugReportUrl({
       msg.length > MAX_MSG_CHARS ? `${msg.slice(0, MAX_MSG_CHARS)}\n… (truncated)` : msg;
     let stack = error?.stack ? scrubText(error.stack) : '';
     if (stack.length > MAX_STACK_CHARS) stack = `${stack.slice(0, MAX_STACK_CHARS)}\n… (truncated)`;
-    // A generic failure message plus a stack of minified bundle frames is the
-    // same report every time; the backend class name is what separates one
-    // unclassified engine failure from another (#1800). Taken from the error
-    // itself, then from a parsed 500 body — the Electron client keeps that on
-    // `payload` instead of lifting the field onto the error (lib/api/client.ts).
-    // `error_type` is the exception type the 500 handler names (#2917); the
-    // older `error_class` there is the diagnosis taxonomy, which is "UNKNOWN"
-    // for most failures, so it only fills in when no type was sent.
-    const rawClass =
-      typeof error?.errorClass === 'string' && error.errorClass
-        ? error.errorClass
-        : error?.payload?.error_type || error?.payload?.error_class;
-    const klass = typeof rawClass === 'string' && rawClass ? scrubText(rawClass) : '';
-    const rawTopic = error?.payload?.docs_topic ?? error?.payload?.detail?.docs_topic;
-    const topic = typeof rawTopic === 'string' && rawTopic ? scrubText(rawTopic) : '';
+    // CLEAN-ROOM (spec H-shivendra-2 §11): derive the backend error class and failure topic from the error
     errorSection.push(
       '## Error',
       '',
       '```',
       msgForBody,
-      ...(klass ? [`Backend error class: ${klass}`] : []),
-      ...(topic ? [`Backend failure topic: ${topic}`] : []),
+      // CLEAN-ROOM (spec H-shivendra-2 §11): backend error class and failure topic lines
       ...(stack && stack !== msgForBody ? [stack] : []),
       '```',
       '',

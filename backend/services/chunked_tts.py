@@ -442,13 +442,7 @@ def join_rendered_chunks(rendered: list, sample_rate: int, *,
     silent-truncation bug (#1330) one branch over. Keeping the decision in one
     function means there is one place that can be wrong, and it is testable.
     """
-    # `set(dropped)` sat inside the comprehension's condition, so it was rebuilt
-    # for every element — O(n) construction n times, to answer a question a
-    # single set answers once.
-    dropped = [i for i, r in enumerate(rendered)
-               if r is None or getattr(r, "shape", (0,))[-1] == 0]
-    dropped_indices = set(dropped)
-    kept = [r for i, r in enumerate(rendered) if i not in dropped_indices]
+    # CLEAN-ROOM (spec H-shivendra-2 §5): split the rendered list into dropped indices and kept chunks in one linear pass
     if trim_edges:
         # The engine's own lead-in/tail would otherwise become a hole at every
         # chunk boundary; the caller adds the gaps it actually wants.
@@ -508,49 +502,4 @@ def concatenate_audio_chunks(chunks: list, sample_rate: int,
         return chunks[0]
     chunks = _normalize_chunk_shapes(chunks)
 
-    crossfade_samples = int(sample_rate * crossfade_ms / 1000)
-    first = chunks[0]
-
-    # Growing the output with `result = torch.cat([result, chunk])` re-copied
-    # every sample already joined, once per chunk: joining N chunks moved N/2
-    # times the finished audio. A chapter splits into ~100 chunks and a book
-    # into ~500 (DEFAULT_MAX_CHUNK_CHARS is 800), so the copying — not the
-    # synthesis — came to dominate the join, and each step also held the old
-    # and new buffers at once.
-    #
-    # Same arithmetic, one buffer. The overlaps depend only on lengths, so
-    # price them in an integer pass first, allocate the finished length once,
-    # then write each chunk into its own slice. Crossfading in place against
-    # the tail already written is what keeps this identical to the old result
-    # rather than merely similar: `overlap` is capped by the length joined SO
-    # FAR, so a run of chunks shorter than the crossfade blends back across a
-    # boundary, and a version that faded chunk-against-chunk would quietly
-    # produce different audio there.
-    lengths = [chunk.shape[-1] for chunk in chunks]
-    joined = lengths[0]
-    overlaps: list[int] = []
-    for length in lengths[1:]:
-        overlap = max(0, min(crossfade_samples, joined, length))
-        overlaps.append(overlap)
-        joined += length - overlap
-
-    out = torch.empty(*first.shape[:-1], joined, dtype=first.dtype, device=first.device)
-    out[..., :lengths[0]] = first
-    filled = lengths[0]
-
-    for chunk, overlap in zip(chunks[1:], overlaps, strict=True):
-        chunk = chunk.to(device=out.device, dtype=out.dtype)
-        if overlap > 0:
-            fade_out = torch.linspace(1.0, 0.0, overlap, dtype=out.dtype, device=out.device)
-            fade_in = torch.linspace(0.0, 1.0, overlap, dtype=out.dtype, device=out.device)
-            tail = out[..., filled - overlap:filled]
-            tail.mul_(fade_out).add_(chunk[..., :overlap] * fade_in)
-        remainder = chunk.shape[-1] - overlap
-        if remainder > 0:
-            out[..., filled:filled + remainder] = chunk[..., overlap:]
-        filled += remainder
-
-    # Every sample is written: the first chunk fills [0, lengths[0]), and each
-    # step writes [filled, filled + remainder) before advancing by exactly
-    # `remainder`, so `filled` lands on `joined` with no gap left uninitialized.
-    return out
+    # CLEAN-ROOM (spec H-shivendra-2 §6): single-allocation linear crossfade join of the chunks, returned as the result
