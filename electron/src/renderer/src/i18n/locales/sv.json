@@ -3042,6 +3042,7 @@
     "transcription_pipe_lost": "Backend förlorade sin utdatakanal till appen under transkriberingen (broken pipe). Starta om VoiceStudio och försök igen.",
     "gpu_oom": "GPU:n fick slut på minne. Stäng andra GPU-tunga appar eller avlasta modeller och försök igen. Du kan också välja CPU under Inställningar → Prestanda och enhet eller välja en mindre TTS-motor.",
     "host_memory_exhausted": "Datorn fick slut på minne. Stäng andra minnestunga appar och webbläsarflikar, avlasta modeller du inte använder, generera ett kortare stycke eller välj en lättare TTS-motor.",
+    "disk_full": "Disken är full. Frigör utrymme på enheten som innehåller VoiceStudios data, modellcache eller tillfälliga mapp och försök igen. Inställningar → Lagring visar diskanvändningen och kan rensa tillfälliga filer.",
     "engine_dependency_missing": "Ett Python-paket som den här motorn behöver är inte installerat, så motorn kunde inte starta. Öppna Modellkatalogen, välj motorn och använd Installera / Reparera och starta sedan om VoiceStudio.",
     "reference_stt_missing": "Rösten saknar transkription och ingen tal-till-text-modell är installerad för att skapa en. Skriv in vad referensklippet säger i transkriptionsrutan (klipp upp till 20 sekunder) eller installera en tal-till-text-modell i Modellkatalogen, välj den och generera igen.",
     "install_speech_model": "Installera taligenkänningsmodell",

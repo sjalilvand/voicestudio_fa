@@ -3044,6 +3044,7 @@
     "transcription_pipe_lost": "El backend perdió su canal de salida con la aplicación durante la transcripción (broken pipe). Reinicia VoiceStudio e inténtalo de nuevo.",
     "gpu_oom": "La GPU se quedó sin memoria. Cierra otras apps que usen mucho la GPU o descarga modelos y vuelve a intentarlo. También puedes elegir CPU en Ajustes → Rendimiento y dispositivo o seleccionar un motor TTS más pequeño.",
     "host_memory_exhausted": "El equipo se quedó sin memoria. Cierra otras apps y pestañas del navegador que consuman memoria, libera los modelos que no uses, genera un fragmento más corto o elige un motor TTS más ligero.",
+    "disk_full": "El disco está lleno. Libera espacio en la unidad que contiene los datos, la caché de modelos o la carpeta temporal de VoiceStudio y vuelve a intentarlo. Ajustes → Almacenamiento muestra el uso del disco y puede borrar los archivos temporales.",
     "engine_dependency_missing": "Falta instalar un paquete de Python que necesita este motor, por lo que no pudo iniciarse. Abre el Catálogo de modelos, selecciona el motor y usa Instalar / Reparar; luego reinicia VoiceStudio.",
     "reference_stt_missing": "Esta voz no tiene transcripción y no hay ningún modelo de voz a texto instalado para crearla. Escribe lo que dice el clip de referencia en el cuadro de transcripción (clips de hasta 20 segundos) o instala un modelo de voz a texto en el Catálogo de modelos, selecciónalo y genera de nuevo.",
     "install_speech_model": "Instalar modelo de voz a texto",
