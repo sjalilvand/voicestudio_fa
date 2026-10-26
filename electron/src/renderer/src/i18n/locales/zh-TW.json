@@ -319,7 +319,9 @@
     "loading": "加載中...",
     "reset": "重設為預設值",
     "open": "打開",
-    "audio_tools_origin_system": "系統"
+    "audio_tools_origin_system": "系統",
+    "sidebar_expanded": "不要收合側邊欄",
+    "sidebar_expanded_hint": "視窗較窄，或專案、轉寫、工具等工作區自帶面板時，側邊欄通常會縮成一條圖示列。開啟後，側邊欄將一律完整展開。"
   },
   "themeAppearance": {
     "light": "淺色",
@@ -1882,6 +1884,16 @@
     "preview_plan": "預覽計劃",
     "stop": "停止",
     "stopped_note": "已停止 — 已完成的章節已快取；再次點擊建立以繼續。",
+    "blocked": {
+      "busy": "另一個專案正在算圖。請等它完成或將其停止，然後再試一次。",
+      "importing": "目前的匯入完成後即可使用「產生」。",
+      "engine_loading": "仍在檢查語音引擎是否就緒…",
+      "engine": "目前沒有就緒的語音引擎。請在「設定 → 引擎」中處理。",
+      "no_lines": "還沒有可朗讀的內容：請先新增一行。",
+      "no_script": "還沒有可旁白的內容：請撰寫或匯入腳本。",
+      "voice": "部分行沒有聲音。請選擇預設聲音，或為每一行分別指定。",
+      "lexicon": "發音清單中同一個詞出現了兩次。請刪除其中一筆。"
+    },
     "recovery_title": "已中斷的有聲書",
     "recovery_progress": "{{total}} 章中有 {{done}} 章已快取",
     "recovery_hint": "繼續時會重複使用已完成的章節，只合成剩餘內容。",

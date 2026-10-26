@@ -192,8 +192,9 @@ export function StoryEditor({
       })),
     });
   return (
-    // CLEAN-ROOM (spec N-jaketame-2 §17): root element classes (growth and vertical spacing; not a shrinkable flex item).
-    <div data-slot="story-editor">
+    // Deliberately not min-h-0: the page column is what scrolls. A root that could
+    // shrink would let a tall script spill over the pinned generate controls.
+    <div data-slot="story-editor" className="space-y-4 flex-1">
       {previewError && (
         <PipelineFailure fallback={previewError} onDismiss={() => setPreviewError(null)} />
       )}

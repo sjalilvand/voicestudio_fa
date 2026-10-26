@@ -71,11 +71,11 @@ export function SecondarySidebar({
   size = 'default',
   variant = 'controls',
   meta,
-  // CLEAN-ROOM (spec N-jaketame-2 §12): `footer` prop (destructured).
+  footer,
   library,
   libraryLabel,
   collapsed: controlledCollapsed,
-  // CLEAN-ROOM (spec N-jaketame-2 §12): `onCollapsedChange` prop (destructured).
+  onCollapsedChange,
   tabsInHeader = false,
 }: {
   title: string;
@@ -85,13 +85,15 @@ export function SecondarySidebar({
   size?: 'default' | 'wide' | 'spacious';
   variant?: 'controls' | 'navigation' | 'library';
   meta?: ReactNode;
-  // CLEAN-ROOM (spec N-jaketame-2 §12): optional `footer?: ReactNode` prop type.
+  /** Pinned below the scrolling content; hidden while collapsed or on the library tab. */
+  footer?: ReactNode;
   /** Saved items beside the controls. A render callback receives visibility so retained panes can cancel hidden work. */
   library?: ReactNode | ((active: boolean) => ReactNode);
   libraryLabel?: string;
   /** Controls the collapsed state when the parent owns a shared pane shortcut. */
   collapsed?: boolean;
-  // CLEAN-ROOM (spec N-jaketame-2 §12): optional `onCollapsedChange?: (collapsed: boolean) => void` prop type.
+  /** Reports each collapse or expand, so a page can re-home the footer while the pane is shut. */
+  onCollapsedChange?: (collapsed: boolean) => void;
   /**
    * Show the controls/library tabs in the header row instead of the title, for
    * pages whose title bar and tabs already name the workspace.
@@ -112,7 +114,13 @@ export function SecondarySidebar({
     setView(next);
   };
   const showLibrary = library != null && view === 'library';
-  // CLEAN-ROOM (spec N-jaketame-2 §12): `setCollapsed` setter (accepts a value or updater), controlled/uncontrolled aware, notifying the parent.
+  const setCollapsed = (next: boolean | ((current: boolean) => boolean)) => {
+    const resolved = typeof next === 'function' ? next(collapsed) : next;
+    if (resolved === collapsed) return;
+    if (controlledCollapsed === undefined) setUncontrolledCollapsed(resolved);
+    // Called from the event handler, not a state updater, so StrictMode cannot fire it twice.
+    onCollapsedChange?.(resolved);
+  };
   const headerTabs = tabsInHeader && library != null;
   const tabList = (className: string) => (
     <div
@@ -281,7 +289,16 @@ export function SecondarySidebar({
       >
         {children}
       </div>
-      {/* CLEAN-ROOM (spec N-jaketame-2 §12): pinned footer region. */}
+      {footer != null && !collapsed && !showLibrary && (
+        <div
+          data-slot="secondary-sidebar-footer"
+          // shrink-[0.05]: when the pane is height-capped (stacked layout) the scrolling content gives
+          // way first and the footer only shrinks once that is exhausted.
+          className="studio-scrollbar flex max-h-[70%] min-h-0 shrink-[0.05] flex-col gap-2 overflow-y-auto overscroll-contain border-t border-border/45 p-3"
+        >
+          {footer}
+        </div>
+      )}
       {collapsed && (
         <button
           type="button"

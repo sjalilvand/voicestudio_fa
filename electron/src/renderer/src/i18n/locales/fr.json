@@ -321,7 +321,9 @@
     "loading": "Chargement…",
     "reset": "Réinitialiser aux valeurs par défaut",
     "open": "Ouvert",
-    "audio_tools_origin_system": "Système"
+    "audio_tools_origin_system": "Système",
+    "sidebar_expanded": "Ne pas réduire la barre latérale",
+    "sidebar_expanded_hint": "Dans une fenêtre étroite, ou quand un espace de travail comme Projets, Transcription ou Outils apporte son propre panneau, la barre latérale se replie d'ordinaire en bande d'icônes. Activez cette option pour la garder entièrement ouverte."
   },
   "themeAppearance": {
     "light": "Clair",
@@ -1884,6 +1886,16 @@
     "preview_plan": "Aperçu du plan",
     "stop": "Arrêter",
     "stopped_note": "Arrêté — les chapitres terminés sont en cache ; relancez Créer pour reprendre.",
+    "blocked": {
+      "busy": "Un autre projet est déjà en cours de rendu. Laissez-le se terminer ou arrêtez-le, puis réessayez.",
+      "importing": "Générer redevient disponible dès que l'import en cours est terminé.",
+      "engine_loading": "Vérification en cours de l’état du moteur vocal…",
+      "engine": "Aucun moteur vocal n'est prêt pour l'instant. Corrigez cela dans Réglages → Moteurs.",
+      "no_lines": "Il n'y a encore rien à dire : ajoutez d'abord une réplique.",
+      "no_script": "Il n'y a encore rien à narrer : écrivez ou importez un script.",
+      "voice": "Certaines lignes n'ont pas de voix. Choisissez une voix par défaut ou attribuez-en une à chaque ligne.",
+      "lexicon": "La liste de prononciation contient deux fois le même mot. Supprimez l'une des entrées."
+    },
     "recovery_title": "Livre audio interrompu",
     "recovery_progress": "{{done}} chapitres sur {{total}} sont mis en cache",
     "recovery_hint": "Reprendre réutilise les chapitres terminés et ne synthétise que ce qui reste.",

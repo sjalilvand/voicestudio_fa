@@ -719,7 +719,9 @@
     "no_matches": "No matches",
     "loading": "Loading…",
     "reset": "Reset to default",
-    "open": "Open"
+    "open": "Open",
+    "sidebar_expanded": "Don't collapse the sidebar",
+    "sidebar_expanded_hint": "On narrow windows, or when a workspace such as Projects, Transcribe or Tools brings its own panel, the sidebar normally folds into an icon strip. Turn this on to keep it fully open."
   },
   "themeAppearance": {
     "light": "Light",
@@ -2026,6 +2028,16 @@
     "assembling": "Assembling the audiobook…",
     "stop": "Stop",
     "stopped_note": "Stopped — finished chapters are cached; Create again to resume.",
+    "blocked": {
+      "busy": "Another project is already rendering. Let it finish or stop it, then try again.",
+      "importing": "Generate becomes available once the current import completes.",
+      "engine_loading": "Still checking whether the voice engine is ready…",
+      "engine": "No voice engine is ready yet. Fix this under Settings → Engines.",
+      "no_lines": "There's nothing to speak yet: add a line first.",
+      "no_script": "There's nothing to narrate yet: write or import a script.",
+      "voice": "Some lines have no voice. Pick a default voice or assign one per line.",
+      "lexicon": "The pronunciation list contains the same word twice. Delete one entry."
+    },
     "recovery_title": "Interrupted audiobook",
     "recovery_progress": "{{done}} of {{total}} chapters are cached",
     "recovery_hint": "Resume reuses finished chapters and synthesizes only what remains.",

@@ -321,7 +321,9 @@
     "loading": "Caricamento…",
     "reset": "Ripristina le impostazioni predefinite",
     "open": "Aperto",
-    "audio_tools_origin_system": "Sistema"
+    "audio_tools_origin_system": "Sistema",
+    "sidebar_expanded": "Non comprimere la barra laterale",
+    "sidebar_expanded_hint": "Nelle finestre strette, o quando uno spazio di lavoro come Progetti, Trascrizione o Strumenti porta il proprio pannello, la barra laterale di norma si riduce a una fascia di icone. Attiva questa opzione per tenerla sempre aperta."
   },
   "themeAppearance": {
     "light": "Chiaro",
@@ -1884,6 +1886,16 @@
     "preview_plan": "Piano in anteprima",
     "stop": "Ferma",
     "stopped_note": "Interrotto — i capitoli completati sono in cache; premi di nuovo Crea per riprendere.",
+    "blocked": {
+      "busy": "Un altro progetto è già in fase di rendering. Lascia che finisca o fermalo, poi riprova.",
+      "importing": "Genera tornerà disponibile quando l'importazione in corso sarà completata.",
+      "engine_loading": "Controllo in corso dello stato del motore vocale…",
+      "engine": "Nessun motore vocale è ancora pronto. Risolvi in Impostazioni → Motori.",
+      "no_lines": "Non c'è ancora nulla da pronunciare: aggiungi prima una riga.",
+      "no_script": "Non c'è ancora nulla da narrare: scrivi o importa uno script.",
+      "voice": "Alcune righe non hanno una voce. Scegli una voce predefinita o assegnane una a ogni riga.",
+      "lexicon": "L'elenco di pronuncia contiene due volte la stessa parola. Elimina una delle voci."
+    },
     "recovery_title": "Audiolibro interrotto",
     "recovery_progress": "{{done}} capitoli su {{total}} sono nella cache",
     "recovery_hint": "La ripresa riutilizza i capitoli completati e sintetizza solo ciò che resta.",

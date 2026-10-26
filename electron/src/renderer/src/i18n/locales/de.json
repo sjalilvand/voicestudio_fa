@@ -319,7 +319,9 @@
     "loading": "Laden…",
     "reset": "Auf Standard zurücksetzen",
     "open": "Offen",
-    "audio_tools_origin_system": "System"
+    "audio_tools_origin_system": "System",
+    "sidebar_expanded": "Seitenleiste nie einklappen",
+    "sidebar_expanded_hint": "In schmalen Fenstern oder wenn ein Arbeitsbereich wie Projekte, Transkription oder Werkzeuge ein eigenes Panel mitbringt, wird die Seitenleiste sonst zu einer Symbolspalte verkleinert. Mit dieser Option bleibt sie ganz geöffnet."
   },
   "themeAppearance": {
     "light": "Hell",
@@ -1882,6 +1884,16 @@
     "preview_plan": "Vorschauplan",
     "stop": "Stopp",
     "stopped_note": "Gestoppt — fertige Kapitel sind zwischengespeichert; erneut „Erstellen“ zum Fortsetzen.",
+    "blocked": {
+      "busy": "Ein anderes Projekt wird gerade gerendert. Warte, bis es fertig ist, oder brich es ab, und versuche es dann erneut.",
+      "importing": "Das Erzeugen ist wieder möglich, sobald der laufende Import abgeschlossen ist.",
+      "engine_loading": "Es wird noch geprüft, ob die Stimm-Engine bereit ist …",
+      "engine": "Noch keine Stimm-Engine bereit. Behebe das unter Einstellungen → Engines.",
+      "no_lines": "Es gibt noch nichts zu sprechen: Füge zuerst eine Zeile hinzu.",
+      "no_script": "Es gibt noch nichts zu erzählen: Schreibe oder importiere ein Skript.",
+      "voice": "Einigen Zeilen fehlt eine Stimme. Lege eine Standardstimme fest oder weise jeder Zeile eine zu.",
+      "lexicon": "Die Ausspracheliste enthält dasselbe Wort doppelt. Lösche einen der Einträge."
+    },
     "recovery_title": "Unterbrochenes Hörbuch",
     "recovery_progress": "{{done}} von {{total}} Kapiteln sind zwischengespeichert",
     "recovery_hint": "Beim Fortsetzen werden fertige Kapitel wiederverwendet und nur der Rest erzeugt.",

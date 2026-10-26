@@ -319,7 +319,9 @@
     "loading": "Đang tải…",
     "reset": "Đặt lại về mặc định",
     "open": "Mở",
-    "audio_tools_origin_system": "Hệ thống"
+    "audio_tools_origin_system": "Hệ thống",
+    "sidebar_expanded": "Không thu gọn thanh bên",
+    "sidebar_expanded_hint": "Trong cửa sổ hẹp, hoặc khi một không gian làm việc như Dự án, Phiên âm hay Công cụ mang theo bảng riêng, thanh bên thường thu thành dải biểu tượng. Bật tùy chọn này để luôn giữ nó mở đầy đủ."
   },
   "themeAppearance": {
     "light": "Sáng",
@@ -1882,6 +1884,16 @@
     "preview_plan": "Xem trước kế hoạch",
     "stop": "Dừng",
     "stopped_note": "Đã dừng — các chương đã xong được lưu trong bộ nhớ đệm; nhấn Tạo lại để tiếp tục.",
+    "blocked": {
+      "busy": "Một dự án khác đang được kết xuất. Hãy để nó xong hoặc dừng nó rồi thử lại.",
+      "importing": "Nút Tạo sẽ dùng lại được khi lần nhập đang chạy hoàn tất.",
+      "engine_loading": "Vẫn đang kiểm tra xem công cụ giọng nói đã sẵn sàng chưa…",
+      "engine": "Chưa có công cụ giọng nói nào sẵn sàng. Hãy khắc phục tại Cài đặt → Công cụ.",
+      "no_lines": "Chưa có gì để đọc: hãy thêm một dòng trước.",
+      "no_script": "Chưa có gì để thuyết minh: hãy viết hoặc nhập một kịch bản.",
+      "voice": "Một số dòng chưa có giọng. Hãy chọn giọng mặc định hoặc gán giọng cho từng dòng.",
+      "lexicon": "Danh sách phát âm có cùng một từ hai lần. Hãy xóa một trong hai mục."
+    },
     "recovery_title": "Sách nói bị gián đoạn",
     "recovery_progress": "Đã lưu đệm {{done}} trong số {{total}} chương",
     "recovery_hint": "Tiếp tục sẽ dùng lại các chương đã hoàn thành và chỉ tổng hợp phần còn lại.",

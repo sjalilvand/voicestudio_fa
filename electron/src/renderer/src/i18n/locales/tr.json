@@ -319,7 +319,9 @@
     "loading": "Yükleniyor…",
     "reset": "Varsayılana sıfırla",
     "open": "Açık",
-    "audio_tools_origin_system": "Sistem"
+    "audio_tools_origin_system": "Sistem",
+    "sidebar_expanded": "Kenar çubuğunu daraltma",
+    "sidebar_expanded_hint": "Dar pencerelerde ya da Projeler, Yazıya Dökme veya Araçlar gibi bir çalışma alanı kendi panelini getirdiğinde kenar çubuğu normalde bir simge şeridine dönüşür. Her zaman tam açık kalması için bunu açın."
   },
   "themeAppearance": {
     "light": "Işık",
@@ -1882,6 +1884,16 @@
     "preview_plan": "Önizleme planı",
     "stop": "Durdur",
     "stopped_note": "Durduruldu — tamamlanan bölümler önbellekte; devam etmek için tekrar Oluştur'a basın.",
+    "blocked": {
+      "busy": "Başka bir proje şu anda oluşturuluyor. Bitmesini bekleyin ya da durdurun, sonra yeniden deneyin.",
+      "importing": "Süren içe aktarma tamamlanınca Oluştur yeniden kullanılabilir olur.",
+      "engine_loading": "Ses motorunun hazır olup olmadığı hâlâ denetleniyor…",
+      "engine": "Henüz hazır bir ses motoru yok. Bunu Ayarlar → Motorlar bölümünden düzeltin.",
+      "no_lines": "Henüz seslendirilecek bir şey yok: önce bir satır ekleyin.",
+      "no_script": "Henüz anlatılacak bir şey yok: bir senaryo yazın ya da içe aktarın.",
+      "voice": "Bazı satırların sesi yok. Varsayılan bir ses seçin ya da her satıra bir ses atayın.",
+      "lexicon": "Telaffuz listesinde aynı sözcük iki kez geçiyor. Kayıtlardan birini silin."
+    },
     "recovery_title": "Kesintiye uğrayan sesli kitap",
     "recovery_progress": "{{total}} bölümün {{done}} tanesi önbelleğe alındı",
     "recovery_hint": "Devam et, tamamlanan bölümleri yeniden kullanır ve yalnızca kalanı sentezler.",

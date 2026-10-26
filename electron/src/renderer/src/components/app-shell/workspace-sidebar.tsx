@@ -26,7 +26,8 @@ export function WorkspaceSidebar() {
     version: appVersion(),
   });
   const { libraryOpen } = useWorkspace();
-  // CLEAN-ROOM (spec N-jaketame-2 §11): obtain compact, compactViewport, forceExpanded, secondaryWorkspace and setOpen from the shared sidebar-state hook.
+  const { compact, compactViewport, forceExpanded, secondaryWorkspace, setOpen } =
+    useWorkspaceSidebarState();
   const sidebarResize = usePaneResize({
     storageKey: 'voicestudio.nav-width',
     side: 'left',
@@ -61,7 +62,27 @@ export function WorkspaceSidebar() {
             style={trafficLights ? { paddingTop: MAC_TRAFFIC_LIGHTS_BAND } : undefined}
             className="workspace-titlebar box-content flex h-12 shrink-0 items-center justify-center"
           >
-            {/* CLEAN-ROOM (spec N-jaketame-2 §11): rail toggle button (brand mark that reveals an expand icon). */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t('clone.toggle_sidebar')}
+              title={t('clone.toggle_sidebar')}
+              aria-expanded={false}
+              onClick={() => setOpen(true)}
+              className="group/rail relative"
+            >
+              <img
+                src={brandIcon}
+                alt=""
+                data-slot="rail-brand"
+                className="size-5 transition-opacity duration-150 group-hover/rail:opacity-0 group-focus-visible/rail:opacity-0 motion-reduce:transition-none"
+              />
+              <PanelLeftOpenIcon
+                aria-hidden="true"
+                className="absolute size-4 opacity-0 transition-opacity duration-150 group-hover/rail:opacity-100 group-focus-visible/rail:opacity-100 motion-reduce:transition-none"
+              />
+            </Button>
           </div>
           <WorkspaceNavigation compact />
           {!mac && <StatusBar compact />}
@@ -125,14 +146,25 @@ export function WorkspaceSidebar() {
                 </span>
               </span>
             </Link>
-            {/* CLEAN-ROOM (spec N-jaketame-2 §11): close/collapse button in the expanded sidebar header. */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t('common.close')}
+              title={t('common.close')}
+              onClick={() => setOpen(false)}
+            >
+              <PanelLeftIcon aria-hidden="true" />
+            </Button>
           </header>
           <div
             {...sidebarResize.separatorProps}
             aria-label={t('app.name')}
             className="absolute inset-y-0 right-0 z-20 w-2 cursor-col-resize touch-none outline-none hover:bg-primary/15 focus-visible:bg-primary/30"
           />
-          {/* CLEAN-ROOM (spec N-jaketame-2 §11): navigation wrapper directly under the header. */}
+          <div className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden">
+            <WorkspaceNavigation />
+          </div>
           <div className="flex min-w-0 shrink-0 flex-col border-t border-border/50">
             <StatusBar
               footerLeading={

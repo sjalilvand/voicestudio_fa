@@ -323,7 +323,9 @@
     "loading": "Ładowanie…",
     "reset": "Przywróć ustawienia domyślne",
     "open": "Otwórz",
-    "audio_tools_origin_system": "Systemu"
+    "audio_tools_origin_system": "Systemu",
+    "sidebar_expanded": "Nie zwijaj paska bocznego",
+    "sidebar_expanded_hint": "W wąskich oknach albo gdy obszar roboczy, taki jak Projekty, Transkrypcja czy Narzędzia, wnosi własny panel, pasek boczny zwykle zwija się do paska ikon. Włącz tę opcję, aby zawsze był w pełni otwarty."
   },
   "themeAppearance": {
     "light": "Jasny",
@@ -1890,6 +1892,16 @@
     "preview_plan": "Podgląd planu",
     "stop": "Zatrzymaj",
     "stopped_note": "Zatrzymano — ukończone rozdziały są w pamięci podręcznej; kliknij Utwórz ponownie, aby wznowić.",
+    "blocked": {
+      "busy": "Inny projekt jest właśnie renderowany. Poczekaj, aż się skończy, albo go zatrzymaj, i spróbuj ponownie.",
+      "importing": "Generowanie będzie dostępne po zakończeniu trwającego importu.",
+      "engine_loading": "Nadal sprawdzam, czy silnik głosu jest gotowy…",
+      "engine": "Żaden silnik głosu nie jest jeszcze gotowy. Napraw to w Ustawienia → Silniki.",
+      "no_lines": "Nie ma jeszcze nic do wypowiedzenia: najpierw dodaj linię.",
+      "no_script": "Nie ma jeszcze nic do przeczytania: napisz skrypt lub go zaimportuj.",
+      "voice": "Niektóre linie nie mają głosu. Wybierz głos domyślny lub przypisz głos do każdej linii.",
+      "lexicon": "Lista wymowy zawiera to samo słowo dwa razy. Usuń jeden z wpisów."
+    },
     "recovery_title": "Przerwana książka audio",
     "recovery_progress": "{{done}} z {{total}} rozdziałów jest w pamięci podręcznej",
     "recovery_hint": "Wznowienie wykorzystuje ukończone rozdziały i syntezuje tylko to, co pozostało.",

@@ -3416,8 +3416,13 @@ class GPTSoVITSBackend(TTSBackend):
                     "python api_v2.py -a 127.0.0.1 -p 9880 -c "
                     "GPT_SoVITS/configs/tts_infer.yaml"
                 )
-            # CLEAN-ROOM (spec N-jaketame-2 §4): availability message for any other HTTP status from the probe.
-            raise NotImplementedError("clean-room reimplementation pending")
+            # The server answered, so it is up; it just refused the probe.
+            return False, (
+                f"GPT-SoVITS server at {url} answered the availability check "
+                f"with HTTP {exc.status}. Check the server logs and its access "
+                "configuration (a proxy or auth layer in front of it can block "
+                "this request)."
+            )
         except Exception:
             # Connection refused / DNS failure / unsafe endpoint / etc.
             return False, (
@@ -3449,9 +3454,38 @@ class GPTSoVITSBackend(TTSBackend):
         }
         text_lang = lang_map.get(language.lower() if language else "en", "en")
 
-        # CLEAN-ROOM (spec N-jaketame-2 §5): build the api_v2 request body `body` (JSON fields,
-        # reference-clip fallback from the environment, reference-language handling, missing-reference error).
-        raise NotImplementedError("clean-room reimplementation pending")
+        # api_v2 wants a reference clip on every call. A request-supplied clip
+        # (profile or upload) wins; plain TTS falls back to the environment.
+        from_request = bool(ref_audio)
+        if from_request:
+            clip = ref_audio
+            transcript = ref_text or ""
+            prompt_lang = "auto"  # a profile stores the output language, not the clip's
+        else:
+            clip = os.environ.get("OMNIVOICE_GPTSOVITS_REF_AUDIO") or None
+            transcript = (os.environ.get("OMNIVOICE_GPTSOVITS_REF_TEXT") or "") if clip else ""
+            env_lang = (os.environ.get("OMNIVOICE_GPTSOVITS_REF_LANG") or "").strip().lower()
+            prompt_lang = lang_map.get(env_lang, "auto")
+        if not clip:
+            raise TTSInputError(
+                "GPT-SoVITS api_v2 needs a reference clip for every request. "
+                "Pick a voice profile that has one, or set "
+                "OMNIVOICE_GPTSOVITS_REF_AUDIO (a path the GPT-SoVITS server "
+                "can read) together with OMNIVOICE_GPTSOVITS_REF_TEXT (what "
+                "the clip says) to give plain TTS a default voice."
+            )
+        body = {
+            "text": text,
+            "text_lang": text_lang,
+            "ref_audio_path": clip,
+            "prompt_text": transcript or "",
+            "prompt_lang": prompt_lang,
+            # VoiceStudio already chunks long text; ask the server not to
+            # re-split it into short fragments.
+            "text_split_method": "cut0",
+            "media_type": "wav",
+            "streaming_mode": False,
+        }
 
         speed = kw.get("speed", 1.0)
         if speed != 1.0:

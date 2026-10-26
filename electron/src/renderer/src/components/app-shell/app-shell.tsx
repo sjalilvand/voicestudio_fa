@@ -30,7 +30,7 @@ export function AppShell() {
         {shellOnly ? (
           <>
             <CommandPalette />
-            {/* CLEAN-ROOM (spec N-jaketame-2 §10): the main sidebar element rendered in the Settings/Pro shell-only branch. */}
+            <WorkspaceSidebar />
             <SettingsWorkspace
               data-slot="workspace-content"
               role={pathname === '/settings/openapi' ? 'main' : undefined}

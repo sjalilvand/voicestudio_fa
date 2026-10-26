@@ -5,10 +5,16 @@ type Layout = {
   panel: 'voice' | null;
   libraryOpen: boolean;
   libraryTab: 'voices' | 'takes';
-  // CLEAN-ROOM (spec N-jaketame-2 §8): persisted boolean preference field for auto-collapsing the sidebar.
+  /** Allow the sidebar to fold into an icon rail on its own (default on). */
+  autoCollapseSidebar: boolean;
 };
 const key = 'voicestudio.workspace-layout';
-// CLEAN-ROOM (spec N-jaketame-2 §8): `defaults` layout constant (panel null, library open, voices tab, auto-collapse on).
+const defaults: Layout = {
+  autoCollapseSidebar: true,
+  libraryOpen: true,
+  libraryTab: 'voices',
+  panel: null,
+};
 function read(): Layout {
   try {
     const value = JSON.parse(localStorage.getItem(key) ?? '{}');
@@ -17,7 +23,7 @@ function read(): Layout {
       panel: value?.panel === 'voice' ? 'voice' : null,
       libraryOpen: typeof value?.libraryOpen === 'boolean' ? value.libraryOpen : true,
       libraryTab: value?.libraryTab === 'takes' ? 'takes' : 'voices',
-      // CLEAN-ROOM (spec N-jaketame-2 §8): read the stored auto-collapse preference, default true.
+      autoCollapseSidebar: value?.autoCollapseSidebar !== false,
     };
   } catch {
     return defaults;

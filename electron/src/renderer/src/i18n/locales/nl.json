@@ -319,7 +319,9 @@
     "loading": "Laden…",
     "reset": "Resetten naar standaard",
     "open": "Openen",
-    "audio_tools_origin_system": "Systeem"
+    "audio_tools_origin_system": "Systeem",
+    "sidebar_expanded": "Zijbalk niet inklappen",
+    "sidebar_expanded_hint": "In smalle vensters, of wanneer een werkruimte zoals Projecten, Transcriberen of Hulpmiddelen een eigen paneel meebrengt, klapt de zijbalk normaal in tot een pictogramstrook. Zet dit aan om hem helemaal open te houden."
   },
   "themeAppearance": {
     "light": "Licht",
@@ -1882,6 +1884,16 @@
     "preview_plan": "Voorbeeldplan",
     "stop": "Stoppen",
     "stopped_note": "Gestopt — voltooide hoofdstukken staan in de cache; klik opnieuw op Maken om te hervatten.",
+    "blocked": {
+      "busy": "Een ander project wordt al gerenderd. Laat het afronden of stop het en probeer het daarna opnieuw.",
+      "importing": "Genereren is weer mogelijk zodra de lopende import klaar is.",
+      "engine_loading": "Er wordt nog gecontroleerd of de stemengine klaar is…",
+      "engine": "Er is nog geen stemengine gereed. Los dit op via Instellingen → Engines.",
+      "no_lines": "Er is nog niets om uit te spreken: voeg eerst een regel toe.",
+      "no_script": "Er is nog niets om voor te lezen: schrijf of importeer een script.",
+      "voice": "Sommige regels hebben geen stem. Kies een standaardstem of wijs per regel een stem toe.",
+      "lexicon": "In de uitspraaklijst staat hetzelfde woord twee keer. Verwijder een van de items."
+    },
     "recovery_title": "Onderbroken luisterboek",
     "recovery_progress": "{{done}} van {{total}} hoofdstukken zijn gecachet",
     "recovery_hint": "Hervatten gebruikt voltooide hoofdstukken opnieuw en synthetiseert alleen wat resteert.",

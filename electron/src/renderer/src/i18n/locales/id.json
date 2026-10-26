@@ -319,7 +319,9 @@
     "loading": "Memuat…",
     "reset": "Atur ulang ke default",
     "open": "Buka",
-    "audio_tools_origin_system": "Sistem"
+    "audio_tools_origin_system": "Sistem",
+    "sidebar_expanded": "Jangan ciutkan bilah samping",
+    "sidebar_expanded_hint": "Di jendela sempit, atau saat ruang kerja seperti Proyek, Transkripsi, atau Alat membawa panelnya sendiri, bilah samping biasanya melipat menjadi deretan ikon. Aktifkan ini agar tetap terbuka penuh."
   },
   "themeAppearance": {
     "light": "Terang",
@@ -1882,6 +1884,16 @@
     "preview_plan": "Rencana pratinjau",
     "stop": "Hentikan",
     "stopped_note": "Dihentikan — bab yang selesai tersimpan di cache; tekan Buat lagi untuk melanjutkan.",
+    "blocked": {
+      "busy": "Proyek lain sedang dirender. Biarkan selesai atau hentikan, lalu coba lagi.",
+      "importing": "Tombol Buat aktif kembali setelah impor yang sedang berjalan selesai.",
+      "engine_loading": "Masih memeriksa apakah mesin suara sudah siap…",
+      "engine": "Belum ada mesin suara yang siap. Perbaiki di Pengaturan → Mesin.",
+      "no_lines": "Belum ada yang bisa diucapkan: tambahkan satu baris dulu.",
+      "no_script": "Belum ada yang bisa dinarasikan: tulis atau impor naskah.",
+      "voice": "Ada baris tanpa suara. Pilih suara default atau tetapkan suara untuk tiap baris.",
+      "lexicon": "Daftar pengucapan memuat kata yang sama dua kali. Hapus salah satu entrinya."
+    },
     "recovery_title": "Buku audio terputus",
     "recovery_progress": "{{done}} dari {{total}} bab telah di-cache",
     "recovery_hint": "Lanjutkan menggunakan kembali bab yang selesai dan hanya menyintesis sisanya.",

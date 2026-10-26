@@ -319,7 +319,9 @@
     "loading": "Laddar...",
     "reset": "Återställ till standard",
     "open": "Öppna",
-    "audio_tools_origin_system": "System"
+    "audio_tools_origin_system": "System",
+    "sidebar_expanded": "Fäll inte ihop sidofältet",
+    "sidebar_expanded_hint": "I smala fönster, eller när en arbetsyta som Projekt, Transkribera eller Verktyg tar med en egen panel, fälls sidofältet normalt ihop till en ikonremsa. Slå på det här för att hålla det helt öppet."
   },
   "themeAppearance": {
     "light": "Ljust",
@@ -1882,6 +1884,16 @@
     "preview_plan": "Förhandsgranska plan",
     "stop": "Stoppa",
     "stopped_note": "Stoppad — färdiga kapitel är cachade; klicka på Skapa igen för att fortsätta.",
+    "blocked": {
+      "busy": "Ett annat projekt renderas redan. Låt det bli klart eller stoppa det och försök igen.",
+      "importing": "Generera blir tillgängligt igen när den pågående importen är klar.",
+      "engine_loading": "Kontrollerar fortfarande om röstmotorn är redo …",
+      "engine": "Ingen röstmotor är redo ännu. Åtgärda det under Inställningar → Motorer.",
+      "no_lines": "Det finns inget att tala än: lägg först till en rad.",
+      "no_script": "Det finns inget att läsa upp än: skriv eller importera ett manus.",
+      "voice": "Vissa rader saknar röst. Välj en standardröst eller tilldela en till varje rad.",
+      "lexicon": "Uttalslistan innehåller samma ord två gånger. Ta bort en av posterna."
+    },
     "recovery_title": "Avbruten ljudbok",
     "recovery_progress": "{{done}} av {{total}} kapitel är cachade",
     "recovery_hint": "Fortsätt återanvänder färdiga kapitel och syntetiserar bara det som återstår.",

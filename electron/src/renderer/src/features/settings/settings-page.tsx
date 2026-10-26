@@ -78,7 +78,7 @@ import { setWorkspace, useWorkspace } from '@/lib/store/workspace';
 const sections = ['general', 'appearance'] as const;
 const fields = {
   general: ['language', 'review_mode'],
-  appearance: [], // CLEAN-ROOM (spec N-jaketame-2 §18): searchable Appearance field keys.
+  appearance: ['theme', 'font', 'ui_scale', 'glass', 'sidebar_expanded'],
 };
 
 const fieldKey = (key: string) =>
@@ -265,14 +265,14 @@ export function SettingsPage() {
   }, [pathname, target]);
   const { mode, setTheme, updateTheme } = useTheme();
   const appearance = useAppearance();
-  // CLEAN-ROOM (spec N-jaketame-2 §18): subscribe to the workspace layout store for the sidebar preference.
+  const workspace = useWorkspace();
   const reviewMode = useReviewMode();
   const targetIds: Record<string, string> = {
     theme: 'theme-label',
     font: 'font-label',
     ui_scale: 'scale-label',
     glass: 'glass-label',
-    // CLEAN-ROOM (spec N-jaketame-2 §18): search-target id for the sidebar preference row.
+    sidebar_expanded: 'sidebar-expanded-label',
     language: 'language-label',
     review_mode: 'review-mode-label',
   };
@@ -290,7 +290,15 @@ export function SettingsPage() {
   return (
     <div className="flex h-full min-h-0">
       <aside className="flex w-[clamp(11rem,20vw,17rem)] shrink-0 flex-col border-r border-sidebar-border/50 bg-sidebar text-sidebar-foreground shadow-[inset_-1px_0_0_color-mix(in_oklab,var(--foreground)_2%,transparent)]">
-        {/* CLEAN-ROOM (spec N-jaketame-2 §18): header of the Settings section column (icon badge and Settings title). */}
+        <div
+          data-slot="settings-column-header"
+          className="workspace-titlebar flex h-12 shrink-0 items-center gap-2 border-b border-sidebar-border/50 bg-sidebar/70 px-3 backdrop-blur-xl"
+        >
+          <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/12 text-primary">
+            <SettingsIcon aria-hidden="true" className="size-3.5" />
+          </div>
+          <h2 className="min-w-0 truncate text-sm font-semibold">{t('nav.settings')}</h2>
+        </div>
         <div className="studio-scrollbar flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain p-3 [scrollbar-gutter:stable]">
           <div className="sticky top-0 z-10 flex h-9 shrink-0 items-center gap-2 rounded-lg border border-sidebar-border/45 bg-sidebar/90 px-2.5 shadow-xs backdrop-blur-xl transition-[border-color,background-color,box-shadow] focus-within:border-primary/30 focus-within:bg-background/55 focus-within:ring-2 focus-within:ring-ring/20">
             <SearchIcon className="size-4 shrink-0 text-muted-foreground" />
@@ -356,7 +364,12 @@ export function SettingsPage() {
                       onClick={() => {
                         setTarget(targetIds[key]);
                         setQuery('');
-                        // CLEAN-ROOM (spec N-jaketame-2 §18): navigate to the owning section's route inside the renderer-task wrapper.
+                        runRendererTask('Open settings search result', () =>
+                          navigate({
+                            to:
+                              item === 'appearance' ? '/settings/appearance' : '/settings/general',
+                          }),
+                        );
                       }}
                     >
                       <span
@@ -607,7 +620,17 @@ export function SettingsPage() {
                       onCheckedChange={(glass) => appearance.update({ glass })}
                     />
                   </SettingsRow>
-                  {/* CLEAN-ROOM (spec N-jaketame-2 §18): Keep-sidebar-expanded preference row. */}
+                  <SettingsRow
+                    id="sidebar-expanded-label"
+                    description={t('preferences.sidebar_expanded_hint')}
+                    title={t('preferences.sidebar_expanded')}
+                  >
+                    <Switch
+                      aria-labelledby="sidebar-expanded-label"
+                      checked={workspace.autoCollapseSidebar === false}
+                      onCheckedChange={(pinned) => setWorkspace({ autoCollapseSidebar: !pinned })}
+                    />
+                  </SettingsRow>
                   <PalettePicker appearance="light" />
                   <PalettePicker appearance="dark" />
                   <SettingsRow id="font-label" title={t('preferences.font')}>

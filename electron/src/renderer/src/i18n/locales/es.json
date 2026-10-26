@@ -321,7 +321,9 @@
     "loading": "Cargando…",
     "reset": "Restablecer los valores predeterminados",
     "open": "Abierto",
-    "audio_tools_origin_system": "Sistema"
+    "audio_tools_origin_system": "Sistema",
+    "sidebar_expanded": "No contraer la barra lateral",
+    "sidebar_expanded_hint": "En ventanas estrechas, o cuando un espacio de trabajo como Proyectos, Transcribir o Herramientas trae su propio panel, la barra lateral suele plegarse en una tira de iconos. Activa esto para mantenerla abierta del todo."
   },
   "themeAppearance": {
     "light": "Claro",
@@ -1884,6 +1886,16 @@
     "preview_plan": "Vista previa del plan",
     "stop": "Detener",
     "stopped_note": "Detenido — los capítulos terminados están en caché; pulsa Crear de nuevo para continuar.",
+    "blocked": {
+      "busy": "Otro proyecto se está renderizando ahora mismo. Deja que termine o deténlo y vuelve a intentarlo.",
+      "importing": "Generar estará disponible cuando termine la importación en curso.",
+      "engine_loading": "Aún se está comprobando si el motor de voz está listo…",
+      "engine": "Todavía no hay ningún motor de voz listo. Arréglalo en Ajustes → Motores.",
+      "no_lines": "Todavía no hay nada que locutar: añade primero una línea.",
+      "no_script": "Todavía no hay nada que narrar: escribe o importa un guion.",
+      "voice": "Hay líneas sin voz. Elige una voz predeterminada o asigna una a cada línea.",
+      "lexicon": "La lista de pronunciación contiene la misma palabra dos veces. Borra una de las entradas."
+    },
     "recovery_title": "Audiolibro interrumpido",
     "recovery_progress": "{{done}} de {{total}} capítulos están en caché",
     "recovery_hint": "Al reanudar se reutilizan los capítulos terminados y solo se sintetiza lo que falta.",

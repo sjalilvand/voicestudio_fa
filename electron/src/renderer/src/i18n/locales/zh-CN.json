@@ -319,7 +319,9 @@
     "no_matches": "没有匹配项",
     "loading": "加载中…",
     "reset": "重置为默认值",
-    "open": "打开"
+    "open": "打开",
+    "sidebar_expanded": "不要收起侧边栏",
+    "sidebar_expanded_hint": "窗口较窄，或项目、转写、工具等工作区自带面板时，侧边栏通常会缩成一条图标栏。开启后，侧边栏将始终完整展开。"
   },
   "themeAppearance": {
     "light": "浅色",
@@ -1882,6 +1884,16 @@
     "preview_plan": "预览计划",
     "stop": "停止",
     "stopped_note": "已停止 — 已完成的章节已缓存；再次点击创建以继续。",
+    "blocked": {
+      "busy": "另一个项目正在渲染。请等它完成或将其停止，然后重试。",
+      "importing": "当前导入完成后即可使用“生成”。",
+      "engine_loading": "仍在检查语音引擎是否就绪…",
+      "engine": "目前没有就绪的语音引擎。请在“设置 → 引擎”中处理。",
+      "no_lines": "还没有可朗读的内容：请先添加一行。",
+      "no_script": "还没有可旁白的内容：请编写或导入脚本。",
+      "voice": "部分行没有声音。请选择默认声音，或为每一行分别指定。",
+      "lexicon": "发音列表中同一个词出现了两次。请删除其中一条。"
+    },
     "recovery_title": "已中断的有声读物",
     "recovery_progress": "{{total}} 章中有 {{done}} 章已缓存",
     "recovery_hint": "继续时会复用已完成的章节，只合成剩余内容。",

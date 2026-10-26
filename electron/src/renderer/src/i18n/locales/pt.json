@@ -321,7 +321,9 @@
     "loading": "Carregando…",
     "reset": "Redefinir para o padrão",
     "open": "Abrir",
-    "audio_tools_origin_system": "Sistema"
+    "audio_tools_origin_system": "Sistema",
+    "sidebar_expanded": "Não recolher a barra lateral",
+    "sidebar_expanded_hint": "Em janelas estreitas, ou quando um espaço de trabalho como Projetos, Transcrição ou Ferramentas traz o seu próprio painel, a barra lateral costuma encolher para uma faixa de ícones. Ative isto para mantê-la totalmente aberta."
   },
   "themeAppearance": {
     "light": "Claro",
@@ -1884,6 +1886,16 @@
     "preview_plan": "Plano de visualização",
     "stop": "Parar",
     "stopped_note": "Parado — os capítulos concluídos estão em cache; clique em Criar novamente para retomar.",
+    "blocked": {
+      "busy": "Outro projeto já está sendo renderizado. Deixe terminar ou pare-o e tente de novo.",
+      "importing": "Gerar volta a ficar disponível quando a importação em andamento terminar.",
+      "engine_loading": "Ainda verificando se o motor de voz está pronto…",
+      "engine": "Nenhum motor de voz está pronto ainda. Corrija em Configurações → Motores.",
+      "no_lines": "Ainda não há nada para falar: adicione primeiro uma linha.",
+      "no_script": "Ainda não há nada para narrar: escreva ou importe um roteiro.",
+      "voice": "Algumas linhas estão sem voz. Escolha uma voz padrão ou atribua uma a cada linha.",
+      "lexicon": "A lista de pronúncia tem a mesma palavra duas vezes. Apague uma das entradas."
+    },
     "recovery_title": "Audiolivro interrompido",
     "recovery_progress": "{{done}} de {{total}} capítulos estão em cache",
     "recovery_hint": "Retomar reutiliza os capítulos concluídos e sintetiza apenas o que falta.",

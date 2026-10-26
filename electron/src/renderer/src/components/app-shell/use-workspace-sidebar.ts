@@ -14,7 +14,7 @@ const SECONDARY_ROUTES = new Set([
   '/design',
   '/transcriptions',
   '/calls',
-  // CLEAN-ROOM (spec N-jaketame-2 §9): the Settings route belongs in this set.
+  '/settings',
 ]);
 // Voice-section routes whose context pane is the shared library (ContextSidebar).
 export const LIBRARY_ROUTES = new Set(['/', '/clone']);
@@ -34,7 +34,9 @@ function routeHasSecondarySidebar(pathname: string): boolean {
   const normalized = normalize(pathname);
   return (
     LIBRARY_ROUTES.has(normalized) ||
-    [...SECONDARY_ROUTES].some((route) => normalized === route || normalized.startsWith(`${route}/`))
+    [...SECONDARY_ROUTES].some(
+      (route) => normalized === route || normalized.startsWith(`${route}/`),
+    )
   );
 }
 
@@ -51,20 +53,17 @@ function useCompactViewport(): boolean {
 }
 
 export function useWorkspaceSidebarState() {
-  // CLEAN-ROOM (spec N-jaketame-2 §9): read libraryOpen, expandedLibraryContext and the auto-collapse preference from the workspace store.
+  const layout = useWorkspace();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const compactViewport = useCompactViewport();
-  const compactContext = `${pathname}:${compactViewport}`;
-  const forceExpanded = expandedLibraryContext === compactContext;
-  // CLEAN-ROOM (spec N-jaketame-2 §9): `autoCollapse` flag combining the preference, section-pane routes and a narrow viewport.
-  const compact = !libraryOpen || (autoCollapse && !forceExpanded);
+  const secondaryWorkspace = routeHasSecondarySidebar(pathname);
+  // Where the user last asked for the full sidebar; it only applies to this exact page and window size.
+  const context = `${pathname}:${compactViewport}`;
+  const forceExpanded = layout.expandedLibraryContext === context;
+  // Folding on its own needs the preference; closing it by hand does not.
+  const wantsRail = layout.autoCollapseSidebar !== false && (secondaryWorkspace || compactViewport);
+  const compact = !layout.libraryOpen || (wantsRail && !forceExpanded);
   const setOpen = (open: boolean) =>
-    setWorkspace({ libraryOpen: open, expandedLibraryContext: open ? compactContext : null });
-  return {
-    compact,
-    compactViewport,
-    forceExpanded,
-    secondaryWorkspace: routeHasSecondarySidebar(pathname),
-    setOpen,
-  };
+    setWorkspace({ libraryOpen: open, expandedLibraryContext: open ? context : null });
+  return { compact, compactViewport, forceExpanded, secondaryWorkspace, setOpen };
 }
