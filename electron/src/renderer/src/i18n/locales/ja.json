@@ -447,7 +447,7 @@
     "mode_fast": "速い",
     "mode_fast_desc": "選択した低遅延ディクテーション モデルを使用します。",
     "mode_accurate": "正確な",
-    "mode_accurate_desc": "選択した ASR モデルと詳細なタイムスタンプを使用します。",
+    "mode_accurate_desc": "選択した音声認識モデルを使い、詳細なタイムスタンプを付けます。",
     "title": "転写",
     "entries": "{{count}} エントリ",
     "search_placeholder": "文字起こしを検索…",
@@ -474,7 +474,8 @@
     "identify_speakers": "話者を識別",
     "speakers_unavailable": "話者の識別は利用できません。文字起こしは話者ラベルなしで保存されました。",
     "missing_model": "音声認識モデルがインストールされていません — この機能で文字起こしを行うにはモデルが必要です。",
-    "original_transcript": "元の文字起こし"
+    "original_transcript": "元の文字起こし",
+    "active_model": "モデル: {{model}}"
   },
   "engineRuntime": {
     "ready": "準備完了",
@@ -803,7 +804,6 @@
     "install_disabled_title": "パッケージ化されたビルドではインストールが無効になっています",
     "needs_install_suffix": "— インストールが必要です",
     "glossary_title": "繰り返し現れる用語 (名前、ブランド単語、専門用語) の翻訳をピン留めする",
-    "glossary_btn": "+ 用語集 ({{count}})",
     "selected_count": "{{count}} が選択されました",
     "set_voice": "音声を設定…",
     "clear_voice": "⊘ デフォルト",
@@ -926,7 +926,12 @@
     "input_issue_unsupported": "サポートされていないファイル形式です — 動画または音声ファイルを選んでください",
     "input_issue_empty": "このファイルは空です — 別のファイルを選んでください",
     "file_actions": "ファイル操作",
-    "translator_agent": "エージェント"
+    "translator_agent": "エージェント",
+    "segment_count_one": "{{count}} セグメント",
+    "segment_count_other": "{{count}} セグメント",
+    "glossary_terms_one": "用語集 · {{count}} 語",
+    "glossary_terms_other": "用語集 · {{count}} 語",
+    "glossary_label": "用語集"
   },
   "dub_workflow": {
     "preparing_audio": "オーディオを準備しています…",
@@ -1527,7 +1532,7 @@
     "more_actions": "その他の操作",
     "use_in_stories": "ストーリーで使用",
     "set_audiobook_default": "オーディオブックのデフォルト音声に設定",
-    "open_designer": "デザイナーで開く",
+    "open_designer": "デザインで開く",
     "no_matches": "これらのフィルターに一致する音声はありません。",
     "load_more": "さらにロードする",
     "saved_as_profile": "ボイスに「{{name}}」を追加しました。",
@@ -1549,7 +1554,7 @@
     "trim_load_failed": "トリミングするオーディオをロードできませんでした：{{message}}",
     "delete": "削除",
     "community_empty": "コミュニティの音声はまだ読み込まれていません — インターネットに接続して開き直すか、最初の投稿者になりましょう。",
-    "community_explainer": "コミュニティが共有したデザイン済みプリセットと録音音声です。omnivoice-gallery から読み込まれます。",
+    "community_explainer": "コミュニティが共有したデザイン済みプリセットと録音音声です。",
     "no_designer": "録音された音声です — 代わりに「音声を使用する」をお使いください。",
     "no_preview": "プレビューはありません — 「音声を使用する」で追加すると聞けます。",
     "submit_failed": "投稿フォームを開けませんでした。",
@@ -1675,7 +1680,9 @@
     "probe_placeholder": "/ユーザー/あなた/映画/sample.mp4",
     "probe_failed": "プローブが失敗しました: {{message}}",
     "parse_failed": "解析に失敗しました: {{message}}",
-    "fit_failed": "フィットに失敗しました: {{message}}"
+    "fit_failed": "フィットに失敗しました: {{message}}",
+    "placeholder_direction": "例: 秘密のようにささやき、だんだん高揚させて。",
+    "placeholder_rate_fit": "翻訳した行を貼り付けて、時間枠と比べます。"
   },
   "projects": {
     "title": "プロジェクト",
@@ -1721,7 +1728,9 @@
     "delete_selected": "選択項目を削除（{{count}}）",
     "deleted_count": "削除済み：{{count}}",
     "delete_warning": "この操作は取り消せません。プロジェクトと文字起こしが削除されます。音声やテイクを削除すると、保存された音声も削除されます。エクスポートしたファイルと完成したレンダリング音声は保持されます。",
-    "draft_changed": "プロジェクトの読み込み中に下書きが変更されました。置き換えるには、もう一度確認してください。"
+    "draft_changed": "プロジェクトの読み込み中に下書きが変更されました。置き換えるには、もう一度確認してください。",
+    "all_projects": "すべてのプロジェクト",
+    "library_group": "ライブラリ"
   },
   "projectActions": {
     "delete": "「{{name}}」を削除しますか？この操作は元に戻せません。",
@@ -1746,7 +1755,9 @@
     "tagline": "ローカル音声のクローン作成。マシンからは何も残りません。",
     "coming_soon": "近日公開",
     "switch_to_light": "ライトテーマに切り替える",
-    "switch_to_dark": "ダークテーマに切り替える"
+    "switch_to_dark": "ダークテーマに切り替える",
+    "not_found_title": "ページが見つかりません",
+    "not_found_body": "このアドレスに一致する VoiceStudio のページはありません。"
   },
   "stories": {
     "title": "ストーリーエディター",
@@ -1798,13 +1809,13 @@
     "splitModeHint": "各行は独立したテイクとして読み上げられます。語り手が一人なら、文より段落や章全体のほうが自然につながります。",
     "emptyText": "会話やナレーションを追加してストーリーを開始します。各キャラクターにキャストの声を割り当てます。",
     "addFirst": "最初の行を追加",
-    "linePlaceholder": "ダイアログまたはナレーションを入力します...無音の休憩には [一時停止 0.5 秒] を使用してください",
+    "linePlaceholder": "ダイアログまたはナレーションを入力します...無音の休憩には [pause 0.5s] を使用してください",
     "text": "テキスト",
     "defaultVoice": "デフォルト",
     "inlineVoice": "インライン音声を設定する",
     "inlineVoiceHint": "ハイライトされたテキストの音声を切り替えます (またはカーソルにスイッチを挿入します)",
     "resetInlineVoice": "LINE音声にリセット",
-    "insertPause": "[一時停止 0.5 秒] の休憩を挿入します",
+    "insertPause": "[pause 0.5s] の休憩を挿入します",
     "preview": "この行をプレビューする",
     "removeLine": "行を削除",
     "tune": "トーンとスピード",
@@ -1842,7 +1853,8 @@
     "toneChip": "トーンと速度: {{speed}}",
     "lineVoice": "行の音声",
     "chapterHeading": "章タイトル",
-    "lineActions": "行の操作"
+    "lineActions": "行の操作",
+    "recovery_title": "中断したストーリー"
   },
   "audiobook": {
     "cast": "キャスト",
@@ -1866,7 +1878,6 @@
     "stats_one": "{{count}} 章 · 約 {{words}} 語 · 推定 {{runtime}}",
     "stats_other": "{{count}} 章 · 約 {{words}} 語 · 推定 {{runtime}}",
     "warnings_title": "作成する前に",
-    "warn_unknown_voice": "不明な声 ‘{{name}}’ — デフォルトを使用します",
     "warn_empty_chapter": "章「{{title}}」に読み上げるテキストがありません",
     "warn_unknown_tag": "不明なタグ {{tag}} — そのまま読み上げられます",
     "untitled": "無題のオーディオブック",
@@ -1878,7 +1889,7 @@
     "tab_book": "ブック",
     "subtitle": "物語を書いたり読み込んだり、声を配役して、本格的な章付きオーディオブックを書き出せます。",
     "script": "スクリプト",
-    "script_placeholder": "# 第一章\nむかしむかし… [500 ミリ秒停止] 終了。\n\n# 第二章\n[音声:ナレーター] そして、それは続きました。",
+    "script_placeholder": "# 第一章\nむかしむかし… [pause 0.5s] 終了。\n\n# 第二章\n[voice:ナレーター] そして、それは続きました。",
     "default_voice": "デフォルトボイス",
     "engine_default": "エンジンのデフォルト",
     "preview_plan": "プレビュープラン",
@@ -1954,7 +1965,7 @@
     "lex_add": "単語を追加",
     "lex_remove": "削除",
     "markup_help": "マークアップリファレンス",
-    "markup_hint": "# 章タイトル · [voice:NAME] 音声切り替え · [pause 500ms] / [pause 1s] · [slow]…[/slow] · [fast]…[/fast] · [emphasis]…[/emphasis] · [spell]…[/spell] · リアクション (VoiceStudio): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
+    "markup_hint": "# 章タイトル · [voice:NAME] 音声切り替え · [pause 0.5s] · [slow]…[/slow] · [fast]…[/fast] · [emphasis]…[/emphasis] · [spell]…[/spell] · リアクション (VoiceStudio): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
     "language": "言語",
     "expressive": "プロダクションオーバーライド",
     "reset": "リセット",
@@ -1971,7 +1982,10 @@
     "emotion_text": "感情の説明",
     "emotion_text_ph": "例 疲れているように聞こえ、悲しい",
     "emotion_alpha": "感情の強さ",
-    "lex_duplicate": "各単語の発音は1つだけ指定してください。"
+    "lex_duplicate": "各単語の発音は1つだけ指定してください。",
+    "recovery_busy": "別のレンダリングを実行中です。終わってから再開してください。",
+    "cast_note_one": "{{names}} はまだ配役されていないため、メインの音声で読み上げます。キャストで音声を選んでください。",
+    "cast_note_other": "{{names}} はまだ配役されていないため、メインの音声で読み上げます。キャストで音声を選んでください。"
   },
   "credentials": {
     "microsoft_key": "Microsoft トランスレータ キー",
@@ -2364,7 +2378,8 @@
     "generating_voice_a": "音声を生成中...",
     "generating_voice_b": "ボイスBを生成中...",
     "comparison_complete": "比較完了！",
-    "play_failed": "プレイに失敗しました: {{message}}"
+    "play_failed": "プレイに失敗しました: {{message}}",
+    "test_phrase_placeholder": "両方の音声が読む文を入力してください。"
   },
   "demo": {
     "clone_coachmark": "これはガイド付きデモです。提案されたプロンプトを試すか、独自のプロンプトを作成してください。",
@@ -2870,7 +2885,8 @@
     "plan_impossible": "収まりません +{{seconds}}秒",
     "plan_impossible_title": "予測音声は約{{est}}秒、使用可能時間は{{avail}}秒です。調整できる範囲を約{{seconds}}秒超えており、音声が切り詰められます。生成前に文章を短くしてください。",
     "plan_tight": "余裕が少ない",
-    "plan_tight_title": "予測音声は約{{est}}秒、使用可能時間は{{avail}}秒です。スマートフィットで調整できますが、音声の速度上昇や動画の減速が目立ちます。より自然な結果にするには文章を短くしてください。"
+    "plan_tight_title": "予測音声は約{{est}}秒、使用可能時間は{{avail}}秒です。スマートフィットで調整できますが、音声の速度上昇や動画の減速が目立ちます。より自然な結果にするには文章を短くしてください。",
+    "replace_toggle": "検索と置換"
   },
   "update": {
     "checking": "アップデートを確認中…",
@@ -2948,8 +2964,6 @@
     "translate_hint": "対象のテキストをざっと読んでください。長すぎる回線の速度が向上します。直接編集することもできます。",
     "done_title": "ダビング完了",
     "done_hint": "タイミングと同期率を確認します。任意の行を微調整し、「Regen Changed」を押すと、部分的に素早くやり直すことができます。",
-    "segment_one": "{{count}} セグメント",
-    "segment_other": "{{count}} セグメント",
     "dismiss_title": "閉じる — リロードするまでこのステージでは再表示されません",
     "timing_review_one": "{{count}} 個のセグメントのタイミングを確認してください",
     "timing_review_other": "{{count}} 個のセグメントでタイミングの確認が必要です",
@@ -4405,5 +4419,20 @@
     "nextMemory": "このデバイスのメモリが不足しました。設定 → パフォーマンス で軽いプロファイルを選んでから再試行してください。",
     "downloads": "ダウンロード",
     "activeCount": "進行中のダウンロード: {{count}}"
+  },
+  "disabledReason": {
+    "files_required": "まず動画を 1 本以上追加してください。",
+    "languages_required": "翻訳先の言語を 1 つ以上選んでください。",
+    "language_required": "まず翻訳先の言語を選んでください。",
+    "translation_not_ready": "まず翻訳エンジンを設定してください。",
+    "recovery_pending": "まず中断した手順を再開するか取り消してください。",
+    "segments_required": "まず動画を文字起こししてください。",
+    "text_required": "まずテキストを入力してください。",
+    "path_required": "まずファイルのフルパスを入力してください。",
+    "slot_required": "0 秒より長いスロットを入力してください。",
+    "voices_required": "まず両方の音声を選んでください。",
+    "generating": "現在のテイクが終わるまでお待ちください。",
+    "name_required": "まず名前を入力してください。",
+    "audio_missing": "このテイクには保存できる音声ファイルがありません。"
   }
 }

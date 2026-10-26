@@ -449,7 +449,7 @@
     "mode_fast": "Rápido",
     "mode_fast_desc": "Utiliza el modelo de dictado de baja latencia seleccionado.",
     "mode_accurate": "Preciso",
-    "mode_accurate_desc": "Utiliza el modelo ASR seleccionado con marcas de tiempo detalladas.",
+    "mode_accurate_desc": "Usa el modelo de voz a texto seleccionado con marcas de tiempo detalladas.",
     "title": "Transcripciones",
     "entries": "{{count}} entradas",
     "search_placeholder": "Buscar transcripciones…",
@@ -476,7 +476,8 @@
     "identify_speakers": "Identificar hablantes",
     "speakers_unavailable": "La identificación de hablantes no está disponible. La transcripción se guardó sin etiquetas de hablante.",
     "missing_model": "No hay ningún modelo de voz a texto instalado — esta función necesita uno para transcribir audio.",
-    "original_transcript": "Transcripción original"
+    "original_transcript": "Transcripción original",
+    "active_model": "Modelo: {{model}}"
   },
   "engineRuntime": {
     "ready": "Listo",
@@ -805,7 +806,6 @@
     "install_disabled_title": "Las instalaciones están deshabilitadas en compilaciones empaquetadas",
     "needs_install_suffix": "- necesita instalación",
     "glossary_title": "Traducciones de pines para términos recurrentes (nombres, palabras de marca, jerga)",
-    "glossary_btn": "+ Glosario ({{count}})",
     "selected_count": "{{count}} seleccionado",
     "set_voice": "Establecer voz…",
     "clear_voice": "⊘ Predeterminado",
@@ -928,7 +928,12 @@
     "input_issue_unsupported": "Tipo de archivo no compatible: elige un archivo de vídeo o audio",
     "input_issue_empty": "Este archivo está vacío: elige otro archivo",
     "file_actions": "Acciones del archivo",
-    "translator_agent": "Agente"
+    "translator_agent": "Agente",
+    "segment_count_one": "{{count}} segmento",
+    "segment_count_other": "{{count}} segmentos",
+    "glossary_terms_one": "Glosario · {{count}} término",
+    "glossary_terms_other": "Glosario · {{count}} términos",
+    "glossary_label": "Glosario"
   },
   "dub_workflow": {
     "preparing_audio": "Preparando audio…",
@@ -1529,7 +1534,7 @@
     "more_actions": "Más acciones",
     "use_in_stories": "Usar en Historias",
     "set_audiobook_default": "Establecer como voz predeterminada para Audiolibro",
-    "open_designer": "Abrir en Diseñador",
+    "open_designer": "Abrir en Diseñar",
     "no_matches": "Ninguna voz coincide con estos filtros.",
     "load_more": "Cargar más",
     "saved_as_profile": "Se agregó \"{{name}}\" a tus voces.",
@@ -1551,7 +1556,7 @@
     "trim_load_failed": "No se pudo cargar el audio para recortar: {{message}}",
     "delete": "Eliminar",
     "community_empty": "Aún no se han cargado voces de la comunidad: conéctate a internet y vuelve a abrir, o sé el primero en enviar una.",
-    "community_explainer": "Preajustes diseñados y voces grabadas compartidos por la comunidad, cargados desde la omnivoice-gallery.",
+    "community_explainer": "Preajustes diseñados y voces grabadas compartidos por la comunidad.",
     "no_designer": "Voz grabada — usa \"Usar voz\" en su lugar.",
     "no_preview": "Sin vista previa — añádela con \"Usar voz\" para escucharla.",
     "submit_failed": "No se pudo abrir el formulario de envío.",
@@ -1677,7 +1682,9 @@
     "probe_placeholder": "/Usuarios/usted/Películas/sample.mp4",
     "probe_failed": "Sonda fallida: {{message}}",
     "parse_failed": "Error de análisis: {{message}}",
-    "fit_failed": "Error de ajuste: {{message}}"
+    "fit_failed": "Error de ajuste: {{message}}",
+    "placeholder_direction": "p. ej., Susúrralo como un secreto y luego deja que crezca la emoción.",
+    "placeholder_rate_fit": "Pega la línea traducida para compararla con su intervalo de tiempo."
   },
   "projects": {
     "title": "Proyectos",
@@ -1723,7 +1730,9 @@
     "delete_selected": "Eliminar selección ({{count}})",
     "deleted_count": "Eliminados: {{count}}",
     "delete_warning": "Esta acción no se puede deshacer. Se eliminan los proyectos y las transcripciones. Al eliminar voces o tomas también se borra su audio guardado. Se conservan los archivos exportados y el audio de los renderizados terminados.",
-    "draft_changed": "Tu borrador cambió mientras se cargaba este proyecto. Confirma de nuevo para reemplazarlo."
+    "draft_changed": "Tu borrador cambió mientras se cargaba este proyecto. Confirma de nuevo para reemplazarlo.",
+    "all_projects": "Todos los proyectos",
+    "library_group": "Biblioteca"
   },
   "projectActions": {
     "delete": "¿Eliminar «{{name}}»? No se puede deshacer.",
@@ -1748,7 +1757,9 @@
     "tagline": "Clonación de voz local. Nada sale de tu máquina.",
     "coming_soon": "Muy pronto",
     "switch_to_light": "Cambiar al tema claro",
-    "switch_to_dark": "Cambiar al tema oscuro"
+    "switch_to_dark": "Cambiar al tema oscuro",
+    "not_found_title": "Página no encontrada",
+    "not_found_body": "Esta dirección no corresponde a ninguna página de VoiceStudio."
   },
   "stories": {
     "title": "Editor de historias",
@@ -1800,13 +1811,13 @@
     "splitModeHint": "Cada línea se lee como una toma independiente. Para un solo narrador, los párrafos o capítulos completos fluyen mejor que las frases.",
     "emptyText": "Comience su historia agregando diálogos y líneas de narración. Asigna a cada personaje una voz en el elenco.",
     "addFirst": "Agregar primera línea",
-    "linePlaceholder": "Ingrese un diálogo o narración... use [pausa 0,5 s] para un descanso en silencio",
+    "linePlaceholder": "Ingrese un diálogo o narración... use [pause 0.5s] para un descanso en silencio",
     "text": "texto",
     "defaultVoice": "Predeterminado",
     "inlineVoice": "Establecer voz en línea",
     "inlineVoiceHint": "Cambie la voz para el texto resaltado (o inserte un interruptor en el cursor)",
     "resetInlineVoice": "Restablecer la voz de línea",
-    "insertPause": "Insertar una pausa de [pausa de 0,5 s]",
+    "insertPause": "Insertar una pausa de [pause 0.5s]",
     "preview": "Vista previa de esta línea",
     "removeLine": "Quitar línea",
     "tune": "Tono y velocidad",
@@ -1844,7 +1855,8 @@
     "toneChip": "Tono y velocidad: {{speed}}",
     "lineVoice": "Voz de la línea",
     "chapterHeading": "Título del capítulo",
-    "lineActions": "Acciones de la línea"
+    "lineActions": "Acciones de la línea",
+    "recovery_title": "Historia interrumpida"
   },
   "audiobook": {
     "cast": "Reparto",
@@ -1868,7 +1880,6 @@
     "stats_one": "{{count}} capítulo · {{words}} palabras · {{runtime}} de duración est.",
     "stats_other": "{{count}} capítulos · {{words}} palabras · {{runtime}} de duración est.",
     "warnings_title": "Antes de crear",
-    "warn_unknown_voice": "Voz desconocida «{{name}}»: se usará la predeterminada",
     "warn_empty_chapter": "El capítulo «{{title}}» no tiene texto hablado",
     "warn_unknown_tag": "Etiqueta no reconocida {{tag}}: se leerá en voz alta",
     "untitled": "Audiolibro sin título",
@@ -1880,7 +1891,7 @@
     "tab_book": "Libro",
     "subtitle": "Escribe o importa tu historia, asigna cada voz y exporta un audiolibro pulido con capítulos reales.",
     "script": "Guión",
-    "script_placeholder": "# Capítulo uno\nÉrase una vez… [pausa 500ms] el final.\n\n# Capítulo Dos\n[voz:narrador] Y así continuó.",
+    "script_placeholder": "# Capítulo uno\nÉrase una vez… [pause 0.5s] el final.\n\n# Capítulo Dos\n[voice:narrador] Y así continuó.",
     "default_voice": "Voz predeterminada",
     "engine_default": "Valor predeterminado del motor",
     "preview_plan": "Vista previa del plan",
@@ -1956,7 +1967,7 @@
     "lex_add": "Agregar palabra",
     "lex_remove": "Quitar",
     "markup_help": "Referencia de marcado",
-    "markup_hint": "# Título del capítulo · [voice:NAME] cambiar voz · [pause 500ms] / [pause 1s] · [slow]…[/slow] · [fast]…[/fast] · [emphasis]…[/emphasis] · [spell]…[/spell] · Reacciones (VoiceStudio): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
+    "markup_hint": "# Título del capítulo · [voice:NAME] cambiar voz · [pause 0.5s] · [slow]…[/slow] · [fast]…[/fast] · [emphasis]…[/emphasis] · [spell]…[/spell] · Reacciones (VoiceStudio): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
     "language": "Idioma",
     "expressive": "Anulaciones de producción",
     "reset": "Reiniciar",
@@ -1973,7 +1984,10 @@
     "emotion_text": "Descripción de emoción",
     "emotion_text_ph": "p. ej. suena agotado y triste",
     "emotion_alpha": "Intensidad emocional",
-    "lex_duplicate": "Usa una sola pronunciación por palabra."
+    "lex_duplicate": "Usa una sola pronunciación por palabra.",
+    "recovery_busy": "Hay otra generación en curso. Reanuda cuando termine.",
+    "cast_note_one": "{{names}} aún no tiene voz asignada, así que se lee con la voz principal. Elige una en Reparto.",
+    "cast_note_other": "{{names}} aún no tienen voz asignada, así que se leen con la voz principal. Elige voces en Reparto."
   },
   "credentials": {
     "microsoft_key": "Clave del traductor de Microsoft",
@@ -2366,7 +2380,8 @@
     "generating_voice_a": "Generando voz A...",
     "generating_voice_b": "Generando voz B...",
     "comparison_complete": "¡Comparación completa!",
-    "play_failed": "Error al reproducir: {{message}}"
+    "play_failed": "Error al reproducir: {{message}}",
+    "test_phrase_placeholder": "Escribe una frase que lean ambas voces."
   },
   "demo": {
     "clone_coachmark": "Esta es una demostración guiada: pruebe el mensaje sugerido o escriba el suyo propio.",
@@ -2872,7 +2887,8 @@
     "plan_impossible": "No cabe +{{seconds}}s",
     "plan_impossible_title": "Voz estimada ≈{{est}}s frente a {{avail}}s disponibles. Sobran unos {{seconds}}s que ningún ajuste puede compensar; se recortaría el audio. Acorta el texto antes de generar.",
     "plan_tight": "Ajuste justo",
-    "plan_tight_title": "Voz estimada ≈{{est}}s frente a {{avail}}s disponibles. El ajuste inteligente puede compensarlo acelerando la voz de forma audible o ralentizando el vídeo. Acorta el texto para mejorar el resultado."
+    "plan_tight_title": "Voz estimada ≈{{est}}s frente a {{avail}}s disponibles. El ajuste inteligente puede compensarlo acelerando la voz de forma audible o ralentizando el vídeo. Acorta el texto para mejorar el resultado.",
+    "replace_toggle": "Buscar y reemplazar"
   },
   "update": {
     "checking": "Buscando actualizaciones…",
@@ -2950,8 +2966,6 @@
     "translate_hint": "Hojee el texto de destino. Las líneas demasiado largas aumentan la velocidad; También puedes editar directamente.",
     "done_title": "doblaje completo",
     "done_hint": "Revise las proporciones de sincronización y sincronización. Modifica cualquier línea y presiona \"Regeneración cambiada\" para una rehacer parcial rápida.",
-    "segment_one": "{{count}} segmento",
-    "segment_other": "{{count}} segmentos",
     "dismiss_title": "Descartar: no volverá a aparecer en esta etapa hasta que se vuelva a cargar",
     "timing_review_one": "{{count}} segmento necesita revisión de tiempos",
     "timing_review_other": "{{count}} segmentos necesitan revisión de tiempos",
@@ -4407,5 +4421,20 @@
     "nextMemory": "Este dispositivo se quedó sin memoria. Elige un perfil más ligero en Ajustes → Rendimiento y vuelve a intentarlo.",
     "downloads": "Descargas",
     "activeCount": "Descargas en curso: {{count}}"
+  },
+  "disabledReason": {
+    "files_required": "Añade al menos un vídeo primero.",
+    "languages_required": "Elige al menos un idioma de destino.",
+    "language_required": "Elige primero un idioma de destino.",
+    "translation_not_ready": "Configura primero un motor de traducción.",
+    "recovery_pending": "Reanuda o cancela primero el paso interrumpido.",
+    "segments_required": "Transcribe primero el vídeo.",
+    "text_required": "Escribe primero un texto.",
+    "path_required": "Escribe primero la ruta completa de un archivo.",
+    "slot_required": "Indica un intervalo de más de 0 segundos.",
+    "voices_required": "Elige primero ambas voces.",
+    "generating": "Espera a que termine la toma actual.",
+    "name_required": "Escribe primero un nombre.",
+    "audio_missing": "Esta toma no tiene archivo de audio para guardar."
   }
 }

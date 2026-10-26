@@ -447,7 +447,7 @@
     "mode_fast": "快速地",
     "mode_fast_desc": "使用選定的低延遲聽寫模型。",
     "mode_accurate": "準確的",
-    "mode_accurate_desc": "使用帶有詳細時間戳的選定 ASR 模型。",
+    "mode_accurate_desc": "使用所選的語音轉文字模型，並提供詳細時間戳記。",
     "title": "轉錄",
     "entries": "{{count}} 條目",
     "search_placeholder": "搜尋轉錄...",
@@ -474,7 +474,8 @@
     "identify_speakers": "辨識說話者",
     "speakers_unavailable": "說話者辨識無法使用。逐字稿已儲存，但沒有說話者標籤。",
     "missing_model": "尚未安裝語音轉文字模型 — 此功能需要一個模型來轉錄音訊。",
-    "original_transcript": "原始轉錄"
+    "original_transcript": "原始轉錄",
+    "active_model": "模型：{{model}}"
   },
   "engineRuntime": {
     "ready": "準備好",
@@ -803,7 +804,6 @@
     "install_disabled_title": "在打包版本中停用安裝",
     "needs_install_suffix": "— 需要安裝",
     "glossary_title": "重複出現的術語（名稱、品牌詞、行話）的 Pin 翻譯",
-    "glossary_btn": "+ 術語表 ({{count}})",
     "selected_count": "已選擇 {{count}}",
     "set_voice": "設定語音...",
     "clear_voice": "⊘ 預設",
@@ -926,7 +926,12 @@
     "input_issue_unsupported": "不支援的檔案類型 — 請選擇影片或音訊檔案",
     "input_issue_empty": "此檔案是空的 — 請選擇其他檔案",
     "file_actions": "檔案操作",
-    "translator_agent": "智慧代理"
+    "translator_agent": "智慧代理",
+    "segment_count_one": "{{count}} 個片段",
+    "segment_count_other": "{{count}} 個片段",
+    "glossary_terms_one": "術語表 · {{count}} 個術語",
+    "glossary_terms_other": "術語表 · {{count}} 個術語",
+    "glossary_label": "術語表"
   },
   "dub_workflow": {
     "preparing_audio": "正在準備音訊...",
@@ -1527,7 +1532,7 @@
     "more_actions": "更多操作",
     "use_in_stories": "在劇本中使用",
     "set_audiobook_default": "設為有聲書預設語音",
-    "open_designer": "在設計器中打開",
+    "open_designer": "在「設計聲音」中開啟",
     "no_matches": "沒有聲音符合這些過濾器。",
     "load_more": "加載更多",
     "saved_as_profile": "在您的聲音中加入了「{{name}}」。",
@@ -1549,7 +1554,7 @@
     "trim_load_failed": "無法載入音訊進行修剪：{{message}}",
     "delete": "刪除",
     "community_empty": "尚未載入任何社群語音 — 請連上網路後重新開啟，或成為第一個投稿的人。",
-    "community_explainer": "由社群分享的設計預設與錄製語音，從 omnivoice-gallery 載入。",
+    "community_explainer": "由社群分享的設計預設與錄製語音。",
     "no_designer": "錄製的語音 — 請改用「使用語音」。",
     "no_preview": "沒有預覽 — 透過「使用語音」加入後即可試聽。",
     "submit_failed": "無法開啟投稿表單。",
@@ -1675,7 +1680,9 @@
     "probe_placeholder": "/用户/你/电影/sample.mp4",
     "probe_failed": "探測失敗：{{message}}",
     "parse_failed": "解析失敗：{{message}}",
-    "fit_failed": "擬合失敗：{{message}}"
+    "fit_failed": "擬合失敗：{{message}}",
+    "placeholder_direction": "例如：像說祕密一樣輕聲說，然後逐漸興奮起來。",
+    "placeholder_rate_fit": "貼上譯文，與其時段進行比對。"
   },
   "projects": {
     "title": "專案",
@@ -1721,7 +1728,9 @@
     "delete_selected": "刪除所選項目（{{count}}）",
     "deleted_count": "已刪除：{{count}}",
     "delete_warning": "此操作無法復原。專案和轉錄文字將被刪除。刪除聲音或錄音也會刪除其儲存的音訊。匯出的檔案和已完成算繪的音訊將保留。",
-    "draft_changed": "載入此專案時，你的草稿已變更。請再次確認以取代草稿。"
+    "draft_changed": "載入此專案時，你的草稿已變更。請再次確認以取代草稿。",
+    "all_projects": "所有專案",
+    "library_group": "資料庫"
   },
   "projectActions": {
     "delete": "刪除「{{name}}」？此操作無法復原。",
@@ -1746,7 +1755,9 @@
     "tagline": "本地語音克隆。沒有任何東西可以離開你的機器。",
     "coming_soon": "即將推出",
     "switch_to_light": "切換到淺色主題",
-    "switch_to_dark": "切換到深色主題"
+    "switch_to_dark": "切換到深色主題",
+    "not_found_title": "找不到頁面",
+    "not_found_body": "此位址不符合 VoiceStudio 中的任何頁面。"
   },
   "stories": {
     "title": "故事編輯器",
@@ -1798,13 +1809,13 @@
     "splitModeHint": "每一行都作為獨立的一段錄音朗讀。單人朗讀時，按段落或整章拆分比按句子更連貫。",
     "emptyText": "透過加入對話和旁白來開始你的故事。為演員陣容中的每個角色分配一個聲音。",
     "addFirst": "新增第一行",
-    "linePlaceholder": "輸入對話或旁白…使用 [暫停 0.5 秒] 進行靜默休息",
+    "linePlaceholder": "輸入對話或旁白…使用 [pause 0.5s] 進行靜默休息",
     "text": "文字",
     "defaultVoice": "預設",
     "inlineVoice": "設定內嵌語音",
     "inlineVoiceHint": "切換突出顯示文字的語音（或在遊標處插入開關）",
     "resetInlineVoice": "重設為線路語音",
-    "insertPause": "插入 [暫停 0.5 秒] 中斷",
+    "insertPause": "插入 [pause 0.5s] 中斷",
     "preview": "預覽此行",
     "removeLine": "刪除線",
     "tune": "音調和速度",
@@ -1842,7 +1853,8 @@
     "toneChip": "語氣與語速：{{speed}}",
     "lineVoice": "本行聲音",
     "chapterHeading": "章節標題",
-    "lineActions": "行操作"
+    "lineActions": "行操作",
+    "recovery_title": "中斷的故事"
   },
   "audiobook": {
     "cast": "配音角色",
@@ -1866,7 +1878,6 @@
     "stats_one": "{{count}} 章 · 約 {{words}} 字 · 約 {{runtime}} 預計時長",
     "stats_other": "{{count}} 章 · 約 {{words}} 字 · 約 {{runtime}} 預計時長",
     "warnings_title": "建立前",
-    "warn_unknown_voice": "未知聲音 ‘{{name}}’ — 將使用預設聲音",
     "warn_empty_chapter": "章節「{{title}}」沒有可朗讀的文字",
     "warn_unknown_tag": "無法辨識的標記 {{tag}} — 將被朗讀出來",
     "untitled": "未命名有聲書",
@@ -1878,7 +1889,7 @@
     "tab_book": "書籍",
     "subtitle": "撰寫或匯入故事，為每個角色分配聲音，再匯出具備真實章節的精緻有聲書。",
     "script": "腳本",
-    "script_placeholder": "#第一章\n從前…[停頓 500 毫秒]結束。\n\n# 第二章\n[聲音：旁白] 就這樣繼續下去。",
+    "script_placeholder": "# 第一章\n從前…[pause 0.5s]結束。\n\n# 第二章\n[voice:旁白] 就這樣繼續下去。",
     "default_voice": "預設語音",
     "engine_default": "引擎預設",
     "preview_plan": "預覽計劃",
@@ -1954,7 +1965,7 @@
     "lex_add": "添加單字",
     "lex_remove": "刪除",
     "markup_help": "標記參考",
-    "markup_hint": "# 章節標題 · [voice:NAME] 切換語音 · [pause 500ms] / [pause 1s] · [slow]…[/slow] · [fast]…[/fast] · [emphasis]…[/emphasis] · [spell]…[/spell] · 反應 (VoiceStudio)： [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]: [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
+    "markup_hint": "# 章節標題 · [voice:NAME] 切換語音 · [pause 0.5s] · [slow]…[/slow] · [fast]…[/fast] · [emphasis]…[/emphasis] · [spell]…[/spell] · 反應 (VoiceStudio)： [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]: [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
     "language": "語言",
     "expressive": "製作覆蓋",
     "reset": "重置",
@@ -1971,7 +1982,10 @@
     "emotion_text": "情感描述",
     "emotion_text_ph": "例如 聽起來很疲勞和悲傷",
     "emotion_alpha": "情感強度",
-    "lex_duplicate": "每個詞只保留一種發音。"
+    "lex_duplicate": "每個詞只保留一種發音。",
+    "recovery_busy": "另一個算繪正在進行，完成後再繼續。",
+    "cast_note_one": "{{names}} 尚未分配聲音，將使用主要聲音朗讀。請在「角色」中選擇聲音。",
+    "cast_note_other": "{{names}} 尚未分配聲音，將使用主要聲音朗讀。請在「角色」中選擇聲音。"
   },
   "credentials": {
     "microsoft_key": "微軟翻譯金鑰",
@@ -2364,7 +2378,8 @@
     "generating_voice_a": "生成語音...",
     "generating_voice_b": "生成語音 B...",
     "comparison_complete": "對比完畢！",
-    "play_failed": "播放失敗：{{message}}"
+    "play_failed": "播放失敗：{{message}}",
+    "test_phrase_placeholder": "輸入一句兩個聲音都會朗讀的話。"
   },
   "demo": {
     "clone_coachmark": "這是一個引導演示 - 嘗試建議的提示或編寫您自己的提示。",
@@ -2870,7 +2885,8 @@
     "plan_impossible": "無法容納 +{{seconds}}秒",
     "plan_impossible_title": "預計語音約{{est}}秒，可用時間為{{avail}}秒。約有{{seconds}}秒超出任何適配方式的調整範圍，音訊將被截斷。請在產生前縮短文字。",
     "plan_tight": "勉強適配",
-    "plan_tight_title": "預計語音約{{est}}秒，可用時間為{{avail}}秒。智慧適配可以處理，但會明顯加快語速或減慢影片。縮短文字可獲得更自然的效果。"
+    "plan_tight_title": "預計語音約{{est}}秒，可用時間為{{avail}}秒。智慧適配可以處理，但會明顯加快語速或減慢影片。縮短文字可獲得更自然的效果。",
+    "replace_toggle": "尋找和取代"
   },
   "update": {
     "checking": "正在檢查更新…",
@@ -2948,8 +2964,6 @@
     "translate_hint": "瀏覽目標文字。超長線路速度提升；您也可以直接編輯。",
     "done_title": "配音完成",
     "done_hint": "檢查時序和同步比率。調整任何線條並點擊“Regen Changed”即可快速部分重做。",
-    "segment_one": "{{count}} 段",
-    "segment_other": "{{count}} 段",
     "dismiss_title": "關閉 — 在重新載入之前不會再次出現在該階段",
     "timing_review_one": "{{count}} 個片段需要檢查時間",
     "timing_review_other": "{{count}} 個片段需要檢查時間同步",
@@ -4405,5 +4419,20 @@
     "nextMemory": "此裝置記憶體不足。請在 設定 → 效能 中選擇較輕量的設定檔，然後重試。",
     "downloads": "下載",
     "activeCount": "進行中的下載：{{count}}"
+  },
+  "disabledReason": {
+    "files_required": "請先至少新增一部影片。",
+    "languages_required": "請至少選擇一種目標語言。",
+    "language_required": "請先選擇目標語言。",
+    "translation_not_ready": "請先設定翻譯引擎。",
+    "recovery_pending": "請先繼續或取消中斷的步驟。",
+    "segments_required": "請先轉寫影片。",
+    "text_required": "請先輸入文字。",
+    "path_required": "請先輸入檔案的完整路徑。",
+    "slot_required": "請輸入大於 0 秒的時長。",
+    "voices_required": "請先選擇兩個聲音。",
+    "generating": "請等待目前的生成完成。",
+    "name_required": "請先輸入名稱。",
+    "audio_missing": "此條生成沒有可儲存的音訊檔案。"
   }
 }

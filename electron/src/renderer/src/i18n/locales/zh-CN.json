@@ -462,7 +462,7 @@
     "mode_fast": "快速地",
     "mode_fast_desc": "使用所选的低延迟听写模型。",
     "mode_accurate": "准确的",
-    "mode_accurate_desc": "使用带有详细时间戳的选定 ASR 模型。",
+    "mode_accurate_desc": "使用所选的语音转文字模型，并提供详细时间戳。",
     "title": "转录记录",
     "entries": "{{count}} 条记录",
     "search_placeholder": "搜索转录记录…",
@@ -489,7 +489,8 @@
     "identify_speakers": "识别说话人",
     "speakers_unavailable": "说话人识别不可用。转录文本已保存，但没有说话人标签。",
     "missing_model": "尚未安装语音转文字模型 — 此功能需要一个模型来转写音频。",
-    "original_transcript": "原始转录"
+    "original_transcript": "原始转录",
+    "active_model": "模型：{{model}}"
   },
   "engineRuntime": {
     "ready": "准备好",
@@ -821,7 +822,6 @@
     "install_disabled_title": "打包版本中禁用安装",
     "needs_install_suffix": " — 需要安装",
     "glossary_title": "为重复出现的术语固定翻译（名称、品牌词、术语）",
-    "glossary_btn": "+ 术语表（{{count}}）",
     "selected_count": "{{count}} 个已选",
     "set_voice": "设置声音…",
     "clear_voice": "⊘ 默认",
@@ -941,7 +941,12 @@
     "input_issue_unsupported": "不支持的文件类型 — 请选择视频或音频文件",
     "input_issue_empty": "此文件为空 — 请选择其他文件",
     "file_actions": "文件操作",
-    "translator_agent": "智能体"
+    "translator_agent": "智能体",
+    "segment_count_one": "{{count}} 个片段",
+    "segment_count_other": "{{count}} 个片段",
+    "glossary_terms_one": "术语表 · {{count}} 个术语",
+    "glossary_terms_other": "术语表 · {{count}} 个术语",
+    "glossary_label": "术语表"
   },
   "dub_workflow": {
     "preparing_audio": "正在准备音频...",
@@ -1527,7 +1532,7 @@
     "more_actions": "更多操作",
     "use_in_stories": "在故事中使用",
     "set_audiobook_default": "设为有声读物默认声音",
-    "open_designer": "在设计器中打开",
+    "open_designer": "在“设计”中打开",
     "no_matches": "没有符合这些筛选条件的声音。",
     "load_more": "加载更多",
     "saved_as_profile": "已将“{{name}}”保存为声音配置。",
@@ -1550,7 +1555,7 @@
     "trim_load_failed": "无法加载音频进行修剪：{{message}}",
     "delete": "删除",
     "community_empty": "尚未加载社区声音——请联网后重新打开，或成为第一位提交者。",
-    "community_explainer": "由社区分享的设计预设与录制声音，加载自 omnivoice-gallery。",
+    "community_explainer": "由社区分享的设计预设与录制声音。",
     "no_designer": "录制声音——请改用“使用此声音”。",
     "no_preview": "暂无预览——通过“使用此声音”添加后即可收听。",
     "submit_failed": "无法打开提交表单。",
@@ -1675,7 +1680,9 @@
     "probe_placeholder": "/Users/you/Movies/sample.mp4",
     "probe_failed": "探测失败：{{message}}",
     "parse_failed": "解析失败：{{message}}",
-    "fit_failed": "匹配失败：{{message}}"
+    "fit_failed": "匹配失败：{{message}}",
+    "placeholder_direction": "例如：像说秘密一样轻声说，然后逐渐兴奋起来。",
+    "placeholder_rate_fit": "粘贴译文，与其时间段进行比对。"
   },
   "projects": {
     "title": "项目",
@@ -1721,7 +1728,9 @@
     "delete_selected": "删除所选项（{{count}}）",
     "deleted_count": "已删除：{{count}}",
     "delete_warning": "此操作无法撤销。项目和转录文本将被删除。删除声音或录音也会删除其保存的音频。导出的文件和已完成渲染的音频将保留。",
-    "draft_changed": "加载此项目时，你的草稿已更改。请再次确认以替换草稿。"
+    "draft_changed": "加载此项目时，你的草稿已更改。请再次确认以替换草稿。",
+    "all_projects": "所有项目",
+    "library_group": "资料库"
   },
   "projectActions": {
     "delete": "删除“{{name}}”？此操作无法撤销。",
@@ -1746,7 +1755,9 @@
     "tagline": "本地语音克隆。没有任何东西离开你的机器。",
     "coming_soon": "即将推出",
     "switch_to_light": "切换到浅色主题",
-    "switch_to_dark": "切换到深色主题"
+    "switch_to_dark": "切换到深色主题",
+    "not_found_title": "找不到页面",
+    "not_found_body": "此地址与 VoiceStudio 中的任何页面都不匹配。"
   },
   "stories": {
     "title": "故事编辑器",
@@ -1842,7 +1853,8 @@
     "toneChip": "语气与语速：{{speed}}",
     "lineVoice": "本行声音",
     "chapterHeading": "章节标题",
-    "lineActions": "行操作"
+    "lineActions": "行操作",
+    "recovery_title": "中断的故事"
   },
   "audiobook": {
     "cast": "配音角色",
@@ -1866,7 +1878,6 @@
     "stats_one": "{{count}} 章 · 约 {{words}} 字 · 约 {{runtime}} 预计时长",
     "stats_other": "{{count}} 章 · 约 {{words}} 字 · 约 {{runtime}} 预计时长",
     "warnings_title": "创建前",
-    "warn_unknown_voice": "未知声音 ‘{{name}}’ — 将使用默认声音",
     "warn_empty_chapter": "章节“{{title}}”没有可朗读的文本",
     "warn_unknown_tag": "无法识别的标记 {{tag}} — 将被朗读出来",
     "untitled": "未命名有声读物",
@@ -1878,7 +1889,7 @@
     "tab_book": "书籍",
     "subtitle": "编写或导入故事，为每个角色分配声音，再导出带有真实章节的精致有声书。",
     "script": "脚本",
-    "script_placeholder": "#第一章\n从前……[停顿 500 毫秒]结束。\n\n# 第二章\n[声音：旁白] 就这样继续下去。",
+    "script_placeholder": "# 第一章\n从前……[pause 0.5s]结束。\n\n# 第二章\n[voice:旁白] 就这样继续下去。",
     "default_voice": "默认语音",
     "engine_default": "引擎默认",
     "preview_plan": "预览计划",
@@ -1954,7 +1965,7 @@
     "lex_add": "添加单词",
     "lex_remove": "删除",
     "markup_help": "标记参考",
-    "markup_hint": "# 章节标题 · [voice:NAME] 切换语音 · [pause 500ms] / [pause 1s] · [slow]…[/slow] · [fast]…[/fast] · [emphasis]…[/emphasis] · [spell]…[/spell] · 反应（VoiceStudio）： [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]: [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
+    "markup_hint": "# 章节标题 · [voice:NAME] 切换语音 · [pause 0.5s] · [slow]…[/slow] · [fast]…[/fast] · [emphasis]…[/emphasis] · [spell]…[/spell] · 反应（VoiceStudio）： [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]: [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
     "language": "语言",
     "expressive": "制作参数覆盖",
     "reset": "重置",
@@ -1971,7 +1982,10 @@
     "emotion_text": "情感描述",
     "emotion_text_ph": "例如：听起来疲惫而悲伤",
     "emotion_alpha": "情感强度",
-    "lex_duplicate": "每个词只保留一种发音。"
+    "lex_duplicate": "每个词只保留一种发音。",
+    "recovery_busy": "另一个渲染正在进行，完成后再继续。",
+    "cast_note_one": "{{names}} 尚未分配声音，将使用主声音朗读。请在“角色”中选择声音。",
+    "cast_note_other": "{{names}} 尚未分配声音，将使用主声音朗读。请在“角色”中选择声音。"
   },
   "credentials": {
     "microsoft_key": "Microsoft Translator 密钥",
@@ -2364,7 +2378,8 @@
     "generating_voice_a": "正在生成声音 A…",
     "generating_voice_b": "正在生成声音 B…",
     "comparison_complete": "对比完毕！",
-    "play_failed": "播放失败：{{message}}"
+    "play_failed": "播放失败：{{message}}",
+    "test_phrase_placeholder": "输入一句两个声音都会朗读的话。"
   },
   "demo": {
     "clone_coachmark": "这是一个引导式演示 — 试试建议的提示词，或自己写一段。",
@@ -2870,7 +2885,8 @@
     "qc_verify": "验证",
     "qc_verify_title": "第二遍 ASR 听到：“{{heard}}” — 重新聆听或重新配音此台词。",
     "live_play_title": "立即流式播放该行(实时预览)",
-    "live_stop_title": "停止实时预览"
+    "live_stop_title": "停止实时预览",
+    "replace_toggle": "查找和替换"
   },
   "update": {
     "checking": "正在检查更新…",
@@ -2948,8 +2964,6 @@
     "translate_hint": "浏览译文。超长句子的语速已提升；你也可以直接编辑。",
     "done_title": "配音完成",
     "done_hint": "检查时序和同步比率。调整任意句子并点击“重新生成已改”即可快速部分重做。",
-    "segment_one": "{{count}} 段",
-    "segment_other": "{{count}} 段",
     "dismiss_title": "关闭 — 在重新加载之前不会再次出现在该阶段",
     "timing_review_one": "{{count}} 个片段需要检查时间",
     "timing_review_other": "{{count}} 个片段需要检查时间同步",
@@ -4405,5 +4419,20 @@
     "nextMemory": "此设备内存不足。请在 设置 → 性能 中选择更轻量的配置，然后重试。",
     "downloads": "下载",
     "activeCount": "正在进行的下载：{{count}}"
+  },
+  "disabledReason": {
+    "files_required": "请先至少添加一个视频。",
+    "languages_required": "请至少选择一种目标语言。",
+    "language_required": "请先选择目标语言。",
+    "translation_not_ready": "请先设置翻译引擎。",
+    "recovery_pending": "请先继续或取消被中断的步骤。",
+    "segments_required": "请先转写视频。",
+    "text_required": "请先输入文本。",
+    "path_required": "请先输入文件的完整路径。",
+    "slot_required": "请输入大于 0 秒的时长。",
+    "voices_required": "请先选择两个声音。",
+    "generating": "请等待当前生成完成。",
+    "name_required": "请先输入名称。",
+    "audio_missing": "此条生成没有可保存的音频文件。"
   }
 }

@@ -447,7 +447,7 @@
     "mode_fast": "빠른",
     "mode_fast_desc": "선택한 낮은 대기 시간 받아쓰기 모델을 사용합니다.",
     "mode_accurate": "정확한",
-    "mode_accurate_desc": "상세한 타임스탬프와 함께 선택한 ASR 모델을 사용합니다.",
+    "mode_accurate_desc": "선택한 음성 인식 모델로 자세한 타임스탬프를 붙입니다.",
     "title": "전사",
     "entries": "{{count}} 항목",
     "search_placeholder": "전사본 검색…",
@@ -474,7 +474,8 @@
     "identify_speakers": "화자 식별",
     "speakers_unavailable": "화자 식별을 사용할 수 없습니다. 화자 라벨 없이 전사본이 저장되었습니다.",
     "missing_model": "음성 인식 모델이 설치되어 있지 않습니다 — 이 기능으로 오디오를 전사하려면 모델이 필요합니다.",
-    "original_transcript": "원본 대본"
+    "original_transcript": "원본 대본",
+    "active_model": "모델: {{model}}"
   },
   "engineRuntime": {
     "ready": "준비",
@@ -801,7 +802,6 @@
     "install_disabled_title": "패키지 빌드에서는 설치가 비활성화됩니다.",
     "needs_install_suffix": "— 설치 필요",
     "glossary_title": "반복되는 용어(이름, 브랜드 단어, 전문 용어)에 대한 번역 고정",
-    "glossary_btn": "+ 용어집 ({{count}})",
     "selected_count": "{{count}} 선택됨",
     "set_voice": "음성 설정…",
     "clear_voice": "⊘ 기본값",
@@ -926,7 +926,12 @@
     "input_issue_unsupported": "지원하지 않는 파일 형식입니다 — 동영상 또는 오디오 파일을 선택하세요",
     "input_issue_empty": "빈 파일입니다 — 다른 파일을 선택하세요",
     "file_actions": "파일 작업",
-    "translator_agent": "에이전트"
+    "translator_agent": "에이전트",
+    "segment_count_one": "세그먼트 {{count}}개",
+    "segment_count_other": "세그먼트 {{count}}개",
+    "glossary_terms_one": "용어집 · {{count}}개",
+    "glossary_terms_other": "용어집 · {{count}}개",
+    "glossary_label": "용어집"
   },
   "dub_workflow": {
     "preparing_audio": "오디오 준비 중…",
@@ -1527,7 +1532,7 @@
     "more_actions": "추가 작업",
     "use_in_stories": "스토리에서 사용",
     "set_audiobook_default": "오디오북 기본 음성으로 설정",
-    "open_designer": "디자이너에서 열기",
+    "open_designer": "디자인에서 열기",
     "no_matches": "이 필터와 일치하는 음성이 없습니다.",
     "load_more": "더 로드하기",
     "saved_as_profile": "목소리에 \"{{name}}\"을(를) 추가했습니다.",
@@ -1549,7 +1554,7 @@
     "trim_load_failed": "다듬기 위해 오디오를 로드할 수 없습니다: {{message}}",
     "delete": "삭제",
     "community_empty": "아직 로드된 커뮤니티 음성이 없습니다 — 인터넷에 연결한 뒤 다시 열거나, 첫 번째로 제출해 보세요.",
-    "community_explainer": "커뮤니티가 공유한 디자인 프리셋과 녹음 음성으로, omnivoice-gallery에서 로드됩니다.",
+    "community_explainer": "커뮤니티가 공유한 디자인 프리셋과 녹음 음성입니다.",
     "no_designer": "녹음된 음성입니다 — 대신 \"음성 사용\"을 이용하세요.",
     "no_preview": "미리보기 없음 — \"음성 사용\"으로 추가하면 들을 수 있습니다.",
     "submit_failed": "제출 양식을 열 수 없습니다.",
@@ -1675,7 +1680,9 @@
     "probe_placeholder": "/Users/you/Movies/sample.mp4",
     "probe_failed": "프로브 실패: {{message}}",
     "parse_failed": "구문 분석 실패: {{message}}",
-    "fit_failed": "맞춤 실패: {{message}}"
+    "fit_failed": "맞춤 실패: {{message}}",
+    "placeholder_direction": "예: 비밀처럼 속삭이다가 점점 들뜨게.",
+    "placeholder_rate_fit": "번역한 줄을 붙여 넣어 시간 구간과 비교하세요."
   },
   "projects": {
     "title": "프로젝트",
@@ -1721,7 +1728,9 @@
     "delete_selected": "선택 항목 삭제 ({{count}})",
     "deleted_count": "삭제됨: {{count}}",
     "delete_warning": "이 작업은 되돌릴 수 없습니다. 프로젝트와 전사 내용이 삭제됩니다. 음성이나 테이크를 삭제하면 저장된 오디오도 삭제됩니다. 내보낸 파일과 완료된 렌더링 오디오는 유지됩니다.",
-    "draft_changed": "프로젝트를 불러오는 동안 초안이 변경되었습니다. 바꾸려면 다시 확인하세요."
+    "draft_changed": "프로젝트를 불러오는 동안 초안이 변경되었습니다. 바꾸려면 다시 확인하세요.",
+    "all_projects": "모든 프로젝트",
+    "library_group": "라이브러리"
   },
   "projectActions": {
     "delete": "“{{name}}”을(를) 삭제할까요? 되돌릴 수 없습니다.",
@@ -1746,7 +1755,9 @@
     "tagline": "로컬 음성 복제. 당신의 기계에는 아무것도 남지 않습니다.",
     "coming_soon": "곧 출시 예정",
     "switch_to_light": "밝은 테마로 전환",
-    "switch_to_dark": "어두운 테마로 전환"
+    "switch_to_dark": "어두운 테마로 전환",
+    "not_found_title": "페이지를 찾을 수 없음",
+    "not_found_body": "이 주소와 일치하는 VoiceStudio 페이지가 없습니다."
   },
   "stories": {
     "title": "스토리 편집자",
@@ -1798,13 +1809,13 @@
     "splitModeHint": "각 줄은 별도의 테이크로 읽힙니다. 화자가 한 명이면 문장보다 문단이나 장 전체가 더 자연스럽게 이어집니다.",
     "emptyText": "대화와 내레이션 대사를 추가하여 스토리를 시작하세요. 캐스트에서 각 캐릭터에게 음성을 할당하세요.",
     "addFirst": "첫 번째 줄 추가",
-    "linePlaceholder": "대화나 내레이션을 입력하세요. 조용히 휴식하려면 [0.5초 일시정지]를 사용하세요.",
+    "linePlaceholder": "대화나 내레이션을 입력하세요. 조용히 휴식하려면 [pause 0.5s]를 사용하세요.",
     "text": "텍스트",
     "defaultVoice": "기본값",
     "inlineVoice": "인라인 음성 설정",
     "inlineVoiceHint": "강조 표시된 텍스트의 음성 전환(또는 커서에 스위치 삽입)",
     "resetInlineVoice": "줄 음성으로 재설정",
-    "insertPause": "[0.5초 멈춤] 브레이크 삽입",
+    "insertPause": "[pause 0.5s] 브레이크 삽입",
     "preview": "이 라인 미리보기",
     "removeLine": "줄 삭제",
     "tune": "톤 & 속도",
@@ -1842,7 +1853,8 @@
     "toneChip": "톤 및 속도: {{speed}}",
     "lineVoice": "줄 음성",
     "chapterHeading": "챕터 제목",
-    "lineActions": "줄 작업"
+    "lineActions": "줄 작업",
+    "recovery_title": "중단된 스토리"
   },
   "audiobook": {
     "cast": "캐스트",
@@ -1866,7 +1878,6 @@
     "stats_one": "{{count}}개 챕터 · 약 {{words}}단어 · 예상 {{runtime}}",
     "stats_other": "{{count}}개 챕터 · 약 {{words}}단어 · 예상 {{runtime}}",
     "warnings_title": "만들기 전에",
-    "warn_unknown_voice": "알 수 없는 음성 ‘{{name}}’ — 기본값을 사용합니다",
     "warn_empty_chapter": "챕터 “{{title}}”에 읽을 텍스트가 없습니다",
     "warn_unknown_tag": "인식할 수 없는 태그 {{tag}} — 그대로 읽힙니다",
     "untitled": "제목 없는 오디오북",
@@ -1878,7 +1889,7 @@
     "tab_book": "책",
     "subtitle": "이야기를 쓰거나 가져오고, 각 배역의 목소리를 정한 다음 실제 챕터가 있는 완성도 높은 오디오북으로 내보내세요.",
     "script": "스크립트",
-    "script_placeholder": "# 1장\n옛날 옛적에… [500ms 동안 일시 중지] 끝.\n\n# 2장\n[음성:내레이터] 그리고 계속되었습니다.",
+    "script_placeholder": "# 1장\n옛날 옛적에… [pause 0.5s] 끝.\n\n# 2장\n[voice:내레이터] 그리고 계속되었습니다.",
     "default_voice": "기본 음성",
     "engine_default": "엔진 기본값",
     "preview_plan": "계획 미리보기",
@@ -1954,7 +1965,7 @@
     "lex_add": "단어 추가",
     "lex_remove": "제거",
     "markup_help": "마크업 참조",
-    "markup_hint": "# 장 제목 · [voice:NAME] 음성 전환 · [pause 500ms] / [pause 1s] · [slow]…[/slow] · [fast]…[/fast] · [emphasis]…[/emphasis] · [spell]…[/spell] · 반응 (VoiceStudio): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
+    "markup_hint": "# 장 제목 · [voice:NAME] 음성 전환 · [pause 0.5s] · [slow]…[/slow] · [fast]…[/fast] · [emphasis]…[/emphasis] · [spell]…[/spell] · 반응 (VoiceStudio): [laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh] [question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa] [surprise-yo] [dissatisfaction-hnn]",
     "language": "언어",
     "expressive": "제작 재정의",
     "reset": "재설정",
@@ -1971,7 +1982,10 @@
     "emotion_text": "감정 설명",
     "emotion_text_ph": "예: 지쳐 보이고 슬픈 소리",
     "emotion_alpha": "감정의 강도",
-    "lex_duplicate": "단어마다 발음을 하나만 지정하세요."
+    "lex_duplicate": "단어마다 발음을 하나만 지정하세요.",
+    "recovery_busy": "다른 렌더링이 진행 중입니다. 끝난 뒤 다시 시작하세요.",
+    "cast_note_one": "{{names}}에 아직 목소리가 지정되지 않아 기본 목소리로 읽습니다. 캐스트에서 목소리를 고르세요.",
+    "cast_note_other": "{{names}}에 아직 목소리가 지정되지 않아 기본 목소리로 읽습니다. 캐스트에서 목소리를 고르세요."
   },
   "credentials": {
     "microsoft_key": "마이크로소프트 번역기 키",
@@ -2364,7 +2378,8 @@
     "generating_voice_a": "음성 생성 중...",
     "generating_voice_b": "음성 B 생성 중...",
     "comparison_complete": "비교 완료!",
-    "play_failed": "플레이 실패: {{message}}"
+    "play_failed": "플레이 실패: {{message}}",
+    "test_phrase_placeholder": "두 목소리가 읽을 문장을 입력하세요."
   },
   "demo": {
     "clone_coachmark": "이것은 안내형 데모입니다. 제안된 프롬프트를 시도해 보거나 직접 작성해 보세요.",
@@ -2870,7 +2885,8 @@
     "plan_tight": "빠듯하게 맞음",
     "plan_tight_title": "예상 발화 길이는 ≈{{est}}초, 사용 가능 시간은 {{avail}}초입니다 — 스마트 핏으로 흡수할 수 있지만, 체감되는 속도 조절이나 영상 슬로우다운이 필요합니다. 더 깔끔한 결과를 위해 텍스트를 줄이세요.",
     "live_play_title": "이 줄 지금 스트리밍(실시간 미리듣기)",
-    "live_stop_title": "실시간 미리듣기 중지"
+    "live_stop_title": "실시간 미리듣기 중지",
+    "replace_toggle": "찾기 및 바꾸기"
   },
   "update": {
     "checking": "업데이트 확인 중…",
@@ -2948,8 +2964,6 @@
     "translate_hint": "대상 텍스트를 훑어보세요. 길이가 긴 라인은 속도가 향상됩니다. 직접 편집할 수도 있습니다.",
     "done_title": "더빙 완료",
     "done_hint": "타이밍과 동기화 비율을 검토하세요. 빠른 부분 재실행을 위해 라인을 조정하고 \"변경됨 재생성\"을 눌러보세요.",
-    "segment_one": "{{count}} 세그먼트",
-    "segment_other": "{{count}} 세그먼트",
     "dismiss_title": "닫기 — 새로고침할 때까지 이 단계에서는 다시 나타나지 않습니다.",
     "timing_review_one": "세그먼트 {{count}}개의 타이밍 검토가 필요합니다",
     "timing_review_other": "{{count}}개 구간의 타이밍을 검토해야 합니다",
@@ -4405,5 +4419,20 @@
     "nextMemory": "이 기기의 메모리가 부족합니다. 설정 → 성능에서 더 가벼운 프로필을 선택한 뒤 다시 시도하세요.",
     "downloads": "다운로드",
     "activeCount": "진행 중인 다운로드: {{count}}"
+  },
+  "disabledReason": {
+    "files_required": "먼저 동영상을 하나 이상 추가하세요.",
+    "languages_required": "대상 언어를 하나 이상 고르세요.",
+    "language_required": "먼저 대상 언어를 고르세요.",
+    "translation_not_ready": "먼저 번역 엔진을 설정하세요.",
+    "recovery_pending": "먼저 중단된 단계를 다시 시작하거나 취소하세요.",
+    "segments_required": "먼저 동영상을 받아쓰기하세요.",
+    "text_required": "먼저 텍스트를 입력하세요.",
+    "path_required": "먼저 파일의 전체 경로를 입력하세요.",
+    "slot_required": "0초보다 긴 구간을 입력하세요.",
+    "voices_required": "먼저 두 목소리를 모두 고르세요.",
+    "generating": "현재 테이크가 끝날 때까지 기다리세요.",
+    "name_required": "먼저 이름을 입력하세요.",
+    "audio_missing": "이 테이크에는 저장할 오디오 파일이 없습니다."
   }
 }
