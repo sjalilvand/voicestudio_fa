@@ -162,10 +162,7 @@ and with no LLM configured (or on any LLM error) it simply does nothing.
 
 **Settings → System → LLM Providers** is the one place to set up the LLM. Pick a
 provider, paste its API key, choose a model, **Test** it, and "use for
-translation." Supported: OpenAI, OpenRouter, OrcaRouter, Cheaper Inference, Groq,
-Cerebras, Google AI (Gemini), Mistral, Cohere, NVIDIA, GitHub Models, Cloudflare,
-Hugging Face, SambaNova, SiliconFlow, iFLYTEK Astron MaaS, **local Ollama / LM Studio**
-(offline, no key), and a **Custom** OpenAI-compatible endpoint.
+<!-- CLEAN-ROOM (spec T2-folded §8): supported-providers sentence goes here. -->
 
 Keys entered here are stored **encrypted** on your machine and never returned to
 the UI. For a fully offline setup, pick **Ollama** (`ollama pull llama3.1`) or
@@ -177,12 +174,7 @@ provider via environment variables (e.g. `GROQ_API_KEY`, or the legacy
 OrcaRouter can be configured without the UI with `ORCAROUTER_API_KEY`, and its
 defaults can be overridden with `ORCAROUTER_BASE_URL` and `ORCAROUTER_MODEL`.
 
-[Cheaper Inference](https://cheaperinference.com) is an OpenAI-compatible
-gateway to models from several labs (default model `gpt-5.4-mini`).
-Pricing varies by model and request; check the [current provider catalog](https://cheaperinference.com/docs).
-It can be configured without the UI with `CHEAPER_INFERENCE_API_KEY`, and its
-defaults can be overridden with `CHEAPER_INFERENCE_BASE_URL` and
-`CHEAPER_INFERENCE_MODEL`.
+<!-- CLEAN-ROOM (spec T2-folded §8): paragraph on configuring the Cheaper Inference provider goes here. -->
 
 iFLYTEK Astron MaaS uses `IFLYTEK_API_KEY`, `IFLYTEK_BASE_URL` and
 `IFLYTEK_MODEL`. It has no default model: copy the model ID (for example Spark

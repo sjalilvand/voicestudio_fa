@@ -105,9 +105,7 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
   );
   const installing = status.stage === 'installing';
   const setupFailed = setup && Boolean(status.message);
-  // Intel Macs can never resolve the runtime (#2365): the setup screen
-  // offers a remote backend instead of a local install that must fail.
-  const unsupportedPlatform = setup && status.setupIssue === 'unsupported_platform';
+  // CLEAN-ROOM (spec T2-folded §13): `unsupportedPlatform` flag (setup stage and setupIssue is unsupported_platform) goes here.
   // The Intel build under Rosetta on Apple Silicon (#2598): the same Mac runs
   // the local backend once the Apple Silicon build is installed.
   const wrongArchitecture = setup && status.setupIssue === 'wrong_architecture';
@@ -283,13 +281,7 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
                   </p>
                 ))
               : null}
-            {failed && status.diagnosis === 'auth_required' ? (
-              // The workspace is gated, so Settings is unreachable: reconnecting
-              // with the API key has to be possible right here.
-              <div className="w-full pt-2 text-left">
-                <RemoteBackendSettings />
-              </div>
-            ) : null}
+            {/* CLEAN-ROOM (spec T2-folded §13): remote-backend settings panel shown when the failure diagnosis is auth_required goes here. */}
             {running ? (
               <p className="mx-auto max-w-sm text-sm text-muted-foreground">
                 {t('backend.first_run_hint')}
@@ -308,21 +300,7 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
           {setup ? (
             <>
               <p className="max-w-sm text-sm text-muted-foreground">{t('backend.setup_hint')}</p>
-              {wrongArchitecture && (
-                <p className="max-w-sm text-sm text-muted-foreground">
-                  {t('backend.setup_wrong_architecture')}
-                </p>
-              )}
-              {unsupportedPlatform && (
-                <p className="max-w-sm text-sm text-muted-foreground">
-                  {t('backend.setup_unsupported_platform')}
-                </p>
-              )}
-              {(unsupportedPlatform || wrongArchitecture) && (
-                <div className="w-full text-left">
-                  <RemoteBackendSettings />
-                </div>
-              )}
+              {/* CLEAN-ROOM (spec T2-folded §13): wrong-architecture note, unsupported-platform note, and the remote-backend settings panel for both go here. */}
               <div className="grid w-full grid-cols-2 gap-2">
                 <label className="space-y-1 text-left text-xs text-muted-foreground">
                   <span>{t('settings.language')}</span>

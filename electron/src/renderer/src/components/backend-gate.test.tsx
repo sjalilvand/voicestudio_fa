@@ -373,28 +373,7 @@ it('shows a populated, usable reconnect form for an expired remote session while
   }
 });
 
-it('offers a remote backend instead of a doomed local install on Intel Macs', () => {
-  backendStatus.setupIssue = 'unsupported_platform';
-  render(
-    <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-    >
-      <BackendGate>
-        <div>workspace</div>
-      </BackendGate>
-    </QueryClientProvider>,
-  );
-
-  expect(screen.getByText(i18n.t('backend.setup_unsupported_platform'))).toBeVisible();
-  expect(
-    screen.queryByRole('button', { name: i18n.t('backend.setup_required') }),
-  ).not.toBeInTheDocument();
-  expect(
-    screen.getByRole('textbox', {
-      name: i18n.t('settings.remote_backend_url'),
-    }),
-  ).toBeVisible();
-});
+// CLEAN-ROOM (spec T2-folded §17): test that an Intel Mac setup screen offers a remote backend instead of a local install goes here.
 
 it.each([
   [

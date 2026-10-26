@@ -2163,7 +2163,6 @@
     "setup_space": "Kosongkan setidaknya {{gib}} GiB di drive aplikasi, lalu coba lagi.",
     "repair_failed": "Perbaikan otomatis lingkungan Python tidak selesai. Periksa log mesin, lalu tekan Coba lagi.",
     "setup_access": "Izinkan akses tulis ke folder data aplikasi, lalu coba lagi.",
-    "setup_unsupported_platform": "Mac Intel ini tidak dapat menjalankan backend AI lokal — PyTorch tidak menyediakan wheel macOS Intel. Hubungkan backend jarak jauh di bawah; instalasi lokal tidak diperlukan.",
     "setup_wrong_architecture": "Ini adalah build Intel (x64) VoiceStudio yang berjalan melalui Rosetta di Mac Apple Silicon, sehingga backend AI lokal tidak dapat dipasang. Tutup aplikasi, pasang DMG Apple Silicon (arm64) di atasnya, lalu buka kembali — suara dan proyek Anda tetap tersimpan.",
     "setup_missing_system_library": "Sistem Windows ini tidak memiliki Microsoft Visual C++ 2015-2022 Redistributable (x64), yang dibutuhkan ekstensi audio PyTorch. Pasang dari Microsoft, lalu tekan Coba Lagi.",
     "setup_outdated_system_library": "Microsoft Visual C++ Redistributable (x64) di sistem Windows ini terlalu lama, sehingga sebuah pustaka suara mogok saat dimuat. Pasang versi terbaru dari Microsoft, lalu tekan Coba Lagi.",

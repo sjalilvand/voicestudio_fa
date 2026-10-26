@@ -84,12 +84,7 @@ _PROVIDERS: tuple[Provider, ...] = (
              "openai/gpt-5.5", key_envs=("ORCAROUTER_API_KEY",),
              base_url_env="ORCAROUTER_BASE_URL", model_env="ORCAROUTER_MODEL",
              signup_url="https://www.orcarouter.ai"),
-    Provider("cheaperinference", "Cheaper Inference",
-             "https://api.cheaperinference.com/v1", "gpt-5.4-mini",
-             key_envs=("CHEAPER_INFERENCE_API_KEY",),
-             base_url_env="CHEAPER_INFERENCE_BASE_URL",
-             model_env="CHEAPER_INFERENCE_MODEL",
-             signup_url="https://cheaperinference.com/signup"),
+    # CLEAN-ROOM (spec T2-folded §5): "cheaperinference" Provider registry entry goes here (between orcarouter and groq).
     Provider("groq", "Groq", "https://api.groq.com/openai/v1",
              "llama-3.3-70b-versatile",
              key_envs=("GROQ_API_KEY",), base_url_env="GROQ_BASE_URL",

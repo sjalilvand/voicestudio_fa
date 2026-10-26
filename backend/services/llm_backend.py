@@ -214,11 +214,8 @@ class OpenAICompatBackend(LLMBackend):
         from services import llm_providers
         p = llm_providers.active_provider()
         if p is None:
-            return False, (
-                "No LLM configured. Add a provider key in Settings → LLM Providers "
-                "(OpenAI/OpenRouter/OrcaRouter/Cheaper Inference/Groq/… or a local "
-                "Ollama), or set TRANSLATE_BASE_URL (+ TRANSLATE_API_KEY)."
-            )
+            # CLEAN-ROOM (spec T2-folded §4): "no LLM configured" guidance message goes here.
+            return False, ""
         error = llm_providers.configuration_error(p)
         if error:
             return False, error

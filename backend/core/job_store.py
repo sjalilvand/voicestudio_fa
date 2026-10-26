@@ -97,33 +97,7 @@ def _update_status(job_id: str, status: str, *, finished: bool = False, error: O
 # ── Events ─────────────────────────────────────────────────────────────────
 
 
-def append_event(job_id: str, payload: str) -> int:
-    """Persist one SSE event. Returns the new `seq` number.
-
-    `payload` is the raw SSE line (e.g. `data: {...}\\n\\n`). The schema keeps
-    it opaque so future event shapes don't require migrations.
-    """
-    now = time.time()
-    with db_conn() as conn:
-        row = conn.execute(
-            "INSERT INTO job_events (job_id, seq, created_at, payload) "
-            "SELECT ?, COALESCE(MAX(seq), 0) + 1, ?, ? FROM job_events WHERE job_id = ? "
-            "RETURNING seq",
-            (job_id, now, payload, job_id),
-        ).fetchone()
-        next_seq = int(row["seq"])
-        # Trim oldest beyond the cap. Cheap: bounded by _EVENT_CAP_PER_JOB.
-        cnt = conn.execute(
-            "SELECT COUNT(*) AS n FROM job_events WHERE job_id = ?",
-            (job_id,),
-        ).fetchone()["n"]
-        if cnt > _EVENT_CAP_PER_JOB:
-            conn.execute(
-                "DELETE FROM job_events WHERE job_id = ? AND seq IN "
-                "(SELECT seq FROM job_events WHERE job_id = ? ORDER BY seq ASC LIMIT ?)",
-                (job_id, job_id, cnt - _EVENT_CAP_PER_JOB),
-            )
-    return next_seq
+# CLEAN-ROOM (spec T2-folded §2): append_event(job_id, payload) -> int goes here.
 
 
 def events_since(job_id: str, after_seq: int = 0, limit: int = 1000) -> list[dict]:
