@@ -82,7 +82,8 @@ def catalog_ids(value):
     """Include transitive pipeline dependencies, not only top-level models."""
     if isinstance(value, dict):
         if isinstance(value.get("repo_id"), str):
-            yield value["repo_id"]
+            # A package entry of a shared repository is recorded by its own id.
+            yield value["id"] if isinstance(value.get("id"), str) else value["repo_id"]
         for child in value.values():
             yield from catalog_ids(child)
     elif isinstance(value, list):
