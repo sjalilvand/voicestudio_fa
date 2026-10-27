@@ -20,13 +20,17 @@ def test_shared_installer_exists_without_importing_native_packages():
     assert not ({"torch", "torchaudio", "torchvision", "ctranslate2"} & (set(sys.modules) - before))
 
 
-@pytest.mark.parametrize("platform,version,architecture", [
-    ("linux", (3, 12), "win-amd64"),
-    ("win32", (3, 11), "win-amd64"),
-    ("win32", (3, 12), "win-arm64"),
-    ("win32", (3, 12), "win32"),
-])
-def test_wrong_target_refused_before_install(platform, version, architecture):
+@pytest.mark.parametrize(
+    "platform,version,architecture",
+    [
+        ("win32", (3, 12), "win-arm64"),
+        ("darwin", (3, 12), "win-amd64"),
+        ("win32", (3, 12), "win32"),
+        ("win32", (3, 13), "win-amd64"),
+    ],
+    ids=("arm-wheel", "mac-host", "x86-wheel", "newer-python"),
+)
+def test_recipe_rejects_an_unsupported_runtime(platform, version, architecture):
     with pytest.raises(RuntimeError, match="x64 Python 3.12"):
         module("recipe").validate_target(platform, version, architecture)
 
