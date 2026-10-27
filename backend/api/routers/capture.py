@@ -42,8 +42,11 @@ def _timing(value):
 
 def _truthy(value: Optional[str]) -> bool:
     """Parse a multipart form flag. Treats '1'/'true'/'yes'/'on'/'auto'
-    (any case) as on; everything else — including None — as off."""
-    return (value or "").strip().lower() in {"1", "true", "yes", "on", "auto"}
+    (any case) as on; everything else — including None, and the ``Form``
+    default a direct (non-HTTP) call leaves in place — as off."""
+    if not isinstance(value, str):
+        return False
+    return value.strip().lower() in {"1", "true", "yes", "on", "auto"}
 
 
 @router.post("/transcribe")
@@ -74,11 +77,10 @@ async def transcribe_audio(
               through when no LLM backend is configured. The raw ``text``
               is always returned; ``refined_text`` is added only when the
               LLM actually changed something.
-        dictation: Opt-in flag for hotkey-dictation callers: applies the
-              saved dictation vocabulary hint (``dictation.prompt``) to
-              engines that accept a prompt. Off by default so file
-              transcription and MCP/CLI callers are never biased by it;
-              ignored in 'reference' mode.
+        dictation: Opt-in flag for hotkey-dictation callers. When true, the
+              saved vocabulary hint is passed to engines that accept a
+              prompt. Off by default (file transcription, MCP/CLI stay
+              unbiased) and ignored in 'reference' mode.
 
         diarize: Opt-in speaker identification ('accurate' mode only, which
               is the mode with segment timings). Each segment gains a
@@ -154,13 +156,12 @@ async def transcribe_audio(
                 detail={**missing, "message": asr_model_missing_detail(missing)},
             )
 
-        from api.routers.dictation import dictation_transcribe_kwargs
+        apply_hint = _truthy(dictation) and requested_mode != "reference"
 
-        def _prompt_kwargs(backend) -> dict:
-            # The dictation vocabulary prompt, only for callers that opt in;
-            # a voice-clone reference transcript must stay unbiased by it.
-            if requested_mode == "reference" or not _truthy(dictation):
+        def _hint_kwargs(backend) -> dict:
+            if not apply_hint:
                 return {}
+            from api.routers.dictation import dictation_transcribe_kwargs
             return dictation_transcribe_kwargs(backend)
 
         def _run():
@@ -179,7 +180,7 @@ async def transcribe_audio(
                     require_installed=requested_mode == "reference", warm=True,
                 )
                 result = backend.transcribe(
-                    tmp.name, word_timestamps=use_accurate, **_prompt_kwargs(backend),
+                    tmp.name, word_timestamps=use_accurate, **_hint_kwargs(backend)
                 )
             else:
                 # Fast mode (default): use the fastest available engine
@@ -188,7 +189,7 @@ async def transcribe_audio(
                 from services.asr_backend import get_capture_asr_backend
                 backend = get_capture_asr_backend()
                 result = backend.transcribe(
-                    tmp.name, word_timestamps=False, **_prompt_kwargs(backend),
+                    tmp.name, word_timestamps=False, **_hint_kwargs(backend)
                 )
             sherpa_model_id = getattr(getattr(backend, "spec", None), "id", None)
             return result, backend.id, sherpa_model_id
@@ -254,9 +255,8 @@ async def transcribe_audio(
                 def _run_fallback():
                     from services.asr_backend import get_capture_asr_backend
 
-                    # No vocabulary prompt here: this text is the evidence for
-                    # demoting the sherpa model, and Whisper can echo a prompt
-                    # on noise — it must come from the audio alone.
+                    # No hint here: this text decides whether a sherpa model is
+                    # demoted, and a prompted Whisper can echo the hint on noise.
                     fallback = get_capture_asr_backend(skip_sherpa=True)
                     return (
                         fallback.transcribe(tmp.name, word_timestamps=False),

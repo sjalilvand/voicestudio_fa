@@ -363,41 +363,15 @@ peak memory footprint that exceeds free VRAM. Windows-only quirk.
 
 **Linked issue:** [#65](https://github.com/debpalash/VoiceStudio/issues/65)
 
-## 5a. Backend dies on the first `/generate` (older NVIDIA GPUs, e.g. Tesla T4)
+## 5a. Backend exits on the first `/generate` on an older NVIDIA GPU
 
-**Symptom:** the backend starts fine, `/health` reports your GPU, the model
-preloads — and then the first generation request returns
-`RemoteDisconnected: Remote end closed connection without response`. Every call
-after it gets `ConnectionRefused`, because the backend process is gone. No
-Python traceback is printed.
+**Symptom:** the backend starts, `/health` identifies the GPU, and model preload succeeds, but the first generation ends with `RemoteDisconnected` or “remote end closed.” Later requests get `ConnectionRefused`, often without a Python traceback. Tesla T4 machines, including common Colab hosts, are a typical example.
 
-**Cause:** `torch.compile(mode="reduce-overhead")` captures CUDA graphs. On
-pre-Ampere cards (Turing sm_75 / Volta sm_70 — the Tesla T4 on Google Colab is
-the common case) that capture can abort the process from inside the native CUDA
-library. It happens below the interpreter, so no `except` in the app can catch
-it and nothing is logged.
+**Cause:** CUDA-graph capture in the graph-oriented compile mode can abort the process natively on pre-Ampere GPUs such as Turing sm_75 and Volta sm_70.
 
-**Fix:** update — VoiceStudio now selects the compile mode per GPU and does not
-capture CUDA graphs below sm_80, so this should no longer happen. If you still
-see a crash in the generate path on any GPU, turn compilation off entirely:
+**Fix:** update VoiceStudio. Compile mode is selected from the detected GPU, and devices below sm_80 keep compiled kernels without graph capture. If the crash remains, enable **Settings → Performance → Disable torch.compile**, or set `TORCH_COMPILE_DISABLE=1` before a CLI/source launch. Both in-process and sidecar engines honour this on every platform.
 
-- **In the app:** Settings → Performance → **"Disable torch.compile"**.
-- **From the CLI / from source:** `TORCH_COMPILE_DISABLE=1` before launching.
-  This is honoured on every platform and by every engine, in-process or
-  sidecar.
-
-**Getting a traceback:** the backend now arms `faulthandler`, so a native crash
-writes the faulting thread's Python stack to `backend_err.log` on the way down.
-Include that stack when reporting — without it a native crash is unattributable.
-(`OMNIVOICE_DISABLE_FAULTHANDLER=1` turns it off.)
-
-**Extra containment:** to keep a crashing engine from taking the API down with
-it, run the engine in a killable child process — select
-**OmniVoice (subprocess-isolated)** in Settings → Engines, or
-`OMNIVOICE_TTS_BACKEND=omnivoice-subprocess`. The parent then returns an HTTP
-error and respawns the sidecar instead of dying.
-
-**Linked issue:** [#2135](https://github.com/debpalash/VoiceStudio/issues/2135)
+For diagnosis, the backend arms Python's fatal-signal handler early and writes the dying thread stack to `backend_err.log`; attach that file to a report. Set `OMNIVOICE_DISABLE_FAULTHANDLER=1` to turn this diagnostic off. For additional containment, select **OmniVoice (subprocess-isolated)** under **Settings → Engines**, or launch with `OMNIVOICE_TTS_BACKEND=omnivoice-subprocess`. A native engine failure then becomes an HTTP error and the parent respawns the sidecar. See [#2135](https://github.com/debpalash/VoiceStudio/issues/2135).
 
 ## 5b. RTX 50-series (Blackwell, sm_120): backend crashes during `ml_imports`
 
@@ -406,29 +380,25 @@ ready. The desktop app sits on "starting backend", `/health` returns 503, and
 `/startup/progress` shows `ml_imports` active. From source you see `import
 torch` die with a native access violation rather than a Python traceback.
 
-**Cause:** not established. The pinned build is not missing Blackwell code:
-`torch 2.8.0+cu128` lists `sm_120` in `torch.cuda.get_arch_list()`, and that
-build imports and runs CUDA normally on some Blackwell cards. What is confirmed
-is that on the Windows setups in
-[#1931](https://github.com/debpalash/VoiceStudio/issues/1931) `import torch`
-faults inside the native library before Python can raise an error, and moving
-the torch trio to 2.9.x clears it.
+**Cause:** unknown so far. The pinned `torch 2.8.0+cu128` build advertises
+`sm_120` in `torch.cuda.get_arch_list()`, and on some Blackwell cards it runs
+CUDA fine. The Windows machines in #1931 fault inside `import torch` itself,
+natively, before Python gets a chance to raise; upgrading the torch trio to
+2.9.x made that stop.
 
-If `import torch` crashes for you, that crash *is* the symptom — skip straight
-to the fix below. Where torch does import, this shows what the build actually
-contains:
+**See what your build ships:**
 
 ```bash
 uv run python -c "import torch; print(torch.__version__, torch.cuda.get_arch_list())"
 ```
 
-`sm_120` in that list means the kernels are present and the crash is elsewhere
-in the native init path. Either way the upgrade below is the known workaround.
+With `sm_120` listed, kernels exist for your GPU and the crash comes from
+somewhere else in torch's native start-up. If the command itself dies, that is
+the symptom described above. The upgrade is the known workaround in both cases.
 
-**Fix:** move the whole torch trio to 2.9.x. They must move together —
-upgrading one past the ABI the others were built against gives you
-`RuntimeError: operator torchvision::nms does not exist`, which is the next
-section's problem instead.
+**Fix:** bump `torch`, `torchaudio` and `torchvision` to 2.9.x in one step. A
+partial bump leaves them mismatched and fails with `RuntimeError: operator
+torchvision::nms does not exist` (covered in the next section).
 
 Edit **both** pin lists, keeping them identical:
 
@@ -467,13 +437,13 @@ which VoiceStudio used to call unguarded — that turned this upgrade into a
 different hard startup crash (`AttributeError` inside `ml_imports`). It is
 guarded now, so the upgrade path above is clean on a current checkout.
 
-**Keeping the change:** these are the repo's own pins, so a `git pull` that
-touches them will conflict or overwrite. Re-apply after updating until the
-default pin moves — the default cannot move for everyone until the newer torch
-is verified across the older GPUs VoiceStudio supports, since a newer build can
-drop older architectures. Which ones varies by torch release, not by the CUDA
-variant alone: the pinned 2.8.0+cu128 build reports `sm_70` first, while the
-cu128 arch list captured in #1285 still carried `sm_61`.
+**Keeping the change:** the pins are shared project files, so a `git pull` that
+touches them may conflict with your edit or silently replace it. Re-apply the
+edit after pulling until the default pin moves. It has not moved because a newer
+torch can stop shipping kernels for older GPUs, and which architectures go
+differs per release and CUDA variant: the pinned 2.8.0+cu128 starts its list at
+`sm_70`, while the cu128 list captured in #1285 still included `sm_61`. The
+default only changes once newer torch is verified on those older cards.
 
 **Linked issue:** [#1931](https://github.com/debpalash/VoiceStudio/issues/1931)
 — thanks to the reporter for the full diagnosis, including the verification
@@ -1365,16 +1335,14 @@ retrying.
 and the backend log ends inside the `ml_imports` phase — often with a native
 crash (exit code `0xffffffff` / `-1073741819`) rather than a Python traceback.
 
-**Cause.** Not established. `torch 2.8.0+cu128` does contain Blackwell code:
-`sm_120` is in `torch.cuda.get_arch_list()`, and that build imports and runs
-CUDA normally on some Blackwell cards, so this is not simply a wheel without
-kernels for your GPU. What is confirmed is that on the Windows setups in
-[#1931](https://github.com/debpalash/VoiceStudio/issues/1931) `import torch`
-dies natively before any VoiceStudio code can classify it, which is why the app
-can only say the backend did not start. Moving to torch 2.9.x clears it for the
-users who hit it.
+**Cause.** Unknown so far. The pinned torch build does ship `sm_120` kernels,
+and some of these cards run CUDA on it. On the Windows machines in #1931,
+`import torch` crashes natively before VoiceStudio can inspect anything, so all
+the app can show is that the backend never started. Moving to torch 2.9.x fixed
+it for those users.
 
-**Fix.** Move to torch 2.9.x. From a source checkout, in the project folder:
+**Fix.** Upgrade to torch 2.9.x. From a source checkout, run these steps in the
+project folder:
 
 1. Edit `pyproject.toml` → `[tool.uv] constraint-dependencies` and raise the
    torch constraint to `torch==2.9.1+cu128` (matching `torchaudio` /
@@ -1400,6 +1368,31 @@ in the same phase. Update VoiceStudio, or delete that line in
 **Why the pin has not moved.** Raising it for everyone changes the CUDA build
 on every platform, in Docker, and in CI, so it is a deliberate decision rather
 than a patch. Track it in [#1931](https://github.com/debpalash/VoiceStudio/issues/1931).
+
+## Windows Smart App Control blocks an engine DLL (`An Application Control policy has blocked this file`)
+
+On Windows 11, Smart App Control (or a WDAC/AppLocker policy on a work PC) can
+let the engine's `python.exe` start and then block a DLL it loads, for example
+`ImportError: DLL load failed while importing _sqlite3: An Application Control
+policy has blocked this file`. The engine runtime is made of thousands of DLLs
+built and published by other projects — the Python interpreter and packages
+such as PyTorch, NumPy and ONNX Runtime — and many of them are unsigned. Signing
+VoiceStudio's installer does not sign those files, so Smart App Control can
+block one even when the app itself is trusted (#3209, #1779). Smart App Control
+has no per-app exceptions. Your options:
+
+- **Turn Smart App Control off** in Windows Security → App & browser control →
+  Smart App Control settings, then restart VoiceStudio. This is a one-way
+  switch: Windows cannot turn Smart App Control back on without a reset or
+  reinstall of Windows.
+- **Keep it on and run the engine where it does not apply:** a WSL2 Linux distro
+  or [Docker](docker.md) on the same PC (both run Linux binaries, which Smart App
+  Control does not check), or another computer, then connect to it in
+  Settings → Sharing → **Remote backend** ([remote-gpu.md](../remote-gpu.md)).
+  A source checkout on Windows itself does not help: it downloads the same
+  Python packages.
+- **Work PC:** ask IT to allow VoiceStudio's runtime folder in the
+  application-control policy.
 
 ## Uninstalling / removing all of VoiceStudio's data
 

@@ -98,27 +98,22 @@ app's model download flow rather than installing into an unrelated system Python
   the model's callable signature does not accept them; supported voice,
   reference and language inputs, plus voice-design instructions (`instruct`),
   remain in the same request.
-- **Cloning works only with the `csm` model** — it is the only curated model
-  confirmed to accept a reference clip. Other models silently ignore
-  reference audio, so the engine reports cloning support only when CSM is
-  selected (dub/batch jobs gate on this). Starting a dub, batch or voice
-  conversion on any other model is refused with an error that names the model
-  in the way and tells you to pick **CSM (voice cloning)** in Model Catalogue —
-  switching engine is offered as a fallback, not the only route
-  ([#2201](https://github.com/debpalash/VoiceStudio/issues/2201)).
+- Of the curated choices, only `csm` is confirmed to consume a reference clip; the other models disregard reference audio. MLX-Audio therefore advertises cloning only when CSM is selected, and dub and batch jobs use that capability flag. Starting a dub, batch, or voice-conversion job with another model is refused with an error that names the active model and directs you to **CSM (voice cloning)** in Model Catalogue; switching engines remains an alternative. See [#2201](https://github.com/debpalash/VoiceStudio/issues/2201).
 - Voice design (text description → voice) is available through the
   Qwen3-TTS VoiceDesign model.
-- Language support is per-model (Kokoro ~8 languages, others vary). An
-  unsupported language for Kokoro produces a clear error naming what it
-  does support ([#977](https://github.com/debpalash/VoiceStudio/issues/977))
-  — pick a language it supports or switch to a multilingual engine.
-- Auto is not an escape hatch from that. With the picker on Auto the request
-  carries no language, and a selected voice profile's saved language fills the
-  gap ([#533](https://github.com/debpalash/VoiceStudio/issues/533)) — so a
-  profile saved as, say, Persian still reaches Kokoro and is still refused. The
-  error names the profile as the source in that case
-  ([#2156](https://github.com/debpalash/VoiceStudio/issues/2156)); change the
-  profile's language, or pick a supported one explicitly for the render.
+- Which languages work depends on the model you load. Kokoro handles about
+  eight; the rest vary. If Kokoro is handed a language outside its set, the
+  error lists the ones it accepts
+  ([#977](https://github.com/debpalash/VoiceStudio/issues/977)). Pick one of
+  those, or run the text through a multilingual engine instead.
+- Setting the picker to Auto does not sidestep a refusal. Auto sends no
+  language at all, so a selected voice profile supplies its own saved one
+  ([#533](https://github.com/debpalash/VoiceStudio/issues/533)). A profile
+  stored as Persian would still be passed to Kokoro and rejected, and the
+  message now points at the profile as the origin
+  ([#2156](https://github.com/debpalash/VoiceStudio/issues/2156)). Edit the
+  profile's language, or choose a supported language directly for that
+  generation.
 
 ## Platform notes
 

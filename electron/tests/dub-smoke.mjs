@@ -269,7 +269,7 @@ try {
     .waitFor();
   assert.equal(await page.getByRole('alert').count(), 0);
   assert.equal(await page.getByRole('button', { name: 'Copy diagnostic' }).count(), 0);
-  assert.equal(await page.getByText('Video Dubbing Studio', { exact: true }).count(), 0);
+  assert.equal(await page.getByText('Video dubbing studio', { exact: true }).count(), 0);
   await page
     .locator('[data-slot="dub-source-status"]')
     .getByRole('button', { name: 'Change file', exact: true })
@@ -429,7 +429,7 @@ try {
   // Translation controls stay expanded without an extra disclosure click.
   await page.getByRole('button', { name: 'Cinematic', exact: true }).waitFor({ state: 'visible' });
   await page.getByRole('button', { name: 'Cinematic', exact: true }).click();
-  await page.getByRole('button', { name: 'Translate All', exact: true }).click();
+  await page.getByRole('button', { name: 'Translate every segment', exact: true }).click();
   await waitForSegmentText(0, 'Hola');
   assert.equal(translations[0].quality, 'cinematic');
   await page
@@ -477,7 +477,7 @@ try {
   );
   fallback = true;
   await page.getByRole('button', { name: 'Autofit', exact: true }).click();
-  await page.getByRole('button', { name: 'Translate All', exact: true }).click();
+  await page.getByRole('button', { name: 'Translate every segment', exact: true }).click();
   await page
     .getByRole('button', { name: 'Fast', exact: true })
     .and(page.locator('[aria-pressed="true"]'))
@@ -493,7 +493,7 @@ try {
     /\/settings\/models\/llm$/,
   );
   await page.getByRole('button', { name: 'Generate Dub', exact: true }).click();
-  const dubbedPreview = page.getByRole('button', { name: 'Dubbed (es)', exact: true });
+  const dubbedPreview = page.getByRole('button', { name: 'es dubbed audio', exact: true });
   await dubbedPreview.waitFor();
   if (video) {
     await page.evaluate(async () => {
@@ -530,7 +530,7 @@ try {
   if (video) {
     assert.equal(
       await page
-        .getByRole('switch', { name: 'Burn subtitles into picture (hardsub)', exact: true })
+        .getByRole('switch', { name: 'Burn into video', exact: true })
         .isDisabled(),
       true,
     );
@@ -547,7 +547,7 @@ try {
     );
   });
   await page.route('**/api/export/record', (route) => route.fulfill({ json: { ok: true } }));
-  await page.getByRole('button', { name: 'MP3 (compressed)', exact: true }).click();
+  await page.getByRole('button', { name: 'MP3 · compressed', exact: true }).click();
   await page.getByRole('button', { name: '320 kbps', exact: true }).click();
   // #2964: the background bed level reaches the export while the background is mixed in.
   const bedLevel = page.getByRole('slider', { name: 'Background volume', exact: true });
@@ -580,7 +580,7 @@ try {
     });
   });
   await page.getByRole('button', { name: 'SRT', exact: true }).click();
-  await page.getByRole('switch', { name: 'Dual (translated + original)', exact: true }).click();
+  await page.getByRole('switch', { name: 'Translation + original', exact: true }).click();
   await page.getByRole('button', { name: 'Export', exact: true }).click();
   await page.waitForFunction(() => globalThis.__nativeSaveRequests.length === 2);
   savedExport = await page.evaluate(() => globalThis.__nativeSaveRequests.at(-1));
@@ -595,11 +595,11 @@ try {
   );
   assert.equal(
     await page
-      .getByRole('switch', { name: 'Dual (translated + original)', exact: true })
+      .getByRole('switch', { name: 'Translation + original', exact: true })
       .getAttribute('aria-checked'),
     'true',
   );
-  await page.getByRole('button', { name: 'MP3 (compressed)', exact: true }).click();
+  await page.getByRole('button', { name: 'MP3 · compressed', exact: true }).click();
   assert.equal(
     await page
       .getByRole('switch', { name: 'Background audio', exact: true })
@@ -621,7 +621,7 @@ try {
     1,
     'the file row has a single actions trigger instead of wrapping text buttons',
   );
-  const linkInput = page.getByRole('textbox', { name: /paste YouTube/ });
+  const linkInput = page.getByRole('textbox', { name: /paste a video URL/ });
   await useLink();
   await linkInput.fill('https://example.com/cancelled.mp4');
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
@@ -811,7 +811,7 @@ try {
   await page.evaluate(() => sessionStorage.setItem('voicestudio.test.reset-dub', '1'));
   await page.reload();
   failTranscription = true;
-  await page.getByRole('textbox', { name: /paste YouTube/ }).fill('https://example.com/movie.mp4');
+  await page.getByRole('textbox', { name: /paste a video URL/ }).fill('https://example.com/movie.mp4');
   await page
     .locator('summary')
     .filter({ hasText: /^Advanced$/ })

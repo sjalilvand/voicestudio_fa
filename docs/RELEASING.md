@@ -282,6 +282,17 @@ libraries. AppImages use the static runtime, which needs no host libfuse2; test
 the downloaded image on a clean host because build-runner libraries can hide
 relocation errors.
 
+Every direct desktop installer except Intel macOS ships the OmniVoice GGUF
+runtime under `resources/bin/` (#2780). `electron-release.yml` and the
+packaging rehearsal call `build-omnivoice-tts.yml` (`desktop: true`) and stage
+each platform's artifact into `electron/build/omnivoice-tts/`; Windows ARM64
+ships the x64 build. Signing rewrites the binary, so the build refreshes
+`bin/checksums.sha256` after signing (`electron/omnivoice-tts-bundle.mjs`; on
+macOS before the bundle is sealed). `packaging-contract.mjs` fails a release
+whose installer lacks the runtime, whose manifest no longer matches the shipped
+bytes, or (macOS) whose runtime is unsigned. A failed runtime build fails the
+release; there is no fallback that ships without it.
+
 Linux release AppImages include `gh-releases-zsync` update information and a
 versioned `.AppImage.zsync` asset for AppImageUpdate/AppImageLauncher. Release
 images follow the latest stable GitHub release. The build uses `readelf` and

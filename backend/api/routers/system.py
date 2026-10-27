@@ -9,7 +9,7 @@ import psutil
 import asyncio
 import logging
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, Query, Request
-from core.prefs import set_ as prefs_set, delete as prefs_delete
+from core.prefs import delete as prefs_delete, set_ as prefs_set
 from services import network_share
 from services import tailscale as _tailscale
 from api.schemas import SysinfoResponse, SystemInfoResponse, ModelStatusResponse
@@ -366,7 +366,7 @@ def system_info():
     and a 500 here blocks the entire UI from rendering system details.
     """
     try:
-        _ffmpeg = find_ffmpeg()
+        _ffmpeg_path = find_ffmpeg()
         from services import model_manager as _mm
         from services import asr_backend as _asr_backend
         from core import prefs as _prefs_mod
@@ -415,8 +415,8 @@ def system_info():
             "gpu_name": _GPU_NAME,
             "vram_total_gb": _VRAM_TOTAL_GB,
             "disk_free_gb": _disk_free_gb(),
-            "ffmpeg_ok": bool(_ffmpeg),
-            "ffmpeg_path": _ffmpeg or "",
+            "ffmpeg_ok": bool(_ffmpeg_path),
+            "ffmpeg_path": _ffmpeg_path or "",
             "proxy_url": os.environ.get("HTTP_PROXY") or os.environ.get("http_proxy") or "",
             "share_enabled": network_share.get_state().enabled,
             "share_port": network_share.get_state().share_port,
@@ -1289,18 +1289,14 @@ def _authorized_sidecar_dir(value, authorization) -> str:
 
 @router.post("/system/set-env")
 async def set_env_var(body: dict):
-    """Set an environment variable at runtime, persisted across restarts.
+    """Set an environment variable for the running backend.
 
-    Persistent keys (proxy, FFMPEG_PATH, translation provider keys, …) are
-    saved to ``prefs.json`` so they survive backend restarts (restored at
-    startup in ``main.py``). HF_TOKEN is persisted via
-    ``token_resolver.persist_hub_token()`` (and cleared with the shared token-file helper). Other keys
-    are set on ``os.environ`` for the running process.
+    Keys in ``PERSISTENT_KEYS`` are saved in prefs.json and restored during
+    startup in main.py. HF_TOKEN is saved by
+    ``token_resolver.persist_hub_token()`` and cleared through the shared
+    token-file helper. Other accepted keys affect only this process.
 
-    The loopback-origin gate that previously lived inline here is now applied
-    at the router level via `dependencies=[Depends(require_admin)]` on
-    `router` — see the top of this file. Every route on this router is
-    gated, including this one. The 403 body and behavior are unchanged.
+    The loopback-origin gate that previously lived inline here is now applied at the router level via `dependencies=[Depends(require_admin)]` on `router` — see the top of this file. Every route on this router is gated, including this one. The 403 body and behavior are unchanged.
     """
     ALLOWED_KEYS = PERSISTENT_KEYS | {"HF_TOKEN", "TRANSLATE_API_KEY"}
     key = body.get("key", "")
@@ -1380,11 +1376,9 @@ async def set_env_var(body: dict):
 
     # HF_TOKEN persistence is handled above via persist_hub_token()/
     # clear_hf_cli_tokens() — it never touches prefs.json. Everything else in
-    # PERSISTENT_KEYS (proxy, FFMPEG_PATH, translation provider keys, …) is
-    # saved to prefs.json so it survives backend restarts (restored at
-    # startup in main.py). Non-persistent keys stay process-local.
+    # the persistent set is stored after the process environment is updated.
     if key != "HF_TOKEN" and key in PERSISTENT_KEYS:
-        prefs_key = f"env.{key}"
+        prefs_key = "env." + key
         from services.translation_apis import SECRET_ENV_KEYS
         if key in SECRET_ENV_KEYS:
             from services import settings_store

@@ -234,7 +234,11 @@ def _detect_gpu() -> dict:
 
 
 def _probe_network(host: str = "huggingface.co", port: int = 443, timeout: float = 8.0) -> bool:
-    """Tiny TCP connect test. 8s default — high-latency / China paths often exceed 2–3s."""
+    """Plain TCP connect check; True if the handshake completes in time.
+
+    The 8 s default is generous on purpose: slow, high-latency routes to
+    Hugging Face (for example from mainland China) must not look offline.
+    """
     import socket
     try:
         with socket.create_connection((host, port), timeout=timeout):
@@ -482,43 +486,41 @@ def preflight():
             f"Fix write permissions on {cache} or point HF_HOME elsewhere.",
     })
 
-    # ── Intel-Mac platform gate (#2365): PyTorch ships no macOS x86_64
-    # wheels, so the dependency set can never resolve there (see #889 and
-    # docs/install/macos.md). Fail the preflight BEFORE any multi-GB
-    # download so first-run setup shows this guidance instead of a raw
-    # uv resolver error. Local inference stays unsupported; the Electron
-    # UI can use a remote backend on another supported machine.
-    #
-    # Return immediately: _media_summary(auto_acquire=True) below would
-    # otherwise start a background acquisition on this blocked path.
     if sys.platform == "darwin" and arch == "x86_64":
-        checks.append({
-            "id": "platform", "label": "Platform support", "status": "fail",
-            "detail": "Intel Macs can't run the local AI backend "
-                      "(PyTorch ships no macOS x86_64 wheels).",
-            "fix": "Use a remote backend on a supported machine "
-                   "(Apple Silicon, NVIDIA, or CPU-only Linux/Windows) — "
-                   "see docs/install/macos.md. Local setup is disabled "
-                   "on this host.",
-        })
-        gpu = _detect_gpu()
+        platform_failure = {
+            "id": "platform",
+            "label": "Local backend support",
+            "status": "fail",
+            "detail": (
+                "PyTorch has no macOS x86_64 distribution, so the on-device "
+                "AI services cannot be installed on an Intel Mac."
+            ),
+            "fix": (
+                "Use a remote backend hosted on Apple Silicon, an NVIDIA system, "
+                "or CPU-only Linux/Windows. Local setup is disabled here; "
+                "docs/install/macos.md explains the supported paths."
+            ),
+        }
+        checks.append(platform_failure)
+        hardware = _detect_gpu()
+        blocked_device = {
+            "os": sys.platform,
+            "arch": arch,
+            "gpu_vendor": hardware["vendor"],
+            "gpu_backend": hardware["backend"],
+            "gpu_available": hardware["available"],
+            "gpu_driver": hardware["driver"],
+            "gpu_device_name": hardware["device_name"],
+            "gpu_family": "cpu",
+            "vram_gb": 0.0,
+            "ram_gb": round(ram, 1),
+            "disk_free_gb": round(free, 1),
+        }
         return {
             "ok": False,
             "has_warnings": False,
             "checks": checks,
-            "device": {
-                "os": sys.platform,
-                "arch": arch,
-                "gpu_vendor": gpu["vendor"],
-                "gpu_backend": gpu["backend"],
-                "gpu_available": gpu["available"],
-                "gpu_driver": gpu["driver"],
-                "gpu_device_name": gpu["device_name"],
-                "gpu_family": "cpu",
-                "vram_gb": 0.0,
-                "ram_gb": round(ram, 1),
-                "disk_free_gb": round(free, 1),
-            },
+            "device": blocked_device,
             "gpu_routing": None,
             "media_tools": None,
         }
@@ -633,14 +635,14 @@ def preflight():
         _why = gpu_routing.get("routing_reason")
         if _rs == "accelerated" and not _why:
             r_status, r_detail, r_fix = "pass", f"{_eng} → {_dev} (accelerated)", None
-        elif _rs == "accelerated" and KERNEL_RISK_MARKER in (_why or ""):
+        elif _rs == "accelerated" and KERNEL_RISK_MARKER in _why:  # driver/arch caveat
             r_status, r_detail, r_fix = "warn", f"{_eng} → {_dev}: {_why}", (
                 "GPU selected but may fail at kernel launch — update drivers / "
                 "reinstall torch for this GPU architecture.")
-        elif _rs == "accelerated":  # low-VRAM caveat — not a driver/arch issue
+        elif _rs == "accelerated":  # advisory only, e.g. little free VRAM
             r_status, r_detail, r_fix = "warn", f"{_eng} → {_dev}: {_why}", (
                 "Unload other models before generating, keep the text short, "
-                "or pick a lighter engine.")
+                "or choose a lighter engine.")
         elif _rs == "cpu_fallback" and KERNEL_RISK_MARKER in (_why or ""):
             # The wheel lacks this GPU's architecture (#3067): the driver is fine.
             r_status, r_detail, r_fix = "warn", f"{_eng} runs on CPU here: {_why}", (

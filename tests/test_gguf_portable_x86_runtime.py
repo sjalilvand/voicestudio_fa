@@ -48,7 +48,12 @@ def test_x86_cpu_build_is_portable(tmp_path, platform):
         (fake / name).write_text("#!/usr/bin/env bash\nset -euo pipefail\n" + body + "\n")
         (fake / name).chmod(0o755)
     log = tmp_path / "cmake.log"
-    env = {**os.environ, "PATH": f"{fake}:/usr/bin:/bin", "CMAKE_LOG": str(log)}
+    msvc = tmp_path / "msvc"
+    msvc.mkdir()
+    for dll in ("msvcp140.dll", "vcruntime140.dll"):
+        (msvc / dll).write_text("crt")
+    env = {**os.environ, "PATH": f"{fake}:/usr/bin:/bin", "CMAKE_LOG": str(log),
+           "OMNIVOICE_MSVC_RUNTIME_DIR": msvc.as_posix()}
     env.pop("VULKAN_SDK", None)
     result = subprocess.run(
         [BASH, str(scripts / "build-omnivoice-tts.sh"), "--platform", platform,

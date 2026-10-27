@@ -835,12 +835,15 @@ def _make_backend_class():
               * ``ref_audio`` (str/Path) — speaker reference WAV for cloning.
               * ``ref_text`` (str) — transcript of ``ref_audio``.
               * ``language`` (str) — ISO code or omnivoice-tts lang label.
-              * ``instruct`` (str) — style instruction.
-              * ``duration`` (float) — target duration in seconds.
-              * ``seed`` (int) — deterministic sampling seed.
-              * ``denoise`` (bool) — omit denoise token when false.
-              * ``preprocess_prompt`` (bool) — skip prompt preprocessing when false.
-              * ``chunk_duration`` / ``chunk_threshold`` (float) — binary long-form controls.
+              * ``instruct`` (str) — free-text speaking-style hint.
+              * ``duration`` (float) — desired output length in seconds.
+              * ``seed`` (int) — RNG seed, to make a run repeatable.
+              * ``denoise`` (bool, default True) — False asks the binary to
+                skip denoising.
+              * ``preprocess_prompt`` (bool, default True) — False feeds the
+                reference clip through unprocessed.
+              * ``chunk_duration`` / ``chunk_threshold`` (float) — tuning of
+                how the binary splits long inputs.
             """
             import soundfile as sf  # local import keeps module import cheap
             import torch
@@ -851,24 +854,22 @@ def _make_backend_class():
             fd, out_str = tempfile.mkstemp(prefix="omnivoice-gguf-", suffix=".wav")
             os.close(fd)
             out_path = Path(out_str)
-            ref_text_path: Optional[Path] = None
+            ref_text_file: Optional[Path] = None
 
             try:
+                # The binary reads the prompt transcript from a file, so stage one.
                 ref_text = kw.get("ref_text")
                 if kw.get("ref_audio") and ref_text:
-                    text_fd, text_str = tempfile.mkstemp(
-                        prefix="omnivoice-gguf-ref-", suffix=".txt"
-                    )
-                    os.close(text_fd)
-                    ref_text_path = Path(text_str)
-                    ref_text_path.write_text(str(ref_text), encoding="utf-8")
-
+                    tfd, tname = tempfile.mkstemp(prefix="gguf-prompt-transcript-", suffix=".transcript")
+                    os.close(tfd)
+                    ref_text_file = Path(tname)
+                    ref_text_file.write_text(str(ref_text), encoding="utf-8")
                 argv = self._build_argv(
                     base=base_path,
                     tokenizer=tok_path,
                     out_path=out_path,
                     ref_audio=kw.get("ref_audio"),
-                    ref_text=str(ref_text_path) if ref_text_path else None,
+                    ref_text=str(ref_text_file) if ref_text_file else None,
                     language=kw.get("language"),
                     instruct=kw.get("instruct"),
                     duration=kw.get("duration"),
@@ -885,9 +886,9 @@ def _make_backend_class():
                     out_path.unlink()
                 except OSError:
                     pass
-                if ref_text_path is not None:
+                if ref_text_file is not None:
                     try:
-                        ref_text_path.unlink()
+                        ref_text_file.unlink()
                     except OSError:
                         pass
 
@@ -932,20 +933,22 @@ def _make_backend_class():
             lang = _iso_to_omnivoice_lang(language)
             if lang:
                 argv += ["--lang", lang]
-            if instruct:
-                argv += ["--instruct", str(instruct)]
-            if duration is not None:
-                argv += ["--duration", str(float(duration))]
-            if seed is not None:
-                argv += ["--seed", str(int(seed))]
-            if denoise is False:
-                argv += ["--no-denoise"]
-            if preprocess_prompt is False:
-                argv += ["--no-preprocess-prompt"]
-            if chunk_duration is not None:
-                argv += ["--chunk-duration", str(float(chunk_duration))]
-            if chunk_threshold is not None:
-                argv += ["--chunk-threshold", str(float(chunk_threshold))]
+            valued = (
+                ("--instruct", instruct or None, str),
+                ("--duration", duration, lambda v: str(float(v))),
+                ("--seed", seed, lambda v: str(int(v))),
+                ("--chunk-duration", chunk_duration, lambda v: str(float(v))),
+                ("--chunk-threshold", chunk_threshold, lambda v: str(float(v))),
+            )
+            for flag, value, render in valued:
+                if value is not None:
+                    argv.extend((flag, render(value)))
+            for flag, switched_off in (
+                ("--no-denoise", denoise is False),
+                ("--no-preprocess-prompt", preprocess_prompt is False),
+            ):
+                if switched_off:
+                    argv.append(flag)
             if ref_audio:
                 # Two-stage validation (defense in depth):
                 #   (a) Reject anything outside the project's voices /
@@ -979,8 +982,7 @@ def _make_backend_class():
                     )
                 argv += ["--ref-wav", str(ref_path)]
                 if ref_text:
-                    # The C++ runtime expects a transcript file path.
-                    # generate() creates this file in the system temp dir.
+                    # By this point ref_text is a path to the staged transcript file.
                     argv += ["--ref-text", str(ref_text)]
             return argv
 
