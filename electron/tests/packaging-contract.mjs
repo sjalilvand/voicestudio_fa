@@ -217,6 +217,7 @@ for (const [platform, icon] of Object.entries(platformIcons)) {
 }
 for (const icon of [
   'brand/icon.png',
+  'brand/icon-macos.png',
   'brand/icon.ico',
   'brand/32x32.png',
   'brand/tray-recording.png',
