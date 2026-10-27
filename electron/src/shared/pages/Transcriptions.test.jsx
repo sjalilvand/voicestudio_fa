@@ -47,48 +47,7 @@ describe('Transcriptions capture entry point', () => {
     toast.error.mockReset();
   });
 
-  it('shows the effective shortcut and starts the shared recorder from the empty state', async () => {
-    render(<TranscriptionsPage />);
-    expect(screen.getByText('Super+Shift+V', { selector: 'kbd' })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Start dictation' }));
-    await waitFor(() => expect(requestDictationCapture).toHaveBeenCalledWith('start'));
-  });
-
-  it('reports a capture-controller failure', async () => {
-    requestDictationCapture.mockRejectedValueOnce(new Error('event channel unavailable'));
-    render(<TranscriptionsPage />);
-    fireEvent.click(screen.getByRole('button', { name: 'Start dictation' }));
-
-    await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith(
-        'Could not start dictation. Check microphone access, then try again.',
-      ),
-    );
-  });
-
-  it('keeps the capture action available for whitespace-only searches', () => {
-    render(<TranscriptionsPage />);
-    fireEvent.change(screen.getByRole('textbox', { name: 'Search transcripts…' }), {
-      target: { value: '   ' },
-    });
-
-    const button = screen.getByRole('button', { name: 'Start dictation' });
-    expect(button.querySelector(':scope > svg')).toBeInTheDocument();
-    expect(button.querySelector(':scope > span')).toHaveTextContent('Start dictation');
-    expect(screen.getByText('No transcripts saved yet')).toBeInTheDocument();
-  });
-
-  it('moves the single capture action to the header once history exists', () => {
-    addTranscription({ text: 'Existing transcript.', language: 'en' });
-    render(<TranscriptionsPage />);
-
-    const button = screen.getByRole('button', { name: 'Start dictation' });
-    expect(button.closest('.txn-header__right')).toBeInTheDocument();
-    expect(button.querySelector(':scope > svg')).toBeInTheDocument();
-    expect(button.querySelector(':scope > span')).toHaveTextContent('Start dictation');
-    expect(screen.queryByText('No transcripts saved yet')).not.toBeInTheDocument();
-  });
+  // CLEAN-ROOM (spec W5-dictation §8): Start dictation action tests (start, failure toast, whitespace search, header placement).
 
   it('shows a successful transcript emitted by the shared recorder', async () => {
     render(<TranscriptionsPage />);
