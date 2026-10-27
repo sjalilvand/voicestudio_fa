@@ -22,6 +22,10 @@
     <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="AGPL-3.0" /></a>
     <a href="https://supermetry.com"><img src="https://app.supermetry.com/px/zfjiv7psp4ed.svg?c=VoiceStudio&style=stats" alt="조회수" /></a>
   </p>
+  <p>
+    <sub>전략 스폰서</sub><br />
+    <a href="https://supermetry.com/?utm_source=voicestudio&utm_medium=sponsor&utm_campaign=strategic-sponsor&utm_content=readme-logo"><picture><source media="(prefers-color-scheme: dark)" srcset="../../docs/sponsors/supermetry-dark.svg" /><img src="../../docs/sponsors/supermetry.svg" alt="Supermetry" height="48" /></picture></a>
+  </p>
 </div>
 
 ![Electron 앱 둘러보기: 음성 복제, 보이스 디자인, 더빙, 모델 관리](../../docs/media/electron/voicestudio.gif)
@@ -152,8 +156,6 @@ bun run dev
 ## 후원사
 
 후원금은 메인테이너의 작업 시간, 개발 도구, 릴리스 인프라와 테스트 하드웨어에 쓰입니다. 후원으로 얻는 것은 기능이 아니라 크레딧입니다.
-
-<a href="https://supermetry.com/?utm_source=voicestudio&utm_medium=sponsor&utm_campaign=strategic-sponsor&utm_content=readme-logo"><picture><source media="(prefers-color-scheme: dark)" srcset="../../docs/sponsors/supermetry-dark.svg" /><img src="../../docs/sponsors/supermetry.svg" alt="Supermetry" height="48" /></picture></a>
 
 [GitHub Sponsors](https://github.com/sponsors/debpalash) · [Ko-fi](https://ko-fi.com/debpalash) · [PayPal](https://paypal.me/palashCoder) · [등급과 크레딧](../../SPONSORS.md) · [크레딧 요청](https://github.com/debpalash/VoiceStudio/issues/new?template=sponsor.yml)
 

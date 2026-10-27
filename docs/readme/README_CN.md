@@ -20,6 +20,10 @@
     <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="AGPL-3.0 许可证" /></a>
     <a href="https://supermetry.com"><img src="https://app.supermetry.com/px/zfjiv7psp4ed.svg?c=VoiceStudio&style=stats" alt="访问量" /></a>
   </p>
+  <p>
+    <sub>战略赞助商</sub><br />
+    <a href="https://supermetry.com/?utm_source=voicestudio&utm_medium=sponsor&utm_campaign=strategic-sponsor&utm_content=readme-logo"><picture><source media="(prefers-color-scheme: dark)" srcset="../../docs/sponsors/supermetry-dark.svg" /><img src="../../docs/sponsors/supermetry.svg" alt="Supermetry" height="48" /></picture></a>
+  </p>
 </div>
 
 ![Electron 应用导览：声音克隆、声音设计、配音和模型管理](../../docs/media/electron/voicestudio.gif)
@@ -163,8 +167,6 @@ bun run dev
 ## 赞助者
 
 赞助资金用于维护者时间、开发工具、发布基础设施和测试硬件；赞助获得的是鸣谢，而不是功能优先权。
-
-<a href="https://supermetry.com/?utm_source=voicestudio&utm_medium=sponsor&utm_campaign=strategic-sponsor&utm_content=readme-logo"><picture><source media="(prefers-color-scheme: dark)" srcset="../../docs/sponsors/supermetry-dark.svg" /><img src="../../docs/sponsors/supermetry.svg" alt="Supermetry" height="48" /></picture></a>
 
 [GitHub Sponsors](https://github.com/sponsors/debpalash) · [Ko-fi](https://ko-fi.com/debpalash) · [PayPal](https://paypal.me/palashCoder) · [赞助等级与鸣谢](../../SPONSORS.md) · [申请鸣谢](https://github.com/debpalash/VoiceStudio/issues/new?template=sponsor.yml)
 
