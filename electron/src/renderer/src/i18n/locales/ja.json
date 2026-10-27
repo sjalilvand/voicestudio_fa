@@ -936,7 +936,10 @@
     "segment_count_other": "{{count}} セグメント",
     "glossary_terms_one": "用語集 · {{count}} 語",
     "glossary_terms_other": "用語集 · {{count}} 語",
-    "glossary_label": "用語集"
+    "glossary_label": "用語集",
+    "set_speaker": "話者を設定…",
+    "new_speaker": "新しい話者",
+    "speaker_label": "話者"
   },
   "dub_workflow": {
     "preparing_audio": "オーディオを準備しています…",
@@ -2136,7 +2139,8 @@
     "export_n_audio_other": "{{count}} オーディオ ファイルをエクスポートする",
     "export_audio": "オーディオのエクスポート",
     "export_subtitles": "字幕のエクスポート",
-    "stretch_subs_note": "動画引き伸ばし：字幕は別途エクスポートしてください。"
+    "stretch_subs_note": "動画引き伸ばし：字幕は別途エクスポートしてください。",
+    "undubbed_video_note": "まだ吹き替えがありません。動画は元の音声のままです。字幕を焼き込むと文字起こしが追加されます。"
   },
   "models": {
     "pack_title": "モデルパック",
