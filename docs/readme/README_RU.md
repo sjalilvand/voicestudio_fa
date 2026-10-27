@@ -2,15 +2,15 @@
   <img src="../../docs/logo.png" alt="VoiceStudio" width="88" />
   <h1>VoiceStudio</h1>
   <p>
-    <a href="https://trendshift.io/repositories/28176?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-28176" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/28176" alt="VoiceStudio в рейтинге Trendshift" width="220" height="48" /></a>
+    <a href="https://trendshift.io/repositories/28176?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-28176" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/28176" alt="Позиция VoiceStudio на Trendshift" width="220" height="48" /></a>
   </p>
   <p><strong>Локальная голосовая студия: клонирование и создание голосов, дубляж, диктовка, расшифровка и озвучка на 646 языках.</strong><br />
   Работает на вашем компьютере и телефоне. Без аккаунтов и API-ключей; без вашего согласия ничего не покидает устройство.</p>
   <p>
-    <a href="https://voicestudio.sh/?utm_source=github&utm_medium=readme&utm_campaign=project">Сайт</a> ·
-    <a href="https://github.com/debpalash/VoiceStudio/releases/latest">Скачать</a> ·
-    <a href="#начало-работы">Начало работы</a> ·
-    <a href="#документация">Документация</a> ·
+    <a href="https://voicestudio.sh/?utm_source=github&utm_medium=readme&utm_campaign=project">Веб-сайт</a> ·
+    <a href="https://github.com/debpalash/VoiceStudio/releases/latest">Загрузки</a> ·
+    <a href="#быстрый-старт">Быстрый старт</a> ·
+    <a href="#справка">Справка</a> ·
     <a href="https://discord.gg/bzQavDfVV9">Discord</a> ·
     <a href="../../README.md">English</a> ·
     <a href="README_CN.md">简体中文</a> ·
@@ -19,9 +19,9 @@
   </p>
   <p>
     <a href="https://github.com/debpalash/VoiceStudio/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/debpalash/VoiceStudio/ci.yml?branch=main" alt="CI" /></a>
-    <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/github/v/release/debpalash/VoiceStudio" alt="Последний релиз" /></a>
+    <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/github/v/release/debpalash/VoiceStudio" alt="Актуальная версия" /></a>
     <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="AGPL-3.0" /></a>
-    <a href="https://supermetry.com"><img src="https://app.supermetry.com/px/zfjiv7psp4ed.svg?c=VoiceStudio&style=stats" alt="просмотры" /></a>
+    <a href="https://supermetry.com"><img src="https://app.supermetry.com/px/zfjiv7psp4ed.svg?c=VoiceStudio&style=stats" alt="Счётчик посещений" /></a>
   </p>
   <p>
     <sub>Стратегический спонсор</sub><br />
@@ -33,12 +33,12 @@
 
 ## Возможности
 
-| Создавайте | Выпускайте | Подключайте |
+| Творите | Публикуйте | Интегрируйте |
 | :--- | :--- | :--- |
-| Клонируйте голос или создайте свой | Дублируйте видео с речью, уложенной по времени | Локальный API и MCP для агентов |
-| Диктуйте через плавающий виджет | Истории, аудиокниги и пакетные задания | Повторяемые рецепты и отслеживаемые папки |
+| Копия любого голоса или голос по описанию | Перевод и озвучка роликов с точной синхронизацией | API и MCP-сервер для ИИ-агентов прямо на вашей машине |
+| Голосовой ввод из компактного окна поверх приложений | Рассказы, аудиокниги и обработка файлов пачками | Сохранённые сценарии и автообработка новых файлов в папке |
 
-Начните с **VoiceStudio** (движок по умолчанию, на основе k2-fsa/OmniVoice) или выберите любой из десятков других движков в менеджере моделей. См. [каталог возможностей и движков](../../docs/feature-catalog.md).
+Из коробки работает **VoiceStudio** — штатный движок, построенный на k2-fsa/OmniVoice; ещё несколько десятков альтернатив ставятся из менеджера моделей. Полный список — в [каталоге функций и движков](../../docs/feature-catalog.md).
 
 <details>
 <summary><strong>Скриншоты</strong></summary>
@@ -46,21 +46,21 @@
 <table>
   <tr>
     <td><img src="../../docs/media/electron/voice-cloning.png" alt="Рабочее пространство клонирования голоса со встроенным демонстрационным голосом" width="100%" /></td>
-    <td><img src="../../docs/media/electron/dubbing.png" alt="Рабочее пространство дубляжа видео" width="100%" /></td>
+    <td><img src="../../docs/media/electron/dubbing.png" alt="Экран дубляжа в приложении Electron" width="100%" /></td>
   </tr>
-  <tr><td align="center">Клонирование голоса</td><td align="center">Дубляж видео</td></tr>
+  <tr><td align="center">Клонирование голоса</td><td align="center">Дубляж</td></tr>
   <tr>
-    <td><img src="../../docs/media/electron/voice-design.png" alt="Описание голоса в рабочем пространстве создания голоса" width="100%" /></td>
-    <td><img src="../../docs/media/electron/models.png" alt="Установка локальных речевых моделей и управление ими" width="100%" /></td>
+    <td><img src="../../docs/media/electron/voice-design.png" alt="Голос задаётся текстовым описанием на экране голосового дизайна" width="100%" /></td>
+    <td><img src="../../docs/media/electron/models.png" alt="Скачивание, обновление и удаление речевых моделей на компьютере" width="100%" /></td>
   </tr>
-  <tr><td align="center">Создание голоса</td><td align="center">Локальные модели</td></tr>
+  <tr><td align="center">Голосовой дизайн</td><td align="center">Модели</td></tr>
 </table>
 
 </details>
 
 ## Платформы
 
-| Платформа | Загрузка | Ускорение | Статус |
+| Платформа | Файл | Аппаратное ускорение | Статус |
 | :--- | :--- | :--- | :--- |
 | **macOS** (Apple Silicon) | `.dmg` · [руководство](../../docs/install/macos.md) | Metal (MPS) | Стабильная |
 | **Windows 10/11** (x64) | `.exe` · [руководство](../../docs/install/windows.md) | NVIDIA CUDA · [AMD ROCm (по желанию)](../../docs/install/windows-rocm.md) · CPU | Стабильная |
@@ -68,12 +68,12 @@
 | **Docker** | [`ghcr.io/debpalash/voicestudio`](../../docs/install/docker.md) | NVIDIA CUDA · AMD ROCm | Стабильная |
 | **Android** 10+ | `.apk` · [руководство](../../docs/mobile.md#install) | На устройстве, офлайн | Предварительная |
 | **iPhone / iPad** (iOS 17+) | `.ipa` (sideload) · [руководство](../../docs/mobile.md#install) | На устройстве, офлайн | Предварительная |
-| **Windows на ARM** | `.exe` · [руководство](../../docs/install/windows.md) | CPU (бэкенд x64 под эмуляцией) | Экспериментальная |
-| **Mac на Intel** | `.dmg` · [почему](../../docs/install/macos.md) | Только интерфейс, подключение к удалённому бэкенду | Ограниченная |
+| **Windows ARM64** | `.exe` · [руководство](../../docs/install/windows.md) | CPU (x64-бэкенд работает через эмуляцию) | Экспериментальная |
+| **Intel Mac** | `.dmg` · [причины](../../docs/install/macos.md) | Только интерфейс, подключение к удалённому бэкенду | Ограниченная |
 
-Все файлы для загрузки — в [последнем релизе](https://github.com/debpalash/VoiceStudio/releases/latest). Нет видеокарты? Приложение полностью работает на процессоре, просто медленнее. Необязательные нативные GGUF-движки могут использовать Vulkan, в том числе на видеокартах AMD ([OmniVoice](../../docs/engines/omnivoice-gguf.md#optional-vulkan-acceleration), [CosyVoice](../../docs/engines/cosyvoice-gguf.md)). Скорость по движкам и оборудованию: [производительность](../../docs/performance.md).
+Установщики для компьютера и телефона лежат в [последнем релизе](https://github.com/debpalash/VoiceStudio/releases/latest), а образы Docker публикуются в GHCR. Нет видеокарты? Приложение полностью работает на процессоре, просто медленнее. Необязательные нативные GGUF-движки могут использовать Vulkan, в том числе на видеокартах AMD ([OmniVoice](../../docs/engines/omnivoice-gguf.md#optional-vulkan-acceleration), [CosyVoice](../../docs/engines/cosyvoice-gguf.md)). Сколько занимает генерация на разных движках и железе, показано в [обзоре быстродействия](../../docs/performance.md).
 
-## Начало работы
+## Быстрый старт
 
 **macOS / Linux**
 
@@ -90,7 +90,7 @@ irm https://voicestudio.sh/install.ps1 | iex
 Или скачайте установщик из таблицы выше. Затем откройте **Клонирование голоса**, выберите голос или добавьте чистую эталонную запись, введите текст и запустите генерацию. Перед загрузкой любой модели приложение спросит разрешения.
 
 > [!NOTE]
-> Сообщение macOS «Программа VoiceStudio повреждена, и её не удаётся открыть» означает, что приложение заблокировал Gatekeeper, а не что загрузка повреждена. См. [как это исправить](../../docs/install/macos.md#gatekeeper-quarantine).
+> Сообщение macOS «Программа VoiceStudio повреждена, и её не удаётся открыть» означает, что приложение заблокировал Gatekeeper, а не что загрузка повреждена. [Как снять блокировку](../../docs/install/macos.md#gatekeeper-quarantine).
 
 <details>
 <summary><strong>Другие способы установки</strong>: конкретная версия, текущий main, удаление, из исходного кода, с помощью агента</summary>
@@ -115,9 +115,9 @@ bun run setup:api
 bun run dev
 ```
 
-См. [настройку Electron](../../electron/README.md).
+Зависимости и настройка бэкенда описаны в [инструкции к Electron](../../electron/README.md).
 
-**С помощью агента для программирования** (Claude Code, Codex, Cursor, …) — вставьте:
+**Через ИИ-агента** (например, Claude Code, Codex или Cursor) — передайте ему такой запрос:
 
 ```text
 Install the VoiceStudio app on this device and verify it works, following
@@ -128,20 +128,20 @@ https://github.com/debpalash/VoiceStudio/blob/main/docs/install/agent.md
 
 </details>
 
-## Документация
+## Справка
 
-| Что нужно | С чего начать |
+| Задача | Куда смотреть |
 |---|---|
-| Помощь с установкой | [Устранение неполадок](../../docs/install/troubleshooting.md) · [Загрузка моделей](../../docs/downloading-models.md) |
-| Руководства | [Дубляж с несколькими дикторами](../../docs/dubbing/multi-speaker-guide.md) · [Выразительная речь](../../docs/expressive-speech.md) · [Экспорт дубляжа](../../docs/dubbing/export.md) |
-| Модели и качество звука | [Руководства по движкам](../../docs/engines/README.md) · [whisper.cpp ASR](../../docs/engines/whisper-cpp.md) · [Тесты производительности](../../docs/benchmarks.md) |
-| Интеграции | [Локальный API](../../docs/speech-platform.md) · [MCP](../../docs/mcp.md) · [Примеры](../../examples/README.md) |
-| Приложения для телефона | [iOS и Android](../../docs/mobile.md) |
-| Разработка | [Участие в проекте](../../.github/CONTRIBUTING.md) ([подпишите CLA](../../.github/CONTRIBUTING.md#contribution-licensing) перед первым PR) · [Список изменений](../../CHANGELOG.md) |
+| Проблемы при установке | [Решение проблем](../../docs/install/troubleshooting.md) · [Скачивание моделей](../../docs/downloading-models.md) |
+| Пошаговые инструкции | [Дубляж с несколькими дикторами](../../docs/dubbing/multi-speaker-guide.md) · [Выразительная речь](../../docs/expressive-speech.md) · [Экспорт дубляжа](../../docs/dubbing/export.md) |
+| Движки и качество | [Обзор движков](../../docs/engines/README.md) · [whisper.cpp ASR](../../docs/engines/whisper-cpp.md) · [Бенчмарки](../../docs/benchmarks.md) |
+| Связка с другими инструментами | [API речевой платформы](../../docs/speech-platform.md) · [MCP](../../docs/mcp.md) · [Образцы кода](../../examples/README.md) |
+| Мобильные приложения | [Android и iOS](../../docs/mobile.md) |
+| Для разработчиков | [Правила для контрибьюторов](../../.github/CONTRIBUTING.md) ([подпишите CLA](../../.github/CONTRIBUTING.md#contribution-licensing) перед первым PR) · [История версий](../../CHANGELOG.md) |
 
-Навыки для агентов: `npx skills add debpalash/VoiceStudio` (**voicestudio** для работы со звуком, **voicestudio-maintainer** для сопровождения репозитория).
+Скиллы для ИИ-агентов ставятся командой `npx skills add debpalash/VoiceStudio`: **voicestudio** — для аудиозадач, **voicestudio-maintainer** — для поддержки самого репозитория.
 
-## Спонсоры
+## Поддержка проекта
 
 VoiceStudio бесплатен, и за ним нет платного облака. Новые версии выходят благодаря спонсорам: они оплачивают время мейнтейнера, оборудование для тестов, подпись кода и инфраструктуру релизов.
 
@@ -154,7 +154,7 @@ VoiceStudio бесплатен, и за ним нет платного обла�
 <a href="https://github.com/sponsors/debpalash"><img src="https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-ea4aaa?logo=githubsponsors&logoColor=white" alt="Поддержать через GitHub Sponsors" /></a>
 [Ko-fi](https://ko-fi.com/debpalash) · [PayPal](https://paypal.me/palashCoder) · [Уровни и привилегии](../../SPONSORS.md) · [Разместить логотип](https://github.com/debpalash/VoiceStudio/issues/new?template=sponsor.yml)
 
-## Команда
+## Команда проекта
 
 ### Основная команда
 
@@ -171,6 +171,6 @@ VoiceStudio бесплатен, и за ним нет платного обла�
 
 Спасибо всем, кто присылает код, сообщения об ошибках, переводы и идеи. [Все участники](https://github.com/debpalash/VoiceStudio/graphs/contributors) · [Как помочь проекту](../../.github/CONTRIBUTING.md)
 
-## Лицензия и ответственное использование
+## Лицензия и этичное использование
 
-На приложение распространяется лицензия [AGPL-3.0](../../LICENSE), в том числе на коммерческое использование на её условиях. У весов моделей, голосов и сгенерированного результата свои лицензии; менеджер моделей показывает их для каждой модели ([реестр](../../docs/licensing/model-inventory.md)). Клонируйте голос только с разрешения его владельца. Подробности: [LICENSE-NOTICE.md](../../LICENSE-NOTICE.md).
+На приложение распространяется лицензия [AGPL-3.0](../../LICENSE), в том числе на коммерческое использование на её условиях. У весов моделей, голосов и сгенерированного результата свои лицензии; менеджер моделей показывает их для каждой модели ([полный перечень](../../docs/licensing/model-inventory.md)). Клонируйте голос только с разрешения его владельца. Подробности: [LICENSE-NOTICE.md](../../LICENSE-NOTICE.md).
