@@ -7,11 +7,17 @@ import pytest
 import soundfile
 import torch
 
-from services.pyannote_audio_compat import ensure_pyannote_audio_compat
-
 
 def _install_on(monkeypatch, fake):
     monkeypatch.setitem(sys.modules, "torchaudio", fake)
+    from services.pyannote_audio_compat import ensure_pyannote_audio_compat
+
+    return ensure_pyannote_audio_compat()
+
+
+def _ensure_installed():
+    from services.pyannote_audio_compat import ensure_pyannote_audio_compat
+
     return ensure_pyannote_audio_compat()
 
 
@@ -40,7 +46,7 @@ def test_new_surface_installs_once_and_delegates_other_backends(monkeypatch):
     fake = SimpleNamespace(load=original)
     assert _install_on(monkeypatch, fake) is True
     installed_load = fake.load
-    assert ensure_pyannote_audio_compat() is False
+    assert _ensure_installed() is False
     assert fake.load is installed_load
     assert fake.list_audio_backends() == ["soundfile"]
 

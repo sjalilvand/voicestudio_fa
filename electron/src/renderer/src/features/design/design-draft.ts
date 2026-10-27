@@ -303,7 +303,7 @@ export function designDraftFromTake(item: HistoryItem): DesignDraft {
   const draft: DesignDraft = {
     text: item.text,
     attrs: mapped,
-    seed: item.seed || pickDesignSeed(false, null),
+    seed: item.seed ?? pickDesignSeed(false, null),
     profileId: item.profile_id,
     description,
     picks: restoredPicks,

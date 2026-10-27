@@ -67,6 +67,43 @@ def test_only_named_checked_wheel_is_written(tmp_path):
     assert list(destination.iterdir()) == [wheel]
 
 
+def test_partial_wheel_is_removed_when_output_write_fails(tmp_path, monkeypatch):
+    archive, config = archive_fixture(tmp_path)
+    destination = tmp_path / "output"
+    destination.mkdir()
+    expected_output = destination / config["wheel_member"].rsplit("/", 1)[-1]
+    artifacts = module("artifacts")
+    original_open = artifacts.Path.open
+    failure = OSError("simulated storage failure")
+
+    class FailingWriter:
+        def __init__(self, stream):
+            self.stream = stream
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            self.stream.close()
+
+        def write(self, data):
+            self.stream.write(data[:2])
+            raise failure
+
+    def open_path(path, *args, **kwargs):
+        stream = original_open(path, *args, **kwargs)
+        if path == expected_output and args and args[0] == "wb":
+            return FailingWriter(stream)
+        return stream
+
+    monkeypatch.setattr(artifacts.Path, "open", open_path)
+    with pytest.raises(OSError) as caught:
+        artifacts.checked_wheel(archive, destination, config)
+
+    assert caught.value is failure
+    assert list(destination.iterdir()) == []
+
+
 @pytest.mark.parametrize("field", ["archive_sha256", "wheel_sha256"])
 def test_tampered_artifacts_never_return_installable_wheel(tmp_path, field):
     archive, config = archive_fixture(tmp_path)
