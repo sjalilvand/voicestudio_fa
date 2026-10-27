@@ -25,6 +25,9 @@ import { publicFailureFromEvent, type PublicFailure } from '@/lib/api/failure';
 import {
   assignSpeakerProfile,
   applySpeakerCloneDefaults,
+  autoProfileId,
+  castParts,
+  castSpeakers,
   cueSourceId,
   segmentGenInputs,
   settleCueSources,
@@ -596,6 +599,53 @@ export function assignDubSpeakerProfile(speakerId: string, profileId: string) {
     delete invalidated.sync_ratio;
     delete invalidated.fit_status;
     return invalidated;
+  });
+  if (changed) commitSegmentEdit(next);
+}
+
+/** The next unused `Speaker N` label, matching the backend's default
+ *  speaker naming (`Speaker 1` when diarization found no one). */
+export function nextDubSpeakerId(segments: DubSegment[]): string {
+  const taken = new Set(castSpeakers(segments) as string[]);
+  let n = taken.size + 1;
+  while (taken.has(`Speaker ${n}`)) n += 1;
+  return `Speaker ${n}`;
+}
+
+/**
+ * Move lines to another speaker (#3515, #3419). A line that followed its old
+ * speaker's voice (no explicit voice, that speaker's `auto:` clone, or the
+ * voice the old speaker is cast with) follows the new speaker's voice; a voice
+ * the user picked for that line on purpose stays. Mirrors the backend's
+ * re-analysis rebind rule so manual and automatic speaker fixes agree.
+ */
+export function setDubSegmentsSpeaker(ids: ReadonlySet<string>, speakerId: string) {
+  const speaker = speakerId.trim();
+  if (!ids.size || !speaker) return;
+  const current = dubSession.state.segments;
+  const castVoice = (name: string) => {
+    const row = current.find((segment) => !ids.has(segment.id) && segment.speaker_id === name);
+    if (row) return row.profile_id || '';
+    const part = current
+      .flatMap(
+        (segment) => castParts(segment) as Array<{ speaker_id?: string; profile_id?: string }>,
+      )
+      .find((item) => item.speaker_id === name);
+    return part ? part.profile_id || '' : undefined;
+  };
+  const targetVoice = castVoice(speaker) ?? '';
+  let changed = false;
+  const next = current.map((segment) => {
+    if (!ids.has(segment.id) || segment.speaker_id === speaker) return segment;
+    changed = true;
+    const oldSpeaker = segment.speaker_id || 'Speaker 1';
+    const voice = segment.profile_id || '';
+    const followsSpeaker =
+      !voice || voice === autoProfileId(oldSpeaker) || voice === castVoice(oldSpeaker);
+    return patchSegment(segment, {
+      speaker_id: speaker,
+      ...(followsSpeaker ? { profile_id: targetVoice || undefined } : {}),
+    });
   });
   if (changed) commitSegmentEdit(next);
 }

@@ -4661,6 +4661,75 @@
     "title": "SystemInfoResponse",
     "type": "object"
    },
+   "TranscriptSegment": {
+    "properties": {
+     "cue_source_id": {
+      "anyOf": [
+       {
+        "maxLength": 200,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cue Source Id"
+     },
+     "end": {
+      "minimum": 0.0,
+      "title": "End",
+      "type": "number"
+     },
+     "id": {
+      "anyOf": [
+       {
+        "maxLength": 200,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Id"
+     },
+     "start": {
+      "minimum": 0.0,
+      "title": "Start",
+      "type": "number"
+     },
+     "text": {
+      "maxLength": 20000,
+      "title": "Text",
+      "type": "string"
+     }
+    },
+    "required": [
+     "start",
+     "end",
+     "text"
+    ],
+    "title": "TranscriptSegment",
+    "type": "object"
+   },
+   "TranscriptSyncRequest": {
+    "description": "The editor's transcript, stored before any dub exists so exports of\nthe original audio with subtitles use the edited lines (#3393).",
+    "properties": {
+     "segments": {
+      "items": {
+       "$ref": "#/components/schemas/TranscriptSegment"
+      },
+      "maxItems": 20000,
+      "minItems": 1,
+      "title": "Segments",
+      "type": "array"
+     }
+    },
+    "required": [
+     "segments"
+    ],
+    "title": "TranscriptSyncRequest",
+    "type": "object"
+   },
    "TranslateRequest": {
     "properties": {
      "auto_glossary": {
@@ -12209,6 +12278,54 @@
      }
     },
     "summary": "Dub Export Srt"
+   }
+  },
+  "/dub/sync-transcript/{job_id}": {
+   "post": {
+    "description": "Store the editor's transcript while the job has no dub yet (#3393).\n\nExporting the original video or audio with subtitles needs no generated\ntrack, but the subtitle writers read ``job[\"segments\"]``, which still\nholds the raw transcription. Once a dub exists its exports must keep the\nsegments that dub was rendered from, so this refuses to overwrite them.\nPer-row metadata (speaker, word timings, cue sources) is carried over by\nstable id; text and timing come from the editor.",
+    "operationId": "dub_sync_transcript_dub_sync_transcript__job_id__post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "job_id",
+      "required": true,
+      "schema": {
+       "title": "Job Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TranscriptSyncRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Dub Sync Transcript"
    }
   },
   "/dub/thumb/{job_id}": {

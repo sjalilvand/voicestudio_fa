@@ -936,7 +936,10 @@
     "segment_count_other": "{{count}} bölüm",
     "glossary_terms_one": "Sözlük · {{count}} terim",
     "glossary_terms_other": "Sözlük · {{count}} terim",
-    "glossary_label": "Sözlük"
+    "glossary_label": "Sözlük",
+    "set_speaker": "Konuşmacı ata…",
+    "new_speaker": "Yeni konuşmacı",
+    "speaker_label": "Konuşmacı"
   },
   "dub_workflow": {
     "preparing_audio": "Ses hazırlanıyor…",
@@ -2136,7 +2139,8 @@
     "export_n_audio_other": "{{count}} ses dosyalarını dışa aktar",
     "export_audio": "Sesi dışa aktar",
     "export_subtitles": "Altyazıları dışa aktar",
-    "stretch_subs_note": "Videoyu Uzat: altyazıları ayrı dışa aktarın."
+    "stretch_subs_note": "Videoyu Uzat: altyazıları ayrı dışa aktarın.",
+    "undubbed_video_note": "Henüz dublaj yok: video özgün sesini korur. Dökümü eklemek için altyazıları görüntüye yakın."
   },
   "models": {
     "pack_title": "Model paketleri",

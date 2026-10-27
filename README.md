@@ -148,6 +148,7 @@ Add `-- --install` for the networked managed-runtime installation check.
 | Need | Start here |
 |---|---|
 | Setup help | [Troubleshooting](docs/install/troubleshooting.md) · [Model downloads](docs/downloading-models.md) |
+| Step-by-step guides | [Dub a video with several characters](docs/dubbing/multi-speaker-guide.md) · [Expressive speech](docs/expressive-speech.md) · [Exporting dubs](docs/dubbing/export.md) |
 | Models & audio quality | [Engine guides](docs/engines/README.md) · [whisper.cpp ASR](docs/engines/whisper-cpp.md) · [Benchmarks](docs/benchmarks.md) |
 | Integrations | [Local API](docs/speech-platform.md) · [MCP](docs/mcp.md) · [Examples](examples/README.md) |
 | Phone apps (preview, run offline) | [iOS and Android](docs/mobile.md) |
