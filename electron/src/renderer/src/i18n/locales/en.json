@@ -82,7 +82,8 @@
     "stop": "Stop loading",
     "address": "Website address",
     "default_browser": "Default browser",
-    "failed": "Could not complete that action. Check the address and connection, or open in your browser."
+    "failed": "Could not complete that action. Check the address and connection, or open in your browser.",
+    "return_studio": "Back to VoiceStudio"
   },
   "sidebarTools": {
     "simple": "Simple",
@@ -382,7 +383,8 @@
     "pill_recovering": "Recovering",
     "pill_failed": "Failed",
     "pill_repeats": "{{count}} times in a row",
-    "offline_bar": "Engine busy, reconnecting automatically"
+    "offline_bar": "Engine busy, reconnecting automatically",
+    "copy_diagnostics": "Copy system details"
   },
   "engines": {
     "selectCpuFallback": "{{engine}}: running on CPU — {{reason}}",
@@ -577,7 +579,19 @@
     "replace_reference_hint": "Saving replaces this voice's reference sample. Its locked take and own-voice verification are cleared because the new clip may be a different speaker. Leave the transcript blank to transcribe the new clip automatically.",
     "cannotCloneUseDesign": "This model can't clone a voice. Describe one in Voice design, or choose a model that clones.",
     "savedTab": "Saved",
-    "recentsTab": "Recents"
+    "recentsTab": "Recents",
+    "all_languages": "Every language",
+    "cat_ChineseDialect": "Chinese dialect",
+    "cat_EnglishAccent": "English accent",
+    "design_placeholder": "Describe the voice, accent, mood, and speaking style…",
+    "opt_moderate_pitch": "Medium",
+    "opt_very_high_pitch": "Very high",
+    "opt_very_low_pitch": "Very low",
+    "preset_excited_child": "🧒 Excited child",
+    "preset_narrator": "🎙️ Clear narrator",
+    "reference_audio": "Reference recording",
+    "synthesizing": "Creating speech… {{seconds}}s",
+    "toggle_sidebar": "Toggle voice panel"
   },
   "recording": {
     "cleaned_loaded": "Recording cleaned and loaded.",
@@ -649,7 +663,8 @@
     "exit_fullscreen": "Exit full screen",
     "unavailable": "Playback unavailable",
     "now_playing": "Now playing",
-    "kind_convert": "Voice conversion"
+    "kind_convert": "Voice conversion",
+    "generated_audio": "Generated audio"
   },
   "common": {
     "close": "Close",
@@ -691,7 +706,9 @@
     "unknown": "unknown",
     "remove": "Remove {{term}}",
     "not_set": "Not set",
-    "details": "Details"
+    "details": "Details",
+    "languages_count": "646 languages",
+    "reload": "Reload interface"
   },
   "preferences": {
     "title": "Settings",
@@ -765,7 +782,8 @@
   "referenceAsr": {
     "busy": "Transcribing…",
     "install": "Install {{label}} ({{size}} GB) to transcribe automatically",
-    "installing": "Downloading {{label}}. Transcription retries when it finishes."
+    "installing": "Downloading {{label}}. Transcription retries when it finishes.",
+    "retry": "Retry transcription"
   },
   "engineSidebar": {
     "tts": "TTS",
@@ -854,7 +872,17 @@
     "speakers_unavailable": "Speaker identification isn't available. The transcript was saved without speaker labels.",
     "missing_model": "No speech-to-text model is installed — this feature needs one to transcribe audio.",
     "original_transcript": "Original transcript",
-    "active_model": "Model: {{model}}"
+    "active_model": "Model: {{model}}",
+    "copied": "Copied to clipboard",
+    "empty_search_desc": "Try another word or clear the search.",
+    "empty_search_title": "No matching transcripts",
+    "empty_title": "No transcripts saved yet",
+    "entries": "{{count}} transcripts",
+    "exported": "Transcript exported.",
+    "h_ago": "{{count}} hr ago",
+    "m_ago": "{{count}} min ago",
+    "search_placeholder": "Search transcripts…",
+    "title": "Transcription library"
   },
   "engineRuntime": {
     "ready": "Ready",
@@ -1069,7 +1097,60 @@
     "segment_count_other": "{{count}} segments",
     "glossary_terms_one": "Glossary · {{count}} term",
     "glossary_terms_other": "Glossary · {{count}} terms",
-    "glossary_label": "Glossary"
+    "glossary_label": "Glossary",
+    "all_languages": "Every language",
+    "all_up_to_date": "All {{count}} segments are current",
+    "burn_subs": "Burn subtitles into video",
+    "burn_subs_title": "Permanently add subtitles to the MP4; when Dual is enabled, both lines are used.",
+    "cast_title": "Choose a voice for each detected speaker. Cross-language clones retain the speaker’s identity.",
+    "clean_up_title": "Join tiny fragments and neighboring short segments.",
+    "clone_profiles": "Cloned voices",
+    "collapse_settings": "Hide voice settings",
+    "default_track": "Default audio track",
+    "design_presets": "Designed voices",
+    "drop_here": "Drop an audio or video file here",
+    "dual_subs": "Dual subtitles",
+    "dual_subs_title": "Show the translation above and the italic original below.",
+    "dub_track": "Dub track · {{code}}",
+    "dubbed_audio": "{{code}} dubbed audio",
+    "edit_settings": "Edit voice settings",
+    "first_play_hint": "The first playback can take a moment while the audio is combined.",
+    "from_video": "🎤 From video · {{duration}}",
+    "glossary_btn": "+ Glossary ({{count}})",
+    "glossary_title": "Fix translations for recurring names, brands, and specialist terms.",
+    "import_srt_alt": "Add an SRT file",
+    "install_already": "{{engine}} is already installed.",
+    "install_disabled_title": "Engine installation is unavailable in packaged builds.",
+    "install_engine": "Install engine",
+    "install_failed": "Engine installation failed: {{message}}",
+    "install_ok": "{{engine}} installed successfully.",
+    "install_popover_title": "Install engine",
+    "install_progress": "Installing {{engine}}…",
+    "install_restart": "Restart the backend to make the newly installed {{engine}} available.",
+    "needs_install_suffix": "— installation required",
+    "output_options": "Output settings",
+    "paste_url": "Paste a media URL",
+    "prep_demucs": "Separating vocals and music…",
+    "prep_demucs_note": "Vocal separation can take several minutes for a long video.",
+    "prep_download": "Downloading media…",
+    "prep_extract": "Extracting audio…",
+    "prep_scene": "Finding scene changes…",
+    "pull_captions_title": "On sites with captions, including YouTube, Vimeo, and TED, also fetch the original captions and available automatic translations.",
+    "quality_title": "Cinematic uses an LLM to translate, review, and adapt in three passes. Configure an LLM before using it.",
+    "regen_changed": "Regenerate {{count}} changed segments",
+    "restore_title": "Restore the original text",
+    "retry_transcription": "Retry transcription",
+    "segments_changed": "{{count}} segments changed",
+    "selected_count": "{{count}} selected",
+    "selected_dub": "Selected dub: {{code}}",
+    "sidebar_toggle": "Toggle voice panel",
+    "speaker": "Speaker {{n}}",
+    "stop_progress": "Stopping {{current}} of {{total}}",
+    "supported_formats": "MP4 · MOV · MKV · WEBM · MP3 · WAV · FLAC · M4A",
+    "tracks_done": "Finished tracks: {{tracks}}",
+    "translate_all": "Translate every segment",
+    "upload_transcribe": "Upload and transcribe",
+    "video_dubbing_studio": "Video dubbing workspace"
   },
   "dub_workflow": {
     "preparing_audio": "Preparing audio…",
@@ -1127,7 +1208,9 @@
     "delete_history_confirm": "Delete this history item?",
     "history_deleted": "History item deleted",
     "restored_state": "Restored previous generation state",
-    "upgrading_preview": "Upgrading {{count}} preview-quality segment(s) to full quality…"
+    "upgrading_preview": "Upgrading {{count}} preview-quality segment(s) to full quality…",
+    "downloading_video": "Downloading media…",
+    "save_failed": "Could not save settings: {{message}}"
   },
   "dubWorkspace": {
     "transcriptIssues": "Transcript issues",
@@ -1187,7 +1270,12 @@
     "report_failed": "Report failed: {{message}}",
     "source": "Log source",
     "frontend_buffer": "in-memory (last 500)",
-    "copy_failed_short": "Could not copy the log"
+    "copy_failed_short": "Could not copy the log",
+    "clear_failed": "Could not clear automatic terms: {{message}}",
+    "empty_frontend": "No interface log entries yet.",
+    "empty_tauri": "No desktop runtime log entries yet.",
+    "no_tauri_log": "No desktop runtime log is available.",
+    "version_updates": "Look for updates"
   },
   "settings": {
     "engine_switched": "Switched {{family}} to {{engine}}",
@@ -1568,7 +1656,14 @@
     "gpu_report_engine_no_family_path": "CPU: no path for your GPU type",
     "gpu_report_engine_no_gpu": "CPU: no GPU available",
     "gpu_report_engine_needs_accelerator": "Needs a GPU ({{needs}}) this machine does not have",
-    "models_dir_desc": "Downloaded models are stored here. Choose a drive with more free space if this one fills up."
+    "models_dir_desc": "Downloaded models are stored here. Choose a drive with more free space if this one fills up.",
+    "compute_device": "Processing device",
+    "compute_device_title": "Processing device",
+    "history_retention": "Generation history retention",
+    "language_desc": "Choose the language used throughout VoiceStudio.",
+    "llmp_save_failed": "Credentials could not be saved.",
+    "llmskills_save_failed": "Credentials could not be saved.",
+    "proxy_cleared": "Proxy setting removed."
   },
   "gallery": {
     "title": "VoiceStudio Gallery",
@@ -1637,7 +1732,9 @@
     "community_new": "New",
     "community_author_profile": "{{author}} on GitHub",
     "zone_community": "Community",
-    "filters": "Filters"
+    "filters": "Filters",
+    "community_all_languages": "Every language",
+    "download_hint": "Download this voice before using it."
   },
   "batch": {
     "active": "Active",
@@ -1680,7 +1777,25 @@
     "watch_started": "Watching {{folder}} — new videos are added to the queue automatically",
     "watch_unsupported": "Folder watching needs the desktop app or a Chromium-based browser — use Add Videos here instead.",
     "watch_failed": "Folder watching stopped — the folder is no longer readable (moved, deleted, or permissions changed). Pick it again to resume.",
-    "watch_start_failed": "Couldn't start watching that folder — pick it again to retry."
+    "watch_start_failed": "Couldn't start watching that folder — pick it again to retry.",
+    "cancel_failed": "Could not cancel the job: {{message}}",
+    "clone_profiles": "Cloned voices",
+    "completed_in": "Finished in {{duration}}",
+    "delete_failed": "Could not delete the voice: {{message}}",
+    "drop_hint": "Drop several videos here to add them to the queue.",
+    "enqueue_failed": "Could not queue {{name}}: {{message}}",
+    "enqueued": "Added {{count}} videos to the queue.",
+    "job_cancelled": "Batch job cancelled.",
+    "no_active": "No batch jobs are running.",
+    "no_completed": "No completed batch jobs.",
+    "no_failed": "No failed batch jobs.",
+    "seg": "Segment {{current}} of {{total}}",
+    "stage_extract": "🎞️ Extracting audio",
+    "stage_generate": "🎙️ Generating speech",
+    "stage_mix": "🎚️ Mixing tracks",
+    "stage_transcribe": "🎧 Transcribing audio",
+    "stage_translate": "🌐 Translating segments",
+    "title": "Batch dubbing"
   },
   "dictation": {
     "flag_smart_cleanup": "Remove filler words",
@@ -1713,7 +1828,22 @@
     "probe_file": "Probe file",
     "probe": "Probe",
     "placeholder_direction": "e.g. Whisper it like a secret, then let the excitement build.",
-    "placeholder_rate_fit": "Paste the translated line to check against its time slot."
+    "placeholder_rate_fit": "Paste the translated line to check against its time slot.",
+    "absolute_path": "Absolute file path",
+    "desc": "Inspect media, parse performance directions, and fit translated speech to a time slot.",
+    "directorial_ai": "Direction parser",
+    "fit_failed": "Timing check failed: {{message}}",
+    "parse_failed": "Direction parsing failed: {{message}}",
+    "probe_desc": "Use ffprobe to read codecs, streams, bit depth, and duration without changing the file.",
+    "probe_failed": "Media inspection failed: {{message}}",
+    "probe_placeholder": "/path/to/example-video.mp4",
+    "slot_seconds": "Slot length in seconds",
+    "speech_rate_desc": "Estimate whether a translated line can be spoken naturally within its assigned slot.",
+    "speech_rate_fit": "Speech timing fit",
+    "target_language": "Target language",
+    "translate_hint": "Translation hint:",
+    "translated_line": "Translated line",
+    "tts_instruct": "Speech instruction:"
   },
   "projects": {
     "title": "Projects",
@@ -1753,7 +1883,15 @@
     "render_settings": "Settings",
     "render_no_details": "No details were kept for this one: it was rendered before details were recorded.",
     "all_projects": "All projects",
-    "library_group": "Library"
+    "library_group": "Library",
+    "designed_voice": "Designed voice",
+    "empty": "No saved projects",
+    "empty_hint": "Create or save something in the studio and it will appear here.",
+    "generated_audio": "Generated audio",
+    "no_matches": "No projects match “{{query}}”.",
+    "search_placeholder": "Search projects…",
+    "transcription": "Transcription",
+    "voice_profiles": "Voice profiles"
   },
   "projectActions": {
     "delete": "Delete “{{name}}”? This cannot be undone.",
@@ -2002,7 +2140,13 @@
     "aws_profile": "AWS profile",
     "deepl_key_placeholder": "DeepL API key",
     "microsoft_key_placeholder": "Microsoft API key",
-    "base_url": "Base URL"
+    "base_url": "Base URL",
+    "deepl_base_url": "DeepL endpoint",
+    "deepl_base_url_help": "The standard endpoint is https://api.deepl.com/v2. Change it only for another DeepL plan or a compatible gateway.",
+    "deepl_key": "DeepL API key",
+    "microsoft_base_url": "Microsoft Translator endpoint",
+    "microsoft_base_url_help": "The default endpoint is https://api.cognitive.microsofttranslator.com.",
+    "microsoft_key": "Microsoft Translator key"
   },
   "about": {
     "architecture": "Architecture",
@@ -2031,7 +2175,9 @@
     "model_terms": "Model terms",
     "model_related_sources": "Related sources:",
     "self_check_attention_one": "{{count}} check failed — see the hints above.",
-    "self_check_attention_other": "{{count}} checks failed — see the hints above."
+    "self_check_attention_other": "{{count}} checks failed — see the hints above.",
+    "compute_device": "Processing device",
+    "copy_diagnostics": "Copy system details"
   },
   "privacy": {
     "analytics_title": "Help improve VoiceStudio",
@@ -2040,7 +2186,8 @@
     "watermark_subtitle": "On by default. Marks generated audio as AI-made so it can be identified later. Only affects audio generated from now on.",
     "analytics_subtitle": "Off by default. Anonymous engine, language, duration, character counts and error types. Never your text or audio.",
     "watermark_title": "Invisible watermark",
-    "change_translator": "Change translator"
+    "change_translator": "Change translator",
+    "translator_online": "Online through {{provider}}"
   },
   "updates": {
     "tab": "Updates",
@@ -2096,7 +2243,40 @@
     "output": "Output",
     "export_mp4": "Export MP4",
     "export_audio": "Export audio",
-    "stretch_subs_note": "Stretch Video: export subtitles separately."
+    "stretch_subs_note": "Stretch Video: export subtitles separately.",
+    "all_selected_dubs": "All selected dubs · {{count}}",
+    "bg_audio": "Background audio",
+    "close_drawer": "Close export settings",
+    "current_target": "Current target · {{code}}",
+    "default_audio_hint": "Choose which track starts when the exported video opens.",
+    "default_audio_track": "Default audio",
+    "dual_subs": "Translation + original",
+    "dual_subs_video": "Include translated and original subtitle lines",
+    "export_each_dub": "Export every dubbed language",
+    "export_n_audio_one": "Export {{count}} audio file",
+    "export_n_audio_other": "Export {{count}} audio files",
+    "export_options": "Export settings",
+    "export_single_lang": "Export one language",
+    "export_subtitles": "Export subtitles",
+    "hardsub": "Burned in",
+    "mix_bg_audio": "Mix in background audio",
+    "mix_bg_video": "Mix background audio into video",
+    "mp3_compressed": "MP3 · compressed",
+    "nothing_selected": "Choose at least one item to export.",
+    "pkg_audio_body_one": "Export {{count}} chosen audio track as separate files.",
+    "pkg_audio_body_other": "Export {{count}} chosen audio tracks as separate files.",
+    "pkg_audio_cta": "Export audio tracks",
+    "pkg_audio_title": "Individual tracks",
+    "pkg_clips_body": "A ZIP containing one audio file per generated segment.",
+    "pkg_clips_cta": "Export clips ZIP",
+    "pkg_clips_title": "Segment clips",
+    "pkg_stems_body": "A ZIP with separate dialogue, music, and effects tracks.",
+    "pkg_stems_cta": "Export stems ZIP",
+    "preset_title": "Apply {{label}} settings to the {{tab}} tab",
+    "subs_in_video": "Subtitles in video",
+    "subs_note": "Subtitle files keep the timing and language choices above.",
+    "wav_lossless": "WAV · lossless",
+    "what_to_export": "Audio selection"
   },
   "models": {
     "pack_title": "Model packs",
@@ -2137,7 +2317,8 @@
     "reco_low_disk": "Not enough space for the full bundle: it downloads ~{{need}} GB and keeps {{headroom}} GB free afterwards ({{total}} GB in total), but only {{free}} GB is free. Install just the required models, or free up space first.",
     "pack_low_disk": "Not enough space for this pack: it downloads ~{{need}} GB and keeps {{headroom}} GB free afterwards ({{total}} GB in total), but only {{free}} GB is free. Free up space or move the models folder to a larger drive first.",
     "req_tag": "req",
-    "reco_install_one": "Install {{label}}"
+    "reco_install_one": "Install {{label}}",
+    "install_failed": "Engine installation failed: {{message}}"
   },
   "bootstrap": {
     "checking": "Checking environment…",
@@ -2166,7 +2347,10 @@
     "transcribing_label": "Transcribing…",
     "model_loading": "Loading model…",
     "model_downloading": "Downloading voice model…",
-    "needs_modifier": "Add a modifier — Ctrl / Cmd / Alt / Shift + key (Esc to cancel)"
+    "needs_modifier": "Add a modifier — Ctrl / Cmd / Alt / Shift + key (Esc to cancel)",
+    "active_shortcut": "Current shortcut",
+    "press_key": "Press a key combination",
+    "record_shortcut": "Set recording shortcut"
   },
   "voicePanel": {
     "mode_label": "Dictation Mode",
@@ -2234,7 +2418,22 @@
     "attest_permission": "I have the speaker’s permission",
     "attested_own_voice": "Confirmed: this is my voice",
     "attested_permission": "Confirmed: I have the speaker’s permission",
-    "attest_clear": "Remove confirmation"
+    "attest_clear": "Remove confirmation",
+    "dubbed_segments_one": "{{count}} dubbed segment",
+    "dubbed_segments_other": "{{count}} dubbed segments",
+    "gen_preview": "Create preview",
+    "locked_explain": "Locked voices reuse one reference recording and seed for repeatable results.",
+    "projects_count_one": "{{count}} project",
+    "projects_count_other": "{{count}} projects",
+    "synth_clips_one": "{{count}} generated clip",
+    "synth_clips_other": "{{count}} generated clips",
+    "test_placeholder": "Enter something for this voice to say…",
+    "test_text": "A calm voice can make every sentence feel clear and welcoming.",
+    "try_voice": "Test this voice",
+    "unlock_confirm": "Unlocking changes the reference or seed, so later audio will no longer be exactly reproducible. Continue?",
+    "unlock_failed": "Could not unlock the voice: {{message}}",
+    "unlocked": "Voice unlocked.",
+    "used_title": "Used in"
   },
   "profiles": {
     "locked": "Voice locked! Identity is now consistent across all generations.",
@@ -2303,7 +2502,12 @@
     "enter_studio": "Enter studio",
     "check_arch_label": "Windows on ARM",
     "check_arch_detail": "ARM64 Windows PC — the AI backend runs as x64 under Windows emulation, CPU only (no GPU/NPU acceleration).",
-    "check_arch_fix": "Voice generation works but is slower. Prefer a lightweight voice engine (KittenTTS, Supertonic-3, PocketTTS) and a small Whisper model."
+    "check_arch_fix": "Voice generation works but is slower. Prefer a lightweight voice engine (KittenTTS, Supertonic-3, PocketTTS) and a small Whisper model.",
+    "continue_ok": "Continue to model setup",
+    "install_models": "Install selected models",
+    "probing": "Checking your system…",
+    "still_needed": "More setup is required.",
+    "system_preflight": "System diagnostics"
   },
   "consent": {
     "title": "Help improve VoiceStudio?",
@@ -2470,7 +2674,14 @@
       "star": "Star on GitHub",
       "opt_out": "Don't ask again",
       "dismiss_aria": "Dismiss"
-    }
+    },
+    "back": "Back to VoiceStudio",
+    "coffee_desc": "Make a small one-time contribution.",
+    "commercial": "Commercial license",
+    "desc": "Help fund ongoing maintenance and make local voice tools available to everyone.",
+    "footer": "Thank you for supporting independent, open-source development.",
+    "github_desc": "Sponsor development through GitHub.",
+    "paypal_desc": "Contribute securely with PayPal."
   },
   "support": {
     "tab_support": "Support",
@@ -2491,7 +2702,8 @@
     "sponsors_tier_platinum": "Platinum",
     "sponsors_tier_gold": "Gold",
     "sponsors_tier_silver": "Silver",
-    "sponsors_tier_bronze": "Bronze"
+    "sponsors_tier_bronze": "Bronze",
+    "tab_license": "Commercial license"
   },
   "enterprise": {
     "hero_simple": "VoiceStudio is free and open-source under the AGPL-3.0 — including for commercial and internal business use. You only need a commercial license to embed it in a closed-source product without AGPL’s copyleft obligations. Our licence covers VoiceStudio code. Rights to models and generated output depend on the selected models and their terms.",
@@ -2507,7 +2719,22 @@
     "benefit_team": "Team-wide access",
     "benefit_source": "Source-available core",
     "why_title": "Why businesses choose VoiceStudio",
-    "pricing_title": "Pricing"
+    "pricing_title": "Pricing",
+    "back": "Back to VoiceStudio",
+    "badge": "Commercial license",
+    "benefit_cost": "Predictable costs",
+    "benefit_cost_desc": "Choose terms that fit your deployment instead of paying per generated minute.",
+    "benefit_lang": "646 languages",
+    "benefit_lang_desc": "Transcribe, translate, and dub across 646 languages.",
+    "benefit_source_desc": "Keep your recordings and production data under your control.",
+    "benefit_support": "Direct support",
+    "benefit_support_desc": "Get help with rollout, configuration, and production issues.",
+    "benefit_team_desc": "Give the whole team one consistent local workflow.",
+    "desc": "License VoiceStudio for organizations that need commercial terms and direct assistance.",
+    "hero_title": "Bring private voice production to your team",
+    "pricing_desc": "Pricing is tailored to your team size and deployment needs.",
+    "request_quote": "Request pricing",
+    "title": "Commercial license"
   },
   "reportBug": {
     "native_fault_cause": "Native fault: the process failed below Python, so no Python traceback is available.",
@@ -2570,7 +2797,9 @@
     "undo": "Undo",
     "redo": "Redo",
     "timeline": "Segment timeline",
-    "overlap": "Overlaps an adjacent segment — both lines will play together"
+    "overlap": "Overlaps an adjacent segment — both lines will play together",
+    "mergeNext": "Merge with next",
+    "split": "Split segment"
   },
   "sharing": {
     "title": "Sharing & Remote Access",
@@ -2632,7 +2861,33 @@
     "note": "Note",
     "add_term": "Add term",
     "auto_badge": "auto",
-    "manual_badge": "manual"
+    "manual_badge": "manual",
+    "add_error": "Could not add the term: {{message}}",
+    "auto_added_one": "Before translating, review the {{count}} suggested term that was added.",
+    "auto_added_other": "Before translating, review the {{count}} suggested terms that were added.",
+    "auto_count": "{{count}} automatic",
+    "auto_empty": "No recurring terms were found.",
+    "auto_error": "Automatic term search failed: {{message}}",
+    "auto_title": "Ask the configured LLM to find proper names and repeated terms in the transcript.",
+    "clear_auto_confirm": "Remove every automatically found term? Manually added terms will remain.",
+    "clear_auto_title": "Remove all automatically found terms",
+    "clear_error": "Could not clear automatic terms: {{message}}",
+    "close": "Collapse glossary",
+    "count": "{{count}} glossary terms",
+    "count_one": "{{count}} glossary term",
+    "count_other": "{{count}} glossary terms",
+    "delete_error": "Could not delete the voice: {{message}}",
+    "empty_save": "A glossary becomes available after you save this dub as a project.",
+    "hint": "Every Cinematic translation receives this glossary; manual terms override automatic suggestions.",
+    "load_error": "Could not load the glossary: {{message}}",
+    "needs_project": "Save this project before editing its glossary.",
+    "no_segments": "Add transcript segments before scanning for terms.",
+    "no_terms": "No glossary terms yet.",
+    "note_placeholder": "Optional context for translators",
+    "pick_target": "Select a target language first.",
+    "source_placeholder": "Term in {{lang}}",
+    "target_placeholder": "Translation in {{lang}}",
+    "update_error": "Could not update the term: {{message}}"
   },
   "segment": {
     "time": "Time",
@@ -2694,7 +2949,23 @@
     "plan_apply_title": "Replace this line with the suggested shorter rewrite: \"{{text}}\"",
     "live_play_title": "Stream this line now (live preview)",
     "live_stop_title": "Stop the live preview",
-    "replace_toggle": "Find and replace"
+    "replace_toggle": "Find and replace",
+    "budget_title": "Text uses {{pct}} of the original timing budget. Raise speed or shorten the wording if it does not fit.",
+    "clone_profiles": "Cloned voices",
+    "design_presets": "Designed voices",
+    "direction_title": "Direction: {{dir}}",
+    "edit_direction": "Edit direction",
+    "merge_label": "Merge with next",
+    "rate_title": "Speech-rate fit: {{ratio}} · {{error}}",
+    "restore_title": "Restore original segment text",
+    "sel_count": "{{count}} selected",
+    "select_all_title": "Select all visible segments",
+    "select_title": "Select this segment; Shift+click selects a range.",
+    "set_direction": "Add direction",
+    "speaker_title_detected": "Speaker detected from the source audio",
+    "split_label": "Split segment",
+    "translate_error_title": "Translation error: {{error}}",
+    "vol_title": "Volume from 0% to 200%"
   },
   "update": {
     "checking": "Checking for updates…",
@@ -4065,7 +4336,12 @@
       "import": "Import",
       "export": "Export",
       "send": "Send"
-    }
+    },
+    "dub_advanced.clips": "Segment clips",
+    "dub_advanced.dual": "Translation + original",
+    "dub_advanced.exports": "Export settings",
+    "editing.generated": "Generated audio",
+    "editing.merge": "Merge with next"
   },
   "failureCause": {
     "details": "Details",
