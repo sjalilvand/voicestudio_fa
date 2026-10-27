@@ -107,6 +107,30 @@ copy_shared_libs() {
         done
 }
 
+# MSVC builds link the C++ runtime dynamically, and a Windows host without the
+# Visual C++ Redistributable cannot start the binary (exit 0xC0000135). The
+# desktop installer ships it (#2780), so deploy the runtime app-locally next
+# to the executable, as Microsoft documents for redistribution. These x64
+# copies also serve Windows on ARM, which runs this binary under emulation.
+copy_msvc_runtime() {
+    # OMNIVOICE_MSVC_RUNTIME_DIR overrides the source directory (tests).
+    local runtime_dir="${OMNIVOICE_MSVC_RUNTIME_DIR:-}" dll
+    if [[ -z "$runtime_dir" ]]; then
+        runtime_dir="$(cygpath -u "${SYSTEMROOT:-C:\\Windows}")/System32"
+    fi
+    for dll in vcruntime140.dll vcruntime140_1.dll msvcp140.dll msvcp140_1.dll \
+        msvcp140_2.dll vcomp140.dll; do
+        if [[ -f "$runtime_dir/$dll" ]]; then
+            cp -v "$runtime_dir/$dll" "$BIN_DIR/"
+            printf '%s\n' "$dll" >> "$COPIED_LIBS"
+        fi
+    done
+    if [[ ! -f "$BIN_DIR/msvcp140.dll" || ! -f "$BIN_DIR/vcruntime140.dll" ]]; then
+        echo "Visual C++ runtime DLLs not found in $runtime_dir" >&2
+        return 1
+    fi
+}
+
 # Multi-config generators (Visual Studio) put the executable under
 # build/Release/; single-config ones (Ninja, Makefiles) put it in build/.
 built_windows_exe() {
@@ -133,6 +157,12 @@ portable_x86_cpu_build() {
         -DGGML_NATIVE=OFF -DGGML_CPU_ALL_VARIANTS=ON "$@"
     cmake --build build --config Release -j
 }
+
+# The desktop app supports macOS 13.3+; without an explicit target the binary
+# would require the build host's macOS version.
+case "$PLATFORM" in
+    darwin-*) export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-13.3}" ;;
+esac
 
 OUT_NAME="omnivoice-tts-$PLATFORM"
 case "$PLATFORM" in
@@ -162,6 +192,7 @@ case "$PLATFORM" in
         exe="$(built_windows_exe)"
         cp -v "$exe" "$BIN_DIR/$OUT_NAME"
         copy_shared_libs
+        copy_msvc_runtime
         ;;
     darwin-x86_64)
         # x86_64 Macs build the CPU variant; Metal on Intel is undocumented.
