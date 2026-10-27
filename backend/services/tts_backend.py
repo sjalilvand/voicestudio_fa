@@ -231,7 +231,7 @@ class TTSBackend(ABC):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         # Enforce lifetime at the engine boundary so every caller is covered.
-        for name in ("generate", "generate_batch", "_ensure_loaded"):
+        for name in ("generate", "generate_batch", "_ensure_loaded", "convert_voice"):
             method = cls.__dict__.get(name)
             if method is not None:
                 setattr(cls, name, _lease_render(method))
@@ -456,6 +456,21 @@ class TTSBackend(ABC):
     #: (issue #312 class) before committing to a job that needs it, instead
     #: of silently falling back to OmniVoice or mis-cloning per segment.
     supports_cloning: bool = True
+
+    #: Whether :meth:`convert_voice` works: speech-to-speech conversion that
+    #: keeps the source recording's timing, rhythm and intonation and changes
+    #: only the timbre (#3421). Convert's "Keep my delivery" mode routes to an
+    #: engine that declares it instead of transcribing and re-speaking.
+    supports_voice_conversion: bool = False
+
+    def convert_voice(self, source_audio: str, *, ref_audio: str, seed: Optional[int] = None) -> torch.Tensor:
+        """Re-voice the speech in ``source_audio`` with ``ref_audio``'s timbre.
+
+        Both are local WAV paths. Returns a ``(1, n_samples)`` tensor at
+        :attr:`sample_rate` that follows the source's timing. Engines that
+        declare :attr:`supports_voice_conversion` override this.
+        """
+        raise NotImplementedError(f"{self.id} does not support voice conversion")
 
     #: Longest stretch of a reference clip this engine actually conditions on,
     #: in seconds, and how it chooses that stretch from a longer clip:
@@ -4121,6 +4136,8 @@ def list_backends(*, include_hidden: bool = False) -> list[dict]:
             # upgrade hint). None unless ok and the message carries advice.
             "hint": _available_hint(msg) if ok else None,
             "supports_cloning": _clone if isinstance(_clone, bool) else None,
+            # Speech-to-speech conversion (#3421): Convert's "Keep my delivery".
+            "supports_voice_conversion": bool(getattr(cls, "supports_voice_conversion", False)),
             # Graded-emotion capability (#1208) — drives the Audiobook emotion
             # panel's engine gate. Class attr, defaults False.
             "supports_emotion": bool(getattr(cls, "supports_emotion", False)),
@@ -4852,6 +4869,21 @@ async def resolve_generation_backend(
         raise ValueError(cloning_unavailable_detail(engine_id, backend, cloning_purpose))
 
     return backend
+
+
+def voice_conversion_engine_ids() -> list[str]:
+    """Registered engines whose effective class converts speech to speech."""
+    return [
+        bid for bid, cls in _REGISTRY.items()
+        if getattr(_effective_backend_class(bid, cls), "supports_voice_conversion", False) is True
+    ]
+
+
+VOICE_CONVERSION_MISSING = (
+    "Keep my delivery needs an engine that converts a recording directly. "
+    "Install CosyVoice 3 from Model Catalogue → Engines, or turn off Keep my "
+    "delivery to re-speak the text instead."
+)
 
 
 # ── PEP 562 lazy attribute re-export ───────────────────────────────────────
