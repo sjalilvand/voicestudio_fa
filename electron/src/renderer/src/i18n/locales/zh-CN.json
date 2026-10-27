@@ -934,7 +934,6 @@
     "dual_subs_title": "上方显示译文，下方以斜体显示原文。",
     "first_play_hint": "首次播放时需要合并音频，可能会稍等片刻。",
     "from_video": "🎤 来自视频 · {{duration}}",
-    "glossary_btn": "+ 术语表（{{count}}）",
     "glossary_title": "固定姓名、品牌和专业词汇等重复术语的译法。",
     "install_already": "{{engine}} 已经安装。",
     "install_failed": "引擎安装失败：{{message}}",

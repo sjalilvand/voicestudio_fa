@@ -1116,7 +1116,6 @@
     "edit_settings": "Edit voice settings",
     "first_play_hint": "The first playback can take a moment while the audio is combined.",
     "from_video": "🎤 From video · {{duration}}",
-    "glossary_btn": "+ Glossary ({{count}})",
     "glossary_title": "Fix translations for recurring names, brands, and specialist terms.",
     "import_srt_alt": "Add an SRT file",
     "install_already": "{{engine}} is already installed.",

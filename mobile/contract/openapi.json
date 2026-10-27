@@ -18256,7 +18256,7 @@
   },
   "/system/set-env": {
    "post": {
-    "description": "Set an environment variable at runtime, persisted across restarts.\n\nPersistent keys (proxy, FFMPEG_PATH, translation provider keys, \u2026) are\nsaved to ``prefs.json`` so they survive backend restarts (restored at\nstartup in ``main.py``). HF_TOKEN is persisted via\n``token_resolver.persist_hub_token()`` (and cleared with the shared token-file helper). Other keys\nare set on ``os.environ`` for the running process.\n\nThe loopback-origin gate that previously lived inline here is now applied\nat the router level via `dependencies=[Depends(require_admin)]` on\n`router` \u2014 see the top of this file. Every route on this router is\ngated, including this one. The 403 body and behavior are unchanged.",
+    "description": "Set an environment variable for the running backend.\n\nKeys in ``PERSISTENT_KEYS`` are saved in prefs.json and restored during\nstartup in main.py. HF_TOKEN is saved by\n``token_resolver.persist_hub_token()`` and cleared through the shared\ntoken-file helper. Other accepted keys affect only this process.\n\nThe loopback-origin gate that previously lived inline here is now applied at the router level via `dependencies=[Depends(require_admin)]` on `router` \u2014 see the top of this file. Every route on this router is gated, including this one. The 403 body and behavior are unchanged.",
     "operationId": "set_env_var_system_set_env_post",
     "requestBody": {
      "content": {
