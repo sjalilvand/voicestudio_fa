@@ -246,15 +246,18 @@ export function pickDetail(
   };
 }
 
-/** Build the instruction string sent with a design take. */
 export function designInstruct(
   draft: Pick<DesignDraft, 'attrs' | 'description' | 'picks'>,
   vocabulary: InstructVocabulary,
 ): string {
-  if (vocabulary !== 'freeform') return buildDesignInstruct(draft.attrs, '').instruct;
-  return [draft.description.trim(), buildDesignInstruct(pickValues(draft.picks), '').instruct]
-    .filter(Boolean)
-    .join(', ');
+  const freeform = vocabulary === 'freeform';
+  const tagSource = freeform ? pickValues(draft.picks) : draft.attrs;
+  const tags = buildDesignInstruct(tagSource, '').instruct;
+  if (!freeform) return tags;
+
+  const prose = draft.description.trim();
+  if (!prose) return tags;
+  return tags ? `${prose}, ${tags}` : prose;
 }
 
 /** The part of the draft that is stored with the take. */
