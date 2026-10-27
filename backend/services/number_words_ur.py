@@ -14,9 +14,10 @@ integers, decimals and percentages the way an Urdu speaker reads them:
     alike: 1956 → انیس سو چھپن, 1500 → پندرہ سو. Outside that range
     (1000, 2000 and up) the ہزار form is the spoken one.
 
-Scope matches the conservative rules of :mod:`services.text_normalization`:
-integers 0–999999 (six digits, so کروڑ is out of scope), decimals read as
-"<int> اعشاریہ <digit> <digit>…", percentages as "<number> فیصد".
+Its deliberately narrow scope matches ``services.text_normalization``: only
+integers from 0 through 999 999 are supported, so crore and longer forms stay
+out of scope. Decimals say the integer, ``DECIMAL_WORD``, then each fractional
+digit separately; percentages say the number followed by ``PERCENT_WORD``.
 
 Spelling uses Urdu letters (ی U+06CC, ہ U+06C1, ک U+06A9, ے U+06D2, ھ U+06BE
 for aspirates), never their Arabic look-alikes. Pure Python, no dependencies;
@@ -63,10 +64,10 @@ def _below_thousand(n: int) -> str:
 
 def cardinal(n: int) -> str:
     """Render an integer 0 ≤ n ≤ 999999 as Urdu words."""
-    if isinstance(n, bool) or not isinstance(n, int):
-        raise TypeError("cardinal() expects an int")
-    if n < 0 or n > 999_999:
-        raise ValueError("cardinal() supports 0..999999")
+    if type(n) is not int:
+        raise TypeError("cardinal() requires a plain integer argument")
+    if n not in range(1_000_000):
+        raise ValueError("cardinal() can spell only values in the 0 to 999999 range")
     if n < 1000:
         return _below_thousand(n)
     if 1100 <= n <= 1999:
