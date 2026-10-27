@@ -8,14 +8,14 @@ from __future__ import annotations
 
 import pytest
 
-from services.subprocess_backend import SubprocessBackend
-from services.tts_backend import IndexTTS2Backend
-
 TEXT = "abcdefghijklmno"  # fifteen English characters: one natural second
 
 
 @pytest.fixture
 def forwarded(monkeypatch):
+    from services.subprocess_backend import SubprocessBackend
+    from services.tts_backend import IndexTTS2Backend
+
     sent: list[dict] = []
 
     def capture(self, text, **kw):

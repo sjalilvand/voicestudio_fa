@@ -156,7 +156,10 @@ export function CastingBoard({
             const choices = choicesFor(speaker);
             const current = currentVoice(speaker);
             const value = current || DEFAULT_VOICE;
-            const selected = choices.find((choice) => choice.value === value) || choices[0];
+            const selected =
+              choices.find((choice) => choice.value === value) ||
+              choices.find((choice) => choice.value === DEFAULT_VOICE) ||
+              choices[0];
             return (
               <div
                 key={speaker}

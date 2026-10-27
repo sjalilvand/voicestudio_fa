@@ -51,3 +51,16 @@ it('shows Auto as the current voice while the extracted voice is assigned', () =
   );
   expect(screen.getAllByText('dub.auto · Speaker 1').length).toBeGreaterThan(0);
 });
+
+it('shows Default, not Auto, for a voice that is no longer available', () => {
+  render(
+    <CastingBoard
+      segments={[segment('deleted-profile')]}
+      profiles={[]}
+      disabled={false}
+      onAssign={vi.fn()}
+    />,
+  );
+  expect(screen.getAllByText('dub.default').length).toBeGreaterThan(0);
+  expect(screen.queryByText('dub.auto · Speaker 1')).toBeNull();
+});

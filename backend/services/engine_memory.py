@@ -18,7 +18,6 @@ switch — ~8 s for the VoiceStudio core, ~1–2 s for the lighter engines).
 """
 from __future__ import annotations
 
-import asyncio
 import logging
 from core.logging_utils import log_safe
 import os
@@ -49,17 +48,22 @@ def _evict_instance_cache(keep_cls) -> list[str]:
         return evicted
     from services import tts_backend
 
+    # Retire instances under the lock; unload after releasing it, so a request
+    # resolving its engine on the event loop never waits on a slow unload.
+    retired = []
     with tts_backend._ENGINE_CACHE_LOCK:
         for cls, inst in list(_ENGINE_INSTANCES.items()):
             if cls is keep_cls or tts_backend._ENGINE_IN_USE.get(cls):
                 continue
-            try:
-                inst.unload()
-            except Exception:  # noqa: BLE001
-                logger.warning("evict: %s.unload() failed", getattr(cls, "id", cls.__name__),
-                               exc_info=True)
             _ENGINE_INSTANCES.pop(cls, None)
-            evicted.append(getattr(cls, "id", cls.__name__))
+            retired.append((cls, inst))
+    for cls, inst in retired:
+        try:
+            inst.unload()
+        except Exception:  # noqa: BLE001
+            logger.warning("evict: %s.unload() failed", getattr(cls, "id", cls.__name__),
+                           exc_info=True)
+        evicted.append(getattr(cls, "id", cls.__name__))
     return evicted
 
 
@@ -87,35 +91,35 @@ async def evict_other_tts_engines(keep_id: str) -> list[str]:
         try:
             import services.model_manager as mm
 
-            def unload_core() -> bool:
-                with tts_backend._ENGINE_CACHE_LOCK:
-                    core_busy = tts_backend._ENGINE_IN_USE.get(tts_backend.OmniVoiceBackend)
-                    return not core_busy and mm.unload_shared_model()
-
             # Freeing device memory blocks (gc, cudaFree, sidecar shutdown);
             # off the event loop so other requests keep being served (#3558).
+            # The engine-cache lock covers only the in-use check; the model
+            # lock, held throughout, keeps a load from interleaving.
             async with mm._model_lock:
-                if await asyncio.to_thread(unload_core):
+                with tts_backend._ENGINE_CACHE_LOCK:
+                    core_busy = tts_backend._ENGINE_IN_USE.get(tts_backend.OmniVoiceBackend)
+                if not core_busy and await mm.run_release(mm.unload_shared_model):
                     evicted.append("omnivoice")
         except Exception:  # noqa: BLE001
             logger.warning("evict: VoiceStudio core unload failed", exc_info=True)
 
     # Every other in-process / sidecar engine instance.
-    evicted.extend(await asyncio.to_thread(_evict_instance_cache, keep_cls))
+    import services.model_manager as mm
 
-    def reset_active() -> str | None:
-        with tts_backend._ENGINE_CACHE_LOCK:
-            active = tts_backend._active_instance
-            if (active is not None and type(active) is not keep_cls
-                    and not tts_backend._ENGINE_IN_USE.get(type(active))):
-                active_id = tts_backend._active_instance_id
-                tts_backend.reset_active_backend()
-                return active_id or None
-        return None
+    evicted.extend(await mm.run_release(_evict_instance_cache, keep_cls))
 
-    active_id = await asyncio.to_thread(reset_active)
-    if active_id and active_id not in evicted:
-        evicted.append(active_id)
+    detached = None
+    active_id = None
+    with tts_backend._ENGINE_CACHE_LOCK:
+        active = tts_backend._active_instance
+        if (active is not None and type(active) is not keep_cls
+                and not tts_backend._ENGINE_IN_USE.get(type(active))):
+            active_id = tts_backend._active_instance_id
+            detached = tts_backend.detach_active_backend()
+    if detached is not None:
+        await mm.run_release(tts_backend.unload_detached, detached)
+        if active_id and active_id not in evicted:
+            evicted.append(active_id)
 
     if evicted:
         logger.info("single-engine eviction: freed %s (keeping %s)", log_safe(evicted), log_safe(keep_id))

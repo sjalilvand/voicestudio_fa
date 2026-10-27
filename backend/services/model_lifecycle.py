@@ -12,7 +12,6 @@ the flush dropdown) depends on ``{models, count}`` and
 """
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
 from typing import Optional
@@ -315,10 +314,10 @@ async def unload(model_id: str) -> dict:
     loop it stalled every other request, health checks included (#3558)."""
     if model_id == "tts":
         async with mm._model_lock:
-            if await asyncio.to_thread(mm.unload_shared_model):
+            if await mm.run_release(mm.unload_shared_model):
                 return {"unloaded": "tts", "success": True}
         return {"unloaded": "tts", "success": False, "reason": "not loaded"}
-    return await asyncio.to_thread(_unload_blocking, model_id)
+    return await mm.run_release(_unload_blocking, model_id)
 
 
 def _unload_blocking(model_id: str) -> dict:

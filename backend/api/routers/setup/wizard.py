@@ -57,7 +57,13 @@ def _ready_other_engine(engines: list[str]) -> bool:
         if active in engines:
             return False
         ok, _ = tts_backend.get_backend_class(active).is_available()
-        return bool(ok)
+        if not ok:
+            return False
+        # An installed package is not a usable voice: when the catalogue lists
+        # weights for the chosen engine, one of them must be downloaded, so
+        # the first voice works offline instead of fetching on first use.
+        own = [m["repo_id"] for m in KNOWN_MODELS if active in (m.get("engines") or [])]
+        return not own or any(is_cached(repo_id) for repo_id in own)
     except Exception:  # noqa: BLE001 — the gate falls back to the default requirement
         logger.debug("active TTS engine readiness probe failed", exc_info=True)
         return False

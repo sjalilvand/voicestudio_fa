@@ -3615,6 +3615,24 @@ def _resolve_idle_timeout() -> float:
         return float(IDLE_TIMEOUT_SECONDS)
 
 
+async def run_release(fn, *args):
+    """Run blocking memory-release work on a worker thread (#3558).
+
+    Releasing device memory (gc over the weights, cudaFree waiting on the
+    device, sidecar shutdown) must not run on the event loop, where it stalls
+    every request, health checks included. If the awaiting task is cancelled,
+    this still waits for the worker before re-raising, so a caller holding
+    ``_model_lock`` never releases it while an unload is still running.
+    """
+    task = asyncio.ensure_future(asyncio.to_thread(fn, *args))
+    try:
+        return await asyncio.shield(task)
+    except asyncio.CancelledError:
+        with contextlib.suppress(BaseException):
+            await task
+        raise
+
+
 def _release_idle_model() -> None:
     """Unload the idle shared model; a failure must not end the idle reaper."""
     try:
@@ -3671,8 +3689,8 @@ async def idle_worker():
         async with _model_lock:
             if model is not None and time.time() - _last_used > idle_timeout:
                 logger.info("Idle timeout reached. Unloading VoiceStudio model to free VRAM.")
-                await asyncio.to_thread(_release_idle_model)
-        await asyncio.to_thread(_release_idle_side_models, idle_timeout)
+                await run_release(_release_idle_model)
+        await run_release(_release_idle_side_models, idle_timeout)
 
 def release_tts_side_caches():
     """Drop caches keyed to the TTS model, for when the model itself is released.

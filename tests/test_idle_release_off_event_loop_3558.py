@@ -14,14 +14,19 @@ import threading
 
 import pytest
 
-import services.model_manager as mm
+
+@pytest.fixture
+def mm():
+    import services.model_manager as module
+
+    return module
 
 
 class _Stop(Exception):
     pass
 
 
-def _one_tick(monkeypatch):
+def _one_tick(mm, monkeypatch):
     """Let idle_worker run exactly one iteration."""
     ticks = iter([None])
     real_sleep = asyncio.sleep
@@ -36,7 +41,7 @@ def _one_tick(monkeypatch):
     monkeypatch.setattr(mm.asyncio, "sleep", sleep)
 
 
-def test_idle_releases_run_off_the_event_loop(monkeypatch):
+def test_idle_releases_run_off_the_event_loop(mm, monkeypatch):
     threads: dict[str, int] = {}
 
     def unload():
@@ -51,7 +56,7 @@ def test_idle_releases_run_off_the_event_loop(monkeypatch):
     monkeypatch.setattr(mm, "_resolve_idle_timeout", lambda: 1.0)
     monkeypatch.setattr(mm, "unload_shared_model", unload)
     monkeypatch.setattr(mm, "_release_idle_side_models", side)
-    _one_tick(monkeypatch)
+    _one_tick(mm, monkeypatch)
 
     async def run():
         loop_thread = threading.get_ident()
@@ -64,7 +69,7 @@ def test_idle_releases_run_off_the_event_loop(monkeypatch):
     assert loop_thread not in threads.values()
 
 
-def test_a_failing_idle_unload_does_not_end_the_reaper(monkeypatch):
+def test_a_failing_idle_unload_does_not_end_the_reaper(mm, monkeypatch):
     calls: list[str] = []
 
     def boom():
@@ -75,7 +80,7 @@ def test_a_failing_idle_unload_does_not_end_the_reaper(monkeypatch):
     monkeypatch.setattr(mm, "_resolve_idle_timeout", lambda: 1.0)
     monkeypatch.setattr(mm, "unload_shared_model", boom)
     monkeypatch.setattr(mm, "_release_idle_side_models", lambda t: calls.append("side"))
-    _one_tick(monkeypatch)
+    _one_tick(mm, monkeypatch)
 
     async def run():
         with pytest.raises(_Stop):  # reached the next tick instead of dying
@@ -85,7 +90,7 @@ def test_a_failing_idle_unload_does_not_end_the_reaper(monkeypatch):
     assert calls == ["side"]
 
 
-def test_explicit_tts_unload_runs_off_the_event_loop(monkeypatch):
+def test_explicit_tts_unload_runs_off_the_event_loop(mm, monkeypatch):
     from services import model_lifecycle
 
     seen: list[int] = []
@@ -98,3 +103,36 @@ def test_explicit_tts_unload_runs_off_the_event_loop(monkeypatch):
     loop_thread, result = asyncio.run(run())
     assert result == {"unloaded": "tts", "success": True}
     assert seen and seen[0] != loop_thread
+
+
+def test_a_cancelled_unload_keeps_the_model_lock_until_it_finishes(mm):
+    """Cancelling the caller must not free ``_model_lock`` mid-unload."""
+    import threading as _threading
+
+    started = _threading.Event()
+    release = _threading.Event()
+    finished: list[bool] = []
+
+    def slow():
+        started.set()
+        release.wait(5)
+        finished.append(True)
+
+    async def run():
+        async def holder():
+            async with mm._model_lock:
+                await mm.run_release(slow)
+
+        task = asyncio.create_task(holder())
+        while not started.is_set():
+            await asyncio.sleep(0.01)
+        task.cancel()
+        await asyncio.sleep(0.05)
+        assert mm._model_lock.locked()  # still held while the worker runs
+        release.set()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert finished == [True]
+        assert not mm._model_lock.locked()
+
+    asyncio.run(run())
