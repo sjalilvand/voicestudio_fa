@@ -3615,45 +3615,87 @@ def _resolve_idle_timeout() -> float:
         return float(IDLE_TIMEOUT_SECONDS)
 
 
+async def run_release(fn, *args):
+    """Run blocking memory-release work on a worker thread (#3558).
+
+    Releasing device memory (gc over the weights, cudaFree waiting on the
+    device, sidecar shutdown) must not run on the event loop, where it stalls
+    every request, health checks included. If the awaiting task is cancelled,
+    this still waits for the worker before re-raising, so a caller holding
+    ``_model_lock`` never releases it while an unload is still running.
+    """
+    task = asyncio.ensure_future(asyncio.to_thread(fn, *args))
+    try:
+        return await asyncio.shield(task)
+    except asyncio.CancelledError:
+        while not task.done():
+            try:
+                await asyncio.wait({task})
+            except asyncio.CancelledError:
+                continue  # already cancelling; the worker still has to finish
+        if not task.cancelled() and task.exception() is not None:
+            logger.warning("memory release failed after cancellation", exc_info=task.exception())
+        raise
+
+
+def _release_idle_model() -> None:
+    """Unload the idle shared model; a failure must not end the idle reaper."""
+    try:
+        unload_shared_model()
+    except Exception:  # noqa: BLE001 — the reaper must never kill idle_worker
+        logger.warning("idle model unload failed", exc_info=True)
+
+
+def _release_idle_side_models(idle_timeout: float) -> None:
+    """Release the warm ASR and watermark models that sat unused past the timeout."""
+    # The capture/dictation ASR was never idle-released — so once a user
+    # dictated, its model stayed resident for the life of the process while
+    # the TTS model dutifully freed its 3.8 GB. On a 16 GB Mac that left the
+    # backend sitting at ~6.2 GB idle, which is what tipped it into the
+    # memory pressure that gets it killed mid-generate (#1076/#1092/#1093/
+    # #1101). Give it the same bargain the TTS model already makes. Held
+    # off while a live dictation stream has a lease, so nothing is unloaded
+    # mid-sentence.
+    try:
+        from services.asr_backend import (
+            release_idle_capture_backend,
+            release_transcription_backend,
+        )
+
+        released = release_idle_capture_backend(idle_timeout)
+        # The warm transcription ASR gets the same idle bargain.
+        if release_transcription_backend(idle_timeout) or released:
+            free_vram()
+    except Exception:  # noqa: BLE001 — the reaper must never kill idle_worker
+        logger.warning("idle capture-ASR release failed", exc_info=True)
+    # Same bargain for the AudioSeal watermark models, which loaded on the
+    # first embed and were never released. Deliberately only here and not
+    # in the make-room paths: watermarking runs immediately *after* a
+    # generate, so evicting it just before one would only buy a reload.
+    try:
+        from services.watermark import release_idle_models
+
+        release_idle_models(idle_timeout)
+    except Exception:  # noqa: BLE001 — the reaper must never kill idle_worker
+        logger.warning("idle watermark-model release failed", exc_info=True)
+
+
 async def idle_worker():
-    torch = _lazy_torch()
     while True:
         await asyncio.sleep(30)
         idle_timeout = _resolve_idle_timeout()
+        # Releasing device memory is blocking work: gc over a multi-GB model,
+        # cudaFree (which waits for the whole device, including a job another
+        # thread is still running), allocator and cuBLAS cleanup. On the event
+        # loop it froze every request, health checks included, until the app
+        # reported the backend "running but not responding" right after
+        # "Idle timeout reached" (#3558). It runs on a worker thread; the model
+        # lock is still held across it, so no load can interleave.
         async with _model_lock:
             if model is not None and time.time() - _last_used > idle_timeout:
                 logger.info("Idle timeout reached. Unloading VoiceStudio model to free VRAM.")
-                unload_shared_model()
-        # The capture/dictation ASR was never idle-released — so once a user
-        # dictated, its model stayed resident for the life of the process while
-        # the TTS model dutifully freed its 3.8 GB. On a 16 GB Mac that left the
-        # backend sitting at ~6.2 GB idle, which is what tipped it into the
-        # memory pressure that gets it killed mid-generate (#1076/#1092/#1093/
-        # #1101). Give it the same bargain the TTS model already makes. Held
-        # off while a live dictation stream has a lease, so nothing is unloaded
-        # mid-sentence.
-        try:
-            from services.asr_backend import (
-                release_idle_capture_backend,
-                release_transcription_backend,
-            )
-
-            released = release_idle_capture_backend(idle_timeout)
-            # The warm transcription ASR gets the same idle bargain.
-            if release_transcription_backend(idle_timeout) or released:
-                free_vram()
-        except Exception:  # noqa: BLE001 — the reaper must never kill idle_worker
-            logger.warning("idle capture-ASR release failed", exc_info=True)
-        # Same bargain for the AudioSeal watermark models, which loaded on the
-        # first embed and were never released. Deliberately only here and not
-        # in the make-room paths: watermarking runs immediately *after* a
-        # generate, so evicting it just before one would only buy a reload.
-        try:
-            from services.watermark import release_idle_models
-
-            release_idle_models(idle_timeout)
-        except Exception:  # noqa: BLE001 — the reaper must never kill idle_worker
-            logger.warning("idle watermark-model release failed", exc_info=True)
+                await run_release(_release_idle_model)
+        await run_release(_release_idle_side_models, idle_timeout)
 
 def release_tts_side_caches():
     """Drop caches keyed to the TTS model, for when the model itself is released.
