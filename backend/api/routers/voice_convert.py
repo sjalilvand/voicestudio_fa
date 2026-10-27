@@ -258,8 +258,11 @@ async def _convert_keeping_delivery(row, profile_id: str, source_path: str) -> d
         GpuPoolBusyError,
         run_on_gpu_pool_guarded,
     )
-    from services.tts_backend import resolve_voice_conversion_backend
-    from services.voice_conversion import CHARS_PER_SECOND, convert_recording
+    from services.voice_conversion import (
+        CHARS_PER_SECOND,
+        convert_recording,
+        resolve_voice_conversion_backend,
+    )
 
     try:
         backend = await resolve_voice_conversion_backend()

@@ -42,6 +42,44 @@ MAX_REF_S = 28.0
 CHARS_PER_SECOND = 15
 
 
+async def resolve_voice_conversion_backend():
+    """The engine Convert's "Keep my delivery" mode runs on (#3421).
+
+    The active engine when it converts speech itself; otherwise the first
+    installed engine that does, so the user does not have to switch their
+    TTS engine for one conversion. Raises ``LookupError`` with
+    :data:`services.tts_backend.VOICE_CONVERSION_MISSING` when none is installed, and
+    ``ValueError`` when the one installed cannot run on this host.
+    """
+    from core.device_caps import detect_host_caps
+    from services import tts_backend as tb
+    from services.engine_routing import runtime_compute_profile_async
+
+    active = tb.active_backend_id()
+    candidates = tb.voice_conversion_engine_ids()
+    if active in candidates:
+        candidates.remove(active)
+        candidates.insert(0, active)
+    blocked: list[str] = []
+    for engine_id in candidates:
+        cls = tb.get_backend_class(engine_id)
+        try:
+            tb.ensure_engine_licence(cls)
+            ok, _msg = cls.is_available()
+        except Exception:  # noqa: BLE001 — an unusable engine is skipped
+            ok = False
+        if not ok:
+            continue
+        routing = await runtime_compute_profile_async(cls, detect_host_caps())
+        if routing["routing_status"] == "unavailable":
+            blocked.append(str(routing["routing_reason"]))
+            continue
+        return tb.get_engine_instance_for(engine_id)
+    if blocked:
+        raise ValueError(blocked[0])
+    raise LookupError(tb.VOICE_CONVERSION_MISSING)
+
+
 def split_audio(audio: np.ndarray, sr: int, max_s: float) -> list[tuple[int, int]]:
     """Split mono ``audio`` into pieces no longer than ``max_s`` seconds.
 
