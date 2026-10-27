@@ -25,6 +25,7 @@ Cross-platform:
   - macOS:   skipped (no CUDA)
 """
 import os
+import re
 import sys
 import subprocess
 import glob
@@ -66,24 +67,38 @@ def _rocm_opt_in(environ=os.environ):
 
 
 def _installed_torch_is_rocm():
-    """Whether the torch already in this venv was built against HIP.
-
-    The import happens here, not at module load, because it is slow and may fail.
-    """
+    """Ask a fresh interpreter: this process may already hold the old torch."""
+    probe = "import torch, sys; sys.exit(0 if getattr(torch.version, 'hip', None) else 1)"
     try:
-        import torch
-        return bool(torch.version.hip)
-    except Exception:
+        return subprocess.call(
+            [sys.executable, "-c", probe],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        ) == 0
+    except OSError:
         return False
 
 
 def rocm_torch_reinstall_cmd(index_url, python=None):
-    """Build the uv command line that forces the pinned ROCm wheels into one specific venv."""
-    target = python if python else sys.executable
-    cmd = ["uv", "pip", "install", "--reinstall", "--python", target]
-    cmd.extend(ROCM_TORCH_PINS)
-    cmd.extend(["--index-url", index_url])
-    return cmd
+    """`uv pip install` argv targeting THIS venv (not whatever uv guesses).
+
+    The ROCm index is an extra index and only the torch packages are
+    reinstalled: `--index-url` + `--reinstall` forced every dependency onto
+    PyTorch's index, which has no Pillow 13, so the project's
+    `pillow>=13.0.0` override made the swap unsatisfiable (#3158). Kept equal
+    to Electron's `rocmTorchInstallArgs`.
+    """
+    tail = index_url.rstrip("/").rsplit("/", 1)[-1]
+    tag = f"+{tail}" if re.fullmatch(r"rocm\d[\d.]*", tail) else ""
+    names = [pin.split("==", 1)[0] for pin in ROCM_TORCH_PINS]
+    return [
+        "uv", "pip", "install",
+        "--python", python or sys.executable,
+        *(arg for name in names for arg in ("--reinstall-package", name)),
+        *(f"{pin}{tag}" for pin in ROCM_TORCH_PINS),
+        "--extra-index-url", index_url,
+        "--index-strategy", "unsafe-best-match",
+    ]
 
 
 def _ensure_rocm_torch():
@@ -97,10 +112,15 @@ def _ensure_rocm_torch():
     print(f"⚙ OMNIVOICE_TORCH_VARIANT=rocm set: fetching AMD wheels from {index_url} ...")
     try:
         subprocess.check_call(rocm_torch_reinstall_cmd(index_url))
-    except (OSError, subprocess.CalledProcessError) as err:
-        print(f"⚠ Could not switch to ROCm wheels ({err}); leaving the stock torch in place")
-    else:
-        print("✓ ROCm wheels are now installed")
+    except (OSError, subprocess.CalledProcessError) as exc:
+        print(f"⚠ ROCm torch install failed ({exc}); keeping the default torch build")
+        return
+    if not _installed_torch_is_rocm():
+        # An untagged OMNIVOICE_TORCH_INDEX mirror can resolve the bare pins
+        # to ordinary wheels.
+        print("⚠ The installed torch has no ROCm support; check OMNIVOICE_TORCH_INDEX")
+        return
+    print("✓ ROCm torch installed")
 
 
 # ── Windows: VC++ Redistributable ─────────────────────────────────────────

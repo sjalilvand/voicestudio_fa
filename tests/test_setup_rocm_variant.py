@@ -37,11 +37,19 @@ class TestOptIn:
 
 def test_command_layout(setup_mod):
     assert setup_mod.ROCM_TORCH_PINS == ("torch==2.8.0", "torchaudio==2.8.0", "torchvision==0.23.0")
-    cmd = setup_mod.rocm_torch_reinstall_cmd("https://wheels.invalid/x", python="/opt/venv/bin/py")
-    assert cmd[:6] == ["uv", "pip", "install", "--reinstall", "--python", "/opt/venv/bin/py"]
-    assert cmd[6:9] == list(setup_mod.ROCM_TORCH_PINS)
-    assert cmd[9:] == ["--index-url", "https://wheels.invalid/x"]
-    assert setup_mod.rocm_torch_reinstall_cmd("u")[5] == sys.executable
+    cmd = setup_mod.rocm_torch_reinstall_cmd(setup_mod.ROCM_TORCH_INDEX, python="/opt/venv/bin/py")
+    # #3158: only the torch stack is reinstalled and the ROCm index is an
+    # extra one. `--index-url` + `--reinstall` forced Pillow onto PyTorch's
+    # index (no Pillow 13), so the swap was unsatisfiable.
+    assert "--reinstall" not in cmd and "--index-url" not in cmd
+    assert cmd[:5] == ["uv", "pip", "install", "--python", "/opt/venv/bin/py"]
+    assert cmd[5:11] == [arg for n in ("torch", "torchaudio", "torchvision") for arg in ("--reinstall-package", n)]
+    assert cmd[11:14] == ["torch==2.8.0+rocm6.4", "torchaudio==2.8.0+rocm6.4", "torchvision==0.23.0+rocm6.4"]
+    assert cmd[14:] == ["--extra-index-url", setup_mod.ROCM_TORCH_INDEX, "--index-strategy", "unsafe-best-match"]
+    # A mirror without a rocm-style name keeps the bare pins.
+    mirror = setup_mod.rocm_torch_reinstall_cmd("https://wheels.invalid/x")
+    assert mirror[4] == sys.executable
+    assert mirror[11:14] == list(setup_mod.ROCM_TORCH_PINS) and "https://wheels.invalid/x" in mirror
 
 
 class _Recorder:
@@ -87,9 +95,24 @@ def test_swap_failure_only_warns(monkeypatch, capsys, setup_mod, exc):
     assert capsys.readouterr().out.strip() != ""
 
 
-def test_probe_survives_broken_torch(monkeypatch, setup_mod):
-    monkeypatch.setitem(sys.modules, "torch", None)
+def test_probe_survives_missing_interpreter(monkeypatch, setup_mod):
+    def boom(*a, **k):
+        raise OSError("no python")
+    monkeypatch.setattr(setup_mod.subprocess, "call", boom)
     assert setup_mod._installed_torch_is_rocm() is False
+
+
+def test_rocm_swap_is_verified_in_a_fresh_interpreter(monkeypatch, capsys, setup_mod):
+    # Review on #3553: an untagged mirror can resolve ordinary wheels, so a
+    # successful uv run is not proof of a ROCm build.
+    monkeypatch.setenv("OMNIVOICE_TORCH_VARIANT", "rocm")
+    states = iter([False, False])  # before the swap, after the swap
+    monkeypatch.setattr(setup_mod, "_installed_torch_is_rocm", lambda: next(states))
+    monkeypatch.setattr(setup_mod.subprocess, "check_call", lambda cmd: 0)
+    setup_mod._ensure_rocm_torch()
+    out = capsys.readouterr().out
+    assert "no ROCm support" in out
+    assert "✓ ROCm torch installed" not in out
 
 
 @pytest.mark.parametrize("plat, runs", [("linux", True), ("linux2", True), ("win32", False), ("darwin", False)])
