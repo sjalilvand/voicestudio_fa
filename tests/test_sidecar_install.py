@@ -1415,6 +1415,7 @@ def test_torch_pins_follow_the_host(monkeypatch, family, platform, suffix, index
     assert spec.torch_pins
     argvs = _capture_install_argvs(monkeypatch, family=family)
     monkeypatch.setattr(si.sys, "platform", platform)
+    monkeypatch.setattr(si, "_host_machine", lambda: "x86_64")
 
     si._step_install_deps(spec, si._new_job("voxcpm2"))
 
@@ -1426,6 +1427,44 @@ def test_torch_pins_follow_the_host(monkeypatch, family, platform, suffix, index
         assert pip[pip.index("--extra-index-url") + 1] == index
     else:
         assert "--extra-index-url" not in pip
+
+
+_TORCH_PINNED_SPECS = sorted(s for s in si.SPECS if si.SPECS[s].torch_pins)
+
+
+@pytest.mark.parametrize("engine_id", _TORCH_PINNED_SPECS)
+@pytest.mark.parametrize(
+    ("family", "suffix", "index"),
+    [
+        ("cuda", "+cu128", "https://download.pytorch.org/whl/cu128"),
+        ("cpu", "+cpu", "https://download.pytorch.org/whl/cpu"),
+    ],
+)
+@pytest.mark.parametrize("machine", ["aarch64", "arm64"])
+def test_linux_arm64_forces_only_torch_to_a_local_build(
+    monkeypatch, engine_id, family, suffix, index, machine
+):
+    """PyTorch's cu128 and CPU indexes ship aarch64 torchaudio 2.7.0 without a
+    local label, so the forced ``torchaudio==2.7.0+cu128`` / ``+cpu`` pin made
+    CosyVoice's install unresolvable on Linux ARM64 (NVIDIA or CPU-only). Only
+    torch takes the local build there; companions take the labelled build
+    where it exists, else the plain wheel."""
+    spec = si.get_spec(engine_id)
+    argvs = _capture_install_argvs(monkeypatch, family=family)
+    monkeypatch.setattr(si.sys, "platform", "linux")
+    monkeypatch.setattr(si, "_host_machine", lambda: machine)
+
+    si._step_install_deps(spec, si._new_job(engine_id))
+
+    pip = next(a for a in argvs if a[1:3] == ["pip", "install"])
+    for pin in spec.torch_pins:
+        if pin.startswith("torch=="):
+            assert f"{pin}{suffix}" in pip
+        else:
+            assert pin in pip
+            assert f"{pin}{suffix}" not in pip
+    assert pip.count("--extra-index-url") == 1
+    assert pip[pip.index("--extra-index-url") + 1] == index
 
 
 # ── ROCm hosts take a ROCm torch, not the upstream's CUDA build (#2371) ────
@@ -1979,3 +2018,48 @@ def test_engines_dir_env_relocates_managed_roots(monkeypatch, tmp_path):
     elsewhere = tmp_path / "bigdrive"
     monkeypatch.setenv("OMNIVOICE_ENGINES_DIR", str(elsewhere))
     assert si.managed_root(spec) == elsewhere / spec.engine_id
+
+
+# ── missing C++ compiler (#3423) ───────────────────────────────────────────
+# CosyVoice builds PyWORLD from source; without build tools the install used
+# to fail with only "a network hiccup, re-run", which never helps.
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "error: Microsoft Visual C++ 14.0 or greater is required. Get it with "
+        "\"Microsoft C++ Build Tools\"",
+        "xcrun: error: invalid active developer path (/Library/Developer/CommandLineTools)",
+        "error: command 'c++' failed: No such file or directory",
+    ],
+)
+def test_missing_compiler_names_the_build_tools(monkeypatch, line):
+    from collections import deque
+
+    spec = si.get_spec("cosyvoice")
+    monkeypatch.setattr(si, "_locate_uv", lambda: "/fake/uv")
+    monkeypatch.setattr(si, "_host_family", lambda: "cpu")
+
+    def failing_run(job, argv, timeout=None, env=None):
+        job["_last_run_output"] = deque(["Building pyworld", line])
+        return 1
+
+    monkeypatch.setattr(si, "_run_logged", failing_run)
+    with pytest.raises(si._StepError) as err:
+        si._step_install_deps(spec, si._new_job("cosyvoice"))
+    assert "no C++ compiler" in str(err.value)
+    assert "compiler was found" in err.value.remediation
+    assert "network hiccup" not in err.value.remediation
+
+
+def test_missing_compiler_remediation_per_platform():
+    assert "Build Tools" in si._missing_compiler_remediation("win32")
+    assert "xcode-select --install" in si._missing_compiler_remediation("darwin")
+    assert "build-essential" in si._missing_compiler_remediation("linux")
+    assert not si._output_shows_missing_compiler(["connection reset by peer"])
+    # An installed compiler that fails to build is a build error, not a
+    # missing toolchain.
+    assert not si._output_shows_missing_compiler([
+        "pyworld.cpp(12): error C2065: 'foo': undeclared identifier",
+        "error: command 'C:\\BuildTools\\VC\\bin\\cl.exe' failed with exit code 2",
+    ])

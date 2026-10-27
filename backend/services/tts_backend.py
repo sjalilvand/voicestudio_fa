@@ -520,7 +520,10 @@ class TTSBackend(ABC):
         return {
             "gpu_compat": gpu_compat,
             "min_vram_gb": min_vram_gb,
-            **resolve_routing(gpu_compat, caps, min_vram_gb),
+            **resolve_routing(
+                gpu_compat, caps, min_vram_gb,
+                parent_torch=not getattr(cls, "_is_subprocess_isolated", False),
+            ),
             "runtime_backend": None,
             "runtime_device_index": None,
             "runtime_device_name": None,
@@ -1579,8 +1582,8 @@ def _get_clone_prompt(
                         "releasing allocator caches and retrying once", e,
                     )
                     try:
-                        from services.model_manager import free_vram
-                        free_vram()
+                        from services.model_manager import release_after_oom
+                        release_after_oom(e)
                     except Exception:  # noqa: BLE001 — reclaim is best-effort
                         logger.debug("VRAM reclaim before OOM retry failed", exc_info=True)
                     prompt = model.create_voice_clone_prompt(
@@ -4079,7 +4082,10 @@ def list_backends(*, include_hidden: bool = False) -> list[dict]:
             profile = {
                 "gpu_compat": compat,
                 "min_vram_gb": floor,
-                **resolve_routing(compat, caps, floor),
+                **resolve_routing(
+                    compat, caps, floor,
+                    parent_torch=not getattr(cls, "_is_subprocess_isolated", False),
+                ),
                 "runtime_backend": None,
                 "runtime_device_index": None,
                 "runtime_device_name": None,

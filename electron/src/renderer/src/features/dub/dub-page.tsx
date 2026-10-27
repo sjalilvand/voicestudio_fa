@@ -33,6 +33,7 @@ import { CheckpointBanner, type CheckpointStage } from './checkpoint-banner';
 import { ConfirmDialog } from '../clone/confirm-dialog';
 import { useDubOnsets } from './use-dub-onsets';
 import { useDubLivePreview } from './use-dub-live-preview';
+import { formatSegmentTime, parseSegmentTimeField } from './segment-time-field';
 import { setDubFitOptions, setDubQuality, setDubProduction } from './dub-session';
 import { DEFAULT_REPAIR_AGENT_KEY } from '@/lib/repair-agent-events';
 import type { RepairAgentId, RepairAgentInfo } from '../../../../preload/index.d';
@@ -2372,19 +2373,22 @@ export function DubPage() {
                                         step="0.01"
                                         min={0}
                                         aria-label={t('dubWorkspace.start')}
-                                        defaultValue={segment.start.toFixed(2)}
+                                        defaultValue={formatSegmentTime(segment.start)}
                                         disabled={busy || Boolean(session.recovery)}
                                         onKeyDown={(event) => {
                                           if (event.key === 'Enter') event.currentTarget.blur();
                                           if (event.key === 'Escape') {
-                                            event.currentTarget.value = segment.start.toFixed(2);
+                                            event.currentTarget.value = formatSegmentTime(segment.start);
                                             event.currentTarget.blur();
                                           }
                                         }}
                                         onBlur={(event) => {
-                                          const start = Number(event.target.value);
-                                          if (!Number.isFinite(start)) {
-                                            event.currentTarget.value = segment.start.toFixed(2);
+                                          const start = parseSegmentTimeField(
+                                            event.target.value,
+                                            segment.start,
+                                          );
+                                          if (start === null) {
+                                            event.currentTarget.value = formatSegmentTime(segment.start);
                                             return;
                                           }
                                           const timing = clampSegmentEdit(
@@ -2396,7 +2400,7 @@ export function DubPage() {
                                               duration: session.duration || undefined,
                                             },
                                           );
-                                          event.currentTarget.value = timing.start.toFixed(2);
+                                          event.currentTarget.value = formatSegmentTime(timing.start);
                                           moveResizeDubSegment(segment.id, timing);
                                         }}
                                       />
@@ -2406,19 +2410,22 @@ export function DubPage() {
                                         step="0.01"
                                         min={segment.start}
                                         aria-label={t('dubWorkspace.end')}
-                                        defaultValue={segment.end.toFixed(2)}
+                                        defaultValue={formatSegmentTime(segment.end)}
                                         disabled={busy || Boolean(session.recovery)}
                                         onKeyDown={(event) => {
                                           if (event.key === 'Enter') event.currentTarget.blur();
                                           if (event.key === 'Escape') {
-                                            event.currentTarget.value = segment.end.toFixed(2);
+                                            event.currentTarget.value = formatSegmentTime(segment.end);
                                             event.currentTarget.blur();
                                           }
                                         }}
                                         onBlur={(event) => {
-                                          const end = Number(event.target.value);
-                                          if (!Number.isFinite(end)) {
-                                            event.currentTarget.value = segment.end.toFixed(2);
+                                          const end = parseSegmentTimeField(
+                                            event.target.value,
+                                            segment.end,
+                                          );
+                                          if (end === null) {
+                                            event.currentTarget.value = formatSegmentTime(segment.end);
                                             return;
                                           }
                                           const timing = clampSegmentEdit(
@@ -2430,7 +2437,7 @@ export function DubPage() {
                                               duration: session.duration || undefined,
                                             },
                                           );
-                                          event.currentTarget.value = timing.end.toFixed(2);
+                                          event.currentTarget.value = formatSegmentTime(timing.end);
                                           moveResizeDubSegment(segment.id, timing);
                                         }}
                                       />

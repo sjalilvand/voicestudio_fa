@@ -70,18 +70,21 @@ async def _resolve_dub_execution():
 
 def _prepare_oom_retry(error: Exception) -> bool:
     """Prepare one low-step retry after a genuine local device OOM."""
+    from core.failure import is_gpu_oom
+
     is_oom = (
         isinstance(error, torch.cuda.OutOfMemoryError)
         or "out of memory" in str(error).lower()
         or "CUDA error" in str(error)
+        # Every accelerator's device-OOM spelling, incl. Intel XPU's
+        # UR_RESULT_ERROR_OUT_OF_DEVICE_MEMORY.
+        or is_gpu_oom(error)
     )
     if not is_oom:
         return False
-    import gc
-    from services.model_manager import release_device_cache
+    from services.model_manager import release_after_oom
 
-    gc.collect()
-    release_device_cache()
+    release_after_oom(error)
     return True
 
 
@@ -696,7 +699,7 @@ async def dub_generate(job_id: str, req: DubRequest):
             Re-marking here would double-mark every segment in the final mix.
             """
             import wave
-            import numpy as np
+            from services.dub_mix import pcm16_chunks
 
             target_base = os.path.basename(target_path)
             fd, tmp_path = tempfile.mkstemp(
@@ -711,15 +714,11 @@ async def dub_generate(job_id: str, req: DubRequest):
                     wf.setnchannels(1)
                     wf.setsampwidth(2)
                     wf.setframerate(sample_rate)
-                    total_len = int(samples.shape[0])
-                    for off in range(0, total_len, chunk_samples):
-                        chunk = np.array(samples[off: off + chunk_samples], dtype=np.float32, copy=True)
-                        if chunk.size == 0:
-                            continue
-                        np.nan_to_num(chunk, copy=False, nan=0.0, posinf=1.0, neginf=-1.0)
-                        chunk = np.clip(chunk, -1.0, 1.0)
-                        pcm = (chunk * 32767.0).astype("<i2", copy=False)
-                        wf.writeframes(pcm.tobytes())
+                    for pcm in pcm16_chunks(
+                        samples, chunk_samples,
+                        prevent_clipping=strategy == "smart_fit",
+                    ):
+                        wf.writeframes(pcm)
                 return tmp_path
             except BaseException:
                 try:

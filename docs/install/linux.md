@@ -154,6 +154,17 @@ release `.deb`; report packaging problems on its AUR page. Package-managed
 installs should set `VOICESTUDIO_DISABLE_UPDATER=1` so `pacman` handles
 updates instead of the in-app updater.
 
+### Nix / NixOS
+
+A community-maintained Nix flake provides development shells and an FHS environment for running from source (not tested in CI). See the [Nix / NixOS guide](nix.md):
+
+```bash
+nix develop .#fhs   # recommended for NixOS
+bun install
+bun run setup:api
+bun run dev
+```
+
 ## ChromeOS, iPad and other devices
 
 There is no native ChromeOS or iPadOS app, and VoiceStudio does not run
@@ -299,9 +310,9 @@ Ways to opt in, in order of preference:
 (`/opt/rocm` or `rocminfo` on PATH), then launch VoiceStudio once with
 `OMNIVOICE_TORCH_VARIANT=rocm` set, for example
 `OMNIVOICE_TORCH_VARIANT=rocm ./VoiceStudio-*-linux-x64.AppImage`.
-Runtime setup then reinstalls `torch`/`torchaudio` from the ROCm wheel index
-(`https://download.pytorch.org/whl/rocm6.4` by default) right after the
-dependency sync, matched to the app's pinned `torch==2.8.0` (the rocm6.2 index
+Runtime setup then reinstalls `torch`/`torchaudio`/`torchvision` from the ROCm
+wheel index (`https://download.pytorch.org/whl/rocm6.4` by default) right after
+the dependency sync, leaving every other package on the regular index, matched to the app's pinned `torch==2.8.0` (the rocm6.2 index
 only ever published up to torch 2.5.1). **Settings → Performance → GPU
 acceleration** reports which PyTorch build is installed. The option is ignored
 on macOS and Windows.
@@ -316,7 +327,8 @@ index when you need a different ROCm version — e.g. AMD publishes newer
 driver-matched builds (7.2.x) at `repo.radeon.com` as a `--find-links` page
 rather than a PyPI-style index:
 ```bash
-uv pip install --reinstall torch==2.8.0 torchaudio==2.8.0 \
+uv pip install --reinstall-package torch --reinstall-package torchaudio \
+  --reinstall-package torchvision torch==2.8.0 torchaudio==2.8.0 torchvision==0.23.0 \
   --find-links https://repo.radeon.com/rocm/manylinux/rocm-rel-7.2.4/
 ```
 run that manually if you want a specific ROCm point release; the
@@ -331,8 +343,15 @@ keeps the default torch build and warns instead of breaking the install.
 # From the project directory (source install), into VoiceStudio's uv venv.
 # Matches the app's torch==2.8.0 pin — a different ROCm point release
 # (e.g. rocm6.2, rocm7.x) may not carry that exact torch build.
-uv pip install --reinstall torch torchaudio \
-  --index-url https://download.pytorch.org/whl/rocm6.4
+# Swap all three torch packages together: a CUDA torchvision left beside a
+# ROCm torch fails at generation time ("operator torchvision::nms does not
+# exist"). Keep PyPI as the main index: PyTorch's index has no Pillow 13, so
+# `--index-url` with `--reinstall` cannot resolve (#3158).
+uv pip install \
+  --reinstall-package torch --reinstall-package torchaudio --reinstall-package torchvision \
+  torch==2.8.0+rocm6.4 torchaudio==2.8.0+rocm6.4 torchvision==0.23.0+rocm6.4 \
+  --extra-index-url https://download.pytorch.org/whl/rocm6.4 \
+  --index-strategy unsafe-best-match
 ```
 
 Once a ROCm build of PyTorch is in the venv, detection is automatic —
