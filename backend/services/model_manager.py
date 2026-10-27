@@ -1652,7 +1652,7 @@ def get_best_device():
     here for Windows DirectML users). The string contract is unchanged:
     ``"cuda"`` / ``"xpu"`` / a DirectML device string / ``"mps"`` / ``"cpu"``.
     """
-    from core.device_caps import detect_host_caps
+    from core.device_caps import cuda_forced, detect_host_caps
 
     torch = _lazy_torch()
     family = detect_host_caps().family
@@ -1670,8 +1670,6 @@ def get_best_device():
             # Fall back to CPU so the app WORKS (slowly) instead of dead-ending;
             # OMNIVOICE_FORCE_CUDA=1 overrides for users who installed a matching
             # torch and know the arch_list probe is wrong for their setup.
-            from core.device_caps import cuda_forced
-
             if not cuda_forced():
                 logger.warning(
                     "Falling back to CPU: this GPU is unsupported by the installed "
