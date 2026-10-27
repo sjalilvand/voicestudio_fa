@@ -316,8 +316,12 @@ def install() -> None:
                     return None
 
             def close(self):
-                total = getattr(self, "total", None)
-                if isinstance(total, int) and total > 0:
+                # tqdm totals can be floats or numpy numbers; coerce like _emit_progress.
+                try:
+                    total = int(getattr(self, "total", 0) or 0)
+                except (TypeError, ValueError):
+                    total = 0
+                if total > 0:
                     try:
                         self._feed_sink(total, total, complete=True)
                     except Exception:

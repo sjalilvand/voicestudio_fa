@@ -317,6 +317,7 @@ export const GROUPS = [
           'openai',
           'openrouter',
           'orcarouter',
+          'cheaper inference',
           'cheaperinference',
           'opper',
           'api route',
