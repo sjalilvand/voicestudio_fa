@@ -314,7 +314,8 @@ wheel index (`https://download.pytorch.org/whl/rocm6.4` by default) right after
 the dependency sync, leaving every other package on the regular index, matched to the app's pinned `torch==2.8.0` (the rocm6.2 index
 only ever published up to torch 2.5.1). **Settings → Performance → GPU
 acceleration** reports which PyTorch build is installed. The option is ignored
-on macOS and Windows.
+on macOS; on Windows it selects the opt-in stack in
+[windows-rocm.md](windows-rocm.md).
 
 **2. Source checkout.** `OMNIVOICE_TORCH_VARIANT=rocm bun run setup:api` swaps
 torch right after `uv sync`; `bun run dev` then starts the backend from that
