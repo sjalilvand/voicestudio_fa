@@ -936,7 +936,10 @@
     "segment_count_other": "{{count}} segmenten",
     "glossary_terms_one": "Woordenlijst · {{count}} term",
     "glossary_terms_other": "Woordenlijst · {{count}} termen",
-    "glossary_label": "Woordenlijst"
+    "glossary_label": "Woordenlijst",
+    "set_speaker": "Spreker instellen…",
+    "new_speaker": "Nieuwe spreker",
+    "speaker_label": "Spreker"
   },
   "dub_workflow": {
     "preparing_audio": "Audio voorbereiden…",
@@ -2136,7 +2139,8 @@
     "export_n_audio_other": "Exporteer {{count}} audiobestanden",
     "export_audio": "Audio exporteren",
     "export_subtitles": "Ondertitels exporteren",
-    "stretch_subs_note": "Video uitrekken: exporteer ondertitels afzonderlijk."
+    "stretch_subs_note": "Video uitrekken: exporteer ondertitels afzonderlijk.",
+    "undubbed_video_note": "Nog geen nasynchronisatie: de video houdt het originele geluid. Brand ondertitels in om het transcript toe te voegen."
   },
   "models": {
     "pack_title": "Modelpakketten",

@@ -950,7 +950,10 @@
     "glossary_terms_other": "Глосарій · {{count}} терміна",
     "glossary_terms_few": "Глосарій · {{count}} терміни",
     "glossary_terms_many": "Глосарій · {{count}} термінів",
-    "glossary_label": "Глосарій"
+    "glossary_label": "Глосарій",
+    "set_speaker": "Призначити мовця…",
+    "new_speaker": "Новий мовець",
+    "speaker_label": "Мовець"
   },
   "dub_workflow": {
     "preparing_audio": "Підготовка аудіо…",
@@ -2160,7 +2163,8 @@
     "export_n_audio_other": "Експортувати {{count}} аудіофайлів",
     "export_audio": "Експорт аудіо",
     "export_subtitles": "Експортувати субтитри",
-    "stretch_subs_note": "Розтягнення відео: експортуйте субтитри окремо."
+    "stretch_subs_note": "Розтягнення відео: експортуйте субтитри окремо.",
+    "undubbed_video_note": "Дубляжу ще немає: відео збереже оригінальний звук. Вбудуйте субтитри, щоб додати розшифровку."
   },
   "models": {
     "pack_title": "Пакети моделей",

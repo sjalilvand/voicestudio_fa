@@ -950,7 +950,10 @@
     "glossary_terms_other": "Глоссарий · {{count}} термина",
     "glossary_terms_few": "Глоссарий · {{count}} термина",
     "glossary_terms_many": "Глоссарий · {{count}} терминов",
-    "glossary_label": "Глоссарий"
+    "glossary_label": "Глоссарий",
+    "set_speaker": "Назначить говорящего…",
+    "new_speaker": "Новый говорящий",
+    "speaker_label": "Говорящий"
   },
   "dub_workflow": {
     "preparing_audio": "Подготовка аудио…",
@@ -2160,7 +2163,8 @@
     "export_n_audio_other": "Экспорт аудиофайлов {{count}}",
     "export_audio": "Экспорт аудио",
     "export_subtitles": "Экспортировать субтитры",
-    "stretch_subs_note": "Растяжение видео: экспортируйте субтитры отдельно."
+    "stretch_subs_note": "Растяжение видео: экспортируйте субтитры отдельно.",
+    "undubbed_video_note": "Дубляжа пока нет: видео сохранит исходный звук. Вшейте субтитры, чтобы добавить расшифровку."
   },
   "models": {
     "pack_title": "Пакеты моделей",

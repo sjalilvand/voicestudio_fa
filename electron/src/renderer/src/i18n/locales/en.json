@@ -1149,7 +1149,10 @@
     "segment_count_other": "{{count}} segments",
     "glossary_terms_one": "Glossary · {{count}} term",
     "glossary_terms_other": "Glossary · {{count}} terms",
-    "glossary_label": "Glossary"
+    "glossary_label": "Glossary",
+    "set_speaker": "Set speaker…",
+    "new_speaker": "New speaker",
+    "speaker_label": "Speaker"
   },
   "dub_workflow": {
     "preparing_audio": "Preparing audio…",
@@ -2275,7 +2278,8 @@
     "export_n_audio_other": "Export {{count}} audio files",
     "export_audio": "Export audio",
     "export_subtitles": "Export subtitles",
-    "stretch_subs_note": "Stretch Video: export subtitles separately."
+    "stretch_subs_note": "Stretch Video: export subtitles separately.",
+    "undubbed_video_note": "No dub yet: the video keeps its original audio. Burn subtitles in to add the transcript."
   },
   "models": {
     "pack_title": "Model packs",

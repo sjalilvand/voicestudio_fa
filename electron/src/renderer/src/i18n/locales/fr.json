@@ -938,7 +938,10 @@
     "segment_count_other": "{{count}} segments",
     "glossary_terms_one": "Glossaire · {{count}} terme",
     "glossary_terms_other": "Glossaire · {{count}} termes",
-    "glossary_label": "Glossaire"
+    "glossary_label": "Glossaire",
+    "set_speaker": "Définir le locuteur…",
+    "new_speaker": "Nouveau locuteur",
+    "speaker_label": "Locuteur"
   },
   "dub_workflow": {
     "preparing_audio": "Préparation du son…",
@@ -2138,7 +2141,8 @@
     "export_n_audio_other": "Exporter des fichiers audio {{count}}",
     "export_audio": "Exporter l'audio",
     "export_subtitles": "Exporter les sous-titres",
-    "stretch_subs_note": "Étirer la vidéo : exportez les sous-titres séparément."
+    "stretch_subs_note": "Étirer la vidéo : exportez les sous-titres séparément.",
+    "undubbed_video_note": "Pas encore de doublage : la vidéo garde son audio d’origine. Incrustez les sous-titres pour ajouter la transcription."
   },
   "models": {
     "pack_title": "Packs de modèles",

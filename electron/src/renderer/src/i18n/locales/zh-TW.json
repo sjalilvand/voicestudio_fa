@@ -936,7 +936,10 @@
     "segment_count_other": "{{count}} 個片段",
     "glossary_terms_one": "術語表 · {{count}} 個術語",
     "glossary_terms_other": "術語表 · {{count}} 個術語",
-    "glossary_label": "術語表"
+    "glossary_label": "術語表",
+    "set_speaker": "設定說話者…",
+    "new_speaker": "新說話者",
+    "speaker_label": "說話者"
   },
   "dub_workflow": {
     "preparing_audio": "正在準備音訊...",
@@ -2136,7 +2139,8 @@
     "export_n_audio_other": "匯出 {{count}} 音訊文件",
     "export_audio": "匯出音訊",
     "export_subtitles": "匯出字幕",
-    "stretch_subs_note": "拉伸影片：請單獨匯出字幕。"
+    "stretch_subs_note": "拉伸影片：請單獨匯出字幕。",
+    "undubbed_video_note": "尚未配音：影片保留原始音訊。燒錄字幕即可加入轉寫文字。"
   },
   "models": {
     "pack_title": "模型套件",

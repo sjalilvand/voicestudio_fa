@@ -23,8 +23,8 @@ from core.media_types import AUDIO_EXTS, MEDIA_EXTS, media_extension, media_uplo
 from core.url_safety import UnsafeURLError, check_public_url, is_manifest_head, is_manifest_file
 from core.failure import InvalidMediaFileError
 from core import event_bus
-from schemas.requests import CleanupSegmentsRequest, DubIngestUrlRequest, ParseSubtitleTextRequest
-from services.srt_parser import CUE_SOURCE_FIELDS, CUE_SOURCE_ID
+from schemas.requests import CleanupSegmentsRequest, DubIngestUrlRequest, ParseSubtitleTextRequest, TranscriptSyncRequest
+from services.srt_parser import CUE_SOURCE_FIELDS, CUE_SOURCE_ID, vouch_cue_source
 from services.dub_language import (
     DUB_SOURCE_LANG_CODES as _DUB_SOURCE_LANG_CODES,
     detected_source_language as _detected_source_lang,
@@ -561,6 +561,48 @@ def dub_cleanup_segments(job_id: str, req: Optional[CleanupSegmentsRequest] = No
         replace_source_segments(job, cleaned)
         _save_job(job_id, job)
     return {"segments": cleaned, "before": len(segments), "after": len(cleaned)}
+
+
+@router.post("/dub/sync-transcript/{job_id}")
+def dub_sync_transcript(job_id: str, req: TranscriptSyncRequest):
+    """Store the editor's transcript while the job has no dub yet (#3393).
+
+    Exporting the original video or audio with subtitles needs no generated
+    track, but the subtitle writers read ``job["segments"]``, which still
+    holds the raw transcription. Once a dub exists its exports must keep the
+    segments that dub was rendered from, so this refuses to overwrite them.
+    Per-row metadata (speaker, word timings, cue sources) is carried over by
+    stable id; text and timing come from the editor.
+    """
+    job = _get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    with dub_pipeline._dub_jobs_lock:
+        if job.get("dubbed_tracks"):
+            raise HTTPException(
+                status_code=409,
+                detail="This project already has a dub; its exports use the dubbed lines.",
+            )
+        existing = [row for row in (job.get("segments") or []) if isinstance(row, dict)]
+        by_id = {str(row["id"]): row for row in existing if row.get("id") is not None}
+        rows = []
+        for segment in req.segments:
+            previous = by_id.get(segment.id) if segment.id is not None else None
+            row = dict(previous) if previous else {}
+            if segment.id is not None:
+                row["id"] = segment.id
+            if previous is None or previous.get("text") != segment.text:
+                # Word timings belong to the transcribed words, not edited text.
+                row.pop("words", None)
+            row["start"] = segment.start
+            row["end"] = max(segment.start, segment.end)
+            row["text"] = segment.text
+            row["text_original"] = segment.text_original or segment.text
+            vouch_cue_source(row, segment.text, segment.cue_source_id)
+            rows.append(row)
+        replace_source_segments(job, rows)
+        _save_job(job_id, job)
+    return {"segments": len(rows)}
 
 
 @router.post("/dub/abort/{job_id}")
