@@ -1467,6 +1467,7 @@
   },
   "glossary": {
     "title": "Translation glossary",
+    "close": "Hide glossary",
     "load_error": "Could not load the glossary: {{message}}",
     "needs_project": "Load a project to use its glossary.",
     "add_error": "Could not add the term: {{message}}",
