@@ -12,7 +12,9 @@
     <a href="#documentation">Docs</a> ·
     <a href="https://discord.gg/bzQavDfVV9">Discord</a> ·
     <a href="docs/readme/README_CN.md">简体中文</a> ·
-    <a href="docs/readme/README_JA.md">日本語</a>
+    <a href="docs/readme/README_JA.md">日本語</a> ·
+    <a href="docs/readme/README_KO.md">한국어</a> ·
+    <a href="docs/readme/README_RU.md">Русский</a>
   </p>
   <p>
     <a href="https://github.com/debpalash/VoiceStudio/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/debpalash/VoiceStudio/ci.yml?branch=main" alt="CI" /></a>
@@ -77,7 +79,7 @@ curl -fsSL https://voicestudio.sh/install | sh -s -- --main
 curl -fsSL https://voicestudio.sh/install | sh -s -- --uninstall
 ```
 
-On Windows, run `irm https://voicestudio.sh/install | iex` in PowerShell.
+On Windows, run `irm https://voicestudio.sh/install.ps1 | iex` in PowerShell.
 
 If `voicestudio.sh/install` is unreachable or returns 404, run the same script
 straight from the repository, or clone it and run `scripts/install.sh`:
@@ -94,7 +96,7 @@ must contain Electron packages; it never falls back to archived Tauri builds.
 
 Or download from [Releases](https://github.com/debpalash/VoiceStudio/releases/latest) (macOS `.dmg`, Windows `.exe`, Linux `.AppImage` or `.deb`, Android `.apk`, iPhone `.ipa`; or `sudo snap install voicestudio` on Linux) and follow your platform guide:
 
-**[macOS](docs/install/macos.md) · [Windows](docs/install/windows.md) · [Linux](docs/install/linux.md) · [Docker](docs/install/docker.md) · [Android and iPhone](docs/mobile.md#install)**
+**[macOS](docs/install/macos.md) · [Windows](docs/install/windows.md) · [Linux](docs/install/linux.md) · [Nix / NixOS](docs/install/nix.md) · [Docker](docs/install/docker.md) · [Android and iPhone](docs/mobile.md#install)**
 
 | Hardware | Support |
 |---|---|
