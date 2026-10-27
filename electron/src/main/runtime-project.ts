@@ -1324,8 +1324,9 @@ export async function installRuntime(
     localUrls,
   );
   signal.throwIfAborted();
-  // uv has the prefetched wheels in its cache now; the copies only take space.
-  if (localUrls.size) await clearPrefetchedWheels(runtimeWheelPrefetchDir(project));
+  // The sync succeeded, so uv has every wheel now: prefetched copies and any
+  // resume parts left by a failed segmented fetch only take space.
+  await clearPrefetchedWheels(runtimeWheelPrefetchDir(project));
   if (cpuTorch) {
     await run(
       uv,

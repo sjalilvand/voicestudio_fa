@@ -1276,7 +1276,8 @@ before uv installs it from disk. The setup log shows `Fetching torch (3.2 GB)
 from download-r2.pytorch.org over 8 connections` and how long it took. If a
 server refuses byte ranges or the download fails, the log says so and uv
 downloads that file as before. The files wait in the runtime's `.wheel-prefetch`
-folder and are deleted once setup finishes. Set `OMNIVOICE_SETUP_CONNECTIONS`
+folder and are deleted once the dependency install succeeds, including the
+partial parts of any file that fell back to uv's own download. Set `OMNIVOICE_SETUP_CONNECTIONS`
 to change the number of connections (up to 16), or to `1` to turn this off.
 
 **What Cancel keeps:** every file that finished downloading stays in the
@@ -1518,10 +1519,13 @@ reconnecting automatically; the workspace stays usable.
 - **`Backend exited (exit code 1): Windows refused to load one of the engine's
   files.`** — the engine started, but Windows blocked one of its DLLs, e.g.
   `ImportError: DLL load failed while importing _sqlite3: An Application Control
-  policy has blocked this file`. The message names who blocked it: **Smart App
-  Control** (same options as above), **your antivirus** (add the runtime folder
-  to its exclusions), or **a Windows application control policy** your
-  organization set (ask your administrator to allow the runtime folder). The
+  policy has blocked this file`. When Windows reports it in English, the message
+  names who blocked it: **Smart App Control** (same options as above), **your
+  antivirus** (add the runtime folder to its exclusions), or **a Windows
+  application control policy** your organization set (ask your administrator to
+  allow the runtime folder). On other Windows display languages only Smart App
+  Control is recognized (from its registry setting); otherwise check those three
+  in that order. The
   files themselves are intact, so VoiceStudio does not download the runtime
   again, which would be blocked the same way (#3209).
 - **`Backend did not answer on port 3900 within N s`** — the wait for the
