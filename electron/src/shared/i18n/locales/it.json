@@ -472,10 +472,6 @@
     "pasteAbove": "Incolla il testo sopra",
     "cancel": "Annulla",
     "splitIntoTracks": "Diviso in linee",
-    "splitMode": "Dividi per",
-    "split_sentences": "Frasi",
-    "split_paragraphs": "Paragrafi",
-    "split_chapters": "Capitoli",
     "splitModeHint": "Ogni riga viene letta come una ripresa a sé. Con un solo narratore, Paragrafi o Capitoli scorrono meglio.",
     "emptyText": "Inizia la tua storia aggiungendo linee di dialogo e narrazione. Assegna a ogni personaggio una voce nel cast.",
     "addFirst": "Aggiungi la prima riga",
@@ -508,7 +504,11 @@
     "global_speed": "Velocità",
     "global_speed_hint": "Velocità di lettura per tutte le linee senza il proprio override di velocità",
     "deleteProjectConfirm": "Eliminare definitivamente questo progetto?",
-    "clearScript": "Svuota script"
+    "clearScript": "Svuota script",
+    "splitMode": "Dividi per",
+    "split_chapters": "Capitoli",
+    "split_paragraphs": "Paragrafi",
+    "split_sentences": "Frasi"
   },
   "common": {
     "stop": "Fermati",
@@ -2354,10 +2354,10 @@
     "hf_token_get": "Non hai un gettone? Ottienine uno gratis →",
     "hf_token_inline_prompt": "Velocizza i download con un token Hugging Face gratuito",
     "hf_token_inline_ph": "Incolla il token hf_… (facoltativo)",
-    "hf_token_get_short": "Ottienine uno gratis →",
     "hf_token_active_using": "Token Hugging Face trovato in {{source}} — {{masked}}",
     "hf_token_replace": "Sostituisci…",
-    "hf_token_replace_warning": "Questo sostituisce il token salvato per questa app. Non revoca il vecchio token."
+    "hf_token_replace_warning": "Questo sostituisce il token salvato per questa app. Non revoca il vecchio token.",
+    "hf_token_get_short": "Creane uno gratis →"
   },
   "history": {
     "dub_meta": "{{segments}} segmenti · {{duration}} s",
@@ -2543,17 +2543,17 @@
     "seed_ph": "Auto",
     "vary_repeats": "Varare le linee ripetute",
     "vary_repeats_help": "Fornisci riprese distinte alle linee identiche invece di riutilizzare una registrazione.",
-    "line_gap": "Pausa tra le righe",
     "joins_help": "La pausa tra le righe va tra righe senza un proprio [pause]; la pausa tra i paragrafi va alle righe vuote. Con il taglio attivo, prima si rimuove il silenzio iniziale e finale di ogni riga, così la pausa impostata è quella che si sente.",
-    "paragraph_gap": "Pausa tra i paragrafi",
-    "trim_edges": "Taglia il silenzio del motore",
     "trim_edges_help": "Elimina il silenzio che ogni motore aggiunge prima e dopo una riga, poi unisce. Disattiva per ottenere l’audio grezzo.",
     "emotion_help": "Emozione graduata — applicata solo dal motore IndexTTS2.",
     "emotion_text": "Descrizione dell'emozione",
     "emotion_text_ph": "es. suona stanco e triste",
     "emotion_alpha": "Forza emotiva",
     "recovery_load_failed": "Impossibile verificare gli audiolibri non completati.",
-    "recovery_retry": "Riprova"
+    "recovery_retry": "Riprova",
+    "line_gap": "Intervallo tra le righe",
+    "paragraph_gap": "Intervallo tra i paragrafi",
+    "trim_edges": "Taglia i silenzi del motore"
   },
   "voicePanel": {
     "title": "Voce",

@@ -473,10 +473,6 @@
     "pasteAbove": "Fügen Sie den Text oben ein",
     "cancel": "Abbrechen",
     "splitIntoTracks": "In Zeilen aufteilen",
-    "splitMode": "Aufteilen nach",
-    "split_sentences": "Sätze",
-    "split_paragraphs": "Absätze",
-    "split_chapters": "Kapitel",
     "splitModeHint": "Jede Zeile wird als eigene Aufnahme gesprochen. Für einen einzelnen Sprecher klingen Absätze oder Kapitel flüssiger.",
     "emptyText": "Beginnen Sie Ihre Geschichte, indem Sie Dialog- und Erzählzeilen hinzufügen. Weisen Sie jedem Charakter eine Stimme in der Besetzung zu.",
     "addFirst": "Erste Zeile hinzufügen",
@@ -508,7 +504,11 @@
     "exportFailed": "Der Export ist fehlgeschlagen. Überprüfen Sie, ob das Backend ausgeführt wird.",
     "global_speed": "Geschwindigkeit",
     "global_speed_hint": "Lesegeschwindigkeit für alle Zeilen ohne eigene Geschwindigkeitsüberschreibung",
-    "deleteProjectConfirm": "Dieses Projekt dauerhaft löschen?"
+    "deleteProjectConfirm": "Dieses Projekt dauerhaft löschen?",
+    "splitMode": "Aufteilen nach",
+    "split_chapters": "Kapitel",
+    "split_paragraphs": "Absätze",
+    "split_sentences": "Sätze"
   },
   "common": {
     "stop": "Stopp",
@@ -2354,10 +2354,10 @@
     "hf_token_get": "Sie haben kein Token? Holen Sie sich eins gratis →",
     "hf_token_inline_prompt": "Beschleunigen Sie Downloads mit einem kostenlosen Hugging Face-Token",
     "hf_token_inline_ph": "HF_…-Token einfügen (optional)",
-    "hf_token_get_short": "Holen Sie sich eins gratis →",
     "hf_token_active_using": "Hugging-Face-Token in {{source}} gefunden — {{masked}}",
     "hf_token_replace": "Ersetzen…",
-    "hf_token_replace_warning": "Dies ersetzt das für diese App gespeicherte Token. Das alte Token wird nicht widerrufen."
+    "hf_token_replace_warning": "Dies ersetzt das für diese App gespeicherte Token. Das alte Token wird nicht widerrufen.",
+    "hf_token_get_short": "Kostenlos erhalten →"
   },
   "history": {
     "dub_meta": "{{segments}} Segmente · {{duration}} s",
@@ -2543,9 +2543,7 @@
     "seed_ph": "Automatisch",
     "vary_repeats": "Wiederholt Zeilen variieren",
     "vary_repeats_help": "Geben Sie identischen Zeilen unterschiedliche Takes, anstatt eine Aufnahme wiederzuverwenden.",
-    "line_gap": "Pause zwischen Zeilen",
     "joins_help": "Die Zeilenpause steht zwischen Zeilen ohne eigenes [pause], die Absatzpause an Leerzeilen. Bei aktiviertem Kürzen wird zuerst die eigene Anfangs- und Endstille jeder Zeile entfernt, sodass die eingestellte Pause auch die hörbare ist.",
-    "paragraph_gap": "Pause zwischen Absätzen",
     "trim_edges": "Stille der Engine kürzen",
     "trim_edges_help": "Schneidet die Stille, die jede Engine vor und nach einer Zeile einfügt, und fügt dann zusammen. Für Rohaufnahmen ausschalten.",
     "emotion_help": "Abgestufte Emotion — nur vom IndexTTS2-Engine angewendet.",
@@ -2553,7 +2551,9 @@
     "emotion_text_ph": "z.B. klingt erschöpft und traurig",
     "emotion_alpha": "Emotionale Stärke",
     "recovery_load_failed": "Unvollständige Hörbücher konnten nicht geprüft werden.",
-    "recovery_retry": "Erneut versuchen"
+    "recovery_retry": "Erneut versuchen",
+    "line_gap": "Abstand zwischen Zeilen",
+    "paragraph_gap": "Abstand zwischen Absätzen"
   },
   "voicePanel": {
     "title": "Stimme",

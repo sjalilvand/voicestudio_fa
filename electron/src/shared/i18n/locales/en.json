@@ -1321,7 +1321,6 @@
     "elapsed": "elapsed",
     "remaining": "remaining",
     "retry_transcription": "Retry transcription",
-    "supported_formats": "MP4 · MOV · MKV · WEBM · MP3 · WAV · FLAC · M4A",
     "pull_captions_title": "For captioned hosts such as YouTube, Vimeo, and TED, fetch source captions and any YouTube auto-translations. This fills the editor without transcription; languages already supplied by YouTube can skip Translate all.",
     "time_col": "Time",
     "spkr_col": "Speaker",
@@ -1344,7 +1343,6 @@
     "casting_assigned": "Cast {{voice}} as {{speaker}}",
     "edit_settings": "Edit translation settings",
     "style_label_prefix": "Style: ",
-    "collapse_settings": "Collapse translation settings",
     "quality_label": "Translation quality",
     "quality_title": "Cinematic uses an LLM to translate, review, and adapt in three passes. Configure an LLM before using it.",
     "fast_quality": "Fast",
@@ -1463,7 +1461,9 @@
     "languages_pending": "Pending",
     "live_preview": "Live preview",
     "live_preview_title": "Hear a line as you edit it — the edited segment streams TTS with its CAST voice after a short pause. Playback only: nothing is saved, and export still renders at full quality.",
-    "live_preview_pick_voice": "Assign a CAST voice to this line or its speaker to hear the live preview."
+    "live_preview_pick_voice": "Assign a CAST voice to this line or its speaker to hear the live preview.",
+    "collapse_settings": "Hide translation settings",
+    "supported_formats": "Audio or video: MP4, MOV, MKV, WEBM, MP3, WAV, FLAC, M4A"
   },
   "glossary": {
     "title": "Translation glossary",
@@ -1517,7 +1517,6 @@
     "rate_title": "Required pace for this slot: {{ratio}}×{{error}}",
     "speaker_id": "Speaker ID",
     "translate_degraded_title": "Translated (plain) — the polish pass was skipped: {{reason}}",
-    "translate_error_title": "Translation error: {{error}}",
     "budget_title": "Text uses {{pct}} of the original timing budget. Raise speed or shorten the wording if it does not fit.",
     "text_title": "Cmd/Ctrl+D to split at cursor · Cmd/Ctrl+M to merge with next · Cmd/Ctrl+Shift+M to merge with previous",
     "orig_label": "Original",
@@ -1562,7 +1561,8 @@
     "plan_apply": "Use shorter rewrite",
     "plan_apply_title": "Replace this line with the suggested shorter rewrite: \"{{text}}\"",
     "live_play_title": "Stream this line now (live preview)",
-    "live_stop_title": "Stop the live preview"
+    "live_stop_title": "Stop the live preview",
+    "translate_error_title": "Could not translate: {{error}}"
   },
   "timeline": {
     "track_label": "Segment timeline",
@@ -1826,7 +1826,6 @@
     "back": "Back",
     "continue_ok": "Continue",
     "continue_warn": "Continue with warnings",
-    "continue_blocked": "Resolve blockers to continue",
     "waiting_models": "Waiting for model installation…",
     "models_ready": "Required models are ready.",
     "still_needed": "Still needed:",
@@ -1849,7 +1848,8 @@
     "mirror_rescue_title": "Can't reach Hugging Face? Use a mirror",
     "mirror_rescue_hint": "Model downloads switch to the mirror immediately — no restart needed during setup. hf-mirror.com is the community mirror commonly used in China.",
     "mirror_apply": "Apply & re-check",
-    "mirror_apply_error": "Could not save the mirror setting."
+    "mirror_apply_error": "Could not save the mirror setting.",
+    "continue_blocked": "Fix issues to continue"
   },
   "donate": {
     "title": "Support the project",
@@ -1888,7 +1888,6 @@
     "back": "Return to support",
     "badge": "For organizations",
     "hero_simple": "VoiceStudio is free and open-source under the AGPL-3.0 — including for commercial and internal business use. You only need a commercial license to embed it in a closed-source product without AGPL’s copyleft obligations. Our licence covers VoiceStudio code. Rights to models and generated output depend on the selected models and their terms.",
-    "hero_title": "Ship AI voices in production",
     "hero_desc": "VoiceStudio is free and open-source software under the GNU Affero General Public License v3 (AGPL-3.0) — free to use, including for commercial and internal business use. A commercial license is needed only if you want to embed VoiceStudio in a closed-source or proprietary product or service without AGPL-3.0's copyleft obligations. Our licence covers VoiceStudio code. Rights to models and generated output depend on the selected models and their terms.",
     "pricing_desc": "Plans and pricing are still being finalized.",
     "request_quote": "Request pricing",
@@ -1900,7 +1899,8 @@
     "benefit_support": "Direct support",
     "benefit_support_desc": "Get priority email and video support from the core engineering team.",
     "benefit_source_desc": "Inspect, fork, and adapt the full stack within the license terms.",
-    "benefit_lang_desc": "Transcribe, translate, and dub in 646 languages at human-level quality."
+    "benefit_lang_desc": "Transcribe, translate, and dub in 646 languages at human-level quality.",
+    "hero_title": "License VoiceStudio for your organization"
   },
   "exportModal": {
     "export": "Export",
@@ -1968,10 +1968,10 @@
     "output": "Output",
     "nothing_selected": "Nothing is selected, or the track is unavailable.",
     "export_mp4": "Export MP4",
-    "export_n_audio_one": "Export {{count}} audio file",
-    "export_n_audio_other": "Export {{count}} audio files",
     "export_audio": "Export audio",
-    "export_subtitles": "Export subtitles"
+    "export_subtitles": "Export subtitles",
+    "export_n_audio_one": "Export {{count}} separate audio file",
+    "export_n_audio_other": "Export {{count}} separate audio files"
   },
   "demo": {
     "clone_coachmark": "This is a guided demo — try the suggested prompt or write your own.",

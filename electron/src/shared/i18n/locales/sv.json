@@ -473,10 +473,6 @@
     "pasteAbove": "Klistra in texten ovan",
     "cancel": "Avbryt",
     "splitIntoTracks": "Dela upp i rader",
-    "splitMode": "Dela upp efter",
-    "split_sentences": "Meningar",
-    "split_paragraphs": "Stycken",
-    "split_chapters": "Kapitel",
     "splitModeHint": "Varje rad läses som en egen inspelning. Med en enda berättare flyter Stycken eller Kapitel bättre.",
     "emptyText": "Börja din berättelse genom att lägga till dialog- och berättarrader. Tilldela varje karaktär en röst i rollen.",
     "addFirst": "Lägg till första raden",
@@ -508,7 +504,11 @@
     "exportFailed": "Exporten misslyckades – kontrollera att backend körs.",
     "global_speed": "Hastighet",
     "global_speed_hint": "Läshastighet för alla linjer utan egen hastighetsöverstyrning",
-    "deleteProjectConfirm": "Ta bort projektet permanent?"
+    "deleteProjectConfirm": "Ta bort projektet permanent?",
+    "splitMode": "Dela upp efter",
+    "split_chapters": "Kapitel",
+    "split_paragraphs": "Stycken",
+    "split_sentences": "Meningar"
   },
   "common": {
     "stop": "Sluta",
@@ -2354,10 +2354,10 @@
     "hf_token_get": "Har du ingen token? Få en gratis →",
     "hf_token_inline_prompt": "Snabba upp nedladdningarna med ett gratis Hugging Face-token",
     "hf_token_inline_ph": "Klistra in hf_… token (valfritt)",
-    "hf_token_get_short": "Få en gratis →",
     "hf_token_active_using": "Hugging Face-token hittades i {{source}} — {{masked}}",
     "hf_token_replace": "Byt ut…",
-    "hf_token_replace_warning": "Detta ersätter token som sparats för denna app. Den gamla token återkallas inte."
+    "hf_token_replace_warning": "Detta ersätter token som sparats för denna app. Den gamla token återkallas inte.",
+    "hf_token_get_short": "Hämta en gratis →"
   },
   "history": {
     "dub_meta": "{{segments}} segment · {{duration}} s",
@@ -2543,17 +2543,17 @@
     "seed_ph": "Auto",
     "vary_repeats": "Variera upprepade rader",
     "vary_repeats_help": "Ge identiska rader distinkta tagningar i stället för att återanvända en inspelning.",
-    "line_gap": "Paus mellan rader",
     "joins_help": "Radpausen läggs mellan rader utan egen [pause]; styckepausen vid tomma rader. Med trimning på klipps först varje rads egen inlednings- och avslutningstystnad bort, så att pausen du ställer in är den du hör.",
-    "paragraph_gap": "Paus mellan stycken",
-    "trim_edges": "Trimma motorns tystnad",
     "trim_edges_help": "Klipper bort tystnaden som varje motor lägger före och efter en rad och fogar sedan ihop. Stäng av för råa renderingar.",
     "emotion_help": "Graderad emotion — endast tillämpas av IndexTTS2-motorn.",
     "emotion_text": "Emotionsbeskrivning",
     "emotion_text_ph": "t.ex. låter uttömd och ledsen",
     "emotion_alpha": "Emotionsstyrka",
     "recovery_load_failed": "Det gick inte att söka efter ofärdiga ljudböcker.",
-    "recovery_retry": "Försök igen"
+    "recovery_retry": "Försök igen",
+    "line_gap": "Tystnad mellan rader",
+    "paragraph_gap": "Tystnad mellan stycken",
+    "trim_edges": "Ta bort tystnad som motorn skapar"
   },
   "voicePanel": {
     "title": "Röst",

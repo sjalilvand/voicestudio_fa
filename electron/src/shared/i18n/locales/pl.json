@@ -473,10 +473,6 @@
     "pasteAbove": "Wklej tekst powyżej",
     "cancel": "Anuluj",
     "splitIntoTracks": "Podziel na linie",
-    "splitMode": "Podziel według",
-    "split_sentences": "Zdania",
-    "split_paragraphs": "Akapity",
-    "split_chapters": "Rozdziały",
     "splitModeHint": "Każdy wiersz jest czytany jako osobne nagranie. Przy jednym narratorze Akapity lub Rozdziały brzmią płynniej.",
     "emptyText": "Rozpocznij swoją historię od dodania dialogów i linii narracji. Przypisz każdej postaci głos w obsadzie.",
     "addFirst": "Dodaj pierwszą linię",
@@ -508,7 +504,11 @@
     "exportFailed": "Eksport nie powiódł się — sprawdź, czy backend działa.",
     "global_speed": "Prędkość",
     "global_speed_hint": "Prędkość odczytu dla wszystkich linii bez własnego sterowania prędkością",
-    "deleteProjectConfirm": "Usunąć ten projekt na stałe?"
+    "deleteProjectConfirm": "Usunąć ten projekt na stałe?",
+    "splitMode": "Podziel według",
+    "split_chapters": "Rozdziały",
+    "split_paragraphs": "Akapity",
+    "split_sentences": "Zdania"
   },
   "common": {
     "stop": "Zatrzymaj się",
@@ -2354,10 +2354,10 @@
     "hf_token_get": "Nie masz tokena? Zdobądź jeden za darmo →",
     "hf_token_inline_prompt": "Przyspiesz pobieranie dzięki darmowemu tokenowi Przytulająca Twarz",
     "hf_token_inline_ph": "Wklej token hf_… (opcjonalnie)",
-    "hf_token_get_short": "Zdobądź jeden za darmo →",
     "hf_token_active_using": "Znaleziono token Hugging Face w {{source}} — {{masked}}",
     "hf_token_replace": "Zastąp…",
-    "hf_token_replace_warning": "To zastępuje token zapisany dla tej aplikacji. Nie unieważnia starego tokena."
+    "hf_token_replace_warning": "To zastępuje token zapisany dla tej aplikacji. Nie unieważnia starego tokena.",
+    "hf_token_get_short": "Uzyskaj bezpłatnie →"
   },
   "history": {
     "dub_meta": "{{segments}} segmentów · {{duration}} s",
@@ -2543,17 +2543,17 @@
     "seed_ph": "Auto",
     "vary_repeats": "Zmienić powtarzające się wiersze",
     "vary_repeats_help": "Podaj odrębne ujęcia do identycznych wierszy zamiast ponownie używać jednego nagrania.",
-    "line_gap": "Przerwa między wierszami",
     "joins_help": "Przerwa między wierszami trafia między wiersze bez własnego [pause]; przerwa między akapitami – w miejsca pustych wierszy. Przy włączonym przycinaniu najpierw usuwana jest własna cisza początkowa i końcowa każdego wiersza, więc ustawiona przerwa jest tą, którą słychać.",
-    "paragraph_gap": "Przerwa między akapitami",
-    "trim_edges": "Przytnij ciszę silnika",
     "trim_edges_help": "Usuwa ciszę, którą każdy silnik dodaje przed wierszem i po nim, a potem łączy nagrania. Wyłącz, aby uzyskać surowe nagrania.",
     "emotion_help": "Stopniowana emocja — zastosowana tylko przez silnik IndexTTS2.",
     "emotion_text": "Opis emocji",
     "emotion_text_ph": "np. brzmi wyczerpany i smutny",
     "emotion_alpha": "Siła emocji",
     "recovery_load_failed": "Nie udało się sprawdzić niedokończonych audiobooków.",
-    "recovery_retry": "Spróbuj ponownie"
+    "recovery_retry": "Spróbuj ponownie",
+    "line_gap": "Odstęp między wierszami",
+    "paragraph_gap": "Odstęp między akapitami",
+    "trim_edges": "Usuń ciszę generowaną przez silnik"
   },
   "voicePanel": {
     "title": "Głos",
