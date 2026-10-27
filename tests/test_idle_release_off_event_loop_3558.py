@@ -94,7 +94,12 @@ def test_explicit_tts_unload_runs_off_the_event_loop(mm, monkeypatch):
     from services import model_lifecycle
 
     seen: list[int] = []
-    monkeypatch.setattr(mm, "unload_shared_model", lambda: seen.append(threading.get_ident()) or True)
+    # The module model_lifecycle actually calls (it may differ from the
+    # fixture's under sys.modules pollution in the parallel suite).
+    monkeypatch.setattr(
+        model_lifecycle.mm, "unload_shared_model",
+        lambda: seen.append(threading.get_ident()) or True,
+    )
 
     async def run():
         result = await model_lifecycle.unload("tts")
@@ -124,11 +129,13 @@ def test_a_cancelled_unload_keeps_the_model_lock_until_it_finishes(mm):
                 await mm.run_release(slow)
 
         task = asyncio.create_task(holder())
-        while not started.is_set():
-            await asyncio.sleep(0.01)
+        assert await asyncio.to_thread(started.wait, 5)
         task.cancel()
-        await asyncio.sleep(0.05)
-        assert mm._model_lock.locked()  # still held while the worker runs
+        # The cancelled holder must not finish while the worker still runs
+        # (bounded wait for that negative; the fix holds it indefinitely).
+        done, _ = await asyncio.wait({task}, timeout=0.5)
+        assert not done and not finished
+        assert mm._model_lock.locked()
         release.set()
         with pytest.raises(asyncio.CancelledError):
             await task

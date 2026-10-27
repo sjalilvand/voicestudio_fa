@@ -4495,33 +4495,20 @@ _active_instance_id: "str | None" = None
 _active_mlx_model_key: "str | None" = None
 
 
-def detach_active_backend() -> "TTSBackend | None":
-    """Clear the cached active backend without unloading it; return it.
-
-    Lets a caller retire the instance under ``_ENGINE_CACHE_LOCK`` and run the
-    slow ``unload()`` after releasing the lock (#3558)."""
+def reset_active_backend() -> None:
+    """Unload + clear the cached active backend. For app shutdown and tests.
+    Idempotent and best-effort — a raising unload() never propagates."""
     global _active_instance, _active_instance_id, _active_mlx_model_key
     inst = _active_instance
     _active_instance = None
     _active_instance_id = None
     _active_mlx_model_key = None
-    return inst
-
-
-def unload_detached(inst: "TTSBackend | None") -> None:
-    """Best-effort ``unload()`` of an instance no cache refers to any more."""
     if inst is not None:
         try:
             inst.unload()
         except Exception as exc:  # noqa: BLE001
             logger.warning("reset_active_backend: %s.unload() raised: %s",
                            type(inst).__name__, exc)
-
-
-def reset_active_backend() -> None:
-    """Unload + clear the cached active backend. For app shutdown and tests.
-    Idempotent and best-effort — a raising unload() never propagates."""
-    unload_detached(detach_active_backend())
 
 
 def ensure_engine_licence(cls) -> None:

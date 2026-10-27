@@ -3628,8 +3628,13 @@ async def run_release(fn, *args):
     try:
         return await asyncio.shield(task)
     except asyncio.CancelledError:
-        with contextlib.suppress(BaseException):
-            await task
+        while not task.done():
+            try:
+                await asyncio.wait({task})
+            except asyncio.CancelledError:
+                continue  # already cancelling; the worker still has to finish
+        if not task.cancelled() and task.exception() is not None:
+            logger.warning("memory release failed after cancellation", exc_info=task.exception())
         raise
 
 
