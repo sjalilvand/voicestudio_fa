@@ -29,10 +29,12 @@ import { downloadRuntimeInstaller } from './runtime-download';
 import { asciiSafePthFiles } from './pth-ascii';
 import { pruneInterruptedUvDownloads, setupDownloadHosts } from './setup-downloads';
 import {
+  AUTO_PYPI_MIRROR,
   PYPI_FILES_ORIGIN,
   mirrorLockUrls,
   normalizeLockHosts,
   pypiFilesMirror,
+  raceAutoPypiMirror,
 } from './pypi-mirror';
 import { scrubText } from '../shared/utils/scrub';
 import {
@@ -1115,6 +1117,29 @@ async function prefetchLockedWheels(
   }
 }
 
+/**
+ * "Auto" picks a regional PyPI mirror only when a one-wheel speed check finds
+ * it clearly faster than files.pythonhosted.org (#3444); otherwise PyPI.
+ */
+async function autoPypiMirror(
+  project: string,
+  signal: AbortSignal,
+  { log = () => {} }: MirrorReporter,
+): Promise<string | null> {
+  const lock = await readFile(join(project, 'uv.lock'), 'utf8').catch(() => '');
+  const race = await raceAutoPypiMirror(lock, signal);
+  signal.throwIfAborted();
+  const ms = (value: number | null) => (value === null ? 'no answer' : `${Math.round(value)} ms`);
+  if (race.originMs !== null || race.mirrorMs !== null) {
+    log(
+      `PyPI speed check: ${new URL(PYPI_FILES_ORIGIN).host} ${ms(race.originMs)}, ` +
+        `${new URL(AUTO_PYPI_MIRROR).host} ${ms(race.mirrorMs)}; ` +
+        `using ${new URL(race.mirror ?? PYPI_FILES_ORIGIN).host}.`,
+    );
+  }
+  return race.mirror;
+}
+
 function errorSummary(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   return message.split(/\r?\n/)[0]!.slice(0, 200);
@@ -1303,7 +1328,10 @@ export async function installRuntime(
         ]
       : [];
   const syncArgs = ['sync', '--frozen', '--no-dev', ...pythonArgs, ...repairArgs, ...skipArgs];
-  const mirror = pypiFilesMirror(downloadRegion);
+  const mirror =
+    region === 'auto'
+      ? await autoPypiMirror(project, signal, downloads)
+      : pypiFilesMirror(downloadRegion);
   const localUrls = await prefetchLockedWheels(
     uv,
     project,

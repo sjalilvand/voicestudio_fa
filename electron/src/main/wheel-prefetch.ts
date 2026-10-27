@@ -19,7 +19,7 @@
  * download of that wheel. Unfinished downloads are kept beside the runtime
  * and resumed by the next attempt; Cancel and Retry no longer start a 3 GB
  * wheel from zero. No new hosts are contacted: the URLs come from uv.lock
- * (or the regional mirror the user chose).
+ * (or the regional mirror the user chose or the Auto speed check picked).
  */
 
 import { createHash } from 'node:crypto';
