@@ -25,19 +25,13 @@ router = APIRouter()
 
 from services.model_catalogue import (  # noqa: F401 — re-exported API
     KNOWN_MODELS,
-    _MIN_WEIGHT_BYTES,
-    _WEIGHT_FLOORS,
-    _YAML_PATH,
     _hub_cache_roots,
-    _load_models_from_yaml,
-    _package_files,
     _repo_dir_name,
     _snapshot_dirs,
     hf_cache_dir,
     model_key,
     package_cache_usage,
     shares_repo,
-    snapshot_has_weights,
     snapshot_is_complete,
 )
 

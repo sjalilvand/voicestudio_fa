@@ -107,8 +107,8 @@ def cache(models, monkeypatch, tmp_path):
     catalogue = importlib.import_module("services.model_catalogue")
     for module in (models, catalogue):
         monkeypatch.setattr(module, "_snapshot_dirs", snapshots)
-        monkeypatch.setattr(module, "snapshot_has_weights", lambda _path: True)
-    monkeypatch.setitem(models._WEIGHT_FLOORS, ".gguf", 1)
+    monkeypatch.setattr(catalogue, "snapshot_has_weights", lambda _path: True)
+    monkeypatch.setitem(catalogue._WEIGHT_FLOORS, ".gguf", 1)
     download = importlib.import_module("api.routers.setup.download")
     monkeypatch.setattr(download, "_snapshot_dirs", snapshots)
     return tmp_path

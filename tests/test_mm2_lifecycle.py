@@ -242,6 +242,7 @@ def test_large_tensor_weight_passes(tmp_path):
 # ── #622: install-state detector is weight-aware (truncated cache ≠ installed) ─
 
 import api.routers.setup.models as models  # noqa: E402
+import services.model_catalogue as catalogue  # noqa: E402
 
 
 def _make_snapshot(cache_root, repo_id, files):
@@ -258,12 +259,12 @@ def test_snapshot_has_weights_distinguishes_truncated(tmp_path):
     full = tmp_path / "full"; full.mkdir()
     (full / "config.json").write_bytes(b"{}")
     (full / "model.safetensors").write_bytes(b"\0" * (6 * 1024 * 1024))
-    assert models.snapshot_has_weights(str(full)) is True
+    assert catalogue.snapshot_has_weights(str(full)) is True
 
     trunc = tmp_path / "trunc"; trunc.mkdir()
     (trunc / "config.json").write_bytes(b"{}")
     (trunc / "tokenizer.json").write_bytes(b"x" * 4096)
-    assert models.snapshot_has_weights(str(trunc)) is False
+    assert catalogue.snapshot_has_weights(str(trunc)) is False
 
 
 def test_cache_is_complete_flags_truncated_weight_repo(tmp_path, monkeypatch):

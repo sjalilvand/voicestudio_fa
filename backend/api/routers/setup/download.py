@@ -28,22 +28,20 @@ from services.hf_auth import token_for_endpoint
 from services.hf_revisions import revision_for
 from utils import hf_progress
 from utils import download_aggregator
-# Weight-floor scan (MM2-07 / #352) lives in ``models.py`` — the lowest module in
-# the setup import graph — so install-time validation here, the first-run
-# install-state detector (#622), and load-time repair share one set of floors and
-# can't drift apart. ``_MIN_WEIGHT_BYTES``/``_WEIGHT_FLOORS`` re-exported for tests.
-from .models import (  # noqa: F401
+# Weight floors and package files live in ``services/model_catalogue.py`` (via
+# ``models.py``), so install-time validation here, the first-run install-state
+# detector (#622), and load-time repair share one set of floors.
+from services.model_catalogue import _package_files
+
+from .models import (
     KNOWN_MODELS,
     invalidate_cache,
     model_key,
     shares_repo,
-    _package_files,
     _snapshot_dirs,
     snapshot_is_complete,
     disk_full_message,
     disk_space_error,
-    _MIN_WEIGHT_BYTES,
-    _WEIGHT_FLOORS,
 )
 
 logger = logging.getLogger("omnivoice.setup.download")
