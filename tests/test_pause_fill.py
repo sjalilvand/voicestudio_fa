@@ -148,3 +148,26 @@ def test_room_tone_gets_its_own_audiobook_cache_slot(prefs_store, tmp_path):
     assert key("b") == silent
     prefs_store[audio_dsp.PAUSE_FILL_PREF] = "room_tone"
     assert key("c") != silent
+
+
+def test_audiobook_render_uses_the_fill_its_cache_key_was_built_from(prefs_store, tmp_path, monkeypatch):
+    """Flipping the switch mid-render must not store room tone under the silence key."""
+    from api.routers import audiobook as router
+    from services.audiobook import Chapter, Span
+
+    seen = {}
+    real = router.synthesize_chapter
+
+    def spy(*args, **kwargs):
+        prefs_store[audio_dsp.PAUSE_FILL_PREF] = "room_tone"  # user flips it now
+        seen["fill"] = kwargs.get("pause_fill")
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(router, "synthesize_chapter", spy)
+    ch = Chapter(title="C", spans=[Span(voice_id=None, text="hello", pause_ms_after=300),
+                                   Span(voice_id=None, text="there", pause_ms_after=0)])
+    router._render_chapter_cached(
+        ch, lambda text, vid, speed=None: _take(0.2), SR, "eng",
+        lambda vid: {"ref_audio": None, "ref_text": None, "instruct": None, "seed": None},
+        str(tmp_path), None, None, None)
+    assert seen["fill"] == "silence"

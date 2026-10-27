@@ -82,7 +82,10 @@ def offer_status() -> dict:
         gpu_name=hw["gpu_name"], device=hw["device"], vendor=hw["vendor"],
         shared_memory=hw["shared_memory"], effective_vram_gb=hw["effective_vram_gb"],
         quant=selected["tag"] if selected else None,
-        download_mb=0 if (selected is None or selected["installed"]) else selected["approx_size_mb"],
+        # A pair generation can already load (an installed fallback) means
+        # nothing has to be downloaded, the same rule generation follows.
+        download_mb=0 if (selected is None or selected["installed"] or q["in_use"])
+        else selected["approx_size_mb"],
     )
     return status
 
@@ -98,11 +101,17 @@ def respond(accept: bool) -> dict:
     from services.tts_backend import ensure_engine_licence
 
     ensure_engine_licence(_make_backend_class())  # raises → licence dialog
-    from .quants import start_download
+    from .quants import quant_status, start_download
 
-    # Switch only once the weights are on their way: a failed start (offline,
-    # no network) must not leave the engine pointing at missing weights.
-    download = start_download(None)
+    # Generation accepts an installed pair when the recommended one is
+    # missing, so an existing install is used rather than fetching another.
+    in_use = quant_status()["in_use"]
+    if in_use:
+        download = {"status": "already_installed", "quant": in_use}
+    else:
+        # Switch only once the weights are on their way: a failed start
+        # (offline, no network) must not leave the engine on missing weights.
+        download = start_download(None)
     if download.get("status") not in _DOWNLOAD_OK:
         return {**offer_status(), "download": download}
     prefs.set_("tts_backend", ENGINE_ID)

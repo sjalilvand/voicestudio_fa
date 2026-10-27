@@ -207,7 +207,9 @@ will open without PyTorch:
 2. Without it, the OS GPU list is used when the Vulkan loader is installed:
    the 64-bit `HardwareInformation.qwMemorySize` registry value on Windows, or
    DRM sysfs on Linux. WMI's `AdapterRAM` is never used; it is 32-bit and
-   reports an 8 GB card as 4 GB or less.
+   reports an 8 GB card as 4 GB or less. This list only sizes the quant: it
+   does not prove the driver can open the GPU, so without `vulkaninfo` the
+   engine keeps the CPU time budget and the GPU offer is not shown.
 
 GGML numbers every discrete and integrated GPU in Vulkan order and opens the
 first discrete one, else the first integrated one. With an Intel UHD iGPU at

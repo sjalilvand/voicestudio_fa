@@ -514,3 +514,44 @@ def test_api_errors_carry_no_exception_text(quants, monkeypatch):
 
     monkeypatch.setattr(gguf._make_backend_class(), "_resolve_quant_paths", unresolvable)
     assert quants._in_use("rev") == (None, "weights_unavailable")
+
+
+def test_accepting_reuses_an_installed_pair_instead_of_downloading(eligible, monkeypatch):
+    """Q4_K_M cached, Q8_0 recommended: generation loads Q4_K_M, so no download
+    (and it works offline)."""
+    from services import tts_backend
+
+    quants = importlib.import_module("engines.omnivoice_gguf.quants")
+    monkeypatch.setattr(quants, "_in_use", lambda revision: ("omnivoice-base-Q4_K_M.gguf", None))
+    assert eligible.offer.offer_status()["download_mb"] == 0
+    result = eligible.offer.respond(True)
+    assert result["download"]["status"] == "already_installed"
+    assert eligible.downloads == []
+    assert tts_backend.active_backend_id() == "omnivoice-gguf"
+
+
+def test_os_inventory_sizes_the_quant_but_gets_no_offer_or_gpu_budget(vk, monkeypatch):
+    """Only a loader and a listed GPU: the driver may still be unable to open it."""
+    from core import device_caps
+    from core.gpu_inventory import HostGPU
+
+    vk.state.loader = True
+    vk.state.gpus = (HostGPU(vendor="amd", name="AMD Radeon RX 7600", vram_gb=8.0, discrete=True),)
+    monkeypatch.setattr(device_caps, "detect_host_caps", lambda: SimpleNamespace(family="cpu"))
+    assert _auto_base() == "omnivoice-base-Q8_0.gguf"
+    gguf = importlib.import_module("engines.omnivoice_gguf.backend")
+    profile = vk.compute.runtime_profile(gguf._make_backend_class(), None)
+    assert profile["routing_status"] == "cpu_only"
+    assert vk.compute.vulkan_eligible() is False
+
+
+def test_a_refused_offer_is_rechecked_without_a_binary_change(eligible, monkeypatch):
+    """A repaired ggml-vulkan library leaves the executable unchanged."""
+    gguf = importlib.import_module("engines.omnivoice_gguf.backend")
+    ok = {"value": False}
+    monkeypatch.setattr(gguf._make_backend_class(), "_binary_status",
+                        classmethod(lambda cls: (ok["value"], "")))
+    monkeypatch.setattr(eligible.compute, "_binary_identity", lambda: ("same",))
+    assert eligible.compute.vulkan_eligible() is False
+    ok["value"] = True
+    assert eligible.compute.vulkan_eligible() is True

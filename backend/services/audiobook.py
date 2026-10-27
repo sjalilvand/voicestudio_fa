@@ -313,9 +313,10 @@ def _note_chunk_done() -> None:
 class _JoinPolicy:
     """How a chapter's spoken spans are stitched: the two gap lengths (ms)."""
 
-    def __init__(self, line_ms: int, paragraph_ms: int) -> None:
+    def __init__(self, line_ms: int, paragraph_ms: int, pause_fill: str = "silence") -> None:
         self.line_ms = line_ms
         self.paragraph_ms = paragraph_ms
+        self.pause_fill = pause_fill
 
     def silence_after(self, span: Span) -> int:
         """Gap (ms) owed once *span* has been spoken and before any following audio."""
@@ -372,7 +373,8 @@ class _JoinPolicy:
                 items.append(("s", width))
         items.append(("a", present[-1]))
         # Digital silence or room tone, per Settings (#3611).
-        return concatenate_audio_chunks(fill_gaps(items, sample_rate), sample_rate, crossfade_ms=0)
+        return concatenate_audio_chunks(
+            fill_gaps(items, sample_rate, self.pause_fill), sample_rate, crossfade_ms=0)
 
 
 def synthesize_chapter(
@@ -387,6 +389,7 @@ def synthesize_chapter(
     lexicon: Optional[dict] = None,
     segment_cache: Optional["object"] = None,
     on_progress: Optional[Callable[..., None]] = None,
+    pause_fill: Optional[str] = None,
 ):
     """Render a chapter's spans to one waveform via an injected ``synth``.
 
@@ -430,7 +433,13 @@ def synthesize_chapter(
 
     items: list = []  # ("a", tensor) for audio, ("s", n_samples) for silence
     texts_by_span = [apply_lexicon(span.text, lexicon) if span.text else "" for span in spans]
-    policy = _JoinPolicy(line_gap_ms, paragraph_gap_ms)
+    # Read the gap fill once (#3611): the caller keys its caches on the same
+    # value, so a switch flipped mid-render cannot mix fills under one key.
+    if pause_fill is None:
+        from services.audio_dsp import pause_fill_mode
+
+        pause_fill = pause_fill_mode()
+    policy = _JoinPolicy(line_gap_ms, paragraph_gap_ms, pause_fill)
     paragraphs_by_span = [policy.pieces(t) if t else [] for t in texts_by_span]
     policy.enforce_budget(spans, texts_by_span)
     pending_gap_ms = 0  # silence owed before the next piece of audio
@@ -515,7 +524,7 @@ def synthesize_chapter(
     # Gaps are digital silence or room tone, per Settings (#3611).
     from services.audio_dsp import fill_gaps
 
-    parts: list = fill_gaps(items, sample_rate)
+    parts: list = fill_gaps(items, sample_rate, pause_fill)
     # Hard-concat spans + silences (crossfading silence would bleed the gap).
     audio = parts[0] if len(parts) == 1 else concatenate_audio_chunks(parts, sample_rate, crossfade_ms=0)
     return audio, audio.shape[-1] / float(sample_rate)

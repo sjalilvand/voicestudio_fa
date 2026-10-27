@@ -930,6 +930,8 @@ def _render_chapter_cached(chapter, synth, sr, engine_id, resolve, cache_dir, le
 
     audio, dur = synthesize_chapter(spans, synth, sr, lexicon=lexicon,
                                     segment_cache=seg_cache, on_progress=on_progress,
+                                    # the fill the cache keys were derived from
+                                    pause_fill=inputs.get("pause fill", "silence"),
                                     **opts.join_kwargs())
     # Invisible provenance mark on the assembled chapter (#1169), tensor stage,
     # before the WAV lands in the cache — this single site covers every

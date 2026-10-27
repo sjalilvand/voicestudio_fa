@@ -10,7 +10,6 @@ unverified policy.
 """
 from __future__ import annotations
 
-import functools
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
@@ -168,7 +167,7 @@ def runtime_profile(cls: type[TTSBackend], caps: HostCaps) -> dict:
         adapter = selected_vulkan_adapter()
     except ComputeConfigError:
         adapter = None
-    if adapter is not None:
+    if adapter is not None and _device_proven():
         return {
             **base,
             "effective_device": "vulkan",
@@ -195,6 +194,19 @@ def runtime_profile(cls: type[TTSBackend], caps: HostCaps) -> dict:
     }
 
 
+def _device_proven() -> bool:
+    """Whether a Vulkan driver actually enumerated the adapter.
+
+    The OS-inventory fallback (no ``vulkaninfo``) is good enough to size the
+    quant, but it only proves a GPU and a Vulkan loader exist, not that the
+    driver can open the GPU. Such an adapter gets neither the GPU timeout
+    budget nor the GPU offer: a CPU fallback must keep the CPU budget.
+    """
+    from .vulkan_auto import detect_vulkan_profile
+
+    return detect_vulkan_profile().source == "vulkaninfo"
+
+
 def _promotion_evidence() -> bool:
     """Host facts behind the offer: CPU-only PyTorch, a verified adapter, a usable binary."""
     from core.device_caps import detect_host_caps
@@ -202,7 +214,7 @@ def _promotion_evidence() -> bool:
     if detect_host_caps().family != "cpu":
         return False  # PyTorch has an accelerator: the in-process engine uses it
     try:
-        if selected_vulkan_adapter() is None:
+        if selected_vulkan_adapter() is None or not _device_proven():
             return False
     except ComputeConfigError:
         return False  # an invalid backend/device pin is reported by generate
@@ -224,16 +236,33 @@ def _licence_accepted() -> bool:
     return True
 
 
-@functools.lru_cache(maxsize=8)
+_PROMOTION_CACHE: dict[tuple, bool] = {}
+
+
 def _promotion_for(device_choice: str, backend: str, device: str, ggml: str, binary: tuple) -> bool:
-    """Cached eligibility for one combination of compute choice, backend/device
-    env and runtime binary. Keyed on what can change at runtime, so switching
-    Compute device or repairing the runtime re-evaluates instead of serving a
-    stale verdict."""
+    """Eligibility for one combination of compute choice, backend/device env
+    and runtime binary.
+
+    Only a positive verdict is cached. A refusal can come from a damaged
+    runtime library that a repair fixes without touching the executable, so it
+    is re-checked on the next call; the binary hash runs only on hosts that
+    already have a proven Vulkan adapter.
+    """
+    key = (device_choice, backend, device, ggml, binary)
+    if _PROMOTION_CACHE.get(key):
+        return True
     try:
-        return _promotion_evidence()
+        ok = bool(_promotion_evidence())
     except Exception:  # noqa: BLE001 - a probe bug must never break engine selection
-        return False
+        ok = False
+    if ok:
+        if len(_PROMOTION_CACHE) >= 8:
+            _PROMOTION_CACHE.clear()
+        _PROMOTION_CACHE[key] = True
+    return ok
+
+
+_promotion_for.cache_clear = _PROMOTION_CACHE.clear  # type: ignore[attr-defined]
 
 
 def vulkan_eligible() -> bool:
