@@ -9,6 +9,8 @@ from __future__ import annotations
 import asyncio
 import threading
 
+import pytest
+
 from core.device_caps import DIRECTML_MARKER, KERNEL_RISK_MARKER, HostCaps
 from services.engine_routing import (
     header_safe_reason,
@@ -277,3 +279,25 @@ def test_npu_compatible_engine_uses_accelerated_route():
     assert resolve_routing(("npu", "cpu"), _caps("npu")) == {
         "effective_device": "npu", "routing_status": "accelerated", "routing_reason": None,
     }
+
+
+def test_sidecar_engine_kernel_mismatch_stays_a_caveat(monkeypatch):
+    # Review on #3553: a sidecar runs its own torch and never gets the parent
+    # loader's CPU fallback, so it must not be badged cpu_fallback.
+    monkeypatch.delenv("OMNIVOICE_FORCE_CUDA", raising=False)
+    note = f"GPU (sm_52) not in this torch build's archs — {KERNEL_RISK_MARKER}"
+    r = resolve_routing(("cuda", "cpu"), _caps("cuda", notes=[note]), parent_torch=False)
+    assert r["routing_status"] == "accelerated"
+    assert KERNEL_RISK_MARKER in r["routing_reason"]
+
+
+@pytest.mark.parametrize("value", [None, "", "0", "1", "true", " Yes ", "on", "off", "no"])
+def test_badge_and_loader_read_force_cuda_alike(monkeypatch, value):
+    from core.device_caps import cuda_forced
+    from services.model_manager import _env_flag
+
+    if value is None:
+        monkeypatch.delenv("OMNIVOICE_FORCE_CUDA", raising=False)
+    else:
+        monkeypatch.setenv("OMNIVOICE_FORCE_CUDA", value)
+    assert cuda_forced() == _env_flag("OMNIVOICE_FORCE_CUDA")

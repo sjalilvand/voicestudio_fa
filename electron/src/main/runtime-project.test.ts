@@ -18,6 +18,8 @@ import {
   NATIVE_DIAGNOSTIC_PREFIX,
   ROCM_TORCH_INDEX,
   ROCM_TORCH_PINS,
+  ROCM_TORCH_PROBE,
+  ROCM_TORCH_PROBE_FAILURE,
   rocmTorchInstallArgs,
   rocmTorchOptIn,
   RUNTIME_IMPORT_PROBE,
@@ -423,6 +425,21 @@ describe('packaged runtime setup', () => {
       ...rocmTorchInstallArgs('https://mirror.invalid/rocm'),
     ]);
     expect(ROCM_TORCH_INDEX).toContain('/rocm');
+  });
+  it('refuses to mark a non-ROCm torch ready after a ROCm install', async () => {
+    forcePlatform('linux');
+    const { bundle, project } = await fixture();
+    vi.stubEnv('OMNIVOICE_TORCH_VARIANT', 'rocm');
+    vi.stubEnv('OMNIVOICE_TORCH_INDEX', 'https://mirror.invalid/simple');
+    const run = vi.fn(
+      async (_command: string, args: string[], _cwd: string, _env?: NodeJS.ProcessEnv) => {
+        await interpreter(project);
+        if (args[0] === '-c' && args[1] === ROCM_TORCH_PROBE) throw new Error('exit 1');
+      },
+    );
+    await expect(
+      installRuntime(bundle, project, 'uv', run, new AbortController().signal),
+    ).rejects.toThrow(ROCM_TORCH_PROBE_FAILURE);
   });
   it('swaps only the torch stack and keeps the default index for its dependencies', () => {
     // #3158: `--index-url` + `--reinstall` forced Pillow onto PyTorch's index,

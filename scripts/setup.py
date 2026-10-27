@@ -63,11 +63,16 @@ def _rocm_opt_in(environ=os.environ):
 
 
 def _installed_torch_is_rocm():
+    """Ask a fresh interpreter: this process may already hold the old torch."""
+    probe = "import torch, sys; sys.exit(0 if getattr(torch.version, 'hip', None) else 1)"
     try:
-        import torch  # noqa: WPS433 — deliberately lazy; torch is heavy
-    except Exception:
+        return subprocess.call(
+            [sys.executable, "-c", probe],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        ) == 0
+    except OSError:
         return False
-    return bool(getattr(torch.version, "hip", None))
 
 
 def rocm_torch_reinstall_cmd(index_url, python=None):
@@ -104,6 +109,11 @@ def _ensure_rocm_torch():
         subprocess.check_call(rocm_torch_reinstall_cmd(index_url))
     except (OSError, subprocess.CalledProcessError) as exc:
         print(f"⚠ ROCm torch install failed ({exc}); keeping the default torch build")
+        return
+    if not _installed_torch_is_rocm():
+        # An untagged OMNIVOICE_TORCH_INDEX mirror can resolve the bare pins
+        # to ordinary wheels.
+        print("⚠ The installed torch has no ROCm support; check OMNIVOICE_TORCH_INDEX")
         return
     print("✓ ROCm torch installed")
 

@@ -86,6 +86,12 @@ export function rocmTorchInstallArgs(index: string): string[] {
     'unsafe-best-match',
   ];
 }
+/** Exits non-zero unless the installed torch is a ROCm (HIP) build. */
+export const ROCM_TORCH_PROBE =
+  "import torch, sys; sys.exit(0 if getattr(torch.version, 'hip', None) else 1)";
+export const ROCM_TORCH_PROBE_FAILURE =
+  'The ROCm setup installed a PyTorch build without ROCm support. Check that ' +
+  'OMNIVOICE_TORCH_INDEX points at a ROCm wheel index, then run setup again.';
 /**
  * Linux uses PyTorch's ROCm index; Windows x64 uses the shared AMD recipe.
  */
@@ -1279,6 +1285,15 @@ export async function installRuntime(
       // An outdated system Visual C++ runtime crashes newer C++ wheels such as
       // sentencepiece 0.2.2 with an access violation; say so and how to fix it (#3293).
       throw outdatedSystemLibraryError(error, diagnosis) ?? importFailure(error);
+    }
+    if (torch.variant === 'rocm') {
+      // With an untagged OMNIVOICE_TORCH_INDEX mirror the bare pins can resolve
+      // to ordinary wheels; never mark such a runtime ROCm-ready.
+      try {
+        await run(runtimePython(project), ['-c', ROCM_TORCH_PROBE], project);
+      } catch {
+        throw new Error(ROCM_TORCH_PROBE_FAILURE);
+      }
     }
   }
   signal.throwIfAborted();

@@ -2018,3 +2018,9 @@ def test_missing_compiler_remediation_per_platform():
     assert "xcode-select --install" in si._missing_compiler_remediation("darwin")
     assert "build-essential" in si._missing_compiler_remediation("linux")
     assert not si._output_shows_missing_compiler(["connection reset by peer"])
+    # An installed compiler that fails to build is a build error, not a
+    # missing toolchain.
+    assert not si._output_shows_missing_compiler([
+        "pyworld.cpp(12): error C2065: 'foo': undeclared identifier",
+        "error: command 'C:\\BuildTools\\VC\\bin\\cl.exe' failed with exit code 2",
+    ])

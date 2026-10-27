@@ -50,10 +50,11 @@ def runtime_compute_profile(engine_or_cls, caps: HostCaps) -> dict:
     dynamic = getattr(cls, "runtime_gpu_compat", None)
     compat = tuple(dynamic() if callable(dynamic) else getattr(cls, "gpu_compat", ("cpu",)))
     floor = float(getattr(cls, "min_vram_gb", 0.0) or 0.0)
+    parent_torch = not getattr(cls, "_is_subprocess_isolated", False)
     return {
         "gpu_compat": compat,
         "min_vram_gb": floor,
-        **resolve_routing(compat, caps, floor),
+        **resolve_routing(compat, caps, floor, parent_torch=parent_torch),
         "runtime_backend": None,
         "runtime_device_index": None,
         "runtime_device_name": None,
@@ -151,13 +152,17 @@ def resolve_routing(
     gpu_compat: tuple[str, ...],
     caps: HostCaps,
     min_vram_gb: float = 0.0,
+    parent_torch: bool = True,
 ) -> RoutingResult:
     """Resolve the effective device + status for an engine on this host.
 
     Rules are evaluated in order; the first match wins (see spec §2).
     ``min_vram_gb`` is the engine's declared VRAM floor (``TTSBackend
     .min_vram_gb``); 0 disables the under-provisioned-GPU caveat. Optional so
-    every existing caller keeps its exact behaviour."""
+    every existing caller keeps its exact behaviour. ``parent_torch=False``
+    marks an engine that runs its own PyTorch in a sidecar venv: the parent
+    loader's CPU fallback (rule 2a) does not reach it, so a kernel mismatch
+    stays a caveat there."""
     targets = tuple(gpu_compat or ())
     fam = caps.family
 
@@ -177,7 +182,13 @@ def resolve_routing(
     #     silent-fallback this resolver exists to prevent. CUDA only: on Linux
     #     ROCm the loader may still remap the card with HSA_OVERRIDE_GFX_VERSION
     #     after this probe ran, so a ROCm mismatch stays a caveat.
-    if fam == "cuda" and fam in targets and "cpu" in targets and not cuda_forced():
+    if (
+        parent_torch
+        and fam == "cuda"
+        and fam in targets
+        and "cpu" in targets
+        and not cuda_forced()
+    ):
         for note in caps.notes:
             if KERNEL_RISK_MARKER in note:
                 return {

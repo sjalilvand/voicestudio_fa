@@ -1076,7 +1076,6 @@ def _output_shows_disk_full(lines: Iterable[str]) -> bool:
 _MISSING_COMPILER_MARKERS = (
     "microsoft visual c++ 14.0 or greater is required",
     "unable to find vcvarsall.bat",
-    "command 'cl.exe' failed",
     "xcrun: error: invalid active developer path",
     "no developer tools were found",
     "unable to execute 'gcc'",

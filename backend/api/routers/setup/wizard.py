@@ -157,6 +157,15 @@ def _detect_gpu() -> dict:
             import torch
             info["available"] = bool(torch.cuda.is_available())
             info["backend"] = "cuda" if info["available"] else "cpu"
+            # The wheel may have no kernels for this card (sm_52 on cu128,
+            # #3067): the loader then runs on CPU, so "CUDA ready" would
+            # contradict the routing row below.
+            if info["available"]:
+                from core.device_caps import arch_unsupported, cuda_forced
+
+                mismatch = arch_unsupported(torch)
+                if mismatch is not None and not cuda_forced():
+                    info["kernels_missing"] = mismatch[0]
         except Exception:
             pass
         try:
@@ -547,6 +556,16 @@ def preflight():
     if gpu["vendor"] == "apple" and gpu["available"]:
         gpu_status, gpu_fix = "pass", None
         gpu_detail = f"{gpu['device_name']} — Metal (MPS) ready"
+    elif gpu["vendor"] == "nvidia" and gpu["available"] and gpu.get("kernels_missing"):
+        gpu_status = "warn"
+        gpu_detail = (
+            f"{gpu['device_name']} ({gpu['kernels_missing']}) — this PyTorch build "
+            "has no kernels for it; running on CPU"
+        )
+        gpu_fix = (
+            "A driver update will not help. Install a PyTorch build that covers "
+            "this GPU's architecture, or continue on CPU (slower)."
+        )
     elif gpu["vendor"] == "nvidia" and gpu["available"]:
         gpu_status, gpu_fix = "pass", None
         gpu_detail = f"{gpu['device_name']} (driver {gpu['driver']}) — CUDA ready"

@@ -90,3 +90,17 @@ def test_dev_backend_skips_resync_when_rocm_requested():
     assert observed["unset"] == [base[0], "--no-sync", *base[1:]]
     assert observed["auto"] == [base[0], "--no-sync", *base[1:]]
     assert observed["rocm"] == [base[0], "--no-sync", *base[1:]]
+
+
+def test_rocm_swap_is_verified_in_a_fresh_interpreter(monkeypatch, capsys):
+    # Review on #3553: an untagged mirror can resolve ordinary wheels, so a
+    # successful uv run is not proof of a ROCm build.
+    setup = _load_setup()
+    monkeypatch.setenv("OMNIVOICE_TORCH_VARIANT", "rocm")
+    states = iter([False, False])  # before the swap, after the swap
+    monkeypatch.setattr(setup, "_installed_torch_is_rocm", lambda: next(states))
+    monkeypatch.setattr(setup.subprocess, "check_call", lambda cmd: 0)
+    setup._ensure_rocm_torch()
+    out = capsys.readouterr().out
+    assert "no ROCm support" in out
+    assert "✓ ROCm torch installed" not in out

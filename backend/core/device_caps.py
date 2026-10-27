@@ -62,14 +62,15 @@ def cuda_forced() -> bool:
     """``OMNIVOICE_FORCE_CUDA`` asks for CUDA even when the installed wheel has
     no kernels for the card (#3067).
 
-    The one reading of the flag shared by the loader
-    (``services.model_manager.get_best_device``), the routing badge
-    (``services.engine_routing``) and the GPU report, so none of them can say
-    "GPU" while another says "CPU" for the same host.
-    """
+    Shared by the routing badge (``services.engine_routing``) and the GPU
+    report. ``services.model_manager.get_best_device`` reads the same flag
+    with the same truthy values through its ``_env_flag`` helper (kept
+    separate to avoid an import cycle); tests/test_engine_routing.py checks
+    the two agree."""
     return os.environ.get("OMNIVOICE_FORCE_CUDA", "").strip().lower() in {
         "1", "true", "yes", "on",
     }
+
 
 # NOTE: the NVIDIA driver-version check (CUDA 12.x minor-compat floor: R525.60.13 Linux / R528.33 Windows)
 # is intentionally NOT done here — it requires shelling to ``nvidia-smi``, which
