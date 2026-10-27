@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 const mock = vi.hoisted(() => ({ metadata: [] as unknown[] }));
@@ -7,7 +7,9 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 vi.mock('@/lib/api/client', () => ({
-  apiFetch: () => Promise.resolve(new Response(new Blob(['RIFF'], { type: 'audio/wav' }))),
+  // A plain stub: a jsdom Blob inside a Node Response cannot be read back.
+  apiFetch: () =>
+    Promise.resolve({ blob: () => Promise.resolve(new Blob(['RIFF'], { type: 'audio/wav' })) }),
 }));
 vi.mock('./reference-panel', () => ({
   SaveProfileForm: ({ metadata }: { metadata: unknown }) => {
@@ -34,6 +36,6 @@ it.each([
     />,
   );
   fireEvent.click(screen.getByRole('button', { name: 'clone.save_as_profile' }));
-  await waitFor(() => expect(screen.getByText('form')).toBeTruthy());
+  expect(await screen.findByText('form')).toBeTruthy();
   expect(mock.metadata.at(-1)).toMatchObject({ refText });
 });
