@@ -474,9 +474,6 @@
     "cancel": "Batalkan",
     "splitIntoTracks": "Bagi menjadi beberapa baris",
     "splitMode": "Pisahkan per",
-    "split_sentences": "Kalimat",
-    "split_paragraphs": "Paragraf",
-    "split_chapters": "Bab",
     "splitModeHint": "Setiap baris dibaca sebagai rekaman tersendiri. Untuk satu narator, Paragraf atau Bab terdengar lebih mengalir.",
     "emptyText": "Mulailah cerita Anda dengan menambahkan dialog dan alur narasi. Tetapkan suara untuk setiap karakter dalam Pemeran.",
     "addFirst": "Tambahkan Baris Pertama",
@@ -508,7 +505,10 @@
     "exportFailed": "Ekspor gagal — periksa apakah backend sedang berjalan.",
     "global_speed": "Kecepatan",
     "global_speed_hint": "Kecepatan membaca untuk semua lini tanpa mengesampingkan kecepatannya sendiri",
-    "deleteProjectConfirm": "Hapus proyek ini secara permanen?"
+    "deleteProjectConfirm": "Hapus proyek ini secara permanen?",
+    "split_chapters": "Bab",
+    "split_paragraphs": "Paragraf",
+    "split_sentences": "Kalimat"
   },
   "common": {
     "stop": "Berhenti",
@@ -2354,10 +2354,10 @@
     "hf_token_get": "Tidak punya tokennya? Dapatkan satu gratis →",
     "hf_token_inline_prompt": "Percepat pengunduhan dengan token Hugging Face gratis",
     "hf_token_inline_ph": "Tempel hf_… token (opsional)",
-    "hf_token_get_short": "Dapatkan satu gratis →",
     "hf_token_active_using": "Token Hugging Face ditemukan di {{source}} — {{masked}}",
     "hf_token_replace": "Ganti…",
-    "hf_token_replace_warning": "Ini mengganti token yang disimpan untuk aplikasi ini. Token lama tidak dicabut."
+    "hf_token_replace_warning": "Ini mengganti token yang disimpan untuk aplikasi ini. Token lama tidak dicabut.",
+    "hf_token_get_short": "Dapatkan gratis →"
   },
   "history": {
     "dub_meta": "{{segments}} segmen · {{duration}} dtk",
@@ -2543,17 +2543,17 @@
     "seed_ph": "Otomatis",
     "vary_repeats": "Bervariasi baris berulang",
     "vary_repeats_help": "Berikan pengambilan yang berbeda untuk baris identik daripada menggunakan kembali satu perekaman.",
-    "line_gap": "Jeda antarbaris",
     "joins_help": "Jeda antar baris ditempatkan di antara baris tanpa [pause] sendiri; jeda antar paragraf ditempatkan pada baris kosong. Jika pemangkasan aktif, keheningan awal dan akhir setiap baris dipotong lebih dulu, sehingga jeda yang Anda atur adalah jeda yang terdengar.",
-    "paragraph_gap": "Jeda antarparagraf",
-    "trim_edges": "Pangkas keheningan mesin",
     "trim_edges_help": "Memotong keheningan yang ditambahkan tiap mesin sebelum dan sesudah baris, lalu menyambung baris-barisnya. Matikan untuk hasil mentah.",
     "emotion_help": "Emosi berjenjang — diterapkan hanya oleh mesin IndexTTS2.",
     "emotion_text": "Deskripsi emosi",
     "emotion_text_ph": "mis. terdengar lelah dan sedih",
     "emotion_alpha": "Kekuatan emosi",
     "recovery_load_failed": "Tidak dapat memeriksa buku audio yang belum selesai.",
-    "recovery_retry": "Coba lagi"
+    "recovery_retry": "Coba lagi",
+    "line_gap": "Durasi jeda antarbaris",
+    "paragraph_gap": "Durasi jeda antarparagraf",
+    "trim_edges": "Hapus bagian senyap dari mesin"
   },
   "voicePanel": {
     "title": "Suara",

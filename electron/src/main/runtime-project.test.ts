@@ -12,6 +12,7 @@ import {
   type RangeTransport,
 } from './wheel-prefetch';
 import * as pthAscii from './pth-ascii';
+import { PYPI_SPEED_SAMPLE_BYTES } from './pypi-mirror';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import {
   installRuntime,
@@ -1261,6 +1262,50 @@ describe('regional PyPI mirror for the frozen sync (#3444)', () => {
       expect(seen).toEqual([LOCK]);
     },
   );
+
+  describe('the auto region', () => {
+    // Big enough for the speed check to sample.
+    const SAMPLED = LOCK.replace('size = 1 }', 'size = 1048576 }');
+    async function autoInstall(fetchImpl: (url: string) => Promise<Response>) {
+      vi.stubGlobal('fetch', vi.fn(fetchImpl));
+      const { bundle, project } = await fixture();
+      await writeFile(join(bundle, 'uv.lock'), SAMPLED);
+      const { run, seen } = recordingRun(project);
+      const log = vi.fn();
+      await installRuntime(
+        bundle,
+        project,
+        'uv',
+        run,
+        new AbortController().signal,
+        undefined,
+        'auto',
+        {
+          log,
+        },
+      );
+      return { seen, log };
+    }
+    const body = () => new Response(new Uint8Array(PYPI_SPEED_SAMPLE_BYTES), { status: 206 });
+
+    it('uses the aliyun mirror when it answers and PyPI does not', async () => {
+      const { seen, log } = await autoInstall(async (url) => {
+        if (url.includes('files.pythonhosted.org')) throw new Error('ETIMEDOUT');
+        return body();
+      });
+      expect(seen).toHaveLength(1);
+      expect(seen[0]).toContain(`url = "https://mirrors.aliyun.com/pypi/${WHEEL}"`);
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('PyPI speed check'));
+    });
+
+    it('stays on PyPI when the mirror does not answer', async () => {
+      const { seen } = await autoInstall(async (url) => {
+        if (url.includes('mirrors.aliyun.com')) throw new Error('ECONNREFUSED');
+        return body();
+      });
+      expect(seen).toEqual([SAMPLED]);
+    });
+  });
 
   it('retries once from the original URLs when the mirrored sync fails', async () => {
     const { bundle, project } = await lockedFixture();

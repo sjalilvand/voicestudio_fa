@@ -982,7 +982,6 @@
     "cleanup_failed": "Czyszczenie nie powiodło się: {{message}}",
     "mirror_applied_one": "Dodano wskazówkę do {{count}} linii",
     "mirror_applied_other": "Dodano wskazówki do {{count}} linii",
-    "mirror_none": "Żadna linia nie wymagała wskazówki",
     "mirror_insufficient": "Za mało wyraźnej mowy do pomiaru",
     "mirror_failed": "Odwzorowanie sposobu mówienia nie powiodło się: {{message}}",
     "cinematic_no_llm": "Ta jakość wymaga dostawcy LLM. Skonfiguruj go w sekcji Dostawcy LLM, aby kontynuować.",
@@ -1013,7 +1012,8 @@
     "restored_state": "Przywrócono stan poprzedniej generacji",
     "upgrading_preview": "Uaktualniam segmenty w jakości podglądu {{count}} do pełnej jakości…",
     "session_expired": "Ta sesja dubowania wygasła lub została wyczyszczona — prześlij film ponownie, aby rozpocząć nową.",
-    "unsupported_translation_language": "NLLB nie obsługuje: {{languages}}. Wybierz inny język lub silnik tłumaczenia."
+    "unsupported_translation_language": "NLLB nie obsługuje: {{languages}}. Wybierz inny język lub silnik tłumaczenia.",
+    "mirror_none": "Żaden wiersz nie wymagał wskazówki"
   },
   "common": {
     "stop": "Zatrzymaj się",
@@ -1735,16 +1735,9 @@
     "story_voices_plural": "{{count}} głosy",
     "audiobooks": "Audiobooki",
     "audiobook": "Książka audio",
-    "story": "Historia",
     "render_details": "Jak powstało",
-    "render_voice": "Głos",
     "render_speed": "Tempo",
-    "render_engine": "Silnik",
-    "render_language": "Język",
-    "render_format": "Format",
-    "render_size_label": "Rozmiar",
     "render_size": "{{chapters}} rozdz. · {{lines}} wierszy · {{words}} słów",
-    "render_settings": "Ustawienia",
     "render_no_details": "Dla tej pozycji nie zapisano szczegółów: powstała, zanim zaczęto je rejestrować.",
     "select_visible": "Zaznacz widoczne",
     "select_item": "Zaznacz {{name}}",
@@ -1753,7 +1746,14 @@
     "delete_warning": "Tej operacji nie można cofnąć. Projekty i transkrypcje zostaną usunięte. Usunięcie głosów lub nagrań usuwa też ich zapisany dźwięk. Wyeksportowane pliki i ukończone rendery audio pozostaną.",
     "draft_changed": "Szkic zmienił się podczas wczytywania tego projektu. Potwierdź ponownie, aby go zastąpić.",
     "all_projects": "Wszystkie projekty",
-    "library_group": "Biblioteka"
+    "library_group": "Biblioteka",
+    "render_engine": "Silnik",
+    "render_format": "Format",
+    "render_language": "Język",
+    "render_settings": "Ustawienia",
+    "render_size_label": "Rozmiar",
+    "render_voice": "Głos",
+    "story": "Opowieść"
   },
   "projectActions": {
     "delete": "Usunąć „{{name}}”? Tej czynności nie można cofnąć.",
@@ -1824,10 +1824,6 @@
     "pasteAbove": "Wklej tekst powyżej",
     "cancel": "Anuluj",
     "splitIntoTracks": "Podziel na linie",
-    "splitMode": "Podziel według",
-    "split_sentences": "Zdania",
-    "split_paragraphs": "Akapity",
-    "split_chapters": "Rozdziały",
     "splitModeHint": "Każdy wiersz jest czytany jako osobne nagranie. Przy jednym narratorze Akapity lub Rozdziały brzmią płynniej.",
     "emptyText": "Rozpocznij swoją historię od dodania dialogów i linii narracji. Przypisz każdej postaci głos w obsadzie.",
     "addFirst": "Dodaj pierwszą linię",
@@ -1880,7 +1876,11 @@
     "autocastDone_few": "Przydzielono {{lines}} linii do {{count}} głosów",
     "autocastDone_many": "Przydzielono {{lines}} linii do {{count}} głosów",
     "autocastDone_other": "Przydzielono {{lines}} linii do {{count}} głosu",
-    "recovery_title": "Przerwana historia"
+    "recovery_title": "Przerwana historia",
+    "splitMode": "Podziel według",
+    "split_chapters": "Rozdziały",
+    "split_paragraphs": "Akapity",
+    "split_sentences": "Zdania"
   },
   "audiobook": {
     "cast": "Obsada",
@@ -1995,10 +1995,7 @@
     "seed_ph": "Auto",
     "vary_repeats": "Zmienić powtarzające się wiersze",
     "vary_repeats_help": "Podaj odrębne ujęcia do identycznych wierszy zamiast ponownie używać jednego nagrania.",
-    "line_gap": "Przerwa między wierszami",
     "joins_help": "Przerwa między wierszami trafia między wiersze bez własnego [pause]; przerwa między akapitami – w miejsca pustych wierszy. Przy włączonym przycinaniu najpierw usuwana jest własna cisza początkowa i końcowa każdego wiersza, więc ustawiona przerwa jest tą, którą słychać.",
-    "paragraph_gap": "Przerwa między akapitami",
-    "trim_edges": "Przytnij ciszę silnika",
     "trim_edges_help": "Usuwa ciszę, którą każdy silnik dodaje przed wierszem i po nim, a potem łączy nagrania. Wyłącz, aby uzyskać surowe nagrania.",
     "emotion_help": "Stopniowana emocja — zastosowana tylko przez silnik IndexTTS2.",
     "emotion_text": "Opis emocji",
@@ -2017,7 +2014,10 @@
     "cast_note_one": "{{names}} nie ma jeszcze głosu, więc czyta go główny głos. Wybierz głos w sekcji Obsada.",
     "cast_note_other": "{{names}} nie mają jeszcze głosów, więc czyta je główny głos. Wybierz głosy w sekcji Obsada.",
     "cast_note_few": "{{names}} nie mają jeszcze głosów, więc czyta je główny głos. Wybierz głosy w sekcji Obsada.",
-    "cast_note_many": "{{names}} nie mają jeszcze głosów, więc czyta je główny głos. Wybierz głosy w sekcji Obsada."
+    "cast_note_many": "{{names}} nie mają jeszcze głosów, więc czyta je główny głos. Wybierz głosy w sekcji Obsada.",
+    "line_gap": "Odstęp między wierszami",
+    "paragraph_gap": "Odstęp między akapitami",
+    "trim_edges": "Usuń ciszę generowaną przez silnik"
   },
   "credentials": {
     "microsoft_key": "Klucz tłumacza Microsoft",
