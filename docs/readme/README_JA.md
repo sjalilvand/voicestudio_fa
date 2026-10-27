@@ -154,6 +154,8 @@ bun run dev
 
 スポンサーシップはメンテナーの時間、開発ツール、リリース基盤、テスト用ハードウェアに充てられます。得られるのは謝辞の掲載であり、機能ではありません。
 
+<a href="https://supermetry.com/?utm_source=voicestudio&utm_medium=sponsor&utm_campaign=strategic-sponsor&utm_content=readme-logo"><picture><source media="(prefers-color-scheme: dark)" srcset="../../docs/sponsors/supermetry-dark.svg" /><img src="../../docs/sponsors/supermetry.svg" alt="Supermetry" height="48" /></picture></a>
+
 開発を支援する：[Ko-fi](https://ko-fi.com/debpalash) · [PayPal](https://paypal.me/palashCoder) · [スポンサーシップの詳細](../../SPONSORS.md)
 
 ## ライセンスと責任ある利用

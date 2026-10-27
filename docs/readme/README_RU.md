@@ -153,6 +153,8 @@ bun run dev
 
 Спонсорство оплачивает время мейнтейнера, инструменты разработки, инфраструктуру релизов и оборудование для тестов; оно даёт признание, а не функции.
 
+<a href="https://supermetry.com/?utm_source=voicestudio&utm_medium=sponsor&utm_campaign=strategic-sponsor&utm_content=readme-logo"><picture><source media="(prefers-color-scheme: dark)" srcset="../../docs/sponsors/supermetry-dark.svg" /><img src="../../docs/sponsors/supermetry.svg" alt="Supermetry" height="48" /></picture></a>
+
 [GitHub Sponsors](https://github.com/sponsors/debpalash) · [Ko-fi](https://ko-fi.com/debpalash) · [PayPal](https://paypal.me/palashCoder) · [Уровни и признание](../../SPONSORS.md) · [Запросить признание](https://github.com/debpalash/VoiceStudio/issues/new?template=sponsor.yml)
 
 ## Лицензия и ответственное использование
