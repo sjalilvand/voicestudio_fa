@@ -23,7 +23,12 @@ import { asciiSafePthFiles } from './pth-ascii';
 import { devProbeStamped, writeDevProbeStamp } from './dev-probe-stamp';
 import { CrashJournal } from './crash-journal';
 import { nativeFaultSummary } from '../shared/utils/crashReport';
-import { backendStartupFailure, isBrokenEnvironmentOutput } from '../shared/utils/backendOutput';
+import {
+  backendStartupFailure,
+  isBrokenEnvironmentOutput,
+  windowsLoadBlock,
+  type WindowsLoadBlock,
+} from '../shared/utils/backendOutput';
 import { availableBackendPort } from './backend-port';
 import { scopedStorage, scopedStorageEnv, type ScopedStorage } from './storage-scope';
 import { legacyStorageEnv } from './legacy-storage';
@@ -701,6 +706,29 @@ export function spawnFailureMessage(
     : `Could not start ${command}: ${detail}. Check that the program exists and can be launched, then try again.`;
 }
 
+/** A backend that Windows stopped from loading one of its files names who did
+ *  it, in words the renderer's hints recognise: Smart App Control (no per-app
+ *  exceptions), an antivirus, or another application-control policy (#3209). */
+export function loadBlockMessage(
+  why: string,
+  lastOutput: string,
+  block: WindowsLoadBlock,
+  smartAppControl: SmartAppControl = block === 'application_control'
+    ? readSmartAppControl()
+    : 'unknown',
+): string {
+  const who =
+    block === 'antivirus'
+      ? 'Your antivirus blocked it.'
+      : smartAppControl === 'on' || smartAppControl === 'evaluation'
+        ? 'Windows Smart App Control blocked it.'
+        : 'A Windows application control policy blocked it.';
+  return (
+    `Backend exited (${why}): Windows refused to load one of the engine's files. ${who}` +
+    (lastOutput ? ` Last output: ${lastOutput}` : '')
+  );
+}
+
 /** The startup-budget failure says what the launch actually did, so a report
  *  shows where startup stalled instead of asking for the log (#2445): the
  *  backend's last line, "no output" for a managed process that never printed,
@@ -1128,6 +1156,20 @@ export class BackendSupervisor extends EventEmitter<{
         project,
         findUv(),
         (command, args, cwd, env, options) => {
+          // A planning run (uv's dry run) is read, not shown: its package list
+          // would read as installs to the progress tracker.
+          if (options?.quiet)
+            return runRuntimeProbe(
+              command,
+              args,
+              cwd,
+              { ...childEnv(this.port, this.runtimeRegion), ...env },
+              {
+                timeoutMs: options.timeoutMs,
+                signal: controller.signal,
+                captureStderr: true,
+              },
+            );
           if (options?.timeoutMs)
             return runRuntimeProbe(
               command,
@@ -1197,6 +1239,11 @@ export class BackendSupervisor extends EventEmitter<{
         {
           log: (line) => {
             if (gen === this.generation) this.pushLog('out', line);
+          },
+          transfer: (name, received, total) => {
+            if (gen !== this.generation) return;
+            this.setupProgress.observeTransfer(name, received, total);
+            this.emitStatus();
           },
           pypiHost: (host) => {
             if (gen !== this.generation) return;
@@ -1468,7 +1515,9 @@ export class BackendSupervisor extends EventEmitter<{
   get ownedRuntimeEntries(): string | string[] | null {
     const root = this.ownedRuntimeRoot;
     if (!root || storedRuntimeLocation()?.scoped !== true) return root;
-    return ['project', '.uv-cache', '.python', '.tmp', 'tmp'].map((name) => join(root, name));
+    return ['project', '.uv-cache', '.python', '.tmp', 'tmp', '.wheel-prefetch'].map((name) =>
+      join(root, name),
+    );
   }
 
   websocketUrl(path: '/ws/transcribe' | '/ws/events' | '/ws/tts'): Promise<string> {
@@ -1710,6 +1759,16 @@ export class BackendSupervisor extends EventEmitter<{
     // "503 Service Unavailable" — and hid the import error that actually
     // killed the process (#3058).
     const startup = backendStartupFailure(this.childErrorLog);
+    // Windows refused to load one of the runtime's files: name who did, since
+    // the quoted DLL error alone reads like a broken install (#3209).
+    const loadBlock = windowsLoadBlock(this.childErrorLog);
+    if (loadBlock) {
+      this.setStage('crashed', {
+        managed: true,
+        message: loadBlockMessage(why, lastLine ?? '', loadBlock),
+      });
+      return;
+    }
     // A backend that died while importing its own dependencies is a broken
     // environment, not a crash to retry: its wheels are damaged or a system
     // library they link against is gone. Repair the managed runtime once per

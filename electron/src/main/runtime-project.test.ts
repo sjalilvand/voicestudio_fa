@@ -4,6 +4,13 @@ import { cp, mkdtemp, mkdir, readFile, rm, writeFile, statfs, utimes } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { downloadRuntimeInstaller } from './runtime-download';
+import { createHash } from 'node:crypto';
+import {
+  httpsRangeTransport,
+  PREFETCH_MIN_BYTES,
+  RangeUnsupportedError,
+  type RangeTransport,
+} from './wheel-prefetch';
 import * as pthAscii from './pth-ascii';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -34,6 +41,10 @@ import {
 } from './runtime-project';
 
 vi.mock('./runtime-download', () => ({ downloadRuntimeInstaller: vi.fn() }));
+vi.mock('./wheel-prefetch', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./wheel-prefetch')>();
+  return { ...actual, httpsRangeTransport: vi.fn(actual.httpsRangeTransport) };
+});
 
 vi.mock('node:fs/promises', async (importOriginal) => ({
   ...(await importOriginal<typeof import('node:fs/promises')>()),
@@ -317,7 +328,10 @@ describe('packaged runtime setup', () => {
       'installing_deps',
       'verifying',
     ]);
-    expect(run.mock.calls).toHaveLength(process.platform === 'darwin' ? 2 : 3);
+    // The dry run that plans multi-connection downloads (#3411), the sync, the
+    // import check, and off macOS the CUDA compatibility probe.
+    expect(run.mock.calls).toHaveLength(process.platform === 'darwin' ? 3 : 4);
+    expect(run.mock.calls[0]![1]).toEqual(expect.arrayContaining(['-v', 'sync', '--dry-run']));
     expect(await runtimeReady(bundle, project)).toBe(true);
     await writeFile(join(bundle, 'uv.lock'), 'updated dependencies');
     expect(await runtimeReady(bundle, project)).toBe(false);
@@ -1265,6 +1279,163 @@ describe('regional PyPI mirror for the frozen sync (#3444)', () => {
     expect(await runtimeCompatible(bundle, project)).toBe(true);
     await writeFile(join(project, 'uv.lock'), LOCK.replace('sha256:e943', 'sha256:0000'));
     expect(await runtimeCompatible(bundle, project)).toBe(false);
+  });
+});
+
+describe('restricted networks race PyPI against the mirror (#3444)', () => {
+  const WHEEL = 'packages/a8/db/253133d7/accelerate-1.14.0-py3-none-any.whl';
+  const LOCK = [
+    '[[package]]',
+    'name = "accelerate"',
+    `wheels = [{ url = "https://files.pythonhosted.org/${WHEEL}", hash = "sha256:e943", size = 1 }]`,
+    '',
+  ].join('\n');
+  async function syncedLock(region: 'restricted' | 'auto') {
+    const { bundle, project } = await fixture();
+    await writeFile(join(bundle, 'uv.lock'), LOCK);
+    const seen: string[] = [];
+    const run = vi.fn(async (_command: string, args: string[]) => {
+      if (args[0] !== 'sync') return undefined;
+      seen.push(await readFile(join(project, 'uv.lock'), 'utf8'));
+      await interpreter(project);
+      return undefined;
+    });
+    await installRuntime(
+      bundle,
+      project,
+      'uv',
+      run,
+      new AbortController().signal,
+      undefined,
+      region,
+    );
+    expect(await readFile(join(project, 'uv.lock'), 'utf8')).toBe(LOCK);
+    return seen;
+  }
+
+  it.each(['restricted', 'auto'] as const)(
+    'uses the mirror on a %s network that cannot reach PyPI',
+    async (region) => {
+      // GitHub and PyPI unreachable: what auto-detection sees from mainland China.
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string) => ({ ok: !/github\.com$|pythonhosted/.test(url) })),
+      );
+      const [lock] = await syncedLock(region);
+      expect(lock).toContain(`https://mirrors.aliyun.com/pypi/${WHEEL}`);
+    },
+  );
+
+  it('keeps PyPI when the mirror is not clearly faster', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => ({ ok: !url.includes('aliyun') })),
+    );
+    expect(await syncedLock('restricted')).toEqual([LOCK]);
+  });
+});
+
+describe('multi-connection download of large locked wheels (#3411)', () => {
+  const data = Buffer.alloc(PREFETCH_MIN_BYTES + 5, 7);
+  const digest = createHash('sha256').update(data).digest('hex');
+  const URL_ =
+    'https://download-r2.pytorch.org/whl/cu128/torch-2.8.0%2Bcu128-cp311-cp311-win_amd64.whl';
+  const LOCK = [
+    '[[package]]',
+    'name = "torch"',
+    'version = "2.8.0+cu128"',
+    'source = { registry = "https://download.pytorch.org/whl/cu128" }',
+    'wheels = [',
+    `    { url = "${URL_}", hash = "sha256:${digest}", upload-time = "2025-10-01T23:49:30Z" },`,
+    ']',
+    '',
+  ].join('\n');
+  const DRY_RUN = [
+    'Using CPython 3.11.16 interpreter at: C:\\rt\\.python\\python.exe',
+    'DEBUG Identified uncached distribution: torch==2.8.0+cu128',
+  ].join('\n');
+
+  function transportFor(fail: boolean): RangeTransport {
+    return async (url, start, end) => {
+      if (fail) throw new RangeUnsupportedError(url);
+      return (async function* () {
+        yield data.subarray(start, end + 1);
+      })();
+    };
+  }
+
+  async function install(fail = false) {
+    forcePlatform('win32');
+    vi.spyOn(process, 'arch', 'get').mockReturnValue('x64');
+    vi.mocked(httpsRangeTransport).mockReturnValue({
+      transport: transportFor(fail),
+      probeSize: async () => data.length,
+      close: () => undefined,
+    });
+    const { bundle, project } = await fixture();
+    await writeFile(join(bundle, 'uv.lock'), LOCK);
+    const seen: string[] = [];
+    const planning: Array<{ timeoutMs: number; quiet?: boolean } | undefined> = [];
+    const run = vi.fn(
+      async (
+        _command: string,
+        args: string[],
+        _cwd: string,
+        _env?: NodeJS.ProcessEnv,
+        options?: { timeoutMs: number; quiet?: boolean },
+      ) => {
+        if (args[0] === '-v' && args.includes('--dry-run')) {
+          planning.push(options);
+          return DRY_RUN;
+        }
+        if (args[0] !== 'sync') return undefined;
+        seen.push(await readFile(join(project, 'uv.lock'), 'utf8'));
+        await interpreter(project);
+        return undefined;
+      },
+    );
+    const transfer = vi.fn();
+    const log = vi.fn();
+    await installRuntime(
+      bundle,
+      project,
+      'uv',
+      run,
+      new AbortController().signal,
+      undefined,
+      'global',
+      { transfer, log },
+    );
+    return { bundle, project, seen, planning, transfer, log };
+  }
+
+  it('hands uv the verified local copy, then restores the lock and frees the space', async () => {
+    const { bundle, project, seen, planning, transfer } = await install();
+    expect(planning).toEqual([expect.objectContaining({ quiet: true })]);
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toMatch(
+      new RegExp(
+        `url = "file://[^"]+/torch-2\\.8\\.0%2Bcu128-cp311-cp311-win_amd64\\.whl", hash = "sha256:${digest}"`,
+      ),
+    );
+    expect(seen[0]).not.toContain(URL_);
+    expect(transfer).toHaveBeenLastCalledWith('torch', data.length, data.length);
+    expect(await readFile(join(project, 'uv.lock'), 'utf8')).toBe(LOCK);
+    expect(existsSync(join(project, '..', '.wheel-prefetch'))).toBe(false);
+    expect(await runtimeReady(bundle, project)).toBe(true);
+  });
+
+  it('leaves the wheel to uv when the fast download fails', async () => {
+    const { seen, log } = await install(true);
+    expect(seen).toEqual([LOCK]);
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('uv will download it instead'));
+  });
+
+  it('can be turned off with OMNIVOICE_SETUP_CONNECTIONS=1', async () => {
+    vi.stubEnv('OMNIVOICE_SETUP_CONNECTIONS', '1');
+    const { seen, planning } = await install();
+    expect(planning).toEqual([]);
+    expect(seen).toEqual([LOCK]);
   });
 });
 
