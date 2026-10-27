@@ -318,6 +318,7 @@ export const GROUPS = [
           'openrouter',
           'orcarouter',
           'cheaper inference',
+          'cheaperinference',
           'opper',
           'api route',
           'groq',

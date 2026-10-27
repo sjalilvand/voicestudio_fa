@@ -73,13 +73,13 @@ export function AppearanceSettings() {
         </SettingsRow>
         <SettingsRow
           id="sidebar-expanded-label"
-          title={t('preferences.sidebar_expanded')}
           description={t('preferences.sidebar_expanded_hint')}
+          title={t('preferences.sidebar_expanded')}
         >
           <Switch
             aria-labelledby="sidebar-expanded-label"
-            checked={!workspace.autoCollapseSidebar}
-            onCheckedChange={(keep) => setWorkspace({ autoCollapseSidebar: !keep })}
+            checked={workspace.autoCollapseSidebar === false}
+            onCheckedChange={(pinned) => setWorkspace({ autoCollapseSidebar: !pinned })}
           />
         </SettingsRow>
         <PalettePicker appearance="light" />

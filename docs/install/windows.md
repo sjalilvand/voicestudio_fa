@@ -216,11 +216,7 @@ synthesise call. On machines with <16 GB VRAM, that compile step can OOM
 `OutOfMemoryError: CUDA out of memory` or `RuntimeError: Triton compilation
 failed`.
 
-**The one-click fix:** open **Settings → Performance** in the app and toggle
-**"Disable torch.compile"** on. That sets the `TORCH_COMPILE_DISABLE=1` env var
-on every engine subprocess VoiceStudio spawns and forces the in-process engine
-to eager mode as well. You'll lose a few percent of peak throughput in exchange
-for the engine actually loading.
+For the built-in remedy, open **Settings → Performance** and turn on **Disable torch.compile**. In-process generation then follows the eager path, while every engine child launched by VoiceStudio receives `TORCH_COMPILE_DISABLE=1`. The tradeoff is a modest loss of maximum throughput.
 
 **From the CLI / from source:** set the env var manually before launching:
 
@@ -229,13 +225,7 @@ $env:TORCH_COMPILE_DISABLE = "1"
 bun run dev
 ```
 
-The OOM this section describes is Windows-specific, but the toggle itself works
-on **every** platform — it used to be greyed out elsewhere, which left Linux and
-macOS users with no way to switch off a `torch.compile` that was breaking their
-engine. Tracking issues:
-[#65](https://github.com/debpalash/VoiceStudio/issues/65) (this OOM) and
-[#2135](https://github.com/debpalash/VoiceStudio/issues/2135) (the same toggle
-on Linux/CUDA).
+Although [#65](https://github.com/debpalash/VoiceStudio/issues/65) describes a Windows-only memory problem, the control is intentionally not restricted to Windows. Other hosts can need the same eager fallback for compiler failures, including the older-NVIDIA crash tracked in [#2135](https://github.com/debpalash/VoiceStudio/issues/2135).
 
 ## Hugging Face token (optional but recommended)
 

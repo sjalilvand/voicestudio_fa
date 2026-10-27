@@ -39,7 +39,8 @@ def _doc(body: str, *, title: str = "", section_type: str | None = None) -> str:
     )
 
 
-def _epub(docs: dict[str, str], *, nav: str | None = None, ncx: str | None = None, linear_no=(), guide: str = "") -> bytes:
+def _epub(docs: dict[str, str], *, nav: str | None = None, ncx: str | None = None, linear_no=(),
+          guide: str | None = None) -> bytes:
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as z:
         z.writestr("mimetype", "application/epub+zip")
@@ -60,8 +61,7 @@ def _epub(docs: dict[str, str], *, nav: str | None = None, ncx: str | None = Non
             "OPS/package.opf",
             '<?xml version="1.0"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="id">'
             '<metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>T</dc:title></metadata>'
-            f"<manifest>{''.join(manifest)}</manifest><spine>{''.join(spine)}</spine>"
-            f"{'<guide>' + guide + '</guide>' if guide else ''}</package>",
+            f"<manifest>{''.join(manifest)}</manifest><spine>{''.join(spine)}</spine>{guide or ''}</package>",
         )
     return buf.getvalue()
 
@@ -373,171 +373,226 @@ def test_required_members_consume_total_budget_before_decompression():
             read.assert_not_called()
 
 
-# ── Unmarked teaser pages ahead of the book (untyped, heading-less, unlisted) ─
-_TEASER = "<p>Zoe stepped closer. A little round face peered sleepily over the crate.</p>"
-_PLAIN_NAV = (
-    '<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><body>'
-    '<nav epub:type="toc"><ol>'
-    '<li><a href="cover.xhtml">Cover</a></li>'
-    '<li><a href="title.xhtml">Title Page</a></li>'
-    '<li><a href="ch1.xhtml">Chapter One: The Rainforest Dome</a></li>'
-    '<li><a href="ch2.xhtml">Chapter Two: A Sleepy Sloth</a></li>'
-    "</ol>{extra}</nav>{landmarks}</body></html>"
-)
+# ── unmarked front matter and stray back matter ────────────────────────────
+
+_WORDS = " ".join(["word"] * 450)  # comfortably over the 400-word furniture ceiling
 
 
-def _untyped_book(**extra_docs) -> dict[str, str]:
-    """A publisher EPUB with NO epub:type anywhere (the real-world failure)."""
+def _plain_nav(entries: list[tuple[str, str]], landmarks: str = "") -> str:
+    items = "".join(f'<li><a href="{h}">{label}</a></li>' for h, label in entries)
+    return (
+        '<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><body>'
+        f'<nav epub:type="toc"><ol>{items}</ol></nav>{landmarks}</body></html>'
+    )
+
+
+def _landmarks(target: str) -> str:
+    return (
+        '<nav epub:type="landmarks"><ol>'
+        f'<li><a epub:type="bodymatter" href="{target}">Start</a></li></ol></nav>'
+    )
+
+
+def _heads(script: str) -> list[str]:
+    return [ln for ln in script.split("\n") if ln.startswith("# ")]
+
+
+def _guide(target: str, kind: str = "text") -> str:
+    return f'<guide><reference type="{kind}" href="{target}" title="Start"/></guide>'
+
+
+def _book(extra_docs: dict[str, str], *, nav=None, guide=None) -> bytes:
     docs = {
-        "cover.xhtml": _doc("<p>The Super Sloth</p>"),
-        "teaser.xhtml": _doc(_TEASER, title="The Super Sloth-Other"),
-        "title.xhtml": _doc("<p>The Super Sloth</p><p>Amelia Cobb</p>"),
-        "ch1.xhtml": _doc("<h1>The Rainforest Dome</h1><p>Zoe Parker raced along the path.</p>"),
-        "ch2.xhtml": _doc("<h1>A Sleepy Sloth</h1><p>“A sloth indeed,” replied Horace.</p>"),
+        "teaser.xhtml": _doc("<p>A teaser excerpt of a few words.</p>"),
+        "c1.xhtml": _doc("<h1>One</h1><p>First chapter text.</p>"),
+        "c2.xhtml": _doc("<h1>Two</h1><p>Second chapter text.</p>"),
+        **extra_docs,
     }
-    docs.update(extra_docs)
-    return docs
+    return _epub(docs, nav=nav, guide=guide)
 
 
-def test_unlisted_teaser_before_the_declared_start_is_not_a_chapter():
-    nav = _PLAIN_NAV.format(extra="", landmarks="")
-    guide = '<reference type="text" title="Start" href="ch1.xhtml"/>'
-    script = li.epub_to_chapter_script(_epub(_untyped_book(), nav=nav, guide=guide))
-    assert "Zoe stepped closer" not in script
-    assert [ln for ln in script.splitlines() if ln.startswith("# ")] == [
-        "# Chapter One: The Rainforest Dome", "# Chapter Two: A Sleepy Sloth"]
+_TWO_CHAPTER_NAV = _plain_nav([("c1.xhtml", "One"), ("c2.xhtml", "Two")])
 
 
-def test_epub3_landmarks_bodymatter_declares_the_start_too():
-    landmarks = ('<nav epub:type="landmarks"><ol>'
-                 '<li><a epub:type="bodymatter" href="ch1.xhtml#top">Start</a></li></ol></nav>')
-    nav = _PLAIN_NAV.format(extra="", landmarks=landmarks)
-    script = li.epub_to_chapter_script(_epub(_untyped_book(), nav=nav))
-    assert "Zoe stepped closer" not in script and script.startswith("# Chapter One")
+def test_guide_text_reference_declares_the_start_and_drops_the_teaser():
+    script = li.epub_to_chapter_script(_book({}, nav=None, guide=_guide("c1.xhtml")))
+    assert "teaser excerpt" not in script
+    assert _heads(script) == ["# One", "# Two"]
 
 
-def test_without_a_declared_start_the_toc_decides_for_short_headingless_pages_only():
-    nav = _PLAIN_NAV.format(extra="", landmarks="")
-    script = li.epub_to_chapter_script(_epub(_untyped_book(), nav=nav))
-    assert "Zoe stepped closer" not in script and script.startswith("# Chapter One")
+def test_guide_reference_type_is_case_insensitive_and_other_types_ignored():
+    upper = li.epub_to_chapter_script(_book({}, guide=_guide("c1.xhtml", "TEXT")))
+    assert "teaser excerpt" not in upper
+    other = li.epub_to_chapter_script(_book({}, guide=_guide("c1.xhtml", "cover")))
+    assert "teaser excerpt" in other  # nothing declares a start, nothing is dropped
 
-    # A LONG unlisted section ahead of chapter one is real prose (an unlisted
-    # prologue): the weaker TOC-only signal must never drop it.
-    long_page = _doc("<p>" + "Once upon a time there was a very long prologue. " * 60 + "</p>")
-    script = li.epub_to_chapter_script(_epub(_untyped_book(**{"teaser.xhtml": long_page}), nav=nav))
-    assert "very long prologue" in script
+
+def test_landmarks_bodymatter_declares_the_start():
+    nav = _plain_nav([("c1.xhtml", "One"), ("c2.xhtml", "Two")], _landmarks("c1.xhtml"))
+    # TOC alone would also work here; point landmarks at c2 to prove it is the source.
+    nav2 = _plain_nav([("c1.xhtml", "One"), ("c2.xhtml", "Two")], _landmarks("c2.xhtml"))
+    assert "teaser excerpt" not in li.epub_to_chapter_script(_book({}, nav=nav))
+    script = li.epub_to_chapter_script(_book({}, nav=nav2))
+    assert "teaser excerpt" not in script
+    assert _heads(script) == ["# One", "# Two"]  # headed chapters before the start survive
+
+
+def test_without_a_declared_start_the_toc_decides():
+    script = li.epub_to_chapter_script(_book({}, nav=_TWO_CHAPTER_NAV))
+    assert "teaser excerpt" not in script
+    assert _heads(script) == ["# One", "# Two"]
+
+
+def test_long_unlisted_prologue_is_kept_when_no_start_is_declared():
+    docs = {"prologue.xhtml": _doc(f"<p>{_WORDS}</p>")}
+    epub = _epub({**docs, "c1.xhtml": _doc("<h1>One</h1><p>Text.</p>")},
+                 nav=_plain_nav([("c1.xhtml", "One")]))
+    assert _WORDS in li.epub_to_chapter_script(epub)
 
 
 def test_listed_or_body_typed_sections_before_the_start_are_kept():
-    # The "start reading" location often skips a prologue the TOC does list.
-    nav = _PLAIN_NAV.format(extra="", landmarks="").replace(
-        '<li><a href="ch1.xhtml">', '<li><a href="teaser.xhtml">Prologue</a></li><li><a href="ch1.xhtml">')
-    guide = '<reference type="text" href="ch1.xhtml"/>'
-    script = li.epub_to_chapter_script(_epub(_untyped_book(), nav=nav, guide=guide))
-    assert script.startswith("# Prologue") and "Zoe stepped closer" in script
-
-    plain = _PLAIN_NAV.format(extra="", landmarks="")
-    typed = _untyped_book(**{"teaser.xhtml": _doc(_TEASER, section_type="bodymatter prologue")})
-    assert "Zoe stepped closer" in li.epub_to_chapter_script(_epub(typed, nav=plain, guide=guide))
-
-
-def test_unlisted_pages_after_the_start_are_untouched_and_no_navigation_changes_nothing():
-    # A chapter split across files lists only its first file — never drop the rest.
-    docs = _untyped_book()
-    docs["ch1b.xhtml"] = _doc("<p>The chapter carries on in a second file.</p>")
-    nav = _PLAIN_NAV.format(extra="", landmarks="")
-    guide = '<reference type="text" href="ch1.xhtml"/>'
-    assert "carries on in a second file" in li.epub_to_chapter_script(_epub(docs, nav=nav, guide=guide))
-    # No TOC and no declared start: nothing to go on, so nothing is dropped.
-    assert "Zoe stepped closer" in li.epub_to_chapter_script(_epub(_untyped_book()))
+    nav = _plain_nav([("pre.xhtml", "Before"), ("c1.xhtml", "One")], _landmarks("c1.xhtml"))
+    epub = _epub(
+        {
+            "pre.xhtml": _doc("<p>Short listed page.</p>"),
+            "typed.xhtml": _doc("<p>Short typed page.</p>", section_type="prologue"),
+            "c1.xhtml": _doc("<h1>One</h1><p>Text.</p>"),
+        },
+        nav=nav,
+    )
+    script = li.epub_to_chapter_script(epub)
+    assert "Short listed page." in script and "Short typed page." in script
 
 
-def test_unlisted_stray_pages_are_dropped_only_after_listed_back_matter_begins():
-    docs = _untyped_book()
-    docs["ch2b.xhtml"] = _doc("<p>The last chapter ends in a second, unlisted file.</p>")
-    docs["works.xhtml"] = _doc("<p>The Hobbit</p><p>Leaf by Niggle</p>")
-    docs["publisher.xhtml"] = _doc("<p>HarperCollins Publishers, 25 Ryde Road</p>")
-    docs["footnotes.xhtml"] = _doc("<p>* The reason for this use is given elsewhere.</p>")
-    nav = _PLAIN_NAV.format(extra="", landmarks="").replace(
-        "</ol>", '<li><a href="works.xhtml">Works by J.R.R. Tolkien</a></li>'
-                 '<li><a href="publisher.xhtml">About the Publisher</a></li></ol>', 1)
-    script = li.epub_to_chapter_script(_epub(docs, nav=nav))
-    assert [ln for ln in script.splitlines() if ln.startswith("# ")][:2] == [
-        "# Chapter One: The Rainforest Dome", "# Chapter Two: A Sleepy Sloth"]
-    assert "ends in a second, unlisted file" in script          # continuation kept
-    for gone in ("Leaf by Niggle", "Ryde Road", "The reason for this use"):
-        assert gone not in script
+def test_unlisted_pages_after_the_start_and_books_without_navigation_are_untouched():
+    nav = _plain_nav([("c1.xhtml", "One")])
+    epub = _epub({"c1.xhtml": _doc("<h1>One</h1><p>Text.</p>"),
+                  "after.xhtml": _doc("<p>Continuation of one.</p>")}, nav=nav)
+    assert "Continuation of one." in li.epub_to_chapter_script(epub)
+    bare = _epub({"a.xhtml": _doc("<p>Alpha page.</p>"), "b.xhtml": _doc("<h1>B</h1><p>Beta.</p>")})
+    script = li.epub_to_chapter_script(bare)
+    assert "Alpha page." in script and "Beta." in script
 
 
-def test_an_unlisted_ancillary_looking_page_does_not_open_back_matter():
-    # "Dedication" by heading only, NOT in the contents, sitting mid-book: the
-    # short unlisted file after it is still the chapter's continuation.
-    docs = _untyped_book()
-    docs["ch2.xhtml"] = docs.pop("ch2.xhtml")  # keep order: ch1, dedication, ch1b, ch2
-    ordered = {}
-    for name, doc in docs.items():
-        if name == "ch2.xhtml":
-            ordered["ded.xhtml"] = _doc("<h1>Dedication</h1><p>For Sam.</p>")
-            ordered["ch1b.xhtml"] = _doc("<p>The first chapter carries on here.</p>")
-        ordered[name] = doc
-    script = li.epub_to_chapter_script(_epub(ordered, nav=_PLAIN_NAV.format(extra="", landmarks="")))
-    assert "For Sam." not in script
-    assert "The first chapter carries on here." in script
+def _back_matter_book(middle: dict[str, str], listed_back: bool = True) -> bytes:
+    entries = [("c1.xhtml", "One"), ("c2.xhtml", "Two")]
+    if listed_back:
+        entries.append(("praise.xhtml", "Praise for Another Book"))
+    docs = {
+        "c1.xhtml": _doc("<h1>One</h1><p>First chapter text.</p>"),
+        "c2.xhtml": _doc("<h1>Two</h1><p>Second chapter text.</p>"),
+        "praise.xhtml": _doc("<p>Rave reviews.</p>"),
+        **middle,
+    }
+    return _epub(docs, nav=_plain_nav(entries))
 
 
-def test_an_unlisted_ancillary_page_inside_back_matter_keeps_it_open():
-    docs = _untyped_book()
-    docs["publisher.xhtml"] = _doc("<p>HarperCollins Publishers, 25 Ryde Road</p>")
-    docs["endnotes.xhtml"] = _doc("<h1>Endnotes</h1><p>1. See the appendix.</p>")   # unlisted
-    docs["stray.xhtml"] = _doc("<p>* The reason for this use is given elsewhere.</p>")
-    nav = _PLAIN_NAV.format(extra="", landmarks="").replace(
-        "</ol>", '<li><a href="publisher.xhtml">About the Publisher</a></li></ol>', 1)
-    script = li.epub_to_chapter_script(_epub(docs, nav=nav))
-    for gone in ("Ryde Road", "See the appendix", "The reason for this use"):
-        assert gone not in script
+def test_stray_pages_are_dropped_only_after_listed_back_matter_begins():
+    epub = _back_matter_book({"ad.xhtml": _doc("<p>Buy more books.</p>")})
+    script = li.epub_to_chapter_script(epub)
+    assert "Buy more books." not in script and "Rave reviews." not in script
+    assert _heads(script) == ["# One", "# Two"]
 
 
-@pytest.mark.parametrize('body', [
-    '<h1>Prologue</h1><p>A brief but real opening scene.</p>',
-    '<p>' + 'A substantive opening scene continues here. ' * 100 + '</p>',
-])
-def test_declared_reading_start_keeps_substantive_unlisted_prologue(body):
-    import importlib
-    importer = importlib.import_module('services.longform_import')
-    nav = _PLAIN_NAV.format(extra='', landmarks='')
-    guide = '<reference type="text" href="ch1.xhtml"/>'
-    docs = _untyped_book(**{'teaser.xhtml': _doc(body)})
-    script = importer.epub_to_chapter_script(_epub(docs, nav=nav, guide=guide))
-    assert 'opening scene' in script
+def test_unlisted_stray_page_right_after_a_chapter_is_its_continuation():
+    epub = _epub(
+        {
+            "c1.xhtml": _doc("<h1>One</h1><p>Opening.</p>"),
+            "c1b.xhtml": _doc("<p>Second half of chapter one.</p>"),
+            "praise.xhtml": _doc("<p>Rave reviews.</p>"),
+        },
+        nav=_plain_nav([("c1.xhtml", "One"), ("praise.xhtml", "Praise for Another Book")]),
+    )
+    script = li.epub_to_chapter_script(epub)
+    assert "Second half of chapter one." in script
 
 
-@pytest.mark.parametrize('heading', ['Novels by Amelia Cobb', 'Published by Example Press'])
-def test_publisher_and_bibliography_headings_are_ancillary(heading):
-    import importlib
-    importer = importlib.import_module('services.longform_import')
-    docs = _untyped_book(**{'teaser.xhtml': _doc(f'<h1>{heading}</h1><p>Print furniture.</p>')})
-    script = importer.epub_to_chapter_script(_epub(docs, nav=_PLAIN_NAV.format(extra='', landmarks='')))
-    assert 'Print furniture' not in script
+def test_unlisted_ancillary_looking_page_does_not_open_back_matter():
+    epub = _epub(
+        {
+            "c1.xhtml": _doc("<h1>One</h1><p>Opening.</p>"),
+            "notes.xhtml": _doc("<h1>Footnotes</h1><p>Note text.</p>"),
+            "c1b.xhtml": _doc("<p>More of chapter one.</p>"),
+        },
+        nav=_plain_nav([("c1.xhtml", "One")]),
+    )
+    script = li.epub_to_chapter_script(epub)
+    assert "Note text." not in script  # the page itself is ancillary
+    assert "More of chapter one." in script  # but it did not start back matter
 
 
-def test_ambiguous_short_heading_is_not_enough_to_delete_a_chapter():
-    import importlib
-    importer = importlib.import_module('services.longform_import')
-    docs = _untyped_book(**{'teaser.xhtml': _doc('<h1>Works</h1><p>A real scene.</p>')})
-    guide = '<reference type="text" href="ch1.xhtml"/>'
-    script = importer.epub_to_chapter_script(_epub(docs, nav=_PLAIN_NAV.format(extra='', landmarks=''), guide=guide))
-    assert 'A real scene.' in script
+def test_unlisted_ancillary_page_inside_back_matter_keeps_it_open():
+    epub = _back_matter_book(
+        {"colophon.xhtml": _doc("<h1>Footnotes</h1><p>Note text.</p>"),
+         "ad.xhtml": _doc("<p>Buy more books.</p>")},
+    )
+    script = li.epub_to_chapter_script(epub)
+    assert "Note text." not in script and "Buy more books." not in script
 
 
-@pytest.mark.parametrize('listed, substantive', [(True, False), (False, True)])
-def test_publisher_like_headings_keep_listed_or_substantive_sections(listed, substantive):
-    import importlib
-    importer = importlib.import_module('services.longform_import')
-    text = 'This is real narrative. ' * (200 if substantive else 1)
-    docs = _untyped_book(**{'teaser.xhtml': _doc('<h1>Published by Fate</h1><p>' + text + '</p>')})
-    nav = _PLAIN_NAV.format(extra='', landmarks='')
-    if listed:
-        nav = nav.replace('<li><a href="ch1.xhtml">', '<li><a href="teaser.xhtml">Published by Fate</a></li><li><a href="ch1.xhtml">')
-    guide = '<reference type="text" href="ch1.xhtml"/>'
-    script = importer.epub_to_chapter_script(_epub(docs, nav=nav, guide=guide))
-    assert 'This is real narrative.' in script
+def test_substantive_unlisted_prologue_survives_a_late_declared_start():
+    headed = _epub(
+        {
+            "pro.xhtml": _doc("<h1>Prologue</h1><p>Short but headed.</p>"),
+            "long.xhtml": _doc(f"<p>{_WORDS}</p>"),
+            "c1.xhtml": _doc("<h1>One</h1><p>Text.</p>"),
+        },
+        nav=_plain_nav([("c1.xhtml", "One")]),
+        guide=_guide("c1.xhtml"),
+    )
+    script = li.epub_to_chapter_script(headed)
+    assert "Short but headed." in script and _WORDS in script
+
+
+def test_publisher_style_headings_are_ancillary_when_short_and_unlisted():
+    for heading in ("Novels by Some Author", "Published by Some House"):
+        epub = _epub(
+            {
+                "pub.xhtml": _doc(f"<h1>{heading}</h1><p>Catalogue.</p>"),
+                "c1.xhtml": _doc("<h1>One</h1><p>Text.</p>"),
+            },
+            nav=_plain_nav([("c1.xhtml", "One")]),
+        )
+        assert "Catalogue." not in li.epub_to_chapter_script(epub)
+
+
+def test_ambiguous_short_heading_alone_does_not_delete_a_chapter():
+    epub = _epub(
+        {
+            "short.xhtml": _doc("<h1>Prologue</h1><p>Brief opening.</p>"),
+            "c1.xhtml": _doc("<h1>One</h1><p>Text.</p>"),
+        },
+        nav=_plain_nav([("c1.xhtml", "One")]),
+    )
+    assert "Brief opening." in li.epub_to_chapter_script(epub)
+
+
+def test_publisher_like_headings_are_kept_when_listed_or_substantive():
+    listed = _epub(
+        {"pub.xhtml": _doc("<h1>Published by Me</h1><p>My own story.</p>"),
+         "c1.xhtml": _doc("<h1>One</h1><p>Text.</p>")},
+        nav=_plain_nav([("pub.xhtml", "Published by Me"), ("c1.xhtml", "One")]),
+    )
+    assert "My own story." in li.epub_to_chapter_script(listed)
+    long = _epub(
+        {"pub.xhtml": _doc(f"<h1>Novels by Me</h1><p>{_WORDS}</p>"),
+         "c1.xhtml": _doc("<h1>One</h1><p>Text.</p>")},
+        nav=_plain_nav([("c1.xhtml", "One")]),
+    )
+    assert _WORDS in li.epub_to_chapter_script(long)
+
+
+@pytest.mark.parametrize("title", ["Other Works by Jane", "Books by Jane", "About the Publisher",
+                                   "Footnotes", "Endnote", "Titles by Jane"])
+def test_new_ancillary_titles_are_recognised(title):
+    assert li._is_ancillary(set(), title)
+    assert not li._is_ancillary(set(), "Booksellers")
+
+
+def test_toc_titles_reports_the_landmarks_start():
+    epub = _epub({"c1.xhtml": _doc("<h1>One</h1><p>Text.</p>")},
+                 nav=_plain_nav([("c1.xhtml", "One")], _landmarks("c1.xhtml")))
+    with zipfile.ZipFile(io.BytesIO(epub)) as zf:
+        budget = li._ReadBudget(10**6, 10**7)
+        titles, start = li._toc_titles(zf, "OPS", ["TOC.xhtml"], set(zf.namelist()), budget)
+    assert titles == {"OPS/c1.xhtml": "One"} and start == "OPS/c1.xhtml"
