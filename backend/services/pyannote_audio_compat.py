@@ -112,8 +112,7 @@ def _soundfile_load(
         sample_rate = int(stream.samplerate)
 
     waveform = torch.from_numpy(samples)
-    if native_wav and subtype == "PCM_U8":
-        waveform = ((waveform.to(torch.int32) >> 8) + 128).to(torch.uint8)
+    # CLEAN-ROOM (spec W8-border §2)
     if channels_first:
         waveform = waveform.transpose(0, 1)
     return waveform, sample_rate

@@ -82,17 +82,7 @@ class SegmentSpan:
     speaker_id: str = ""
 
 
-@dataclass(frozen=True)
-class ProsodyFeatures:
-    loudness_db: float
-    rate_hz: float
-    voiced_ratio: float
-    active_s: float
-    pitch_st: Optional[float] = None
-    pitch_spread_st: Optional[float] = None
-
-    def get(self, name: str) -> Optional[float]:
-        return getattr(self, name)
+# CLEAN-ROOM (spec W8-border §1)
 
 
 @dataclass(frozen=True)
@@ -117,22 +107,7 @@ class Baseline:
         return out
 
 
-@dataclass
-class MirrorResult:
-    id: str
-    direction: str = ""
-    tokens: dict[str, list[str]] = field(default_factory=dict)
-    z: dict[str, float] = field(default_factory=dict)
-    measured: bool = False
-
-    def to_dict(self) -> dict:
-        return {
-            "id": self.id,
-            "direction": self.direction,
-            "tokens": self.tokens,
-            "z": {name: round(value, 2) for name, value in self.z.items()},
-            "measured": self.measured,
-        }
+# CLEAN-ROOM (spec W8-border §1)
 
 
 def to_mono_analysis_rate(audio: np.ndarray, sr: int) -> np.ndarray:

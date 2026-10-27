@@ -1,21 +1,8 @@
-"""Generation takes: Voice Design recipe on generation_history
+"""CLEAN-ROOM (spec W8-border §5)
 
 Revision ID: 0013_generation_history_design_recipe
 Revises: 0012_call_sessions
 Create Date: 2026-10-01 00:00:00.000000
-
-Adds a nullable ``generation_history.design_recipe TEXT`` column. For a Voice
-Design take it holds a small JSON document (the written description, the
-details the user picked by hand, and the details the description mapped to) so
-that reopening the take can rebuild the workspace. It is display metadata
-only and never feeds synthesis. Older rows keep NULL and clients fall back to
-the stored instruct text.
-
-Additive and idempotent: the column is added only when ``PRAGMA table_info``
-does not list it, so a fresh install whose ``_BASE_SCHEMA`` already declares
-it passes through untouched. A DB with no ``generation_history`` table is
-skipped, since the startup self-heal creates it complete. DBs where alembic
-cannot run at all get the column from ``_reconcile_additive_columns``.
 """
 from typing import Sequence, Union
 

@@ -1,15 +1,8 @@
-"""Voice sync preparation (S2): sync_id and consent attestation on voices
+"""CLEAN-ROOM (spec W8-border §5)
 
 Revision ID: 0015_voice_sync_prep
 Revises: 0014_cloud_sync
 Create Date: 2026-10-16 00:00:00.000000
-
-Adds ``voice_profiles.sync_id`` (16 Base62, filled when sync is first turned
-on; local IDs stay local), ``consent_basis`` (``own_voice`` or
-``speaker_permission``) and ``consent_attested_at`` (RFC 3339 UTC). A voice
-without an attestation is never pushed. Additive and guarded by
-PRAGMA table_info; the same columns are in ``core/db.py::_BASE_SCHEMA`` so
-``_reconcile_additive_columns`` heals DBs where alembic cannot run.
 """
 from typing import Sequence, Union
 

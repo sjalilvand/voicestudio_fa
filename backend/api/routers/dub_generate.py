@@ -1608,11 +1608,7 @@ async def dub_generate(job_id: str, req: DubRequest):
 
         os.makedirs(os.path.dirname(track_path), exist_ok=True)
         mix_samples = max(total_samples, 1)
-        mix_fd, mix_file = tempfile.mkstemp(
-            prefix=f".{os.path.basename(track_path)}.mix.",
-            suffix=".f32",
-            dir=os.path.dirname(track_path),
-        )
+        # CLEAN-ROOM (spec W8-border §4)
         os.close(mix_fd)
         mix_audio = None
         try:

@@ -561,12 +561,7 @@ class OmniVoice(PreTrainedModel):
         for _lg in _quiet_loggers:
             _lg.setLevel(logging.WARNING)
 
-        # Electron and other sidecar hosts capture stdout through a pipe. tqdm
-        # must stay quiet there because some Windows pipe failures surface as
-        # OSError during model loading.
-        _previous_tqdm_disable = os.environ.get("TQDM_DISABLE")
-        if sys.stdout is not None and not sys.stdout.isatty():
-            os.environ["TQDM_DISABLE"] = "1"
+        # CLEAN-ROOM (spec W8-border §6 (enter))
 
         try:
             model = super().from_pretrained(
@@ -617,10 +612,7 @@ class OmniVoice(PreTrainedModel):
         finally:
             for _lg, _lvl in _prev_levels:
                 _lg.setLevel(_lvl)
-            if _previous_tqdm_disable is None:
-                os.environ.pop("TQDM_DISABLE", None)
-            else:
-                os.environ["TQDM_DISABLE"] = _previous_tqdm_disable
+            # CLEAN-ROOM (spec W8-border §6 (restore))
 
         return model
 

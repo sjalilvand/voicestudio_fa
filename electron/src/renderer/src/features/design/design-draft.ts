@@ -176,11 +176,7 @@ export function designRequestSeed(
   return linked && linked.seed == null ? undefined : draft.seed;
 }
 
-/**
- * Merge the server's reading of the prose into this draft. Picks from the same
- * prose survive; older picks yield when the new prose changes their detail or
- * an exclusive detail that applying the pick would clear.
- */
+// CLEAN-ROOM (spec W8-border §3)
 export function applyDescription(
   current: DesignDraft,
   mapping: Record<string, string>,
