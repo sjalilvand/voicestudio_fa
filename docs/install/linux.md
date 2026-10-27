@@ -376,7 +376,8 @@ Notes:
 - Unsupported GFX (e.g. some consumer RDNA cards): if it still won't run, set
   `HSA_OVERRIDE_GFX_VERSION` yourself to a supported architecture **of the same
   generation** before launching (e.g. `export HSA_OVERRIDE_GFX_VERSION=11.0.0`
-  for a gfx11xx card, `10.3.0` for gfx10xx). A remap across generations cannot
+  for a gfx11xx card, `10.3.0` for a gfx103x card; RDNA1 gfx101x cannot use
+  `10.3.0`). A remap across generations cannot
   work, so RDNA4 (gfx12xx) cards need a ROCm build that lists them instead.
   When the build lacks your card, VoiceStudio's GPU architecture notification
   names the exact value to try, or says that no remap exists.

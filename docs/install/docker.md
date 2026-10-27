@@ -249,10 +249,13 @@ the CUDA tags exactly.
 > closest same-generation target that list contains (never across a
 > generation), so try without any override first. Overriding a natively-supported GPU (gfx1151 on
 > ROCm 7.x, for example) only forces it onto foreign kernels. If the GPU still
-> isn't used, force it explicitly with `-e HSA_OVERRIDE_GFX_VERSION=11.0.0`
-> (user-set on the container — it is deliberately **not** baked into the
-> image, because the right value depends on your card); a value you set is
-> always respected as-is.
+> isn't used, force a same-generation value on the container, for example
+> `-e HSA_OVERRIDE_GFX_VERSION=11.0.0` for an RX 7000 (gfx11xx) card or
+> `10.3.0` for an RX 6000 (gfx103x) card. It is deliberately **not** baked into
+> the image, because the right value depends on your card, and a value you set
+> is always respected as-is. **Never set it on an RX 9000 (RDNA4, gfx12xx)
+> card:** the ROCm image supports those natively, and an RDNA3 value maps them
+> onto kernels they cannot run.
 >
 > **Rootless / non-root hosts:** if `/dev/kfd` is group-owned, the container
 > user needs those groups too — add `--group-add` for your host's `render` and

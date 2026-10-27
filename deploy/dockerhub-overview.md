@@ -105,7 +105,8 @@ docker run -d --name omnivoice \
 
 Podman users: same two `--device` flags (Quadlet: `AddDevice=/dev/kfd` +
 `AddDevice=/dev/dri`). On RDNA3 consumer cards (RX 7900 XTX/XT), add
-`-e HSA_OVERRIDE_GFX_VERSION=11.0.0` if the GPU isn't detected — details in
+`-e HSA_OVERRIDE_GFX_VERSION=11.0.0` if the GPU isn't detected; never set it
+on RX 9000 (RDNA4) cards, which the image supports natively — details in
 the [Docker install guide](https://github.com/debpalash/VoiceStudio/blob/main/docs/install/docker.md).
 
 There's also a Compose file in the repo with `cpu` / `gpu` / `rocm` profiles;
