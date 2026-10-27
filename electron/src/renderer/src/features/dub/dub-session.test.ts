@@ -437,6 +437,14 @@ it('moves lines to another or a new speaker and follows that speaker voice (#351
   undoDubEdit();
   expect(dubSession.state.segments).toEqual(original);
 
+  // Moving a whole speaker keeps following cast voices, not freezing the old one.
+  setDubSegmentsSpeaker(new Set(['a', 'b']), 'Speaker 2');
+  expect(dubSession.state.segments.slice(0, 2).map((s) => s.profile_id)).toEqual([
+    'voice-two',
+    'voice-two',
+  ]);
+  undoDubEdit();
+
   expect(nextDubSpeakerId(original)).toBe('Speaker 3');
   setDubSegmentsSpeaker(new Set(['a']), nextDubSpeakerId(original));
   expect(dubSession.state.segments[0]).toMatchObject({ speaker_id: 'Speaker 3' });

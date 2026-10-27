@@ -2140,7 +2140,7 @@
     "export_audio": "Sesi dışa aktar",
     "export_subtitles": "Altyazıları dışa aktar",
     "stretch_subs_note": "Videoyu Uzat: altyazıları ayrı dışa aktarın.",
-    "undubbed_video_note": "Henüz dublaj yok: video özgün sesini korur. Dökümü eklemek için altyazıları görüntüye yakın."
+    "undubbed_video_note": "Henüz dublaj yok: video özgün sesini korur. Dökümü eklemek için altyazıları görüntüye gömün."
   },
   "models": {
     "pack_title": "Model paketleri",

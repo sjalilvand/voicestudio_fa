@@ -623,8 +623,11 @@ export function setDubSegmentsSpeaker(ids: ReadonlySet<string>, speakerId: strin
   const speaker = speakerId.trim();
   if (!ids.size || !speaker) return;
   const current = dubSession.state.segments;
+  // A speaker's cast voice is read the way the casting board shows it (its
+  // first row), over every row: excluding the moved rows would lose the cast
+  // voice when a whole speaker is selected.
   const castVoice = (name: string) => {
-    const row = current.find((segment) => !ids.has(segment.id) && segment.speaker_id === name);
+    const row = current.find((segment) => segment.speaker_id === name);
     if (row) return row.profile_id || '';
     const part = current
       .flatMap(

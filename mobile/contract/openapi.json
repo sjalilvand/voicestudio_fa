@@ -4701,6 +4701,18 @@
       "maxLength": 20000,
       "title": "Text",
       "type": "string"
+     },
+     "text_original": {
+      "anyOf": [
+       {
+        "maxLength": 20000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Text Original"
      }
     },
     "required": [
