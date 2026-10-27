@@ -34,13 +34,16 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it('reopens the full library sidebar from the compact rail', () => {
+it('promotes the clone rail into an open library pane', () => {
   render(<WorkspaceSidebar />);
-  fireEvent.click(screen.getByRole('button', { name: 'clone.toggle_sidebar' }));
+  const compactToggle = screen.getByRole('button', { name: 'clone.toggle_sidebar' });
+  fireEvent.click(compactToggle);
 
-  expect(screen.queryByRole('button', { name: 'clone.toggle_sidebar' })).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'common.close' })).toBeInTheDocument();
-  const saved = JSON.parse(localStorage.getItem('voicestudio.workspace-layout') || '{}');
-  expect(saved.libraryOpen).toBe(true);
-  expect(saved.expandedLibraryContext).toBe('/clone:false');
+  const persisted = JSON.parse(localStorage.getItem('voicestudio.workspace-layout') || '{}');
+  expect(persisted).toMatchObject({
+    libraryOpen: true,
+    expandedLibraryContext: '/clone:false',
+  });
+  expect(screen.getByRole('button', { name: 'common.close' })).toBeVisible();
+  expect(compactToggle).not.toBeInTheDocument();
 });
