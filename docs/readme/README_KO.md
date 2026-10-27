@@ -71,7 +71,7 @@
 | **Windows on ARM** | `.exe` · [가이드](../../docs/install/windows.md) | CPU (x64 백엔드를 에뮬레이션으로 실행) | 실험적 |
 | **Intel Mac** | `.dmg` · [이유](../../docs/install/macos.md) | 앱 UI만 지원, 원격 백엔드에 연결 | 제한적 |
 
-모든 설치 파일은 [최신 릴리스](https://github.com/debpalash/VoiceStudio/releases/latest)에 있습니다. GPU가 없나요? CPU만으로도 모든 기능을 쓸 수 있으며, 속도만 느립니다. 선택 기능인 네이티브 GGUF 엔진은 AMD GPU를 포함해 Vulkan도 사용할 수 있습니다([OmniVoice](../../docs/engines/omnivoice-gguf.md#optional-vulkan-acceleration), [CosyVoice](../../docs/engines/cosyvoice-gguf.md)). 엔진과 하드웨어별 속도는 [성능](../../docs/performance.md) 문서를 참고하세요.
+데스크톱과 휴대폰 설치 파일은 [최신 릴리스](https://github.com/debpalash/VoiceStudio/releases/latest)에 있고, Docker 이미지는 GHCR에서 받을 수 있습니다. GPU가 없나요? CPU만으로도 모든 기능을 쓸 수 있으며, 속도만 느립니다. 선택 기능인 네이티브 GGUF 엔진은 AMD GPU를 포함해 Vulkan도 사용할 수 있습니다([OmniVoice](../../docs/engines/omnivoice-gguf.md#optional-vulkan-acceleration), [CosyVoice](../../docs/engines/cosyvoice-gguf.md)). 엔진과 하드웨어별 속도는 [성능](../../docs/performance.md) 문서를 참고하세요.
 
 ## 시작하기
 
@@ -90,7 +90,7 @@ irm https://voicestudio.sh/install.ps1 | iex
 위 표에서 설치 파일을 내려받아도 됩니다. 그런 다음 **음성 복제**를 열고, 목소리를 고르거나 깨끗한 참조 녹음을 추가한 뒤 텍스트를 입력하고 생성하세요. 모델을 내려받기 전에는 항상 먼저 확인을 요청합니다.
 
 > [!NOTE]
-> macOS에서 "VoiceStudio이(가) 손상되었기 때문에 열 수 없습니다"라는 메시지는 Gatekeeper가 앱을 차단했다는 뜻이지, 다운로드한 파일이 손상되었다는 뜻이 아닙니다. [Gatekeeper 해결 방법](../../docs/install/macos.md#gatekeeper-quarantine)을 참고하세요.
+> macOS에서 "VoiceStudio가 손상되었기 때문에 열 수 없습니다"라는 메시지는 Gatekeeper가 앱을 차단했다는 뜻이지, 다운로드한 파일이 손상되었다는 뜻이 아닙니다. [Gatekeeper 해결 방법](../../docs/install/macos.md#gatekeeper-quarantine)을 참고하세요.
 
 <details>
 <summary><strong>다른 설치 방법</strong>: 특정 버전, 최신 main, 제거, 소스에서 설치, 코딩 에이전트로 설치</summary>

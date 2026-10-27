@@ -69,7 +69,7 @@
 | **Windows on ARM** | `.exe` · [指南](../../docs/install/windows.md) | CPU（x64 后端在模拟层中运行） | 实验性 |
 | **Intel Mac** | `.dmg` · [原因](../../docs/install/macos.md) | 仅应用界面，需连接远程后端 | 受限 |
 
-所有安装包都在[最新发行版](https://github.com/debpalash/VoiceStudio/releases/latest)中。没有 GPU？应用在 CPU 上也能完整使用，只是速度较慢。可选的原生 GGUF 引擎还能使用 Vulkan，包括 AMD GPU（[OmniVoice](../../docs/engines/omnivoice-gguf.md#optional-vulkan-acceleration)、[CosyVoice](../../docs/engines/cosyvoice-gguf.md)）。各引擎在不同硬件上的速度：[性能说明](../../docs/performance.md)。
+桌面端和手机安装包都在[最新发行版](https://github.com/debpalash/VoiceStudio/releases/latest)中，Docker 镜像则发布在 GHCR。没有 GPU？应用在 CPU 上也能完整使用，只是速度较慢。可选的原生 GGUF 引擎还能使用 Vulkan，包括 AMD GPU（[OmniVoice](../../docs/engines/omnivoice-gguf.md#optional-vulkan-acceleration)、[CosyVoice](../../docs/engines/cosyvoice-gguf.md)）。各引擎在不同硬件上的速度：[性能说明](../../docs/performance.md)。
 
 ## 开始使用
 
