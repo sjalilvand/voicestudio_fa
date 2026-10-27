@@ -623,25 +623,27 @@ def test_mlx_audio_generate_omits_ref_text_without_ref_audio():
     assert "ref_text" not in captured
 
 
-def test_mlx_audio_generate_design_path_unaffected_without_any_ref():
-    # Absorbed from community PR #1015 (MahdiHedhli) — the design/instruct
-    # path (no ref_audio, no ref_text at all) must stay untouched by the
-    # ref_text forwarding fix; neither kwarg may leak into the model call.
-    pytest.importorskip("mlx_audio", reason="mlx-audio is Apple-Silicon-only")
-    backend = tts_backend.MLXAudioBackend()
-    backend._ensure_loaded = lambda: None
+def test_mlx_audio_instruct_only_call_leaves_reference_args_out():
+    pytest.importorskip("mlx_audio", reason="needs the mlx_audio package (macOS arm64 only)")
+    import numpy as np
 
-    captured = {}
+    class RecordingModel:
+        def __init__(self):
+            self.kwargs = None
 
-    def _fake_generate(**kw):
-        captured.update(kw)
-        return iter([types.SimpleNamespace(audio=__import__("numpy").zeros(4))])
+        def generate(self, **kwargs):
+            self.kwargs = kwargs
+            yield types.SimpleNamespace(audio=np.ones(8, dtype=np.float32))
 
-    backend._model = types.SimpleNamespace(generate=_fake_generate)
-    backend.generate("hello")
+    engine = tts_backend.MLXAudioBackend()
+    engine._ensure_loaded = lambda: None
+    engine._model = RecordingModel()
 
-    assert "ref_text" not in captured
-    assert "ref_audio" not in captured
+    engine.generate("a line of speech without any cloning inputs")
+
+    assert engine._model.kwargs is not None
+    forbidden = {"ref_text", "ref_audio"} & set(engine._model.kwargs)
+    assert not forbidden
 
 
 @pytest.mark.parametrize("language", ["Auto", "auto", " AUTO ", " ", "", None])

@@ -34,6 +34,25 @@ class RoutingResult(TypedDict):
     routing_reason: str | None     # raw, pre-scrub
 
 
+def uses_parent_torch(cls) -> bool:
+    """Whether an engine loads its model through this process's PyTorch and
+    ``model_manager.get_best_device()``, so it gets the loader's CPU fallback.
+
+    True for in-process engines and for sidecars that run the parent's own
+    interpreter (``shares_parent_torch()``, e.g. ``omnivoice-subprocess``,
+    whose child calls ``get_best_device()``). False only for a sidecar with its
+    own venv and torch build. ``shares_parent_torch()`` is cheap and
+    side-effect free by contract; a failing one counts as a separate venv.
+    """
+    if not getattr(cls, "_is_subprocess_isolated", False):
+        return True
+    probe = getattr(cls, "shares_parent_torch", None)
+    try:
+        return bool(probe()) if callable(probe) else False
+    except Exception:  # noqa: BLE001 - unknown interpreter: assume separate
+        return False
+
+
 def runtime_compute_profile(engine_or_cls, caps: HostCaps) -> dict:
     """Return one engine's runtime-aware compute contract.
 
@@ -50,7 +69,7 @@ def runtime_compute_profile(engine_or_cls, caps: HostCaps) -> dict:
     dynamic = getattr(cls, "runtime_gpu_compat", None)
     compat = tuple(dynamic() if callable(dynamic) else getattr(cls, "gpu_compat", ("cpu",)))
     floor = float(getattr(cls, "min_vram_gb", 0.0) or 0.0)
-    parent_torch = not getattr(cls, "_is_subprocess_isolated", False)
+    parent_torch = uses_parent_torch(cls)
     return {
         "gpu_compat": compat,
         "min_vram_gb": floor,

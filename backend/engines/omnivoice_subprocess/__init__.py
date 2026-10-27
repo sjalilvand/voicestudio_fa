@@ -157,6 +157,7 @@ class OmniVoiceMPSSubprocessBackend(OmniVoiceSubprocessBackend):
 
     id = "omnivoice"
     display_name = "VoiceStudio (k2-fsa/OmniVoice, 600+ languages)"
+    instruct_vocabulary = "tags"
     supports_native_omnivoice_controls = True
 
     def generate(self, text: str, **kw):

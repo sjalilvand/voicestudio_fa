@@ -107,14 +107,14 @@ export function SecondarySidebar({
   size?: 'default' | 'wide' | 'spacious';
   variant?: 'controls' | 'navigation' | 'library';
   meta?: ReactNode;
-  /** Pinned below the scrolling content — never scrolls out of view. */
+  /** Pinned below the scrolling content; hidden while collapsed or on the library tab. */
   footer?: ReactNode;
   /** Saved items beside the controls. A render callback receives visibility so retained panes can cancel hidden work. */
   library?: ReactNode | ((active: boolean) => ReactNode);
   libraryLabel?: string;
   /** Controls the collapsed state when the parent owns a shared pane shortcut. */
   collapsed?: boolean;
-  /** Lets the page re-home the footer's content while the pane is collapsed. */
+  /** Reports each collapse or expand, so a page can re-home the footer while the pane is shut. */
   onCollapsedChange?: (collapsed: boolean) => void;
   /**
    * Show the controls/library tabs in the header row instead of the title, for
@@ -137,12 +137,11 @@ export function SecondarySidebar({
     setView(next);
   };
   const showLibrary = library != null && view === 'library';
-  // Notify from the event handler, never from inside a state updater: updaters
-  // must stay pure (StrictMode runs them twice, which would double-fire this).
-  const setCollapsed = (next: boolean | ((value: boolean) => boolean)) => {
+  const setCollapsed = (next: boolean | ((current: boolean) => boolean)) => {
     const resolved = typeof next === 'function' ? next(collapsed) : next;
     if (resolved === collapsed) return;
     if (controlledCollapsed === undefined) setUncontrolledCollapsed(resolved);
+    // Called from the event handler, not a state updater, so StrictMode cannot fire it twice.
     onCollapsedChange?.(resolved);
   };
   const headerTabs = tabsInHeader && library != null;
@@ -320,10 +319,12 @@ export function SecondarySidebar({
       >
         {children}
       </div>
-      {footer !== undefined && footer !== null && !collapsed && !showLibrary && (
+      {footer != null && !collapsed && !showLibrary && (
         <div
           data-slot="secondary-sidebar-footer"
-          className="flex min-h-0 max-h-[70%] flex-col space-y-3 border-t border-border/55 p-3.5 text-[13px]"
+          // shrink-[0.05]: when the pane is height-capped (stacked layout) the scrolling content gives
+          // way first and the footer only shrinks once that is exhausted.
+          className="studio-scrollbar flex max-h-[70%] min-h-0 shrink-[0.05] flex-col gap-2 overflow-y-auto overscroll-contain border-t border-border/45 p-3"
         >
           {footer}
         </div>

@@ -98,11 +98,14 @@ Or download from [Releases](https://github.com/debpalash/VoiceStudio/releases/la
 
 **[macOS](docs/install/macos.md) · [Windows](docs/install/windows.md) · [Linux](docs/install/linux.md) · [Nix / NixOS](docs/install/nix.md) · [Docker](docs/install/docker.md) · [Android and iPhone](docs/mobile.md#install)**
 
+> [!NOTE]
+> On macOS, a "VoiceStudio is damaged and can't be opened" message does not mean the download is corrupt. It is Gatekeeper rejecting a quarantined, un-notarized app. Follow the [Gatekeeper section](docs/install/macos.md#gatekeeper-quarantine) of the macOS guide.
+
 | Hardware | Support |
 |---|---|
 | NVIDIA GPU (Windows / Linux) | CUDA acceleration |
 | AMD Radeon / supported Ryzen AI (Windows) | CPU by default; [opt-in Windows ROCm setup](docs/install/windows-rocm.md) for AMD's Windows 11 hardware matrix. Setup distinguishes package repair from host failures; install the VC++ runtime manually first. Optional engines have separate limits; Vulkan engines retain their own runtime. |
-| Apple Silicon (M1–M5) | Metal (MPS) acceleration |
+| Apple Silicon (any M-series chip) | Metal (MPS) acceleration |
 | AMD GPU | Opt-in native CosyVoice GGUF can use Vulkan when the community runtime is built with Vulkan; verified on RX 6700 XT ([setup](docs/engines/cosyvoice-gguf.md)) |
 | No dedicated GPU (Intel/AMD integrated graphics, older PCs) | Fully usable on the CPU, slower; setup installs the small CPU build of PyTorch (about 5 GB free disk) |
 | Windows on ARM (Snapdragon X etc.) | **Experimental**, validation pending: native ARM64 app, x64 Python backend under emulation, CPU only |

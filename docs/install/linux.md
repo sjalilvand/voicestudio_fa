@@ -113,8 +113,7 @@ Prerequisites:
     libXtst-devel libX11-devel libxkbcommon-devel wayland-devel openssl-devel
 
   # Arch
-  sudo pacman -S --needed base-devel alsa-lib xdotool libxtst libx11 \
-    libxkbcommon wayland openssl
+  sudo pacman -S --needed base-devel alsa-lib xdotool libxtst libx11 libxkbcommon wayland openssl
   ```
 
   `bun run dist` also needs `readelf` (binutils) and `zsyncmake` (zsync) to

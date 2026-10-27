@@ -33,8 +33,6 @@ export function AppShell() {
         {shellOnly ? (
           <>
             <CommandPalette />
-            {/* The main sidebar (navigation, library, status) stays where it is
-                on Settings too, so the app never swaps its left column. */}
             <WorkspaceSidebar />
             <SettingsWorkspace
               data-slot="workspace-content"

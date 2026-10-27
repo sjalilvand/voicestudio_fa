@@ -17,6 +17,7 @@ import logging
 import posixpath
 import re
 import zipfile
+from typing import Optional
 from html.parser import HTMLParser
 from xml.etree import ElementTree as ET
 from urllib.parse import unquote, urlsplit
@@ -324,7 +325,8 @@ _ANCILLARY_TITLE = re.compile(
     r"^\s*(cover|half[ -]?title|title[ -]?page|copyright|dedication|contents|"
     r"table of contents|acknowledg\w*|about the (author|illustrator|book)|"
     r"also (by|available)|praise for|imprint|colophon|newsletter|look out for|"
-    r"(other )?(works|books|titles) by|about the publisher|footnotes?|endnotes?)\b",
+    r"(other )?(works|books|titles) by|about the publisher|"
+    r"footnotes?|endnotes?)\b",
     re.I,
 )
 
@@ -337,13 +339,27 @@ def _is_ancillary(types: set[str], title: str) -> bool:
     return bool(title and _ANCILLARY_TITLE.match(title))
 
 
+def _landmarks_start(navs, nav_dir: str, type_attribute: str, local_name) -> Optional[str]:
+    """Member path of the first ``bodymatter`` link inside an EPUB 3 ``landmarks`` nav."""
+    for nav in navs:
+        if "landmarks" not in nav.get(type_attribute, "").split():
+            continue
+        for link in nav.iter():
+            if local_name(link) != "a" or not link.get("href"):
+                continue
+            if "bodymatter" in link.get(type_attribute, "").split():
+                return _member_path(nav_dir, link.get("href")) or None
+    return None
+
+
 def _toc_titles(
     zf: zipfile.ZipFile, base: str, nav_hrefs: list[str], names: set[str], budget: _ReadBudget
-) -> tuple[dict[str, str], str | None]:
+) -> tuple[dict[str, str], Optional[str]]:
     """Map each spine document (full zip path) to its table-of-contents label.
 
-    Also returns the EPUB 3 landmarks ``bodymatter`` target (the publisher's
-    "the book starts here"), or ``None`` — see :func:`_front_matter_end`.
+    Returns ``(titles, body_start)``. ``body_start`` is the member path the EPUB 3
+    ``landmarks`` list marks as ``bodymatter`` (where the book proper begins), or
+    ``None`` when the navigation declares no such entry.
 
     Publishers label sections better than their headings do ("Chapter One:
     A New Arrival" versus an ``<h1>`` holding only "A New Arrival"). Reads
@@ -353,9 +369,9 @@ def _toc_titles(
     Navigation documents come from the user's file like every other member,
     so they are read through the same zip-bomb ``budget`` as the spine.
     """
-    body_start: str | None = None
     nav_titles: dict[str, str] = {}  # EPUB 3 nav — authoritative
     ncx_titles: dict[str, str] = {}  # EPUB 2 NCX — fallback
+    body_start: Optional[str] = None
     for href in nav_hrefs:
         full = _member_path(base, href)
         if full not in names:
@@ -392,13 +408,8 @@ def _toc_titles(
                 for anchor in scope.iter():
                     if local_name(anchor) == "a" and anchor.get("href"):
                         pairs.append((anchor.get("href"), "".join(anchor.itertext())))
-            for nav in navs:
-                if "landmarks" not in nav.get(type_attribute, "").split():
-                    continue
-                for anchor in nav.iter():
-                    if (body_start is None and local_name(anchor) == "a" and anchor.get("href")
-                            and "bodymatter" in anchor.get(type_attribute, "").split()):
-                        body_start = _member_path(nav_dir, anchor.get("href"))
+            if body_start is None:
+                body_start = _landmarks_start(navs, nav_dir, type_attribute, local_name)
         for src, label in pairs:
             path = _member_path(nav_dir, src)
             label = " ".join(label.split())
@@ -408,31 +419,25 @@ def _toc_titles(
     return {k: v for k, v in titles.items() if v}, body_start
 
 
-#: Ceiling for dropping an unlisted page on the TOC alone (no declared start):
-#: a teaser, epigraph or blurb is a few dozen words; an unlisted prologue is not.
+#: An unlisted, unmarked page this short (or shorter) is treated as publisher
+#: furniture (teaser, epigraph, blurb) rather than a chapter.
 _FRONT_MATTER_MAX_WORDS = 400
 
 
-def _front_matter_end(
-    sections: list[tuple[str, set[str], str, str]], toc: dict[str, str], declared: str | None
-) -> tuple[int, bool]:
-    """Index of the first spine section that belongs to the book, and whether
-    the publisher DECLARED it.
+def _book_start_index(sections: list, toc: dict[str, str], declared: Optional[str]) -> int:
+    """Index of the first section that belongs to the book proper.
 
-    Untagged EPUBs put unmarked pages — a teaser excerpt, an epigraph, a blurb —
-    ahead of chapter one: no ``epub:type``, no heading, not in the contents. The
-    only things that say "this is not a chapter" are structural: the package's
-    declared reading start (EPUB 2 ``guide`` ``text`` reference / EPUB 3
-    landmarks ``bodymatter``) and, failing that, the first section the table of
-    contents lists that is not itself front matter.
+    The publisher's declared start wins when it is one of the sections; else the
+    first section the table of contents lists under a non-ancillary label; else 0.
     """
-    paths = [full for full, *_ in sections]
-    if declared in paths:
-        return paths.index(declared), True
-    for i, (full, types, _title, _body) in enumerate(sections):
-        if full in toc and not _is_ancillary(types, toc[full]):
-            return i, False
-    return 0, False
+    if declared is not None:
+        for i, section in enumerate(sections):
+            if section[0] == declared:
+                return i
+    for i, (path, types, _heading, _body) in enumerate(sections):
+        if path in toc and not _is_ancillary(types, toc[path]):
+            return i
+    return 0
 
 
 class _ReadBudget:
@@ -483,6 +488,32 @@ def _read_member(zf: zipfile.ZipFile, name: str, budget: _ReadBudget, *, require
     return raw
 
 
+def _narrated(sections: list, toc: dict[str, str], declared: Optional[str]):
+    """Yield ``(title, body)`` for the sections a narrator should read.
+
+    Drops ancillary pages, unlisted teaser/publisher pages that precede the book
+    start, and stray unlisted pages once listed back matter has begun.
+    """
+    first = _book_start_index(sections, toc, declared)
+    back_matter = False
+    for pos, (path, types, heading, body) in enumerate(sections):
+        label = toc.get(path) or heading
+        in_toc = path in toc
+        if _is_ancillary(types, label):
+            back_matter = back_matter or (pos > first and in_toc)
+            continue
+        loose = not in_toc and not (types & _BODY_TYPES)
+        short = len(body.split()) <= _FRONT_MATTER_MAX_WORDS
+        if loose and short and pos < first:
+            publisher_like = re.match(r"\s*(novels|published) by\b", heading, re.I)
+            if not heading or publisher_like:
+                continue
+        if back_matter and loose and short and not heading:
+            continue
+        back_matter = False
+        yield label, body
+
+
 def epub_to_chapter_script(
     data: bytes,
     *,
@@ -523,11 +554,14 @@ def epub_to_chapter_script(
 
     names = set(zf.namelist())
     toc, declared_start = _toc_titles(zf, base, nav_hrefs, names, budget)
-    for ref in opf.findall(".//opf:guide/opf:reference", _OPF_NS):  # EPUB 2 equivalent
-        if declared_start is None and (ref.get("type") or "").lower() == "text" and ref.get("href"):
-            declared_start = _member_path(base, ref.get("href"))
+    if declared_start is None:
+        # EPUB 2: <guide><reference type="text" href=...> names the reading start.
+        for reference in opf.findall(".//opf:guide/opf:reference", _OPF_NS):
+            if (reference.get("type") or "").lower() == "text" and reference.get("href"):
+                declared_start = _member_path(base, reference.get("href")) or None
+                break
 
-    sections: list[tuple[str, set[str], str, str]] = []  # (path, epub:types, heading, body)
+    sections: list[tuple[str, set[str], str, str]] = []
     for ref in opf.findall(".//opf:spine/opf:itemref", _OPF_NS):
         href = manifest.get(ref.get("idref") or "")
         if not href or href in nav_hrefs:
@@ -549,35 +583,10 @@ def epub_to_chapter_script(
             continue  # nav docs, empty pages
         sections.append((full, types, title, body))
 
-    start, _declared = _front_matter_end(sections, toc, declared_start)
-    # Reading-start metadata can skip a real unlisted prologue. Only discard
-    # short, headingless stray pages, never substantive opening sections.
-    blocks: list[str] = []
-    in_back_matter = False
-    for index, (full, types, heading, body) in enumerate(sections):
-        title = toc.get(full) or heading
-        if _is_ancillary(types, title):
-            # Only a section the contents LISTS opens back matter: an unlisted page
-            # that merely looks ancillary must not cost the next chapter's
-            # continuation file.
-            # Once open it stays open through further ancillary pages, listed or not.
-            in_back_matter = in_back_matter or (index > start and full in toc)
-            continue  # cover, title page, dedication, copyright, contents, …
-        unlisted = full not in toc and not (types & _BODY_TYPES)
-        stray = not heading and len(body.split()) <= _FRONT_MATTER_MAX_WORDS
-        front_furniture = bool(heading and re.match(r"^\s*(novels by|published by)\b", heading, re.I))
-        if (index < start and unlisted
-                and len(body.split()) <= _FRONT_MATTER_MAX_WORDS
-                and (not heading or front_furniture)):
-            continue  # unlisted page ahead of the book: a teaser/epigraph/blurb
-        if in_back_matter and unlisted and stray:
-            # Footnotes, a stray ad — but ONLY once listed back matter has begun:
-            # an unlisted file straight after a chapter is that chapter's
-            # continuation (split chapters list only their first file).
-            continue
-        in_back_matter = False
-        title = title or f"Chapter {len(blocks) + 1}"
-        blocks.append(f"# {title}\n\n{body}")
+    blocks = [
+        f"# {title or f'Chapter {n}'}\n\n{body}"
+        for n, (title, body) in enumerate(_narrated(sections, toc, declared_start), start=1)
+    ]
 
     if not blocks:
         raise ValueError("no readable chapters found in the EPUB")

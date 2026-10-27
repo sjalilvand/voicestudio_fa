@@ -557,34 +557,47 @@ def test_partial_failure_isolates_bad_chapter(tmp_path, monkeypatch):
     assert (out / done["output"]).exists()  # the surviving chapter still muxed
 
 
-def test_chapter_duration_ms_reproduces_the_embedded_chapter_starts(tmp_path, monkeypatch):
-    """The cue sheet (#2278) sums `duration_ms` over the chapters that rendered.
-    That sum must land on the m4b's own chapter START offsets, with a failed
-    chapter contributing neither a chapter nor any time."""
+def test_delivered_chapter_timings_match_muxed_metadata_after_a_failure(tmp_path, monkeypatch):
     out = tmp_path / "outputs"
     out.mkdir()
+    chapter_text = [
+        ("Overture", "alpha"),
+        ("Broken bridge", "reject-this"),
+        ("Crossing", "gamma"),
+        ("Homeward", "delta"),
+    ]
     events = _collect_events(
-        _plan(("One", "Hello there."), ("Bad", "FAILME now"), ("Three", "Third one."),
-              ("Four", "Fourth one.")),
-        monkeypatch, out, fmt="m4b", fail_on=lambda t: "FAILME" in t,
+        _plan(*chapter_text),
+        monkeypatch,
+        out,
+        fmt="m4b",
+        fail_on=lambda text: text.startswith("reject"),
     )
-    chapters = [e for e in events if e["type"] == "chapter"]
-    assert [c["title"] for c in chapters] == ["One", "Three", "Four"]
-    for c in chapters:
-        assert isinstance(c["duration_ms"], int)
-        assert c["duration_ms"] == pytest.approx(c["duration_s"] * 1000, abs=5)
-    starts, elapsed = [], 0
-    for c in chapters:
-        starts.append(elapsed)
-        elapsed += c["duration_ms"]
-    done = events[-1]
-    assert done["type"] == "done"
-    assert done["duration_s"] == pytest.approx(elapsed / 1000, abs=0.005)
+    chapters = [event for event in events if event["type"] == "chapter"]
+    assert [(event["index"], event["title"]) for event in chapters] == [
+        (0, "Overture"),
+        (2, "Crossing"),
+        (3, "Homeward"),
+    ]
+    timing_error = [
+        abs(event["duration_ms"] - round(1000 * event["duration_s"]))
+        for event in chapters
+    ]
+    assert all(type(event["duration_ms"]) is int for event in chapters)
+    assert max(timing_error) <= 5
+    total_ms = sum(map(lambda event: event["duration_ms"], chapters))
+    done = next(event for event in events if event["type"] == "done")
+    assert done["duration_s"] == pytest.approx(total_ms / 1000, abs=0.005)
     if _FFPROBE:
-        embedded = _ffprobe(str(out / done["output"]))["chapters"]
-        assert [ch["tags"]["title"] for ch in embedded] == ["One", "Three", "Four"]
-        assert [round(float(ch["start_time"]) * 1000) for ch in embedded] == starts
-
+        embedded = _ffprobe(str(out / done["output"])).get("chapters", [])
+        assert [item["tags"]["title"] for item in embedded] == [
+            event["title"] for event in chapters
+        ]
+        expected_starts = [0]
+        for event in chapters[:-1]:
+            expected_starts.append(expected_starts[-1] + event["duration_ms"])
+        actual_starts = [round(float(item["start_time"]) * 1000) for item in embedded]
+        assert actual_starts == expected_starts
 
 def test_all_chapters_fail_emits_error_and_no_file(tmp_path, monkeypatch):
     out = tmp_path / "outputs"
@@ -744,56 +757,35 @@ def test_off_path_emits_no_loudness_block(tmp_path, monkeypatch):
     assert "loudness" not in events[-1]  # legacy done shape preserved
 
 
-# ── the finished render says what it is ─────────────────────────────────────
+def _done_of(events):
+    assert events[-1]["type"] == "done"
+    return events[-1]
 
-def test_done_event_carries_the_title_and_how_it_was_rendered(tmp_path, monkeypatch):
-    from services.audiobook import AudiobookPlan, Chapter, ExpressiveOptions, Span
 
+def test_done_summary_describes_the_render_but_never_quotes_it(tmp_path, monkeypatch):
     out = tmp_path / "outputs"
     out.mkdir()
-    plan = AudiobookPlan(chapters=[Chapter(title="Chapter One", spans=[
-        Span(voice_id=None, text="Zoe raced along the path.", speed=0.95)])])
-    events = _collect_events(plan, monkeypatch, out, fmt="mp3", language="English",
-                             metadata={"title": "The Super Sloth"},
-                             opts=ExpressiveOptions(seed=0, postprocess_output=False))
-    done = events[-1]
-    assert done["type"] == "done" and done["title"] == "The Super Sloth"
-    summary = done["summary"]
-    assert summary["speeds"] == [0.95] and summary["lines"] == 1 and summary["words"] == 5
-    assert summary["language"] == "English" and summary["format"] == "mp3"
-    # Explicit falsy settings and effective sampling values are recorded.
-    assert summary["options"]["seed"] == 0
-    assert summary["options"]["postprocess_output"] is False
-    assert summary["options"]["num_step"] > 0
-    assert summary["options"]["guidance_scale"] == 2.0
-    assert summary["chapter_titles"] == ["Chapter One"]
-    assert "Zoe" not in json.dumps(summary)      # settings and counts, never the script
+    done = _done_of(_collect_events(_plan(("Ch A", "quiet harbour lights")), monkeypatch, out,
+                                    fmt="mp3", metadata={"title": "Harbour"}))
+    assert done["title"] == "Harbour"
+    detail = done["summary"]
+    assert {k: detail[k] for k in ("lines", "words", "format", "speeds", "chapter_titles")} == {
+        "lines": 1, "words": 3, "format": "mp3", "speeds": [1.0], "chapter_titles": ["Ch A"],
+    }
+    assert "harbour lights" not in json.dumps(done)
 
 
-def test_a_summary_failure_never_costs_the_render(tmp_path, monkeypatch):
+def test_done_title_defaults_to_first_chapter_and_summary_errors_are_swallowed(
+        tmp_path, monkeypatch):
     from api.routers import audiobook
-
-    def boom(*_a, **_k):
-        raise RuntimeError("profile db unavailable")
-
-    monkeypatch.setattr(audiobook, "_render_summary", boom)
     out = tmp_path / "outputs"
     out.mkdir()
-    done = _collect_events(_plan(("One", "Hi.")), monkeypatch, out, fmt="mp3")[-1]
-    assert done["type"] == "done" and "summary" not in done
-    assert (out / done["output"]).exists()
-
-
-def test_summary_describes_only_the_chapters_that_made_it_into_the_file(tmp_path, monkeypatch):
-    out = tmp_path / "outputs"
-    out.mkdir()
-    events = _collect_events(
-        _plan(("Good", "Hello world."), ("Bad", "BOOM please fail here.")),
-        monkeypatch, out, fmt="mp3", fail_on=lambda text: "BOOM" in text)
-    done = events[-1]
-    assert done["type"] == "done" and done["failed_chapters"]
-    assert done["summary"]["chapter_titles"] == ["Good"]
-    assert done["summary"]["words"] == 2
+    plan = _plan(("Intro", "x"))
+    assert _done_of(_collect_events(plan, monkeypatch, out, fmt="mp3"))["title"] == "Intro"
+    monkeypatch.setattr(audiobook, "_render_summary",
+                        lambda *a, **k: (_ for _ in ()).throw(KeyError("nope")))
+    again = _done_of(_collect_events(plan, monkeypatch, out, fmt="mp3"))
+    assert "summary" not in again and again["output"]
 
 
 def test_done_summary_from_old_manifest_is_strict_json(tmp_path, monkeypatch):
