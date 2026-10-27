@@ -93,7 +93,7 @@ def rocm_torch_reinstall_cmd(index_url, python=None):
     names = [pin.split("==", 1)[0] for pin in ROCM_TORCH_PINS]
     return [
         "uv", "pip", "install",
-        "--python", python or sys.executable,
+        "--python", python if python else sys.executable,
         *(arg for name in names for arg in ("--reinstall-package", name)),
         *(f"{pin}{tag}" for pin in ROCM_TORCH_PINS),
         "--extra-index-url", index_url,
@@ -112,15 +112,15 @@ def _ensure_rocm_torch():
     print(f"⚙ OMNIVOICE_TORCH_VARIANT=rocm set: fetching AMD wheels from {index_url} ...")
     try:
         subprocess.check_call(rocm_torch_reinstall_cmd(index_url))
-    except (OSError, subprocess.CalledProcessError) as exc:
-        print(f"⚠ ROCm torch install failed ({exc}); keeping the default torch build")
+    except (OSError, subprocess.CalledProcessError) as err:
+        print(f"⚠ Could not switch to ROCm wheels ({err}); leaving the stock torch in place")
         return
     if not _installed_torch_is_rocm():
         # An untagged OMNIVOICE_TORCH_INDEX mirror can resolve the bare pins
         # to ordinary wheels.
         print("⚠ The installed torch has no ROCm support; check OMNIVOICE_TORCH_INDEX")
         return
-    print("✓ ROCm torch installed")
+    print("✓ ROCm wheels are now installed")
 
 
 # ── Windows: VC++ Redistributable ─────────────────────────────────────────

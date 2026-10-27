@@ -112,7 +112,7 @@ def test_rocm_swap_is_verified_in_a_fresh_interpreter(monkeypatch, capsys, setup
     setup_mod._ensure_rocm_torch()
     out = capsys.readouterr().out
     assert "no ROCm support" in out
-    assert "✓ ROCm torch installed" not in out
+    assert "✓ ROCm wheels are now installed" not in out
 
 
 @pytest.mark.parametrize("plat, runs", [("linux", True), ("linux2", True), ("win32", False), ("darwin", False)])
