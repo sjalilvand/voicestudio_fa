@@ -358,6 +358,9 @@ it('names Smart App Control when it refused a runtime DLL, and other blockers ot
   expect(loadBlockMessage('exit code 1', last, 'application_control', 'off')).toContain(
     'A Windows application control policy blocked it.',
   );
+  expect(loadBlockMessage('exit code 1', '', 'group_policy', 'on')).toContain(
+    'A Windows application control policy blocked it.',
+  );
   expect(loadBlockMessage('exit code 1', '', 'antivirus')).toBe(
     "Backend exited (exit code 1): Windows refused to load one of the engine's files. Your antivirus blocked it.",
   );

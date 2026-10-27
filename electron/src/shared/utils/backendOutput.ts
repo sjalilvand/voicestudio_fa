@@ -109,7 +109,7 @@ export function isBrokenEnvironmentOutput(lines: readonly string[]): boolean {
 }
 
 /** Who refused to load a runtime file, by the Windows error text Python quotes. */
-export type WindowsLoadBlock = 'application_control' | 'antivirus';
+export type WindowsLoadBlock = 'application_control' | 'group_policy' | 'antivirus';
 
 /**
  * Windows refused to load one of the runtime's files (#3209, #3224).
@@ -123,8 +123,9 @@ export type WindowsLoadBlock = 'application_control' | 'antivirus';
  */
 export function windowsLoadBlock(lines: readonly string[]): WindowsLoadBlock | null {
   const tail = lines.slice(-RECENT_OUTPUT_LINES).join('\n');
-  if (/an application control policy has blocked this file|this program is blocked by group policy/i.test(tail))
-    return 'application_control';
+  if (/an application control policy has blocked this file/i.test(tail)) return 'application_control';
+  // ERROR 1260 is AppLocker / Software Restriction Policies, never Smart App Control.
+  if (/this program is blocked by group policy/i.test(tail)) return 'group_policy';
   if (/contains a virus or potentially unwanted software/i.test(tail)) return 'antivirus';
   return null;
 }

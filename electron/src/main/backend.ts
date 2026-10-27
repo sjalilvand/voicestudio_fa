@@ -720,7 +720,8 @@ export function loadBlockMessage(
   const who =
     block === 'antivirus'
       ? 'Your antivirus blocked it.'
-      : smartAppControl === 'on' || smartAppControl === 'evaluation'
+      : block === 'application_control' &&
+          (smartAppControl === 'on' || smartAppControl === 'evaluation')
         ? 'Windows Smart App Control blocked it.'
         : 'A Windows application control policy blocked it.';
   return (

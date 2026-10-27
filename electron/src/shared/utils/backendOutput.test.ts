@@ -84,7 +84,7 @@ describe('windowsLoadBlock (#3209)', () => {
     expect(windowsLoadBlock(lines)).toBe('application_control');
     expect(isBrokenEnvironmentOutput(lines)).toBe(false);
     expect(windowsLoadBlock(blocked('This program is blocked by group policy.'))).toBe(
-      'application_control',
+      'group_policy',
     );
   });
   it('names an antivirus that refused the load', () => {
