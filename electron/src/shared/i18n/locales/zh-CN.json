@@ -75,7 +75,8 @@
     "stop": "停止加载",
     "address": "网站地址",
     "default_browser": "默认浏览器",
-    "failed": "无法完成此操作。请检查地址和网络连接，或在浏览器中打开。"
+    "failed": "无法完成此操作。请检查地址和网络连接，或在浏览器中打开。",
+    "return_studio": "返回工作室"
   },
   "sidebarTools": {
     "simple": "简洁",
@@ -202,7 +203,8 @@
     "deleteProjectConfirm": "永久删除此项目？",
     "split_chapters": "章节",
     "split_paragraphs": "段落",
-    "split_sentences": "句子"
+    "split_sentences": "句子",
+    "global_speed_hint": "适用于未单独设置语速的所有台词"
   },
   "common": {
     "stop": "停止",
@@ -241,7 +243,9 @@
     "pause": "暂停",
     "play": "播放",
     "refresh": "刷新",
-    "save": "保存"
+    "save": "保存",
+    "languages_count": "646 种语言",
+    "saving": "正在保存…"
   },
   "nav": {
     "launchpad": "创作主页",
@@ -256,7 +260,10 @@
     "audiobook": "有声读物",
     "workspaces": "工作区",
     "omnidrive": "OmniDrive",
-    "settings": "设置"
+    "settings": "设置",
+    "dub": "配音",
+    "flip_rail": "切换侧栏位置",
+    "move_rail_left": "将侧栏移到左侧"
   },
   "catalogue": {
     "title": "模型库",
@@ -301,7 +308,10 @@
     "audiobook_desc": "将长脚本或 EPUB 转换为分章有声读物 — 封面、元数据、一位旁白。",
     "convert_title": "变声器",
     "convert_desc": "说一遍,用另一种声音听到。语音到语音,完全本地运行。",
-    "open": "打开"
+    "open": "打开",
+    "dub_title": "视频配音",
+    "dubbing_projects": "配音项目",
+    "transcripts_desc": "将音频或视频转换为可编辑、可搜索的文本 — 支持 646 种语言。"
   },
   "clone": {
     "text_label": "文本",
@@ -404,7 +414,15 @@
     "opt_teenager": "青少年",
     "opt_young_adult": "青年",
     "preset_sichuan": "🌶️ 四川话",
-    "toggle_sidebar": "切换侧栏"
+    "toggle_sidebar": "切换侧栏",
+    "cat_EnglishAccent": "英语口音",
+    "opt_Auto": "✨ 自动",
+    "preset_narrator": "🎙️ 有号召力",
+    "reference_audio": "参考音频",
+    "style_placeholder": "例如：耳语",
+    "transcript": "转写文本",
+    "tshift": "t_shift",
+    "voice_source": "声音来源"
   },
   "settings": {
     "remote_backend_test": "测试连接",
@@ -837,7 +855,27 @@
     "logs": "日志",
     "models": "模型",
     "privacy": "隐私",
-    "title": "设置"
+    "title": "设置",
+    "clear_failed": "清除失败：{{message}}",
+    "compute_device": "处理设备",
+    "compute_device_title": "计算设备",
+    "ffmpeg_saved": "FFmpeg 路径已设置 — 重启后端后生效。",
+    "header_live_stats": "在页眉中显示实时系统指标",
+    "hf_token_input": "HuggingFace 令牌",
+    "hf_token_title": "HuggingFace 令牌",
+    "history_retention_save_failed": "无法保存",
+    "llmp_api_key": "API 密钥",
+    "llmp_save_failed": "保存失败。",
+    "llmskills_save_failed": "保存失败。",
+    "network_desc": "用于下载和获取模型的代理。",
+    "remote_backend_key": "API 密钥",
+    "review_mode": "审核模式",
+    "review_mode_off": "直接执行到底",
+    "save_failed": "无法保存设置：{{message}}",
+    "translate_cinematic": "影视级",
+    "translate_quality_desc": "快速模式直译且速度快；影视级模式使用 LLM 生成自然表达。",
+    "translation_providers_desc": "DeepL 和 Microsoft 在线翻译器的 API 密钥。保存后重启仍会保留。",
+    "ui_scale_setup_preview_title": "实时预览"
   },
   "about": {
     "version": "应用版本",
@@ -881,7 +919,10 @@
     "app": "应用",
     "no": "否",
     "vram": "显存",
-    "yes": "是"
+    "yes": "是",
+    "check_updates": "查找更新",
+    "commercial_license": "商业许可",
+    "copy_diagnostics": "复制系统诊断信息"
   },
   "privacy": {
     "desc": "录音和模型都保留在<1>这台设备</1>上。",
@@ -904,7 +945,10 @@
     "watermark_subtitle": "默认开启。将生成的音频标记为 AI 制作，以便日后识别。仅影响从现在起生成的音频。",
     "watermark_on_toast": "已为新音频启用不可见水印。",
     "watermark_off_toast": "已为新音频停用不可见水印。",
-    "watermark_failed": "无法更改水印设置。"
+    "watermark_failed": "无法更改水印设置。",
+    "model_telemetry": "模型使用情况遥测",
+    "no_tracking": "无 — 不进行跟踪",
+    "translator_offline": "离线翻译"
   },
   "consent": {
     "title": "帮助改进 VoiceStudio？",
@@ -913,7 +957,8 @@
     "body": "匿名且不含内容的使用统计：使用了哪些引擎、生成耗时多久，以及错误的类型。绝不会发送你的文本、音频、文件或任何可识别你身份的信息。除非你同意，否则不会发送任何数据；你可以随时在 设置 → 隐私 中更改选择。",
     "learn_more": "究竟会发送什么？",
     "yes": "是，分享匿名统计",
-    "no": "不用了，谢谢"
+    "no": "不用了，谢谢",
+    "dismiss": "关闭（继续停用分析）"
   },
   "langPrompt": {
     "offer": "VoiceStudio 以{{language}}打开。更想用英语吗？",
@@ -936,7 +981,8 @@
     "microsoft_base_url_help": "默认地址为 https://api.cognitive.microsofttranslator.com。",
     "region": "区域",
     "aws_profile": "AWS 配置",
-    "microsoft_key": "Microsoft Translator API 密钥"
+    "microsoft_key": "Microsoft Translator API 密钥",
+    "deepl_key": "DeepL API 密钥"
   },
   "engines": {
     "use": "使用此引擎",
@@ -1049,7 +1095,14 @@
     "backend": "后端",
     "ready": "就绪",
     "status": "状态",
-    "unavailable": "不可用"
+    "unavailable": "不可用",
+    "activeEngine": "当前 {{family}}：{{engine}}",
+    "cpuLongText": "{{engine}} 在此使用 CPU 运行，且文本较长 — 生成可能超出时间限制。缩短文本，或改用针对 CPU 优化的引擎（OmniVoice GGUF、Supertonic-3），速度会快得多。",
+    "cpuLongTextTuned": "{{engine}} 在此使用 CPU 运行，且文本较长 — 生成可能超出时间限制。缩短文本或分成几次录制，速度会快得多。",
+    "installFailed": "安装失败：{{message}}",
+    "recheck": "重新检查",
+    "routingAccelerated": "GPU 已启用",
+    "routingEffectiveChip": "在本机的 {{device}} 上运行"
   },
   "capture": {
     "desc": "全局快捷键需要桌面应用。在浏览器中，请保持本页面打开并按 <1>Ctrl+Shift+Space</1>。",
@@ -1080,7 +1133,12 @@
     "transcription_failed": "转录失败：{{message}}",
     "mic_not_found": "未找到麦克风。请连接或启用麦克风后重试。",
     "mic_in_use": "麦克风被占用或不可用。请关闭可能正在使用它的其他应用后重试。",
-    "mic_error_generic": "无法启动麦克风：{{message}}"
+    "mic_error_generic": "无法启动麦克风：{{message}}",
+    "active_shortcut": "当前快捷键",
+    "copied": "已复制到剪贴板",
+    "new_shortcut": "新快捷键",
+    "record_shortcut": "设置键盘快捷键",
+    "reset_default": "恢复默认设置"
   },
   "logs": {
     "no_tauri_log": "磁盘上尚无桌面日志。启动桌面应用后即可创建。",
@@ -1121,7 +1179,14 @@
     "contact": "联系方式",
     "contact_aria": "打开联系页面",
     "open_api": "API 参考",
-    "open_api_aria": "打开 OpenAPI 参考"
+    "open_api_aria": "打开 OpenAPI 参考",
+    "clear_failed": "无法清除日志：{{message}}",
+    "empty_backend": "运行日志为空。后端记录活动后会显示在这里。",
+    "empty_lines": "没有日志行。",
+    "join_discord": "加入我们的 Discord",
+    "report_copied": "诊断报告已复制 — 请粘贴到 GitHub 问题中。",
+    "update_available_aria": "有可用更新（{{version}}）— 打开更新页面",
+    "version_updates": "检查更新"
   },
   "voice_profile": {
     "not_found": "未找到声音。",
@@ -1169,7 +1234,20 @@
     "consent_revoked": "验证已撤销",
     "dubbed_segments_one": "已配音片段：{{count}} 个",
     "locked": "已锁定",
-    "ref_transcript": "参考转录稿"
+    "ref_transcript": "参考转录稿",
+    "consent_explain": "请录制自己朗读下方声明，以验证这是你的声音。智能体功能和社区分享需要验证 — 本地合成永远不需要。",
+    "consent_statement": "我确认此声音配置使用的是我本人的声音，并同意 VoiceStudio 代我克隆该声音。",
+    "dubbed_segments_other": "{{count}} 个配音片段",
+    "locked_explain": "锁定的声音会复用同一参考录音和随机种子，以获得可复现的结果。",
+    "name_placeholder": "声音名称",
+    "persona_exported": "声音角色已导出",
+    "persona_exporting": "正在构建声音角色…",
+    "projects_count_one": "用于 {{count}} 个项目",
+    "projects_count_other": "用于 {{count}} 个项目",
+    "test_text": "沉稳的声音能让每句话都清晰而亲切。",
+    "try_voice": "测试此声音",
+    "unlock_confirm": "解锁会更改参考录音或随机种子，之后的音频将无法精确复现。是否继续？",
+    "used_title": "此声音的使用位置"
   },
   "dub": {
     "timing_label": "时间匹配",
@@ -1358,7 +1436,32 @@
     "transcribe": "转录",
     "transcript": "转录稿",
     "translate": "翻译",
-    "voice_col": "指定声音"
+    "voice_col": "指定声音",
+    "all_languages": "所有语言",
+    "clone_profiles": "克隆声音配置",
+    "collapse_settings": "隐藏翻译设置",
+    "copy_failed": "无法复制文本。",
+    "design_presets": "设计预设",
+    "diagnostic_copied": "诊断信息已复制",
+    "edit_settings": "更改翻译设置",
+    "generate_dub": "生成配音音频",
+    "import_srt_alt": "改为导入 SRT",
+    "install_popover_title": "安装此引擎",
+    "live_preview": "实时预览",
+    "more_to_narrow": "另有 {{count}} 项 — 输入文字以缩小范围",
+    "multi_lang_skipped": "{{langs}} 翻译失败 — 已跳过这些配音，避免生成语言错误的轨道。",
+    "output_options": "输出选项：",
+    "prep_download": "正在获取视频…",
+    "prep_elapsed": "已用时 {{time}}",
+    "prep_extract": "正在提取音频…",
+    "pull_captions_title": "对于 YouTube、Vimeo 和 TED 等带字幕的平台，可获取源字幕及 YouTube 自动翻译。这会直接填充编辑器，无需转写；YouTube 已提供的语言可跳过“全部翻译”。",
+    "qc_failed": "时序检查失败：{{message}}",
+    "qc_running": "正在检查配音时序…",
+    "retranslate": "再次翻译",
+    "save": "保存项目",
+    "speaker": "说话人 {{n}}：",
+    "upload_transcribe": "上传并转写",
+    "video_dubbing_studio": "视频配音工作室"
   },
   "glossary": {
     "title": "翻译术语表",
@@ -1391,7 +1494,11 @@
     "auto_empty": "未自动发现新术语。",
     "manual_badge": "手动",
     "no_segments": "没有可扫描的片段。",
-    "note": "备注"
+    "note": "备注",
+    "add_term": "添加术语",
+    "close": "隐藏术语表",
+    "note_placeholder": "可选备注",
+    "pick_target": "请先选择目标语言。"
   },
   "segment": {
     "lang": "语言",
@@ -1447,7 +1554,13 @@
     "text": "文本",
     "time": "时间",
     "translate_error_title": "无法翻译：{{error}}",
-    "vol": "音量"
+    "vol": "音量",
+    "all_speakers": "所有说话人",
+    "fit_compressed_title": "TTS 音频占时段的 {{pct}}% — 压缩程度很高。",
+    "fit_overflows_title": "译文比原时段长 {{seconds}} 秒。音频已强制裁短；请缩短文本，或将时序切换为“拉伸视频”。",
+    "merge_label": "与下一段合并",
+    "speaker_title_custom": "说话人 — 输入名称（未检测到分离出的克隆声音）",
+    "split_label": "在此处拆分"
   },
   "timeline": {
     "track_label": "片段时间轴",
@@ -1460,14 +1573,16 @@
     "snapped_announce": "边缘已吸附到 {{time}} 处的语音起点",
     "edit_mode_on": "编辑模式：方向键微调起点，Shift 调整终点，Alt 移动整个片段，Esc 结束",
     "edit_mode_off": "已退出编辑模式",
-    "play_slot": "播放此区间"
+    "play_slot": "播放此区间",
+    "preview_dub": "在此预览配音"
   },
   "voice": {
     "personality": "个性",
     "instruct": "声音指导",
     "generate": "生成",
     "language": "语言",
-    "name": "名称"
+    "name": "名称",
+    "reference_text": "参考文本"
   },
   "tools": {
     "title": "工作室工具",
@@ -1495,7 +1610,10 @@
     "method": "方法：",
     "result": "结果：",
     "slot_seconds": "时段（秒）",
-    "taxonomy": "分类体系"
+    "taxonomy": "分类体系",
+    "directorial_ai": "AI 导演",
+    "target_language": "翻译语言",
+    "translate_hint": "翻译提示："
   },
   "projects": {
     "empty": "还没有项目",
@@ -1521,7 +1639,14 @@
     "delete_warning": "此操作无法撤销。项目和转录文本将被删除。删除声音或录音也会删除其保存的音频。导出的文件和已完成渲染的音频将保留。",
     "export": "导出",
     "title": "项目",
-    "transcription": "转录"
+    "transcription": "转录",
+    "cloned_voice": "克隆声音",
+    "create": "新建项目",
+    "dub_projects": "配音项目",
+    "exports": "导出内容",
+    "generated_audio": "已创建音频",
+    "story_lines": "{{count}} 行",
+    "voice_profiles": "声音配置"
   },
   "batch": {
     "refresh": "刷新任务",
@@ -1572,7 +1697,16 @@
     "no_completed": "近期没有已完成的任务。",
     "status_done": "已完成",
     "status_failed": "失败",
-    "status_running": "运行中"
+    "status_running": "运行中",
+    "add_videos": "添加视频",
+    "back": "← 返回",
+    "stage_extract": "🎬 正在提取音频…",
+    "stage_generate": "🗣️ 正在生成语音…",
+    "stage_mix": "🎛️ 正在混合音频…",
+    "stage_transcribe": "📝 正在将语音转成文字…",
+    "stage_translate": "🌐 正在翻译…",
+    "target_languages": "目标语言",
+    "title": "批量配音"
   },
   "gallery": {
     "title": "VoiceStudio 音色库",
@@ -1610,7 +1744,21 @@
     "persona_unverified_suffix": "（未经验证）",
     "persona_too_large": "该捆绑包太大（最大 100 MB）。",
     "persona_import_failed": "无法导入该角色包。",
-    "filters": "筛选"
+    "filters": "筛选",
+    "confirm_delete": "确定删除“{{name}}”吗？",
+    "download_failed": "下载失败：{{msg}}",
+    "import_explainer": "粘贴你有权使用的 URL（或上传文件），裁出所需部分并保存为声音。你须自行负责所导入内容的许可。",
+    "import_placeholder": "粘贴视频或音频 URL，或输入内容搜索…",
+    "imported_clip": "已导入片段",
+    "more_actions": "更多操作",
+    "my_imports": "我的导入",
+    "no_imports": "尚未导入内容。请在上方粘贴 URL 开始。",
+    "no_matches": "没有符合筛选条件的声音。",
+    "open_designer": "在设计器中打开",
+    "search_results": "{{count}} 条结果",
+    "subtitle": "数百种现成的设计声音 — 选一个即可开始。",
+    "use_voice": "使用此声音",
+    "zone_imports": "我的导入"
   },
   "transcriptions": {
     "search_placeholder": "搜索转录稿…",
@@ -1632,7 +1780,9 @@
     "exported": "转录稿已导出。",
     "entries": "{{count}} 个条目",
     "just_now": "刚刚",
-    "title": "转录"
+    "title": "转录",
+    "h_ago": "{{count}} 小时前",
+    "m_ago": "{{count}} 分钟前"
   },
   "setup": {
     "ready_desc": "现在可以创建你的第一个声音了。你可以立即设置语音输入，也可以稍后在设置中完成。",
@@ -1671,7 +1821,10 @@
     "mirror_apply": "应用并重新检查",
     "mirror_apply_error": "镜像设置保存失败。",
     "back": "返回",
-    "still_needed": "仍需完成："
+    "still_needed": "仍需完成：",
+    "install_models": "安装模型",
+    "system_check": "系统检查",
+    "system_preflight": "系统预检"
   },
   "donate": {
     "title": "支持 VoiceStudio",
@@ -1688,11 +1841,21 @@
     "choose_method_amount": "继续 ${{amount}}",
     "goal": {
       "title": "支持 VoiceStudio 开发",
-      "per_month": "/月"
+      "per_month": "/月",
+      "aria": "每月目标 {{goal}}，已筹 {{raised}}",
+      "met": "🎉 目标已达成 — 已筹得 {{raised}}。感谢支持！",
+      "of": "共",
+      "remaining": "还差 {{amount}}",
+      "social_proof": "加入 {{count}} 位支持者，共同资助本地 AI"
     },
     "postcard": {
-      "title": "支持 VoiceStudio 开发"
-    }
+      "title": "支持 VoiceStudio 开发",
+      "later": "以后再说"
+    },
+    "choose_method": "选择支持方式",
+    "github_desc": "通过 GitHub 直接单次或定期赞助。",
+    "hero_desc": "VoiceStudio 免费、开源，并完全在你的硬件上运行。如果它改善了你的工作流程，欢迎支持核心团队。",
+    "most_common": "最常用"
   },
   "enterprise": {
     "desc": "面向需要商业条款和直接协助的组织提供 VoiceStudio 许可。",
@@ -1710,7 +1873,9 @@
     "benefit_support_desc": "由核心工程团队提供优先电子邮件和视频支持。",
     "benefit_source_desc": "可在许可条款范围内检查、派生并调整完整技术栈。",
     "hero_simple": "VoiceStudio 在 AGPL-3.0 下是免费和开源的 — 包括商业和内部业务用途。您只需要商业许可即可将其嵌入闭源产品中，无需 AGPL 的 Copyleft 义务。 我们的许可适用于 VoiceStudio 代码。模型和生成内容的相关权利取决于所选模型及其条款。",
-    "title": "商业许可证"
+    "title": "商业许可证",
+    "benefit_lang_desc": "以接近人工的质量转写、翻译并配音 646 种语言。",
+    "benefit_support": "直接支持"
   },
   "exportModal": {
     "close_drawer": "关闭导出设置",
@@ -1775,7 +1940,13 @@
     "tab_audio": "音频",
     "tab_subs": "字幕",
     "tab_video": "视频",
-    "tracks": "音轨"
+    "tracks": "音轨",
+    "bg_audio": "背景声音",
+    "export_audio": "导出音频",
+    "export_mp4": "导出 MP4",
+    "export_options": "导出选项",
+    "export_subtitles": "导出字幕",
+    "what_to_export": "导出内容"
   },
   "demo": {
     "clone_coachmark": "这是引导演示——可试用建议提示词，也可自行编写。",
@@ -1805,7 +1976,11 @@
     "aria_pause": "暂停{{label}}",
     "aria_hear": "听到{{label}}",
     "aria_replay": "通过转录器重播 {{label}}",
-    "dictation_lede_hotkey_only": "在桌面任意位置按住上方快捷键说话，松开后文字会输入到当前聚焦的应用中。现在按一下即可验证是否生效。"
+    "dictation_lede_hotkey_only": "在桌面任意位置按住上方快捷键说话，松开后文字会输入到当前聚焦的应用中。现在按一下即可验证是否生效。",
+    "dictation_lede": "按下快捷键后朗读其中一段，或点击“重播”将内置样本送入转写器；无需开口即可查看完整听写流程。",
+    "dictation_transcribing": "正在转写…",
+    "dubbing_cta": "在你的视频上试用 →",
+    "stop_demo": "停止演示"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -1852,7 +2027,13 @@
     "ipc_lost_repair": "修复并重启",
     "ipc_lost_repairing": "正在修复…",
     "ipc_lost_repair_confirm": "这将清除应用的 WebView 缓存（仅显示数据——你的语音、项目和设置不受影响）并重启 VoiceStudio。是否继续？",
-    "ipc_lost_repair_failed": "自动修复未成功。请退出 VoiceStudio，删除此文件夹后重新启动应用：{{path}}"
+    "ipc_lost_repair_failed": "自动修复未成功。请退出 VoiceStudio，删除此文件夹后重新启动应用：{{path}}",
+    "hint_stuck": "后端未能完成启动。若从源码运行，请先执行 `uv sync`，并确认 `uv` 和 Python 位于 PATH 中，然后重试。请查看下方日志（或“设置 → 日志 → 后端”）以确定具体卡住的位置。",
+    "lines": "{{count}} 行",
+    "lines_one": "{{count}} 行",
+    "lines_other": "{{count}} 行",
+    "region_china": "中国（镜像）",
+    "region_russia": "俄罗斯（镜像）"
   },
   "direction": {
     "title": "段 #{{id}} 的方向",
@@ -1867,7 +2048,11 @@
     "nothingParsed": "—（没有解析）",
     "speedsUp": "加速",
     "slowsDown": "放慢",
-    "taxonomyTokens": "分类标记"
+    "taxonomyTokens": "分类标记",
+    "desc": "描述这句台词应有的感觉。使用普通英文即可 — 系统会将描述映射到稳定的分类（能量 / 情绪 / 节奏 / 亲密度 / 正式度），并贯穿影视级翻译、TTS 和时段适配。",
+    "placeholder": "例如：急切而惊讶  /  温暖、有希望  /  轻声、亲密",
+    "rateBias": "语速偏置：",
+    "translateHint": "翻译提示："
   },
   "errors": {
     "tryAgain": "再试一次",
@@ -1882,7 +2067,10 @@
     "backend_shutting_down": "VoiceStudio 正在关闭。请重新打开应用后再试。",
     "crash_vram_default": "在较小的 GPU 上，常见原因是在 TTS 模型仍占用显存时加载 ASR 模型，导致显存（VRAM）不足：请先卸载 TTS 模型，或在 模型库 → 模型 中选择更小的 ASR 模型。",
     "stream_cut_backend_alive": "请先检查应用前面的反向代理或负载均衡器：为该路由关闭响应缓冲（proxy_buffering off; X-Accel-Buffering: no），并调大读取超时。连接中断时后端仍在运行，所以并没有崩溃；服务器或容器部署中通常是代理造成的，直接运行桌面应用或通过 localhost 访问即可确认或排除。",
-    "stream_cut_backend_alive_local": "请等待几分钟，然后从历史记录中重新打开该任务；若找不到，请在 设置 → 日志 → 后端 中查看后端日志。一个耗时且无输出的步骤之后，连接在任务中途断开，但后端仍在运行，通常会把工作完成，所以这不是崩溃。"
+    "stream_cut_backend_alive_local": "请等待几分钟，然后从历史记录中重新打开该任务；若找不到，请在 设置 → 日志 → 后端 中查看后端日志。一个耗时且无输出的步骤之后，连接在任务中途断开，但后端仍在运行，通常会把工作完成，所以这不是崩溃。",
+    "crash_broken_env": "后端在加载自身的 Python 依赖项时终止，因此问题不在内存或 GPU — 环境不完整或更新中断。请在“设置 → 日志 → 后端”中使用“清理并重试”，从头重建环境；这会就地修复，不会影响声音或项目。若之后仍失败，崩溃详情会指出无法导入的具体软件包。",
+    "desc": "别担心 — 应用其他部分仍可使用。你可以切换标签页，或在下方重试。",
+    "title": "此标签页遇到问题。"
   },
   "keyboard": {
     "title": "键盘快捷键",
@@ -1908,7 +2096,12 @@
     "trim_zoomIn": "放大/缩小",
     "trim_fitAll": "适合全部/适合选择",
     "trim_confirm": "确认修剪",
-    "dub": "配音"
+    "dub": "配音",
+    "dub_generate": "生成配音",
+    "dub_sidebar": "切换侧边栏",
+    "nav_save": "保存项目 / 确认裁剪",
+    "trim_nudgeEnd": "微调结束手柄",
+    "trim_nudgeStart": "微调起始手柄"
   },
   "network": {
     "sharing_on_title": "分享于——点击查看详情",
@@ -1929,7 +2122,8 @@
     "copied": "已复制",
     "enable_error": "无法启用共享：{{message}}",
     "disable_error": "无法禁用：{{message}}",
-    "connect": "连接"
+    "connect": "连接",
+    "pin": "PIN："
   },
   "readiness": {
     "checking_system": "检查系统...",
@@ -1943,7 +2137,10 @@
     "tts_not_loaded_yet": "尚未加载 — 将在首次语音生成时加载",
     "error_check_logs": "错误：{{error}}。检查日志并尝试重新启动。",
     "check_logs_restart": "检查日志中是否有模型加载错误。尝试重新启动。",
-    "llm_set_env": "设置 TRANSLATE_BASE_URL 和 TRANSLATE_API_KEY 环境变量。可与 Ollama、OpenAI、LM Studio 等配合使用。"
+    "llm_set_env": "设置 TRANSLATE_BASE_URL 和 TRANSLATE_API_KEY 环境变量。可与 Ollama、OpenAI、LM Studio 等配合使用。",
+    "llm_cinematic": "LLM（影视级）",
+    "llm_configure": "配置 TRANSLATE_BASE_URL 以使用影视级翻译质量",
+    "llm_optional": "可选 — 设置 TRANSLATE_BASE_URL 可启用影视级质量"
   },
   "license": {
     "title": "Supertonic-3 — 许可证接受",
@@ -1968,7 +2165,9 @@
     "pockettts_conditions_desc": "访问条件禁止非法、有害、欺骗、欺诈、未经授权或未经同意的声音使用。继续前请查看完整条件。",
     "review_access_conditions": "查看访问条件",
     "pockettts_footer": "点击“接受”只会将你的确认保存在 VoiceStudio 本地设置中并启用引擎。模型访问和下载使用 Hugging Face，该服务会收到常规请求和账户信息。",
-    "pockettts_accepted_toast": "已接受 PocketTTS 条件。"
+    "pockettts_accepted_toast": "已接受 PocketTTS 条件。",
+    "model_heading": "模型权重 · OpenRAIL-M",
+    "sdk_heading": "SDK 代码 · MIT"
   },
   "voicePreview": {
     "title": "语音预览",
@@ -1979,7 +2178,10 @@
     "presets": "预设",
     "placeholder": "输入要听的内容...",
     "stop": "停止",
-    "preview": "预览"
+    "preview": "预览",
+    "designed_voices": "设计声音",
+    "hint": "8 步 · 快速试听",
+    "regenerate": "重新生成"
   },
   "header": {
     "speech": "语音",
@@ -2003,7 +2205,11 @@
     "no_models": "没有加载模型",
     "model_not_active": "非当前引擎 — 可安全卸载",
     "unload": "卸载",
-    "flush_caches": "刷新缓存"
+    "flush_caches": "刷新缓存",
+    "label_design": "声音设计",
+    "label_enterprise": "商业许可",
+    "loaded_models": "已加载模型",
+    "unload_all_flush": "全部卸载并清空"
   },
   "sidebar": {
     "tab_drive": "驱动器",
@@ -2038,7 +2244,12 @@
     "in_folder": "在 {{folder}} 中",
     "search": "搜索…",
     "rename": "重命名",
-    "rename_save": "保存名称"
+    "rename_save": "保存名称",
+    "designed_voices": "设计声音",
+    "dub_projects": "配音项目",
+    "no_exports_hint": "通过 Tauri 导出文件后，可在此查看记录。",
+    "no_history": "没有生成历史",
+    "recent_exports": "最近导出"
   },
   "trimmer": {
     "title": "修剪参考音频",
@@ -2063,10 +2274,15 @@
     "decode_failed": "解码失败：{{message}}",
     "playback_failed": "播放失败：{{message}}",
     "audio_load_failed": "音频加载失败",
-    "unit_seconds": "s"
+    "unit_seconds": "s",
+    "fit_all": "显示全部（Home）",
+    "fit_sel_btn": "适配选区",
+    "fit_selection": "适配选区（End）",
+    "use_trimmed": "使用裁剪结果"
   },
   "casting": {
-    "segments_count": "{{count}} 段"
+    "segments_count": "{{count}} 段",
+    "title": "说话人选角"
   },
   "checkpoint": {
     "timing_review": "{{count}} 个片段需要检查时间同步",
@@ -2080,7 +2296,13 @@
     "timing_review_zero": "{{count}} 个片段需要检查时间同步",
     "timing_review_two": "{{count}} 个片段需要检查时间同步",
     "timing_review_few": "{{count}} 个片段需要检查时间同步",
-    "timing_review_many": "{{count}} 个片段需要检查时间同步"
+    "timing_review_many": "{{count}} 个片段需要检查时间同步",
+    "asr_hint": "请立即修正 ASR 错误 — 准确的文本能减少后续 TTS 重试。",
+    "asr_title": "转写文本已就绪",
+    "done_hint": "请检查时长和同步比例。修改任意台词后，点击“重新生成改动项”即可快速局部重做。",
+    "translate_cta": "生成配音",
+    "translate_hint": "快速检查目标文本。过长台词会自动加速，也可直接编辑。",
+    "translate_title": "译文已就绪"
   },
   "compare": {
     "title": "A/B 语音比较",
@@ -2094,7 +2316,12 @@
     "compare_btn": "比较",
     "preparing_voice": "正在准备语音...",
     "comparison_complete": "对比完毕！",
-    "play_failed": "播放失败：{{message}}"
+    "play_failed": "播放失败：{{message}}",
+    "close": "关闭对比",
+    "desc": "并排对比两种声音，方便确定配音人选；对比时仍可操作应用的其他部分。",
+    "generating_voice_a": "正在生成声音 A...",
+    "generating_voice_b": "正在生成声音 B...",
+    "test_phrase": "对比短句"
   },
   "models": {
     "delete_confirm": "删除{{repoId}}？您可以稍后重新安装。",
@@ -2222,7 +2449,21 @@
     "voice_previews_checked": "{{when}}检查",
     "voice_previews_never": "尚未检查",
     "voice_previews_check": "立即检查",
-    "voice_previews_rejected": "语音库更新被拒绝：{{message}}"
+    "voice_previews_rejected": "语音库更新被拒绝：{{message}}",
+    "asrOpenAICompatApiKeyTitle": "API 密钥",
+    "asrOpenAICompatSaveError": "保存失败",
+    "disk_free": "可用 {{size}}",
+    "get_token": "获取令牌 →",
+    "install_started": "安装已开始 — 可在该行查看进度",
+    "mirror_save_error": "保存失败",
+    "no_matches": "没有符合筛选条件的模型。",
+    "recommended_installed": "推荐模型均已安装。",
+    "section_asr": "ASR（离线转写）",
+    "section_dictation": "听写（流式）",
+    "started_downloading_one": "已开始下载 {{count}} 个模型",
+    "started_downloading_other": "已开始下载 {{count}} 个模型",
+    "starting": "正在启动…",
+    "voice_previews": "声音试听"
   },
   "gallery_extra": {
     "trim_load_failed": "无法加载音频进行修剪：{{message}}"
@@ -2258,7 +2499,28 @@
     "project_deleted": "项目已删除",
     "delete_history_confirm": "删除该历史记录吗？",
     "history_deleted": "历史记录项已删除",
-    "restored_state": "恢复了上一代状态"
+    "restored_state": "恢复了上一代状态",
+    "cinematic_no_llm": "影视级质量需要 LLM。请在“设置 → 凭据 → LLM 端点”中配置（Ollama 在本地运行，无需密钥）。目前暂用快速质量。",
+    "clamped_to_duration": "{{count}} 个片段已限制到媒体时长内",
+    "cleaned_one": "已整理 {{count}} 个碎片",
+    "cleaned_other": "已整理 {{count}} 个碎片",
+    "dialect_not_applied": "应用所选方言需要 LLM。请将翻译引擎切换为 OpenAI/Ollama，或在“设置 → 凭据 → LLM 端点”中配置 LLM。",
+    "dropped_overlap": "已丢弃 {{count}} 个（重叠）",
+    "generation_aborted": "生成已中止。",
+    "import_srt_no_job": "请先上传或导入视频 — 当前没有可附加字幕的任务。",
+    "imported_cues": "已从 {{file}} 导入 {{count}} 条字幕",
+    "ingest_cancelled": "导入已取消",
+    "ingest_failed": "URL 导入失败：{{message}}",
+    "ingested": "已导入 {{url}}",
+    "opened_project": "已打开：{{name}}",
+    "save_failed": "无法保存：{{message}}",
+    "segments_clean": "片段无需整理",
+    "session_expired": "此配音会话已过期或被清理 — 请重新上传视频以开始新会话。",
+    "skipped_malformed": "已跳过 {{count}} 个（格式错误）",
+    "stop_failed": "停止失败",
+    "translated_cinematic_suffix": "（影视级）",
+    "translated_segments": "已将 {{count}} 个片段翻译为 {{lang}}",
+    "upgrading_preview": "正在将 {{count}} 个预览质量片段升级为完整质量…"
   },
   "tts_errors": {
     "profile_language_rejected": "自动模式使用声音档案的语言（{{language}}），但此引擎不支持该语言。请修改档案语言、选择支持的语言或更换引擎。",
@@ -2303,7 +2565,21 @@
     "tailscale_copy": "复制链接",
     "tailscale_open": "在浏览器中打开",
     "copied": "已复制",
-    "tailscale_qr_alt": "Tailscale URL 的二维码"
+    "tailscale_qr_alt": "Tailscale URL 的二维码",
+    "help": "无需重启，即可让其他设备访问当前运行的 VoiceStudio。默认仅限本机回环 — 在此开启前不会共享任何内容。",
+    "lan_share_port": "局域网共享端口",
+    "ports_help": "这些端口由启动时读取的环境变量设置。更改后端或界面端口后，请重启 VoiceStudio。",
+    "ports_note": "后端和界面端口会在重启后生效；局域网共享端口会在下次启用共享时生效。",
+    "tailscale_absent": "未检测到 Tailscale。安装后可从专用 tailnet 中的任意位置安全访问 VoiceStudio。",
+    "tailscale_checking": "正在检查 Tailscale…",
+    "tailscale_disable_btn": "停止 Tailscale serve",
+    "tailscale_disabled": "Tailscale serve 已停用",
+    "tailscale_enable_btn": "启用 Tailscale serve",
+    "tailscale_enabled": "Tailscale serve 已启用",
+    "tailscale_install": "安装 Tailscale",
+    "tailscale_not_logged_in": "Tailscale 已安装但尚未登录。请先启动并登录 Tailscale。",
+    "tailscale_running": "Tailscale 正在运行。可通过专用 tailnet 提供 VoiceStudio。",
+    "ui_port": "界面端口"
   },
   "reportBug": {
     "native_fault_cause": "原生代码故障：进程在 Python 底层崩溃，因此没有可用的 Python 回溯信息。",
@@ -2311,7 +2587,8 @@
     "staleTitle": "有可用更新",
     "staleMessage": "你正在使用 VoiceStudio {{current}}，但 {{latest}} 已经发布——这个错误可能已在新版本中修复。报告前先查看最新版本？",
     "staleView": "查看更新",
-    "staleFileAnyway": "仍然报告"
+    "staleFileAnyway": "仍然报告",
+    "title": "将在浏览器中打开预填的 GitHub Issues 页面。点击“提交”前不会发送任何内容。"
   },
   "app": {
     "loading": "加载中...",
@@ -2338,7 +2615,9 @@
     "dismiss": "关闭",
     "toast_available": "VoiceStudio {{version}} 可用",
     "toast_install": "安装并重启",
-    "toast_later": "稍后"
+    "toast_later": "稍后",
+    "toast_whats_new": "新增内容",
+    "whats_new": "新增内容"
   },
   "archetypes": {
     "featured": "精选",
@@ -2350,7 +2629,12 @@
     "facet_pitch": "音高",
     "facet_accent": "口音",
     "facet_lang": "语言",
-    "facet_whisper": "耳语"
+    "facet_whisper": "耳语",
+    "use_characters": "角色与动画",
+    "use_entertainment": "娱乐与电视",
+    "use_informative": "知识与教育",
+    "use_narration": "旁白与故事",
+    "use_social": "社交媒体"
   },
   "support": {
     "tab_support": "支持",
@@ -2370,7 +2654,9 @@
     "sponsors_tier_company": "企业",
     "sponsors_tier_development": "开发",
     "sponsors_tier_community": "社区",
-    "sponsors_tier_supporter": "支持者"
+    "sponsors_tier_supporter": "支持者",
+    "join_discord": "加入 Discord",
+    "tab_license": "商业许可"
   },
   "updates": {
     "tab": "更新",
@@ -2468,7 +2754,10 @@
     "hf_token_active_using": "在 {{source}} 中找到 Hugging Face 令牌 — {{masked}}",
     "hf_token_replace": "替换…",
     "hf_token_replace_warning": "这会替换为此应用保存的令牌，但不会撤销旧令牌。",
-    "hf_token_get_short": "免费获取 →"
+    "hf_token_get_short": "免费获取 →",
+    "hf_token_saving": "正在保存…",
+    "lib_downloading": "正在下载…",
+    "size_left": "剩余 {{size}}"
   },
   "history": {
     "dub_meta": "{{segments}} 个片段 · {{duration}} 秒",
@@ -2500,7 +2789,10 @@
     "retry": "重试",
     "copy_failed": "复制失败 — 请手动选择并复制上方网址。",
     "open_raw": "打开原始规范",
-    "open_raw_aria": "在浏览器中打开原始 OpenAPI JSON"
+    "open_raw_aria": "在浏览器中打开原始 OpenAPI JSON",
+    "copied": "规范 URL 已复制",
+    "copy_url": "复制规范 URL",
+    "copy_url_aria": "复制 /openapi.json URL"
   },
   "footer_donate": {
     "aria": "来自 VoiceStudio 的友好提示",
@@ -2586,7 +2878,13 @@
     "import_replace_prompt": "用导入的文件替换现有的 {{count}} 个条目？选择“否”则将导入的条目添加到现有条目旁边。",
     "import_done": "已导入 {{count}} 个条目。",
     "import_error": "无法导入该文件 — 需要发音导出的 JSON。",
-    "export_error": "无法导出词典。"
+    "export_error": "无法导出词典。",
+    "help": "教引擎读准难词。每个条目会在合成前用注音拼写替换词语，因此适用于所有引擎。可将条目限定为一种语言，或保留为全局。内联写法 [[word|respelling]] 可单次覆盖词典。",
+    "lang_label": "语言代码（例如 en、de），留空则全局生效",
+    "lang_placeholder": "en、de…（留空 = 全局）",
+    "test_global_hint": "当前仅试听全局条目 — 选择语言后可包含该语言专属条目。",
+    "type_cmu": "CMU",
+    "type_ipa": "IPA"
   },
   "audiobook": {
     "cast_hint": "将脚本中的每个 [voice:NAME] 映射到一个声音。",
@@ -2682,7 +2980,17 @@
     "recovery_load_failed": "无法检查未完成的有声书。",
     "recovery_retry": "重试",
     "line_gap": "行间停顿",
-    "paragraph_gap": "段落间停顿"
+    "paragraph_gap": "段落间停顿",
+    "assembling": "正在合成有声书…",
+    "cached_note": "已复用 {{count}} 个渲染完成的章节。",
+    "cast": "配音阵容",
+    "cover_remove": "移除封面",
+    "emotion_text_ph": "例如：听起来疲惫而悲伤",
+    "expressive": "制作参数",
+    "failed_note": "{{count}} 个章节失败 — 再次点击“创建”即可只重试这些章节。",
+    "loudness_podcast": "响度标准化（播客）",
+    "ready": "有声书已就绪",
+    "synthesizing": "正在合成第 {{current}}/{{total}} 章 {{title}}"
   },
   "voicePanel": {
     "title": "语音",
@@ -2706,8 +3014,14 @@
       "sherpa-parakeet-tdt-v3": "支持 25 种欧洲语言的快速、准确听写。",
       "sherpa-parakeet-tdt-v2": "快速、准确的纯英语听写。",
       "sherpa-zipformer-en-20m": "小型流式英文模型 — 最低延迟。",
-      "sherpa-whisper-tiny": "推荐。支持 90 多种语言并可自动检测语言的多语言听写。"
-    }
+      "sherpa-whisper-tiny": "推荐。支持 90 多种语言并可自动检测语言的多语言听写。",
+      "sherpa-paraformer-bilingual-zh-en": "流式中英双语紧凑模型。",
+      "sherpa-zipformer-bilingual-zh-en": "流式中英双语模型，支持实时部分结果。",
+      "sherpa-zipformer-zh-14m": "小型流式中文模型 — 延迟最低。"
+    },
+    "engine_unavailable": "此安装中没有实时听写引擎。听写将回退到标准转写流程。",
+    "model_sub": "选择听写所用的本机模型。",
+    "subtitle": "使用本机模型进行本地语音转文字听写。"
   },
   "profiles": {
     "need_name_audio": "需要名称和参考音频",
@@ -2716,7 +3030,12 @@
     "preview_ready": "预览准备好了！",
     "playback_failed": "播放失败",
     "preview_failed": "预览失败：{{message}}",
-    "save_failed": "保存语音配置文件失败"
+    "save_failed": "保存语音配置文件失败",
+    "lock_failed": "锁定声音配置失败",
+    "locked": "声音已锁定！后续生成将保持一致的声音身份。",
+    "saved": "声音已保存到配置！",
+    "unlock_failed": "解锁声音配置失败",
+    "unlocked": "声音已解锁，生成结果将再次产生变化。"
   },
   "transcriptionPicker": {
     "title": "从转录导入",
@@ -2741,13 +3060,16 @@
     "play": "播放",
     "pause": "暂停",
     "seek": "进度",
-    "stop": "停止播放"
+    "stop": "停止播放",
+    "generated_audio": "合成音频"
   },
   "tts": {
     "droppedChunks_one": "请注意：文本中有 {{count}} 处没有生成音频，因此这段录音缺少该部分。请重新生成——换一个随机种子通常就能解决。",
     "droppedChunks_other": "请注意：文本中有 {{count}} 处没有生成音频，因此这段录音缺少这些部分。请重新生成——换一个随机种子通常就能解决。",
     "droppedChunksWithText_one": "请注意：文本中有 {{count}} 处没有生成音频，这段录音缺少该部分——“{{text}}”。请重新生成，换一个随机种子通常就能解决。",
-    "droppedChunksWithText_other": "请注意：文本中有 {{count}} 处没有生成音频，这段录音缺少这些部分——“{{text}}”。请重新生成，换一个随机种子通常就能解决。"
+    "droppedChunksWithText_other": "请注意：文本中有 {{count}} 处没有生成音频，这段录音缺少这些部分——“{{text}}”。请重新生成，换一个随机种子通常就能解决。",
+    "routingCaveat": "正在使用 GPU，但：{{reason}}",
+    "routingFallback": "正在 CPU 上运行 — 此引擎在本机没有 GPU 路径，因此生成速度会较慢。{{reason}}"
   },
   "voiceSelector": {
     "engineDefault": "引擎默认",
@@ -2757,15 +3079,23 @@
     "preview": "预览语音",
     "createVoice": "创建新声音",
     "gallery": "音色库",
-    "addingVoice": "正在添加声音…"
+    "addingVoice": "正在添加声音…",
+    "addVoiceFailed": "无法添加该声音 — 请重试。",
+    "designed": "设计声音",
+    "fromVideo": "来自视频",
+    "openGallery": "在声音库中打开"
   },
   "remote_gate": {
     "title": "输入访问 PIN 码",
     "body": "此 VoiceStudio 实例在网络上共享。输入主机上显示的 PIN。",
-    "connect": "连接"
+    "connect": "连接",
+    "label": "访问 PIN"
   },
   "remote_apikey_gate": {
-    "connect": "连接"
+    "connect": "连接",
+    "body": "此后端需要 API 密钥。请输入服务器上设置的 OMNIVOICE_API_KEY 值。",
+    "label": "API 密钥",
+    "title": "输入 API 密钥"
   },
   "contact": {
     "hero_title": "联系我们",
@@ -2790,7 +3120,10 @@
     "follow_title": "在 X 上关注",
     "follow_desc": "版本说明、新引擎，以及偶尔透露接下来在做什么。如果你不想常驻聊天服务器，这里更方便。",
     "support_follow_title": "在 X 上关注，支持项目",
-    "follow_cta": "在 X 上关注"
+    "follow_cta": "在 X 上关注",
+    "community_cta": "加入 Discord",
+    "email_desc": "电子邮件 — 适合许可、合作或其他私密事项",
+    "website_desc": "网站 — 了解项目及其作者"
   },
   "permissions": {
     "title": "权限",
@@ -2846,7 +3179,8 @@
     "stderr_title": "最后的错误输出（stderr）",
     "no_stderr": "未捕获到任何错误输出。",
     "notice_unclean": "上一个会话在 {{ago}}前未正常关闭就结束了。这通常无害 —— 电脑进入了睡眠、应用被强制退出，或某个虚拟机/容器停止了。",
-    "details_intro_unclean": "上次运行的关闭标记在 {{ago}}前一直未被清除。VoiceStudio 无法判断那是崩溃还是仅仅被中断 —— 睡眠、强制退出或停止虚拟机/容器都会留下相同的痕迹。如果现在一切正常，则无需处理。"
+    "details_intro_unclean": "上次运行的关闭标记在 {{ago}}前一直未被清除。VoiceStudio 无法判断那是崩溃还是仅仅被中断 —— 睡眠、强制退出或停止虚拟机/容器都会留下相同的痕迹。如果现在一切正常，则无需处理。",
+    "report_needs_log": "此次事件未捕获错误输出，一键报告将没有内容。如果确实存在问题，请在新建问题时附上“设置 → 日志 → 后端”中的末尾日志。"
   },
   "voices": {
     "active": "当前声音",
