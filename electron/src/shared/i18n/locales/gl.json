@@ -2945,10 +2945,11 @@
     "sponsors_become_aria": "Convértete en patrocinador: abre un problema de GitHub precargado no teu navegador",
     "sponsors_learn_more": "Que reciben os patrocinadores",
     "sponsors_logo_aria": "Visita {{name}}, un patrocinador de VoiceStudio",
-    "sponsors_tier_platinum": "Platino",
-    "sponsors_tier_gold": "Ouro",
-    "sponsors_tier_silver": "Prata",
-    "sponsors_tier_bronze": "Bronce"
+    "sponsors_tier_strategic": "Estratéxico",
+    "sponsors_tier_company": "Empresa",
+    "sponsors_tier_development": "Desenvolvemento",
+    "sponsors_tier_community": "Comunidade",
+    "sponsors_tier_supporter": "Colaborador"
   },
   "openapi": {
     "title": "Referencia da API OpenAPI de VoiceStudio",

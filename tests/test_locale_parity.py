@@ -1,4 +1,4 @@
-"""Locale key parity — all 21 i18n files stay in lockstep with en.json.
+"""Locale key parity — every i18n file stay in lockstep with en.json.
 
 Two catalogs exist. ``electron/src/renderer/src/i18n/locales`` is the one the
 app loads at runtime; it must have full key parity (see the ``renderer``
@@ -17,7 +17,7 @@ tokens. Real bug classes this pins down:
 
 Missing keys degrade gracefully (i18next falls back to en), so full key parity
 is enforced as a RATCHET: each locale's missing-key count may only go down.
-When en.json gains keys, add them to all 21 locales in the same change — that
+When en.json gains keys, add them to every locale in the same change — that
 is exactly the house rule this test automates.
 """
 
@@ -224,7 +224,7 @@ def test_missing_keys_ratchet(locale):
     allowed = _MISSING_BASELINE[locale]
     assert len(missing) <= allowed, (
         f"{locale}.json is missing {len(missing)} en.json keys — the ratchet "
-        f"allows at most {allowed}. New en.json keys must land in all 21 "
+        f"allows at most {allowed}. New en.json keys must land in all "
         f"locales (translated) in the same change (CLAUDE.md, Localization). "
         f"Newly missing keys include: {missing[:20]}"
     )
