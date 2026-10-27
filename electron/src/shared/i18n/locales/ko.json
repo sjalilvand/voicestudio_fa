@@ -75,7 +75,8 @@
     "stop": "로딩 중지",
     "address": "웹사이트 주소",
     "default_browser": "기본 브라우저",
-    "failed": "작업을 완료하지 못했습니다. 주소와 연결을 확인하거나 브라우저에서 여세요."
+    "failed": "작업을 완료하지 못했습니다. 주소와 연결을 확인하거나 브라우저에서 여세요.",
+    "reload": "새로고침"
   },
   "sidebarTools": {
     "simple": "간단히",
@@ -134,7 +135,8 @@
     "flip_rail": "레일 측면 뒤집기",
     "voice": "음성",
     "workspaces": "작업 공간",
-    "transcripts": "전사"
+    "transcripts": "전사",
+    "audiobook": "오디오북"
   },
   "catalogue": {
     "title": "모델 카탈로그",
@@ -146,7 +148,8 @@
     "storage_link": "저장소 설정",
     "reco_line": "{{device}} 권장 모델 {{total}}개 중 {{installed}}개 설치됨 · {{remaining}} GB 남음",
     "install_rest": "나머지 설치",
-    "device_remote": "원격"
+    "device_remote": "원격",
+    "status_setup": "설정 필요"
   },
   "settings": {
     "remote_backend_save": "저장 후 새로고침",
@@ -533,7 +536,73 @@
     "usage_audio": "생성한 오디오",
     "perf_load_failed": "성능 옵션을 가져오지 못했습니다",
     "perf_save_failed": "설정 저장에 실패했습니다",
-    "network_desc": "다운로드와 모델 가져오기에 사용할 프록시입니다."
+    "network_desc": "다운로드와 모델 가져오기에 사용할 프록시입니다.",
+    "audio_tools": "오디오 도구",
+    "audio_tools_choose_file": "파일 선택…",
+    "audio_tools_not_found": "사용할 수 없음",
+    "audio_tools_open": "오디오 도구 열기",
+    "audio_tools_origin_custom": "사용자 지정",
+    "audio_tools_origin_sidecar": "앱 패키지",
+    "audio_tools_update_bundle": "번들 빌드 업데이트",
+    "audio_tools_version_unknown": "버전 알 수 없음",
+    "audio_tools_ytdlp_update": "업데이트",
+    "clear_backend_title": "로그 지우기",
+    "clear_frontend_title": "로그 지우기",
+    "clear_tauri_title": "Tauri 로그 지우기",
+    "compute_device_auto": "자동(권장)",
+    "data_dir_at": "앱 데이터 저장 위치",
+    "ffmpeg_input_aria": "FFmpeg 경로",
+    "hf_source_env_label": "환경 변수",
+    "hf_token_checking": "토큰 출처 확인 중…",
+    "hf_token_input": "HuggingFace 토큰",
+    "hf_token_not_set": "설정 안 됨",
+    "hf_token_whoami_failed": "whoami 실패",
+    "history_retention": "생성 기록",
+    "history_retention_save_failed": "저장하지 못했습니다",
+    "llmp_api_key": "API 키",
+    "llmp_save_failed": "저장하지 못했습니다.",
+    "llmskills_dictation_refinement_name": "받아쓰기 정리",
+    "llmskills_dub_translation_name": "더빙 번역",
+    "llmskills_glossary_extract_name": "용어집 자동 추출",
+    "llmskills_needs_setup": "설정 필요",
+    "llmskills_save_failed": "저장하지 못했습니다.",
+    "mcp_client_id": "클라이언트 ID",
+    "mcp_default_voice": "기본 음성",
+    "mcp_voice_profile": "음성 프로필",
+    "open_folder_failed": "폴더를 열지 못했습니다",
+    "proxy_input_aria": "프록시 URL",
+    "remote_backend_key": "API 키",
+    "remote_backend_test": "연결 테스트",
+    "remote_backend_title": "원격 백엔드",
+    "remote_backend_unreachable": "연결할 수 없음",
+    "remote_backend_url": "백엔드 URL",
+    "reset": "초기화 및 제거",
+    "reset_scope_caches": "캐시 및 임시 파일",
+    "reset_scope_logs": "로그 및 충돌 보고서",
+    "reset_scope_models": "다운로드한 모델 가중치",
+    "reset_tier_settings": "모든 설정",
+    "retry": "다시 시도",
+    "review_mode_off": "검토 없이 끝까지 실행",
+    "storage_cat_data": "앱 데이터",
+    "storage_cat_engine_venvs": "엔진 환경",
+    "storage_cat_hf_cache": "모델 캐시",
+    "storage_cat_temp": "임시 파일",
+    "storage_child_database": "데이터베이스",
+    "storage_child_dub_jobs": "더빙 작업",
+    "storage_clear_logs": "로그 지우기",
+    "storage_clear_temp": "임시 파일 지우기",
+    "storage_data_volume": "데이터 볼륨",
+    "storage_manage_models": "모델 관리",
+    "storage_open_folder": "폴더 열기",
+    "storage_usage": "디스크 사용량",
+    "translate_autofit": "자동 맞춤",
+    "translation_llm": "번역 LLM",
+    "translation_open_llm": "LLM 제공업체 열기",
+    "ui_scale": "UI 배율",
+    "uninstall": "모든 데이터 제거",
+    "uninstall_optional_group": "선택 사항",
+    "uninstall_type_to_confirm": "확인하려면 {{word}} 입력:",
+    "updates": "업데이트"
   },
   "bootstrap": {
     "title": "VoiceStudio",
@@ -584,7 +653,9 @@
     "ipc_lost_repair": "복구 후 다시 시작",
     "ipc_lost_repair_confirm": "앱의 WebView 캐시(화면 표시 데이터만 해당하며 음성, 프로젝트, 설정은 유지됨)를 지우고 VoiceStudio를 다시 시작합니다. 계속하시겠어요?",
     "ipc_lost_repair_failed": "자동 복구에 실패했습니다. VoiceStudio를 종료하고 다음 폴더를 삭제한 뒤 앱을 다시 시작하세요: {{path}}",
-    "lines": "{{count}}줄"
+    "lines": "{{count}}줄",
+    "ipc_lost_open_logs": "로그 열기",
+    "ipc_lost_repairing": "복구 중…"
   },
   "stories": {
     "title": "스토리 편집자",
@@ -663,7 +734,9 @@
     "cleared": "대본을 비웠습니다",
     "split_chapters": "장",
     "split_paragraphs": "문단",
-    "split_sentences": "문장"
+    "split_sentences": "문장",
+    "import": "가져오기",
+    "lines": "{{count}}줄"
   },
   "common": {
     "stop": "중지",
@@ -700,7 +773,11 @@
     "no": "아니요",
     "more_info": "추가 정보",
     "learn_more": "자세히 알아보기",
-    "saving": "저장 중…"
+    "saving": "저장 중…",
+    "not_set": "설정 안 됨",
+    "refresh": "새로 고침",
+    "remove": "{{term}} 제거",
+    "unknown": "알 수 없음"
   },
   "launchpad": {
     "greeting": "안녕하세요",
@@ -733,7 +810,9 @@
     "convert_desc": "한 번 말하면 다른 목소리로 들립니다. 음성에서 음성으로, 완전히 로컬.",
     "clone_desc": "짧은 클립을 넣으면 같은 음색으로 재현합니다. 보통 샘플 하나면 충분합니다.",
     "dub_desc": "전사하고 번역한 뒤 새 음성으로 입히세요. 화자를 유지하고 타이밍을 맞춰 완성할 수 있습니다.",
-    "transcripts_title": "전사"
+    "transcripts_title": "전사",
+    "audiobook_title": "오디오북",
+    "clone_title": "음성 복제"
   },
   "clone": {
     "text_label": "텍스트",
@@ -837,7 +916,14 @@
     "duration": "길이",
     "preset_sichuan": "🌶️ 四川话",
     "seed_label": "시드",
-    "seed_keep": "이 시드 유지"
+    "seed_keep": "이 시드 유지",
+    "class_temp": "클래스 온도",
+    "cleaning": "오디오 정리 중…",
+    "optional_details": "선택 정보",
+    "preset_elderly_story": "👵 노년 이야기꾼",
+    "preset_surprised_woman": "😲 놀란 여성",
+    "seed_reroll": "새 시드",
+    "stop_playback": "재생 중지"
   },
   "about": {
     "app": "앱",
@@ -881,7 +967,10 @@
     "model_related_sources": "관련 출처:",
     "yes": "예",
     "no": "아니요",
-    "bundle_failed": "진단용 번들 생성에 실패했습니다: {{message}}"
+    "bundle_failed": "진단용 번들 생성에 실패했습니다: {{message}}",
+    "architecture": "시스템 아키텍처",
+    "commercial_license": "상업용 라이선스",
+    "open_fix_category": "{{category}} 열기"
   },
   "privacy": {
     "uploads_at": "업로드 저장 위치",
@@ -904,7 +993,10 @@
     "analytics_off_anytime": "언제든 다시 끌 수 있으며, 끈 뒤에는 어떤 정보도 더 전송되지 않습니다.",
     "analytics_on": "감사합니다. 익명 사용 통계를 사용합니다.",
     "analytics_off": "분석 기능이 꺼져 있습니다. 아무 정보도 전송하지 않습니다.",
-    "watermark_failed": "워터마크 설정을 변경하지 못했습니다."
+    "watermark_failed": "워터마크 설정을 변경하지 못했습니다.",
+    "change_translator": "번역기 변경",
+    "gen_history": "생성 기록 보관 기간",
+    "translator_unknown": "알 수 없음"
   },
   "consent": {
     "title": "VoiceStudio 개선에 참여하시겠어요?",
@@ -936,7 +1028,9 @@
     "microsoft_base_url": "Microsoft 번역기 기본 URL",
     "microsoft_base_url_help": "사용자 지정 Azure Translator 엔드포인트(기본값: https://api.cognitive.microsofttranslator.com).",
     "region": "리전",
-    "aws_profile": "AWS 프로필"
+    "aws_profile": "AWS 프로필",
+    "hf_token": "모델 저장소 접근 토큰",
+    "saved_persisted": "{{key}} 저장됨"
   },
   "engines": {
     "backend": "백엔드",
@@ -1038,7 +1132,25 @@
     "curatedModelAria": "{{engine}}에서 사용할 모델",
     "cloneCapableTitle": "짧은 참조 클립에서 음성을 복제할 수 있습니다",
     "inMemoryTitle": "현재 메모리에 로드되어 있습니다. 언로드하면 RAM/VRAM이 확보되며 다음 사용 시 다시 로드됩니다",
-    "unload": "언로드"
+    "unload": "언로드",
+    "available": "사용 가능",
+    "cloneCapable": "음성 복제",
+    "depsOk": "종속성 정상",
+    "diskConfidence_unknown": "알 수 없음",
+    "inMemory": "메모리에 로드됨",
+    "installStep_fetch_source": "엔진 소스 가져오는 중",
+    "installStep_install_deps": "종속성 설치 중",
+    "installStep_verify": "환경 확인 중",
+    "installing": "설치 중…",
+    "latencyMs": "{{ms}}ms",
+    "refresh": "새로 고침",
+    "retryInstall": "설치 다시 시도",
+    "routingUnknown": "알 수 없음",
+    "selfTest": "자체 테스트",
+    "selfTestFailed": "자체 테스트 실패",
+    "selfTestTimedOut": "자체 테스트 시간 초과",
+    "testing": "테스트 중…",
+    "unloading": "언로드 중…"
   },
   "capture": {
     "desc": "전역 단축키는 데스크톱 앱에서만 작동합니다. 웹 UI는 창에 포커스가 있는 동안 페이지 내 <1>Ctrl+Shift+Space</1> 단축키를 사용합니다.",
@@ -1071,7 +1183,10 @@
     "a11y_error": "붙여 넣을 수 없습니다. 손쉬운 사용 권한이 필요합니다",
     "clipboard_error": "클립보드 복사에 실패했습니다",
     "paste_error": "현재 앱에 붙여 넣지 못했습니다",
-    "mic_error_generic": "마이크를 켜지 못했습니다: {{message}}"
+    "mic_error_generic": "마이크를 켜지 못했습니다: {{message}}",
+    "model_loading": "모델 불러오는 중…",
+    "open_a11y_settings": "설정 열기",
+    "transcription_failed": "전사 실패: {{message}}"
   },
   "logs": {
     "no_tauri_log": "아직 디스크에 Tauri 로그가 없습니다. 데스크탑 빌드를 통해 실행하여 생성하세요.",
@@ -1115,7 +1230,11 @@
     "sponsors": "후원자",
     "sponsors_aria": "후원자를 보고 프로젝트 지원하기",
     "frontend_buffer": "메모리 내 저장(최근 500개)",
-    "copy_failed_short": "로그 복사에 실패했습니다"
+    "copy_failed_short": "로그 복사에 실패했습니다",
+    "clear_aria": "로그 지우기",
+    "open_api": "API 참고 문서",
+    "refresh": "새로 고침",
+    "source": "로그 출처"
   },
   "voice_profile": {
     "test_text": "안녕하세요. 이 목소리에 대한 테스트입니다.",
@@ -1382,7 +1501,15 @@
     "track_tip_timing": "시간 배치 방식: {{strategy}}",
     "upload_transcribe": "업로드 후 전사",
     "hq_needs_llm_hint": "고품질 번역은 로컬 또는 클라우드 LLM을 이용해 각 문장을 해당 구간 시간에 맞춥니다. 사용하려면 LLM을 설정하세요.",
-    "transcript_after_extract": "추출이 끝나면 전사문이 표시됩니다."
+    "transcript_after_extract": "추출이 끝나면 전사문이 표시됩니다.",
+    "autofit_quality": "자동 맞춤",
+    "clone_profiles": "복제 음성 프로필",
+    "export": "내보내기",
+    "ingest": "미디어 가져오기",
+    "install_failed": "엔진 설치 실패: {{message}}",
+    "speaker": "화자 {{n}}:",
+    "timing_concise": "간결하게",
+    "transcribing": "오디오 전사 중…"
   },
   "glossary": {
     "title": "용어집",
@@ -1418,7 +1545,8 @@
     "auto_badge": "자동",
     "close": "용어집 접기",
     "no_terms": "아직 용어가 없습니다. 아래에서 추가하거나 자동을 클릭하세요.",
-    "manual_badge": "수동"
+    "manual_badge": "수동",
+    "target_placeholder": "번역어({{lang}})"
   },
   "segment": {
     "time": "시간",
@@ -1477,7 +1605,10 @@
     "plan_impossible": "맞출 수 없음 +{{seconds}}초",
     "plan_impossible_title": "예상 발화 {{est}}초, 사용 가능 {{avail}}초 — 어떤 맞춤 처리로도 흡수할 수 있는 범위보다 약 {{seconds}}초 길어 오디오가 잘립니다. 생성 전에 텍스트를 줄이세요.",
     "plan_apply": "짧은 수정문 사용",
-    "plan_apply_title": "이 문장을 제안된 짧은 수정문으로 바꿉니다: “{{text}}”"
+    "plan_apply_title": "이 문장을 제안된 짧은 수정문으로 바꿉니다: “{{text}}”",
+    "all_speakers": "모든 화자",
+    "plan_tight": "빠듯하게 맞음",
+    "speaker_id": "화자 ID"
   },
   "timeline": {
     "track_label": "세그먼트 타임라인",
@@ -1528,7 +1659,9 @@
     "parse_failed": "구문 분석 실패: {{message}}",
     "fit_failed": "맞춤 실패: {{message}}",
     "tts_instruct": "TTS 지시:",
-    "probe_placeholder": "/Users/you/Movies/example.mp4"
+    "probe_placeholder": "/Users/you/Movies/example.mp4",
+    "taxonomy": "분류 체계",
+    "translate_hint": "번역 지침:"
   },
   "projects": {
     "title": "프로젝트",
@@ -1555,7 +1688,13 @@
     "history": "기록",
     "exports": "내보낸 파일",
     "search_placeholder": "더빙, 복제, 전사, 내보낸 파일 검색…",
-    "transcripts": "전사"
+    "transcripts": "전사",
+    "audiobook": "오디오북",
+    "audiobooks": "오디오북",
+    "export": "내보내기",
+    "generated_audio": "만든 오디오",
+    "story_lines": "{{count}}줄",
+    "voice_profiles": "음성 프로필"
   },
   "batch": {
     "title": "일괄 더빙",
@@ -1610,7 +1749,12 @@
     "watch_unsupported": "폴더 감시에는 데스크톱 앱 또는 Chromium 기반 브라우저가 필요합니다. 대신 동영상 추가를 사용하세요.",
     "watch_failed": "감시가 중지되었습니다 — 폴더를 더 이상 읽을 수 없습니다(이동, 삭제 또는 권한 변경). 다시 시작하려면 폴더를 다시 선택하세요.",
     "watch_start_failed": "해당 폴더 감시를 시작할 수 없습니다 — 다시 시도하려면 폴더를 다시 선택하세요.",
-    "status_failed": "실패"
+    "status_failed": "실패",
+    "clone_profiles": "복제 음성 프로필",
+    "refresh": "작업 새로 고침",
+    "stage_transcribe": "📝 음성을 텍스트로 변환 중…",
+    "status_running": "실행 중",
+    "watch_pause": "일시 정지"
   },
   "gallery": {
     "title": "VoiceStudio 갤러리",
@@ -1661,7 +1805,8 @@
     "my_imports": "내 가져오기",
     "delete_failed": "삭제할 수 없습니다: {{message}}",
     "zone_imports": "내 가져오기",
-    "filters": "필터"
+    "filters": "필터",
+    "import": "가져오기"
   },
   "transcriptions": {
     "title": "전사",
@@ -1684,7 +1829,8 @@
     "h_ago": "{{count}}시간 전",
     "search_placeholder": "전사 검색…",
     "empty_title": "아직 전사가 없습니다",
-    "empty_search_title": "일치하는 전사가 없습니다"
+    "empty_search_title": "일치하는 전사가 없습니다",
+    "export": "전사문 내보내기"
   },
   "setup": {
     "ready_desc": "첫 음성을 만들 준비가 되었습니다. 받아쓰기는 지금 또는 나중에 설정에서 구성할 수 있습니다.",
@@ -1722,7 +1868,11 @@
     "mirror_rescue_title": "Hugging Face에 연결할 수 없나요? 미러를 사용하세요",
     "mirror_rescue_hint": "모델 다운로드가 즉시 미러로 전환되므로 설정 중에는 다시 시작할 필요가 없습니다. hf-mirror.com은 중국에서 널리 쓰이는 커뮤니티 미러입니다.",
     "mirror_apply": "적용 후 다시 확인",
-    "mirror_apply_error": "미러 구성 저장에 실패했습니다."
+    "mirror_apply_error": "미러 구성 저장에 실패했습니다.",
+    "cache_label": "모델 캐시",
+    "media_engine_choose_file": "파일 선택…",
+    "media_engine_preparing": "미디어 엔진 준비 중…",
+    "media_engine_retry": "다시 시도"
   },
   "donate": {
     "title": "지원",
@@ -1771,7 +1921,9 @@
     "benefit_source_desc": "스택에 대한 완전한 가시성. 라이선스 조건 내에서 감사, 분기 및 조정합니다.",
     "benefit_lang_desc": "인간 수준의 품질로 646개 언어로 전사, 번역, 더빙하세요.",
     "hero_simple": "VoiceStudio는 상업용 및 내부 업무용을 포함하여 AGPL-3.0에 따른 무료 오픈 소스입니다. AGPL의 카피레프트 의무 없이 비공개 소스 제품에 포함하려면 상용 라이선스만 필요합니다. 당사 라이선스는 VoiceStudio 코드에 적용됩니다. 모델과 생성된 출력에 대한 권리는 선택한 모델과 해당 이용 약관에 따라 달라집니다.",
-    "benefit_team_desc": "라이선스 하나로 조직 내 사용자 수 제한 없이 이용할 수 있습니다."
+    "benefit_team_desc": "라이선스 하나로 조직 내 사용자 수 제한 없이 이용할 수 있습니다.",
+    "badge": "조직용",
+    "title": "상업용 라이선스"
   },
   "exportModal": {
     "export_options": "내보내기 옵션",
@@ -1839,7 +1991,10 @@
     "export_audio": "오디오 내보내기",
     "export_subtitles": "자막 내보내기",
     "hardsub": "자막을 영상에 입히기(하드서브)",
-    "dual_subs": "이중 자막(번역문 + 원문)"
+    "dual_subs": "이중 자막(번역문 + 원문)",
+    "export": "내보내기",
+    "pkg_stems_cta": "분리 트랙 ZIP 내보내기",
+    "pkg_stems_title": "분리 오디오 트랙"
   },
   "demo": {
     "clone_coachmark": "이것은 안내형 데모입니다. 제안된 프롬프트를 시도해 보거나 직접 작성해 보세요.",
@@ -1890,7 +2045,9 @@
     "speedsUp": "속도를 높이다",
     "slowsDown": "속도가 느려지다",
     "taxonomyTokens": "분류 토큰",
-    "desc": "이 문장의 느낌을 파이프라인에 알려 주세요. 평범한 영어로 입력하면 시스템이 안정적인 분류 체계(에너지 / 감정 / 속도 / 친밀감 / 격식)에 맞춘 뒤 Cinematic 번역, TTS, 구간 맞춤에 전달합니다."
+    "desc": "이 문장의 느낌을 파이프라인에 알려 주세요. 평범한 영어로 입력하면 시스템이 안정적인 분류 체계(에너지 / 감정 / 속도 / 친밀감 / 격식)에 맞춘 뒤 Cinematic 번역, TTS, 구간 맞춤에 전달합니다.",
+    "rateBias": "속도 편향:",
+    "translateHint": "번역 힌트:"
   },
   "errors": {
     "title": "이 탭에 문제가 발생했습니다.",
@@ -2017,7 +2174,9 @@
     "stop": "중지",
     "regenerate": "재생성",
     "preview": "미리보기",
-    "hint": "8단계 · 빠른 미리보기"
+    "hint": "8단계 · 빠른 미리보기",
+    "clone_profiles": "복제된 음성",
+    "default_voice": "기본 음성"
   },
   "header": {
     "speech": "음성",
@@ -2041,7 +2200,11 @@
     "unload": "언로드",
     "flush_caches": "캐시 플러시",
     "model_not_active": "비활성 — 안전하게 언로드 가능",
-    "unload_all_flush": "모두 언로드 + 비우기"
+    "unload_all_flush": "모두 언로드 + 비우기",
+    "kicker_library": "라이브러리",
+    "kicker_licensing": "라이선스",
+    "label_clone": "음성 복제",
+    "label_enterprise": "상업용 라이선스"
   },
   "sidebar": {
     "tab_drive": "드라이브",
@@ -2079,7 +2242,9 @@
     "rename_save": "이름 저장",
     "tab_history": "기록",
     "no_history": "생성 기록이 없습니다",
-    "try_voice": "사용해 보기"
+    "try_voice": "사용해 보기",
+    "recent_exports": "최근 내보내기",
+    "tab_exports": "내보낸 항목"
   },
   "trimmer": {
     "title": "참조 오디오 다듬기",
@@ -2107,7 +2272,8 @@
     "unit_seconds": "초",
     "fit_selection": "선택 영역 맞춤(End)",
     "length_ok": "적합",
-    "play_hint": "Space로 재생 · Enter로 확정 · Esc로 취소"
+    "play_hint": "Space로 재생 · Enter로 확정 · Esc로 취소",
+    "fit_all": "전체 맞춤(Home)"
   },
   "casting": {
     "segments_count": "{{count}} 세그먼트",
@@ -2149,7 +2315,8 @@
     "generating_voice_a": "음성 생성 중...",
     "generating_voice_b": "음성 B 생성 중...",
     "comparison_complete": "비교 완료!",
-    "play_failed": "플레이 실패: {{message}}"
+    "play_failed": "플레이 실패: {{message}}",
+    "close": "비교 닫기"
   },
   "models": {
     "install_started": "설치 시작됨 - 행의 진행률",
@@ -2269,7 +2436,29 @@
     "asrOpenAICompatTestNotConfigured": "서버 URL부터 입력해 주세요",
     "asrOpenAICompatTestInvalidUrl": "서버 URL의 시작 부분에는 http:// 또는 https://가 필요합니다",
     "asrOpenAICompatTestFailed": "연결 테스트 실패",
-    "voice_previews_rejected": "음성 갤러리 갱신 요청이 거부되었습니다: {{message}}"
+    "voice_previews_rejected": "음성 갤러리 갱신 요청이 거부되었습니다: {{message}}",
+    "asrOpenAICompatApiKeyOptional": "선택 사항",
+    "asrOpenAICompatApiKeyTitle": "API 키",
+    "asrOpenAICompatBaseUrlTitle": "서버 URL",
+    "asrOpenAICompatSaveError": "저장 실패",
+    "asrOpenAICompatTest": "연결 테스트",
+    "asrOpenAICompatTestTitle": "연결 테스트",
+    "asrOpenAICompatTesting": "테스트 중…",
+    "clear_filters": "필터 지우기",
+    "in_memory": "메모리에 로드됨",
+    "install_error": "설치 실패: {{error}}",
+    "install_failed": "모델 설치 실패: {{message}}",
+    "mirror_auto_latency": "{{ms}}ms",
+    "mirror_auto_test": "다시 테스트",
+    "mirror_auto_testing": "테스트 중…",
+    "mirror_auto_title": "자동 선택",
+    "mirror_preset_title": "미러 프리셋",
+    "mirror_retry": "다시 시도",
+    "mirror_save_error": "저장 실패",
+    "retry_btn": "다시 시도",
+    "role_diarisation": "화자 분리",
+    "section_diarisation": "화자 분리",
+    "voice_previews_checked": "{{when}}에 확인"
   },
   "gallery_extra": {
     "trim_load_failed": "자르기를 위해 오디오를 로드하지 못했습니다: {{message}}"
@@ -2325,7 +2514,8 @@
     "dialect_not_applied": "선택한 방언을 적용하려면 LLM이 필요합니다. 번역 엔진을 OpenAI/Ollama로 바꾸거나 설정 → 자격 증명 → LLM 엔드포인트에서 LLM을 구성하세요.",
     "translated_cinematic_suffix": " (Cinematic)",
     "save_first": "저장하기 전에 먼저 “업로드 후 전사”를 눌러 서버에서 영상을 처리해 주세요.",
-    "restored_state": "이전 생성 상태를 복원했습니다"
+    "restored_state": "이전 생성 상태를 복원했습니다",
+    "transcribing_audio": "오디오 전사 중…"
   },
   "tts_errors": {
     "profile_language_rejected": "자동은 이 엔진이 지원하지 않는 음성 프로필의 언어({{language}})를 사용합니다. 프로필 언어를 변경하거나 지원되는 언어 또는 다른 엔진을 선택하세요.",
@@ -2392,7 +2582,8 @@
     "staleTitle": "업데이트 사용 가능",
     "staleMessage": "VoiceStudio {{current}}을(를) 사용 중이지만 {{latest}}이(가) 이미 출시되었습니다. 이 버그는 이미 수정되었을 수 있습니다. 신고하기 전에 최신 릴리스를 확인할까요?",
     "staleView": "업데이트 보기",
-    "staleFileAnyway": "그래도 신고"
+    "staleFileAnyway": "그래도 신고",
+    "label": "버그 신고"
   },
   "app": {
     "loading": "로드 중…",
@@ -2459,7 +2650,8 @@
     "sponsors_tier_company": "기업",
     "sponsors_tier_development": "개발",
     "sponsors_tier_community": "커뮤니티",
-    "sponsors_tier_supporter": "후원자"
+    "sponsors_tier_supporter": "후원자",
+    "tab_license": "상업용 라이선스"
   },
   "updates": {
     "up_to_date": "최신 · v{{version}}",
@@ -2474,7 +2666,9 @@
     "backup_line": "업데이트할 때마다 먼저 데이터를 백업합니다.",
     "backup_latest": "마지막으로 백업한 시각: {{when}}",
     "backup_none": "다음 데이터베이스 업그레이드 전에 첫 백업이 자동으로 만들어집니다.",
-    "whats_new_in": "v{{version}}에서 달라진 점"
+    "whats_new_in": "v{{version}}에서 달라진 점",
+    "retry_load": "다시 시도",
+    "tab": "업데이트"
   },
   "firstrun": {
     "backend_stop_failed": "VoiceStudio가 이전 백엔드를 안전하게 중지하지 못했습니다. 다른 VoiceStudio 창이나 프로세스를 닫은 후 다시 시도하세요.",
@@ -2556,7 +2750,9 @@
     "hf_token_replace_warning": "이 앱에 저장된 토큰을 교체합니다. 기존 토큰은 폐기되지 않습니다.",
     "lib_install_failed": "설치하지 못했습니다: {{error}}",
     "lib_show_all": "나머지 모델 {{count}}개 표시",
-    "hf_token_get_short": "무료 토큰 받기 →"
+    "hf_token_get_short": "무료 토큰 받기 →",
+    "lib_retry": "다시 시도",
+    "models_dir": "모델 캐시"
   },
   "history": {
     "dub_meta": "{{segments}}개 세그먼트 · {{duration}}초",
@@ -2590,7 +2786,8 @@
     "copied": "사양 URL을 복사했습니다",
     "copy_failed": "복사하지 못했습니다. 위 URL을 선택하여 직접 복사하세요.",
     "open_raw": "원본 사양 열기",
-    "open_raw_aria": "원본 OpenAPI JSON을 브라우저에서 열기"
+    "open_raw_aria": "원본 OpenAPI JSON을 브라우저에서 열기",
+    "retry": "다시 시도"
   },
   "recording": {
     "loaded_raw": "녹음이 로드되었습니다 (원본 — 노이즈 제거 사용 불가)",
@@ -2642,7 +2839,10 @@
     "type_respelling": "발음 표기",
     "test_placeholder": "치환을 미리 들을 문장을 입력하세요…",
     "test_result": "이렇게 소리 내어 읽습니다:",
-    "load_error": "발음 사전을 불러오지 못했습니다."
+    "load_error": "발음 사전을 불러오지 못했습니다.",
+    "remove": "{{term}} 제거",
+    "test_label": "문장 테스트",
+    "title": "발음 사전"
   },
   "audiobook": {
     "cast": "캐스트",
@@ -2741,7 +2941,14 @@
     "recovery_load_failed": "완료되지 않은 오디오북을 확인하지 못했습니다.",
     "line_gap": "줄 사이 간격",
     "paragraph_gap": "문단 사이 간격",
-    "trim_edges": "엔진 무음 구간 다듬기"
+    "trim_edges": "엔진 무음 구간 다듬기",
+    "create": "오디오북 만들기",
+    "default_voice": "기본 음성",
+    "engine_default": "엔진 기본값",
+    "import": "가져오기",
+    "insert_pause": "일시 정지",
+    "recovery_retry": "다시 시도",
+    "title": "오디오북"
   },
   "voicePanel": {
     "title": "음성",
@@ -2823,7 +3030,8 @@
     "createVoice": "새 목소리 만들기",
     "gallery": "갤러리",
     "addingVoice": "음성 추가 중…",
-    "addVoiceFailed": "해당 음성을 추가할 수 없습니다"
+    "addVoiceFailed": "해당 음성을 추가할 수 없습니다",
+    "engineDefault": "엔진 기본값"
   },
   "remote_gate": {
     "title": "액세스 PIN을 입력하세요.",
@@ -2849,7 +3057,15 @@
     "community_cta": "Discord 참여",
     "support_desc": "VoiceStudio는 무료이며 사용자의 컴퓨터에서 완전히 실행됩니다. 시간을 절약해 주었다면 일회성 후원이 개발을 이어 가는 데 도움이 됩니다. 작은 도움도 정말 소중합니다.",
     "security_desc": "보안 취약점을 발견했다면 공개 이슈를 만들지 마세요. 공개 전에 수정할 수 있도록 GitHub Security Advisories를 통해 비공개로 알려 주세요.",
-    "email_desc": "이메일 — 라이선스, 제휴 또는 비공개 문의"
+    "email_desc": "이메일 — 라이선스, 제휴 또는 비공개 문의",
+    "bug_cta": "버그 신고 도구 열기",
+    "bug_title": "버그 신고",
+    "channels_label": "연락 방법",
+    "follow_cta": "X에서 팔로우",
+    "security_cta": "비공개로 신고",
+    "security_title": "보안 문제 신고",
+    "support_cta": "후원 방법 보기",
+    "support_title": "프로젝트 후원"
   },
   "permissions": {
     "title": "권한",
@@ -2861,7 +3077,9 @@
     "status_granted": "허용됨",
     "status_denied": "거부됨",
     "status_prompt": "아직 요청되지 않음",
-    "web_note": "권한 상태는 데스크톱 앱에서만 읽을 수 있습니다. 브라우저에서는 브라우저가 직접 마이크 접근을 관리합니다."
+    "web_note": "권한 상태는 데스크톱 앱에서만 읽을 수 있습니다. 브라우저에서는 브라우저가 직접 마이크 접근을 관리합니다.",
+    "open_settings": "설정 열기",
+    "status_unknown": "알 수 없음"
   },
   "asr_missing": {
     "message": "음성 인식 모델이 설치되어 있지 않습니다 — 이 기능으로 오디오를 전사하려면 모델이 필요합니다.",
@@ -2900,7 +3118,11 @@
     "field_uptime": "충돌 전 실행 시간",
     "stderr_title": "최근 stderr 오류 메시지",
     "no_stderr": "기록된 오류 출력이 없습니다.",
-    "report_needs_log": "이 이벤트에서 오류 출력이 기록되지 않아 원클릭 신고 내용이 비어 있습니다. 실제 문제가 있다면 설정 → 로그 → 백엔드의 마지막 몇 줄을 새 이슈에 첨부해 주세요."
+    "report_needs_log": "이 이벤트에서 오류 출력이 기록되지 않아 원클릭 신고 내용이 비어 있습니다. 실제 문제가 있다면 설정 → 로그 → 백엔드의 마지막 몇 줄을 새 이슈에 첨부해 주세요.",
+    "details_title": "백엔드 충돌 상세 정보",
+    "field_version": "백엔드 버전",
+    "uptime_value": "{{count}}초",
+    "view": "충돌 상세 정보 보기"
   },
   "voices": {
     "active": "사용 중인 음성",
@@ -3059,11 +3281,15 @@
     "untitled": "오디오",
     "play": "재생",
     "pause": "일시 정지",
-    "seek": "탐색"
+    "seek": "탐색",
+    "generated_audio": "합성된 오디오",
+    "stop": "재생 중지"
   },
   "remote_apikey_gate": {
     "body": "이 백엔드에는 API 키가 필요합니다. 서버에 설정된 OMNIVOICE_API_KEY 값을 입력하세요.",
-    "connect": "연결"
+    "connect": "연결",
+    "label": "API 키",
+    "title": "API 키 입력"
   },
   "footer_donate": {
     "aria": "VoiceStudio가 전하는 짧은 안내",
@@ -3075,7 +3301,8 @@
     "kofi_aria": "Ko-fi에서 VoiceStudio 후원",
     "paypal": "PayPal",
     "paypal_aria": "PayPal로 VoiceStudio 후원",
-    "later": "나중에"
+    "later": "나중에",
+    "dont_ask": "다시 묻지 않기"
   },
   "dictation": {
     "needs_llm": "로컬 LLM 엔드포인트가 필요합니다. 설정 전에는 원본 전사문이 그대로 붙여 넣어집니다.",
@@ -3094,6 +3321,11 @@
     "aec_title": "오디오를 들으며 받아쓰기",
     "aec_description": "VoiceStudio가 재생하는 소리가 마이크에 들어가지 않도록 제거합니다.",
     "aec_row_title": "받아쓰기 에코 제거 사용",
-    "aec_hint": "VoiceStudio 자체 재생 소리를 마이크에서 제거하여 미리 듣기, 더빙 또는 영상이 재생되는 동안에도 앱 음성이 전사문에 들어가지 않게 받아쓸 수 있습니다. 오디오 처리가 조금 추가되므로 재생 중 받아쓰기를 하지 않는다면 끄세요."
+    "aec_hint": "VoiceStudio 자체 재생 소리를 마이크에서 제거하여 미리 듣기, 더빙 또는 영상이 재생되는 동안에도 앱 음성이 전사문에 들어가지 않게 받아쓸 수 있습니다. 오디오 처리가 조금 추가되므로 재생 중 받아쓰기를 하지 않는다면 끄세요.",
+    "aec_experimental": "실험적 기능",
+    "no_llm_configured": "설정된 LLM 없음",
+    "open_llm_providers": "LLM 제공업체 열기",
+    "retry": "다시 시도",
+    "title": "받아쓰기 다듬기"
   }
 }
