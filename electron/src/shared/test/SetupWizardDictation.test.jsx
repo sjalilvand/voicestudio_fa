@@ -56,7 +56,7 @@ describe('SetupWizard dictation step (real DictationDemo)', () => {
   it('shows the rail label and the demo title as two distinct strings, each once (#1930)', async () => {
     render(withI18n(<SetupWizard onReady={() => {}} />));
 
-    fireEvent.click(await screen.findByText(/Continue to model setup/i));
+    fireEvent.click(await screen.findByText('Continue'));
     fireEvent.click(await screen.findByText(/Required models are ready/i));
 
     // Straight to dictation — no consent step in this build.

@@ -60,14 +60,14 @@ describe('CastingBoard drag & drop', () => {
     const card = screen
       .getByTestId('casting-board')
       .querySelector('[data-profile="preset:narrator"]');
-    expect(card).toHaveTextContent('Clear narrator');
+    expect(card).toHaveTextContent('Authoritative');
     expect(card.querySelector('svg')).toBeInTheDocument();
     expect(card.textContent).not.toMatch(/\p{Extended_Pictographic}/u);
     fireEvent.click(screen.getByRole('button', { name: /assign a voice to SPEAKER_1/i }));
     fireEvent.change(within(screen.getByRole('listbox')).getByRole('textbox'), {
-      target: { value: 'Clear narrator' },
+      target: { value: 'Authoritative' },
     });
-    const option = screen.getByRole('option', { name: 'Clear narrator' });
+    const option = screen.getByRole('option', { name: 'Authoritative' });
     expect(option.querySelector('svg')).toBeInTheDocument();
   });
   it('labels restored automatic voices without requiring clone metadata', () => {

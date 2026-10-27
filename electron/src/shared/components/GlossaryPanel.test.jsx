@@ -23,7 +23,7 @@ describe('Glossary term entry', () => {
     const onChange = vi.fn();
     addGlossaryTerm.mockResolvedValue({ id: 1, source: 'Studio', target: 'Estudio', note: '' });
     render(<GlossaryPanel projectId="test" targetLang="es" onChange={onChange} />);
-    await screen.findByText('No glossary terms yet.');
+    await screen.findByText('No terms yet. Add one below or find them automatically.');
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add term' })).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Source term'), { target: { value: 'Studio' } });

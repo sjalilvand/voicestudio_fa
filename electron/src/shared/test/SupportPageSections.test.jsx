@@ -52,7 +52,7 @@ describe('the compact support page', () => {
       'true',
     );
     expect(
-      screen.getByRole('heading', { name: 'Bring private voice production to your team' }),
+      screen.getByRole('heading', { name: 'Ship AI voices in production' }),
     ).toBeInTheDocument();
   });
 

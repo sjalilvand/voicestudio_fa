@@ -51,7 +51,7 @@ function withI18n(node) {
 
 /** Walk the wizard from the system step to the step after models. */
 async function advancePastModels() {
-  fireEvent.click(await screen.findByText(/Continue to model setup/i));
+  fireEvent.click(await screen.findByText('Continue'));
   fireEvent.click(await screen.findByText(/Required models are ready/i));
 }
 

@@ -22,7 +22,7 @@ import {
 // view must instead reflect the pipeline stage on every ingest path.
 
 const DROP_HINT = 'Drop an audio or video file here';
-const URL_PLACEHOLDER = 'Paste a media URL';
+const URL_PLACEHOLDER = '…or paste a video URL';
 const TRANSCRIBING = 'Transcribing audio…';
 
 function baseProps(overrides = {}) {
