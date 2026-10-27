@@ -4502,5 +4502,11 @@
     "licence_then_retry": "請先接受授權條款，然後再次點選「使用 GPU」。",
     "switched": "現在使用 {{gpu}} 生成語音。",
     "switched_downloading": "現在使用 {{gpu}} 生成語音。正在下載 {{quant}} 模型…"
+  },
+  "pauseFill": {
+    "title": "停頓",
+    "room_tone": "以房間底噪填補停頓",
+    "room_tone_note": "[pause] 標記與有聲書間隔會使用該錄音本身的安靜背景音，而非數位靜音，句子之間的聲音不會突然中斷。",
+    "env_pinned": "由 {{env}} 設定。修改或清除它後才能使用此開關。"
   }
 }

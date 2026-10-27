@@ -4502,5 +4502,11 @@
     "licence_then_retry": "请先接受许可证，然后再次点击“使用 GPU”。",
     "switched": "现在使用 {{gpu}} 生成语音。",
     "switched_downloading": "现在使用 {{gpu}} 生成语音。正在下载 {{quant}} 模型…"
+  },
+  "pauseFill": {
+    "title": "停顿",
+    "room_tone": "用房间底噪填充停顿",
+    "room_tone_note": "[pause] 标记和有声书间隔会使用该录音自身的安静背景音，而不是数字静音，句子之间的声音不会突然中断。",
+    "env_pinned": "由 {{env}} 设置。修改或清除它后才能使用此开关。"
   }
 }

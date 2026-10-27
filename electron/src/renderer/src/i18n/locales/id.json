@@ -4502,5 +4502,11 @@
     "licence_then_retry": "Terima lisensinya, lalu tekan Pakai GPU lagi.",
     "switched": "Suara sekarang memakai {{gpu}}.",
     "switched_downloading": "Suara sekarang memakai {{gpu}}. Mengunduh model {{quant}}…"
+  },
+  "pauseFill": {
+    "title": "Jeda",
+    "room_tone": "Isi jeda dengan nada ruangan",
+    "room_tone_note": "Penanda [pause] dan jeda buku audio mendapat latar senyap dari rekaman itu sendiri, bukan keheningan digital, sehingga suara tidak terputus di antara baris.",
+    "env_pinned": "Ditetapkan oleh {{env}}. Ubah atau hapus untuk memakai sakelar ini."
   }
 }

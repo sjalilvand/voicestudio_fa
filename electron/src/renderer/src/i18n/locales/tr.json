@@ -4502,5 +4502,11 @@
     "licence_then_retry": "Lisansı kabul edin, ardından GPU kullan'a yeniden basın.",
     "switched": "Konuşma için artık {{gpu}} kullanılıyor.",
     "switched_downloading": "Konuşma için artık {{gpu}} kullanılıyor. {{quant}} modeli indiriliyor…"
+  },
+  "pauseFill": {
+    "title": "Duraklamalar",
+    "room_tone": "Duraklamaları oda sesiyle doldur",
+    "room_tone_note": "[pause] işaretleri ve sesli kitap boşlukları dijital sessizlik yerine kaydın kendi sessiz arka planını alır; böylece ses satırlar arasında kesilmez.",
+    "env_pinned": "{{env}} tarafından belirlendi. Bu anahtarı kullanmak için değiştirin veya temizleyin."
   }
 }

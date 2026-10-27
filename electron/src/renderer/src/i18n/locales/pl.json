@@ -4530,5 +4530,11 @@
     "licence_then_retry": "Zaakceptuj licencję, a potem ponownie naciśnij Użyj GPU.",
     "switched": "Mowa korzysta teraz z {{gpu}}.",
     "switched_downloading": "Mowa korzysta teraz z {{gpu}}. Pobieranie modelu {{quant}}…"
+  },
+  "pauseFill": {
+    "title": "Pauzy",
+    "room_tone": "Wypełniaj pauzy tłem pomieszczenia",
+    "room_tone_note": "Znaczniki [pause] i przerwy w audiobookach dostają ciche tło samego nagrania zamiast cyfrowej ciszy, więc dźwięk nie urywa się między wersami.",
+    "env_pinned": "Ustawione przez {{env}}. Zmień lub usuń tę wartość, aby użyć tego przełącznika."
   }
 }

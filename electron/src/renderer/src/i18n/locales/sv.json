@@ -4502,5 +4502,11 @@
     "licence_then_retry": "Godkänn licensen och tryck sedan på Använd GPU igen.",
     "switched": "{{gpu}} används nu för tal.",
     "switched_downloading": "{{gpu}} används nu för tal. Laddar ned modellen {{quant}}…"
+  },
+  "pauseFill": {
+    "title": "Pauser",
+    "room_tone": "Fyll pauser med rumston",
+    "room_tone_note": "[pause]-markörer och luckor i ljudböcker får tagningens egen tysta bakgrund i stället för digital tystnad, så att ljudet inte bryts mellan raderna.",
+    "env_pinned": "Styrs av {{env}}. Ändra eller rensa den för att använda det här reglaget."
   }
 }

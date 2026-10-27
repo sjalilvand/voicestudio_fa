@@ -787,6 +787,14 @@ def _chapter_cache_inputs(chapter, sr, engine_id, resolve, cache_dir, lexicon=No
     if language:
         sig["\x00language"] = language
         seg_extra_sig = f"{seg_extra_sig}\x00language={language}"
+    # Room tone in the gaps (#3611) changes the audio of both layers; the
+    # default (digital silence) adds nothing, so existing caches keep hitting.
+    from services.audio_dsp import pause_fill_mode
+
+    pause_fill = pause_fill_mode()
+    if pause_fill != "silence":
+        sig["\x00pausefill"] = pause_fill
+        seg_extra_sig = f"{seg_extra_sig}\x00pausefill={pause_fill}"
     marking = will_mark()
     if marking:
         # Provenance-marked chapters cache under their own key (#1169): a
@@ -819,6 +827,8 @@ def _chapter_cache_inputs(chapter, sr, engine_id, resolve, cache_dir, lexicon=No
         "pronunciation lexicon": lex_sig, "expressive settings": expr_sig,
         "voice map": vmap_sig, "watermark": marking,
     }
+    if pause_fill != "silence":
+        inputs["pause fill"] = pause_fill
     if language:
         inputs["language"] = language
     for k, v in resolved.items():

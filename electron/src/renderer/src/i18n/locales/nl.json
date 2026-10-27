@@ -4502,5 +4502,11 @@
     "licence_then_retry": "Accepteer de licentie en druk daarna opnieuw op GPU gebruiken.",
     "switched": "{{gpu}} wordt nu gebruikt voor spraak.",
     "switched_downloading": "{{gpu}} wordt nu gebruikt voor spraak. Het {{quant}}-model wordt gedownload…"
+  },
+  "pauseFill": {
+    "title": "Pauzes",
+    "room_tone": "Pauzes vullen met ruimtetoon",
+    "room_tone_note": "[pause]-markeringen en luisterboekpauzes krijgen de stille achtergrond van de opname zelf in plaats van digitale stilte, zodat het geluid tussen regels niet wegvalt.",
+    "env_pinned": "Ingesteld door {{env}}. Wijzig of wis het om deze schakelaar te gebruiken."
   }
 }

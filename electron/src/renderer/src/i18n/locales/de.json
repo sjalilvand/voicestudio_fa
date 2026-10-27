@@ -4502,5 +4502,11 @@
     "licence_then_retry": "Akzeptiere die Lizenz und drücke dann erneut auf GPU nutzen.",
     "switched": "{{gpu}} wird jetzt für Sprache verwendet.",
     "switched_downloading": "{{gpu}} wird jetzt für Sprache verwendet. Das Modell {{quant}} wird heruntergeladen…"
+  },
+  "pauseFill": {
+    "title": "Pausen",
+    "room_tone": "Pausen mit Raumklang füllen",
+    "room_tone_note": "[pause]-Marker und Hörbuch-Lücken erhalten den leisen Hintergrund der Aufnahme statt digitaler Stille, damit der Klang zwischen den Zeilen nicht abbricht.",
+    "env_pinned": "Durch {{env}} festgelegt. Ändere oder entferne den Wert, um diesen Schalter zu nutzen."
   }
 }

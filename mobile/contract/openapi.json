@@ -5604,6 +5604,24 @@
     "title": "_OffloadAfterGenerationBody",
     "type": "object"
    },
+   "_PauseFillBody": {
+    "properties": {
+     "mode": {
+      "description": "silence: exact zeros (default); room_tone: the take's own noise floor",
+      "enum": [
+       "silence",
+       "room_tone"
+      ],
+      "title": "Mode",
+      "type": "string"
+     }
+    },
+    "required": [
+     "mode"
+    ],
+    "title": "_PauseFillBody",
+    "type": "object"
+   },
    "_PerformanceProfileBody": {
     "properties": {
      "family": {
@@ -7962,6 +7980,64 @@
      }
     },
     "summary": "Set Llm Skill",
+    "tags": [
+     "settings"
+    ]
+   }
+  },
+  "/api/settings/pause-fill": {
+   "get": {
+    "description": "How [pause] markers and audiobook gaps are filled.",
+    "operationId": "get_pause_fill_api_settings_pause_fill_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "summary": "Get Pause Fill",
+    "tags": [
+     "settings"
+    ]
+   },
+   "put": {
+    "description": "Persist the choice. Applies from the next generation, no restart.",
+    "operationId": "set_pause_fill_api_settings_pause_fill_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/_PauseFillBody"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Set Pause Fill",
     "tags": [
      "settings"
     ]

@@ -4504,5 +4504,11 @@
     "licence_then_retry": "Acepta la licencia y vuelve a pulsar Usar GPU.",
     "switched": "Ahora se usa {{gpu}} para la voz.",
     "switched_downloading": "Ahora se usa {{gpu}} para la voz. Descargando el modelo {{quant}}…"
+  },
+  "pauseFill": {
+    "title": "Pausas",
+    "room_tone": "Rellenar pausas con tono de sala",
+    "room_tone_note": "Los marcadores [pause] y los huecos de los audiolibros reciben el fondo silencioso de la propia toma en lugar de silencio digital, para que el sonido no se corte entre líneas.",
+    "env_pinned": "Lo fija {{env}}. Cámbialo o bórralo para usar este interruptor."
   }
 }

@@ -362,14 +362,17 @@ class _JoinPolicy:
         present = [r for r in renders if r is not None]
         if len(present) < 2:
             return present[0] if present else None
+        from services.audio_dsp import fill_gaps
+
         width = int(sample_rate * self.paragraph_ms / 1000.0)
-        woven: list = []
+        items: list = []
         for r in present[:-1]:
-            woven.append(r)
+            items.append(("a", r))
             if width > 0:
-                woven.append(torch.zeros(*r.shape[:-1], width, dtype=r.dtype, device=r.device))
-        woven.append(present[-1])
-        return concatenate_audio_chunks(woven, sample_rate, crossfade_ms=0)
+                items.append(("s", width))
+        items.append(("a", present[-1]))
+        # Digital silence or room tone, per Settings (#3611).
+        return concatenate_audio_chunks(fill_gaps(items, sample_rate), sample_rate, crossfade_ms=0)
 
 
 def synthesize_chapter(
@@ -509,13 +512,10 @@ def synthesize_chapter(
     # materialize inter-span silence AFTER the loop, matching the rendered
     # audio's channel dims / dtype / device (same pattern as generation.py's
     # _render_with_pauses). A silence-only chapter stays 1-D float32 as before.
-    ref = next((t for kind, t in items if kind == "a"), None)
-    parts: list = [
-        val if kind == "a"
-        else (torch.zeros(val, dtype=torch.float32) if ref is None
-              else torch.zeros(*ref.shape[:-1], val, dtype=ref.dtype, device=ref.device))
-        for kind, val in items
-    ]
+    # Gaps are digital silence or room tone, per Settings (#3611).
+    from services.audio_dsp import fill_gaps
+
+    parts: list = fill_gaps(items, sample_rate)
     # Hard-concat spans + silences (crossfading silence would bleed the gap).
     audio = parts[0] if len(parts) == 1 else concatenate_audio_chunks(parts, sample_rate, crossfade_ms=0)
     return audio, audio.shape[-1] / float(sample_rate)

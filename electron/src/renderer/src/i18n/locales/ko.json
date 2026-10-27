@@ -4502,5 +4502,11 @@
     "licence_then_retry": "라이선스에 동의한 뒤 GPU 사용을 다시 누르세요.",
     "switched": "이제 음성에 {{gpu}}를 사용합니다.",
     "switched_downloading": "이제 음성에 {{gpu}}를 사용합니다. {{quant}} 모델을 다운로드하는 중…"
+  },
+  "pauseFill": {
+    "title": "일시 정지",
+    "room_tone": "일시 정지를 룸톤으로 채우기",
+    "room_tone_note": "[pause] 표시와 오디오북 간격에 디지털 무음 대신 녹음 자체의 조용한 배경음을 넣어 줄 사이에서 소리가 끊기지 않게 합니다.",
+    "env_pinned": "{{env}}(으)로 설정되어 있습니다. 이 스위치를 사용하려면 값을 바꾸거나 지우세요."
   }
 }

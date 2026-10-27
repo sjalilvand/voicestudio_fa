@@ -4502,5 +4502,11 @@
     "licence_then_retry": "Accept the licence, then press Use GPU again.",
     "switched": "Now using {{gpu}} for speech.",
     "switched_downloading": "Now using {{gpu}} for speech. Downloading the {{quant}} model…"
+  },
+  "pauseFill": {
+    "title": "Pauses",
+    "room_tone": "Fill pauses with room tone",
+    "room_tone_note": "[pause] markers and audiobook gaps get the take's own quiet background instead of digital silence, so the sound doesn't cut out between lines.",
+    "env_pinned": "Set by {{env}}. Change or clear it to use this switch."
   }
 }

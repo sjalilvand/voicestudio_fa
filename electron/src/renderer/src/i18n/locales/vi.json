@@ -4502,5 +4502,11 @@
     "licence_then_retry": "Hãy chấp nhận giấy phép, rồi nhấn Dùng GPU lần nữa.",
     "switched": "Giọng nói giờ dùng {{gpu}}.",
     "switched_downloading": "Giọng nói giờ dùng {{gpu}}. Đang tải mô hình {{quant}}…"
+  },
+  "pauseFill": {
+    "title": "Khoảng dừng",
+    "room_tone": "Lấp khoảng dừng bằng âm nền phòng",
+    "room_tone_note": "Dấu [pause] và các khoảng trống trong sách nói sẽ có nền yên tĩnh của chính bản thu thay vì im lặng kỹ thuật số, để âm thanh không bị ngắt giữa các dòng.",
+    "env_pinned": "Được đặt bởi {{env}}. Hãy đổi hoặc xóa để dùng công tắc này."
   }
 }
