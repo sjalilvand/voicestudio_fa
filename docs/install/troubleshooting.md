@@ -1292,11 +1292,8 @@ The **download region** choice on the setup screen changes where the Python
 interpreter downloads from. With **China** selected, setup also downloads the
 `files.pythonhosted.org` wheels from the Aliyun PyPI mirror
 (`mirrors.aliyun.com`), which serves the same files: each one is still checked
-against the hash pinned in `uv.lock`. The setup log names the mirror. On
-**Restricted network**, and on **Auto-detect** when GitHub is unreachable
-(where mainland China lands), setup times one locked wheel on
-`files.pythonhosted.org` and on the mirror, and uses the mirror when PyPI is
-unreachable or clearly slower. If the
+against the hash pinned in `uv.lock`. The setup log names the mirror. **Auto-detect** never picks China by itself, so pick **China**
+explicitly on the setup screen if you are in mainland China. If the
 mirror fails, setup retries once from `files.pythonhosted.org` and keeps every
 file that finished. The PyTorch wheels on `download-r2.pytorch.org` have no
 mirror and download from there in every region. PyPI mirror variables

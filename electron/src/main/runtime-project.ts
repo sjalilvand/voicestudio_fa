@@ -227,38 +227,6 @@ async function effectiveRegion(region: RuntimeRegion, signal: AbortSignal): Prom
   return 'restricted';
 }
 
-/**
- * The PyPI file mirror for the frozen sync (#3444). China always uses its
- * mirror. A restricted network (picked, or what auto-detection concluded,
- * which is where China lands on the default "auto") races one locked wheel on
- * PyPI against the same file on the mirror and takes the mirror only when
- * PyPI is unreachable or clearly slower.
- */
-export async function pypiMirrorFor(
-  region: RuntimeRegion,
-  project: string,
-  signal: AbortSignal,
-): Promise<string | null> {
-  const fixed = pypiFilesMirror(region);
-  if (fixed || region !== 'restricted') return fixed;
-  const candidate = pypiFilesMirror('china');
-  if (!candidate) return null;
-  const lock = await readFile(join(project, 'uv.lock'), 'utf8').catch(() => '');
-  const sample = lock
-    .match(/url = "([^"]+\.whl)"/g)
-    ?.map((match) => match.slice(7, -1))
-    .find((url) => url.startsWith(PYPI_FILES_ORIGIN));
-  if (!sample) return null;
-  const [origin, mirror] = await Promise.all([
-    probeLatency(sample, signal),
-    probeLatency(candidate + sample.slice(PYPI_FILES_ORIGIN.length), signal),
-  ]);
-  signal.throwIfAborted();
-  if (mirror === null) return null;
-  if (origin === null) return candidate;
-  return mirror * 5 < origin * 4 && origin - mirror > 50 ? candidate : null;
-}
-
 function runtimeDownloadEnv(effective: RuntimeRegion): NodeJS.ProcessEnv {
   return {
     UV_HTTP_TIMEOUT: process.env.UV_HTTP_TIMEOUT || '120',
@@ -1035,7 +1003,18 @@ export async function syncLockedWithMirror(
       }
       await writeFile(lockPath, local);
     }
-    await sync();
+    try {
+      await sync();
+    } catch (error) {
+      // uv could not use a prefetched copy (removed or locked by an antivirus
+      // after it was verified): let uv download everything itself (#3411).
+      if (signal.aborted || !localUrls.size) throw error;
+      log(
+        `Install from the pre-downloaded wheels failed (${errorSummary(error)}); letting uv download them.`,
+      );
+      await writeFile(lockPath, original);
+      await sync();
+    }
   } finally {
     await writeFile(lockPath, original);
   }
@@ -1293,7 +1272,7 @@ export async function installRuntime(
         ]
       : [];
   const syncArgs = ['sync', '--frozen', '--no-dev', ...pythonArgs, ...repairArgs, ...skipArgs];
-  const mirror = await pypiMirrorFor(downloadRegion, project, signal);
+  const mirror = pypiFilesMirror(downloadRegion);
   const localUrls = await prefetchLockedWheels(
     uv,
     project,

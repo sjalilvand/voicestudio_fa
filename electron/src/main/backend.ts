@@ -1761,7 +1761,15 @@ export class BackendSupervisor extends EventEmitter<{
     const startup = backendStartupFailure(this.childErrorLog);
     // Windows refused to load one of the runtime's files: name who did, since
     // the quoted DLL error alone reads like a broken install (#3209).
-    const loadBlock = windowsLoadBlock(this.childErrorLog);
+    // Python words the refusal in the Windows display language, so a non-English
+    // message is matched by the Smart App Control state instead.
+    const loadBlock =
+      windowsLoadBlock(this.childErrorLog) ??
+      (process.platform === 'win32' &&
+      /dll load failed/i.test(this.childErrorLog.slice(-20).join('\n')) &&
+      ['on', 'evaluation'].includes(readSmartAppControl())
+        ? 'application_control'
+        : null);
     if (loadBlock) {
       this.setStage('crashed', {
         managed: true,

@@ -1282,59 +1282,6 @@ describe('regional PyPI mirror for the frozen sync (#3444)', () => {
   });
 });
 
-describe('restricted networks race PyPI against the mirror (#3444)', () => {
-  const WHEEL = 'packages/a8/db/253133d7/accelerate-1.14.0-py3-none-any.whl';
-  const LOCK = [
-    '[[package]]',
-    'name = "accelerate"',
-    `wheels = [{ url = "https://files.pythonhosted.org/${WHEEL}", hash = "sha256:e943", size = 1 }]`,
-    '',
-  ].join('\n');
-  async function syncedLock(region: 'restricted' | 'auto') {
-    const { bundle, project } = await fixture();
-    await writeFile(join(bundle, 'uv.lock'), LOCK);
-    const seen: string[] = [];
-    const run = vi.fn(async (_command: string, args: string[]) => {
-      if (args[0] !== 'sync') return undefined;
-      seen.push(await readFile(join(project, 'uv.lock'), 'utf8'));
-      await interpreter(project);
-      return undefined;
-    });
-    await installRuntime(
-      bundle,
-      project,
-      'uv',
-      run,
-      new AbortController().signal,
-      undefined,
-      region,
-    );
-    expect(await readFile(join(project, 'uv.lock'), 'utf8')).toBe(LOCK);
-    return seen;
-  }
-
-  it.each(['restricted', 'auto'] as const)(
-    'uses the mirror on a %s network that cannot reach PyPI',
-    async (region) => {
-      // GitHub and PyPI unreachable: what auto-detection sees from mainland China.
-      vi.stubGlobal(
-        'fetch',
-        vi.fn(async (url: string) => ({ ok: !/github\.com$|pythonhosted/.test(url) })),
-      );
-      const [lock] = await syncedLock(region);
-      expect(lock).toContain(`https://mirrors.aliyun.com/pypi/${WHEEL}`);
-    },
-  );
-
-  it('keeps PyPI when the mirror is not clearly faster', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string) => ({ ok: !url.includes('aliyun') })),
-    );
-    expect(await syncedLock('restricted')).toEqual([LOCK]);
-  });
-});
-
 describe('multi-connection download of large locked wheels (#3411)', () => {
   const data = Buffer.alloc(PREFETCH_MIN_BYTES + 5, 7);
   const digest = createHash('sha256').update(data).digest('hex');
@@ -1429,6 +1376,40 @@ describe('multi-connection download of large locked wheels (#3411)', () => {
     const { seen, log } = await install(true);
     expect(seen).toEqual([LOCK]);
     expect(log).toHaveBeenCalledWith(expect.stringContaining('uv will download it instead'));
+  });
+
+  it('lets uv download the wheel itself when it cannot use the local copy', async () => {
+    forcePlatform('win32');
+    vi.spyOn(process, 'arch', 'get').mockReturnValue('x64');
+    vi.mocked(httpsRangeTransport).mockReturnValue({
+      transport: transportFor(false),
+      probeSize: async () => data.length,
+      close: () => undefined,
+    });
+    const { bundle, project } = await fixture();
+    await writeFile(join(bundle, 'uv.lock'), LOCK);
+    const seen: string[] = [];
+    const run = vi.fn(async (_command: string, args: string[]) => {
+      if (args[0] === '-v') return DRY_RUN;
+      if (args[0] !== 'sync') return undefined;
+      const lock = await readFile(join(project, 'uv.lock'), 'utf8');
+      seen.push(lock);
+      if (lock.includes('file://')) throw new Error('Runtime setup exited with code 2');
+      await interpreter(project);
+      return undefined;
+    });
+    await installRuntime(
+      bundle,
+      project,
+      'uv',
+      run,
+      new AbortController().signal,
+      undefined,
+      'global',
+    );
+    expect(seen).toHaveLength(2);
+    expect(seen[1]).toBe(LOCK);
+    expect(await runtimeReady(bundle, project)).toBe(true);
   });
 
   it('can be turned off with OMNIVOICE_SETUP_CONNECTIONS=1', async () => {
