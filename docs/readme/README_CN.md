@@ -109,29 +109,9 @@ curl -fsSL https://raw.githubusercontent.com/debpalash/VoiceStudio/main/scripts/
 
 ### 通过提示词安装
 
-将下面内容粘贴到编码智能体（Claude Code、Codex、Cursor 等）中：
+<!-- CLEAN-ROOM (spec W7-docs §8): Simplified Chinese translation of README.md's Install with prompt section body -->
 
-```text
-Install the VoiceStudio Electron app on this device and verify it works, following
-https://github.com/debpalash/VoiceStudio/blob/main/docs/install/agent.md
-```
-
-[智能体安装指南](../../docs/install/agent.md)介绍硬件检测、复用已有数据、下载模型前询问用户以及测试生成。支持技能的智能体也可以运行 `npx skills add debpalash/VoiceStudio`。
-
-<details>
-<summary><strong>从源码运行 Electron 预览版</strong></summary>
-
-```bash
-git clone https://github.com/debpalash/VoiceStudio.git
-cd VoiceStudio
-bun install
-bun run setup:api  # prepare Python dependencies before starting Electron
-bun run dev
-```
-
-前置要求和后端配置请参见 [Electron 设置](../../electron/README.md)。运行 `bun run smoke-test` 可构建并启动隔离的打包应用；添加 `-- --install` 可检查联网安装。
-
-</details>
+<!-- CLEAN-ROOM (spec W7-docs §9): Simplified Chinese translation of README.md's Run the Electron preview from source details block -->
 
 > **Electron 是唯一的桌面应用和 Web UI。** 0.5.3 是最后一个 Tauri 版本。现有 Tauri 用户必须[单独安装 Electron](../../docs/electron-migration.md)。已退役的 Tauri 外壳和旧 UI 入口均已移除。
 

@@ -16,11 +16,7 @@ audio to the versioned WebSocket API or transcribe files over HTTP. See the
    press again.
 
 The Transcriptions page opens this recorder with one **Start dictation** action.
-It appears in the empty state before the first transcript and moves to the page
-header once history exists. On desktop, the action wakes the recorder window
-first, waits for it to acknowledge the request, and reports success only after
-microphone startup is accepted. Turned-off, rejected, timed-out, and failed
-starts are reported on the page.
+<!-- CLEAN-ROOM (spec W7-docs §2): where the Start dictation action appears, the desktop start handshake, and how failed starts are reported -->
 
 Whisper Tiny is the recommended default on macOS, Windows, and Linux. It
 auto-detects more than 90 languages. Parakeet TDT v3 remains available for its

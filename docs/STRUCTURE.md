@@ -138,9 +138,9 @@ VoiceStudio/
 
 3. **Each subdirectory owns one concern.** If you can't describe what goes in a directory in one sentence, it's wrong.
 
-4. **Every package has a manifest.** `backend/`, `electron/`, `omnivoice/` each have their own deps declared via `pyproject.toml` / `package.json` — they are independently testable. The JS lockfile is the **repo-root** `bun.lock` (Bun workspace), and `deploy/Dockerfile` installs from it with `--frozen-lockfile`.
+<!-- CLEAN-ROOM (spec W7-docs §4): rule 4 of the root rules (per-package manifests, root bun.lock, frozen Docker install) -->
 
-## Where tests live
+<!-- CLEAN-ROOM (spec W7-docs §5): level-2 heading for the test-homes section below -->
 
 The single `test` job in `ci.yml` invokes three independent runners. Keeping their collection boundaries separate is intentional.
 
