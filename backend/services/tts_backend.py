@@ -444,11 +444,7 @@ class TTSBackend(ABC):
     #: the reference voice. Read through :func:`rendered_dialects`.
     rendered_dialects: tuple[str, ...] = ()
 
-    #: Whether this engine already emits mastered, studio-grade audio and should
-    #: therefore skip the shared apply_mastering() chain (highpass + Compressor,
-    #: tuned for OmniVoice's 24 kHz output). Studio engines like VoxCPM2 (native
-    #: 48 kHz) set this True so their clean output isn't pumped. Loudness
-    #: normalisation is applied regardless — it's a benign peak scale.
+    #: CLEAN-ROOM (spec W5-small §2): document the applies_own_mastering capability flag.
     applies_own_mastering: bool = False
 
     #: Whether this engine can clone an arbitrary voice from reference audio
@@ -2135,7 +2131,7 @@ class VoxCPM2Backend(TTSBackend):
     # _prepare_voxcpm_ref keeps the first _VOXCPM_REF_MAX_S after silence trim.
     max_ref_seconds = _VOXCPM_REF_MAX_S
     ref_strategy = "head"
-    applies_own_mastering = True  # native 48 kHz studio output — skip apply_mastering()
+    applies_own_mastering = True  # CLEAN-ROOM (spec W5-small §2): note why this engine skips the shared mastering chain.
     gpu_compat = ("cuda", "mps", "cpu")
 
     def __init__(self):

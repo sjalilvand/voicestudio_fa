@@ -978,13 +978,7 @@ Error paths (HTTP 400, `{"detail": …}`): empty → `"empty file"` (`:108-109`)
 (`:115-116`); decoded-empty/whitespace → `"no text found in the file"` (`:119-120`).
 
 ### `GET /longform/jobs?limit=50`
-→ **200** `{ "jobs": [ { "job_id": "<16hex>", "type": "audiobook"|"story", "output":
-"<filename>", "duration_s": <2dp float>, "chapters": <int>, "created_at": <float epoch>
-[, "title": "<str>"] } ] }`. Item shape notes:
-- Keys always present: `job_id, type, output, duration_s, chapters, created_at`
-  (`longform_jobs.py:116-123`). **`title` is a conditional key** — added only when
-  recoverable (`:135-136`); for longform jobs it is **virtually always absent** (the
-  `done` event has no `title`, and `job_store.create` writes empty `meta_json`).
+<!-- CLEAN-ROOM (spec W5-small §10): 200 response shape and the always-present/conditional key notes. -->
 - `output` is a bare filename → served at `/audio/<output>`.
 - Newest-first; only finished `audiobook`/`story` jobs (`_LONGFORM_TYPES`,
   `longform_jobs.py:29`) with a recoverable `done` event carrying an `output` filename.

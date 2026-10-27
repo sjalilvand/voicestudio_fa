@@ -295,7 +295,7 @@ _UNCHANGED_CASES = [
     ("Urdu", "کوڈ ۰۰۷"),                          # native leading-zero code
     ("Urdu", "1234567 نمبر"),                     # 7+ digits: an ID
     ("Urdu", "ورژن 3.5.1"),                       # version string
-    ("ar", "الرمز ٠٠٧"),                         # same class on the num2words path
+    # CLEAN-ROOM (spec W5-small §9.1): Arabic-Indic leading-zero code case on the num2words path.
     # Digit-range rule: only a clean tilde between two numbers is rewritten.
     ("Korean", "서울-부산 3-5일 걸려요"),         # hyphen is never a range mark
     ("Korean", "마감일은 2025-03-14 입니다"),     # ISO date
@@ -406,16 +406,7 @@ def test_native_language_resolution():
     assert text_normalization._num2words_lang("ml") is None
 
 
-def test_urdu_verbalizer_covers_full_integer_range():
-    """Every ≤ 6-digit integer renders in Urdu letters only: no digits, and
-    none of the Arabic look-alikes (ي ك ه ى) that TTS frontends treat as a
-    different language."""
-    from services import number_words_ur as ur
-    arabic_lookalikes = set("\u064a\u0643\u0647\u0649")
-    for n in range(1_000_000):
-        word = ur.cardinal(n)
-        assert word and not any(ch.isdigit() for ch in word), n
-        assert not arabic_lookalikes & set(word), n
+# CLEAN-ROOM (spec W5-small §9.2): Urdu full-range cardinal test.
 
 
 @pytest.mark.parametrize("n,expected", [

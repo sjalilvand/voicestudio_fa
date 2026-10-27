@@ -333,14 +333,7 @@ _ANCILLARY_TYPES = {
     "imprint", "colophon", "contributors", "other-credits", "epigraph", "loi",
     "lot", "index", "glossary", "bibliography", "appendix",
 }
-_ANCILLARY_TITLE_RE = re.compile(
-    r"(?:cover|half(?:[ -]?title)|title[ -]?page|copyright|dedication|contents|"
-    r"table of contents|acknowledg\w*|about the (?:author|illustrator|book)|"
-    r"also (by|available)|praise for|imprint|colophon|newsletter|look out for|"
-    r"(other )?(works|books|titles) by|about the publisher|"
-    r"footnotes?|endnotes?)\b",
-    re.IGNORECASE,
-)
+# CLEAN-ROOM (spec W5-small §3.1): title pattern that marks a section as front/back-matter furniture.
 
 
 def _is_ancillary(types: set[str], title: str | None) -> bool:
@@ -351,17 +344,7 @@ def _is_ancillary(types: set[str], title: str | None) -> bool:
     return bool(title and _ANCILLARY_TITLE_RE.match(title.strip()))
 
 
-def _landmarks_start(navs, nav_dir: str, type_attribute: str, local_name) -> Optional[str]:
-    """Member path of the first ``bodymatter`` link inside an EPUB 3 ``landmarks`` nav."""
-    for nav in navs:
-        if "landmarks" not in nav.get(type_attribute, "").split():
-            continue
-        for link in nav.iter():
-            if local_name(link) != "a" or not link.get("href"):
-                continue
-            if "bodymatter" in link.get(type_attribute, "").split():
-                return _member_path(nav_dir, link.get("href")) or None
-    return None
+# CLEAN-ROOM (spec W5-small §3.2): find the EPUB 3 landmarks "bodymatter" start.
 
 
 def _toc_titles(
@@ -425,9 +408,7 @@ def _toc_titles(
     return {**ncx_titles, **nav_titles}, body_start
 
 
-#: An unlisted, unmarked page this short (or shorter) is treated as publisher
-#: furniture (teaser, epigraph, blurb) rather than a chapter.
-_FRONT_MATTER_MAX_WORDS = 400
+# CLEAN-ROOM (spec W5-small §3.3): word-count ceiling for unlisted, unmarked front-matter pages.
 
 
 def _front_matter_end(
