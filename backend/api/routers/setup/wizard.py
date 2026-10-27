@@ -137,7 +137,7 @@ def _run_cmd(args: list[str], timeout: float = 2.0) -> tuple[int, str]:
     import subprocess
     try:
         out = subprocess.run(
-            args, capture_output=True, text=True, timeout=timeout, check=False,
+            args, capture_output=True, text=True, errors="replace", timeout=timeout, check=False,
         )
         return out.returncode, out.stdout
     except (FileNotFoundError, subprocess.TimeoutExpired, OSError):

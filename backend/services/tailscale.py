@@ -40,7 +40,7 @@ def status() -> dict:
         return out
     out["installed"] = True
     try:
-        r = subprocess.run([cli, "status", "--json"], capture_output=True, text=True, timeout=10)
+        r = subprocess.run([cli, "status", "--json"], capture_output=True, text=True, errors="replace", timeout=10)
         if r.returncode != 0:
             return out
         data = json.loads(r.stdout or "{}")
@@ -56,7 +56,7 @@ def status() -> dict:
 
 def _run(args):
     try:
-        r = subprocess.run(args, capture_output=True, text=True, timeout=20)
+        r = subprocess.run(args, capture_output=True, text=True, errors="replace", timeout=20)
         if r.returncode != 0:
             diagnostic = (r.stderr or r.stdout or "tailscale serve failed").strip()
             logger.error(
@@ -88,6 +88,7 @@ def _serve_config(cli):
             [cli, "serve", "status", "--json"],
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=10,
         )
         if result.returncode != 0:

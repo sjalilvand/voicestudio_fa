@@ -1629,7 +1629,7 @@ def _existing_venv_compatible(spec: SidecarSpec, py: Path) -> bool:
     try:
         result = subprocess.run(
             [str(py), "-I", "-c", "import sys; print('%s.%s' % sys.version_info[:2])"],
-            capture_output=True, text=True, timeout=15,
+            capture_output=True, text=True, errors="replace", timeout=15,
         )
         version = result.stdout.strip()
         if result.returncode != 0 or not version or not all(

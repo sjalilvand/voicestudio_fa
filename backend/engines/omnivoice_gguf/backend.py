@@ -487,6 +487,7 @@ def _is_macos_quarantined(p: Path) -> bool:
             ["/usr/bin/xattr", "-p", "com.apple.quarantine", str(p)],
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=2,
         )
         # Exit code 0 means the xattr exists; non-zero usually means
@@ -1049,6 +1050,7 @@ def _make_backend_class():
                     argv,
                     input=stdin_text,
                     text=True,
+                    errors="replace",
                     capture_output=True,
                     timeout=timeout_s,
                     check=False,

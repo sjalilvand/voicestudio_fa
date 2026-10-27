@@ -363,6 +363,7 @@ def _cuda_devices() -> list[dict]:
             ],
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=3,
             check=False,
         )
