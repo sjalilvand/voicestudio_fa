@@ -243,10 +243,11 @@ Environment=OMNIVOICE_API_KEY=replace-with-a-long-random-key
 Release pins exist too: `:stable-rocm`, `:0.5.6-rocm`, `:0.5-rocm` mirror
 the CUDA tags exactly.
 
-> **Consumer cards and APUs (RX 6000/7000, Strix Point/Halo):** the backend
+> **Consumer cards and APUs (RX 6000/7000/9000, Strix Point/Halo):** the backend
 > auto-sets `HSA_OVERRIDE_GFX_VERSION` when — and only when — your card's GFX
-> ID is missing from the shipped ROCm build's architecture list, so try
-> without any override first. Overriding a natively-supported GPU (gfx1151 on
+> ID is missing from the shipped ROCm build's architecture list, picking the
+> closest same-generation target that list contains (never across a
+> generation), so try without any override first. Overriding a natively-supported GPU (gfx1151 on
 > ROCm 7.x, for example) only forces it onto foreign kernels. If the GPU still
 > isn't used, force it explicitly with `-e HSA_OVERRIDE_GFX_VERSION=11.0.0`
 > (user-set on the container — it is deliberately **not** baked into the

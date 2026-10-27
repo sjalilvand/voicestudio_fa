@@ -105,20 +105,48 @@ def _run_cmd(args: list[str], timeout: float = 2.0) -> tuple[int, str]:
         return -1, ""
 
 
-def _amd_unusable_note() -> str:
-    """Why an AMD card sits idle, per OS - and only options that really exist."""
+def _amd_unusable_note(torch=None) -> str:
+    """Why an AMD card sits idle, per OS and per installed PyTorch build - and
+    only options that really exist on that OS (#3418).
+
+    The desktop installer picks the CPU PyTorch build on a machine with no
+    NVIDIA driver, so an RX 9070 owner lands here with a CPU build, not a CUDA
+    one; and a ROCm build that found no device is a different problem again
+    (driver, device access, or a card newer than the wheel)."""
+    hip = cuda = None
+    if torch is not None:
+        try:
+            hip = getattr(torch.version, "hip", None)
+            cuda = getattr(torch.version, "cuda", None)
+        except Exception:  # noqa: BLE001 - advisory text only
+            hip = cuda = None
+    if hip:
+        try:
+            from core.device_caps import why_no_gpu
+
+            reasons = why_no_gpu(torch)
+        except Exception:  # noqa: BLE001
+            reasons = ()
+        if reasons:
+            return f"AMD GPU detected: {reasons[0]}."
+        return f"AMD GPU detected and ROCm {hip} is installed, but PyTorch found no usable GPU."
+    build = "the NVIDIA CUDA build" if cuda else "the CPU-only build"
     if sys.platform == "win32":
         return (
-            "AMD GPU detected, but this install's PyTorch (the NVIDIA CUDA or "
-            "CPU-only build) cannot drive it, and no ROCm build of the PyTorch "
-            "version VoiceStudio ships exists for Windows. PyTorch "
-            "engines run on the CPU; audio.cpp (Vulkan) can use the GPU - see "
-            "Settings > Performance for the per-engine list."
+            f"AMD GPU detected, but this install's PyTorch is {build}, which "
+            "cannot drive it, so PyTorch engines run on the CPU. On Windows 11 "
+            "x64 with a GPU in AMD's ROCm 7.2.1 support matrix (including the "
+            "RX 9000 and RX 7000 series), set OMNIVOICE_TORCH_VARIANT=rocm and "
+            "run setup again to install the native ROCm build "
+            "(docs/install/windows-rocm.md). audio.cpp (Vulkan) engines can "
+            "use the GPU either way - see Settings > Performance for the "
+            "per-engine list."
         )
     return (
-        "AMD GPU detected but torch was installed with CUDA wheels. Set "
-        "OMNIVOICE_TORCH_VARIANT=rocm and re-run setup to install the ROCm "
-        "build of PyTorch (docs/install/linux.md#amd-gpu-rocm)."
+        f"AMD GPU detected, but this install's PyTorch is {build}, which "
+        "cannot drive it. Set OMNIVOICE_TORCH_VARIANT=rocm and re-run setup "
+        "to install the ROCm build of PyTorch "
+        "(docs/install/linux.md#amd-gpu-rocm)."
     )
 
 
@@ -205,9 +233,17 @@ def _detect_gpu() -> dict:
             if has_hip and torch.cuda.is_available():
                 info["backend"] = "rocm"
                 info["available"] = True
+                # Same check as NVIDIA: a wheel without kernels for this gfx
+                # (an RX 9070 on a pre-gfx12 ROCm build) runs on the CPU, so
+                # "ROCm ready" would contradict the routing below (#3418).
+                from core.device_caps import arch_unsupported
+
+                mismatch = arch_unsupported(torch)
+                if mismatch is not None:
+                    info["kernels_missing"] = mismatch[0]
             else:
                 info["backend"] = "cpu"
-                info["notes"].append(_amd_unusable_note())
+                info["notes"].append(_amd_unusable_note(torch))
         except Exception:
             info["notes"].append("AMD GPU detected but torch not importable.")
         return info
@@ -585,14 +621,24 @@ def preflight():
             "by continuing past this step. CPU inference is slower; GPU-only "
             "engines remain unavailable."
         )
-    elif gpu["vendor"] == "amd":
+    elif gpu["vendor"] == "amd" and gpu["available"] and gpu.get("kernels_missing"):
         gpu_status = "warn"
         gpu_detail = (
-            f"{gpu['device_name']} — ROCm "
-            + ("ready" if gpu["available"] else "not configured")
+            f"{gpu['device_name']} ({gpu['kernels_missing']}) — this ROCm "
+            "PyTorch build has no kernels for it; running on CPU"
         )
         gpu_fix = (
-            None if gpu["available"] else
+            "Install a ROCm PyTorch build that lists this GPU's architecture "
+            "(re-run setup with OMNIVOICE_TORCH_VARIANT=rocm), or continue on "
+            "CPU (slower)."
+        )
+    elif gpu["vendor"] == "amd" and gpu["available"]:
+        gpu_status, gpu_fix = "pass", None
+        gpu_detail = f"{gpu['device_name']} — ROCm ready"
+    elif gpu["vendor"] == "amd":
+        gpu_status = "warn"
+        gpu_detail = f"{gpu['device_name']} — ROCm not configured"
+        gpu_fix = (
             " ".join(gpu["notes"] or [_amd_unusable_note()])
             + " The app works on CPU otherwise (slower)."
         )

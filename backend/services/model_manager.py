@@ -1515,24 +1515,23 @@ def _configure_rocm_if_needed(torch):
     if sys.platform == "win32":
         return  # Windows uses AMD's exact native matrix, never Linux HSA remaps.
     from core.device_caps import (
-        ROCM_GFX_OVERRIDES,
         build_arch_list,
         hsa_override_for,
+        rocm_override_target,
     )
 
     if os.environ.get("HSA_OVERRIDE_GFX_VERSION"):
         return  # User already set it manually
     try:
-        device_name = torch.cuda.get_device_name(0).lower()
-        # Only AMD GPUs need this — skip NVIDIA
-        if not any(kw in device_name for kw in ("amd", "radeon", "instinct")):
+        # Only ROCm builds take an HSA override. Decided from the build, not
+        # from the marketing name, which says nothing about the runtime.
+        if not getattr(getattr(torch, "version", None), "hip", None):
             return
-        # Try to read the GFX version from the device properties
+        device_name = torch.cuda.get_device_name(0)
         props = torch.cuda.get_device_properties(0)
         gcn_arch = getattr(props, "gcnArchName", "") or ""
         gfx_id = gcn_arch.split(":")[0].strip().lower()
-        target = ROCM_GFX_OVERRIDES.get(gfx_id)
-        if not target:
+        if not gfx_id.startswith("gfx"):
             return
         arch_list = {a.split(":")[0].strip().lower() for a in build_arch_list(torch)}
         if not arch_list:
@@ -1548,15 +1547,18 @@ def _configure_rocm_if_needed(torch):
             logger.info("ROCm: %s (%s) is natively supported by this build; "
                         "no HSA_OVERRIDE_GFX_VERSION needed", device_name, gfx_id)
             return
-        if target not in arch_list:
-            # The remap target isn't in this build either — setting the
+        # Derived from what this wheel ships, so a card newer than any table
+        # still gets the closest same-family target (#3418).
+        target = rocm_override_target(gfx_id, arch_list)
+        if not target:
+            # No architecture this build ships can run the card: setting the
             # override would only change WHICH kernel is missing. Leave it
             # unset so check_device_compatibility() reports the real mismatch
             # and the CPU fallback engages.
             logger.warning(
-                "ROCm: %s (%s) is unsupported by this build and its remap "
-                "target %s is missing too — not setting "
-                "HSA_OVERRIDE_GFX_VERSION.", device_name, gfx_id, target,
+                "ROCm: %s (%s) is unsupported by this build and no same-family "
+                "target is available — not setting HSA_OVERRIDE_GFX_VERSION.",
+                device_name, gfx_id,
             )
             return
         override = hsa_override_for(target)
