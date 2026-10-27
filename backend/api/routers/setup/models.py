@@ -47,10 +47,32 @@ def _load_models_from_yaml() -> list[dict]:
         return []
 
 
+def model_key(model: dict) -> str:
+    """Catalogue identity of one entry.
+
+    Most entries are a whole Hugging Face repository and their identity is the
+    repo id. An entry that selects one package from a repository shared with
+    other entries declares its own ``id`` (``<repo_id>:<package>``, never a
+    valid Hub id). API rows, install/cancel/delete requests, progress events
+    and licence records use this identity; Hub calls and the cache always use
+    ``repo_id``.
+    """
+    return str(model.get("id") or model["repo_id"])
+
+
+def shares_repo(model: dict, models: "list[dict] | None" = None) -> bool:
+    """True when another catalogue entry downloads from the same Hub repo."""
+    repo = model["repo_id"]
+    return any(
+        other is not model and other.get("repo_id") == repo
+        for other in (KNOWN_MODELS if models is None else models)
+    )
+
+
 KNOWN_MODELS = _load_models_from_yaml()
 
 # Back-compat tuple view for code that expects (repo_id, label) pairs.
-REQUIRED_MODELS = [(m["repo_id"], m["label"]) for m in KNOWN_MODELS if m.get("required")]
+REQUIRED_MODELS = [(model_key(m), m["label"]) for m in KNOWN_MODELS if m.get("required")]
 
 
 # ── Dependency Injection ───────────────────────────────────────────────────
@@ -62,11 +84,12 @@ class ModelCatalog:
 
     def __init__(self, models: list[dict] | None = None):
         self.models = models if models is not None else KNOWN_MODELS
-        self._by_id = {m["repo_id"]: m for m in self.models}
-        self._required = [(m["repo_id"], m["label"]) for m in self.models if m.get("required")]
+        self._by_id = {model_key(m): m for m in self.models}
+        self._required = [(model_key(m), m["label"]) for m in self.models if m.get("required")]
 
-    def get(self, repo_id: str) -> dict | None:
-        return self._by_id.get(repo_id)
+    def get(self, key: str) -> dict | None:
+        """Entry by catalogue identity (the repo id for whole-repo entries)."""
+        return self._by_id.get(key)
 
     @property
     def required(self) -> list[tuple[str, str]]:
@@ -391,13 +414,14 @@ def installed_snapshot_path(repo_id: str) -> "str | None":
         meta = get_model_catalog().get(repo_id)
         if meta is None:
             return None
-        snapshots = [path for path in _snapshot_dirs(repo_id) if snapshot_is_complete(meta, path)]
+        hub_repo = meta["repo_id"]
+        snapshots = [path for path in _snapshot_dirs(hub_repo) if snapshot_is_complete(meta, path)]
         if not snapshots:
             return None
         try:
             from services.hf_cache_repair import hf_cache_home
             from services.hf_revisions import installed_revision
-            pinned = installed_revision(repo_id, hf_cache_home())
+            pinned = installed_revision(hub_repo, hf_cache_home())
         except Exception:  # noqa: BLE001 — uncurated repo: newest snapshot wins
             pinned = None
         for path in snapshots:
@@ -406,6 +430,43 @@ def installed_snapshot_path(repo_id: str) -> "str | None":
         return max(snapshots, key=os.path.getmtime)
     except Exception:  # noqa: BLE001 — callers keep loading by name
         return None
+
+
+def _package_files(model: dict, snapshot_path: str) -> list[str]:
+    """Files of one snapshot that this entry's ``allow_patterns`` select."""
+    import fnmatch
+
+    patterns = [str(p) for p in model.get("allow_patterns") or ()]
+    found = []
+    for root, _dirs, files in os.walk(snapshot_path):
+        for name in files:
+            path = os.path.join(root, name)
+            rel = os.path.relpath(path, snapshot_path).replace(os.sep, "/")
+            if any(fnmatch.fnmatchcase(rel, pattern) for pattern in patterns):
+                found.append(path)
+    return found
+
+
+def package_cache_usage(model: dict) -> "dict | None":
+    """``{size_on_disk, nb_files}`` of an installed package entry, else None.
+
+    For an entry that shares its Hub repository with other entries: complete
+    only when a snapshot holds every required file, and sized by the files its
+    ``allow_patterns`` select, so a sibling package never makes it look
+    installed or inflates its size.
+    """
+    for snapshot in _snapshot_dirs(model["repo_id"]):
+        if not snapshot_is_complete(model, snapshot):
+            continue
+        files = _package_files(model, snapshot)
+        size = 0
+        for path in files:
+            try:
+                size += os.path.getsize(path)
+            except OSError:
+                pass
+        return {"size_on_disk": size, "last_accessed": None, "nb_files": len(files)}
+    return None
 
 
 def _is_cached_on_disk(repo_id: str) -> bool:
@@ -552,7 +613,7 @@ def model_access_status(repo_id: str = Query(...)):
     from services import token_resolver
 
     resolved = token_resolver.resolve()
-    repositories = [repo_id]
+    repositories = [model["repo_id"]]
     prerequisite = str(model.get("prerequisite_repo_id") or "").strip()
     if prerequisite:
         repositories.append(prerequisite)
@@ -636,13 +697,24 @@ def list_models():
     host_tags = set(platform_tags)
     for m in KNOWN_MODELS:
         cached = cached_by_repo.get(m["repo_id"])
-        on_disk = cached is not None and cached["size_on_disk"] > 0
-        # A size-positive cache can still be a truncated download (config landed,
-        # weight shard didn't). Treat that as not-installed + incomplete so the
-        # wizard re-offers the download instead of stranding the user (#622).
-        incomplete = on_disk and not cache_is_complete(m)
+        if cached is not None and shares_repo(m):
+            # The repository also holds other entries' packages: only this
+            # entry's own files decide whether it is installed and its size.
+            cached = package_cache_usage(m)
+            on_disk = cached is not None
+            incomplete = False
+        else:
+            on_disk = cached is not None and cached["size_on_disk"] > 0
+            # A size-positive cache can still be a truncated download (config
+            # landed, weight shard didn't). Treat that as not-installed +
+            # incomplete so the wizard re-offers the download (#622).
+            incomplete = on_disk and not cache_is_complete(m)
+        key = model_key(m)
         out.append({
             **m,
+            # Rows are addressed by catalogue identity; hf_repo is the Hub repo.
+            "repo_id": key,
+            "hf_repo": m["repo_id"],
             "installed": on_disk and not incomplete,
             "incomplete": incomplete,
             "size_on_disk_bytes": cached["size_on_disk"] if cached else 0,
@@ -651,8 +723,8 @@ def list_models():
             # Curated "best for your system" pick (curated_on in models.yaml) —
             # drives the recommended badge in the wizard and Settings model store.
             "curated": _model_curated(m, host_tags),
-            "license_info": _model_license_info(m["repo_id"]),
-            "license_acceptance": _model_licence_acceptance(m["repo_id"]),
+            "license_info": _model_license_info(key),
+            "license_acceptance": _model_licence_acceptance(key),
         })
     response = {
         "target": "local",
@@ -766,10 +838,13 @@ def recommendations():
 
     entries = []
     for meta in curated:
-        rid = meta["repo_id"]
+        rid = model_key(meta)
         # Mirror /models: a truncated cache (weights missing) is not installed, so
         # the wizard counts it toward the remaining download instead of "all set".
-        installed = rid in cached_ids and cache_is_complete(meta)
+        if shares_repo(meta):
+            installed = package_cache_usage(meta) is not None
+        else:
+            installed = meta["repo_id"] in cached_ids and cache_is_complete(meta)
         entries.append({
             "repo_id": rid,
             "label": meta.get("label", rid),

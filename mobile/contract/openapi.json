@@ -16,7 +16,7 @@
      "repo_id": {
       "maxLength": 200,
       "minLength": 3,
-      "pattern": "^[A-Za-z0-9][\\w.-]*/[\\w.-]+$",
+      "pattern": "^[A-Za-z0-9][\\w.-]*/[\\w.-]+(?::[\\w.-]+)?$",
       "title": "Repo Id",
       "type": "string"
      }
@@ -3636,7 +3636,7 @@
      "repo_id": {
       "maxLength": 200,
       "minLength": 3,
-      "pattern": "^[A-Za-z0-9][\\w.-]*/[\\w.-]+$",
+      "pattern": "^[A-Za-z0-9][\\w.-]*/[\\w.-]+(?::[\\w.-]+)?$",
       "title": "Repo Id",
       "type": "string"
      }
@@ -15978,7 +15978,7 @@
   },
   "/models/{repo_id}": {
    "delete": {
-    "description": "Remove every cached revision of a repo from the HF cache.",
+    "description": "Remove an installed model from the HF cache.\n\nA whole-repo entry removes every cached revision of its repo. An entry that\nshares its Hub repository with other catalogue entries removes only the\nfiles it selected, so uninstalling one package never deletes another's.",
     "operationId": "delete_model_models__repo_id__delete",
     "parameters": [
      {
