@@ -105,3 +105,41 @@ def test_cpu_pipeline_uses_small_batch(backend):
 def test_oom_classifier():
     assert ab.PyTorchWhisperBackend._is_oom(RuntimeError("CUDA Out Of Memory"))
     assert not ab.PyTorchWhisperBackend._is_oom(RuntimeError("nope"))
+
+
+@pytest.mark.parametrize(
+    "oom",
+    [
+        RuntimeError("level_zero backend failed with error: 39 (UR_RESULT_ERROR_OUT_OF_DEVICE_MEMORY)"),
+        RuntimeError("XPU out of memory. Tried to allocate 1.50 GiB"),
+    ],
+)
+def test_intel_xpu_pipeline_gets_the_same_ladder_and_release(backend, monkeypatch, oom):
+    """get_best_device() picks XPU on Intel Arc. Its OOMs must step the batch
+    down and release the failed batch exactly like CUDA, not fail the chunk."""
+    import services.model_manager as mm
+
+    class _XpuPipe(FakePipe):
+        def __call__(self, inputs, **kw):
+            self.calls.append((str(self.device), kw["batch_size"], kw))
+            if kw["batch_size"] > 2:
+                raise oom
+            return {"text": "ok", "chunks": []}
+
+    released = []
+    monkeypatch.setattr(mm, "release_after_oom", released.append)
+    pipe = _XpuPipe(device="xpu:0")
+    out = backend(pipe).transcribe("x.wav", word_timestamps=True)
+    assert out["text"] == "ok"
+    assert _batches(pipe) == [8, 2]
+    assert released == [oom]
+
+
+@pytest.mark.parametrize("device", ["cuda:0", "xpu:0"])
+def test_cpu_fallback_releases_the_gpu_it_left(monkeypatch, device):
+    import services.model_manager as mm
+
+    released = []
+    monkeypatch.setattr(mm, "release_device_cache", lambda **kw: released.append(kw))
+    ab.PyTorchWhisperBackend(asr_pipe=FakePipe(device=device))._rebuild_on_cpu()
+    assert released == [{"device": device}]

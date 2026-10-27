@@ -1149,7 +1149,10 @@
     "tracks_done": "Finished tracks: {{tracks}}",
     "translate_all": "Translate every segment",
     "upload_transcribe": "Upload and transcribe",
-    "video_dubbing_studio": "Video dubbing studio"
+    "video_dubbing_studio": "Video dubbing studio",
+    "set_speaker": "Set speaker…",
+    "new_speaker": "New speaker",
+    "speaker_label": "Speaker"
   },
   "dub_workflow": {
     "preparing_audio": "Preparing audio…",
@@ -2275,7 +2278,8 @@
     "subs_in_video": "Subtitles in video",
     "subs_note": "Subtitles use the segment text exactly as shown; correct any typos in the segment table before exporting.",
     "wav_lossless": "WAV · lossless",
-    "what_to_export": "What to export"
+    "what_to_export": "What to export",
+    "undubbed_video_note": "No dub yet: the video keeps its original audio. Burn subtitles in to add the transcript."
   },
   "models": {
     "pack_title": "Model packs",

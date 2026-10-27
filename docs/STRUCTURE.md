@@ -7,7 +7,7 @@ Every folder has a single job. Every file at the root earns its place.
 ```
 VoiceStudio/
 │
-├── README.md ⟵ user-facing overview (translations: docs/readme/README_CN.md, README_JA.md)
+├── README.md ⟵ user-facing overview (translations: docs/readme/README_*.md)
 ├── CHANGELOG.md                 ⟵ release history; Electron releases use the tagged section
 ├── CLAUDE.md / AGENTS.md        ⟵ the working contract for AI agents — keep the two in sync
 ├── LICENSE, LICENSE-NOTICE.md, SPONSORS.md
@@ -18,6 +18,7 @@ VoiceStudio/
 │                                   version (pyproject.toml + backend/core/version.py mirror it)
 ├── bun.lock                     ⟵ JS lockfile — repo-root, covers the electron/ workspace
 ├── turbo.json                   ⟵ turborepo pipeline
+├── flake.nix, flake.lock        ⟵ community Nix dev shells + NixOS FHS env (docs/install/nix.md)
 │
 ├── .coderabbit.yaml             ⟵ CodeRabbit PR review config (fed CLAUDE.md)
 ├── greptile.json                ⟵ Greptile PR review config (fed CLAUDE.md)
@@ -39,7 +40,7 @@ VoiceStudio/
 │   │   └── setup/               first-run wizard, model download
 │   ├── core/                    config, db, job queue, event bus, auth/CSRF, path security,
 │   │                            opt-in analytics, version, diagnostics
-│   ├── services/                111 modules of business logic — TTS, dubbing pipeline,
+│   ├── services/                112 modules of business logic — TTS, dubbing pipeline,
 │   │                            audio DSP, GPU gateway, engine routing, model lifecycle
 │   ├── engines/                 per-engine adapters: indextts, supertonic3, confucius4,
 │   │                            dots_tts, moss_tts_v15, pockettts, audiocpp,

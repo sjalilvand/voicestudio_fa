@@ -712,11 +712,14 @@ async def dub_download(
         raise HTTPException(status_code=404, detail="Job not found")
 
     tracks = job.get("dubbed_tracks", {})
-    if not tracks:
-        raise HTTPException(status_code=400, detail="No dubbed tracks generated yet")
-
     include_set = set(t.strip() for t in include_tracks.split(",") if t.strip()) if include_tracks else None
     include_original = include_set is None or "original" in include_set
+    is_audio_job = (job.get("input_type") or "video").lower() == "audio"
+    # A transcribed video can be exported before any dub exists: the original
+    # audio with its transcript as burned or soft subtitles (#3393). Audio
+    # jobs have nothing to add without a dub.
+    if not tracks and (is_audio_job or not include_original):
+        raise HTTPException(status_code=400, detail="No dubbed tracks generated yet")
 
     if include_set:
         filtered_tracks = {k: v for k, v in tracks.items() if k in include_set}
@@ -1100,7 +1103,7 @@ async def dub_download(
 
     base_name = os.path.splitext(job.get('filename', 'output'))[0]
     safe_name = ''.join(c for c in base_name if c.isalnum() or c in '-_ ').strip() or 'output'
-    dl_name = f"dubbed_{safe_name}_{stamp}.mp4"
+    dl_name = f"{'dubbed' if tracks_to_process else 'subtitled'}_{safe_name}_{stamp}.mp4"
 
     # Structured warning surface for the Smart Fit fallback ladder: header is
     # a fixed ASCII token (FileResponse headers must be latin-1 safe); the

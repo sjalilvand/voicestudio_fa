@@ -28,12 +28,11 @@ _ALLOWED_PREFIXES = (
     "electron/src/shared/i18n/",
     "electron/src/renderer/src/i18n/",
     "docs/specs/",
+    "docs/readme/",  # translated READMEs and their native language-switcher links
 )
 _ALLOWED_FILES = {
     "electron/src/main/blank-window-guard.ts",  # Matches localized window text.
     "README.md",  # Presents translated project copy.
-    "docs/readme/README_CN.md",  # Simplified-Chinese documentation.
-    "docs/readme/README_JA.md",  # Japanese documentation.
     "docs/data_preparation.md",  # Includes multilingual data examples.
     "docs/voice-design.md",  # Documents multilingual voice prompts.
     "docs/engines/omnivoice.md",  # Documents engine vocabulary.

@@ -951,7 +951,10 @@
     "selected_dub": "已选配音：{{code}}",
     "stop_progress": "正在停止第 {{current}} 项，共 {{total}} 项",
     "supported_formats": "MP4 · MOV · MKV · WEBM · MP3 · WAV · FLAC · M4A",
-    "tracks_done": "已完成音轨：{{tracks}}"
+    "tracks_done": "已完成音轨：{{tracks}}",
+    "set_speaker": "设置说话人…",
+    "new_speaker": "新说话人",
+    "speaker_label": "说话人"
   },
   "dub_workflow": {
     "preparing_audio": "正在准备音频...",
@@ -2136,7 +2139,8 @@
     "pkg_clips_body": "ZIP 中每个生成片段对应一个带编号的 WAV，适合审核、交付旁白或制作数据集。",
     "pkg_stems_body": "ZIP 中包含分离的人声与背景音乐或音效 WAV，便于后续音频编辑。",
     "preset_title": "使用“{{label}}”默认设置打开“{{tab}}”标签页",
-    "subs_note": "字幕会原样使用片段文本；如有错字，请先在片段表中修正再导出。"
+    "subs_note": "字幕会原样使用片段文本；如有错字，请先在片段表中修正再导出。",
+    "undubbed_video_note": "尚未配音：视频保留原始音频。烧录字幕即可加入转写文本。"
   },
   "models": {
     "pack_title": "模型包",

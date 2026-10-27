@@ -70,18 +70,21 @@ async def _resolve_dub_execution():
 
 def _prepare_oom_retry(error: Exception) -> bool:
     """Prepare one low-step retry after a genuine local device OOM."""
+    from core.failure import is_gpu_oom
+
     is_oom = (
         isinstance(error, torch.cuda.OutOfMemoryError)
         or "out of memory" in str(error).lower()
         or "CUDA error" in str(error)
+        # Every accelerator's device-OOM spelling, incl. Intel XPU's
+        # UR_RESULT_ERROR_OUT_OF_DEVICE_MEMORY.
+        or is_gpu_oom(error)
     )
     if not is_oom:
         return False
-    import gc
-    from services.model_manager import release_device_cache
+    from services.model_manager import release_after_oom
 
-    gc.collect()
-    release_device_cache()
+    release_after_oom(error)
     return True
 
 
@@ -682,8 +685,7 @@ async def dub_generate(job_id: str, req: DubRequest):
             marked, and marking again would double-mark it.
             """
             import wave
-
-            import numpy as np
+            from services.dub_mix import pcm16_chunks
 
             fd, tmp_path = tempfile.mkstemp(
                 prefix=f".{os.path.basename(target_path)}.", suffix=".wav", dir=stage_dir
@@ -695,13 +697,10 @@ async def dub_generate(job_id: str, req: DubRequest):
                     out.setnchannels(1)
                     out.setsampwidth(2)
                     out.setframerate(sample_rate)
-                    for offset in range(0, len(samples), step):
-                        block = np.array(samples[offset:offset + step], dtype=np.float32)
-                        if block.size == 0:
-                            continue
-                        block = np.nan_to_num(block, nan=0.0, posinf=1.0, neginf=-1.0)
-                        block = np.clip(block, -1.0, 1.0)
-                        out.writeframes((block * 32767.0).astype("<i2").tobytes())
+                    for pcm in pcm16_chunks(
+                        samples, step, prevent_clipping=strategy == "smart_fit"
+                    ):
+                        out.writeframes(pcm)
             except BaseException:
                 try:
                     os.unlink(tmp_path)

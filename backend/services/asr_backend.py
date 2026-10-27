@@ -1353,15 +1353,17 @@ _MLX_MODEL_DEFAULT = "mlx-community/whisper-large-v3-mlx"
 _MLX_MODEL_TURBO = "mlx-community/whisper-large-v3-turbo"
 
 
+def mlx_whisper_model_id() -> str:
+    return os.environ.get("ASR_MODEL", _MLX_MODEL_DEFAULT)
+
+
 class MLXWhisperBackend(ASRBackend):
     id = "mlx-whisper"
     display_name = "MLX Whisper (Apple Silicon CoreML)"
     gpu_compat = ("mps", "cpu")
 
     def __init__(self, model_name: str | None = None):
-        self._model_name = model_name or os.environ.get(
-            "ASR_MODEL", _MLX_MODEL_DEFAULT,
-        )
+        self._model_name = model_name or mlx_whisper_model_id()
 
     @classmethod
     def is_available(cls) -> tuple[bool, str]:
@@ -1626,7 +1628,7 @@ class PyTorchWhisperBackend(ASRBackend):
                 f"PyTorch Whisper ASR initialization failed: {type(e).__name__}: {e}"
             ) from e
 
-    # Candidate GPU batch sizes, biggest first. The load-time VRAM check only
+    # Candidate batch sizes on a dedicated GPU (CUDA or Intel XPU), biggest first. The load-time VRAM check only
     # accounts for model weights; activation memory grows with the batch, so
     # a large batch may still not fit. Word-level timestamps retain
     # cross-attention tensors for every item in the batch, so that mode
@@ -1646,7 +1648,11 @@ class PyTorchWhisperBackend(ASRBackend):
                 oom_type = None
             if oom_type is not None and isinstance(exc, oom_type):
                 return True
-            return "out of memory" in str(exc).casefold()
+            from core.failure import is_gpu_oom
+
+            # Covers every accelerator's spelling, incl. Intel XPU's
+            # UR_RESULT_ERROR_OUT_OF_DEVICE_MEMORY.
+            return "out of memory" in str(exc).casefold() or is_gpu_oom(exc)
         except Exception:  # noqa: BLE001
             return False
 
@@ -1661,12 +1667,12 @@ class PyTorchWhisperBackend(ASRBackend):
         return self._pipe({"array": audio, "sampling_rate": rate}, **options)
 
     def _run_with_oom_fallback(self, audio, rate, word_timestamps, generate_kwargs):
-        """Run the pipeline; on CUDA shrink the batch after each OOM, and as a
-        last resort finish on CPU."""
+        """Run the pipeline; on a dedicated GPU shrink the batch after each OOM,
+        and as a last resort finish on CPU."""
         def attempt(batch):
             return self._call_pipe(audio, rate, batch, word_timestamps, generate_kwargs)
 
-        if not self._pipe_on_cuda():
+        if not self._pipe_on_gpu():
             return attempt(2)
         sizes = list(
             self._CUDA_BATCH_LADDER_WORDS if word_timestamps
@@ -1679,15 +1685,14 @@ class PyTorchWhisperBackend(ASRBackend):
             except Exception as exc:
                 if not self._is_oom(exc):
                     raise
-            try:
-                import torch
+                # Free the failed batch's activations, still pinned by this
+                # traceback, before the smaller retry.
+                from services.model_manager import release_after_oom
 
-                torch.cuda.empty_cache()
-            except Exception:  # noqa: BLE001
-                pass
+                release_after_oom(exc)
             if sizes:
                 logger.warning(
-                    "Whisper hit a CUDA memory limit with batch=%d; trying batch=%d. "
+                    "Whisper hit a GPU memory limit with batch=%d; trying batch=%d. "
                     "Closing other GPU programs would free VRAM.",
                     current, sizes[0],
                 )
@@ -1704,12 +1709,14 @@ class PyTorchWhisperBackend(ASRBackend):
 
         # Keep the loaded checkpoint, tokenizer and feature extractor. Looking
         # up the default model here could download a different model offline.
+        gpu = str(getattr(self._pipe, "device", "") or "")
         self._pipe.model.to(device="cpu", dtype=torch.float32)
         self._pipe.device = torch.device("cpu")
-        try:
-            torch.cuda.empty_cache()
-        except Exception:
-            pass  # Some builds have no CUDA cache to release.
+        if gpu and not gpu.startswith("cpu"):
+            # Return the weights' blocks to the GPU they left (CUDA or XPU).
+            from services.model_manager import release_device_cache
+
+            release_device_cache(device=gpu)
 
     def supports_translation(self) -> bool:
         # A reused TTS-model ASR head may differ from the env default: ask the
@@ -1741,11 +1748,11 @@ class PyTorchWhisperBackend(ASRBackend):
         )
         return result if isinstance(result, dict) else {"chunks": [], "raw": result}
 
-    def _pipe_on_cuda(self) -> bool:
+    def _pipe_on_gpu(self) -> bool:
         # Look at the built pipeline, not torch.cuda.is_available(): it may sit
-        # on CPU even on a CUDA host.
+        # on CPU even on a CUDA host. get_best_device() also picks XPU on Intel Arc.
         try:
-            return str(getattr(self._pipe, "device", "cpu")).startswith("cuda")
+            return str(getattr(self._pipe, "device", "cpu")).lower().startswith(("cuda", "xpu"))
         except Exception:  # noqa: BLE001
             return False
 
@@ -4258,7 +4265,7 @@ def _offline_asr_repo(backend_id: str | None = None) -> str | None:
             or _FASTER_WHISPER_DEFAULT
         )
     if bid == "mlx-whisper":
-        return os.environ.get("ASR_MODEL", _MLX_MODEL_DEFAULT)
+        return mlx_whisper_model_id()
     if bid == "parakeet-mlx":
         return os.environ.get("ASR_MODEL_PARAKEET_MLX", _PARAKEET_MLX_DEFAULT)
     if bid == "sherpa-onnx-asr":

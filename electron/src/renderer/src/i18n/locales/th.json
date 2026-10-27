@@ -936,7 +936,10 @@
     "segment_count_other": "{{count}} ช่วง",
     "glossary_terms_one": "อภิธานศัพท์ · {{count}} คำ",
     "glossary_terms_other": "อภิธานศัพท์ · {{count}} คำ",
-    "glossary_label": "อภิธานศัพท์"
+    "glossary_label": "อภิธานศัพท์",
+    "set_speaker": "กำหนดผู้พูด…",
+    "new_speaker": "ผู้พูดใหม่",
+    "speaker_label": "ผู้พูด"
   },
   "dub_workflow": {
     "preparing_audio": "กำลังเตรียมเสียง...",
@@ -2136,7 +2139,8 @@
     "export_n_audio_other": "ส่งออกไฟล์เสียง {{count}}",
     "export_audio": "ส่งออกเสียง",
     "export_subtitles": "ส่งออกคำบรรยาย",
-    "stretch_subs_note": "ยืดวิดีโอ: ส่งออกคำบรรยายแยกต่างหาก"
+    "stretch_subs_note": "ยืดวิดีโอ: ส่งออกคำบรรยายแยกต่างหาก",
+    "undubbed_video_note": "ยังไม่มีการพากย์: วิดีโอใช้เสียงต้นฉบับ ฝังคำบรรยายเพื่อเพิ่มบทถอดเสียง"
   },
   "models": {
     "pack_title": "ชุดโมเดล",
