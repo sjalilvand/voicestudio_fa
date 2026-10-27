@@ -51,7 +51,7 @@ from services.segmentation import (
     _words_from_whisper,
     clean_up_segments,
 )
-from services.onset_align import snap_segments_to_speech
+from services.onset_align import snap_segment_starts, trim_segment_ends
 from services import dub_pipeline
 from core.browser_guard import reject_cross_site_get
 
@@ -1970,11 +1970,13 @@ async def dub_transcribe_stream(
             # track ASR ran on — vocals.wav when Demucs succeeded. #963:
             # when it didn't (mixed audio), snapping is disabled — every
             # footstep/sigh/score cue is a false onset candidate there.
-            # #3419: starts and ends are gated on voiced speech, so a sigh
-            # or breath neither starts a line nor pads its end.
+            # #3419: starts are gated on voiced speech, so a sigh or breath
+            # does not start a line. Ends are trimmed only after the speaker
+            # re-split below: trimming here would cut a whispered reply that
+            # shares this segment off before diarization can split it out.
             try:
-                snap_segments_to_speech(chunk_segs, audio_np, sr,
-                                        separated_vocals=asr_on_vocals)
+                snap_segment_starts(chunk_segs, audio_np, sr,
+                                    separated_vocals=asr_on_vocals)
             except Exception as e:
                 logger.warning("onset alignment skipped for chunk %d: %s", i, e)
             # Provisional per-chunk labels for the streaming UI only — the
@@ -2342,6 +2344,12 @@ async def dub_transcribe_stream(
 
         from services.segmentation import deduplicate_chunk_segments
         final_segs = deduplicate_chunk_segments(final_segs)
+        # #3419: pull each speaker-specific line's end back to its last voiced
+        # speech, after the re-split so a reply is never trimmed away.
+        try:
+            trim_segment_ends(final_segs, audio_np, sr, separated_vocals=asr_on_vocals)
+        except Exception as e:
+            logger.warning("end trimming skipped: %s", e)
         # Everything this pass derives is committed together at the end, so an
         # SRT import that lands while references are extracted is never mixed
         # with, or overwritten by, this transcript. The clone maps are replaced
@@ -2774,11 +2782,13 @@ async def dub_transcribe(job_id: str, num_speakers: Optional[int] = None):
         # dub doesn't begin seconds before the original speaker does. #963:
         # only on the separated vocals track — on mixed audio every ambient
         # sound is a false onset candidate, so snapping is disabled.
+        audio_for_onset = None
         try:
             audio_for_onset, onset_sr = sf.read(asr_audio_target, dtype="float32")
-            # #3419: also gate on voiced speech and trim trailing non-speech.
-            snap_segments_to_speech(segments, audio_for_onset, onset_sr,
-                                    separated_vocals=asr_on_vocals)
+            # #3419: starts also gate on voiced speech; ends are trimmed after
+            # the speaker re-split below so a shared reply is not cut off.
+            snap_segment_starts(segments, audio_for_onset, onset_sr,
+                                separated_vocals=asr_on_vocals)
         except Exception as e:
             logger.warning("onset alignment skipped: %s", e)
 
@@ -2805,6 +2815,13 @@ async def dub_transcribe(job_id: str, num_speakers: Optional[int] = None):
                 segments = assign_speakers_heuristic(segments, num_speakers)
         else:
             segments = assign_speakers_heuristic(segments, num_speakers)
+
+        if audio_for_onset is not None:
+            try:
+                trim_segment_ends(segments, audio_for_onset, onset_sr,
+                                  separated_vocals=asr_on_vocals)
+            except Exception as e:
+                logger.warning("end trimming skipped: %s", e)
 
         # Previously ran `segment_for_subtitles(segments)` here. Removed 2026-04-21 —
         # that splitter enforces Netflix's 17 CPS reading-speed ceiling which
