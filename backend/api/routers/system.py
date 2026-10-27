@@ -1,3 +1,4 @@
+import importlib.util
 import os
 import sys
 import platform
@@ -48,6 +49,10 @@ try:
 except Exception:
     _is_xpu = False
 try:
+    # torch.npu exists only once the Ascend extension registers it; torch_npu
+    # releases before 2.5.1 do not autoload, so import it where installed.
+    if not hasattr(torch, "npu") and importlib.util.find_spec("torch_npu"):
+        import torch_npu  # noqa: F401
     _is_npu = hasattr(torch, "npu") and torch.npu.is_available()
 except Exception:
     _is_npu = False
