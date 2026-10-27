@@ -4496,5 +4496,39 @@
     "generating": "Poczekaj, aż bieżące nagranie się zakończy.",
     "name_required": "Najpierw wpisz nazwę.",
     "audio_missing": "To nagranie nie ma pliku audio do zapisania."
+  },
+  "ggufQuant": {
+    "label": "Kwantyzacja modelu",
+    "auto": "Auto: {{quant}} ({{target}})",
+    "target_vulkan": "Vulkan – {{device}}",
+    "target_cpu": "CPU",
+    "target_unverified": "CPU lub domyślny wybór natywny",
+    "option": "{{quant}} · {{size}} MB",
+    "option_installed": "{{quant}} · {{size}} MB · zainstalowano",
+    "download": "Pobierz {{quant}} ({{size}} MB)",
+    "downloading": "Pobieranie {{quant}}: {{done}} z {{total}} MB",
+    "using_installed": "Używany jest zainstalowany {{quant}}, dopóki wybrana kwantyzacja nie zostanie pobrana.",
+    "env_pinned": "Ustawione na {{quant}} przez {{env}}.",
+    "runtime_missing": "Brak środowiska omnivoice-tts. Zainstaluj ponownie VoiceStudio lub zbuduj je skryptem scripts/build-omnivoice-tts.sh.",
+    "runtime_placeholder": "Dołączony plik omnivoice-tts to atrapa, a nie działające środowisko. Zainstaluj ponownie VoiceStudio.",
+    "runtime_integrity": "Suma kontrolna środowiska omnivoice-tts się nie zgadza. Zainstaluj ponownie VoiceStudio.",
+    "runtime_quarantined": "System poddał środowisko omnivoice-tts kwarantannie. Zezwól na nie lub zainstaluj ponownie VoiceStudio.",
+    "runtime_other": "Środowisko omnivoice-tts się nie uruchamia. Szczegóły w kontroli silnika.",
+    "weights_missing": "Wagi modelu nie są jeszcze pobrane. Pobierz je teraz, inaczej pobiorą się przy pierwszym generowaniu.",
+    "download_failed": "Pobieranie wag nie powiodło się"
+  },
+  "gpuOffer": {
+    "title": "Użyć karty graficznej do szybszej mowy?",
+    "body": "VoiceStudio wykrył {{gpu}}. OmniVoice GGUF może działać na niej przez Vulkan zamiast na CPU, z modelem {{quant}}.",
+    "body_shared": "VoiceStudio wykrył {{gpu}}, która współdzieli pamięć systemową. OmniVoice GGUF może działać na niej przez Vulkan zamiast na CPU, z modelem {{quant}}.",
+    "download": "Jednorazowe pobranie {{size}} MB.",
+    "no_download": "Nic nie trzeba pobierać.",
+    "licence": "Model GGUF jest do użytku niekomercyjnego; najpierw poprosimy o akceptację licencji.",
+    "accept": "Użyj GPU",
+    "decline": "Nie teraz",
+    "later": "Możesz to zmienić później w Ustawienia › {{section}}.",
+    "licence_then_retry": "Zaakceptuj licencję, a potem ponownie naciśnij Użyj GPU.",
+    "switched": "Mowa korzysta teraz z {{gpu}}.",
+    "switched_downloading": "Mowa korzysta teraz z {{gpu}}. Pobieranie modelu {{quant}}…"
   }
 }
