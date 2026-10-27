@@ -68,3 +68,56 @@ def take_reference_transcript(text: Optional[str]) -> str:
     if not text or len(text) == LEGACY_HISTORY_TEXT_CAP:
         return ""
     return strip_script_markup(text)
+
+
+#: Prefix lengths older releases cut take text to before storing it as a
+#: transcript: 100 when locking a take (until #3320), 200 in history (#3062).
+LEGACY_CUT_LENGTHS = (100, LEGACY_HISTORY_TEXT_CAP)
+
+
+def _row_value(row, key):
+    try:
+        return row[key]
+    except (KeyError, IndexError):
+        return None
+
+
+def is_legacy_cut_transcript(row) -> bool:
+    """True when a profile's stored transcript is a cut prefix of a take.
+
+    A locked voice's transcript was written by the lock, so a locked transcript
+    of exactly a legacy cut length is treated as cut. Any other voice needs a
+    take in history whose text the transcript is a cut prefix of, so a
+    transcript the user typed is never discarded.
+    """
+    text = _row_value(row, "ref_text") or ""
+    if len(text) not in LEGACY_CUT_LENGTHS:
+        return False
+    if _row_value(row, "is_locked") and _row_value(row, "locked_audio_path"):
+        return True
+    from core.db import db_conn
+
+    try:
+        with db_conn() as conn:
+            hit = conn.execute(
+                "SELECT 1 FROM generation_history WHERE substr(text, 1, ?) = ? "
+                "AND length(text) >= ? LIMIT 1",
+                # A 200-character match is the cut history row itself; a
+                # 100-character lock cut came from a longer row.
+                (len(text), text, len(text) if len(text) == LEGACY_HISTORY_TEXT_CAP else len(text) + 1),
+            ).fetchone()
+    except Exception:  # noqa: BLE001 - a missing table only means no evidence
+        return False
+    return hit is not None
+
+
+def stored_reference_transcript(row) -> Optional[str]:
+    """A profile row's transcript as a reference transcript, or ``None``.
+
+    ``None`` (transcribe the clip) for a cut legacy take prefix; otherwise the
+    stored transcript without script markup. Rows are never rewritten here, so
+    saved voices keep their data.
+    """
+    if is_legacy_cut_transcript(row):
+        return None
+    return strip_script_markup(_row_value(row, "ref_text")) or None

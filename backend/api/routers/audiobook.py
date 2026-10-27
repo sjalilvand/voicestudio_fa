@@ -33,6 +33,7 @@ from collections.abc import Awaitable, Callable
 from typing import Literal
 
 from core import voice_leases
+from services.reference_transcript import stored_reference_transcript
 from core.render_trace import call as trace_call, stage as trace_stage
 
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
@@ -276,15 +277,15 @@ def _resolve_voice(profile_id: str | None) -> dict:
         kind = "clone"
     if row["is_locked"] and row["locked_audio_path"]:
         out["ref_audio"] = contained_join(VOICES_DIR, row["locked_audio_path"])
-        out["ref_text"] = row["ref_text"]
+        out["ref_text"] = stored_reference_transcript(row)
         out["instruct"] = row["instruct"]
     elif kind == "design":
         out["ref_audio"] = contained_join(VOICES_DIR, row["ref_audio_path"])
-        out["ref_text"] = row["ref_text"] if out["ref_audio"] else None
+        out["ref_text"] = stored_reference_transcript(row) if out["ref_audio"] else None
         out["instruct"] = row["instruct"]
     else:
         out["ref_audio"] = contained_join(VOICES_DIR, row["ref_audio_path"])
-        out["ref_text"] = row["ref_text"]
+        out["ref_text"] = stored_reference_transcript(row)
         out["instruct"] = row["instruct"]
     try:
         if row["seed"] is not None:

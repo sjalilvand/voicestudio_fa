@@ -32,7 +32,11 @@ from services.model_manager import (
 from services.generation_audio import save_generation_wav
 # Compatibility export used by archetype previews and the gallery renderer.
 from services.audio_io import _safe_torchaudio_save
-from services.reference_transcript import strip_script_markup, take_reference_transcript
+from services.reference_transcript import (
+    is_legacy_cut_transcript,
+    strip_script_markup,
+    take_reference_transcript,
+)
 from services.binary_preflight import InvalidBinaryError
 from services.model_acceptance import ModelLicenceNotAccepted
 from core import event_bus
@@ -492,7 +496,18 @@ def _resolve_profile_conditioning(row, *, ref_text=None, instruct=None,
         if prof_lang and prof_lang != "Auto":
             out["language"] = prof_lang
             out["language_from_profile"] = True
-    if out["ref_text"]:
+    stored_ref_text = row["ref_text"]
+    if out["ref_text"] and out["ref_text"] == stored_ref_text and is_legacy_cut_transcript(row):
+        # #3062: a voice saved or locked from a take before the fix carries a
+        # cut prefix of the take's text; transcribe the clip instead. The
+        # request may echo the stored value, so both are checked.
+        out["ref_text"] = None
+        if out["ref_audio_path"] and not locked_take and profile_kind != "design":
+            # Replace the cut prefix with the transcript once (#1032). Locked
+            # transcripts are never persisted (unlock must not keep them).
+            out["persist_ref_text"] = True
+            out["replace_ref_text"] = stored_ref_text
+    elif out["ref_text"]:
         # A stored transcript may hold script markup the take never spoke (#3062).
         out["ref_text"] = strip_script_markup(out["ref_text"]) or None
     return out
@@ -1546,7 +1561,7 @@ def _root_language_error(exc: BaseException) -> BaseException:
     return getattr(exc, "engine_language_error", exc)
 
 
-def _persist_profile_ref_text(profile_id: str, ref_text: str) -> None:
+def _persist_profile_ref_text(profile_id: str, ref_text: str, replace: Optional[str] = None) -> None:
     """Cache an auto-transcribed reference transcript onto its profile row.
 
     #1032 perf regression: profiles saved without a transcript re-ran a FULL
@@ -1555,13 +1570,16 @@ def _persist_profile_ref_text(profile_id: str, ref_text: str) -> None:
     from the row like a user-entered one. The guarded UPDATE only ever fills
     an empty column — it can never overwrite a transcript the user typed or a
     lock wrote — and a failure is logged, never raised (best-effort, same
-    contract as the transcribe itself)."""
+    contract as the transcribe itself).
+
+    ``replace`` is a cut legacy transcript (#3062) the new one may overwrite;
+    it only matches while the row still holds exactly that value."""
     try:
         with db_conn() as conn:
             updated = conn.execute(
                 "UPDATE voice_profiles SET ref_text=? "
-                "WHERE id=? AND (ref_text IS NULL OR ref_text='')",
-                (ref_text, profile_id),
+                "WHERE id=? AND (ref_text IS NULL OR ref_text='' OR ref_text=?)",
+                (ref_text, profile_id, replace or ""),
             ).rowcount
         if updated:
             event_bus.emit("profiles", {"action": "updated", "id": profile_id})
@@ -2092,6 +2110,7 @@ async def generate_speech(
     # transcript paired with the original reference); design profiles are
     # excluded (a re-render replaces the sample, stranding a stale transcript).
     persist_ref_text_profile_id = None
+    persist_replace_ref_text = None
     # A transcript the caller sent, before a profile fills in its stored one:
     # an explicit transcript on an over-long clip gets the actionable 400
     # below instead of being silently dropped at the engine boundary (#2281).
@@ -2119,6 +2138,7 @@ async def generate_speech(
             language_from_profile = _cond["language_from_profile"]
             if _cond["persist_ref_text"]:
                 persist_ref_text_profile_id = profile_id
+                persist_replace_ref_text = _cond.get("replace_ref_text")
     elif ref_audio is not None:
         try:
             suffix = _ref_upload_suffix(ref_audio.filename)
@@ -2192,7 +2212,9 @@ async def generate_speech(
         # load + transcribe above happens once per profile, not per generate.
         # Only fills an empty column — a user-entered transcript always wins.
         if ref_text and persist_ref_text_profile_id:
-            _persist_profile_ref_text(persist_ref_text_profile_id, ref_text)
+            _persist_profile_ref_text(
+                persist_ref_text_profile_id, ref_text, replace=persist_replace_ref_text,
+            )
 
     # #2764: choosing the best 15 s window of a long reference runs the
     # installed recognizer over several windows — minutes on a CPU. Inside the

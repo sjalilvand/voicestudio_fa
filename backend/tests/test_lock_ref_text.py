@@ -110,3 +110,54 @@ def test_a_stored_transcript_loses_its_markup_at_generation():
         "seed": 7, "language": "Auto",
     }
     assert _resolve_profile_conditioning(row)["ref_text"] == "One. Two."
+
+
+def _voice(**patch):
+    row = {
+        "kind": "clone", "is_locked": 0, "locked_audio_path": "", "ref_audio_path": "p1.wav",
+        "ref_text": "", "instruct": "", "seed": None, "language": "Auto",
+    }
+    row.update(patch)
+    return row
+
+
+@pytest.mark.parametrize("cut", [100, 200])
+def test_an_already_locked_voice_drops_its_cut_transcript(client, cut):
+    # Greptile on #3602: voices locked before #3062 (100-char cut until #3320,
+    # then the 200-char history cut) keep the bug unless the cut is ignored.
+    from api.routers.generation import _resolve_profile_conditioning
+
+    cut_text = ("word " * 60)[:cut]
+    row = _voice(is_locked=1, locked_audio_path="p1_locked.wav", ref_text=cut_text, seed=7)
+    for request_text in (None, cut_text):  # the renderer echoes the stored text
+        cond = _resolve_profile_conditioning(row, ref_text=request_text)
+        assert cond["ref_audio_path"] and cond["ref_text"] is None
+        assert cond["persist_ref_text"] is False  # locked transcripts never persist
+
+
+def test_a_voice_saved_from_a_cut_take_drops_and_replaces_its_transcript(client):
+    from api.routers.generation import _persist_profile_ref_text, _resolve_profile_conditioning
+    from core import db
+
+    full = "word " * 60
+    with db.db_conn() as conn:
+        conn.execute("UPDATE generation_history SET text=? WHERE id='h1'", (full[:200],))
+        conn.execute("UPDATE voice_profiles SET ref_text=? WHERE id='p1'", (full[:200],))
+        conn.commit()
+        row = conn.execute("SELECT * FROM voice_profiles WHERE id='p1'").fetchone()
+    cond = _resolve_profile_conditioning(_voice(ref_text=row["ref_text"]))
+    assert cond["ref_text"] is None
+    assert cond["persist_ref_text"] is True and cond["replace_ref_text"] == full[:200]
+    _persist_profile_ref_text("p1", "what the clip says", replace=cond["replace_ref_text"])
+    with db.db_conn() as conn:
+        assert conn.execute("SELECT ref_text FROM voice_profiles WHERE id='p1'").fetchone()[0] == "what the clip says"
+
+
+def test_a_typed_transcript_of_a_cut_length_is_kept(client):
+    # No history take starts with it, so it is the user's own transcript.
+    from api.routers.generation import _resolve_profile_conditioning
+
+    typed = ("typed " * 40)[:200]
+    cond = _resolve_profile_conditioning(_voice(ref_text=typed))
+    assert cond["ref_text"] == typed.strip()
+    assert cond["persist_ref_text"] is False
