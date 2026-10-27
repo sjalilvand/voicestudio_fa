@@ -89,10 +89,10 @@ G:\WSL\
 
 1. Install a current **AMD Adrenalin driver** for your card. AMD's WSL pages reference
    Adrenalin 26.1.1 or newer for WSL2. Reboot afterwards.
-2. Install or update WSL to **2.4 or newer** (`wsl --update`). That version is
+2. Install or update WSL to **2.5.6 or newer** (`wsl --update`). That version is
    needed for `wsl --install --name/--location`, `--format vhd` exports and
-   `--set-sparse` (WSL 2.5.6 and newer also require `--allow-unsafe` for it; see
-   the [sparse VHDX warning](#sparse-vhd-warning)). Check with `wsl --version`.
+   `--set-sparse` with the `--allow-unsafe` flag this guide passes (see the
+   [sparse VHDX warning](#sparse-vhd-warning)). Check with `wsl --version`.
 3. Make sure `%UserProfile%\.wslconfig` gives WSL enough memory for the models
    (16 GB was used here).
 
@@ -394,12 +394,12 @@ switch ($Action) {
         wsl --manage $Distro --set-sparse true --allow-unsafe
         if ($LASTEXITCODE -ne 0) { throw "enabling sparse mode on $Distro failed" }
         if ($From -eq 'base') {
-            wsl -d $Distro -- bash -lc "sed 's/\r$//' $Scripts/provision-voicestudio.sh | bash"
+            wsl -d $Distro -- bash -lc "sed 's/\r$//' '$Scripts/provision-voicestudio.sh' | bash"
         }
     }
     'start' { wsl -d $Distro -- bash -lc '~/start-voicestudio.sh' }
     'save'  { Export-Image $Distro $Images.ready }
-    'check' { wsl -d $Distro -- bash -lc "sed 's/\r$//' $Scripts/verify-gpu.sh | bash" }
+    'check' { wsl -d $Distro -- bash -lc "sed 's/\r$//' '$Scripts/verify-gpu.sh' | bash" }
 }
 ```
 

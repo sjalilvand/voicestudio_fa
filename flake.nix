@@ -109,6 +109,8 @@
             profile = ''
               export UV_PYTHON_PREFERENCE="only-managed"
             '';
+            # Headers and .pc files for native builds inside the FHS env.
+            extraOutputsToInstall = [ "dev" ];
             runScript = "bash";
           };
         in

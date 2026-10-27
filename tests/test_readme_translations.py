@@ -12,7 +12,7 @@ _TARGET = re.compile(r'(?:src="|href="|\]\()([^")\s]+)')
 
 
 def test_translations_are_present_and_the_root_readme_links_to_them():
-    assert {"README_CN.md", "README_JA.md"} <= {p.name for p in _TRANSLATIONS}
+    assert {"README_CN.md", "README_JA.md", "README_KO.md", "README_RU.md"} <= {p.name for p in _TRANSLATIONS}
     root = (_ROOT / "README.md").read_text(encoding="utf-8")
     for path in _TRANSLATIONS:
         assert f'href="docs/readme/{path.name}"' in root
