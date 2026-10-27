@@ -14,8 +14,12 @@ REPO = Path(__file__).resolve().parents[1]
 
 
 def _registry():
-    # CLEAN-ROOM (spec W9-caps §1)
-    raise NotImplementedError
+    tts_backend = importlib.import_module("services.tts_backend")
+    entries = {
+        entry["id"]: entry
+        for entry in tts_backend.list_backends(include_hidden=True)
+    }
+    return tts_backend, entries
 
 
 def test_omnivoice_tags_match_the_model_tokenizer():
