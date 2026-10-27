@@ -32,6 +32,7 @@ from services.model_manager import (
 from services.generation_audio import save_generation_wav
 # Compatibility export used by archetype previews and the gallery renderer.
 from services.audio_io import _safe_torchaudio_save
+from services.reference_transcript import strip_script_markup, take_reference_transcript
 from services.binary_preflight import InvalidBinaryError
 from services.model_acceptance import ModelLicenceNotAccepted
 from core import event_bus
@@ -491,6 +492,9 @@ def _resolve_profile_conditioning(row, *, ref_text=None, instruct=None,
         if prof_lang and prof_lang != "Auto":
             out["language"] = prof_lang
             out["language_from_profile"] = True
+    if out["ref_text"]:
+        # A stored transcript may hold script markup the take never spoke (#3062).
+        out["ref_text"] = strip_script_markup(out["ref_text"]) or None
     return out
 
 
@@ -1660,11 +1664,14 @@ async def _finalize_generation(
     if take_mode != "design":
         design_recipe = None
 
+    # The whole text, not a prefix: a take can become a voice whose reference
+    # transcript is this text, and a cut one ends in words the take never
+    # finishes, which OmniVoice then speaks at every chunk seam (#3062).
     def _write_history():
         with db_conn() as conn:
             conn.execute(
                 "INSERT INTO generation_history (id, text, mode, language, instruct, profile_id, audio_path, duration_seconds, generation_time, seed, design_recipe, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-                (audio_id, text[:200], take_mode,
+                (audio_id, text, take_mode,
                  language or "Auto", instruct or "", resolved_profile_id,
                  audio_filename, audio_dur, gen_time, used_seed, design_recipe, time.time())
             )
@@ -2088,7 +2095,7 @@ async def generate_speech(
     # A transcript the caller sent, before a profile fills in its stored one:
     # an explicit transcript on an over-long clip gets the actionable 400
     # below instead of being silently dropped at the engine boundary (#2281).
-    request_ref_text = (ref_text or "").strip()
+    request_ref_text = strip_script_markup(ref_text)
 
     if profile_id:
         with db_conn() as conn:
@@ -2122,6 +2129,8 @@ async def generate_speech(
                 ref_lease = _TempReferenceLease(ref_audio_path)
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
+    # Script markup is never spoken, so it is never part of a transcript (#3062).
+    ref_text = strip_script_markup(ref_text) or None
 
     # #2281: an engine that picks the best passage of a long clip itself
     # (OmniVoice) cannot align a whole-clip transcript. A transcript typed on
@@ -2920,7 +2929,11 @@ def list_history():
             if r["audio_path"] and (not p or not os.path.exists(p)):
                 stale_ids.append(r["id"])
             else:
-                alive.append(dict(r))
+                item = dict(r)
+                # What "save as voice" may use as the take's transcript; ""
+                # asks for the take's audio to be transcribed (#3062).
+                item["transcript"] = take_reference_transcript(item.get("text"))
+                alive.append(item)
         if stale_ids:
             conn.executemany(
                 "DELETE FROM generation_history WHERE id=?",

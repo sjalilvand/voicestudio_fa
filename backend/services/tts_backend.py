@@ -895,7 +895,11 @@ def omnivoice_ref_text(ref_audio, ref_text):
     fallback when that recognizer finds no words. A transcript typed on a ``/generate`` request is
     rejected there with ``[clone_ref_too_long]`` before reaching this point.
     """
-    if not ref_text or not ref_text.strip():
+    from services.reference_transcript import strip_script_markup
+
+    # Script markup in a transcript is read out at every chunk start (#3062).
+    ref_text = strip_script_markup(ref_text)
+    if not ref_text:
         # "" and whitespace are no transcript: the model checks
         # ``ref_text is not None``, so pass None and let it pick the passage.
         return None

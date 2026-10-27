@@ -53,6 +53,8 @@ export interface HistoryItem {
   starred: boolean | number | null;
   /** JSON copy of the Voice Design draft behind a design take; null for any other take or a row saved earlier. */
   design_recipe?: string | null;
+  /** The take's text as a reference transcript: no script markup, '' when it may be cut short (#3062). */
+  transcript?: string;
   /** Epoch seconds (SQLite REAL) on the wire; tolerate ISO strings too. */
   created_at: number | string;
 }

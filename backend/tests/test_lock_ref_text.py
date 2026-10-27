@@ -68,3 +68,45 @@ def test_lock_keeps_the_whole_take_text(client):
         row = conn.execute("SELECT ref_text, seed, is_locked FROM voice_profiles WHERE id='p1'").fetchone()
     assert row["ref_text"] == TAKE_TEXT
     assert (row["seed"], row["is_locked"]) == (7, 1)
+
+
+def _lock_with_history_text(client, text):
+    from core import db
+
+    with db.db_conn() as conn:
+        conn.execute("UPDATE generation_history SET text=? WHERE id='h1'", (text,))
+        conn.commit()
+    response = client.post("/profiles/p1/lock", data={"history_id": "h1", "seed": "7"})
+    assert response.status_code == 200, response.text
+    with db.db_conn() as conn:
+        return conn.execute("SELECT ref_text FROM voice_profiles WHERE id='p1'").fetchone()["ref_text"]
+
+
+def test_lock_drops_script_markup_from_the_transcript(client):
+    # #3062: markup in a transcript is spoken at every chunk start.
+    text = "Hello there. [pause 1s] [slow]Take your time.[/slow] [[VS|VoiceStudio]] [laughter]"
+    assert _lock_with_history_text(client, text) == "Hello there. Take your time. VoiceStudio [laughter]"
+
+
+def test_lock_leaves_a_possibly_cut_take_untranscribed(client):
+    # #3062: history rows saved before the fix kept only text[:200], so a long
+    # take's transcript stopped mid-word. Empty asks generation to transcribe.
+    from services.reference_transcript import LEGACY_HISTORY_TEXT_CAP
+
+    cut = ("word " * 60)[:LEGACY_HISTORY_TEXT_CAP]
+    assert _lock_with_history_text(client, cut) == ""
+    full = "word " * 60
+    assert _lock_with_history_text(client, full) == full.strip()
+
+
+def test_a_stored_transcript_loses_its_markup_at_generation():
+    # Voices saved before #3062 keep working: their stored transcript is
+    # cleaned when it is used, without rewriting the row.
+    from api.routers.generation import _resolve_profile_conditioning
+
+    row = {
+        "kind": "clone", "is_locked": 1, "locked_audio_path": "p1_locked.wav",
+        "ref_audio_path": "", "ref_text": "One. [pause 500ms] Two.", "instruct": "",
+        "seed": 7, "language": "Auto",
+    }
+    assert _resolve_profile_conditioning(row)["ref_text"] == "One. Two."
