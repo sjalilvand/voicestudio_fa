@@ -331,25 +331,7 @@ def test_repo_cache_dir_uses_env_cache(monkeypatch, tmp_path):
 # ── model_manager wiring ───────────────────────────────────────────────────
 
 
-@pytest.fixture
-def model_manager(monkeypatch):
-    for mod_name in ("core.config", "services.model_manager"):
-        if getattr(sys.modules.get(mod_name), "__file__", None) is None:
-            sys.modules.pop(mod_name, None)
-
-    import services.model_manager as mm
-
-    monkeypatch.setattr(mm, "_torch", None)
-    monkeypatch.setattr(mm, "_OmniVoice", None)
-    monkeypatch.setattr(mm, "model", None)
-    monkeypatch.setattr(mm, "_LINK_REPAIR_ATTEMPTED", set())
-    monkeypatch.setenv("OMNIVOICE_MODEL", "test/checkpoint")
-    monkeypatch.delenv("OMNIVOICE_PRELOAD_TTS_ASR", raising=False)
-    monkeypatch.delenv("HF_HUB_OFFLINE", raising=False)
-    monkeypatch.delenv("TRANSFORMERS_OFFLINE", raising=False)
-    monkeypatch.setattr(mm, "_lazy_torch", lambda: SimpleNamespace(float16="float16", float32="float32"))
-    monkeypatch.setattr(mm, "get_best_device", lambda: "cpu")
-    return mm
+# CLEAN-ROOM (spec W7-tests §2): model_manager fixture (offline-loader variant E + link-repair reset)
 
 
 def _healed_summary(repo_id="test/checkpoint"):

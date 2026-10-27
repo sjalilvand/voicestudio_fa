@@ -12,27 +12,7 @@ async function expectFocus(page, locator) {
   );
 }
 try {
-  const page = await browser.newPage({ viewport: { width: 1200, height: 800 } });
-  await page.addInitScript(() => localStorage.setItem('voicestudio.setup.complete.v1', '1'));
-  await page.route(
-    (url) => url.pathname.startsWith('/api/'),
-    (route) => {
-      const path = new URL(route.request().url()).pathname;
-      const fixtures = {
-        '/api/health': { status: 'ok' },
-        '/api/setup/status': { ready: true },
-        '/api/models/install/status': { jobs: [] },
-        '/api/profiles': [],
-        '/api/history': [],
-        '/api/projects': [],
-        '/api/export/history': [],
-        '/api/longform/jobs': { jobs: [] },
-      };
-      return path in fixtures
-        ? route.fulfill({ json: fixtures[path] })
-        : route.fulfill({ status: 404, json: { detail: 'Not mocked' } });
-    },
-  );
+  // CLEAN-ROOM (spec W7-tests §11): open the mocked page via the shared smoke API-mock helper
   const routes = [
     ['Voice', 'Clone', '/clone'],
     ['Voice', 'Design', '/design'],

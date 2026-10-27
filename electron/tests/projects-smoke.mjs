@@ -1,30 +1,8 @@
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
-const browser = await chromium.launch({
-  ...(process.env.CHROMIUM_PATH
-    ? { executablePath: process.env.CHROMIUM_PATH }
-    : { channel: process.env.PLAYWRIGHT_CHANNEL || 'msedge' }),
-  headless: true,
-});
+// CLEAN-ROOM (spec W7-tests §11): launch the smoke browser (with channel fallback)
 try {
-  const page = await browser.newPage();
-  await page.addInitScript(() => localStorage.setItem('voicestudio.setup.complete.v1', '1'));
-  await page.route(
-    (url) => url.pathname.startsWith('/api/'),
-    (route) => {
-      const path = new URL(route.request().url()).pathname;
-      const fixtures = {
-        '/api/health': { status: 'ok' },
-        '/api/setup/status': { ready: true },
-        '/api/models/install/status': { jobs: [] },
-      };
-      return path in fixtures
-        ? route.fulfill({ json: fixtures[path] })
-        : route.fulfill({ status: 404, json: { detail: 'Not mocked' } });
-    },
-  );
-  const errors = [];
-  page.on('pageerror', (e) => errors.push(e.message));
+  // CLEAN-ROOM (spec W7-tests §11): open the mocked page and collect page errors
   const stored = {
     id: 'legacy',
     name: 'Legacy project',

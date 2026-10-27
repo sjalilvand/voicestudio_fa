@@ -16,17 +16,7 @@ import sys
 import pytest
 
 
-@pytest.fixture
-def mm(monkeypatch):
-    for mod_name in ("core.config", "services.model_manager"):
-        if getattr(sys.modules.get(mod_name), "__file__", None) is None:
-            sys.modules.pop(mod_name, None)
-    import services.model_manager as _mm
-    # Keep the pool tiny + device-probe-free regardless of the host.
-    monkeypatch.setattr(_mm, "_pick_gpu_workers", lambda: 1)
-    # Start from a clean singleton so tests don't share a wrapper.
-    monkeypatch.setattr(_mm, "_gpu_pool_singleton", None)
-    return _mm
+# CLEAN-ROOM (spec W7-tests §2): mm fixture (variant B: one worker, fresh pool singleton)
 
 
 def test_stale_reference_survives_reset(mm):

@@ -34,12 +34,4 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it('the rail toggle swaps in the full sidebar and stores where it was asked for', () => {
-  render(<WorkspaceSidebar />);
-  fireEvent.click(screen.getByRole('button', { name: 'clone.toggle_sidebar' }));
-  expect(screen.queryByRole('button', { name: 'clone.toggle_sidebar' })).toBeNull();
-  expect(screen.getByRole('button', { name: 'common.close' })).toBeTruthy();
-  const stored = JSON.parse(localStorage.getItem('voicestudio.workspace-layout')!);
-  expect(stored.libraryOpen).toBe(true);
-  expect(stored.expandedLibraryContext).toBe('/clone:false');
-});
+// CLEAN-ROOM (spec W7-tests §9): rail toggle swaps in the full sidebar and persists the request

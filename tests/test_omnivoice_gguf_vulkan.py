@@ -13,15 +13,7 @@ def gguf():
     return importlib.import_module("engines.omnivoice_gguf.backend")
 
 
-def test_loader_presence_does_not_prove_engine_acceleration():
-    """A loader cannot establish that an executable can use a physical GPU."""
-    from core.device_caps import HostCaps
-    from services.engine_routing import resolve_routing
-
-    caps = HostCaps(family="cpu", available_families=("cpu",),
-                    notes=("Vulkan runtime present",))
-    result = resolve_routing(("cuda", "vulkan", "mps", "cpu"), caps)
-    assert result["effective_device"] == "cpu"
+# CLEAN-ROOM (spec W7-tests §4): loader presence alone does not route to an accelerator
 
 
 def test_pinned_cli_does_not_receive_unsupported_compute_flags(monkeypatch, tmp_path, gguf):

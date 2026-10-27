@@ -6,28 +6,7 @@ const browser = await chromium.launch({
   headless: true,
 });
 try {
-  const page = await browser.newPage({ viewport: { width: 1200, height: 800 } });
-  await page.addInitScript(() => localStorage.setItem('voicestudio.setup.complete.v1', '1'));
-  await page.route(
-    (url) => url.pathname.startsWith('/api/'),
-    (route) => {
-      const path = new URL(route.request().url()).pathname;
-      const fixtures = {
-        '/api/health': { status: 'ok' },
-        '/api/setup/status': { ready: true },
-        '/api/models/install/status': { jobs: [] },
-        '/api/profiles': [],
-        '/api/history': [],
-        '/api/projects': [],
-      };
-      return path in fixtures
-        ? route.fulfill({ json: fixtures[path] })
-        : route.fulfill({ status: 404, json: { detail: 'Not mocked' } });
-    },
-  );
-  await page.goto(
-    (process.env.VOICESTUDIO_UI_URL || 'http://localhost:3928') + '/#/settings/appearance',
-  );
+  // CLEAN-ROOM (spec W7-tests §11): open the mocked page on the appearance settings route
   const dark = page.getByRole('group', { name: 'Dark', exact: true });
   const original = dark.getByRole('button', { name: 'VoiceStudio Original', exact: true });
   assert.equal(

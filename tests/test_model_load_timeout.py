@@ -13,17 +13,7 @@ import threading
 
 import pytest
 
-
-@pytest.fixture
-def model_manager(monkeypatch):
-    for mod_name in ("core.config", "services.model_manager"):
-        if getattr(sys.modules.get(mod_name), "__file__", None) is None:
-            sys.modules.pop(mod_name, None)
-
-    import services.model_manager as mm
-
-    monkeypatch.setattr(mm, "model", None)
-    return mm
+# CLEAN-ROOM (spec W7-tests §2): model_manager fixture (variant C: no loaded model)
 
 
 def test_model_load_timeout_respects_env(model_manager, monkeypatch):

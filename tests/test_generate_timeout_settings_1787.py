@@ -82,13 +82,7 @@ class TestSetEnvValidation:
 
 # ── effective-budget behaviour: persisted value survives the next import ──
 
-@pytest.fixture
-def model_manager(monkeypatch):
-    for mod_name in ("core.config", "services.model_manager"):
-        if getattr(sys.modules.get(mod_name), "__file__", None) is None:
-            sys.modules.pop(mod_name, None)
-    import services.model_manager as mm
-    return mm
+# CLEAN-ROOM (spec W7-tests §2): model_manager fixture (base variant A)
 
 
 def test_generate_budget_takes_effect_after_restart(model_manager, monkeypatch):

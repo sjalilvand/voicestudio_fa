@@ -38,13 +38,7 @@ os.environ.setdefault("OMNIVOICE_DISABLE_FILE_LOG", "1")
 _BACKEND = Path(__file__).resolve().parents[1] / "backend"
 
 
-@pytest.fixture
-def mm(monkeypatch):
-    for mod_name in ("core.config", "services.model_manager"):
-        if getattr(sys.modules.get(mod_name), "__file__", None) is None:
-            sys.modules.pop(mod_name, None)
-    import services.model_manager as _mm
-    return _mm
+# CLEAN-ROOM (spec W7-tests §2): mm fixture (base variant A)
 
 
 # ── Defect 1: the execution clock must not start at submit ──────────────────

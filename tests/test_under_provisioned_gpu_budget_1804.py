@@ -45,12 +45,7 @@ def floor(engine):
     return engine.min_vram_gb
 
 
-@pytest.fixture
-def model_manager(monkeypatch):
-    for mod_name in ("core.config", "services.model_manager"):
-        if getattr(sys.modules.get(mod_name), "__file__", None) is None:
-            sys.modules.pop(mod_name, None)
-    return importlib.import_module("services.model_manager")
+# CLEAN-ROOM (spec W7-tests §2): model_manager fixture (base variant A)
 
 
 def _gpu(vram_gb: float, *, family: str = "cuda",

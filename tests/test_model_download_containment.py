@@ -32,47 +32,7 @@ def download():
     return importlib.import_module("api.routers.setup.download")
 
 
-def _drive_segmented(
-    download, monkeypatch, tmp_path, files, *, etag=GOOD_ETAG, endpoint=None,
-    resolved=None, default_endpoint="https://huggingface.co",
-):
-    import huggingface_hub
-    from huggingface_hub import file_download as hf_file_download
-    from services import segmented_download as sd_mod
-    from services import token_resolver
-
-    cache = tmp_path / "hub"
-    cache.mkdir()
-    monkeypatch.setattr(token_resolver, "resolve", lambda *a, **k: resolved)
-    monkeypatch.setattr(huggingface_hub.constants, "HF_HUB_CACHE", str(cache))
-    monkeypatch.setattr(huggingface_hub.constants, "ENDPOINT", default_endpoint)
-    seen: dict = {}
-
-    class _FakeApi:
-        def __init__(self, *, endpoint=None, token=None):
-            seen["hf_api"] = token
-
-        def repo_info(self, repo_id, repo_type=None, revision=None):
-            return SimpleNamespace(
-                sha=revision, siblings=[SimpleNamespace(rfilename=f) for f in files],
-            )
-
-    def _fake_metadata(url, token=None, **_kw):
-        seen["file_metadata"] = token
-        return SimpleNamespace(etag=f'"{etag}"', location=url, size=4)
-
-    async def _fake_segmented(url, blob_path, *, token=None, **_kw):
-        seen["segmented"] = token
-        os.makedirs(os.path.dirname(blob_path), exist_ok=True)
-        with open(blob_path, "wb") as fh:
-            fh.write(b"data")
-        return blob_path
-
-    monkeypatch.setattr(huggingface_hub, "HfApi", _FakeApi)
-    monkeypatch.setattr(hf_file_download, "get_hf_file_metadata", _fake_metadata)
-    monkeypatch.setattr(sd_mod, "segmented_download", _fake_segmented)
-    result = download._segmented_snapshot(REPO, endpoint=endpoint, revision=REVISION)
-    return cache, seen, result
+# CLEAN-ROOM (spec W7-tests §5): _drive_segmented helper (fake Hub API driver for the segmented snapshot)
 
 
 def _files_outside(root, tmp_path):

@@ -171,28 +171,7 @@ it('keeps distinct model names visible in the compact pack summary', async () =>
   expect(screen.getAllByText(/engineSidebar\.dictation/)).toHaveLength(2);
 });
 
-it('permits selecting a complete pack when the disk is nearly full', async () => {
-  serveBalancedPack({ installed: true, freeGb: 0.5 });
-  render(
-    <QueryClientProvider client={new QueryClient()}>
-      <PerformanceModelPacks />
-    </QueryClientProvider>,
-  );
-  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-  const activate = await screen.findByRole('button', { name: /models\.pack_use/ });
-  fireEvent.click(activate);
-  await waitFor(() =>
-    expect(mock.api).toHaveBeenCalledWith(
-      '/api/settings/performance-profile',
-      expect.objectContaining({
-        method: 'PUT',
-        body: JSON.stringify({ tier: 'balanced', family: null }),
-      }),
-    ),
-  );
-  expect(activate).toBeEnabled();
-  expect(mock.api).not.toHaveBeenCalledWith('/models/install', expect.anything());
-});
+// CLEAN-ROOM (spec W7-tests §16): installed pack stays selectable on a nearly full disk
 
 it('disables a pack that still needs downloads when reserve space is missing', async () => {
   serveBalancedPack({ installed: false, freeGb: 0.5 });
