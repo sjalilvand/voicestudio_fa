@@ -204,3 +204,11 @@ def test_breeze_requests_are_unchanged(monkeypatch, mods):
     backend.generate("Hello.", description="warm narrator", guidance_scale=2.0)
     assert sent[0]["instructions"] == "warm narrator"
     assert sent[0]["guidance_scale"] == 2.0
+
+
+def test_dots_reports_its_native_rate_before_the_first_render(mods):
+    # Callers read sample_rate before generate() sets it from the response;
+    # inheriting Breeze's 24 kHz would mislabel the first dots.tts render.
+    audiocpp, _bootstrap = mods
+    assert audiocpp.AudioCPPDotsBackend().sample_rate == 48000
+    assert audiocpp.AudioCPPBackend().sample_rate == 24000

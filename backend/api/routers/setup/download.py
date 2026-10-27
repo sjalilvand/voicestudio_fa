@@ -1277,4 +1277,6 @@ def _prune_empty_dirs(snapshot: str) -> None:
             try:
                 os.rmdir(root)
             except OSError:
-                pass
+                # Best-effort tidy-up: a dir that gained a file (a sibling
+                # package's concurrent download) or is locked stays in place.
+                continue

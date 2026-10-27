@@ -133,7 +133,7 @@
       "engines": [
         "audiocpp-dots"
       ],
-      "catalogued": false,
+      "catalogued": true,
       "registry_version": "2026-10-09.draft1",
       "registry_digest": "3fe7ecc35505e9281780fed2f514ee461a9127a3ce90925775fc640ff33893b2",
       "license": "apache-2.0",

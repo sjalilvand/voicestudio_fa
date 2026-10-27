@@ -190,9 +190,9 @@ def _measure_model_cache(engine_id: str) -> dict | None:
     if key is None:
         return None
     try:
-        from api.routers.setup.models import get_model_catalog, package_cache_usage, shares_repo
+        from services.model_catalogue import catalogue_entry, package_cache_usage, shares_repo
 
-        entry = get_model_catalog().get(key)
+        entry = catalogue_entry(key)
         if entry is not None and shares_repo(entry):
             # Only this entry's package: the repo also holds other entries' files.
             usage = package_cache_usage(entry)

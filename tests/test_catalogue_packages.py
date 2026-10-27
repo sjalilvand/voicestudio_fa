@@ -104,8 +104,10 @@ def cache(models, monkeypatch, tmp_path):
         repo_dir = tmp_path / ("models--" + repo_id.replace("/", "--")) / "snapshots"
         return [str(p) for p in repo_dir.iterdir()] if repo_dir.is_dir() else []
 
-    monkeypatch.setattr(models, "_snapshot_dirs", snapshots)
-    monkeypatch.setattr(models, "snapshot_has_weights", lambda _path: True)
+    catalogue = importlib.import_module("services.model_catalogue")
+    for module in (models, catalogue):
+        monkeypatch.setattr(module, "_snapshot_dirs", snapshots)
+        monkeypatch.setattr(module, "snapshot_has_weights", lambda _path: True)
     monkeypatch.setitem(models._WEIGHT_FLOORS, ".gguf", 1)
     download = importlib.import_module("api.routers.setup.download")
     monkeypatch.setattr(download, "_snapshot_dirs", snapshots)
@@ -234,3 +236,24 @@ def test_engine_disk_usage_counts_only_its_package(models, cache):
     assert engine_disk_usage._measure_model_cache("audiocpp")["model_bytes"] == len(
         b"breezesortformer"
     )
+
+
+def test_services_read_the_catalogue_without_importing_a_router():
+    # services/ must not import api.routers (CodeQL cyclic import): the shared
+    # catalogue and cache helpers live in services.model_catalogue, and the
+    # router re-exports the same objects.
+    import ast
+
+    backend = Path(__file__).resolve().parents[1] / "backend"
+    source = (backend / "services" / "engine_disk_usage.py").read_text(encoding="utf-8")
+    imported = {
+        node.module for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.ImportFrom) and node.module
+    }
+    assert not any(name.startswith("api.") for name in imported)
+    catalogue = importlib.import_module("services.model_catalogue")
+    router = importlib.import_module("api.routers.setup.models")
+    for name in ("model_key", "shares_repo", "package_cache_usage", "KNOWN_MODELS"):
+        assert getattr(router, name) is getattr(catalogue, name)
+    assert catalogue.catalogue_entry("audio-cpp/audio.cpp-gguf:dots-tts-soar-q8_0")["repo_id"] == \
+        "audio-cpp/audio.cpp-gguf"

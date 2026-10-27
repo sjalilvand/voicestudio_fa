@@ -402,6 +402,16 @@ class ProductionTests(unittest.TestCase):
         self.assertEqual(actual, expected)
         self.assertEqual(actual["enforcement"], "disclosure_only")
 
+    def test_package_entries_are_catalogued_by_their_own_id(self):
+        # A catalogue entry with its own ``id`` (one package of a shared repo)
+        # must mark its licence record as offered, not only whole-repo entries.
+        spec = importlib.util.spec_from_file_location("generate_model_license_data",
+                                                      ROOT / "scripts/generate_model_license_data.py")
+        module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        rows = {row["id"]: row for row in module.generate(ROOT)["models"]}
+        self.assertTrue(rows["audio-cpp/audio.cpp-gguf:dots-tts-soar-q8_0"]["catalogued"])
+        self.assertTrue(rows["audio-cpp/audio.cpp-gguf"]["catalogued"])
+
     def test_v1_migration_preserves_unknowns_and_evidence(self):
         spec = importlib.util.spec_from_file_location("migrate_model_licenses",
                                                       ROOT / "scripts/migrate_model_licenses.py")

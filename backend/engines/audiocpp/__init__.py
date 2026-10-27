@@ -619,6 +619,10 @@ class AudioCPPDotsBackend(AudioCPPBackend):
     display_name = "audio.cpp · dots.tts (native GGUF, multilingual voice cloning; Apache-2.0)"
     supports_voice_design = False
     _package_name = "DOTS"
+    #: dots.tts SOAR's vocoder emits 48 kHz (checkpoint ``vocoder.sample_rate``,
+    #: as in ``engines.dots_tts``). ``sample_rate`` is read before the first
+    #: generate sets ``_sr``, so the default must already be the real rate.
+    _DEFAULT_SAMPLE_RATE = 48000
     #: Upstream default for dots.tts SOAR (``model_specs`` guidance_scale).
     _DEFAULT_GUIDANCE_SCALE = 1.2
 
