@@ -138,9 +138,9 @@ VoiceStudio/
 
 3. **Each subdirectory owns one concern.** If you can't describe what goes in a directory in one sentence, it's wrong.
 
-<!-- CLEAN-ROOM (spec W7-docs §4): rule 4 of the root rules (per-package manifests, root bun.lock, frozen Docker install) -->
+4. **Packages declare dependencies independently.** `backend/`, `electron/`, and `omnivoice/` each have their own `pyproject.toml` or `package.json`, allowing them to be tested separately. The Bun workspace shares one root `bun.lock`, and Docker uses a frozen install that fails rather than modifying it.
 
-<!-- CLEAN-ROOM (spec W7-docs §5): level-2 heading for the test-homes section below -->
+## Where tests live
 
 The single `test` job in `ci.yml` invokes three independent runners. Keeping their collection boundaries separate is intentional.
 

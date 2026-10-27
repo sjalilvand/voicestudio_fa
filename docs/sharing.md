@@ -98,8 +98,8 @@ If you have [Tailscale](https://tailscale.com/download) installed and signed in,
 3. Otherwise, **Enable** publishes this backend over your tailnet via `tailscale serve`. The panel shows your `<machine>.<tailnet>` URL with copy / open / QR.
    - By default this serves over **HTTP** on the tailnet (`tailscale serve --http=80`) — which works on any tailnet, because the WireGuard tunnel already encrypts the traffic. No certificate needed.
    - If your tailnet has **HTTPS Certificates** enabled (admin console → DNS → *HTTPS Certificates*), it serves over **HTTPS** instead and you get an `https://…ts.net` URL. (Forcing HTTPS without that feature is what produces the `error enabling https feature: 404` — so we detect it and fall back to HTTP automatically.)
-   <!-- CLEAN-ROOM (spec W7-docs §6): sub-bullet on the shared serve config and the fallback port -->
-<!-- CLEAN-ROOM (spec W7-docs §7): step 4: open the URL from the tailnet; Disable removes only this backend's handlers -->
+   - Tailscale serve settings are shared by every app on the machine, so VoiceStudio does not replace another app's share. If another service occupies the default port (80 for HTTP or 443 for HTTPS), VoiceStudio tries port **10000** and includes it in the address, such as `http://<machine>.<tailnet>:10000`. If that port is also occupied, VoiceStudio leaves the configuration unchanged and reports an error.
+4. Open the displayed URL on any device signed in to the same tailnet. **Disable** removes only serve handlers that target this VoiceStudio backend, using `tailscale serve --http=<port> off`; it preserves every other app's share and never runs `tailscale serve reset`.
 
 Tailscale proxies the loopback backend directly, so — like LAN sharing — it never restarts the backend or drops the loaded model.
 

@@ -320,7 +320,11 @@ on macOS and Windows.
 torch right after `uv sync`; `bun run dev` then starts the backend from that
 environment, and `bun run dev:api` launches it without re-syncing, so the
 wheel is not reverted (#1665).
-<!-- CLEAN-ROOM (spec W7-docs §1): two sentences: re-running setup without the variable reverts to the CUDA build; the index-override variable and the AMD find-links note that introduces the command below -->
+Running `bun run setup:api` again without `OMNIVOICE_TORCH_VARIANT` restores
+the lockfile's CUDA torch build, replacing any ROCm wheel you installed by
+hand. To choose another ROCm release, set `OMNIVOICE_TORCH_INDEX=<url>`; AMD
+publishes newer driver-matched 7.2.x wheels on `repo.radeon.com` as a
+`--find-links` page rather than a PyPI-compatible index, for example:
 ```bash
 uv pip install --reinstall-package torch --reinstall-package torchaudio \
   --reinstall-package torchvision torch==2.8.0 torchaudio==2.8.0 torchvision==0.23.0 \
