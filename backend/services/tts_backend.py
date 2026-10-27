@@ -3521,7 +3521,42 @@ class GPTSoVITSBackend(TTSBackend):
 # ── Sherpa-ONNX adapter (universal ONNX runtime, WASM-ready) ───────────────
 
 
-# CLEAN-ROOM (spec W5-sherpa §1, §2): sherpa-onnx model-file resolver and optional VITS extras helpers go here.
+def _sherpa_model_file(model_dir: str) -> Optional[str]:
+    """Find the single VITS model that can be loaded from ``model_dir``.
+
+    Piper archives commonly name the ONNX file after the voice instead of
+    using ``model.onnx``.  Accepting that layout is important because Piper is
+    the only sherpa-onnx voice available for many languages, while refusing
+    directories with several candidates keeps model selection deterministic.
+    """
+    if not model_dir or not os.path.isdir(model_dir):
+        return None
+
+    conventional = os.path.join(model_dir, "model.onnx")
+    if os.path.isfile(conventional):
+        return conventional
+
+    candidates = [
+        os.path.join(model_dir, name)
+        for name in os.listdir(model_dir)
+        if name.lower().endswith(".onnx")
+        and os.path.isfile(os.path.join(model_dir, name))
+    ]
+    return candidates[0] if len(candidates) == 1 else None
+
+
+def _sherpa_vits_extras(model_dir: str) -> dict[str, str]:
+    """Return optional phonemizer inputs present beside a VITS model."""
+    if not model_dir:
+        return {}
+    extras: dict[str, str] = {}
+    data_dir = os.path.join(model_dir, "espeak-ng-data")
+    lexicon = os.path.join(model_dir, "lexicon.txt")
+    if os.path.isdir(data_dir):
+        extras["data_dir"] = data_dir
+    if os.path.isfile(lexicon):
+        extras["lexicon"] = lexicon
+    return extras
 
 
 class SherpaOnnxBackend(TTSBackend):
@@ -3582,7 +3617,14 @@ class SherpaOnnxBackend(TTSBackend):
                 "restart VoiceStudio. Download models from "
                 "https://github.com/k2-fsa/sherpa-onnx/releases"
             )
-        # CLEAN-ROOM (spec W5-sherpa §3): reject a model directory with no resolvable VITS .onnx file here.
+        if _sherpa_model_file(model_dir) is None:
+            return False, (
+                f"OMNIVOICE_SHERPA_MODEL points to {model_dir!r}, but that directory "
+                "does not contain model.onnx or exactly one voice-named .onnx file. "
+                "Choose a sherpa-onnx TTS model directory containing that model and "
+                "tokens.txt (Piper archives use a per-voice filename). Download models "
+                "from https://github.com/k2-fsa/sherpa-onnx/releases"
+            )
         return True, "ready"
 
     @property
@@ -3595,7 +3637,41 @@ class SherpaOnnxBackend(TTSBackend):
     def supported_languages(self) -> list[str]:
         return ["multi"]  # depends on loaded model
 
-    # CLEAN-ROOM (spec W5-sherpa §4): _ensure_loaded() (lazy sherpa-onnx VITS load) goes here.
+    def _ensure_loaded(self):
+        if self._tts is not None:
+            return
+
+        ok, msg = self.is_available()
+        if not ok:
+            raise RuntimeError(f"Sherpa-ONNX unavailable: {msg}")
+
+        import sherpa_onnx
+
+        if not self._model_dir:
+            raise RuntimeError(
+                "OMNIVOICE_SHERPA_MODEL not set. Point it to a sherpa-onnx "
+                "TTS model directory (containing model.onnx + tokens.txt)."
+            )
+
+        model_file = _sherpa_model_file(self._model_dir)
+        tokens_file = os.path.join(self._model_dir, "tokens.txt")
+        if model_file is None:
+            raise RuntimeError(
+                f"No model.onnx found in {self._model_dir}. "
+                "Download a model from https://github.com/k2-fsa/sherpa-onnx/releases"
+            )
+
+        logger.info("Loading sherpa-onnx TTS from %s", self._model_dir)
+        config = sherpa_onnx.OfflineTtsConfig(
+            model=sherpa_onnx.OfflineTtsModelConfig(
+                vits=sherpa_onnx.OfflineTtsVitsModelConfig(
+                    model=model_file,
+                    tokens=tokens_file,
+                    **_sherpa_vits_extras(self._model_dir),
+                )
+            )
+        )
+        self._tts = sherpa_onnx.OfflineTts(config)
 
     def generate(self, text: str, **kw) -> torch.Tensor:
         import numpy as np

@@ -107,7 +107,87 @@ def test_tts_sherpa_available_when_model_env_points_at_model(monkeypatch, tmp_pa
     assert ok is True
 
 
-# CLEAN-ROOM (spec W5-sherpa §11): sherpa-onnx Piper / lexicon / ambiguous-dir tests go here.
+def _recording_sherpa_module(captured):
+    module = types.ModuleType("sherpa_onnx")
+
+    def remember_vits(**kwargs):
+        captured.update(kwargs)
+        return kwargs
+
+    module.OfflineTtsVitsModelConfig = remember_vits
+    module.OfflineTtsModelConfig = lambda **kwargs: kwargs
+    module.OfflineTtsConfig = lambda **kwargs: kwargs
+    module.OfflineTts = lambda config: types.SimpleNamespace(config=config, sample_rate=22050)
+    return module
+
+
+def test_tts_sherpa_accepts_voice_named_piper_model(monkeypatch, tmp_path):
+    monkeypatch.setitem(sys.modules, "sherpa_onnx", types.ModuleType("sherpa_onnx"))
+    (tmp_path / "en_US-voice.onnx").write_bytes(b"")
+    (tmp_path / "en_US-voice.onnx.json").write_text("{}", encoding="utf-8")
+    (tmp_path / "tokens.txt").write_text("tokens", encoding="utf-8")
+    (tmp_path / "espeak-ng-data").mkdir()
+    monkeypatch.setenv("OMNIVOICE_SHERPA_MODEL", str(tmp_path))
+
+    ok, _reason = tts_backend.SherpaOnnxBackend.is_available()
+
+    assert ok is True
+
+
+def test_tts_sherpa_rejects_ambiguous_onnx_directory(monkeypatch, tmp_path):
+    monkeypatch.setitem(sys.modules, "sherpa_onnx", types.ModuleType("sherpa_onnx"))
+    (tmp_path / "first.onnx").write_bytes(b"")
+    (tmp_path / "second.ONNX").write_bytes(b"")
+    monkeypatch.setenv("OMNIVOICE_SHERPA_MODEL", str(tmp_path))
+
+    ok, reason = tts_backend.SherpaOnnxBackend.is_available()
+
+    assert ok is False
+    assert "model.onnx" in reason
+
+
+def test_tts_sherpa_resolver_prioritizes_conventional_filename(tmp_path):
+    expected = tmp_path / "model.onnx"
+    expected.write_bytes(b"")
+    (tmp_path / "alternate.onnx").write_bytes(b"")
+
+    assert tts_backend._sherpa_model_file(str(tmp_path)) == str(expected)
+
+
+def test_tts_sherpa_loads_piper_phonemizer_data(monkeypatch, tmp_path):
+    captured = {}
+    monkeypatch.setitem(sys.modules, "sherpa_onnx", _recording_sherpa_module(captured))
+    voice = tmp_path / "sample-voice.onnx"
+    voice.write_bytes(b"")
+    (tmp_path / "tokens.txt").write_text("tokens", encoding="utf-8")
+    data_dir = tmp_path / "espeak-ng-data"
+    data_dir.mkdir()
+    monkeypatch.setenv("OMNIVOICE_SHERPA_MODEL", str(tmp_path))
+
+    tts_backend.SherpaOnnxBackend()._ensure_loaded()
+
+    assert captured["model"] == str(voice)
+    assert captured["data_dir"] == str(data_dir)
+    assert "lexicon" not in captured
+
+
+def test_tts_sherpa_loads_lexicon_without_obsolete_dictionary(monkeypatch, tmp_path):
+    captured = {}
+    monkeypatch.setitem(sys.modules, "sherpa_onnx", _recording_sherpa_module(captured))
+    model = tmp_path / "model.onnx"
+    model.write_bytes(b"")
+    (tmp_path / "tokens.txt").write_text("tokens", encoding="utf-8")
+    lexicon = tmp_path / "lexicon.txt"
+    lexicon.write_text("word phones", encoding="utf-8")
+    (tmp_path / "dict").mkdir()
+    monkeypatch.setenv("OMNIVOICE_SHERPA_MODEL", str(tmp_path))
+
+    tts_backend.SherpaOnnxBackend()._ensure_loaded()
+
+    assert captured["model"] == str(model)
+    assert captured["lexicon"] == str(lexicon)
+    assert "dict_dir" not in captured
+    assert "data_dir" not in captured
 
 
 def test_tts_sherpa_setup_snippet_registered():
