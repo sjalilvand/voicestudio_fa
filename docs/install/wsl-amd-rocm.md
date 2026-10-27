@@ -27,7 +27,7 @@ setup can be wiped and restored in under a minute.
 | ROCm | 7.2.4 from `repo.radeon.com` (no DKMS) |
 | WSL bridge | `librocdxg` 1.2.0 (`rocdxg-roct` .deb) |
 | PyTorch | `torch 2.8.0+rocm7.2.4` / `torchaudio 2.8.0` / `torchvision 0.23.0` from `repo.radeon.com` |
-| VoiceStudio | tag `v0.5.6`, run from source |
+| VoiceStudio | tag `v0.5.6` validated, run from source; steps target `v0.5.7` (Electron web UI) |
 
 **Verified:**
 
@@ -66,7 +66,7 @@ predates ROCDXG.
 | Image | Contents | Rebuild time |
 |---|---|---|
 | `vs-rocm-base.vhdx` | Ubuntu 24.04, ROCm 7.2.4 libraries, librocdxg, user `vs` | ~15 min |
-| `vs-0.5.6-ready.vhdx` | base + VoiceStudio `v0.5.6`, Python deps, ROCm torch (no models) | ~10 min on top of base |
+| `vs-0.5.7-ready.vhdx` | base + VoiceStudio `v0.5.7`, Python deps, ROCm torch (no models) | ~10 min on top of base |
 
 The working distro (`VoiceStudio`) is always a **copy** of one of these
 (`wsl --import --vhd` copies the file), so breaking it costs nothing: reset and
@@ -77,7 +77,7 @@ MIOpen and hipBLASLt ship kernels for every GPU architecture.
 ```text
 G:\WSL\
   images\vs-rocm-base.vhdx       # layer 1
-  images\vs-0.5.6-ready.vhdx     # layer 2
+  images\vs-0.5.7-ready.vhdx     # layer 2
   VoiceStudio\                   # the live distro's disk (a copy)
   scripts\provision-base.sh      # builds layer 1
   scripts\provision-voicestudio.sh  # builds layer 2
@@ -91,7 +91,8 @@ G:\WSL\
    Adrenalin 26.1.1 or newer for WSL2. Reboot afterwards.
 2. Install or update WSL to **2.4 or newer** (`wsl --update`). That version is
    needed for `wsl --install --name/--location`, `--format vhd` exports and
-   `--set-sparse`. Check with `wsl --version`.
+   `--set-sparse` (WSL 2.5.6 and newer also require `--allow-unsafe` for it; see
+   the [sparse VHDX warning](#sparse-vhd-warning)). Check with `wsl --version`.
 3. Make sure `%UserProfile%\.wslconfig` gives WSL enough memory for the models
    (16 GB was used here).
 
@@ -213,12 +214,12 @@ Save as `G:\WSL\scripts\provision-voicestudio.sh`:
 
 ```bash
 #!/usr/bin/env bash
-# Layer 2: VoiceStudio v0.5.6 from source + PyTorch 2.8.0 for ROCm 7.2.4.
+# Layer 2: VoiceStudio v0.5.7 from source + PyTorch 2.8.0 for ROCm 7.2.4.
 # Run as the default user (vs) inside a distro imported from the base image.
 set -euxo pipefail
 source /etc/profile.d/rocm-wsl.sh
 
-VS_TAG=v0.5.6
+VS_TAG=v0.5.7
 VS_DIR="$HOME/VoiceStudio"
 ROCM_WHEELS=https://repo.radeon.com/rocm/manylinux/rocm-rel-7.2.4/
 
@@ -264,18 +265,21 @@ echo "VOICESTUDIO PROVISION OK"
 
 Notes on this script:
 
-- **Why `OMNIVOICE_TORCH_VARIANT=rocm` in the launcher.** In `v0.5.6`, that
-  variable makes `scripts/dev-backend.mjs` start uvicorn with `uv run --no-sync`.
-  Without it, every launch re-syncs the venv to `uv.lock` and puts the CUDA
-  torch back. The torch swap itself is done by hand above, because the
+- **Why the launcher never re-syncs.** From `v0.5.7`, `scripts/dev-backend.mjs`
+  always starts uvicorn with `uv run --no-sync`, so a launch keeps the ROCm
+  torch installed above instead of restoring the CUDA build from `uv.lock`
+  (in `v0.5.6` that needed `OMNIVOICE_TORCH_VARIANT=rocm`, which the launcher
+  still sets for older checkouts). The torch swap itself is done by hand above, because the
   built-in swap only accepts a PEP 503 index (`OMNIVOICE_TORCH_INDEX`), and
   `repo.radeon.com` is a `--find-links` page.
 - **Exact local versions are pinned.** `repo.radeon.com` carries two different
   `torch 2.8.0+rocm7.2.4` builds (`git6bea3e0b` and `gitd618db82`), and pinning
-  keeps the result reproducible. Use `python3.11` wheels: `v0.5.6`'s
+  keeps the result reproducible. Use `python3.11` wheels: `v0.5.7`'s
   `.python-version` is `3.11`, and uv downloads it.
-- **On current `main`, which is Electron-based,** `bun run dev:api` /
-  `dev:frontend` may differ. This guide was validated on the `v0.5.6` tag only.
+- **`bun run dev:frontend` starts the Electron web UI** on port 3901. The
+  community run validated this guide on `v0.5.6`, whose `dev:frontend` started
+  the retired web UI; the steps here target `v0.5.7`, the first release whose
+  `dev:frontend` is Electron's web entrypoint. Later tags use the same commands.
 
 Save `G:\WSL\scripts\verify-gpu.sh`:
 
@@ -298,6 +302,7 @@ if ok:
     for _ in range(20): a @ a
     torch.cuda.synchronize()
     print(f"matmul x20 fp16 4096: {time.time()-t:.3f}s  (~{20*2*4096**3/(time.time()-t)/1e12:.1f} TFLOPS)")
+raise SystemExit(0 if ok else 1)  # a missing GPU fails the check
 EOF
 ```
 
@@ -328,7 +333,7 @@ hard-linked files.
 ```powershell
 wsl -d VoiceStudio -- bash -lc 'export PATH=$HOME/.local/bin:$PATH; uv cache clean; rm -rf ~/.bun/install/cache; sudo fstrim -av'
 wsl --shutdown
-wsl --export VoiceStudio G:\WSL\images\vs-0.5.6-ready.vhdx --format vhd
+wsl --export VoiceStudio G:\WSL\images\vs-0.5.7-ready.vhdx --format vhd
 ```
 
 ## Day to day: `vs-wsl.ps1`
@@ -339,7 +344,7 @@ Save as `G:\WSL\scripts\vs-wsl.ps1`:
 # VoiceStudio-on-WSL2 image manager (ROCm 7.2.4 + librocdxg).
 #
 #   .\vs-wsl.ps1 reset            # wipe "VoiceStudio" and re-import the ready image (fast)
-#   .\vs-wsl.ps1 reset -From base # re-import the ROCm-only base and reinstall VoiceStudio v0.5.6
+#   .\vs-wsl.ps1 reset -From base # re-import the ROCm-only base and reinstall VoiceStudio v0.5.7
 #   .\vs-wsl.ps1 start            # launch VoiceStudio, then open http://127.0.0.1:3901
 #   .\vs-wsl.ps1 save             # snapshot the current "VoiceStudio" as the new ready image
 #   .\vs-wsl.ps1 check            # GPU check (rocminfo + torch)
@@ -350,7 +355,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $Root    = Split-Path $PSScriptRoot          # the folder above scripts\, e.g. G:\WSL
 $Distro  = 'VoiceStudio'
-$Images  = @{ base = "$Root\images\vs-rocm-base.vhdx"; ready = "$Root\images\vs-0.5.6-ready.vhdx" }
+$Images  = @{ base = "$Root\images\vs-rocm-base.vhdx"; ready = "$Root\images\vs-0.5.7-ready.vhdx" }
 $Install = "$Root\$Distro"
 # Windows path of scripts\ as seen from WSL, e.g. G:\WSL\scripts -> /mnt/g/WSL/scripts
 $Scripts = '/mnt/' + $PSScriptRoot.Substring(0, 1).ToLower() + ($PSScriptRoot.Substring(2) -replace '\\', '/')
@@ -383,9 +388,11 @@ switch ($Action) {
         if (-not (Test-Path $Images[$From])) { throw "missing image $($Images[$From])" }
         if (((wsl -l -q) -replace "`0", '') -contains $Distro) { wsl --unregister $Distro }
         wsl --import $Distro $Install $Images[$From] --vhd   # copies; the image stays untouched
+        if ($LASTEXITCODE -ne 0) { throw "import of $($Images[$From]) failed" }
         # Sparse VHDX gives freed space back to the host drive (run `sudo fstrim -av` inside after big deletes).
         # WSL calls sparse mode unsafe (possible disk corruption): the images stay the known-good copy.
         wsl --manage $Distro --set-sparse true --allow-unsafe
+        if ($LASTEXITCODE -ne 0) { throw "enabling sparse mode on $Distro failed" }
         if ($From -eq 'base') {
             wsl -d $Distro -- bash -lc "sed 's/\r$//' $Scripts/provision-voicestudio.sh | bash"
         }
