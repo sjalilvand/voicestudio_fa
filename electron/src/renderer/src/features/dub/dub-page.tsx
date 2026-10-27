@@ -1423,42 +1423,7 @@ export function DubPage() {
                           <WandSparklesIcon className="size-4" />
                           {t('dub.clean_up')}
                         </Menu.Item>
-                        <Menu.Item
-                          disabled={!session.jobId}
-                          onClick={() =>
-                            void mirrorDubSourceDelivery()
-                              .then((outcome) => {
-                                if (!outcome) {
-                                  toast.error(
-                                    t('dub_workflow.mirror_failed', {
-                                      message: dubSession.state.error || t('common.error'),
-                                    }),
-                                  );
-                                } else if (outcome.applied > 0) {
-                                  toast.success(
-                                    t('dub_workflow.mirror_applied', {
-                                      count: outcome.applied,
-                                    }),
-                                  );
-                                } else if (outcome.measured === 0) {
-                                  toast.info(t('dub_workflow.mirror_insufficient'));
-                                } else {
-                                  toast.info(t('dub_workflow.mirror_none'));
-                                }
-                              })
-                              .catch((error) =>
-                                toast.error(
-                                  t('dub_workflow.mirror_failed', {
-                                    message: describeError(error),
-                                  }),
-                                ),
-                              )
-                          }
-                          className="flex cursor-default items-center gap-2 rounded-md px-3 py-2 text-sm outline-none data-disabled:opacity-40 data-highlighted:bg-accent"
-                        >
-                          <AudioWaveformIcon className="size-4" />
-                          {t('dub.mirror_delivery')}
-                        </Menu.Item>
+                        {/* CLEAN-ROOM (spec W7-frontend §6): mirror-source-delivery menu item and its outcome toasts go here. */}
                         <Menu.Item
                           disabled={!canRestoreOriginal}
                           onClick={restoreDubSegments}

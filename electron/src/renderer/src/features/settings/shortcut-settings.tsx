@@ -138,35 +138,7 @@ export function ShortcutSettings() {
             </Button>
           ))}
         </SettingsRow>
-        <SettingsRow
-          id="dictation-prompt"
-          title={t('voicePanel.prompt_label')}
-          description={t('voicePanel.prompt_sub')}
-        >
-          <Textarea
-            aria-labelledby="dictation-prompt"
-            className="@2xl:w-80"
-            maxLength={1000}
-            value={hint}
-            // Frozen during a save so keystrokes are not lost when the draft resets.
-            disabled={busy || !prefs.data}
-            onChange={({ target }) =>
-              setHintDraft(target.value === storedHint ? null : target.value)
-            }
-          />
-          <Button
-            size="sm"
-            disabled={busy || !prefs.data || hint.trim() === storedHint}
-            onClick={() => void storeHint()}
-          >
-            {t('common.save')}
-          </Button>
-          {hintSaveFailed && (
-            <p role="alert" className="text-xs text-destructive">
-              {t('common.error')}
-            </p>
-          )}
-        </SettingsRow>
+        {/* CLEAN-ROOM (spec W7-frontend §7): dictation vocabulary-hint (prompt) settings row goes here. */}
         {api && (
           <>
             <SettingsRow id="dictation-shortcut" title={t('capture.active_shortcut')}>

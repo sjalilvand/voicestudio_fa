@@ -74,66 +74,9 @@ export function voiceLabel(summary?: RenderSummary): string {
     .join(', ');
 }
 
-/** Summarise voice, speed, engine, and length on one line. */
-export function renderRecipe(render: RenderRecord): string {
-  return [
-    voiceLabel(render.summary),
-    speedLabel(render.summary?.speeds),
-    render.summary?.engine,
-    render.duration_s ? clock(render.duration_s) : '',
-  ]
-    .filter(Boolean)
-    .join(' · ');
-}
+// CLEAN-ROOM (spec W7-frontend §3): exported renderRecipe(render) one-line summary goes here.
 
-export function RenderDetails({ render }: { render: RenderRecord }) {
-  const { t } = useTranslation();
-  const summary = render.summary;
-  if (!summary) {
-    return <p className="mt-2 text-xs text-muted-foreground">{t('projects.render_no_details')}</p>;
-  }
-
-  const options =
-    summary.options && typeof summary.options === 'object' && !Array.isArray(summary.options)
-      ? summary.options
-      : {};
-  const settings = Object.entries(options)
-    .filter(([key]) => Object.prototype.hasOwnProperty.call(OPTION_LABELS, key))
-    .map(([key, value]) => {
-      const shown =
-        typeof value === 'boolean'
-          ? t(value ? 'pronunciation.enabled' : 'supportPlans.disabled')
-          : String(value);
-      return `${t(OPTION_LABELS[key])} ${shown}`;
-    })
-    .join(' · ');
-  const size = t('projects.render_size', {
-    chapters: render.chapters ?? summary.chapter_titles?.length ?? 0,
-    lines: summary.lines ?? 0,
-    words: summary.words ?? 0,
-  });
-  const candidates = [
-    { term: t('projects.render_voice'), detail: voiceLabel(summary) },
-    { term: t('projects.render_speed'), detail: speedLabel(summary.speeds) },
-    { term: t('projects.render_engine'), detail: summary.engine ?? '' },
-    { term: t('projects.render_language'), detail: summary.language ?? '' },
-    { term: t('projects.render_format'), detail: summary.format?.toUpperCase() ?? '' },
-    { term: t('projects.render_size_label'), detail: size },
-    { term: t('projects.render_settings'), detail: settings },
-  ];
-  const rows = candidates.filter(({ detail }) => detail !== '');
-
-  return (
-    <dl className="mt-2 grid grid-cols-[max-content_minmax(0,1fr)] items-baseline gap-x-3 gap-y-1 text-xs">
-      {rows.map(({ term, detail }) => (
-        <Fragment key={term}>
-          <dt className="whitespace-nowrap text-muted-foreground">{term}</dt>
-          <dd className="min-w-0 [overflow-wrap:anywhere]">{detail}</dd>
-        </Fragment>
-      ))}
-    </dl>
-  );
-}
+// CLEAN-ROOM (spec W7-frontend §4): exported RenderDetails component goes here.
 
 /** Collapsible "how it was made" block for a Projects row. */
 export function RenderDisclosure({ render }: { render: RenderRecord }) {

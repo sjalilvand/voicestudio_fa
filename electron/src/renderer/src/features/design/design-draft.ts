@@ -246,16 +246,7 @@ export function pickDetail(
   };
 }
 
-/** Build the instruction string sent with a design take. */
-export function designInstruct(
-  draft: Pick<DesignDraft, 'attrs' | 'description' | 'picks'>,
-  vocabulary: InstructVocabulary,
-): string {
-  if (vocabulary !== 'freeform') return buildDesignInstruct(draft.attrs, '').instruct;
-  return [draft.description.trim(), buildDesignInstruct(pickValues(draft.picks), '').instruct]
-    .filter(Boolean)
-    .join(', ');
-}
+// CLEAN-ROOM (spec W7-frontend §5): exported designInstruct(draft, vocabulary) goes here.
 
 /** The part of the draft that is stored with the take. */
 export function designRecipe(draft: Pick<DesignDraft, 'description' | 'picks'>): DesignRecipe {
