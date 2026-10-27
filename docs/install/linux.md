@@ -361,7 +361,8 @@ Once a ROCm build of PyTorch is in the venv, detection is automatic —
 installed wheel's architecture list. The target comes from that list, not from
 a fixed table: the closest architecture of the same generation and the same or
 an older revision (gfx1152 → gfx1100, gfx1035 → gfx1030, gfx1201 → gfx1200 on
-a wheel that only ships gfx1200). It never crosses a generation, so an RDNA4
+a wheel that only ships gfx1200). It never crosses a generation, nor RDNA1/RDNA2
+(gfx101x/gfx103x) or Vega/CDNA within gfx9, so an RDNA4
 card on a wheel without any gfx12 target gets no override and a clear message. Relaunch and **Settings → Performance → GPU acceleration** should
 report the GPU device instead of `cpu`. Verify the wheel sees your card:
 

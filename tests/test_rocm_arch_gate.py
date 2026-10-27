@@ -56,7 +56,11 @@ def _no_hsa_override(monkeypatch):
     # attribute, and this fixture's teardown runs before monkeypatch's undo.
     clear = device_caps.detect_host_caps.cache_clear
     monkeypatch.setattr("sys.platform", "linux")  # Linux HSA remapping contract.
-    monkeypatch.delenv("HSA_OVERRIDE_GFX_VERSION", raising=False)
+    # _configure_rocm_if_needed writes os.environ directly. Registering the
+    # variable first makes teardown remove whatever a test leaves behind;
+    # delenv on an absent variable records no undo.
+    monkeypatch.setenv("HSA_OVERRIDE_GFX_VERSION", "")
+    monkeypatch.delenv("HSA_OVERRIDE_GFX_VERSION")
     clear()
     yield
     clear()
@@ -158,6 +162,9 @@ def test_every_derived_target_has_a_valid_hsa_form():
     ("gfx950", ["gfx900", "gfx942"], None),
     ("gfx906", ["gfx908"], None),
     ("gfx909", ["gfx900", "gfx908"], "gfx900"),
+    # gfx10 is RDNA1 (101x) and RDNA2 (103x): no remap across them.
+    ("gfx1030", ["gfx1010", "gfx1012"], None),
+    ("gfx1036", ["gfx1010", "gfx1030"], "gfx1030"),
 ])
 def test_rocm_override_target_is_derived_from_the_wheel(gfx, archs, expected):
     assert device_caps.rocm_override_target(gfx, archs) == expected

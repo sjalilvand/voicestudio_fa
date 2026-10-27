@@ -122,6 +122,8 @@ def rocm_override_target(gfx: str, arch_list) -> str | None:
     * never across an ISA generation — gfx12 (RDNA4) cannot run gfx11 kernels;
     * within gfx9, Vega only — CDNA parts (gfx908, gfx90a, gfx942) never remap
       onto Vega, and Vega never onto CDNA;
+    * within gfx10, the same minor revision only — RDNA1 (gfx101x) and RDNA2
+      (gfx103x) are different ISAs;
     * never onto a NEWER minor revision — gfx1012 (RDNA1) is not gfx1030
       (RDNA2), but gfx1151 (RDNA3.5) does run gfx1100 (RDNA3) code;
     * the target must be expressible as an HSA version (digits only);
@@ -147,6 +149,8 @@ def rocm_override_target(gfx: str, arch_list) -> str | None:
             continue
         t_major, t_minor, t_step = parts
         if major == "9" and _normalize_arch(arch) not in _GFX9_GENERIC:
+            continue
+        if major == "10" and t_minor != minor:
             continue
         if t_major == major and int(t_minor) <= int(minor):
             candidates.append(((t_minor != minor, int(t_minor), int(t_step)), arch))
