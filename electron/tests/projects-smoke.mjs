@@ -118,7 +118,7 @@ try {
   });
   await page.goto((process.env.VOICESTUDIO_UI_URL || 'http://localhost:3902') + '/#/projects');
   const filters = page.locator('[data-slot=secondary-sidebar]');
-  await filters.getByRole('button', { name: 'Voice Profiles 1', exact: true }).click();
+  await filters.getByRole('button', { name: 'Voice profiles 1', exact: true }).click();
   await page.locator('main').getByRole('heading', { name: 'Library voice', exact: true }).waitFor();
   await filters.getByRole('button', { name: 'Transcripts 1', exact: true }).click();
   await page.getByText('Fixture transcript', { exact: true }).waitFor();
@@ -174,7 +174,7 @@ try {
   await page
     .getByRole('button', { name: 'Library renamed', exact: true })
     .waitFor({ state: 'detached' });
-  await filters.getByRole('button', { name: 'Voice Profiles 1', exact: true }).click();
+  await filters.getByRole('button', { name: 'Voice profiles 1', exact: true }).click();
   await page.locator('main').getByRole('heading', { name: 'Library voice', exact: true }).waitFor();
   assert.equal(row, null);
   assert.deepEqual(errors, []);

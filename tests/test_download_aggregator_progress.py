@@ -193,3 +193,23 @@ def test_each_tracked_bar_gets_its_own_key():
     assert len({first._bar_key, second._bar_key, third._bar_key}) == 3, (
         f"two bars shared a key: {[first._bar_key, second._bar_key, third._bar_key]}"
     )
+
+
+def test_closing_a_bar_with_a_float_total_still_credits_it_complete():
+    """tqdm accepts float (and numpy) totals; close() must still report the
+    bar complete, or its bytes stay unfinished in the overall progress."""
+    from utils import hf_progress
+
+    seen = []
+    previous_sink = hf_progress._byte_sink
+    hf_progress.set_byte_sink(lambda repo_id, key, unit, done, total, complete: seen.append((done, total, complete)))
+    token = hf_progress.current_repo_id.set("org/model")
+    try:
+        hf_progress.install()
+        bar = hf_progress.tracked_tqdm_class()(total=12.0, unit="B")
+        bar.close()
+    finally:
+        hf_progress.current_repo_id.reset(token)
+        hf_progress.set_byte_sink(previous_sink)
+
+    assert (12, 12, True) in seen

@@ -68,7 +68,7 @@ import {
   detachDubProject,
 } from '../dub/dub-session';
 import type { DubProject } from './project-format';
-import { RenderDetails, renderRecipe, type RenderRecord } from './render-details';
+import { RenderDisclosure, renderRecipe, type RenderRecord } from './render-details';
 
 import {
   LIBRARY_KINDS,
@@ -367,7 +367,6 @@ export function ProjectsPage() {
         id: render.job_id,
         name: render.title || render.output,
         kind: render.type === 'story' ? 'stories' : 'audiobooks',
-        // Voice · speed · engine · length: what tells two renders of a book apart.
         subtitle: renderRecipe(render),
         updatedAt: timestamp(render.created_at),
         render,
@@ -710,16 +709,7 @@ export function ProjectsPage() {
                             </span>
                           )}
                         </p>
-                        {row.render && (
-                          <details className="mt-1.5">
-                            <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
-                              {t('projects.render_details')}
-                            </summary>
-                            <div className="mt-2">
-                              <RenderDetails render={row.render} />
-                            </div>
-                          </details>
-                        )}
+                        {row.render ? <RenderDisclosure render={row.render} /> : null}
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">

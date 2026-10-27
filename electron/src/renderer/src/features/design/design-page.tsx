@@ -80,15 +80,14 @@ export function DesignPage() {
   const [name, setName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [startingOpen, setStartingOpen] = useState(true);
-  const mapper = useDescription((mapped, described) =>
-    // A mapping that lands after the description changed (edited, or the
-    // recipe was replaced from another view) no longer describes this voice.
-    setDraft((current) =>
-      current.description.trim() === described
-        ? applyDescription(current, mapped, described)
-        : current,
-    ),
-  );
+  // Results are keyed by the text they were computed for; if the text has since
+  // moved on (typed over, or swapped out elsewhere) the result is stale: ignore it.
+  const mapper = useDescription((mapped, described) => {
+    setDraft((current) => {
+      if (current.description.trim() !== described) return current;
+      return applyDescription(current, mapped, described);
+    });
+  });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const generation = useGenerateClone();
@@ -122,17 +121,21 @@ export function DesignPage() {
     return () => clearTimeout(timer);
   }, [draft]);
   const change = (category: string, value: string) => {
-    // No mapper.cancel(): a mapping still in flight lands under this pick.
-    const { clearedCategory } = pickDetail(draft, category, value);
+    // A running mapping is left alone; its result is merged beneath this pick.
     setDraft((current) => pickDetail(current, category, value).draft);
-    if (clearedCategory) {
-      toast(
-        t('clone.vd_exclusive_cleared', {
-          cleared: t(`clone.cat_${clearedCategory}`),
-        }),
-      );
-    }
+    const reset = pickDetail(draft, category, value).clearedCategory;
+    if (reset === null) return;
+    toast.info(t('clone.vd_exclusive_cleared', { cleared: t('clone.cat_' + reset) }));
   };
+  const descriptionStatus = freeform
+    ? t('clone.describe_freeform')
+    : mapper.pending
+      ? t('preferences.loading')
+      : !mapper.matched
+        ? t('clone.describe_no_match')
+        : mapper.unmatched.length
+          ? t('clone.describe_unmatched', { items: mapper.unmatched.join(', ') })
+          : t('clone.describe_hint');
   const save = async () => {
     if (!name.trim() || saving) return;
     setSaving(true);
@@ -199,10 +202,8 @@ export function DesignPage() {
                   size="icon-xs"
                   title={t('clone.reset_to_description')}
                   aria-label={t('clone.reset_to_description')}
-                  className="text-muted-foreground hover:text-foreground"
                   disabled={generation.isGenerating || mapper.pending}
                   onClick={() => {
-                    // Reset drops the picks so the description alone decides again.
                     setDraft((current) => ({ ...current, picks: {}, profileId: null }));
                     mapper.reset(description);
                   }}
@@ -213,37 +214,35 @@ export function DesignPage() {
             </div>
             <Textarea
               id="voice-description"
+              rows={3}
               maxLength={2000}
+              className="min-h-20 resize-y text-sm"
               disabled={generation.isGenerating}
-              className="min-h-20 resize-y bg-background/40 leading-5 dark:bg-background/30"
               value={description}
               placeholder={t('clone.describe_placeholder')}
               onChange={(event) => {
                 const value = event.target.value;
                 setDraft((current) => editVoice(current, { description: value }));
-                // Mapping runs for every engine so the details stay in step
-                // with the description when switching back to OmniVoice.
+                // Always map, even for a free-form engine, so the details stay
+                // in step for when the user switches back to OmniVoice.
                 mapper.describe(value);
               }}
             />
-            <p role="status" className="text-xs text-muted-foreground">
-              {freeform
-                ? t('clone.describe_freeform')
-                : mapper.pending
-                  ? t('preferences.loading')
-                  : !mapper.matched
-                    ? t('clone.describe_no_match')
-                    : mapper.unmatched.length
-                      ? t('clone.describe_unmatched', {
-                          items: mapper.unmatched.join(', '),
-                        })
-                      : t('clone.describe_hint')}
-            </p>
-            {!freeform && mapper.failed && (
-              <Button variant="ghost" size="xs" onClick={() => mapper.describe(description)}>
-                {t('backend.retry')}
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              <p role="status" className="min-w-0 flex-1 text-xs text-muted-foreground">
+                {descriptionStatus}
+              </p>
+              {!freeform && mapper.failed && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  onClick={() => mapper.describe(description)}
+                >
+                  {t('backend.retry')}
+                </Button>
+              )}
+            </div>
           </section>
           <DesignDisclosure
             icon={BookmarkIcon}
@@ -552,7 +551,8 @@ export function DesignPage() {
           <DesignComposer
             generation={generation}
             blocker={designBlocker}
-            // Free-form engines take the description itself, not its mapping.
+            // Free-form engines take the description itself, so a mapping still
+            // in flight does not hold them back.
             ready={Boolean(draft.text.trim()) && (freeform || !mapper.pending)}
             engineName={activeEngine?.display_name ?? ''}
             onSynthesize={() =>

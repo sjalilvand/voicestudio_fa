@@ -107,73 +107,87 @@ def test_tts_sherpa_available_when_model_env_points_at_model(monkeypatch, tmp_pa
     assert ok is True
 
 
-def _piper_voice_dir(root, name="tr_TR-dfki-medium"):
-    # Layout of every vits-piper-* sherpa-onnx release: the .onnx keeps the
-    # voice name and espeak-ng-data is the phonemizer data dir.
-    (root / f"{name}.onnx").write_bytes(b"")
-    (root / f"{name}.onnx.json").write_text("{}")
-    (root / "tokens.txt").write_text("_ 0\n")
-    (root / "espeak-ng-data").mkdir()
-    return root
+def _recording_sherpa_module(captured):
+    module = types.ModuleType("sherpa_onnx")
+
+    def remember_vits(**kwargs):
+        captured.update(kwargs)
+        return kwargs
+
+    module.OfflineTtsVitsModelConfig = remember_vits
+    module.OfflineTtsModelConfig = lambda **kwargs: kwargs
+    module.OfflineTtsConfig = lambda **kwargs: kwargs
+    module.OfflineTts = lambda config: types.SimpleNamespace(config=config, sample_rate=22050)
+    return module
 
 
-def test_tts_sherpa_available_for_piper_voice_dir(monkeypatch, tmp_path):
-    # Piper voices (the only sherpa-onnx option for e.g. Turkish) ship
-    # <voice>.onnx, not model.onnx; the engine used to reject them.
+def test_tts_sherpa_accepts_voice_named_piper_model(monkeypatch, tmp_path):
     monkeypatch.setitem(sys.modules, "sherpa_onnx", types.ModuleType("sherpa_onnx"))
-    monkeypatch.setenv("OMNIVOICE_SHERPA_MODEL", str(_piper_voice_dir(tmp_path)))
-    ok, msg = tts_backend.SherpaOnnxBackend.is_available()
-    assert ok is True, msg
-
-
-def test_tts_sherpa_rejects_ambiguous_onnx_dir(monkeypatch, tmp_path):
-    monkeypatch.setitem(sys.modules, "sherpa_onnx", types.ModuleType("sherpa_onnx"))
-    (tmp_path / "a.onnx").write_bytes(b"")
-    (tmp_path / "b.onnx").write_bytes(b"")
+    (tmp_path / "en_US-voice.onnx").write_bytes(b"")
+    (tmp_path / "en_US-voice.onnx.json").write_text("{}", encoding="utf-8")
+    (tmp_path / "tokens.txt").write_text("tokens", encoding="utf-8")
+    (tmp_path / "espeak-ng-data").mkdir()
     monkeypatch.setenv("OMNIVOICE_SHERPA_MODEL", str(tmp_path))
-    ok, msg = tts_backend.SherpaOnnxBackend.is_available()
+
+    ok, _reason = tts_backend.SherpaOnnxBackend.is_available()
+
+    assert ok is True
+
+
+def test_tts_sherpa_rejects_ambiguous_onnx_directory(monkeypatch, tmp_path):
+    monkeypatch.setitem(sys.modules, "sherpa_onnx", types.ModuleType("sherpa_onnx"))
+    (tmp_path / "first.onnx").write_bytes(b"")
+    (tmp_path / "second.ONNX").write_bytes(b"")
+    monkeypatch.setenv("OMNIVOICE_SHERPA_MODEL", str(tmp_path))
+
+    ok, reason = tts_backend.SherpaOnnxBackend.is_available()
+
     assert ok is False
-    assert "model.onnx" in msg
+    assert "model.onnx" in reason
 
 
-def test_tts_sherpa_prefers_model_onnx(tmp_path):
-    (tmp_path / "model.onnx").write_bytes(b"")
-    (tmp_path / "other.onnx").write_bytes(b"")
-    assert tts_backend._sherpa_model_file(str(tmp_path)) == str(tmp_path / "model.onnx")
+def test_tts_sherpa_resolver_prioritizes_conventional_filename(tmp_path):
+    expected = tmp_path / "model.onnx"
+    expected.write_bytes(b"")
+    (tmp_path / "alternate.onnx").write_bytes(b"")
+
+    assert tts_backend._sherpa_model_file(str(tmp_path)) == str(expected)
 
 
-def test_tts_sherpa_load_passes_piper_and_lexicon_files(monkeypatch, tmp_path):
-    # The VITS config must carry espeak-ng-data (Piper) and lexicon.txt
-    # (lexicon models) when the release ships them; sherpa-onnx cannot
-    # tokenize text without them. dict/ is never passed (unused for VITS).
-    seen = {}
-    fake = types.ModuleType("sherpa_onnx")
-    fake.OfflineTtsVitsModelConfig = lambda **kw: seen.setdefault("vits", kw)
-    fake.OfflineTtsModelConfig = lambda **kw: kw
-    fake.OfflineTtsConfig = lambda **kw: kw
-    fake.OfflineTts = lambda cfg: object()
-    monkeypatch.setitem(sys.modules, "sherpa_onnx", fake)
+def test_tts_sherpa_loads_piper_phonemizer_data(monkeypatch, tmp_path):
+    captured = {}
+    monkeypatch.setitem(sys.modules, "sherpa_onnx", _recording_sherpa_module(captured))
+    voice = tmp_path / "sample-voice.onnx"
+    voice.write_bytes(b"")
+    (tmp_path / "tokens.txt").write_text("tokens", encoding="utf-8")
+    data_dir = tmp_path / "espeak-ng-data"
+    data_dir.mkdir()
+    monkeypatch.setenv("OMNIVOICE_SHERPA_MODEL", str(tmp_path))
 
-    (tmp_path / "piper").mkdir()
-    piper = _piper_voice_dir(tmp_path / "piper")
-    monkeypatch.setenv("OMNIVOICE_SHERPA_MODEL", str(piper))
     tts_backend.SherpaOnnxBackend()._ensure_loaded()
-    assert seen["vits"]["model"] == str(piper / "tr_TR-dfki-medium.onnx")
-    assert seen["vits"]["data_dir"] == str(piper / "espeak-ng-data")
-    assert "lexicon" not in seen["vits"]
 
-    lex = tmp_path / "melo"
-    lex.mkdir()
-    (lex / "model.onnx").write_bytes(b"")
-    (lex / "tokens.txt").write_text("_ 0\n")
-    (lex / "lexicon.txt").write_text("a a\n")
-    (lex / "dict").mkdir()
-    seen.clear()
-    monkeypatch.setenv("OMNIVOICE_SHERPA_MODEL", str(lex))
+    assert captured["model"] == str(voice)
+    assert captured["data_dir"] == str(data_dir)
+    assert "lexicon" not in captured
+
+
+def test_tts_sherpa_loads_lexicon_without_obsolete_dictionary(monkeypatch, tmp_path):
+    captured = {}
+    monkeypatch.setitem(sys.modules, "sherpa_onnx", _recording_sherpa_module(captured))
+    model = tmp_path / "model.onnx"
+    model.write_bytes(b"")
+    (tmp_path / "tokens.txt").write_text("tokens", encoding="utf-8")
+    lexicon = tmp_path / "lexicon.txt"
+    lexicon.write_text("word phones", encoding="utf-8")
+    (tmp_path / "dict").mkdir()
+    monkeypatch.setenv("OMNIVOICE_SHERPA_MODEL", str(tmp_path))
+
     tts_backend.SherpaOnnxBackend()._ensure_loaded()
-    assert seen["vits"]["lexicon"] == str(lex / "lexicon.txt")
-    assert "dict_dir" not in seen["vits"]
-    assert "data_dir" not in seen["vits"]
+
+    assert captured["model"] == str(model)
+    assert captured["lexicon"] == str(lexicon)
+    assert "dict_dir" not in captured
+    assert "data_dir" not in captured
 
 
 def test_tts_sherpa_setup_snippet_registered():
@@ -623,25 +637,27 @@ def test_mlx_audio_generate_omits_ref_text_without_ref_audio():
     assert "ref_text" not in captured
 
 
-def test_mlx_audio_generate_design_path_unaffected_without_any_ref():
-    # Absorbed from community PR #1015 (MahdiHedhli) — the design/instruct
-    # path (no ref_audio, no ref_text at all) must stay untouched by the
-    # ref_text forwarding fix; neither kwarg may leak into the model call.
-    pytest.importorskip("mlx_audio", reason="mlx-audio is Apple-Silicon-only")
-    backend = tts_backend.MLXAudioBackend()
-    backend._ensure_loaded = lambda: None
+def test_mlx_audio_instruct_only_call_leaves_reference_args_out():
+    pytest.importorskip("mlx_audio", reason="needs the mlx_audio package (macOS arm64 only)")
+    import numpy as np
 
-    captured = {}
+    class RecordingModel:
+        def __init__(self):
+            self.kwargs = None
 
-    def _fake_generate(**kw):
-        captured.update(kw)
-        return iter([types.SimpleNamespace(audio=__import__("numpy").zeros(4))])
+        def generate(self, **kwargs):
+            self.kwargs = kwargs
+            yield types.SimpleNamespace(audio=np.ones(8, dtype=np.float32))
 
-    backend._model = types.SimpleNamespace(generate=_fake_generate)
-    backend.generate("hello")
+    engine = tts_backend.MLXAudioBackend()
+    engine._ensure_loaded = lambda: None
+    engine._model = RecordingModel()
 
-    assert "ref_text" not in captured
-    assert "ref_audio" not in captured
+    engine.generate("a line of speech without any cloning inputs")
+
+    assert engine._model.kwargs is not None
+    forbidden = {"ref_text", "ref_audio"} & set(engine._model.kwargs)
+    assert not forbidden
 
 
 @pytest.mark.parametrize("language", ["Auto", "auto", " AUTO ", " ", "", None])

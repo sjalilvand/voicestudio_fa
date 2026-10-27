@@ -60,7 +60,7 @@ export interface DesignGenerateInput {
   seed?: number;
   language?: string;
   profileId?: string | null;
-  /** Stored with the take so reopening it rebuilds the same draft (#2389). */
+  /** Draft to record alongside the take (display only; the audio ignores it). */
   recipe?: DesignRecipe;
 }
 
@@ -108,7 +108,7 @@ export interface UseGenerateClone {
    */
   designBlockerFor(profile: Profile | null | undefined): DesignBlocker;
   cloneBlocker: CloneBlocker;
-  /** How the active engine reads `instruct`: OmniVoice tags or as written (#2389). */
+  /** The active engine's reading of `instruct`; the OmniVoice tag list unless it says otherwise. */
   instructVocabulary: InstructVocabulary;
 }
 
@@ -345,13 +345,11 @@ function useGenerateController(): UseGenerateClone {
         // engines whose instruct steers a clone receive it; others never see it.
         const direction = !design && sendsDirection ? settings.direction.trim() : '';
         const free = [style.trim(), direction].filter(Boolean).join(', ');
-        // Only OmniVoice's closed tag set needs reducing; other engines read
-        // the description natively and would lose whatever the sanitizer drops.
-        const instruct = !free.trim()
-          ? ''
-          : instructVocabulary === 'freeform'
-            ? free.trim()
-            : announceInstructWarnings(free);
+        // Only tag-list engines need the text filtered (with warnings); a
+        // free-form engine reads whatever was written.
+        const wording = free.trim();
+        let instruct = wording;
+        if (wording && instructVocabulary !== 'freeform') instruct = announceInstructWarnings(free);
         const input = {
           text: design?.text ?? settings.text,
           seed: design?.seed,

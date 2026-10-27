@@ -302,29 +302,29 @@ class SpeechRequest(BaseModel):
     duration: Optional[float] = Field(
         default=None,
         gt=0,
-        description="VoiceStudio extension: target output duration in seconds.",
+        description="Aim for this many seconds of audio (seconds, must be positive). Outside the OpenAI spec; used by VoiceStudio engines that can honour it.",
     )
     seed: Optional[int] = Field(
         default=None,
-        description="VoiceStudio extension: deterministic sampling seed.",
+        description="Fixes the random seed so the same request can be reproduced. Outside the OpenAI spec; VoiceStudio only.",
     )
     denoise: bool = Field(
         default=True,
-        description="VoiceStudio extension: prepend denoise control when supported.",
+        description="Set false to skip the denoise step on engines that offer one. Outside the OpenAI spec; VoiceStudio only.",
     )
     preprocess_prompt: bool = Field(
         default=True,
-        description="VoiceStudio extension: trim/preprocess reference prompt when supported.",
+        description="Set false to use the reference clip untouched instead of preprocessing it, where the engine supports that. Outside the OpenAI spec; VoiceStudio only.",
     )
     chunk_duration: Optional[float] = Field(
         default=None,
         ge=0,
-        description="OmniVoice GGUF extension: long-form internal chunk duration.",
+        description="Seconds of speech per internal chunk for long texts; read by the OmniVoice GGUF engine only. Outside the OpenAI spec.",
     )
     chunk_threshold: Optional[float] = Field(
         default=None,
         ge=0,
-        description="OmniVoice GGUF extension: long-form internal chunk threshold.",
+        description="Length above which the OmniVoice GGUF engine starts splitting long texts into chunks. Outside the OpenAI spec.",
     )
     # #1014: these two were silently DISCARDED before (pydantic ignores
     # undeclared fields) — a 200 OK that quietly dropped the caller's quality
@@ -592,12 +592,10 @@ def _run_tts(backend, text: str, kw: dict):
     # caller asked for an exact `duration`, which a trim would shorten.
     if not kw.get("duration") and torch.is_tensor(wav):
         wav = trim_speech_padding(wav, sr)
-    # Engines that already emit mastered, studio-grade audio (e.g. VoxCPM2's
-    # native 48 kHz) opt out of apply_mastering via `applies_own_mastering`.
-    # That chain's highpass + Compressor is tuned for VoiceStudio's 24 kHz clone
-    # output; applied to a studio engine it adds an audible level pump that
-    # degrades the very output we want clean. Loudness normalisation still
-    # runs — it's a benign peak scale, not dynamics.
+    # Finished studio engines, such as VoxCPM2's native 48 kHz output, declare
+    # that they master themselves.  The shared high-pass/compressor was tuned
+    # for 24 kHz cloned audio and can make studio output pump audibly.  Peak-only
+    # loudness normalisation below remains safe and applies to every engine.
     if not getattr(backend, "applies_own_mastering", False):
         wav = apply_mastering(wav, sample_rate=sr)
     wav = normalize_audio(wav, target_dBFS=-2.0)
@@ -680,14 +678,10 @@ async def create_speech(req: SpeechRequest):
         "denoise": req.denoise,
         "preprocess_prompt": req.preprocess_prompt,
     }
-    if req.duration is not None:
-        kw["duration"] = req.duration
-    if req.seed is not None:
-        kw["seed"] = req.seed
-    if req.chunk_duration is not None:
-        kw["chunk_duration"] = req.chunk_duration
-    if req.chunk_threshold is not None:
-        kw["chunk_threshold"] = req.chunk_threshold
+    for opt in ("duration", "seed", "chunk_duration", "chunk_threshold"):
+        given = getattr(req, opt)
+        if given is not None:
+            kw[opt] = given
     if req.num_step is not None:
         kw["num_step"] = req.num_step
     if req.guidance_scale is not None:
@@ -722,6 +716,7 @@ async def create_speech(req: SpeechRequest):
                 stored_instruct = profile_instruct(row, backend.id)
                 if stored_instruct:
                     kw["instruct"] = stored_instruct
+            # A profile's remembered seed keeps repeat requests for it reproducible.
             if req.seed is None and row["seed"] is not None:
                 kw["seed"] = row["seed"]
         else:
@@ -896,8 +891,7 @@ def _is_asr_engine_id(model: Optional[str]) -> bool:
 
 
 def _backend_request_kwargs(backend, options: dict) -> dict:
-    """The subset of OpenAI-derived decode options this backend's
-    ``transcribe()`` declares (shared with dictation's vocabulary prompt)."""
+    """Decode options from the request that this backend's ``transcribe`` accepts."""
     from services.asr_backend import transcribe_request_kwargs
     return transcribe_request_kwargs(backend, options)
 

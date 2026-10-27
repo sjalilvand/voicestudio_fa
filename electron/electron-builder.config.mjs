@@ -8,6 +8,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { packageNativeHelper } from './native-helper-build.mjs';
+import { finalizeOmnivoiceTts, omnivoiceTtsResources, signMac } from './omnivoice-tts-bundle.mjs';
 import { repairSnapArtifacts } from './snap-template-payload.mjs';
 import { APP_ID, PRODUCT_NAME } from '../config/app-config.mjs';
 import { DISTRIBUTION_PROFILE, DISTRIBUTION_TARGET } from '../config/distributions.mjs';
@@ -111,6 +112,8 @@ const bundledUvResources =
   uvSource && existsSync(uvSource) && statSync(uvSource).size > 0
     ? [{ from: uvSource, to: `tools/uv${uvExtension}` }]
     : [];
+// OmniVoice GGUF runtime, staged by the release workflows (#2780).
+const bundledOmnivoiceTtsResources = isMacAppStore ? [] : omnivoiceTtsResources();
 const notarizeMac =
   !isMacAppStore &&
   Boolean(
@@ -188,9 +191,13 @@ export default {
     { from: '../config/app.json', to: 'config/app.json' },
     { from: 'T3CODE-LICENSE.txt', to: 'electron/T3CODE-LICENSE.txt' },
     ...bundledUvResources,
+    ...bundledOmnivoiceTtsResources,
   ],
   asar: true,
-  afterPack: packageNativeHelper,
+  afterPack: async (context) => {
+    await packageNativeHelper(context);
+    finalizeOmnivoiceTts(context);
+  },
   ...(DISTRIBUTION_TARGET === 'snap-store'
     ? { afterAllArtifactBuild: ({ artifactPaths }) => repairSnapArtifacts(artifactPaths) }
     : {}),
@@ -215,6 +222,9 @@ export default {
     // a Developer ID certificate and Apple credentials enable both together.
     hardenedRuntime: isMacAppStore ? false : notarizeMac,
     ...(adhocSignMac ? { identity: '-' } : {}),
+    // Signs the bundled GGUF runtime and refreshes its checksum manifest
+    // before the bundle seal (electron/omnivoice-tts-bundle.mjs).
+    ...(bundledOmnivoiceTtsResources.length ? { sign: signMac } : {}),
     notarize: notarizeMac,
     extendInfo: {
       NSMicrophoneUsageDescription: readFileSync(resolve(here, 'build/Info.plist'), 'utf8')

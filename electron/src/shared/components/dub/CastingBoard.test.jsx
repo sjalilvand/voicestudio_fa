@@ -60,21 +60,21 @@ describe('CastingBoard drag & drop', () => {
     const card = screen
       .getByTestId('casting-board')
       .querySelector('[data-profile="preset:narrator"]');
-    expect(card).toHaveTextContent('Authoritative');
+    expect(card).toHaveTextContent('Commanding');
     expect(card.querySelector('svg')).toBeInTheDocument();
     expect(card.textContent).not.toMatch(/\p{Extended_Pictographic}/u);
     fireEvent.click(screen.getByRole('button', { name: /assign a voice to SPEAKER_1/i }));
     fireEvent.change(within(screen.getByRole('listbox')).getByRole('textbox'), {
-      target: { value: 'Authoritative' },
+      target: { value: 'Commanding' },
     });
-    const option = screen.getByRole('option', { name: 'Authoritative' });
+    const option = screen.getByRole('option', { name: 'Commanding' });
     expect(option.querySelector('svg')).toBeInTheDocument();
   });
   it('labels restored automatic voices without requiring clone metadata', () => {
     renderBoard({
       dubSegments: [{ id: '1', speaker_id: 'Speaker 1', profile_id: 'auto:speaker_1' }],
     });
-    expect(screen.getByRole('button', { name: 'Speaker 1' })).toHaveTextContent('Auto · Speaker 1');
+    expect(screen.getByRole('button', { name: 'Speaker 1' })).toHaveTextContent('Detect automatically · Speaker 1');
   });
   it('dropping a voice chip on a speaker writes the same fields as the CAST select', () => {
     const { props } = renderBoard();
@@ -215,11 +215,11 @@ describe('CastingBoard auto-clone chip', () => {
     openBoard();
 
     const row = screen.getByTestId('casting-board').querySelector('[data-speaker="SPEAKER_1"]');
-    expect(within(row).getByTitle(/from video · 6\.2s/i)).toBeInTheDocument();
+    expect(within(row).getByTitle(/from video · 6\.2/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /assign a voice to SPEAKER_1/i }));
     const options = within(screen.getByRole('listbox')).getAllByRole('option');
-    expect(options[0]).toHaveTextContent(/from video · 6\.2s/i);
+    expect(options[0]).toHaveTextContent(/from video · 6\.2/i);
     expect(options[1]).toHaveTextContent('Default');
   });
 
