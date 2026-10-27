@@ -169,6 +169,11 @@ export const DEFAULT_FIXTURES = {
     env_pinned: false,
     device: 'cpu',
   },
+  '/api/settings/pause-fill': {
+    mode: 'silence',
+    env_pinned: false,
+    choices: ['silence', 'room_tone'],
+  },
   '/api/settings/storage': { categories: [], volumes: [], warnings: [] },
   '/api/settings/storage/models-dir': {},
   '/demo_audio/demo/dubbing/manifest.json': {
