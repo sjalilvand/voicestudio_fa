@@ -936,7 +936,10 @@
     "segment_count_other": "{{count}} Segmente",
     "glossary_terms_one": "Glossar · {{count}} Begriff",
     "glossary_terms_other": "Glossar · {{count}} Begriffe",
-    "glossary_label": "Glossar"
+    "glossary_label": "Glossar",
+    "set_speaker": "Sprecher festlegen…",
+    "new_speaker": "Neuer Sprecher",
+    "speaker_label": "Sprecher"
   },
   "dub_workflow": {
     "preparing_audio": "Audio wird vorbereitet…",
@@ -2136,7 +2139,8 @@
     "export_n_audio_other": "Exportieren Sie {{count}} Audiodateien",
     "export_audio": "Audio exportieren",
     "export_subtitles": "Untertitel exportieren",
-    "stretch_subs_note": "Video strecken: Untertitel separat exportieren."
+    "stretch_subs_note": "Video strecken: Untertitel separat exportieren.",
+    "undubbed_video_note": "Noch keine Synchronisation: Das Video behält seinen Originalton. Untertitel einbrennen, um das Transkript hinzuzufügen."
   },
   "models": {
     "pack_title": "Modellpakete",

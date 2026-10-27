@@ -513,7 +513,7 @@ class TTSBackend(ABC):
         installed executable determines both the available runtimes and the
         device actually selected.
         """
-        from services.engine_routing import resolve_routing
+        from services.engine_routing import resolve_routing, uses_parent_torch
 
         gpu_compat = tuple(getattr(cls, "gpu_compat", ("cpu",)))
         min_vram_gb = float(getattr(cls, "min_vram_gb", 0.0) or 0.0)
@@ -522,7 +522,7 @@ class TTSBackend(ABC):
             "min_vram_gb": min_vram_gb,
             **resolve_routing(
                 gpu_compat, caps, min_vram_gb,
-                parent_torch=not getattr(cls, "_is_subprocess_isolated", False),
+                parent_torch=uses_parent_torch(cls),
             ),
             "runtime_backend": None,
             "runtime_device_index": None,
@@ -4077,7 +4077,7 @@ def list_backends(*, include_hidden: bool = False) -> list[dict]:
             isolation = "subprocess"
         else:
             isolation = "in-process"
-        from services.engine_routing import resolve_routing, runtime_compute_profile
+        from services.engine_routing import resolve_routing, runtime_compute_profile, uses_parent_torch
         try:
             profile = runtime_compute_profile(cls, caps)
         except Exception:
@@ -4091,7 +4091,7 @@ def list_backends(*, include_hidden: bool = False) -> list[dict]:
                 "min_vram_gb": floor,
                 **resolve_routing(
                     compat, caps, floor,
-                    parent_torch=not getattr(cls, "_is_subprocess_isolated", False),
+                    parent_torch=uses_parent_torch(cls),
                 ),
                 "runtime_backend": None,
                 "runtime_device_index": None,

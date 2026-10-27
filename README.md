@@ -102,7 +102,7 @@ Or download from [Releases](https://github.com/debpalash/VoiceStudio/releases/la
 |---|---|
 | NVIDIA GPU (Windows / Linux) | CUDA acceleration |
 | AMD Radeon / supported Ryzen AI (Windows) | CPU by default; [opt-in Windows ROCm setup](docs/install/windows-rocm.md) for AMD's Windows 11 hardware matrix. Setup distinguishes package repair from host failures; install the VC++ runtime manually first. Optional engines have separate limits; Vulkan engines retain their own runtime. |
-| Apple Silicon (M1–M5) | Metal (MPS) acceleration |
+| Apple Silicon (any M-series chip) | Metal (MPS) acceleration |
 | AMD GPU | Opt-in native CosyVoice GGUF can use Vulkan when the community runtime is built with Vulkan; verified on RX 6700 XT ([setup](docs/engines/cosyvoice-gguf.md)) |
 | No dedicated GPU (Intel/AMD integrated graphics, older PCs) | Fully usable on the CPU, slower; setup installs the small CPU build of PyTorch (about 5 GB free disk) |
 | Windows on ARM (Snapdragon X etc.) | **Experimental**, validation pending: native ARM64 app, x64 Python backend under emulation, CPU only |
@@ -150,6 +150,7 @@ Add `-- --install` for the networked managed-runtime installation check.
 | Need | Start here |
 |---|---|
 | Setup help | [Troubleshooting](docs/install/troubleshooting.md) · [Model downloads](docs/downloading-models.md) |
+| Step-by-step guides | [Dub a video with several characters](docs/dubbing/multi-speaker-guide.md) · [Expressive speech](docs/expressive-speech.md) · [Exporting dubs](docs/dubbing/export.md) |
 | Models & audio quality | [Engine guides](docs/engines/README.md) · [whisper.cpp ASR](docs/engines/whisper-cpp.md) · [Benchmarks](docs/benchmarks.md) |
 | Integrations | [Local API](docs/speech-platform.md) · [MCP](docs/mcp.md) · [Examples](examples/README.md) |
 | Phone apps (preview, run offline) | [iOS and Android](docs/mobile.md) |
