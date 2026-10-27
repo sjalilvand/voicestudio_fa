@@ -94,9 +94,10 @@ def _run_install(download, monkeypatch, tmp_path, fail=None):
         asyncio.run(install())
     finally:
         hf_progress.unregister_listener(listener)
+        cooldown_was_set = GATED_PIPELINE in download._install_cooldowns
         download._install_cooldowns.pop(GATED_PIPELINE, None)
         download._install_failures.pop(GATED_PIPELINE, None)
-    return calls, events
+    return calls, events, cooldown_was_set
 
 
 @pytest.fixture
@@ -148,7 +149,7 @@ def test_mirror_gated_topic_is_registered():
 def test_auto_mirror_routes_gated_install_to_official_hub(
     auto_mirror, download, monkeypatch, tmp_path
 ):
-    calls, events = _run_install(download, monkeypatch, tmp_path)
+    calls, events, _cooldown_was_set = _run_install(download, monkeypatch, tmp_path)
 
     assert any(event.get("phase") == "install_done" for event in events)
     assert calls
@@ -162,7 +163,9 @@ def test_explicit_mirror_reports_gated_recovery_without_token(
     failure = RuntimeError(
         f"401 Unauthorized while requesting {MIRROR}/{GATED_PIPELINE}"
     )
-    calls, events = _run_install(download, monkeypatch, tmp_path, fail=failure)
+    calls, events, cooldown_was_set = _run_install(
+        download, monkeypatch, tmp_path, fail=failure
+    )
 
     assert calls
     assert all(call.get("endpoint") == MIRROR for call in calls)
@@ -171,4 +174,4 @@ def test_explicit_mirror_reports_gated_recovery_without_token(
     assert errors[-1]["docs_topic"] == "HF_MIRROR_GATED"
     assert "Hugging Face (official)" in errors[-1]["error"]
     assert "HF_TOKEN" not in errors[-1]["error"]
-    assert GATED_PIPELINE not in download._install_cooldowns
+    assert cooldown_was_set is False
