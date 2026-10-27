@@ -72,13 +72,17 @@ def test_transformers_imported_first_still_loads_omnivoice_dependencies():
         "import sys; sys.path.insert(0, sys.argv[1])\n"
         "import transformers\n"
         "from transformers.utils import is_torchvision_available\n"
-        "available = is_torchvision_available()\n"
+        "if not is_torchvision_available():\n"
+        "    sys.exit(3)\n"
         "from engines.omnivoice_subprocess import main as sidecar\n"
         "with sidecar._skip_unused_heavy_imports():\n"
-        "    if available:\n"
-        "        import transformers.image_utils\n"
+        "    import transformers.image_utils\n"
     )
     result = subprocess.run([sys.executable, "-c", code, backend], capture_output=True, text=True, timeout=300)
+    if result.returncode == 3:
+        import pytest
+
+        pytest.skip("transformers does not consider torchvision usable here")
     assert result.returncode == 0, result.stderr[-2000:]
 
 
