@@ -978,7 +978,18 @@ Error paths (HTTP 400, `{"detail": …}`): empty → `"empty file"` (`:108-109`)
 (`:115-116`); decoded-empty/whitespace → `"no text found in the file"` (`:119-120`).
 
 ### `GET /longform/jobs?limit=50`
-<!-- CLEAN-ROOM (spec W5-small §10): 200 response shape and the always-present/conditional key notes. -->
+A **200** response is an object containing a `jobs` array. Every item has all
+six core fields: `job_id` (a 16-character hexadecimal id), `type` (`audiobook`
+or `story`), `output` (file name), `duration_s` (a float rounded to two decimal
+places), `chapters` (integer), and `created_at` (float epoch time). The item
+builder writes those fields unconditionally (`backend/api/routers/longform_jobs.py:198-205`).
+It may additionally contain a string `title`, but only when one can be recovered
+(`longform_jobs.py:206-218`). In practice that is almost always absent for
+longform jobs: the basic `done` payload does not itself supply a title
+(`backend/api/routers/audiobook.py:1413-1415`), and a new job is created without
+metadata (`audiobook.py:1064-1069`), which the store serialises as an empty JSON
+object (`backend/core/job_store.py:38-46`).
+
 - `output` is a bare filename → served at `/audio/<output>`.
 - Newest-first; only finished `audiobook`/`story` jobs (`_LONGFORM_TYPES`,
   `longform_jobs.py:29`) with a recoverable `done` event carrying an `output` filename.

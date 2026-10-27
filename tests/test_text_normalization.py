@@ -286,8 +286,6 @@ _UNCHANGED_CASES = [
     ("Malayalam", "5ാം ദിവസം"),            # vowel sign glued after the digits
     ("Malayalam", "ക്5 ദിവസം"),             # virama glued before the digits
     ("Malayalam", "ദിവസം5 കഴിഞ്ഞു"),         # consonant + digits word
-    # Arabic-Indic zero-prefixed code on the num2words path.
-    ("ar", "الرمز \u0660\u0660\u0667 هنا"),
     # Urdu native path keeps the same conservative boundaries
     ("Urdu", "1,000 روپے"),                       # thousands separator
     ("Urdu", "صفحہ 3-5 پڑھیں"),                   # range
@@ -295,7 +293,8 @@ _UNCHANGED_CASES = [
     ("Urdu", "کوڈ ۰۰۷"),                          # native leading-zero code
     ("Urdu", "1234567 نمبر"),                     # 7+ digits: an ID
     ("Urdu", "ورژن 3.5.1"),                       # version string
-    # CLEAN-ROOM (spec W5-small §9.1): Arabic-Indic leading-zero code case on the num2words path.
+    # Arabic num2words must preserve zero-prefixed identifiers.
+    ("ar", "رقم الطلب ٠٠٤٢ محفوظ"),
     # Digit-range rule: only a clean tilde between two numbers is rewritten.
     ("Korean", "서울-부산 3-5일 걸려요"),         # hyphen is never a range mark
     ("Korean", "마감일은 2025-03-14 입니다"),     # ISO date
@@ -406,7 +405,21 @@ def test_native_language_resolution():
     assert text_normalization._num2words_lang("ml") is None
 
 
-# CLEAN-ROOM (spec W5-small §9.2): Urdu full-range cardinal test.
+def test_urdu_cardinal_spells_every_supported_integer():
+    """Every supported Urdu cardinal is words-only and uses Urdu glyphs."""
+    from services import number_words_ur
+
+    arabic_lookalikes = {"\u064a", "\u0643", "\u0647", "\u0649"}
+    failures = []
+    for number in range(1_000_000):
+        words = number_words_ur.cardinal(number)
+        if (
+            not words
+            or any(character.isdigit() for character in words)
+            or arabic_lookalikes.intersection(words)
+        ):
+            failures.append((number, words))
+    assert failures == []
 
 
 @pytest.mark.parametrize("n,expected", [

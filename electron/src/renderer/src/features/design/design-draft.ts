@@ -25,7 +25,7 @@ export interface DesignDraft {
   description: string;
   /** Explicit choices; each holds until the description says something else about it. */
   picks: Record<string, DesignPick>;
-  // CLEAN-ROOM (spec W5-small §5.1): doc comment for `mapped`.
+  /** Details inferred from the current description. */
   mapped: Record<string, string>;
 }
 
@@ -33,7 +33,12 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-// CLEAN-ROOM (spec W5-small §5.2): stringEntries helper.
+function stringEntries(value: unknown): Record<string, string> {
+  if (!isPlainObject(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter((entry) => typeof entry[1] === 'string'),
+  ) as Record<string, string>;
+}
 
 /** Details that are set (not Auto), recorded as picks made under no description. */
 function explicitPicks(attrs: Record<string, string>): Record<string, DesignPick> {
@@ -64,7 +69,37 @@ function blankDraft(): DesignDraft {
   };
 }
 
-// CLEAN-ROOM (spec W5-small §5.3): readDraft().
+export function readDraft(): DesignDraft {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(STORAGE) ?? '{}');
+    const stored = isPlainObject(parsed) ? parsed : {};
+    const attrs = mergeDescribedAttrs(stringEntries(stored.attrs));
+    let picks: Record<string, DesignPick> = {};
+    if (!Object.prototype.hasOwnProperty.call(stored, 'picks')) {
+      picks = explicitPicks(attrs);
+    } else if (isPlainObject(stored.picks)) {
+      const validEntries = Object.entries(stored.picks).flatMap(([category, candidate]) => {
+        if (!isPlainObject(candidate)) return [];
+        const { value, description } = candidate;
+        return typeof value === 'string' && typeof description === 'string'
+          ? [[category, { value, description }] as const]
+          : [];
+      });
+      picks = Object.fromEntries(validEntries);
+    }
+    return {
+      text: typeof stored.text === 'string' ? stored.text : '',
+      attrs,
+      seed: Number.isInteger(stored.seed) ? (stored.seed as number) : pickDesignSeed(false, null),
+      profileId: typeof stored.profileId === 'string' ? stored.profileId : null,
+      description: typeof stored.description === 'string' ? stored.description : '',
+      picks,
+      mapped: stringEntries(stored.mapped),
+    };
+  } catch {
+    return blankDraft();
+  }
+}
 
 export function writeDraft(draft: DesignDraft) {
   try {
@@ -75,7 +110,21 @@ export function writeDraft(draft: DesignDraft) {
   window.dispatchEvent(new CustomEvent<DesignDraft>(DESIGN_DRAFT_EVENT, { detail: draft }));
 }
 
-// CLEAN-ROOM (spec W5-small §5.4): replaceRecipe().
+/**
+ * Replace the draft from a profile, preset, or new recipe. Source prose and
+ * picks are retained when supplied; otherwise both reset so another voice's
+ * free-form directions cannot carry across.
+ */
+export function replaceRecipe(current: DesignDraft, recipe: Partial<DesignDraft>): DesignDraft {
+  const overlaid = { ...current, ...recipe };
+  return {
+    ...overlaid,
+    profileId: recipe.profileId ?? null,
+    description: recipe.description ?? '',
+    mapped: recipe.mapped ?? {},
+    picks: recipe.picks ?? explicitPicks(overlaid.attrs),
+  };
+}
 
 /**
  * Change part of the voice (description, seed, details). The draft no longer
@@ -127,7 +176,37 @@ export function designRequestSeed(
   return linked && linked.seed == null ? undefined : draft.seed;
 }
 
-// CLEAN-ROOM (spec W5-small §5.5): applyDescription().
+/**
+ * Merge the server's reading of the prose into this draft. Picks from the same
+ * prose survive; older picks yield when the new prose changes their detail or
+ * an exclusive detail that applying the pick would clear.
+ */
+export function applyDescription(
+  current: DesignDraft,
+  mapping: Record<string, string>,
+  described: string,
+): DesignDraft {
+  const mapped = mergeDescribedAttrs(mapping);
+  const changed = (category: string) =>
+    (mapped[category] ?? 'Auto') !== (current.mapped[category] ?? 'Auto');
+  const reconciled = Object.entries(current.picks).reduce<{
+    attrs: Record<string, string>;
+    picks: Record<string, DesignPick>;
+  }>(
+    (state, [category, pick]) => {
+      const applied = applyVdState(state.attrs, category, pick.value);
+      const textOverridesPick =
+        changed(category) || (applied.clearedCategory !== null && changed(applied.clearedCategory));
+      if (pick.description !== described && textOverridesPick) return state;
+      return {
+        attrs: applied.vdStates,
+        picks: { ...state.picks, [category]: pick },
+      };
+    },
+    { attrs: mapped, picks: {} },
+  );
+  return { ...current, ...reconciled, mapped };
+}
 
 /**
  * "Reset to description" drops the picks (and a saved-voice link) so the
@@ -143,9 +222,40 @@ export function canResetToDescription(
   );
 }
 
-// CLEAN-ROOM (spec W5-small §5.6): pickDetail().
+/** Record a deliberate detail choice and report any exclusive detail reset by it. */
+export function pickDetail(
+  current: DesignDraft,
+  category: string,
+  value: string,
+): { draft: DesignDraft; clearedCategory: string | null } {
+  const applied = applyVdState(current.attrs, category, value);
+  const nextPicks = Object.assign({}, current.picks, {
+    [category]: { value, description: current.description.trim() },
+  });
+  if (applied.clearedCategory) delete nextPicks[applied.clearedCategory];
+  const nextProfile = sameAttrs(applied.vdStates, current.attrs) ? current.profileId : null;
+  const draft = {
+    ...current,
+    attrs: applied.vdStates,
+    profileId: nextProfile,
+    picks: nextPicks,
+  };
+  return {
+    draft,
+    clearedCategory: applied.clearedCategory,
+  };
+}
 
-// CLEAN-ROOM (spec W5-small §5.7): designInstruct().
+/** Build the instruction string sent with a design take. */
+export function designInstruct(
+  draft: Pick<DesignDraft, 'attrs' | 'description' | 'picks'>,
+  vocabulary: InstructVocabulary,
+): string {
+  if (vocabulary !== 'freeform') return buildDesignInstruct(draft.attrs, '').instruct;
+  return [draft.description.trim(), buildDesignInstruct(pickValues(draft.picks), '').instruct]
+    .filter(Boolean)
+    .join(', ');
+}
 
 /** The part of the draft that is stored with the take. */
 export function designRecipe(draft: Pick<DesignDraft, 'description' | 'picks'>): DesignRecipe {
@@ -173,7 +283,34 @@ function parseStoredRecipe(raw: string | null | undefined): StoredRecipe | null 
   }
 }
 
-// CLEAN-ROOM (spec W5-small §5.8): designDraftFromTake().
+/**
+ * Rebuild Design from a take. Recipes restore prose, picks, and mapped details;
+ * legacy takes use their full instruction as prose and recognise its tags.
+ */
+export function designDraftFromTake(item: HistoryItem): DesignDraft {
+  const stored = parseStoredRecipe(item.design_recipe);
+  const legacyDescription = item.instruct ?? '';
+  const description = stored ? stored.description : legacyDescription;
+  const describedAttrs = stored ? stored.mapped : instructToVdStates(description);
+  const mapped = mergeDescribedAttrs(describedAttrs);
+  const described = description.trim();
+  const restoredPicks: Record<string, DesignPick> = {};
+  if (stored) {
+    Object.entries(stored.picks).forEach(([category, value]) => {
+      restoredPicks[category] = { value, description: described };
+    });
+  }
+  const draft: DesignDraft = {
+    text: item.text,
+    attrs: mapped,
+    seed: item.seed || pickDesignSeed(false, null),
+    profileId: item.profile_id,
+    description,
+    picks: restoredPicks,
+    mapped,
+  };
+  return applyDescription(draft, mapped, described);
+}
 
 /** Restore a saved design recipe without leaking values from the previous voice. */
 export function restoreDesignProfile(

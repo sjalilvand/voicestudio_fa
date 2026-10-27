@@ -444,7 +444,10 @@ class TTSBackend(ABC):
     #: the reference voice. Read through :func:`rendered_dialects`.
     rendered_dialects: tuple[str, ...] = ()
 
-    #: CLEAN-ROOM (spec W5-small §2): document the applies_own_mastering capability flag.
+    #: True bypasses ``apply_mastering()``: its high-pass filter and compressor
+    #: target the default engine's 24 kHz cloned audio. Finished high-rate
+    #: engines such as VoxCPM2 opt out to avoid damaging their studio output;
+    #: loudness normalisation is still applied independently.
     applies_own_mastering: bool = False
 
     #: Whether this engine can clone an arbitrary voice from reference audio
@@ -2131,7 +2134,7 @@ class VoxCPM2Backend(TTSBackend):
     # _prepare_voxcpm_ref keeps the first _VOXCPM_REF_MAX_S after silence trim.
     max_ref_seconds = _VOXCPM_REF_MAX_S
     ref_strategy = "head"
-    applies_own_mastering = True  # CLEAN-ROOM (spec W5-small §2): note why this engine skips the shared mastering chain.
+    applies_own_mastering = True  # Native studio-grade 48 kHz needs no apply_mastering().
     gpu_compat = ("cuda", "mps", "cpu")
 
     def __init__(self):

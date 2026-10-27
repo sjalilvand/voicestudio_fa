@@ -333,7 +333,17 @@ _ANCILLARY_TYPES = {
     "imprint", "colophon", "contributors", "other-credits", "epigraph", "loi",
     "lot", "index", "glossary", "bibliography", "appendix",
 }
-# CLEAN-ROOM (spec W5-small §3.1): title pattern that marks a section as front/back-matter furniture.
+_ANCILLARY_TITLE_RE = re.compile(
+    r"^(?:"
+    r"cover|half[ -]?title|title[ -]?page|copyright|dedication|contents|"
+    r"table[ -]of[ -]contents|acknowledg\w*|"
+    r"about[ -]the[ -](?:author|illustrator|book)|about[ -]the[ -]publisher|"
+    r"also[ -]by|also[ -]available|praise[ -]for|imprint|colophon|newsletter|"
+    r"look[ -]out[ -]for|(?:other[ -])?(?:works|books|titles)[ -]by|"
+    r"footnotes?|endnotes?"
+    r")\b",
+    re.IGNORECASE,
+)
 
 
 def _is_ancillary(types: set[str], title: str | None) -> bool:
@@ -344,7 +354,20 @@ def _is_ancillary(types: set[str], title: str | None) -> bool:
     return bool(title and _ANCILLARY_TITLE_RE.match(title.strip()))
 
 
-# CLEAN-ROOM (spec W5-small §3.2): find the EPUB 3 landmarks "bodymatter" start.
+def _landmarks_start(navs, nav_dir: str, type_attribute: str, local_name) -> Optional[str]:
+    """Return the first EPUB landmark that declares the start of body matter."""
+    for nav in navs:
+        if "landmarks" not in nav.get(type_attribute, "").split():
+            continue
+        for element in nav.iter():
+            href = element.get("href")
+            if (
+                local_name(element) == "a"
+                and href
+                and "bodymatter" in element.get(type_attribute, "").split()
+            ):
+                return _member_path(nav_dir, href) or None
+    return None
 
 
 def _toc_titles(
@@ -408,7 +431,9 @@ def _toc_titles(
     return {**ncx_titles, **nav_titles}, body_start
 
 
-# CLEAN-ROOM (spec W5-small §3.3): word-count ceiling for unlisted, unmarked front-matter pages.
+# Short unlisted pages before the narrative are usually publisher furniture
+# (a teaser, epigraph, or blurb), rather than chapters to narrate.
+_FRONT_MATTER_MAX_WORDS = 400
 
 
 def _front_matter_end(
