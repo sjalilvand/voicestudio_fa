@@ -1,8 +1,8 @@
 import { abortableDelay } from './abortableDelay.ts';
 import { DEFAULT_BACKEND_PORT } from '../app-config.ts';
 import { deploymentMode, type DeploymentMode } from './deploymentMode.ts';
-import { isNativeFaultExit } from './nativeExit.ts';
 import { isBrokenEnvironmentOutput } from './backendOutput.ts';
+import { isNativeFaultExit } from './nativeExit.ts';
 /**
  * backendCrash — frontend bridge to the desktop shell's crash forensics
  * (#941, src-tauri/src/crash.rs).
@@ -292,18 +292,6 @@ export function describeCrashExit(
  * blamed "VRAM" on machines that have none (audit finding: OS-OOM kills were
  * misattributed). Everything else keeps the small-GPU VRAM guidance, which is
  * the dominant cause for real GPU aborts.
- */
-/**
- * True when the process died of a NATIVE fault — a segfault/illegal
- * instruction/abort — rather than memory pressure or an orderly exit.
- *
- * POSIX reports these as signals. Windows has no signals here: the shell sees
- * the raw NTSTATUS as an exit code, and the two shells disagree on how to read
- * it — Rust as a negative i32, Node as the unsigned DWORD. The table used to
- * live here in Rust's representation, so the same access violation was a fault
- * from Tauri and an ordinary non-zero exit from Electron (#2250). It now lives
- * in `utils/nativeExit`, which normalises before matching, and both shells ask
- * the same question of the same table.
  */
 export function isNativeFault(marker: Pick<BackendCrashMarker, 'exit_code' | 'signal'>): boolean {
   return isNativeFaultExit({ exitCode: marker.exit_code, signal: marker.signal });

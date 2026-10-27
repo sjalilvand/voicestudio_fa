@@ -473,11 +473,6 @@
     "pasteAbove": "Coller le texte ci-dessus",
     "cancel": "Annuler",
     "splitIntoTracks": "Divisé en lignes",
-    "splitMode": "Découper par",
-    "split_sentences": "Phrases",
-    "split_paragraphs": "Paragraphes",
-    "split_chapters": "Chapitres",
-    "splitModeHint": "Chaque ligne est lue comme une prise à part. Pour un seul narrateur, les paragraphes ou les chapitres entiers s'enchaînent mieux que les phrases.",
     "emptyText": "Commencez votre histoire en ajoutant des lignes de dialogue et de narration. Attribuez à chaque personnage une voix dans le casting.",
     "addFirst": "Ajouter la première ligne",
     "linePlaceholder": "Entrez un dialogue ou une narration… utilisez [pause 0,5 s] pour une pause silencieuse",
@@ -508,7 +503,12 @@
     "exportFailed": "Échec de l'exportation : vérifiez que le backend est en cours d'exécution.",
     "global_speed": "Vitesse",
     "global_speed_hint": "Vitesse de lecture pour toutes les lignes sans leur propre priorité de vitesse",
-    "deleteProjectConfirm": "Supprimer définitivement ce projet ?"
+    "deleteProjectConfirm": "Supprimer définitivement ce projet ?",
+    "splitMode": "Découper par",
+    "split_sentences": "Phrases",
+    "split_paragraphs": "Paragraphes",
+    "split_chapters": "Chapitres",
+    "splitModeHint": "Chaque ligne est lue comme une prise distincte. Avec un seul narrateur, Paragraphes ou Chapitres sonnent plus naturellement."
   },
   "common": {
     "stop": "Arrêter",
@@ -2543,15 +2543,15 @@
     "seed_ph": "Auto",
     "vary_repeats": "Varier les lignes répétées",
     "vary_repeats_help": "Donnez des prises distinctes aux lignes identiques au lieu de réutiliser un enregistrement.",
-    "line_gap": "Pause entre les lignes",
     "joins_help": "La pause entre les lignes s'insère entre les lignes sans [pause] propre ; la pause entre les paragraphes, aux lignes vides. Quand la coupe est activée, le silence d'attaque et de fin de chaque ligne est d'abord supprimé : la pause réglée est celle que l'on entend.",
-    "paragraph_gap": "Pause entre les paragraphes",
-    "trim_edges": "Couper le silence du moteur",
-    "trim_edges_help": "Supprime le silence que le moteur ajoute à chaque ligne avant l'assemblage. Désactivez pour garder les rendus bruts.",
     "emotion_help": "Émotion graduée — appliquée par le moteur IndexTTS2 uniquement.",
     "emotion_text": "Description de l'émotion",
     "emotion_text_ph": "p. ex. sonne épuisé et triste",
-    "emotion_alpha": "Force de l'émotion"
+    "emotion_alpha": "Force de l'émotion",
+    "line_gap": "Pause entre les lignes",
+    "paragraph_gap": "Pause entre les paragraphes",
+    "trim_edges": "Supprimer le silence du moteur",
+    "trim_edges_help": "Retire le silence ajouté par chaque moteur avant et après une ligne, puis assemble. Désactivez pour des rendus bruts."
   },
   "voicePanel": {
     "title": "Voix",

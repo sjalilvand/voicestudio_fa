@@ -17,12 +17,12 @@ import { cueSheetFor } from './cue-sheet';
 import { saveLocalFile } from '@/lib/local-export';
 import { StoryEditor } from './story-editor';
 import { StoryCast } from './story-cast';
+import { StorySpeed } from './story-speed';
 import { clearedScriptPatch, scriptSize } from './story-clear';
 import { ConfirmDialog } from '../clone/confirm-dialog';
 import { AudiobookMarkupToolbar } from './audiobook-markup-toolbar';
 import { ChapterOutline } from './chapter-outline';
 import { storyVoicesReady } from './story-inputs';
-import { StorySpeed } from './story-speed';
 import { ProjectSettings } from './project-settings';
 import { ProductionSettings } from './production-settings';
 import { ChapterPreviews } from './chapter-previews';
@@ -282,7 +282,9 @@ export function LongformPage({ mode }: { mode: Mode }) {
                 </Button>
               ))}
             </div>
-            {mode === 'stories' && <StorySpeed draft={draft} disabled={locked} onChange={set} />}
+            {mode === 'stories' ? (
+              <StorySpeed draft={draft} disabled={locked} onChange={set} />
+            ) : null}
             <div className="space-y-2">
               <h2 className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                 <LanguagesIcon className="size-4" aria-hidden="true" />

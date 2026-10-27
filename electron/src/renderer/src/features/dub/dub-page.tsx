@@ -1434,13 +1434,13 @@ export function DubPage() {
                                       message: dubSession.state.error || t('common.error'),
                                     }),
                                   );
-                                } else if (outcome.applied) {
+                                } else if (outcome.applied > 0) {
                                   toast.success(
                                     t('dub_workflow.mirror_applied', {
                                       count: outcome.applied,
                                     }),
                                   );
-                                } else if (!outcome.measured) {
+                                } else if (outcome.measured === 0) {
                                   toast.info(t('dub_workflow.mirror_insufficient'));
                                 } else {
                                   toast.info(t('dub_workflow.mirror_none'));

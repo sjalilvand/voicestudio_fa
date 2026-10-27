@@ -151,6 +151,8 @@ export function buildExitBanner({ code, signal, logTail, logPath, platform = pro
 
 // Setup is explicit and chooses the CPU/CUDA wheel graph. Never let launch or
 // restart silently restore the default CUDA group (or undo a ROCm swap).
+
+/** `uv run` argv for launching the backend: same as uvicornArgs, minus any dependency re-sync. */
 export function uvRunArgs(env = process.env) {
   const args = uvicornArgs(env);
   return [args[0], "--no-sync", ...args.slice(1)];

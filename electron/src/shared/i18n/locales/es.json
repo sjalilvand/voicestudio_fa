@@ -473,11 +473,6 @@
     "pasteAbove": "Pegar texto arriba",
     "cancel": "Cancelar",
     "splitIntoTracks": "Dividir en líneas",
-    "splitMode": "Dividir por",
-    "split_sentences": "Frases",
-    "split_paragraphs": "Párrafos",
-    "split_chapters": "Capítulos",
-    "splitModeHint": "Cada línea se lee como una toma independiente. Para un solo narrador, los párrafos o capítulos completos fluyen mejor que las frases.",
     "emptyText": "Comience su historia agregando diálogos y líneas de narración. Asigna a cada personaje una voz en el elenco.",
     "addFirst": "Agregar primera línea",
     "linePlaceholder": "Ingrese un diálogo o narración... use [pausa 0,5 s] para un descanso en silencio",
@@ -508,7 +503,12 @@
     "exportFailed": "Falló la exportación: verifique que el backend se esté ejecutando.",
     "global_speed": "Velocidad",
     "global_speed_hint": "Velocidad de lectura para todas las líneas sin su propia anulación de velocidad",
-    "deleteProjectConfirm": "¿Eliminar este proyecto permanentemente?"
+    "deleteProjectConfirm": "¿Eliminar este proyecto permanentemente?",
+    "splitMode": "Dividir por",
+    "split_sentences": "Frases",
+    "split_paragraphs": "Párrafos",
+    "split_chapters": "Capítulos",
+    "splitModeHint": "Cada línea se lee como una toma independiente. Con un solo narrador, Párrafos o Capítulos suenan más fluidos."
   },
   "common": {
     "stop": "Detener",
@@ -2543,15 +2543,15 @@
     "seed_ph": "Automático",
     "vary_repeats": "Variar líneas repetidas",
     "vary_repeats_help": "Proporcione tomas distintas a líneas idénticas en lugar de reutilizar una grabación.",
-    "line_gap": "Pausa entre líneas",
     "joins_help": "La pausa entre líneas va entre líneas sin su propio [pause]; la pausa entre párrafos, en las líneas en blanco. Con el recorte activado, primero se quita el silencio inicial y final de cada línea, así la pausa que eliges es la que se oye.",
-    "paragraph_gap": "Pausa entre párrafos",
-    "trim_edges": "Recortar silencio del motor",
-    "trim_edges_help": "Quita el silencio que el motor añade a cada línea antes de unirlas. Desactívalo para conservar las tomas sin recortar.",
     "emotion_help": "Emoción graduada — aplicada solo por el motor IndexTTS2.",
     "emotion_text": "Descripción de emoción",
     "emotion_text_ph": "p. ej. suena agotado y triste",
-    "emotion_alpha": "Intensidad emocional"
+    "emotion_alpha": "Intensidad emocional",
+    "line_gap": "Pausa entre líneas",
+    "paragraph_gap": "Pausa entre párrafos",
+    "trim_edges": "Recortar el silencio del motor",
+    "trim_edges_help": "Elimina el silencio que cada motor añade antes y después de una línea y luego las une. Desactívalo para obtener audio sin procesar."
   },
   "voicePanel": {
     "title": "Voz",

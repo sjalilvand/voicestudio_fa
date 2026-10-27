@@ -242,12 +242,7 @@ export interface GenerateOptions {
 export class StreamingPreviewError extends Error {
   readonly retryable: boolean;
   readonly terminal: boolean;
-  /**
-   * The backend exception TYPE behind an otherwise generic failure. Every
-   * unclassified engine failure renders one fixed floor message, so without
-   * this an auto-filed report cannot be told apart from any other (#1800).
-   * Never the exception message — only its class name.
-   */
+  /** Backend exception class name (never a message), or null when absent. */
   readonly errorClass: string | null;
   constructor(
     message: string,

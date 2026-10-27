@@ -541,13 +541,12 @@ def dub_use_downloaded_captions(job_id: str):
 
 @router.post("/dub/cleanup-segments/{job_id}")
 def dub_cleanup_segments(job_id: str, req: Optional[CleanupSegmentsRequest] = None):
-    """Re-run merge/stitch passes to drop fragments.
+    """Re-run the merge/stitch passes to drop fragments.
 
-    Cleans the editor's segments when sent, so unsaved text, timing and
-    direction edits survive; otherwise the job's stored segments. The
-    editor's result is returned without being stored: it is an undoable edit
-    like any other, and the job keeps the segments its existing audio and
-    subtitle exports were generated from until the next generation.
+    Uses the editor's segments when they are sent, so unsaved edits survive;
+    otherwise the stored ones. The editor's result is returned unsaved (the
+    client applies it as an undoable edit) and the job keeps its stored
+    segments until the next generation.
     """
     job = _get_job(job_id)
     if not job:
@@ -1791,38 +1790,22 @@ async def dub_transcribe_stream(
             return
 
         total = float(len(audio_np)) / float(sr) if sr else 0.0
-        global_speaker_clustering = bool(
-            getattr(
-                _asr_backend,
-                "requires_full_audio_for_speaker_consistency",
-                False,
-            )
-        )
-        transcribe_chunk_s = (
-            total
-            if global_speaker_clustering and total > 0
-            else TRANSCRIBE_CHUNK_S
-        )
-        transcribe_timeout_s = (
-            ASR_TRANSCRIBE_TIMEOUT_S
-            if global_speaker_clustering
-            else TRANSCRIBE_CHUNK_TIMEOUT_S
-        )
-        transcribe_timeout_env = (
-            "OMNIVOICE_ASR_TRANSCRIBE_TIMEOUT_S"
-            if global_speaker_clustering
-            else "OMNIVOICE_TRANSCRIBE_CHUNK_TIMEOUT_S"
-        )
-        chunks_n = (
-            max(1, int(math.ceil(total / transcribe_chunk_s)))
-            if total > 0
-            else 1
-        )
-        yield _sse_event("start", {
-            "duration": total,
-            "chunks": chunks_n,
-            "chunk_s": transcribe_chunk_s,
-        })
+        # Some backends (FunASR with a speaker model) only label speakers
+        # consistently within one transcribe() call, so they get the entire
+        # recording as a single chunk instead of fixed-size slices.
+        whole_file_mode = bool(getattr(_asr_backend, "requires_full_audio_for_speaker_consistency", False))
+        if whole_file_mode and total > 0:
+            chunk_len = total
+        else:
+            chunk_len = TRANSCRIBE_CHUNK_S
+        if whole_file_mode:
+            chunk_timeout = ASR_TRANSCRIBE_TIMEOUT_S
+            chunk_timeout_env = "OMNIVOICE_ASR_TRANSCRIBE_TIMEOUT_S"
+        else:
+            chunk_timeout = TRANSCRIBE_CHUNK_TIMEOUT_S
+            chunk_timeout_env = "OMNIVOICE_TRANSCRIBE_CHUNK_TIMEOUT_S"
+        chunks_n = max(1, math.ceil(total / chunk_len)) if total > 0 else 1
+        yield _sse_event("start", {"duration": total, "chunks": chunks_n, "chunk_s": chunk_len})
 
         all_segments: list[dict] = []
         # Words (global-timeline) retained so diarization can re-split a segment
@@ -1846,8 +1829,8 @@ async def dub_transcribe_stream(
             if job.get("aborted"):
                 yield _sse_event("aborted", {})
                 return
-            t0 = i * transcribe_chunk_s
-            t1 = min(total, t0 + transcribe_chunk_s)
+            t0 = i * chunk_len
+            t1 = min(total, t0 + chunk_len)
             s_from = int(t0 * sr)
             s_to = int(t1 * sr)
             chunk_arr = audio_np[s_from:s_to]
@@ -1914,8 +1897,8 @@ async def dub_transcribe_stream(
                 task = asyncio.ensure_future(run_transcribe_guarded(
                     _gpu_pool, lambda: _asr_work.run(_transcribe_chunk),
                     what=f"Dub chunk {i + 1}/{chunks_n}",
-                    timeout=transcribe_timeout_s,
-                    timeout_env=transcribe_timeout_env,
+                    timeout=chunk_timeout,
+                    timeout_env=chunk_timeout_env,
                 ))
                 while True:
                     done, _pending = await asyncio.wait({task}, timeout=5.0)
@@ -1932,9 +1915,8 @@ async def dub_transcribe_stream(
                     # the worker remains honestly occupied until it exits.
                     timed_out = True
                     logger.error(
-                        "Transcribe chunk %d/%d timed out after %.0fs (attempt %d/%d, job=%s)",
-                        i + 1, chunks_n, transcribe_timeout_s, _attempt,
-                        _CHUNK_TRANSCRIBE_ATTEMPTS, log_safe(job_id),
+                        "Transcribe chunk %d/%d exceeded %.0fs limit (attempt %d/%d, job=%s)",
+                        i + 1, chunks_n, chunk_timeout, _attempt, _CHUNK_TRANSCRIBE_ATTEMPTS, log_safe(job_id),
                     )
                     from core.public_errors import stream_failure
                     failure = stream_failure("transcription_timeout")
@@ -2151,11 +2133,9 @@ async def dub_transcribe_stream(
             # The active ASR backend already diarized inline (FunASR cam++):
             # its turns are the fast path and skip pyannote entirely (#182) —
             # but ONLY when the user didn't set an explicit speaker count.
-            # Inline turns can't be forced to N speakers through the shared ASR
-            # contract, so a set num_speakers prefers pyannote — the one engine
-            # that honors an exact count. When pyannote can't load, the turns
-            # are still the best labels available; use them and say so instead
-            # of silently eating the hint.
+            # An explicit speaker count can't be pushed through the shared ASR
+            # contract to inline turns, so in that case prefer pyannote. If pyannote
+            # fails to load we still keep the inline turns and tell the user.
             diar_pipe = None
             err_sentinel = None
             if asr_speaker_turns:
