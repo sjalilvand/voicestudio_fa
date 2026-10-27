@@ -383,8 +383,8 @@ def _dots_host() -> tuple[bool, str]:
     if sys.platform != "win32":
         return True, ""
     return False, (
-        "dots.tts publishes no Windows install. Run VoiceStudio on Linux or "
-        "macOS, or under WSL2, to use it."
+        "dots.tts publishes no Windows install. Use the audio.cpp dots.tts "
+        "engine instead, which runs natively on Windows."
     )
 
 

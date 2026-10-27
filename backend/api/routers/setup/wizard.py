@@ -23,7 +23,7 @@ from core.device_caps import KERNEL_RISK_MARKER, is_windows_on_arm
 # MIN_FREE_GB + disk_free_bytes are single-sourced in ``.models`` (the lowest
 # module in the setup import graph) so the wizard gate, the /models header, and
 # the per-install disk guard can't drift apart.
-from .models import REQUIRED_MODELS, hf_cache_dir, is_cached, MIN_FREE_GB, INSTALL_HEADROOM_GB, disk_free_bytes
+from .models import KNOWN_MODELS, hf_cache_dir, is_cached, MIN_FREE_GB, INSTALL_HEADROOM_GB, disk_free_bytes
 from core.browser_guard import reject_cross_site_get
 
 logger = logging.getLogger("omnivoice.setup.wizard")
@@ -39,13 +39,52 @@ def _disk_free_gb(path: str) -> float:
 
 # ── Setup Status ───────────────────────────────────────────────────────────
 
+def _ready_other_engine(engines: list[str]) -> bool:
+    """Whether the chosen TTS engine is outside ``engines`` and ready to use.
+
+    A required model is the default engine's weights. Someone who installed
+    and selected another engine in setup's Advanced view does not need them,
+    so the first-run gate must not wait on them forever (#3581). Any doubt
+    (no choice recorded, an engine that is not ready, a failed probe) keeps
+    the requirement, so setup never finishes with no usable voice engine.
+    """
+    if not engines:
+        return False
+    try:
+        from services import tts_backend
+
+        active = tts_backend.active_backend_id()
+        if active in engines:
+            return False
+        ok, _ = tts_backend.get_backend_class(active).is_available()
+        if not ok:
+            return False
+        # An installed package is not a usable voice: when the catalogue lists
+        # weights for the chosen engine, one of them must be downloaded, so
+        # the first voice works offline instead of fetching on first use.
+        own = [m["repo_id"] for m in KNOWN_MODELS if active in (m.get("engines") or [])]
+        return not own or any(is_cached(repo_id) for repo_id in own)
+    except Exception:  # noqa: BLE001 — the gate falls back to the default requirement
+        logger.debug("active TTS engine readiness probe failed", exc_info=True)
+        return False
+
+
+def required_models() -> list[dict]:
+    """Required catalogue rows the current engine choice still needs."""
+    return [
+        model
+        for model in KNOWN_MODELS
+        if model.get("required") and not _ready_other_engine(list(model.get("engines") or []))
+    ]
+
+
 @router.get("/setup/status", response_model=SetupStatusResponse)
 def setup_status():
     """Snapshot the setup state so the client can pick its boot screen."""
     missing = [
-        {"repo_id": rid, "label": label}
-        for (rid, label) in REQUIRED_MODELS
-        if not is_cached(rid)
+        {"repo_id": model["repo_id"], "label": model["label"]}
+        for model in required_models()
+        if not is_cached(model["repo_id"])
     ]
     cache = hf_cache_dir()
     free_gb = _disk_free_gb(cache)
