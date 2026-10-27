@@ -1768,6 +1768,10 @@ export class BackendSupervisor extends EventEmitter<{
       windowsLoadBlock(this.childErrorLog) ??
       (process.platform === 'win32' &&
       /dll load failed/i.test(this.childErrorLog.slice(-20).join('\n')) &&
+      // A missing DLL is a broken runtime that repair can fix, not a refusal.
+      !/the specified module could not be found|could not find module/i.test(
+        this.childErrorLog.slice(-20).join('\n'),
+      ) &&
       ['on', 'evaluation'].includes(readSmartAppControl())
         ? 'application_control'
         : null);
