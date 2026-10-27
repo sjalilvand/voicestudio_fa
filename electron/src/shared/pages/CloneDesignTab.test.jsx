@@ -29,7 +29,7 @@ const PERSONALITIES = [
   { id: 'news_anchor', name: 'News Anchor', is_demo: false },
   { id: 'storyteller', name: 'Storyteller', is_demo: false },
   { id: 'corporate', name: 'Corporate', is_demo: false },
-  { id: 'energetic', name: 'Energetic', is_demo: false },
+  { id: 'energetic', name: 'High energy', is_demo: false },
 ];
 
 vi.mock('../api/client', () => ({
@@ -176,20 +176,20 @@ describe('CloneDesignTab — Voice Design panel redesign regressions', () => {
   it('shows exactly 5 combined starting-point chips, with the overflow count covering BOTH personalities and PRESETS', async () => {
     renderDesignTab();
     await screen.findByText('Narrator');
-    expect(screen.getByText('Casual')).toBeInTheDocument();
-    expect(screen.getByText('News Anchor')).toBeInTheDocument();
+    expect(screen.getByText('Relaxed')).toBeInTheDocument();
+    expect(screen.getByText('Newsreader')).toBeInTheDocument();
     expect(screen.getByText('Storyteller')).toBeInTheDocument();
-    expect(screen.getByText('Corporate')).toBeInTheDocument();
+    expect(screen.getByText('Professional')).toBeInTheDocument();
 
-    // Hidden behind the toggle: the 6th personality (Energetic) + all 6
+    // Hidden behind the toggle: the 6th personality (High energy) + all 6
     // hardcoded PRESETS (12 total - 5 visible = 7).
-    expect(screen.queryByText('Energetic')).toBeNull();
-    expect(screen.queryByText(/Authoritative/)).toBeNull();
+    expect(screen.queryByText('High energy')).toBeNull();
+    expect(screen.queryByText(/Clear narrator/)).toBeNull();
     const more = screen.getByText('7 more…');
 
     fireEvent.click(more);
-    expect(screen.getByText('Energetic')).toBeInTheDocument();
-    expect(screen.getByText(/Authoritative/)).toBeInTheDocument();
+    expect(screen.getByText('High energy')).toBeInTheDocument();
+    expect(screen.getByText(/Clear narrator/)).toBeInTheDocument();
     expect(screen.queryByText(/more…/)).toBeNull();
   });
 
@@ -204,8 +204,8 @@ describe('CloneDesignTab — Voice Design panel redesign regressions', () => {
     const setVdStates = vi.fn();
     const setInstruct = vi.fn();
     renderDesignTab({ setVdStates, setInstruct });
-    const narrator = await screen.findByRole('button', { name: /narrator/i });
-    const casual = screen.getByRole('button', { name: /casual/i });
+    const narrator = await screen.findByRole('button', { name: /^narrator$/i });
+    const casual = screen.getByRole('button', { name: /relaxed/i });
 
     narrator.focus();
     expect(document.activeElement).toBe(narrator);
