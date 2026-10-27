@@ -1499,8 +1499,7 @@
     "add_term": "Add term",
     "hint": "Every Cinematic translation receives this glossary; manual terms override automatic suggestions.",
     "auto_badge": "Suggested",
-    "manual_badge": "Manual",
-    "close": "Collapse glossary"
+    "manual_badge": "Manual"
   },
   "segment": {
     "time": "Time",

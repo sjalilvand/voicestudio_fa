@@ -1679,7 +1679,6 @@
   },
   "gallery": {
     "title": "VoiceStudio Gallery",
-    "search_placeholder": "Search YouTube…",
     "all_voices": "All Voices ({{count}})",
     "no_voices": "No voices yet",
     "download_hint": "Search above to download clips.",
@@ -1687,7 +1686,6 @@
     "download_btn": "Download",
     "saving": "Saving…",
     "trim": "Trim",
-    "delete_confirm": "Delete this voice clip?",
     "view_mode_list": "List",
     "view_mode_grid": "Grid",
     "youtube_results": "YouTube Results ({{count}})",
@@ -2734,7 +2732,6 @@
     "pricing_detail": "Until they’re public, every commercial deployment is being quoted individually so we can right-size for your team and workload.",
     "request_quote": "Request pricing",
     "footer_email": "Questions? Reach out at hi@voicestudio.sh",
-    "footer_discord": "Join our Discord for community support.",
     "benefit_ip": "Application licence",
     "benefit_ip_desc": "Our licence covers VoiceStudio code. Rights to models and generated output depend on the selected models and their terms.",
     "benefit_cost": "No per-minute fees",
@@ -2904,8 +2901,7 @@
     "add_term": "Add term",
     "hint": "Every Cinematic translation receives this glossary; manual terms override automatic suggestions.",
     "auto_badge": "auto",
-    "manual_badge": "manual",
-    "close": "Collapse glossary"
+    "manual_badge": "manual"
   },
   "segment": {
     "time": "Time",

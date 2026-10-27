@@ -945,8 +945,6 @@
     "timing_concise": "간결하게",
     "timing_stretch_video": "영상 늘이기",
     "timing_strict_slot": "구간 엄수",
-    "track_tip_duration": "길이 {{duration}}",
-    "track_tip_timing": "타이밍 {{strategy}}",
     "transcribing": "오디오 전사 중…",
     "transcript_after_extract": "추출이 끝나면 전사문이 표시됩니다.",
     "upload_transcribe": "업로드 및 전사"
@@ -1008,7 +1006,6 @@
     "save_first": "저장하기 전에 먼저 '업로드 및 전사'를 눌러 서버에서 영상을 처리하세요.",
     "skipped_malformed": "{{count}}개 건너뜀(형식 오류)",
     "transcribing_audio": "오디오 전사 중…",
-    "transcription_failed": "전사 실패: {{message}}",
     "translated_cinematic_suffix": " (Cinematic)"
   },
   "common": {
@@ -1378,8 +1375,6 @@
     "models_dir_desc": "다운로드한 모델이 여기에 저장됩니다. 공간이 부족해지면 여유 공간이 더 많은 드라이브를 선택하세요.",
     "audio_tools": "오디오 도구",
     "audio_tools_bundle_done": "번들 미디어 엔진이 준비되었습니다.",
-    "audio_tools_bundle_failed": "번들 다운로드 실패: {{message}}",
-    "audio_tools_bundle_updating": "번들 빌드 다운로드 중… {{percent}}%",
     "audio_tools_choose_file": "파일 선택…",
     "audio_tools_desc": "앱에서 관리하는 미디어 엔진(FFmpeg, FFprobe)과 동영상 다운로더(yt-dlp)입니다.",
     "audio_tools_ffmpeg_desc": "오디오와 영상을 변환, 더빙, 믹싱합니다. 앱이 자동으로 찾으므로 특정 빌드가 필요할 때만 직접 지정하세요.",
@@ -1403,7 +1398,6 @@
     "audio_tools_ytdlp_restore": "검증된 버전 복원",
     "audio_tools_ytdlp_restored": "검증된 yt-dlp를 복원했습니다. 적용하려면 백엔드를 다시 시작하세요.",
     "audio_tools_ytdlp_update": "업데이트",
-    "audio_tools_ytdlp_update_failed": "yt-dlp 업데이트 실패: {{message}}",
     "audio_tools_ytdlp_updated": "yt-dlp {{version}} 설치 완료 — 적용하려면 백엔드를 다시 시작하세요.",
     "compute_device_auto": "자동(권장)",
     "hf_source_app_label": "VoiceStudio(암호화 저장, 권장)",
@@ -1445,8 +1439,6 @@
     "remote_backend_hint": "다른 컴퓨터에서 <1>OMNIVOICE_API_KEY</1>를 설정하여 백엔드를 시작하고 tailnet으로 연결한 뒤 이 앱이 해당 주소를 사용하도록 지정하세요.",
     "remote_backend_invalid_url": "http:// 또는 https://로 시작하는 올바른 URL을 입력하세요(예: http://gpu-box:3900).",
     "remote_backend_key": "API 키",
-    "remote_backend_probe_fail": "실패 — {{detail}}",
-    "remote_backend_probe_ok": "정상 — {{detail}}",
     "remote_backend_test": "연결 테스트",
     "remote_backend_title": "원격 백엔드",
     "remote_backend_unreachable": "연결할 수 없음",
@@ -1460,7 +1452,6 @@
     "reset_desc": "VoiceStudio의 일부 또는 전부를 처음 설치한 상태로 되돌립니다.",
     "reset_done": "초기화 완료 — 새로고침 중…",
     "reset_done_restart": "초기화 완료 — VoiceStudio 다시 시작 중…",
-    "reset_failed": "초기화 실패: {{message}}",
     "reset_irreversible": "음성 프로필, 프로젝트, 생성된 오디오가 영구적으로 삭제됩니다. 되돌릴 수 없습니다.",
     "reset_models_shared": "공유 Hugging Face 캐시 — 다른 AI 도구가 받은 모델도 들어 있을 수 있습니다.",
     "reset_models_shared_warning": "모델 캐시는 이 컴퓨터의 다른 AI 도구와 공유하는 표준 Hugging Face 캐시입니다. 제거하면 VoiceStudio가 받지 않은 모델도 삭제될 수 있습니다. VoiceStudio에 필요한 항목은 다음 사용 시 다시 다운로드됩니다.",
@@ -1468,13 +1459,9 @@
     "reset_restart_note": "완료하려면 VoiceStudio가 엔진을 다시 시작합니다. 몇 초 정도 걸립니다.",
     "reset_scope_caches": "캐시 및 임시 파일",
     "reset_scope_content": "음성, 프로젝트, 생성된 오디오 및 앱 데이터베이스",
-    "reset_scope_engines": "설치된 사이드카 엔진(IndexTTS-2 등)",
-    "reset_scope_history": "생성 및 더빙 기록과 관련 오디오",
     "reset_scope_logs": "로그 및 충돌 보고서",
     "reset_scope_models": "다운로드한 모델 가중치",
     "reset_scope_settings": "앱 설정 — 엔진 선택, 기본 음성, 저장된 옵션",
-    "reset_scope_tools": "다운로드한 오디오 도구(ffmpeg, ffprobe, yt-dlp)",
-    "reset_scope_ui_prefs": "UI 환경설정 — 테마, 언어, 레이아웃, 더빙 설정",
     "reset_tier_assets": "다운로드한 자산 및 모델",
     "reset_tier_assets_hint": "모델 가중치, 사이드카 엔진, 오디오 도구, 캐시를 제거합니다. 만든 콘텐츠는 모두 유지되며 필요할 때 다시 다운로드됩니다.",
     "reset_tier_everything": "VoiceStudio가 만든 모든 항목",
@@ -1500,7 +1487,6 @@
     "translate_quality_desc": "빠른 번역은 직역에 가깝고 신속하며, Cinematic은 LLM으로 자연스럽게 다듬습니다.",
     "uninstall": "모든 데이터 제거",
     "uninstall_body": "VoiceStudio는 완전히 로컬에서 작동하므로 제거 과정은 앱이 만든 폴더를 삭제하는 것입니다. 음성 프로필, 프로젝트, 생성된 오디오가 영구적으로 삭제되며 되돌릴 수 없습니다. 앱 자체를 제거하는 작업은 별도로 해야 합니다.",
-    "uninstall_confirm": "{{size}} 삭제 후 종료",
     "uninstall_confirm_body": "음성 프로필, 프로젝트, 생성된 오디오가 영구적으로 삭제됩니다. 되돌릴 수 없습니다.",
     "uninstall_confirm_title": "VoiceStudio 데이터를 모두 제거할까요?",
     "uninstall_desc": "VoiceStudio가 이 컴퓨터에 기록한 모든 데이터를 삭제한 뒤 종료합니다.",
@@ -1509,8 +1495,6 @@
     "uninstall_models_warning": "공유 Hugging Face 캐시({{size}})도 포함됩니다. 다른 AI 도구가 다운로드한 모델도 함께 삭제될 수 있습니다.",
     "uninstall_optional_group": "선택 사항",
     "uninstall_partial": "일부 폴더를 제거하지 못했습니다: {{paths}}",
-    "uninstall_target_data": "음성, 프로젝트, 생성된 오디오, 기록",
-    "uninstall_target_env": "설정 + 관리되는 Python 환경",
     "uninstall_target_models": "다운로드한 모델 가중치(공유 Hugging Face 캐시)",
     "uninstall_target_userenv": "저장된 환경(캐시 위치, 토큰)",
     "uninstall_total": "위치 {{count}}곳 · {{size}} 확보",
@@ -2073,10 +2057,7 @@
     "retry_load": "재시도",
     "backup_line": "데이터베이스 백업",
     "backup_none": "다음 데이터베이스 업데이트 전에 자동 생성됩니다.",
-    "backup_latest": "최근 백업: {{when}}",
-    "notes_for": "릴리스 노트 — v{{version}}",
-    "tab": "업데이트",
-    "whats_new_in": "v{{version}}의 새로운 기능"
+    "tab": "업데이트"
   },
   "exportModal": {
     "export_options": "내보내기 옵션",
@@ -2189,7 +2170,6 @@
     "reco_install_one": "{{label}} 설치",
     "install_failed": "모델 설치 실패: {{message}}",
     "mirror_custom_url": "사용자 지정 미러 URL",
-    "mirror_title": "Hugging Face 미러",
     "reco_disk_free": "모델 디스크 여유 공간 {{free}}GB",
     "voice_previews_checked": "{{when}}에 확인",
     "voice_previews_rejected": "음성 갤러리 업데이트가 거부되었습니다: {{message}}"
@@ -2544,7 +2524,6 @@
     "reset_default": "기본값으로 재설정",
     "region_label": "다운로드 지역",
     "free_space": "이 드라이브의 여유 공간은 {{free}}GB이며 약 {{needed}}GB가 필요합니다",
-    "lib_show_all": "모델 {{count}}개 더 보기",
     "storage_temp": "임시 파일"
   },
   "asr_missing": {
@@ -2575,7 +2554,6 @@
     "community_desc": "설정 도움과 문제 해결을 가장 빠르게 받을 수 있고, 만든 더빙과 음성을 편하게 공유할 수도 있습니다. 인사를 나누고 다른 사람들이 무엇을 만드는지 구경해 보세요.",
     "community_title": "도움말 및 커뮤니티",
     "email_desc": "이메일 — 라이선스, 제휴 또는 비공개 문의",
-    "feature_cta": "GitHub Issues 열기",
     "feature_desc": "아이디어나 질문이 있거나 작업 흐름이 불편한가요? GitHub 이슈를 열면 공개적으로 추적되고 다른 사람도 의견을 보탤 수 있습니다. 먼저 간단히 검색하면 이미 논의된 내용을 찾을 때가 많습니다.",
     "feature_title": "기능 제안 또는 질문",
     "follow_cta": "X에서 팔로우",
@@ -2716,7 +2694,6 @@
     "no_stderr": "기록된 오류 출력이 없습니다.",
     "notice": "음성 백엔드가 {{ago}} 전에 충돌했으며({{exit}}) 자동으로 다시 시작하고 있습니다.",
     "report_needs_log": "이 이벤트에는 기록된 오류 출력이 없어 원클릭 신고 내용이 비게 됩니다. 실제 문제가 있다면 설정 → 로그 → 백엔드의 마지막 부분을 새 이슈에 첨부해 주세요.",
-    "stderr_title": "마지막 오류 출력(stderr)",
     "uptime_value": "{{count}}초",
     "view": "충돌 상세 정보 보기"
   },
@@ -3034,7 +3011,6 @@
     "intro": "Supertonic-3에는 서로 다른 두 라이선스가 적용됩니다. 엔진을 활성화하기 전에 모두 확인하세요.",
     "model_desc": "Supertonic-3 모델 가중치는 OpenRAIL-M 라이선스로 배포됩니다. 이 라이선스는 악의적 목적의 사용을 제한합니다. 전체 용도 제한은 연결된 라이선스를 확인하세요.",
     "read_mit": "MIT 라이선스 읽기 →",
-    "read_openrail": "OpenRAIL-M 라이선스 읽기 →",
     "title": "Supertonic-3 — 라이선스 동의"
   },
   "engines": {

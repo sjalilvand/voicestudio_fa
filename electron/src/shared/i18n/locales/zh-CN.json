@@ -2139,7 +2139,6 @@
     "check_logs_restart": "检查日志中是否有模型加载错误。尝试重新启动。",
     "llm_set_env": "设置 TRANSLATE_BASE_URL 和 TRANSLATE_API_KEY 环境变量。可与 Ollama、OpenAI、LM Studio 等配合使用。",
     "llm_cinematic": "LLM（影视级）",
-    "llm_configure": "配置 TRANSLATE_BASE_URL 以使用影视级翻译质量",
     "llm_optional": "可选 — 设置 TRANSLATE_BASE_URL 可启用影视级质量"
   },
   "license": {
