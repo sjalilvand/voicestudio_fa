@@ -27,7 +27,12 @@ from types import SimpleNamespace
 import pytest
 
 
-# CLEAN-ROOM (spec W7-tests §2): model_manager fixture (diarization variant D)
+@pytest.fixture
+def model_manager(fresh_model_manager, monkeypatch):
+    manager = fresh_model_manager(force=True)
+    monkeypatch.setattr(manager, "_diar_pipeline", None)
+    monkeypatch.setattr(manager, "_torch", None)
+    return manager
 
 
 # ---------------------------------------------------------------------------

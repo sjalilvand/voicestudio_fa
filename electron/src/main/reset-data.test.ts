@@ -99,7 +99,18 @@ it('does not infer ownership from a lookalike ancestor or a model-cache signatur
   expect(await isValidVoiceStudioRoot(cache, null, true)).toBe(true);
 });
 
-// CLEAN-ROOM (spec W7-tests §15): model/data comparison follows aliases
+it('resolves aliases before deciding whether models are shared', async () => {
+  const roots = await fixture();
+  const externalAlias = join(roots.root, 'external-models-link');
+  await symlink(roots.models, externalAlias, process.platform === 'win32' ? 'junction' : 'dir');
+  expect(await modelsAreShared(externalAlias, roots.data)).toBe(true);
+
+  const nestedModels = join(roots.data, 'models');
+  const nestedAlias = join(roots.root, 'nested-models-link');
+  await mkdir(nestedModels);
+  await symlink(nestedModels, nestedAlias, process.platform === 'win32' ? 'junction' : 'dir');
+  expect(await modelsAreShared(nestedAlias, roots.data)).toBe(false);
+});
 
 it('authorizes reset roots per scope and rejects a logs alias to a shared cache', async () => {
   const roots = await fixture();

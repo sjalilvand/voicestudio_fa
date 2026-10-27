@@ -75,7 +75,29 @@ def client():
     return TestClient(app, client=("127.0.0.1", 50000))
 
 
-# CLEAN-ROOM (spec W7-tests §7): make_profile fixture
+@pytest.fixture
+def make_profile():
+    from core import db
+
+    db.init_db()
+    inserted = []
+
+    def make(language):
+        profile_id = f"lang-{uuid.uuid4().hex[:10]}"
+        with db.db_conn() as conn:
+            conn.execute(
+                "INSERT INTO voice_profiles (id, name, language, kind, created_at) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (profile_id, "Language fixture", language, "clone", 0.0),
+            )
+        inserted.append(profile_id)
+        return profile_id
+
+    yield make
+    with db.db_conn() as conn:
+        for profile_id in inserted:
+            conn.execute("DELETE FROM generation_history WHERE profile_id=?", (profile_id,))
+            conn.execute("DELETE FROM voice_profiles WHERE id=?", (profile_id,))
 
 
 def _install(monkeypatch, engine):

@@ -23,7 +23,27 @@ def test_status_parses_json():
 _RUNNING = {"BackendState": "Running", "Self": {"DNSName": "box.ts.net.", "TailscaleIPs": ["100.64.0.1"]}}
 
 
-# CLEAN-ROOM (spec W7-tests §14): _runner helper (fake tailscale CLI)
+def _runner(status_payload, https_ok=True, http_ok=True, serve_config=None):
+    def run(args, **kw):
+        if args[1:3] == ["serve", "status"]:
+            return MagicMock(returncode=0, stdout=json.dumps(serve_config or {}), stderr="")
+        if "status" in args and "--json" in args:
+            return MagicMock(returncode=0, stdout=json.dumps(status_payload), stderr="")
+        if "--https=443" in args:
+            return MagicMock(
+                returncode=0 if https_ok else 1,
+                stdout="",
+                stderr="" if https_ok else "error enabling https feature: 404",
+            )
+        if "--http=80" in args:
+            return MagicMock(
+                returncode=0 if http_ok else 1,
+                stdout="",
+                stderr="" if http_ok else "serve failed",
+            )
+        return MagicMock(returncode=0, stdout="", stderr="")
+
+    return run
 
 
 def test_status_includes_cert_domains():

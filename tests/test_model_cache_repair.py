@@ -16,7 +16,12 @@ from types import SimpleNamespace
 import pytest
 
 
-# CLEAN-ROOM (spec W7-tests §2): model_manager fixture (offline-loader variant E + curated revision pin)
+@pytest.fixture
+def model_manager(offline_model_manager, monkeypatch):
+    from services import hf_revisions
+
+    monkeypatch.setitem(hf_revisions.CURATED_REVISIONS, "test/checkpoint", "a" * 40)
+    return offline_model_manager
 
 
 _TRUNCATED = OSError(

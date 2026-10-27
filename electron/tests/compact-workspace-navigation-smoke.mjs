@@ -1,9 +1,6 @@
-import { chromium } from 'playwright';
+import { launchSmokeBrowser, openMockedPage } from './smoke-api-mock.mjs';
 import assert from 'node:assert/strict';
-const browser = await chromium.launch({
-  ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}),
-  headless: true,
-});
+const browser = await launchSmokeBrowser();
 async function expectFocus(page, locator) {
   await page.waitForFunction(
     (element) => element === document.activeElement,
@@ -12,7 +9,16 @@ async function expectFocus(page, locator) {
   );
 }
 try {
-  // CLEAN-ROOM (spec W7-tests §11): open the mocked page via the shared smoke API-mock helper
+  const page = await openMockedPage(browser, {
+    viewport: { width: 1200, height: 800 },
+    fixtures: {
+      '/api/profiles': [],
+      '/api/history': [],
+      '/api/projects': [],
+      '/api/export/history': [],
+      '/api/longform/jobs': { jobs: [] },
+    },
+  });
   const routes = [
     ['Voice', 'Clone', '/clone'],
     ['Voice', 'Design', '/design'],

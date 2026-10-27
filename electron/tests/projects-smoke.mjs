@@ -1,8 +1,10 @@
-import { chromium } from 'playwright';
+import { launchSmokeBrowser, openMockedPage } from './smoke-api-mock.mjs';
 import assert from 'node:assert/strict';
-// CLEAN-ROOM (spec W7-tests §11): launch the smoke browser (with channel fallback)
+const browser = await launchSmokeBrowser({ fallbackChannel: 'msedge' });
 try {
-  // CLEAN-ROOM (spec W7-tests §11): open the mocked page and collect page errors
+  const page = await openMockedPage(browser);
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
   const stored = {
     id: 'legacy',
     name: 'Legacy project',

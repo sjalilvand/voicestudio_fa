@@ -45,7 +45,9 @@ def floor(engine):
     return engine.min_vram_gb
 
 
-# CLEAN-ROOM (spec W7-tests §2): model_manager fixture (base variant A)
+@pytest.fixture
+def model_manager(fresh_model_manager):
+    return fresh_model_manager()
 
 
 def _gpu(vram_gb: float, *, family: str = "cuda",

@@ -38,7 +38,9 @@ os.environ.setdefault("OMNIVOICE_DISABLE_FILE_LOG", "1")
 _BACKEND = Path(__file__).resolve().parents[1] / "backend"
 
 
-# CLEAN-ROOM (spec W7-tests §2): mm fixture (base variant A)
+@pytest.fixture
+def mm(fresh_model_manager):
+    return fresh_model_manager()
 
 
 # ── Defect 1: the execution clock must not start at submit ──────────────────

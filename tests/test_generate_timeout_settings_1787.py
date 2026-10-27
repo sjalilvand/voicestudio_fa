@@ -82,7 +82,9 @@ class TestSetEnvValidation:
 
 # ── effective-budget behaviour: persisted value survives the next import ──
 
-# CLEAN-ROOM (spec W7-tests §2): model_manager fixture (base variant A)
+@pytest.fixture
+def model_manager(fresh_model_manager):
+    return fresh_model_manager()
 
 
 def test_generate_budget_takes_effect_after_restart(model_manager, monkeypatch):

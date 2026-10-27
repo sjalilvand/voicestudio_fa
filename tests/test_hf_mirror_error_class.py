@@ -129,7 +129,10 @@ def test_journal_classifies_mirror_download_as_network_error(mirror_env):
 # ── #886 family: the incomplete-cache auto-repair failure names its cause ───
 
 
-# CLEAN-ROOM (spec W7-tests §2): model_manager fixture (offline-loader variant E + last-repair-error reset)
+@pytest.fixture
+def model_manager(offline_model_manager, monkeypatch):
+    monkeypatch.setattr(offline_model_manager, "_last_repair_error", "")
+    return offline_model_manager
 
 
 _TRUNCATED = OSError(

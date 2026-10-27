@@ -16,7 +16,12 @@ import sys
 import pytest
 
 
-# CLEAN-ROOM (spec W7-tests §2): mm fixture (variant B: one worker, fresh pool singleton)
+@pytest.fixture
+def mm(fresh_model_manager, monkeypatch):
+    manager = fresh_model_manager()
+    monkeypatch.setattr(manager, "_pick_gpu_workers", lambda: 1)
+    monkeypatch.setattr(manager, "_gpu_pool_singleton", None)
+    return manager
 
 
 def test_stale_reference_survives_reset(mm):

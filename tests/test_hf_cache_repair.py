@@ -331,7 +331,10 @@ def test_repo_cache_dir_uses_env_cache(monkeypatch, tmp_path):
 # ── model_manager wiring ───────────────────────────────────────────────────
 
 
-# CLEAN-ROOM (spec W7-tests §2): model_manager fixture (offline-loader variant E + link-repair reset)
+@pytest.fixture
+def model_manager(offline_model_manager, monkeypatch):
+    monkeypatch.setattr(offline_model_manager, "_LINK_REPAIR_ATTEMPTED", set())
+    return offline_model_manager
 
 
 def _healed_summary(repo_id="test/checkpoint"):

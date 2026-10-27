@@ -1,12 +1,19 @@
 import assert from 'node:assert/strict';
-import { chromium } from 'playwright';
+import { launchSmokeBrowser, openMockedPage } from './smoke-api-mock.mjs';
 
-const browser = await chromium.launch({
-  ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}),
-  headless: true,
-});
+const browser = await launchSmokeBrowser();
 try {
-  // CLEAN-ROOM (spec W7-tests §11): open the mocked page on the appearance settings route
+  const page = await openMockedPage(browser, {
+    viewport: { width: 1200, height: 800 },
+    fixtures: {
+      '/api/profiles': [],
+      '/api/history': [],
+      '/api/projects': [],
+    },
+  });
+  await page.goto(
+    (process.env.VOICESTUDIO_UI_URL || 'http://localhost:3928') + '/#/settings/appearance',
+  );
   const dark = page.getByRole('group', { name: 'Dark', exact: true });
   const original = dark.getByRole('button', { name: 'VoiceStudio Original', exact: true });
   assert.equal(

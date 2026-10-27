@@ -1,15 +1,37 @@
-import { chromium } from 'playwright';
+import { launchSmokeBrowser, openMockedPage } from './smoke-api-mock.mjs';
 import assert from 'node:assert/strict';
 
 // Saving a designed voice confirms it: the form only clears its name field, so
 // without the toast the save looked like nothing happened.
 const BASE = process.env.VOICESTUDIO_UI_URL || 'http://localhost:3912';
-const browser = await chromium.launch({
-  ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}),
-  headless: true,
-});
+const browser = await launchSmokeBrowser();
 try {
-  // CLEAN-ROOM (spec W7-tests §11): mocked page with profile-create handler, then open the design route
+  const created = [];
+  const page = await openMockedPage(browser, {
+    viewport: { width: 1280, height: 860 },
+    fixtures: {
+      '/api/history': [],
+      '/api/projects': [],
+      '/api/export/history': [],
+      '/api/longform/jobs': { jobs: [] },
+    },
+    handle: (route, request, path) => {
+      if (path !== '/api/profiles') return false;
+      if (request.method() === 'POST') {
+        const profile = {
+          id: 'designed-profile',
+          name: request.postDataJSON().name,
+          kind: 'design',
+          language: 'English',
+        };
+        created.push(profile);
+        return route.fulfill({ json: profile });
+      }
+      if (request.method() === 'GET') return route.fulfill({ json: created });
+      return false;
+    },
+  });
+  await page.goto(`${BASE}/#/design`);
   await page.getByRole('textbox', { name: 'Profile name' }).fill('Release voice');
   await page.getByRole('button', { name: 'Save as voice profile' }).click();
   await page.locator('[data-sonner-toast]', { hasText: 'Voice profile saved.' }).waitFor();

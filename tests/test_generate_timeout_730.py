@@ -20,7 +20,9 @@ import threading
 
 import pytest
 
-# CLEAN-ROOM (spec W7-tests §2): model_manager fixture (base variant A)
+@pytest.fixture
+def model_manager(fresh_model_manager):
+    return fresh_model_manager()
 
 
 def test_guard_times_out_resets_pool_and_restores_capacity(model_manager):

@@ -83,7 +83,24 @@ def _patch_install(download, monkeypatch, snapshot_download=None):
         monkeypatch.setattr(huggingface_hub, "snapshot_download", snapshot_download)
 
 
-# CLEAN-ROOM (spec W7-tests §6): _run_install helper
+def _run_install(download):
+    from utils import hf_progress
+
+    events = []
+    listener = hf_progress.register_listener(events.append)
+
+    async def install_and_drain():
+        await download.install_model(download.InstallModelRequest(repo_id=REPO))
+        current = asyncio.current_task()
+        pending = [task for task in asyncio.all_tasks() if task is not current and not task.done()]
+        if pending:
+            await asyncio.gather(*pending)
+
+    try:
+        asyncio.run(install_and_drain())
+    finally:
+        hf_progress.unregister_listener(listener)
+    return [event["phase"] for event in events if event.get("repo_id") == REPO]
 
 
 def _cancel(download):

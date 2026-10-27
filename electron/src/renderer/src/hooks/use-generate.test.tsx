@@ -315,7 +315,46 @@ it.each([
   },
 );
 
-// CLEAN-ROOM (spec W7-tests §12): Voice Design blocker follows the engine design capability
+it.each([
+  [false, 'design', false, false],
+  [null, 'none', true, true],
+  [true, 'none', true, true],
+] as const)(
+  'uses the declared Voice Design capability %s',
+  async (capability, expectedBlocker, expectedAllowed, sends) => {
+    engine.design = capability;
+    vi.mocked(generateClone).mockReset().mockRejectedValue(new Error('request ended'));
+    function CapabilityConsumer() {
+      const state = useGenerateClone();
+      return (
+        <button
+          onClick={() =>
+            void state.generateDesign({ text: 'Capability check', instruct: 'calm', seed: 19 })
+          }
+        >
+          {state.designBlocker ?? 'none'}:{String(state.canGenerateDesign)}
+        </button>
+      );
+    }
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <GenerationProvider>
+          <CapabilityConsumer />
+        </GenerationProvider>
+      </QueryClientProvider>,
+    );
+    const action = screen.getByRole('button', {
+      name: `${expectedBlocker}:${String(expectedAllowed)}`,
+    });
+    fireEvent.click(action);
+    if (sends) await waitFor(() => expect(generateClone).toHaveBeenCalled());
+    else {
+      await act(async () => {});
+      expect(generateClone).not.toHaveBeenCalled();
+    }
+    engine.design = undefined;
+  },
+);
 
 it.each([
   [

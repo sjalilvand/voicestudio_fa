@@ -13,7 +13,11 @@ import threading
 
 import pytest
 
-# CLEAN-ROOM (spec W7-tests §2): model_manager fixture (variant C: no loaded model)
+@pytest.fixture
+def model_manager(fresh_model_manager, monkeypatch):
+    manager = fresh_model_manager()
+    monkeypatch.setattr(manager, "model", None)
+    return manager
 
 
 def test_model_load_timeout_respects_env(model_manager, monkeypatch):

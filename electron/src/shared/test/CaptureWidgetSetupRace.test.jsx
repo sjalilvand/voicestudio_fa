@@ -8,7 +8,7 @@
  */
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { act, render, screen, waitFor, fireEvent } from '@testing-library/react';
 
 const { toastMock, eventHandlers, eventState, eventUnlisteners } = vi.hoisted(() => ({
   toastMock: Object.assign(vi.fn(), {
@@ -222,7 +222,44 @@ describe('CaptureWidget — connect-time asr_model_missing during mic setup', ()
     ).toBe(false);
   });
 
-  // CLEAN-ROOM (spec W7-tests §3): delivery-completion tests (behaviours 3a, 3b)
+  it('completes a native delivery only after microphone startup succeeds', async () => {
+    render(<CaptureWidget />);
+    await waitFor(() => expect(eventHandlers['tray-dictate']).toBeTypeOf('function'));
+    const delivery = shortcutEvent();
+
+    void eventHandlers['tray-dictate'](delivery);
+    await waitFor(() => expect(FakeWS.instances).toHaveLength(1));
+    expect(invokeMock).not.toHaveBeenCalledWith('complete_dictation_capture_delivery', {
+      registrationId: delivery.payload.registrationId,
+      deliveryId: delivery.payload.deliveryId,
+      error: null,
+    });
+
+    micControl.resolve(micStop);
+    await waitFor(() =>
+      expect(invokeMock).toHaveBeenCalledWith('complete_dictation_capture_delivery', {
+        registrationId: delivery.payload.registrationId,
+        deliveryId: delivery.payload.deliveryId,
+        error: null,
+      }),
+    );
+  });
+
+  it('completes a disabled native delivery without opening the microphone', async () => {
+    storeState.dictationEnabled = false;
+    render(<CaptureWidget />);
+    await waitFor(() => expect(eventHandlers['tray-dictate']).toBeTypeOf('function'));
+    const delivery = shortcutEvent();
+
+    await eventHandlers['tray-dictate'](delivery);
+
+    expect(navigator.mediaDevices.getUserMedia).not.toHaveBeenCalled();
+    expect(invokeMock).toHaveBeenCalledWith('complete_dictation_capture_delivery', {
+      registrationId: delivery.payload.registrationId,
+      deliveryId: delivery.payload.deliveryId,
+      error: 'Dictation is turned off',
+    });
+  });
 
   it('turns a PCM-fallback socket failure into a terminal error', async () => {
     storeState.dictationModelId = 'whisperx';
@@ -239,7 +276,73 @@ describe('CaptureWidget — connect-time asr_model_missing during mic setup', ()
     expect(invokeMock).not.toHaveBeenCalledWith('set_tray_recording', { recording: true });
   });
 
-  // CLEAN-ROOM (spec W7-tests §3): error-pill and setup-rejection race tests (behaviours 3c, 3d)
+  it('keeps the missing-model error after microphone setup finishes late', async () => {
+    render(<CaptureWidget />);
+    const delivery = shortcutEvent();
+    pressShortcut();
+    await waitFor(() => expect(FakeWS.instances).toHaveLength(1));
+    const missing = {
+      type: 'error',
+      kind: 'asr_model_missing',
+      error: 'asr_model_missing',
+      recommended: { repo_id: 'acme/speech-small', label: 'Speech Small', size_gb: 1.2 },
+    };
+
+    await act(async () => {
+      await FakeWS.instances[0].onmessage({ data: JSON.stringify(missing) });
+    });
+    expect(await screen.findByText(/No speech-to-text model is installed/)).toBeInTheDocument();
+    expect(toastAsrMock).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(emitMock).toHaveBeenCalledWith(
+        'dictation-notice',
+        expect.objectContaining({
+          kind: 'asr_missing',
+          missing: expect.objectContaining({
+            recommended: expect.objectContaining({ repo_id: 'acme/speech-small' }),
+          }),
+        }),
+      ),
+    );
+
+    await act(async () => micControl.resolve(micStop));
+    await waitFor(() => expect(micStop).toHaveBeenCalled());
+    expect(screen.getByText(/No speech-to-text model is installed/)).toBeInTheDocument();
+    expect(screen.queryByText('Listening…')).not.toBeInTheDocument();
+    expect(invokeMock).not.toHaveBeenCalledWith('set_tray_recording', { recording: true });
+    await waitFor(() =>
+      expect(invokeMock).toHaveBeenCalledWith('complete_dictation_capture_delivery', {
+        registrationId: delivery.payload.registrationId,
+        deliveryId: delivery.payload.deliveryId,
+        error: 'Dictation could not start',
+      }),
+    );
+  });
+
+  it('does not replace the missing-model error when late microphone setup rejects', async () => {
+    render(<CaptureWidget />);
+    pressShortcut();
+    await waitFor(() => expect(FakeWS.instances).toHaveLength(1));
+    const missing = {
+      type: 'error',
+      kind: 'asr_model_missing',
+      error: 'asr_model_missing',
+      recommended: { repo_id: 'acme/speech-small', label: 'Speech Small', size_gb: 1.2 },
+    };
+    await act(async () => {
+      await FakeWS.instances[0].onmessage({ data: JSON.stringify(missing) });
+    });
+    const failure = new Error('input device became busy');
+    failure.name = 'NotReadableError';
+    await act(async () => {
+      micControl.reject(failure);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(screen.getByText(/No speech-to-text model is installed/)).toBeInTheDocument();
+    expect(toastMock.error).not.toHaveBeenCalled();
+    expect(invokeMock).not.toHaveBeenCalledWith('set_tray_recording', { recording: true });
+  });
 });
 
 it('pauses, resumes, and closes a capture started by the native shortcut', async () => {
