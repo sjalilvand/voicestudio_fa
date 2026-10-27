@@ -124,7 +124,7 @@ def test_whole_file_dub_preserves_unknown_or_explicit_source(tmp_path, monkeypat
     monkeypatch.setattr(dc, '_ensure_diarisation_accepted', lambda: None)
     monkeypatch.setattr(dc, 'get_diarization_pipeline', lambda: None)
     monkeypatch.setattr(dc, 'release_device_cache', lambda: None)
-    monkeypatch.setattr(dc, 'snap_segment_starts', lambda *a, **k: None)
+    monkeypatch.setattr(dc, 'snap_segments_to_speech', lambda *a, **k: None)
     monkeypatch.setattr(dc.sf, 'read', lambda *a, **k: (np.zeros(32000), 16000))
     monkeypatch.setattr(m.ab, 'asr_model_missing_error', lambda *a, **k: None)
     transcript = {'chunks': [{'text': 'Goedemorgen', 'timestamp': (0, 2)}], 'language': None}

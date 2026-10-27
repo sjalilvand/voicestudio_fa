@@ -50,7 +50,7 @@ from services.segmentation import (
     _words_from_whisper,
     clean_up_segments,
 )
-from services.onset_align import snap_segment_starts
+from services.onset_align import snap_segments_to_speech
 from services import dub_pipeline
 from core.browser_guard import reject_cross_site_get
 
@@ -1951,9 +1951,11 @@ async def dub_transcribe_stream(
             # track ASR ran on — vocals.wav when Demucs succeeded. #963:
             # when it didn't (mixed audio), snapping is disabled — every
             # footstep/sigh/score cue is a false onset candidate there.
+            # #3419: starts and ends are gated on voiced speech, so a sigh
+            # or breath neither starts a line nor pads its end.
             try:
-                snap_segment_starts(chunk_segs, audio_np, sr,
-                                    separated_vocals=asr_on_vocals)
+                snap_segments_to_speech(chunk_segs, audio_np, sr,
+                                        separated_vocals=asr_on_vocals)
             except Exception as e:
                 logger.warning("onset alignment skipped for chunk %d: %s", i, e)
             # Provisional per-chunk labels for the streaming UI only — the
@@ -2756,8 +2758,9 @@ async def dub_transcribe(job_id: str, num_speakers: Optional[int] = None):
         # sound is a false onset candidate, so snapping is disabled.
         try:
             audio_for_onset, onset_sr = sf.read(asr_audio_target, dtype="float32")
-            snap_segment_starts(segments, audio_for_onset, onset_sr,
-                                separated_vocals=asr_on_vocals)
+            # #3419: also gate on voiced speech and trim trailing non-speech.
+            snap_segments_to_speech(segments, audio_for_onset, onset_sr,
+                                    separated_vocals=asr_on_vocals)
         except Exception as e:
             logger.warning("onset alignment skipped: %s", e)
 
