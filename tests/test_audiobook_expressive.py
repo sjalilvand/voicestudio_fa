@@ -417,6 +417,9 @@ class TestEdgeTrim:
     ("alpha\n\nbeta", ["alpha", "beta"]),
     ("  alpha  \n \t\n\n\n  beta\n", ["alpha", "beta"]),
     ("", []), (None, []), (" \n\n \n", []),
+    ("alpha\r\n\r\nbeta", ["alpha", "beta"]),
+    ("alpha\r\n \r\n\r\nbeta", ["alpha", "beta"]),
+    ("alpha\r\nbeta", ["alpha\r\nbeta"]),
 ])
 def test_split_paragraphs_cases(text, expected):
     from services.chunked_tts import split_paragraphs

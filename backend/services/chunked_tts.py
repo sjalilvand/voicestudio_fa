@@ -97,7 +97,7 @@ def _effective_max_chars(text: str, max_chars: int) -> int:
 DEFAULT_TRIM_THRESHOLD_DB = -40.0
 DEFAULT_TRIM_KEEP_MS = 40
 
-_PARAGRAPH_BREAK = re.compile(r"\n[ \t]*\n+")
+_PARAGRAPH_BREAK = re.compile(r"\r?\n[ \t\r]*\n(?:[ \t\r]*\n)*")
 
 
 def trim_edge_silence(audio, sample_rate, *, threshold_db=DEFAULT_TRIM_THRESHOLD_DB,

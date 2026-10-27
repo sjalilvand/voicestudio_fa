@@ -97,6 +97,9 @@ def _clean_summary(raw) -> Optional[dict]:
         return None
 
     def text(value) -> str:
+        # Only scalars become text; a dict or list would reach the client as its repr.
+        if isinstance(value, bool) or not isinstance(value, (str, int, float)):
+            return ""
         return str(value) if value else ""
 
     voices = []

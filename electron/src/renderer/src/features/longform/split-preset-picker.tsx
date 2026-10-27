@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
 import {
@@ -11,6 +12,8 @@ import { SPLIT_MODES, type SplitMode } from '@shared/utils/splitStoryText';
 
 const CHAR_FLOOR = 40;
 const CHAR_CEIL = 2000;
+const clampChars = (raw: string) =>
+  Math.min(CHAR_CEIL, Math.max(CHAR_FLOOR, Number(raw) || CHAR_FLOOR));
 
 interface PickerProps {
   preset: SplitMode;
@@ -28,6 +31,14 @@ export function SplitPresetPicker({
   onCharLimit,
   disabled,
 }: PickerProps) {
+  // The typed text, kept until the field is committed: clamping on every keystroke
+  // would turn a first digit of "500" into the floor.
+  const [draft, setDraft] = useState<string | null>(null);
+  const commit = () => {
+    if (draft === null) return;
+    onCharLimit(clampChars(draft));
+    setDraft(null);
+  };
   const { t } = useTranslation();
   const entries = SPLIT_MODES.map((value) => ({ value, label: t(`stories.split_${value}`) }));
   return (
@@ -59,12 +70,12 @@ export function SplitPresetPicker({
             step={10}
             className="h-8 w-20"
             disabled={disabled}
-            value={charLimit}
-            onChange={(e) =>
-              onCharLimit(
-                Math.min(CHAR_CEIL, Math.max(CHAR_FLOOR, Number(e.target.value) || CHAR_FLOOR)),
-              )
-            }
+            value={draft ?? String(charLimit)}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commit();
+            }}
           />
         </label>
       )}

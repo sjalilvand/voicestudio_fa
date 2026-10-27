@@ -2551,7 +2551,7 @@
     "line_gap": "Jeda antarbaris",
     "paragraph_gap": "Jeda antarparagraf",
     "trim_edges": "Pangkas keheningan mesin",
-    "trim_edges_help": "Memotong keheningan yang ditambahkan tiap mesin sebelum dan sesudah baris, lalu menyambungnya. Matikan untuk hasil mentah."
+    "trim_edges_help": "Memotong keheningan yang ditambahkan tiap mesin sebelum dan sesudah baris, lalu menyambung baris-barisnya. Matikan untuk hasil mentah."
   },
   "voicePanel": {
     "title": "Suara",

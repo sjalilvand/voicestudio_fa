@@ -24,4 +24,5 @@ https://github.com/debpalash/VoiceStudio
 This archived entry is not an installable skill. Existing installations should
 remove the old `omnivoice` / `oss-maintainer` entries and install `voicestudio` /
 `voicestudio-maintainer` from the canonical repository. The Electron supervisor
-launches the backend.
+attaches to a backend that is already running, or starts and supervises one when
+none is.

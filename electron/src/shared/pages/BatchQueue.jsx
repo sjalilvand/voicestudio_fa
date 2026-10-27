@@ -371,7 +371,7 @@ function JobCard({ job, onCancel, onDelete, t }) {
       {/* Duration for completed jobs */}
       {duration != null && (
         <div className="batch-queue__card-meta mt-[var(--space-1)] text-[var(--text-xs)] text-fg-muted">
-          {t('batch.completed_in', { duration: formatDuration(duration / 1000) })}
+          {t('batch.completed_in', { duration: formatDuration(duration) })}
         </div>
       )}
 

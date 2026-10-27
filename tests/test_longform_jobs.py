@@ -329,3 +329,17 @@ def test_summary_voice_rows_resolve_names_in_first_use_order(monkeypatch):
     assert rows == [{"id": "p1", "name": "First"}, {"id": "p2", "name": "Second"},
                     {"id": "ghost", "name": ""}]
     assert router._summary_voice_rows([], None, None) == []
+
+
+def test_summary_drops_non_scalar_text_fields():
+    """A persisted summary is untrusted: a dict or list must not reach the client as its repr."""
+    from api.routers.longform_jobs import _clean_summary
+
+    out = _clean_summary({
+        "engine": {"name": "x"},
+        "language": ["en"],
+        "format": True,
+        "voices": [{"id": ["v"], "name": "Narrator"}, {"id": 7, "name": None}],
+    })
+    assert out["engine"] == "" and out["language"] == "" and out["format"] == ""
+    assert out["voices"] == [{"id": "", "name": "Narrator"}, {"id": "7", "name": ""}]

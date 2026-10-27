@@ -157,7 +157,7 @@ def test_concurrent_repairs(tmp_path, monkeypatch):
 def test_locking_follows_host_os_name(tmp_path, monkeypatch):
     p = tmp_path / "libx.so"
     make_elf(p)
-    import fcntl
+    fcntl = pytest.importorskip("fcntl")  # Unix-only module
     seen = []
     monkeypatch.setattr(fcntl, "flock", lambda fd, op: seen.append(op))
     monkeypatch.setattr(sys, "platform", "win32")  # must not disable locking
