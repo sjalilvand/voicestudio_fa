@@ -5772,7 +5772,7 @@
    "_TorchCompileBody": {
     "properties": {
      "enabled": {
-      "description": "True to disable torch.compile (eager mode) for the engine",
+      "description": "True disables torch.compile and selects eager execution",
       "title": "Enabled",
       "type": "boolean"
      }
@@ -7910,7 +7910,7 @@
   },
   "/api/settings/perf/torch-compile-disabled": {
    "get": {
-    "description": "Return the current torch.compile-disabled toggle + the runtime platform.\n\n`platform` is still reported (clients may show it), but since #2135 the\ntoggle is live on every host: it used to be rendered disabled off Windows\non the assumption that only #65's Windows OOM needed it, which left the\nLinux/CUDA reporter of #2135 with no way to switch off the compile that\nwas killing their backend.",
+    "description": "Return the cross-platform compile-disable toggle and runtime platform.",
     "operationId": "get_torch_compile_disabled_api_settings_perf_torch_compile_disabled_get",
     "responses": {
      "200": {
@@ -7928,7 +7928,7 @@
     ]
    },
    "put": {
-    "description": "Persist the toggle. Honoured by `services.engine_env.build_engine_env()`\n(subprocess engines) and `services.engine_env.should_torch_compile()`\n(in-process), on every platform since #2135.",
+    "description": "Persist the toggle used by subprocess environments and in-process compile gates on every host.",
     "operationId": "set_torch_compile_disabled_api_settings_perf_torch_compile_disabled_put",
     "requestBody": {
      "content": {
