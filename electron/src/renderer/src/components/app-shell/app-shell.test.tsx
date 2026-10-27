@@ -1,7 +1,7 @@
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const where = vi.hoisted(() => ({ path: '/settings/general' }));
+const where = vi.hoisted(() => ({ path: '/settings/general', mac: false }));
 
 vi.mock('@tanstack/react-router', () => ({
   Outlet: () => <i data-mock="outlet" />,
@@ -17,7 +17,7 @@ vi.mock('@/components/now-playing-dock', () => ({ NowPlayingDock: () => null }))
 vi.mock('../backend-gate', () => ({
   BackendGate: ({ children }: { children: unknown }) => <>{children as never}</>,
 }));
-vi.mock('../bridge', () => ({ isMac: () => false }));
+vi.mock('../bridge', () => ({ isMac: () => where.mac }));
 vi.mock('@/hooks/use-backend-status', () => ({ useBackendStatus: () => ({ stage: 'running' }) }));
 vi.mock('@shared/utils/backendStage', () => ({ isBackendReachable: () => true }));
 import { AppShell } from './app-shell';
@@ -45,4 +45,18 @@ describe('AppShell', () => {
   it.each(['/design', '/settings/general'])('keeps the account corner on %s', (path) => {
     expect(mounted(path).has('corner')).toBe(1);
   });
+});
+
+it.each([
+  ['/pro', true],
+  ['/integrations', true],
+  ['/settings/general', false],
+])('gives %s headers clearance from the macOS account corner: %s', (path, padded) => {
+  where.mac = true;
+  where.path = path;
+  const { container } = render(<AppShell />);
+  expect(container.firstElementChild!.classList.contains('macos-notification-safe-area')).toBe(
+    padded,
+  );
+  where.mac = false;
 });

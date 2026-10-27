@@ -57,10 +57,18 @@ it.each(['/clone', '/', '/design', '/settings/appearance'])(
   },
 );
 
-it('keeps the full navigation on a page without a pane, but still honours an explicit close', () => {
+it.each(['/integrations', '/integrations/n8n', '/pro', '/workflows', '/clone'])(
+  'keeps one navigation layout on %s',
+  (path) => {
+    route.pathname = path;
+    expect(state().result.current.compact).toBe(true);
+  },
+);
+
+it('syncs an explicit collapse after the user expands the rail', () => {
   route.pathname = '/integrations';
   const hook = state();
-  expect(hook.result.current.secondaryWorkspace).toBe(false);
+  act(() => hook.result.current.setOpen(true));
   expect(hook.result.current.compact).toBe(false);
   act(() => hook.result.current.setOpen(false));
   expect(hook.result.current.compact).toBe(true);

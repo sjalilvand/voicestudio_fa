@@ -112,4 +112,12 @@ describe('icon rail', () => {
     fireEvent.click(toggle);
     expect(host.open).toHaveBeenCalledWith(true);
   });
+
+  it('sizes the rail to the row above the bottom player, never the whole viewport', () => {
+    // A viewport-tall rail ran under the now-playing dock and hid its last items.
+    show({ compact: true });
+    const rail = document.querySelector('[data-slot="compact-main-sidebar"]')!;
+    expect(rail.classList.contains('h-full')).toBe(true);
+    expect(rail.className).not.toMatch(/\bh-(?:dvh|screen|svh)\b/);
+  });
 });

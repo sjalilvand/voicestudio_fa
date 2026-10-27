@@ -14,7 +14,12 @@ const SECONDARY_ROUTES = new Set([
   '/design',
   '/transcriptions',
   '/calls',
+  '/workflows',
   '/settings',
+  // No pane of their own, but they keep the same icon rail as every other
+  // workspace so the navigation never changes shape between pages.
+  '/integrations',
+  '/pro',
 ]);
 // Voice-section routes whose context pane is the shared library (ContextSidebar).
 export const LIBRARY_ROUTES = new Set(['/', '/clone']);

@@ -23,7 +23,7 @@ import os
 import sys
 from typing import Any
 
-from core.device_caps import ACCELERATOR_PRIORITY, KERNEL_RISK_MARKER, HostCaps
+from core.device_caps import ACCELERATOR_PRIORITY, KERNEL_RISK_MARKER, HostCaps, cuda_forced
 from core.gpu_inventory import HostGPU, detect_host_gpus, discrete_candidates, pick_for_build
 
 #: Device families PyTorch can accelerate on. An engine whose targets include
@@ -33,17 +33,8 @@ _PYTORCH_FAMILIES = frozenset(ACCELERATOR_PRIORITY)
 
 
 def _cuda_forced() -> bool:
-    """``OMNIVOICE_FORCE_CUDA`` asks for CUDA even when the installed wheel
-    cannot drive the card (#3067).
-
-    ``services.model_manager.get_best_device`` honors the same flag, so the
-    report must agree with it: a forced host runs on the GPU and may fail at
-    kernel launch, which is a caveat rather than a host that cannot use its
-    card.
-    """
-    return os.environ.get("OMNIVOICE_FORCE_CUDA", "").strip().lower() in {
-        "1", "true", "yes", "on",
-    }
+    """Same flag the loader and routing badge read (``device_caps.cuda_forced``)."""
+    return cuda_forced()
 
 
 # Host states in which a physical GPU exists that PyTorch cannot drive.
