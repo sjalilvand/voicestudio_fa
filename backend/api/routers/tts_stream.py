@@ -29,6 +29,8 @@ from typing import Optional
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
+from services.reference_transcript import stored_reference_transcript
+
 router = APIRouter()
 logger = logging.getLogger("omnivoice.tts_stream")
 
@@ -187,8 +189,9 @@ def build_stream_kwargs(data: dict) -> dict:
                     kw["ref_audio"] = contained_join(VOICES_DIR, row["locked_audio_path"])
                 elif row["ref_audio_path"]:
                     kw["ref_audio"] = contained_join(VOICES_DIR, row["ref_audio_path"])
-                if row["ref_text"]:
-                    kw["ref_text"] = row["ref_text"]
+                stored_ref_text = stored_reference_transcript(row)
+                if stored_ref_text:
+                    kw["ref_text"] = stored_ref_text
                 if row["instruct"] and not data.get("instruct"):
                     kw["instruct"] = row["instruct"]
             else:

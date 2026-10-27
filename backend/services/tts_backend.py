@@ -882,6 +882,31 @@ def _reference_duration_cached(path: str, _mtime_ns: int, _size: int) -> Optiona
         return None
 
 
+def required_reference_transcript(ref_audio, ref_text):
+    """``ref_text``, or the reference clip's transcript when it has none.
+
+    For engines that cannot clone without a transcript (MLX-Audio CSM,
+    CosyVoice GGUF). /generate and /convert transcribe a transcript-less clip
+    before calling the engine, but streaming, audiobook and dub pass a profile's
+    stored transcript straight through, and that is missing for a voice saved
+    without one or whose cut legacy take transcript is ignored (#3062).
+    Transcribing here covers every route with the same recognizer
+    (``transcribe_reference``, cached by audio content). Best-effort: ``None``
+    when recognition fails, and the engine reports its own error.
+    """
+    if ref_text and str(ref_text).strip():
+        return ref_text
+    if not isinstance(ref_audio, str) or not ref_audio:
+        return None
+    try:
+        from services.asr_backend import transcribe_reference
+
+        return transcribe_reference(ref_audio) or None
+    except Exception as exc:  # noqa: BLE001 - the engine names the missing transcript
+        logger.warning("reference transcript for a cloning engine failed: %s", exc)
+        return None
+
+
 def omnivoice_ref_text(ref_audio, ref_text):
     """The transcript OmniVoice can actually align with ``ref_audio`` (#2281).
 
@@ -895,7 +920,11 @@ def omnivoice_ref_text(ref_audio, ref_text):
     fallback when that recognizer finds no words. A transcript typed on a ``/generate`` request is
     rejected there with ``[clone_ref_too_long]`` before reaching this point.
     """
-    if not ref_text or not ref_text.strip():
+    from services.reference_transcript import strip_script_markup
+
+    # Script markup in a transcript is read out at every chunk start (#3062).
+    ref_text = strip_script_markup(ref_text)
+    if not ref_text:
         # "" and whitespace are no transcript: the model checks
         # ``ref_text is not None``, so pass None and let it pick the passage.
         return None
@@ -3109,6 +3138,8 @@ class MLXAudioBackend(TTSBackend):
         # stays empty and indexing into it raises an opaque
         # "IndexError: list index out of range" deep inside mlx-audio,
         # instead of ever attempting the clone. Community-diagnosed (#1012).
+        if ref_audio:
+            ref_text = required_reference_transcript(ref_audio, ref_text)
         if ref_audio and ref_text: kwargs["ref_text"] = ref_text
         if language and language.strip() and language.strip().lower() != "auto":
             if self._model_id == self.CURATED_MODELS.get("kokoro"):

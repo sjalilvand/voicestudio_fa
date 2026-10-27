@@ -12,6 +12,7 @@ import torch
 from fastapi import APIRouter, HTTPException
 
 from core import voice_leases
+from services.reference_transcript import stored_reference_transcript
 from core.db import db_conn
 from core.config import DUB_DIR, VOICES_DIR, dub_seg_path
 from core.path_security import contained_join
@@ -1066,13 +1067,13 @@ async def dub_generate(job_id: str, req: DubRequest):
                     if row:
                         if row["is_locked"] and row["locked_audio_path"]:
                             ref_audio = contained_join(VOICES_DIR, row["locked_audio_path"])
-                            ref_text = row["ref_text"]
+                            ref_text = stored_reference_transcript(row)
                             used_seed = row["seed"]
                         elif row["instruct"] and not row["is_locked"]:
                             used_seed = row["seed"] 
                         else:
                             ref_audio = contained_join(VOICES_DIR, row["ref_audio_path"])
-                            ref_text = row["ref_text"]
+                            ref_text = stored_reference_transcript(row)
                             used_seed = row["seed"]
                             
                         if not instruct_str:
@@ -1954,10 +1955,10 @@ async def preview_segment(job_id: str, req: SegmentPreviewRequest):
             if row:
                 if row["is_locked"] and row["locked_audio_path"]:
                     ref_audio = contained_join(VOICES_DIR, row["locked_audio_path"])
-                    ref_text = row["ref_text"]
+                    ref_text = stored_reference_transcript(row)
                 elif row["ref_audio_path"]:
                     ref_audio = contained_join(VOICES_DIR, row["ref_audio_path"])
-                    ref_text = row["ref_text"]
+                    ref_text = stored_reference_transcript(row)
                 if not instruct_str and row["instruct"]:
                     instruct_str = row["instruct"]
 
