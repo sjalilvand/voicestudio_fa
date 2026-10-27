@@ -164,6 +164,8 @@ bun run dev
 
 赞助资金用于维护者时间、开发工具、发布基础设施和测试硬件；赞助获得的是鸣谢，而不是功能优先权。
 
+<a href="https://supermetry.com/?utm_source=voicestudio&utm_medium=sponsor&utm_campaign=strategic-sponsor&utm_content=readme-logo"><picture><source media="(prefers-color-scheme: dark)" srcset="../../docs/sponsors/supermetry-dark.svg" /><img src="../../docs/sponsors/supermetry.svg" alt="Supermetry" height="48" /></picture></a>
+
 [GitHub Sponsors](https://github.com/sponsors/debpalash) · [Ko-fi](https://ko-fi.com/debpalash) · [PayPal](https://paypal.me/palashCoder) · [赞助等级与鸣谢](../../SPONSORS.md) · [申请鸣谢](https://github.com/debpalash/VoiceStudio/issues/new?template=sponsor.yml)
 
 ## 许可证与负责任使用

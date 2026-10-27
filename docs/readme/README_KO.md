@@ -153,6 +153,8 @@ bun run dev
 
 후원금은 메인테이너의 작업 시간, 개발 도구, 릴리스 인프라와 테스트 하드웨어에 쓰입니다. 후원으로 얻는 것은 기능이 아니라 크레딧입니다.
 
+<a href="https://supermetry.com/?utm_source=voicestudio&utm_medium=sponsor&utm_campaign=strategic-sponsor&utm_content=readme-logo"><picture><source media="(prefers-color-scheme: dark)" srcset="../../docs/sponsors/supermetry-dark.svg" /><img src="../../docs/sponsors/supermetry.svg" alt="Supermetry" height="48" /></picture></a>
+
 [GitHub Sponsors](https://github.com/sponsors/debpalash) · [Ko-fi](https://ko-fi.com/debpalash) · [PayPal](https://paypal.me/palashCoder) · [등급과 크레딧](../../SPONSORS.md) · [크레딧 요청](https://github.com/debpalash/VoiceStudio/issues/new?template=sponsor.yml)
 
 ## 라이선스와 책임 있는 사용
