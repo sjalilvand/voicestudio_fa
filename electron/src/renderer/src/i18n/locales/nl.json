@@ -968,9 +968,7 @@
     "cleanup_failed": "Opschonen mislukt: {{message}}",
     "mirror_applied_one": "Aanwijzing toegevoegd aan {{count}} regel",
     "mirror_applied_other": "Aanwijzingen toegevoegd aan {{count}} regels",
-    "mirror_none": "Geen enkele regel had een aanwijzing nodig",
     "mirror_insufficient": "Te weinig duidelijke spraak om te meten",
-    "mirror_failed": "Voordracht overnemen mislukt: {{message}}",
     "cinematic_no_llm": "Deze kwaliteit vereist een LLM-provider. Configureer deze bij LLM-providers om door te gaan.",
     "dialect_not_applied": "Het gekozen dialect heeft een LLM nodig — zet de engine op OpenAI/Ollama of kies Cinematic-kwaliteit.",
     "dialect_used": "Deze engine schrijft alleen {{variant}}. Gebruik een LLM-vertaalengine om het gekozen dialect toe te passen.",
@@ -999,7 +997,9 @@
     "restored_state": "Herstelde staat van de vorige generatie",
     "upgrading_preview": "{{count}} segment(en) van voorbeeldkwaliteit upgraden naar volledige kwaliteit…",
     "session_expired": "Deze kopieersessie is verlopen of opgeschoond. Upload je video opnieuw om een nieuwe te starten.",
-    "unsupported_translation_language": "NLLB ondersteunt {{languages}} niet. Kies een andere taal of vertaalengine."
+    "unsupported_translation_language": "NLLB ondersteunt {{languages}} niet. Kies een andere taal of vertaalengine.",
+    "mirror_failed": "Bronvoordracht nabootsen mislukt: {{message}}",
+    "mirror_none": "Voor geen enkele regel was regie nodig"
   },
   "common": {
     "stop": "Stop",
@@ -1721,16 +1721,6 @@
     "story_voices_plural": "{{count}} stemmen",
     "audiobooks": "Audioboeken",
     "audiobook": "Audioboek",
-    "story": "Verhaal",
-    "render_details": "Hoe het is gemaakt",
-    "render_voice": "Stem",
-    "render_speed": "Snelheid",
-    "render_engine": "Engine",
-    "render_language": "Taal",
-    "render_format": "Formaat",
-    "render_size_label": "Omvang",
-    "render_size": "{{chapters}} hoofdstukken · {{lines}} regels · {{words}} woorden",
-    "render_settings": "Instellingen",
     "render_no_details": "Voor dit item zijn geen details bewaard: het is gemaakt voordat details werden vastgelegd.",
     "select_visible": "Zichtbare items selecteren",
     "select_item": "{{name}} selecteren",
@@ -1739,7 +1729,17 @@
     "delete_warning": "Dit kan niet ongedaan worden gemaakt. Projecten en transcripties worden verwijderd. Bij het verwijderen van stemmen of opnamen wordt ook hun opgeslagen audio verwijderd. Geëxporteerde bestanden en voltooide audiorenders blijven bewaard.",
     "draft_changed": "Je concept is gewijzigd tijdens het laden van dit project. Bevestig opnieuw om het te vervangen.",
     "all_projects": "Alle projecten",
-    "library_group": "Bibliotheek"
+    "library_group": "Bibliotheek",
+    "render_details": "Productiedetails",
+    "render_engine": "Engine",
+    "render_format": "Indeling",
+    "render_language": "Taal",
+    "render_settings": "Instellingen",
+    "render_size": "Hoofdstukken: {{chapters}} · Regels: {{lines}} · Woorden: {{words}}",
+    "render_size_label": "Grootte",
+    "render_speed": "Snelheid",
+    "render_voice": "Stem",
+    "story": "Verhaal"
   },
   "projectActions": {
     "delete": "‘{{name}}’ verwijderen? Dit kan niet ongedaan worden gemaakt.",
@@ -1810,10 +1810,7 @@
     "pasteAbove": "Plak de tekst hierboven",
     "cancel": "Annuleer",
     "splitIntoTracks": "Opgesplitst in lijnen",
-    "splitMode": "Splitsen op",
-    "split_sentences": "Zinnen",
     "split_paragraphs": "Alinea’s",
-    "split_chapters": "Hoofdstukken",
     "splitModeHint": "Elke regel wordt als aparte opname voorgelezen. Met één verteller klinken Alinea’s of Hoofdstukken vloeiender.",
     "emptyText": "Begin je verhaal door dialoog- en verhaallijnen toe te voegen. Geef elk personage een stem in de cast.",
     "addFirst": "Eerste regel toevoegen",
@@ -1864,7 +1861,10 @@
     "lineActions": "Regelacties",
     "autocastDone_one": "{{lines}} regels toegewezen aan {{count}} stem",
     "autocastDone_other": "{{lines}} regels verdeeld over {{count}} stemmen",
-    "recovery_title": "Onderbroken verhaal"
+    "recovery_title": "Onderbroken verhaal",
+    "splitMode": "Splitsen op",
+    "split_chapters": "Hoofdstukken",
+    "split_sentences": "Zinnen"
   },
   "audiobook": {
     "cast": "Cast",
@@ -1975,7 +1975,6 @@
     "seed_ph": "Automatisch",
     "vary_repeats": "Herhaal regels variëren",
     "vary_repeats_help": "Geef identieke regels verschillende takes in plaats van één opname opnieuw te gebruiken.",
-    "line_gap": "Pauze tussen regels",
     "joins_help": "De pauze tussen regels komt tussen regels zonder eigen [pause]; de pauze tussen alinea's bij lege regels. Met inkorten aan wordt eerst de eigen aanloop- en staartstilte van elke regel weggeknipt, zodat de ingestelde pauze ook de hoorbare is.",
     "paragraph_gap": "Pauze tussen alinea’s",
     "trim_edges": "Stilte van de engine wegknippen",
@@ -1995,7 +1994,8 @@
     "untitled": "Zonder titel",
     "recovery_busy": "Er loopt al een andere render. Hervat zodra die klaar is.",
     "cast_note_one": "{{names}} heeft nog geen stem en wordt met de hoofdstem gelezen. Kies er een onder Cast.",
-    "cast_note_other": "{{names}} hebben nog geen stem en worden met de hoofdstem gelezen. Kies stemmen onder Cast."
+    "cast_note_other": "{{names}} hebben nog geen stem en worden met de hoofdstem gelezen. Kies stemmen onder Cast.",
+    "line_gap": "Stilte tussen regels"
   },
   "credentials": {
     "microsoft_key": "Microsoft Translator-sleutel",

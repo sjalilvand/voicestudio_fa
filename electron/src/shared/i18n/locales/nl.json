@@ -473,10 +473,7 @@
     "pasteAbove": "Plak de tekst hierboven",
     "cancel": "Annuleer",
     "splitIntoTracks": "Opgesplitst in lijnen",
-    "splitMode": "Splitsen op",
-    "split_sentences": "Zinnen",
     "split_paragraphs": "Alinea’s",
-    "split_chapters": "Hoofdstukken",
     "splitModeHint": "Elke regel wordt als aparte opname voorgelezen. Met één verteller klinken Alinea’s of Hoofdstukken vloeiender.",
     "emptyText": "Begin je verhaal door dialoog- en verhaallijnen toe te voegen. Geef elk personage een stem in de cast.",
     "addFirst": "Eerste regel toevoegen",
@@ -508,7 +505,10 @@
     "exportFailed": "Exporteren mislukt. Controleer of de backend actief is.",
     "global_speed": "Snelheid",
     "global_speed_hint": "Leessnelheid voor alle lijnen zonder hun eigen snelheidsoverschrijving",
-    "deleteProjectConfirm": "Dit project permanent verwijderen?"
+    "deleteProjectConfirm": "Dit project permanent verwijderen?",
+    "splitMode": "Splitsen op",
+    "split_chapters": "Hoofdstukken",
+    "split_sentences": "Zinnen"
   },
   "common": {
     "stop": "Stop",
@@ -2354,10 +2354,10 @@
     "hf_token_get": "Heeft u geen token? Ontvang er één gratis →",
     "hf_token_inline_prompt": "Versnel downloads met een gratis Hugging Face-token",
     "hf_token_inline_ph": "Plak het hf_…-token (optioneel)",
-    "hf_token_get_short": "Ontvang er één gratis →",
     "hf_token_active_using": "Hugging Face-token gevonden in {{source}} — {{masked}}",
     "hf_token_replace": "Vervangen…",
-    "hf_token_replace_warning": "Dit vervangt het token dat voor deze app is opgeslagen. Het oude token wordt niet ingetrokken."
+    "hf_token_replace_warning": "Dit vervangt het token dat voor deze app is opgeslagen. Het oude token wordt niet ingetrokken.",
+    "hf_token_get_short": "Gratis ophalen →"
   },
   "history": {
     "dub_meta": "{{segments}} segmenten · {{duration}} s",
@@ -2543,7 +2543,6 @@
     "seed_ph": "Automatisch",
     "vary_repeats": "Herhaal regels variëren",
     "vary_repeats_help": "Geef identieke regels verschillende takes in plaats van één opname opnieuw te gebruiken.",
-    "line_gap": "Pauze tussen regels",
     "joins_help": "De pauze tussen regels komt tussen regels zonder eigen [pause]; de pauze tussen alinea's bij lege regels. Met inkorten aan wordt eerst de eigen aanloop- en staartstilte van elke regel weggeknipt, zodat de ingestelde pauze ook de hoorbare is.",
     "paragraph_gap": "Pauze tussen alinea’s",
     "trim_edges": "Stilte van de engine wegknippen",
@@ -2553,7 +2552,8 @@
     "emotion_text_ph": "bijv. klinkt uitgeput en verdrietig",
     "emotion_alpha": "Emotie sterkte",
     "recovery_load_failed": "Kon niet controleren op onvoltooide audioboeken.",
-    "recovery_retry": "Opnieuw proberen"
+    "recovery_retry": "Opnieuw proberen",
+    "line_gap": "Stilte tussen regels"
   },
   "voicePanel": {
     "title": "Stem",

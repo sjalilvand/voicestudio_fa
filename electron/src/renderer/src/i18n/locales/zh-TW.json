@@ -1721,16 +1721,7 @@
     "story_voices_plural": "{{count}} 聲音",
     "audiobooks": "有聲書",
     "audiobook": "有聲書",
-    "story": "故事",
     "render_details": "製作方式",
-    "render_voice": "聲音",
-    "render_speed": "語速",
-    "render_engine": "引擎",
-    "render_language": "語言",
-    "render_format": "格式",
-    "render_size_label": "規模",
-    "render_size": "{{chapters}} 章 · {{lines}} 行 · {{words}} 詞",
-    "render_settings": "設定",
     "render_no_details": "此項目沒有儲存詳細資料：它是在開始記錄詳細資料之前產生的。",
     "select_visible": "選取可見項目",
     "select_item": "選取{{name}}",
@@ -1739,7 +1730,16 @@
     "delete_warning": "此操作無法復原。專案和轉錄文字將被刪除。刪除聲音或錄音也會刪除其儲存的音訊。匯出的檔案和已完成算繪的音訊將保留。",
     "draft_changed": "載入此專案時，你的草稿已變更。請再次確認以取代草稿。",
     "all_projects": "所有專案",
-    "library_group": "資料庫"
+    "library_group": "資料庫",
+    "render_engine": "引擎",
+    "render_format": "格式",
+    "render_language": "語言",
+    "render_settings": "設定",
+    "render_size": "{{chapters}} 章 · {{lines}} 行 · {{words}} 字",
+    "render_size_label": "大小",
+    "render_speed": "速度",
+    "render_voice": "聲音",
+    "story": "故事"
   },
   "projectActions": {
     "delete": "刪除「{{name}}」？此操作無法復原。",
@@ -1811,9 +1811,6 @@
     "cancel": "取消",
     "splitIntoTracks": "分成幾行",
     "splitMode": "拆分依據",
-    "split_sentences": "句子",
-    "split_paragraphs": "段落",
-    "split_chapters": "章節",
     "splitModeHint": "每一行都會當作獨立的一遍朗讀。只有一位敘述者時，依段落或章節拆分聽起來更自然。",
     "emptyText": "透過加入對話和旁白來開始你的故事。為演員陣容中的每個角色分配一個聲音。",
     "addFirst": "新增第一行",
@@ -1864,7 +1861,10 @@
     "lineActions": "行操作",
     "autocastDone_one": "已將 {{lines}} 行自動分配給 {{count}} 個聲音",
     "autocastDone_other": "已將 {{lines}} 行自動分配給 {{count}} 個聲音",
-    "recovery_title": "中斷的故事"
+    "recovery_title": "中斷的故事",
+    "split_chapters": "章節",
+    "split_paragraphs": "段落",
+    "split_sentences": "句子"
   },
   "audiobook": {
     "cast": "配音角色",
@@ -1979,9 +1979,7 @@
     "seed_ph": "自動",
     "vary_repeats": "改變重複的行",
     "vary_repeats_help": "為相同的行提供不同的 take，而不是重複使用一條錄音。",
-    "line_gap": "行間停頓",
     "joins_help": "行間停頓加在沒有自己 [pause] 的行之間，段落間停頓加在空行處。開啟裁剪時，會先裁掉每行自帶的開頭與結尾靜音，因此你設定的停頓就是實際聽到的停頓。",
-    "paragraph_gap": "段落間停頓",
     "trim_edges": "裁掉引擎靜音",
     "trim_edges_help": "先裁掉各引擎在每行前後加入的靜音，再接合。需要原始輸出時請關閉。",
     "emotion_help": "分層情感 — 僅由 IndexTTS2 引擎應用。",
@@ -1995,7 +1993,9 @@
     "resume_failed": "無法繼續這本有聲書：{{message}}",
     "recovery_busy": "另一個算繪正在進行，完成後再繼續。",
     "cast_note_one": "{{names}} 尚未分配聲音，將使用主要聲音朗讀。請在「角色」中選擇聲音。",
-    "cast_note_other": "{{names}} 尚未分配聲音，將使用主要聲音朗讀。請在「角色」中選擇聲音。"
+    "cast_note_other": "{{names}} 尚未分配聲音，將使用主要聲音朗讀。請在「角色」中選擇聲音。",
+    "line_gap": "行間停頓",
+    "paragraph_gap": "段落間停頓"
   },
   "credentials": {
     "microsoft_key": "微軟翻譯金鑰",

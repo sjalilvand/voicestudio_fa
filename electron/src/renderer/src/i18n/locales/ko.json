@@ -1721,16 +1721,8 @@
     "story_voices_plural": "{{count}} 목소리",
     "audiobooks": "오디오북",
     "audiobook": "오디오북",
-    "story": "스토리",
     "render_details": "만든 방식",
-    "render_voice": "음성",
-    "render_speed": "속도",
-    "render_engine": "엔진",
-    "render_language": "언어",
-    "render_format": "형식",
     "render_size_label": "규모",
-    "render_size": "{{chapters}}개 장 · {{lines}}줄 · {{words}}단어",
-    "render_settings": "설정",
     "render_no_details": "이 항목은 세부 정보가 저장되지 않았습니다. 세부 정보를 기록하기 전에 생성되었습니다.",
     "select_visible": "표시된 항목 선택",
     "select_item": "{{name}} 선택",
@@ -1739,7 +1731,15 @@
     "delete_warning": "이 작업은 되돌릴 수 없습니다. 프로젝트와 전사 내용이 삭제됩니다. 음성이나 테이크를 삭제하면 저장된 오디오도 삭제됩니다. 내보낸 파일과 완료된 렌더링 오디오는 유지됩니다.",
     "draft_changed": "프로젝트를 불러오는 동안 초안이 변경되었습니다. 바꾸려면 다시 확인하세요.",
     "all_projects": "모든 프로젝트",
-    "library_group": "라이브러리"
+    "library_group": "라이브러리",
+    "render_engine": "엔진",
+    "render_format": "형식",
+    "render_language": "언어",
+    "render_settings": "설정",
+    "render_size": "{{chapters}}장 · {{lines}}줄 · {{words}}단어",
+    "render_speed": "속도",
+    "render_voice": "음성",
+    "story": "스토리"
   },
   "projectActions": {
     "delete": "“{{name}}”을(를) 삭제할까요? 되돌릴 수 없습니다.",
@@ -1811,9 +1811,6 @@
     "cancel": "취소",
     "splitIntoTracks": "줄 단위로 분할",
     "splitMode": "나누는 기준",
-    "split_sentences": "문장",
-    "split_paragraphs": "문단",
-    "split_chapters": "장",
     "splitModeHint": "각 줄은 별도의 테이크로 읽힙니다. 화자가 한 명이라면 문단이나 장 단위가 더 자연스럽습니다.",
     "emptyText": "대화와 내레이션 대사를 추가하여 스토리를 시작하세요. 캐스트에서 각 캐릭터에게 음성을 할당하세요.",
     "addFirst": "첫 번째 줄 추가",
@@ -1864,7 +1861,10 @@
     "lineActions": "줄 작업",
     "autocastDone_one": "{{lines}}줄을 음성 {{count}}개에 자동 배정했습니다",
     "autocastDone_other": "{{lines}}줄을 음성 {{count}}개에 자동 배정했습니다",
-    "recovery_title": "중단된 스토리"
+    "recovery_title": "중단된 스토리",
+    "split_chapters": "장",
+    "split_paragraphs": "문단",
+    "split_sentences": "문장"
   },
   "audiobook": {
     "cast": "캐스트",
@@ -1978,10 +1978,7 @@
     "seed_ph": "자동",
     "vary_repeats": "반복된 라인 변경",
     "vary_repeats_help": "하나의 녹음을 재사용하는 대신 동일한 라인에 서로 다른 테이크를 제공합니다.",
-    "line_gap": "줄 사이 간격",
     "joins_help": "줄 사이 간격은 자체 [pause]가 없는 줄 사이에, 문단 사이 간격은 빈 줄에 들어갑니다. 잘라내기가 켜져 있으면 각 줄의 앞뒤 무음을 먼저 제거하므로 설정한 간격이 그대로 들리는 간격이 됩니다.",
-    "paragraph_gap": "문단 사이 간격",
-    "trim_edges": "엔진 무음 잘라내기",
     "trim_edges_help": "엔진이 줄 앞뒤에 붙이는 무음을 잘라낸 뒤 이어 붙입니다. 가공되지 않은 결과가 필요하면 끄세요.",
     "emotion_help": "단계별 감정 — IndexTTS2 엔진에서만 적용됩니다.",
     "emotion_text": "감정 설명",
@@ -1995,7 +1992,10 @@
     "resume_failed": "이 오디오북을 이어서 만들 수 없습니다: {{message}}",
     "recovery_busy": "다른 렌더링이 진행 중입니다. 끝난 뒤 다시 시작하세요.",
     "cast_note_one": "{{names}}에 아직 목소리가 지정되지 않아 기본 목소리로 읽습니다. 캐스트에서 목소리를 고르세요.",
-    "cast_note_other": "{{names}}에 아직 목소리가 지정되지 않아 기본 목소리로 읽습니다. 캐스트에서 목소리를 고르세요."
+    "cast_note_other": "{{names}}에 아직 목소리가 지정되지 않아 기본 목소리로 읽습니다. 캐스트에서 목소리를 고르세요.",
+    "line_gap": "줄 사이 간격",
+    "paragraph_gap": "문단 사이 간격",
+    "trim_edges": "엔진 무음 구간 다듬기"
   },
   "credentials": {
     "microsoft_key": "마이크로소프트 번역기 키",
