@@ -85,20 +85,15 @@ export function CastingBoard({
     })),
   ];
 
-  const choicesFor = (speaker: string) => {
-    const current = currentVoice(speaker);
-    const automatic = autoProfileId(speaker);
-    return current === automatic
-      ? [
-          {
-            value: automatic,
-            label: `${t('dub.auto')} · ${speaker}`,
-            kind: 'auto' as const,
-          },
-          ...baseChoices,
-        ]
-      : baseChoices;
-  };
+  // The voice extracted from this speaker in the source is always a choice,
+  // not only while it is still selected: otherwise one override could never
+  // be undone (#3582). The backend resolves `auto:` for every source speaker.
+  const autoChoice = (speaker: string): VoiceChoice => ({
+    value: autoProfileId(speaker),
+    label: `${t('dub.auto')} · ${speaker}`,
+    kind: 'auto',
+  });
+  const choicesFor = (speaker: string) => [autoChoice(speaker), ...baseChoices];
 
   const assign = (speaker: string, raw: string) => {
     const value = raw === DEFAULT_VOICE ? '' : raw;
@@ -213,6 +208,10 @@ export function CastingBoard({
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent align="start">
+                    <SelectItem value={autoProfileId(speaker)}>
+                      <UserRoundIcon />
+                      {autoChoice(speaker).label}
+                    </SelectItem>
                     <SelectItem value={DEFAULT_VOICE}>
                       <UserRoundIcon />
                       {t('dub.default')}

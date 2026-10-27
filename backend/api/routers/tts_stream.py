@@ -21,6 +21,7 @@ from __future__ import annotations
 import asyncio
 from contextlib import ExitStack
 import logging
+import math
 import os
 import time
 from typing import Optional
@@ -84,6 +85,11 @@ class StreamTTSRequest(BaseModel):
     voice: Optional[str] = None       # profile_id or preset name
     language: Optional[str] = None
     speed: float = 1.0
+    # Relative pacing for engines with native duration control (IndexTTS 2.5:
+    # <1 faster, >1 slower). Relative, so it holds for every streamed
+    # sentence; an absolute ``duration`` would apply to each one and is not
+    # accepted here. Takes precedence over ``speed`` (#3588).
+    duration_factor: Optional[float] = None
     instruct: Optional[str] = None
     description: Optional[str] = None
     # Emotion control (IndexTTS2)
@@ -124,6 +130,19 @@ def resolve_emotion_clip(value: object) -> str:
     raise ValueError(EMO_AUDIO_DETAIL)
 
 
+DURATION_FACTOR_DETAIL = "duration_factor must be a number from 0.5 to 2.0."
+
+
+def _duration_factor(value: object) -> float:
+    """A validated relative pacing factor; refuses rather than ignores (#3588)."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(DURATION_FACTOR_DETAIL)
+    factor = float(value)
+    if not math.isfinite(factor) or not 0.5 <= factor <= 2.0:
+        raise ValueError(DURATION_FACTOR_DETAIL)
+    return factor
+
+
 def build_stream_kwargs(data: dict) -> dict:
     """Generation kwargs for one streaming request, voice profile resolved.
 
@@ -131,6 +150,8 @@ def build_stream_kwargs(data: dict) -> dict:
     voice the same way (locked clip preferred, profile instruct as fallback).
     """
     kw: dict = {"speed": data.get("speed", 1.0)}
+    if data.get("duration_factor") is not None:
+        kw["duration_factor"] = _duration_factor(data["duration_factor"])
     if data.get("language"):
         kw["language"] = data["language"]
     if data.get("instruct"):

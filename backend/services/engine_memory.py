@@ -18,6 +18,7 @@ switch — ~8 s for the VoiceStudio core, ~1–2 s for the lighter engines).
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from core.logging_utils import log_safe
 import os
@@ -86,25 +87,35 @@ async def evict_other_tts_engines(keep_id: str) -> list[str]:
         try:
             import services.model_manager as mm
 
-            async with mm._model_lock:
+            def unload_core() -> bool:
                 with tts_backend._ENGINE_CACHE_LOCK:
                     core_busy = tts_backend._ENGINE_IN_USE.get(tts_backend.OmniVoiceBackend)
-                    if not core_busy and mm.unload_shared_model():
-                        evicted.append("omnivoice")
+                    return not core_busy and mm.unload_shared_model()
+
+            # Freeing device memory blocks (gc, cudaFree, sidecar shutdown);
+            # off the event loop so other requests keep being served (#3558).
+            async with mm._model_lock:
+                if await asyncio.to_thread(unload_core):
+                    evicted.append("omnivoice")
         except Exception:  # noqa: BLE001
             logger.warning("evict: VoiceStudio core unload failed", exc_info=True)
 
     # Every other in-process / sidecar engine instance.
-    evicted.extend(_evict_instance_cache(keep_cls))
+    evicted.extend(await asyncio.to_thread(_evict_instance_cache, keep_cls))
 
-    with tts_backend._ENGINE_CACHE_LOCK:
-        active = tts_backend._active_instance
-        if (active is not None and type(active) is not keep_cls
-                and not tts_backend._ENGINE_IN_USE.get(type(active))):
-            active_id = tts_backend._active_instance_id
-            tts_backend.reset_active_backend()
-            if active_id and active_id not in evicted:
-                evicted.append(active_id)
+    def reset_active() -> str | None:
+        with tts_backend._ENGINE_CACHE_LOCK:
+            active = tts_backend._active_instance
+            if (active is not None and type(active) is not keep_cls
+                    and not tts_backend._ENGINE_IN_USE.get(type(active))):
+                active_id = tts_backend._active_instance_id
+                tts_backend.reset_active_backend()
+                return active_id or None
+        return None
+
+    active_id = await asyncio.to_thread(reset_active)
+    if active_id and active_id not in evicted:
+        evicted.append(active_id)
 
     if evicted:
         logger.info("single-engine eviction: freed %s (keeping %s)", log_safe(evicted), log_safe(keep_id))
