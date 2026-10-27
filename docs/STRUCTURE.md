@@ -14,10 +14,9 @@ VoiceStudio/
 │
 ├── pyproject.toml               ⟵ Python project manifest (+ pytest / lint config)
 ├── uv.lock                      ⟵ Python lockfile
-├── package.json                 ⟵ monorepo manifest (Bun workspaces + Turborepo) and THE app
+├── package.json                 ⟵ monorepo manifest (Bun workspaces) and THE app
 │                                   version (pyproject.toml + backend/core/version.py mirror it)
 ├── bun.lock                     ⟵ JS lockfile — repo-root, covers the electron/ workspace
-├── turbo.json                   ⟵ turborepo pipeline
 ├── flake.nix, flake.lock        ⟵ community Nix dev shells + NixOS FHS env (docs/install/nix.md)
 │
 ├── .coderabbit.yaml             ⟵ CodeRabbit PR review config (fed CLAUDE.md)
@@ -223,7 +222,7 @@ VoiceStudio/
 **Do not execute this migration without a dedicated PR.** It breaks:
 - `pyproject.toml` `[tool.hatch.build.targets.{sdist,wheel}]` paths
 - `package.json` workspaces and scripts
-- `turbo.json`, `Dockerfile`, `docker-compose.yml` paths
+- `Dockerfile`, `docker-compose.yml` paths
 - Electron Builder, native-helper, updater and packaged-smoke paths
 - every import that reads `from backend.main import …` (tests, scripts)
 - the root `package.json` as the version source of truth and its mirrors

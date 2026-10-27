@@ -1378,6 +1378,31 @@ in the same phase. Update VoiceStudio, or delete that line in
 on every platform, in Docker, and in CI, so it is a deliberate decision rather
 than a patch. Track it in [#1931](https://github.com/debpalash/VoiceStudio/issues/1931).
 
+## Windows Smart App Control blocks an engine DLL (`An Application Control policy has blocked this file`)
+
+On Windows 11, Smart App Control (or a WDAC/AppLocker policy on a work PC) can
+let the engine's `python.exe` start and then block a DLL it loads, for example
+`ImportError: DLL load failed while importing _sqlite3: An Application Control
+policy has blocked this file`. The engine runtime is made of thousands of DLLs
+built and published by other projects — the Python interpreter and packages
+such as PyTorch, NumPy and ONNX Runtime — and many of them are unsigned. Signing
+VoiceStudio's installer does not sign those files, so Smart App Control can
+block one even when the app itself is trusted (#3209, #1779). Smart App Control
+has no per-app exceptions. Your options:
+
+- **Turn Smart App Control off** in Windows Security → App & browser control →
+  Smart App Control settings, then restart VoiceStudio. This is a one-way
+  switch: Windows cannot turn Smart App Control back on without a reset or
+  reinstall of Windows.
+- **Keep it on and run the engine where it does not apply:** a WSL2 Linux distro
+  or [Docker](docker.md) on the same PC (both run Linux binaries, which Smart App
+  Control does not check), or another computer, then connect to it in
+  Settings → Sharing → **Remote backend** ([remote-gpu.md](../remote-gpu.md)).
+  A source checkout on Windows itself does not help: it downloads the same
+  Python packages.
+- **Work PC:** ask IT to allow VoiceStudio's runtime folder in the
+  application-control policy.
+
 ## Uninstalling / removing all of VoiceStudio's data
 
 VoiceStudio is fully local — no accounts, no services, nothing to deactivate. To
