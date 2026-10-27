@@ -206,6 +206,7 @@ def test_list_backends_shape(registry_sandbox):
         "supports_voice_design",
         # How the engine reads `instruct`: "tags" (closed OmniVoice list) or "freeform".
         "instruct_vocabulary",
+        "expression_caps",
         # Reference-length truth (#2281): seconds of a clone clip the engine
         # uses and how it picks them; None when not verified in-repo.
         "max_ref_seconds", "ref_strategy", "preset_voices", "default_voice",
