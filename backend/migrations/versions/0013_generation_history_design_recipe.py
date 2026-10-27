@@ -1,4 +1,10 @@
-"""CLEAN-ROOM (spec W8-border §5)
+"""Keep the inputs needed to recreate designed-voice generations.
+
+Adds an optional design-recipe payload to generation history. The migration
+checks the table and column first, so repeated or partial upgrades only add
+missing schema and leave existing rows intact. ``core.db`` declares the same
+column in its base schema and additive reconciliation path for installations
+where alembic cannot run.
 
 Revision ID: 0013_generation_history_design_recipe
 Revises: 0012_call_sessions

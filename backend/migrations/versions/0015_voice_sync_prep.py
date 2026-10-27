@@ -1,4 +1,10 @@
-"""CLEAN-ROOM (spec W8-border §5)
+"""Prepare voice profiles for consent-aware synchronization.
+
+Adds a nullable synchronization identity and consent-basis/attestation fields,
+plus a partial unique index for assigned identities. Existing columns are
+detected before each additive change and the index uses ``IF NOT EXISTS``, so
+reruns preserve prior data. ``core.db`` carries the same columns in its base
+schema and additive reconciler, covering databases alembic cannot reach.
 
 Revision ID: 0015_voice_sync_prep
 Revises: 0014_cloud_sync

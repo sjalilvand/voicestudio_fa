@@ -176,7 +176,12 @@ export function designRequestSeed(
   return linked && linked.seed == null ? undefined : draft.seed;
 }
 
-// CLEAN-ROOM (spec W8-border §3)
+/**
+ * Reconcile details inferred from a description with the user's explicit picks.
+ * New wording replaces an older pick when it changes that detail (or its
+ * mutually exclusive counterpart); otherwise the pick is reapplied over the
+ * inferred values. Picks made for the current wording also survive a late map.
+ */
 export function applyDescription(
   current: DesignDraft,
   mapping: Record<string, string>,

@@ -561,7 +561,16 @@ class OmniVoice(PreTrainedModel):
         for _lg in _quiet_loggers:
             _lg.setLevel(logging.WARNING)
 
-        # CLEAN-ROOM (spec W8-border §6 (enter))
+        _had_tqdm_setting = "TQDM_DISABLE" in os.environ
+        _previous_tqdm_setting = os.environ.get("TQDM_DISABLE")
+        _disable_tqdm = False
+        if sys.stdout is not None:
+            try:
+                _disable_tqdm = not sys.stdout.isatty()
+            except (AttributeError, OSError):
+                _disable_tqdm = True
+        if _disable_tqdm:
+            os.environ["TQDM_DISABLE"] = "1"
 
         try:
             model = super().from_pretrained(
@@ -612,7 +621,11 @@ class OmniVoice(PreTrainedModel):
         finally:
             for _lg, _lvl in _prev_levels:
                 _lg.setLevel(_lvl)
-            # CLEAN-ROOM (spec W8-border §6 (restore))
+            if _disable_tqdm:
+                if _had_tqdm_setting:
+                    os.environ["TQDM_DISABLE"] = _previous_tqdm_setting
+                else:
+                    os.environ.pop("TQDM_DISABLE", None)
 
         return model
 
