@@ -113,23 +113,20 @@ _CHANGE_CASES = [
     # English keeps reading separate numbers: "2 100" is not a group there.
     ("English", "room 2 100 meters away", "room two one hundred meters away"),
     ("Russian", "у меня 42 кота", "у меня сорок два кота"),
-    # Malayalam goes through the native verbalizer (num2words has no ml
-    # locale): cardinals with sandhi, years as plain cardinals, Indian
-    # lakh grouping, percent and decimal. Display name and ISO code agree.
-    ("Malayalam", "എനിക്ക് 2 പൂച്ചകൾ ഉണ്ട്", "എനിക്ക് രണ്ട് പൂച്ചകൾ ഉണ്ട്"),
-    ("Malayalam", "അവിടെ 42 പേർ വന്നു", "അവിടെ നാൽപത്തിരണ്ട് പേർ വന്നു"),
-    ("Malayalam", "വില 150 രൂപ", "വില നൂറ്റിയൻപത് രൂപ"),
-    ("Malayalam", "2026 ൽ", "രണ്ടായിരത്തി ഇരുപത്തിയാറ് ൽ"),
-    ("Malayalam", "1984 ലെ കഥ", "ആയിരത്തി തൊള്ളായിരത്തിയെൺപത്തിനാല് ലെ കഥ"),
-    ("Malayalam", "150000 രൂപ", "ഒരു ലക്ഷത്തി അൻപതിനായിരം രൂപ"),
-    ("Malayalam", "ഏകദേശം 50%", "ഏകദേശം അൻപത് ശതമാനം"),
-    ("Malayalam", "3.5 കിലോമീറ്റർ", "മൂന്ന് ദശാംശം അഞ്ച് കിലോമീറ്റർ"),
-    ("ml", "എനിക്ക് 2 പൂച്ചകൾ ഉണ്ട്", "എനിക്ക് രണ്ട് പൂച്ചകൾ ഉണ്ട്"),
-    ("ml-IN", "25000 രൂപ", "ഇരുപത്തയ്യായിരം രൂപ"),
-    # Digits inside bracket grammar are masked; the rest still verbalizes.
-    ("Malayalam", "[pause 300ms] 42 [voice:Anu]", "[pause 300ms] നാൽപത്തിരണ്ട് [voice:Anu]"),
-    # Native Malayalam digits are digits too.
-    ("Malayalam", "൪൨ പേർ", "നാൽപത്തിരണ്ട് പേർ"),
+    # Malayalam: no num2words locale, so these go through number_words_ml.
+    ("Malayalam", "എനിക്ക് 5 പൂച്ചകൾ", "എനിക്ക് അഞ്ച് പൂച്ചകൾ"),
+    ("Malayalam", "വീട് നമ്പർ 21", "വീട് നമ്പർ ഇരുപത്തിയൊന്ന്"),
+    ("Malayalam", "ആകെ 150 പേർ", "ആകെ നൂറ്റിയൻപത് പേർ"),
+    ("Malayalam", "വർഷം 2026 ആണ്", "വർഷം രണ്ടായിരത്തി ഇരുപത്തിയാറ് ആണ്"),
+    ("Malayalam", "വില 150000 ആണ്", "വില ഒരു ലക്ഷത്തി അൻപതിനായിരം ആണ്"),
+    ("Malayalam", "വില 100000 ആണ്", "വില ഒരു ലക്ഷം ആണ്"),
+    ("Malayalam", "ഫലം 50% ആണ്", "ഫലം അൻപത് ശതമാനം ആണ്"),
+    ("Malayalam", "അളവ് 3.14 ആണ്", "അളവ് മൂന്ന് ദശാംശം ഒന്ന് നാല് ആണ്"),
+    ("ml", "എനിക്ക് 5 പൂച്ചകൾ", "എനിക്ക് അഞ്ച് പൂച്ചകൾ"),
+    ("ml-IN", "എനിക്ക് 5 പൂച്ചകൾ", "എനിക്ക് അഞ്ച് പൂച്ചകൾ"),
+    ("Malayalam", "[pause 300ms] 7 പേർ", "[pause 300ms] ഏഴ് പേർ"),
+    ("Malayalam", "[voice:A3] 7 പേർ", "[voice:A3] ഏഴ് പേർ"),
+    ("Malayalam", "എനിക്ക് ൫ പൂച്ചകൾ", "എനിക്ക് അഞ്ച് പൂച്ചകൾ"),
     # Urdu goes through the native verbalizer too (num2words has no ur
     # locale): an irregular 0-99 table, سو / ہزار / لاکھ, and 1100-1999 read in
     # hundreds the way Urdu speakers say years ("انیس سو چھپن", not the
@@ -148,18 +145,15 @@ _CHANGE_CASES = [
     ("Urdu", "[pause 300ms] 42 [voice:Ali]", "[pause 300ms] بیالیس [voice:Ali]"),
     # Urdu (Extended Arabic-Indic) digits are digits too.
     ("Urdu", "سن ۱۹۵۶ میں", "سن انیس سو چھپن میں"),
-    # Digit ranges: the tilde has to be SPOKEN or the engine mashes the two
-    # numbers into one ("20~30초" was read as "이십삼"). Spacing is part of the
-    # per-language form — a Korean postposition binds to its numeral, Japanese
-    # and Chinese set no spaces, English needs them.
-    ("Korean", "대략 20~30초짜리", "대략 20에서 30초짜리"),
-    ("Korean", "가격은 20~30만원", "가격은 20에서 30만원"),
-    ("ko", "20~30초", "20에서 30초"),
-    ("Japanese", "20〜30分ぐらい", "20から30分ぐらい"),          # wave dash U+301C
-    ("Japanese", "20～30分ぐらい", "20から30分ぐらい"),          # fullwidth U+FF5E
-    ("Chinese", "大约需要20～30秒", "大约需要20到30秒"),
-    # EN runs the range through num2words afterwards, as it does any digit
-    ("English", "It takes 20~30 seconds", "It takes twenty to thirty seconds"),
+    # Tilde between two numbers is spoken instead of being swallowed.
+    ("Korean", "사과 3~5개 주세요", "사과 3에서 5개 주세요"),
+    ("Korean", "가격은 1000~2000원입니다", "가격은 1000에서 2000원입니다"),
+    ("ko", "기온 -5 ~ 3도", "기온 -5에서 3도"),
+    ("Japanese", "参加者は10\u301c20人", "参加者は10から20人"),
+    ("Japanese", "気温は15\uff5e25度", "気温は15から25度"),
+    ("Chinese", "需要3\uff5e4天", "需要3到4天"),
+    ("English", "Open 20~30 minutes", "Open twenty to thirty minutes"),
+    ("ko", "[pause 300ms] 1.5~2.5배", "[pause 300ms] 1.5에서 2.5배"),
     # Universal safety filters (language-independent)
     (None, "hello\u200b \u200dworld", "hello \u200dworld"),
     (None, "too   many\t spaces", "too many spaces"),
@@ -281,18 +275,19 @@ _UNCHANGED_CASES = [
     ("French", "soit 1 234 % du total"),
     ("French", "une baisse de -1 234% du total"),  # a sign stays on the run
     ("French", "soit -12 500 euros"),
-    # Malayalam native path keeps the same conservative boundaries
-    ("Malayalam", "1,000 രൂപ"),                  # thousands separator
-    ("Malayalam", "പേജ് 3-5 വായിക്കുക"),           # range
-    ("Malayalam", "കോഡ് 007"),                    # leading-zero code
-    ("Malayalam", "1234567 എന്ന നമ്പർ"),           # 7+ digits: an ID
-    ("Malayalam", "[pause 300ms] ശബ്ദം [rate 0.9]"),  # bracket grammar untouched
-    # Python's \w misses combining marks: a number glued to a vowel sign or
-    # virama is part of a word ("10ാം" = 10th), never spliced into it.
-    ("Malayalam", "10ാം ക്ലാസ്"),
-    ("Malayalam", "ക്ലാസ്10 ജയിച്ചു"),
-    ("Malayalam", "കോടി150"),
-    ("Malayalam", "കോഡ് ൦൦൭"),                    # native leading-zero code
+    # Malayalam / native-digit boundaries: all stay as written.
+    ("Malayalam", "വില 1,000 ആണ്"),
+    ("Malayalam", "പേജ് 3-5 കാണുക"),
+    ("Malayalam", "കോഡ് 007 ആണ്"),
+    ("Malayalam", "കോഡ് ൦൦൭ ആണ്"),
+    ("Malayalam", "ഐഡി 1234567 ആണ്"),
+    ("Malayalam", "[pause 300ms]"),
+    ("Malayalam", "[voice:A3]"),
+    ("Malayalam", "5ാം ദിവസം"),            # vowel sign glued after the digits
+    ("Malayalam", "ക്5 ദിവസം"),             # virama glued before the digits
+    ("Malayalam", "ദിവസം5 കഴിഞ്ഞു"),         # consonant + digits word
+    # Arabic-Indic zero-prefixed code on the num2words path.
+    ("ar", "الرمز \u0660\u0660\u0667 هنا"),
     # Urdu native path keeps the same conservative boundaries
     ("Urdu", "1,000 روپے"),                       # thousands separator
     ("Urdu", "صفحہ 3-5 پڑھیں"),                   # range
@@ -301,6 +296,15 @@ _UNCHANGED_CASES = [
     ("Urdu", "1234567 نمبر"),                     # 7+ digits: an ID
     ("Urdu", "ورژن 3.5.1"),                       # version string
     ("ar", "الرمز ٠٠٧"),                         # same class on the num2words path
+    # Digit-range rule: only a clean tilde between two numbers is rewritten.
+    ("Korean", "서울-부산 3-5일 걸려요"),         # hyphen is never a range mark
+    ("Korean", "마감일은 2025-03-14 입니다"),     # ISO date
+    ("Korean", "전화 010-1234-5678 로 연락"),    # phone-shaped
+    ("Korean", "모델 AB12~34CD 재고"),            # letters touching the digits
+    ("Korean", "1~2~3 순서"),                    # malformed chain
+    ("Japanese", "また明日~"),                    # trailing tilde, no digits
+    ("Vietnamese", "Khoảng 20~30 người"),        # no verified form
+    (None, "about 20~30 people"),
     # Digit ranges: only the tilde family is a range mark. Everything else that
     # sits between digits means something other than "to".
     ("Korean", "대략 20-30초"),                   # ASCII hyphen: also dates/phones
@@ -382,24 +386,33 @@ def test_cjk_passthrough_untouched():
         assert normalize_text(s, None) == s
 
 
-def test_native_verbalizer_covers_full_integer_range():
-    """Every integer the conservative regex can match (≤ 6 digits) must render
-    without digits and without raising — the ml module has no num2words
-    fallback to hide a table gap."""
-    from services import number_words_ml as ml
+def test_malayalam_cardinal_covers_whole_range():
+    from services import number_words_ml
+
     for n in range(1_000_000):
-        word = ml.cardinal(n)
-        assert word and not any(ch.isdigit() for ch in word), n
+        words = number_words_ml.cardinal(n)
+        assert words
+        assert not any(ch.isdigit() for ch in words)
+        assert "\u200d" not in words and "\u200c" not in words
 
 
-def test_native_language_is_outside_num2words_gate():
-    """ml resolves to the native path, never to num2words (no ml locale)."""
-    from services.text_normalization import _native_lang, _num2words_lang
-    assert _num2words_lang("Malayalam") is None
-    assert _num2words_lang("ml") is None
-    assert _native_lang("Malayalam") == "ml"
-    assert _native_lang("ml-IN") == "ml"
-    assert _native_lang("English") is None
+def test_malayalam_cardinal_rejects_bad_input():
+    from services import number_words_ml
+
+    for bad in (-1, 1_000_000):
+        with pytest.raises(ValueError):
+            number_words_ml.cardinal(bad)
+    for bad in (True, 1.5, "3"):
+        with pytest.raises(TypeError):
+            number_words_ml.cardinal(bad)
+
+
+def test_native_language_resolution():
+    assert text_normalization._native_lang("Malayalam") == "ml"
+    assert text_normalization._native_lang("ml-IN") == "ml"
+    assert text_normalization._native_lang("English") is None
+    assert text_normalization._num2words_lang("Malayalam") is None
+    assert text_normalization._num2words_lang("ml") is None
 
 
 def test_urdu_verbalizer_covers_full_integer_range():
@@ -761,3 +774,47 @@ def test_pronunciation_switch_is_env_only(monkeypatch, env, expected):
     # A never-written pref must not change the outcome.
     monkeypatch.setattr(prefs_mod, "get", lambda key, default=None: False)
     assert pronunciation_enabled() is expected
+
+
+# ── Plain language-code resolver & range chain guard ────────────────────────
+
+from services.text_normalization import _plain_lang_code, _speak_number_ranges  # noqa: E402
+
+
+@pytest.mark.parametrize("language,expected", [
+    ("Korean", "ko"),
+    ("Mandarin Chinese", "zh"),
+    ("ja", "ja"),
+    ("ko-KR", "ko"),
+    ("vi", "vi"),
+    ("kk", "kz"),
+    ("auto", None),
+    ("AUTO", None),
+    ("", None),
+    ("   ", None),
+    (None, None),
+    ("!!", None),
+])
+def test_plain_lang_code(language, expected):
+    assert _plain_lang_code(language) == expected
+
+
+@pytest.mark.parametrize("raw", [
+    "1~2~3",
+    "1 ~ 2 ~ 3",
+    "1~2 ~3",
+    "1~2~ 3",
+    "~1~2",
+])
+def test_range_chain_is_never_partially_rewritten(raw):
+    assert _speak_number_ranges(raw, "ko") == raw
+
+
+def test_range_rewrite_is_idempotent():
+    once = normalize_text("3~5개", "Korean")
+    assert normalize_text(once, "Korean") == once
+
+
+def test_range_unknown_form_language_untouched():
+    assert _speak_number_ranges("3~5", "vi") == "3~5"
+    assert _speak_number_ranges("3~5", None) == "3~5"

@@ -332,32 +332,38 @@ transcripts automatically.
 
 ### Mirror source delivery
 
-**More → Mirror source delivery** writes a direction for each line from how the
-original actor spoke it. VoiceStudio measures pitch, pitch movement, loudness,
-syllable rate and voicing on the separated vocals track (the full mix when
-separation did not run) and compares every line against the same speaker's own
-typical delivery. Markedly louder, higher and faster lines become `urgent, quick`;
-near-unvoiced lines become `whispered`; lines close to the speaker's norm stay empty.
+**More → Mirror source delivery** writes short delivery words into the Direction
+field of segments that have none, based on how the original speaker said each line.
+It never touches a direction you typed, and the whole pass is one Undo step.
 
-| Measured against the speaker's baseline | Direction |
-| :--- | :--- |
-| Louder, faster and higher | `urgent` |
-| Louder, higher or more animated | `energetic` |
-| Quieter, lower and flatter | `calm` |
-| Loud but unhurried | `announcing` |
-| Mostly unvoiced and quiet | `whispered` |
-| Faster or slower syllables | `quick` / `slow` |
+For every segment it measures the separated vocals (the mix when no vocals exist):
+loudness, speaking rate, pitch level, pitch movement and how much of the line is
+voiced. Each line is then compared with the same speaker's usual delivery, and only
+clear departures become words from the same taxonomy as typed directions. Lines
+close to the speaker's norm get nothing.
 
-Only empty directions are filled; a direction you typed is never replaced, and
-**Undo** reverts the whole pass. The words are the same taxonomy typed directions
-use, so they reach the TTS instruction, translation tone and speech-rate target
-with or without an LLM. Emotion is not inferred from acoustics; add it yourself.
-A speaker needs three measurable lines for their own baseline; otherwise the video's
-pooled baseline is used without pitch, which does not transfer between voices.
-Analysis runs locally in pure NumPy and takes roughly ten seconds per hour of
-dialogue; a line longer than a minute is measured from its first minute. The API is `POST /dub/prosody-mirror/{job_id}` with the editor's current
-segments; it only suggests directions and never changes the job, and refuses requests
-whose segments add up to more than twice the source audio plus one minute (one line).
+| Measured against the speaker's norm | Word |
+| --- | --- |
+| Louder and faster, with higher pitch when pitch is comparable | urgent |
+| Louder and higher or more animated overall | energetic |
+| Quieter and lower or flatter overall | calm |
+| Much louder and slower | announcing |
+| Mostly unvoiced and quieter | whispered (nothing else is added) |
+| Noticeably faster / slower | quick / slow |
+
+Emotion is never inferred; add it yourself in the Direction field.
+
+A speaker with at least three measured lines gets a personal baseline, including
+pitch. Otherwise lines are compared with all measured lines pooled together, and
+pitch is only used in that pooled case when the whole file has a single known
+speaker. Fewer than three measurable lines produce no suggestions. Analysis runs
+locally with no model download. A line longer than a minute is measured from its
+first minute.
+
+The same analysis is available as `POST /dub/prosody-mirror/{job_id}`. It only
+reads the job and never changes it. The request is rejected when the segments
+together cover more than twice the track length plus one minute (typically
+duplicated or overlapping segments).
 
 ### Preserve sound outside dialogue
 

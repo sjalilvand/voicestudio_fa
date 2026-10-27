@@ -46,17 +46,14 @@ def _ts_to_seconds(h: str, m: str, s: str, ms: str) -> float:
 
 
 def _is_index_line(line: str) -> bool:
-    """True when `line` is a bare SubRip cue number.
+    """True when ``line`` is nothing but ASCII digits (a SubRip cue number).
 
-    Stricter than `str.isdigit()` on purpose: that also accepts non-ASCII
-    numerals (Arabic-Indic "١٩٩٩", Devanagari "२०२६", and the full-width
-    forms), which in a 646-language dubbing app are dialogue, never the
-    ASCII cue indices SubRip actually writes.
+    Deliberately narrower than ``str.isdigit()``, which also accepts
+    Arabic-Indic, Devanagari and full-width numerals. Those are spoken text in
+    their own scripts and must never be mistaken for a cue index.
     """
     stripped = line.strip()
-    return stripped.isascii() and stripped.isdigit()
-
-
+    return bool(stripped) and all("0" <= ch <= "9" for ch in stripped)
 @dataclass
 class SrtParseResult:
     segments: list[dict]
@@ -125,38 +122,40 @@ def parse_srt(content: str) -> SrtParseResult:
     # timing line (or end of file). This is robust to missing index
     # numbers and to spec deviations in the blank-line separator.
     matches = list(_TIMING_RE.finditer(text))
-    # A mixed file can stop numbering at any cue. Track each boundary;
-    # never treat an initial index as permission to discard later numbers.
+    # Running cue number, when the file numbers its cues: seeded from the line
+    # right before the first timing line.
     head = text[:matches[0].start()].strip() if matches else ""
     first_marker = head.split("\n")[-1].strip() if head else ""
     cue_index = int(first_marker) if _is_index_line(first_marker) and len(first_marker) <= 12 else None
     for i, m in enumerate(matches):
-        body_start = m.end()
         has_next = i + 1 < len(matches)
-        body_end = matches[i + 1].start() if has_next else len(text)
-        body = text[body_start:body_end]
-        if is_webvtt:
-            # The blank separator ends WebVTT dialogue; following identifiers,
-            # NOTE/STYLE blocks belong outside the cue, even when numeric.
-            body = re.split(r"\n[^\S\n]*\n", body, maxsplit=1)[0]
-        # An index must directly precede the next timing line. A blank line
-        # AFTER a number instead marks that number as preceding dialogue.
+        body = text[m.end():matches[i + 1].start() if has_next else len(text)]
         next_index = None
-        if has_next and not is_webvtt:
-            # Inspect lines rather than a backtracking regex on uploaded text.
-            # One newline terminates the marker; a second means it is dialogue.
-            marker_lines = body.split("\n")
-            if marker_lines and not marker_lines[-1].strip(" \t"):
-                marker_lines.pop()
-            marker = marker_lines[-1].strip(" \t") if marker_lines else ""
-            numeric = bool(marker) and marker.isascii() and marker.isdecimal()
-            separated = len(marker_lines) > 2 and not marker_lines[-2].strip()
-            expected_index = cue_index + 1 if cue_index is not None else i + 2
-            expected = marker.lstrip("0") == str(expected_index)
-            has_dialogue = any(line.strip() for line in marker_lines[:-1])
-            if numeric and expected and (has_dialogue or separated) and (cue_index is not None or separated):
-                body = "\n".join(marker_lines[:-1])
-                next_index = expected_index
+        if is_webvtt:
+            # Whatever follows the first blank separator (identifiers, NOTE and
+            # STYLE blocks) is not dialogue, numeric or not.
+            body = re.split(r"\n[^\S\n]*\n", body, maxsplit=1)[0]
+        elif has_next:
+            # The last line of this body is the NEXT cue's number when the file
+            # numbers its cues. Plain line inspection (no backtracking regex)
+            # because the text is user-uploaded.
+            pieces = body.split("\n")
+            if pieces and not pieces[-1].strip(" \t"):
+                pieces.pop()
+            marker = pieces[-1].strip(" \t") if pieces else ""
+            expected = cue_index + 1 if cue_index is not None else i + 2
+            before = pieces[:-1]
+            has_dialogue = any(piece.strip() for piece in before)
+            separated = len(pieces) > 2 and not pieces[-2].strip(" \t")
+            if (
+                marker
+                and _is_index_line(marker)
+                and marker.lstrip("0") == str(expected)
+                and (has_dialogue or separated)
+                and (cue_index is not None or separated)
+            ):
+                body = "\n".join(before)
+                next_index = expected
         cue_index = next_index
         try:
             start = _ts_to_seconds(m.group(1), m.group(2), m.group(3), m.group(4))
