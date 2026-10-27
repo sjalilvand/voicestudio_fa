@@ -936,7 +936,10 @@
     "segment_count_other": "{{count}} segment",
     "glossary_terms_one": "Ordlista · {{count}} term",
     "glossary_terms_other": "Ordlista · {{count}} termer",
-    "glossary_label": "Ordlista"
+    "glossary_label": "Ordlista",
+    "set_speaker": "Ange talare…",
+    "new_speaker": "Ny talare",
+    "speaker_label": "Talare"
   },
   "dub_workflow": {
     "preparing_audio": "Förbereder ljud...",
@@ -2136,7 +2139,8 @@
     "export_n_audio_other": "Exportera {{count}} ljudfiler",
     "export_audio": "Exportera ljud",
     "export_subtitles": "Exportera undertexter",
-    "stretch_subs_note": "Sträck video: exportera undertexter separat."
+    "stretch_subs_note": "Sträck video: exportera undertexter separat.",
+    "undubbed_video_note": "Ingen dubbning än: videon behåller originalljudet. Bränn in undertexter för att lägga till transkriptet."
   },
   "models": {
     "pack_title": "Modellpaket",

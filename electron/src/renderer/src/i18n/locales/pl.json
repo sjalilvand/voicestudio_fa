@@ -950,7 +950,10 @@
     "glossary_terms_other": "Słowniczek · {{count}} terminu",
     "glossary_terms_few": "Słowniczek · {{count}} terminy",
     "glossary_terms_many": "Słowniczek · {{count}} terminów",
-    "glossary_label": "Słowniczek"
+    "glossary_label": "Słowniczek",
+    "set_speaker": "Ustaw mówcę…",
+    "new_speaker": "Nowy mówca",
+    "speaker_label": "Mówca"
   },
   "dub_workflow": {
     "preparing_audio": "Przygotowuję dźwięk…",
@@ -2160,7 +2163,8 @@
     "export_n_audio_other": "Eksportuj {{count}} plików audio",
     "export_audio": "Eksportuj dźwięk",
     "export_subtitles": "Eksportuj napisy",
-    "stretch_subs_note": "Rozciąganie wideo: wyeksportuj napisy osobno."
+    "stretch_subs_note": "Rozciąganie wideo: wyeksportuj napisy osobno.",
+    "undubbed_video_note": "Brak dubbingu: wideo zachowa oryginalny dźwięk. Wypal napisy, aby dodać transkrypcję."
   },
   "models": {
     "pack_title": "Pakiety modeli",

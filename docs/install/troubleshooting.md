@@ -678,7 +678,9 @@ nor the **China** download region redirects it: PyTorch's index has no mirror.
 
 1. **Clean & Retry.** Large downloads frequently succeed on a second attempt —
    VoiceStudio already retries each request 5× with long timeouts, and a fresh
-   attempt reuses every file that finished downloading.
+   attempt reuses every file that finished downloading. The CUDA `torch` wheel
+   downloads over several connections and resumes from the parts it already
+   has (see below).
 2. **Use a VPN** if your network throttles or blocks the PyTorch CDN.
 3. See [First-run setup is slow or stalls on a download](#first-run-setup-is-slow-or-stalls-on-a-download)
    for what the setup screen shows and what a retry keeps.
@@ -720,6 +722,25 @@ PyTorch build and, for every engine, whether it uses the GPU.
   groups).
 
 **Linked issue:** [#2468](https://github.com/debpalash/VoiceStudio/issues/2468)
+
+## 12c. Intel Arc (XPU): model load fails, or every generation fails after one out-of-memory error
+
+**Symptom (load):** with a PyTorch `+xpu` build on Windows, every model load
+fails and the log shows `doesn't support querying the available free memory`.
+
+**Symptom (after OOM):** one generation fails with
+`UR_RESULT_ERROR_OUT_OF_DEVICE_MEMORY` or `XPU out of memory`. After that, every
+generation fails the same way until the app restarts.
+
+**Cause:** the Arc Windows driver does not implement the free-memory query that
+model loading calls. Separately, the failed request's memory used to stay held
+after an out-of-memory error.
+
+**Fix:** update VoiceStudio. Free memory is now estimated from total minus
+reserved, and the failed request's memory is released right after the error.
+If generations still run out of memory, use a smaller model or shorter text,
+or press **Flush** to unload models. Intel Arc support is experimental — see
+[windows.md — GPU support](windows.md#gpu-support).
 
 ## 13. Stuck on the download page / incomplete model cache ("only `refs/`")
 
@@ -1241,15 +1262,29 @@ download stalled or resumed. Attach those lines to a bug report.
 | `files.pythonhosted.org` (PyPI) | Most packages, and on Linux the `nvidia-*` CUDA libraries (~3 GB) |
 | `download-r2.pytorch.org` (PyTorch) | `torch`, `torchaudio`, `torchvision` on Windows and Linux x64. On Windows the CUDA `torch` wheel is one file of about 3 GB |
 
-**Why it can be slow:** each file downloads over a single connection, and uv
+**Why it can be slow:** uv downloads each file over a single connection, and it
 cannot resume a file that stopped partway. A speed test opens many connections
 at once, so a network or CDN that limits each connection looks fast in a speed
 test and slow here. One large file (the Windows CUDA `torch` wheel) then decides
 the total time.
 
+**Large wheels use several connections:** before uv runs, setup asks uv which
+wheels it still has to download and fetches every one larger than 64 MB itself,
+in byte ranges over 8 connections, from the same URL in `uv.lock` (or the
+regional mirror). Each file is checked against the sha256 pinned in `uv.lock`
+before uv installs it from disk. The setup log shows `Fetching torch (3.2 GB)
+from download-r2.pytorch.org over 8 connections` and how long it took. If a
+server refuses byte ranges or the download fails, the log says so and uv
+downloads that file as before. The files wait in the runtime's `.wheel-prefetch`
+folder and are deleted once the dependency install succeeds, including the
+partial parts of any file that fell back to uv's own download. Set `OMNIVOICE_SETUP_CONNECTIONS`
+to change the number of connections (up to 16), or to `1` to turn this off.
+
 **What Cancel keeps:** every file that finished downloading stays in the
 runtime's `.uv-cache` folder, and the next attempt reuses it, including after
-**Clean & Retry**. A file that was still downloading starts again from zero.
+**Clean & Retry**. A large wheel fetched over several connections keeps every
+finished 8 MB part in `.wheel-prefetch`, so a retry continues where it stopped.
+A file uv itself was still downloading starts again from zero.
 The next attempt deletes the unfinished parts a cancelled attempt left behind,
 so repeated retries do not fill the disk.
 
@@ -1277,7 +1312,8 @@ The **download region** choice on the setup screen changes where the Python
 interpreter downloads from. With **China** selected, setup also downloads the
 `files.pythonhosted.org` wheels from the Aliyun PyPI mirror
 (`mirrors.aliyun.com`), which serves the same files: each one is still checked
-against the hash pinned in `uv.lock`. The setup log names the mirror. If the
+against the hash pinned in `uv.lock`. The setup log names the mirror. **Auto-detect** never picks China by itself, so pick **China**
+explicitly on the setup screen if you are in mainland China. If the
 mirror fails, setup retries once from `files.pythonhosted.org` and keeps every
 file that finished. The PyTorch wheels on `download-r2.pytorch.org` have no
 mirror and download from there in every region. PyPI mirror variables
@@ -1480,6 +1516,18 @@ reconnecting automatically; the workspace stays usable.
   (`VerifiedAndReputablePolicyState` 1 or 2 under
   `HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy`); otherwise it shows the
   antivirus advice above (#3224).
+- **`Backend exited (exit code 1): Windows refused to load one of the engine's
+  files.`** — the engine started, but Windows blocked one of its DLLs, e.g.
+  `ImportError: DLL load failed while importing _sqlite3: An Application Control
+  policy has blocked this file`. When Windows reports it in English, the message
+  names who blocked it: **Smart App Control** (same options as above), **your
+  antivirus** (add the runtime folder to its exclusions), or **a Windows
+  application control policy** your organization set (ask your administrator to
+  allow the runtime folder). On other Windows display languages only Smart App
+  Control is recognized (from its registry setting); otherwise check those three
+  in that order. The
+  files themselves are intact, so VoiceStudio does not download the runtime
+  again, which would be blocked the same way (#3209).
 - **`Backend did not answer on port 3900 within N s`** — the wait for the
   backend ran out. The budget (`OMNIVOICE_STARTUP_BUDGET_S`) now starts when the
   backend process is spawned, not when the launch began, defaults to 300 s (600 s
