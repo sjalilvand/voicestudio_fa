@@ -123,21 +123,39 @@ def test_orcarouter_provider_contract(lp, monkeypatch):
     assert lp.resolve_model(p) == "orcarouter/test-model"
 
 
-def test_cheaperinference_provider_contract(lp, monkeypatch):
-    p = lp.get_provider("cheaperinference")
-    assert p.display_name == "Cheaper Inference"
-    assert p.default_base_url == "https://api.cheaperinference.com/v1"
-    assert p.default_model == "gpt-5.4-mini"
-    assert p.key_envs == ("CHEAPER_INFERENCE_API_KEY",)
-    assert p.base_url_env == "CHEAPER_INFERENCE_BASE_URL"
-    assert p.model_env == "CHEAPER_INFERENCE_MODEL"
+def test_cheaper_inference_catalogue_entry_and_environment_resolution(lp, monkeypatch):
+    provider = lp.get_provider("cheaperinference")
+    declared = {
+        "name": provider.display_name,
+        "endpoint": provider.default_base_url,
+        "model": provider.default_model,
+        "key_names": provider.key_envs,
+        "endpoint_env": provider.base_url_env,
+        "model_env": provider.model_env,
+        "signup": provider.signup_url,
+    }
+    assert declared == {
+        "name": "Cheaper Inference",
+        "endpoint": "https://api.cheaperinference.com/v1",
+        "model": "gpt-5.4-mini",
+        "key_names": ("CHEAPER_INFERENCE_API_KEY",),
+        "endpoint_env": "CHEAPER_INFERENCE_BASE_URL",
+        "model_env": "CHEAPER_INFERENCE_MODEL",
+        "signup": "https://cheaperinference.com/signup",
+    }
 
-    monkeypatch.setenv("CHEAPER_INFERENCE_API_KEY", "sk-ci-test")
-    monkeypatch.setenv("CHEAPER_INFERENCE_BASE_URL", "https://cheaperinference.example/v1")
-    monkeypatch.setenv("CHEAPER_INFERENCE_MODEL", "gpt-5.4")
-    assert lp.resolve_api_key(p) == "sk-ci-test"
-    assert lp.resolve_base_url(p) == "https://cheaperinference.example/v1"
-    assert lp.resolve_model(p) == "gpt-5.4"
+    overrides = {
+        "CHEAPER_INFERENCE_API_KEY": "temporary-secret",
+        "CHEAPER_INFERENCE_BASE_URL": "https://router.example/api/v1",
+        "CHEAPER_INFERENCE_MODEL": "vendor/small-chat",
+    }
+    for variable, value in overrides.items():
+        monkeypatch.setenv(variable, value)
+    assert (
+        lp.resolve_api_key(provider),
+        lp.resolve_base_url(provider),
+        lp.resolve_model(provider),
+    ) == ("temporary-secret", "https://router.example/api/v1", "vendor/small-chat")
 
 
 def test_opper_provider_contract(lp, monkeypatch):

@@ -105,8 +105,6 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
   );
   const installing = status.stage === 'installing';
   const setupFailed = setup && Boolean(status.message);
-  // Intel Macs can never resolve the runtime (#2365): the setup screen
-  // offers a remote backend instead of a local install that must fail.
   const unsupportedPlatform = setup && status.setupIssue === 'unsupported_platform';
   // The Intel build under Rosetta on Apple Silicon (#2598): the same Mac runs
   // the local backend once the Apple Silicon build is installed.
@@ -284,8 +282,7 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
                 ))
               : null}
             {failed && status.diagnosis === 'auth_required' ? (
-              // The workspace is gated, so Settings is unreachable: reconnecting
-              // with the API key has to be possible right here.
+              // The gated workspace hides Settings, so credentials must be repairable here.
               <div className="w-full pt-2 text-left">
                 <RemoteBackendSettings />
               </div>
@@ -308,21 +305,21 @@ export function BackendGate({ children, repairDock }: BackendGateProps) {
           {setup ? (
             <>
               <p className="max-w-sm text-sm text-muted-foreground">{t('backend.setup_hint')}</p>
-              {wrongArchitecture && (
+              {wrongArchitecture ? (
                 <p className="max-w-sm text-sm text-muted-foreground">
                   {t('backend.setup_wrong_architecture')}
                 </p>
-              )}
-              {unsupportedPlatform && (
+              ) : null}
+              {unsupportedPlatform ? (
                 <p className="max-w-sm text-sm text-muted-foreground">
                   {t('backend.setup_unsupported_platform')}
                 </p>
-              )}
-              {(unsupportedPlatform || wrongArchitecture) && (
+              ) : null}
+              {wrongArchitecture || unsupportedPlatform ? (
                 <div className="w-full text-left">
                   <RemoteBackendSettings />
                 </div>
-              )}
+              ) : null}
               <div className="grid w-full grid-cols-2 gap-2">
                 <label className="space-y-1 text-left text-xs text-muted-foreground">
                   <span>{t('settings.language')}</span>

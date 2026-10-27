@@ -947,7 +947,6 @@ async def _run_chapter(chapter, *, default_voice, language, opts, voice_map,
     from services import gpu_gateway
     from services.model_manager import generate_timeout_s
     from services.tts_backend import get_backend_class
-
     # Resolve and pin every take before rendering starts.  The former routing
     # setup did this even for local jobs; keeping it explicit prevents a
     # concurrent re-lock/sweep from deleting a take before the local resolver
@@ -963,10 +962,10 @@ async def _run_chapter(chapter, *, default_voice, language, opts, voice_map,
     if reserve_cache is not None:
         await asyncio.to_thread(reserve_cache, sr, engine_id, resolve)
     try:
-        timeout_engine = get_backend_class(engine_id)
+        engine_class = get_backend_class(engine_id)
     except ValueError:
-        timeout_engine = None
-    text = "\n".join(span.text for span in chapter.spans)
+        engine_class = None
+    spoken_text = "\n".join(span.text for span in chapter.spans)
     return await gpu_gateway.run(
         local=gpu_gateway.LocalCall(
             fn=lambda: _render_chapter_cached(
@@ -974,7 +973,7 @@ async def _run_chapter(chapter, *, default_voice, language, opts, voice_map,
                 language, opts, voice_map, cache_lease, on_progress=on_progress,
             ),
             what="Audiobook chapter",
-            timeout=generate_timeout_s(text, engine=timeout_engine),
+            timeout=generate_timeout_s(spoken_text, engine=engine_class),
         )
     )
 
@@ -1287,15 +1286,13 @@ async def _render_longform_sse(
                     task.add_done_callback(
                         lambda t: t.cancelled() or t.exception())
             chapter_files.append(wav_path)
-            dur_ms = int(round(dur * 1000))
-            chapters_meta.append((chapter.title, dur_ms))
+            chapter_ms = round(dur * 1000)
+            chapters_meta.append((chapter.title, int(chapter_ms)))
             cached_n += 1 if was_cached else 0
-            # `duration_ms` (additive; old clients ignore it) is exactly what
-            # the embedded m4b chapters are built from, so a client summing it
-            # reproduces their START offsets; `duration_s` is display-rounded.
             ev = {"type": "chapter", "index": i, "total": total,
                   "title": chapter.title, "duration_s": round(dur, 2),
-                  "duration_ms": dur_ms, "cached": was_cached}
+                  # One value feeds both the stream and the M4B offset table.
+                  "duration_ms": int(chapter_ms), "cached": was_cached}
             if seg_stats is not None:
                 # Additive fields (old clients ignore them): segment-level
                 # reuse inside a re-rendered chapter.

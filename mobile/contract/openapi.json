@@ -5852,7 +5852,7 @@
    "_TorchCompileBody": {
     "properties": {
      "enabled": {
-      "description": "True to disable torch.compile (eager mode) for the engine",
+      "description": "True disables torch.compile and selects eager execution",
       "title": "Enabled",
       "type": "boolean"
      }
@@ -7990,7 +7990,7 @@
   },
   "/api/settings/perf/torch-compile-disabled": {
    "get": {
-    "description": "Return the current torch.compile-disabled toggle + the runtime platform.\n\n`platform` is still reported (clients may show it), but since #2135 the\ntoggle is live on every host: it used to be rendered disabled off Windows\non the assumption that only #65's Windows OOM needed it, which left the\nLinux/CUDA reporter of #2135 with no way to switch off the compile that\nwas killing their backend.",
+    "description": "Return the cross-platform compile-disable toggle and runtime platform.",
     "operationId": "get_torch_compile_disabled_api_settings_perf_torch_compile_disabled_get",
     "responses": {
      "200": {
@@ -8008,7 +8008,7 @@
     ]
    },
    "put": {
-    "description": "Persist the toggle. Honoured by `services.engine_env.build_engine_env()`\n(subprocess engines) and `services.engine_env.should_torch_compile()`\n(in-process), on every platform since #2135.",
+    "description": "Persist the toggle used by subprocess environments and in-process compile gates on every host.",
     "operationId": "set_torch_compile_disabled_api_settings_perf_torch_compile_disabled_put",
     "requestBody": {
      "content": {
@@ -10343,7 +10343,7 @@
     "summary": "Get Dictation Prefs"
    },
    "post": {
-    "description": "Persist any subset of the dictation prefs. Validates ``mode``,\n``model_id`` and ``prompt`` so a bad value can't wedge the capture engine.\nAn empty ``prompt`` clears it.",
+    "description": "Persist any subset of the dictation prefs. Validates the values so a\nbad one can't wedge the capture engine.",
     "operationId": "set_dictation_prefs_dictation_prefs_post",
     "requestBody": {
      "content": {
@@ -18811,7 +18811,7 @@
   },
   "/transcribe": {
    "post": {
-    "description": "Transcribe an audio file to text.\n\nArgs:\n    audio: The audio file to transcribe.\n    language: Optional language hint (not currently used; auto-detected).\n    model: Whisper model size (legacy; ignored in dual-mode architecture).\n    mode: 'fast' (default) uses MLX Turbo for speed; 'accurate' uses\n          the selected ASR engine with word-level timing. 'reference' uses\n          the selected ASR engine without word-level timing.\n    refine: Opt-in local-LLM cleanup of the final text (disfluencies,\n          self-corrections, punctuation) \u2014 same pipeline the live\n          dictation socket uses. Off by default so MCP/CLI callers don't\n          pay LLM latency unless they ask; honours the user's\n          Settings \u2192 Dictation-refinement config and silently passes\n          through when no LLM backend is configured. The raw ``text``\n          is always returned; ``refined_text`` is added only when the\n          LLM actually changed something.\n    dictation: Opt-in flag for hotkey-dictation callers: applies the\n          saved dictation vocabulary hint (``dictation.prompt``) to\n          engines that accept a prompt. Off by default so file\n          transcription and MCP/CLI callers are never biased by it;\n          ignored in 'reference' mode.\n\n    diarize: Opt-in speaker identification ('accurate' mode only, which\n          is the mode with segment timings). Each segment gains a\n          ``speaker`` label and the response a ``speakers`` list. If the\n          diarization model is missing or fails, the transcript is still\n          returned with a ``diarization_error`` code and no labels.\n    num_speakers: Optional exact speaker count hint for diarization.\n\nReturns:\n    {\n        \"text\": \"full transcription\",\n        \"refined_text\": \"cleaned text\",   # only when refine=true changed it\n        \"segments\": [ {\"start\": 0.0, \"end\": 1.5, \"text\": \"...\"}, ... ],\n        \"language\": \"en\",\n        \"duration_s\": 4.2,\n        \"transcription_time_s\": 0.8,\n        \"engine\": \"mlx-whisper\"\n    }",
+    "description": "Transcribe an audio file to text.\n\nArgs:\n    audio: The audio file to transcribe.\n    language: Optional language hint (not currently used; auto-detected).\n    model: Whisper model size (legacy; ignored in dual-mode architecture).\n    mode: 'fast' (default) uses MLX Turbo for speed; 'accurate' uses\n          the selected ASR engine with word-level timing. 'reference' uses\n          the selected ASR engine without word-level timing.\n    refine: Opt-in local-LLM cleanup of the final text (disfluencies,\n          self-corrections, punctuation) \u2014 same pipeline the live\n          dictation socket uses. Off by default so MCP/CLI callers don't\n          pay LLM latency unless they ask; honours the user's\n          Settings \u2192 Dictation-refinement config and silently passes\n          through when no LLM backend is configured. The raw ``text``\n          is always returned; ``refined_text`` is added only when the\n          LLM actually changed something.\n    dictation: Opt-in flag for hotkey-dictation callers. When true, the\n          saved vocabulary hint is passed to engines that accept a\n          prompt. Off by default (file transcription, MCP/CLI stay\n          unbiased) and ignored in 'reference' mode.\n\n    diarize: Opt-in speaker identification ('accurate' mode only, which\n          is the mode with segment timings). Each segment gains a\n          ``speaker`` label and the response a ``speakers`` list. If the\n          diarization model is missing or fails, the transcript is still\n          returned with a ``diarization_error`` code and no labels.\n    num_speakers: Optional exact speaker count hint for diarization.\n\nReturns:\n    {\n        \"text\": \"full transcription\",\n        \"refined_text\": \"cleaned text\",   # only when refine=true changed it\n        \"segments\": [ {\"start\": 0.0, \"end\": 1.5, \"text\": \"...\"}, ... ],\n        \"language\": \"en\",\n        \"duration_s\": 4.2,\n        \"transcription_time_s\": 0.8,\n        \"engine\": \"mlx-whisper\"\n    }",
     "operationId": "transcribe_audio_transcribe_post",
     "requestBody": {
      "content": {

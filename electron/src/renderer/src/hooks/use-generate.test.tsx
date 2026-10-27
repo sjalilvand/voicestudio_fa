@@ -273,26 +273,23 @@ it('attributes generation to an explicitly selected designed voice', async () =>
 });
 
 it.each([
-  ['freeform', 'raspy old female, scottish accent', 'freeform'],
-  [undefined, '', 'tags'],
+  ['freeform', 'a weary sea captain, slow', 'a weary sea captain, slow'],
+  [undefined, 'a weary sea captain, slow', ''],
 ] as const)(
-  'forwards design prose only to free-form engines (#2389, %s)',
-  async (vocabulary, sent, expectedVocabulary) => {
+  'generateDesign with vocabulary %s forwards the right instruct',
+  async (vocabulary, written, sent) => {
     engine.vocabulary = vocabulary;
-    vi.mocked(generateClone).mockReset().mockRejectedValueOnce(new Error('stop'));
+    vi.mocked(generateClone).mockReset().mockRejectedValue(new Error('stop'));
+    const recipe = { description: written, picks: {} };
     function DesignConsumer() {
       const state = useGenerateClone();
       return (
         <button
           onClick={() =>
-            void state.generateDesign({
-              text: 'Hi',
-              instruct: 'raspy old female, scottish accent',
-              seed: 1,
-            })
+            void state.generateDesign({ text: 'Hi', instruct: `  ${written} `, seed: 1, recipe })
           }
         >
-          design {state.instructVocabulary}
+          vocabulary {state.instructVocabulary}
         </button>
       );
     }
@@ -303,10 +300,15 @@ it.each([
         </GenerationProvider>
       </QueryClientProvider>,
     );
-    fireEvent.click(screen.getByText('design ' + expectedVocabulary));
+    const expected = vocabulary ?? 'tags';
+    fireEvent.click(screen.getByText(`vocabulary ${expected}`));
     await waitFor(() => expect(generateClone).toHaveBeenCalled());
     expect(generateClone).toHaveBeenCalledWith(
-      expect.objectContaining({ instruct: sent, instructVocabulary: expectedVocabulary }),
+      expect.objectContaining({
+        instruct: sent,
+        instructVocabulary: expected,
+        designRecipe: recipe,
+      }),
       expect.anything(),
     );
     engine.vocabulary = undefined;

@@ -58,23 +58,17 @@ function useCompactViewport(): boolean {
 }
 
 export function useWorkspaceSidebarState() {
-  const { libraryOpen, expandedLibraryContext, autoCollapseSidebar } = useWorkspace();
+  const layout = useWorkspace();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const compactViewport = useCompactViewport();
-  const compactContext = `${pathname}:${compactViewport}`;
-  const forceExpanded = expandedLibraryContext === compactContext;
-  // Auto-collapse is a preference (Settings → Appearance → Keep sidebar
-  // expanded): off keeps the full navigation beside a section's own pane.
-  const autoCollapse =
-    autoCollapseSidebar !== false && (routeHasSecondarySidebar(pathname) || compactViewport);
-  const compact = !libraryOpen || (autoCollapse && !forceExpanded);
+  const secondaryWorkspace = routeHasSecondarySidebar(pathname);
+  // Where the user last asked for the full sidebar; it only applies to this exact page and window size.
+  const context = `${pathname}:${compactViewport}`;
+  const forceExpanded = layout.expandedLibraryContext === context;
+  // Folding on its own needs the preference; closing it by hand does not.
+  const wantsRail = layout.autoCollapseSidebar !== false && (secondaryWorkspace || compactViewport);
+  const compact = !layout.libraryOpen || (wantsRail && !forceExpanded);
   const setOpen = (open: boolean) =>
-    setWorkspace({ libraryOpen: open, expandedLibraryContext: open ? compactContext : null });
-  return {
-    compact,
-    compactViewport,
-    forceExpanded,
-    secondaryWorkspace: routeHasSecondarySidebar(pathname),
-    setOpen,
-  };
+    setWorkspace({ libraryOpen: open, expandedLibraryContext: open ? context : null });
+  return { compact, compactViewport, forceExpanded, secondaryWorkspace, setOpen };
 }
