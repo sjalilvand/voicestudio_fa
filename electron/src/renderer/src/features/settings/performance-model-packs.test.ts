@@ -82,4 +82,19 @@ describe('performance model packs', () => {
     expect(largestFittingTier(catalogue, 'max', 1, 10)).toBe('fast');
     expect(largestFittingTier(catalogue, 'quality', undefined, 10)).toBe('quality');
   });
+
+  it.each([
+    [true, 'mlx-community/whisper-large-v3-mlx'],
+    [false, 'Systran/faster-whisper-large-v3'],
+  ])('picks the Metal Whisper only where the device supports it (%s)', (mlxSupported, expected) => {
+    const pack = resolvePerformanceModelPack(
+      [
+        model('Systran/faster-whisper-large-v3', 2.9),
+        model('mlx-community/whisper-large-v3-mlx', 3.0, false, mlxSupported),
+      ],
+      'max',
+    );
+
+    expect(pack.models.map((item) => item.repo_id)).toEqual([expected]);
+  });
 });
