@@ -58,6 +58,15 @@ describe('backendFailureCause', () => {
   it.each([
     ['Could not start the backend: spawn UNKNOWN', 'spawn_blocked'],
     ['Could not start the backend: spawn UNKNOWN (Smart App Control)', 'smart_app_control'],
+    // #3209: a refused DLL load names its blocker, so the advice matches it.
+    [
+      "Backend exited (exit code 1): Windows refused to load one of the engine's files. Windows Smart App Control blocked it. Last output: ImportError: DLL load failed while importing _sqlite3: An Application Control policy has blocked this file.",
+      'smart_app_control',
+    ],
+    [
+      "Backend exited (exit code 1): Windows refused to load one of the engine's files. Your antivirus blocked it.",
+      'spawn_blocked',
+    ],
     ['Backend exited unexpectedly (exit code 3221225477).', 'native_crash'],
     ['Backend exited unexpectedly (exit code -1073741819).', 'native_crash'],
     ['Backend exited unexpectedly (signal SIGSEGV).', 'native_crash'],

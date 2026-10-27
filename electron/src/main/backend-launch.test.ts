@@ -35,6 +35,7 @@ vi.mock('./legacy-storage', () => ({
 }));
 import {
   devRendererPort,
+  loadBlockMessage,
   resolveSpawnPlan,
   managedBackendSpawnOptions,
   setBackendOnlyEnv,
@@ -345,4 +346,22 @@ it('tells the backend which commit the app was built from (#3293)', () => {
   expect(managedBackendSpawnOptions(3900).env.OMNIVOICE_BUILD_COMMIT).toBe('000000000');
   vi.stubEnv('OMNIVOICE_BUILD_COMMIT', 'abcdef123');
   expect(managedBackendSpawnOptions(3900).env.OMNIVOICE_BUILD_COMMIT).toBe('abcdef123');
+});
+
+it('names Smart App Control when it refused a runtime DLL, and other blockers otherwise (#3209)', () => {
+  const last =
+    'ImportError: DLL load failed while importing _sqlite3: An Application Control policy has blocked this file.';
+  expect(loadBlockMessage('exit code 1', last, 'application_control', 'on')).toBe(
+    "Backend exited (exit code 1): Windows refused to load one of the engine's files. " +
+      `Windows Smart App Control blocked it. Last output: ${last}`,
+  );
+  expect(loadBlockMessage('exit code 1', last, 'application_control', 'off')).toContain(
+    'A Windows application control policy blocked it.',
+  );
+  expect(loadBlockMessage('exit code 1', '', 'group_policy', 'on')).toContain(
+    'A Windows application control policy blocked it.',
+  );
+  expect(loadBlockMessage('exit code 1', '', 'antivirus')).toBe(
+    "Backend exited (exit code 1): Windows refused to load one of the engine's files. Your antivirus blocked it.",
+  );
 });
