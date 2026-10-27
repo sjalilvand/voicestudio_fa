@@ -306,7 +306,14 @@ export default function PronunciationPanel() {
               />
               <Badge tone="neutral">{typeLabel(e.type)}</Badge>
               <Badge tone="neutral">{scopeLabel(e.scope || e.language)}</Badge>
-              {/* CLEAN-ROOM (spec W10-pron §1) */}
+              {/* The engine only substitutes respelling entries for now; any
+                  other type is stored but skipped at synthesis time, so flag
+                  live entries the user might expect to take effect. */}
+              {e.enabled && e.type !== 'respelling' && (
+                <Badge tone="warn" data-testid={`pron-inert-${e.id}`}>
+                  {t('pronunciation.not_applied_badge')}
+                </Badge>
+              )}
               <Button
                 variant="danger"
                 size="sm"

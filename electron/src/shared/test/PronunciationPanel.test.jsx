@@ -326,5 +326,46 @@ describe('PronunciationPanel', () => {
     expect(apiJson).not.toHaveBeenCalledWith('/pronunciation/import', expect.anything());
   });
 
-  // CLEAN-ROOM (spec W10-pron §2)
+  describe('not-applied-yet badge', () => {
+    const entry = (id, type, enabled = true) => ({
+      id,
+      term: `term-${id}`,
+      replacement: `say-${id}`,
+      type,
+      language: '*',
+      scope: '*',
+      enabled,
+    });
+
+    async function renderWith(list) {
+      apiJson.mockResolvedValue(list);
+      render(withI18n(<PronunciationPanel />));
+      await screen.findByText(list[0].term);
+    }
+
+    it('flags enabled ipa and cmu entries with an English "not applied" badge', async () => {
+      await renderWith([entry('ipa1', 'ipa'), entry('cmu1', 'cmu')]);
+      for (const id of ['ipa1', 'cmu1']) {
+        const badge = screen.getByTestId(`pron-inert-${id}`);
+        expect(badge.textContent).toMatch(/not applied/i);
+      }
+    });
+
+    it('leaves enabled respelling entries unbadged', async () => {
+      await renderWith([entry('r1', 'respelling'), entry('r2', 'respelling')]);
+      expect(screen.queryByTestId('pron-inert-r1')).toBeNull();
+      expect(screen.queryByTestId('pron-inert-r2')).toBeNull();
+      expect(screen.queryByText(/not applied/i)).toBeNull();
+    });
+
+    it('does not badge a disabled ipa entry', async () => {
+      await renderWith([entry('off', 'ipa', false)]);
+      expect(screen.queryByTestId('pron-inert-off')).toBeNull();
+    });
+
+    it('badges an enabled entry whose type it does not recognise', async () => {
+      await renderWith([entry('x1', 'sampa')]);
+      expect(screen.getByTestId('pron-inert-x1')).toBeInTheDocument();
+    });
+  });
 });
