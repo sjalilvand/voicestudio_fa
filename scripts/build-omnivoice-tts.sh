@@ -63,6 +63,11 @@ case "$PLATFORM" in
 esac
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+# A bare `-j` runs every compile at once. With GGML_CPU_ALL_VARIANTS that is
+# dozens of cc1plus processes, which the kernel OOM-kills on a 16 GB runner
+# ("Killed signal terminated program cc1plus"). Bound it by the CPU count.
+BUILD_JOBS="${OMNIVOICE_BUILD_JOBS:-$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo "${NUMBER_OF_PROCESSORS:-2}")}"
 source "$REPO_ROOT/scripts/lib/omnivoice-vulkan.sh"
 BIN_DIR="$REPO_ROOT/bin"
 mkdir -p "$BIN_DIR"
@@ -155,7 +160,7 @@ portable_x86_cpu_build() {
     cmake -B build -DCMAKE_BUILD_TYPE=Release \
         -DGGML_BACKEND_DL=ON -DBUILD_SHARED_LIBS=ON \
         -DGGML_NATIVE=OFF -DGGML_CPU_ALL_VARIANTS=ON "$@"
-    cmake --build build --config Release -j
+    cmake --build build --config Release -j "$BUILD_JOBS"
 }
 
 # The desktop app supports macOS 13.3+; without an explicit target the binary
@@ -178,7 +183,7 @@ case "$PLATFORM" in
                 portable_x86_cpu_build
             else
                 cmake -B build -DCMAKE_BUILD_TYPE=Release
-                cmake --build build --config Release -j
+                cmake --build build --config Release -j "$BUILD_JOBS"
             fi
         fi
         cp -v build/omnivoice-tts "$BIN_DIR/$OUT_NAME"
@@ -204,7 +209,7 @@ case "$PLATFORM" in
         # Apple Silicon — try Metal (no published buildmetal.sh; we
         # invoke the GGML flag directly per Pitfall 1 / A1).
         if cmake -B build -DCMAKE_BUILD_TYPE=Release -DGGML_METAL=ON -DCMAKE_OSX_ARCHITECTURES=arm64; then
-            if cmake --build build --config Release -j; then
+            if cmake --build build --config Release -j "$BUILD_JOBS"; then
                 cp -v build/omnivoice-tts "$BIN_DIR/$OUT_NAME"
                 copy_shared_libs
             else

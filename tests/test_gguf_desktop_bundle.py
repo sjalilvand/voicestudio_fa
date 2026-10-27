@@ -148,3 +148,16 @@ def test_windows_build_fails_without_the_cpp_runtime(tmp_path):
     result = _run_windows_build(tmp_path, {"vcruntime140.dll": "vcrt"})
     assert result.returncode != 0
     assert "Visual C++ runtime DLLs not found" in result.stderr
+
+
+def test_every_parallel_build_is_bounded():
+    # A bare `cmake --build -j` compiles every CPU variant at once and the
+    # Linux runner OOM-kills cc1plus, so the installer runtime never builds.
+    for rel in ("scripts/build-omnivoice-tts.sh", "scripts/lib/omnivoice-vulkan.sh"):
+        text = (REPO / rel).read_text(encoding="utf-8")
+        builds = [line for line in text.splitlines() if "cmake --build" in line]
+        assert builds, rel
+        for line in builds:
+            assert '-j "$BUILD_JOBS"' in line, f"{rel}: {line.strip()}"
+    script = (REPO / "scripts/build-omnivoice-tts.sh").read_text(encoding="utf-8")
+    assert script.index("BUILD_JOBS=") < script.index('source "$REPO_ROOT/scripts/lib/omnivoice-vulkan.sh"')
