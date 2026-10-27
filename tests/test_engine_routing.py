@@ -301,3 +301,49 @@ def test_badge_and_loader_read_force_cuda_alike(monkeypatch, value):
     else:
         monkeypatch.setenv("OMNIVOICE_FORCE_CUDA", value)
     assert cuda_forced() == _env_flag("OMNIVOICE_FORCE_CUDA")
+
+
+def test_same_interpreter_sidecar_gets_the_loader_cpu_fallback(monkeypatch):
+    # omnivoice-subprocess runs the parent's interpreter and its child calls
+    # get_best_device(), which picks CPU for a card the wheel cannot drive. Its
+    # profile must say so, or CPU synthesis gets the accelerated time budget.
+    from engines.omnivoice_subprocess import OmniVoiceSubprocessBackend
+
+    monkeypatch.delenv("OMNIVOICE_FORCE_CUDA", raising=False)
+    note = f"Quadro M5000M (sm_52) not in this torch build's archs — {KERNEL_RISK_MARKER}"
+    profile = OmniVoiceSubprocessBackend.runtime_compute_profile(_caps("cuda", notes=[note]))
+    assert profile["routing_status"] == "cpu_fallback"
+    assert profile["effective_device"] == "cpu"
+
+
+def test_uses_parent_torch_by_interpreter_not_isolation():
+    from services.engine_routing import uses_parent_torch
+
+    class InProcess:
+        pass
+
+    class SharedSidecar:
+        _is_subprocess_isolated = True
+
+        @classmethod
+        def shares_parent_torch(cls):
+            return True
+
+    class OwnVenvSidecar:
+        _is_subprocess_isolated = True
+
+        @classmethod
+        def shares_parent_torch(cls):
+            return False
+
+    class BrokenProbe:
+        _is_subprocess_isolated = True
+
+        @classmethod
+        def shares_parent_torch(cls):
+            raise RuntimeError("boom")
+
+    assert uses_parent_torch(InProcess)
+    assert uses_parent_torch(SharedSidecar)
+    assert not uses_parent_torch(OwnVenvSidecar)
+    assert not uses_parent_torch(BrokenProbe)
