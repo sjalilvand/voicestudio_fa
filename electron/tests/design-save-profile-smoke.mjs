@@ -18,14 +18,19 @@ try {
     handle: (route, request, path) => {
       if (path !== '/api/profiles') return false;
       if (request.method() === 'POST') {
-        const profile = {
-          id: 'designed-profile',
-          name: request.postDataJSON().name,
-          kind: 'design',
-          language: 'English',
-        };
-        created.push(profile);
-        return route.fulfill({ json: profile });
+        return (async () => {
+          const form = await new Response(request.postDataBuffer(), {
+            headers: { 'content-type': request.headers()['content-type'] },
+          }).formData();
+          const profile = {
+            id: 'designed-profile',
+            name: String(form.get('name') || ''),
+            kind: 'design',
+            language: 'English',
+          };
+          created.push(profile);
+          return route.fulfill({ json: profile });
+        })();
       }
       if (request.method() === 'GET') return route.fulfill({ json: created });
       return false;
