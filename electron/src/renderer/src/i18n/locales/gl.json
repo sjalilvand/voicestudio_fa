@@ -13,6 +13,16 @@
     "surprised": "Sorprendido",
     "calm": "Tranquilo"
   },
+  "expression": {
+    "direction_label": "Indicación de interpretación",
+    "direction_ph": "p. ex., nervioso ao principio e despois emocionado",
+    "direction_help": "Aplícase a toda a toma, como guía para {{engine}}.",
+    "unsupported": "A emoción non está dispoñible con {{engine}}. IndexTTS2 ofrece emoción graduada; CosyVoice 3 e VoxCPM2 aceptan unha indicación escrita.",
+    "tags_hint": "Para momentos dentro dunha liña, engade reaccións como {{example}} desde Inserir no guión.",
+    "tags_unsupported": "{{engine}} lería en voz alta como palabras as etiquetas en gris.",
+    "guide": "Guía de voz expresiva",
+    "tip": "Consello: dálle forma á interpretación con Emoción, abaixo, e engade reaccións como risos ou suspiros desde Inserir no guión."
+  },
   "cloneQuality": {
     "title": "Calidade de audio",
     "precision": "Precisión WAV",
