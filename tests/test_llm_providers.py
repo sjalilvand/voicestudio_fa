@@ -39,8 +39,9 @@ def lp(monkeypatch, clean_llm_env):
 
 def test_registry_has_all_providers(lp):
     ids = {p.id for p in lp.all_providers()}
+    # Named cloud providers, local servers and a custom endpoint.
     for expected in ("openai", "openrouter", "orcarouter", "cheaperinference",
-                     "groq", "cerebras", "google-ai",
+                     "opper", "api-route", "groq", "cerebras", "google-ai",
                      "mistral", "cohere", "nvidia", "github-models", "cloudflare",
                      "huggingface", "sambanova", "siliconflow", "ollama",
                      "lmstudio", "iflytek", "custom"):
@@ -149,6 +150,52 @@ def test_cheaper_inference_catalogue_entry_and_environment_resolution(lp, monkey
         lp.resolve_base_url(provider),
         lp.resolve_model(provider),
     ) == ("temporary-secret", "https://router.example/api/v1", "vendor/small-chat")
+
+
+def test_opper_provider_contract(lp, monkeypatch):
+    p = lp.get_provider("opper")
+    assert p.display_name == "Opper"
+    assert p.default_base_url == "https://api.opper.ai/v3/compat"
+    assert p.default_model == "claude-sonnet-4-6"
+    assert p.key_envs == ("OPPER_API_KEY",)
+    assert p.base_url_env is None
+    assert p.model_env == "OPPER_MODEL"
+
+    monkeypatch.setenv("OPPER_API_KEY", "op-test")
+    monkeypatch.setenv("OPPER_MODEL", "gpt-5.4-mini")
+    # Opper's SDKs read OPPER_BASE_URL as the API root, so it must not
+    # replace the OpenAI-compatible endpoint here.
+    monkeypatch.setenv("OPPER_BASE_URL", "https://api.opper.ai")
+    assert lp.resolve_api_key(p) == "op-test"
+    assert lp.resolve_model(p) == "gpt-5.4-mini"
+    assert lp.resolve_base_url(p) == "https://api.opper.ai/v3/compat"
+
+
+def test_api_route_provider_contract(lp, monkeypatch):
+    p = lp.get_provider("api-route")
+    assert p.display_name == "API Route"
+    assert p.default_base_url == "https://global.api-route.com/v1"
+    assert p.default_model == "deepseek-v4.1-flash"
+    assert p.key_envs == ("API_ROUTE_API_KEY",)
+    assert p.base_url_env == "API_ROUTE_BASE_URL"
+    assert p.model_env == "API_ROUTE_MODEL"
+    assert p.transport == "openai" and not p.local
+    assert not lp.is_configured(p)
+    assert lp.active_provider_id() != p.id
+
+    lp.set_active_provider("openai")
+    lp.save_key(p.id, "stored-api-route-key")
+    assert lp.is_configured(p)
+    assert "stored-api-route-key" not in json.dumps(lp.describe(p))
+    assert lp.active_provider_id() == "openai"
+
+    monkeypatch.setenv("API_ROUTE_API_KEY", "env-api-route-key")
+    monkeypatch.setenv("API_ROUTE_BASE_URL", "https://gateway.example/v1")
+    monkeypatch.setenv("API_ROUTE_MODEL", "test-model")
+    assert lp.resolve_api_key(p) == "env-api-route-key"
+    assert lp.resolve_base_url(p) == "https://gateway.example/v1"
+    assert lp.resolve_model(p) == "test-model"
+    assert "env-api-route-key" not in json.dumps(lp.describe(p))
 
 
 def test_iflytek_provider_contract(lp, monkeypatch):

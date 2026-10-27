@@ -10,7 +10,9 @@
     <a href="#文档">文档</a> ·
     <a href="https://discord.gg/bzQavDfVV9">Discord</a> ·
     <a href="../../README.md">English</a> ·
-    <a href="README_JA.md">日本語</a>
+    <a href="README_JA.md">日本語</a> ·
+    <a href="README_KO.md">한국어</a> ·
+    <a href="README_RU.md">Русский</a>
   </p>
   <p>
     <a href="https://github.com/debpalash/VoiceStudio/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/debpalash/VoiceStudio/ci.yml?branch=main" alt="持续集成状态" /></a>

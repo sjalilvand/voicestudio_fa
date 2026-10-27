@@ -10,7 +10,7 @@ import { AgentFixButton } from '@/components/agent-fix-button';
 import { getBridge } from '@/components/bridge';
 import { WorkspaceHeader } from '@/components/app-shell/workspace-header';
 import { hasCompleteTranslation, multiLangTargets } from '@shared/utils/multiLang';
-import { segmentGenInputs } from '@shared/utils/segments';
+import { castSpeakers, segmentGenInputs } from '@shared/utils/segments';
 import { clampSegmentEdit } from '@shared/utils/timeline';
 import { DubExportPanel } from './dub-export-panel';
 import { DubEmptyState } from './dub-empty-state';
@@ -33,6 +33,7 @@ import { CheckpointBanner, type CheckpointStage } from './checkpoint-banner';
 import { ConfirmDialog } from '../clone/confirm-dialog';
 import { useDubOnsets } from './use-dub-onsets';
 import { useDubLivePreview } from './use-dub-live-preview';
+import { formatSegmentTime, parseSegmentTimeField } from './segment-time-field';
 import { setDubFitOptions, setDubQuality, setDubProduction } from './dub-session';
 import { DEFAULT_REPAIR_AGENT_KEY } from '@/lib/repair-agent-events';
 import type { RepairAgentId, RepairAgentInfo } from '../../../../preload/index.d';
@@ -122,6 +123,8 @@ import {
   applyDubQc,
   applyDubTranslationRows,
   assignDubSpeakerProfile,
+  nextDubSpeakerId,
+  setDubSegmentsSpeaker,
   dubSession,
   DUB_STOP_FAILED,
   DUB_AGENT_UNAVAILABLE,
@@ -341,6 +344,7 @@ export function DubPage() {
     requestAnimationFrame(() => segmentVirtualizer.measure());
   }, [editingSegmentId, expandedSegmentId, segmentVirtualizer]);
   const code = translationTargetCode(target);
+  const speakers = useMemo(() => castSpeakers(session.segments) as string[], [session.segments]);
   const scrollToSegmentRow = useCallback(
     (row: number) => segmentVirtualizer.scrollToIndex(row, { align: 'center' }),
     [segmentVirtualizer],
@@ -1766,6 +1770,45 @@ export function DubPage() {
                         </Menu.Positioner>
                       </Menu.Portal>
                     </Menu.Root>
+                    <Menu.Root>
+                      <Menu.Trigger
+                        disabled={busy || Boolean(session.recovery)}
+                        className={buttonVariants({
+                          variant: 'outline',
+                          size: 'sm',
+                        })}
+                      >
+                        {t('dub.set_speaker')}
+                        <ChevronDownIcon />
+                      </Menu.Trigger>
+                      <Menu.Portal>
+                        <Menu.Positioner sideOffset={6} align="end" className="z-50">
+                          <Menu.Popup className="max-h-72 min-w-52 overflow-y-auto rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg outline-none">
+                            {speakers.map((speaker) => (
+                              <Menu.Item
+                                key={speaker}
+                                onClick={() => setDubSegmentsSpeaker(selectedSegmentIds, speaker)}
+                                className="cursor-default rounded-md px-3 py-2 text-sm outline-none data-highlighted:bg-accent"
+                              >
+                                {speaker}
+                              </Menu.Item>
+                            ))}
+                            <Menu.Item
+                              onClick={() =>
+                                setDubSegmentsSpeaker(
+                                  selectedSegmentIds,
+                                  nextDubSpeakerId(session.segments),
+                                )
+                              }
+                              className="flex cursor-default items-center gap-2 rounded-md px-3 py-2 text-sm outline-none data-highlighted:bg-accent"
+                            >
+                              <PlusIcon className="size-4" />
+                              {t('dub.new_speaker')}
+                            </Menu.Item>
+                          </Menu.Popup>
+                        </Menu.Positioner>
+                      </Menu.Portal>
+                    </Menu.Root>
                     <EngineLanguagePicker
                       operation="dub"
                       value={t('dub.set_lang')}
@@ -2208,6 +2251,45 @@ export function DubPage() {
                                     id={`dub-segment-options-${index}`}
                                     className="mt-1.5 rounded-lg border border-border/50 bg-muted/20 p-2.5"
                                   >
+                                    <div
+                                      role="group"
+                                      aria-label={t('dub.speaker_label')}
+                                      className="flex flex-wrap items-center gap-1"
+                                    >
+                                      <span className="mr-1 text-muted-foreground">
+                                        {t('dub.speaker_label')}
+                                      </span>
+                                      {speakers.map((speaker) => (
+                                        <Button
+                                          key={speaker}
+                                          size="xs"
+                                          variant={
+                                            segment.speaker_id === speaker ? 'secondary' : 'ghost'
+                                          }
+                                          aria-pressed={segment.speaker_id === speaker}
+                                          disabled={busy || Boolean(session.recovery)}
+                                          onClick={() =>
+                                            setDubSegmentsSpeaker(new Set([segment.id]), speaker)
+                                          }
+                                        >
+                                          {speaker}
+                                        </Button>
+                                      ))}
+                                      <Button
+                                        size="xs"
+                                        variant="ghost"
+                                        disabled={busy || Boolean(session.recovery)}
+                                        onClick={() =>
+                                          setDubSegmentsSpeaker(
+                                            new Set([segment.id]),
+                                            nextDubSpeakerId(session.segments),
+                                          )
+                                        }
+                                      >
+                                        <PlusIcon />
+                                        {t('dub.new_speaker')}
+                                      </Button>
+                                    </div>
                                     <div className="mt-2 flex flex-wrap gap-1">
                                       {profiles.data?.map((profile) => (
                                         <Button
@@ -2291,19 +2373,22 @@ export function DubPage() {
                                         step="0.01"
                                         min={0}
                                         aria-label={t('dubWorkspace.start')}
-                                        defaultValue={segment.start.toFixed(2)}
+                                        defaultValue={formatSegmentTime(segment.start)}
                                         disabled={busy || Boolean(session.recovery)}
                                         onKeyDown={(event) => {
                                           if (event.key === 'Enter') event.currentTarget.blur();
                                           if (event.key === 'Escape') {
-                                            event.currentTarget.value = segment.start.toFixed(2);
+                                            event.currentTarget.value = formatSegmentTime(segment.start);
                                             event.currentTarget.blur();
                                           }
                                         }}
                                         onBlur={(event) => {
-                                          const start = Number(event.target.value);
-                                          if (!Number.isFinite(start)) {
-                                            event.currentTarget.value = segment.start.toFixed(2);
+                                          const start = parseSegmentTimeField(
+                                            event.target.value,
+                                            segment.start,
+                                          );
+                                          if (start === null) {
+                                            event.currentTarget.value = formatSegmentTime(segment.start);
                                             return;
                                           }
                                           const timing = clampSegmentEdit(
@@ -2315,7 +2400,7 @@ export function DubPage() {
                                               duration: session.duration || undefined,
                                             },
                                           );
-                                          event.currentTarget.value = timing.start.toFixed(2);
+                                          event.currentTarget.value = formatSegmentTime(timing.start);
                                           moveResizeDubSegment(segment.id, timing);
                                         }}
                                       />
@@ -2325,19 +2410,22 @@ export function DubPage() {
                                         step="0.01"
                                         min={segment.start}
                                         aria-label={t('dubWorkspace.end')}
-                                        defaultValue={segment.end.toFixed(2)}
+                                        defaultValue={formatSegmentTime(segment.end)}
                                         disabled={busy || Boolean(session.recovery)}
                                         onKeyDown={(event) => {
                                           if (event.key === 'Enter') event.currentTarget.blur();
                                           if (event.key === 'Escape') {
-                                            event.currentTarget.value = segment.end.toFixed(2);
+                                            event.currentTarget.value = formatSegmentTime(segment.end);
                                             event.currentTarget.blur();
                                           }
                                         }}
                                         onBlur={(event) => {
-                                          const end = Number(event.target.value);
-                                          if (!Number.isFinite(end)) {
-                                            event.currentTarget.value = segment.end.toFixed(2);
+                                          const end = parseSegmentTimeField(
+                                            event.target.value,
+                                            segment.end,
+                                          );
+                                          if (end === null) {
+                                            event.currentTarget.value = formatSegmentTime(segment.end);
                                             return;
                                           }
                                           const timing = clampSegmentEdit(
@@ -2349,7 +2437,7 @@ export function DubPage() {
                                               duration: session.duration || undefined,
                                             },
                                           );
-                                          event.currentTarget.value = timing.end.toFixed(2);
+                                          event.currentTarget.value = formatSegmentTime(timing.end);
                                           moveResizeDubSegment(segment.id, timing);
                                         }}
                                       />

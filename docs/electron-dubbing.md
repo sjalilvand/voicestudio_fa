@@ -35,7 +35,11 @@ selection and timestamp stay visible, while row actions reveal on hover or keybo
 focus. Inset hairline separators preserve the reading rhythm; source text and metadata
 stay dimmed until the row is active, while the translation remains the visual lead.
 Clicking a translation turns only that row into a growing editor. Advanced
-voice and timing controls remain folded behind the speaker header. When a workspace
+voice and timing controls remain folded behind the speaker header, which also
+moves the line to another speaker or a **New speaker**; **Set speaker...** in the
+selection bar does the same for several lines. A line that followed its old
+speaker's voice takes the new speaker's voice, while a voice picked for that line
+stays. See the [multi-speaker walkthrough](dubbing/multi-speaker-guide.md). When a workspace
 also opens local controls, constrained or scaled windows automatically use the main
 navigation rail so the transcript keeps the available width; expanding it remains an
 explicit temporary override.
@@ -124,6 +128,11 @@ The backend retains voice references only where their timing overlaps the new cu
 Malformed, overlapping, or duration-clamped cue counts remain visible in the sidebar.
 Failed imports preserve the current edits. Generated track buttons clear on successful
 replacement to avoid presenting older audio as the new subtitles' output.
+Ruby pronunciation guides in SRT/VTT captions are excluded from the spoken text
+in Dub and Stories: `<ruby>read<rt>reed</rt></ruby>` speaks only "read".
+Nested annotation containers and fallback parentheses are excluded too; unchanged
+Dub subtitle exports retain the original ruby markup. An unclosed annotation
+ends at the enclosing ruby or cue boundary, so it cannot hide the next cue.
 URL import runs only after clicking Ingest; it uses the backend's existing yt-dlp
 pipeline. URL imports (here and in the voice gallery) accept only `http://` and
 `https://` links and refuse addresses on this computer or the local network,

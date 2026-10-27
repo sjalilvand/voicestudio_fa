@@ -936,7 +936,10 @@
     "segment_count_other": "{{count}} segmen",
     "glossary_terms_one": "Glosarium · {{count}} istilah",
     "glossary_terms_other": "Glosarium · {{count}} istilah",
-    "glossary_label": "Glosarium"
+    "glossary_label": "Glosarium",
+    "set_speaker": "Atur pembicara…",
+    "new_speaker": "Pembicara baru",
+    "speaker_label": "Pembicara"
   },
   "dub_workflow": {
     "preparing_audio": "Mempersiapkan audio…",
@@ -2136,7 +2139,8 @@
     "export_n_audio_other": "Ekspor {{count}} file audio",
     "export_audio": "Ekspor audio",
     "export_subtitles": "Ekspor subtitle",
-    "stretch_subs_note": "Regangkan Video: ekspor subtitel secara terpisah."
+    "stretch_subs_note": "Regangkan Video: ekspor subtitel secara terpisah.",
+    "undubbed_video_note": "Belum ada sulih suara: video mempertahankan audio aslinya. Tanamkan subtitle untuk menambahkan transkrip."
   },
   "models": {
     "pack_title": "Paket model",

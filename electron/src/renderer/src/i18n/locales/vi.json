@@ -936,7 +936,10 @@
     "segment_count_other": "{{count}} đoạn",
     "glossary_terms_one": "Bảng thuật ngữ · {{count}} thuật ngữ",
     "glossary_terms_other": "Bảng thuật ngữ · {{count}} thuật ngữ",
-    "glossary_label": "Bảng thuật ngữ"
+    "glossary_label": "Bảng thuật ngữ",
+    "set_speaker": "Đặt người nói…",
+    "new_speaker": "Người nói mới",
+    "speaker_label": "Người nói"
   },
   "dub_workflow": {
     "preparing_audio": "Đang chuẩn bị âm thanh…",
@@ -2136,7 +2139,8 @@
     "export_n_audio_other": "Xuất tệp âm thanh {{count}}",
     "export_audio": "Xuất âm thanh",
     "export_subtitles": "Xuất phụ đề",
-    "stretch_subs_note": "Kéo giãn video: xuất phụ đề riêng."
+    "stretch_subs_note": "Kéo giãn video: xuất phụ đề riêng.",
+    "undubbed_video_note": "Chưa có lồng tiếng: video giữ âm thanh gốc. Ghi phụ đề vào hình để thêm bản chép lời."
   },
   "models": {
     "pack_title": "Gói mô hình",

@@ -964,7 +964,10 @@
     "glossary_terms_many": "المسرد · {{count}} مصطلحًا",
     "glossary_terms_zero": "المسرد · {{count}} مصطلح",
     "glossary_terms_two": "المسرد · {{count}} مصطلحان",
-    "glossary_label": "المسرد"
+    "glossary_label": "المسرد",
+    "set_speaker": "تعيين المتحدث…",
+    "new_speaker": "متحدث جديد",
+    "speaker_label": "المتحدث"
   },
   "dub_workflow": {
     "preparing_audio": "جارٍ تحضير الصوت…",
@@ -2184,7 +2187,8 @@
     "export_n_audio_other": "تصدير {{count}} الملفات الصوتية",
     "export_audio": "تصدير الصوت",
     "export_subtitles": "تصدير ترجمات",
-    "stretch_subs_note": "تمديد الفيديو: صدّر الترجمة بشكل منفصل."
+    "stretch_subs_note": "تمديد الفيديو: صدّر الترجمة بشكل منفصل.",
+    "undubbed_video_note": "لا توجد دبلجة بعد: يحتفظ الفيديو بصوته الأصلي. انسخ الترجمة على الصورة لإضافة النص."
   },
   "models": {
     "pack_title": "حزم النماذج",

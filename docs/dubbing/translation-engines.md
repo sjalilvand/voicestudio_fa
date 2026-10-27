@@ -163,7 +163,7 @@ and with no LLM configured (or on any LLM error) it simply does nothing.
 **Settings → System → LLM Providers** is the one place to set up the LLM. Pick a
 provider, paste its API key, choose a model, **Test** it, and "use for
 translation." Supported choices are OpenAI, OpenRouter, OrcaRouter, Cheaper Inference,
-Groq, Cerebras, Google AI (Gemini), Mistral, Cohere, NVIDIA, GitHub Models,
+Opper, API Route, Groq, Cerebras, Google AI (Gemini), Mistral, Cohere, NVIDIA, GitHub Models,
 Cloudflare, Hugging Face, SambaNova, SiliconFlow, iFLYTEK Astron MaaS,
 **local Ollama / LM Studio (offline, no key)**, and a **Custom OpenAI-compatible endpoint**.
 
@@ -182,6 +182,21 @@ covering models from several labs. It defaults to `gpt-5.4-mini`; pricing depend
 on the selected model and request, as listed in its [provider catalog](https://cheaperinference.com/docs).
 Without the UI, set `CHEAPER_INFERENCE_API_KEY`; override the defaults with
 `CHEAPER_INFERENCE_BASE_URL` and `CHEAPER_INFERENCE_MODEL`.
+
+[Opper](https://opper.ai) is an EU-hosted AI gateway with 700+ models from 50+
+providers behind one OpenAI-compatible API and one key (default model
+`claude-sonnet-4-6`). Enter a key from [platform.opper.ai](https://platform.opper.ai)
+in the provider settings, or set `OPPER_API_KEY`, and override the model with
+`OPPER_MODEL`. The endpoint can only be changed in the provider settings,
+because Opper's own tools use `OPPER_BASE_URL` for a different URL.
+
+[API Route](https://www.api-route.com) uses the OpenAI-compatible endpoint
+`https://global.api-route.com/v1` and defaults to `deepseek-v4.1-flash`.
+Choose **API Route** in the provider settings and enter your API key, or set
+`API_ROUTE_API_KEY`. Override the endpoint and model with `API_ROUTE_BASE_URL`
+and `API_ROUTE_MODEL`. To pin the active provider, set
+`LLM_DEFAULT_PROVIDER=api-route`. Cloud requests require explicit selection
+and a configured key, just like the other hosted providers.
 
 iFLYTEK Astron MaaS uses `IFLYTEK_API_KEY`, `IFLYTEK_BASE_URL` and
 `IFLYTEK_MODEL`. It has no default model: copy the model ID (for example Spark
@@ -203,7 +218,7 @@ shared machine — set the `LLM_DEFAULT_PROVIDER` environment variable to a
 provider id before launching the backend:
 
 ```
-LLM_DEFAULT_PROVIDER=groq        # or openai, openrouter, orcarouter, cheaperinference, cerebras, iflytek, ollama, custom, …
+LLM_DEFAULT_PROVIDER=groq        # or openai, openrouter, orcarouter, cheaperinference, opper, api-route, cerebras, iflytek, ollama, custom, …
 ```
 
 Resolution order for the active provider is: `LLM_DEFAULT_PROVIDER` (env) →

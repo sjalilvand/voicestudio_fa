@@ -936,7 +936,10 @@
     "segment_count_other": "{{count}} सेगमेंट",
     "glossary_terms_one": "शब्दावली · {{count}} शब्द",
     "glossary_terms_other": "शब्दावली · {{count}} शब्द",
-    "glossary_label": "शब्दावली"
+    "glossary_label": "शब्दावली",
+    "set_speaker": "वक्ता चुनें…",
+    "new_speaker": "नया वक्ता",
+    "speaker_label": "वक्ता"
   },
   "dub_workflow": {
     "preparing_audio": "ऑडियो तैयार किया जा रहा है…",
@@ -2136,7 +2139,8 @@
     "export_n_audio_other": "{{count}} ऑडियो फ़ाइलें निर्यात करें",
     "export_audio": "ऑडियो निर्यात करें",
     "export_subtitles": "उपशीर्षक निर्यात करें",
-    "stretch_subs_note": "वीडियो खींचें: उपशीर्षक अलग से निर्यात करें।"
+    "stretch_subs_note": "वीडियो खींचें: उपशीर्षक अलग से निर्यात करें।",
+    "undubbed_video_note": "अभी डब नहीं है: वीडियो में मूल ऑडियो रहेगा। ट्रांसक्रिप्ट जोड़ने के लिए सबटाइटल वीडियो में जोड़ें।"
   },
   "models": {
     "pack_title": "मॉडल पैक",
