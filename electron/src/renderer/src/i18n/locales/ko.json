@@ -936,7 +936,10 @@
     "segment_count_other": "세그먼트 {{count}}개",
     "glossary_terms_one": "용어집 · {{count}}개",
     "glossary_terms_other": "용어집 · {{count}}개",
-    "glossary_label": "용어집"
+    "glossary_label": "용어집",
+    "set_speaker": "화자 지정…",
+    "new_speaker": "새 화자",
+    "speaker_label": "화자"
   },
   "dub_workflow": {
     "preparing_audio": "오디오 준비 중…",
@@ -2136,7 +2139,8 @@
     "export_n_audio_other": "{{count}} 오디오 파일 내보내기",
     "export_audio": "오디오 내보내기",
     "export_subtitles": "자막 내보내기",
-    "stretch_subs_note": "동영상 늘이기: 자막을 별도로 내보내세요."
+    "stretch_subs_note": "동영상 늘이기: 자막을 별도로 내보내세요.",
+    "undubbed_video_note": "아직 더빙이 없습니다. 영상은 원본 오디오를 유지합니다. 자막을 입히면 대본이 추가됩니다."
   },
   "models": {
     "pack_title": "모델 팩",
