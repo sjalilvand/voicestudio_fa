@@ -95,7 +95,7 @@ must contain Electron packages; it never falls back to archived Tauri builds.
 
 Or download from [Releases](https://github.com/debpalash/VoiceStudio/releases/latest) (macOS `.dmg`, Windows `.exe`, Linux `.AppImage` or `.deb`, Android `.apk`, iPhone `.ipa`; or `sudo snap install voicestudio` on Linux) and follow your platform guide:
 
-**[macOS](docs/install/macos.md) · [Windows](docs/install/windows.md) · [Linux](docs/install/linux.md) · [Docker](docs/install/docker.md) · [Android and iPhone](docs/mobile.md#install)**
+**[macOS](docs/install/macos.md) · [Windows](docs/install/windows.md) · [Linux](docs/install/linux.md) · [Nix / NixOS](docs/install/nix.md) · [Docker](docs/install/docker.md) · [Android and iPhone](docs/mobile.md#install)**
 
 | Hardware | Support |
 |---|---|
