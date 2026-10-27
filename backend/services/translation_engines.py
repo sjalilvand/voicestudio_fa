@@ -56,11 +56,8 @@ REGISTRY: dict[str, dict] = {
         "id": "argos",
         "display_name": "Argos (Local, Fast)",
         "pip_package": "argostranslate",
-        # `argostranslate.translate`, not the bare package: the translator runs
-        # on CTranslate2, and the bare package imports fine on a host whose
-        # kernel rejects CTranslate2's native library (#692) — so a shallow
-        # probe advertised Argos as ready and every translate 500'd. Probe the
-        # module that actually pulls the native dep (same lesson as #1185).
+        # The bare package imports without the native library; the translate
+        # submodule is what loads CTranslate2 and can fail (#692, #1185).
         "probe_module": "argostranslate.translate",
         "category": "offline",
         "needs_key": False,
@@ -164,6 +161,22 @@ def _nllb_weights_probe() -> tuple[bool, str | None]:
     return True, None
 
 
+def _argos_native_blocker() -> str | None:
+    """Try to make CTranslate2 loadable before Argos is imported (#692).
+
+    Returns the failure text if it stays unloadable, else None. A crash in the
+    repair code itself is only logged.
+    """
+    try:
+        from core.execstack import ensure_ctranslate2_loadable
+
+        loadable, why = ensure_ctranslate2_loadable()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("CTranslate2 repair before Argos probe failed: %s", exc)
+        return None
+    return None if loadable else why
+
+
 def _probe(entry: dict, *, import_check: bool = True) -> tuple[bool, str | None]:
     mod = entry.get("probe_module")
     if not mod:
@@ -177,18 +190,10 @@ def _probe(entry: dict, *, import_check: bool = True) -> tuple[bool, str | None]
         if entry.get("id") == "nllb":
             return _nllb_weights_probe()
         return True, None
-    if mod.startswith("argostranslate"):
-        # Repair CTranslate2's exec-stack request before the import that would
-        # be rejected by it (#692) — otherwise Argos, the default offline
-        # engine, is unusable on kernels that refuse an executable stack.
-        try:
-            from core.execstack import ensure_ctranslate2_loadable
-
-            ok, detail = ensure_ctranslate2_loadable()
-            if not ok:
-                return False, detail
-        except Exception as e:  # noqa: BLE001 — a broken repair must not hide the engine
-            logger.debug("exec-stack repair unavailable (%s) — probing anyway", e)
+    if mod.split(".")[0] == "argostranslate":
+        blocked = _argos_native_blocker()
+        if blocked:
+            return False, blocked
     try:
         importlib.import_module(mod)
         if entry.get("id") == "nllb":
@@ -199,10 +204,7 @@ def _probe(entry: dict, *, import_check: bool = True) -> tuple[bool, str | None]
         return True, None
     except ImportError as e:
         return False, f"import {mod!r} failed: {e}"
-    except Exception as e:  # noqa: BLE001
-        # A native library that refuses to load raises OSError, not ImportError
-        # (#692). An availability probe must report "unusable here", never take
-        # the engine list down with it.
+    except Exception as e:  # noqa: BLE001 — native libraries raise OSError
         return False, f"import {mod!r} failed ({type(e).__name__}): {e}"
 
 
@@ -520,8 +522,8 @@ async def run_pip(args: list[str], timeout: float = 600.0) -> tuple[int, str]:
             stderr=asyncio.subprocess.STDOUT,
         )
     except NotImplementedError:
-        logger.debug("asyncio subprocess not supported, falling back to thread-based subprocess")
-        return await _run_pip_thread(cmd, timeout)
+        logger.debug("Async process launching is unavailable; running the installer in a worker thread")
+        return await _run_installer_in_thread(cmd, timeout)
     except FileNotFoundError as e:
         return 1, f"installer not found: {e}"
     try:
@@ -536,23 +538,23 @@ async def run_pip(args: list[str], timeout: float = 600.0) -> tuple[int, str]:
     return proc.returncode or 0, out
 
 
-async def _run_pip_thread(cmd: list[str], timeout: float) -> tuple[int, str]:
-    """Fallback: run pip in a thread via subprocess.Popen (Windows compat)."""
+async def _run_installer_in_thread(cmd: list[str], timeout: float) -> tuple[int, str]:
     loop = asyncio.get_running_loop()
-
-    def _run():
-        proc = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
+    factory = functools.partial(
+        subprocess.Popen,
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    proc = await loop.run_in_executor(None, factory)
+    try:
+        stdout, _ = await loop.run_in_executor(
+            None, functools.partial(proc.communicate, timeout=timeout)
         )
-        try:
-            stdout, _ = proc.communicate(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            stdout, _ = proc.communicate()
-            return 1, f"pip timed out after {timeout:.0f}s"
-        out = stdout.decode(errors="replace") if stdout else ""
-        return proc.returncode or 0, out
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        await loop.run_in_executor(None, proc.communicate)
+        return 1, f"pip timed out after {timeout:.0f}s"
+    out = stdout.decode(errors="replace") if stdout else ""
+    return proc.returncode or 0, out
 
-    return await loop.run_in_executor(None, _run)

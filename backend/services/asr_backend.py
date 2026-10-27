@@ -293,23 +293,19 @@ def _ctranslate2_cudnn_ok() -> tuple[bool, str]:
 
 
 def _ctranslate2_execstack_ok() -> tuple[bool, str]:
-    """Make CTranslate2 importable on kernels that refuse an executable stack.
+    """Call before importing a CTranslate2 engine (#692).
 
-    ctranslate2 ≤4.4.0 — the version whisperx 3.4.5 pins, and 3.4.5 is the
-    newest release that supports the Python 3.11 we ship — marks its native
-    library's stack ``RWE``. Kernels that refuse the request fail the dlopen
-    with "cannot enable executable stack", killing whisperx, faster-whisper
-    *and* Argos translation (#692). :mod:`core.execstack` clears that one bit
-    in place, so call this BEFORE importing either engine; it cheaply rechecks the library and
-    only writes when the library would otherwise refuse to load.
+    Rechecks the installed libraries' executable-stack request (cheap) and
+    clears it in place only when needed. A failing repair routine never blocks
+    ASR: it is treated as "probe unavailable".
     """
     try:
         from core.execstack import ensure_ctranslate2_loadable
 
         return ensure_ctranslate2_loadable()
-    except Exception as e:  # noqa: BLE001 — a broken repair must not block ASR
-        logger.debug("exec-stack repair unavailable (%s) — continuing", e)
-        return True, "repair probe unavailable"
+    except Exception as e:  # noqa: BLE001
+        logger.debug("CTranslate2 exec-stack probe unavailable: %s", e)
+        return True, "probe unavailable"
 
 
 def _decode_audio_16k_mono(audio_path: str):
@@ -439,10 +435,8 @@ def whisper_checkpoint_translates(model_name: str | None) -> bool:
 class ASRBackend(ABC):
     id: str = "base"
     display_name: str = "Base ASR"
-    # Backends normally receive bounded chunks from the dub stream. Set this
-    # when speaker labels are clustered only within one transcribe() call: the
-    # caller must then submit the full recording or identical numeric labels
-    # from separate chunks can refer to different people.
+    # True when speaker labels are only consistent within a single
+    # transcribe() call; callers must then submit the whole recording at once.
     requires_full_audio_for_speaker_consistency: bool = False
     # Accelerator families this backend can use, in preference order; always
     # includes a fallback. Subset of {cuda, rocm, mps, xpu, cpu}. Mirrors the
@@ -781,9 +775,9 @@ class WhisperXBackend(ASRBackend):
 
         if reason := pipeline_error():
             return False, reason
-        ct2_ok, ct2_detail = _ctranslate2_execstack_ok()
-        if not ct2_ok:
-            return False, f"whisperx cannot load CTranslate2: {ct2_detail}"
+        ok, detail = _ctranslate2_execstack_ok()
+        if not ok:
+            return False, f"whisperx cannot load CTranslate2: {detail}"
         try:
             prepare_audio_imports()
             import whisperx  # noqa: F401
@@ -816,14 +810,11 @@ class WhisperXBackend(ASRBackend):
         # → speechbrain, or a stray k2_fsa redirect import aborts ASR on Windows
         # (#630/#611/#647). No-op on macOS/Linux and when speechbrain is absent.
         _harden_speechbrain_lazy_imports()
-        # #692: repair CTranslate2's exec-stack request before the import that
-        # would be rejected by it. Memoized, so this is free after the probe.
-        ct2_ok, ct2_detail = _ctranslate2_execstack_ok()
-        if not ct2_ok:
-            # ImportError (not RuntimeError): this IS a native-import failure,
-            # and the sentinel lets load_active_asr_backend degrade to the next
-            # engine instead of failing ASR wholesale (#1185).
-            raise ImportError(f"whisperx cannot load CTranslate2: {ct2_detail}")
+        # #692: repair a CTranslate2 exec-stack request before whisperx loads it.
+        ok, detail = _ctranslate2_execstack_ok()
+        if not ok:
+            # ImportError lets engine selection fall through to the next engine (#1185).
+            raise ImportError(f"whisperx cannot load CTranslate2: {detail}")
         prepare_audio_imports()
         import whisperx
         # #723: re-check the CUDA pick against *currently free* VRAM — the TTS
@@ -1179,9 +1170,9 @@ class FasterWhisperBackend(ASRBackend):
 
         if (status := availability_status()) is not None:
             return status
-        ct2_ok, ct2_detail = _ctranslate2_execstack_ok()
-        if not ct2_ok:
-            return False, f"faster-whisper cannot load CTranslate2: {ct2_detail}"
+        ok, detail = _ctranslate2_execstack_ok()
+        if not ok:
+            return False, f"faster-whisper cannot load CTranslate2: {detail}"
         try:
             from core.windows_rocm.ct2 import prepare_import
 
@@ -1199,9 +1190,9 @@ class FasterWhisperBackend(ASRBackend):
     def _ensure_model(self):
         if self._model is not None:
             return
-        ct2_ok, ct2_detail = _ctranslate2_execstack_ok()  # #692, see WhisperX
-        if not ct2_ok:
-            raise ImportError(f"faster-whisper cannot load CTranslate2: {ct2_detail}")
+        ok, detail = _ctranslate2_execstack_ok()
+        if not ok:
+            raise ImportError(f"faster-whisper cannot load CTranslate2: {detail}")
         from core.windows_rocm.ct2 import prepare_import
 
         prepare_import()
@@ -1620,30 +1611,80 @@ class PyTorchWhisperBackend(ASRBackend):
                 f"PyTorch Whisper ASR initialization failed: {type(e).__name__}: {e}"
             ) from e
 
-    #: Batch sizes to try on a dedicated GPU (CUDA or Intel XPU), largest first. The VRAM preflight only sizes
-    #: the *weights*; generation adds an encoder/decoder workspace that scales
-    #: with the batch, and `return_timestamps="word"` keeps every layer's
-    #: cross-attention for the whole batch — gigabytes at batch 16. A card with
-    #: room for the model can therefore still OOM at the first transcribe, which
-    #: used to lose that chunk entirely (the dub retried the same batch size and
-    #: gave up, leaving a hole in the transcript). Step down, then use CPU.
+    # Candidate batch sizes on a dedicated GPU (CUDA or Intel XPU), biggest first. The load-time VRAM check only
+    # accounts for model weights; activation memory grows with the batch, so
+    # a large batch may still not fit. Word-level timestamps retain
+    # cross-attention tensors for every item in the batch, so that mode
+    # starts lower.
     _CUDA_BATCH_LADDER = (16, 4, 1)
-    _CUDA_BATCH_LADDER_WORD_TS = (8, 2, 1)
+    _CUDA_BATCH_LADDER_WORDS = (8, 2, 1)
 
     @staticmethod
     def _is_oom(exc: BaseException) -> bool:
+        """True when `exc` signals GPU memory exhaustion. Never raises."""
         try:
-            import torch
+            try:
+                import torch
 
-            if isinstance(exc, torch.cuda.OutOfMemoryError):
+                oom_type = torch.cuda.OutOfMemoryError
+            except Exception:  # noqa: BLE001
+                oom_type = None
+            if oom_type is not None and isinstance(exc, oom_type):
                 return True
-        except Exception:  # noqa: BLE001 — classification must not raise
-            pass
-        from core.failure import is_gpu_oom
+            from core.failure import is_gpu_oom
 
-        # Every accelerator's device-OOM spelling, incl. Intel XPU's
-        # UR_RESULT_ERROR_OUT_OF_DEVICE_MEMORY.
-        return "out of memory" in str(exc).lower() or is_gpu_oom(exc)
+            # Covers every accelerator's spelling, incl. Intel XPU's
+            # UR_RESULT_ERROR_OUT_OF_DEVICE_MEMORY.
+            return "out of memory" in str(exc).casefold() or is_gpu_oom(exc)
+        except Exception:  # noqa: BLE001
+            return False
+
+    def _call_pipe(self, audio, rate, batch, word_timestamps, generate_kwargs):
+        options = {
+            "return_timestamps": "word" if word_timestamps else True,
+            "chunk_length_s": 15,
+            "batch_size": batch,
+        }
+        if generate_kwargs:
+            options["generate_kwargs"] = generate_kwargs
+        return self._pipe({"array": audio, "sampling_rate": rate}, **options)
+
+    def _run_with_oom_fallback(self, audio, rate, word_timestamps, generate_kwargs):
+        """Run the pipeline; on a dedicated GPU shrink the batch after each OOM,
+        and as a last resort finish on CPU."""
+        def attempt(batch):
+            return self._call_pipe(audio, rate, batch, word_timestamps, generate_kwargs)
+
+        if not self._pipe_on_gpu():
+            return attempt(2)
+        sizes = list(
+            self._CUDA_BATCH_LADDER_WORDS if word_timestamps
+            else self._CUDA_BATCH_LADDER
+        )
+        while sizes:
+            current = sizes.pop(0)
+            try:
+                return attempt(current)
+            except Exception as exc:
+                if not self._is_oom(exc):
+                    raise
+                # Free the failed batch's activations, still pinned by this
+                # traceback, before the smaller retry.
+                from services.model_manager import release_after_oom
+
+                release_after_oom(exc)
+            if sizes:
+                logger.warning(
+                    "Whisper hit a GPU memory limit with batch=%d; trying batch=%d. "
+                    "Closing other GPU programs would free VRAM.",
+                    current, sizes[0],
+                )
+        logger.warning(
+            "Whisper cannot fit even a single-item batch on the GPU; "
+            "moving the pipeline to CPU for this request."
+        )
+        self._rebuild_on_cpu()
+        return attempt(2)
 
     def _rebuild_on_cpu(self) -> None:
         """Move the existing pipeline to CPU without resolving any model files."""
@@ -1685,64 +1726,16 @@ class PyTorchWhisperBackend(ASRBackend):
         if audio_np.ndim > 1:
             audio_np = audio_np.mean(axis=1)
 
-        def _run(batch_size: int):
-            return self._pipe(
-                {"array": audio_np, "sampling_rate": sr},
-                return_timestamps="word" if word_timestamps else True,
-                chunk_length_s=15,
-                batch_size=batch_size,
-                **({"generate_kwargs": generate_kwargs} if generate_kwargs else {}),
-            )
-
-        if self._on_dedicated_gpu():
-            ladder = (
-                self._CUDA_BATCH_LADDER_WORD_TS if word_timestamps
-                else self._CUDA_BATCH_LADDER
-            )
-            for i, bs in enumerate(ladder):
-                try:
-                    result = _run(bs)
-                    break
-                except Exception as e:  # noqa: BLE001 — only OOM is retryable
-                    if not self._is_oom(e):
-                        raise
-                    # Drop the failed batch's activations (still pinned by
-                    # this traceback) before the smaller retry.
-                    from services.model_manager import release_after_oom
-
-                    release_after_oom(e)
-                    if i + 1 < len(ladder):
-                        logger.warning(
-                            "PyTorch Whisper GPU OOM at batch_size=%d — "
-                            "retrying at %d. Free VRAM (Flush models, close "
-                            "other GPU apps) for full-speed ASR.",
-                            bs, ladder[i + 1],
-                        )
-                        continue
-                    # Smallest batch still OOMs: finish on CPU rather than
-                    # return an empty chunk the caller cannot distinguish
-                    # from silence.
-                    logger.warning(
-                        "PyTorch Whisper GPU OOM even at batch_size=1 — "
-                        "transcribing on CPU (slower, same model). Detail: %s", e,
-                    )
-                    self._rebuild_on_cpu()
-                    result = _run(2)
-        else:
-            result = _run(2)
+        result = self._run_with_oom_fallback(
+            audio_np, sr, word_timestamps, generate_kwargs
+        )
         return result if isinstance(result, dict) else {"chunks": [], "raw": result}
 
-    def _on_dedicated_gpu(self) -> bool:
-        """Whether the built pipeline actually sits on a CUDA or Intel XPU device.
-
-        `torch.cuda.is_available()` is the wrong question: `_pick_device()` may
-        have chosen CPU on a CUDA host (low free VRAM), and a CPU pipeline must
-        not be handed a GPU-sized batch. `get_best_device()` also picks XPU on
-        Intel Arc, whose OOMs need the same batch ladder and release.
-        """
+    def _pipe_on_gpu(self) -> bool:
+        # Look at the built pipeline, not torch.cuda.is_available(): it may sit
+        # on CPU even on a CUDA host. get_best_device() also picks XPU on Intel Arc.
         try:
-            device = str(getattr(self._pipe, "device", None)).lower()
-            return device.startswith(("cuda", "xpu"))
+            return str(getattr(self._pipe, "device", "cpu")).lower().startswith(("cuda", "xpu"))
         except Exception:  # noqa: BLE001
             return False
 
@@ -2280,7 +2273,8 @@ def _normalize_funasr(res) -> dict:
     for s in item.get("sentence_info") or []:
         if not isinstance(s, dict):
             continue
-        txt = _clean_funasr_text(s.get("text") or s.get("sentence", ""))
+        # FunASR 1.3.1 vad mode names the text field "sentence".
+        txt = _clean_funasr_text(s.get("text") or s.get("sentence") or "")
         if not txt:
             continue
         seg = {"text": txt, "start": _ms_to_s(s.get("start", 0)) or 0.0, "end": _ms_to_s(s.get("end"))}
@@ -2321,8 +2315,7 @@ class FunASRBackend(ASRBackend):
 
     @property
     def requires_full_audio_for_speaker_consistency(self) -> bool:
-        # CAM++ assigns cluster IDs per generate() call. Let FunASR's internal
-        # VAD split long recordings so one call retains global voice identity.
+        # Speaker clusters from the cam++ model are per call, so whole-file input is needed.
         return bool(self._spk_model)
 
     @classmethod
@@ -2340,8 +2333,8 @@ class FunASRBackend(ASRBackend):
         kwargs = {"model": self._model_name, "vad_model": self._vad_model, "disable_update": True}
         if self._spk_model:
             kwargs["spk_model"] = self._spk_model
-            # FunASR 1.3.1 defaults to punc_segment, which requires a separate
-            # punc_model and crashes when SenseVoice is loaded without one.
+            # FunASR 1.3.1's default speaker mode wants a separate punctuation
+            # model and fails with SenseVoice loaded alone; segment by VAD instead.
             kwargs["spk_mode"] = "vad_segment"
         logger.info("FunASR loading %s (vad=%s, spk=%s)", self._model_name, self._vad_model, self._spk_model or "off")
         self._model = AutoModel(**kwargs)
@@ -2349,11 +2342,11 @@ class FunASRBackend(ASRBackend):
     def transcribe(self, audio_path: str, *, word_timestamps: bool = True) -> dict:
         self._ensure_model()
         logger.info("FunASR transcribing %s", audio_path)
-        kwargs = {"input": audio_path, "cache": {}, "language": "auto", "use_itn": True}
+        gen_kwargs = {"input": audio_path, "cache": {}, "language": "auto", "use_itn": True}
         if self._spk_model:
-            # vad_segment reads SenseVoice's timestamps to build sentence_info.
-            kwargs["output_timestamp"] = True
-        res = self._model.generate(**kwargs)
+            # VAD-segment speaker mode builds sentence info from timestamps.
+            gen_kwargs["output_timestamp"] = True
+        res = self._model.generate(**gen_kwargs)
         return _normalize_funasr(res)
 
     def unload(self) -> None:

@@ -35,6 +35,14 @@ import {
   pypiFilesMirror,
 } from './pypi-mirror';
 import { scrubText } from '../shared/utils/scrub';
+import {
+  clearPrefetchedWheels,
+  httpsRangeTransport,
+  localizeLockUrls,
+  planWheelPrefetch,
+  prefetchConnections,
+  prefetchWheels,
+} from './wheel-prefetch';
 import { execFile } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { cp, mkdir, readFile, readdir, rm, stat, statfs, writeFile } from 'node:fs/promises';
@@ -219,7 +227,8 @@ export type RuntimeRunner = (
   args: string[],
   cwd: string,
   env?: NodeJS.ProcessEnv,
-  options?: { timeoutMs: number },
+  /** `quiet`: capture stdout and stderr together and keep them out of the setup log. */
+  options?: { timeoutMs: number; quiet?: boolean },
 ) => Promise<string | void>;
 
 const PYTHON_DOWNLOAD_MIRROR =
@@ -981,6 +990,8 @@ export interface MirrorReporter {
   log?: (line: string) => void;
   /** The host PyPI-hosted wheels download from changed (fallback to the origin). */
   pypiHost?: (host: string) => void;
+  /** Byte progress of a wheel the shell downloads itself (#3411). */
+  transfer?: (name: string, received: number, total: number) => void;
 }
 
 export async function syncLockedWithMirror(
@@ -989,33 +1000,118 @@ export async function syncLockedWithMirror(
   sync: () => Promise<unknown>,
   signal: AbortSignal,
   { log = () => {}, pypiHost = () => {} }: MirrorReporter = {},
+  /** Locked artifact URL to the `file://` copy already downloaded and verified (#3411). */
+  localUrls: ReadonlyMap<string, string> = new Map(),
 ): Promise<void> {
   const lockPath = join(project, 'uv.lock');
-  const original = mirror ? await readFile(lockPath, 'utf8') : '';
-  const mirrored = mirror ? mirrorLockUrls(original, mirror) : original;
-  if (!mirror || mirrored === original) {
+  if (!mirror && !localUrls.size) {
+    await sync();
+    return;
+  }
+  const original = await readFile(lockPath, 'utf8');
+  const local = localizeLockUrls(original, localUrls);
+  const mirrored = mirror ? mirrorLockUrls(local, mirror) : local;
+  if (mirrored === original) {
     await sync();
     return;
   }
   const origin = new URL(PYPI_FILES_ORIGIN).host;
-  log(
-    `PyPI downloads: ${new URL(mirror).host} (regional mirror of ${origin}). ` +
-      'PyTorch wheels still download from their own index; it has no mirror.',
-  );
   try {
     await writeFile(lockPath, mirrored);
+    if (mirror && mirrored !== local) {
+      log(
+        `PyPI downloads: ${new URL(mirror).host} (regional mirror of ${origin}). ` +
+          'PyTorch wheels still download from their own index; it has no mirror.',
+      );
+      pypiHost(new URL(mirror).host);
+      try {
+        await sync();
+        return;
+      } catch (error) {
+        if (signal.aborted) throw error;
+        log(`Mirror download failed (${errorSummary(error)}); retrying from ${origin}.`);
+        pypiHost(origin);
+      }
+      await writeFile(lockPath, local);
+    }
     try {
       await sync();
-      return;
     } catch (error) {
-      if (signal.aborted) throw error;
-      log(`Mirror download failed (${errorSummary(error)}); retrying from ${origin}.`);
-      pypiHost(origin);
+      // uv could not use a prefetched copy (removed or locked by an antivirus
+      // after it was verified): let uv download everything itself (#3411).
+      if (signal.aborted || !localUrls.size) throw error;
+      log(
+        `Install from the pre-downloaded wheels failed (${errorSummary(error)}); letting uv download them.`,
+      );
+      await writeFile(lockPath, original);
+      await sync();
     }
-    await writeFile(lockPath, original);
-    await sync();
   } finally {
     await writeFile(lockPath, original);
+  }
+}
+
+/** Where verified wheels wait for uv between attempts; outside the replaceable project. */
+export function runtimeWheelPrefetchDir(project: string): string {
+  return join(project, '..', '.wheel-prefetch');
+}
+
+/**
+ * Download the large wheels this sync needs over several connections first
+ * (#3411). uv's own dry run names the wheels it would download (cache hits
+ * and installed packages excluded); anything unexpected returns an empty map
+ * and leaves every download to uv.
+ */
+async function prefetchLockedWheels(
+  uv: string,
+  project: string,
+  syncArgs: readonly string[],
+  env: NodeJS.ProcessEnv,
+  run: RuntimeRunner,
+  signal: AbortSignal,
+  mirror: string | null,
+  reserveBytes: number,
+  { log = () => {}, transfer }: MirrorReporter,
+): Promise<Map<string, string>> {
+  const connections = prefetchConnections();
+  if (connections < 2) return new Map();
+  let output: string | void;
+  try {
+    output = await run(uv, ['-v', ...syncArgs, '--dry-run'], project, env, {
+      timeoutMs: 300_000,
+      quiet: true,
+    });
+  } catch {
+    signal.throwIfAborted();
+    return new Map();
+  }
+  signal.throwIfAborted();
+  const managedMinor = /3\.(\d+)/.exec(managedPythonRequest())?.[1];
+  const plan = planWheelPrefetch(
+    await readFile(join(project, 'uv.lock'), 'utf8'),
+    String(output ?? ''),
+    {
+      platform: process.platform,
+      arch: process.arch,
+      pythonMinor: managedMinor ? Number(managedMinor) : undefined,
+    },
+  );
+  if (!plan.length) return new Map();
+  const { transport, probeSize, close } = httpsRangeTransport(env);
+  try {
+    return await prefetchWheels(plan, {
+      dir: runtimeWheelPrefetchDir(project),
+      connections,
+      transport,
+      probeSize,
+      signal,
+      mirror,
+      reserveBytes,
+      log,
+      transfer,
+    });
+  } finally {
+    close();
   }
 }
 
@@ -1206,20 +1302,31 @@ export async function installRuntime(
           ].flatMap((name) => ['--no-install-package', name]),
         ]
       : [];
-  await syncLockedWithMirror(
+  const syncArgs = ['sync', '--frozen', '--no-dev', ...pythonArgs, ...repairArgs, ...skipArgs];
+  const mirror = pypiFilesMirror(downloadRegion);
+  const localUrls = await prefetchLockedWheels(
+    uv,
     project,
-    pypiFilesMirror(downloadRegion),
-    () =>
-      run(
-        uv!,
-        ['sync', '--frozen', '--no-dev', ...pythonArgs, ...repairArgs, ...skipArgs],
-        project,
-        env,
-      ),
+    syncArgs,
+    env,
+    run,
     signal,
+    mirror,
+    requiredBytes,
     downloads,
   );
+  await syncLockedWithMirror(
+    project,
+    mirror,
+    () => run(uv!, syncArgs, project, env),
+    signal,
+    downloads,
+    localUrls,
+  );
   signal.throwIfAborted();
+  // The sync succeeded, so uv has every wheel now: prefetched copies and any
+  // resume parts left by a failed segmented fetch only take space.
+  await clearPrefetchedWheels(runtimeWheelPrefetchDir(project));
   if (cpuTorch) {
     await run(
       uv,

@@ -20,9 +20,9 @@ Design rules (load-bearing):
   * **Per-language.** Numbers go through ``num2words`` only for languages it
     supports (``_NUM2WORDS_LANGS``; the request's ``language`` is a full
     display name from electron/src/shared/languages.json or an ISO-ish code — both
-    resolve via :func:`_num2words_lang`), or through a hand-written native
-    verbalizer for languages num2words lacks (``_NATIVE_VERBALIZERS``, e.g.
-    Malayalam, Urdu). Everything else keeps its digits.
+    resolve via :func:`_num2words_lang`). A language num2words does not
+    know may be listed in ``_NATIVE_VERBALIZERS`` and spoken by its own small
+    module (Malayalam today); any other language keeps its digits.
     Clock times / ordinals / currency are English-only (their spoken form is
     language-specific); decimals only for locales whose num2words rendering
     was vetted. CJK scripts pass through the safety filters untouched — no
@@ -59,6 +59,7 @@ never raises — normalization is never allowed to break synthesis.
 
 from __future__ import annotations
 
+import importlib
 import logging
 import os
 import re
@@ -696,23 +697,25 @@ _ORDINAL_SUFFIX = {1: "st", 2: "nd", 3: "rd"}
 
 
 def _glued_to_mark(m: re.Match) -> bool:
-    """True when the match touches a combining mark (``ാ``, ``്``, …).
+    """Is a combining mark (Unicode category M*) directly next to this match?
 
-    Python's ``\\w`` excludes Unicode marks, so the regex boundaries above
-    treat "10ാം" or "ക്ലാസ്10" as isolated numbers and splice words into the
-    middle of a syllable. A mark belongs to the word it attaches to: leave it.
+    Regex word boundaries ignore marks, so a number stuck to a vowel sign or a
+    virama looks standalone to them; it is really part of a written word.
     """
-    s, start, end = m.string, m.start(), m.end()
-    return any(
-        unicodedata.category(ch).startswith("M")
-        for ch in (s[start - 1:start], s[end:end + 1]) if ch
-    )
+    text = m.string
+    neighbours = []
+    if m.start() > 0:
+        neighbours.append(text[m.start() - 1])
+    if m.end() < len(text):
+        neighbours.append(text[m.end()])
+    return any(unicodedata.category(c)[0] == "M" for c in neighbours)
 
 
 def _leading_zero(raw: str) -> bool:
-    """``(?!0\\d)`` only sees ASCII zero; ``\\d`` also matches native digits
-    (൦൦൭, ٠٠٧), which must stay codes just like "007"."""
-    return len(raw) > 1 and unicodedata.digit(raw[0], -1) == 0
+    """Zero-padded identifiers such as "007" (any script's zero digit) are codes, not quantities."""
+    if len(raw) < 2:
+        return False
+    return unicodedata.digit(raw[0], -1) == 0
 
 
 def _correct_ordinal_suffix(n: int) -> str:
@@ -736,7 +739,8 @@ def _numbers_to_words(text: str, lang: str, locale: Optional[str] = None) -> str
 
     def _safe(m: re.Match, render: Callable[[re.Match], str], *, clock: bool = False) -> str:
         # Any num2words hiccup leaves this occurrence untouched.
-        if _glued_to_mark(m) or (not clock and _leading_zero(m.group(1).partition(".")[0])):
+        whole = m.group(1).partition(".")[0]
+        if _glued_to_mark(m) or (_leading_zero(whole) and not clock):
             return m.group(0)
         try:
             return render(m)
@@ -852,16 +856,15 @@ def _numbers_to_words(text: str, lang: str, locale: Optional[str] = None) -> str
     return _INTEGER_RE.sub(lambda m: _safe(m, _integer), text)
 
 
-# ── Native verbalizers (languages num2words lacks) ──────────────────────────
+# ── Languages with their own number-word module ─────────────────────────────
 #
-# Same conservative regexes and bracket masking as the num2words path, but the
-# rendering is a hand-written module. Malayalam (ml) is the first: num2words
-# ships bn/kn/te but no ml, so Malayalam dubs reached the engine with raw
-# digits. Each module exposes ``cardinal(int)``, ``decimal(int, str)`` and
-# ``percent(str)``; any exception leaves that occurrence untouched. Urdu (ur)
-# followed for the same reason: OmniVoice read "1956" as "انیس سو سپنس", while
-# the sentence spelled out in Urdu words came back with 0% CER.
+# For languages that num2words cannot do, a plain module supplies
+# cardinal(int), decimal(int, str) and percent(str). The token patterns and
+# bracket masking are shared with the num2words route; a token that fails to
+# render is simply left as written.
 
+# Urdu (ur) followed for the same reason: OmniVoice read "1956" as "انیس سو سپنس", while
+# the sentence spelled out in Urdu words came back with 0% CER.
 _NATIVE_VERBALIZERS = {
     "ml": "services.number_words_ml",
     "ur": "services.number_words_ur",
@@ -875,33 +878,32 @@ def _native_lang(language: Optional[str]) -> Optional[str]:
 
 
 def _numbers_to_words_native(text: str, lang: str) -> str:
-    """Verbalize percent, decimal and integer tokens via the native module
-    for ``lang``; any failure leaves the input untouched."""
-    import importlib
-
     try:
-        mod = importlib.import_module(_NATIVE_VERBALIZERS[lang])
-    except Exception:  # noqa: BLE001 — never break synthesis
+        words = importlib.import_module(_NATIVE_VERBALIZERS[lang])
+    except Exception:  # noqa: BLE001
         return text
 
-    def _safe(m: re.Match, render: Callable[[re.Match], str]) -> str:
-        """Render one match; on any error return the original text."""
-        if _glued_to_mark(m) or _leading_zero(m.group(1).partition(".")[0]):
-            return m.group(0)
-        try:
-            return render(m)
-        except Exception:  # noqa: BLE001 — conservative: never mangle
-            return m.group(0)
+    def rewrite(pattern: re.Pattern, speak: Callable[[re.Match], str], source: str) -> str:
+        def one(m: re.Match) -> str:
+            head = m.group(1).partition(".")[0]
+            if _glued_to_mark(m) or _leading_zero(head):
+                return m.group(0)
+            try:
+                return speak(m)
+            except Exception:  # noqa: BLE001
+                return m.group(0)
 
-    text = _PERCENT_RE.sub(lambda m: _safe(m, lambda m: mod.percent(m.group(1))), text)
-    text = _DECIMAL_RE.sub(
-        lambda m: _safe(m, lambda m: mod.decimal(int(m.group(1)), m.group(2))), text
+        return pattern.sub(one, source)
+
+    # Percentages and decimals first, so the integer pass never sees their digits.
+    steps = (
+        (_PERCENT_RE, lambda m: words.percent(m.group(1))),
+        (_DECIMAL_RE, lambda m: words.decimal(int(m.group(1)), m.group(2))),
+        (_INTEGER_RE, lambda m: words.cardinal(int(m.group(1)))),
     )
-    def _integer(m: re.Match) -> str:
-        raw = m.group(1)
-        return m.group(0) if _leading_zero(raw) else mod.cardinal(int(raw))
-
-    return _INTEGER_RE.sub(lambda m: _safe(m, _integer), text)
+    for pattern, speak in steps:
+        text = rewrite(pattern, speak, text)
+    return text
 
 
 # ── Public API ───────────────────────────────────────────────────────────────
@@ -924,10 +926,9 @@ def normalize_text(text: str, language: Optional[str] = None) -> str:
             out = _outside_brackets(out, lambda t: _expand_abbreviations(t, lang))
         locale = _num2words_locale(language, lang)
         out = _outside_brackets(out, lambda t: _numbers_to_words(t, lang, locale))
-    else:
-        native = _native_lang(language)
-        if native:
-            out = _outside_brackets(out, lambda t: _numbers_to_words_native(t, native))
+    elif _native_lang(language):
+        own = _native_lang(language)
+        out = _outside_brackets(out, lambda t: _numbers_to_words_native(t, own))
     return out
 
 

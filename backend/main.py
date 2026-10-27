@@ -229,6 +229,7 @@ sys.modules.setdefault("torchcodec", None)
 import warnings
 import logging
 from logging.handlers import RotatingFileHandler
+from utils.fsops import safe_replace
 
 # The heavy tail that used to run here at module scope — prefs.json env
 # restore, the legacy-translate migration (#963), the yt-dlp overlay, the
@@ -240,38 +241,49 @@ from logging.handlers import RotatingFileHandler
 # at the bottom of this module — same order, same side effects, so the
 # ~100 lifespan-less TestClient call sites see today's fully-built app.
 
+class _LockTolerantRotatingFileHandler(RotatingFileHandler):
+    """Keep file logging alive when Windows temporarily locks a log file."""
 
-class _WindowsSafeRotatingFileHandler(RotatingFileHandler):
-    def doRollover(self):
-        _log = logging.getLogger("omnivoice.api")
+    def doRollover(self) -> None:
         try:
             super().doRollover()
+            return
         except PermissionError:
-            for i in range(self.backupCount - 1, 0, -1):
-                sfn = self.rotation_filename("%s.%d" % (self.baseFilename, i))
-                dfn = self.rotation_filename("%s.%d" % (self.baseFilename, i + 1))
-                if os.path.exists(sfn):
-                    try:
-                        from utils.fsops import safe_replace
-                        safe_replace(sfn, dfn)
-                    except OSError as e:
-                        _log.warning("log rotation rename failed: %s", e)
-            dfn = self.rotation_filename(self.baseFilename + ".1")
-            if os.path.exists(dfn):
+            pass
+
+        rollover_logger = logging.getLogger("omnivoice.api")
+        for index in range(self.backupCount - 1, 0, -1):
+            source = self.rotation_filename(f"{self.baseFilename}.{index}")
+            target = self.rotation_filename(f"{self.baseFilename}.{index + 1}")
+            if os.path.exists(source):
                 try:
-                    os.remove(dfn)
-                except OSError as e:
-                    _log.warning("log rotation remove failed: %s", e)
+                    safe_replace(source, target)
+                except Exception as exc:
+                    rollover_logger.warning("Could not shift log backup %s: %s", index, exc)
+
+        first_backup = self.rotation_filename(f"{self.baseFilename}.1")
+        if os.path.exists(first_backup):
             try:
-                self.rotate(self.baseFilename, dfn)
-            except PermissionError:
-                _log.warning("log rotation rotate failed (PermissionError)")
-            if self.stream:
-                try:
-                    self.stream.close()
-                except Exception:
-                    pass
+                os.remove(first_backup)
+            except Exception as exc:
+                rollover_logger.warning("Could not remove the oldest active log backup: %s", exc)
+
+        try:
+            self.rotate(self.baseFilename, first_backup)
+        except PermissionError as exc:
+            rollover_logger.warning("Log rotation is delayed because the file is locked: %s", exc)
+
+        if self.stream is not None:
+            try:
+                self.stream.close()
+            except Exception:
+                pass
+            try:
                 self.stream = self._open()
+            except PermissionError as exc:
+                self.stream = None
+                rollover_logger.warning("Could not reopen the locked log file: %s", exc)
+
 
 _LOG_FMT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 
@@ -337,7 +349,7 @@ if not os.environ.get("OMNIVOICE_DISABLE_FILE_LOG"):
     )  # local import — avoids circular import at module top
 
     try:
-        _file_handler = _WindowsSafeRotatingFileHandler(
+        _file_handler = _LockTolerantRotatingFileHandler(
             _LOG_PATH,
             maxBytes=2 * 1024 * 1024,
             backupCount=3,
@@ -626,11 +638,12 @@ def _phase_a_build_inner() -> None:
     # already provided, so a Settings control can tell the user their saved
     # value is being shadowed instead of silently promising it will apply
     # (core.prefs.is_env_shadowed — #1787 review fix).
+    # Preference damage must not prevent the backend from starting.
     try:
         from core.prefs import _load as _load_all_prefs, restore_env
         restore_env(_load_all_prefs())
     except Exception:
-        pass  # prefs.json missing or broken — fine on first run
+        pass
     # MIOpen's default find mode runs an exhaustive algorithm search the first
     # time it sees each convolution *shape*, and shape-varying vocoders pay it
     # again on nearly every call — ~18 s per new BigVGAN input shape on an

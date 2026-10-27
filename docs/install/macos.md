@@ -44,8 +44,13 @@ double-click to mount it, and drag **VoiceStudio.app** into `/Applications`.
 
 | Mac | DMG to download |
 |-----|-----------------|
-| Apple Silicon (M1–M5) | `VoiceStudio-<version>-mac-arm64.dmg` |
+| Apple Silicon (any M-series chip) | `VoiceStudio-<version>-mac-arm64.dmg` |
 | Intel | `VoiceStudio-<version>-mac-x64.dmg` — **UI only**: the local backend cannot run on Intel ([#889](https://github.com/debpalash/VoiceStudio/issues/889)) |
+
+Every Apple Silicon Mac takes the `arm64` DMG, including chips newer than this
+page: VoiceStudio checks the CPU architecture, never the chip's name. If macOS
+says VoiceStudio "is not supported on this Mac" or asks you to install Rosetta,
+you opened the `x64` DMG; install the `arm64` one instead (#3074).
 
 The architectures are **not** interchangeable: an Intel Mac cannot run the
 `arm64` build (Rosetta 2 only translates the other direction). An Apple

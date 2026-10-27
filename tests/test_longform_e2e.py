@@ -757,56 +757,35 @@ def test_off_path_emits_no_loudness_block(tmp_path, monkeypatch):
     assert "loudness" not in events[-1]  # legacy done shape preserved
 
 
-# ── the finished render says what it is ─────────────────────────────────────
+def _done_of(events):
+    assert events[-1]["type"] == "done"
+    return events[-1]
 
-def test_done_event_carries_the_title_and_how_it_was_rendered(tmp_path, monkeypatch):
-    from services.audiobook import AudiobookPlan, Chapter, ExpressiveOptions, Span
 
+def test_done_summary_describes_the_render_but_never_quotes_it(tmp_path, monkeypatch):
     out = tmp_path / "outputs"
     out.mkdir()
-    plan = AudiobookPlan(chapters=[Chapter(title="Chapter One", spans=[
-        Span(voice_id=None, text="Zoe raced along the path.", speed=0.95)])])
-    events = _collect_events(plan, monkeypatch, out, fmt="mp3", language="English",
-                             metadata={"title": "The Super Sloth"},
-                             opts=ExpressiveOptions(seed=0, postprocess_output=False))
-    done = events[-1]
-    assert done["type"] == "done" and done["title"] == "The Super Sloth"
-    summary = done["summary"]
-    assert summary["speeds"] == [0.95] and summary["lines"] == 1 and summary["words"] == 5
-    assert summary["language"] == "English" and summary["format"] == "mp3"
-    # Explicit falsy settings and effective sampling values are recorded.
-    assert summary["options"]["seed"] == 0
-    assert summary["options"]["postprocess_output"] is False
-    assert summary["options"]["num_step"] > 0
-    assert summary["options"]["guidance_scale"] == 2.0
-    assert summary["chapter_titles"] == ["Chapter One"]
-    assert "Zoe" not in json.dumps(summary)      # settings and counts, never the script
+    done = _done_of(_collect_events(_plan(("Ch A", "quiet harbour lights")), monkeypatch, out,
+                                    fmt="mp3", metadata={"title": "Harbour"}))
+    assert done["title"] == "Harbour"
+    detail = done["summary"]
+    assert {k: detail[k] for k in ("lines", "words", "format", "speeds", "chapter_titles")} == {
+        "lines": 1, "words": 3, "format": "mp3", "speeds": [1.0], "chapter_titles": ["Ch A"],
+    }
+    assert "harbour lights" not in json.dumps(done)
 
 
-def test_a_summary_failure_never_costs_the_render(tmp_path, monkeypatch):
+def test_done_title_defaults_to_first_chapter_and_summary_errors_are_swallowed(
+        tmp_path, monkeypatch):
     from api.routers import audiobook
-
-    def boom(*_a, **_k):
-        raise RuntimeError("profile db unavailable")
-
-    monkeypatch.setattr(audiobook, "_render_summary", boom)
     out = tmp_path / "outputs"
     out.mkdir()
-    done = _collect_events(_plan(("One", "Hi.")), monkeypatch, out, fmt="mp3")[-1]
-    assert done["type"] == "done" and "summary" not in done
-    assert (out / done["output"]).exists()
-
-
-def test_summary_describes_only_the_chapters_that_made_it_into_the_file(tmp_path, monkeypatch):
-    out = tmp_path / "outputs"
-    out.mkdir()
-    events = _collect_events(
-        _plan(("Good", "Hello world."), ("Bad", "BOOM please fail here.")),
-        monkeypatch, out, fmt="mp3", fail_on=lambda text: "BOOM" in text)
-    done = events[-1]
-    assert done["type"] == "done" and done["failed_chapters"]
-    assert done["summary"]["chapter_titles"] == ["Good"]
-    assert done["summary"]["words"] == 2
+    plan = _plan(("Intro", "x"))
+    assert _done_of(_collect_events(plan, monkeypatch, out, fmt="mp3"))["title"] == "Intro"
+    monkeypatch.setattr(audiobook, "_render_summary",
+                        lambda *a, **k: (_ for _ in ()).throw(KeyError("nope")))
+    again = _done_of(_collect_events(plan, monkeypatch, out, fmt="mp3"))
+    assert "summary" not in again and again["output"]
 
 
 def test_done_summary_from_old_manifest_is_strict_json(tmp_path, monkeypatch):

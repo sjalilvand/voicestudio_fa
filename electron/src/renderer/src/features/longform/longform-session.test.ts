@@ -190,19 +190,20 @@ it('sends identical explicit production overrides to preview and full render', (
   }
 });
 
-it('seamless-join gaps reach preview and full render only once touched', () => {
-  const base = longformSession.state.drafts.audiobook;
-  for (const body of [renderBody('audiobook', base), chapterPreviewBody(base, 0)]) {
-    expect(body).not.toHaveProperty('line_gap_ms');
-    expect(body).not.toHaveProperty('trim_edges');
-  }
-  const draft = {
-    ...base,
-    overrides: { ...base.overrides, lineGapMs: 0, paragraphGapMs: 900, trimEdges: false },
-  };
-  for (const body of [renderBody('audiobook', draft), chapterPreviewBody(draft, 0)]) {
-    expect(body).toMatchObject({ line_gap_ms: 0, paragraph_gap_ms: 900, trim_edges: false });
-  }
+it.each([
+  ['full render', (d: Parameters<typeof renderBody>[1]) => renderBody('audiobook', d)],
+  ['chapter preview', (d: Parameters<typeof renderBody>[1]) => chapterPreviewBody(d, 1)],
+])('%s: join knobs appear on the wire only after being set', (_name, build) => {
+  const pristine = longformSession.state.drafts.audiobook;
+  const untouched = build(pristine) as Record<string, unknown>;
+  expect(['line_gap_ms', 'paragraph_gap_ms', 'trim_edges'].filter((k) => k in untouched)).toEqual(
+    [],
+  );
+  const tuned = build({
+    ...pristine,
+    overrides: { ...pristine.overrides, lineGapMs: 200, paragraphGapMs: 0, trimEdges: true },
+  }) as Record<string, unknown>;
+  expect(tuned).toMatchObject({ line_gap_ms: 200, paragraph_gap_ms: 0, trim_edges: true });
 });
 
 it('does not recreate a cleared draft during pagehide persistence', async () => {

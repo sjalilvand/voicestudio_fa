@@ -219,3 +219,30 @@ it('forgets import errors once the backend has been healthy', async () => {
   expect(mocks.install).not.toHaveBeenCalled();
   await supervisor.shutdown();
 });
+
+it('names a Windows load block instead of rebuilding a runtime that cannot help (#3209)', async () => {
+  const supervisor = new BackendSupervisor();
+  const { child, internal } = launch(supervisor);
+  internal.runtimeProject = OWN_PROJECT;
+  internal.pushLog(
+    'err',
+    [
+      'Traceback (most recent call last):',
+      '  File "backend/main.py", line 365, in <module>',
+      '    import torch',
+      'ImportError: DLL load failed while importing _C: An Application Control policy has blocked this file.',
+    ].join('\n'),
+    true,
+  );
+
+  child.emit('exit', 1, null);
+  await vi.advanceTimersByTimeAsync(11_000);
+
+  // torch is a core dependency, so this used to read as a broken environment
+  // and download the whole runtime again, only to be blocked again.
+  expect(mocks.install).not.toHaveBeenCalled();
+  expect(supervisor.status.stage).toBe('crashed');
+  expect(supervisor.status.message).toContain("Windows refused to load one of the engine's files");
+  expect(supervisor.status.message).toContain('application control policy');
+  await supervisor.shutdown();
+});
