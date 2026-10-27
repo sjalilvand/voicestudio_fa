@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { requestDictationCapture, copyToClipboard, toast, readiness, apiJson } = vi.hoisted(() => ({
@@ -47,7 +47,53 @@ describe('Transcriptions capture entry point', () => {
     toast.error.mockReset();
   });
 
-  // CLEAN-ROOM (spec W5-dictation §8): Start dictation action tests (start, failure toast, whitespace search, header placement).
+  it('shows the shortcut and starts dictation from the empty state', async () => {
+    render(<TranscriptionsPage />);
+
+    expect(screen.getByText('Super+Shift+V', { selector: 'kbd' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Start dictation' }));
+
+    await waitFor(() => expect(requestDictationCapture).toHaveBeenCalledWith('start'));
+  });
+
+  it('reports a rejected capture request', async () => {
+    requestDictationCapture.mockRejectedValueOnce(new Error('recorder unavailable'));
+    render(<TranscriptionsPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Start dictation' }));
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        'Could not start dictation. Check microphone access, then try again.',
+      ),
+    );
+  });
+
+  it('treats whitespace search as empty and keeps the labelled action', () => {
+    render(<TranscriptionsPage />);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search transcripts…' }), {
+      target: { value: '   ' },
+    });
+
+    expect(screen.getByText('No transcripts saved yet')).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: 'Start dictation' });
+    const label = within(button).getByText('Start dictation');
+    expect(button.children).toHaveLength(2);
+    expect(button.children[0]).toBeInstanceOf(SVGElement);
+    expect(button.children[1]).toBe(label);
+  });
+
+  it('moves the sole capture action to the header after history exists', async () => {
+    render(<TranscriptionsPage />);
+    act(() => addTranscription({ text: 'A saved thought.', language: 'en' }));
+
+    const buttons = await screen.findAllByRole('button', { name: 'Start dictation' });
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0].closest('.txn-header__right')).not.toBeNull();
+    const label = within(buttons[0]).getByText('Start dictation');
+    expect(Array.from(buttons[0].children)).toEqual([expect.any(SVGElement), label]);
+    expect(screen.queryByText('No transcripts saved yet')).not.toBeInTheDocument();
+  });
 
   it('shows a successful transcript emitted by the shared recorder', async () => {
     render(<TranscriptionsPage />);

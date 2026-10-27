@@ -764,7 +764,47 @@ export default function CaptureWidget({ onDismiss }) {
         await tauriInvoke('end_dictation_capture_registration', { registrationId });
       }
     };
-    // CLEAN-ROOM (spec W5-dictation §2): native delivery receipt-acknowledgement and completion-report helpers.
+    const acknowledgeDelivery = (event) => {
+      const payload = event?.payload || {};
+      if (payload.registrationId !== undefined && payload.registrationId !== registrationId) {
+        return false;
+      }
+      if (payload.deliveryId === undefined) return true;
+      try {
+        return Promise.resolve(
+          tauriInvoke('acknowledge_dictation_capture_delivery', {
+            registrationId,
+            deliveryId: payload.deliveryId,
+          }),
+        )
+          .then((accepted) => accepted !== false)
+          .catch((err) => {
+            console.warn('acknowledge_dictation_capture_delivery was rejected:', err);
+            return false;
+          });
+      } catch (err) {
+        console.warn('acknowledge_dictation_capture_delivery threw before returning:', err);
+        return Promise.resolve(false);
+      }
+    };
+    const completeDelivery = (event, error = null) => {
+      const deliveryId = event?.payload?.deliveryId;
+      if (deliveryId === undefined) return;
+      try {
+        void Promise.resolve(
+          tauriInvoke('complete_dictation_capture_delivery', {
+            registrationId,
+            deliveryId,
+            error,
+          }),
+        ).catch((err) => {
+          console.warn('complete_dictation_capture_delivery was rejected:', err);
+        });
+      } catch (err) {
+        console.warn('complete_dictation_capture_delivery threw before returning:', err);
+      }
+    };
+    const startFailure = 'Dictation could not start';
     (async () => {
       try {
         registrationId = await tauriInvoke('begin_dictation_capture_registration');
@@ -773,8 +813,186 @@ export default function CaptureWidget({ onDismiss }) {
           return;
         }
         const { listen } = await import('@tauri-apps/api/event');
-        // CLEAN-ROOM (spec W5-dictation §3): subscribe to the `tray-dictate` (start) native event and handle it.
-        // CLEAN-ROOM (spec W5-dictation §4): subscribe to the `tray-dictate-stop` (release) native event and handle it.
+        const handleStart = async (event) => {
+          const now = Date.now();
+          if (now - nativeEventAtRef.current.start < 150) {
+            completeDelivery(event, 'Repeated start ignored');
+            return;
+          }
+          nativeEventAtRef.current.start = now;
+
+          const sessionId = event?.payload?.sessionId;
+          if (!sessionId) {
+            void hideWidgetWindow();
+            completeDelivery(event, 'No output session was supplied');
+            return;
+          }
+
+          await ensureDictationPrefsHydrated({ fresh: true });
+          if (!enabledRef.current) {
+            void hideWidgetWindow();
+            void finishOutputSession(sessionId);
+            completeDelivery(event, 'Dictation is turned off');
+            return;
+          }
+
+          const sequence = ++nativeStartSequenceRef.current;
+          const initialState = stateRef.current;
+          const startupWasInFlight = startInFlightRef.current;
+          const restartable = ['idle', 'done', 'error', 'setup'].includes(initialState);
+          if (!restartable && !startupWasInFlight) {
+            if (modeRef.current === 'toggle' && initialState === 'recording') {
+              stopRecordingRef.current?.();
+            }
+            try {
+              await tauriInvoke('reject_dictation_output_session', { sessionId });
+            } catch (err) {
+              console.warn('dictation output session rejection failed:', err);
+            }
+            completeDelivery(event, 'A capture is already running');
+            return;
+          }
+
+          const trackHold = modeRef.current === 'hold';
+          if (trackHold) {
+            holdStartSequenceRef.current = sequence;
+            holdStartRef.current = 'starting';
+          }
+          const resetPendingHold = () => {
+            if (holdStartSequenceRef.current === sequence) {
+              holdStartRef.current = null;
+              holdStartSequenceRef.current = 0;
+            }
+          };
+
+          const activation = nativeActivationChainRef.current.then(() =>
+            tauriInvoke('activate_dictation_output_session', { sessionId }),
+          );
+          nativeActivationChainRef.current = activation.catch(() => {});
+          try {
+            await activation;
+          } catch (err) {
+            console.warn('dictation output activation failed:', err);
+            resetPendingHold();
+            void finishOutputSession(sessionId);
+            void hideWidgetWindow();
+            completeDelivery(event, `Output activation failed: ${String(err?.message || err)}`);
+            return;
+          }
+
+          if (cancelled || sequence !== nativeStartSequenceRef.current || !enabledRef.current) {
+            resetPendingHold();
+            void finishOutputSession(sessionId);
+            completeDelivery(event, 'Dictation start was cancelled or replaced');
+            return;
+          }
+
+          const completeAfterStart = (result) =>
+            completeDelivery(event, result ? null : startFailure);
+          const launchRecording = (hold) => {
+            try {
+              void Promise.resolve(startRecordingRef.current?.(hold, sessionId)).then(
+                completeAfterStart,
+                (err) => {
+                  console.warn('dictation recording startup failed:', err);
+                  completeDelivery(event, startFailure);
+                },
+              );
+            } catch (err) {
+              console.warn('dictation recording startup failed:', err);
+              completeDelivery(event, startFailure);
+            }
+          };
+
+          if (startupWasInFlight) {
+            const current = stateRef.current;
+            if (startInFlightRef.current) {
+              outputSessionIdRef.current = sessionId;
+              pendingNativeStartRef.current = { sessionId, trackHold, sequence };
+              completeDelivery(event, 'Another capture is still starting');
+              return;
+            }
+            if (current === 'recording' || current === 'transcribing') {
+              outputSessionIdRef.current = sessionId;
+              completeDelivery(event);
+              return;
+            }
+            if (['idle', 'done', 'error', 'setup'].includes(current)) {
+              outputSessionIdRef.current = sessionId;
+              launchRecording(trackHold);
+              return;
+            }
+            resetPendingHold();
+            void finishOutputSession(sessionId);
+            completeDelivery(event, 'The current state cannot accept a start');
+            return;
+          }
+
+          if (initialState === 'setup') {
+            outputSessionIdRef.current = sessionId;
+            void checkAccessibility().then(() => {
+              if (outputSessionIdRef.current !== sessionId) {
+                completeDelivery(event, 'Output session changed before startup');
+                return;
+              }
+              launchRecording(modeRef.current === 'hold');
+            });
+            return;
+          }
+
+          const idle = ['idle', 'done', 'error'].includes(initialState);
+          if (modeRef.current === 'toggle') {
+            if (idle) {
+              launchRecording(false);
+              return;
+            }
+            if (initialState === 'recording') {
+              stopRecordingRef.current?.();
+              completeDelivery(event);
+              return;
+            }
+          } else if (idle) {
+            launchRecording(true);
+            return;
+          }
+          completeDelivery(event, startFailure);
+        };
+
+        const onStart = (event) => {
+          const receipt = acknowledgeDelivery(event);
+          if (receipt === false) return;
+          if (receipt === true) return handleStart(event);
+          return receipt.then((accepted) => (accepted ? handleStart(event) : undefined));
+        };
+
+        const handleStop = async (event) => {
+          const now = Date.now();
+          if (now - nativeEventAtRef.current.stop < 150) {
+            completeDelivery(event, 'Repeated stop ignored');
+            return;
+          }
+          nativeEventAtRef.current.stop = now;
+          await ensureDictationPrefsHydrated();
+          let accepted = false;
+          if (modeRef.current === 'hold' && stateRef.current === 'recording') {
+            stopRecordingRef.current?.();
+            accepted = true;
+          } else if (modeRef.current === 'hold' && holdStartRef.current === 'starting') {
+            holdStartRef.current = 'released';
+            accepted = true;
+          }
+          completeDelivery(event, accepted ? null : 'No hold recording is ready to stop');
+        };
+
+        const onStop = (event) => {
+          const receipt = acknowledgeDelivery(event);
+          if (receipt === false) return;
+          if (receipt === true) return handleStop(event);
+          return receipt.then((accepted) => (accepted ? handleStop(event) : undefined));
+        };
+
+        unlistenStart = await listen('tray-dictate', onStart);
+        unlistenStop = await listen('tray-dictate-stop', onStop);
         await ensureDictationPrefsHydrated();
         if (cancelled) {
           await teardownRegistration();
@@ -1842,7 +2060,7 @@ export default function CaptureWidget({ onDismiss }) {
           }
         }
       }
-      // CLEAN-ROOM (spec W5-dictation §5): return whether startup was accepted (boolean).
+      return stateRef.current === 'recording' || stateRef.current === 'transcribing';
     },
     [startRecordingImpl],
   );

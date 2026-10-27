@@ -115,7 +115,16 @@ class FakeWS {
   }
 }
 
-// CLEAN-ROOM (spec W5-dictation §7): helper that fires a native start event, or queues it until readiness.
+const shortcutEvent = () => ({
+  payload: { sessionId: 7, deliveryId: 9, registrationId: 1 },
+});
+
+function pressShortcut() {
+  const handler = eventHandlers['tray-dictate'];
+  if (handler) return handler(shortcutEvent());
+  eventState.pendingStart = true;
+  return undefined;
+}
 
 let realWebSocket;
 
@@ -126,13 +135,16 @@ beforeEach(() => {
     if (cmd === 'begin_dictation_capture_registration') return 1;
     if (cmd === 'check_microphone') return 'granted';
     if (cmd === 'check_accessibility') return true;
-    // CLEAN-ROOM (spec W5-dictation §7): replay a queued native start when readiness is marked.
+    if (cmd === 'mark_dictation_capture_ready' && eventState.pendingStart) {
+      eventState.pendingStart = false;
+      return eventHandlers['tray-dictate']?.(shortcutEvent());
+    }
     return undefined;
   });
   eventState.pendingStart = false;
   eventUnlisteners.length = 0;
   FakeWS.instances = [];
-  // CLEAN-ROOM (spec W5-dictation §7): reset the store enabled flag between tests.
+  storeState.dictationEnabled = true;
   storeState.dictationModelId = 'sherpa-parakeet-v3';
   realWebSocket = globalThis.WebSocket;
   globalThis.WebSocket = FakeWS;
@@ -189,7 +201,65 @@ describe('CaptureWidget — connect-time asr_model_missing during mic setup', ()
     });
   });
 
-  // CLEAN-ROOM (spec W5-dictation §7): tests: failed receipt ack blocks capture; completion waits for mic startup; disabled start is rejected.
+  it('does not start or complete a delivery whose acknowledgement fails', async () => {
+    invokeMock.mockImplementation(async (cmd) => {
+      if (cmd === 'begin_dictation_capture_registration') return 1;
+      if (cmd === 'check_accessibility') return true;
+      if (cmd === 'acknowledge_dictation_capture_delivery') throw new Error('receipt refused');
+      return undefined;
+    });
+    render(<CaptureWidget />);
+    await waitFor(() => expect(eventHandlers['tray-dictate']).toBeTypeOf('function'));
+
+    await eventHandlers['tray-dictate'](shortcutEvent());
+
+    expect(navigator.mediaDevices.getUserMedia).not.toHaveBeenCalled();
+    expect(invokeMock).not.toHaveBeenCalledWith('activate_dictation_output_session', {
+      sessionId: 7,
+    });
+    expect(
+      invokeMock.mock.calls.some(([cmd]) => cmd === 'complete_dictation_capture_delivery'),
+    ).toBe(false);
+  });
+
+  it('reports success only after microphone startup finishes', async () => {
+    render(<CaptureWidget />);
+    await waitFor(() => expect(eventHandlers['tray-dictate']).toBeTypeOf('function'));
+    void eventHandlers['tray-dictate'](shortcutEvent());
+
+    await waitFor(() => expect(FakeWS.instances).toHaveLength(1));
+    expect(invokeMock).not.toHaveBeenCalledWith('complete_dictation_capture_delivery', {
+      registrationId: 1,
+      deliveryId: 9,
+      error: null,
+    });
+
+    micControl.resolve(micStop);
+    await waitFor(() =>
+      expect(invokeMock).toHaveBeenCalledWith('complete_dictation_capture_delivery', {
+        registrationId: 1,
+        deliveryId: 9,
+        error: null,
+      }),
+    );
+  });
+
+  it('completes a disabled delivery without opening the microphone', async () => {
+    storeState.dictationEnabled = false;
+    render(<CaptureWidget />);
+    await waitFor(() => expect(eventHandlers['tray-dictate']).toBeTypeOf('function'));
+
+    await eventHandlers['tray-dictate'](shortcutEvent());
+
+    expect(navigator.mediaDevices.getUserMedia).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(invokeMock).toHaveBeenCalledWith('complete_dictation_capture_delivery', {
+        registrationId: 1,
+        deliveryId: 9,
+        error: 'Dictation is turned off',
+      }),
+    );
+  });
 
   it('turns a PCM-fallback socket failure into a terminal error', async () => {
     storeState.dictationModelId = 'whisperx';
@@ -251,7 +321,13 @@ describe('CaptureWidget — connect-time asr_model_missing during mic setup', ()
     expect(screen.getByText(/No speech-to-text model/)).toBeInTheDocument();
     expect(screen.queryByText(/Listening/)).not.toBeInTheDocument();
     expect(invokeMock).not.toHaveBeenCalledWith('set_tray_recording', { recording: true });
-    // CLEAN-ROOM (spec W5-dictation §7): assert the delivery is completed with a could-not-start error.
+    await waitFor(() =>
+      expect(invokeMock).toHaveBeenCalledWith('complete_dictation_capture_delivery', {
+        registrationId: 1,
+        deliveryId: 9,
+        error: 'Dictation could not start',
+      }),
+    );
   });
 
   it('setup REJECTION after the terminal frame must not clobber it with a mic error', async () => {
@@ -287,4 +363,24 @@ describe('CaptureWidget — connect-time asr_model_missing during mic setup', ()
   });
 });
 
-// CLEAN-ROOM (spec W5-dictation §7): test: pause/resume/close of a natively started capture.
+it('pauses, resumes, and closes a capture started by the native shortcut', async () => {
+  const track = { enabled: true, stop: vi.fn() };
+  navigator.mediaDevices.getUserMedia.mockResolvedValue({ getTracks: () => [track] });
+  render(<CaptureWidget />);
+  await waitFor(() => expect(eventHandlers['tray-dictate']).toBeTypeOf('function'));
+
+  void eventHandlers['tray-dictate'](shortcutEvent());
+  await waitFor(() => expect(FakeWS.instances).toHaveLength(1));
+  micControl.resolve(micStop);
+
+  const pause = await screen.findByRole('button', { name: 'Pause' });
+  fireEvent.click(pause);
+  expect(track.enabled).toBe(false);
+  fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
+  expect(track.enabled).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+  await waitFor(() => expect(track.stop).toHaveBeenCalled());
+  expect(screen.queryByRole('button', { name: 'Resume' })).not.toBeInTheDocument();
+});
