@@ -1525,43 +1525,45 @@ async def dub_get_onsets(job_id: str):
 
 @router.post("/dub/prosody-mirror/{job_id}")
 async def dub_prosody_mirror(job_id: str, req: ProsodyMirrorRequest):
-    """Suggest per-segment directions that mirror the source delivery.
+    """Suggest delivery directions from how the source actor spoke each line.
 
-    Measures each line on the Demucs vocals track (the mix when separation
-    did not run) against its speaker's baseline and returns taxonomy
-    directions the editor can apply to lines without one. Read-only: nothing
-    about the job changes.
+    Read-only: nothing on the job changes.
     """
     _job_dir_or_400(job_id)
     job = _get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    mix = _optional_dub_artifact(job.get("audio_path"), job_id)
     vocals = _optional_dub_artifact(job.get("vocals_path"), job_id)
-    src_path = vocals or mix
-    if not src_path:
-        raise HTTPException(status_code=404, detail="No audio track available for prosody analysis")
+    mix = _optional_dub_artifact(job.get("audio_path"), job_id)
+    audio_path = vocals or mix
+    if not audio_path:
+        raise HTTPException(status_code=404, detail="No audio track available for delivery analysis")
     source = "vocals" if vocals and vocals != mix else "mix"
 
     spans = [
-        SegmentSpan(id=seg.id, start=seg.start, end=seg.end, speaker_id=seg.speaker_id or "")
-        for seg in req.segments
+        SegmentSpan(
+            id=segment.id,
+            start=segment.start,
+            end=segment.end,
+            speaker_id=segment.speaker_id or "",
+        )
+        for segment in req.segments
     ]
     try:
-        results = await asyncio.to_thread(mirror_file, src_path, spans)
-    except AnalysisBudgetExceeded as e:
+        results = await asyncio.to_thread(mirror_file, audio_path, spans)
+    except AnalysisBudgetExceeded as exc:
+        logger.warning("Prosody mirror refused: %s", log_safe(exc))
         raise HTTPException(
             status_code=413,
-            detail="These segments overlap far more than the source audio allows. "
-            "Remove duplicated or overlapping segments and try again.",
-        ) from e
-    except (OSError, RuntimeError, ValueError) as e:
-        logger.warning("prosody mirror failed for %s: %s", log_safe(job_id), log_safe(e))
+            detail="The segments cover far more audio than the source holds. Remove duplicated or overlapping segments and try again.",
+        ) from exc
+    except (OSError, RuntimeError, ValueError) as exc:
+        logger.warning("Prosody mirror could not read the source audio: %s", log_safe(exc))
         raise HTTPException(
             status_code=422,
-            detail="Prosody analysis could not read this job's audio. Re-import the source and try again.",
-        ) from e
+            detail="The source audio could not be analysed. Re-import the source and try again.",
+        ) from exc
     return {"source": source, "segments": [result.to_dict() for result in results]}
 
 
