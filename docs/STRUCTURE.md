@@ -138,7 +138,7 @@ VoiceStudio/
 
 3. **Each subdirectory owns one concern.** If you can't describe what goes in a directory in one sentence, it's wrong.
 
-4. **Every package has a manifest.** `backend/`, `electron/`, `omnivoice/` each have their own deps declared via `pyproject.toml` / `package.json` — they are independently testable. The JS lockfile is the **repo-root** `bun.lock` (Bun workspace), and `deploy/Dockerfile` installs from it with `--frozen-lockfile`.
+4. **Packages declare dependencies independently.** `backend/`, `electron/`, and `omnivoice/` each have their own `pyproject.toml` or `package.json`, allowing them to be tested separately. The Bun workspace shares one root `bun.lock`, and Docker uses a frozen install that fails rather than modifying it.
 
 ## Where tests live
 
