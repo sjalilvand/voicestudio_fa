@@ -1871,7 +1871,6 @@
     "render_language": "Language",
     "render_format": "Format",
     "render_size_label": "Size",
-    "render_size": "{{chapters}} chapters · {{lines}} lines · {{words}} words",
     "render_settings": "Settings",
     "render_no_details": "No details were kept for this one: it was rendered before details were recorded.",
     "history": "History",
