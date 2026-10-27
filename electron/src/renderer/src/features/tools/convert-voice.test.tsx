@@ -10,6 +10,7 @@ const mock = vi.hoisted(() => ({
   cloning: true as boolean | null,
   backends: [] as { available: boolean; supports_voice_conversion?: boolean }[],
   saveAudio: vi.fn(() => Promise.resolve({ canceled: true })),
+  profiles: null as { id: string; name: string; kind: string; ref_audio_path: null }[] | null,
 }));
 vi.mock('@/components/bridge', () => ({
   getBridge: () => ({ files: { saveAudio: mock.saveAudio, revealPath: vi.fn() } }),
@@ -33,7 +34,7 @@ vi.mock('@/hooks/use-recording', () => ({
 }));
 vi.mock('@/hooks/use-profiles', () => ({
   useProfiles: () => ({
-    data: [
+    data: mock.profiles ?? [
       { id: 'a', name: 'Alpha', kind: 'clone', ref_audio_path: 'a.wav' },
       { id: 'design', name: 'Captain Crusty', kind: 'design', ref_audio_path: 'design.wav' },
       { id: 'legacy-design', name: 'Legacy Design', kind: 'design', ref_audio_path: null },
@@ -303,4 +304,17 @@ it('keep my delivery offers only voices with a recording to convert into', () =>
   expect(screen.queryByRole('button', { name: 'Legacy Design' })).toBeNull();
   expect(screen.getByRole('button', { name: 'Captain Crusty' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Locked Clone' })).toBeInTheDocument();
+});
+it('keep my delivery explains why no voice is offered when none has a recording', () => {
+  mock.backends = [{ available: true, supports_voice_conversion: true }];
+  mock.profiles = [{ id: 'd', name: 'Design Only', kind: 'design', ref_audio_path: null }];
+  try {
+    mount();
+    expect(screen.getByRole('button', { name: 'Design Only' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('switch', { name: 'convert.keep_delivery' }));
+    expect(screen.getByText('convert.keep_delivery_no_voices')).toBeInTheDocument();
+    expect(screen.queryByText('clone.no_profiles')).toBeNull();
+  } finally {
+    mock.profiles = null;
+  }
 });

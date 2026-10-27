@@ -219,7 +219,11 @@ export function ConvertVoice() {
               </Button>
             ))}
           {!voices.length && (
-            <p className="text-sm text-muted-foreground">{t('clone.no_profiles')}</p>
+            <p className="text-sm text-muted-foreground">
+              {keepDelivery && profiles.data?.length
+                ? t('convert.keep_delivery_no_voices')
+                : t('clone.no_profiles')}
+            </p>
           )}
         </div>
       </section>
