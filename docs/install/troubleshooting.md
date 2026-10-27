@@ -1226,8 +1226,9 @@ VoiceStudio now tries, in order: the default GitHub host → a gh-proxy mirror �
    tick *"Add Python to PATH"*), then relaunch — VoiceStudio will use it.
 2. **Point at a reachable mirror** for the Python download:
    - `UV_PYTHON_INSTALL_MIRROR=https://gh-proxy.com/https://github.com/astral-sh/python-build-standalone/releases/download`
-3. **In China, pick the China download region** on the setup screen. Packaged
-   setup then downloads the PyPI wheels pinned in `uv.lock` from the Aliyun
+3. **In China, keep Auto-detect or pick the China download region** on the
+   setup screen. Auto-detect uses the Aliyun mirror when a quick speed check
+   finds it faster; China always uses it. Packaged setup then downloads the PyPI wheels pinned in `uv.lock` from the Aliyun
    PyPI mirror (`mirrors.aliyun.com`). PyTorch wheels still come from
    `download-r2.pytorch.org`.
 4. **Use a VPN or proxy for the dependency install.** The install downloads
@@ -1312,8 +1313,13 @@ The **download region** choice on the setup screen changes where the Python
 interpreter downloads from. With **China** selected, setup also downloads the
 `files.pythonhosted.org` wheels from the Aliyun PyPI mirror
 (`mirrors.aliyun.com`), which serves the same files: each one is still checked
-against the hash pinned in `uv.lock`. The setup log names the mirror. **Auto-detect** never picks China by itself, so pick **China**
-explicitly on the setup screen if you are in mainland China. If the
+against the hash pinned in `uv.lock`. The setup log names the mirror. With
+**Auto-detect**, setup runs a quick speed check first: it reads the first
+256 KB of one locked wheel from `files.pythonhosted.org` and from the Aliyun
+mirror at the same time (one request each, 6-second limit, no retries) and
+uses the mirror only when it answers and is clearly faster. Any doubt keeps
+`files.pythonhosted.org`; the setup log line `PyPI speed check: ...` shows the
+result. **Global** never runs the check; **China** always uses the mirror. If the
 mirror fails, setup retries once from `files.pythonhosted.org` and keeps every
 file that finished. The PyTorch wheels on `download-r2.pytorch.org` have no
 mirror and download from there in every region. PyPI mirror variables
