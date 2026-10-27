@@ -27,6 +27,9 @@ export interface GpuOfferStatus {
   download_mb: number;
 }
 
+type DownloadStatus = 'started' | 'already_running' | 'already_installed' | 'failed';
+type GpuOfferAnswer = GpuOfferStatus & { download: { status: DownloadStatus } | null };
+
 /** The GPU offer state plus the accept / decline actions shared by the
  * one-time banner and the Settings › Compute device row. */
 export function useGpuOffer() {
@@ -47,21 +50,31 @@ export function useGpuOffer() {
     setBusy(true);
     setFailed(false);
     try {
-      const next = await apiJson<GpuOfferStatus>(PATH, {
+      const next = await apiJson<GpuOfferAnswer>(PATH, {
         method: 'POST',
         body: JSON.stringify({ accept }),
       });
       client.setQueryData(gpuOfferKey, next);
       setNeedsLicence(false);
+      if (accept && !next.active) {
+        // The weights could not start downloading, so nothing was switched.
+        setFailed(true);
+        return false;
+      }
       if (accept) {
         void client.invalidateQueries({ queryKey: queryKeys.engines });
         void client.invalidateQueries({ queryKey: ['gguf-quants'] });
         void client.invalidateQueries({ queryKey: ['gpu-report'] });
         toast.success(
-          t(next.download_mb ? 'gpuOffer.switched_downloading' : 'gpuOffer.switched', {
-            gpu: next.gpu_name ?? '',
-            quant: next.quant ?? '',
-          }),
+          t(
+            next.download?.status === 'already_installed'
+              ? 'gpuOffer.switched'
+              : 'gpuOffer.switched_downloading',
+            {
+              gpu: next.gpu_name ?? '',
+              quant: next.quant ?? '',
+            },
+          ),
         );
       }
       return true;
@@ -107,8 +120,9 @@ export function GpuOfferBanner() {
   const status = offer.status;
   if (hidden || !status?.show) return null;
   const decline = async () => {
-    setHidden(true);
-    await offer.answer(false);
+    // Stay visible when the answer could not be saved, so the error shows
+    // and the user can try again.
+    if (await offer.answer(false)) setHidden(true);
   };
   return (
     <aside

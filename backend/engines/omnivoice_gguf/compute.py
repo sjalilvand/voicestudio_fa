@@ -225,10 +225,11 @@ def _licence_accepted() -> bool:
 
 
 @functools.lru_cache(maxsize=8)
-def _promotion_for(device_choice: str, backend: str, device: str, ggml: str) -> bool:
-    # Keyed on the inputs a user can change at runtime, so switching Compute
-    # device in Settings re-evaluates instead of serving a stale verdict.
-    """Cached eligibility for one combination of compute choice and backend/device env."""
+def _promotion_for(device_choice: str, backend: str, device: str, ggml: str, binary: tuple) -> bool:
+    """Cached eligibility for one combination of compute choice, backend/device
+    env and runtime binary. Keyed on what can change at runtime, so switching
+    Compute device or repairing the runtime re-evaluates instead of serving a
+    stale verdict."""
     try:
         return _promotion_evidence()
     except Exception:  # noqa: BLE001 - a probe bug must never break engine selection
@@ -253,4 +254,17 @@ def vulkan_eligible() -> bool:
         os.environ.get(BACKEND_ENV, ""),
         os.environ.get(DEVICE_ENV, ""),
         os.environ.get("GGML_BACKEND", ""),
+        _binary_identity(),
     )
+
+
+def _binary_identity() -> tuple:
+    """Path, size and mtime of the runtime binary, so a repaired or replaced
+    runtime is re-evaluated instead of serving a cached refusal."""
+    try:
+        from .backend import _binary_path, _file_identity
+
+        path = _binary_path()
+        return (str(path), _file_identity(path))
+    except Exception:  # noqa: BLE001 - an unresolvable binary is just another key
+        return ()

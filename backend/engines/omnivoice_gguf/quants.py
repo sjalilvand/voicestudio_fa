@@ -39,6 +39,11 @@ from .quant_cache import installed_pair
 logger = logging.getLogger("omnivoice.gguf.quants")
 
 _MIB = 1024 * 1024
+#: Fixed text for the UI: exception messages can carry local paths or URLs.
+_DOWNLOAD_FAILED = (
+    "The download did not finish. Check your connection and free disk space, "
+    "then try again."
+)
 _lock = threading.Lock()
 _job: dict = {
     "state": "idle", "quant": None, "error": None,
@@ -75,8 +80,11 @@ def _in_use(revision: str) -> tuple[Optional[str], Optional[str]]:
 
         _base, _tok, entry = _make_backend_class()()._resolve_quant_paths(download=False)
         return entry.get("base"), None
-    except Exception as exc:  # noqa: BLE001 - reported, not raised
-        return None, str(exc)
+    except Exception:  # noqa: BLE001 - reported as a code, not raised
+        # The exception text can carry local paths; the API returns a fixed
+        # code and the details stay in the log.
+        logger.debug("OmniVoice GGUF weights not resolvable", exc_info=True)
+        return None, "weights_unavailable"
 
 
 def _incomplete_bytes() -> int:
@@ -138,7 +146,10 @@ def _runtime() -> dict:
     if key is not None and key in _RUNTIME_CACHE:
         return dict(_RUNTIME_CACHE[key])
     result = _runtime_uncached()
-    if key is not None:
+    # Only a ready runtime is cached: the fixes a problem asks for (allowing a
+    # quarantined file, repairing a library) do not change the binary's
+    # identity, so a cached failure would outlive them.
+    if key is not None and result["ready"]:
         _RUNTIME_CACHE.clear()
         _RUNTIME_CACHE[key] = result
     return dict(result)
@@ -238,9 +249,9 @@ def _download(entry: dict, revision: str) -> None:
         for filename in (entry["base"], entry["tokenizer"]):
             hf_hub_download(repo_id=_HF_REPO_ID, filename=filename, revision=revision)
         outcome = {"state": "done", "error": None}
-    except Exception as exc:  # noqa: BLE001 - reported to the UI, not raised
-        logger.warning("OmniVoice GGUF weight download failed: %s", exc)
-        outcome = {"state": "failed", "error": f"{type(exc).__name__}: {exc}"}
+    except Exception:  # noqa: BLE001 - reported to the UI, not raised
+        logger.warning("OmniVoice GGUF weight download failed", exc_info=True)
+        outcome = {"state": "failed", "error": _DOWNLOAD_FAILED}
     with _lock:
         _job.update(outcome, finished_at=time.time())
 

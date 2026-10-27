@@ -83,7 +83,30 @@ it('records Not now and hides', async () => {
       expect.objectContaining({ body: JSON.stringify({ accept: false }) }),
     ),
   );
-  expect(screen.queryByText('gpuOffer.title')).toBeNull();
+  await waitFor(() => expect(screen.queryByText('gpuOffer.title')).toBeNull());
+});
+
+it('keeps the banner and shows an error when Not now cannot be saved', async () => {
+  mock.api.mockImplementation((_path: string, init?: RequestInit) =>
+    init?.method === 'POST' ? Promise.reject(new Error('offline')) : Promise.resolve(offer),
+  );
+  renderBanner();
+  fireEvent.click((await screen.findAllByRole('button', { name: 'gpuOffer.decline' }))[0]);
+  expect(await screen.findByRole('alert')).toBeTruthy();
+  expect(screen.getByText('gpuOffer.title')).toBeTruthy();
+});
+
+it('reports a failure instead of a switch when the download cannot start', async () => {
+  mock.api.mockImplementation((_path: string, init?: RequestInit) =>
+    Promise.resolve(
+      init?.method === 'POST' ? { ...offer, active: false, download: { status: 'failed' } } : offer,
+    ),
+  );
+  renderBanner();
+  fireEvent.click(await screen.findByRole('button', { name: /gpuOffer\.accept/ }));
+  expect(await screen.findByRole('alert')).toBeTruthy();
+  expect(screen.getByText('gpuOffer.title')).toBeTruthy();
+  expect(mock.toast.success).not.toHaveBeenCalled();
 });
 
 it('stays hidden when the host is not eligible', async () => {

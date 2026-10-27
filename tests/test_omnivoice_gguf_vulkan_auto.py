@@ -448,3 +448,69 @@ def test_no_offer_while_the_environment_pins_another_engine(eligible, monkeypatc
     assert (status["eligible"], status["show"], status["blocked_by_environment"]) == (False, False, True)
     with pytest.raises(ValueError):
         eligible.offer.respond(True)
+
+
+# ── review fixes ────────────────────────────────────────────────────────────
+
+
+def test_accepting_does_not_switch_when_the_download_cannot_start(eligible, monkeypatch):
+    """Offline: the engine must not point at weights that never arrive."""
+    from services import tts_backend
+
+    quants = importlib.import_module("engines.omnivoice_gguf.quants")
+    monkeypatch.setattr(quants, "start_download", lambda value=None: {"status": "failed"})
+    result = eligible.offer.respond(True)
+    assert result["download"]["status"] == "failed"
+    assert result["active"] is False
+    assert "tts_backend" not in eligible.store
+    assert "gguf_vulkan_offer" not in eligible.store
+    assert tts_backend.active_backend_id() == "omnivoice"
+
+
+def test_a_runtime_failure_is_not_cached(quants, monkeypatch, tmp_path):
+    """Allowing a quarantined file does not change its identity; re-check it."""
+    gguf = importlib.import_module("engines.omnivoice_gguf.backend")
+    binary = tmp_path / "omnivoice-tts"
+    binary.write_bytes(b"v1")
+    monkeypatch.setattr(gguf, "_binary_path", lambda slug=None: binary)
+    answers = iter([(False, "omnivoice-tts is quarantined by Gatekeeper"), (True, "")])
+    monkeypatch.setattr(gguf._make_backend_class(), "_binary_status",
+                        classmethod(lambda cls: next(answers)))
+    assert quants._runtime()["problem"] == "quarantined"
+    assert quants._runtime()["ready"] is True
+
+
+def test_offer_eligibility_follows_a_repaired_runtime(eligible, monkeypatch, tmp_path):
+    gguf = importlib.import_module("engines.omnivoice_gguf.backend")
+    binary = tmp_path / "omnivoice-tts"
+    binary.write_bytes(b"broken")
+    monkeypatch.setattr(gguf, "_binary_path", lambda slug=None: binary)
+    ok = {"value": False}
+    monkeypatch.setattr(gguf._make_backend_class(), "_binary_status",
+                        classmethod(lambda cls: (ok["value"], "")))
+    assert eligible.compute.vulkan_eligible() is False
+    binary.write_bytes(b"repaired runtime")
+    ok["value"] = True
+    assert eligible.compute.vulkan_eligible() is True
+
+
+def test_api_errors_carry_no_exception_text(quants, monkeypatch):
+    """Exception messages can hold local paths: the API returns fixed text."""
+    import huggingface_hub
+
+    def boom(**kwargs):
+        raise OSError("/Users/someone/.cache/huggingface/secret-path")
+
+    monkeypatch.setattr(huggingface_hub, "hf_hub_download", boom)
+    monkeypatch.setattr(quants.threading, "Thread", lambda target, args, **kw:
+                        SimpleNamespace(start=lambda: target(*args)))
+    quants.start_download("Q8_0")
+    assert quants._job["state"] == "failed"
+    assert "secret-path" not in quants._job["error"]
+    gguf = importlib.import_module("engines.omnivoice_gguf.backend")
+
+    def unresolvable(self, download=True):
+        raise RuntimeError("/Users/someone/models missing")
+
+    monkeypatch.setattr(gguf._make_backend_class(), "_resolve_quant_paths", unresolvable)
+    assert quants._in_use("rev") == (None, "weights_unavailable")

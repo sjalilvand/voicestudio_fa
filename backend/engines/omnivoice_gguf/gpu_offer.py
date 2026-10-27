@@ -26,6 +26,7 @@ from core import prefs
 
 PREF_KEY = "gguf_vulkan_offer"
 ENGINE_ID = "omnivoice-gguf"
+_DOWNLOAD_OK = ("started", "already_running", "already_installed")
 
 
 def _answer() -> Optional[str]:
@@ -97,11 +98,15 @@ def respond(accept: bool) -> dict:
     from services.tts_backend import ensure_engine_licence
 
     ensure_engine_licence(_make_backend_class())  # raises → licence dialog
-    prefs.set_("tts_backend", ENGINE_ID)
-    prefs.set_(PREF_KEY, "accepted")
     from .quants import start_download
 
+    # Switch only once the weights are on their way: a failed start (offline,
+    # no network) must not leave the engine pointing at missing weights.
     download = start_download(None)
+    if download.get("status") not in _DOWNLOAD_OK:
+        return {**offer_status(), "download": download}
+    prefs.set_("tts_backend", ENGINE_ID)
+    prefs.set_(PREF_KEY, "accepted")
     return {**offer_status(), "download": download}
 
 
