@@ -1730,7 +1730,16 @@
     "delete_warning": "Detta kan inte ångras. Projekt och transkriptioner tas bort. När röster eller tagningar tas bort raderas även deras sparade ljud. Exporterade filer och färdigrenderat ljud behålls.",
     "draft_changed": "Ditt utkast ändrades medan projektet laddades. Bekräfta igen för att ersätta det.",
     "all_projects": "Alla projekt",
-    "library_group": "Bibliotek"
+    "library_group": "Bibliotek",
+    "render_details": "Så skapades det",
+    "render_engine": "Motor",
+    "render_format": "Format",
+    "render_language": "Språk",
+    "render_settings": "Inställningar",
+    "render_size": "Kapitel: {{chapters}} · Rader: {{lines}} · Ord: {{words}}",
+    "render_speed": "Hastighet",
+    "render_voice": "Röst",
+    "story": "Berättelse"
   },
   "projectActions": {
     "delete": "Ta bort ”{{name}}”? Detta kan inte ångras.",
@@ -1851,7 +1860,11 @@
     "lineActions": "Radåtgärder",
     "autocastDone_one": "{{lines}} rader tilldelade {{count}} röst",
     "autocastDone_other": "{{lines}} rader fördelade på {{count}} röster",
-    "recovery_title": "Avbruten berättelse"
+    "recovery_title": "Avbruten berättelse",
+    "splitMode": "Dela upp efter",
+    "split_chapters": "Kapitel",
+    "split_paragraphs": "Stycken",
+    "split_sentences": "Meningar"
   },
   "audiobook": {
     "cast": "Rollbesättning",
@@ -1979,7 +1992,10 @@
     "untitled": "Utan titel",
     "recovery_busy": "En annan rendering pågår. Återuppta när den är klar.",
     "cast_note_one": "{{names}} har ingen röst än och läses med huvudrösten. Välj en under Rollbesättning.",
-    "cast_note_other": "{{names}} har inga röster än och läses med huvudrösten. Välj röster under Rollbesättning."
+    "cast_note_other": "{{names}} har inga röster än och läses med huvudrösten. Välj röster under Rollbesättning.",
+    "line_gap": "Tystnad mellan rader",
+    "paragraph_gap": "Tystnad mellan stycken",
+    "trim_edges": "Ta bort tystnad som motorn skapar"
   },
   "credentials": {
     "microsoft_key": "Microsoft Translator-nyckel",

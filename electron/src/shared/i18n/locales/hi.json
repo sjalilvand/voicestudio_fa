@@ -505,7 +505,10 @@
     "exportFailed": "निर्यात विफल - जांचें कि बैकएंड चल रहा है।",
     "global_speed": "गति",
     "global_speed_hint": "अपनी स्वयं की गति ओवरराइड के बिना सभी लाइनों के लिए पढ़ने की गति",
-    "deleteProjectConfirm": "इस प्रोजेक्ट को स्थायी रूप से मिटाएँ?"
+    "deleteProjectConfirm": "इस प्रोजेक्ट को स्थायी रूप से मिटाएँ?",
+    "split_chapters": "अध्याय",
+    "split_paragraphs": "अनुच्छेद",
+    "split_sentences": "वाक्य"
   },
   "common": {
     "stop": "रुकें",
@@ -2353,7 +2356,8 @@
     "hf_token_inline_ph": "hf_...टोकन चिपकाएँ (वैकल्पिक)",
     "hf_token_active_using": "{{source}} में Hugging Face टोकन मिला — {{masked}}",
     "hf_token_replace": "बदलें…",
-    "hf_token_replace_warning": "यह इस ऐप के लिए सहेजे गए टोकन को बदलता है। पुराना टोकन रद्द नहीं होता।"
+    "hf_token_replace_warning": "यह इस ऐप के लिए सहेजे गए टोकन को बदलता है। पुराना टोकन रद्द नहीं होता।",
+    "hf_token_get_short": "मुफ़्त पाएँ →"
   },
   "history": {
     "dub_meta": "{{segments}} खंड · {{duration}} सेकंड",
@@ -2547,7 +2551,9 @@
     "emotion_text_ph": "जैसे। थका हुआ और उदास लगता है",
     "emotion_alpha": "भावना की शक्ति",
     "recovery_load_failed": "अधूरी ऑडियोबुक की जाँच नहीं हो सकी।",
-    "recovery_retry": "फिर से कोशिश करें"
+    "recovery_retry": "फिर से कोशिश करें",
+    "line_gap": "पंक्ति के बाद विराम",
+    "paragraph_gap": "अनुच्छेद के बाद विराम"
   },
   "voicePanel": {
     "title": "आवाज",

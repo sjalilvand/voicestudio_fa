@@ -505,7 +505,10 @@
     "exportFailed": "エクスポートに失敗しました — バックエンドが実行中であることを確認してください。",
     "global_speed": "速度",
     "global_speed_hint": "独自の速度オーバーライドを行わないすべての行の読み取り速度",
-    "deleteProjectConfirm": "このプロジェクトを完全に削除しますか？"
+    "deleteProjectConfirm": "このプロジェクトを完全に削除しますか？",
+    "split_chapters": "章",
+    "split_paragraphs": "段落",
+    "split_sentences": "文"
   },
   "common": {
     "stop": "停止",
@@ -2353,7 +2356,8 @@
     "hf_token_inline_ph": "hf_… トークンを貼り付けます (オプション)",
     "hf_token_active_using": "{{source}} に Hugging Face トークンがあります — {{masked}}",
     "hf_token_replace": "置き換える…",
-    "hf_token_replace_warning": "このアプリに保存されたトークンを置き換えます。古いトークンは失効しません。"
+    "hf_token_replace_warning": "このアプリに保存されたトークンを置き換えます。古いトークンは失効しません。",
+    "hf_token_get_short": "無料で取得 →"
   },
   "history": {
     "dub_meta": "{{segments}} セグメント · {{duration}} 秒",

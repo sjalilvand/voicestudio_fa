@@ -505,7 +505,10 @@
     "exportFailed": "匯出失敗 — 檢查後端是否正在運作。",
     "global_speed": "速度",
     "global_speed_hint": "所有線路的讀取速度，沒有自己的速度覆蓋",
-    "deleteProjectConfirm": "要永久刪除此專案嗎？"
+    "deleteProjectConfirm": "要永久刪除此專案嗎？",
+    "split_chapters": "章節",
+    "split_paragraphs": "段落",
+    "split_sentences": "句子"
   },
   "common": {
     "stop": "停止",
@@ -2353,7 +2356,8 @@
     "hf_token_inline_ph": "貼上 hf_… 令牌（可選）",
     "hf_token_active_using": "在 {{source}} 中找到 Hugging Face 權杖 — {{masked}}",
     "hf_token_replace": "取代…",
-    "hf_token_replace_warning": "這會取代為此應用程式儲存的權杖，但不會撤銷舊權杖。"
+    "hf_token_replace_warning": "這會取代為此應用程式儲存的權杖，但不會撤銷舊權杖。",
+    "hf_token_get_short": "免費取得 →"
   },
   "history": {
     "dub_meta": "{{segments}} 個片段 · {{duration}} 秒",
@@ -2547,7 +2551,9 @@
     "emotion_text_ph": "例如 聽起來很疲勞和悲傷",
     "emotion_alpha": "情感強度",
     "recovery_load_failed": "無法檢查未完成的有聲書。",
-    "recovery_retry": "重試"
+    "recovery_retry": "重試",
+    "line_gap": "行間停頓",
+    "paragraph_gap": "段落間停頓"
   },
   "voicePanel": {
     "title": "語音",

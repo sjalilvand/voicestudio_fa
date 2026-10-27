@@ -1012,7 +1012,8 @@
     "restored_state": "Przywrócono stan poprzedniej generacji",
     "upgrading_preview": "Uaktualniam segmenty w jakości podglądu {{count}} do pełnej jakości…",
     "session_expired": "Ta sesja dubowania wygasła lub została wyczyszczona — prześlij film ponownie, aby rozpocząć nową.",
-    "unsupported_translation_language": "NLLB nie obsługuje: {{languages}}. Wybierz inny język lub silnik tłumaczenia."
+    "unsupported_translation_language": "NLLB nie obsługuje: {{languages}}. Wybierz inny język lub silnik tłumaczenia.",
+    "mirror_none": "Żaden wiersz nie wymagał wskazówki"
   },
   "common": {
     "stop": "Zatrzymaj się",
@@ -1745,7 +1746,14 @@
     "delete_warning": "Tej operacji nie można cofnąć. Projekty i transkrypcje zostaną usunięte. Usunięcie głosów lub nagrań usuwa też ich zapisany dźwięk. Wyeksportowane pliki i ukończone rendery audio pozostaną.",
     "draft_changed": "Szkic zmienił się podczas wczytywania tego projektu. Potwierdź ponownie, aby go zastąpić.",
     "all_projects": "Wszystkie projekty",
-    "library_group": "Biblioteka"
+    "library_group": "Biblioteka",
+    "render_engine": "Silnik",
+    "render_format": "Format",
+    "render_language": "Język",
+    "render_settings": "Ustawienia",
+    "render_size_label": "Rozmiar",
+    "render_voice": "Głos",
+    "story": "Opowieść"
   },
   "projectActions": {
     "delete": "Usunąć „{{name}}”? Tej czynności nie można cofnąć.",
@@ -1868,7 +1876,11 @@
     "autocastDone_few": "Przydzielono {{lines}} linii do {{count}} głosów",
     "autocastDone_many": "Przydzielono {{lines}} linii do {{count}} głosów",
     "autocastDone_other": "Przydzielono {{lines}} linii do {{count}} głosu",
-    "recovery_title": "Przerwana historia"
+    "recovery_title": "Przerwana historia",
+    "splitMode": "Podziel według",
+    "split_chapters": "Rozdziały",
+    "split_paragraphs": "Akapity",
+    "split_sentences": "Zdania"
   },
   "audiobook": {
     "cast": "Obsada",
@@ -2002,7 +2014,10 @@
     "cast_note_one": "{{names}} nie ma jeszcze głosu, więc czyta go główny głos. Wybierz głos w sekcji Obsada.",
     "cast_note_other": "{{names}} nie mają jeszcze głosów, więc czyta je główny głos. Wybierz głosy w sekcji Obsada.",
     "cast_note_few": "{{names}} nie mają jeszcze głosów, więc czyta je główny głos. Wybierz głosy w sekcji Obsada.",
-    "cast_note_many": "{{names}} nie mają jeszcze głosów, więc czyta je główny głos. Wybierz głosy w sekcji Obsada."
+    "cast_note_many": "{{names}} nie mają jeszcze głosów, więc czyta je główny głos. Wybierz głosy w sekcji Obsada.",
+    "line_gap": "Odstęp między wierszami",
+    "paragraph_gap": "Odstęp między akapitami",
+    "trim_edges": "Usuń ciszę generowaną przez silnik"
   },
   "credentials": {
     "microsoft_key": "Klucz tłumacza Microsoft",

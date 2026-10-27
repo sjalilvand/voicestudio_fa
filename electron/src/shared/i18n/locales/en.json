@@ -1461,7 +1461,9 @@
     "languages_pending": "Pending",
     "live_preview": "Live preview",
     "live_preview_title": "Hear a line as you edit it — the edited segment streams TTS with its CAST voice after a short pause. Playback only: nothing is saved, and export still renders at full quality.",
-    "live_preview_pick_voice": "Assign a CAST voice to this line or its speaker to hear the live preview."
+    "live_preview_pick_voice": "Assign a CAST voice to this line or its speaker to hear the live preview.",
+    "collapse_settings": "Hide translation settings",
+    "supported_formats": "Audio or video: MP4, MOV, MKV, WEBM, MP3, WAV, FLAC, M4A"
   },
   "glossary": {
     "title": "Translation glossary",
@@ -1559,7 +1561,8 @@
     "plan_apply": "Use shorter rewrite",
     "plan_apply_title": "Replace this line with the suggested shorter rewrite: \"{{text}}\"",
     "live_play_title": "Stream this line now (live preview)",
-    "live_stop_title": "Stop the live preview"
+    "live_stop_title": "Stop the live preview",
+    "translate_error_title": "Could not translate: {{error}}"
   },
   "timeline": {
     "track_label": "Segment timeline",
@@ -1845,7 +1848,8 @@
     "mirror_rescue_title": "Can't reach Hugging Face? Use a mirror",
     "mirror_rescue_hint": "Model downloads switch to the mirror immediately — no restart needed during setup. hf-mirror.com is the community mirror commonly used in China.",
     "mirror_apply": "Apply & re-check",
-    "mirror_apply_error": "Could not save the mirror setting."
+    "mirror_apply_error": "Could not save the mirror setting.",
+    "continue_blocked": "Fix issues to continue"
   },
   "donate": {
     "title": "Support the project",
@@ -1895,7 +1899,8 @@
     "benefit_support": "Direct support",
     "benefit_support_desc": "Get priority email and video support from the core engineering team.",
     "benefit_source_desc": "Inspect, fork, and adapt the full stack within the license terms.",
-    "benefit_lang_desc": "Transcribe, translate, and dub in 646 languages at human-level quality."
+    "benefit_lang_desc": "Transcribe, translate, and dub in 646 languages at human-level quality.",
+    "hero_title": "License VoiceStudio for your organization"
   },
   "exportModal": {
     "export": "Export",
@@ -1964,7 +1969,9 @@
     "nothing_selected": "Nothing is selected, or the track is unavailable.",
     "export_mp4": "Export MP4",
     "export_audio": "Export audio",
-    "export_subtitles": "Export subtitles"
+    "export_subtitles": "Export subtitles",
+    "export_n_audio_one": "Export {{count}} separate audio file",
+    "export_n_audio_other": "Export {{count}} separate audio files"
   },
   "demo": {
     "clone_coachmark": "This is a guided demo — try the suggested prompt or write your own.",

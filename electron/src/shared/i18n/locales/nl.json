@@ -505,7 +505,10 @@
     "exportFailed": "Exporteren mislukt. Controleer of de backend actief is.",
     "global_speed": "Snelheid",
     "global_speed_hint": "Leessnelheid voor alle lijnen zonder hun eigen snelheidsoverschrijving",
-    "deleteProjectConfirm": "Dit project permanent verwijderen?"
+    "deleteProjectConfirm": "Dit project permanent verwijderen?",
+    "splitMode": "Splitsen op",
+    "split_chapters": "Hoofdstukken",
+    "split_sentences": "Zinnen"
   },
   "common": {
     "stop": "Stop",
@@ -2353,7 +2356,8 @@
     "hf_token_inline_ph": "Plak het hf_…-token (optioneel)",
     "hf_token_active_using": "Hugging Face-token gevonden in {{source}} — {{masked}}",
     "hf_token_replace": "Vervangen…",
-    "hf_token_replace_warning": "Dit vervangt het token dat voor deze app is opgeslagen. Het oude token wordt niet ingetrokken."
+    "hf_token_replace_warning": "Dit vervangt het token dat voor deze app is opgeslagen. Het oude token wordt niet ingetrokken.",
+    "hf_token_get_short": "Gratis ophalen →"
   },
   "history": {
     "dub_meta": "{{segments}} segmenten · {{duration}} s",
@@ -2548,7 +2552,8 @@
     "emotion_text_ph": "bijv. klinkt uitgeput en verdrietig",
     "emotion_alpha": "Emotie sterkte",
     "recovery_load_failed": "Kon niet controleren op onvoltooide audioboeken.",
-    "recovery_retry": "Opnieuw proberen"
+    "recovery_retry": "Opnieuw proberen",
+    "line_gap": "Stilte tussen regels"
   },
   "voicePanel": {
     "title": "Stem",

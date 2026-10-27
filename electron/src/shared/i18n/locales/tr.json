@@ -504,7 +504,11 @@
     "exportFailed": "Dışa aktarma başarısız oldu — arka ucun çalıştığını kontrol edin.",
     "global_speed": "Hız",
     "global_speed_hint": "Kendi hız geçersiz kılma özelliği olmadan tüm satırlar için okuma hızı",
-    "deleteProjectConfirm": "Bu proje kalıcı olarak silinsin mi?"
+    "deleteProjectConfirm": "Bu proje kalıcı olarak silinsin mi?",
+    "splitMode": "Şuna göre böl",
+    "split_chapters": "Bölümler",
+    "split_paragraphs": "Paragraflar",
+    "split_sentences": "Cümleler"
   },
   "common": {
     "stop": "Durdur",
@@ -2352,7 +2356,8 @@
     "hf_token_inline_ph": "hf_… jetonunu yapıştırın (isteğe bağlı)",
     "hf_token_active_using": "{{source}} içinde Hugging Face belirteci bulundu — {{masked}}",
     "hf_token_replace": "Değiştir…",
-    "hf_token_replace_warning": "Bu uygulama için kaydedilen belirteci değiştirir. Eski belirteci iptal etmez."
+    "hf_token_replace_warning": "Bu uygulama için kaydedilen belirteci değiştirir. Eski belirteci iptal etmez.",
+    "hf_token_get_short": "Ücretsiz alın →"
   },
   "history": {
     "dub_meta": "{{segments}} segment · {{duration}} sn",
@@ -2545,7 +2550,10 @@
     "emotion_text_ph": "örn. tükenmiş ve üzgün geliyor",
     "emotion_alpha": "Duygu gücü",
     "recovery_load_failed": "Tamamlanmamış sesli kitaplar denetlenemedi.",
-    "recovery_retry": "Yeniden dene"
+    "recovery_retry": "Yeniden dene",
+    "line_gap": "Satırların arasındaki duraklama",
+    "paragraph_gap": "Paragrafların arasındaki duraklama",
+    "trim_edges": "Motorun sessiz kısımlarını kes"
   },
   "voicePanel": {
     "title": "Ses",

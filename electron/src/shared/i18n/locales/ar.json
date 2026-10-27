@@ -506,7 +506,9 @@
     "exportFailed": "فشل التصدير — تحقق من تشغيل الواجهة الخلفية.",
     "global_speed": "السرعة",
     "global_speed_hint": "سرعة القراءة لجميع الخطوط دون تجاوز السرعة الخاصة بها",
-    "deleteProjectConfirm": "هل تريد حذف هذا المشروع نهائيًا؟"
+    "deleteProjectConfirm": "هل تريد حذف هذا المشروع نهائيًا؟",
+    "split_chapters": "الفصول",
+    "split_paragraphs": "الفقرات"
   },
   "common": {
     "stop": "توقف",
@@ -2354,7 +2356,8 @@
     "hf_token_inline_ph": "الصق hf_... الرمز المميز (اختياري)",
     "hf_token_active_using": "تم العثور على رمز Hugging Face في {{source}} — {{masked}}",
     "hf_token_replace": "تغيير الرمز…",
-    "hf_token_replace_warning": "يستبدل هذا الرمز المحفوظ لهذا التطبيق، ولا يُلغي الرمز القديم."
+    "hf_token_replace_warning": "يستبدل هذا الرمز المحفوظ لهذا التطبيق، ولا يُلغي الرمز القديم.",
+    "hf_token_get_short": "احصل على واحد مجانًا →"
   },
   "history": {
     "dub_meta": "{{segments}} مقطعًا · {{duration}} ث",
@@ -2548,7 +2551,9 @@
     "emotion_text_ph": "على سبيل المثال يبدو متعباً وحزيناً",
     "emotion_alpha": "قوة العاطفة",
     "recovery_load_failed": "تعذّر التحقق من وجود كتب صوتية غير مكتملة.",
-    "recovery_retry": "إعادة المحاولة"
+    "recovery_retry": "إعادة المحاولة",
+    "line_gap": "مدة الصمت بين الأسطر",
+    "paragraph_gap": "مدة الصمت بين الفقرات"
   },
   "voicePanel": {
     "title": "صوت",

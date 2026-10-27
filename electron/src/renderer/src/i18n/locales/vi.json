@@ -1732,7 +1732,14 @@
     "delete_warning": "Không thể hoàn tác. Dự án và bản chép lời sẽ bị xóa. Xóa giọng nói hoặc bản thu cũng xóa âm thanh đã lưu của chúng. Tệp đã xuất và âm thanh kết xuất hoàn tất được giữ lại.",
     "draft_changed": "Bản nháp của bạn đã thay đổi trong khi tải dự án này. Xác nhận lại để thay thế bản nháp.",
     "all_projects": "Tất cả dự án",
-    "library_group": "Thư viện"
+    "library_group": "Thư viện",
+    "render_format": "Định dạng",
+    "render_language": "Ngôn ngữ",
+    "render_settings": "Cài đặt",
+    "render_size": "Chương: {{chapters}} · Dòng: {{lines}} · Từ: {{words}}",
+    "render_size_label": "Kích thước",
+    "render_speed": "Tốc độ",
+    "story": "Truyện"
   },
   "projectActions": {
     "delete": "Xóa “{{name}}”? Không thể hoàn tác thao tác này.",
@@ -1854,7 +1861,10 @@
     "lineActions": "Thao tác dòng",
     "autocastDone_one": "Đã phân {{lines}} dòng cho {{count}} giọng",
     "autocastDone_other": "Đã phân {{lines}} dòng cho {{count}} giọng",
-    "recovery_title": "Truyện bị gián đoạn"
+    "recovery_title": "Truyện bị gián đoạn",
+    "splitMode": "Chia theo",
+    "split_chapters": "Chương",
+    "split_sentences": "Câu"
   },
   "audiobook": {
     "cast": "Dàn giọng",
@@ -1983,7 +1993,9 @@
     "untitled": "Chưa đặt tên",
     "recovery_busy": "Đang có một lượt kết xuất khác. Hãy tiếp tục khi nó xong.",
     "cast_note_one": "{{names}} chưa được chọn giọng nên sẽ đọc bằng giọng chính. Hãy chọn giọng trong mục Vai.",
-    "cast_note_other": "{{names}} chưa được chọn giọng nên sẽ đọc bằng giọng chính. Hãy chọn giọng trong mục Vai."
+    "cast_note_other": "{{names}} chưa được chọn giọng nên sẽ đọc bằng giọng chính. Hãy chọn giọng trong mục Vai.",
+    "line_gap": "Độ ngắt giữa các dòng",
+    "paragraph_gap": "Độ ngắt giữa các đoạn"
   },
   "credentials": {
     "microsoft_key": "Khóa dịch của Microsoft",

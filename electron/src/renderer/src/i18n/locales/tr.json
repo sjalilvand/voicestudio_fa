@@ -1729,7 +1729,17 @@
     "delete_warning": "Bu işlem geri alınamaz. Projeler ve dökümler kaldırılır. Sesleri veya kayıtları silmek, saklanan ses dosyalarını da siler. Dışa aktarılan dosyalar ve tamamlanmış işleme sesleri korunur.",
     "draft_changed": "Bu proje yüklenirken taslağınız değişti. Değiştirmek için yeniden onaylayın.",
     "all_projects": "Tüm projeler",
-    "library_group": "Kitaplık"
+    "library_group": "Kitaplık",
+    "render_details": "Oluşturma ayrıntıları",
+    "render_engine": "Motor",
+    "render_format": "Biçim",
+    "render_language": "Dil",
+    "render_settings": "Ayarlar",
+    "render_size": "Bölüm: {{chapters}} · Satır: {{lines}} · Sözcük: {{words}}",
+    "render_size_label": "Boyut",
+    "render_speed": "Hız",
+    "render_voice": "Ses",
+    "story": "Hikâye"
   },
   "projectActions": {
     "delete": "“{{name}}” silinsin mi? Bu işlem geri alınamaz.",
@@ -1850,7 +1860,11 @@
     "lineActions": "Satır işlemleri",
     "autocastDone_one": "{{lines}} satır {{count}} sese dağıtıldı",
     "autocastDone_other": "{{lines}} satır {{count}} sese dağıtıldı",
-    "recovery_title": "Yarıda kalan hikâye"
+    "recovery_title": "Yarıda kalan hikâye",
+    "splitMode": "Şuna göre böl",
+    "split_chapters": "Bölümler",
+    "split_paragraphs": "Paragraflar",
+    "split_sentences": "Cümleler"
   },
   "audiobook": {
     "cast": "Kadro",
@@ -1978,7 +1992,10 @@
     "untitled": "Başlıksız",
     "recovery_busy": "Başka bir işleme sürüyor. Bittiğinde devam edin.",
     "cast_note_one": "{{names}} için henüz ses seçilmedi, ana sesle okunur. Oyuncular bölümünden bir ses seçin.",
-    "cast_note_other": "{{names}} için henüz ses seçilmedi, ana sesle okunurlar. Oyuncular bölümünden ses seçin."
+    "cast_note_other": "{{names}} için henüz ses seçilmedi, ana sesle okunurlar. Oyuncular bölümünden ses seçin.",
+    "line_gap": "Satırların arasındaki duraklama",
+    "paragraph_gap": "Paragrafların arasındaki duraklama",
+    "trim_edges": "Motorun sessiz kısımlarını kes"
   },
   "credentials": {
     "microsoft_key": "Microsoft Çevirmen Anahtarı",

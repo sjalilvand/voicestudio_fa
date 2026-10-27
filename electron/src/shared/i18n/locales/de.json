@@ -504,7 +504,11 @@
     "exportFailed": "Der Export ist fehlgeschlagen. Überprüfen Sie, ob das Backend ausgeführt wird.",
     "global_speed": "Geschwindigkeit",
     "global_speed_hint": "Lesegeschwindigkeit für alle Zeilen ohne eigene Geschwindigkeitsüberschreibung",
-    "deleteProjectConfirm": "Dieses Projekt dauerhaft löschen?"
+    "deleteProjectConfirm": "Dieses Projekt dauerhaft löschen?",
+    "splitMode": "Aufteilen nach",
+    "split_chapters": "Kapitel",
+    "split_paragraphs": "Absätze",
+    "split_sentences": "Sätze"
   },
   "common": {
     "stop": "Stopp",
@@ -2352,7 +2356,8 @@
     "hf_token_inline_ph": "HF_…-Token einfügen (optional)",
     "hf_token_active_using": "Hugging-Face-Token in {{source}} gefunden — {{masked}}",
     "hf_token_replace": "Ersetzen…",
-    "hf_token_replace_warning": "Dies ersetzt das für diese App gespeicherte Token. Das alte Token wird nicht widerrufen."
+    "hf_token_replace_warning": "Dies ersetzt das für diese App gespeicherte Token. Das alte Token wird nicht widerrufen.",
+    "hf_token_get_short": "Kostenlos erhalten →"
   },
   "history": {
     "dub_meta": "{{segments}} Segmente · {{duration}} s",
@@ -2546,7 +2551,9 @@
     "emotion_text_ph": "z.B. klingt erschöpft und traurig",
     "emotion_alpha": "Emotionale Stärke",
     "recovery_load_failed": "Unvollständige Hörbücher konnten nicht geprüft werden.",
-    "recovery_retry": "Erneut versuchen"
+    "recovery_retry": "Erneut versuchen",
+    "line_gap": "Abstand zwischen Zeilen",
+    "paragraph_gap": "Abstand zwischen Absätzen"
   },
   "voicePanel": {
     "title": "Stimme",

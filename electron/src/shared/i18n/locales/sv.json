@@ -504,7 +504,11 @@
     "exportFailed": "Exporten misslyckades – kontrollera att backend körs.",
     "global_speed": "Hastighet",
     "global_speed_hint": "Läshastighet för alla linjer utan egen hastighetsöverstyrning",
-    "deleteProjectConfirm": "Ta bort projektet permanent?"
+    "deleteProjectConfirm": "Ta bort projektet permanent?",
+    "splitMode": "Dela upp efter",
+    "split_chapters": "Kapitel",
+    "split_paragraphs": "Stycken",
+    "split_sentences": "Meningar"
   },
   "common": {
     "stop": "Sluta",
@@ -2352,7 +2356,8 @@
     "hf_token_inline_ph": "Klistra in hf_… token (valfritt)",
     "hf_token_active_using": "Hugging Face-token hittades i {{source}} — {{masked}}",
     "hf_token_replace": "Byt ut…",
-    "hf_token_replace_warning": "Detta ersätter token som sparats för denna app. Den gamla token återkallas inte."
+    "hf_token_replace_warning": "Detta ersätter token som sparats för denna app. Den gamla token återkallas inte.",
+    "hf_token_get_short": "Hämta en gratis →"
   },
   "history": {
     "dub_meta": "{{segments}} segment · {{duration}} s",
@@ -2545,7 +2550,10 @@
     "emotion_text_ph": "t.ex. låter uttömd och ledsen",
     "emotion_alpha": "Emotionsstyrka",
     "recovery_load_failed": "Det gick inte att söka efter ofärdiga ljudböcker.",
-    "recovery_retry": "Försök igen"
+    "recovery_retry": "Försök igen",
+    "line_gap": "Tystnad mellan rader",
+    "paragraph_gap": "Tystnad mellan stycken",
+    "trim_edges": "Ta bort tystnad som motorn skapar"
   },
   "voicePanel": {
     "title": "Röst",

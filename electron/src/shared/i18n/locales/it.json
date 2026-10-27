@@ -504,7 +504,11 @@
     "global_speed": "Velocità",
     "global_speed_hint": "Velocità di lettura per tutte le linee senza il proprio override di velocità",
     "deleteProjectConfirm": "Eliminare definitivamente questo progetto?",
-    "clearScript": "Svuota script"
+    "clearScript": "Svuota script",
+    "splitMode": "Dividi per",
+    "split_chapters": "Capitoli",
+    "split_paragraphs": "Paragrafi",
+    "split_sentences": "Frasi"
   },
   "common": {
     "stop": "Fermati",
@@ -2352,7 +2356,8 @@
     "hf_token_inline_ph": "Incolla il token hf_… (facoltativo)",
     "hf_token_active_using": "Token Hugging Face trovato in {{source}} — {{masked}}",
     "hf_token_replace": "Sostituisci…",
-    "hf_token_replace_warning": "Questo sostituisce il token salvato per questa app. Non revoca il vecchio token."
+    "hf_token_replace_warning": "Questo sostituisce il token salvato per questa app. Non revoca il vecchio token.",
+    "hf_token_get_short": "Creane uno gratis →"
   },
   "history": {
     "dub_meta": "{{segments}} segmenti · {{duration}} s",
@@ -2545,7 +2550,10 @@
     "emotion_text_ph": "es. suona stanco e triste",
     "emotion_alpha": "Forza emotiva",
     "recovery_load_failed": "Impossibile verificare gli audiolibri non completati.",
-    "recovery_retry": "Riprova"
+    "recovery_retry": "Riprova",
+    "line_gap": "Intervallo tra le righe",
+    "paragraph_gap": "Intervallo tra i paragrafi",
+    "trim_edges": "Taglia i silenzi del motore"
   },
   "voicePanel": {
     "title": "Voce",

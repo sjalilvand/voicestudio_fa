@@ -733,7 +733,10 @@
     "characters": "문자 {{count}}개",
     "clearScript": "대본 비우기",
     "clearScriptHint": "스크립트의 모든 줄과 챕터를 전부 지웁니다",
-    "cleared": "대본을 비웠습니다"
+    "cleared": "대본을 비웠습니다",
+    "split_chapters": "장",
+    "split_paragraphs": "문단",
+    "split_sentences": "문장"
   },
   "common": {
     "stop": "중지",
@@ -2941,7 +2944,10 @@
     "lex_word": "단어",
     "expressive": "제작 설정 덮어쓰기",
     "recovery_load_failed": "완료되지 않은 오디오북을 확인하지 못했습니다.",
-    "recovery_retry": "다시 시도"
+    "recovery_retry": "다시 시도",
+    "line_gap": "줄 사이 간격",
+    "paragraph_gap": "문단 사이 간격",
+    "trim_edges": "엔진 무음 구간 다듬기"
   },
   "voicePanel": {
     "title": "음성",

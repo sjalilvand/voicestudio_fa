@@ -505,7 +505,10 @@
     "exportFailed": "Xuất không thành công - kiểm tra xem chương trình phụ trợ có đang chạy không.",
     "global_speed": "Tốc độ",
     "global_speed_hint": "Tốc độ đọc cho tất cả các dòng mà không cần ghi đè tốc độ riêng",
-    "deleteProjectConfirm": "Xóa vĩnh viễn dự án này?"
+    "deleteProjectConfirm": "Xóa vĩnh viễn dự án này?",
+    "splitMode": "Chia theo",
+    "split_chapters": "Chương",
+    "split_sentences": "Câu"
   },
   "common": {
     "stop": "Dừng lại",
@@ -2353,7 +2356,8 @@
     "hf_token_inline_ph": "Dán mã thông báo hf_… (tùy chọn)",
     "hf_token_active_using": "Đã tìm thấy token Hugging Face trong {{source}} — {{masked}}",
     "hf_token_replace": "Thay thế…",
-    "hf_token_replace_warning": "Thao tác này thay thế token đã lưu cho ứng dụng này. Token cũ không bị thu hồi."
+    "hf_token_replace_warning": "Thao tác này thay thế token đã lưu cho ứng dụng này. Token cũ không bị thu hồi.",
+    "hf_token_get_short": "Nhận miễn phí →"
   },
   "history": {
     "dub_meta": "{{segments}} phân đoạn · {{duration}} giây",
@@ -2547,7 +2551,9 @@
     "emotion_text_ph": "ví dụ: nghe vẻ mệt mỏi và buồn",
     "emotion_alpha": "Độ mạnh của cảm xúc",
     "recovery_load_failed": "Không thể kiểm tra sách nói chưa hoàn tất.",
-    "recovery_retry": "Thử lại"
+    "recovery_retry": "Thử lại",
+    "line_gap": "Độ ngắt giữa các dòng",
+    "paragraph_gap": "Độ ngắt giữa các đoạn"
   },
   "voicePanel": {
     "title": "Giọng nói",

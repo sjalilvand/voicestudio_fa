@@ -2356,7 +2356,8 @@
     "hf_token_inline_ph": "Вставте маркер hf_… (необов’язково)",
     "hf_token_active_using": "Токен Hugging Face знайдено в {{source}} — {{masked}}",
     "hf_token_replace": "Змінити токен…",
-    "hf_token_replace_warning": "Це замінює токен, збережений для цього застосунку. Старий токен не відкликається."
+    "hf_token_replace_warning": "Це замінює токен, збережений для цього застосунку. Старий токен не відкликається.",
+    "hf_token_get_short": "Отримати безкоштовно →"
   },
   "history": {
     "dub_meta": "{{segments}} сегментів · {{duration}} с",
@@ -2549,7 +2550,10 @@
     "emotion_text_ph": "напр. звучить виснажено і сумно",
     "emotion_alpha": "Інтенсивність емоції",
     "recovery_load_failed": "Не вдалося перевірити незавершені аудіокниги.",
-    "recovery_retry": "Спробувати ще раз"
+    "recovery_retry": "Спробувати ще раз",
+    "line_gap": "Інтервал між рядками",
+    "paragraph_gap": "Інтервал між абзацами",
+    "trim_edges": "Прибирати тишу рушія"
   },
   "voicePanel": {
     "title": "Голос",

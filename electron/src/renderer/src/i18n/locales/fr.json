@@ -1731,7 +1731,17 @@
     "delete_warning": "Cette action est irréversible. Les projets et transcriptions sont supprimés. Supprimer des voix ou des prises efface aussi leur audio enregistré. Les fichiers exportés et les rendus audio terminés sont conservés.",
     "draft_changed": "Votre brouillon a changé pendant le chargement de ce projet. Confirmez à nouveau pour le remplacer.",
     "all_projects": "Tous les projets",
-    "library_group": "Bibliothèque"
+    "library_group": "Bibliothèque",
+    "render_details": "Détails de création",
+    "render_engine": "Moteur",
+    "render_format": "Format",
+    "render_language": "Langue",
+    "render_settings": "Réglages",
+    "render_size": "Chapitres : {{chapters}} · Lignes : {{lines}} · Mots : {{words}}",
+    "render_size_label": "Taille",
+    "render_speed": "Vitesse",
+    "render_voice": "Voix",
+    "story": "Histoire"
   },
   "projectActions": {
     "delete": "Supprimer « {{name}} » ? Cette action est irréversible.",
@@ -1852,7 +1862,11 @@
     "lineActions": "Actions de la ligne",
     "autocastDone_one": "{{lines}} lignes distribuées à {{count}} voix",
     "autocastDone_other": "{{lines}} lignes distribuées entre {{count}} voix",
-    "recovery_title": "Histoire interrompue"
+    "recovery_title": "Histoire interrompue",
+    "splitMode": "Découper par",
+    "split_chapters": "Chapitres",
+    "split_paragraphs": "Paragraphes",
+    "split_sentences": "Phrases"
   },
   "audiobook": {
     "cast": "Distribution",
@@ -1981,7 +1995,9 @@
     "untitled": "Sans titre",
     "recovery_busy": "Un autre rendu est en cours. Reprenez une fois terminé.",
     "cast_note_one": "{{names}} n’a pas encore de voix et sera lu avec la voix principale. Choisissez-en une dans Distribution.",
-    "cast_note_other": "{{names}} n’ont pas encore de voix et seront lus avec la voix principale. Choisissez-en dans Distribution."
+    "cast_note_other": "{{names}} n’ont pas encore de voix et seront lus avec la voix principale. Choisissez-en dans Distribution.",
+    "line_gap": "Silence entre chaque ligne",
+    "paragraph_gap": "Silence entre chaque paragraphe"
   },
   "credentials": {
     "microsoft_key": "Clé du traducteur Microsoft",

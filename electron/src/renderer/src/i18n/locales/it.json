@@ -1731,7 +1731,17 @@
     "delete_warning": "Questa azione è irreversibile. Progetti e trascrizioni vengono rimossi. Eliminare voci o registrazioni rimuove anche il relativo audio salvato. I file esportati e i rendering audio completati vengono conservati.",
     "draft_changed": "La bozza è cambiata durante il caricamento di questo progetto. Conferma di nuovo per sostituirla.",
     "all_projects": "Tutti i progetti",
-    "library_group": "Libreria"
+    "library_group": "Libreria",
+    "render_details": "Dettagli di creazione",
+    "render_engine": "Motore",
+    "render_format": "Formato",
+    "render_language": "Lingua",
+    "render_settings": "Impostazioni",
+    "render_size": "Capitoli: {{chapters}} · Righe: {{lines}} · Parole: {{words}}",
+    "render_size_label": "Dimensione",
+    "render_speed": "Velocità",
+    "render_voice": "Voce",
+    "story": "Storia"
   },
   "projectActions": {
     "delete": "Eliminare “{{name}}”? Questa azione è irreversibile.",
@@ -1852,7 +1862,11 @@
     "lineActions": "Azioni della riga",
     "autocastDone_one": "{{lines}} righe assegnate a {{count}} voce",
     "autocastDone_other": "{{lines}} righe assegnate a {{count}} voci",
-    "recovery_title": "Storia interrotta"
+    "recovery_title": "Storia interrotta",
+    "splitMode": "Dividi per",
+    "split_chapters": "Capitoli",
+    "split_paragraphs": "Paragrafi",
+    "split_sentences": "Frasi"
   },
   "audiobook": {
     "cast": "Cast",
@@ -1980,7 +1994,10 @@
     "untitled": "Senza titolo",
     "recovery_busy": "È in corso un altro rendering. Riprendi quando finisce.",
     "cast_note_one": "{{names}} non ha ancora una voce, quindi viene letto con la voce principale. Scegline una in Cast.",
-    "cast_note_other": "{{names}} non hanno ancora una voce, quindi vengono letti con la voce principale. Scegli le voci in Cast."
+    "cast_note_other": "{{names}} non hanno ancora una voce, quindi vengono letti con la voce principale. Scegli le voci in Cast.",
+    "line_gap": "Intervallo tra le righe",
+    "paragraph_gap": "Intervallo tra i paragrafi",
+    "trim_edges": "Taglia i silenzi del motore"
   },
   "credentials": {
     "microsoft_key": "Chiave del traduttore Microsoft",

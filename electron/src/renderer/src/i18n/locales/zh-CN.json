@@ -1730,7 +1730,16 @@
     "delete_warning": "此操作无法撤销。项目和转录文本将被删除。删除声音或录音也会删除其保存的音频。导出的文件和已完成渲染的音频将保留。",
     "draft_changed": "加载此项目时，你的草稿已更改。请再次确认以替换草稿。",
     "all_projects": "所有项目",
-    "library_group": "资料库"
+    "library_group": "资料库",
+    "render_engine": "引擎",
+    "render_format": "格式",
+    "render_language": "语言",
+    "render_settings": "设置",
+    "render_size": "{{chapters}} 章 · {{lines}} 行 · {{words}} 字",
+    "render_size_label": "大小",
+    "render_speed": "速度",
+    "render_voice": "声音",
+    "story": "故事"
   },
   "projectActions": {
     "delete": "删除“{{name}}”？此操作无法撤销。",
@@ -1852,7 +1861,10 @@
     "lineActions": "行操作",
     "autocastDone_one": "已将 {{lines}} 行自动分配给 {{count}} 个声音",
     "autocastDone_other": "已将 {{lines}} 行自动分配给 {{count}} 个声音",
-    "recovery_title": "中断的故事"
+    "recovery_title": "中断的故事",
+    "split_chapters": "章节",
+    "split_paragraphs": "段落",
+    "split_sentences": "句子"
   },
   "audiobook": {
     "cast": "配音角色",
@@ -1981,7 +1993,9 @@
     "resume_failed": "无法继续这本有声书：{{message}}",
     "recovery_busy": "另一个渲染正在进行，完成后再继续。",
     "cast_note_one": "{{names}} 尚未分配声音，将使用主声音朗读。请在“角色”中选择声音。",
-    "cast_note_other": "{{names}} 尚未分配声音，将使用主声音朗读。请在“角色”中选择声音。"
+    "cast_note_other": "{{names}} 尚未分配声音，将使用主声音朗读。请在“角色”中选择声音。",
+    "line_gap": "行间停顿",
+    "paragraph_gap": "段落间停顿"
   },
   "credentials": {
     "microsoft_key": "Microsoft Translator 密钥",

@@ -998,7 +998,8 @@
     "restored_state": "Wiederhergestellter Zustand der vorherigen Generation",
     "upgrading_preview": "Upgrade von {{count}} Segment(en) in Vorschauqualität auf volle Qualität…",
     "session_expired": "Diese Dub-Sitzung ist abgelaufen oder wurde bereinigt. Laden Sie Ihr Video erneut hoch, um eine neue zu starten.",
-    "unsupported_translation_language": "NLLB unterstützt {{languages}} nicht. Wähle eine andere Sprache oder Übersetzungs-Engine."
+    "unsupported_translation_language": "NLLB unterstützt {{languages}} nicht. Wähle eine andere Sprache oder Übersetzungs-Engine.",
+    "mirror_none": "Keine Zeile benötigte eine Anweisung"
   },
   "common": {
     "stop": "Stopp",
@@ -1729,7 +1730,16 @@
     "delete_warning": "Dies kann nicht rückgängig gemacht werden. Projekte und Transkripte werden entfernt. Beim Löschen von Stimmen oder Aufnahmen wird auch deren gespeichertes Audio gelöscht. Exportierte Dateien und fertig gerendertes Audio bleiben erhalten.",
     "draft_changed": "Dein Entwurf wurde beim Laden dieses Projekts geändert. Bestätige erneut, um ihn zu ersetzen.",
     "all_projects": "Alle Projekte",
-    "library_group": "Bibliothek"
+    "library_group": "Bibliothek",
+    "render_details": "Angaben zur Erstellung",
+    "render_engine": "Engine",
+    "render_format": "Format",
+    "render_language": "Sprache",
+    "render_settings": "Einstellungen",
+    "render_size": "Kapitel: {{chapters}} · Zeilen: {{lines}} · Wörter: {{words}}",
+    "render_size_label": "Größe",
+    "render_voice": "Stimme",
+    "story": "Geschichte"
   },
   "projectActions": {
     "delete": "„{{name}}“ löschen? Dies kann nicht rückgängig gemacht werden.",
@@ -1850,7 +1860,11 @@
     "lineActions": "Zeilenaktionen",
     "autocastDone_one": "{{lines}} Zeilen mit {{count}} Stimme besetzt",
     "autocastDone_other": "{{lines}} Zeilen auf {{count}} Stimmen verteilt",
-    "recovery_title": "Unterbrochene Geschichte"
+    "recovery_title": "Unterbrochene Geschichte",
+    "splitMode": "Aufteilen nach",
+    "split_chapters": "Kapitel",
+    "split_paragraphs": "Absätze",
+    "split_sentences": "Sätze"
   },
   "audiobook": {
     "cast": "Besetzung",
@@ -1979,7 +1993,9 @@
     "untitled": "Ohne Titel",
     "recovery_busy": "Ein anderes Rendering läuft. Setze fort, wenn es fertig ist.",
     "cast_note_one": "{{names}} hat noch keine Stimme und wird mit der Hauptstimme gelesen. Wähle unter Besetzung eine Stimme.",
-    "cast_note_other": "{{names}} haben noch keine Stimmen und werden mit der Hauptstimme gelesen. Wähle unter Besetzung Stimmen."
+    "cast_note_other": "{{names}} haben noch keine Stimmen und werden mit der Hauptstimme gelesen. Wähle unter Besetzung Stimmen.",
+    "line_gap": "Abstand zwischen Zeilen",
+    "paragraph_gap": "Abstand zwischen Absätzen"
   },
   "credentials": {
     "microsoft_key": "Microsoft-Übersetzerschlüssel",

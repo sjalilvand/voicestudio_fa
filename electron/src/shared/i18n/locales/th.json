@@ -505,7 +505,10 @@
     "exportFailed": "การส่งออกล้มเหลว — ตรวจสอบว่าแบ็กเอนด์กำลังทำงานอยู่",
     "global_speed": "ความเร็ว",
     "global_speed_hint": "ความเร็วในการอ่านสำหรับทุกบรรทัดโดยไม่มีการแทนที่ความเร็วของตัวเอง",
-    "deleteProjectConfirm": "ลบโปรเจ็กต์นี้อย่างถาวรหรือไม่"
+    "deleteProjectConfirm": "ลบโปรเจ็กต์นี้อย่างถาวรหรือไม่",
+    "split_chapters": "บท",
+    "split_paragraphs": "ย่อหน้า",
+    "split_sentences": "ประโยค"
   },
   "common": {
     "stop": "หยุด",
@@ -2353,7 +2356,8 @@
     "hf_token_inline_ph": "วางโทเค็น hf_… (ไม่บังคับ)",
     "hf_token_active_using": "พบโทเค็น Hugging Face ใน {{source}} — {{masked}}",
     "hf_token_replace": "เปลี่ยน…",
-    "hf_token_replace_warning": "การดำเนินการนี้แทนที่โทเค็นที่บันทึกไว้สำหรับแอปนี้ แต่ไม่เพิกถอนโทเค็นเก่า"
+    "hf_token_replace_warning": "การดำเนินการนี้แทนที่โทเค็นที่บันทึกไว้สำหรับแอปนี้ แต่ไม่เพิกถอนโทเค็นเก่า",
+    "hf_token_get_short": "รับฟรี →"
   },
   "history": {
     "dub_meta": "{{segments}} เซกเมนต์ · {{duration}} วินาที",
@@ -2546,7 +2550,10 @@
     "emotion_text_ph": "เช่น ฟังดูเหนื่อยและเศร้า",
     "emotion_alpha": "ความเข้มของอารมณ์",
     "recovery_load_failed": "ตรวจหาหนังสือเสียงที่ยังไม่เสร็จไม่ได้",
-    "recovery_retry": "ลองอีกครั้ง"
+    "recovery_retry": "ลองอีกครั้ง",
+    "line_gap": "ช่วงว่างระหว่างบรรทัด",
+    "paragraph_gap": "ช่วงว่างระหว่างย่อหน้า",
+    "trim_edges": "ตัดช่วงเงียบจากเอนจิน"
   },
   "voicePanel": {
     "title": "เสียง",

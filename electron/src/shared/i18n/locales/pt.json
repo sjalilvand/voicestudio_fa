@@ -504,7 +504,11 @@
     "exportFailed": "Falha na exportação – verifique se o back-end está em execução.",
     "global_speed": "Velocidade",
     "global_speed_hint": "Velocidade de leitura para todas as linhas sem sua própria substituição de velocidade",
-    "deleteProjectConfirm": "Excluir este projeto permanentemente?"
+    "deleteProjectConfirm": "Excluir este projeto permanentemente?",
+    "splitMode": "Dividir por",
+    "split_chapters": "Capítulos",
+    "split_paragraphs": "Parágrafos",
+    "split_sentences": "Frases"
   },
   "common": {
     "stop": "Pare",
@@ -2352,7 +2356,8 @@
     "hf_token_inline_ph": "Cole o token hf_… (opcional)",
     "hf_token_active_using": "Token do Hugging Face encontrado em {{source}} — {{masked}}",
     "hf_token_replace": "Substituir…",
-    "hf_token_replace_warning": "Isso substitui o token salvo para este aplicativo. Não revoga o token antigo."
+    "hf_token_replace_warning": "Isso substitui o token salvo para este aplicativo. Não revoga o token antigo.",
+    "hf_token_get_short": "Obtenha um grátis →"
   },
   "history": {
     "dub_meta": "{{segments}} segmentos · {{duration}} s",
@@ -2546,7 +2551,9 @@
     "emotion_text_ph": "ex.: soa exausto e triste",
     "emotion_alpha": "Força emocional",
     "recovery_load_failed": "Não foi possível verificar audiolivros inacabados.",
-    "recovery_retry": "Tentar novamente"
+    "recovery_retry": "Tentar novamente",
+    "line_gap": "Intervalo entre linhas",
+    "paragraph_gap": "Intervalo entre parágrafos"
   },
   "voicePanel": {
     "title": "Voz",

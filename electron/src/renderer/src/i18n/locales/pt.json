@@ -1731,7 +1731,17 @@
     "delete_warning": "Esta ação não pode ser desfeita. Projetos e transcrições serão removidos. Excluir vozes ou gravações também remove o áudio salvo. Arquivos exportados e áudios de renderizações concluídas serão mantidos.",
     "draft_changed": "Seu rascunho mudou enquanto este projeto era carregado. Confirme novamente para substituí-lo.",
     "all_projects": "Todos os projetos",
-    "library_group": "Biblioteca"
+    "library_group": "Biblioteca",
+    "render_details": "Como foi criado",
+    "render_engine": "Mecanismo",
+    "render_format": "Formato",
+    "render_language": "Idioma",
+    "render_settings": "Configurações",
+    "render_size": "Capítulos: {{chapters}} · Linhas: {{lines}} · Palavras: {{words}}",
+    "render_size_label": "Tamanho",
+    "render_speed": "Velocidade",
+    "render_voice": "Voz",
+    "story": "História"
   },
   "projectActions": {
     "delete": "Excluir “{{name}}”? Esta ação não pode ser desfeita.",
@@ -1852,7 +1862,11 @@
     "lineActions": "Ações da linha",
     "autocastDone_one": "{{lines}} linhas distribuídas para {{count}} voz",
     "autocastDone_other": "{{lines}} linhas distribuídas entre {{count}} vozes",
-    "recovery_title": "História interrompida"
+    "recovery_title": "História interrompida",
+    "splitMode": "Dividir por",
+    "split_chapters": "Capítulos",
+    "split_paragraphs": "Parágrafos",
+    "split_sentences": "Frases"
   },
   "audiobook": {
     "cast": "Elenco",
@@ -1981,7 +1995,9 @@
     "untitled": "Sem título",
     "recovery_busy": "Outra renderização está em andamento. Retome quando terminar.",
     "cast_note_one": "{{names}} ainda não tem voz e será lido com a voz principal. Escolha uma em Elenco.",
-    "cast_note_other": "{{names}} ainda não têm voz e serão lidos com a voz principal. Escolha vozes em Elenco."
+    "cast_note_other": "{{names}} ainda não têm voz e serão lidos com a voz principal. Escolha vozes em Elenco.",
+    "line_gap": "Intervalo entre linhas",
+    "paragraph_gap": "Intervalo entre parágrafos"
   },
   "credentials": {
     "microsoft_key": "Chave do Microsoft Tradutor",

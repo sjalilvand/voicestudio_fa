@@ -1731,7 +1731,17 @@
     "delete_warning": "Esta acción no se puede deshacer. Se eliminan los proyectos y las transcripciones. Al eliminar voces o tomas también se borra su audio guardado. Se conservan los archivos exportados y el audio de los renderizados terminados.",
     "draft_changed": "Tu borrador cambió mientras se cargaba este proyecto. Confirma de nuevo para reemplazarlo.",
     "all_projects": "Todos los proyectos",
-    "library_group": "Biblioteca"
+    "library_group": "Biblioteca",
+    "render_details": "Cómo se creó",
+    "render_engine": "Motor",
+    "render_format": "Formato",
+    "render_language": "Idioma",
+    "render_settings": "Ajustes",
+    "render_size": "Capítulos: {{chapters}} · Líneas: {{lines}} · Palabras: {{words}}",
+    "render_size_label": "Tamaño",
+    "render_speed": "Velocidad",
+    "render_voice": "Voz",
+    "story": "Historia"
   },
   "projectActions": {
     "delete": "¿Eliminar «{{name}}»? No se puede deshacer.",
@@ -1852,7 +1862,11 @@
     "lineActions": "Acciones de la línea",
     "autocastDone_one": "Se repartieron {{lines}} líneas con {{count}} voz",
     "autocastDone_other": "Se repartieron {{lines}} líneas entre {{count}} voces",
-    "recovery_title": "Historia interrumpida"
+    "recovery_title": "Historia interrumpida",
+    "splitMode": "Dividir por",
+    "split_chapters": "Capítulos",
+    "split_paragraphs": "Párrafos",
+    "split_sentences": "Oraciones"
   },
   "audiobook": {
     "cast": "Reparto",
@@ -1981,7 +1995,9 @@
     "untitled": "Sin título",
     "recovery_busy": "Hay otra generación en curso. Reanuda cuando termine.",
     "cast_note_one": "{{names}} aún no tiene voz asignada, así que se lee con la voz principal. Elige una en Reparto.",
-    "cast_note_other": "{{names}} aún no tienen voz asignada, así que se leen con la voz principal. Elige voces en Reparto."
+    "cast_note_other": "{{names}} aún no tienen voz asignada, así que se leen con la voz principal. Elige voces en Reparto.",
+    "line_gap": "Pausa al cambiar de línea",
+    "paragraph_gap": "Pausa al cambiar de párrafo"
   },
   "credentials": {
     "microsoft_key": "Clave del traductor de Microsoft",

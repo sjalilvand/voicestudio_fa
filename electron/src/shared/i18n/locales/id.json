@@ -505,7 +505,10 @@
     "exportFailed": "Ekspor gagal — periksa apakah backend sedang berjalan.",
     "global_speed": "Kecepatan",
     "global_speed_hint": "Kecepatan membaca untuk semua lini tanpa mengesampingkan kecepatannya sendiri",
-    "deleteProjectConfirm": "Hapus proyek ini secara permanen?"
+    "deleteProjectConfirm": "Hapus proyek ini secara permanen?",
+    "split_chapters": "Bab",
+    "split_paragraphs": "Paragraf",
+    "split_sentences": "Kalimat"
   },
   "common": {
     "stop": "Berhenti",
@@ -2353,7 +2356,8 @@
     "hf_token_inline_ph": "Tempel hf_… token (opsional)",
     "hf_token_active_using": "Token Hugging Face ditemukan di {{source}} — {{masked}}",
     "hf_token_replace": "Ganti…",
-    "hf_token_replace_warning": "Ini mengganti token yang disimpan untuk aplikasi ini. Token lama tidak dicabut."
+    "hf_token_replace_warning": "Ini mengganti token yang disimpan untuk aplikasi ini. Token lama tidak dicabut.",
+    "hf_token_get_short": "Dapatkan gratis →"
   },
   "history": {
     "dub_meta": "{{segments}} segmen · {{duration}} dtk",
@@ -2546,7 +2550,10 @@
     "emotion_text_ph": "mis. terdengar lelah dan sedih",
     "emotion_alpha": "Kekuatan emosi",
     "recovery_load_failed": "Tidak dapat memeriksa buku audio yang belum selesai.",
-    "recovery_retry": "Coba lagi"
+    "recovery_retry": "Coba lagi",
+    "line_gap": "Durasi jeda antarbaris",
+    "paragraph_gap": "Durasi jeda antarparagraf",
+    "trim_edges": "Hapus bagian senyap dari mesin"
   },
   "voicePanel": {
     "title": "Suara",
