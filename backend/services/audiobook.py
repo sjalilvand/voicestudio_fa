@@ -94,16 +94,7 @@ class ExpressiveOptions:
     emo_text: Optional[str] = None
     emo_alpha: Optional[float] = None
     vary_repeats: bool = False
-    # Join settings: how rendered lines are stitched, not how they are spoken.
-    line_gap_ms: int = 0
-    paragraph_gap_ms: int = 0
-    trim_edges: bool = False
-
-    JOIN_KEYS = ("line_gap_ms", "paragraph_gap_ms", "trim_edges")
-
-    def join_kwargs(self) -> dict:
-        """The join settings as keyword arguments for ``synthesize_chapter``."""
-        return dict(zip(self.JOIN_KEYS, (self.line_gap_ms, self.paragraph_gap_ms, self.trim_edges)))
+    # CLEAN-ROOM (spec W7-backend §11): join settings fields, JOIN_KEYS and join_kwargs()
 
     @property
     def is_default(self) -> bool:

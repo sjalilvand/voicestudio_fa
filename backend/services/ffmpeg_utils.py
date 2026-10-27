@@ -518,56 +518,8 @@ def ensure_media_tools_on_path() -> list[str]:
     return added
 
 
-class _ThreadProcess:
-    # These are plain SYNC pipes (io.BufferedReader), NOT asyncio
-    # StreamReaders — so callers must not `await proc.stderr.read()` on
-    # this wrapper. `communicate()`/`wait()` below are the only async
-    # entry points. run_proc_streaming_stderr checks this flag and
-    # degrades to communicate() on the fallback loop instead of awaiting
-    # the sync pipe (which raised "a coroutine or an awaitable is
-    # required" and crashed the demucs step under uvicorn --reload).
-    uses_sync_pipes = True
-
-    def __init__(self, popen):
-        self._popen = popen
-        self.returncode = popen.returncode
-        self.stdin = popen.stdin
-        self.stdout = popen.stdout
-        self.stderr = popen.stderr
-        self.pid = popen.pid
-
-    async def communicate(self, input=None):
-        loop = asyncio.get_running_loop()
-        result = await loop.run_in_executor(None, self._popen.communicate, input)
-        self.returncode = self._popen.returncode
-        return result
-
-    async def wait(self):
-        loop = asyncio.get_running_loop()
-        code = await loop.run_in_executor(None, self._popen.wait)
-        self.returncode = code
-        return code
-
-    def kill(self):
-        return self._popen.kill()
-
-    def terminate(self):
-        return self._popen.terminate()
-
-
-async def _spawn_in_thread(cmd, **kwargs):
-    stdout = kwargs.pop("stdout", asyncio.subprocess.PIPE)
-    stderr = kwargs.pop("stderr", asyncio.subprocess.PIPE)
-    stdin = kwargs.pop("stdin", None)
-
-    def pipe(value):
-        return subprocess.PIPE if value == asyncio.subprocess.PIPE else value
-
-    loop = asyncio.get_running_loop()
-    factory = lambda: subprocess.Popen(  # forward cwd / env / etc. so the fallback matches the async call
-        cmd, stdin=pipe(stdin), stdout=pipe(stdout), stderr=pipe(stderr), **kwargs
-    )
-    return _ThreadProcess(await loop.run_in_executor(None, factory))
+# CLEAN-ROOM (spec W7-backend §1): the thread-backed Popen wrapper class _ThreadProcess
+# CLEAN-ROOM (spec W7-backend §2): async _spawn_in_thread(cmd, **kwargs) launching Popen on the executor
 
 
 async def _create_subprocess(cmd, **kwargs):

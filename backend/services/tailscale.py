@@ -81,21 +81,7 @@ _FALLBACK_PORT = 10000
 _LOOPBACK_HOSTS = {"127.0.0.1", "localhost"}
 
 
-def _serve_config(cli):
-    """The node's background serve config, or None when it cannot be read."""
-    try:
-        r = subprocess.run([cli, "serve", "status", "--json"], capture_output=True, text=True, timeout=10)
-        if r.returncode != 0:
-            logger.warning("tailscale serve status exited with code %s", r.returncode)
-            return None
-        # Older/newer clients may print a version-skew warning before the JSON.
-        text = r.stdout or ""
-        brace = text.find("{")
-        data = json.loads(text[brace:]) if brace >= 0 else {}
-        return data if isinstance(data, dict) else None
-    except Exception:
-        logger.exception("Could not read the Tailscale serve config")
-        return None
+# CLEAN-ROOM (spec W7-backend §15): _serve_config(cli)
 
 
 def _is_our_proxy(proxy, backend_port: int) -> bool:
@@ -153,10 +139,7 @@ def _pick_port(config: dict, scheme: str, backend_port: int):
     return None
 
 
-def _url(scheme: str, dns: str, port: int) -> str:
-    if not dns:
-        return ""
-    return f"{scheme}://{dns}" if port == _DEFAULT_PORTS[scheme] else f"{scheme}://{dns}:{port}"
+# CLEAN-ROOM (spec W7-backend §16): _url(scheme, dns, port)
 
 
 def serve_enable(port: int | None = None) -> dict:

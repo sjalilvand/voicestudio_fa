@@ -62,42 +62,4 @@ def _below_thousand(n: int) -> str:
 
 # ── Public API ───────────────────────────────────────────────────────────────
 
-def cardinal(n: int) -> str:
-    """Render an integer 0 ≤ n ≤ 999999 as Urdu words."""
-    if type(n) is not int:
-        raise TypeError("cardinal() requires a plain integer argument")
-    if n not in range(1_000_000):
-        raise ValueError("cardinal() can spell only values in the 0 to 999999 range")
-    if n < 1000:
-        return _below_thousand(n)
-    if 1100 <= n <= 1999:
-        # Years and amounts alike: 1956 → انیس سو چھپن, 1500 → پندرہ سو.
-        hundreds, rest = divmod(n, 100)
-        head = f"{_BELOW_HUNDRED[hundreds]} {HUNDRED}"
-        return f"{head} {_BELOW_HUNDRED[rest]}" if rest else head
-    lakhs, rest = divmod(n, 100_000)
-    thousands, units = divmod(rest, 1000)
-    parts: list[str] = []
-    if lakhs:
-        parts.append(f"{_BELOW_HUNDRED[lakhs]} {LAKH}")
-    if thousands:
-        parts.append(f"{_BELOW_HUNDRED[thousands]} {THOUSAND}")
-    if units:
-        parts.append(_below_thousand(units))
-    return " ".join(parts)
-
-
-def decimal(int_part: int, frac_digits: str) -> str:
-    """3.14 → تین اعشاریہ ایک چار (fraction digits are read one by one)."""
-    digits = " ".join(_BELOW_HUNDRED[int(d)] for d in frac_digits)
-    return f"{cardinal(int_part)} {DECIMAL_WORD} {digits}"
-
-
-def percent(raw: str) -> str:
-    """'50' → پچاس فیصد; '2.5' → دو اعشاریہ پانچ فیصد."""
-    if "." in raw:
-        a, b = raw.split(".", 1)
-        body = decimal(int(a), b)
-    else:
-        body = cardinal(int(raw))
-    return f"{body} {PERCENT_WORD}"
+# CLEAN-ROOM (spec W7-backend §14): cardinal(n), decimal(int_part, frac_digits), percent(raw)
