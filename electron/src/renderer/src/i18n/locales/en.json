@@ -1677,7 +1677,6 @@
     "download_btn": "Download",
     "saving": "Saving…",
     "trim": "Trim",
-    "delete_confirm": "Delete this voice clip?",
     "view_mode_list": "List",
     "view_mode_grid": "Grid",
     "youtube_results": "YouTube Results ({{count}})",
@@ -2890,8 +2889,7 @@
     "add_term": "Add term",
     "hint": "Every Cinematic translation receives this glossary; manual terms override automatic suggestions.",
     "auto_badge": "auto",
-    "manual_badge": "manual",
-    "close": "Collapse glossary"
+    "manual_badge": "manual"
   },
   "segment": {
     "time": "Time",

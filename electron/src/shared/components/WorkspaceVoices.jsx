@@ -142,8 +142,8 @@ export default function WorkspaceVoices({
         {items.length === 0 ? (
           <div className="wv__empty">
             {defineMethod === 'design'
-              ? t('sidebar.no_designs', { defaultValue: 'No designed voices yet' })
-              : t('sidebar.no_clones', { defaultValue: 'No voice clones yet' })}
+              ? t('sidebar.no_designs' /* CLEAN-ROOM (spec W6-en §2): defaultValue */)
+              : t('sidebar.no_clones' /* CLEAN-ROOM (spec W6-en §2): defaultValue */)}
             {/* Empty states carry verbs (10x §2). */}
             <button
               type="button"

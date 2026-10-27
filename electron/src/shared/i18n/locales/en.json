@@ -679,7 +679,6 @@
     "ffmpeg_missing": "FFmpeg was not found",
     "ffmpeg_current": "Current location",
     "ffmpeg_desc": "If automatic detection fails, provide a custom path to FFmpeg.",
-    "ffmpeg_saved": "FFmpeg path set — restart backend to apply.",
     "audio_tools": "Audio tools",
     "audio_tools_desc": "The media engine (FFmpeg, FFprobe) and video downloader (yt-dlp) the app manages for you.",
     "audio_tools_origin_bundled": "Bundled",
@@ -1499,8 +1498,7 @@
     "add_term": "Add term",
     "hint": "Every Cinematic translation receives this glossary; manual terms override automatic suggestions.",
     "auto_badge": "Suggested",
-    "manual_badge": "Manual",
-    "close": "Hide glossary"
+    "manual_badge": "Manual"
   },
   "segment": {
     "time": "Time",
@@ -2448,9 +2446,7 @@
     "designed_voices": "Designed Voices",
     "no_dub_projects": "No saved dub projects",
     "no_dub_hint": "Upload a video and click Save to keep your work.",
-    "no_clones": "No voice clones yet",
     "no_clones_hint": "Record or upload audio, then click Save as Voice Profile.",
-    "no_designs": "No designed voices yet",
     "no_designs_hint": "Generate a voice and save it from History.",
     "history_subtitle": "Generation history · Stored in SQLite",
     "no_history": "No generation history",
