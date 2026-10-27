@@ -83,7 +83,7 @@
     "address": "Website address",
     "default_browser": "Default browser",
     "failed": "Could not complete that action. Check the address and connection, or open in your browser.",
-    "return_studio": "Back to VoiceStudio"
+    "return_studio": "Return to the studio"
   },
   "sidebarTools": {
     "simple": "Simple",
@@ -1660,7 +1660,7 @@
     "compute_device": "Processing device",
     "compute_device_title": "Processing device",
     "history_retention": "Generation history retention",
-    "language_desc": "Choose the language used throughout VoiceStudio.",
+    "language_desc": "Choose which language the interface uses.",
     "llmp_save_failed": "Credentials could not be saved.",
     "llmskills_save_failed": "Credentials could not be saved.",
     "proxy_cleared": "Proxy setting removed."
@@ -2675,7 +2675,7 @@
       "opt_out": "Don't ask again",
       "dismiss_aria": "Dismiss"
     },
-    "back": "Back to VoiceStudio",
+    "back": "Return to the studio",
     "coffee_desc": "Make a small one-time contribution.",
     "commercial": "Commercial license",
     "desc": "Help fund ongoing maintenance and make local voice tools available to everyone.",
@@ -2720,7 +2720,7 @@
     "benefit_source": "Source-available core",
     "why_title": "Why businesses choose VoiceStudio",
     "pricing_title": "Pricing",
-    "back": "Back to VoiceStudio",
+    "back": "Return to the studio",
     "badge": "Commercial license",
     "benefit_cost": "Predictable costs",
     "benefit_cost_desc": "Choose terms that fit your deployment instead of paying per generated minute.",
@@ -2730,7 +2730,7 @@
     "benefit_support": "Direct support",
     "benefit_support_desc": "Get help with rollout, configuration, and production issues.",
     "benefit_team_desc": "Give the whole team one consistent local workflow.",
-    "desc": "License VoiceStudio for organizations that need commercial terms and direct assistance.",
+    "desc": "Commercial terms and direct assistance are available to organizations through this license.",
     "hero_title": "Bring private voice production to your team",
     "pricing_desc": "Pricing is tailored to your team size and deployment needs.",
     "request_quote": "Request pricing",
