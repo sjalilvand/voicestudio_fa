@@ -198,9 +198,9 @@ class OpenAICompatBackend(LLMBackend):
         p = llm_providers.active_provider()
         if p is None:
             return False, (
-                "No LLM configured. Add a provider key in Settings → LLM Providers "
-                "(OpenAI/OpenRouter/OrcaRouter/Cheaper Inference/Groq/… or a local "
-                "Ollama), or set TRANSLATE_BASE_URL (+ TRANSLATE_API_KEY)."
+                "Add a provider key in Settings -> LLM Providers (for example OpenAI, "
+                "Cheaper Inference, or Groq), choose local Ollama, or set "
+                "TRANSLATE_BASE_URL with optional TRANSLATE_API_KEY."
             )
         error = llm_providers.configuration_error(p)
         if error:

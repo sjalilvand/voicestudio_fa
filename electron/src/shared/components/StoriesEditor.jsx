@@ -177,9 +177,7 @@ export default function StoriesEditor({ profiles = [] }) {
   }, []);
 
   const [activeTrack, setActiveTrack] = useState(null);
-  // Bumped by clearScript so a preview that was still generating when the
-  // script went away never plays or writes audio back for a deleted line.
-  const previewGenRef = useRef(0);
+  const previewEpochRef = useRef(0);
   const playingPreviewRef = useRef(null);
   const [activeTab, setActiveTab] = useState('script');
   const [splitOpen, setSplitOpen] = useState(false);
@@ -391,33 +389,33 @@ export default function StoriesEditor({ profiles = [] }) {
     setTracks((prev) => [...prev, makeTrack('narrator', `# ${t('stories.chapterN', { n })}`)]);
   }, [tracks, setTracks, t]);
 
-  // Clear every line and chapter at once (an import can add hundreds; the
-  // per-line trash icon was the only way to undo one). Cast is kept.
   const clearScript = useCallback(async () => {
-    const count = tracks.length + (splitText.trim() ? 1 : 0);
-    if (!count) return;
-    const ok = await askConfirm(t('stories.clearConfirm', { count }), t('stories.clearScript'));
-    if (!ok) return;
-    // Invalidate previews still generating for lines that are about to go,
-    // and stop whatever is playing (#2203 review).
-    previewGenRef.current += 1;
+    const hasImportedDraft = splitText.trim().length > 0;
+    const entriesToRemove = tracks.length + Number(hasImportedDraft);
+    if (entriesToRemove === 0) return;
+    const accepted = await askConfirm(
+      t('stories.clearConfirm', { count: entriesToRemove }),
+      t('stories.clearScript'),
+    );
+    if (!accepted) return;
+
+    previewEpochRef.current += 1;
     stopActivePlayback();
-    // An empty script is exactly what the first-run bootstrap below treats as
-    // "pristine", so mark the sample as shown or it would reseed the demo.
+    playingPreviewRef.current = null;
     sampleBootstrapRef.current = true;
     try {
       localStorage.setItem(DEFAULT_SAMPLE_KEY, '1');
     } catch {
-      // Storage unavailable: the ref alone covers this mounted session.
+      // The in-memory guard above still prevents reseeding for this mount.
     }
-    setTracks((prev) => {
-      prev.forEach(releasePreview);
+    setTracks((liveTracks) => {
+      for (const item of liveTracks) releasePreview(item);
       return [];
     });
     setSplitText('');
     setSplitOpen(false);
     toast.success(t('stories.cleared'));
-  }, [tracks.length, splitText, setTracks, t]);
+  }, [setTracks, splitText, t, tracks.length]);
 
   const splitStatus = useMemo(() => {
     if (!splitText) return t('stories.pasteAbove');
@@ -507,10 +505,10 @@ export default function StoriesEditor({ profiles = [] }) {
     async (track) => {
       const raw = (track.text || '').trim();
       if (!raw) return;
-      const gen = previewGenRef.current;
-      const stale = () =>
-        previewGenRef.current !== gen ||
-        !useAppStore.getState().storyTracks.some((tk) => tk.id === track.id);
+      const startingEpoch = previewEpochRef.current;
+      const previewWasInvalidated = () =>
+        startingEpoch !== previewEpochRef.current ||
+        !useAppStore.getState().storyTracks.some((candidate) => candidate.id === track.id);
       const playback = { id: track.id };
       const releasePlayback = () => {
         if (playingPreviewRef.current === playback) playingPreviewRef.current = null;
@@ -524,7 +522,7 @@ export default function StoriesEditor({ profiles = [] }) {
       if (!hasStoryMarkers(raw)) {
         try {
           const blob = await fetchChunkBlob(raw, pid, spd);
-          if (stale()) return;
+          if (previewWasInvalidated()) return;
           const url = URL.createObjectURL(blob);
           setTracks((prev) =>
             prev.map((tk) => {
@@ -559,7 +557,7 @@ export default function StoriesEditor({ profiles = [] }) {
             seg.type === 'chunk' ? await fetchChunkBlob(seg.text, seg.profileId, spd) : null,
           );
         }
-        if (stale()) return;
+        if (previewWasInvalidated()) return;
         let cursor = 0;
         const finish = () => {
           setTracks((prev) =>
@@ -571,7 +569,7 @@ export default function StoriesEditor({ profiles = [] }) {
           );
         };
         const step = () => {
-          if (stale()) return;
+          if (previewWasInvalidated()) return;
           while (cursor < parsed.length) {
             const seg = parsed[cursor];
             const blob = chunkBlobs[cursor];

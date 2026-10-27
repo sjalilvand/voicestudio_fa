@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import time
 import asyncio
 import logging
@@ -350,43 +351,38 @@ def _dialect_flags(req, applied: bool) -> dict:
 
 
 def _guess_lang_from_text(segments) -> str | None:
-    """Best-effort source language from segment text, by script.
-
-    Used only as a last resort when neither the request nor the job carries a
-    detected language. Without this, the bare "en" fallback below forces
-    en -> en on non-English audio (e.g. Korean), which has no Argos package and
-    fails every segment even though ASR detected the language correctly.
-    """
-    text = " ".join((getattr(s, "text", "") or "") for s in (segments or [])[:8])
-    has = lambda lo, hi: any(lo <= ord(c) <= hi for c in text)
-    if has(0x3040, 0x30FF):
-        return "ja"  # Hiragana/Katakana — check before CJK (Japanese uses Kanji too)
-    if has(0xAC00, 0xD7A3) or has(0x1100, 0x11FF):
-        return "ko"  # Hangul
-    if has(0x4E00, 0x9FFF):
-        return "zh"  # CJK ideographs
-    if has(0x0400, 0x04FF):
-        return "ru"  # Cyrillic
-    if has(0x0600, 0x06FF):
-        return "ar"  # Arabic
+    """Infer a likely source language from scripts in the first few captions."""
+    text = " ".join(str(getattr(segment, "text", "") or "") for segment in (segments or ())[:8])
+    script_codes = (
+        (r"[\u3040-\u30ff]", "ja"),
+        (r"[\uac00-\ud7a3\u1100-\u11ff]", "ko"),
+        (r"[\u4e00-\u9fff]", "zh"),
+        (r"[\u0400-\u04ff]", "ru"),
+        (r"[\u0600-\u06ff]", "ar"),
+    )
+    for pattern, code in script_codes:
+        if re.search(pattern, text):
+            return code
     return None
 
 
 def _resolve_source_lang(req: TranslateRequest) -> str | None:
-    """Prefer explicit or job source; unknown ASR needs user selection.
+    """Choose an explicit, job-derived, or text-inferred source language."""
+    requested = getattr(req, "source_lang", None)
+    if requested:
+        return requested
 
-    Text-only calls retain their legacy script guess / English fallback.
-    """
-    if getattr(req, "source_lang", None):
-        return req.source_lang
-    if getattr(req, "job_id", None):
-        job = _get_job(req.job_id)
+    job_id = getattr(req, "job_id", None)
+    if job_id:
+        job = _get_job(job_id)
         if job:
-            source = job.get("source_lang_override") or job.get("source_lang")
-            if source:
-                return source
+            if job.get("source_lang_override"):
+                return job["source_lang_override"]
+            if job.get("source_lang"):
+                return job["source_lang"]
             if job.get("source_lang_detection_missing"):
                 return None
+
     return _guess_lang_from_text(getattr(req, "segments", None)) or "en"
 
 

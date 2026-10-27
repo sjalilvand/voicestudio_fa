@@ -687,3 +687,10 @@ html[data-theme-id='heritage'] {
     transition: none;
   }
 }
+
+/* macOS draws its traffic lights over the web content. The tabs layout reserves
+   64px from the window edge for them; the breadcrumb layout reaches the same
+   total by adding whatever the header's own start padding (12px) leaves over. */
+.header-area__lead--mac-inset {
+  margin-inline-start: calc(64px - var(--header-area-pad-x, 12px));
+}

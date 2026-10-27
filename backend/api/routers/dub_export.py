@@ -99,11 +99,11 @@ def _unique_stamp() -> str:
     return f"{time.strftime('%Y%m%dT%H%M%S')}-{uuid.uuid4().hex[:8]}"
 
 
-#: Seconds of silence on a `/tasks/stream` before a keepalive comment goes out.
-#: A task that is busy but quiet — ffmpeg on a long video, a slow TTS segment,
-#: a job queued behind another — leaves the stream byte-silent, and byte-silent
-#: SSE gets severed by the desktop webview, Chrome's ~5 min cap or a proxy's
-#: idle timeout (#1196, #2108). Comments are invisible to every consumer.
+#: Longest quiet spell, in seconds, before `/tasks/stream` writes a keepalive
+#: comment. A task can be busy yet silent (a long ffmpeg run, one slow TTS
+#: segment, a job waiting behind another); with nothing on the wire, desktop
+#: webviews, Chrome (~5 min cap) and proxy idle timeouts close the stream.
+#: Read at call time so tests can patch it.
 TASK_STREAM_KEEPALIVE_S = 15.0
 
 
@@ -306,6 +306,7 @@ async def stream_task(task_id: str, after_seq: int = 0):
                 try:
                     evt = await asyncio.wait_for(q.get(), timeout=TASK_STREAM_KEEPALIVE_S)
                 except asyncio.TimeoutError:
+                    # SSE comment line: ignored by every client, but keeps bytes flowing.
                     yield ": keepalive\n\n"
                     continue
                 if evt is None:

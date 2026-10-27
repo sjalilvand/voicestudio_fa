@@ -373,27 +373,18 @@ it('shows a populated, usable reconnect form for an expired remote session while
   }
 });
 
-it('offers a remote backend instead of a doomed local install on Intel Macs', () => {
+it('replaces Intel-Mac installation controls with the connection editor', () => {
   backendStatus.setupIssue = 'unsupported_platform';
-  render(
-    <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-    >
-      <BackendGate>
-        <div>workspace</div>
-      </BackendGate>
-    </QueryClientProvider>,
-  );
+  renderGate('setup_required');
 
-  expect(screen.getByText(i18n.t('backend.setup_unsupported_platform'))).toBeVisible();
+  const remoteAddress = screen.getByRole('textbox', {
+    name: i18n.t('settings.remote_backend_url'),
+  });
+  expect(remoteAddress).toBeVisible();
+  expect(screen.getByText(i18n.t('backend.setup_unsupported_platform'))).toBeInTheDocument();
   expect(
     screen.queryByRole('button', { name: i18n.t('backend.setup_required') }),
   ).not.toBeInTheDocument();
-  expect(
-    screen.getByRole('textbox', {
-      name: i18n.t('settings.remote_backend_url'),
-    }),
-  ).toBeVisible();
 });
 
 it.each([

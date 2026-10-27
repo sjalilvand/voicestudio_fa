@@ -254,12 +254,7 @@ export function bundledUvPath(resourcesPath: string, platform = process.platform
   return join(resourcesPath, 'tools', platform === 'win32' ? 'uv.exe' : 'uv');
 }
 
-/**
- * Intel Macs (#889, #2365): PyTorch ships no macOS x86_64 wheels, so the
- * managed runtime can never resolve there. The setup screen must say so
- * before any install is offered — never after a multi-GB failure.
- * Testable via parameters following bundledUvPath's precedent.
- */
+/** Whether this host has no installable managed AI runtime. */
 export function isUnsupportedPlatform(platform = process.platform, arch = process.arch): boolean {
   return platform === 'darwin' && arch === 'x64';
 }
@@ -1086,8 +1081,6 @@ export class BackendSupervisor extends EventEmitter<{
       this.installation ||
       this.cleaningRuntime ||
       this.stage !== 'setup_required' ||
-      // The setup screen hides the install CTA here; refuse direct IPC too —
-      // the dependency set can never resolve on this host (#2365).
       isUnsupportedPlatform()
     )
       return;

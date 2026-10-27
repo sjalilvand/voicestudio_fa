@@ -162,10 +162,10 @@ and with no LLM configured (or on any LLM error) it simply does nothing.
 
 **Settings → System → LLM Providers** is the one place to set up the LLM. Pick a
 provider, paste its API key, choose a model, **Test** it, and "use for
-translation." Supported: OpenAI, OpenRouter, OrcaRouter, Cheaper Inference, Opper, API Route, Groq,
-Cerebras, Google AI (Gemini), Mistral, Cohere, NVIDIA, GitHub Models, Cloudflare,
-Hugging Face, SambaNova, SiliconFlow, iFLYTEK Astron MaaS, **local Ollama / LM Studio**
-(offline, no key), and a **Custom** OpenAI-compatible endpoint.
+translation." Supported choices are OpenAI, OpenRouter, OrcaRouter, Cheaper Inference,
+Opper, API Route, Groq, Cerebras, Google AI (Gemini), Mistral, Cohere, NVIDIA, GitHub Models,
+Cloudflare, Hugging Face, SambaNova, SiliconFlow, iFLYTEK Astron MaaS,
+**local Ollama / LM Studio (offline, no key)**, and a **Custom OpenAI-compatible endpoint**.
 
 Keys entered here are stored **encrypted** on your machine and never returned to
 the UI. For a fully offline setup, pick **Ollama** (`ollama pull llama3.1`) or
@@ -177,12 +177,11 @@ provider via environment variables (e.g. `GROQ_API_KEY`, or the legacy
 OrcaRouter can be configured without the UI with `ORCAROUTER_API_KEY`, and its
 defaults can be overridden with `ORCAROUTER_BASE_URL` and `ORCAROUTER_MODEL`.
 
-[Cheaper Inference](https://cheaperinference.com) is an OpenAI-compatible
-gateway to models from several labs (default model `gpt-5.4-mini`).
-Pricing varies by model and request; check the [current provider catalog](https://cheaperinference.com/docs).
-It can be configured without the UI with `CHEAPER_INFERENCE_API_KEY`, and its
-defaults can be overridden with `CHEAPER_INFERENCE_BASE_URL` and
-`CHEAPER_INFERENCE_MODEL`.
+[Cheaper Inference](https://cheaperinference.com) is an OpenAI-compatible gateway
+covering models from several labs. It defaults to `gpt-5.4-mini`; pricing depends
+on the selected model and request, as listed in its [provider catalog](https://cheaperinference.com/docs).
+Without the UI, set `CHEAPER_INFERENCE_API_KEY`; override the defaults with
+`CHEAPER_INFERENCE_BASE_URL` and `CHEAPER_INFERENCE_MODEL`.
 
 [Opper](https://opper.ai) is an EU-hosted AI gateway with 700+ models from 50+
 providers behind one OpenAI-compatible API and one key (default model

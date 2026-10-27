@@ -277,12 +277,11 @@ class TTSBackend(ABC):
     #: so this is a discoverability hint, not an enforcement gate.
     supports_emotion: bool = False
 
-    #: How ``instruct`` is read (#2389): ``"tags"`` for OmniVoice's closed
-    #: voice-design vocabulary, which rejects anything else, or ``"freeform"``
-    #: for engines that take a written description as-is (Qwen3-TTS
-    #: VoiceDesign, VoxCPM2, audio.cpp) or ignore it. Surfaced via
-    #: ``list_backends()`` so clients reduce prose to tags only where the
-    #: engine requires it.
+    #: How this engine reads the ``instruct`` text of a request. ``"tags"`` is
+    #: a closed list of voice-design attributes (the OmniVoice family) and
+    #: anything else must be filtered out; ``"freeform"`` means the text is
+    #: used as written or ignored. Reported by ``list_backends()`` so clients
+    #: know whether to sanitise before sending.
     instruct_vocabulary: Literal["tags", "freeform"] = "freeform"
 
     def ensure_ready(self) -> None:
@@ -468,17 +467,14 @@ class TTSBackend(ABC):
     max_ref_seconds: Optional[float] = None
     ref_strategy: Optional[str] = None
 
-    #: Curated model keys that DO accept a reference clip, for an adapter
-    #: whose ``supports_cloning`` is model-dependent (a property rather than
-    #: a plain bool). Empty when cloning is a fixed fact about the engine.
-    #: Lets the cloning gate name the one-setting fix — pick this model —
-    #: instead of telling the user their engine can't clone at all (#2201).
+    #: Curated model-picker keys that accept reference audio for adapters whose
+    #: cloning capability depends on the selected model.
     cloning_model_keys: tuple[str, ...] = ()
 
     @classmethod
     def cloning_model_labels(cls) -> tuple[str, ...]:
-        """:attr:`cloning_model_keys` as the model picker labels them."""
-        return cls.cloning_model_keys
+        """Expose the declared keys using their default picker text."""
+        return tuple(cls.cloning_model_keys)
 
     #: GPU/accelerator targets the engine can run on. Surfaced via the
     #: Engine Compatibility Matrix (Plan 02-04 / ENGINE-06) so users can
@@ -2854,6 +2850,12 @@ class MLXAudioBackend(TTSBackend):
     gpu_compat = ("mps", "cpu")
     # generate() seeds mlx's RNG from the request's seed.
     supports_generation_seed = True
+    cloning_model_keys = ("csm",)
+
+    @classmethod
+    def cloning_model_labels(cls) -> tuple[str, ...]:
+        labels = _MLX_AUDIO_MODEL_LABELS
+        return tuple(labels.get(model_key, model_key) for model_key in cls.cloning_model_keys)
 
     # A curated subset surfaced by default — the full mlx-audio roster is
     # larger but these cover the useful tiers: small multilingual (Kokoro),
@@ -2986,23 +2988,7 @@ class MLXAudioBackend(TTSBackend):
         curated set, only CSM (`mlx-community/csm-1b-8bit`) is confirmed to
         accept a reference prompt — default False for every other model,
         curated or user-supplied, until positively confirmed."""
-        return self._model_id in {
-            self.CURATED_MODELS.get(key) for key in self.cloning_model_keys
-        }
-
-    #: The curated picks that take a reference prompt. Kept beside
-    #: ``supports_cloning`` above so the two cannot drift — the property reads
-    #: this list, and ``test_cloning_model_keys_match_supports_cloning``
-    #: instantiates the engine on each key to prove the claim.
-    cloning_model_keys = ("csm",)
-
-    @classmethod
-    def cloning_model_labels(cls) -> tuple[str, ...]:
-        # The picker calls it "CSM (voice cloning)"; quote it verbatim so the
-        # error names what the user is actually looking at.
-        return tuple(
-            _MLX_AUDIO_MODEL_LABELS.get(key, key) for key in cls.cloning_model_keys
-        )
+        return self._curated_key() in self.cloning_model_keys
 
     def _ensure_loaded(self):
         if self._model is not None:
@@ -3420,9 +3406,12 @@ class GPTSoVITSBackend(TTSBackend):
                     "python api_v2.py -a 127.0.0.1 -p 9880 -c "
                     "GPT_SoVITS/configs/tts_infer.yaml"
                 )
+            # The server answered, so it is up; it just refused the probe.
             return False, (
-                f"GPT-SoVITS server at {url} returned HTTP {exc.status}. "
-                "Check the server logs and access configuration."
+                f"GPT-SoVITS server at {url} answered the availability check "
+                f"with HTTP {exc.status}. Check the server logs and its access "
+                "configuration (a proxy or auth layer in front of it can block "
+                "this request)."
             )
         except Exception:
             # Connection refused / DNS failure / unsafe endpoint / etc.
@@ -3455,41 +3444,38 @@ class GPTSoVITSBackend(TTSBackend):
         }
         text_lang = lang_map.get(language.lower() if language else "en", "en")
 
-        # api_v2 takes a JSON body to /tts (api.py v1 took a query string
-        # at the root URL with different field names). The two protocols do
-        # not share a schema, so sending v1-shaped params to an api_v2
-        # server produces a 404 and a silent failure.
-        body: dict[str, object] = {
+        # api_v2 wants a reference clip on every call. A request-supplied clip
+        # (profile or upload) wins; plain TTS falls back to the environment.
+        from_request = bool(ref_audio)
+        if from_request:
+            clip = ref_audio
+            transcript = ref_text or ""
+            prompt_lang = "auto"  # a profile stores the output language, not the clip's
+        else:
+            clip = os.environ.get("OMNIVOICE_GPTSOVITS_REF_AUDIO") or None
+            transcript = (os.environ.get("OMNIVOICE_GPTSOVITS_REF_TEXT") or "") if clip else ""
+            env_lang = (os.environ.get("OMNIVOICE_GPTSOVITS_REF_LANG") or "").strip().lower()
+            prompt_lang = lang_map.get(env_lang, "auto")
+        if not clip:
+            raise TTSInputError(
+                "GPT-SoVITS api_v2 needs a reference clip for every request. "
+                "Pick a voice profile that has one, or set "
+                "OMNIVOICE_GPTSOVITS_REF_AUDIO (a path the GPT-SoVITS server "
+                "can read) together with OMNIVOICE_GPTSOVITS_REF_TEXT (what "
+                "the clip says) to give plain TTS a default voice."
+            )
+        body = {
             "text": text,
             "text_lang": text_lang,
+            "ref_audio_path": clip,
+            "prompt_text": transcript or "",
+            "prompt_lang": prompt_lang,
+            # VoiceStudio already chunks long text; ask the server not to
+            # re-split it into short fragments.
             "text_split_method": "cut0",
             "media_type": "wav",
             "streaming_mode": False,
         }
-        # api_v2 has no server-side default reference (api.py's -dr/-dt/-dl
-        # flags are v1 only) and answers 400 without one, so a plain TTS
-        # request — no voice profile — needs the clip from the environment.
-        # Profiles store the desired output language, not the reference's
-        # spoken language. Let api_v2 detect the reference transcript language
-        # independently, including mixed-language clips, instead of forcing
-        # it through the target language's phonemizer.
-        prompt_lang = "auto"
-        if not ref_audio:
-            ref_audio = os.environ.get("OMNIVOICE_GPTSOVITS_REF_AUDIO") or None
-            ref_text = os.environ.get("OMNIVOICE_GPTSOVITS_REF_TEXT", "") if ref_audio else ""
-            prompt_lang = lang_map.get(
-                os.environ.get("OMNIVOICE_GPTSOVITS_REF_LANG", "").lower(), "auto"
-            )
-        if not ref_audio:
-            raise TTSInputError(
-                "GPT-SoVITS (api_v2) needs a reference clip for every request: "
-                "pick a voice profile, or set OMNIVOICE_GPTSOVITS_REF_AUDIO (path "
-                "readable by the server) and OMNIVOICE_GPTSOVITS_REF_TEXT (its "
-                "transcript) as the default voice."
-            )
-        body["ref_audio_path"] = ref_audio
-        body["prompt_text"] = ref_text or ""
-        body["prompt_lang"] = prompt_lang
 
         speed = kw.get("speed", 1.0)
         if speed != 1.0:
@@ -3977,14 +3963,11 @@ def preset_voices_of(cls) -> list[str]:
 
 
 def list_backends(*, include_hidden: bool = False) -> list[dict]:
-    """Enumerate the engine catalogue with each backend's availability state.
+    """Enumerate every registered backend with its availability state.
 
-    On MPS, the canonical ``omnivoice`` id already resolves to the killable
-    OmniVoice sidecar. The explicit ``omnivoice-subprocess`` compatibility id
-    is therefore omitted from the normal catalogue so the picker does not
-    advertise two choices with the same runtime behavior. Internal callers
-    that must validate or preserve a stored compatibility id can pass
-    ``include_hidden=True``.
+    On MPS, the explicit ``omnivoice-subprocess`` compatibility entry is
+    omitted unless ``include_hidden`` is true. Internal callers validating or
+    retaining that stored id must opt in to hidden entries.
 
     Per-entry shape (ENGINE-05 + ENGINE-06):
 
@@ -4005,7 +3988,8 @@ def list_backends(*, include_hidden: bool = False) -> list[dict]:
           "gpu_compat":     list[str],              # subset of {cuda, rocm, mps, vulkan, xpu, npu, cpu}
           "supports_cloning": Optional[bool],       # True/False from the class attr; None when
                                                     #   model-dependent (property, e.g. mlx-audio)
-          "instruct_vocabulary": "tags" | "freeform",  # OmniVoice tag set vs model-native text
+          "instruct_vocabulary": "tags" | "freeform",  # how ``instruct`` is read: closed OmniVoice
+                                                    #   attribute list vs text used as written
           "supports_voice_design": Optional[bool],  # False = needs a reference clip;
                                                     #   None = undeclared (design allowed)
           "preset_voices":  list[str],              # built-in voice ids a request may pick (``voice``); [] = none
@@ -4044,11 +4028,7 @@ def list_backends(*, include_hidden: bool = False) -> list[dict]:
 
     out: list[dict] = []
     for bid, cls in _REGISTRY.items():
-        if (
-            not include_hidden
-            and caps.family == "mps"
-            and bid == "omnivoice-subprocess"
-        ):
+        if not include_hidden and caps.family == "mps" and bid == "omnivoice-subprocess":
             continue
         cls = _effective_backend_class(bid, cls, caps.family)
         try:
@@ -4136,8 +4116,6 @@ def list_backends(*, include_hidden: bool = False) -> list[dict]:
             # Graded-emotion capability (#1208) — drives the Audiobook emotion
             # panel's engine gate. Class attr, defaults False.
             "supports_emotion": bool(getattr(cls, "supports_emotion", False)),
-            # "tags" = OmniVoice's closed design vocabulary; "freeform" = the
-            # text reaches the model as written (#2389).
             "instruct_vocabulary": getattr(cls, "instruct_vocabulary", "freeform"),
             # Voice Design gate: False hides Design for reference-only engines.
             "supports_voice_design": voice_design_support(cls),
@@ -4369,44 +4347,33 @@ def _installed_kokoro_language_options() -> list[str]:
 
 
 def cloning_unavailable_detail(engine_id: str, backend, cloning_purpose: str) -> str:
-    """Why the active engine can't clone, and the smallest change that fixes it.
+    """Explain a cloning refusal, including a model change when applicable."""
+    adapter_type = backend.__class__
+    class_capability = getattr(adapter_type, "supports_cloning", True)
+    picker_names: tuple[str, ...]
+    try:
+        label_method = getattr(adapter_type, "cloning_model_labels")
+        picker_names = tuple(filter(None, map(str, label_method())))
+    except Exception:
+        picker_names = ()
 
-    ``supports_cloning`` is an engine-level flag for every backend except the
-    adapters that multiplex models, where it is a property computed from the
-    *model* currently selected. For those, "this engine doesn't support voice
-    cloning" is simply untrue — the engine clones fine, just not with the pick
-    it is running. #2201 told an mlx-audio user to abandon the engine for one
-    of thirteen others while their own model picker was offering
-    "CSM (voice cloning)" one setting away.
-
-    So: name the model in the way, name the model that works, and keep the
-    engine list as the fallback it should always have been.
-    """
-    cls = type(backend)
-    declared = getattr(cls, "supports_cloning", True)
-    labels = tuple(cls.cloning_model_labels()) if hasattr(cls, "cloning_model_labels") else ()
     alternatives = ", ".join(cloning_capable_engine_ids())
-    # A plain bool is a fact about the engine; a property is a fact about the
-    # model, and only the second case has a model to switch to.
-    if not isinstance(declared, bool) and labels:
-        current = ""
+    if picker_names and not isinstance(class_capability, bool):
         try:
-            current = backend.model_identity() or ""
-        except Exception:  # noqa: BLE001 — naming the model is best-effort
-            current = ""
-        running = f" ({current})" if current else ""
+            current_model = str(backend.model_identity() or "").strip()
+        except Exception:
+            current_model = ""
+        model_suffix = f" (currently {current_model})" if current_model else ""
         return (
-            f"The '{engine_id}' engine can clone voices, but not with the model "
-            f"it is running{running}, so {cloning_purpose} can't preserve speaker "
-            f"voices. Set this engine's model to {' or '.join(labels)} in Model "
-            f"Catalogue — nothing else has to change — or switch engine to one "
-            f"of: {alternatives}."
+            f"'{engine_id}' supports reference voices, but its selected model{model_suffix} does not. "
+            f"That prevents {cloning_purpose} from retaining each speaker. Choose "
+            f"{' or '.join(picker_names)} for this engine in Model Catalogue; the remaining settings "
+            f"can stay as they are. You can instead choose one of these engines: {alternatives}."
         )
     return (
         f"The active TTS engine '{engine_id}' doesn't support voice cloning, "
         f"so {cloning_purpose} can't preserve speaker voices. Switch to one "
-        f"of: {alternatives} in "
-        "Model Catalogue, or use OmniVoice for this job."
+        f"of: {alternatives} in Model Catalogue, or use OmniVoice for this job."
     )
 
 
@@ -4444,8 +4411,6 @@ def active_routing() -> dict | None:
     """
     try:
         active = active_backend_id()
-        # The MPS picker intentionally hides the redundant compatibility id,
-        # but routing must still describe a saved or environment-pinned id.
         for b in list_backends(include_hidden=True):
             if b.get("id") == active:
                 return {

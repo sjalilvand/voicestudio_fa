@@ -893,8 +893,7 @@ def _is_asr_engine_id(model: Optional[str]) -> bool:
 
 
 def _backend_request_kwargs(backend, options: dict) -> dict:
-    """The subset of OpenAI-derived decode options this backend's
-    ``transcribe()`` declares (shared with dictation's vocabulary prompt)."""
+    """Decode options from the request that this backend's ``transcribe`` accepts."""
     from services.asr_backend import transcribe_request_kwargs
     return transcribe_request_kwargs(backend, options)
 

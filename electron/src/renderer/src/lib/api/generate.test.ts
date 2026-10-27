@@ -192,10 +192,10 @@ describe('toGenerateForm', () => {
     ).toBe(false);
   });
 
-  it('sends the Voice Design recipe with the take (#2389)', () => {
-    const designRecipe = { description: 'raspy', picks: { Pitch: 'low pitch' } };
-    const form = toGenerateForm({ ...BASE_INPUT, designRecipe });
-    expect(JSON.parse(String(form.get('design_recipe')))).toEqual(designRecipe);
+  it('attaches the design recipe as JSON only when one is given', () => {
+    const recipe = { description: 'a calm narrator', picks: { Pitch: 'low pitch' } };
+    const withRecipe = toGenerateForm({ ...BASE_INPUT, designRecipe: recipe });
+    expect(JSON.parse(String(withRecipe.get('design_recipe')))).toEqual(recipe);
     expect(toGenerateForm(BASE_INPUT).has('design_recipe')).toBe(false);
   });
 
@@ -228,15 +228,24 @@ describe('toGenerateForm', () => {
     expect(form.has('emo_alpha')).toBe(false);
   });
 
-  it('sends a free-form engine its description as written (#2389)', () => {
-    const description = ' raspy old female, scottish accent ';
+  it('keeps a free-form engine instruct as written, trimmed', () => {
+    const prose = 'a tired lighthouse keeper, gravelly, speaking slowly';
+    const form = toGenerateForm({
+      ...BASE_INPUT,
+      profileId: 'p1',
+      instruct: `  ${prose}  `,
+      instructVocabulary: 'freeform',
+    });
+    expect(form.get('instruct')).toBe(prose);
+    // The tag engines still drop it.
     expect(
       toGenerateForm({
         ...BASE_INPUT,
-        instruct: description,
-        instructVocabulary: 'freeform',
-      }).get('instruct'),
-    ).toBe('raspy old female, scottish accent');
+        profileId: 'p1',
+        instruct: prose,
+        instructVocabulary: 'tags',
+      }).has('instruct'),
+    ).toBe(false);
   });
 });
 

@@ -369,26 +369,30 @@ def _decode_audio_16k_mono(audio_path: str):
 # ── Protocol ────────────────────────────────────────────────────────────────
 
 
-#: Per-request decode options a backend may accept as keyword arguments on
-#: ``transcribe()``. Callers exposing OpenAI's transcription parameters
-#: (``/v1/audio/transcriptions`` and ``/translations``) and the dictation
-#: vocabulary prompt pass only the ones a backend's signature declares (see
-#: ``transcribe_request_kwargs``), so an engine that cannot honour one is never
-#: handed it and never fails on an unexpected keyword.
+#: Optional decode settings that ``transcribe()`` may take as keyword arguments.
+#: The OpenAI transcription routes and the dictation vocabulary prompt both
+#: filter their settings through ``transcribe_request_kwargs`` below, so an
+#: engine only ever receives the options its own signature names.
 TRANSCRIBE_REQUEST_OPTIONS = ("language", "initial_prompt", "temperature", "task")
 
 
 def transcribe_request_kwargs(backend, options: dict) -> dict:
-    """The subset of per-request decode ``options`` this backend's
-    ``transcribe()`` declares. An engine that can't honour one (e.g. a
-    CTC model has no prompt) is simply not handed it."""
+    """Pick the entries of ``options`` that ``backend.transcribe`` can take.
+
+    An entry survives when its name is a known request option, appears as a
+    named parameter in the transcribe signature, and carries a value other
+    than None. If the signature cannot be read, nothing is passed.
+    """
     try:
-        params = inspect.signature(backend.transcribe).parameters
+        declared = inspect.signature(backend.transcribe).parameters
     except (TypeError, ValueError):
         return {}
     return {
-        k: v for k, v in options.items()
-        if k in TRANSCRIBE_REQUEST_OPTIONS and k in params and v is not None
+        name: value
+        for name, value in options.items()
+        if name in TRANSCRIBE_REQUEST_OPTIONS
+        and name in declared
+        and value is not None
     }
 
 
@@ -1073,18 +1077,13 @@ class WhisperXBackend(ASRBackend):
         # Windows (#479). Same 16 kHz mono s16le array whisperx expects.
         audio = _decode_audio_16k_mono(audio_path)
         try:
-            # whisperx's pipeline takes language/task per call; prompt and
-            # temperature are fixed load-time asr_options, so this backend
-            # does not advertise them (the OpenAI route passes only what a
-            # backend's signature accepts).
             result = self._asr.transcribe(
-                audio, **whisper_request_options(language, None, None, task),
+                audio,
+                **whisper_request_options(language, None, None, task),
             )
         except IndexError:
-            # WhisperX pipeline crashes with IndexError if VAD produces 0 segments
-            logger.info("whisperx transcribe threw IndexError (likely 0 VAD segments). Returning empty result.")
+            logger.info("whisperx found no speech segments")
             result = {"segments": [], "language": language or "en"}
-            
         lang = result.get("language", "en")
 
         # Forced alignment when available — drastically improves word boundary
@@ -1397,17 +1396,9 @@ class MLXWhisperBackend(ASRBackend):
             "MLX Whisper transcribing %s (model=%s, word_timestamps=%s)",
             audio_path, self._model_name, word_timestamps,
         )
-        # Decode once here, rather than handing mlx_whisper a path. Given a
-        # path it calls whisper.audio.load_audio, which shells out to a bare
-        # "ffmpeg" PATH lookup -- the same lookup the WhisperX backend was
-        # moved off in #479, and one that cannot find the bundled
-        # imageio-ffmpeg binary because that is named ffmpeg-<plat>-vN. On a
-        # clean from-source install with no system ffmpeg this fails the whole
-        # request with [Errno 2] No such file or directory: ffmpeg.
-        #
-        # The aligner below already used the validated decoder, so this was one
-        # call site out of two in the same method. Reusing that decode also
-        # stops the file being decoded twice per transcription.
+        # Decode here, once, with the validated ffmpeg: handed a path,
+        # mlx_whisper runs a bare `ffmpeg` from PATH, which a from-source
+        # install may not have (same fix WhisperX got in #479).
         audio = _decode_audio_16k_mono(audio_path)
         result = mlx_whisper.transcribe(
             audio,
@@ -1416,19 +1407,11 @@ class MLXWhisperBackend(ASRBackend):
             **WHISPER_LONG_FORM_OPTIONS,
             **whisper_request_options(language, initial_prompt, temperature, task),
         )
-        # Forced alignment, same as WhisperX (#1127). On Apple Silicon this
-        # backend replaces WhisperX for dubbing — CTranslate2 has no Metal
-        # build, so WhisperX transcribes on the CPU while this runs the *same*
-        # whisper-large-v3 on the GPU. But lip-sync accuracy depends on
-        # wav2vec2 word boundaries, not just on being fast, so we keep them:
-        # Whisper's own timestamps are ±100-300 ms, the aligner's are ±10-30 ms.
-        # Degrades gracefully — a language with no aligner keeps MLX's native
-        # word timings rather than failing.
         if word_timestamps and result.get("segments"):
+            # wav2vec2 alignment gives ~10-30 ms word edges vs Whisper's
+            # 100-300 ms, which matters for dub lip-sync. Reuses `audio`.
             result["segments"] = forced_align(
-                result["segments"],
-                audio,
-                result.get("language", "en"),
+                result["segments"], audio, result.get("language", "en"),
             )
         # Normalise to the `chunks` shape the rest of the pipeline expects.
         if "segments" in result:

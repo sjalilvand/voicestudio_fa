@@ -10,14 +10,10 @@ _backend_dir = os.path.dirname(os.path.abspath(__file__))
 if _backend_dir not in sys.path:
     sys.path.insert(0, _backend_dir)
 
-# #2135: arm fatal-signal tracebacks before anything heavy is imported, so a
-# native crash inside torch/CUDA leaves a named frame in backend_err.log
-# instead of a silently vanished process. See core/crash_diagnostics.py.
 from core.crash_diagnostics import enable_fault_handler  # noqa: E402
 from core.app_config import PRODUCT_NAME  # noqa: E402
-
+# Arm native-crash tracebacks before model or GPU libraries can be imported.
 enable_fault_handler()
-
 # PyInstaller re-executes this entry module when the frozen backend binary is
 # launched. Nested operation supervisors therefore dispatch here, before math,
 # logging, FastAPI, torch, or any application initialization. Source launches
@@ -74,15 +70,16 @@ _install_accept_guard()
 from core.omnivoice_path import ensure_omnivoice_importable
 ensure_omnivoice_importable(_backend_dir)
 
-# Triton is unavailable on Windows — disable torch.compile / dynamo / inductor
-# to prevent TritonMissing errors at inference time. Must be set before torch
-# is imported (it is lazily imported in services/model_manager.py). Uses
-# setdefault so an explicit user-set value is never overridden, and is guarded
-# to win32 so cross-platform default behavior is unchanged.
+# Windows builds have no Triton, so torch compilation would fail only when
+# inference begins. Set the opt-outs before model_manager can import torch,
+# while preserving any values the user already supplied.
 if sys.platform == "win32":
-    os.environ.setdefault("TORCH_COMPILE_DISABLE", "1")
-    os.environ.setdefault("TORCHDYNAMO_DISABLE", "1")
-    os.environ.setdefault("TORCHINDUCTOR_DISABLE", "1")
+    for _compile_opt_out in (
+        "TORCH_COMPILE_DISABLE",
+        "TORCHDYNAMO_DISABLE",
+        "TORCHINDUCTOR_DISABLE",
+    ):
+        os.environ.setdefault(_compile_opt_out, "1")
 
 # The Intel Fortran runtime bundled with MKL (under numpy/scipy) installs a
 # console CTRL handler that aborts the whole process with `forrtl: error
@@ -333,7 +330,7 @@ install_redaction_filter()
 install_access_log_filter()
 install_asyncio_transport_filter()
 
-# Silence HF Hub unauthenticated warnings unless specifically requested.
+# Anonymous Hub requests can produce noisy advisory messages during startup.
 logging.getLogger("huggingface_hub.utils._http").setLevel(logging.ERROR)
 # Silence httpx INFO — every HF Hub API call logs a line; the SSE stream
 # already surfaces download progress to the UI.
@@ -428,10 +425,12 @@ from core.csrf import SAFE_HTTP_METHODS, cookie_csrf_allowed, origin_allowed
 
 
 def _env_flag(name: str, default: bool = False) -> bool:
-    value = os.environ.get(name)
-    if value is None:
+    missing = object()
+    configured = os.environ.get(name, missing)
+    if configured is missing:
         return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
+    accepted = {word: True for word in ("1", "true", "yes", "on")}
+    return accepted.get(configured.strip().casefold(), False)
 
 
 # Eager mode runs the heavy phases inline at module import — today's exact
@@ -721,16 +720,9 @@ def _phase_a_build_inner() -> None:
     # failure in that phase takes the whole backend down — the desktop app sits
     # on "starting backend" forever and /health stays 503.
     #
-    # That is not a hypothetical version: #1931 came from an sm_120 (Blackwell)
-    # user whose torch import crashed on Windows and who fixed it by moving to
-    # torch 2.9.1, which brings torchaudio 2.9 with it. Someone already working
-    # around one problem then hit a hard startup crash on a line that does
-    # nothing (#1931).
-    #
-    # The pin is not missing sm_120 kernels: torch 2.8.0 from the cu128 index
-    # lists sm_120 in get_arch_list(). CU128_ARCHS in
-    # tests/test_cuda_arch_compat.py records the same list, captured verbatim
-    # from a real cu128 build in #1285.
+    # The pinned torch cu128 build lists sm_120 in its arch list, so this call is
+    # not about GPU support; it is guarded because newer torchaudio releases no
+    # longer define the function at all.
     # The bare hasattr guard (no `torchaudio is not None` prefix) is what
     # tests/test_torchaudio_legacy_backend_1931.py asserts, and it is safe
     # either way: hasattr(None, ...) is False, so the call is skipped when
@@ -1133,7 +1125,15 @@ async def _phase_b(app: FastAPI) -> None:
     # Dictation v2: capture ASR warms in the background BY DEFAULT (~30s
     # post-boot, skipped under 4 GB free RAM at warm time).
     app.state.capture_preload_task = None  # only assigned when it runs (#1000 class)
-    if _env_flag("OMNIVOICE_PRELOAD_CAPTURE_ASR", default=True):
+    capture_warmup_requested = _env_flag(
+        "OMNIVOICE_PRELOAD_CAPTURE_ASR", default=True
+    )
+    if not capture_warmup_requested:
+        logger.info(
+            "Background capture recognition is off; dictation will initialise "
+            "its recogniser when it is first used."
+        )
+    if capture_warmup_requested:
         async def _preload_capture_asr():
             await asyncio.sleep(_capture_preload_delay_s())
             await _await_profile_reconcile(app)
@@ -1165,8 +1165,6 @@ async def _phase_b(app: FastAPI) -> None:
             except Exception as e:
                 logger.warning("Capture ASR preload skipped: %s", e)
         app.state.capture_preload_task = asyncio.create_task(_preload_capture_asr())
-    else:
-        logger.info("Capture ASR preload disabled; dictation ASR will load on first use.")
 
     # Watermark: warm the AudioSeal generator in the background so the first
     # mark_synthetic doesn't serialize the audioseal import + model load
@@ -1318,26 +1316,17 @@ async def lifespan(app: FastAPI):
     if _loop_stall_stop is not None:
         _loop_stall_stop.set()
     # ── Graceful shutdown (SIGTERM from Tauri, Ctrl+C, etc.) ────────────
-    # Retire the run sentinel FIRST, before any bounded wait below (#1895):
-    # once uvicorn has begun graceful shutdown the exit is deliberate by
-    # definition, so the sentinel has already done its job. This is one
-    # os.remove, against a ~50s worst-case tail of bounded waits plus model
-    # unload / free_vram() / gc.collect() below. Measured on macOS: a normal
-    # shutdown takes 5.25s end to end, while the desktop shell allows 2s
-    # (bootstrap.rs terminate_process_tree) before SIGKILL — so the old
-    # placement at the very end was killed every time on any run that had
-    # reached a working state. Doing the deadline-sensitive step first makes
-    # correctness independent of how much of that tail runs, instead of
-    # depending on the shell-side deadline being long enough to cover it.
-    #
+    # Retire the run sentinel BEFORE any teardown work. Once graceful shutdown
+    # starts, the exit is intentional. The desktop shell only allows a short
+    # grace period (~2 s) before SIGKILL, yet a normal teardown takes several
+    # seconds; clearing the sentinel last meant a clean quit that got killed
+    # mid-teardown looked like a crash on the next launch (#1895).
     # Desktop shells that must hard-kill a Windows process tree retire the
     # sentinel through /system/shutdown-intent before termination. This
     # remains the graceful-path fallback for every platform and direct server
     # runs.
-    #
-    # sentinel_cleared feeds the truthful "Shutdown: done."/degraded log at
-    # the end of this function; nothing below re-clears the sentinel, so a
-    # later failure can't mask this result.
+    # The result is only consumed by the final log line below; nothing later
+    # re-checks the sentinel, so a late failure cannot undo this.
     try:
         sentinel_cleared = run_sentinel.clear_sentinel()
     except Exception:
@@ -1411,18 +1400,11 @@ async def lifespan(app: FastAPI):
     # (still importing, not yet mid weight-download) finish cleanly before we
     # report done; a load that's genuinely deep into a multi-GB download still
     # times out — _reset_gpu_pool() below abandons it either way.
-    #
-    # 20s, not the original 3s (code-review finding post-merge): a cold
-    # transformers import alone can take longer than 3s on a slow disk or a
-    # first-ever launch, so the original bound left a real residual window —
-    # cancellation detaches the asyncio task, but the underlying OS thread
-    # keeps running past it, and shutdown could still report "done" while
-    # that thread was alive. Python cannot forcibly kill a running thread, so
-    # no finite bound eliminates this outright — 20s just shrinks the window
-    # from "any preload" to "an unusually slow cold-import," which is the
-    # practical ceiling before a longer shutdown itself becomes the
-    # complaint. A thread that's still running past 20s was never going to
-    # finish in a shutdown-appropriate timeframe regardless.
+    # Why 20 s: a cold `transformers` import on a slow disk or a first launch
+    # can take longer than a few seconds. Cancelling the asyncio task leaves the
+    # OS thread running, so a short bound would print "done" while that thread
+    # is still alive. Threads can't be killed, so no finite bound removes this;
+    # 20 s just narrows the window.
     await _cancel_and_await_tasks(
         getattr(app.state, "idle_task", None),
         getattr(app.state, "worker_task", None),
@@ -1475,9 +1457,7 @@ async def lifespan(app: FastAPI):
         await close_http_client()
     except Exception:
         pass
-    # Sentinel was already retired at the TOP of this block (#1895) — report
-    # truthfully using that result rather than clearing (or re-checking) it
-    # again here, so a failure in the steps above can't mask it as "done."
+    # The sentinel was retired at the top of shutdown; report that outcome here.
     if sentinel_cleared:
         logger.info("Shutdown: done.")
     else:
@@ -2329,16 +2309,15 @@ if __name__ == "__main__":
             self.denied_error: "OSError | None" = None
 
         def filter(self, record: logging.LogRecord) -> bool:
-            msg = record.msg
-            if isinstance(msg, OSError) and (
-                msg.errno in (48, 98, 10048)
-                or getattr(msg, "winerror", None) == 10048
-            ):
-                self.bind_error = msg
-            elif isinstance(msg, OSError) and (
-                msg.errno == 13 or getattr(msg, "winerror", None) == 10013
-            ):
-                self.denied_error = msg
+            message = record.msg
+            if not isinstance(message, OSError):
+                return True
+            errno = getattr(message, "errno", None)
+            windows_error = getattr(message, "winerror", None)
+            if errno in (48, 98, 10048) or windows_error == 10048:
+                self.bind_error = message
+            elif errno == 13 or windows_error == 10013:
+                self.denied_error = message
             return True
 
     # #1223: uvicorn does NOT let a bind failure reach the caller — it logs the

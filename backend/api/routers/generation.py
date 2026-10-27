@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import uuid
@@ -223,54 +224,53 @@ async def _run_with_reference_lease(lease, factory):
             release()
 
 
-_DESIGN_DESCRIPTION_MAX = 2000  # the Voice Design description field's maxLength
+_DESIGN_DESCRIPTION_MAX = 2000  # mirrors maxLength of the description box in the UI
 _DESIGN_DETAIL_MAX = 64
+_DESIGN_RAW_MAX = 4 * _DESIGN_DESCRIPTION_MAX  # JSON overhead allowance for the whole field
+
+
+def _design_picks_ok(picks: object) -> bool:
+    """True when ``picks`` maps known detail categories to short strings."""
+    from core.describe_voice import CATEGORY_ORDER
+
+    if not isinstance(picks, dict):
+        return False
+    return all(
+        key in CATEGORY_ORDER and isinstance(val, str) and len(val) <= _DESIGN_DETAIL_MAX
+        for key, val in picks.items()
+    )
 
 
 def _design_recipe_json(raw: Optional[str]) -> Optional[str]:
-    """Validated Voice Design draft to store with a take, or None (#2389).
+    """Turn the untrusted ``design_recipe`` form value into the text kept in history.
 
-    ``design_recipe`` is display metadata from the Design page: the description
-    as written and the user's explicit picks. It never affects synthesis, so a
-    malformed or oversized value is dropped instead of failing the take. Only
-    known categories and bounded strings survive, and the stored JSON is
-    re-serialized from the parsed value — the raw form field is never
-    persisted. The details the description maps to are derived here with the
-    same mapper as ``/design/describe``, so they always match the description
-    this take was rendered from, even when the page's own mapping had not
-    landed yet.
+    Only the description and the picks are taken from the client, after strict
+    checks. The ``mapped`` section is always recomputed here with the mapper
+    behind ``POST /design/describe``, and the result is serialised afresh, so
+    nothing but validated values is stored. Any problem yields None; this
+    function does not raise, because a bad recipe must never fail a take.
     """
-    if not raw or len(raw) > 4 * _DESIGN_DESCRIPTION_MAX:
+    if not raw or len(raw) > _DESIGN_RAW_MAX:
         return None
-    import json
-
-    from core.describe_voice import CATEGORY_ORDER, parse_description
-
     try:
-        value = json.loads(raw)
-    except ValueError:
-        return None
-    if not isinstance(value, dict):
-        return None
-    description = value.get("description")
-    if not isinstance(description, str) or len(description) > _DESIGN_DESCRIPTION_MAX:
-        return None
-
-    picks = value.get("picks")
-    if not isinstance(picks, dict):
-        return None
-    for category, detail in picks.items():
-        if (
-            category not in CATEGORY_ORDER
-            or not isinstance(detail, str)
-            or len(detail) > _DESIGN_DETAIL_MAX
-        ):
+        doc = json.loads(raw)
+        if not isinstance(doc, dict):
             return None
-    mapped = parse_description(description)["attrs"]
-    return json.dumps(
-        {"description": description, "picks": picks, "mapped": mapped},
-        ensure_ascii=False,
-    )
+        description, picks = doc.get("description"), doc.get("picks")
+        if not isinstance(description, str) or len(description) > _DESIGN_DESCRIPTION_MAX:
+            return None
+        if not _design_picks_ok(picks):
+            return None
+        from core.describe_voice import parse_description
+
+        record = {
+            "description": description,
+            "picks": dict(picks),
+            "mapped": parse_description(description)["attrs"],
+        }
+        return json.dumps(record, ensure_ascii=False)
+    except Exception:  # noqa: BLE001 - metadata only; never block the take
+        return None
 
 
 def _profile_instruct(row, engine_id=None):
@@ -1793,8 +1793,8 @@ async def generate_speech(
     ref_audio: Optional[UploadFile] = File(None),
     ref_text: Optional[str] = Form(None),
     instruct: Optional[str] = Form(None),
-    # #2389: the Voice Design draft behind this take (description, picks,
-    # mapped details) so reopening it rebuilds the same draft. Metadata only.
+    # Voice Design draft (JSON: description + picks) kept with a design take for
+    # reopening it later. Validated and re-derived server-side; never used to synthesise.
     design_recipe: Optional[str] = Form(None),
     duration: Optional[float] = Form(None),
     num_step: Optional[int] = Form(None),
@@ -2075,6 +2075,7 @@ async def generate_speech(
     # True when `language` was filled from the selected profile (not the request).
     language_from_profile = False
     history_mode = None  # profile.kind when a profile drives; else inferred at insert
+    # Malformed or absent recipes become NULL; they never fail the take.
     stored_design_recipe = _design_recipe_json(design_recipe)
     # #1032: profile id to persist an auto-transcribed reference transcript to.
     # Set only for a plain (unlocked) clone profile whose stored ref_text is

@@ -145,18 +145,15 @@ _CHANGE_CASES = [
     ("Urdu", "[pause 300ms] 42 [voice:Ali]", "[pause 300ms] بیالیس [voice:Ali]"),
     # Urdu (Extended Arabic-Indic) digits are digits too.
     ("Urdu", "سن ۱۹۵۶ میں", "سن انیس سو چھپن میں"),
-    # Digit ranges: the tilde has to be SPOKEN or the engine mashes the two
-    # numbers into one ("20~30초" was read as "이십삼"). Spacing is part of the
-    # per-language form — a Korean postposition binds to its numeral, Japanese
-    # and Chinese set no spaces, English needs them.
-    ("Korean", "대략 20~30초짜리", "대략 20에서 30초짜리"),
-    ("Korean", "가격은 20~30만원", "가격은 20에서 30만원"),
-    ("ko", "20~30초", "20에서 30초"),
-    ("Japanese", "20〜30分ぐらい", "20から30分ぐらい"),          # wave dash U+301C
-    ("Japanese", "20～30分ぐらい", "20から30分ぐらい"),          # fullwidth U+FF5E
-    ("Chinese", "大约需要20～30秒", "大约需要20到30秒"),
-    # EN runs the range through num2words afterwards, as it does any digit
-    ("English", "It takes 20~30 seconds", "It takes twenty to thirty seconds"),
+    # Tilde between two numbers is spoken instead of being swallowed.
+    ("Korean", "사과 3~5개 주세요", "사과 3에서 5개 주세요"),
+    ("Korean", "가격은 1000~2000원입니다", "가격은 1000에서 2000원입니다"),
+    ("ko", "기온 -5 ~ 3도", "기온 -5에서 3도"),
+    ("Japanese", "参加者は10\u301c20人", "参加者は10から20人"),
+    ("Japanese", "気温は15\uff5e25度", "気温は15から25度"),
+    ("Chinese", "需要3\uff5e4天", "需要3到4天"),
+    ("English", "Open 20~30 minutes", "Open twenty to thirty minutes"),
+    ("ko", "[pause 300ms] 1.5~2.5배", "[pause 300ms] 1.5에서 2.5배"),
     # Universal safety filters (language-independent)
     (None, "hello\u200b \u200dworld", "hello \u200dworld"),
     (None, "too   many\t spaces", "too many spaces"),
@@ -298,6 +295,16 @@ _UNCHANGED_CASES = [
     ("Urdu", "کوڈ ۰۰۷"),                          # native leading-zero code
     ("Urdu", "1234567 نمبر"),                     # 7+ digits: an ID
     ("Urdu", "ورژن 3.5.1"),                       # version string
+    ("ar", "الرمز ٠٠٧"),                         # same class on the num2words path
+    # Digit-range rule: only a clean tilde between two numbers is rewritten.
+    ("Korean", "서울-부산 3-5일 걸려요"),         # hyphen is never a range mark
+    ("Korean", "마감일은 2025-03-14 입니다"),     # ISO date
+    ("Korean", "전화 010-1234-5678 로 연락"),    # phone-shaped
+    ("Korean", "모델 AB12~34CD 재고"),            # letters touching the digits
+    ("Korean", "1~2~3 순서"),                    # malformed chain
+    ("Japanese", "また明日~"),                    # trailing tilde, no digits
+    ("Vietnamese", "Khoảng 20~30 người"),        # no verified form
+    (None, "about 20~30 people"),
     # Digit ranges: only the tilde family is a range mark. Everything else that
     # sits between digits means something other than "to".
     ("Korean", "대략 20-30초"),                   # ASCII hyphen: also dates/phones
@@ -767,3 +774,47 @@ def test_pronunciation_switch_is_env_only(monkeypatch, env, expected):
     # A never-written pref must not change the outcome.
     monkeypatch.setattr(prefs_mod, "get", lambda key, default=None: False)
     assert pronunciation_enabled() is expected
+
+
+# ── Plain language-code resolver & range chain guard ────────────────────────
+
+from services.text_normalization import _plain_lang_code, _speak_number_ranges  # noqa: E402
+
+
+@pytest.mark.parametrize("language,expected", [
+    ("Korean", "ko"),
+    ("Mandarin Chinese", "zh"),
+    ("ja", "ja"),
+    ("ko-KR", "ko"),
+    ("vi", "vi"),
+    ("kk", "kz"),
+    ("auto", None),
+    ("AUTO", None),
+    ("", None),
+    ("   ", None),
+    (None, None),
+    ("!!", None),
+])
+def test_plain_lang_code(language, expected):
+    assert _plain_lang_code(language) == expected
+
+
+@pytest.mark.parametrize("raw", [
+    "1~2~3",
+    "1 ~ 2 ~ 3",
+    "1~2 ~3",
+    "1~2~ 3",
+    "~1~2",
+])
+def test_range_chain_is_never_partially_rewritten(raw):
+    assert _speak_number_ranges(raw, "ko") == raw
+
+
+def test_range_rewrite_is_idempotent():
+    once = normalize_text("3~5개", "Korean")
+    assert normalize_text(once, "Korean") == once
+
+
+def test_range_unknown_form_language_untouched():
+    assert _speak_number_ranges("3~5", "vi") == "3~5"
+    assert _speak_number_ranges("3~5", None) == "3~5"

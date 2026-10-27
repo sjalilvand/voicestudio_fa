@@ -85,11 +85,16 @@ export function LongformPage({ mode }: { mode: Mode }) {
   const [localError, setLocalError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [warningsDismissed, setWarningsDismissed] = useState(false);
-  const [clearOpen, setClearOpen] = useState(false);
+  const [scriptResetRequested, setScriptResetRequested] = useState(false);
   const [scriptCaret, setScriptCaret] = useState(0);
   const audiobookInput = useRef<HTMLTextAreaElement>(null);
   const locked = !!session.active || importing;
-  const scriptLines = scriptSize(mode, draft);
+  const resetEntryCount = scriptSize(mode, draft);
+  const resetIsUnavailable = locked || resetEntryCount < 1;
+  const resetMessage =
+    mode === 'audiobook'
+      ? t('stories.clearConfirmScript')
+      : t('stories.clearConfirm', { count: resetEntryCount });
   const set = (value: Parameters<typeof editLongform>[1]) => editLongform(mode, value);
   const usable =
     mode === 'audiobook'
@@ -118,31 +123,35 @@ export function LongformPage({ mode }: { mode: Mode }) {
     [draft.script, draft.voiceCast, mode, profiles],
   );
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const otherModeRendering = session.active !== null && session.active !== mode;
   const blocker = generateBlocker({
     mode,
-    busyElsewhere: Boolean(session.active) && session.active !== mode,
+    busyElsewhere: otherModeRendering,
     importing,
     tts: ttsBlocker,
     usable,
     voicesReady,
     duplicateLexicon: duplicateWords(draft.lexicon),
   });
+  const resumeRender = (jobId: string) => void renderLongform(mode, jobId);
+  const startRender = () => void renderLongform(mode);
+  // One element, rendered either pinned in the setup pane or, once that is folded away, over the editor.
   const generatePanel = (
-    <div className="flex min-h-0 flex-col gap-3">
+    <div className="flex min-h-0 flex-col gap-2">
       <RenderRecovery
         mode={mode}
-        active={Boolean(session.active)}
+        active={session.active !== null}
         disabled={locked || ttsBlocker !== null}
         disabledReason={
           ttsBlocker !== null ? t('engines.none_ready_title') : t('audiobook.recovery_busy')
         }
-        onResume={(jobId) => void renderLongform(mode, jobId)}
+        onResume={resumeRender}
       />
       <GeneratePanel
         mode={mode}
         session={session}
         blocker={blocker}
-        onGenerate={() => void renderLongform(mode)}
+        onGenerate={startRender}
         onStop={stopLongform}
       />
     </div>
@@ -192,21 +201,16 @@ export function LongformPage({ mode }: { mode: Mode }) {
       setExporting(false);
     }
   };
-  // The m4b embeds its chapters, but mp3 has no portable way to carry them, and
-  // players, podcast hosts and show-notes want the timestamps as text. What
-  // belongs in the sheet is decided in cue-sheet.ts; this only saves it.
-  const cueSheet = cueSheetFor(draft.outputChapters, draft.output, (n) =>
+  const downloadableCues = cueSheetFor(draft.outputChapters, draft.output, (n) =>
     t('audiobook.chapter_n', { n }),
   );
-  const downloadCueSheet = async () => {
-    if (!cueSheet) return;
+  const saveCueSheet = async () => {
+    if (downloadableCues === null) return;
     setLocalError(null);
+    const { body, filename } = downloadableCues;
     try {
-      // Native save dialog under Electron, like every other local export.
-      await saveLocalFile(
-        new Blob([cueSheet.body], { type: 'text/plain;charset=utf-8' }),
-        cueSheet.filename,
-      );
+      const textFile = new Blob([body], { type: 'text/plain;charset=utf-8' });
+      await saveLocalFile(textFile, filename);
     } catch (cause) {
       setLocalError(describeError(cause));
     }
@@ -397,21 +401,17 @@ export function LongformPage({ mode }: { mode: Mode }) {
                 variant="ghost"
                 size="sm"
                 title={t('stories.clearScriptHint')}
-                disabled={locked || scriptLines === 0}
-                onClick={() => setClearOpen(true)}
+                disabled={resetIsUnavailable}
+                onClick={() => setScriptResetRequested(true)}
               >
                 <Trash2Icon />
                 {t('stories.clearScript')}
               </Button>
               <ConfirmDialog
-                open={clearOpen}
-                onOpenChange={setClearOpen}
+                open={scriptResetRequested}
+                onOpenChange={(nextOpen) => setScriptResetRequested(nextOpen)}
                 title={t('stories.clearScript')}
-                description={
-                  mode === 'audiobook'
-                    ? t('stories.clearConfirmScript')
-                    : t('stories.clearConfirm', { count: scriptLines })
-                }
+                description={resetMessage}
                 confirmLabel={t('stories.clearScript')}
                 onConfirm={() => set(clearedScriptPatch(mode))}
               />
@@ -506,8 +506,7 @@ export function LongformPage({ mode }: { mode: Mode }) {
               </div>
             )}
             {sidebarCollapsed && (
-              // The setup pane is collapsed: keep Generate and the tracker in reach.
-              <div className="sticky bottom-0 z-10 -mx-2 shrink-0 rounded-xl border border-border/60 bg-background/90 p-3 backdrop-blur-xl">
+              <div className="sticky bottom-0 z-10 -mx-3 mt-auto shrink-0 rounded-2xl border border-border/70 bg-background/75 p-3.5 shadow-lg backdrop-blur-lg">
                 {generatePanel}
               </div>
             )}
@@ -532,8 +531,8 @@ export function LongformPage({ mode }: { mode: Mode }) {
                     )}
                   </div>
                   <div className="flex items-center gap-1">
-                    {cueSheet && (
-                      <Button variant="ghost" size="sm" onClick={() => void downloadCueSheet()}>
+                    {downloadableCues !== null && (
+                      <Button variant="ghost" size="sm" onClick={() => void saveCueSheet()}>
                         <ListIcon />
                         {t('audiobook.download_cues')}
                       </Button>
