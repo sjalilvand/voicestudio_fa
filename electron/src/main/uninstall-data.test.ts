@@ -17,9 +17,9 @@ async function fixture(): Promise<UninstallRoots & { root: string }> {
   created.push(root);
   const roots = {
     root,
-    data: join(root, 'OmniVoice', 'data'),
-    environment: join(root, 'VoiceStudio', 'shell'),
-    logs: join(root, 'OmniVoice', 'logs'),
+    data: join(root, 'Application Support', 'OmniVoice', 'data'),
+    environment: join(root, 'Application Support', 'VoiceStudio', 'shell'),
+    logs: join(root, 'Application Support', 'OmniVoice', 'logs'),
     userEnvironment: join(root, '.config', 'omnivoice'),
     models: join(root, '.cache', 'huggingface'),
   };
@@ -94,7 +94,7 @@ it('lists a setup-chosen location by its runtime folders so data and models stay
 
 it('protects a shared model cache reached through a data-path alias', async () => {
   const roots = await fixture();
-  const alias = join(roots.root, 'VoiceStudio', 'data-alias');
+  const alias = join(roots.root, 'Application Support', 'VoiceStudio', 'data-alias');
   await symlink(roots.models, alias, process.platform === 'win32' ? 'junction' : 'dir');
   const targets = await scanUninstallTargets({ ...roots, data: alias });
   const model = targets.find((target) => target.key === 'models');
@@ -106,7 +106,7 @@ it('protects a shared model cache reached through a data-path alias', async () =
 
 it('counts overlapping parent and child targets only once in the deletion plan', async () => {
   const roots = await fixture();
-  const parent = join(roots.root, 'VoiceStudio');
+  const parent = join(roots.root, 'Application Support', 'VoiceStudio');
   const child = join(parent, 'data');
   await mkdir(child, { recursive: true });
   await writeFile(join(child, 'prefs.json'), '12345');

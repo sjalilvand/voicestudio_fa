@@ -2551,7 +2551,9 @@
     "emotion_help": "Abgestufte Emotion — nur vom IndexTTS2-Engine angewendet.",
     "emotion_text": "Emotionsbeschreibung",
     "emotion_text_ph": "z.B. klingt erschöpft und traurig",
-    "emotion_alpha": "Emotionale Stärke"
+    "emotion_alpha": "Emotionale Stärke",
+    "recovery_load_failed": "Unvollständige Hörbücher konnten nicht geprüft werden.",
+    "recovery_retry": "Erneut versuchen"
   },
   "voicePanel": {
     "title": "Stimme",

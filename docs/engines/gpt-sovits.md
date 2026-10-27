@@ -42,7 +42,6 @@ VoiceStudio marks the engine available only when the server responds
 | `OMNIVOICE_GPTSOVITS_URL` | `http://127.0.0.1:9880` | API server URL |
 | `OMNIVOICE_GPTSOVITS_REF_LANG` | `auto` | Language of the clip (`zh`/`en`/`ja`/`yue`/`ko`) |
 | `OMNIVOICE_TRUSTED_NETWORKS` | (unset) | Required to allow a non-loopback server |
-
 | `OMNIVOICE_GPTSOVITS_REF_AUDIO` | (unset) | Default reference clip, 3-10 s, as a path the server can read; used when a request has no voice profile |
 | `OMNIVOICE_GPTSOVITS_REF_TEXT` | (empty) | Exact transcript of that default clip |
 

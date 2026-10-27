@@ -2551,7 +2551,9 @@
     "emotion_help": "क्रमिक भावना — केवल IndexTTS2 इंजन द्वारा लागू किया गया।",
     "emotion_text": "भावना विवरण",
     "emotion_text_ph": "जैसे। थका हुआ और उदास लगता है",
-    "emotion_alpha": "भावना की शक्ति"
+    "emotion_alpha": "भावना की शक्ति",
+    "recovery_load_failed": "अधूरी ऑडियोबुक की जाँच नहीं हो सकी।",
+    "recovery_retry": "फिर से कोशिश करें"
   },
   "voicePanel": {
     "title": "आवाज",

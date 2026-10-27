@@ -2551,7 +2551,9 @@
     "emotion_help": "Graderad emotion — endast tillämpas av IndexTTS2-motorn.",
     "emotion_text": "Emotionsbeskrivning",
     "emotion_text_ph": "t.ex. låter uttömd och ledsen",
-    "emotion_alpha": "Emotionsstyrka"
+    "emotion_alpha": "Emotionsstyrka",
+    "recovery_load_failed": "Det gick inte att söka efter ofärdiga ljudböcker.",
+    "recovery_retry": "Försök igen"
   },
   "voicePanel": {
     "title": "Röst",

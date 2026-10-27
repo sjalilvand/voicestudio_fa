@@ -42,6 +42,17 @@ describe('recovery card inventory', () => {
     doubles.reveal.mockReset();
   });
 
+  it('explains a failed inventory load and retries on request', async () => {
+    doubles.jobs.mockRejectedValueOnce(new Error('offline'));
+    doubles.jobs.mockResolvedValueOnce({ jobs: [job('later', 5)] });
+    render(<AudiobookRecovery t={translate} generating={false} onResume={vi.fn()} />);
+    expect(await screen.findByText('audiobook.recovery_load_failed')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'audiobook.recovery_retry' }));
+    expect(await screen.findByText('Book later')).toBeTruthy();
+    expect(screen.queryByText('audiobook.recovery_load_failed')).toBeNull();
+    expect(doubles.jobs).toHaveBeenCalledTimes(2);
+  });
+
   it('selects the newest audiobook and replaces it after continuation', async () => {
     doubles.jobs
       .mockResolvedValueOnce({

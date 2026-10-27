@@ -2551,7 +2551,9 @@
     "emotion_help": "Stopniowana emocja — zastosowana tylko przez silnik IndexTTS2.",
     "emotion_text": "Opis emocji",
     "emotion_text_ph": "np. brzmi wyczerpany i smutny",
-    "emotion_alpha": "Siła emocji"
+    "emotion_alpha": "Siła emocji",
+    "recovery_load_failed": "Nie udało się sprawdzić niedokończonych audiobooków.",
+    "recovery_retry": "Spróbuj ponownie"
   },
   "voicePanel": {
     "title": "Głos",

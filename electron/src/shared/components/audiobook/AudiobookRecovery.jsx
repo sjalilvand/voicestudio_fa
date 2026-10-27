@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArchiveRestore, FolderSearch } from 'lucide-react';
+import { ArchiveRestore, FolderSearch, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { audiobookListJobs } from '../../api/audiobook';
 import { exportReveal } from '../../api/exports';
@@ -12,19 +12,28 @@ const newestFirst = (current, item) =>
 export default function AudiobookRecovery({ t, generating, onResume }) {
   const [inventory, setInventory] = useState([]);
   const [suppressedId, setSuppressedId] = useState('');
+  const [loadFailed, setLoadFailed] = useState(false);
   const generation = useRef(0);
   const alive = useRef(false);
   const { data: machine } = useSystemInfo();
 
   const acceptInventory = useCallback(async () => {
     const ticket = ++generation.current;
-    const payload = await audiobookListJobs();
-    if (alive.current && ticket === generation.current) setInventory(payload.jobs ?? []);
+    try {
+      const payload = await audiobookListJobs();
+      if (alive.current && ticket === generation.current) {
+        setInventory(payload.jobs ?? []);
+        setLoadFailed(false);
+      }
+    } catch {
+      // Without the inventory nothing would refetch until the view remounts.
+      if (alive.current && ticket === generation.current) setLoadFailed(true);
+    }
   }, []);
 
   useEffect(() => {
     alive.current = true;
-    void acceptInventory().catch(() => {});
+    void acceptInventory();
     return () => {
       alive.current = false;
       ++generation.current;
@@ -72,7 +81,25 @@ export default function AudiobookRecovery({ t, generating, onResume }) {
     }
   }, [onResume, recoverable]);
 
-  if (!recoverable) return null;
+  if (!recoverable) {
+    if (!loadFailed) return null;
+    return (
+      <div
+        role="status"
+        className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--chrome-radius-card)] border border-[var(--chrome-border)] bg-[var(--chrome-bg)] px-4 py-3 text-xs text-[var(--chrome-fg-muted)]"
+      >
+        <span>{t('audiobook.recovery_load_failed')}</span>
+        <Button
+          size="sm"
+          variant="ghost"
+          leading={<RotateCcw size={14} />}
+          onClick={() => void acceptInventory()}
+        >
+          {t('audiobook.recovery_retry')}
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <section className="rounded-[var(--chrome-radius-card)] border border-[var(--chrome-border)] bg-[var(--chrome-bg)] p-4">

@@ -2551,7 +2551,9 @@
     "emotion_help": "分層情感 — 僅由 IndexTTS2 引擎應用。",
     "emotion_text": "情感描述",
     "emotion_text_ph": "例如 聽起來很疲勞和悲傷",
-    "emotion_alpha": "情感強度"
+    "emotion_alpha": "情感強度",
+    "recovery_load_failed": "無法檢查未完成的有聲書。",
+    "recovery_retry": "重試"
   },
   "voicePanel": {
     "title": "語音",

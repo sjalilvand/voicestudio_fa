@@ -2987,7 +2987,9 @@
     "emotion_help": "分层情感 — 仅由 IndexTTS2 引擎应用。",
     "emotion_text": "情感描述",
     "emotion_text_ph": "例如：听起来疲惫而悲伤",
-    "emotion_alpha": "情感强度"
+    "emotion_alpha": "情感强度",
+    "recovery_load_failed": "无法检查未完成的有声书。",
+    "recovery_retry": "重试"
   },
   "voicePanel": {
     "title": "语音",

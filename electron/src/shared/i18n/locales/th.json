@@ -2551,7 +2551,9 @@
     "emotion_help": "อารมณ์แบบระดับ — ใช้งานเฉพาะกับเครื่องยนต์ IndexTTS2 เท่านั้น",
     "emotion_text": "คำอธิบายอารมณ์",
     "emotion_text_ph": "เช่น ฟังดูเหนื่อยและเศร้า",
-    "emotion_alpha": "ความเข้มของอารมณ์"
+    "emotion_alpha": "ความเข้มของอารมณ์",
+    "recovery_load_failed": "ตรวจหาหนังสือเสียงที่ยังไม่เสร็จไม่ได้",
+    "recovery_retry": "ลองอีกครั้ง"
   },
   "voicePanel": {
     "title": "เสียง",

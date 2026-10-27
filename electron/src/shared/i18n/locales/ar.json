@@ -2551,7 +2551,9 @@
     "emotion_help": "عاطفة متدرجة — يتم تطبيقها فقط من خلال محرك IndexTTS2.",
     "emotion_text": "وصف العاطفة",
     "emotion_text_ph": "على سبيل المثال يبدو متعباً وحزيناً",
-    "emotion_alpha": "قوة العاطفة"
+    "emotion_alpha": "قوة العاطفة",
+    "recovery_load_failed": "تعذّر التحقق من وجود كتب صوتية غير مكتملة.",
+    "recovery_retry": "إعادة المحاولة"
   },
   "voicePanel": {
     "title": "صوت",

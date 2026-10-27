@@ -2551,7 +2551,9 @@
     "emotion_help": "段階的な感情 — IndexTTS2 エンジンによってのみ適用されます。",
     "emotion_text": "感情の説明",
     "emotion_text_ph": "例 疲れているように聞こえ、悲しい",
-    "emotion_alpha": "感情の強さ"
+    "emotion_alpha": "感情の強さ",
+    "recovery_load_failed": "未完了のオーディオブックを確認できませんでした。",
+    "recovery_retry": "再試行"
   },
   "voicePanel": {
     "title": "声",

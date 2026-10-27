@@ -399,7 +399,9 @@
     "emotion_help": "Graded emotion — applied by the IndexTTS2 engine only.",
     "emotion_text": "Emotion description",
     "emotion_text_ph": "e.g. sounds exhausted and sad",
-    "emotion_alpha": "Emotion strength"
+    "emotion_alpha": "Emotion strength",
+    "recovery_load_failed": "Could not check for unfinished audiobooks.",
+    "recovery_retry": "Try again"
   },
   "launchpad": {
     "greeting": "hello there",
@@ -945,7 +947,7 @@
     "perf_title": "Performance",
     "perf_torch_compile": "Disable torch.compile",
     "perf_torch_compile_na": "Windows only — not needed on this platform",
-    "perf_torch_compile_note": "Uses eager execution to avoid Triton memory errors.",
+    "perf_torch_compile_note": "Uses eager execution, without compiled kernels, when Triton is unstable.",
     "perf_torch_compile_hint": "Turn this on after a Triton or <code>torch.compile</code> failure, including a backend exit while audio is being made. VoiceStudio then supplies <code>TORCH_COMPILE_DISABLE=1</code> and favors reliability over compiled speed. Windows systems with under 16 GB VRAM are covered by <issueLink>#65</issueLink>; older NVIDIA CUDA-graph failures are tracked in <crashLink>#2135</crashLink>.",
     "perf_load_failed": "Failed to load performance settings",
     "perf_save_failed": "Failed to save setting",

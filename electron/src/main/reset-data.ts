@@ -144,12 +144,40 @@ const MANAGED_CHILDREN = new Set([
   'tmp',
 ]);
 
-function exactManagedLayout(path: string): boolean {
+// Folders the OS (or the installer) keeps per-app directories in. A bare app-named
+// directory anywhere else, such as ~/Documents/VoiceStudio, is the user's own unless it
+// carries the app's signature.
+const APP_PARENTS = new Set([
+  'application support',
+  'caches',
+  'logs',
+  'roaming',
+  'local',
+  'programs',
+  '.config',
+  '.cache',
+  'share',
+  'state',
+]);
+
+function appParent(appDir: string, home: string | null): boolean {
+  const parent = dirname(appDir);
+  if (home && normalized(parent) === normalized(home)) return true;
+  const parts = components(parent).map((part) => part.toLocaleLowerCase('en-US'));
+  const name = parts.at(-1);
+  if (!name || !APP_PARENTS.has(name)) return false;
+  // `share` and `state` only count as ~/.local/share and ~/.local/state.
+  return (name !== 'share' && name !== 'state') || parts.at(-2) === '.local';
+}
+
+function exactManagedLayout(path: string, home: string | null): boolean {
   const parts = components(path).map((part) => part.toLocaleLowerCase('en-US'));
   const leaf = parts.at(-1);
   const parent = parts.at(-2);
   if (!leaf) return false;
-  if (APP_NAMES.has(leaf)) return true;
+  if (APP_NAMES.has(leaf)) return appParent(path, home);
+  // A known runtime child is specific enough on its own: setup can place the whole
+  // app folder on any drive (#2971).
   if (parent && APP_NAMES.has(parent) && MANAGED_CHILDREN.has(leaf)) return true;
   return (
     parts.length >= 3 &&
@@ -179,7 +207,7 @@ export async function isValidVoiceStudioRoot(
   const physicalHome = await canonical(home ?? homedir());
   if (physicalHome && normalized(physical) === normalized(physicalHome)) return false;
   return (
-    exactManagedLayout(physical) ||
+    exactManagedLayout(physical, physicalHome) ||
     (allowModelCache && exactModelLayout(physical)) ||
     hasAppSignature(physical, allowModelCache)
   );

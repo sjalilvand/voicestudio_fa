@@ -2551,7 +2551,9 @@
     "emotion_help": "Emoción graduada — aplicada solo por el motor IndexTTS2.",
     "emotion_text": "Descripción de emoción",
     "emotion_text_ph": "p. ej. suena agotado y triste",
-    "emotion_alpha": "Intensidad emocional"
+    "emotion_alpha": "Intensidad emocional",
+    "recovery_load_failed": "No se pudo comprobar si hay audiolibros sin terminar.",
+    "recovery_retry": "Reintentar"
   },
   "voicePanel": {
     "title": "Voz",

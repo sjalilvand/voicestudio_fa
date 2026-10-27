@@ -2551,7 +2551,9 @@
     "emotion_help": "Emosi berjenjang — diterapkan hanya oleh mesin IndexTTS2.",
     "emotion_text": "Deskripsi emosi",
     "emotion_text_ph": "mis. terdengar lelah dan sedih",
-    "emotion_alpha": "Kekuatan emosi"
+    "emotion_alpha": "Kekuatan emosi",
+    "recovery_load_failed": "Tidak dapat memeriksa buku audio yang belum selesai.",
+    "recovery_retry": "Coba lagi"
   },
   "voicePanel": {
     "title": "Suara",

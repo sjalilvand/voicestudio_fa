@@ -1521,7 +1521,7 @@
     "hf_token_active": "Active",
     "generate_budget_title": "Compute-time budget",
     "generate_timeout_cpu": "CPU budget",
-    "perf_torch_compile_note": "Uses eager execution to avoid Triton memory errors.",
+    "perf_torch_compile_note": "Uses eager execution, without compiled kernels, when Triton is unstable.",
     "perf_torch_compile_na": "Only needed on Windows.",
     "device_family_mps": "Apple GPU (MPS)",
     "compute_device_auto": "Auto (recommended)",

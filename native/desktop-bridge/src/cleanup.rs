@@ -53,40 +53,106 @@ fn has_signature(path: &Path, allow_model_cache: bool) -> bool {
         || (allow_model_cache
             && (path.join("hub").is_dir()
                 || fs::read_dir(path).is_ok_and(|entries| {
-                    entries.filter_map(Result::ok).any(|entry| {
-                        entry.file_name().to_string_lossy().starts_with("models--")
-                    })
+                    entries
+                        .filter_map(Result::ok)
+                        .any(|entry| entry.file_name().to_string_lossy().starts_with("models--"))
                 })))
 }
 
-fn exact_managed_layout(path: &Path) -> bool {
-    const APP_NAMES: [&str; 4] = [
-        "OmniVoice", ".omnivoice", "VoiceStudio", "com.debpalash.omnivoice-studio",
-    ];
-    const CHILDREN: [&str; 9] = [
-        "data", "logs", "runtime", "shell", "project", ".uv-cache", ".python", ".tmp", "tmp",
-    ];
-    let parts: Vec<_> = path.components().map(|part| part.as_os_str()).collect();
-    let Some(leaf) = parts.last().and_then(|part| part.to_str()) else { return false };
-    if APP_NAMES.iter().any(|name| leaf.eq_ignore_ascii_case(name)) {
+// Folders the OS (or the app's installer) puts per-app directories in. A bare app-named
+// directory anywhere else, such as ~/Documents/VoiceStudio, is the user's own unless it
+// carries the app's signature.
+const APP_PARENTS: [&str; 10] = [
+    "Application Support",
+    "Caches",
+    "Logs",
+    "Roaming",
+    "Local",
+    "Programs",
+    ".config",
+    ".cache",
+    "share",
+    "state",
+];
+
+fn app_parent(path: &Path, home: Option<&Path>) -> bool {
+    let Some(parent) = path.parent() else {
+        return false;
+    };
+    if home == Some(parent) {
         return true;
     }
-    let parent_is_app = parts.get(parts.len().saturating_sub(2))
+    let Some(name) = parent.file_name().and_then(|part| part.to_str()) else {
+        return false;
+    };
+    let local = parent
+        .parent()
+        .and_then(Path::file_name)
+        .and_then(|part| part.to_str());
+    APP_PARENTS
+        .iter()
+        .any(|candidate| name.eq_ignore_ascii_case(candidate))
+        && (!matches!(name.to_ascii_lowercase().as_str(), "share" | "state")
+            || local.is_some_and(|local| local.eq_ignore_ascii_case(".local")))
+}
+
+fn exact_managed_layout(path: &Path, home: Option<&Path>) -> bool {
+    const APP_NAMES: [&str; 4] = [
+        "OmniVoice",
+        ".omnivoice",
+        "VoiceStudio",
+        "com.debpalash.omnivoice-studio",
+    ];
+    const CHILDREN: [&str; 9] = [
+        "data",
+        "logs",
+        "runtime",
+        "shell",
+        "project",
+        ".uv-cache",
+        ".python",
+        ".tmp",
+        "tmp",
+    ];
+    let parts: Vec<_> = path.components().map(|part| part.as_os_str()).collect();
+    let Some(leaf) = parts.last().and_then(|part| part.to_str()) else {
+        return false;
+    };
+    if APP_NAMES.iter().any(|name| leaf.eq_ignore_ascii_case(name)) {
+        return app_parent(path, home);
+    }
+    let parent_is_app = parts
+        .get(parts.len().saturating_sub(2))
         .and_then(|part| part.to_str())
-        .is_some_and(|parent| APP_NAMES.iter().any(|name| parent.eq_ignore_ascii_case(name)));
-    let runtime_grandparent_is_app = parts.get(parts.len().saturating_sub(3))
+        .is_some_and(|parent| {
+            APP_NAMES
+                .iter()
+                .any(|name| parent.eq_ignore_ascii_case(name))
+        });
+    let runtime_grandparent_is_app = parts
+        .get(parts.len().saturating_sub(3))
         .and_then(|part| part.to_str())
-        .is_some_and(|parent| APP_NAMES.iter().any(|name| parent.eq_ignore_ascii_case(name)))
-        && parts.get(parts.len().saturating_sub(2))
+        .is_some_and(|parent| {
+            APP_NAMES
+                .iter()
+                .any(|name| parent.eq_ignore_ascii_case(name))
+        })
+        && parts
+            .get(parts.len().saturating_sub(2))
             .and_then(|part| part.to_str())
             .is_some_and(|parent| parent.eq_ignore_ascii_case("runtime"));
+    // A known runtime child is specific enough on its own: setup can place the whole
+    // app folder on any drive (#2971).
     (parent_is_app || runtime_grandparent_is_app)
         && CHILDREN.iter().any(|name| leaf.eq_ignore_ascii_case(name))
 }
 
 fn exact_model_layout(path: &Path) -> bool {
     let leaf = path.file_name().and_then(|part| part.to_str());
-    let parent = path.parent().and_then(Path::file_name).and_then(|part| part.to_str());
+    let parent = path
+        .parent()
+        .and_then(Path::file_name)
+        .and_then(|part| part.to_str());
     matches!((leaf, parent), (Some(leaf), Some(parent))
         if (leaf.eq_ignore_ascii_case("huggingface") && parent.eq_ignore_ascii_case(".cache"))
             || (leaf.eq_ignore_ascii_case("hub") && parent.eq_ignore_ascii_case("huggingface")))
@@ -96,7 +162,7 @@ fn recognizably_owned(path: &Path, home: Option<&Path>, kind: &CleanupKind) -> b
     if !path.is_absolute() || path.parent().is_none() || home == Some(path) {
         return false;
     }
-    exact_managed_layout(path)
+    exact_managed_layout(path, home)
         || (*kind == CleanupKind::Models && exact_model_layout(path))
         || has_signature(path, *kind == CleanupKind::Models)
 }
@@ -174,7 +240,8 @@ pub fn run(owner_pid: u32, plan_path: &Path) -> io::Result<()> {
     for target in plan.paths {
         let canonical = fs::canonicalize(&target.path)?;
         if !recognizably_owned(&canonical, home.as_deref(), &target.kind)
-            || !seen.insert(canonical.clone()) {
+            || !seen.insert(canonical.clone())
+        {
             return Err(io::Error::new(
                 io::ErrorKind::PermissionDenied,
                 "Unsafe cleanup target",
@@ -211,8 +278,16 @@ mod tests {
         let signed = root.join("custom-data");
         fs::create_dir_all(&signed).unwrap();
         fs::write(signed.join("omnivoice.db"), b"db").unwrap();
-        assert!(recognizably_owned(&signed, home_dir().as_deref(), &CleanupKind::App));
-        assert!(!recognizably_owned(Path::new("."), home_dir().as_deref(), &CleanupKind::App));
+        assert!(recognizably_owned(
+            &signed,
+            home_dir().as_deref(),
+            &CleanupKind::App
+        ));
+        assert!(!recognizably_owned(
+            Path::new("."),
+            home_dir().as_deref(),
+            &CleanupKind::App
+        ));
         if let Some(home) = home_dir() {
             assert!(!recognizably_owned(&home, Some(&home), &CleanupKind::App));
         }
@@ -230,7 +305,8 @@ mod tests {
             &plan,
             serde_json::to_vec(&serde_json::json!({
                 "paths": [{ "path": &target, "kind": "app" }]
-            })).unwrap(),
+            }))
+            .unwrap(),
         )
         .unwrap();
         run(u32::MAX, &plan).unwrap();
@@ -261,6 +337,30 @@ mod tests {
         fs::write(&marker, b"db").unwrap();
         assert!(recognizably_owned(&signed, None, &CleanupKind::App));
         assert!(!recognizably_owned(&marker, None, &CleanupKind::App));
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn bare_app_named_directory_needs_an_app_parent_or_a_signature() {
+        let root = std::env::temp_dir().join(format!("native-app-parent-{}", std::process::id()));
+        let personal = root.join("Documents").join("VoiceStudio");
+        let installed = root.join(".config").join("VoiceStudio");
+        let shared = root.join(".local").join("share").join("OmniVoice");
+        let stray_share = root.join("share").join("OmniVoice");
+        for dir in [&personal, &installed, &shared, &stray_share] {
+            fs::create_dir_all(dir.join("data")).unwrap();
+        }
+        let app = CleanupKind::App;
+        assert!(!recognizably_owned(&personal, None, &app));
+        assert!(!recognizably_owned(&stray_share, None, &app));
+        assert!(recognizably_owned(&installed, None, &app));
+        assert!(recognizably_owned(&installed.join("data"), None, &app));
+        assert!(recognizably_owned(&shared, None, &app));
+        let home_app = root.join(".omnivoice");
+        fs::create_dir_all(&home_app).unwrap();
+        assert!(recognizably_owned(&home_app, Some(&root), &app));
+        fs::write(personal.join("omnivoice.db"), b"db").unwrap();
+        assert!(recognizably_owned(&personal, None, &app));
         fs::remove_dir_all(root).unwrap();
     }
 }

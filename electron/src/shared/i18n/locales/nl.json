@@ -2551,7 +2551,9 @@
     "emotion_help": "Gegradueerde emotie — alleen toegepast door de IndexTTS2-engine.",
     "emotion_text": "Emotie beschrijving",
     "emotion_text_ph": "bijv. klinkt uitgeput en verdrietig",
-    "emotion_alpha": "Emotie sterkte"
+    "emotion_alpha": "Emotie sterkte",
+    "recovery_load_failed": "Kon niet controleren op onvoltooide audioboeken.",
+    "recovery_retry": "Opnieuw proberen"
   },
   "voicePanel": {
     "title": "Stem",

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { API, apiUrl } from '../api/client';
 import { authenticatedWsUrl } from '../api/authSession';
 
@@ -12,7 +12,11 @@ export default function useRealtimeEvents(handlers) {
   const retryCountRef = useRef(0);
   const connectingRef = useRef(false);
   const mountedRef = useRef(false);
-  handlersRef.current = handlers;
+  // Only committed props reach the socket: a render React discards must not
+  // swap in its handlers.
+  useLayoutEffect(() => {
+    handlersRef.current = handlers;
+  });
 
   useEffect(() => {
     mountedRef.current = true;

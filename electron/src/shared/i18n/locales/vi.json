@@ -2551,7 +2551,9 @@
     "emotion_help": "Cảm xúc dần dần — chỉ được áp dụng bởi công cụ IndexTTS2.",
     "emotion_text": "Mô tả cảm xúc",
     "emotion_text_ph": "ví dụ: nghe vẻ mệt mỏi và buồn",
-    "emotion_alpha": "Độ mạnh của cảm xúc"
+    "emotion_alpha": "Độ mạnh của cảm xúc",
+    "recovery_load_failed": "Không thể kiểm tra sách nói chưa hoàn tất.",
+    "recovery_retry": "Thử lại"
   },
   "voicePanel": {
     "title": "Giọng nói",

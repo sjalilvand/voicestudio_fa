@@ -2945,7 +2945,9 @@
     "chapter_meta": "범위 {{spans}}개 · 글자 {{chars}}자",
     "ready": "오디오북 준비됨",
     "lex_word": "단어",
-    "expressive": "제작 설정 덮어쓰기"
+    "expressive": "제작 설정 덮어쓰기",
+    "recovery_load_failed": "완료되지 않은 오디오북을 확인하지 못했습니다.",
+    "recovery_retry": "다시 시도"
   },
   "voicePanel": {
     "title": "음성",

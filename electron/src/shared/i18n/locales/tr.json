@@ -2551,7 +2551,9 @@
     "emotion_help": "Dereceli duygu — yalnızca IndexTTS2 motoru tarafından uygulanır.",
     "emotion_text": "Duygu açıklaması",
     "emotion_text_ph": "örn. tükenmiş ve üzgün geliyor",
-    "emotion_alpha": "Duygu gücü"
+    "emotion_alpha": "Duygu gücü",
+    "recovery_load_failed": "Tamamlanmamış sesli kitaplar denetlenemedi.",
+    "recovery_retry": "Yeniden dene"
   },
   "voicePanel": {
     "title": "Ses",

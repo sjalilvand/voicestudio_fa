@@ -2551,7 +2551,9 @@
     "emotion_help": "Emoção graduada — aplicada apenas pelo mecanismo IndexTTS2.",
     "emotion_text": "Descrição da emoção",
     "emotion_text_ph": "ex.: soa exausto e triste",
-    "emotion_alpha": "Força emocional"
+    "emotion_alpha": "Força emocional",
+    "recovery_load_failed": "Não foi possível verificar audiolivros inacabados.",
+    "recovery_retry": "Tentar novamente"
   },
   "voicePanel": {
     "title": "Voz",
