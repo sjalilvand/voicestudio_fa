@@ -624,7 +624,50 @@ async def dub_generate(job_id: str, req: DubRequest):
             except Exception as err:  # noqa: BLE001
                 logger.debug("device cache release skipped: %s", err)
 
-        # CLEAN-ROOM (spec W7-backend §3): mix temp-path list, _store_mix_wav and _entry_num_samples
+        mix_temp_paths: list[str] = []
+
+        def _segment_storage_path(seg_key: str) -> str:
+            path = dub_seg_path(job_id, seg_key)
+            parent = os.path.dirname(path)
+            os.makedirs(parent, exist_ok=True)
+            return path
+
+        def _remember_mix_scratch(seg_key: str, path: str) -> None:
+            if str(seg_key).startswith("mix_"):
+                mix_temp_paths.append(path)
+
+        def _store_mix_wav(
+            start: float,
+            end: float,
+            wav: torch.Tensor,
+            sr: int,
+            seg_key: str,
+        ):
+            if wav.shape[-1] == 0:
+                return (start, end, wav.new_empty((1, 0)), sr)
+
+            path = _segment_storage_path(seg_key)
+            disk_audio = wav.detach().cpu()
+            atomic_save_wav(path, disk_audio, sr)
+            _release_audio_tensors(wav)
+            entry = (start, end, path, sr)
+            _remember_mix_scratch(seg_key, entry[2])
+            return entry
+
+        def _entry_num_samples(entry) -> int:
+            source = entry[2]
+            if isinstance(source, torch.Tensor):
+                return int(source.shape[-1])
+            try:
+                return int(audio_info(source).num_frames)
+            except Exception:  # noqa: BLE001
+                from services.audio_io import load_audio
+
+                decoded, _ = load_audio(source)
+                length = int(decoded.shape[-1])
+                del decoded
+                _release_audio_tensors()
+                return length
 
         def _load_entry_wav(entry, target_sr: int) -> torch.Tensor:
             source = entry[2]
@@ -812,7 +855,26 @@ async def dub_generate(job_id: str, req: DubRequest):
             yield f"data: {json.dumps({'type': 'progress', 'current': i, 'total': total, 'text': seg.text[:50]})}\n\n"
 
             seg_duration = seg.end - seg.start
-            # CLEAN-ROOM (spec W7-backend §4): silent / too-short segment branch
+            if seg_duration <= 0.05 or not seg.text.strip():
+                silence = torch.zeros(
+                    (1, max(0, int(seg_duration * backend.sample_rate)))
+                )
+                all_segment_wavs.append(
+                    _store_mix_wav(
+                        seg.start,
+                        seg.end,
+                        silence,
+                        backend.sample_rate,
+                        f"mix_{seg_id}",
+                    )
+                )
+                try:
+                    del silence
+                except Exception:  # noqa: BLE001
+                    pass
+                _release_audio_tensors()
+                sync_scores.append(1.0)
+                continue
 
             # Partial regen: if this segment isn't in the allow-list, reuse its
             # previously-rendered WAV so the final mix still covers the timeline.
@@ -1546,7 +1608,12 @@ async def dub_generate(job_id: str, req: DubRequest):
 
         os.makedirs(os.path.dirname(track_path), exist_ok=True)
         mix_samples = max(total_samples, 1)
-        # CLEAN-ROOM (spec W7-backend §5): create the hidden .mix.<...>.f32 scratch file as mix_file
+        mix_fd, mix_file = tempfile.mkstemp(
+            prefix=f".{os.path.basename(track_path)}.mix.",
+            suffix=".f32",
+            dir=os.path.dirname(track_path),
+        )
+        os.close(mix_fd)
         mix_audio = None
         try:
             with open(mix_file, "r+b") as handle:
@@ -1576,7 +1643,11 @@ async def dub_generate(job_id: str, req: DubRequest):
                         return
                     wav = trim_speech_padding(wav, sr)
 
-                # CLEAN-ROOM (spec W7-backend §6a): gain, mono downmix, wl and natural_dur
+                adjusted = wav * gain
+                if adjusted.shape[0] > 1:
+                    adjusted = adjusted.mean(dim=0, keepdim=True)
+                wl = int(adjusted.shape[-1])
+                natural_dur = wl / sr if wl else 0.0
                 orig_dur = max(0, end - start)
 
                 if strategy == "stretch_video":
@@ -1663,7 +1734,21 @@ async def dub_generate(job_id: str, req: DubRequest):
                     adjusted[0, :fade_samples] *= ramp
                     adjusted[0, -fade_samples:] *= ramp.flip(0)
 
-                # CLEAN-ROOM (spec W7-backend §6b): place the segment in the mix (negative-offset trim, clamp, overlap-add)
+                start_sample = int(place_at * sr)
+                if start_sample < 0:
+                    adjusted = adjusted[..., -start_sample:]
+                    wl = int(adjusted.shape[-1])
+                    start_sample = 0
+                end_sample = min(start_sample + wl, total_samples)
+                if start_sample < total_samples and end_sample > start_sample:
+                    placed = (
+                        adjusted[0, :end_sample - start_sample]
+                        .detach()
+                        .to(device="cpu", dtype=torch.float32)
+                        .clamp(-1.0, 1.0)
+                        .numpy()
+                    )
+                    mix_audio[start_sample:end_sample] += placed
 
                 try:
                     del wav, adjusted
@@ -1697,7 +1782,11 @@ async def dub_generate(job_id: str, req: DubRequest):
                 os.unlink(mix_file)
             except OSError:
                 pass
-            # CLEAN-ROOM (spec W7-backend §7): delete every recorded mix_* scratch WAV
+            for path in mix_temp_paths:
+                try:
+                    os.unlink(path)
+                except OSError:
+                    pass
         # ── Publication ───────────────────────────────────────────────
         # The finished track and its segment speech replace the previous ones
         # only if nothing has cancelled or superseded this render; otherwise

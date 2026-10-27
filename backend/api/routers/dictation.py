@@ -50,7 +50,18 @@ _VALID_MODES = ("toggle", "hold")
 MAX_PROMPT_CHARS = 1000
 
 
-# CLEAN-ROOM (spec W7-backend §13): dictation_prompt() and dictation_transcribe_kwargs(backend)
+def dictation_prompt() -> str:
+    value = prefs.get(PREF_PROMPT, "")
+    if not isinstance(value, str):
+        return ""
+    return value.strip()[:MAX_PROMPT_CHARS]
+
+
+def dictation_transcribe_kwargs(backend) -> dict:
+    from services.asr_backend import transcribe_request_kwargs
+
+    hint = dictation_prompt()
+    return transcribe_request_kwargs(backend, {"initial_prompt": hint or None})
 
 
 def _read_prefs() -> dict:

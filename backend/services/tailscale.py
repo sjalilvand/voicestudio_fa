@@ -81,7 +81,25 @@ _FALLBACK_PORT = 10000
 _LOOPBACK_HOSTS = {"127.0.0.1", "localhost"}
 
 
-# CLEAN-ROOM (spec W7-backend §15): _serve_config(cli)
+def _serve_config(cli):
+    """Read the machine-wide Tailscale serve configuration safely."""
+    try:
+        result = subprocess.run(
+            [cli, "serve", "status", "--json"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode != 0:
+            logger.warning("Tailscale serve status exited with code %s", result.returncode)
+            return None
+        output = result.stdout or ""
+        first_object = output.find("{")
+        data = {} if first_object < 0 else json.loads(output[first_object:])
+        return data if isinstance(data, dict) else None
+    except Exception:  # noqa: BLE001
+        logger.exception("Tailscale serve configuration could not be read")
+        return None
 
 
 def _is_our_proxy(proxy, backend_port: int) -> bool:
@@ -139,7 +157,12 @@ def _pick_port(config: dict, scheme: str, backend_port: int):
     return None
 
 
-# CLEAN-ROOM (spec W7-backend §16): _url(scheme, dns, port)
+def _url(scheme: str, dns: str, port: int) -> str:
+    if not dns:
+        return ""
+    if _DEFAULT_PORTS.get(scheme) == port:
+        return f"{scheme}://{dns}"
+    return f"{scheme}://{dns}:{port}"
 
 
 def serve_enable(port: int | None = None) -> dict:

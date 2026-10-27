@@ -518,8 +518,66 @@ def ensure_media_tools_on_path() -> list[str]:
     return added
 
 
-# CLEAN-ROOM (spec W7-backend §1): the thread-backed Popen wrapper class _ThreadProcess
-# CLEAN-ROOM (spec W7-backend §2): async _spawn_in_thread(cmd, **kwargs) launching Popen on the executor
+class _ThreadProcess:
+    uses_sync_pipes = True
+
+    def __init__(self, popen):
+        self._popen = popen
+        self._returncode = popen.returncode
+
+    @property
+    def stdin(self):
+        return self._popen.stdin
+
+    @property
+    def stdout(self):
+        return self._popen.stdout
+
+    @property
+    def stderr(self):
+        return self._popen.stderr
+
+    @property
+    def pid(self):
+        return self._popen.pid
+
+    @property
+    def returncode(self):
+        return self._returncode
+
+    async def communicate(self, input=None):
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(None, self._popen.communicate, input)
+        self._returncode = self._popen.returncode
+        return result
+
+    async def wait(self):
+        if self._returncode is None:
+            loop = asyncio.get_running_loop()
+            self._returncode = await loop.run_in_executor(None, self._popen.wait)
+        return self._returncode
+
+    def kill(self):
+        return self._popen.kill()
+
+    def terminate(self):
+        return self._popen.terminate()
+
+
+async def _spawn_in_thread(cmd, **kwargs):
+    popen_kwargs = dict(kwargs)
+    popen_kwargs.setdefault("stdin", None)
+    popen_kwargs.setdefault("stdout", asyncio.subprocess.PIPE)
+    popen_kwargs.setdefault("stderr", asyncio.subprocess.PIPE)
+    for pipe_name in ("stdin", "stdout", "stderr"):
+        if popen_kwargs[pipe_name] == asyncio.subprocess.PIPE:
+            popen_kwargs[pipe_name] = subprocess.PIPE
+
+    loop = asyncio.get_running_loop()
+    popen = await loop.run_in_executor(
+        None, lambda: subprocess.Popen(cmd, **popen_kwargs)
+    )
+    return _ThreadProcess(popen)
 
 
 async def _create_subprocess(cmd, **kwargs):

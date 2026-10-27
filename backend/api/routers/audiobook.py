@@ -1413,7 +1413,23 @@ async def _render_longform_sse(
         done = {"type": "done", "output": out_name,
                 "chapters": len(chapter_files), "duration_s": round(total_s, 2),
                 "cached_chapters": cached_n, "failed_chapters": failed}
-        # CLEAN-ROOM (spec W7-backend §10): title and summary fields of the done event
+        if title:
+            done["title"] = str(title)[:200]
+        try:
+            completed_chapters = [
+                chapter for index, chapter in enumerate(plan.chapters)
+                if index not in failed
+            ]
+            done["summary"] = _render_summary(
+                completed_chapters,
+                default_voice,
+                voice_map,
+                resolved_lang,
+                fmt,
+                opts,
+            )
+        except Exception:  # noqa: BLE001
+            logger.warning("[%s] render summary could not be built", job_id, exc_info=True)
         # Loudness verdict only when a preset was requested — off/None paths keep
         # the exact legacy `done` shape (additive, old clients unaffected).
         if norm in LOUDNESS_PRESETS:

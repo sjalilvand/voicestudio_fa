@@ -62,4 +62,40 @@ def _below_thousand(n: int) -> str:
 
 # ── Public API ───────────────────────────────────────────────────────────────
 
-# CLEAN-ROOM (spec W7-backend §14): cardinal(n), decimal(int_part, frac_digits), percent(raw)
+def cardinal(n: int) -> str:
+    if type(n) is not int:
+        raise TypeError("Urdu cardinal values must be plain integers")
+    if not 0 <= n <= 999_999:
+        raise ValueError("Urdu cardinal values must be between 0 and 999999")
+    if n < 1000:
+        return _below_thousand(n)
+    if 1100 <= n <= 1999:
+        hundreds, remainder = divmod(n, 100)
+        parts = [_BELOW_HUNDRED[hundreds], HUNDRED]
+        if remainder:
+            parts.append(_BELOW_HUNDRED[remainder])
+        return " ".join(parts)
+
+    lakhs = n // 100_000
+    thousands = (n % 100_000) // 1000
+    units = n % 1000
+    grouped_phrases = (
+        f"{_BELOW_HUNDRED[lakhs]} {LAKH}" if lakhs else "",
+        f"{_BELOW_HUNDRED[thousands]} {THOUSAND}" if thousands else "",
+        _below_thousand(units) if units else "",
+    )
+    return " ".join(phrase for phrase in grouped_phrases if phrase)
+
+
+def decimal(int_part: int, frac_digits: str) -> str:
+    digit_words = (_BELOW_HUNDRED[int(digit)] for digit in frac_digits)
+    return " ".join((cardinal(int_part), DECIMAL_WORD, *digit_words))
+
+
+def percent(raw: str) -> str:
+    if "." in raw:
+        left, right = raw.split(".", 1)
+        number = decimal(int(left), right)
+    else:
+        number = cardinal(int(raw))
+    return f"{number} {PERCENT_WORD}"

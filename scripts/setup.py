@@ -80,7 +80,13 @@ def _installed_torch_is_rocm():
 
 
 def rocm_torch_reinstall_cmd(index_url, python=None):
-    # CLEAN-ROOM (spec W7-backend §17): docstring of rocm_torch_reinstall_cmd
+    """Build the uv argv that reinstalls only torch packages into this script's venv.
+
+    A supplied ``python`` overrides the current interpreter. The ROCm source is
+    an extra index, not a replacement for the default: forcing every dependency
+    through PyTorch's index made resolution impossible (#3158). Keep this argv
+    aligned with Electron's ``rocmTorchInstallArgs``.
+    """
     tail = index_url.rstrip("/").rsplit("/", 1)[-1]
     tag = f"+{tail}" if re.fullmatch(r"rocm\d[\d.]*", tail) else ""
     names = [pin.split("==", 1)[0] for pin in ROCM_TORCH_PINS]

@@ -25,7 +25,7 @@ from __future__ import annotations
 import json
 import zlib
 from dataclasses import dataclass, field
-from typing import Callable, Optional
+from typing import Callable, ClassVar, Optional
 
 
 #: Mix constant for the per-occurrence seed nonce (#1208) — a large odd
@@ -94,7 +94,19 @@ class ExpressiveOptions:
     emo_text: Optional[str] = None
     emo_alpha: Optional[float] = None
     vary_repeats: bool = False
-    # CLEAN-ROOM (spec W7-backend §11): join settings fields, JOIN_KEYS and join_kwargs()
+    line_gap_ms: int = 0
+    paragraph_gap_ms: int = 0
+    trim_edges: bool = False
+
+    JOIN_KEYS: ClassVar[tuple[str, str, str]] = (
+        "line_gap_ms",
+        "paragraph_gap_ms",
+        "trim_edges",
+    )
+
+    def join_kwargs(self) -> dict:
+        """Return the chapter-stitching options as keyword arguments."""
+        return {name: getattr(self, name) for name in self.JOIN_KEYS}
 
     @property
     def is_default(self) -> bool:
