@@ -35,6 +35,9 @@ _CAP_MARGIN_S = 2.0
 #: A split is placed at the quietest frame in this last stretch of a chunk.
 _SPLIT_SEARCH_S = 6.0
 _FRAME_S = 0.02
+#: Longest source recording one Keep my delivery request converts. Longer
+#: uploads would decode to gigabytes of samples and queue hundreds of jobs.
+MAX_SOURCE_S = 600.0
 #: The reference clip is trimmed to this length (the tokenizer cap minus margin).
 MAX_REF_S = 28.0
 #: Speech runs at roughly this many characters a second. Used to give each
@@ -153,7 +156,12 @@ async def convert_recording(
     """
     import torch
 
-    source = await decode_mono(source_path, DECODE_SR)
+    source = await decode_mono(source_path, DECODE_SR, max_s=MAX_SOURCE_S + 1.0)
+    if source.size > int(MAX_SOURCE_S * DECODE_SR):
+        raise ValueError(
+            f"The source clip is longer than {int(MAX_SOURCE_S // 60)} minutes. "
+            "Trim it, or convert it in parts."
+        )
     if source.size == 0 or float(np.max(np.abs(source))) < 1e-4:
         raise ValueError(
             "The source clip is silent, so there is nothing to convert. Record "

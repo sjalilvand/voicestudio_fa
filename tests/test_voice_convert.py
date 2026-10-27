@@ -851,3 +851,18 @@ def test_split_lands_in_the_pause_and_respects_the_cap():
     assert 7.0 * sr <= bounds[0][1] <= 7.5 * sr
     assert split_audio(audio[: 3 * sr], sr, 10.0) == [(0, 3 * sr)]
     assert split_audio(np.zeros(0, np.float32), sr, 10.0) == []
+
+
+def test_keep_delivery_refuses_an_overlong_source(client, monkeypatch, profile):
+    import services.voice_conversion as vc
+
+    vc_cls = _vc_engine(f"vcl-{uuid.uuid4().hex[:6]}")
+    monkeypatch.setitem(_tts_mod()._REGISTRY, vc_cls.id, vc_cls)
+    monkeypatch.setenv("OMNIVOICE_TTS_BACKEND", vc_cls.id)
+    monkeypatch.setattr(vc, "MAX_SOURCE_S", 5.0)
+    _no_asr(monkeypatch)
+    _stub_decode(monkeypatch, 30.0)
+    r = _post(client, profile)
+    assert r.status_code == 422
+    assert "longer than" in r.json()["detail"]
+    assert vc_cls.vc_calls == []

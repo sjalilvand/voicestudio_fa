@@ -80,8 +80,13 @@ export function ConvertVoice() {
   useEffect(() => () => request.current?.abort(), []);
   // Match the backend's profile conditioning: designs use their saved sample
   // or instructions; clones need a reference (a locked take takes precedence).
+  // Keep my delivery converts into a recording, so a design without a saved
+  // sample has nothing to convert into.
   const voices = (profiles.data ?? []).filter(
-    (p) => p.kind === 'design' || p.ref_audio_path || (p.is_locked && p.locked_audio_path),
+    (p) =>
+      (!keepDelivery && p.kind === 'design') ||
+      p.ref_audio_path ||
+      (p.is_locked && p.locked_audio_path),
   );
   const valid = ready && file && voices.some((p) => p.id === voice) && !recordingBusy;
   const run = async () => {

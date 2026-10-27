@@ -295,3 +295,12 @@ it('keep my delivery explains the missing conversion engine', () => {
   expect(screen.getByText('convert.keep_delivery_engine_required')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'convert.convert' })).toBeDisabled();
 });
+it('keep my delivery offers only voices with a recording to convert into', () => {
+  mock.backends = [{ available: true, supports_voice_conversion: true }];
+  mount();
+  expect(screen.getByRole('button', { name: 'Legacy Design' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('switch', { name: 'convert.keep_delivery' }));
+  expect(screen.queryByRole('button', { name: 'Legacy Design' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Captain Crusty' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Locked Clone' })).toBeInTheDocument();
+});
