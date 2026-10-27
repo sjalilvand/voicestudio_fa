@@ -6,8 +6,6 @@ def _runtime_import_module():
 
 def _epub(docs: dict[str, str], *, nav: str | None = None, ncx: str | None = None, linear_no=(),
           guide: str | None = None) -> bytes:
-            f"<manifest>{''.join(manifest)}</manifest><spine>{''.join(spine)}</spine>{guide or ''}</package>",
-                '<h1 id="start">Too Many Questions</h1><p class="page-number">120</p><p>“Fish for breakfast!”</p><p role="doc-pagebreak">iv</p><p>I</p>',
 
 
 
