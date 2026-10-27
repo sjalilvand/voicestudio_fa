@@ -1670,7 +1670,9 @@ def get_best_device():
             # Fall back to CPU so the app WORKS (slowly) instead of dead-ending;
             # OMNIVOICE_FORCE_CUDA=1 overrides for users who installed a matching
             # torch and know the arch_list probe is wrong for their setup.
-            if not _env_flag("OMNIVOICE_FORCE_CUDA"):
+            from core.device_caps import cuda_forced
+
+            if not cuda_forced():
                 logger.warning(
                     "Falling back to CPU: this GPU is unsupported by the installed "
                     "PyTorch build (set OMNIVOICE_FORCE_CUDA=1 to force CUDA anyway)."

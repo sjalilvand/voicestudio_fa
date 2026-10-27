@@ -22,6 +22,7 @@ from core.device_caps import (
     KERNEL_RISK_MARKER,
     UNUSABLE_GPU_MARKER,
     HostCaps,
+    cuda_forced,
 )
 
 RoutingStatus = Literal["accelerated", "cpu_fallback", "cpu_only", "unavailable", "n/a"]
@@ -167,6 +168,26 @@ def resolve_routing(
             "routing_status": "cpu_only",
             "routing_reason": "engine declares no compute targets",
         }
+
+    # 2a. The installed wheel has no kernels for this card (an sm_52 Maxwell on
+    #     torch 2.8+cu128, #3067). The loader (model_manager.get_best_device)
+    #     already falls back to the CPU for it unless OMNIVOICE_FORCE_CUDA is
+    #     set, so the badge must say so instead of "accelerated": a green GPU
+    #     badge followed by CPU-speed (or crashing) generation is the
+    #     silent-fallback this resolver exists to prevent. CUDA only: on Linux
+    #     ROCm the loader may still remap the card with HSA_OVERRIDE_GFX_VERSION
+    #     after this probe ran, so a ROCm mismatch stays a caveat.
+    if fam == "cuda" and fam in targets and "cpu" in targets and not cuda_forced():
+        for note in caps.notes:
+            if KERNEL_RISK_MARKER in note:
+                return {
+                    "effective_device": "cpu",
+                    "routing_status": "cpu_fallback",
+                    "routing_reason": (
+                        f"{note}; running on CPU (set OMNIVOICE_FORCE_CUDA=1 "
+                        "to use the GPU anyway)"
+                    ),
+                }
 
     # 2. Host accelerator is one the engine supports → accelerated.
     if fam != "cpu" and fam in targets:

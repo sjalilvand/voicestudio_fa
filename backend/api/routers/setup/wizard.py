@@ -622,6 +622,12 @@ def preflight():
             r_status, r_detail, r_fix = "warn", f"{_eng} → {_dev}: {_why}", (
                 "Unload other models before generating, keep the text short, "
                 "or pick a lighter engine.")
+        elif _rs == "cpu_fallback" and KERNEL_RISK_MARKER in (_why or ""):
+            # The wheel lacks this GPU's architecture (#3067): the driver is fine.
+            r_status, r_detail, r_fix = "warn", f"{_eng} runs on CPU here: {_why}", (
+                "The installed PyTorch build has no kernels for this GPU's "
+                "architecture, so a driver update will not help. Install a "
+                "PyTorch build that covers it, or continue on CPU (slower).")
         elif _rs == "cpu_fallback":
             r_status, r_detail, r_fix = "warn", (
                 f"{_eng} runs on CPU here: {_why or 'no GPU path for this host'}"), (

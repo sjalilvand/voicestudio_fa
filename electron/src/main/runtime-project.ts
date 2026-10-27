@@ -62,6 +62,31 @@ export const ROCM_TORCH_PINS = [
   'torchvision==0.23.0',
 ] as const;
 /**
+ * `uv pip install` arguments that swap the main venv's torch stack for the
+ * ROCm wheels.
+ *
+ * The ROCm index is an EXTRA index and only the torch packages are reinstalled.
+ * With `--index-url` plus `--reinstall`, every dependency had to come from
+ * PyTorch's index, which carries no Pillow 13, so the project's
+ * `pillow>=13.0.0` override made the swap unsatisfiable and a ROCm install
+ * never finished (#3158, #3418). The local tag comes from the index name
+ * (`…/rocm6.4` → `+rocm6.4`), mirroring `sidecar_install._rocm_pin_args`; a
+ * mirror without such a name keeps the bare pins, and the tagged build still
+ * wins by PEP 440 ordering. Kept equal to `scripts/setup.py`.
+ */
+export function rocmTorchInstallArgs(index: string): string[] {
+  const tail = index.replace(/\/+$/, '').split('/').pop() ?? '';
+  const tag = /^rocm\d[\d.]*$/.test(tail) ? `+${tail}` : '';
+  return [
+    ...ROCM_TORCH_PINS.flatMap((pin) => ['--reinstall-package', pin.split('==')[0]!]),
+    ...ROCM_TORCH_PINS.map((pin) => `${pin}${tag}`),
+    '--extra-index-url',
+    index,
+    '--index-strategy',
+    'unsafe-best-match',
+  ];
+}
+/**
  * Linux uses PyTorch's ROCm index; Windows x64 uses the shared AMD recipe.
  */
 export function rocmTorchApplies(platform: NodeJS.Platform = process.platform): boolean {
@@ -1217,12 +1242,9 @@ export async function installRuntime(
       [
         'pip',
         'install',
-        '--reinstall',
         '--python',
         runtimePython(project),
-        ...ROCM_TORCH_PINS,
-        '--index-url',
-        process.env.OMNIVOICE_TORCH_INDEX || ROCM_TORCH_INDEX,
+        ...rocmTorchInstallArgs(process.env.OMNIVOICE_TORCH_INDEX || ROCM_TORCH_INDEX),
       ],
       project,
       env,

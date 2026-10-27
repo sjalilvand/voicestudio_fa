@@ -26,6 +26,7 @@ Cross-platform:
   - macOS:   skipped (no CUDA)
 """
 import os
+import re
 import sys
 import subprocess
 import glob
@@ -70,12 +71,24 @@ def _installed_torch_is_rocm():
 
 
 def rocm_torch_reinstall_cmd(index_url, python=None):
-    """`uv pip install` argv targeting THIS venv (not whatever uv guesses)."""
+    """`uv pip install` argv targeting THIS venv (not whatever uv guesses).
+
+    The ROCm index is an extra index and only the torch packages are
+    reinstalled: `--index-url` + `--reinstall` forced every dependency onto
+    PyTorch's index, which has no Pillow 13, so the project's
+    `pillow>=13.0.0` override made the swap unsatisfiable (#3158). Kept equal
+    to Electron's `rocmTorchInstallArgs`.
+    """
+    tail = index_url.rstrip("/").rsplit("/", 1)[-1]
+    tag = f"+{tail}" if re.fullmatch(r"rocm\d[\d.]*", tail) else ""
+    names = [pin.split("==", 1)[0] for pin in ROCM_TORCH_PINS]
     return [
-        "uv", "pip", "install", "--reinstall",
+        "uv", "pip", "install",
         "--python", python or sys.executable,
-        *ROCM_TORCH_PINS,
-        "--index-url", index_url,
+        *(arg for name in names for arg in ("--reinstall-package", name)),
+        *(f"{pin}{tag}" for pin in ROCM_TORCH_PINS),
+        "--extra-index-url", index_url,
+        "--index-strategy", "unsafe-best-match",
     ]
 
 

@@ -87,3 +87,18 @@ def test_preflight_routes_the_same_way_as_the_diagnostic(
     row = next(r for r in rows if r["id"] == "gpu_routing")
     assert row["status"] == "warn"
     assert ("reinstall torch" in (row["fix"] or "")) is expect_driver_remedy
+
+
+def test_kernel_mismatch_cpu_fallback_names_the_wheel_not_the_driver(monkeypatch):
+    # #3067: the badge now falls back to CPU for a card the wheel has no
+    # kernels for; the hint must not send the user to pick another engine or
+    # update a driver that is fine.
+    _verdict(
+        monkeypatch,
+        f"Quadro M5000M (sm_52) not in this torch build's archs — {KERNEL_RISK_MARKER}; running on CPU",
+        status="cpu_fallback",
+    )
+    check = diagnose._check_gpu_routing()
+    assert check["status"] == WARN
+    assert "driver update will not help" in check["hint"]
+    assert "Pick an engine" not in check["hint"]

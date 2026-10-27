@@ -36,7 +36,38 @@ def test_mps_host_mps_engine_accelerated():
     assert r["effective_device"] == "mps"
 
 
-def test_accelerated_with_kernel_risk_caveat():
+def test_cuda_kernel_mismatch_falls_back_to_cpu(monkeypatch):
+    # #3067: an sm_52 card on a sm_70+ wheel. The loader falls back to CPU, so
+    # the badge must too instead of a green "accelerated".
+    monkeypatch.delenv("OMNIVOICE_FORCE_CUDA", raising=False)
+    note = f"Quadro M5000M (sm_52) not in this torch build's archs — {KERNEL_RISK_MARKER}"
+    r = resolve_routing(("cuda", "cpu"), _caps("cuda", notes=[note]))
+    assert r["routing_status"] == "cpu_fallback"
+    assert r["effective_device"] == "cpu"
+    assert KERNEL_RISK_MARKER in r["routing_reason"]
+    assert "OMNIVOICE_FORCE_CUDA" in r["routing_reason"]
+
+
+def test_cuda_kernel_mismatch_without_cpu_path_keeps_caveat(monkeypatch):
+    monkeypatch.delenv("OMNIVOICE_FORCE_CUDA", raising=False)
+    note = f"GPU (sm_52) not in this torch build's archs — {KERNEL_RISK_MARKER}"
+    r = resolve_routing(("cuda",), _caps("cuda", notes=[note]))
+    assert r["routing_status"] == "accelerated"
+    assert KERNEL_RISK_MARKER in r["routing_reason"]
+
+
+def test_rocm_kernel_mismatch_stays_a_caveat(monkeypatch):
+    # The Linux ROCm loader may still remap with HSA_OVERRIDE_GFX_VERSION.
+    monkeypatch.delenv("OMNIVOICE_FORCE_CUDA", raising=False)
+    note = f"GPU (gfx1201) not in this torch build's archs — {KERNEL_RISK_MARKER}"
+    r = resolve_routing(("cuda", "rocm", "cpu"), _caps("rocm", notes=[note]))
+    assert r["routing_status"] == "accelerated"
+
+
+def test_accelerated_with_kernel_risk_caveat(monkeypatch):
+    # OMNIVOICE_FORCE_CUDA=1: the loader uses the GPU anyway, so the badge
+    # stays accelerated with the kernel-launch caveat.
+    monkeypatch.setenv("OMNIVOICE_FORCE_CUDA", "1")
     note = f"GPU (sm_120) not in this torch build's archs — {KERNEL_RISK_MARKER}"
     r = resolve_routing(("cuda", "cpu"), _caps("cuda", notes=[note]))
     assert r["routing_status"] == "accelerated"
@@ -199,7 +230,8 @@ def test_notice_emitted_for_cpu_fallback():
     assert n is not None and n[0] == "cpu_fallback" and n[1]
 
 
-def test_notice_emitted_for_accelerated_with_caveat():
+def test_notice_emitted_for_accelerated_with_caveat(monkeypatch):
+    monkeypatch.setenv("OMNIVOICE_FORCE_CUDA", "1")
     note = f"sm_120 not in build — {KERNEL_RISK_MARKER}"
     r = resolve_routing(("cuda", "cpu"), _caps("cuda", notes=[note]))
     n = routing_notice(r)

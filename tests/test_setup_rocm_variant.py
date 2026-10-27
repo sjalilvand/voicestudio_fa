@@ -36,18 +36,31 @@ def test_rocm_opt_in_requires_explicit_variant():
 
 def test_rocm_reinstall_targets_this_venv_with_pinned_stack():
     setup = _load_setup()
-    cmd = setup.rocm_torch_reinstall_cmd("https://idx/", python="/venv/bin/python")
+    cmd = setup.rocm_torch_reinstall_cmd(setup.ROCM_TORCH_INDEX, python="/venv/bin/python")
+    # #3158: only the torch stack is reinstalled and the ROCm index is an
+    # extra one. `--index-url` + `--reinstall` forced Pillow onto PyTorch's
+    # index (no Pillow 13), so the swap was unsatisfiable.
+    assert "--reinstall" not in cmd and "--index-url" not in cmd
     assert cmd == [
         "uv",
         "pip",
         "install",
-        "--reinstall",
         "--python",
         "/venv/bin/python",
-        *setup.ROCM_TORCH_PINS,
-        "--index-url",
-        "https://idx/",
+        "--reinstall-package", "torch",
+        "--reinstall-package", "torchaudio",
+        "--reinstall-package", "torchvision",
+        "torch==2.8.0+rocm6.4",
+        "torchaudio==2.8.0+rocm6.4",
+        "torchvision==0.23.0+rocm6.4",
+        "--extra-index-url",
+        setup.ROCM_TORCH_INDEX,
+        "--index-strategy",
+        "unsafe-best-match",
     ]
+    # A mirror without a rocm-style name keeps the bare pins.
+    mirror = setup.rocm_torch_reinstall_cmd("https://idx/", python="/venv/bin/python")
+    assert "torch==2.8.0" in mirror and "https://idx/" in mirror
     assert setup.ROCM_TORCH_PINS == (
         "torch==2.8.0",
         "torchaudio==2.8.0",
