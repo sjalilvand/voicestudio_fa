@@ -221,6 +221,26 @@ class ProsodyMirrorSegment(BaseModel):
         return self
 
 
+class TranscriptSegment(BaseModel):
+    id: Optional[str] = Field(default=None, max_length=200)
+    start: float = Field(ge=0)
+    end: float = Field(ge=0)
+    text: str = Field(max_length=20000)
+    # Source-language line when ``text`` is an unspoken translation, so dual
+    # subtitles still stack the original under it.
+    text_original: Optional[str] = Field(default=None, max_length=20000)
+    # Same echo as DubSegment.cue_source_id: imported cue markup survives
+    # only while the line is still that import's text (#2295).
+    cue_source_id: Optional[str] = Field(default=None, max_length=200)
+
+
+class TranscriptSyncRequest(BaseModel):
+    """The editor's transcript, stored before any dub exists so exports of
+    the original audio with subtitles use the edited lines (#3393)."""
+
+    segments: List[TranscriptSegment] = Field(min_length=1, max_length=20000)
+
+
 class CleanupSegmentsRequest(BaseModel):
     """The editor's current segments; without them the job's stored copy is
     cleaned, which misses every edit made since transcription."""
