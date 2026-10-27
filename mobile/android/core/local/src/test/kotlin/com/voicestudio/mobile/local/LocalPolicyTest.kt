@@ -46,7 +46,7 @@ class LocalPolicyTest {
         val downloads=ModelDownloads(File(temporary.root,"models"),gate(),8_000_000_000,{true},{Long.MAX_VALUE},OkHttpClient.Builder().followRedirects(false).build(),listOf("https://huggingface.co"),false)
         for(host in listOf("huggingface.co","hf-mirror.com","cdn-lfs.hf-mirror.com","cas-bridge.xethub.hf.co"))
             assertTrue(downloads.allowed("https://$host/org/model/resolve/main/weights.bin".toHttpUrl()))
-        for(url in listOf("http://huggingface.co/org/model/resolve/main/weights.bin","https://user:pass@huggingface.co/x","https://huggingface.co.evil.test/x","https://cdn-lfs.hf-mirror.com.evil.test/x","https://example.org/x"))
+        for(url in listOf("http://huggingface.co/org/model/resolve/main/weights.bin","https://user:pass@huggingface.co/x","https://huggingface.co.evil.test/x","https://cdn-lfs.hf-mirror.com.evil.test/x","https://hf-mirror.com:8443/x","https://example.org/x"))
             assertFalse(downloads.allowed(url.toHttpUrl()))
     }
     @Test fun invalidCatalogueCannotChooseAnUnpinnedOrEscapingFile() {
