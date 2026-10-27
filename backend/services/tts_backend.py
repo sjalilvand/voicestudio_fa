@@ -34,6 +34,8 @@ from typing import Literal, Optional
 
 import torch
 
+from services.expression import COSYVOICE_INLINE_TAGS, OMNIVOICE_INLINE_TAGS, expression_caps
+
 logger = logging.getLogger("omnivoice.tts")
 
 
@@ -283,6 +285,17 @@ class TTSBackend(ABC):
     #: used as written or ignored. Reported by ``list_backends()`` so clients
     #: know whether to sanitise before sending.
     instruct_vocabulary: Literal["tags", "freeform"] = "freeform"
+
+    #: Inline reaction tags (``[laughter]``, ``[breath]``) this engine's own
+    #: tokenizer renders where they are typed (#3422). The text reaches every
+    #: engine verbatim, so an engine that doesn't list a tag speaks it as
+    #: words; Insert menus offer only these. Declare only verified tags.
+    inline_tags: tuple[str, ...] = ()
+
+    #: Whether ``instruct`` steers the *delivery* of a cloned voice ("sound
+    #: scared") rather than only designing a new one (#3422). True for
+    #: CosyVoice's instruct2 and VoxCPM2's controllable cloning.
+    instruct_directs_delivery: bool = False
 
     def ensure_ready(self) -> None:
         """Load model weights now (blocking), so callers can separate the
@@ -1738,6 +1751,7 @@ class OmniVoiceBackend(TTSBackend):
     id = "omnivoice"
     display_name = "VoiceStudio (k2-fsa/OmniVoice, 600+ languages)"
     instruct_vocabulary = "tags"
+    inline_tags = OMNIVOICE_INLINE_TAGS
     supports_voice_design = True
     gpu_compat = ("cuda", "rocm", "mps", "cpu")
     # Derived from the pool's own per-job budget (_GPU_VRAM_PER_JOB_GB = 5.0 in
@@ -2146,6 +2160,8 @@ class VoxCPM2Backend(TTSBackend):
     id = "voxcpm2"
     display_name = "VoxCPM2 (30 langs, studio 48 kHz, voice design)"
     supports_voice_design = True
+    # Controllable cloning: instruct becomes the "(control)text" prefix.
+    instruct_directs_delivery = True
     # _prepare_voxcpm_ref keeps the first _VOXCPM_REF_MAX_S after silence trim.
     max_ref_seconds = _VOXCPM_REF_MAX_S
     ref_strategy = "head"
@@ -3219,6 +3235,9 @@ class CosyVoiceBackend(TTSBackend):
 
     id = "cosyvoice"
     display_name = "CosyVoice 3 (9 langs, zero-shot, instruct, Apache-2.0)"
+    # instruct + reference → inference_instruct2 (emotion, dialect, pace).
+    instruct_directs_delivery = True
+    inline_tags = COSYVOICE_INLINE_TAGS
     # CosyVoice's official inference path expects CUDA; CPU works but slow.
     # MPS support not verified upstream — flagged for Phase 6 confirmation.
     gpu_compat = ("cuda", "cpu")
@@ -3231,8 +3250,18 @@ class CosyVoiceBackend(TTSBackend):
         "ru": "<|ru|>",
     }
 
+    _ENDOFPROMPT = "<|endofprompt|>"
+    _SYSTEM_PROMPT = "You are a helpful assistant."
+
     def __init__(self):
         self._model = None
+
+    @classmethod
+    def _v3_prompt(cls, text: str) -> str:
+        """v3 wants the system prompt ahead of the prompt transcript or text."""
+        if cls._ENDOFPROMPT in text:
+            return text
+        return f"{cls._SYSTEM_PROMPT}{cls._ENDOFPROMPT}{text}"
 
     @classmethod
     def is_available(cls) -> tuple[bool, str]:
@@ -3294,17 +3323,27 @@ class CosyVoiceBackend(TTSBackend):
         # 2. ref_audio + ref_text → inference_zero_shot (voice cloning)
         # 3. ref_audio only → inference_cross_lingual (with lang tag)
         # 4. nothing → inference_sft (built-in speakers, v1/SFT model only)
+        # CosyVoice 3 wants its system prompt ahead of every prompt, the
+        # same construction as the sidecar (engines/cosyvoice_subprocess).
+        v3 = type(self._model).__name__ == "CosyVoice3"
         pieces = []
         if instruct and ref_audio:
             # Instruct mode: "用四川话说<|endofprompt|>"
-            if not instruct.endswith("<|endofprompt|>"):
-                instruct = f"{instruct}<|endofprompt|>"
+            if not instruct.endswith(self._ENDOFPROMPT):
+                instruct = f"{instruct}{self._ENDOFPROMPT}"
+            if v3 and not instruct.startswith(self._SYSTEM_PROMPT):
+                instruct = f"{self._SYSTEM_PROMPT} {instruct}"
             results = self._model.inference_instruct2(
                 text, instruct, ref_audio, stream=False,
             )
         elif ref_audio and ref_text:
+            prompt_text = self._v3_prompt(ref_text) if v3 else ref_text
             results = self._model.inference_zero_shot(
-                text, ref_text, ref_audio, stream=False,
+                text, prompt_text, ref_audio, stream=False,
+            )
+        elif ref_audio and v3:
+            results = self._model.inference_cross_lingual(
+                self._v3_prompt(text), ref_audio, stream=False,
             )
         elif ref_audio:
             # Cross-lingual: prefix text with language tag if available.
@@ -4008,6 +4047,8 @@ def list_backends(*, include_hidden: bool = False) -> list[dict]:
                                                     #   model-dependent (property, e.g. mlx-audio)
           "instruct_vocabulary": "tags" | "freeform",  # how ``instruct`` is read: closed OmniVoice
                                                     #   attribute list vs text used as written
+          "expression_caps": {"emotion": "graded" | "direction" | "none",
+                              "tags": list[str]},   # inline reaction tags it renders (#3422)
           "supports_voice_design": Optional[bool],  # False = needs a reference clip;
                                                     #   None = undeclared (design allowed)
           "preset_voices":  list[str],              # built-in voice ids a request may pick (``voice``); [] = none
@@ -4137,6 +4178,8 @@ def list_backends(*, include_hidden: bool = False) -> list[dict]:
             # panel's engine gate. Class attr, defaults False.
             "supports_emotion": bool(getattr(cls, "supports_emotion", False)),
             "instruct_vocabulary": getattr(cls, "instruct_vocabulary", "freeform"),
+            # Emotion mechanism + inline reaction tags the engine renders (#3422).
+            "expression_caps": expression_caps(cls),
             # Voice Design gate: False hides Design for reference-only engines.
             "supports_voice_design": voice_design_support(cls),
             # Reference-length truth (#2281): how much of a clone clip the
