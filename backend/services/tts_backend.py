@@ -3235,8 +3235,18 @@ class CosyVoiceBackend(TTSBackend):
         "ru": "<|ru|>",
     }
 
+    _ENDOFPROMPT = "<|endofprompt|>"
+    _SYSTEM_PROMPT = "You are a helpful assistant."
+
     def __init__(self):
         self._model = None
+
+    @classmethod
+    def _v3_prompt(cls, text: str) -> str:
+        """v3 wants the system prompt ahead of the prompt transcript or text."""
+        if cls._ENDOFPROMPT in text:
+            return text
+        return f"{cls._SYSTEM_PROMPT}{cls._ENDOFPROMPT}{text}"
 
     @classmethod
     def is_available(cls) -> tuple[bool, str]:
@@ -3298,17 +3308,27 @@ class CosyVoiceBackend(TTSBackend):
         # 2. ref_audio + ref_text → inference_zero_shot (voice cloning)
         # 3. ref_audio only → inference_cross_lingual (with lang tag)
         # 4. nothing → inference_sft (built-in speakers, v1/SFT model only)
+        # CosyVoice 3 wants its system prompt ahead of every prompt, the
+        # same construction as the sidecar (engines/cosyvoice_subprocess).
+        v3 = type(self._model).__name__ == "CosyVoice3"
         pieces = []
         if instruct and ref_audio:
             # Instruct mode: "用四川话说<|endofprompt|>"
-            if not instruct.endswith("<|endofprompt|>"):
-                instruct = f"{instruct}<|endofprompt|>"
+            if not instruct.endswith(self._ENDOFPROMPT):
+                instruct = f"{instruct}{self._ENDOFPROMPT}"
+            if v3 and not instruct.startswith(self._SYSTEM_PROMPT):
+                instruct = f"{self._SYSTEM_PROMPT} {instruct}"
             results = self._model.inference_instruct2(
                 text, instruct, ref_audio, stream=False,
             )
         elif ref_audio and ref_text:
+            prompt_text = self._v3_prompt(ref_text) if v3 else ref_text
             results = self._model.inference_zero_shot(
-                text, ref_text, ref_audio, stream=False,
+                text, prompt_text, ref_audio, stream=False,
+            )
+        elif ref_audio and v3:
+            results = self._model.inference_cross_lingual(
+                self._v3_prompt(text), ref_audio, stream=False,
             )
         elif ref_audio:
             # Cross-lingual: prefix text with language tag if available.
