@@ -107,6 +107,12 @@ def _gfx_parts(gfx: str) -> tuple[str, str, str] | None:
     return major, minor, step
 
 
+# gfx9 holds three ISAs that cannot run each other's kernels: Vega (the
+# ``gfx9-generic`` family below), CDNA1/2 (gfx908, gfx90a) and CDNA3 (gfx94x,
+# gfx950). Only Vega parts remap, and only onto Vega.
+_GFX9_GENERIC = frozenset({"gfx900", "gfx902", "gfx904", "gfx906", "gfx909", "gfx90c"})
+
+
 def rocm_override_target(gfx: str, arch_list) -> str | None:
     """The architecture in ``arch_list`` a card missing from it can be remapped
     onto with ``HSA_OVERRIDE_GFX_VERSION``, or ``None`` when none can work.
@@ -114,6 +120,8 @@ def rocm_override_target(gfx: str, arch_list) -> str | None:
     Rules (the same families LLVM's ``gfxN-generic`` targets group):
 
     * never across an ISA generation — gfx12 (RDNA4) cannot run gfx11 kernels;
+    * within gfx9, Vega only — CDNA parts (gfx908, gfx90a, gfx942) never remap
+      onto Vega, and Vega never onto CDNA;
     * never onto a NEWER minor revision — gfx1012 (RDNA1) is not gfx1030
       (RDNA2), but gfx1151 (RDNA3.5) does run gfx1100 (RDNA3) code;
     * the target must be expressible as an HSA version (digits only);
@@ -130,12 +138,16 @@ def rocm_override_target(gfx: str, arch_list) -> str | None:
     if not build or native in build:
         return None
     major, minor, _step = device
+    if major == "9" and native not in _GFX9_GENERIC:
+        return None
     candidates = []
     for arch in build:
         parts = _gfx_parts(arch)
         if parts is None or not arch.removeprefix("gfx").isdigit():
             continue
         t_major, t_minor, t_step = parts
+        if major == "9" and _normalize_arch(arch) not in _GFX9_GENERIC:
+            continue
         if t_major == major and int(t_minor) <= int(minor):
             candidates.append(((t_minor != minor, int(t_minor), int(t_step)), arch))
     return min(candidates)[1] if candidates else None

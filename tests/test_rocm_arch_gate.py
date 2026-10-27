@@ -152,6 +152,12 @@ def test_every_derived_target_has_a_valid_hsa_form():
     ("sm_89", ["gfx1100"], None),
     # Targets HSA cannot express (gfx90a) are never chosen.
     ("gfx90c", ["gfx90a"], None),
+    # gfx9 is three ISAs: CDNA never lands on Vega kernels, nor Vega on CDNA.
+    ("gfx942", _LEGACY_WHEEL, None),
+    ("gfx908", ["gfx900", "gfx906"], None),
+    ("gfx950", ["gfx900", "gfx942"], None),
+    ("gfx906", ["gfx908"], None),
+    ("gfx909", ["gfx900", "gfx908"], "gfx900"),
 ])
 def test_rocm_override_target_is_derived_from_the_wheel(gfx, archs, expected):
     assert device_caps.rocm_override_target(gfx, archs) == expected
