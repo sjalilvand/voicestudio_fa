@@ -21,7 +21,8 @@ Pure and import-light (no torch), so routers and the engine layer share it.
 from __future__ import annotations
 
 import re
-from typing import Optional
+import sqlite3
+from typing import Any, Mapping, Optional, Union
 
 #: History rows written before #3062 stored ``text[:200]``.
 LEGACY_HISTORY_TEXT_CAP = 200
@@ -70,19 +71,23 @@ def take_reference_transcript(text: Optional[str]) -> str:
     return strip_script_markup(text)
 
 
+#: A ``voice_profiles`` row: a ``sqlite3.Row`` from the database, or a mapping
+#: with the same keys (tests, cached copies).
+ProfileRow = Union[sqlite3.Row, Mapping[str, Any]]
+
 #: Prefix lengths older releases cut take text to before storing it as a
 #: transcript: 100 when locking a take (until #3320), 200 in history (#3062).
 LEGACY_CUT_LENGTHS = (100, LEGACY_HISTORY_TEXT_CAP)
 
 
-def _row_value(row, key):
+def _row_value(row: ProfileRow, key: str) -> Any:
     try:
         return row[key]
     except (KeyError, IndexError):
         return None
 
 
-def is_legacy_cut_transcript(row) -> bool:
+def is_legacy_cut_transcript(row: ProfileRow) -> bool:
     """True when a profile's stored transcript is a cut prefix of a take.
 
     A locked voice's transcript was written by the lock, so a locked transcript
@@ -111,7 +116,7 @@ def is_legacy_cut_transcript(row) -> bool:
     return hit is not None
 
 
-def stored_reference_transcript(row) -> Optional[str]:
+def stored_reference_transcript(row: ProfileRow) -> Optional[str]:
     """A profile row's transcript as a reference transcript, or ``None``.
 
     ``None`` (transcribe the clip) for a cut legacy take prefix; otherwise the
