@@ -70,6 +70,37 @@ export const ROCM_TORCH_PINS = [
   'torchvision==0.23.0',
 ] as const;
 /**
+ * `uv pip install` arguments that swap the main venv's torch stack for the
+ * ROCm wheels.
+ *
+ * The ROCm index is an EXTRA index and only the torch packages are reinstalled.
+ * With `--index-url` plus `--reinstall`, every dependency had to come from
+ * PyTorch's index, which carries no Pillow 13, so the project's
+ * `pillow>=13.0.0` override made the swap unsatisfiable and a ROCm install
+ * never finished (#3158, #3418). The local tag comes from the index name
+ * (`…/rocm6.4` → `+rocm6.4`), mirroring `sidecar_install._rocm_pin_args`; a
+ * mirror without such a name keeps the bare pins, and the tagged build still
+ * wins by PEP 440 ordering. Kept equal to `scripts/setup.py`.
+ */
+export function rocmTorchInstallArgs(index: string): string[] {
+  const tail = index.replace(/\/+$/, '').split('/').pop() ?? '';
+  const tag = /^rocm\d[\d.]*$/.test(tail) ? `+${tail}` : '';
+  return [
+    ...ROCM_TORCH_PINS.flatMap((pin) => ['--reinstall-package', pin.split('==')[0]!]),
+    ...ROCM_TORCH_PINS.map((pin) => `${pin}${tag}`),
+    '--extra-index-url',
+    index,
+    '--index-strategy',
+    'unsafe-best-match',
+  ];
+}
+/** Exits non-zero unless the installed torch is a ROCm (HIP) build. */
+export const ROCM_TORCH_PROBE =
+  "import torch, sys; sys.exit(0 if getattr(torch.version, 'hip', None) else 1)";
+export const ROCM_TORCH_PROBE_FAILURE =
+  'The ROCm setup installed a PyTorch build without ROCm support. Check that ' +
+  'OMNIVOICE_TORCH_INDEX points at a ROCm wheel index, then run setup again.';
+/**
  * Linux uses PyTorch's ROCm index; Windows x64 uses the shared AMD recipe.
  */
 export function rocmTorchApplies(platform: NodeJS.Platform = process.platform): boolean {
@@ -1323,12 +1354,9 @@ export async function installRuntime(
       [
         'pip',
         'install',
-        '--reinstall',
         '--python',
         runtimePython(project),
-        ...ROCM_TORCH_PINS,
-        '--index-url',
-        process.env.OMNIVOICE_TORCH_INDEX || ROCM_TORCH_INDEX,
+        ...rocmTorchInstallArgs(process.env.OMNIVOICE_TORCH_INDEX || ROCM_TORCH_INDEX),
       ],
       project,
       env,
@@ -1363,6 +1391,15 @@ export async function installRuntime(
       // An outdated system Visual C++ runtime crashes newer C++ wheels such as
       // sentencepiece 0.2.2 with an access violation; say so and how to fix it (#3293).
       throw outdatedSystemLibraryError(error, diagnosis) ?? importFailure(error);
+    }
+    if (torch.variant === 'rocm') {
+      // With an untagged OMNIVOICE_TORCH_INDEX mirror the bare pins can resolve
+      // to ordinary wheels; never mark such a runtime ROCm-ready.
+      try {
+        await run(runtimePython(project), ['-c', ROCM_TORCH_PROBE], project);
+      } catch {
+        throw new Error(ROCM_TORCH_PROBE_FAILURE);
+      }
     }
   }
   signal.throwIfAborted();
