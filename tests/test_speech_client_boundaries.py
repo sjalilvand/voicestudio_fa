@@ -56,22 +56,30 @@ def test_remote_addresses_never_gain_loopback_credentials(monkeypatch, host):
     assert not client._is_loopback_host(host)
 
 
-@pytest.mark.parametrize("url", ["http://127.1:3900/v1/x", "http://localhost:3900/v1/x"])
-def test_loopback_requests_bypass_environment_proxies(monkeypatch, url):
-    from urllib import request
+
+@pytest.mark.parametrize(
+    ("url", "proxied"),
+    [
+        ("http://127.1:3900/v1/x", False),
+        ("http://localhost:3900/v1/x", False),
+        # e.g. the target of a redirect from an uncredentialed loopback request
+        ("http://gpu.example/v1/x", True),
+    ],
+)
+def test_only_loopback_requests_bypass_environment_proxies(monkeypatch, url, proxied):
+    from urllib import error, request
     from speech_client import __main__ as client
 
     monkeypatch.setenv("http_proxy", "http://proxy.example:8080")
     monkeypatch.setenv("no_proxy", "")
-    built = []
+    seen = []
 
-    def capture(*handlers):
-        built.append(handlers)
-        raise client.SpeechClientError("stop before network")
+    class _Record(request.HTTPHandler):
+        def http_open(self, req):
+            seen.append(req.has_proxy())
+            raise error.URLError("stop before network")
 
-    monkeypatch.setattr(request, "build_opener", capture)
-    req = request.Request(url, headers={"Authorization": "Bearer synthetic"})
-    with pytest.raises(client.SpeechClientError):
-        client._open(req)
-    proxies = [h for h in built[0] if isinstance(h, request.ProxyHandler)]
-    assert proxies and proxies[0].proxies == {}
+    opener = request.build_opener(client._LoopbackDirectProxyHandler(), _Record())
+    with pytest.raises(error.URLError):
+        opener.open(request.Request(url))
+    assert seen == [proxied]

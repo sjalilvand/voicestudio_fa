@@ -89,23 +89,31 @@ def _is_loopback_host(host: str | None) -> bool:
     )
 
 
+class _LoopbackDirectProxyHandler(request.ProxyHandler):
+    """Environment proxies, except for loopback targets.
+
+    no_proxy rarely lists numeric aliases like 127.1, and a plain-HTTP bearer
+    key must not reach a proxy in the clear. Checked per request, so a redirect
+    from loopback to a remote host still uses the configured proxy.
+    """
+
+    def proxy_open(self, req, proxy, type):  # noqa: A002 - urllib signature
+        if _is_loopback_host(urlsplit(req.full_url).hostname):
+            return None
+        return super().proxy_open(req, proxy, type)
+
+
 def _open(req: request.Request, timeout: float = 300.0) -> tuple[bytes, str]:
     target = urlsplit(req.full_url)
     scheme = target.scheme.lower()
     if scheme not in {"http", "https"}:
         raise SpeechClientError("VoiceStudio URLs must use http:// or https://")
     credentialed = bool(req.get_header("Authorization"))
-    loopback = _is_loopback_host(target.hostname)
-    if credentialed and scheme != "https" and not loopback:
+    if credentialed and scheme != "https" and not _is_loopback_host(target.hostname):
         raise SpeechClientError("Remote VoiceStudio credentials require https://")
-    handlers: list[request.BaseHandler] = []
+    handlers: list[request.BaseHandler] = [_LoopbackDirectProxyHandler()]
     if credentialed:
         handlers.append(_RejectCredentialRedirect())
-    if loopback:
-        # A loopback request never goes through an environment proxy: no_proxy
-        # rarely lists numeric aliases like 127.1, and a plain-HTTP bearer key
-        # must not reach a proxy in the clear.
-        handlers.append(request.ProxyHandler({}))
     try:
         opener = request.build_opener(*handlers)
         with opener.open(req, timeout=timeout) as response:  # noqa: S310
