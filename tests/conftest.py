@@ -393,7 +393,7 @@ def fresh_model_manager(monkeypatch):
         for name in ("core.config", "services.model_manager"):
             loaded = sys.modules.get(name)
             if force or (loaded is not None and getattr(loaded, "__file__", None) is None):
-                monkeypatch.delitem(sys.modules, name, raising=False)
+                sys.modules.pop(name, None)
         return importlib.import_module("services.model_manager")
 
     return load
