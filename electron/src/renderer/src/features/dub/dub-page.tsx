@@ -159,6 +159,45 @@ function preparationStageKey(eventType: unknown) {
   return 'dub.prep_preparing';
 }
 
+type MirrorNotice = {
+  tone: 'error' | 'success' | 'info';
+  key: string;
+  params: Record<string, unknown>;
+};
+
+function describeMirrorOutcome(
+  outcome: Awaited<ReturnType<typeof mirrorDubSourceDelivery>>,
+  failureMessage: string,
+): MirrorNotice {
+  const state =
+    outcome === null
+      ? 'failed'
+      : outcome.applied > 0
+        ? 'applied'
+        : outcome.measured === 0
+          ? 'insufficient'
+          : 'unchanged';
+  const notices = {
+    failed: {
+      tone: 'error',
+      key: 'dub_workflow.mirror_failed',
+      params: { message: failureMessage },
+    },
+    applied: {
+      tone: 'success',
+      key: 'dub_workflow.mirror_applied',
+      params: { count: outcome?.applied ?? 0 },
+    },
+    insufficient: {
+      tone: 'info',
+      key: 'dub_workflow.mirror_insufficient',
+      params: {},
+    },
+    unchanged: { tone: 'info', key: 'dub_workflow.mirror_none', params: {} },
+  } satisfies Record<typeof state, MirrorNotice>;
+  return notices[state];
+}
+
 function bestSplitPoint(text: string) {
   const middle = Math.floor(text.length / 2);
   let best = -1;
@@ -1423,7 +1462,35 @@ export function DubPage() {
                           <WandSparklesIcon className="size-4" />
                           {t('dub.clean_up')}
                         </Menu.Item>
-                        {/* CLEAN-ROOM (spec W7-frontend §6): mirror-source-delivery menu item and its outcome toasts go here. */}
+                        <Menu.Item
+                          disabled={!session.jobId}
+                          onClick={() =>
+                            void mirrorDubSourceDelivery()
+                              .then((outcome) => {
+                                const notice = describeMirrorOutcome(
+                                  outcome,
+                                  dubSession.state.error || t('common.error'),
+                                );
+                                const emit = {
+                                  error: toast.error,
+                                  success: toast.success,
+                                  info: toast.info,
+                                }[notice.tone];
+                                emit(t(notice.key, notice.params));
+                              })
+                              .catch((error) =>
+                                toast.error(
+                                  t('dub_workflow.mirror_failed', {
+                                    message: describeError(error),
+                                  }),
+                                ),
+                              )
+                          }
+                          className="flex cursor-default items-center gap-2 rounded-md px-3 py-2 text-sm outline-none data-disabled:opacity-40 data-highlighted:bg-accent"
+                        >
+                          <AudioWaveformIcon className="size-4" />
+                          {t('dub.mirror_delivery')}
+                        </Menu.Item>
                         <Menu.Item
                           disabled={!canRestoreOriginal}
                           onClick={restoreDubSegments}
@@ -2343,7 +2410,9 @@ export function DubPage() {
                                         onKeyDown={(event) => {
                                           if (event.key === 'Enter') event.currentTarget.blur();
                                           if (event.key === 'Escape') {
-                                            event.currentTarget.value = formatSegmentTime(segment.start);
+                                            event.currentTarget.value = formatSegmentTime(
+                                              segment.start,
+                                            );
                                             event.currentTarget.blur();
                                           }
                                         }}
@@ -2353,7 +2422,9 @@ export function DubPage() {
                                             segment.start,
                                           );
                                           if (start === null) {
-                                            event.currentTarget.value = formatSegmentTime(segment.start);
+                                            event.currentTarget.value = formatSegmentTime(
+                                              segment.start,
+                                            );
                                             return;
                                           }
                                           const timing = clampSegmentEdit(
@@ -2365,7 +2436,9 @@ export function DubPage() {
                                               duration: session.duration || undefined,
                                             },
                                           );
-                                          event.currentTarget.value = formatSegmentTime(timing.start);
+                                          event.currentTarget.value = formatSegmentTime(
+                                            timing.start,
+                                          );
                                           moveResizeDubSegment(segment.id, timing);
                                         }}
                                       />
@@ -2380,7 +2453,9 @@ export function DubPage() {
                                         onKeyDown={(event) => {
                                           if (event.key === 'Enter') event.currentTarget.blur();
                                           if (event.key === 'Escape') {
-                                            event.currentTarget.value = formatSegmentTime(segment.end);
+                                            event.currentTarget.value = formatSegmentTime(
+                                              segment.end,
+                                            );
                                             event.currentTarget.blur();
                                           }
                                         }}
@@ -2390,7 +2465,9 @@ export function DubPage() {
                                             segment.end,
                                           );
                                           if (end === null) {
-                                            event.currentTarget.value = formatSegmentTime(segment.end);
+                                            event.currentTarget.value = formatSegmentTime(
+                                              segment.end,
+                                            );
                                             return;
                                           }
                                           const timing = clampSegmentEdit(

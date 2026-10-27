@@ -74,9 +74,85 @@ export function voiceLabel(summary?: RenderSummary): string {
     .join(', ');
 }
 
-// CLEAN-ROOM (spec W7-frontend §3): exported renderRecipe(render) one-line summary goes here.
+export function renderRecipe(render: RenderRecord): string {
+  const parts: string[] = [];
+  const append = (value: string) => {
+    if (value) parts.push(value);
+  };
+  append(voiceLabel(render.summary));
+  append(speedLabel(render.summary?.speeds));
+  if (typeof render.summary?.engine === 'string') append(render.summary.engine);
+  if (
+    typeof render.duration_s === 'number' &&
+    Number.isFinite(render.duration_s) &&
+    render.duration_s !== 0
+  ) {
+    append(clock(render.duration_s));
+  }
+  return parts.join(' · ');
+}
 
-// CLEAN-ROOM (spec W7-frontend §4): exported RenderDetails component goes here.
+function RecordedRenderDetails({
+  render,
+  summary,
+}: {
+  render: RenderRecord;
+  summary: RenderSummary;
+}) {
+  const { t } = useTranslation();
+  const options =
+    summary.options && typeof summary.options === 'object' && !Array.isArray(summary.options)
+      ? Object.entries(summary.options)
+          .filter(([key]) => Object.prototype.hasOwnProperty.call(OPTION_LABELS, key))
+          .map(([key, value]) => {
+            const shown =
+              typeof value === 'boolean'
+                ? t(value ? 'pronunciation.enabled' : 'supportPlans.disabled')
+                : String(value);
+            return `${t(OPTION_LABELS[key])} ${shown}`;
+          })
+          .join(' · ')
+      : '';
+  const chapterTitles = Array.isArray(summary.chapter_titles) ? summary.chapter_titles : [];
+  const rows = [
+    [t('projects.render_voice'), voiceLabel(summary)],
+    [t('projects.render_speed'), speedLabel(summary.speeds)],
+    [t('projects.render_engine'), typeof summary.engine === 'string' ? summary.engine : ''],
+    [t('projects.render_language'), typeof summary.language === 'string' ? summary.language : ''],
+    [
+      t('projects.render_format'),
+      typeof summary.format === 'string' ? summary.format.toUpperCase() : '',
+    ],
+    [
+      t('projects.render_size_label'),
+      t('projects.render_size', {
+        chapters: render.chapters ?? chapterTitles.length,
+        lines: typeof summary.lines === 'number' ? summary.lines : 0,
+        words: typeof summary.words === 'number' ? summary.words : 0,
+      }),
+    ],
+    [t('projects.render_settings'), options],
+  ].filter((row): row is [string, string] => Boolean(row[1]));
+
+  return (
+    <dl className="mt-1 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
+      {rows.map(([term, detail]) => (
+        <Fragment key={term}>
+          <dt className="whitespace-nowrap text-muted-foreground">{term}</dt>
+          <dd className="break-all">{detail}</dd>
+        </Fragment>
+      ))}
+    </dl>
+  );
+}
+
+export function RenderDetails({ render }: { render: RenderRecord }) {
+  const { t } = useTranslation();
+  if (render.summary == null) {
+    return <p className="mt-1 text-xs text-muted-foreground">{t('projects.render_no_details')}</p>;
+  }
+  return <RecordedRenderDetails render={render} summary={render.summary} />;
+}
 
 /** Collapsible "how it was made" block for a Projects row. */
 export function RenderDisclosure({ render }: { render: RenderRecord }) {

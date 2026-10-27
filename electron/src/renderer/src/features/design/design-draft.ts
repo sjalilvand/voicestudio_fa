@@ -246,7 +246,19 @@ export function pickDetail(
   };
 }
 
-// CLEAN-ROOM (spec W7-frontend §5): exported designInstruct(draft, vocabulary) goes here.
+export function designInstruct(
+  draft: Pick<DesignDraft, 'attrs' | 'description' | 'picks'>,
+  vocabulary: InstructVocabulary,
+): string {
+  const freeform = vocabulary === 'freeform';
+  const tagSource = freeform ? pickValues(draft.picks) : draft.attrs;
+  const tags = buildDesignInstruct(tagSource, '').instruct;
+  if (!freeform) return tags;
+
+  const prose = draft.description.trim();
+  if (!prose) return tags;
+  return tags ? `${prose}, ${tags}` : prose;
+}
 
 /** The part of the draft that is stored with the take. */
 export function designRecipe(draft: Pick<DesignDraft, 'description' | 'picks'>): DesignRecipe {
