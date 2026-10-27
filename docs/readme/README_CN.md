@@ -75,7 +75,7 @@ curl -fsSL https://voicestudio.sh/install | sh -s -- --main
 curl -fsSL https://voicestudio.sh/install | sh -s -- --uninstall
 ```
 
-Windows 用户请在 PowerShell 中运行 `irm https://voicestudio.sh/install | iex`。
+Windows 用户请在 PowerShell 中运行 `irm https://voicestudio.sh/install.ps1 | iex`。
 
 若 `voicestudio.sh/install` 无法访问或返回 404，可直接从仓库运行同一脚本，也可克隆仓库后运行 `scripts/install.sh`：
 
