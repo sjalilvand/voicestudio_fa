@@ -465,7 +465,11 @@ async def convert_speech(
                 )
                 cond["ref_text"] = None
             if cond["ref_text"] and cond["persist_ref_text"]:
-                _persist_profile_ref_text(profile_id, cond["ref_text"])
+                _persist_profile_ref_text(
+                    profile_id, cond["ref_text"],
+                    replace=cond.get("replace_ref_text"),
+                    ref_audio_file=cond.get("ref_audio_file"),
+                )
 
         # Source duration for the optional match: the container's own length
         # (ffprobe), falling back to the last ASR segment end. Best-effort —

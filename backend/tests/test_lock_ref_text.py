@@ -161,3 +161,31 @@ def test_a_typed_transcript_of_a_cut_length_is_kept(client):
     cond = _resolve_profile_conditioning(_voice(ref_text=typed))
     assert cond["ref_text"] == typed.strip()
     assert cond["persist_ref_text"] is False
+
+
+def test_a_transcript_never_lands_on_a_voice_that_changed_mid_transcribe(client):
+    # Greptile on #3602: a lock (which may leave the transcript empty) or an
+    # audio replace landing while /generate transcribes the old clip must not
+    # receive that clip's words.
+    from api.routers.generation import _persist_profile_ref_text
+    from core import db
+
+    def ref_text():
+        with db.db_conn() as conn:
+            return conn.execute("SELECT ref_text FROM voice_profiles WHERE id='p1'").fetchone()[0]
+
+    with db.db_conn() as conn:
+        conn.execute("UPDATE voice_profiles SET ref_text='', ref_audio_path='new.wav' WHERE id='p1'")
+        conn.commit()
+    _persist_profile_ref_text("p1", "old clip words", ref_audio_file="old.wav")
+    assert ref_text() == ""
+    with db.db_conn() as conn:
+        conn.execute("UPDATE voice_profiles SET is_locked=1, locked_audio_path='p1_locked.wav' WHERE id='p1'")
+        conn.commit()
+    _persist_profile_ref_text("p1", "old clip words", ref_audio_file="new.wav")
+    assert ref_text() == ""
+    with db.db_conn() as conn:
+        conn.execute("UPDATE voice_profiles SET is_locked=0, locked_audio_path='' WHERE id='p1'")
+        conn.commit()
+    _persist_profile_ref_text("p1", "new clip words", ref_audio_file="new.wav")
+    assert ref_text() == "new clip words"

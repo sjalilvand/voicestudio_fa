@@ -475,6 +475,7 @@ def _resolve_profile_conditioning(row, *, ref_text=None, instruct=None,
             # cache its result onto the profile so it runs ONCE, not on every
             # generate (#1032 perf regression).
             out["persist_ref_text"] = True
+            out["ref_audio_file"] = row["ref_audio_path"]
         if not out["instruct"] and row["instruct"]:
             out["instruct"] = row["instruct"]
         if out["seed"] is None and row["seed"] is not None:
@@ -507,6 +508,7 @@ def _resolve_profile_conditioning(row, *, ref_text=None, instruct=None,
             # transcripts are never persisted (unlock must not keep them).
             out["persist_ref_text"] = True
             out["replace_ref_text"] = stored_ref_text
+            out["ref_audio_file"] = row["ref_audio_path"]
     elif out["ref_text"]:
         # A stored transcript may hold script markup the take never spoke (#3062).
         out["ref_text"] = strip_script_markup(out["ref_text"]) or None
@@ -1561,7 +1563,10 @@ def _root_language_error(exc: BaseException) -> BaseException:
     return getattr(exc, "engine_language_error", exc)
 
 
-def _persist_profile_ref_text(profile_id: str, ref_text: str, replace: Optional[str] = None) -> None:
+def _persist_profile_ref_text(
+    profile_id: str, ref_text: str, replace: Optional[str] = None,
+    ref_audio_file: Optional[str] = None,
+) -> None:
     """Cache an auto-transcribed reference transcript onto its profile row.
 
     #1032 perf regression: profiles saved without a transcript re-ran a FULL
@@ -1573,13 +1578,20 @@ def _persist_profile_ref_text(profile_id: str, ref_text: str, replace: Optional[
     contract as the transcribe itself).
 
     ``replace`` is a cut legacy transcript (#3062) the new one may overwrite;
-    it only matches while the row still holds exactly that value."""
+    it only matches while the row still holds exactly that value.
+
+    The transcript belongs to the clip that was transcribed, so the row must
+    still be unlocked and, given ``ref_audio_file``, still point at that clip:
+    a lock or an audio replace that lands mid-transcribe (a lock may leave the
+    transcript empty, #3062) must not receive the old clip's words."""
     try:
         with db_conn() as conn:
             updated = conn.execute(
                 "UPDATE voice_profiles SET ref_text=? "
-                "WHERE id=? AND (ref_text IS NULL OR ref_text='' OR ref_text=?)",
-                (ref_text, profile_id, replace or ""),
+                "WHERE id=? AND (ref_text IS NULL OR ref_text='' OR ref_text=?) "
+                "AND COALESCE(is_locked, 0)=0 "
+                "AND (? IS NULL OR ref_audio_path=?)",
+                (ref_text, profile_id, replace or "", ref_audio_file, ref_audio_file),
             ).rowcount
         if updated:
             event_bus.emit("profiles", {"action": "updated", "id": profile_id})
@@ -2111,6 +2123,7 @@ async def generate_speech(
     # excluded (a re-render replaces the sample, stranding a stale transcript).
     persist_ref_text_profile_id = None
     persist_replace_ref_text = None
+    persist_ref_audio_file = None
     # A transcript the caller sent, before a profile fills in its stored one:
     # an explicit transcript on an over-long clip gets the actionable 400
     # below instead of being silently dropped at the engine boundary (#2281).
@@ -2139,6 +2152,7 @@ async def generate_speech(
             if _cond["persist_ref_text"]:
                 persist_ref_text_profile_id = profile_id
                 persist_replace_ref_text = _cond.get("replace_ref_text")
+                persist_ref_audio_file = _cond.get("ref_audio_file")
     elif ref_audio is not None:
         try:
             suffix = _ref_upload_suffix(ref_audio.filename)
@@ -2214,6 +2228,7 @@ async def generate_speech(
         if ref_text and persist_ref_text_profile_id:
             _persist_profile_ref_text(
                 persist_ref_text_profile_id, ref_text, replace=persist_replace_ref_text,
+                ref_audio_file=persist_ref_audio_file,
             )
 
     # #2764: choosing the best 15 s window of a long reference runs the
