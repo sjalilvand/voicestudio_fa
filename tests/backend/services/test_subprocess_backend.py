@@ -280,17 +280,23 @@ def test_live_sidecar_restarts_only_for_changed_automatic_download_endpoint(
         {"op": "error", "stage": "synthesize", "message": failure} if retry_fails else {"op": "audio", "audio_pcm_b64": "AAA="},
     ])
     monkeypatch.setattr(backend, "_recv_with_timeout", lambda timeout: next(replies))
-    if expected_restarts and not retry_fails:
-        assert backend.generate("Hello").shape == (1, 1)
-    else:
-        with pytest.raises(RuntimeError, match=failure):
-            backend.generate("Hello")
-    assert len(spawns) == 1 + expected_restarts
-    assert len(retired) == expected_restarts
-    if expected_restarts:
-        assert retired[0] is spawns[0]
-        assert backend._spawn_hf_endpoint == endpoint_race.CANONICAL_ENDPOINT
-        assert len(reselections) == 1
+    try:
+        if expected_restarts and not retry_fails:
+            assert backend.generate("Hello").shape == (1, 1)
+        else:
+            with pytest.raises(RuntimeError, match=failure):
+                backend.generate("Hello")
+        assert len(spawns) == 1 + expected_restarts
+        assert len(retired) == expected_restarts
+        if expected_restarts:
+            assert retired[0] is spawns[0]
+            assert backend._spawn_hf_endpoint == endpoint_race.CANONICAL_ENDPOINT
+            assert len(reselections) == 1
+    finally:
+        # Backend instances remain in the global sidecar registry until GC
+        # (and have an atexit shutdown callback). Never expose a protocol fake
+        # to later reaper/lifecycle tests, including when an assertion fails.
+        backend._proc = None
 
 
 # ── frame protocol DoS guards ──────────────────────────────────────────────
