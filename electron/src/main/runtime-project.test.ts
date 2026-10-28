@@ -475,7 +475,8 @@ describe('packaged runtime setup', () => {
           expect(args[1]).not.toContain('import torch');
           return `VOICESTUDIO_CUDNN8_PROBE=${JSON.stringify({ device: 'hip', sitePackages })}\n`;
         }
-        if (args[1] === RUNTIME_IMPORT_PROBE || args[1] === RUNTIME_NATIVE_IMPORT_PROBE) {
+        // The torch-only native probe never imports faster_whisper/CTranslate2.
+        if (args[1] === RUNTIME_IMPORT_PROBE) {
           if ((await readFile(library)).readUInt32LE(68) & 1) {
             importFailures += 1;
             throw new Error(
@@ -488,7 +489,10 @@ describe('packaged runtime setup', () => {
       await installRuntime(
         bundle, project, 'uv', run, new AbortController().signal, undefined, 'global',
       );
-      expect(importFailures).toBe(existing ? 2 : 0);
+      expect(importFailures).toBe(existing ? 1 : 0);
+      for (const [, args] of run.mock.calls) {
+        if (args[0] === 'sync') expect(args).not.toContain('--reinstall-package');
+      }
       expect((await readFile(library)).readUInt32LE(68)).toBe(6);
       expect(await runtimeReady(bundle, project)).toBe(true);
     },
