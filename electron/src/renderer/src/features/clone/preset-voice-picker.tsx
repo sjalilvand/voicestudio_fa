@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useEngines } from '@/hooks/use-engines';
 import { setCloneSetting, useCloneSettings } from '@/lib/store/clone-settings';
+// @ts-expect-error Shared JSX component has no declaration file.
 import SearchableSelect from '@shared/components/SearchableSelect';
 
 /** Built-in voices of engines that ship presets instead of cloning (e.g. Supertonic-3, #2938). */
