@@ -27,6 +27,9 @@
     <sub>Стратегический спонсор</sub><br />
     <a href="https://supermetry.com/?utm_source=voicestudio&utm_medium=sponsor&utm_campaign=strategic-sponsor&utm_content=readme-logo"><picture><source media="(prefers-color-scheme: dark)" srcset="../../docs/sponsors/supermetry-dark.svg" /><img src="../../docs/sponsors/supermetry.svg" alt="Supermetry" height="48" /></picture></a>
   </p>
+  <p>
+    <a href="https://snapcraft.io/voicestudio"><img src="https://snapcraft.io/en/dark/install.svg" alt="Get it from the Snap Store" height="40" /></a>
+  </p>
 </div>
 
 ![Обзор приложения: клонирование голоса, создание голоса, дубляж и управление моделями](../../docs/media/electron/voicestudio.gif)
@@ -64,7 +67,7 @@
 | :--- | :--- | :--- | :--- |
 | **macOS** (Apple Silicon) | `.dmg` · [руководство](../../docs/install/macos.md) | Metal (MPS) | Стабильная |
 | **Windows 10/11** (x64) | `.exe` · [руководство](../../docs/install/windows.md) | NVIDIA CUDA · [AMD ROCm (по желанию)](../../docs/install/windows-rocm.md) · CPU | Стабильная |
-| **Linux** (x64) | `.AppImage` · `.deb` · `snap` · [Nix](../../docs/install/nix.md) · [руководство](../../docs/install/linux.md) | NVIDIA CUDA · CPU | Стабильная |
+| **Linux** (x64) | `.AppImage` · `.deb` · [`snap`](https://snapcraft.io/voicestudio) · [Nix](../../docs/install/nix.md) · [руководство](../../docs/install/linux.md) | NVIDIA CUDA · CPU | Стабильная |
 | **Docker** | [`ghcr.io/debpalash/voicestudio`](../../docs/install/docker.md) | NVIDIA CUDA · AMD ROCm | Стабильная |
 | **Android** 10+ | `.apk` · [руководство](../../docs/mobile.md#install) | На устройстве, офлайн | Предварительная |
 | **iPhone / iPad** (iOS 17+) | `.ipa` (sideload) · [руководство](../../docs/mobile.md#install) | На устройстве, офлайн | Предварительная |

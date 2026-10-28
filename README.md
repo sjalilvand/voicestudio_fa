@@ -27,6 +27,9 @@
     <sub>Strategic sponsor</sub><br />
     <a href="https://supermetry.com/?utm_source=voicestudio&utm_medium=sponsor&utm_campaign=strategic-sponsor&utm_content=readme-logo"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/sponsors/supermetry-dark.svg" /><img src="docs/sponsors/supermetry.svg" alt="Supermetry" height="48" /></picture></a>
   </p>
+  <p>
+    <a href="https://snapcraft.io/voicestudio"><img src="https://snapcraft.io/en/dark/install.svg" alt="Get it from the Snap Store" height="40" /></a>
+  </p>
 </div>
 
 ![A tour of the app: voice cloning, voice design, dubbing, and model management](docs/media/electron/voicestudio.gif)
@@ -64,7 +67,7 @@ Start with **VoiceStudio** (default, powered by k2-fsa/OmniVoice), or pick from 
 | :--- | :--- | :--- | :--- |
 | **macOS** (Apple Silicon) | `.dmg` · [guide](docs/install/macos.md) | Metal (MPS) | Stable |
 | **Windows 10/11** (x64) | `.exe` · [guide](docs/install/windows.md) | NVIDIA CUDA · [AMD ROCm (opt-in)](docs/install/windows-rocm.md) · CPU | Stable |
-| **Linux** (x64) | `.AppImage` · `.deb` · `snap` · [Nix](docs/install/nix.md) · [guide](docs/install/linux.md) | NVIDIA CUDA · CPU | Stable |
+| **Linux** (x64) | `.AppImage` · `.deb` · [`snap`](https://snapcraft.io/voicestudio) · [Nix](docs/install/nix.md) · [guide](docs/install/linux.md) | NVIDIA CUDA · CPU | Stable |
 | **Docker** | [`ghcr.io/debpalash/voicestudio`](docs/install/docker.md) | NVIDIA CUDA · AMD ROCm | Stable |
 | **Android** 10+ | `.apk` · [guide](docs/mobile.md#install) | On-device, offline | Preview |
 | **iPhone / iPad** (iOS 17+) | `.ipa` (sideload) · [guide](docs/mobile.md#install) | On-device, offline | Preview |

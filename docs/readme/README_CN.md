@@ -27,6 +27,9 @@
     <sub>战略赞助商</sub><br />
     <a href="https://supermetry.com/?utm_source=voicestudio&utm_medium=sponsor&utm_campaign=strategic-sponsor&utm_content=readme-logo"><picture><source media="(prefers-color-scheme: dark)" srcset="../../docs/sponsors/supermetry-dark.svg" /><img src="../../docs/sponsors/supermetry.svg" alt="Supermetry" height="48" /></picture></a>
   </p>
+  <p>
+    <a href="https://snapcraft.io/voicestudio"><img src="https://snapcraft.io/en/dark/install.svg" alt="Get it from the Snap Store" height="40" /></a>
+  </p>
 </div>
 
 ![应用导览：声音克隆、声音设计、配音和模型管理](../../docs/media/electron/voicestudio.gif)
@@ -64,7 +67,7 @@
 | :--- | :--- | :--- | :--- |
 | **macOS**（Apple Silicon） | `.dmg` · [指南](../../docs/install/macos.md) | Metal（MPS） | 稳定 |
 | **Windows 10/11**（x64） | `.exe` · [指南](../../docs/install/windows.md) | NVIDIA CUDA · [AMD ROCm（可选）](../../docs/install/windows-rocm.md) · CPU | 稳定 |
-| **Linux**（x64） | `.AppImage` · `.deb` · `snap` · [Nix](../../docs/install/nix.md) · [指南](../../docs/install/linux.md) | NVIDIA CUDA · CPU | 稳定 |
+| **Linux**（x64） | `.AppImage` · `.deb` · [`snap`](https://snapcraft.io/voicestudio) · [Nix](../../docs/install/nix.md) · [指南](../../docs/install/linux.md) | NVIDIA CUDA · CPU | 稳定 |
 | **Docker** | [`ghcr.io/debpalash/voicestudio`](../../docs/install/docker.md) | NVIDIA CUDA · AMD ROCm | 稳定 |
 | **Android** 10+ | `.apk` · [指南](../../docs/mobile.md#install) | 设备端运行，可离线 | 预览版 |
 | **iPhone / iPad**（iOS 17+） | `.ipa`（侧载） · [指南](../../docs/mobile.md#install) | 设备端运行，可离线 | 预览版 |
