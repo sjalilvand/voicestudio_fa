@@ -52,3 +52,11 @@ def test_pending_status_does_not_change_timer():
     gh = FakeGitHub("pending", [])
     reminders.reconcile(gh, {"number": 1, "head": {"sha": "abc"}, "labels": []}, dt.date(2026, 10, 15))
     assert not gh.calls
+
+
+def test_other_cla_failure_preserves_existing_deadline():
+    check = comment("<!-- voicestudio-cla -->\nClose duplicate pull requests sharing this head.")
+    timer = comment("<!-- voicestudio-cla-timer -->\n<!-- cla-active -->\n<!-- cla-start:2026-10-01 -->", 2)
+    gh = FakeGitHub("failure", [check, timer])
+    reminders.reconcile(gh, {"number": 1, "head": {"sha": "abc"}, "labels": [{"name": "awaiting-cla"}]}, dt.date(2026, 10, 15))
+    assert not gh.calls

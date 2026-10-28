@@ -32,8 +32,7 @@ def reconcile(gh, pr, today):
     bot_comments = [c for c in comments if (c.get("user") or {}).get("login") == "github-actions[bot]"]
     check = next((c for c in bot_comments if COMMENT_MARKER in (c.get("body") or "")), None)
     timer = next((c for c in bot_comments if MARKER in (c.get("body") or "")), None)
-    unsigned = cla["state"] == "failure" and check and "**Still to sign:**" in check["body"]
-    if not unsigned:
+    if cla["state"] == "success":
         for label in (WAITING, DUE):
             if label in labels:
                 request(gh, "DELETE", issue + "/labels/" + label)
@@ -41,6 +40,8 @@ def reconcile(gh, pr, today):
             request(gh, "PATCH", f"/repos/{gh.repo}/issues/comments/{timer['id']}",
                     {"body": MARKER + "\nCLA waiting period ended; see the CLA check for the current status."})
         return
+    if not check or "**Still to sign:**" not in check["body"]:
+        return  # Another failure does not establish that contributors signed.
     signers = check["body"].split("**Still to sign:**", 1)[1].split("\n", 1)[0].strip()
     names = set(re.findall(r"@([A-Za-z0-9-]+)", signers))
     if not names:
