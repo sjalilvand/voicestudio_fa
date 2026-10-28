@@ -190,6 +190,10 @@ job cards. The bottom dock is icon-only; tab names remain accessibility labels.
 The phone screenshot tour scopes Close to each native sheet and waits for the
 sheet to disappear before interacting with the underlying screen. Settings rows
 can remain in the accessibility hierarchy while a picker still covers them.
+Settings navigation also waits for the outgoing Models navigation bar to disappear,
+reveals each destination row, and waits for the destination to become hittable
+before capturing or interacting with it. A row's existence alone does not mark a
+completed navigation transition.
 
 ## Live previews
 
