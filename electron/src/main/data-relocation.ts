@@ -1,5 +1,6 @@
 import {
   cp,
+  chmod,
   lstat,
   mkdir,
   open,
@@ -10,9 +11,13 @@ import {
   rmdir,
   rm,
   statfs,
+  stat,
+  symlink,
   writeFile,
 } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
+import { createReadStream } from 'node:fs';
+import { pipeline } from 'node:stream/promises';
 import { homedir } from 'node:os';
 import { basename, dirname, isAbsolute, join, parse, relative, resolve } from 'node:path';
 import { DIRECTORY_RENAME, renameWithRetry } from './rename-retry';
@@ -68,11 +73,13 @@ function safeDestination(path: string): boolean {
   if (!isAbsolute(path) || dirname(path) === path || /[\0\r\n]/.test(path)) return false;
   if (normalized(path) === normalized(homedir())) return false;
   const root = parse(path).root;
+  // Any single directory under the volume root is a valid destination;
+  // dirname(path) === path above already refuses the root itself.
   return (
     path
       .slice(root.length)
       .split(/[\\/]+/)
-      .filter(Boolean).length >= 2
+      .filter(Boolean).length >= 1
   );
 }
 
@@ -85,7 +92,7 @@ async function canonicalDestination(path: string): Promise<string> {
   }
 }
 
-async function manifest(root: string): Promise<ManifestEntry[]> {
+async function manifest(root: string, ignoredRootEntry?: string): Promise<ManifestEntry[]> {
   const output: ManifestEntry[] = [];
   const visit = async (absolute: string, path: string): Promise<void> => {
     const info = await lstat(absolute);
@@ -97,10 +104,14 @@ async function manifest(root: string): Promise<ManifestEntry[]> {
       output.push({ path, kind: 'directory', size: 0 });
       const children = await readdir(absolute);
       children.sort();
-      for (const child of children) await visit(join(absolute, child), join(path, child));
+      for (const child of children) {
+        if (path === '' && child === ignoredRootEntry) continue;
+        await visit(join(absolute, child), join(path, child));
+      }
       return;
     }
-    if (info.isFile()) output.push({ path, kind: 'file', size: info.size });
+    if (!info.isFile()) throw new Error('unsupported_entry');
+    output.push({ path, kind: 'file', size: info.size });
   };
   await visit(root, '');
   return output;
@@ -135,7 +146,14 @@ export async function inspectDataRelocation(
   if (!(await targetIsEmpty(canonicalTarget))) throw new Error('target_not_empty');
   const entries = await manifest(canonicalSource);
   const size = manifestBytes(entries);
-  const capacity = await statfs(dirname(canonicalTarget));
+  const capacityPath = await lstat(canonicalTarget).then(
+    () => canonicalTarget,
+    (error: NodeJS.ErrnoException) => {
+      if (error.code !== 'ENOENT') throw error;
+      return dirname(canonicalTarget);
+    },
+  );
+  const capacity = await statfs(capacityPath);
   const available = Number(capacity.bavail) * Number(capacity.bsize);
   if (available < size + MOVE_RESERVE_BYTES) throw new Error('insufficient_space');
   return {
@@ -146,12 +164,148 @@ export async function inspectDataRelocation(
   };
 }
 
+interface OwnedEntry {
+  path: string;
+  kind: ManifestEntry['kind'];
+  dev: bigint;
+  ino: bigint;
+  mode?: number;
+}
+
+// Existing folders may be mount points, or have an unwritable parent. Keep the
+// folder itself and reserve each child exclusively: a POSIX rename can overwrite a
+// concurrent file on POSIX. Copy once, then verify before starting the backend.
+async function prepareExistingDestination(
+  plan: DataRelocationPlan,
+  sourceManifest: ManifestEntry[],
+): Promise<PreparedDataRelocation> {
+  const staging = join(plan.target, `.voicestudio-moving-${randomUUID()}`);
+  await mkdir(staging, { recursive: false });
+  const owned: OwnedEntry[] = [];
+  const ownedDirectories = new Map<string, OwnedEntry>();
+  const remember = async (
+    path: string,
+    kind: ManifestEntry['kind'],
+    mode?: number,
+  ): Promise<void> => {
+    const { dev, ino } = await lstat(join(plan.target, path), { bigint: true });
+    const entry = { path, kind, dev, ino, mode };
+    owned.push(entry);
+    if (kind === 'directory') ownedDirectories.set(path, entry);
+  };
+  const stillOwned = async (entry: OwnedEntry): Promise<boolean> => {
+    try {
+      const info = await lstat(join(plan.target, entry.path), { bigint: true });
+      return info.dev === entry.dev && info.ino === entry.ino;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+      throw error;
+    }
+  };
+  const ownsPath = async (entry: OwnedEntry): Promise<boolean> => {
+    for (let parent = dirname(entry.path); parent !== '.'; parent = dirname(parent)) {
+      const directory = ownedDirectories.get(parent);
+      if (directory && !(await stillOwned(directory))) return false;
+    }
+    return stillOwned(entry);
+  };
+  const directoryModes = async (writable: boolean): Promise<void> => {
+    const directories = [...ownedDirectories.values()];
+    // Open parents before their children, restore children before parents.
+    if (!writable) directories.reverse();
+    for (const entry of directories) {
+      if (await ownsPath(entry)) {
+        await chmod(join(plan.target, entry.path), writable ? entry.mode! | 0o700 : entry.mode!);
+      }
+    }
+  };
+  const rollback = async (): Promise<void> => {
+    // Never follow a replaced parent, delete recursively, or remove unrelated
+    // files added while copying / verifying the new backend.
+    try {
+      await directoryModes(true);
+      for (const entry of [...owned].reverse()) {
+        if (!(await ownsPath(entry))) continue;
+        if (entry.kind === 'directory') {
+          await rmdir(join(plan.target, entry.path)).catch((error: NodeJS.ErrnoException) => {
+            if (!['ENOENT', 'ENOTEMPTY', 'EEXIST'].includes(error.code || '')) throw error;
+          });
+        } else {
+          await rm(join(plan.target, entry.path), { force: true });
+        }
+      }
+    } finally {
+      // A concurrent addition keeps its parent alive; do not leave that folder
+      // with the temporary write permission used for cleanup.
+      await directoryModes(false);
+    }
+  };
+  try {
+    // A small in-target transaction record; model weights are never copied a
+    // second time, even on filesystems without hard links (such as exFAT).
+    await writeFile(join(staging, 'manifest.json'), JSON.stringify(sourceManifest), { flag: 'wx' });
+    for (const entry of sourceManifest) {
+      if (!entry.path) continue;
+      const destination = join(plan.target, entry.path);
+      const original = join(plan.source, entry.path);
+      if (entry.kind === 'directory') {
+        const mode = (await lstat(original)).mode & 0o7777;
+        await mkdir(destination, { recursive: false, mode: mode | 0o700 });
+        await remember(entry.path, entry.kind, mode);
+      } else if (entry.kind === 'link') {
+        const directoryLink = await stat(original).then(
+          (info) => info.isDirectory(),
+          () => false,
+        );
+        await symlink(entry.link!, destination, directoryLink ? 'dir' : 'file');
+        await remember(entry.path, entry.kind);
+      } else {
+        const info = await lstat(original);
+        const output = await open(destination, 'wx', info.mode);
+        try {
+          const { dev, ino } = await output.stat({ bigint: true });
+          owned.push({ path: entry.path, kind: entry.kind, dev, ino });
+          await output.chmod(info.mode);
+          await pipeline(createReadStream(original), output.createWriteStream());
+        } finally {
+          await output.close();
+        }
+      }
+    }
+    if (
+      JSON.stringify(await manifest(plan.target, basename(staging))) !==
+      JSON.stringify(sourceManifest)
+    ) {
+      throw new Error('verification_failed');
+    }
+    await directoryModes(false);
+    await rm(staging, { recursive: true, force: true });
+  } catch (error) {
+    await rollback().catch(() => undefined);
+    await rm(staging, { recursive: true, force: true }).catch(() => undefined);
+    throw error;
+  }
+  return {
+    ...plan,
+    removeSource: () => rm(plan.source, { recursive: true, force: false }),
+    rollback,
+  };
+}
+
 export async function prepareDataRelocation(
   source: string,
   target: string,
 ): Promise<PreparedDataRelocation> {
   const plan = await inspectDataRelocation(source, target);
   const sourceManifest = await manifest(plan.source);
+  const existing = await lstat(plan.target).then(
+    () => true,
+    (error: NodeJS.ErrnoException) => {
+      if (error.code !== 'ENOENT') throw error;
+      return false;
+    },
+  );
+  if (existing) return prepareExistingDestination(plan, sourceManifest);
   const parent = dirname(plan.target);
   const staging = join(parent, `.${basename(plan.target)}.voicestudio-moving-${randomUUID()}`);
   await mkdir(staging, { recursive: false });
@@ -311,7 +465,6 @@ export async function relocateDataDirectory(
     stopped = true;
     runtime.progress('copying');
     prepared = await prepareDataRelocation(source, target);
-    await recordPreviousVoicesRoot(prepared.source, prepared.target).catch(() => undefined);
     previousSetting = await readDataDirectorySetting(runtime.environmentPath);
     runtime.progress('switching');
     await writeDataDirectorySetting(target, runtime.environmentPath);
@@ -320,6 +473,9 @@ export async function relocateDataDirectory(
     await runtime.start();
     started = true;
     if (!(await runtime.verify(target))) throw new Error('backend_verification_failed');
+    // Advisory cache writes replace their inode; defer them until activation so
+    // a failed move can identify every copied entry during rollback.
+    await recordPreviousVoicesRoot(prepared.source, prepared.target).catch(() => undefined);
     runtime.progress('cleaning');
     let removedSource = true;
     try {
