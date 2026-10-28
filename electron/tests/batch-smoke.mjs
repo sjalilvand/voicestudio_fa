@@ -1,9 +1,6 @@
-import { chromium } from 'playwright';
+import { launchSmokeBrowser } from './smoke-api-mock.mjs';
 import assert from 'node:assert/strict';
-const browser = await chromium.launch({
-  channel: process.env.PLAYWRIGHT_CHANNEL || 'msedge',
-  headless: true,
-});
+const browser = await launchSmokeBrowser({ fallbackChannel: 'msedge' });
 try {
   const page = await browser.newPage();
   await page.addInitScript(() => {
@@ -91,6 +88,26 @@ try {
     return route.fulfill({ json: { deleted: true } });
   });
   await page.goto((process.env.VOICESTUDIO_UI_URL || 'http://localhost:3902') + '/#/batch');
+  // #3628: exercise the actual browser interactions, including the scrollable
+  // menu; a DOM-only test cannot detect a modal blocking pointer/focus events.
+  const language = page.getByRole('button', { name: 'Language', exact: true });
+  await language.click();
+  const search = page.getByRole('combobox', { name: 'Language', exact: true });
+  await search.fill('French');
+  assert.equal(await search.inputValue(), 'French');
+  await page.getByRole('option', { name: 'French', exact: true }).click();
+  await page.getByRole('button', { name: 'French', exact: true }).waitFor();
+  await language.click();
+  const list = page.getByRole('listbox', { name: 'Language', exact: true });
+  await list.evaluate((element) => { element.scrollTop = 0; });
+  await list.hover();
+  await page.mouse.wheel(0, 400);
+  await page.waitForFunction(() => document.querySelector('[role="listbox"]')?.scrollTop > 0);
+  await search.fill('German');
+  await page.getByRole('option', { name: 'German', exact: true }).click();
+  await page.getByRole('button', { name: 'German', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'French', exact: true }).click();
+  await page.getByRole('button', { name: 'German', exact: true }).click();
   assert(await page.getByRole('button', { name: 'Add to Queue', exact: true }).isDisabled());
   await page
     .locator('input[type=file]')
