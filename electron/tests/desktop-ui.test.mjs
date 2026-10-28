@@ -253,8 +253,9 @@ test('unclean exit: relaunch on the same profile starts normally', async (t) => 
   await withApp(t, {}, async (session) => {
     const child = session.app.process();
     const exited = once(child, 'exit');
+    const closed = once(session.app, 'close');
     child.kill('SIGKILL');
-    await exited;
+    await Promise.all([exited, closed]);
     const restarted = await session.relaunch();
     await restarted.page.waitForFunction(() => Boolean(window.voicestudio?.files?.saveData));
     const facts = await bridgeFacts(restarted.page);
