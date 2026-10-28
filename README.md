@@ -1,7 +1,8 @@
 <div align="center">
   <h1><img src="docs/logo.png" alt="" width="36" height="36" /> VoiceStudio</h1>
-  <p><strong>The local voice studio: clone, design, dub, dictate, transcribe and narrate in 646 languages.</strong><br />
-  Runs on your own computer and phone. No accounts, no API keys, and nothing leaves your device unless you say yes.</p>
+  <p><strong>Your voice studio. On your device.</strong><br />
+  Clone, design, dub, dictate, transcribe and narrate in 646 languages.<br />
+  <sub>Runs on your computer and phone. No accounts, no API keys, and nothing leaves your device without your permission.</sub></p>
   <p>
     <a href="https://voicestudio.sh/?utm_source=github&utm_medium=readme&utm_campaign=project">Website</a> ·
     <a href="https://github.com/debpalash/VoiceStudio/releases/latest">Download</a> ·
@@ -11,10 +12,9 @@
   </p>
   <p>
     <a href="https://github.com/debpalash/VoiceStudio/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/debpalash/VoiceStudio/ci.yml?branch=main&amp;style=flat-square&amp;label=build&amp;labelColor=27272a" alt="CI" /></a>
-    <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/github/v/release/debpalash/VoiceStudio?style=flat-square&amp;labelColor=27272a&amp;color=c17d98" alt="Latest release" /></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-737373?style=flat-square&amp;labelColor=27272a" alt="AGPL-3.0" /></a>
+    <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/github/v/release/debpalash/VoiceStudio?style=flat-square&amp;labelColor=27272a&amp;color=52525b" alt="Latest release" /></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-52525b?style=flat-square&amp;labelColor=27272a" alt="AGPL-3.0" /></a>
     <a href="https://supermetry.com"><img src="https://app.supermetry.com/px/zfjiv7psp4ed.svg?c=VoiceStudio" alt="views" /></a>
-    <a href="https://snapcraft.io/voicestudio"><img src="https://img.shields.io/badge/Snap_Store-27272a?style=flat-square&amp;logo=snapcraft&amp;logoColor=ffffff" alt="Get it from the Snap Store" /></a>
     <a href="https://trendshift.io/repositories/28176?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-28176"><img src="https://img.shields.io/badge/Trendshift-27272a?style=flat-square" alt="VoiceStudio on Trendshift" /></a>
   </p>
   <p>
@@ -25,32 +25,46 @@
 
 ![A tour of the app: voice cloning, voice design, dubbing, and model management](docs/media/electron/voicestudio.gif)
 
+<p align="center">
+  <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/badge/Download-993f61?style=for-the-badge&amp;logo=github&amp;logoColor=ffffff" alt="Download" height="24" /></a>
+  <a href="#get-started"><img src="https://img.shields.io/badge/Get%20started-27272a?style=for-the-badge" alt="Get started" height="24" /></a>
+  <a href="https://snapcraft.io/voicestudio"><img src="https://img.shields.io/badge/Snap%20Store-27272a?style=for-the-badge&amp;logo=snapcraft&amp;logoColor=ffffff" alt="Snap Store" height="24" /></a>
+</p>
+
 ## What you can do
-
-| Create | Produce | Connect |
-| :--- | :--- | :--- |
-| Clone a voice or design your own | Dub videos with timed speech | Local API & MCP for agents |
-| Dictate with a floating widget | Stories, audiobooks & batch jobs | Reusable recipes & watch folders |
-
-Start with **VoiceStudio** (default, powered by k2-fsa/OmniVoice), or pick from dozens of other engines in the Model Manager. See the [features & engine catalog](docs/feature-catalog.md).
-
-<details>
-<summary><strong>Screenshots</strong></summary>
 
 <table>
   <tr>
-    <td><img src="docs/media/electron/voice-cloning.png" alt="Voice cloning workspace with the bundled demo voice" width="100%" /></td>
-    <td><img src="docs/media/electron/dubbing.png" alt="Video dubbing workspace" width="100%" /></td>
+    <td width="50%" valign="top">
+      <img src="docs/media/electron/voice-cloning.png" alt="Voice cloning workspace with the bundled demo voice" width="100%" /><br />
+      <strong><a href="docs/audio-quality.md">Voice cloning</a></strong><br />
+      Turn a clean reference recording into speech in a familiar voice.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/media/electron/dubbing.png" alt="Video dubbing workspace" width="100%" /><br />
+      <strong><a href="docs/electron-dubbing.md">Video dubbing</a></strong><br />
+      Translate and dub videos with speech timed to the original.
+    </td>
   </tr>
-  <tr><td align="center">Voice cloning</td><td align="center">Video dubbing</td></tr>
   <tr>
-    <td><img src="docs/media/electron/voice-design.png" alt="Describe a voice in the voice design workspace" width="100%" /></td>
-    <td><img src="docs/media/electron/models.png" alt="Install and manage local speech models" width="100%" /></td>
+    <td width="50%" valign="top">
+      <img src="docs/media/electron/voice-design.png" alt="Describe a voice in the voice design workspace" width="100%" /><br />
+      <strong><a href="docs/electron-voice-design.md">Voice design</a></strong><br />
+      Describe a voice in words and generate it.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/media/electron/models.png" alt="Install and manage local speech models" width="100%" /><br />
+      <strong><a href="docs/downloading-models.md">Local models</a></strong><br />
+      Choose your engines and download only the models you need.
+    </td>
   </tr>
-  <tr><td align="center">Voice design</td><td align="center">Local models</td></tr>
 </table>
 
-</details>
+- **Dictate & transcribe** — A floating dictation widget and local transcription
+- **Narrate & batch** — Stories, audiobooks and queued jobs
+- **Connect & automate** — Local API, MCP, reusable recipes and watch folders
+
+Start with **VoiceStudio** (default, powered by k2-fsa/OmniVoice), or pick from dozens of other engines in the Model Manager. See the [features & engine catalog](docs/feature-catalog.md).
 
 ## Platforms
 

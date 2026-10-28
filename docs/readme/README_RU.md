@@ -1,7 +1,8 @@
 <div align="center">
   <h1><img src="../../docs/logo.png" alt="" width="36" height="36" /> VoiceStudio</h1>
-  <p><strong>Локальная голосовая студия: клонирование и создание голосов, дубляж, диктовка, расшифровка и озвучка на 646 языках.</strong><br />
-  Работает на вашем компьютере и телефоне. Без аккаунтов и API-ключей; без вашего согласия ничего не покидает устройство.</p>
+  <p><strong>Ваша голосовая студия. На вашем устройстве.</strong><br />
+  Клонирование и дизайн голоса, дубляж, диктовка, расшифровка и озвучка на 646 языках.<br />
+  <sub>Работает на компьютере и телефоне. Без аккаунтов и API-ключей. Данные покидают устройство только с вашего разрешения.</sub></p>
   <p>
     <a href="https://voicestudio.sh/?utm_source=github&utm_medium=readme&utm_campaign=project">Сайт</a> ·
     <a href="https://github.com/debpalash/VoiceStudio/releases/latest">Скачать</a> ·
@@ -11,10 +12,9 @@
   </p>
   <p>
     <a href="https://github.com/debpalash/VoiceStudio/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/debpalash/VoiceStudio/ci.yml?branch=main&amp;style=flat-square&amp;label=build&amp;labelColor=27272a" alt="Статус CI" /></a>
-    <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/github/v/release/debpalash/VoiceStudio?style=flat-square&amp;labelColor=27272a&amp;color=c17d98" alt="Последний релиз" /></a>
-    <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-737373?style=flat-square&amp;labelColor=27272a" alt="Лицензия AGPL-3.0" /></a>
+    <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/github/v/release/debpalash/VoiceStudio?style=flat-square&amp;labelColor=27272a&amp;color=52525b" alt="Последний релиз" /></a>
+    <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-52525b?style=flat-square&amp;labelColor=27272a" alt="Лицензия AGPL-3.0" /></a>
     <a href="https://supermetry.com"><img src="https://app.supermetry.com/px/zfjiv7psp4ed.svg?c=VoiceStudio" alt="Число просмотров" /></a>
-    <a href="https://snapcraft.io/voicestudio"><img src="https://img.shields.io/badge/Snap_Store-27272a?style=flat-square&amp;logo=snapcraft&amp;logoColor=ffffff" alt="Get it from the Snap Store" /></a>
     <a href="https://trendshift.io/repositories/28176?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-28176"><img src="https://img.shields.io/badge/Trendshift-27272a?style=flat-square" alt="VoiceStudio на Trendshift" /></a>
   </p>
   <p>
@@ -25,32 +25,46 @@
 
 ![Обзор приложения: клонирование голоса, создание голоса, дубляж и управление моделями](../../docs/media/electron/voicestudio.gif)
 
+<p align="center">
+  <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/badge/%D0%A1%D0%BA%D0%B0%D1%87%D0%B0%D1%82%D1%8C-993f61?style=for-the-badge&amp;logo=github&amp;logoColor=ffffff" alt="Скачать" height="24" /></a>
+  <a href="#быстрый-старт"><img src="https://img.shields.io/badge/%D0%9D%D0%B0%D1%87%D0%B0%D0%BB%D0%BE%20%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D1%8B-27272a?style=for-the-badge" alt="Начало работы" height="24" /></a>
+  <a href="https://snapcraft.io/voicestudio"><img src="https://img.shields.io/badge/Snap%20Store-27272a?style=for-the-badge&amp;logo=snapcraft&amp;logoColor=ffffff" alt="Snap Store" height="24" /></a>
+</p>
+
 ## Возможности
-
-| Творите | Публикуйте | Интегрируйте |
-| :--- | :--- | :--- |
-| Копия любого голоса или голос по описанию | Перевод и озвучка роликов с точной синхронизацией | API и MCP-сервер для ИИ-агентов прямо на вашей машине |
-| Голосовой ввод из компактного окна поверх приложений | Рассказы, аудиокниги и обработка файлов пачками | Сохранённые сценарии и автообработка новых файлов в папке |
-
-Из коробки работает **VoiceStudio** — штатный движок, построенный на k2-fsa/OmniVoice; ещё несколько десятков альтернатив ставятся из менеджера моделей. Полный список — в [каталоге функций и движков](../../docs/feature-catalog.md).
-
-<details>
-<summary><strong>Скриншоты</strong></summary>
 
 <table>
   <tr>
-    <td><img src="../../docs/media/electron/voice-cloning.png" alt="Рабочее пространство клонирования голоса со встроенным демонстрационным голосом" width="100%" /></td>
-    <td><img src="../../docs/media/electron/dubbing.png" alt="Экран дубляжа в приложении Electron" width="100%" /></td>
+    <td width="50%" valign="top">
+      <img src="../../docs/media/electron/voice-cloning.png" alt="Рабочее пространство клонирования голоса со встроенным демонстрационным голосом" width="100%" /><br />
+      <strong><a href="../../docs/audio-quality.md">Клонирование голоса</a></strong><br />
+      Создавайте речь знакомым голосом по чистой эталонной записи.
+    </td>
+    <td width="50%" valign="top">
+      <img src="../../docs/media/electron/dubbing.png" alt="Экран дубляжа в приложении Electron" width="100%" /><br />
+      <strong><a href="../../docs/electron-dubbing.md">Дубляж</a></strong><br />
+      Переводите и озвучивайте видео с сохранением исходного тайминга.
+    </td>
   </tr>
-  <tr><td align="center">Клонирование голоса</td><td align="center">Дубляж</td></tr>
   <tr>
-    <td><img src="../../docs/media/electron/voice-design.png" alt="Голос задаётся текстовым описанием на экране голосового дизайна" width="100%" /></td>
-    <td><img src="../../docs/media/electron/models.png" alt="Скачивание, обновление и удаление речевых моделей на компьютере" width="100%" /></td>
+    <td width="50%" valign="top">
+      <img src="../../docs/media/electron/voice-design.png" alt="Голос задаётся текстовым описанием на экране голосового дизайна" width="100%" /><br />
+      <strong><a href="../../docs/electron-voice-design.md">Голосовой дизайн</a></strong><br />
+      Опишите нужный голос словами и создайте его.
+    </td>
+    <td width="50%" valign="top">
+      <img src="../../docs/media/electron/models.png" alt="Скачивание, обновление и удаление речевых моделей на компьютере" width="100%" /><br />
+      <strong><a href="../../docs/downloading-models.md">Модели</a></strong><br />
+      Выбирайте движки и скачивайте только нужные модели.
+    </td>
   </tr>
-  <tr><td align="center">Голосовой дизайн</td><td align="center">Модели</td></tr>
 </table>
 
-</details>
+- **Диктовка и расшифровка** — Компактное окно диктовки и локальная расшифровка
+- **Озвучка и пакетная обработка** — Рассказы, аудиокниги и очередь заданий
+- **Интеграция и автоматизация** — Локальный API, MCP, сохранённые сценарии и отслеживание папок
+
+Из коробки работает **VoiceStudio** — штатный движок, построенный на k2-fsa/OmniVoice; ещё несколько десятков альтернатив ставятся из менеджера моделей. Полный список — в [каталоге функций и движков](../../docs/feature-catalog.md).
 
 ## Платформы
 
