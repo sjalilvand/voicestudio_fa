@@ -423,7 +423,10 @@
     "setupStatusNotInstalled": "O paquete deste motor aínda non está instalado. Instálao en Axustes → Modelos.",
     "setupStatusLicense": "A licenza aínda non se aceptou. Revísaa e acéptaa en Axustes → Modelos para activar este motor.",
     "setupStatusNeedsConfig": "Este motor precisa configuración antes do uso. Abre Axustes → Modelos para rematar a configuración.",
-    "setupStatusFileMissing": "Falta un ficheiro necesario para este motor ou non se pode ler. Reinstálao en Axustes → Modelos."
+    "setupStatusFileMissing": "Falta un ficheiro necesario para este motor ou non se pode ler. Reinstálao en Axustes → Modelos.",
+    "setupStatusPlatform": "Este motor non funciona na plataforma deste ordenador. A súa guía enumera as plataformas compatibles.",
+    "setupStatusNoMps": "Este motor precisa a GPU de Apple (MPS), pero o PyTorch desta instalación non pode usala. Actualizar macOS ou reinstalar VoiceStudio adoita resolvelo.",
+    "asrSetupRepairBundled": "Faltan paquetes Python incluídos no backend ou están danados. Repara o contorno do backend ou volve crealo coas dependencias fixadas da instalación desde o código fonte e reinicia."
   },
   "clone": {
     "title": "Clonación de voz",

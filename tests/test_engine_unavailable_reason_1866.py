@@ -235,3 +235,22 @@ def test_public_configuration_guidance_names_current_settings_navigation(diagnos
     reason = _reason_for(diagnostic)
     assert "Settings → Models" in reason
     assert "Model Catalogue" not in reason
+
+
+def test_renderer_asr_guidance_matrix_matches_real_owned_backend_payloads():
+    import ast
+    import json
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    tree = ast.parse((root / "backend/services/asr_backend.py").read_text(encoding="utf-8"))
+    hints = ast.literal_eval(next(
+        node.value for node in tree.body
+        if isinstance(node, ast.AnnAssign) and getattr(node.target, "id", None) == "_INSTALL_HINTS"
+    ))
+    fixture = root / "electron/src/renderer/src/features/settings/model-list/fixtures/asr-unavailable.json"
+    for case in json.loads(fixture.read_text(encoding="utf-8")):
+        expected = case["engine"]
+        actual = public_backends([{**expected, "reason": case["diagnostic"]}])[0]
+        assert actual == expected
+        assert actual["install_hint"] == hints[actual["id"]]

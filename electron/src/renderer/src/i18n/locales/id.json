@@ -3065,7 +3065,10 @@
     "setupStatusNotInstalled": "Paket mesin ini belum terpasang. Pasang dari Pengaturan → Model.",
     "setupStatusLicense": "Lisensi belum diterima. Baca dan terima di Pengaturan → Model untuk mengaktifkan mesin ini.",
     "setupStatusNeedsConfig": "Mesin ini harus dikonfigurasi sebelum digunakan. Buka Pengaturan → Model untuk menyelesaikan penyiapan.",
-    "setupStatusFileMissing": "Berkas yang diperlukan mesin ini hilang atau tidak dapat dibaca. Pasang ulang dari Pengaturan → Model."
+    "setupStatusFileMissing": "Berkas yang diperlukan mesin ini hilang atau tidak dapat dibaca. Pasang ulang dari Pengaturan → Model.",
+    "setupStatusPlatform": "Mesin ini tidak berjalan pada platform komputer ini. Panduannya mencantumkan platform yang didukung.",
+    "setupStatusNoMps": "Mesin ini memerlukan GPU Apple (MPS), tetapi PyTorch pada instalasi ini tidak dapat menggunakannya. Memperbarui macOS atau memasang ulang VoiceStudio biasanya mengatasinya.",
+    "asrSetupRepairBundled": "Paket Python bawaan backend hilang atau rusak. Perbaiki lingkungan backend atau buat ulang dengan dependensi terkunci dari penyiapan sumber, lalu mulai ulang."
   },
   "performanceProfile": {
     "requiresEngine": "Instal dan pilih {{engine}} untuk menyesuaikan kecepatan dan kualitas.",

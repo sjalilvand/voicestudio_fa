@@ -423,7 +423,10 @@
     "setupStatusNotInstalled": "This engine's package isn't installed yet. Install it from Settings → Models.",
     "setupStatusLicense": "License not accepted yet. Review and accept it in Settings → Models to enable this engine.",
     "setupStatusNeedsConfig": "This engine needs to be configured before it can run. Open Settings → Models to finish setting it up.",
-    "setupStatusFileMissing": "A file this engine needs is missing or unreadable. Reinstall it from Settings → Models."
+    "setupStatusFileMissing": "A file this engine needs is missing or unreadable. Reinstall it from Settings → Models.",
+    "setupStatusPlatform": "This engine doesn't run on this computer's platform. Its guide lists the platforms it supports.",
+    "setupStatusNoMps": "This engine needs Apple's GPU (MPS), and this installation's PyTorch can't use it. Updating macOS or reinstalling VoiceStudio usually restores it.",
+    "asrSetupRepairBundled": "The backend's bundled Python packages are missing or damaged. Repair the backend environment, or recreate it from the pinned source setup, then restart."
   },
   "clone": {
     "title": "Voice cloning",

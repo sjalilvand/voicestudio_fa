@@ -3067,7 +3067,10 @@
     "setupStatusNotInstalled": "Le paquet de ce moteur n’est pas encore installé. Installez-le dans Paramètres → Modèles.",
     "setupStatusLicense": "La licence n’a pas encore été acceptée. Consultez-la et acceptez-la dans Paramètres → Modèles pour activer ce moteur.",
     "setupStatusNeedsConfig": "Ce moteur doit être configuré avant utilisation. Ouvrez Paramètres → Modèles pour terminer sa configuration.",
-    "setupStatusFileMissing": "Un fichier nécessaire à ce moteur manque ou est illisible. Réinstallez-le dans Paramètres → Modèles."
+    "setupStatusFileMissing": "Un fichier nécessaire à ce moteur manque ou est illisible. Réinstallez-le dans Paramètres → Modèles.",
+    "setupStatusPlatform": "Ce moteur ne fonctionne pas sur la plateforme de cet ordinateur. Son guide indique les plateformes prises en charge.",
+    "setupStatusNoMps": "Ce moteur nécessite le GPU Apple (MPS), mais PyTorch ne peut pas l’utiliser dans cette installation. Mettre à jour macOS ou réinstaller VoiceStudio résout généralement le problème.",
+    "asrSetupRepairBundled": "Des paquets Python fournis avec le backend sont manquants ou endommagés. Réparez son environnement ou recréez-le avec les dépendances figées de l’installation depuis les sources, puis redémarrez."
   },
   "performanceProfile": {
     "requiresEngine": "Installez et sélectionnez {{engine}} pour régler la vitesse et la qualité.",

@@ -31,6 +31,12 @@ Everything lives on one screen — **Settings → Models**, **ASR** tab:
    `OMNIVOICE_ASR_BACKEND=openai-compat-asr` before launching; the env var
    always wins over the Settings pick.
 
+A missing or damaged bundled Python package is a backend-environment problem,
+not an endpoint setting. The expanded engine row then shows backend repair
+instructions instead of saying that no installation is needed. Repair the
+backend environment, or recreate a source installation with its pinned setup,
+then restart it before configuring the server.
+
 Config changes apply on the next transcription — no restart needed. The
 engine is never active by default: VoiceStudio's ASR auto-detect only ever
 picks local engines, and the app works fully with this engine unconfigured.
