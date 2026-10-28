@@ -2,7 +2,7 @@
 import { existsSync } from 'node:fs';
 import { mkdtemp, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, parse } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 import {
   inspectDataRelocation,
@@ -148,4 +148,14 @@ it('records nothing without a longform cache and is idempotent', async () => {
     await readFile(join(target, 'outputs', 'longform_cache', 'voices_roots.json'), 'utf8'),
   );
   expect(roots).toEqual([join(source, 'voices')]);
+});
+
+it('accepts a single-component destination directly under the volume root', async () => {
+  const { root, source } = await fixture();
+  // Only one path component below the drive root: previously rejected by
+  // safeDestination's '>= 2' requirement even though dirname(target) !== target.
+  const target = join(parse(root).root, 'VoiceStudio-relocation-single-test');
+  const plan = await inspectDataRelocation(source, target);
+  expect(plan.target.endsWith('VoiceStudio-relocation-single-test')).toBe(true);
+  expect(plan.file_count).toBe(2);
 });
