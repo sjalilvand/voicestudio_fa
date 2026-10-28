@@ -194,6 +194,9 @@ Settings navigation also waits for the outgoing Models navigation bar to disappe
 reveals each destination row, and waits for the destination to become hittable
 before capturing or interacting with it. A row's existence alone does not mark a
 completed navigation transition.
+UI-test setup also waits for the first-run No thanks choice to become hittable
+and disappear after tapping it; Home's presence behind the consent sheet does
+not establish that consent has finished.
 
 ## Live previews
 

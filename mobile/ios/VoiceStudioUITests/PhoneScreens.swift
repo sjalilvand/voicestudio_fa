@@ -3,7 +3,7 @@ import XCTest
 final class PhoneScreens: XCTestCase {
     @MainActor private func launch(extra: [String] = []) -> XCUIApplication {
         let app = XCUIApplication(); app.launchArguments = ["--ui-smoke","-AppleLanguages","(en)"] + extra
-        app.launch(); XCTAssertTrue(app.buttons["consent.no"].waitForExistence(timeout: 10)); app.buttons["consent.no"].tap()
+        app.launch(); app.declineConsent()
         app.openSpeak()
         return app
     }
@@ -139,7 +139,7 @@ final class PhoneScreenshotTour: XCTestCase {
     }
     @MainActor func testPhoneFirstScreens() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-smoke","-AppleLanguages","(en)"]
-        app.launch(); XCTAssertTrue(app.buttons["consent.no"].waitForExistence(timeout: 10)); XCTAssertTrue(app.staticTexts["This companion app records your choice on this phone. It sends no analytics."].exists); capture("Consent",app); app.buttons["consent.no"].tap(); capture("Home",app); app.openSpeak()
+        app.launch(); XCTAssertTrue(app.buttons["consent.no"].waitForExistence(timeout: 10)); XCTAssertTrue(app.staticTexts["This companion app records your choice on this phone. It sends no analytics."].exists); capture("Consent",app); app.declineConsent(); capture("Home",app); app.openSpeak()
         XCTAssertTrue(app.textViews["speak.text"].waitForExistence(timeout: 5)); capture("Speak-phone",app)
         app.tabButton("Voices").tap(); capture("Voices-phone",app)
         app.buttons["voices.create"].tap(); XCTAssertTrue(app.textFields["voices.clone.name"].waitForExistence(timeout: 5)); capture("Clone-phone",app); app.buttons["Cancel"].tap()
@@ -164,7 +164,7 @@ final class PhoneScreenshotTour: XCTestCase {
     }
     @MainActor func testPairedComputerScreens() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-smoke","-AppleLanguages","(en)"]
-        app.launch(); XCTAssertTrue(app.buttons["consent.no"].waitForExistence(timeout: 10)); app.buttons["consent.no"].tap()
+        app.launch(); app.declineConsent()
         app.tabButton("Settings").tap()
         openSettingsPage(app.buttons["settings.connect"], destination: app.buttons["Enter address"], app)
         app.buttons["Enter address"].tap()
