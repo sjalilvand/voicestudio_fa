@@ -68,6 +68,12 @@ bun run dev
 
 This launches Electron with hot reload. Run source dependency setup explicitly before launching; the supervisor manages backend
 startup; do not launch a second backend. See [Electron setup](../electron/README.md).
+
+For screenshots, use the maintained Electron capture script described in
+[README media](../docs/media/electron/README.md). To share a runnable app, use
+the release installers or `bun run dist`; source users should clone the
+repository with its lockfiles and follow the setup commands above.
+
 CPU-only Linux/Windows hosts automatically select CPU wheels; see
 [CPU setup and overrides](../electron/README.md#running-without-a-gpu).
 When regenerating `uv.lock` for compute variants, preserve unrelated package
