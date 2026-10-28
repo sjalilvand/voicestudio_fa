@@ -704,9 +704,9 @@ function readSmartAppControl(platform = process.platform): SmartAppControl {
 }
 
 /** A failed spawn names the program, not just the OS error. Windows denies a
- *  blocked executable with a bare `spawn UNKNOWN`; runtime-owned launches get
- *  the install that owns the program, while custom `OMNIVOICE_BACKEND_CMD`
- *  launches point at their own executable instead (#2440). When Smart App
+ *  blocked executable with a bare `spawn UNKNOWN`; missing runtime-owned programs
+ *  point at their install, while custom `OMNIVOICE_BACKEND_CMD` launches point
+ *  at their own executable instead (#2440). When Smart App
  *  Control is on, it is named: it has no per-app exceptions, so the usual
  *  antivirus-exclusion advice cannot help (#3224). */
 export function spawnFailureMessage(
@@ -727,6 +727,9 @@ export function spawnFailureMessage(
       return `Could not start ${command}: ${detail}. Windows Smart App Control blocked it.`;
     }
   }
+  // Refused execution is not evidence of a broken installation. The renderer
+  // adds its localized permission/security hint to this diagnostic.
+  if (runtimeOwned && code !== 'ENOENT') return `Could not start ${command}: ${detail}`;
   return runtimeOwned
     ? `Could not start ${command}: ${detail}. Install or repair the local runtime, then restart VoiceStudio.`
     : `Could not start ${command}: ${detail}. Check that the program exists and can be launched, then try again.`;
