@@ -176,7 +176,7 @@ def test_env_forwarding_contract(monkeypatch, tmp_path):
     """
     monkeypatch.setenv("HF_TOKEN", "hf_test_abc")
     monkeypatch.setenv("HF_HOME", str(tmp_path / "hf_home"))
-    monkeypatch.setenv("HF_ENDPOINT", "https://hf-mirror.com")
+    monkeypatch.setenv("HF_ENDPOINT", "https://huggingface.co")
     monkeypatch.setenv("HF_HUB_CACHE", str(tmp_path / "hf_cache"))
     monkeypatch.setenv("OMNIVOICE_ECHO_TEST_MODE", "1")
 
@@ -202,10 +202,31 @@ def test_env_forwarding_contract(monkeypatch, tmp_path):
         keys = reply["keys"]
         assert keys["HF_TOKEN"] == "hf_test_abc"
         assert keys["HF_HOME"] == str(tmp_path / "hf_home")
-        assert keys["HF_ENDPOINT"] == "https://hf-mirror.com"
+        assert keys["HF_ENDPOINT"] == "https://huggingface.co"
         assert keys["HF_HUB_CACHE"] == str(tmp_path / "hf_cache")
     finally:
         backend.shutdown()
+
+
+def test_automatic_endpoint_reaches_sidecar_without_token_or_parent_mutation(monkeypatch):
+    from services import endpoint_race, subprocess_backend
+    monkeypatch.delenv("HF_ENDPOINT", raising=False)
+    monkeypatch.setenv("HF_TOKEN", "hf_test_secret")
+    monkeypatch.setenv("YOUR_HF_TOKEN", "hf_test_secret")
+    monkeypatch.setattr(endpoint_race, "download_endpoint", lambda: "https://hf-mirror.com")
+    captured = {}
+    def spawn(*args, **kwargs):
+        captured.update(kwargs["env"])
+        raise RuntimeError("captured spawn")
+    monkeypatch.setattr(subprocess_backend, "spawn_owned", spawn)
+    with pytest.raises(RuntimeError, match="captured spawn"):
+        EchoBackend()._spawn()
+    assert captured["HF_ENDPOINT"] == "https://hf-mirror.com"
+    assert "HF_TOKEN" not in captured
+    assert "YOUR_HF_TOKEN" not in captured
+    assert captured["HF_HUB_DISABLE_IMPLICIT_TOKEN"] == "1"
+    assert "HF_ENDPOINT" not in os.environ
+    assert os.environ["HF_TOKEN"] == "hf_test_secret"
 
 
 # ── frame protocol DoS guards ──────────────────────────────────────────────

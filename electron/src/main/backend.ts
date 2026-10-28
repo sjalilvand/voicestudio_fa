@@ -571,7 +571,7 @@ export function devRendererPort(rendererUrl: string | undefined): string | null 
 
 function childEnv(
   port: number,
-  region: RuntimeRegion = 'auto',
+  _region: RuntimeRegion = 'auto',
   platform = process.platform,
 ): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {

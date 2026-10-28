@@ -497,6 +497,19 @@ class SubprocessBackend(TTSBackend):
         #     past our length-prefix reads.
         env = os.environ.copy()
         env["PYTHONUNBUFFERED"] = "1"
+        # Hub clients in sidecars read HF_ENDPOINT at import time. Forward the
+        # current download choice only to this child; setting it in the parent
+        # would turn an automatic selection into a manual override.
+        from services import endpoint_race
+        from services.hf_auth import env_allows_token
+
+        endpoint = endpoint_race.download_endpoint()
+        if endpoint:
+            env["HF_ENDPOINT"] = endpoint
+        if not env_allows_token(env):
+            env.pop("HF_TOKEN", None)
+            env.pop("YOUR_HF_TOKEN", None)
+            env["HF_HUB_DISABLE_IMPLICIT_TOKEN"] = "1"
 
         kwargs: dict = {
             "stdin": subprocess.PIPE,
