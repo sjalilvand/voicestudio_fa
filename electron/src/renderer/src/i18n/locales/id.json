@@ -3053,7 +3053,18 @@
     "active": "Mesin: {{name}}",
     "none": "Tidak ada mesin aktif",
     "localInstallRequired": "Instal mesin ini di komputer backend melalui localhost atau panduan penyiapannya. Instalasi jarak jauh dinonaktifkan.",
-    "argosRuntimeUnavailable": "Runtime Argos tidak tersedia. Instal ulang backend atau pilih NLLB."
+    "argosRuntimeUnavailable": "Runtime Argos tidak tersedia. Instal ulang backend atau pilih NLLB.",
+    "asrSetupPackageInstall": "Jalankan {{command}} di lingkungan Python backend.",
+    "asrSetupApplePackageInstall": "Hanya Apple Silicon. Jalankan {{command}} di lingkungan Python backend.",
+    "asrSetupBundled": "Disertakan bersama transformers; tidak perlu pemasangan terpisah (CUDA, MPS, atau CPU).",
+    "asrSetupWhisperCpp": "Letakkan {{binary}} di {{folder}} pada komputer backend (Vulkan, CUDA, atau CPU).",
+    "asrSetupNemoParakeet": "NeMo tidak dapat dipasang dengan aman di lingkungan Python yang dikelola VoiceStudio: NeMo memerlukan {{nemoRequirement}}, yang bertentangan dengan {{appRequirement}}. Jangan pasang nemo_toolkit di sini; gunakan lingkungan terpisah khusus. Mengunduh bobot tidak memasang mesin.",
+    "asrSetupIsolated": "Menggunakan kembali faster-whisper; tidak perlu pemasangan tambahan. Transkripsi berjalan dalam proses terpisah yang dapat dihentikan jika macet.",
+    "asrSetupRemote": "Tidak perlu pemasangan. Konfigurasikan server transkripsi yang kompatibel dengan OpenAI di Pengaturan → Model → ASR; server mengelola modelnya sendiri.",
+    "setupStatusNotInstalled": "Paket mesin ini belum terpasang. Pasang dari Pengaturan → Model.",
+    "setupStatusLicense": "Lisensi belum diterima. Baca dan terima di Pengaturan → Model untuk mengaktifkan mesin ini.",
+    "setupStatusNeedsConfig": "Mesin ini harus dikonfigurasi sebelum digunakan. Buka Pengaturan → Model untuk menyelesaikan penyiapan.",
+    "setupStatusFileMissing": "Berkas yang diperlukan mesin ini hilang atau tidak dapat dibaca. Pasang ulang dari Pengaturan → Model."
   },
   "performanceProfile": {
     "requiresEngine": "Instal dan pilih {{engine}} untuk menyesuaikan kecepatan dan kualitas.",

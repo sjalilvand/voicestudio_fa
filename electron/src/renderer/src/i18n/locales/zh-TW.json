@@ -3053,7 +3053,18 @@
     "active": "引擎：{{name}}",
     "none": "沒有啟用的引擎",
     "localInstallRequired": "請在後端電腦上透過 localhost 或安裝指南安裝此引擎。遠端安裝已停用。",
-    "argosRuntimeUnavailable": "Argos 執行環境無法使用。請重新安裝後端或選擇 NLLB。"
+    "argosRuntimeUnavailable": "Argos 執行環境無法使用。請重新安裝後端或選擇 NLLB。",
+    "asrSetupPackageInstall": "在後端的 Python 環境中執行 {{command}}。",
+    "asrSetupApplePackageInstall": "僅限 Apple Silicon。在後端的 Python 環境中執行 {{command}}。",
+    "asrSetupBundled": "已包含在 transformers 中，無須另外安裝（CUDA、MPS 或 CPU）。",
+    "asrSetupWhisperCpp": "在後端電腦上，將 {{binary}} 放入 {{folder}}（Vulkan、CUDA 或 CPU）。",
+    "asrSetupNemoParakeet": "無法在 VoiceStudio 管理的 Python 環境中安全安裝 NeMo：它需要 {{nemoRequirement}}，與 {{appRequirement}} 衝突。請勿在此安裝 nemo_toolkit；請使用獨立的專用環境。下載權重不會安裝引擎。",
+    "asrSetupIsolated": "重用 faster-whisper，無須額外安裝。轉錄在獨立程序中執行，卡住時可停止該程序。",
+    "asrSetupRemote": "無須安裝。請在設定 → 模型 → ASR 中設定相容 OpenAI 的轉錄伺服器；模型由伺服器自行管理。",
+    "setupStatusNotInstalled": "尚未安裝此引擎的套件。請前往設定 → 模型安裝。",
+    "setupStatusLicense": "尚未接受授權條款。請在設定 → 模型中查看並接受條款，以啟用此引擎。",
+    "setupStatusNeedsConfig": "此引擎需要設定後才能執行。請開啟設定 → 模型完成設定。",
+    "setupStatusFileMissing": "此引擎所需的檔案遺失或無法讀取。請前往設定 → 模型重新安裝。"
   },
   "performanceProfile": {
     "requiresEngine": "安裝並選取 {{engine}} 以調整速度與品質。",

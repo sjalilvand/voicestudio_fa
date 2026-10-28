@@ -412,7 +412,18 @@
     "failed": "fallou",
     "latencyMs": "{{ms}} ms",
     "localInstallRequired": "Instale este motor no ordenador de fondo mediante localhost ou a súa guía de configuración. A instalación remota está desactivada.",
-    "argosRuntimeUnavailable": "O tempo de execución de Argos non está dispoñible. Reinstale o backend ou seleccione NLLB."
+    "argosRuntimeUnavailable": "O tempo de execución de Argos non está dispoñible. Reinstale o backend ou seleccione NLLB.",
+    "asrSetupPackageInstall": "Executa {{command}} no contorno Python do backend.",
+    "asrSetupApplePackageInstall": "Só Apple Silicon. Executa {{command}} no contorno Python do backend.",
+    "asrSetupBundled": "Incluído con transformers; non precisa unha instalación separada (CUDA, MPS ou CPU).",
+    "asrSetupWhisperCpp": "Coloca {{binary}} en {{folder}} no ordenador do backend (Vulkan, CUDA ou CPU).",
+    "asrSetupNemoParakeet": "Non é seguro instalar NeMo no contorno Python xestionado por VoiceStudio: require {{nemoRequirement}}, que entra en conflito con {{appRequirement}}. Non instales nemo_toolkit aquí; usa un contorno separado e dedicado. Descargar os pesos non instala o motor.",
+    "asrSetupIsolated": "Reutiliza faster-whisper; non precisa outra instalación. A transcrición execútase nun proceso separado que se pode deter se queda bloqueado.",
+    "asrSetupRemote": "Non precisa instalación. Configura un servidor de transcrición compatible con OpenAI en Axustes → Modelos → ASR; o servidor xestiona os seus propios modelos.",
+    "setupStatusNotInstalled": "O paquete deste motor aínda non está instalado. Instálao en Axustes → Modelos.",
+    "setupStatusLicense": "A licenza aínda non se aceptou. Revísaa e acéptaa en Axustes → Modelos para activar este motor.",
+    "setupStatusNeedsConfig": "Este motor precisa configuración antes do uso. Abre Axustes → Modelos para rematar a configuración.",
+    "setupStatusFileMissing": "Falta un ficheiro necesario para este motor ou non se pode ler. Reinstálao en Axustes → Modelos."
   },
   "clone": {
     "title": "Clonación de voz",

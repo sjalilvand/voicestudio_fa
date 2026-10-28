@@ -1,10 +1,14 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
+import { createInstance } from 'i18next';
+import deLocale from '@/i18n/locales/de.json';
+import enLocale from '@/i18n/locales/en.json';
 import { afterEach, expect, it, vi } from 'vitest';
 
 const mock = vi.hoisted(() => ({
   api: vi.fn(),
+  t: vi.fn<(key: string, options?: Record<string, unknown>) => string>((key) => key),
   toast: { success: vi.fn(), warning: vi.fn(), error: vi.fn() },
 }));
 vi.mock('@/lib/api/client', () => ({ apiJson: mock.api, describeError: String }));
@@ -14,7 +18,7 @@ vi.mock('@tanstack/react-router', () => ({
   Link: ({ to, children }: { to: string; children: ReactNode }) => <a href={to}>{children}</a>,
 }));
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({ t: mock.t }),
 }));
 
 import { EngineFamilyList } from './engine-family-list';
@@ -23,6 +27,7 @@ import { ModelStoreShownContext } from './model-store-context';
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  mock.t.mockImplementation((key) => key);
 });
 
 const base = { role: 'TTS', size_gb: 1, installed: false, supported: true };
@@ -242,6 +247,15 @@ it.each([
 ])(
   'shows owned setup guidance for unavailable ASR %s without inventing an installer',
   async (id, name, hint) => {
+    const english = createInstance();
+    await english.init({
+      lng: 'en',
+      resources: { en: { translation: enLocale } },
+      interpolation: { escapeValue: false },
+    });
+    mock.t.mockImplementation((key, options) =>
+      key.startsWith('engines.asrSetup') ? english.t(key, options) : key,
+    );
     serve();
     const fallback = mock.api.getMockImplementation()!;
     mock.api.mockImplementation((path: string, ...rest: unknown[]) => {
@@ -275,7 +289,15 @@ it.each([
     });
     renderList('asr');
     fireEvent.click(await screen.findByRole('button', { name }));
-    expect(screen.getByText(hint.replace(/\s+/g, ' '))).toBeInTheDocument();
+    if (id === 'nemo-parakeet') {
+      expect(screen.getByText(/NeMo cannot safely be installed/)).toBeInTheDocument();
+      expect(screen.getByText(/Do not install nemo_toolkit here/)).toBeInTheDocument();
+    } else {
+      const command = id === 'moonshine' ? 'uv pip install moonshine-onnx' : 'pip install funasr';
+      expect(
+        screen.getByText(`Run ${command} in the backend's Python environment.`),
+      ).toBeInTheDocument();
+    }
     expect(screen.getAllByRole('button', { name: 'modelMaintenance.download' })).toHaveLength(2);
     expect(
       screen.queryByRole('button', { name: 'modelMaintenance.install' }),
@@ -326,3 +348,39 @@ it.each([
       expect(screen.getAllByText('engines.localInstallRequired').length).toBeGreaterThan(0);
   },
 );
+
+it('localizes the NeMo safety warning for a German interface', async () => {
+  const i18n = createInstance();
+  await i18n.init({
+    lng: 'de',
+    resources: { de: { translation: deLocale } },
+    interpolation: { escapeValue: false },
+  });
+  mock.t.mockImplementation((key, options) => i18n.t(key, options));
+  serve();
+  const fallback = mock.api.getMockImplementation()!;
+  mock.api.mockImplementation((path: string, ...rest: unknown[]) => {
+    if (path === '/engines')
+      return Promise.resolve({
+        asr: {
+          active: 'faster-whisper',
+          backends: [
+            {
+              id: 'nemo-parakeet',
+              display_name: 'Parakeet TDT',
+              available: false,
+              reason:
+                "This engine's package isn't installed yet. Install it from Settings → Models.",
+              install_hint: nemoInstallHint,
+            },
+          ],
+        },
+      });
+    return fallback(path, ...rest);
+  });
+  renderList('asr');
+  const toggle = await screen.findByRole('button', { name: 'Parakeet TDT' });
+  if (toggle.getAttribute('aria-expanded') === 'false') fireEvent.click(toggle);
+  expect(screen.getByText(/NeMo lässt sich.*nicht sicher installieren/)).toBeInTheDocument();
+  expect(screen.queryByText(nemoInstallHint)).not.toBeInTheDocument();
+});
