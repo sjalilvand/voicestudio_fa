@@ -16,7 +16,7 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-import { createReadStream } from 'node:fs';
+import { createReadStream, type BigIntStats } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import { homedir } from 'node:os';
 import { basename, dirname, isAbsolute, join, parse, relative, resolve, sep } from 'node:path';
@@ -42,6 +42,9 @@ export interface DataRelocationPlan {
 export interface PreparedDataRelocation extends DataRelocationPlan {
   removeSource(): Promise<void>;
   rollback(): Promise<void>;
+  /** Recognize narrow startup writes after the failed backend has stopped. */
+  captureStartupWrites?(): Promise<void>;
+  validateTarget?(): Promise<void>;
 }
 
 export interface DataRelocationResult {
@@ -173,15 +176,91 @@ interface OwnedEntry {
   mode?: number;
 }
 
+class TargetChangedError extends Error {
+  constructor() {
+    super('target_changed');
+  }
+}
+
+async function bindTargetDirectory(
+  target: string,
+  requestedTarget: string,
+  identity?: BigIntStats,
+) {
+  const selected = identity ?? (await lstat(target, { bigint: true }));
+  if (!selected.isDirectory() || selected.isSymbolicLink()) throw new TargetChangedError();
+  const selectedStillPresent = async (): Promise<boolean> => {
+    try {
+      const info = await lstat(target, { bigint: true });
+      const requested = await stat(requestedTarget, { bigint: true });
+      return (
+        requested.isDirectory() &&
+        requested.dev === selected.dev &&
+        requested.ino === selected.ino &&
+        info.isDirectory() &&
+        !info.isSymbolicLink() &&
+        info.dev === selected.dev &&
+        info.ino === selected.ino
+      );
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+      throw error;
+    }
+  };
+  const validateTarget = async (): Promise<void> => {
+    if (!(await selectedStillPresent())) throw new TargetChangedError();
+  };
+  return { validateTarget, selectedStillPresent };
+}
+
 // Existing folders may be mount points, or have an unwritable parent. Keep the
 // folder itself and reserve each child exclusively: a POSIX rename can overwrite a
 // concurrent file on POSIX. Copy once, then verify before starting the backend.
 async function prepareExistingDestination(
   plan: DataRelocationPlan,
   sourceManifest: ManifestEntry[],
+  requestedTarget: string,
 ): Promise<PreparedDataRelocation> {
+  const { validateTarget, selectedStillPresent } = await bindTargetDirectory(
+    plan.target,
+    requestedTarget,
+  );
   const staging = join(plan.target, `.voicestudio-moving-${randomUUID()}`);
   await mkdir(staging, { recursive: false });
+  await validateTarget();
+  const stagingInfo = await lstat(staging, { bigint: true });
+  let recordInfo: { dev: bigint; ino: bigint } | undefined;
+  const cleanupStaging = async (): Promise<void> => {
+    if (!(await selectedStillPresent())) return;
+    let info;
+    try {
+      info = await lstat(staging, { bigint: true });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+      throw error;
+    }
+    if (
+      !info.isDirectory() ||
+      info.isSymbolicLink() ||
+      info.dev !== stagingInfo.dev ||
+      info.ino !== stagingInfo.ino
+    )
+      return;
+    if (recordInfo) {
+      const record = join(staging, 'manifest.json');
+      const present = await lstat(record, { bigint: true }).catch(
+        (error: NodeJS.ErrnoException) => {
+          if (error.code !== 'ENOENT') throw error;
+          return null;
+        },
+      );
+      if (present?.dev === recordInfo.dev && present.ino === recordInfo.ino)
+        await rm(record, { force: true });
+    }
+    await rmdir(staging).catch((error: NodeJS.ErrnoException) => {
+      if (!['ENOENT', 'ENOTEMPTY', 'EEXIST'].includes(error.code || '')) throw error;
+    });
+  };
   const owned: OwnedEntry[] = [];
   const ownedDirectories = new Map<string, OwnedEntry>();
   const remember = async (
@@ -204,6 +283,7 @@ async function prepareExistingDestination(
     }
   };
   const ownsPath = async (entry: OwnedEntry): Promise<boolean> => {
+    if (!(await selectedStillPresent())) return false;
     for (let parent = dirname(entry.path); parent !== '.'; parent = dirname(parent)) {
       const directory = ownedDirectories.get(parent);
       if (directory && !(await stillOwned(directory))) return false;
@@ -244,9 +324,17 @@ async function prepareExistingDestination(
   try {
     // A small in-target transaction record; model weights are never copied a
     // second time, even on filesystems without hard links (such as exFAT).
-    await writeFile(join(staging, 'manifest.json'), JSON.stringify(sourceManifest), { flag: 'wx' });
+    const record = await open(join(staging, 'manifest.json'), 'wx');
+    try {
+      const { dev, ino } = await record.stat({ bigint: true });
+      recordInfo = { dev, ino };
+      await record.writeFile(JSON.stringify(sourceManifest));
+    } finally {
+      await record.close();
+    }
     for (const entry of sourceManifest) {
       if (!entry.path) continue;
+      await validateTarget();
       const destination = join(plan.target, entry.path);
       const original = join(plan.source, entry.path);
       if (entry.kind === 'directory') {
@@ -279,17 +367,82 @@ async function prepareExistingDestination(
     ) {
       throw new Error('verification_failed');
     }
+    await validateTarget();
     await directoryModes(false);
-    await rm(staging, { recursive: true, force: true });
+    await cleanupStaging();
+    await validateTarget();
   } catch (error) {
     await rollback().catch(() => undefined);
-    await rm(staging, { recursive: true, force: true }).catch(() => undefined);
+    await cleanupStaging().catch(() => undefined);
     throw error;
   }
+  // Startup replaces this one advisory index. Seed its expected contents only
+  // while the copied cache/index still belongs to this transaction; unrelated
+  // replacements are never made ours just because they occupy the same path.
+  const startupHandoff = async (): Promise<PreparedDataRelocation['captureStartupWrites']> => {
+    const cachePath = join('outputs', 'longform_cache');
+    const cache = ownedDirectories.get(cachePath);
+    if (!cache || !(await ownsPath(cache))) return;
+    const indexPath = join(cachePath, 'voices_roots.json');
+    const index = owned.find((entry) => entry.path === indexPath);
+    if (index && (index.kind === 'directory' || !(await ownsPath(index)))) return;
+    if (!index) {
+      try {
+        await lstat(join(plan.target, indexPath));
+        return;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') return;
+      }
+    }
+    let seen: string[] = [];
+    try {
+      const parsed: unknown = index
+        ? JSON.parse(await readFile(join(plan.target, indexPath), 'utf8'))
+        : [];
+      if (Array.isArray(parsed))
+        seen = parsed.filter((root): root is string => typeof root === 'string' && root.length > 0);
+    } catch {
+      /* Backend startup treats an absent/invalid index as empty. */
+    }
+    if (index && !(await ownsPath(index))) return;
+    // core.config preserves the env spelling, and Python os.path.join does not
+    // normalize it. In particular C:/data becomes C:/data\voices on Windows.
+    const trailingSeparator =
+      requestedTarget.endsWith(sep) || (sep === '\\' && requestedTarget.endsWith('/'));
+    const current = requestedTarget + (trailingSeparator ? '' : sep) + 'voices';
+    // Match services.longform_render.remember_voices_root's filtering/order/cap.
+    const expected = JSON.stringify(
+      [current, ...seen.filter((root) => root !== current)].slice(0, 8),
+    );
+    return async () => {
+      if (!(await ownsPath(cache))) return;
+      const file = join(plan.target, indexPath);
+      const handle = await open(file, 'r');
+      try {
+        const info = await handle.stat({ bigint: true });
+        if (!info.isFile()) return;
+        const parsed: unknown = JSON.parse(await handle.readFile('utf8'));
+        if (JSON.stringify(parsed) !== expected) return;
+        const pathInfo = await lstat(file, { bigint: true });
+        if (pathInfo.dev !== info.dev || pathInfo.ino !== info.ino) return;
+        if (!(await ownsPath(cache))) return;
+        const entry: OwnedEntry = { path: indexPath, kind: 'file', dev: info.dev, ino: info.ino };
+        if (index) Object.assign(index, entry);
+        else owned.push(entry);
+      } finally {
+        await handle.close();
+      }
+    };
+  };
   return {
     ...plan,
-    removeSource: () => rm(plan.source, { recursive: true, force: false }),
+    removeSource: async () => {
+      await validateTarget();
+      await rm(plan.source, { recursive: true, force: false });
+    },
     rollback,
+    validateTarget,
+    captureStartupWrites: await startupHandoff().catch(() => undefined),
   };
 }
 
@@ -306,10 +459,11 @@ export async function prepareDataRelocation(
       return false;
     },
   );
-  if (existing) return prepareExistingDestination(plan, sourceManifest);
+  if (existing) return prepareExistingDestination(plan, sourceManifest, target);
   const parent = dirname(plan.target);
   const staging = join(parent, `.${basename(plan.target)}.voicestudio-moving-${randomUUID()}`);
   await mkdir(staging, { recursive: false });
+  const stagedIdentity = await lstat(staging, { bigint: true });
   try {
     for (const entry of await readdir(plan.source)) {
       await cp(join(plan.source, entry), join(staging, entry), {
@@ -335,10 +489,19 @@ export async function prepareDataRelocation(
     await rm(staging, { recursive: true, force: true }).catch(() => undefined);
     throw error;
   }
+  const binding = await bindTargetDirectory(plan.target, target, stagedIdentity);
+  await binding.validateTarget();
   return {
     ...plan,
-    removeSource: () => rm(plan.source, { recursive: true, force: false }),
-    rollback: () => rm(plan.target, { recursive: true, force: true }),
+    removeSource: async () => {
+      await binding.validateTarget();
+      await rm(plan.source, { recursive: true, force: false });
+    },
+    rollback: async () => {
+      if (await binding.selectedStillPresent())
+        await rm(plan.target, { recursive: true, force: true });
+    },
+    validateTarget: binding.validateTarget,
   };
 }
 
@@ -471,9 +634,12 @@ export async function relocateDataDirectory(
     await writeDataDirectorySetting(target, runtime.environmentPath);
     settingChanged = true;
     runtime.progress('restarting');
-    await runtime.start();
+    await prepared.validateTarget?.();
+    // A rejected start may already have written startup metadata.
     started = true;
+    await runtime.start();
     if (!(await runtime.verify(target))) throw new Error('backend_verification_failed');
+    await prepared.validateTarget?.();
     // Advisory cache writes replace their inode; defer them until activation so
     // a failed move can identify every copied entry during rollback.
     await recordPreviousVoicesRoot(prepared.source, prepared.target).catch(() => undefined);
@@ -481,7 +647,8 @@ export async function relocateDataDirectory(
     let removedSource = true;
     try {
       await prepared.removeSource();
-    } catch {
+    } catch (error) {
+      if (error instanceof TargetChangedError) throw error;
       removedSource = false;
     }
     runtime.progress('done');
@@ -493,14 +660,25 @@ export async function relocateDataDirectory(
     };
   } catch (error) {
     runtime.progress('rolling_back');
-    if (started) await runtime.stop().catch(() => undefined);
+    let backendStopped = !started;
+    if (started) {
+      try {
+        await runtime.stop();
+        backendStopped = true;
+      } catch {
+        /* Keep a potentially live copy intact. */
+      }
+    }
     if (settingChanged) {
       await writeDataDirectorySetting(previousSetting, runtime.environmentPath).catch(
         () => undefined,
       );
     }
-    if (prepared) await prepared.rollback().catch(() => undefined);
-    if (stopped) await runtime.start().catch(() => undefined);
+    if (prepared && backendStopped) {
+      await prepared.captureStartupWrites?.().catch(() => undefined);
+      await prepared.rollback().catch(() => undefined);
+    }
+    if (stopped && backendStopped) await runtime.start().catch(() => undefined);
     throw error;
   }
 }
