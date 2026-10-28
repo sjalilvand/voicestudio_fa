@@ -113,3 +113,18 @@ it('still repairs a genuine missing-module failure', async () => {
   expect(repair).toHaveBeenCalledOnce();
   expect(value.status.stage).toBe('setup_required');
 });
+
+it.each(['darwin', 'linux'] as const)(
+  'reports a refused Python launch on %s without reinstalling',
+  async (platform) => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue(platform);
+    vi.spyOn(process, 'arch', 'get').mockReturnValue(platform === 'darwin' ? 'arm64' : 'x64');
+    failProbe('callback', 'EACCES');
+    const { value, repair } = supervisor();
+    await value.start();
+    expect(value.status.stage).toBe('failed');
+    expect(value.status.message).toContain(runtimePython(join(host.data, 'runtime', 'project')));
+    expect(value.status.message).not.toContain('Smart App Control');
+    expect(repair).not.toHaveBeenCalled();
+  },
+);
