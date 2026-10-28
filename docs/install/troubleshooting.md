@@ -757,7 +757,7 @@ order:
   corporate/school networks.
 - **Region mirror** — if `huggingface.co` is slow/blocked where you are,
   VoiceStudio normally handles this automatically: with no endpoint explicitly
-  configured it probes both the official endpoint and the `hf-mirror.com`
+  configured (including with the China region selected) it probes both the official endpoint and the `hf-mirror.com`
   community mirror and downloads from whichever works (downloads are
   checksum-verified either way; see
   [downloading-models.md](../downloading-models.md)). To check or re-test the
@@ -767,6 +767,13 @@ order:
   set it as an env var before launching and relaunch:
   - macOS/Linux: `export HF_ENDPOINT=https://hf-mirror.com`
   - Windows (PowerShell): `[Environment]::SetEnvironmentVariable("HF_ENDPOINT","https://hf-mirror.com","User")`
+
+  Automatic selection checks model-file metadata, so a mirror that only
+  redirects to the official host without supplying download metadata is not
+  selected. If you pinned a mirror explicitly and downloads fail with an
+  invalid etag or missing metadata, restore automatic selection in the same
+  panel or choose the official endpoint. Old automatic decisions are checked
+  again during setup after this update.
 
 A segmented download refuses a response whose status or Content-Range does not match the requested bytes and file size. An invalid response is not published as the model file; retry through a server or mirror that supports correct byte ranges.
 

@@ -50,6 +50,12 @@ afterEach(() => {
   state.checkout = true;
   vi.unstubAllEnvs();
 });
+it.each(['darwin', 'win32', 'linux'] as const)('leaves China downloads eligible for automatic failover on %s', (platform) => {
+  vi.stubEnv('HF_ENDPOINT', undefined);
+  expect(managedBackendSpawnOptions(3900, 'china', platform).env.HF_ENDPOINT).toBeUndefined();
+  vi.stubEnv('HF_ENDPOINT', 'https://custom.example');
+  expect(managedBackendSpawnOptions(3900, 'china', platform).env.HF_ENDPOINT).toBe('https://custom.example');
+});
 it('launches the prepared source interpreter without syncing or downloading dependencies', async () => {
   vi.stubEnv('OMNIVOICE_BACKEND_CMD', '');
   const plan = await resolveSpawnPlan(3912);
