@@ -68,12 +68,9 @@ function safeDestination(path: string): boolean {
   if (!isAbsolute(path) || dirname(path) === path || /[\0\r\n]/.test(path)) return false;
   if (normalized(path) === normalized(homedir())) return false;
   const root = parse(path).root;
-  return (
-    path
-      .slice(root.length)
-      .split(/[\\/]+/)
-      .filter(Boolean).length >= 2
-  );
+  // Any single directory under the volume root is a valid destination;
+  // dirname(path) === path above already refuses the root itself.
+  return path.slice(root.length).split(/[\\/]+/).filter(Boolean).length >= 1;
 }
 
 async function canonicalDestination(path: string): Promise<string> {
