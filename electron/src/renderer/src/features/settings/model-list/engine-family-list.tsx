@@ -97,9 +97,13 @@ function engineItem(ctx: Context, engine: EngineBackend): FamilyItem {
   const singleInfo = single ? describeJob(single, ops) : undefined;
   const fallbackNote =
     engine.available && engine.routing_status === 'cpu_fallback' ? engine.routing_reason : null;
+  const setupHint =
+    !engine.local_install_required && !engine.setup_snippet && !engine.docs_url
+      ? engine.install_hint
+      : undefined;
   const details = (
     <EngineDetails
-      detail={engine.available ? fallbackNote : engineSummary(ctx, engine, active)}
+      detail={engine.available ? fallbackNote : setupHint || engineSummary(ctx, engine, active)}
       snippet={engine.available ? null : engine.setup_snippet}
       docsUrl={engine.docs_url}
       tools={

@@ -207,9 +207,9 @@ def _reason_for(diagnostic, **row):
 @pytest.mark.parametrize(
     ("diagnostic", "one_click", "points_at"),
     [
-        ("voxcpm package not installed.", True, "Model Catalogue"),
+        ("voxcpm package not installed.", True, "Settings → Models"),
         ("voxcpm package not installed.", False, "guide"),
-        ("file is missing", True, "Model Catalogue"),
+        ("file is missing", True, "Settings → Models"),
         ("file is missing", False, "guide"),
     ],
 )
@@ -219,9 +219,19 @@ def test_the_next_step_matches_whether_the_app_can_install_it(diagnostic, one_cl
     reason = _reason_for(diagnostic, one_click_install=one_click)
     assert points_at in reason
     if not one_click:
-        assert "Model Catalogue" not in reason
+        assert "Settings → Models" not in reason
 
 
-def test_rows_without_the_install_field_keep_the_catalogue_wording():
+def test_rows_without_the_install_field_name_the_current_settings_page():
     # ASR / LLM / translation rows carry no one_click_install field.
-    assert "Model Catalogue" in _reason_for("transformers not installed")
+    assert "Settings → Models" in _reason_for("transformers not installed")
+
+
+@pytest.mark.parametrize(
+    "diagnostic",
+    ["License not accepted", "Configure a server endpoint in Model Catalogue"],
+)
+def test_public_configuration_guidance_names_current_settings_navigation(diagnostic):
+    reason = _reason_for(diagnostic)
+    assert "Settings → Models" in reason
+    assert "Model Catalogue" not in reason

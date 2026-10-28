@@ -9,7 +9,7 @@ model installation and compute.
 
 ## Setup
 
-Everything lives on one screen — **Model Catalogue**, **ASR** tab:
+Everything lives on one screen — **Settings → Models**, **ASR** tab:
 
 1. The **OpenAI-compatible (remote server)** row shows as unavailable until
    a server is configured. The config panel appears **below the engine
