@@ -95,6 +95,11 @@ in **Settings → Models → Hugging Face mirror**. Mirror integrity is a
 non-issue: `huggingface_hub` verifies every download by checksum regardless
 of endpoint. Opt out with `OMNIVOICE_HF_ENDPOINT_MODE=manual`.
 
+This retry also applies to the model weights fetched by one-click engine
+installation. It retries once only when a network failure selects a different
+automatic endpoint; explicit endpoint choices stay fixed, and a full disk
+stops the download immediately.
+
 **Explicit (always wins).** To pin an endpoint yourself:
 
 ```
