@@ -148,7 +148,23 @@ export default function TranscriptionsPage() {
     toast.success(t('transcriptions.exported'));
   }, [transcriptions]);
 
-  // CLEAN-ROOM (spec W11-residue §E16): formatTime(timestamp) relative/absolute time label
+  // Short "how long ago" label; older entries fall back to a local date + time.
+  const formatTime = (timestamp) => {
+    const ms = toMillis(timestamp);
+    if (ms == null) return null;
+    const age = Date.now() - ms;
+    const MINUTE = 60_000;
+    const HOUR = 60 * MINUTE;
+    if (age < MINUTE) return t('transcriptions.just_now');
+    if (age < HOUR) return t('transcriptions.m_ago', { count: Math.floor(age / MINUTE) });
+    if (age < 24 * HOUR) return t('transcriptions.h_ago', { count: Math.floor(age / HOUR) });
+    return new Date(ms).toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   return (
     <div

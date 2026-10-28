@@ -316,7 +316,16 @@ function pause(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
-// CLEAN-ROOM (spec W11-residue §E27): exported fileSha256(path) streaming SHA-256 hex digest
+/** SHA-256 of a file on disk as lowercase hex, read chunk by chunk rather than all at once. */
+export async function fileSha256(path: string): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const digest = createHash('sha256');
+    const source = createReadStream(path);
+    source.on('data', (chunk) => digest.update(chunk));
+    source.once('error', reject);
+    source.once('end', () => resolve(digest.digest('hex')));
+  });
+}
 
 export interface SegmentedDownloadOptions {
   /** Candidate URLs for the same file, tried in order (a mirror, then the origin). */

@@ -1,4 +1,6 @@
-// CLEAN-ROOM (spec W11-residue §T47): vitest, longform-session and story-clear imports
+import { describe, expect, it } from 'vitest';
+import { blankLongformDraft } from './longform-session';
+import { clearedScriptPatch, scriptSize } from './story-clear';
 
 describe('script reset patches', () => {
   it.each([

@@ -12,7 +12,53 @@ def _runtime_import_module():
     from services import longform_import
     li = longform_import
 
-# CLEAN-ROOM (spec W11-residue §T45): _epub helper that builds an in-memory EPUB
+_OPF_NS = "http://www.idpf.org/2007/opf"
+_OPS_NS = "http://www.idpf.org/2007/ops"
+
+
+def _epub(docs: dict[str, str], *, nav=None, ncx=None, linear_no=(), guide=None) -> bytes:
+    """Assemble a minimal EPUB in memory: one OPF under OPS/ plus the given parts."""
+    manifest = []
+    spine = []
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr(
+            "META-INF/container.xml",
+            '<?xml version="1.0"?>'
+            '<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">'
+            '<rootfiles><rootfile full-path="OPS/book.opf" '
+            'media-type="application/oebps-package+xml"/></rootfiles></container>',
+        )
+        for position, (href, xhtml) in enumerate(docs.items()):
+            item_id = f"part{position}"
+            zf.writestr(f"OPS/{href}", xhtml)
+            manifest.append(
+                f'<item id="{item_id}" href="{href}" media-type="application/xhtml+xml"/>'
+            )
+            skip = href in linear_no or position in linear_no
+            spine.append(
+                f'<itemref idref="{item_id}"' + (' linear="no"' if skip else "") + "/>"
+            )
+        if nav is not None:
+            if not nav.lstrip().startswith("<html"):
+                nav = f'<html xmlns:epub="{_OPS_NS}"><body>' + nav
+            zf.writestr("OPS/TOC.xhtml", nav)
+            manifest.append(
+                '<item id="navdoc" href="TOC.xhtml" media-type="application/xhtml+xml" properties="nav"/>'
+            )
+        spine_attrs = ""
+        if ncx is not None:
+            zf.writestr("OPS/toc.ncx", ncx)
+            manifest.append('<item id="ncxdoc" href="toc.ncx" media-type="application/x-dtbncx+xml"/>')
+            spine_attrs = ' toc="ncxdoc"'
+        opf = (
+            f'<?xml version="1.0"?><package xmlns="{_OPF_NS}" version="3.0">'
+            f"<manifest>{''.join(manifest)}</manifest>"
+            f"<spine{spine_attrs}>{''.join(spine)}</spine>"
+            f"{guide or ''}</package>"
+        )
+        zf.writestr("OPS/book.opf", opf)
+    return buf.getvalue()
 
 
 def _doc(body: str) -> str:

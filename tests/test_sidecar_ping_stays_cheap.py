@@ -38,7 +38,18 @@ def test_sidecars_were_discovered():
     assert len(SIDECARS) >= 8
 
 
-# CLEAN-ROOM (spec W11-residue §T52): parametrized test that a sidecar ping VRAM probe does not import torch
+@pytest.mark.parametrize("script", SIDECARS, ids=[p.parent.name for p in SIDECARS])
+def test_ping_vram_probe_never_imports_torch(script, monkeypatch):
+    spec = importlib.util.spec_from_file_location(f"_ping_probe_{script.parent.name}", script)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    monkeypatch.delitem(sys.modules, "torch", raising=False)
+    watcher = _WatchTorch()
+    monkeypatch.setattr(sys, "meta_path", [watcher, *sys.meta_path])
+
+    assert module._measure_vram_mb() == 0.0
+    assert watcher.attempts == []
 
 
 def test_failed_health_check_keeps_its_reason_in_the_local_log(monkeypatch, caplog):

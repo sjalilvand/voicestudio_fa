@@ -43,7 +43,22 @@ export default function PerformanceDeviceTab() {
         })}
       >
         <Row label={t('about.platform')} value={info?.platform || '—'} />
-        {/* CLEAN-ROOM (spec W11-residue §E6): architecture, python, compute device and GPU-active rows */}
+        <Row label={t('about.architecture')} value={info?.arch || '—'} mono />
+        <Row label={t('about.python')} value={info?.python || '—'} mono />
+        <Row label={t('about.compute_device')} value={info?.device || '—'} mono />
+        <Row
+          label={t('about.gpu_active')}
+          value={
+            hw?.gpu_active ? (
+              <Badge tone="success">
+                <CheckCircle size={11} />
+                {t('about.yes')}
+              </Badge>
+            ) : (
+              <Badge tone="neutral">{t('about.no')}</Badge>
+            )
+          }
+        />
         <Row
           label={t('about.ram')}
           value={hw ? `${hw.ram?.toFixed(2)} / ${hw.total_ram?.toFixed(2)} GB` : '—'}
@@ -72,7 +87,13 @@ export default function PerformanceDeviceTab() {
             </Badge>
           }
         />
-        {/* CLEAN-ROOM (spec W11-residue §E6): active model, ASR model and translator rows */}
+        <Row
+          label={t('about.active_model')}
+          value={status?.repo_id || info?.model_checkpoint || '—'}
+          mono
+        />
+        <Row label={t('about.asr_model')} value={info?.asr_model || '—'} mono />
+        <Row label={t('about.translator')} value={info?.translate_provider || '—'} />
       </SettingsSection>
     </>
   );

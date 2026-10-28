@@ -1,7 +1,10 @@
 // @vitest-environment node
 import { fixture, runner, report, recipe } from './runtime-windows-rocm.fixture';
 import { execFile } from 'node:child_process';
-// CLEAN-ROOM (spec W11-residue §T40): fs/path/vitest imports and runtime-project import
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { afterEach, expect, it, vi } from 'vitest';
+import { installRuntime, runtimeDependenciesReady } from './runtime-project';
 const host = vi.hoisted(() => ({ data: '' }));
 const originalResources = Object.getOwnPropertyDescriptor(process, 'resourcesPath');
 afterEach(() => {

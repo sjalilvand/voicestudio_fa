@@ -51,7 +51,16 @@ as out-of-memory —
 | --- | --- | --- |
 | `OMNIVOICE_SHERPA_MODEL` | unset | Path to the unpacked directory containing `tokens.txt` and either `model.onnx` or one voice-named `.onnx` file. |
 
-<!-- CLEAN-ROOM (spec W11-residue §D8): worked example: downloading and pointing at a US English Piper voice -->
+### Example: a US English Piper voice
+
+```bash
+curl -LO https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-lessac-medium.tar.bz2
+tar xjf vits-piper-en_US-lessac-medium.tar.bz2
+export OMNIVOICE_SHERPA_MODEL="$PWD/vits-piper-en_US-lessac-medium"
+```
+
+Any other Piper voice is set up identically; just swap in its archive name and
+the folder it unpacks to.
 
 ## Licences
 

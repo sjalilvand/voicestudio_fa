@@ -1,6 +1,9 @@
 // @vitest-environment node
 import { fixture, interpreter, report } from './runtime-windows-rocm.fixture';
-// CLEAN-ROOM (spec W11-residue §T46): fs/path/vitest imports and installRuntime/runtimeReady import
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { expect, it, vi } from 'vitest';
+import { installRuntime, runtimeReady } from './runtime-project';
 import type { RuntimeRunner } from './runtime-project';
 import { runRuntimeProbe } from './runtime-probe';
 

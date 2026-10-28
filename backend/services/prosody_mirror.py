@@ -82,13 +82,65 @@ class SegmentSpan:
     speaker_id: str = ""
 
 
-# CLEAN-ROOM (spec W11-residue §B7): ProsodyFeatures dataclass
+@dataclass(frozen=True, slots=True)
+class ProsodyFeatures:
+    """Acoustic summary of one spoken line; pitch fields are absent when unvoiced."""
+
+    active_s: float
+    voiced_ratio: float
+    rate_hz: float
+    loudness_db: float
+    pitch_st: Optional[float] = None
+    pitch_spread_st: Optional[float] = None
+
+    def get(self, name: str) -> Optional[float]:
+        """Look a feature up by name; unknown names give ``None``."""
+        return getattr(self, name, None)
 
 
-# CLEAN-ROOM (spec W11-residue §B8): Baseline dataclass with z()
+@dataclass(frozen=True)
+class Baseline:
+    """What is typical for a group of lines: robust centre and spread per feature."""
+
+    centre: Mapping[str, float]
+    spread: Mapping[str, float]
+    pitch_comparable: bool
+
+    def z(self, features: ProsodyFeatures) -> dict[str, float]:
+        """Score each available feature of ``features`` against this baseline."""
+        scores: dict[str, float] = {}
+        for name, mid in self.centre.items():
+            if name not in self.spread:
+                continue
+            if name in _PITCH_FEATURES and not self.pitch_comparable:
+                continue
+            observed = features.get(name)
+            if observed is None:
+                continue
+            scores[name] = (observed - mid) / self.spread[name]
+        # A huge pitch excursion is more likely a tracking error (or another
+        # voice) than real delivery, so pitch is not trusted for this line.
+        if abs(scores.get("pitch_st", 0.0)) > _PITCH_JUMP_Z:
+            for name in _PITCH_FEATURES:
+                scores.pop(name, None)
+        return scores
 
 
-# CLEAN-ROOM (spec W11-residue §B9): MirrorResult dataclass with to_dict()
+@dataclass(slots=True)
+class MirrorResult:
+    """Per-line outcome: the suggested direction text and the evidence for it."""
+
+    id: str
+    direction: str = ""
+    tokens: dict[str, list[str]] = field(default_factory=dict)
+    z: dict[str, float] = field(default_factory=dict)
+    measured: bool = False
+
+    def to_dict(self) -> dict[str, object]:
+        """Plain JSON-friendly form, with scores rounded to two places."""
+        out = asdict(self)
+        out["z"] = {name: round(value, 2) for name, value in self.z.items()}
+        return out
 
 
 def to_mono_analysis_rate(audio: np.ndarray, sr: int) -> np.ndarray:
@@ -267,7 +319,56 @@ _RULES: tuple[_Rule, ...] = (
 )
 
 
-# CLEAN-ROOM (spec W11-residue §B10): infer_direction(z); then (§B11) mirror(features, speakers)
+def infer_direction(z: Mapping[str, float]) -> Direction:
+    """Map a line's z-scores onto director tokens."""
+    view = _Scores(z)
+    chosen: dict[str, list[str]] = {}
+    if view.voice <= -2 and view.loud <= -1:
+        # Mostly unvoiced and quiet: a whisper overrides every other reading.
+        chosen["intimacy"] = ["whispered"]
+    else:
+        for dimension, word, applies in _RULES:
+            if dimension not in chosen and applies(view):
+                chosen[dimension] = [word]
+    return Direction(tokens=chosen, source="prosody-mirror", method="prosody")
+
+
+def mirror(
+    features: Mapping[str, Optional[ProsodyFeatures]],
+    speakers: Mapping[str, str],
+) -> dict[str, MirrorResult]:
+    """Suggest a direction for each measured line relative to its speaker's norm."""
+    results = {key: MirrorResult(id=key) for key in features}
+    measured = {key: value for key, value in features.items() if value is not None}
+    if len(measured) < MIN_BASELINE_LINES:
+        return results
+
+    owner = {key: speakers.get(key) or "" for key in measured}
+    by_speaker: dict[str, list[ProsodyFeatures]] = {}
+    for key, value in measured.items():
+        if owner[key]:
+            by_speaker.setdefault(owner[key], []).append(value)
+
+    # Pitch is only comparable across the pooled lines when they are known to
+    # come from one and the same voice.
+    single_voice = len(by_speaker) == 1 and all(owner.values())
+    pooled = build_baseline(list(measured.values()), pitch_comparable=single_voice)
+    per_speaker = {
+        name: build_baseline(lines, pitch_comparable=True)
+        for name, lines in by_speaker.items()
+        if len(lines) >= MIN_BASELINE_LINES
+    }
+
+    for key, value in measured.items():
+        baseline = per_speaker.get(owner[key], pooled)
+        scores = baseline.z(value)
+        direction = infer_direction(scores)
+        result = results[key]
+        result.direction = direction.instruct_prompt()
+        result.tokens = {dim: list(words) for dim, words in direction.tokens.items() if words}
+        result.z = scores
+        result.measured = True
+    return results
 
 
 def mirror_file(path: str, spans: Sequence[SegmentSpan]) -> list[MirrorResult]:

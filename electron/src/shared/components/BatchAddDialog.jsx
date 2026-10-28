@@ -59,7 +59,30 @@ export default function BatchAddDialog({
         </span>
       }
       footer={
-        null /* CLEAN-ROOM (spec W11-residue §E19): footer: job estimate, cancel and add-to-queue buttons */
+        <>
+          <span className="flex-1 font-mono text-[0.75rem] text-[var(--chrome-fg-dim)]">
+            {files.length && langs.length
+              ? t('batch.estimate', {
+                  videos: files.length,
+                  langs: langs.length,
+                  jobs: files.length * langs.length,
+                })
+              : t('batch.select_files_langs')}
+          </span>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            {t('common.cancel')}
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleSubmit}
+            disabled={!files.length || !langs.length || submitting}
+            loading={submitting}
+            leading={submitting ? null : <Plus size={12} />}
+          >
+            {t('batch.add_to_queue')}
+          </Button>
+        </>
       }
     >
       <div className="flex flex-col gap-[14px]">

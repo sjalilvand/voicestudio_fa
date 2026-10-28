@@ -71,4 +71,46 @@ def test_frozen_numpy_preserves_existing_platform_versions(group, python_version
         assert selected == [f"=={expected}"]
 
 
-# CLEAN-ROOM (spec W11-residue §T6): test that post-setup installs cuDNN only after a positive CUDA probe
+def _import_setup_script():
+    spec = importlib.util.spec_from_file_location("_setup_cudnn_probe", ROOT / "scripts" / "setup.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.mark.parametrize("probe", ["cpu", "cuda", "rocm", "failed", "timeout"])
+def test_cudnn_compat_installs_only_after_positive_cuda_probe(probe, monkeypatch, tmp_path):
+    setup = _import_setup_script()
+    monkeypatch.setattr(setup.sys, "platform", "linux")
+    monkeypatch.setattr(setup, "_ensure_vcredist_windows", lambda *a, **k: None)
+    monkeypatch.setattr(setup, "_ensure_rocm_torch", lambda *a, **k: None)
+    monkeypatch.setattr(setup, "_find_compat_dir", lambda *a, **k: str(tmp_path / "compat"))
+    monkeypatch.setattr(setup, "_count_cudnn8_libs", lambda *a, **k: 7)
+
+    fake_torch = SimpleNamespace(
+        cuda=SimpleNamespace(is_available=lambda: probe != "cpu"),
+        version=SimpleNamespace(hip="6.2.41133" if probe == "rocm" else None),
+    )
+    monkeypatch.setitem(sys.modules, "torch", fake_torch)
+
+    issued = []
+
+    def fake_run(cmd, *args, **kwargs):
+        cmd = list(cmd)
+        issued.append(cmd)
+        if cmd and cmd[0] == setup.sys.executable:
+            if probe == "timeout":
+                raise subprocess.TimeoutExpired(cmd, kwargs.get("timeout", 30))
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                exec(cmd[2], {"__name__": "__probe__"})
+            code = 1 if probe == "failed" else 0
+            return subprocess.CompletedProcess(cmd, code, stdout=out.getvalue(), stderr="")
+        return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(setup.subprocess, "run", fake_run)
+
+    setup.main()
+
+    uv_installs = [cmd for cmd in issued if cmd[:3] == ["uv", "pip", "install"]]
+    assert len(uv_installs) == (1 if probe == "cuda" else 0), issued

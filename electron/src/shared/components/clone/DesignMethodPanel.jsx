@@ -345,7 +345,48 @@ export default function DesignMethodPanel({
             </div>
           </div>
 
-          {/* CLEAN-ROOM (spec W11-residue §E17): reset-to-description / save-design-as-profile action row */}
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={resetToDescription}>
+              {t('clone.reset_to_description', { defaultValue: 'Back to the description' })}
+            </Button>
+            {showSaveProfile ? (
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <Input
+                  size="sm"
+                  className="min-w-0 flex-1"
+                  placeholder={t('clone.profile_name')}
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                />
+                <Button
+                  variant="subtle"
+                  size="sm"
+                  leading={<Save size={12} />}
+                  onClick={() =>
+                    handleSaveDesignProfile(
+                      vdStates,
+                      buildDesignInstruct(vdStates, instruct).instruct,
+                      language,
+                    )
+                  }
+                >
+                  {t('clone.save')}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setShowSaveProfile(false)}>
+                  {t('clone.cancel')}
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="subtle"
+                size="sm"
+                leading={<Save size={12} />}
+                onClick={() => setShowSaveProfile(true)}
+              >
+                {t('clone.save_design_as_profile', { defaultValue: 'Keep this design as a voice' })}
+              </Button>
+            )}
+          </div>
         </div>
       )}
     </div>

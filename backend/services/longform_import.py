@@ -274,7 +274,34 @@ class _TextExtractor(HTMLParser):
         return "\n".join(out).strip()
 
 
-# CLEAN-ROOM (spec W11-residue §B13): _html_to_title_body(xhtml); then (§B14) _html_extract(xhtml)
+def _html_to_title_body(xhtml: str) -> tuple[str, str]:
+    """Title and narratable text of one XHTML document."""
+    _types, title, body = _html_extract(xhtml)
+    return title, body
+
+
+def _html_extract(xhtml: str) -> tuple[set[str], str, str]:
+    """Parse one XHTML entry into its structural epub types, title and body.
+
+    Malformed markup is tolerated: whatever was read before the parser gave up
+    is still returned.
+    """
+    extractor = _TextExtractor()
+    try:
+        extractor.feed(xhtml)
+        extractor.close()
+    except Exception:
+        logger.warning(
+            "EPUB entry: HTML parsing failed part-way; importing the text read before the error",
+            exc_info=True,
+        )
+    body = extractor.text()
+    title = extractor.title
+    if title:
+        first, newline, rest = body.partition("\n")
+        if first == title:
+            body = rest.lstrip("\n") if newline else ""
+    return extractor.epub_types, title, body
 
 
 _OPF_NS = {"opf": "http://www.idpf.org/2007/opf", "c": "urn:oasis:names:tc:opendocument:xmlns:container"}
@@ -312,7 +339,13 @@ _BODY_TYPES = {
     "bodymatter", "chapter", "part", "prologue", "epilogue", "introduction",
     "preface", "foreword", "volume",
 }
-# CLEAN-ROOM (spec W11-residue §B15): _ANCILLARY_TYPES set of EPUB structural types treated as non-narrated
+# EPUB 3 structural-semantics values for matter that is not read aloud.
+_ANCILLARY_TYPES = {
+    "frontmatter", "backmatter", "cover", "titlepage", "halftitlepage",
+    "copyright-page", "toc", "landmarks", "dedication", "acknowledgments",
+    "imprint", "colophon", "contributors", "other-credits", "epigraph",
+    "loi", "lot", "index", "glossary", "bibliography", "appendix",
+}
 _ANCILLARY_TITLE_RE = re.compile(
     r"^(?:"
     r"cover|half[ -]?title|title[ -]?page|copyright|dedication|contents|"

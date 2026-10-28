@@ -987,7 +987,12 @@ async def dub_translate(req: TranslateRequest):
 
         src_arg = TRANSLATE_CODES.get(src_lang, src_lang) or "auto"
 
-        # CLEAN-ROOM (spec W11-residue §B25): free-provider proxy override and DeepL/Microsoft key lookups
+        # The free deep_translator clients go out directly: a system proxy
+        # meant for other traffic should not route (or break) these calls.
+        direct_proxies = {"http": None, "https": None}
+        # Server-side keys take precedence over the one sent with the request.
+        _deepl_key = os.environ.get("DEEPL_API_KEY") or api_key
+        _msft_key = os.environ.get("MICROSOFT_API_KEY") or api_key
 
         def _build_translator(src, tgt):
             if provider in PAID_PROVIDERS:

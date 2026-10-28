@@ -1,4 +1,8 @@
-// CLEAN-ROOM (spec W11-residue §T50): node/vitest imports and token-store import
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { expect, it } from 'vitest';
+import { RefreshTokenStore, type SafeStorageLike } from './token-store';
 
 const fakeSafe = (over: Partial<SafeStorageLike> = {}): SafeStorageLike => ({
   isEncryptionAvailable: () => true,

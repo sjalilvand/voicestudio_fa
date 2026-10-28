@@ -48,7 +48,10 @@ for _stream in (sys.stdout, sys.stderr):
 
 # ── Linux: AMD GPU torch build, only on request ───────────────────────────
 
-# CLEAN-ROOM (spec W11-residue §B23): ROCM_TORCH_INDEX and ROCM_TORCH_PINS constants
+# Keep this index and these pins in step with Electron's runtime-project.ts
+# and with [tool.uv.constraint-dependencies] in pyproject.toml.
+ROCM_TORCH_INDEX = "https://download.pytorch.org/whl/rocm6.4"
+ROCM_TORCH_PINS = ("torch==2.8.0", "torchaudio==2.8.0", "torchvision==0.23.0")
 
 
 def _rocm_opt_in(environ=os.environ):

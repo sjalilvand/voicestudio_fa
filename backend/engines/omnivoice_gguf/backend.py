@@ -869,9 +869,141 @@ def _make_backend_class():
 
         # ── generation ────────────────────────────────────────────────
 
-        # CLEAN-ROOM (spec W11-residue §B17): generate(self, text, **kw)
+        def generate(self, text: str, **kw):
+            """Synthesise ``text`` by running the GGUF CLI once.
 
-        # CLEAN-ROOM (spec W11-residue §B18): _build_argv(self, *, base, tokenizer, out_path, ref_audio, ref_text, language, ...)
+            Keyword arguments understood (anything else is ignored):
+
+            * ``ref_audio`` – path of a voice prompt clip to clone from.
+            * ``ref_text`` – transcript of that clip; only used together with
+              ``ref_audio`` and passed to the CLI through a temporary file.
+            * ``language`` – ISO code or name; unknown values let the CLI guess.
+            * ``instruct`` – free-text voice-design instruction.
+            * ``duration`` – target length in seconds.
+            * ``seed`` – integer seed for reproducible sampling.
+            * ``denoise`` – set False to skip prompt denoising (default True).
+            * ``preprocess_prompt`` – set False to feed the prompt as-is
+              (default True).
+            * ``chunk_duration`` / ``chunk_threshold`` – long-text chunking
+              controls forwarded unchanged.
+
+            Returns a float32 tensor shaped ``(1, n_samples)`` at the model's
+            native rate.
+            """
+            import soundfile as sf
+            import torch
+
+            base, tokenizer, _ = self._resolve_quant_paths()
+            ref_audio = kw.get("ref_audio")
+            ref_text = kw.get("ref_text")
+
+            fd, out_name = tempfile.mkstemp(suffix=".wav")
+            os.close(fd)
+            out_path = Path(out_name)
+            transcript_path: Optional[Path] = None
+            try:
+                if ref_audio and ref_text:
+                    # A file keeps arbitrary transcript text out of argv.
+                    t_fd, t_name = tempfile.mkstemp(suffix=".transcript")
+                    transcript_path = Path(t_name)
+                    with os.fdopen(t_fd, "w", encoding="utf-8") as handle:
+                        handle.write(str(ref_text))
+                argv = self._build_argv(
+                    base=base,
+                    tokenizer=tokenizer,
+                    out_path=out_path,
+                    ref_audio=ref_audio,
+                    ref_text=str(transcript_path) if transcript_path else None,
+                    language=kw.get("language"),
+                    instruct=kw.get("instruct"),
+                    duration=kw.get("duration"),
+                    seed=kw.get("seed"),
+                    denoise=kw.get("denoise", True),
+                    preprocess_prompt=kw.get("preprocess_prompt", True),
+                    chunk_duration=kw.get("chunk_duration"),
+                    chunk_threshold=kw.get("chunk_threshold"),
+                )
+                self._run_subprocess(argv, stdin_text=text)
+                samples, _rate = sf.read(str(out_path), dtype="float32")
+            finally:
+                for leftover in (out_path, transcript_path):
+                    if leftover is None:
+                        continue
+                    try:
+                        leftover.unlink(missing_ok=True)
+                    except OSError:
+                        pass
+
+            if samples.ndim > 1:
+                samples = samples.mean(axis=1)
+            return torch.from_numpy(samples.astype("float32", copy=False)).unsqueeze(0)
+
+        def _build_argv(
+            self,
+            *,
+            base: Path,
+            tokenizer: Path,
+            out_path: Path,
+            ref_audio: Optional[str],
+            ref_text: Optional[str],
+            language: Optional[str],
+            instruct: Optional[str] = None,
+            duration: Optional[float] = None,
+            seed: Optional[int] = None,
+            denoise: bool = True,
+            preprocess_prompt: bool = True,
+            chunk_duration: Optional[float] = None,
+            chunk_threshold: Optional[float] = None,
+        ) -> list[str]:
+            """Assemble the CLI argument list; ``ref_text`` is a staged file path.
+
+            The prompt clip must live under a directory this app owns (voices,
+            dubbing workspace or the temp dir) so a request cannot point the
+            binary at arbitrary files on disk.
+            """
+            argv = [
+                str(_binary_path()),
+                "--model", str(base),
+                "--codec", str(tokenizer),
+                "-o", str(out_path),
+            ]
+            lang = _iso_to_omnivoice_lang(language)
+            if lang:
+                argv += ["--lang", lang]
+            if isinstance(instruct, str) and instruct:
+                argv += ["--instruct", instruct]
+            if duration is not None:
+                argv += ["--duration", str(float(duration))]
+            if seed is not None:
+                argv += ["--seed", str(int(seed))]
+            if chunk_duration is not None:
+                argv += ["--chunk-duration", str(float(chunk_duration))]
+            if chunk_threshold is not None:
+                argv += ["--chunk-threshold", str(float(chunk_threshold))]
+            if denoise is False:
+                argv.append("--no-denoise")
+            if preprocess_prompt is False:
+                argv.append("--no-preprocess-prompt")
+
+            if ref_audio:
+                from core.config import DUB_DIR, VOICES_DIR
+
+                prompt = Path(ref_audio).resolve()
+                roots = [
+                    Path(VOICES_DIR).resolve(),
+                    Path(DUB_DIR).resolve(),
+                    Path(tempfile.gettempdir()).resolve(),
+                ]
+                if not any(prompt == root or prompt.is_relative_to(root) for root in roots):
+                    raise FileNotFoundError(
+                        f"Reference audio is outside the directories this engine may read: {prompt}"
+                    )
+                if not prompt.is_file():
+                    raise FileNotFoundError(f"Reference audio file does not exist: {prompt}")
+                argv += ["--ref-wav", str(prompt)]
+                if ref_text:
+                    argv += ["--ref-text", str(ref_text)]
+            return argv
 
         def _run_subprocess(self, argv: list[str], *, stdin_text: str) -> None:
             """Spawn the binary, feed ``stdin_text``, enforce timeout.

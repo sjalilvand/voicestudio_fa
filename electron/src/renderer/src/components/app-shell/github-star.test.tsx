@@ -1,4 +1,8 @@
-// CLEAN-ROOM (spec W11-residue §T33): test imports and bridge mock
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { afterEach, expect, it, vi } from 'vitest';
+
+vi.mock('@/components/bridge', () => ({ getBridge: () => null }));
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 
 import { GithubStar } from './github-star';

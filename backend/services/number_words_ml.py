@@ -100,7 +100,16 @@ def _chain_form(word: str) -> str:
     return word
 
 
-# CLEAN-ROOM (spec W11-residue §B6): _two_digit(n): Malayalam words for 1..99
+def _two_digit(n: int) -> str:
+    """Words for 1..99 as one compound."""
+    if n < 10:
+        return _UNITS[n]
+    if n < 20:
+        return _TEENS[n - 10]
+    tens, unit = divmod(n, 10)
+    if unit == 0:
+        return _TENS[tens]
+    return _fuse(_TENS_PREFIX[tens], _UNITS[unit])
 
 
 def _three_digit(n: int) -> str:

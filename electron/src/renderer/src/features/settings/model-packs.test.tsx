@@ -3,7 +3,17 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, expect, it, vi } from 'vitest';
 
 const mock = vi.hoisted(() => ({ api: vi.fn(), setTier: vi.fn() }));
-// CLEAN-ROOM (spec W11-residue §T39): api-client, i18n, backend-status and performance-profile mocks
+vi.mock('@/lib/api/client', () => ({ apiJson: mock.api, describeError: String }));
+vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock('@/hooks/use-backend-status', () => ({ useBackendStatus: () => ({ stage: 'ready' }) }));
+vi.mock('@/hooks/use-performance-profile', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/hooks/use-performance-profile')>()),
+  usePerformanceProfile: () => ({
+    data: { global: 'balanced', applicable_families: [], implemented_families: [] },
+    isSaving: false,
+    setTier: mock.setTier,
+  }),
+}));
 import { PerformanceModelPacks } from './model-library';
 
 afterEach(() => {

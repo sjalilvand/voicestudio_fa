@@ -1,6 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-// CLEAN-ROOM (spec W11-residue §E25): imports: Trash2Icon, Button, Dialog parts, describeError, deleteWorkflowRun
+import { Trash2Icon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { describeError } from '@/lib/api/client';
+import { deleteWorkflowRun } from './workflow-run-store';
 
 /** Confirms deleting a workflow; its saved run is removed before the draft is. */
 export function WorkflowDeleteDialog({

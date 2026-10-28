@@ -1,7 +1,17 @@
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, expect, it, vi } from 'vitest';
-// CLEAN-ROOM (spec W11-residue §T2): hoisted shortcut-listener mock state and module mocks (i18n, dictation demo, native dictation hooks)
+const mock = vi.hoisted(() => ({
+  listener: null as ((key: string) => void) | null,
+  unsubscribe: vi.fn(),
+}));
+vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock('@/components/dictation-demo', () => ({ DictationDemo: () => null }));
+vi.mock('@/hooks/use-native-dictation', () => ({
+  dictationPreferencesKey: ['dictation-preferences'],
+  nativeShortcutKey: ['native-shortcut'],
+  useDictationPreferences: () => ({ data: { enabled: true, mode: 'hold' } }),
+}));
 import { ShortcutSettings } from './shortcut-settings';
 afterEach(() => {
   cleanup();

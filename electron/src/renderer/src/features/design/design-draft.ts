@@ -176,7 +176,34 @@ export function designRequestSeed(
   return linked && linked.seed == null ? undefined : draft.seed;
 }
 
-// CLEAN-ROOM (spec W11-residue §E2): exported applyDescription(current, mapping, described) reconciling description-mapped details with explicit picks
+/**
+ * Fold the details inferred from a description into the draft. Explicit picks
+ * are replayed over the inferred values; a pick gives way only when it was
+ * made under other wording and the new text now says something different
+ * about its category (or about the exclusive category the pick would reset).
+ */
+export function applyDescription(
+  current: DesignDraft,
+  mapping: Record<string, string>,
+  described: string,
+): DesignDraft {
+  const inferred = mergeDescribedAttrs(mapping);
+  const textMoved = (category: string) =>
+    (inferred[category] ?? 'Auto') !== (current.mapped[category] ?? 'Auto');
+
+  let attrs: Record<string, string> = { ...inferred };
+  const picks: Record<string, DesignPick> = {};
+  for (const [category, pick] of Object.entries(current.picks)) {
+    const trial = applyVdState(attrs, category, pick.value);
+    const overridden =
+      textMoved(category) || (trial.clearedCategory !== null && textMoved(trial.clearedCategory));
+    if (overridden && pick.description !== described) continue;
+    attrs = trial.vdStates;
+    picks[category] = pick;
+  }
+
+  return { ...current, attrs, picks, mapped: inferred };
+}
 
 /**
  * "Reset to description" drops the picks (and a saved-voice link) so the

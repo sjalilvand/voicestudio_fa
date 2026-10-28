@@ -3605,10 +3605,43 @@ class GPTSoVITSBackend(TTSBackend):
 # ── Sherpa-ONNX adapter (universal ONNX runtime, WASM-ready) ───────────────
 
 
-# CLEAN-ROOM (spec W11-residue §B21): _sherpa_model_file(model_dir)
+def _sherpa_model_file(model_dir: str) -> Optional[str]:
+    """Locate the ONNX graph inside a sherpa-onnx voice directory.
+
+    ``model.onnx`` wins when present. Otherwise a directory holding exactly
+    one ``*.onnx`` file (how Piper voices are packaged, named after the voice)
+    uses that file. Nothing found, or several candidates, gives ``None``
+    rather than a guess.
+    """
+    if not model_dir or not os.path.isdir(model_dir):
+        return None
+    preferred = os.path.join(model_dir, "model.onnx")
+    if os.path.isfile(preferred):
+        return preferred
+    candidates = [
+        os.path.join(model_dir, name)
+        for name in sorted(os.listdir(model_dir))
+        if name.lower().endswith(".onnx") and os.path.isfile(os.path.join(model_dir, name))
+    ]
+    return candidates[0] if len(candidates) == 1 else None
 
 
-# CLEAN-ROOM (spec W11-residue §B22): _sherpa_vits_extras(model_dir)
+def _sherpa_vits_extras(model_dir: str) -> dict[str, str]:
+    """Optional phonemizer resources found next to a VITS/Piper model.
+
+    Keys match sherpa-onnx's VITS config fields: ``data_dir`` for an
+    ``espeak-ng-data`` folder and ``lexicon`` for a ``lexicon.txt`` file.
+    """
+    extras: dict[str, str] = {}
+    if not model_dir:
+        return extras
+    espeak_data = os.path.join(model_dir, "espeak-ng-data")
+    if os.path.isdir(espeak_data):
+        extras["data_dir"] = espeak_data
+    lexicon = os.path.join(model_dir, "lexicon.txt")
+    if os.path.isfile(lexicon):
+        extras["lexicon"] = lexicon
+    return extras
 
 
 class SherpaOnnxBackend(TTSBackend):

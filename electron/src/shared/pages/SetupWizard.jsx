@@ -480,7 +480,22 @@ export default function SetupWizard({ onReady }) {
                 <DictationDemo />
               </div>
             </section>
-            {/* CLEAN-ROOM (spec W11-residue §E23): final-step footer: back, cancel, enter studio */}
+            <div
+              className="fr-rise flex shrink-0 items-center justify-between gap-4 border-t border-border pt-3"
+              style={{ '--rise': 2 }}
+            >
+              <Button variant="ghost" size="sm" onClick={() => setStep(step - 1)}>
+                ← {t('setup.back')}
+              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={onReady}>
+                  {t('common.cancel')}
+                </Button>
+                <Button variant="primary" onClick={onReady}>
+                  {t('setup.enter_studio')}
+                </Button>
+              </div>
+            </div>
           </div>
         )}
 

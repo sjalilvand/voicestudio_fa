@@ -941,7 +941,11 @@ git commit -m "feat(account): one-shot 127.0.0.1 OAuth callback listener"
 
 ```ts
 // electron/src/main/account/token-store.test.ts
-// CLEAN-ROOM (spec W11-residue §D6): import header of the token-store test
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { expect, it } from 'vitest';
+import { RefreshTokenStore, type SafeStorageLike } from './token-store';
 
 const fakeSafe = (over: Partial<SafeStorageLike> = {}): SafeStorageLike => ({
   isEncryptionAvailable: () => true,

@@ -32,7 +32,55 @@ def download():
     return importlib.import_module("api.routers.setup.download")
 
 
-# CLEAN-ROOM (spec W11-residue §T4): helper that drives the segmented snapshot download against faked hub/metadata/transfer
+def _drive_segmented(
+    download, monkeypatch, tmp_path, files, *,
+    etag=GOOD_ETAG, endpoint=None, resolved=None,
+    default_endpoint="https://huggingface.co",
+):
+    """Run ``_segmented_snapshot`` with the hub listing, the per-file metadata
+    lookup and the byte transfer all faked. Returns ``(cache, seen, result)``;
+    ``seen`` records which token each faked call received."""
+    import huggingface_hub
+    from huggingface_hub import constants, file_download
+    import services.segmented_download as seg
+    import services.token_resolver as token_resolver
+
+    cache = tmp_path / "hub"
+    cache.mkdir(parents=True, exist_ok=True)
+    seen: dict = {}
+
+    monkeypatch.setattr(token_resolver, "resolve", lambda *a, **k: resolved)
+    monkeypatch.setattr(constants, "HF_HUB_CACHE", str(cache))
+    monkeypatch.setattr(constants, "ENDPOINT", default_endpoint)
+
+    class _StubApi:
+        def __init__(self, *, endpoint=None, token=None):
+            self.endpoint = endpoint
+            seen["hf_api"] = token
+
+        def repo_info(self, repo_id, repo_type=None, revision=None):
+            return SimpleNamespace(
+                sha=revision,
+                siblings=[SimpleNamespace(rfilename=name) for name in files],
+            )
+
+    def _stub_metadata(url, token=None, **_kw):
+        seen["file_metadata"] = token
+        return SimpleNamespace(etag=f'"{etag}"', location=url, size=4)
+
+    async def _stub_transfer(url, blob_path, *, token=None, **_kw):
+        seen["segmented"] = token
+        os.makedirs(os.path.dirname(str(blob_path)), exist_ok=True)
+        with open(blob_path, "wb") as fh:
+            fh.write(b"data")
+        return blob_path
+
+    monkeypatch.setattr(huggingface_hub, "HfApi", _StubApi)
+    monkeypatch.setattr(file_download, "get_hf_file_metadata", _stub_metadata)
+    monkeypatch.setattr(seg, "segmented_download", _stub_transfer)
+
+    result = download._segmented_snapshot(REPO, endpoint=endpoint, revision=REVISION)
+    return cache, seen, result
 
 
 def _files_outside(root, tmp_path):

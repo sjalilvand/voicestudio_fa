@@ -89,7 +89,16 @@ PERSONALITIES = [
         "name": "The Librarian",
         "icon": "📚",
         "description": "Warm UK audiobook narrator — measured, atmospheric.",
-        # CLEAN-ROOM (spec W11-residue §B20): audiobook_uk_narrator: instruct, attrs and script keys
+        "instruct": "female, middle-aged, low pitch, british accent",
+        "attrs": {
+            "Gender": "female", "Age": "middle-aged", "Pitch": "low pitch",
+            "Style": "Auto", "EnglishAccent": "british accent",
+            "ChineseDialect": "Auto",
+        },
+        "script": (
+            "The clock tower struck thirteen, and for the first time in her "
+            "life, Eleanor wondered if she had been counting wrong all along."
+        ),
         "preview_url": "/demo_audio/voice_design/demo_voice_design_audiobook_uk_narrator.wav",
         "language": "English",
         "is_demo": True,
@@ -99,7 +108,16 @@ PERSONALITIES = [
         "name": "The Anchor",
         "icon": "📺",
         "description": "Clear American broadcaster — primetime evening news.",
-        # CLEAN-ROOM (spec W11-residue §B20): us_news_anchor: instruct, attrs and script keys
+        "instruct": "male, middle-aged, moderate pitch, american accent",
+        "attrs": {
+            "Gender": "male", "Age": "middle-aged", "Pitch": "moderate pitch",
+            "Style": "Auto", "EnglishAccent": "american accent",
+            "ChineseDialect": "Auto",
+        },
+        "script": (
+            "Good evening. Topping our broadcast tonight: scientists at the "
+            "coastal observatory have confirmed the signal is, in fact, repeating."
+        ),
         "preview_url": "/demo_audio/voice_design/demo_voice_design_us_news_anchor.wav",
         "language": "English",
         "is_demo": True,

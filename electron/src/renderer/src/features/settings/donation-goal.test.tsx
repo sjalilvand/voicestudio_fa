@@ -1,4 +1,7 @@
-// CLEAN-ROOM (spec W11-residue §T37): test imports and DonationGoal import
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { afterEach, expect, it, vi } from 'vitest';
+import { DonationGoal } from './donation-goal';
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 afterEach(() => {
   cleanup();

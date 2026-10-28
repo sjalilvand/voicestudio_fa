@@ -1,4 +1,7 @@
-// CLEAN-ROOM (spec W11-residue §E28): imports: React hooks, useTranslation, useNavigate, runRendererTask
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from '@tanstack/react-router';
+import { runRendererTask } from '@/lib/global-error-recovery';
 import {
   Background,
   BackgroundVariant,

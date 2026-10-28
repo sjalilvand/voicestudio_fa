@@ -1,5 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-// CLEAN-ROOM (spec W11-residue §E24): imports: lucide icons, toast, audiobookListJobs, exportReveal, useSystemInfo, Button
+import { ArchiveRestore, FolderSearch, RotateCcw } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { audiobookListJobs } from '../../api/audiobook';
+import { exportReveal } from '../../api/exports';
+import { useSystemInfo } from '../../api/hooks';
+import { Button } from '../../ui';
 
 const newestFirst = (current, item) =>
   !current || (item.created_at ?? 0) > (current.created_at ?? 0) ? item : current;

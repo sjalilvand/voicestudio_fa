@@ -1,7 +1,19 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-// CLEAN-ROOM (spec W11-residue §T12): hoisted API/library mocks plus i18n and api-client module mocks
+const mocks = vi.hoisted(() => ({
+  json: vi.fn(),
+  fetch: vi.fn(),
+  save: vi.fn(),
+  list: vi.fn(),
+  download: vi.fn(),
+}));
+vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock('@/lib/api/client', () => ({
+  apiJson: mocks.json,
+  apiFetch: mocks.fetch,
+  describeError: (error: unknown) => (error as { message?: string } | null | undefined)?.message ?? '',
+}));
 vi.mock('@/lib/local-export', () => ({ saveLocalFile: mocks.download }));
 vi.mock('../longform/project-library', () => ({
   projectLibrary: { save: mocks.save, list: mocks.list },

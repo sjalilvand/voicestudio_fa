@@ -1,6 +1,16 @@
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-// CLEAN-ROOM (spec W11-residue §T29): testing-library/react-query/Header imports and tauri window mock
+import { cleanup, render } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import Header from '../components/Header';
+
+vi.mock('@tauri-apps/api/window', () => ({
+  getCurrentWindow: () => ({
+    minimize: vi.fn(async () => {}),
+    toggleMaximize: vi.fn(async () => {}),
+    close: vi.fn(async () => {}),
+  }),
+}));
 
 afterEach(() => {
   cleanup();

@@ -154,7 +154,31 @@ class ExpressiveOptions:
             **self.join_kwargs(),
         }
 
-    # CLEAN-ROOM (spec W11-residue §B24): ExpressiveOptions.from_manifest classmethod
+    @classmethod
+    def from_manifest(cls, data: Optional[dict]) -> "ExpressiveOptions":
+        """Rebuild options saved by :meth:`to_manifest`; empty input gives defaults.
+
+        Keys the manifest does not know about are ignored, so older and newer
+        manifests both load.
+        """
+        if not data:
+            return cls()
+        vector = data.get("emo_vector")
+        return cls(
+            num_step=data.get("num_step"),
+            guidance_scale=data.get("guidance_scale"),
+            position_temperature=data.get("position_temperature"),
+            class_temperature=data.get("class_temperature"),
+            postprocess_output=data.get("postprocess_output"),
+            seed=data.get("seed"),
+            emo_vector=tuple(vector) if vector else None,
+            emo_text=data.get("emo_text"),
+            emo_alpha=data.get("emo_alpha"),
+            vary_repeats=bool(data.get("vary_repeats", False)),
+            line_gap_ms=int(data.get("line_gap_ms") or 0),
+            paragraph_gap_ms=int(data.get("paragraph_gap_ms") or 0),
+            trim_edges=bool(data.get("trim_edges", False)),
+        )
 
 
 def voice_map_signature(voice_map: Optional[dict]) -> str:

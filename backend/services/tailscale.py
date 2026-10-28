@@ -81,7 +81,32 @@ _FALLBACK_PORT = 10000
 _LOOPBACK_HOSTS = {"127.0.0.1", "localhost"}
 
 
-# CLEAN-ROOM (spec W11-residue §B30): _serve_config(cli)
+def _serve_config(cli):
+    """Read the machine's current ``tailscale serve`` configuration.
+
+    Returns the parsed dict (empty when nothing is served), or ``None`` when
+    the config could not be read; callers must then leave the config alone.
+    """
+    try:
+        r = subprocess.run(
+            [cli, "serve", "status", "--json"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=10,
+        )
+        if r.returncode != 0:
+            logger.warning("tailscale serve status exited with code %s", r.returncode)
+            return None
+        out = r.stdout or ""
+        # Some versions print a version-mismatch notice before the JSON.
+        brace = out.find("{")
+        config = json.loads(out[brace:]) if brace >= 0 else {}
+        return config if isinstance(config, dict) else None
+    except Exception:
+        logger.exception("Could not read the tailscale serve configuration")
+        return None
 
 
 def _is_our_proxy(proxy, backend_port: int) -> bool:

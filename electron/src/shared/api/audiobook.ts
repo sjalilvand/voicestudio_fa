@@ -125,7 +125,21 @@ export async function audiobookGenerate(
   });
 }
 
-// CLEAN-ROOM (spec W11-residue §E4): exported ResumableAudiobookJob interface and audiobookListJobs() (GET /audiobook/jobs)
+export interface ResumableAudiobookJob {
+  job_id: string;
+  type: 'audiobook' | 'longform';
+  status: string;
+  title: string;
+  total_chapters: number;
+  chapters_done: number;
+  created_at: number | null;
+}
+
+/** Fetch the renders the backend has on disk that can still be resumed. */
+export async function audiobookListJobs(): Promise<{ jobs: ResumableAudiobookJob[] }> {
+  const res = await apiFetch('/audiobook/jobs', { method: 'GET' });
+  return res.json();
+}
 
 /** Ask the backend to continue one render; consumers read events from the response body. */
 export async function audiobookResume(

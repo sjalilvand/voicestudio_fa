@@ -1,6 +1,8 @@
 import { CheckIcon, GaugeIcon, GlobeIcon, ServerIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-// CLEAN-ROOM (spec W11-residue §E33): imports: react-query hooks, useTranslation, Button
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { apiJson } from '@/lib/api/client';
 import { SettingsSection, SettingsRow } from './settings-layout';

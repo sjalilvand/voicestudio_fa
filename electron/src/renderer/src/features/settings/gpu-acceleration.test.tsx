@@ -1,4 +1,7 @@
-// CLEAN-ROOM (spec W11-residue §T38): test imports and English locale import
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { afterEach, expect, it, vi } from 'vitest';
+import enLocale from '../../i18n/locales/en.json';
 
 const mock = vi.hoisted(() => ({ api: vi.fn() }));
 vi.mock('@/lib/api/client', () => ({ apiJson: mock.api }));

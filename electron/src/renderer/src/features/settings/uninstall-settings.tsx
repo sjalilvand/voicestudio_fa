@@ -158,7 +158,22 @@ export function UninstallSettings() {
               )}
             </div>
           )}
-          {/* CLEAN-ROOM (spec W11-residue §E22): selection total and uninstall button row */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span className="text-sm text-muted-foreground">
+              {t('settings.uninstall_total', { count: selected.length, size: fmtBytes(bytes) })}
+            </span>
+            <Button
+              variant="destructive"
+              disabled={busy || scanFailed || present.length === 0}
+              onClick={() => {
+                setTyped('');
+                setConfirming(true);
+              }}
+            >
+              <Trash2Icon />
+              {t('settings.uninstall')}
+            </Button>
+          </div>
         </div>
       </SettingsSection>
 

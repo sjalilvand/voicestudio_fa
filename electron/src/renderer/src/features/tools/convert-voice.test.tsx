@@ -1,5 +1,18 @@
 import { clearConversion } from './conversion-state';
-// CLEAN-ROOM (spec W11-residue §T36): testing-library/react-query/vitest imports and hoisted mock state
+import { cleanup, fireEvent, render, screen, act, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { afterEach, expect, it, vi } from 'vitest';
+
+const mock = vi.hoisted(() => ({
+  queryError: false,
+  retry: vi.fn(),
+  convert: vi.fn(),
+  ready: true,
+  cloning: true as boolean | null,
+  backends: [] as { available: boolean; supports_voice_conversion?: boolean }[],
+  saveAudio: vi.fn(async () => ({ canceled: true })),
+  profiles: null as null | { id: string; name: string; kind: string; ref_audio_path: null }[],
+}));
 vi.mock('@/components/bridge', () => ({
   getBridge: () => ({ files: { saveAudio: mock.saveAudio, revealPath: vi.fn() } }),
 }));

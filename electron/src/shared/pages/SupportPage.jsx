@@ -368,7 +368,69 @@ const LICENSE_MAILTO =
   'mailto:hi@voicestudio.sh?subject=VoiceStudio Commercial License Inquiry' +
   '&body=Hi Palash,%0A%0AI%27d like to talk about a commercial license for VoiceStudio.%0A%0AOrganization:%0ATeam size:%0AUse case:%0A';
 
-// CLEAN-ROOM (spec W11-residue §E13): LicenseView component (commercial license panel)
+const LICENSE_BENEFITS = [
+  { Icon: Shield, labelKey: 'enterprise.benefit_ip' },
+  { Icon: Zap, labelKey: 'enterprise.benefit_cost' },
+  { Icon: Headphones, labelKey: 'enterprise.benefit_support' },
+];
+
+// Warm tint for the call-to-action card.
+const LICENSE_HUE = '#fe8019';
+
+function LicenseView() {
+  const { t } = useTranslation();
+  const contact = () => openExternal(LICENSE_MAILTO);
+
+  return (
+    <div className="flex flex-col gap-7">
+      <header className="flex flex-col items-center justify-center gap-3 py-3 text-center">
+        <Badge tone="neutral" size="sm">
+          {t('enterprise.badge')}
+        </Badge>
+        <h2 className="relative inline-block font-serif text-[1.7rem] font-normal leading-tight tracking-[-0.02em] text-[var(--chrome-fg)]">
+          {t('enterprise.hero_title')}
+          <span className="lp-hero__sweep" aria-hidden="true" />
+        </h2>
+        <p className="max-w-prose text-sm text-[var(--chrome-fg-muted)]">
+          {t('enterprise.hero_simple')}
+        </p>
+      </header>
+
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,160px),1fr))] gap-3">
+        {LICENSE_BENEFITS.map(({ Icon, labelKey }) => (
+          <Card
+            key={labelKey}
+            className="flex-row items-center gap-3 rounded-2xl border-border p-3 shadow-none"
+          >
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--chrome-accent)_10%,transparent)] text-[var(--chrome-accent)]">
+              <Icon size={16} />
+            </span>
+            <span className="min-w-0 font-mono text-xs font-semibold uppercase tracking-[var(--chrome-label-track)] text-[var(--chrome-fg)]">
+              {t(labelKey)}
+            </span>
+          </Card>
+        ))}
+      </div>
+
+      <Card
+        style={{ '--license-hue': LICENSE_HUE }}
+        className="flex-row flex-wrap items-center justify-center gap-3 rounded-2xl border-border bg-[color-mix(in_srgb,var(--license-hue)_7%,transparent)] p-4 shadow-none"
+      >
+        <Button variant="subtle" leading={<Mail size={14} />} onClick={contact}>
+          {t('enterprise.request_quote')}
+        </Button>
+        <button
+          type="button"
+          title={LICENSE_EMAIL}
+          onClick={contact}
+          className="bg-transparent font-mono text-sm text-[var(--chrome-fg-muted)] hover:text-[var(--chrome-fg)] hover:underline"
+        >
+          {LICENSE_EMAIL}
+        </button>
+      </Card>
+    </div>
+  );
+}
 
 export default function SupportPage({ onBack, initialView = 'support' }) {
   const { t } = useTranslation();

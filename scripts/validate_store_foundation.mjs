@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
-// CLEAN-ROOM (spec W11-residue §B26): node:fs, node:path, node:url and app-config imports
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { APP_ID, PRODUCT_NAME } from "../config/app-config.mjs";
 import {
   DISTRIBUTION_TARGETS,
   distributionProfile,

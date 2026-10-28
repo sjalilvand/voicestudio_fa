@@ -125,7 +125,17 @@ export default function Projects({
   const [filter, setFilter] = useState('all');
   const [query, setQuery] = useState('');
   const [view, setView] = useState('grid'); // grid | list
-  // CLEAN-ROOM (spec W11-residue §E14): translation hook and FILTERS list
+  const { t } = useTranslation();
+  const FILTERS = [
+    ['all', 'projects.all', FolderOpen],
+    ['dubs', 'projects.dub_projects', Film],
+    ['stories', 'projects.stories', BookOpen],
+    ['profiles', 'projects.voice_profiles', Fingerprint],
+    ['transcripts', 'projects.transcripts', Mic],
+    ['audiobooks', 'projects.audiobooks', BookMarked],
+    ['history', 'projects.history', Music],
+    ['exports', 'projects.exports', Download],
+  ].map(([id, key, Icon]) => ({ id, label: t(key), Icon }));
 
   // Finished Audiobook + Story renders (server-side longform library).
   const [longformJobs, setLongformJobs] = useState([]);
@@ -251,7 +261,20 @@ export default function Projects({
         onClick: () => j.output && playRenderInApp(audioUrl(j.output), j.title || j.output),
       });
     }
-    // CLEAN-ROOM (spec W11-residue §E14): one list item per saved transcription
+    for (const tr of transcriptions) {
+      const text = tr.text || '';
+      const seconds = tr.duration_s ? `${Math.round(tr.duration_s)}s` : '';
+      list.push({
+        type: 'transcripts',
+        id: tr.id || String(Math.random()),
+        title: (text || t('projects.transcription')).slice(0, 120),
+        subtitle: [tr.language, seconds].filter(Boolean).join(' · '),
+        ts: toMillis(tr.timestamp) ?? 0,
+        accent: '#83a598',
+        Icon: FileText,
+        onClick: () => copyText(text),
+      });
+    }
     list.sort((a, b) => (b.ts || 0) - (a.ts || 0));
     return list;
   }, [

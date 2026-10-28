@@ -540,7 +540,26 @@ def dub_use_downloaded_captions(job_id: str):
     }
 
 
-# CLEAN-ROOM (spec W11-residue §B29): POST /dub/cleanup-segments/{job_id} route (dub_cleanup_segments)
+@router.post("/dub/cleanup-segments/{job_id}")
+def dub_cleanup_segments(job_id: str, req: Optional[CleanupSegmentsRequest] = None):
+    """Merge fragments and stitch split sentences in a job's segments.
+
+    With a body, the editor's own segments are cleaned and handed back
+    untouched on the server, so the client can apply the result as an edit
+    the user can undo. Without one, the stored segments are cleaned and saved.
+    """
+    job = _get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if req is not None:
+        cleaned = clean_up_segments(req.segments)
+        return {"segments": cleaned, "before": len(req.segments), "after": len(cleaned)}
+    with dub_pipeline._dub_jobs_lock:
+        stored = job.get("segments") or []
+        cleaned = clean_up_segments(stored)
+        replace_source_segments(job, cleaned)
+        _save_job(job_id, job)
+    return {"segments": cleaned, "before": len(stored), "after": len(cleaned)}
 
 
 @router.post("/dub/sync-transcript/{job_id}")

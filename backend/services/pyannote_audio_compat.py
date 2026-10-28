@@ -45,13 +45,101 @@ def _legacy_encoding(container: str, subtype: str) -> str:
     return "UNKNOWN"
 
 
-# CLEAN-ROOM (spec W11-residue §B1): soundfile-backed replacement for torchaudio.info (_soundfile_info)
+def _soundfile_info(uri, format=None, buffer_size=4096, backend=None):
+    """Describe an audio file the way legacy ``torchaudio.info`` did.
+
+    ``format`` and ``buffer_size`` exist only so old call sites keep working;
+    soundfile works both out on its own.
+    """
+    del format, buffer_size
+    if backend not in (None, "soundfile"):
+        raise ValueError(f"This adapter cannot read metadata with backend {backend!r}")
+
+    import soundfile
+
+    details = soundfile.info(uri)
+    subtype = details.subtype or ""
+    container = details.format or ""
+    return AudioMetaData(
+        int(details.samplerate),
+        int(details.frames),
+        int(details.channels),
+        _sample_width(subtype),
+        _legacy_encoding(container, subtype),
+    )
 
 
-# CLEAN-ROOM (spec W11-residue §B2): soundfile-backed loader used for backend="soundfile" (_soundfile_load)
+# Read dtype used for unnormalised WAV input, keyed by soundfile subtype.
+# Unsigned 8-bit has no soundfile dtype, so it is read as int16 and unpacked.
+_NATIVE_WAV_DTYPES = {
+    "PCM_16": "int16",
+    "PCM_24": "int32",
+    "PCM_32": "int32",
+    "FLOAT": "float32",
+    "DOUBLE": "float64",
+    "PCM_U8": "int16",
+}
 
 
-# CLEAN-ROOM (spec W11-residue §B3): replacement for torchaudio.list_audio_backends (_backends)
+def _soundfile_load(
+    uri,
+    frame_offset=0,
+    num_frames=-1,
+    normalize=True,
+    channels_first=True,
+    format=None,
+    buffer_size=4096,
+    backend=None,
+):
+    """Decode audio through soundfile with the legacy ``torchaudio.load`` contract.
+
+    Returns ``(waveform, sample_rate)``. ``format`` and ``buffer_size`` are
+    accepted but have no effect.
+    """
+    del format, buffer_size
+    if backend not in (None, "soundfile"):
+        raise ValueError(f"This adapter cannot decode audio with backend {backend!r}")
+    if not isinstance(frame_offset, Integral) or frame_offset < 0:
+        raise ValueError(f"frame_offset must be a non-negative integer, got {frame_offset!r}")
+    if not isinstance(num_frames, Integral) or num_frames < -1:
+        raise ValueError(f"num_frames must be an integer of at least -1, got {num_frames!r}")
+
+    import soundfile
+    import torch
+
+    with soundfile.SoundFile(uri) as handle:
+        subtype = handle.subtype
+        native = handle.format == "WAV" and not normalize
+        if native:
+            try:
+                dtype = _NATIVE_WAV_DTYPES[subtype]
+            except KeyError as exc:
+                raise ValueError(
+                    f"Unnormalised loading is not available for WAV subtype {subtype!r}"
+                ) from exc
+        else:
+            dtype = "float32"
+
+        total = int(handle.frames)
+        start = min(int(frame_offset), total)
+        if handle.seekable() or start:
+            handle.seek(start)
+        remaining = total - start
+        count = remaining if num_frames == -1 else min(int(num_frames), remaining)
+        samples = handle.read(frames=count, dtype=dtype, always_2d=True)
+        sample_rate = int(handle.samplerate)
+
+    waveform = torch.from_numpy(samples)
+    if native and subtype == "PCM_U8":
+        waveform = ((waveform.to(torch.int32) >> 8) + 128).to(torch.uint8)
+    if channels_first:
+        waveform = waveform.transpose(0, 1)
+    return waveform, sample_rate
+
+
+def _backends():
+    """Report the only decoding backend this adapter provides."""
+    return ["soundfile"]
 
 
 def ensure_pyannote_audio_compat() -> bool:

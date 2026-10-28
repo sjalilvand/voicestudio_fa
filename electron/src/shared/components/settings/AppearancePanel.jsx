@@ -13,7 +13,13 @@ import { useAppStore, FONT_OPTIONS, FONT_STACKS } from '../../store';
 import { SettingsSection, SettingRow, InfoHint, SettingsToggle } from './primitives';
 
 const THEMES = [
-  // CLEAN-ROOM (spec W11-residue §E15): the "auto" (follow system) theme entry
+  {
+    id: 'auto',
+    labelKey: 'settings.theme_auto',
+    defaultLabel: 'Match system',
+    // Half light, half dark: the theme follows the OS setting.
+    dot: 'linear-gradient(135deg, #fdf6e3 0 50%, #1d2021 50% 100%)',
+  },
   { id: 'gruvbox', label: 'Gruvbox', dot: '#d3869b' },
   { id: 'midnight', label: 'Midnight', dot: '#8b5cf6' },
   { id: 'nord', label: 'Nord', dot: '#88c0d0' },
@@ -203,7 +209,28 @@ export default function AppearancePanel() {
             role="radiogroup"
             aria-label={themeLabel}
           >
-            {/* CLEAN-ROOM (spec W11-residue §E15): one radio dot per theme */}
+            {THEMES.map((entry) => {
+              const selected = theme === entry.id;
+              const name = entry.labelKey
+                ? t(entry.labelKey, { defaultValue: entry.defaultLabel })
+                : entry.label;
+              return (
+                <button
+                  key={entry.id}
+                  type="button"
+                  role="radio"
+                  className={`appearance-panel__theme-dot ${selected ? 'is-active' : ''}`}
+                  style={{ '--dot-color': entry.dot }}
+                  title={name}
+                  aria-label={name}
+                  aria-checked={selected}
+                  tabIndex={radioTabIndex(themeIds, theme, entry.id)}
+                  data-radio-value={entry.id}
+                  onClick={() => setTheme(entry.id)}
+                  onKeyDown={(e) => radioGroupKeyDown(e, themeIds, theme, setTheme)}
+                />
+              );
+            })}
           </div>
         }
       />

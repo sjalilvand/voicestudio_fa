@@ -2,7 +2,18 @@
 // (keyframes hqPulse). Global prefers-reduced-motion CSS cannot target that,
 // so the element has to carry its own motion-reduce override.
 import React from 'react';
-// CLEAN-ROOM (spec W11-residue §T28): test imports, Header import and tauri window mock
+import { it, expect, vi } from 'vitest';
+import { render } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import Header from '../components/Header';
+
+vi.mock('@tauri-apps/api/window', () => ({
+  getCurrentWindow: () => ({
+    minimize: async () => {},
+    toggleMaximize: async () => {},
+    close: async () => {},
+  }),
+}));
 
 it('pulsing dot opts out of its animation under reduced motion', () => {
   const client = new QueryClient();

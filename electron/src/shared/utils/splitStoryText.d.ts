@@ -1,2 +1,6 @@
 export function splitIntoChunks(text: string, maxChars: number): string[];
-// CLEAN-ROOM (spec W11-residue §E7): SplitMode type, SPLIT_MODES, DEFAULT_SPLIT_MODE, DEFAULT_SPLIT_MAX and splitStoryText declarations
+export type SplitMode = 'sentences' | 'paragraphs' | 'chapters';
+export const SPLIT_MODES: SplitMode[];
+export const DEFAULT_SPLIT_MODE: SplitMode;
+export const DEFAULT_SPLIT_MAX: Record<SplitMode, number>;
+export function splitStoryText(text: string, mode?: SplitMode, maxChars?: number): string[];

@@ -1,6 +1,9 @@
 <div align="center">
   <img src="docs/logo.png" alt="VoiceStudio" width="88" />
-  <!-- CLEAN-ROOM (spec W11-residue §D1): project title heading and Trendshift ranking badge -->
+  <h1>VoiceStudio</h1>
+  <p>
+    <a href="https://trendshift.io/repositories/28176?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-28176" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/28176" alt="Trendshift badge showing where VoiceStudio ranks among trending repositories" width="220" height="48" /></a>
+  </p>
   <p><strong>The local voice studio: clone, design, dub, dictate, transcribe and narrate in 646 languages.</strong><br />
   Runs on your own computer and phone. No accounts, no API keys, and nothing leaves your device unless you say yes.</p>
   <p>

@@ -75,7 +75,19 @@ ROUTER_OOM_PROSE = (
 # Signatures that must NOT be claimed. Each is a real phrasing a dependency or
 # the OS produces for something that has nothing to do with RAM — the #1943
 # shape. A hint that names the wrong cause is the failure mode of this module.
-# CLEAN-ROOM (spec W11-residue §T21): NOT_HOST_OOM list of non-RAM failure messages
+NOT_HOST_OOM = [
+    # The disk filled up while writing output, not RAM.
+    "OSError: [Errno 28] No space left on device: '/tmp/out.wav'",
+    # Windows: the paging file is too small (a commit-limit problem the user fixes in System settings).
+    "OSError: [WinError 1455] The paging file is too small for this operation to complete",
+    # A network read stalled.
+    "httpx.ReadTimeout: The read operation timed out",
+    # The peer dropped the connection.
+    "ConnectionResetError: [Errno 104] Connection reset by peer",
+    # Device memory, which GPU_OOM owns.
+    "torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 1.50 GiB. "
+    "GPU 0 has a total capacity of 7.79 GiB of which 312.00 MiB is free.",
+]
 
 
 # ── the reported failure ────────────────────────────────────────────────────

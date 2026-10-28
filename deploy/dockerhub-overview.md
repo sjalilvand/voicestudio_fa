@@ -22,7 +22,16 @@ consent question; declining or skipping keeps analytics disabled, and
 server image runs FastAPI with the pre-built React interface over HTTP, making
 it suitable for an AMD64 homelab or GPU server that you control from a browser.
 
-<!-- CLEAN-ROOM (spec W11-residue §D7): supported architectures paragraph (amd64, :rocm, :stable-cuda-arm64, Apple Silicon, other ARM64) -->
+Images are built per architecture. The main image and its `:rocm` variant
+exist for `linux/amd64` only. For NVIDIA hardware built on ARM, such as a DGX
+Spark (GB10) or a GH200 / GB200 server, pull `:stable-cuda-arm64`, which is a
+native `linux/arm64` build. On an Apple Silicon Mac, a Linux container cannot
+reach the GPU through either MPS or MLX, so for accelerated inference install
+the [native macOS app](https://github.com/debpalash/VoiceStudio/blob/main/docs/install/macos.md)
+instead. Any other ARM64 machine has no native image: run the container on an
+AMD64 host, or expect emulation to make it dramatically slower. Check the
+[architecture notes](https://github.com/debpalash/VoiceStudio/blob/main/docs/install/docker.md#architecture)
+before you pick a tag.
 
 > The desktop app's auto-updater is **desktop-only** and does not apply to this
 > image — to update, pull a newer tag and recreate the container.

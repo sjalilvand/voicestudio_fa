@@ -1,4 +1,16 @@
-// CLEAN-ROOM (spec W11-residue §T43): node/vitest imports and hoisted electron-host state
+import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, expect, it, vi } from 'vitest';
+
+const h = vi.hoisted(() => ({
+  packaged: false,
+  dir: '',
+  safeThrows: false,
+  keyring: false,
+  setBackendOnlyEnv: vi.fn(),
+  handlers: new Map<string, (...args: unknown[]) => unknown>(),
+}));
 vi.mock('electron', () => ({
   app: {
     get isPackaged() {
