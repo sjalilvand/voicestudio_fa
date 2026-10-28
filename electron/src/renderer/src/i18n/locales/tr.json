@@ -3064,7 +3064,10 @@
     "setupStatusNotInstalled": "Bu motorun paketi henüz kurulu değil. Ayarlar → Modeller üzerinden kurun.",
     "setupStatusLicense": "Lisans henüz kabul edilmedi. Bu motoru etkinleştirmek için Ayarlar → Modeller altında lisansı inceleyip kabul edin.",
     "setupStatusNeedsConfig": "Bu motorun kullanılmadan önce yapılandırılması gerekiyor. Kurulumu tamamlamak için Ayarlar → Modeller’i açın.",
-    "setupStatusFileMissing": "Bu motorun gerektirdiği bir dosya eksik veya okunamıyor. Ayarlar → Modeller üzerinden yeniden kurun."
+    "setupStatusFileMissing": "Bu motorun gerektirdiği bir dosya eksik veya okunamıyor. Ayarlar → Modeller üzerinden yeniden kurun.",
+    "setupStatusPlatform": "Bu motor bu bilgisayarın platformunda çalışmaz. Desteklenen platformlar motorun kılavuzunda listelenir.",
+    "setupStatusNoMps": "Bu motor Apple GPU’sunu (MPS) gerektirir, ancak bu kurulumdaki PyTorch onu kullanamaz. macOS’i güncellemek veya VoiceStudio’yu yeniden kurmak genellikle sorunu çözer.",
+    "asrSetupRepairBundled": "Arka uçla gelen Python paketleri eksik veya hasarlı. Arka uç ortamını onarın ya da kaynak kurulumunun sabitlenmiş bağımlılıklarıyla yeniden oluşturun, ardından yeniden başlatın."
   },
   "performanceProfile": {
     "requiresEngine": "Hız ve kaliteyi ayarlamak için {{engine}} yükleyip seçin.",

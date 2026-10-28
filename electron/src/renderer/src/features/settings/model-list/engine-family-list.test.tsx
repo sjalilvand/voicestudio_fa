@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { createInstance } from 'i18next';
 import deLocale from '@/i18n/locales/de.json';
 import enLocale from '@/i18n/locales/en.json';
+import unavailableAsr from './fixtures/asr-unavailable.json';
 import { afterEach, expect, it, vi } from 'vitest';
 
 const mock = vi.hoisted(() => ({
@@ -388,3 +389,53 @@ it('localizes the NeMo safety warning for a German interface', async () => {
   );
   expect(screen.queryByText(nemoInstallHint)).not.toBeInTheDocument();
 });
+
+it.each(
+  unavailableAsr.flatMap((entry) => ['en', 'de'].map((language) => ({ ...entry, language }))),
+)(
+  'keeps setup guidance consistent with $engine.id: $diagnostic ($language)',
+  async ({ engine, key, language }) => {
+    const i18n = createInstance();
+    await i18n.init({
+      lng: language,
+      resources: { en: { translation: enLocale }, de: { translation: deLocale } },
+      interpolation: { escapeValue: false },
+    });
+    mock.t.mockImplementation((key, options) =>
+      key.startsWith('engines.') ? i18n.t(key, options) : key,
+    );
+    serve();
+    const fallback = mock.api.getMockImplementation()!;
+    mock.api.mockImplementation((path: string, ...rest: unknown[]) =>
+      path === '/engines'
+        ? Promise.resolve({ asr: { active: 'faster-whisper', backends: [engine] } })
+        : fallback(path, ...rest),
+    );
+    renderList('asr');
+    const toggle = await screen.findByRole('button', { name: engine.display_name });
+    if (toggle.getAttribute('aria-expanded') === 'false') fireEvent.click(toggle);
+    const expected = i18n.t(`engines.${key}`, {
+      command: engine.id === 'moonshine' ? 'uv pip install moonshine-onnx' : 'pip install funasr',
+      nemoRequirement: 'transformers>=4.57,<4.58',
+      appRequirement: 'transformers>=5.3',
+    });
+    expect(screen.getAllByText(expected).length).toBeGreaterThan(0);
+    if (key === 'asrSetupRepairBundled')
+      expect(screen.queryByText(i18n.t('engines.asrSetupRemote'))).not.toBeInTheDocument();
+    if (key === 'setupStatusFileMissing') {
+      expect(
+        screen.queryByText(
+          i18n.t('engines.asrSetupPackageInstall', { command: 'pip install funasr' }),
+        ),
+      ).not.toBeInTheDocument();
+    }
+    if (key === 'setupStatusPlatform' || key === 'setupStatusNoMps') {
+      expect(screen.getByText('modelSettings.unavailable')).toHaveAttribute('title', expected);
+      expect(
+        screen.queryByText(
+          i18n.t('engines.asrSetupApplePackageInstall', { command: 'pip install mlx-whisper' }),
+        ),
+      ).not.toBeInTheDocument();
+    }
+  },
+);

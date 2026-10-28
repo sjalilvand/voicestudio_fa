@@ -69,3 +69,11 @@ it('leaves other owned reasons and custom server details unchanged', () => {
   expect(engineUnavailableReason('Needs setup', i18n.t)).toBe('Needs setup');
   expect(engineUnavailableReason(null, i18n.t)).toBeNull();
 });
+
+it('keeps custom server guidance compatible and does not guess a remedy for unknown failures', () => {
+  const reason = 'Custom server availability reason';
+  expect(asrSetupHint({ ...engine('custom-asr'), reason }, i18n.t)).toBe(
+    'Authored server setup hint',
+  );
+  expect(asrSetupHint({ ...engine('openai-compat-asr'), reason }, i18n.t)).toBe(reason);
+});

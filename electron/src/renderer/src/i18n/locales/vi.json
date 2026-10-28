@@ -3064,7 +3064,10 @@
     "setupStatusNotInstalled": "Gói của bộ máy này chưa được cài đặt. Hãy cài trong Cài đặt → Mô hình.",
     "setupStatusLicense": "Chưa chấp nhận giấy phép. Xem và chấp nhận trong Cài đặt → Mô hình để bật bộ máy này.",
     "setupStatusNeedsConfig": "Cần cấu hình bộ máy này trước khi dùng. Mở Cài đặt → Mô hình để hoàn tất thiết lập.",
-    "setupStatusFileMissing": "Tệp cần thiết cho bộ máy này bị thiếu hoặc không đọc được. Hãy cài lại trong Cài đặt → Mô hình."
+    "setupStatusFileMissing": "Tệp cần thiết cho bộ máy này bị thiếu hoặc không đọc được. Hãy cài lại trong Cài đặt → Mô hình.",
+    "setupStatusPlatform": "Bộ máy này không chạy trên nền tảng của máy tính này. Hướng dẫn của nó liệt kê các nền tảng được hỗ trợ.",
+    "setupStatusNoMps": "Bộ máy này cần GPU Apple (MPS), nhưng PyTorch trong bản cài đặt này không dùng được. Cập nhật macOS hoặc cài lại VoiceStudio thường sẽ khắc phục được.",
+    "asrSetupRepairBundled": "Các gói Python đi kèm backend bị thiếu hoặc hỏng. Hãy sửa môi trường backend hoặc tạo lại bằng các phụ thuộc đã khóa của bản cài từ mã nguồn, rồi khởi động lại."
   },
   "performanceProfile": {
     "requiresEngine": "Cài đặt và chọn {{engine}} để điều chỉnh tốc độ và chất lượng.",
