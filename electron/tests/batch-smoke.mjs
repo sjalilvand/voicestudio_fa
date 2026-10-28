@@ -93,7 +93,8 @@ try {
   const language = page.getByRole('button', { name: 'Language', exact: true });
   await language.click();
   const search = page.getByRole('combobox', { name: 'Language', exact: true });
-  await search.fill('French');
+  await search.clear();
+  await search.pressSequentially('French');
   assert.equal(await search.inputValue(), 'French');
   await page.getByRole('option', { name: 'French', exact: true }).click();
   await page.getByRole('button', { name: 'French', exact: true }).waitFor();
@@ -103,7 +104,9 @@ try {
   await list.hover();
   await page.mouse.wheel(0, 400);
   await page.waitForFunction(() => document.querySelector('[role="listbox"]')?.scrollTop > 0);
-  await search.fill('German');
+  await search.clear();
+  await search.pressSequentially('German');
+  assert.equal(await search.inputValue(), 'German');
   await page.getByRole('option', { name: 'German', exact: true }).click();
   await page.getByRole('button', { name: 'German', exact: true }).waitFor();
   await page.getByRole('button', { name: 'French', exact: true }).click();
