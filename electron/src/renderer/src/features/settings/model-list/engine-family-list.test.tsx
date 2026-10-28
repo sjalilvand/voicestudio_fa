@@ -382,5 +382,9 @@ it('localizes the NeMo safety warning for a German interface', async () => {
   const toggle = await screen.findByRole('button', { name: 'Parakeet TDT' });
   if (toggle.getAttribute('aria-expanded') === 'false') fireEvent.click(toggle);
   expect(screen.getByText(/NeMo lässt sich.*nicht sicher installieren/)).toBeInTheDocument();
+  expect(screen.getByText(deLocale.modelSettings.unavailable)).toHaveAttribute(
+    'title',
+    deLocale.engines.setupStatusNotInstalled,
+  );
   expect(screen.queryByText(nemoInstallHint)).not.toBeInTheDocument();
 });

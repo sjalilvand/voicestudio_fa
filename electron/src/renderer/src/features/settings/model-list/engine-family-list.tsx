@@ -171,7 +171,7 @@ function engineItem(ctx: Context, engine: EngineBackend): FamilyItem {
           />
         )}
         {!engine.available && (
-          <StatusBadge tone="muted" title={engine.reason || undefined}>
+          <StatusBadge tone="muted" title={engineUnavailableReason(engine.reason, t) || undefined}>
             {t('modelSettings.unavailable')}
           </StatusBadge>
         )}
