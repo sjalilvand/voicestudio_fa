@@ -96,6 +96,7 @@ it.each([
     expect(value.status.managed).toBe(false);
     expect(value.status.message).toContain(runtimePython(join(host.data, 'runtime', 'project')));
     expect(value.status.message?.includes('Windows Smart App Control blocked it.')).toBe(namesSac);
+    expect(value.status.message).not.toContain('repair the local runtime');
     expect(repair).not.toHaveBeenCalled();
     expect(spawn).not.toHaveBeenCalled();
   },
