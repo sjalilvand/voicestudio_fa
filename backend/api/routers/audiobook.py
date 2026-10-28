@@ -803,9 +803,15 @@ def _chapter_cache_inputs(chapter, sr, engine_id, resolve, cache_dir, lexicon=No
         paragraph_ms = int((opts or ExpressiveOptions()).join_kwargs().get("paragraph_gap_ms") or 0)
         if paragraph_ms > 0:
             from services.chunked_tts import split_paragraphs
+            from services.pronunciation import apply_lexicon
+
+            def gap_spans(span) -> bool:
+                # Same text synthesize_chapter splits: after the lexicon,
+                # which can insert a paragraph break.
+                text = apply_lexicon(span.text, lexicon) if span.text else ""
+                return len(split_paragraphs(text)) > 1
 
             gap_sig = f"pausefill={pause_fill}"
-            gap_spans = lambda span: len(split_paragraphs(span.text or "")) > 1  # noqa: E731
     marking = will_mark()
     if marking:
         # Provenance-marked chapters cache under their own key (#1169): a

@@ -203,3 +203,22 @@ def test_room_tone_rekeys_only_segments_with_paragraph_gaps(prefs_store, tmp_pat
     assert toned[1] != base[1]  # its paragraph gap now holds room tone
     plain = seg_paths("silence", None)
     assert seg_paths("room_tone", None) == plain  # no paragraph gaps at all
+
+
+def test_a_lexicon_paragraph_break_rekeys_the_segment(prefs_store, tmp_path):
+    """The lexicon runs before paragraph splitting, so a respelling that adds
+    a blank line gives the segment a paragraph gap (and a room-tone key)."""
+    from api.routers import audiobook as router
+    from services.audiobook import Chapter, ExpressiveOptions, Span
+
+    span = Span(voice_id=None, text="Intro BREAK outro", pause_ms_after=0)
+    resolve = lambda vid: {"ref_audio": None, "ref_text": None, "instruct": None, "seed": None}  # noqa: E731
+    lexicon = {"BREAK": "\n\n"}
+
+    def seg_path(fill):
+        *_rest, seg_cache = router._chapter_cache_inputs(
+            Chapter(title="C", spans=[span]), SR, "eng", resolve, str(tmp_path), lexicon,
+            None, ExpressiveOptions(paragraph_gap_ms=400), None, None, pause_fill=fill)
+        return seg_cache._path(span)
+
+    assert seg_path("room_tone") != seg_path("silence")

@@ -16,6 +16,8 @@ name the encoding its child reads (UTF-8 for the native engines).
 import ast
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 _CALLS = {"run", "check_output", "Popen", "call", "check_call"}
 
@@ -29,10 +31,12 @@ def _text_mode_calls(tree: ast.AST):
         if name not in _CALLS:
             continue
         kw = {k.arg: k.value for k in node.keywords if k.arg}
+        # text=True, universal_newlines=True, or an encoding/errors argument
+        # alone all put Popen in text mode.
         text_mode = any(
             isinstance(kw.get(arg), ast.Constant) and kw[arg].value is True
             for arg in ("text", "universal_newlines")
-        )
+        ) or "encoding" in kw or "errors" in kw
         if text_mode:
             yield node, kw
 
@@ -84,6 +88,12 @@ def test_the_checker_sees_a_bare_text_call():
     assert list(_text_mode_calls_without_errors(tree)) == []
     tree = ast.parse("subprocess.run(['x'], input=t, text=True, errors='replace')")
     assert list(_text_input_calls_without_encoding(tree)) == [1]
+    tree = ast.parse("subprocess.run(['x'], universal_newlines=True)")
+    assert list(_text_mode_calls_without_errors(tree)) == [1]
+    tree = ast.parse("subprocess.run(['x'], encoding='utf-8')")
+    assert list(_text_mode_calls_without_errors(tree)) == [1]
+    tree = ast.parse("subprocess.run(['x'], input=t, errors='replace')")
+    assert list(_text_input_calls_without_encoding(tree)) == [1]
 
 
 _CHILD = r"""
@@ -91,8 +101,6 @@ import sys
 from pathlib import Path
 sys.path.insert(0, sys.argv[1])
 out = sys.argv[2]
-import locale
-assert locale.getpreferredencoding(False).lower().replace("-", "") != "utf8", locale.getpreferredencoding(False)
 from services import binary_preflight
 binary_preflight.validate_executable = lambda *a, **k: None
 from engines.omnivoice_gguf import backend
@@ -119,6 +127,13 @@ def test_prompt_text_reaches_the_engine_intact_under_a_non_utf8_locale(tmp_path)
         env.update(LC_ALL="C", LANG="C")
     else:
         env.pop("PYTHONIOENCODING")
+    probe = subprocess.run(
+        [sys.executable, "-c", "import locale; print(locale.getpreferredencoding(False))"],
+        env=env, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60,
+    )
+    codec = probe.stdout.strip().lower().replace("-", "").replace("_", "")
+    if probe.returncode != 0 or codec in ("utf8", "cp65001", ""):
+        pytest.skip(f"this host gives child processes a UTF-8 locale ({probe.stdout.strip()!r})")
     out = tmp_path / "stdin.bin"
     script = tmp_path / "child.py"
     script.write_text(_CHILD, encoding="utf-8")
