@@ -1490,6 +1490,11 @@ Python traceback may not exist; include the captured crash details and system/GP
 information when reporting them. The name identifies the failure category, not
 its cause: it does not by itself prove a driver, model, or memory problem.
 
+On macOS, stopping a timed-out engine or installer operation can race with its
+supervisor exiting. VoiceStudio rechecks that exact owned supervisor before
+treating a process-group permission error as already-completed cleanup;
+permission failures for a live operation still surface as errors.
+
 ### Backend would not start (Windows: `spawn UNKNOWN`, "did not answer", "environment incomplete")
 
 Three different startup failures share the same screen. The app now names the
