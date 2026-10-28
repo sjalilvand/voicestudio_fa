@@ -2,6 +2,7 @@ import { decideMissingRuntime, runtimeWasInstalled } from './runtime-repair';
 import { windowsRocmInstalled, windowsRocmRequested } from './runtime-windows-rocm';
 import { runtimeProjectReady } from './runtime-readiness';
 import { runRuntimeProbe } from './runtime-probe';
+import { RuntimeLaunchRefusedError } from './runtime-launch-refusal';
 import { pypiFilesHost } from './pypi-mirror';
 import {
   installRuntime,
@@ -731,6 +732,12 @@ export function spawnFailureMessage(
     : `Could not start ${command}: ${detail}. Check that the program exists and can be launched, then try again.`;
 }
 
+function runtimeFailureMessage(error: unknown): string {
+  return error instanceof RuntimeLaunchRefusedError
+    ? spawnFailureMessage(error.program, error.cause)
+    : errorMessage(error);
+}
+
 /** A backend that Windows stopped from loading one of its files names who did
  *  it, in words the renderer's hints recognise: Smart App Control (no per-app
  *  exceptions), an antivirus, or another application-control policy (#3209). */
@@ -1105,7 +1112,7 @@ export class BackendSupervisor extends EventEmitter<{
       void this.waitUntilReady(gen, startupBudgetMs());
     } catch (error) {
       if (gen !== this.generation) return;
-      const message = errorMessage(error);
+      const message = runtimeFailureMessage(error);
       this.pushLog('err', message);
       this.setStage('failed', { message });
     }
@@ -1307,8 +1314,9 @@ export class BackendSupervisor extends EventEmitter<{
           code === 'ENOSPC' ? (error as { requiredGib?: number }).requiredGib : undefined;
         this.runtimeRepairFailed = this.repairAttempted;
         this.runtimeInterrupted = await runtimeInstallInterrupted(project);
-        this.pushLog('err', errorMessage(error));
-        this.setStage('setup_required', { message: errorMessage(error) });
+        const message = runtimeFailureMessage(error);
+        this.pushLog('err', message);
+        this.setStage('setup_required', { message });
       }
     } finally {
       stopWatching();
@@ -1391,8 +1399,9 @@ export class BackendSupervisor extends EventEmitter<{
         )
           ? 'access'
           : undefined;
-        this.pushLog('err', errorMessage(error));
-        this.setStage('setup_required', { message: errorMessage(error) });
+        const message = runtimeFailureMessage(error);
+        this.pushLog('err', message);
+        this.setStage('setup_required', { message });
       }
       return;
     } finally {
