@@ -232,14 +232,53 @@ class TargetChangedError extends Error {
   }
 }
 
+// A nonzero creation timestamp may be a mutable ctime fallback. Only probe
+// ambiguous roots; keep the exclusive marker open so inode reuse cannot make
+// cleanup adopt a replacement. No model files are open during this check.
+async function stableDirectoryIdentity(
+  target: string,
+  selected: BigIntStats,
+): Promise<BigIntStats> {
+  if (selected.birthtimeNs === 0n) throw new Error('identity_unavailable');
+  if (selected.birthtimeNs !== selected.ctimeNs) return selected;
+  const marker = join(target, `.voicestudio-identity-${randomUUID()}`);
+  const handle = await open(marker, 'wx');
+  try {
+    const owned = await handle.stat({ bigint: true });
+    const present = await lstat(marker, { bigint: true });
+    if (
+      !present.isFile() ||
+      present.size !== 0n ||
+      !sameFileGeneration(present, fileFingerprint(owned))
+    )
+      throw new TargetChangedError();
+    await rm(marker);
+  } catch (error) {
+    throw new RollbackIncompleteError(error);
+  } finally {
+    await handle.close();
+  }
+  const after = await lstat(target, { bigint: true });
+  if (
+    !after.isDirectory() ||
+    after.isSymbolicLink() ||
+    after.dev !== selected.dev ||
+    after.ino !== selected.ino
+  )
+    throw new TargetChangedError();
+  if (after.birthtimeNs !== selected.birthtimeNs || after.birthtimeNs === after.ctimeNs)
+    throw new Error('identity_unavailable');
+  return after;
+}
+
 async function bindTargetDirectory(
   target: string,
   requestedTarget: string,
   identity?: BigIntStats,
 ) {
-  const selected = identity ?? (await lstat(target, { bigint: true }));
-  if (!selected.isDirectory() || selected.isSymbolicLink()) throw new TargetChangedError();
-  if (selected.birthtimeNs === 0n) throw new Error('identity_unavailable');
+  const initial = identity ?? (await lstat(target, { bigint: true }));
+  if (!initial.isDirectory() || initial.isSymbolicLink()) throw new TargetChangedError();
+  const selected = await stableDirectoryIdentity(target, initial);
   const selectedStillPresent = async (): Promise<boolean> => {
     try {
       const info = await lstat(target, { bigint: true });
@@ -574,9 +613,9 @@ export async function prepareDataRelocation(
   const parent = dirname(plan.target);
   const staging = join(parent, `.${basename(plan.target)}.voicestudio-moving-${randomUUID()}`);
   await mkdir(staging, { recursive: false });
-  const stagedIdentity = await lstat(staging, { bigint: true });
+  let stagedIdentity = await lstat(staging, { bigint: true });
   try {
-    if (stagedIdentity.birthtimeNs === 0n) throw new Error('identity_unavailable');
+    stagedIdentity = await stableDirectoryIdentity(staging, stagedIdentity);
     for (const entry of await readdir(plan.source)) {
       await cp(join(plan.source, entry), join(staging, entry), {
         recursive: true,
