@@ -1161,6 +1161,7 @@
     "data_move_done": "ข้อมูล VoiceStudio โย้ายไป {{path}}",
     "data_move_old_copy": "แฟลเดอร์ใหม่มีกิจกรรม แต่ VoiceStudio ไม่สามารถลบสําเนาเก่าได้ คุณสามารถลบมันด้วยมือได้",
     "data_move_error": "VoiceStudio ไม่สามารถย้ายข้อมูลได้ ตู้เดิมยังคงมีกิจกรรม",
+    "data_move_error_rollback_incomplete": "การย้ายล้มเหลว ข้อมูลต้นฉบับของคุณยังคงอยู่ แต่ VoiceStudio ไม่สามารถกู้คืนให้เสร็จได้ ตรวจสอบเอนจินและปลายทางก่อนลองอีกครั้งโดยใช้โฟลเดอร์ว่าง",
     "data_move_error_target_not_empty": "เลือกแฟ้มว่างเพื่อไม่สามารถเขียนไฟล์ที่มีอยู่ได้",
     "data_move_error_nested_path": "เลือกโฟลเดอร์นอกโฟลเดอร์ข้อมูล VoiceStudio ปัจจุบัน",
     "data_move_error_insufficient_space": "แจกที่ไม่มีพื้นที่ว่างพอสําหรับการเคลื่อนไหว",

@@ -1,6 +1,7 @@
 // @vitest-environment node
-import { existsSync } from 'node:fs';
+import { existsSync, type BigIntStats } from 'node:fs';
 import {
+  appendFile,
   chmod,
   lstat,
   mkdir,
@@ -34,6 +35,12 @@ const constraints = vi.hoisted(() => ({
   unsupportedPath: '',
   largeIdentityPath: '',
   identityVersion: 0,
+  collisionBirthtime: 0n,
+  collisionCtime: null as bigint | null,
+  reuseEnabled: false,
+  reuseAllMetadata: true,
+  reusedIdentityPath: '',
+  reusedStats: null as BigIntStats | null,
 }));
 vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs/promises')>();
@@ -57,6 +64,26 @@ vi.mock('node:fs/promises', async (importOriginal) => {
     },
     lstat: async (...args: Parameters<typeof actual.lstat>) => {
       const info = await actual.lstat(...args);
+      if (
+        constraints.reuseEnabled &&
+        String(args[0]) === constraints.reusedIdentityPath &&
+        constraints.reusedStats
+      ) {
+        const prior = constraints.reusedStats;
+        if (!constraints.reuseAllMetadata)
+          return Object.assign(Object.create(info), {
+            dev: typeof info.dev === 'bigint' ? prior.dev : Number(prior.dev),
+            ino: typeof info.ino === 'bigint' ? prior.ino : Number(prior.ino),
+          });
+        return Object.assign(Object.create(info), {
+          dev: typeof info.dev === 'bigint' ? prior.dev : Number(prior.dev),
+          ino: typeof info.ino === 'bigint' ? prior.ino : Number(prior.ino),
+          birthtimeNs: constraints.collisionBirthtime,
+          ctimeNs: prior.ctimeNs,
+          size: typeof info.size === 'bigint' ? prior.size : Number(prior.size),
+          mode: typeof info.mode === 'bigint' ? prior.mode : Number(prior.mode),
+        });
+      }
       if (String(args[0]) === constraints.largeIdentityPath) {
         const ino = 9007199254740992n + BigInt(constraints.identityVersion);
         return Object.assign(Object.create(info), {
@@ -73,7 +100,23 @@ vi.mock('node:fs/promises', async (importOriginal) => {
     },
     open: async (...args: Parameters<typeof actual.open>) => {
       await constraints.beforeOpen?.(String(args[0]));
-      return actual.open(...args);
+      const handle = await actual.open(...args);
+      if (String(args[0]) === constraints.reusedIdentityPath && args[1] === 'wx') {
+        const originalStat = handle.stat.bind(handle);
+        handle.stat = (async (options: Parameters<typeof handle.stat>[0]) => {
+          const info = await originalStat(options);
+          if (!('ctimeNs' in info)) return info;
+          const snapshot = constraints.reuseAllMetadata
+            ? Object.assign(Object.create(info), {
+                birthtimeNs: constraints.collisionBirthtime,
+                ctimeNs: constraints.collisionCtime ?? info.ctimeNs,
+              })
+            : info;
+          constraints.reusedStats = snapshot;
+          return snapshot;
+        }) as typeof handle.stat;
+      }
+      return handle;
     },
     statfs: async (...args: Parameters<typeof actual.statfs>) => {
       if (constraints.checkCapacity) {
@@ -114,6 +157,12 @@ afterEach(async () => {
   constraints.beforeOpen = constraints.beforeReadFile = null;
   constraints.largeIdentityPath = '';
   constraints.identityVersion = 0;
+  constraints.reusedIdentityPath = '';
+  constraints.reuseEnabled = false;
+  constraints.collisionBirthtime = 0n;
+  constraints.collisionCtime = null;
+  constraints.reuseAllMetadata = true;
+  constraints.reusedStats = null;
   constraints.collisionDirectory = constraints.failRead = constraints.unsupportedPath = '';
   await Promise.all(created.splice(0).map((path) => rm(path, { recursive: true, force: true })));
 });
@@ -128,6 +177,13 @@ async function fixture() {
   await writeFile(join(source, 'voices', 'sample.wav'), 'voice');
   await writeFile(join(source, 'omnivoice.db'), 'database');
   return { root, source, target };
+}
+
+function incomplete(cause: string | Record<string, unknown>) {
+  return {
+    message: 'rollback_incomplete',
+    cause: expect.objectContaining(typeof cause === 'string' ? { message: cause } : cause),
+  };
 }
 
 it.each([true, false])(
@@ -151,7 +207,7 @@ it.each([true, false])(
       progress: () => undefined,
     });
     if (activate) await expect(move).resolves.toMatchObject({ removed_source: true });
-    else await expect(move).rejects.toThrow('backend_verification_failed');
+    else await expect(move).rejects.toMatchObject(incomplete('backend_verification_failed'));
     expect((await lstat(target)).ino).toBe(inode);
     expect(await readFile(join(target, 'personal.txt'), 'utf8')).toBe('keep');
     expect(existsSync(source)).toBe(!activate);
@@ -172,7 +228,9 @@ it('refuses a concurrently created file and rolls back only its earlier entries'
   constraints.beforeOpen = async (path) => {
     if (path === join(target, 'voices', 'sample.wav')) await writeFile(path, 'concurrent');
   };
-  await expect(prepareDataRelocation(source, target)).rejects.toMatchObject({ code: 'EEXIST' });
+  await expect(prepareDataRelocation(source, target)).rejects.toMatchObject(
+    incomplete({ code: 'EEXIST' }),
+  );
   expect(await readFile(join(target, 'voices', 'sample.wav'), 'utf8')).toBe('concurrent');
   expect(await readdir(target)).toEqual(['voices']);
   expect(await readFile(join(source, 'omnivoice.db'), 'utf8')).toBe('database');
@@ -181,7 +239,9 @@ it('refuses a concurrently created file and rolls back only its earlier entries'
 it('refuses a concurrently created directory without merging into it', async () => {
   const { source, target } = await fixture();
   constraints.collisionDirectory = join(target, 'voices');
-  await expect(prepareDataRelocation(source, target)).rejects.toMatchObject({ code: 'EEXIST' });
+  await expect(prepareDataRelocation(source, target)).rejects.toMatchObject(
+    incomplete({ code: 'EEXIST' }),
+  );
   expect(await readdir(target)).toEqual(['voices']);
   expect(await readdir(join(target, 'voices'))).toEqual(['concurrent.txt']);
 });
@@ -289,7 +349,7 @@ it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)(
         },
         progress: () => undefined,
       }),
-    ).rejects.toThrow('backend_verification_failed');
+    ).rejects.toMatchObject(incomplete('backend_verification_failed'));
     expect(await readdir(target)).toEqual(['voices']);
     expect(await readdir(targetVoices)).toEqual(['concurrent.txt']);
     expect((await lstat(targetVoices)).mode & 0o777).toBe(0o555);
@@ -325,7 +385,9 @@ it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)(
         throw Object.assign(new Error('copy interrupted'), { code: 'EIO' });
       }
     };
-    await expect(prepareDataRelocation(source, target)).rejects.toThrow('copy interrupted');
+    await expect(prepareDataRelocation(source, target)).rejects.toMatchObject(
+      incomplete('copy interrupted'),
+    );
     expect(await readdir(targetVoices)).toEqual(['concurrent.txt']);
     expect((await lstat(targetVoices)).mode & 0o777).toBe(0o555);
   },
@@ -458,7 +520,7 @@ it.each(['during start', 'during verification'])(
         },
         progress: () => undefined,
       }),
-    ).rejects.toThrow('backend_verification_failed');
+    ).rejects.toMatchObject(incomplete('backend_verification_failed'));
     expect(JSON.parse(await readFile(index, 'utf8'))).toEqual(['/unrelated/user/history']);
     expect(await readdir(target)).toEqual(['outputs']);
     expect(existsSync(source)).toBe(true);
@@ -500,7 +562,7 @@ it('keeps the original failure and the live target if stopping the failed backen
       verify: async () => false,
       progress: () => undefined,
     }),
-  ).rejects.toThrow('backend_verification_failed');
+  ).rejects.toMatchObject(incomplete('backend_verification_failed'));
   expect(starts).toBe(1);
   expect(await readFile(join(target, 'omnivoice.db'), 'utf8')).toBe('database');
   expect(existsSync(source)).toBe(true);
@@ -528,7 +590,7 @@ it('preserves an unreadable startup replacement without masking the verification
       },
       progress: () => undefined,
     }),
-  ).rejects.toThrow('backend_verification_failed');
+  ).rejects.toMatchObject(incomplete('backend_verification_failed'));
   expect(existsSync(index)).toBe(true);
   expect(existsSync(source)).toBe(true);
 });
@@ -556,7 +618,7 @@ it('does not learn expected startup history from an unrelated pre-start replacem
       verify: async () => false,
       progress: () => undefined,
     }),
-  ).rejects.toThrow('backend_verification_failed');
+  ).rejects.toMatchObject(incomplete('backend_verification_failed'));
   expect(JSON.parse(await readFile(index, 'utf8'))).toContain('/unrelated/pre-start/history');
 });
 
@@ -599,7 +661,7 @@ it.each(['before activation', 'during verification'])(
       (error: Error) => ({ error }),
     );
     expect(outcome).toMatchObject({
-      error: expect.objectContaining({ message: 'target_changed' }),
+      error: incomplete('target_changed'),
     });
     expect(activatedReplacement).toBe(false);
     expect(await readFile(join(source, 'voices', 'sample.wav'), 'utf8')).toBe('voice');
@@ -623,7 +685,7 @@ it('rejects a symlink substituted for the selected directory without traversing 
       },
       progress: () => undefined,
     }),
-  ).rejects.toThrow('target_changed');
+  ).rejects.toMatchObject(incomplete('target_changed'));
   expect(await readFile(join(source, 'voices', 'sample.wav'), 'utf8')).toBe('voice');
   expect(await readFile(join(moved, 'voices', 'sample.wav'), 'utf8')).toBe('voice');
   expect((await lstat(target)).isSymbolicLink()).toBe(true);
@@ -657,7 +719,9 @@ it.each([
       if (failCopy) throw new Error('copy interrupted');
     };
     if (failCopy)
-      await expect(prepareDataRelocation(source, target)).rejects.toThrow('copy interrupted');
+      await expect(prepareDataRelocation(source, target)).rejects.toMatchObject(
+        incomplete('copy interrupted'),
+      );
     else await prepareDataRelocation(source, target);
     expect(personal).not.toBe('');
     expect(await readFile(personal, 'utf8')).toBe('unrelated');
@@ -685,8 +749,171 @@ it('rejects a requested directory alias retargeted after copying', async () => {
       },
       progress: () => undefined,
     }),
-  ).rejects.toThrow('target_changed');
+  ).rejects.toMatchObject(incomplete('target_changed'));
   expect(await readFile(join(source, 'voices', 'sample.wav'), 'utf8')).toBe('voice');
   expect(await readFile(join(target, 'voices', 'sample.wav'), 'utf8')).toBe('voice');
   expect(await readFile(join(foreignParent, 'data', 'personal.txt'), 'utf8')).toBe('unrelated');
 });
+
+it.each([
+  { parts: ['omnivoice.db'], replacement: 'intruder', birth: 0n, change: null },
+  { parts: ['voices', 'sample.wav'], replacement: 'other', birth: 0n, change: null },
+  { parts: ['omnivoice.db'], replacement: 'intruder', birth: 100n, change: 200n },
+  { parts: ['voices', 'sample.wav'], replacement: 'other', birth: 100n, change: 200n },
+])(
+  'preserves changed content when a replacement reuses all ambiguous metadata at $parts',
+  async ({ parts, replacement, birth, change }) => {
+    constraints.collisionBirthtime = birth;
+    constraints.collisionCtime = change;
+    const { source, target } = await fixture();
+    const path = join(target, ...parts);
+    constraints.reusedIdentityPath = path;
+    const prepared = await prepareDataRelocation(source, target);
+    constraints.reusedStats = Object.assign(Object.create(await lstat(path, { bigint: true })), {
+      birthtimeNs: birth,
+      ctimeNs: change ?? (await lstat(path, { bigint: true })).ctimeNs,
+    });
+    constraints.reuseEnabled = true;
+    const temporary = path + '.external';
+    await writeFile(temporary, replacement);
+    await rename(temporary, path);
+    await prepared.rollback();
+    expect(await readFile(path, 'utf8')).toBe(replacement);
+    expect(existsSync(source)).toBe(true);
+  },
+);
+
+it('preserves a replacement directory when its inode is reused with a new generation', async () => {
+  const { root, source, target } = await fixture();
+  const path = join(target, 'voices');
+  constraints.reusedIdentityPath = path;
+  constraints.reuseAllMetadata = false;
+  const prepared = await prepareDataRelocation(source, target);
+  constraints.reusedStats = await lstat(path, { bigint: true });
+  await rename(path, join(root, 'previous-voices'));
+  await mkdir(path, { mode: 0o700 });
+  constraints.reuseEnabled = true;
+  await prepared.rollback();
+  expect((await lstat(path)).mode & 0o777).toBe(0o700);
+});
+
+it('preserves a scratch record replacement when all ambiguous metadata is reused', async () => {
+  const { source, target } = await fixture();
+  let record = '';
+  constraints.beforeOpen = async (path) => {
+    if (path.endsWith('manifest.json') && path.includes('.voicestudio-moving-')) {
+      record = path;
+      constraints.reusedIdentityPath = path;
+    }
+    if (path === join(target, 'voices', 'sample.wav')) {
+      constraints.reusedStats = Object.assign(
+        Object.create(await lstat(record, { bigint: true })),
+        { birthtimeNs: 0n },
+      );
+      constraints.reuseEnabled = true;
+      await writeFile(record + '.external', 'x'.repeat(Number(constraints.reusedStats!.size)));
+      await rename(record + '.external', record);
+    }
+  };
+  await prepareDataRelocation(source, target);
+  expect(await readFile(record, 'utf8')).toMatch(/^x+$/);
+});
+
+async function backendLogStartup(target: string, rotate: boolean) {
+  const log = join(target, 'omnivoice.log');
+  if (rotate) {
+    await rm(log + '.3', { force: true });
+    for (let index = 2; index >= 1; index -= 1)
+      await rename(log + '.' + index, log + '.' + (index + 1));
+    await rename(log, log + '.1');
+    await writeFile(log, 'backend startup\n');
+  } else await appendFile(log, 'backend startup\n');
+}
+
+it.each([false, true])(
+  'reports incomplete cleanup while preserving uncertain backend logs (rotation: %s)',
+  async (rotate) => {
+    const { root, source, target } = await fixture();
+    const original = rotate ? 'x'.repeat(2 * 1024 * 1024 - 1) + '\n' : 'startup history\n';
+    await writeFile(join(source, 'omnivoice.log'), original);
+    for (let index = 1; index <= 3; index += 1)
+      await writeFile(join(source, 'omnivoice.log.' + index), 'previous ' + index);
+    let starts = 0;
+    await expect(
+      relocateDataDirectory(source, target, {
+        environmentPath: join(root, 'env'),
+        stop: async () => undefined,
+        start: async () => {
+          if (++starts === 1) await backendLogStartup(target, rotate);
+        },
+        verify: async () => false,
+        progress: () => undefined,
+      }),
+    ).rejects.toMatchObject(incomplete('backend_verification_failed'));
+    expect(await readFile(join(source, 'omnivoice.log'), 'utf8')).toBe(original);
+    expect(await readFile(join(target, 'omnivoice.log'), 'utf8')).toContain('backend startup');
+    if (rotate) expect(await readFile(join(target, 'omnivoice.log.1'), 'utf8')).toBe(original);
+    expect(existsSync(join(target, 'omnivoice.db'))).toBe(false);
+  },
+);
+
+it('reports incomplete rollback if restarting the original backend fails', async () => {
+  const { root, source, target } = await fixture();
+  let starts = 0;
+  await expect(
+    relocateDataDirectory(source, target, {
+      environmentPath: join(root, 'env'),
+      stop: async () => undefined,
+      start: async () => {
+        if (++starts === 2) throw new Error('original restart failed');
+      },
+      verify: async () => false,
+      progress: () => undefined,
+    }),
+  ).rejects.toMatchObject(incomplete('backend_verification_failed'));
+  expect(await readdir(target)).toEqual([]);
+  expect(existsSync(source)).toBe(true);
+});
+
+it('rejects a zero-birthtime selected target as unverifiable before writing', async () => {
+  const { source, target } = await fixture();
+  constraints.reusedStats = await lstat(target, { bigint: true });
+  constraints.reusedIdentityPath = target;
+  constraints.reuseEnabled = true;
+  await expect(prepareDataRelocation(source, target)).rejects.toThrow('identity_unavailable');
+  expect(await readdir(target)).toEqual([]);
+  expect(existsSync(source)).toBe(true);
+});
+
+it.each([true, false])(
+  'keeps both copies when restoring the environment fails (existing target: %s)',
+  async (existing) => {
+    const { root, source, target } = await fixture();
+    if (!existing) await rm(target, { recursive: true });
+    const environmentPath = join(root, 'env');
+    await writeFile(environmentPath, `OMNIVOICE_DATA_DIR=${source}\n`);
+    let starts = 0;
+    await expect(
+      relocateDataDirectory(source, target, {
+        environmentPath,
+        stop: async () => undefined,
+        start: async () => {
+          starts++;
+        },
+        verify: async () => {
+          constraints.beforeReadFile = async (path) => {
+            if (path === environmentPath)
+              throw Object.assign(new Error('environment unavailable'), { code: 'EIO' });
+          };
+          return false;
+        },
+        progress: () => undefined,
+      }),
+    ).rejects.toMatchObject(incomplete('backend_verification_failed'));
+    constraints.beforeReadFile = null;
+    expect(await readDataDirectorySetting(environmentPath)).toBe(target);
+    expect(await readFile(join(source, 'omnivoice.db'), 'utf8')).toBe('database');
+    expect(await readFile(join(target, 'omnivoice.db'), 'utf8')).toBe('database');
+    expect(starts).toBe(1);
+  },
+);

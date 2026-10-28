@@ -15,9 +15,8 @@ import {
   symlink,
   writeFile,
 } from 'node:fs/promises';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream, type BigIntStats } from 'node:fs';
-import { pipeline } from 'node:stream/promises';
 import { homedir } from 'node:os';
 import { basename, dirname, isAbsolute, join, parse, relative, resolve, sep } from 'node:path';
 import { DIRECTORY_RENAME, renameWithRetry } from './rename-retry';
@@ -41,7 +40,7 @@ export interface DataRelocationPlan {
 
 export interface PreparedDataRelocation extends DataRelocationPlan {
   removeSource(): Promise<void>;
-  rollback(): Promise<void>;
+  rollback(): Promise<boolean>;
   /** Recognize narrow startup writes after the failed backend has stopped. */
   captureStartupWrites?(): Promise<void>;
   validateTarget?(): Promise<void>;
@@ -173,7 +172,58 @@ interface OwnedEntry {
   kind: ManifestEntry['kind'];
   dev: bigint;
   ino: bigint;
+  birthtimeNs: bigint;
+  ctimeNs?: bigint;
+  size?: bigint;
+  fileMode?: bigint;
+  digest?: string;
+  link?: string;
   mode?: number;
+}
+
+function fileFingerprint(info: BigIntStats, digest?: string) {
+  return {
+    dev: info.dev,
+    ino: info.ino,
+    birthtimeNs: info.birthtimeNs,
+    ctimeNs: info.ctimeNs,
+    size: info.size,
+    fileMode: info.mode,
+    digest,
+  };
+}
+
+function sameFileGeneration(info: BigIntStats, entry: ReturnType<typeof fileFingerprint>): boolean {
+  return (
+    info.dev === entry.dev &&
+    info.ino === entry.ino &&
+    info.birthtimeNs === entry.birthtimeNs &&
+    info.ctimeNs === entry.ctimeNs &&
+    info.size === entry.size &&
+    info.mode === entry.fileMode
+  );
+}
+
+async function matchesFile(
+  path: string,
+  info: BigIntStats,
+  entry: ReturnType<typeof fileFingerprint>,
+): Promise<boolean> {
+  if (!info.isFile() || !sameFileGeneration(info, entry)) return false;
+  // Creation and change timestamps can both be coarse, so even a nonzero
+  // matching generation is not proof after unlink/recreate. Check copied bytes
+  // before destructive rollback; successful moves do not reread model files.
+  if (!entry.digest) return false;
+  const hash = createHash('sha256');
+  for await (const chunk of createReadStream(path)) hash.update(chunk);
+  if (hash.digest('hex') !== entry.digest) return false;
+  return sameFileGeneration(await lstat(path, { bigint: true }), entry);
+}
+
+class RollbackIncompleteError extends Error {
+  constructor(cause: unknown) {
+    super('rollback_incomplete', { cause });
+  }
 }
 
 class TargetChangedError extends Error {
@@ -189,6 +239,7 @@ async function bindTargetDirectory(
 ) {
   const selected = identity ?? (await lstat(target, { bigint: true }));
   if (!selected.isDirectory() || selected.isSymbolicLink()) throw new TargetChangedError();
+  if (selected.birthtimeNs === 0n) throw new Error('identity_unavailable');
   const selectedStillPresent = async (): Promise<boolean> => {
     try {
       const info = await lstat(target, { bigint: true });
@@ -197,10 +248,12 @@ async function bindTargetDirectory(
         requested.isDirectory() &&
         requested.dev === selected.dev &&
         requested.ino === selected.ino &&
+        requested.birthtimeNs === selected.birthtimeNs &&
         info.isDirectory() &&
         !info.isSymbolicLink() &&
         info.dev === selected.dev &&
-        info.ino === selected.ino
+        info.ino === selected.ino &&
+        info.birthtimeNs === selected.birthtimeNs
       );
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
@@ -227,9 +280,14 @@ async function prepareExistingDestination(
   );
   const staging = join(plan.target, `.voicestudio-moving-${randomUUID()}`);
   await mkdir(staging, { recursive: false });
-  await validateTarget();
-  const stagingInfo = await lstat(staging, { bigint: true });
-  let recordInfo: { dev: bigint; ino: bigint } | undefined;
+  let stagingInfo: BigIntStats;
+  try {
+    await validateTarget();
+    stagingInfo = await lstat(staging, { bigint: true });
+  } catch (error) {
+    throw new RollbackIncompleteError(error);
+  }
+  let recordInfo: ReturnType<typeof fileFingerprint> | undefined;
   const cleanupStaging = async (): Promise<void> => {
     if (!(await selectedStillPresent())) return;
     let info;
@@ -243,7 +301,9 @@ async function prepareExistingDestination(
       !info.isDirectory() ||
       info.isSymbolicLink() ||
       info.dev !== stagingInfo.dev ||
-      info.ino !== stagingInfo.ino
+      info.ino !== stagingInfo.ino ||
+      info.birthtimeNs !== stagingInfo.birthtimeNs ||
+      info.birthtimeNs === 0n
     )
       return;
     if (recordInfo) {
@@ -254,7 +314,7 @@ async function prepareExistingDestination(
           return null;
         },
       );
-      if (present?.dev === recordInfo.dev && present.ino === recordInfo.ino)
+      if (present && (await matchesFile(record, present, recordInfo)))
         await rm(record, { force: true });
     }
     await rmdir(staging).catch((error: NodeJS.ErrnoException) => {
@@ -268,15 +328,34 @@ async function prepareExistingDestination(
     kind: ManifestEntry['kind'],
     mode?: number,
   ): Promise<void> => {
-    const { dev, ino } = await lstat(join(plan.target, path), { bigint: true });
-    const entry = { path, kind, dev, ino, mode };
+    const info = await lstat(join(plan.target, path), { bigint: true });
+    const entry: OwnedEntry = { path, kind, ...fileFingerprint(info), mode };
+    if (kind === 'link') entry.link = await readlink(join(plan.target, path));
     owned.push(entry);
     if (kind === 'directory') ownedDirectories.set(path, entry);
   };
   const stillOwned = async (entry: OwnedEntry): Promise<boolean> => {
     try {
       const info = await lstat(join(plan.target, entry.path), { bigint: true });
-      return info.dev === entry.dev && info.ino === entry.ino;
+      if (
+        info.dev !== entry.dev ||
+        info.ino !== entry.ino ||
+        info.birthtimeNs !== entry.birthtimeNs
+      )
+        return false;
+      if (entry.kind === 'directory')
+        return info.isDirectory() && !info.isSymbolicLink() && info.birthtimeNs !== 0n;
+      if (entry.kind === 'link')
+        return (
+          info.isSymbolicLink() &&
+          info.ctimeNs === entry.ctimeNs &&
+          (await readlink(join(plan.target, entry.path))) === entry.link
+        );
+      return matchesFile(
+        join(plan.target, entry.path),
+        info,
+        entry as ReturnType<typeof fileFingerprint>,
+      );
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
       throw error;
@@ -300,7 +379,9 @@ async function prepareExistingDestination(
       }
     }
   };
-  const rollback = async (): Promise<void> => {
+  const destinationClean = async (): Promise<boolean> =>
+    (await selectedStillPresent()) && (await readdir(plan.target)).length === 0;
+  const rollback = async (): Promise<boolean> => {
     // Never follow a replaced parent, delete recursively, or remove unrelated
     // files added while copying / verifying the new backend.
     try {
@@ -320,15 +401,19 @@ async function prepareExistingDestination(
       // with the temporary write permission used for cleanup.
       await directoryModes(false);
     }
+    return destinationClean();
   };
   try {
     // A small in-target transaction record; model weights are never copied a
     // second time, even on filesystems without hard links (such as exFAT).
     const record = await open(join(staging, 'manifest.json'), 'wx');
     try {
-      const { dev, ino } = await record.stat({ bigint: true });
-      recordInfo = { dev, ino };
-      await record.writeFile(JSON.stringify(sourceManifest));
+      const content = JSON.stringify(sourceManifest);
+      await record.writeFile(content);
+      recordInfo = fileFingerprint(
+        await record.stat({ bigint: true }),
+        createHash('sha256').update(content).digest('hex'),
+      );
     } finally {
       await record.close();
     }
@@ -351,13 +436,33 @@ async function prepareExistingDestination(
       } else {
         const info = await lstat(original);
         const output = await open(destination, 'wx', info.mode);
+        const hash = createHash('sha256');
+        const copied: OwnedEntry = {
+          path: entry.path,
+          kind: entry.kind,
+          ...fileFingerprint(await output.stat({ bigint: true })),
+        };
+        owned.push(copied);
         try {
-          const { dev, ino } = await output.stat({ bigint: true });
-          owned.push({ path: entry.path, kind: entry.kind, dev, ino });
           await output.chmod(info.mode);
-          await pipeline(createReadStream(original), output.createWriteStream());
+          async function* chunks() {
+            for await (const chunk of createReadStream(original)) {
+              hash.update(chunk);
+              yield chunk;
+            }
+          }
+          await output.writeFile(chunks());
         } finally {
-          await output.close();
+          // Seal expected copy writes through the same open inode, not a path
+          // that may already have been replaced. Only this one file stays open.
+          try {
+            Object.assign(
+              copied,
+              fileFingerprint(await output.stat({ bigint: true }), hash.digest('hex')),
+            );
+          } finally {
+            await output.close();
+          }
         }
       }
     }
@@ -374,6 +479,7 @@ async function prepareExistingDestination(
   } catch (error) {
     await rollback().catch(() => undefined);
     await cleanupStaging().catch(() => undefined);
+    if (!(await destinationClean().catch(() => false))) throw new RollbackIncompleteError(error);
     throw error;
   }
   // Startup replaces this one advisory index. Seed its expected contents only
@@ -421,12 +527,17 @@ async function prepareExistingDestination(
       try {
         const info = await handle.stat({ bigint: true });
         if (!info.isFile()) return;
-        const parsed: unknown = JSON.parse(await handle.readFile('utf8'));
+        const content = await handle.readFile('utf8');
+        const parsed: unknown = JSON.parse(content);
         if (JSON.stringify(parsed) !== expected) return;
         const pathInfo = await lstat(file, { bigint: true });
         if (pathInfo.dev !== info.dev || pathInfo.ino !== info.ino) return;
         if (!(await ownsPath(cache))) return;
-        const entry: OwnedEntry = { path: indexPath, kind: 'file', dev: info.dev, ino: info.ino };
+        const entry: OwnedEntry = {
+          path: indexPath,
+          kind: 'file',
+          ...fileFingerprint(info, createHash('sha256').update(content).digest('hex')),
+        };
         if (index) Object.assign(index, entry);
         else owned.push(entry);
       } finally {
@@ -489,8 +600,13 @@ export async function prepareDataRelocation(
     await rm(staging, { recursive: true, force: true }).catch(() => undefined);
     throw error;
   }
-  const binding = await bindTargetDirectory(plan.target, target, stagedIdentity);
-  await binding.validateTarget();
+  let binding: Awaited<ReturnType<typeof bindTargetDirectory>>;
+  try {
+    binding = await bindTargetDirectory(plan.target, target, stagedIdentity);
+    await binding.validateTarget();
+  } catch (error) {
+    throw new RollbackIncompleteError(error);
+  }
   return {
     ...plan,
     removeSource: async () => {
@@ -498,8 +614,9 @@ export async function prepareDataRelocation(
       await rm(plan.source, { recursive: true, force: false });
     },
     rollback: async () => {
-      if (await binding.selectedStillPresent())
-        await rm(plan.target, { recursive: true, force: true });
+      if (!(await binding.selectedStillPresent())) return false;
+      await rm(plan.target, { recursive: true, force: true });
+      return true;
     },
     validateTarget: binding.validateTarget,
   };
@@ -669,16 +786,33 @@ export async function relocateDataDirectory(
         /* Keep a potentially live copy intact. */
       }
     }
+    let incomplete = error instanceof RollbackIncompleteError || !backendStopped;
+    let settingRestored = !settingChanged;
     if (settingChanged) {
-      await writeDataDirectorySetting(previousSetting, runtime.environmentPath).catch(
-        () => undefined,
-      );
+      try {
+        await writeDataDirectorySetting(previousSetting, runtime.environmentPath);
+        settingRestored = true;
+      } catch {
+        incomplete = true;
+      }
     }
-    if (prepared && backendStopped) {
+    if (prepared && backendStopped && settingRestored) {
       await prepared.captureStartupWrites?.().catch(() => undefined);
-      await prepared.rollback().catch(() => undefined);
+      try {
+        if (!(await prepared.rollback())) incomplete = true;
+      } catch {
+        incomplete = true;
+      }
     }
-    if (stopped && backendStopped) await runtime.start().catch(() => undefined);
+    if (stopped && backendStopped && settingRestored) {
+      try {
+        await runtime.start();
+      } catch {
+        incomplete = true;
+      }
+    }
+    if (incomplete && !(error instanceof RollbackIncompleteError))
+      throw new RollbackIncompleteError(error);
     throw error;
   }
 }

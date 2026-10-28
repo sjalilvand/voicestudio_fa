@@ -1161,6 +1161,7 @@
     "data_move_done": "VoiceStudio-gegevens worden verplaatst naar {{path}}.",
     "data_move_old_copy": "De nieuwe map is actief, maar VoiceStudio kon de oude kopie niet verwijderen. Je kunt deze handmatig verwijderen.",
     "data_move_error": "VoiceStudio kon de gegevens niet verplaatsen.",
+    "data_move_error_rollback_incomplete": "Het verplaatsen is mislukt. Je oorspronkelijke gegevens zijn behouden, maar VoiceStudio kon het herstel niet voltooien. Controleer de engine en de bestemming voordat je het opnieuw probeert met een lege map.",
     "data_move_error_target_not_empty": "Kies een lege map zodat bestaande bestanden niet kunnen worden overschreven.",
     "data_move_error_nested_path": "Kies een map buiten de huidige VoiceStudio-datamap.",
     "data_move_error_insufficient_space": "Die schijf heeft niet genoeg ruimte om te verhuizen.",
