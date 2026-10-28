@@ -388,6 +388,8 @@ class SubprocessBackend(TTSBackend):
     # old default was the 60 s ping budget, which cut engines off mid-sentence
     # (#2103). Engines may override with a class attribute or a property.
     recv_timeout_s: float = GENERATE_RECV_TIMEOUT_S
+    # Gated weights need the official Hub and its credentials in auto mode.
+    requires_hf_auth: bool = False
 
     # ── instance state (initialised in __init__) ───────────────────────────
 
@@ -503,7 +505,7 @@ class SubprocessBackend(TTSBackend):
         from services import endpoint_race
         from services.hf_auth import env_allows_token
 
-        endpoint = endpoint_race.download_endpoint()
+        endpoint = endpoint_race.download_endpoint(gated=self.requires_hf_auth)
         if endpoint:
             env["HF_ENDPOINT"] = endpoint
         if not env_allows_token(env):

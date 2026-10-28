@@ -208,12 +208,15 @@ def test_env_forwarding_contract(monkeypatch, tmp_path):
         backend.shutdown()
 
 
-def test_automatic_endpoint_reaches_sidecar_without_token_or_parent_mutation(monkeypatch):
+@pytest.mark.parametrize("gated", [False, True])
+def test_automatic_endpoint_reaches_sidecar_without_token_or_parent_mutation(monkeypatch, gated):
     from services import endpoint_race, subprocess_backend
     monkeypatch.delenv("HF_ENDPOINT", raising=False)
     monkeypatch.setenv("HF_TOKEN", "hf_test_secret")
     monkeypatch.setenv("YOUR_HF_TOKEN", "hf_test_secret")
-    monkeypatch.setattr(endpoint_race, "download_endpoint", lambda: "https://hf-mirror.com")
+    monkeypatch.setattr(endpoint_race, "effective_endpoint", lambda: "https://hf-mirror.com")
+    monkeypatch.setattr(endpoint_race, "explicit_mirror", lambda: "")
+    monkeypatch.setattr(EchoBackend, "requires_hf_auth", gated, raising=False)
     captured = {}
     def spawn(*args, **kwargs):
         captured.update(kwargs["env"])
@@ -221,10 +224,14 @@ def test_automatic_endpoint_reaches_sidecar_without_token_or_parent_mutation(mon
     monkeypatch.setattr(subprocess_backend, "spawn_owned", spawn)
     with pytest.raises(RuntimeError, match="captured spawn"):
         EchoBackend()._spawn()
-    assert captured["HF_ENDPOINT"] == "https://hf-mirror.com"
-    assert "HF_TOKEN" not in captured
-    assert "YOUR_HF_TOKEN" not in captured
-    assert captured["HF_HUB_DISABLE_IMPLICIT_TOKEN"] == "1"
+    if gated:
+        assert captured["HF_ENDPOINT"] == endpoint_race.CANONICAL_ENDPOINT
+        assert captured["HF_TOKEN"] == "hf_test_secret"
+    else:
+        assert captured["HF_ENDPOINT"] == "https://hf-mirror.com"
+        assert "HF_TOKEN" not in captured
+        assert "YOUR_HF_TOKEN" not in captured
+        assert captured["HF_HUB_DISABLE_IMPLICIT_TOKEN"] == "1"
     assert "HF_ENDPOINT" not in os.environ
     assert os.environ["HF_TOKEN"] == "hf_test_secret"
 
