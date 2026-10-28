@@ -68,6 +68,12 @@ bun run dev
 
 This launches Electron with hot reload. Run source dependency setup explicitly before launching; the supervisor manages backend
 startup; do not launch a second backend. See [Electron setup](../electron/README.md).
+
+For screenshots, use the maintained Electron capture script described in
+[README media](../docs/media/electron/README.md). To share a runnable app, use
+the release installers or `bun run dist`; source users should clone the
+repository with its lockfiles and follow the setup commands above.
+
 CPU-only Linux/Windows hosts automatically select CPU wheels; see
 [CPU setup and overrides](../electron/README.md#running-without-a-gpu).
 When regenerating `uv.lock` for compute variants, preserve unrelated package
@@ -537,6 +543,13 @@ is in the public VoiceStudio repository, it stays available there under
 AGPL-3.0 or another OSI-approved licence (CLA section 4). AI agents can't be co-authors (see
 [Contributing with AI agents](#contributing-with-ai-agents)); the person
 submitting the work signs for it.
+
+For an unsigned pull request, the daily CLA reminder starts a 14-day waiting
+period, displays its UTC deadline, and sends one reminder after seven days. At
+the deadline maintainers may independently address the underlying issue without
+using the contribution. The pull request stays open and signatures remain
+welcome after the deadline. The timer begins when the reminder first detects an
+unsigned contributor, including for existing pull requests.
 
 The **CLA** check comments on your pull request when someone still needs to
 sign. To sign, post this as a new comment, on its own line:
