@@ -3055,7 +3055,18 @@
     "active": "Motor: {{name}}",
     "none": "Nenhum motor ativo",
     "localInstallRequired": "Instale este motor no computador do backend pelo localhost ou pelo guia de configuração. A instalação remota está desativada.",
-    "argosRuntimeUnavailable": "O ambiente de execução do Argos está indisponível. Reinstale o backend ou selecione NLLB."
+    "argosRuntimeUnavailable": "O ambiente de execução do Argos está indisponível. Reinstale o backend ou selecione NLLB.",
+    "asrSetupPackageInstall": "Execute {{command}} no ambiente Python do backend.",
+    "asrSetupApplePackageInstall": "Apenas Apple Silicon. Execute {{command}} no ambiente Python do backend.",
+    "asrSetupBundled": "Incluído no transformers; não precisa de instalação separada (CUDA, MPS ou CPU).",
+    "asrSetupWhisperCpp": "Coloque {{binary}} em {{folder}} no computador do backend (Vulkan, CUDA ou CPU).",
+    "asrSetupNemoParakeet": "Não é seguro instalar o NeMo no ambiente Python gerenciado pelo VoiceStudio: ele exige {{nemoRequirement}}, incompatível com {{appRequirement}}. Não instale nemo_toolkit aqui; use um ambiente separado e dedicado. Baixar os pesos não instala o motor.",
+    "asrSetupIsolated": "Reutiliza o faster-whisper; não precisa de instalação adicional. A transcrição é executada em um processo separado que pode ser interrompido se travar.",
+    "asrSetupRemote": "Não precisa de instalação. Configure um servidor de transcrição compatível com OpenAI em Configurações → Modelos → ASR; o servidor gerencia seus próprios modelos.",
+    "setupStatusNotInstalled": "O pacote deste motor ainda não está instalado. Instale-o em Configurações → Modelos.",
+    "setupStatusLicense": "A licença ainda não foi aceita. Leia e aceite em Configurações → Modelos para ativar este motor.",
+    "setupStatusNeedsConfig": "Este motor precisa ser configurado antes do uso. Abra Configurações → Modelos para concluir a configuração.",
+    "setupStatusFileMissing": "Um arquivo necessário ao motor está ausente ou ilegível. Reinstale-o em Configurações → Modelos."
   },
   "performanceProfile": {
     "requiresEngine": "Instale e selecione {{engine}} para ajustar a velocidade e a qualidade.",
