@@ -85,3 +85,11 @@ it('turns unsafe destination errors into a clear localized message', async () =>
   );
   expect(mock.relocate).not.toHaveBeenCalled();
 });
+
+it('uses the generic localized error for unsupported filesystem entries', async () => {
+  mock.choose.mockRejectedValue(new Error('unsupported_entry'));
+  renderSettings();
+  fireEvent.click(await screen.findByRole('button', { name: 'settings.data_move_choose' }));
+  await waitFor(() => expect(mock.toastError).toHaveBeenCalledWith('settings.data_move_error'));
+  expect(mock.toastError).not.toHaveBeenCalledWith(expect.stringContaining('unsupported_entry'));
+});

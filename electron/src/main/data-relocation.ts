@@ -1,5 +1,6 @@
 import {
   cp,
+  chmod,
   lstat,
   mkdir,
   open,
@@ -166,8 +167,9 @@ export async function inspectDataRelocation(
 interface OwnedEntry {
   path: string;
   kind: ManifestEntry['kind'];
-  dev: number;
-  ino: number;
+  dev: bigint;
+  ino: bigint;
+  mode?: number;
 }
 
 // Existing folders may be mount points, or have an unwritable parent. Keep the
@@ -181,41 +183,61 @@ async function prepareExistingDestination(
   await mkdir(staging, { recursive: false });
   const owned: OwnedEntry[] = [];
   const ownedDirectories = new Map<string, OwnedEntry>();
-  const remember = async (path: string, kind: ManifestEntry['kind']): Promise<void> => {
-    const { dev, ino } = await lstat(join(plan.target, path));
-    const entry = { path, kind, dev, ino };
+  const remember = async (
+    path: string,
+    kind: ManifestEntry['kind'],
+    mode?: number,
+  ): Promise<void> => {
+    const { dev, ino } = await lstat(join(plan.target, path), { bigint: true });
+    const entry = { path, kind, dev, ino, mode };
     owned.push(entry);
     if (kind === 'directory') ownedDirectories.set(path, entry);
   };
   const stillOwned = async (entry: OwnedEntry): Promise<boolean> => {
     try {
-      const info = await lstat(join(plan.target, entry.path));
+      const info = await lstat(join(plan.target, entry.path), { bigint: true });
       return info.dev === entry.dev && info.ino === entry.ino;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
       throw error;
     }
   };
+  const ownsPath = async (entry: OwnedEntry): Promise<boolean> => {
+    for (let parent = dirname(entry.path); parent !== '.'; parent = dirname(parent)) {
+      const directory = ownedDirectories.get(parent);
+      if (directory && !(await stillOwned(directory))) return false;
+    }
+    return stillOwned(entry);
+  };
+  const directoryModes = async (writable: boolean): Promise<void> => {
+    const directories = [...ownedDirectories.values()];
+    // Open parents before their children, restore children before parents.
+    if (!writable) directories.reverse();
+    for (const entry of directories) {
+      if (await ownsPath(entry)) {
+        await chmod(join(plan.target, entry.path), writable ? entry.mode! | 0o700 : entry.mode!);
+      }
+    }
+  };
   const rollback = async (): Promise<void> => {
     // Never follow a replaced parent, delete recursively, or remove unrelated
     // files added while copying / verifying the new backend.
-    for (const entry of [...owned].reverse()) {
-      let ancestorsOwned = true;
-      for (let parent = dirname(entry.path); parent !== '.'; parent = dirname(parent)) {
-        const directory = ownedDirectories.get(parent);
-        if (directory && !(await stillOwned(directory))) {
-          ancestorsOwned = false;
-          break;
+    try {
+      await directoryModes(true);
+      for (const entry of [...owned].reverse()) {
+        if (!(await ownsPath(entry))) continue;
+        if (entry.kind === 'directory') {
+          await rmdir(join(plan.target, entry.path)).catch((error: NodeJS.ErrnoException) => {
+            if (!['ENOENT', 'ENOTEMPTY', 'EEXIST'].includes(error.code || '')) throw error;
+          });
+        } else {
+          await rm(join(plan.target, entry.path), { force: true });
         }
       }
-      if (!ancestorsOwned || !(await stillOwned(entry))) continue;
-      if (entry.kind === 'directory') {
-        await rmdir(join(plan.target, entry.path)).catch((error: NodeJS.ErrnoException) => {
-          if (!['ENOENT', 'ENOTEMPTY', 'EEXIST'].includes(error.code || '')) throw error;
-        });
-      } else {
-        await rm(join(plan.target, entry.path), { force: true });
-      }
+    } finally {
+      // A concurrent addition keeps its parent alive; do not leave that folder
+      // with the temporary write permission used for cleanup.
+      await directoryModes(false);
     }
   };
   try {
@@ -227,8 +249,9 @@ async function prepareExistingDestination(
       const destination = join(plan.target, entry.path);
       const original = join(plan.source, entry.path);
       if (entry.kind === 'directory') {
-        await mkdir(destination, { recursive: false, mode: (await lstat(original)).mode });
-        await remember(entry.path, entry.kind);
+        const mode = (await lstat(original)).mode & 0o7777;
+        await mkdir(destination, { recursive: false, mode: mode | 0o700 });
+        await remember(entry.path, entry.kind, mode);
       } else if (entry.kind === 'link') {
         const directoryLink = await stat(original).then(
           (info) => info.isDirectory(),
@@ -240,7 +263,7 @@ async function prepareExistingDestination(
         const info = await lstat(original);
         const output = await open(destination, 'wx', info.mode);
         try {
-          const { dev, ino } = await output.stat();
+          const { dev, ino } = await output.stat({ bigint: true });
           owned.push({ path: entry.path, kind: entry.kind, dev, ino });
           await output.chmod(info.mode);
           await pipeline(createReadStream(original), output.createWriteStream());
@@ -255,6 +278,7 @@ async function prepareExistingDestination(
     ) {
       throw new Error('verification_failed');
     }
+    await directoryModes(false);
     await rm(staging, { recursive: true, force: true });
   } catch (error) {
     await rollback().catch(() => undefined);

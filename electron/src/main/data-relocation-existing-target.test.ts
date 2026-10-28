@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { existsSync } from 'node:fs';
 import {
+  chmod,
   lstat,
   mkdir,
   mkdtemp,
@@ -29,6 +30,8 @@ const constraints = vi.hoisted(() => ({
   collisionDirectory: '',
   failRead: '',
   unsupportedPath: '',
+  largeIdentityPath: '',
+  identityVersion: 0,
 }));
 vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs/promises')>();
@@ -52,6 +55,12 @@ vi.mock('node:fs/promises', async (importOriginal) => {
     },
     lstat: async (...args: Parameters<typeof actual.lstat>) => {
       const info = await actual.lstat(...args);
+      if (String(args[0]) === constraints.largeIdentityPath) {
+        const ino = 9007199254740992n + BigInt(constraints.identityVersion);
+        return Object.assign(Object.create(info), {
+          ino: typeof info.ino === 'bigint' ? ino : Number(ino),
+        });
+      }
       return String(args[0]) === constraints.unsupportedPath
         ? Object.assign(Object.create(info), { isFile: () => false })
         : info;
@@ -89,10 +98,16 @@ vi.mock('node:fs', async (importOriginal) => {
 });
 
 const created: string[] = [];
+const readOnlyDirectories: string[] = [];
 afterEach(async () => {
+  await Promise.all(
+    readOnlyDirectories.splice(0).map((path) => chmod(path, 0o755).catch(() => undefined)),
+  );
   constraints.target = constraints.parent = '';
   constraints.checkCapacity = false;
   constraints.beforeOpen = null;
+  constraints.largeIdentityPath = '';
+  constraints.identityVersion = 0;
   constraints.collisionDirectory = constraints.failRead = constraints.unsupportedPath = '';
   await Promise.all(created.splice(0).map((path) => rm(path, { recursive: true, force: true })));
 });
@@ -225,3 +240,87 @@ it('rejects unsupported source entries rather than silently dropping them', asyn
   expect(await readdir(target)).toEqual([]);
   expect(await readFile(join(source, 'voices', 'sample.wav'), 'utf8')).toBe('voice');
 });
+
+// Windows does not enforce POSIX directory modes; root bypasses write checks.
+it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)(
+  'copies read-only model directories and files, preserves modes, and can roll back',
+  async () => {
+    const { source, target } = await fixture();
+    const sourceVoices = join(source, 'voices');
+    const targetVoices = join(target, 'voices');
+    readOnlyDirectories.push(sourceVoices, targetVoices);
+    await chmod(sourceVoices, 0o555);
+    await chmod(join(sourceVoices, 'sample.wav'), 0o444);
+    const prepared = await prepareDataRelocation(source, target);
+    expect(await readFile(join(targetVoices, 'sample.wav'), 'utf8')).toBe('voice');
+    expect((await lstat(targetVoices)).mode & 0o777).toBe(0o555);
+    expect((await lstat(join(targetVoices, 'sample.wav'))).mode & 0o777).toBe(0o444);
+    await prepared.rollback();
+    expect(await readdir(target)).toEqual([]);
+    expect((await lstat(sourceVoices)).mode & 0o777).toBe(0o555);
+  },
+);
+
+it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)(
+  'failed activation removes owned files from read-only directories but restores modes on surviving data',
+  async () => {
+    const { root, source, target } = await fixture();
+    const sourceVoices = join(source, 'voices');
+    const targetVoices = join(target, 'voices');
+    readOnlyDirectories.push(sourceVoices, targetVoices);
+    await chmod(sourceVoices, 0o555);
+    await expect(
+      relocateDataDirectory(source, target, {
+        environmentPath: join(root, 'env'),
+        stop: async () => undefined,
+        start: async () => undefined,
+        verify: async () => {
+          expect((await lstat(targetVoices)).mode & 0o777).toBe(0o555);
+          await chmod(targetVoices, 0o755);
+          await writeFile(join(targetVoices, 'concurrent.txt'), 'keep');
+          await chmod(targetVoices, 0o555);
+          return false;
+        },
+        progress: () => undefined,
+      }),
+    ).rejects.toThrow('backend_verification_failed');
+    expect(await readdir(target)).toEqual(['voices']);
+    expect(await readdir(targetVoices)).toEqual(['concurrent.txt']);
+    expect((await lstat(targetVoices)).mode & 0o777).toBe(0o555);
+    expect((await lstat(sourceVoices)).mode & 0o777).toBe(0o555);
+  },
+);
+
+it('does not claim a replacement directory whose 64-bit file ID rounds to the same Number', async () => {
+  const { root, source, target } = await fixture();
+  const voices = join(target, 'voices');
+  constraints.largeIdentityPath = voices;
+  const prepared = await prepareDataRelocation(source, target);
+  await rename(voices, join(root, 'moved-voices'));
+  await mkdir(voices);
+  constraints.identityVersion = 1;
+  // These distinct filesystem IDs collide if read through numeric Stats.
+  expect(Number(9007199254740992n)).toBe(Number(9007199254740993n));
+  await prepared.rollback();
+  expect(existsSync(voices)).toBe(true);
+});
+
+it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)(
+  'restores read-only modes on surviving concurrent data after a copy failure',
+  async () => {
+    const { source, target } = await fixture();
+    const sourceVoices = join(source, 'voices');
+    const targetVoices = join(target, 'voices');
+    readOnlyDirectories.push(sourceVoices, targetVoices);
+    await chmod(sourceVoices, 0o555);
+    constraints.beforeOpen = async (path) => {
+      if (path === join(targetVoices, 'sample.wav')) {
+        await writeFile(join(targetVoices, 'concurrent.txt'), 'keep');
+        throw Object.assign(new Error('copy interrupted'), { code: 'EIO' });
+      }
+    };
+    await expect(prepareDataRelocation(source, target)).rejects.toThrow('copy interrupted');
+    expect(await readdir(targetVoices)).toEqual(['concurrent.txt']);
+    expect((await lstat(targetVoices)).mode & 0o777).toBe(0o555);
+  },
+);
