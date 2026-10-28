@@ -19,7 +19,7 @@ import { randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import { homedir } from 'node:os';
-import { basename, dirname, isAbsolute, join, parse, relative, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, join, parse, relative, resolve, sep } from 'node:path';
 import { DIRECTORY_RENAME, renameWithRetry } from './rename-retry';
 
 const DATA_KEY = 'OMNIVOICE_DATA_DIR';
@@ -66,7 +66,8 @@ function normalized(path: string): string {
 
 function contains(parent: string, child: string): boolean {
   const rel = relative(normalized(parent), normalized(child));
-  return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
+  // A name such as '..models' is a child; only a complete '..' component escapes.
+  return rel === '' || (rel !== '..' && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
 }
 
 function safeDestination(path: string): boolean {
