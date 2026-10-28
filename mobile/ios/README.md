@@ -200,16 +200,10 @@ and disappear after tapping it; Home's presence behind the consent sheet does
 not establish that consent has finished.
 The combined CI job allows 90 minutes for cold builds and validation; individual
 UI-test readiness deadlines remain bounded separately.
-
-Temporary keyboard diagnostics compare the existing responder action with
-foreground-key-window `endEditing(true)` in three independent launches per path.
-The `keyboard-probe` CI artifact preserves simulator logs and the complete screen
-recording, including successful flows. Logs contain responder class names and
-dispatch results, never entered text. The probes and targeted workflow are removed
-before the final fix runs the full 26-test UI matrix and device build.
-The diagnostic branch isolates the iOS UI probe from unrelated platform/inference
-jobs and package tests; the unchanged package suite stalled before probe startup
-in the first diagnostic run. Those checks return for the final fix.
+The keyboard smoke waits for the shared Done control to become hittable before
+its single tap, then checks that the keyboard disappears within the existing
+deadline. This readiness check does not establish a product responder-routing
+defect.
 
 ## Live previews
 

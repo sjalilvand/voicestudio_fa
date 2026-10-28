@@ -314,18 +314,8 @@ final class SmokeTests: XCTestCase {
     }
 
     @MainActor func testKeyboardDismissalAcrossFormsAndSearch() throws {
-        try keyboardDismissalAcrossFormsAndSearch(mode: "responder")
-    }
-
-    // DEBUG-keyboard-probe: compare native dispatch paths in independent app launches.
-    @MainActor func testKeyboardDismissalUsingWindowEndEditing() throws {
-        try keyboardDismissalAcrossFormsAndSearch(mode: "window")
-    }
-
-    @MainActor private func keyboardDismissalAcrossFormsAndSearch(mode: String) throws {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-smoke", "-AppleLanguages", "(en)"]
-        app.launchEnvironment["VOICESTUDIO_KEYBOARD_DISMISS_MODE"] = mode
         app.launch()
         app.declineConsent()
         app.tabButton("Settings").tap()
@@ -388,7 +378,7 @@ final class SmokeTests: XCTestCase {
     @MainActor private func dismissUsingDone(_ app: XCUIApplication) {
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
         let done = app.buttons["keyboard.done"]
-        XCTAssertTrue(done.waitForExistence(timeout: 5))
+        XCTAssertTrue(done.wait(for: \.isHittable, toEqual: true, timeout: 5))
         done.tap()
         assertKeyboardDismissed(app)
     }

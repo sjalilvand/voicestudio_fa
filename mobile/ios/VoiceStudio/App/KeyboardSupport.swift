@@ -1,53 +1,10 @@
 import SwiftUI
 import UIKit
-#if DEBUG
-import OSLog
-#endif
 
 @MainActor enum Keyboard {
-    static func dismiss(source: String = "submit") {
-#if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("--ui-smoke") {
-            probeDismiss(source: source)
-            return
-        }
-#endif
+    static func dismiss() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
-
-#if DEBUG
-    // DEBUG-keyboard-probe: temporary evidence, removed before this branch lands.
-    private static let logger = Logger(subsystem: "sh.voicestudio.keyboard-diagnostics", category: "dismiss")
-    private static var receipt = 0
-    private static func responder(in view: UIView) -> String? {
-        if view.isFirstResponder { return String(describing: type(of: view)) }
-        return view.subviews.lazy.compactMap { responder(in: $0) }.first
-    }
-    private static func windows() -> [UIWindow] {
-        UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
-            .filter { $0.activationState == .foregroundActive }
-            .flatMap(\.windows)
-    }
-    private static func snapshot() -> String {
-        windows().map { "\(type(of: $0)):key=\($0.isKeyWindow):responder=\(responder(in: $0) ?? "none")" }.joined(separator: ";")
-    }
-    private static func probeDismiss(source: String) {
-        receipt += 1
-        let identifier = receipt
-        let mode = ProcessInfo.processInfo.environment["VOICESTUDIO_KEYBOARD_DISMISS_MODE"] ?? "responder"
-        logger.notice("DEBUG-keyboard-probe received=\(identifier) source=\(source, privacy: .public) mode=\(mode, privacy: .public) before=\(snapshot(), privacy: .public)")
-        let result: Bool
-        if mode == "window" {
-            result = windows().filter(\.isKeyWindow).map { $0.endEditing(true) }.contains(true)
-        } else {
-            result = UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-        }
-        logger.notice("DEBUG-keyboard-probe returned=\(identifier) result=\(result) after=\(snapshot(), privacy: .public)")
-        DispatchQueue.main.async {
-            logger.notice("DEBUG-keyboard-probe next-turn=\(identifier) state=\(snapshot(), privacy: .public)")
-        }
-    }
-#endif
 }
 
 /// Keep SwiftUI's keyboard safe area: scrolling can always reveal the next field/action.
@@ -63,7 +20,7 @@ private struct KeyboardAccessible: ViewModifier {
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button(model.t("mobile.keyboard.done")) { Keyboard.dismiss(source: "toolbar") }
+                    Button(model.t("mobile.keyboard.done")) { Keyboard.dismiss() }
                         .studioButton(.tertiary)
                         .accessibilityIdentifier("keyboard.done")
                 }
