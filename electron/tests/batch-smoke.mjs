@@ -16,9 +16,9 @@ try {
     filename: 'one.mp4',
     created_at: 1_700_000_000,
     status: 'running',
-    langs: ['es'],
+    langs: ['es', 'fr', 'de'],
     progress: { stage: 'transcribe', percent: 35 },
-    outputs: { es: 'output.mp4' },
+    outputs: { es: 'output-es.mp4', fr: 'output-fr.mp4', de: 'output-de.mp4' },
   };
   // Batch refuses to queue until a TTS engine and a translation engine are ready.
   await page.route('**/api/engines', (route) =>
@@ -72,9 +72,13 @@ try {
         : [],
     }),
   );
-  await page.route('**/api/batch/enqueue', (route) => {
+  await page.route('**/api/batch/enqueue', async (route) => {
+    const request = route.request();
+    const body = await new Response(request.postDataBuffer(), {
+      headers: { 'content-type': request.headers()['content-type'] },
+    }).formData();
+    assert.equal(body.get('langs'), 'es,fr,de');
     submits++;
-    assert(route.request().postData().includes('Spanish') === false);
     return route.fulfill({ json: { job_id: 'fixture' } });
   });
   await page.route('**/api/batch/jobs/fixture/cancel', (route) => {
@@ -109,8 +113,6 @@ try {
   assert.equal(await search.inputValue(), 'German');
   await page.getByRole('option', { name: 'German', exact: true }).click();
   await page.getByRole('button', { name: 'German', exact: true }).waitFor();
-  await page.getByRole('button', { name: 'French', exact: true }).click();
-  await page.getByRole('button', { name: 'German', exact: true }).click();
   assert(await page.getByRole('button', { name: 'Add to Queue', exact: true }).isDisabled());
   await page
     .locator('input[type=file]')
@@ -126,11 +128,18 @@ try {
   await page.getByText('cancelled', { exact: true }).waitFor();
   assert.equal(cancels, 1);
   await page.getByRole('button', { name: 'Completed', exact: true }).click();
-  await page.getByRole('button', { name: 'Export es', exact: true }).waitFor();
+  for (const lang of job.langs) {
+    await page.getByRole('button', { name: `Export ${lang}`, exact: true }).waitFor();
+  }
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
   assert.equal(deletes, 0);
+  const deleted = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'DELETE' &&
+      new URL(response.url()).pathname === '/api/batch/jobs/fixture',
+  );
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
-  await page.waitForTimeout(100);
+  assert.equal((await deleted).status(), 200);
   assert.equal(deletes, 1);
   assert.deepEqual(errors, []);
   console.log(
