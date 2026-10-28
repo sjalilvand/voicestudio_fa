@@ -1161,6 +1161,7 @@
     "data_move_done": "Dữ liệu VoiceStudio chuyển sang {{path}}.",
     "data_move_old_copy": "Dữ liệu mới đang hoạt động, nhưng VoiceStudio không thể xóa bản sao cũ. Bạn có thể xóa nó bằng tay.",
     "data_move_error": "VoiceStudio không thể di chuyển dữ liệu.",
+    "data_move_error_rollback_incomplete": "Di chuyển thất bại. Dữ liệu gốc của bạn đã được giữ lại, nhưng VoiceStudio chưa thể hoàn tất khôi phục. Hãy kiểm tra bộ máy và thư mục đích trước khi thử lại với một thư mục trống.",
     "data_move_error_target_not_empty": "Chọn một thư mục trống để các tệp hiện có không thể được ghi lại.",
     "data_move_error_nested_path": "Chọn một thư mục bên ngoài thư mục dữ liệu VoiceStudio hiện tại.",
     "data_move_error_insufficient_space": "Chiếc xe đó không có đủ không gian để di chuyển.",

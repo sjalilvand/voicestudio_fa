@@ -1348,6 +1348,7 @@
     "data_move_done": "VoiceStudio data moved to {{path}}.",
     "data_move_old_copy": "The new folder is active, but VoiceStudio could not remove the old copy. You can remove it manually.",
     "data_move_error": "VoiceStudio could not move the data. The original folder is still active.",
+    "data_move_error_rollback_incomplete": "The move failed. Your original data was kept, but VoiceStudio could not finish recovery. Check the engine and destination before trying again with an empty folder.",
     "data_move_error_target_not_empty": "Choose an empty folder so existing files cannot be overwritten.",
     "data_move_error_nested_path": "Choose a folder outside the current VoiceStudio data folder.",
     "data_move_error_insufficient_space": "That drive does not have enough free space for the move.",

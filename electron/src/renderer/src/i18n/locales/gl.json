@@ -1348,6 +1348,7 @@
     "data_move_done": "Os datos de VoiceStudio movéronse a {{path}}.",
     "data_move_old_copy": "O novo cartafol está activo, pero VoiceStudio non puido eliminar a copia antiga. Podes eliminalo manualmente.",
     "data_move_error": "VoiceStudio non puido mover os datos. O cartafol orixinal aínda está activo.",
+    "data_move_error_rollback_incomplete": "Fallou o traslado. Conserváronse os datos orixinais, pero VoiceStudio non puido completar a recuperación. Revisa o motor e o destino antes de tentalo de novo cun cartafol baleiro.",
     "data_move_error_target_not_empty": "Escolla un cartafol baleiro para que non se poidan sobrescribir os ficheiros existentes.",
     "data_move_error_nested_path": "Escolla un cartafol fóra do cartafol de datos de VoiceStudio actual.",
     "data_move_error_insufficient_space": "Esa unidade non ten espazo libre suficiente para o movemento.",

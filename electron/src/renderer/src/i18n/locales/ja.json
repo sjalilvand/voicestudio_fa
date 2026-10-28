@@ -1161,6 +1161,7 @@
     "data_move_done": "VoiceStudioのデータは {{path}}に移動しました.",
     "data_move_old_copy": "新しいフォルダがアクティブですが, VoiceStudio は古いコピーを取り除くことができなかった.手動で削除できます.",
     "data_move_error": "VoiceStudioはデータを移動できませんでした. オリジナルフォルダーはまだアクティブです.",
+    "data_move_error_rollback_incomplete": "移動に失敗しました。元のデータは保持されていますが、VoiceStudio は復旧を完了できませんでした。空のフォルダーで再試行する前に、エンジンと移動先を確認してください。",
     "data_move_error_target_not_empty": "既存のファイルが書き換えられないように,空のフォルダを選択します.",
     "data_move_error_nested_path": "現在の VoiceStudio データフォルダの外のフォルダを選択します.",
     "data_move_error_insufficient_space": "そのドライブには移動する空間の余地がない.",

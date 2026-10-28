@@ -1161,6 +1161,7 @@
     "data_move_done": "Die VoiceStudio-Daten wurden auf {{path}} verschoben.",
     "data_move_old_copy": "Der neue Ordner ist aktiv, aber VoiceStudio konnte die alte Kopie nicht entfernen. Sie können sie manuell entfernen.",
     "data_move_error": "VoiceStudio konnte die Daten nicht bewegen. Der Originalordner ist noch aktiv.",
+    "data_move_error_rollback_incomplete": "Das Verschieben ist fehlgeschlagen. Deine ursprünglichen Daten wurden behalten, aber VoiceStudio konnte die Wiederherstellung nicht abschließen. Prüfe die Engine und das Ziel, bevor du es mit einem leeren Ordner erneut versuchst.",
     "data_move_error_target_not_empty": "Wählen Sie einen leeren Ordner aus, damit vorhandene Dateien nicht überschrieben werden können.",
     "data_move_error_nested_path": "Wählen Sie einen Ordner außerhalb des aktuellen VoiceStudio-Datenorders aus.",
     "data_move_error_insufficient_space": "Dieser Antrieb hat nicht genug Platz für den Umzug.",

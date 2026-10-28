@@ -1157,6 +1157,7 @@
     "data_move_done": "VoiceStudio 데이터는 {{path}}로 이동되었습니다.",
     "data_move_old_copy": "새로운 폴더가 활성화되어 있지만 VoiceStudio는 오래된 복사본을 제거할 수 없습니다. 수동으로 제거할 수 있습니다.",
     "data_move_error": "VoiceStudio는 데이터를 이동할 수 없었고 원래 폴더는 여전히 활성화되어 있습니다.",
+    "data_move_error_rollback_incomplete": "이동하지 못했습니다. 원본 데이터는 보존되었지만 VoiceStudio가 복구를 완료하지 못했습니다. 빈 폴더로 다시 시도하기 전에 엔진과 대상을 확인하세요.",
     "data_move_error_target_not_empty": "기존 파일들을 덮어쓰지 않도록 빈 폴더를 선택하세요.",
     "data_move_error_nested_path": "현재 VoiceStudio 데이터 폴더 밖의 폴더를 선택하십시오.",
     "data_move_error_insufficient_space": "이 드라이브는 이동할 충분한 공간이 없습니다.",

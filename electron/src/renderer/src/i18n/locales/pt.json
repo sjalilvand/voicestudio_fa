@@ -1163,6 +1163,7 @@
     "data_move_done": "Os dados do VoiceStudio foram transferidos para {{path}}.",
     "data_move_old_copy": "A nova pasta está ativa, mas o VoiceStudio não conseguiu remover a cópia antiga.",
     "data_move_error": "O VoiceStudio não conseguiu mover os dados. A pasta original ainda está ativa.",
+    "data_move_error_rollback_incomplete": "A transferência falhou. Seus dados originais foram preservados, mas o VoiceStudio não conseguiu concluir a recuperação. Verifique o motor e o destino antes de tentar novamente com uma pasta vazia.",
     "data_move_error_target_not_empty": "Escolha uma pasta vazia para que os arquivos existentes não possam ser substituídos.",
     "data_move_error_nested_path": "Escolha uma pasta fora da pasta de dados do VoiceStudio atual.",
     "data_move_error_insufficient_space": "Essa unidade não tem espaço livre suficiente para a mudança.",

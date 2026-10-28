@@ -1161,6 +1161,7 @@
     "data_move_done": "VoiceStudio 資料移至 {{path}}。",
     "data_move_old_copy": "新文件已活跃,但VoiceStudio無法刪除旧副本.你可以手动刪除它.",
     "data_move_error": "VoiceStudio 無法移動資料。原始資料夾仍然處於活動狀態。",
+    "data_move_error_rollback_incomplete": "移動失敗。原始資料已保留，但 VoiceStudio 未能完成復原。請先檢查引擎與目的地，再使用空資料夾重試。",
     "data_move_error_target_not_empty": "選擇一个空格文件,以便無法重写现有文件.",
     "data_move_error_nested_path": "選擇当前的VoiceStudio資料文件之外的文件.",
     "data_move_error_insufficient_space": "这辆车没有足够的空间来移動.",

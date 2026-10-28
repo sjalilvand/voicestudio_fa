@@ -1161,6 +1161,7 @@
     "data_move_done": "VoiceStudio-data flyttades till {{path}}.",
     "data_move_old_copy": "Den nya mappen är aktiv, men VoiceStudio kunde inte ta bort den gamla kopien. Du kan ta bort den manuellt.",
     "data_move_error": "VoiceStudio kunde inte flytta data.",
+    "data_move_error_rollback_incomplete": "Flytten misslyckades. Dina ursprungliga data har sparats, men VoiceStudio kunde inte slutföra återställningen. Kontrollera motorn och målplatsen innan du försöker igen med en tom mapp.",
     "data_move_error_target_not_empty": "Välj en tom mapp så att befintliga filer inte kan skrivas över.",
     "data_move_error_nested_path": "Välj en mapp utanför den aktuella VoiceStudio-datafilen.",
     "data_move_error_insufficient_space": "Den där bilen har inte tillräckligt med utrymme för att flytta.",
