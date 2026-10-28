@@ -706,7 +706,8 @@ async def _prepare_synth(
 
 
 def _chapter_cache_inputs(chapter, sr, engine_id, resolve, cache_dir, lexicon=None,
-                          language=None, opts=None, voice_map=None, cache_lease=None):
+                          language=None, opts=None, voice_map=None, cache_lease=None,
+                          pause_fill=None):
     """Derive and reserve the same inputs for planning and chapter rendering."""
     import json
 
@@ -787,14 +788,24 @@ def _chapter_cache_inputs(chapter, sr, engine_id, resolve, cache_dir, lexicon=No
     if language:
         sig["\x00language"] = language
         seg_extra_sig = f"{seg_extra_sig}\x00language={language}"
-    # Room tone in the gaps (#3611) changes the audio of both layers; the
-    # default (digital silence) adds nothing, so existing caches keep hitting.
+    # Room tone in the gaps (#3611) changes the chapter's audio. A spoken
+    # segment only changes when its own paragraphs are joined with a gap, so
+    # only those segments are re-keyed. The default (digital silence) adds
+    # nothing to either layer, so existing caches keep hitting. The mode is
+    # resolved once here and the render passes the same value to every join.
     from services.audio_dsp import pause_fill_mode
 
-    pause_fill = pause_fill_mode()
+    if pause_fill is None:
+        pause_fill = pause_fill_mode()
+    gap_sig, gap_spans = "", None
     if pause_fill != "silence":
         sig["\x00pausefill"] = pause_fill
-        seg_extra_sig = f"{seg_extra_sig}\x00pausefill={pause_fill}"
+        paragraph_ms = int((opts or ExpressiveOptions()).join_kwargs().get("paragraph_gap_ms") or 0)
+        if paragraph_ms > 0:
+            from services.chunked_tts import split_paragraphs
+
+            gap_sig = f"pausefill={pause_fill}"
+            gap_spans = lambda span: len(split_paragraphs(span.text or "")) > 1  # noqa: E731
     marking = will_mark()
     if marking:
         # Provenance-marked chapters cache under their own key (#1169): a
@@ -844,7 +855,8 @@ def _chapter_cache_inputs(chapter, sr, engine_id, resolve, cache_dir, lexicon=No
     seg_cache = SegmentCache(cache_dir, sample_rate=sr, engine_id=engine_id,
                              voice_sig=voice_sigs, extra_sig=seg_extra_sig,
                              vary_repeats=opts.vary_repeats,
-                             legacy_voice_sigs=legacy_voice_sigs, lease=cache_lease)
+                             legacy_voice_sigs=legacy_voice_sigs, lease=cache_lease,
+                             gap_sig=gap_sig, gap_spans=gap_spans)
     seg_cache.reserve(spans)
     return spans, wav_path, legacy_paths, content_id, inputs, seg_cache
 
@@ -894,9 +906,13 @@ def _render_chapter_cached(chapter, synth, sr, engine_id, resolve, cache_dir, le
     from services.watermark import mark_synthetic
 
     opts = opts or ExpressiveOptions()
+    from services.audio_dsp import pause_fill_mode
+
+    # One read per chapter render (#3611): the cache keys and every join use it.
+    pause_fill = pause_fill_mode()
     spans, wav_path, legacy_paths, content_id, inputs, seg_cache = _chapter_cache_inputs(
         chapter, sr, engine_id, resolve, cache_dir, lexicon,
-        language, opts, voice_map, cache_lease,
+        language, opts, voice_map, cache_lease, pause_fill=pause_fill,
     )
     for candidate in dict.fromkeys((wav_path, *legacy_paths)):
         if not os.path.exists(candidate):
@@ -931,7 +947,7 @@ def _render_chapter_cached(chapter, synth, sr, engine_id, resolve, cache_dir, le
     audio, dur = synthesize_chapter(spans, synth, sr, lexicon=lexicon,
                                     segment_cache=seg_cache, on_progress=on_progress,
                                     # the fill the cache keys were derived from
-                                    pause_fill=inputs.get("pause fill", "silence"),
+                                    pause_fill=pause_fill,
                                     **opts.join_kwargs())
     # Invisible provenance mark on the assembled chapter (#1169), tensor stage,
     # before the WAV lands in the cache — this single site covers every

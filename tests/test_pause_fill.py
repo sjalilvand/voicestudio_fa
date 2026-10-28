@@ -5,14 +5,19 @@ made the background cut out at every marker. Room tone fills the gap with
 noise shaped like the take's own quietest frames, with fades into the
 neighbouring lines, and falls back to silence when there is no usable floor.
 """
+import importlib
+
 import numpy as np
 import pytest
 import torch
 
-from services import audio_dsp
-from services.audio_dsp import fill_gaps
-
 SR = 24000
+
+
+def _dsp():
+    """``services.audio_dsp`` as the app sees it now (resolved per test, so a
+    module swapped in ``sys.modules`` by another test cannot go stale here)."""
+    return importlib.import_module("services.audio_dsp")
 
 
 def _take(seconds=1.0, floor_db=-53.0, seed=0):
@@ -35,7 +40,7 @@ def prefs_store(monkeypatch):
     from core import prefs
 
     store: dict = {}
-    monkeypatch.delenv(audio_dsp.PAUSE_FILL_ENV, raising=False)
+    monkeypatch.delenv(_dsp().PAUSE_FILL_ENV, raising=False)
     monkeypatch.setattr(prefs, "get", lambda key, default=None: store.get(key, default))
     monkeypatch.setattr(prefs, "set_", lambda key, value: store.__setitem__(key, value))
     return store
@@ -43,14 +48,14 @@ def prefs_store(monkeypatch):
 
 def test_silence_stays_the_default(prefs_store):
     a, b = _take(), _take(seed=1)
-    parts = fill_gaps([("a", a), ("s", 1200), ("a", b)], SR)
+    parts = _dsp().fill_gaps([("a", a), ("s", 1200), ("a", b)], SR)
     assert torch.equal(parts[0], a) and torch.equal(parts[2], b)
     assert parts[1].shape == (1, 1200) and not parts[1].any()
 
 
 def test_room_tone_sits_at_the_takes_floor(prefs_store):
-    prefs_store[audio_dsp.PAUSE_FILL_PREF] = "room_tone"
-    parts = fill_gaps([("a", _take()), ("s", SR), ("a", _take(seed=1))], SR)
+    prefs_store[_dsp().PAUSE_FILL_PREF] = "room_tone"
+    parts = _dsp().fill_gaps([("a", _take()), ("s", SR), ("a", _take(seed=1))], SR)
     gap = parts[1].numpy()
     assert gap.shape == (1, SR)
     assert not np.any(gap == 0.0)
@@ -59,7 +64,7 @@ def test_room_tone_sits_at_the_takes_floor(prefs_store):
 
 def test_room_tone_fades_into_the_neighbouring_lines():
     a, b = _take(), _take(seed=1)
-    parts = fill_gaps([("a", a), ("s", SR // 2), ("a", b)], SR, "room_tone")
+    parts = _dsp().fill_gaps([("a", a), ("s", SR // 2), ("a", b)], SR, "room_tone")
     fade = int(SR * 0.04)
     # Only the last / first 40 ms of the lines change; the callers' tensors are untouched.
     assert torch.equal(parts[0][..., :-fade], a[..., :-fade])
@@ -71,15 +76,15 @@ def test_room_tone_fades_into_the_neighbouring_lines():
 
 def test_room_tone_is_reproducible():
     items = [("a", _take()), ("s", 4000), ("a", _take(seed=1))]
-    first = fill_gaps(items, SR, "room_tone")
-    second = fill_gaps(items, SR, "room_tone")
+    first = _dsp().fill_gaps(items, SR, "room_tone")
+    second = _dsp().fill_gaps(items, SR, "room_tone")
     assert all(torch.equal(x, y) for x, y in zip(first, second))
 
 
 def test_no_usable_floor_falls_back_to_silence():
     clean = torch.zeros(1, SR)
     clean[0, : SR // 2] = 0.5  # loud, then digital silence: no quiet floor
-    parts = fill_gaps([("a", clean), ("s", 1000), ("a", clean)], SR, "room_tone")
+    parts = _dsp().fill_gaps([("a", clean), ("s", 1000), ("a", clean)], SR, "room_tone")
     assert not parts[1].any()
 
 
@@ -99,7 +104,7 @@ def test_render_with_pauses_uses_room_tone(prefs_store):
 def test_audiobook_line_and_paragraph_gaps_use_room_tone(prefs_store):
     from services.audiobook import Span, synthesize_chapter
 
-    prefs_store[audio_dsp.PAUSE_FILL_PREF] = "room_tone"
+    prefs_store[_dsp().PAUSE_FILL_PREF] = "room_tone"
     spans = [Span(voice_id=None, text="one", pause_ms_after=500),
              Span(voice_id=None, text="two", pause_ms_after=0)]
     audio, _dur = synthesize_chapter(spans, lambda text, voice, speed: _take(), SR)
@@ -108,12 +113,12 @@ def test_audiobook_line_and_paragraph_gaps_use_room_tone(prefs_store):
 
 
 def test_env_overrides_settings_and_bad_values_mean_silence(prefs_store, monkeypatch):
-    prefs_store[audio_dsp.PAUSE_FILL_PREF] = "room_tone"
-    assert audio_dsp.pause_fill_mode() == "room_tone"
-    monkeypatch.setenv(audio_dsp.PAUSE_FILL_ENV, "silence")
-    assert audio_dsp.pause_fill_mode() == "silence"
-    monkeypatch.setenv(audio_dsp.PAUSE_FILL_ENV, "pink-noise")
-    assert audio_dsp.pause_fill_mode() == "silence"
+    prefs_store[_dsp().PAUSE_FILL_PREF] = "room_tone"
+    assert _dsp().pause_fill_mode() == "room_tone"
+    monkeypatch.setenv(_dsp().PAUSE_FILL_ENV, "silence")
+    assert _dsp().pause_fill_mode() == "silence"
+    monkeypatch.setenv(_dsp().PAUSE_FILL_ENV, "pink-noise")
+    assert _dsp().pause_fill_mode() == "silence"
 
 
 def test_settings_route_round_trips(prefs_store):
@@ -146,7 +151,7 @@ def test_room_tone_gets_its_own_audiobook_cache_slot(prefs_store, tmp_path):
 
     silent = key("a")
     assert key("b") == silent
-    prefs_store[audio_dsp.PAUSE_FILL_PREF] = "room_tone"
+    prefs_store[_dsp().PAUSE_FILL_PREF] = "room_tone"
     assert key("c") != silent
 
 
@@ -159,7 +164,7 @@ def test_audiobook_render_uses_the_fill_its_cache_key_was_built_from(prefs_store
     real = router.synthesize_chapter
 
     def spy(*args, **kwargs):
-        prefs_store[audio_dsp.PAUSE_FILL_PREF] = "room_tone"  # user flips it now
+        prefs_store[_dsp().PAUSE_FILL_PREF] = "room_tone"  # user flips it now
         seen["fill"] = kwargs.get("pause_fill")
         return real(*args, **kwargs)
 
@@ -171,3 +176,30 @@ def test_audiobook_render_uses_the_fill_its_cache_key_was_built_from(prefs_store
         lambda vid: {"ref_audio": None, "ref_text": None, "instruct": None, "seed": None},
         str(tmp_path), None, None, None)
     assert seen["fill"] == "silence"
+
+
+def test_room_tone_rekeys_only_segments_with_paragraph_gaps(prefs_store, tmp_path):
+    """Pause fill changes a cached spoken segment only when that segment's own
+    paragraphs are joined with a gap; others stay reusable, and the default
+    keeps today's keys."""
+    from api.routers import audiobook as router
+    from services.audiobook import Chapter, ExpressiveOptions, Span
+
+    single = Span(voice_id=None, text="one paragraph", pause_ms_after=0)
+    double = Span(voice_id=None, text="first paragraph\n\nsecond paragraph", pause_ms_after=0)
+    resolve = lambda vid: {"ref_audio": None, "ref_text": None, "instruct": None, "seed": None}  # noqa: E731
+
+    def seg_paths(fill, opts):
+        ch = Chapter(title="C", spans=[single, double])
+        *_rest, seg_cache = router._chapter_cache_inputs(
+            ch, SR, "eng", resolve, str(tmp_path), None, None, opts, None, None, pause_fill=fill)
+        return seg_cache._path(single), seg_cache._path(double)
+
+    gaps = ExpressiveOptions(paragraph_gap_ms=400)
+    base = seg_paths("silence", gaps)
+    assert seg_paths("silence", gaps) == base
+    toned = seg_paths("room_tone", gaps)
+    assert toned[0] == base[0]  # no paragraph gap inside: reusable
+    assert toned[1] != base[1]  # its paragraph gap now holds room tone
+    plain = seg_paths("silence", None)
+    assert seg_paths("room_tone", None) == plain  # no paragraph gaps at all
