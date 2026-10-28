@@ -413,6 +413,7 @@ def _probe_device_outcome(binary: str) -> _ProbeOutcome:
             [binary, "--list-devices"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
             errors="replace",
             timeout=10,
             check=False,

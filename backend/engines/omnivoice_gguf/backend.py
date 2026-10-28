@@ -1050,6 +1050,7 @@ def _make_backend_class():
                     argv,
                     input=stdin_text,
                     text=True,
+                    encoding="utf-8",
                     errors="replace",
                     capture_output=True,
                     timeout=timeout_s,
