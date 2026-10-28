@@ -236,16 +236,17 @@ def test_automatic_endpoint_reaches_sidecar_without_token_or_parent_mutation(mon
     assert os.environ["HF_TOKEN"] == "hf_test_secret"
 
 
-@pytest.mark.parametrize("failure,changed,manual,gated,expected_restarts", [
-    ("Connection reset by peer", True, False, False, 1),
-    ("Connection reset by peer", False, False, False, 0),
-    ("Connection reset by peer", True, True, False, 0),
-    ("Connection reset by peer", True, False, True, 0),
-    ("CUDA out of memory", True, False, False, 0),
+@pytest.mark.parametrize("failure,changed,preselected,manual,gated,expected_restarts", [
+    ("Connection reset by peer", True, False, False, False, 1),
+    ("Connection reset by peer", False, False, False, False, 0),
+    ("Connection reset by peer", False, True, False, False, 1),
+    ("Connection reset by peer", True, False, True, False, 0),
+    ("Connection reset by peer", True, False, False, True, 0),
+    ("CUDA out of memory", True, False, False, False, 0),
 ])
 @pytest.mark.parametrize("retry_fails", [False, True])
 def test_live_sidecar_restarts_only_for_changed_automatic_download_endpoint(
-    monkeypatch, failure, changed, manual, gated, expected_restarts, retry_fails,
+    monkeypatch, failure, changed, preselected, manual, gated, expected_restarts, retry_fails,
 ):
     from services import endpoint_race, model_manager
     from types import SimpleNamespace
@@ -279,7 +280,13 @@ def test_live_sidecar_restarts_only_for_changed_automatic_download_endpoint(
         {"op": "error", "stage": "synthesize", "message": failure},
         {"op": "error", "stage": "synthesize", "message": failure} if retry_fails else {"op": "audio", "audio_pcm_b64": "AAA="},
     ])
-    monkeypatch.setattr(backend, "_recv_with_timeout", lambda timeout: next(replies))
+    def receive(timeout):
+        if preselected:
+            # Another download selected the official endpoint while this child
+            # was still using the mirror. No new global reselection is needed.
+            endpoint[0] = None
+        return next(replies)
+    monkeypatch.setattr(backend, "_recv_with_timeout", receive)
     try:
         if expected_restarts and not retry_fails:
             assert backend.generate("Hello").shape == (1, 1)

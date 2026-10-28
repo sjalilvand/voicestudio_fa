@@ -121,6 +121,15 @@ final class PhoneScreenshotTour: XCTestCase {
     @MainActor private func capture(_ name: String,_ app: XCUIApplication) {
         let attachment = XCTAttachment(screenshot: app.screenshot()); attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
     }
+    @MainActor private func closeSheet(_ title: String, _ app: XCUIApplication) {
+        let picker = app.navigationBars[title]
+        let close = picker.buttons["Close"]
+        XCTAssertTrue(close.wait(for: \.isHittable, toEqual: true, timeout: 5))
+        close.tap()
+        // The Settings rows remain in the hierarchy behind the native sheet.
+        // Its disappearance, rather than a row's existence, marks dismissal.
+        XCTAssertTrue(picker.waitForNonExistence(timeout: 5))
+    }
     @MainActor func testPhoneFirstScreens() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-smoke","-AppleLanguages","(en)"]
         app.launch(); XCTAssertTrue(app.buttons["consent.no"].waitForExistence(timeout: 10)); XCTAssertTrue(app.staticTexts["This companion app records your choice on this phone. It sends no analytics."].exists); capture("Consent",app); app.buttons["consent.no"].tap(); capture("Home",app); app.openSpeak()
@@ -131,10 +140,16 @@ final class PhoneScreenshotTour: XCTestCase {
         app.tabButton("Dictate").tap(); capture("Dictate-phone",app)
         app.tabButton("Settings").tap(); capture("Settings",app)
         app.buttons["settings.palette.light"].tap()
-        XCTAssertTrue(app.buttons["choice.option.default"].waitForExistence(timeout: 5)); capture("Palette-picker",app); app.buttons["Close"].tap()
-        app.buttons["Language"].tap(); capture("Language-picker",app); app.buttons["Close"].tap()
-        app.buttons["Models"].tap(); capture("Models",app)
-        app.buttons["model.licence.kitten-mini-en-fp16"].tap(); capture("Model-terms",app); app.buttons["Close"].tap()
+        XCTAssertTrue(app.buttons["choice.option.default"].waitForExistence(timeout: 5)); capture("Palette-picker",app); closeSheet("Light palette",app)
+        let language = app.buttons["settings.language"]
+        app.reveal(language)
+        XCTAssertTrue(language.wait(for: \.isHittable, toEqual: true, timeout: 5))
+        language.tap(); capture("Language-picker",app); closeSheet("Language",app)
+        let models = app.buttons["Models"]
+        app.reveal(models)
+        XCTAssertTrue(models.wait(for: \.isHittable, toEqual: true, timeout: 5))
+        models.tap(); capture("Models",app)
+        app.buttons["model.licence.kitten-mini-en-fp16"].tap(); capture("Model-terms",app); closeSheet("Review model licence",app)
         let adaptiveBack = app.buttons["BackButton"]
         if adaptiveBack.exists { adaptiveBack.tap() } else { app.navigationBars.buttons.firstMatch.tap() }
         XCTAssertTrue(app.buttons["settings.connect"].waitForExistence(timeout: 5))

@@ -103,6 +103,58 @@ def test_probe_allows_only_shipped_https_origins(er, endpoint):
     assert er._is_allowed_probe_endpoint(endpoint) is True
 
 
+@pytest.mark.parametrize("name", ["ConnectTimeout", "ReadTimeout", "WriteTimeout", "PoolTimeout"])
+def test_classify_httpx_probe_timeout(er, name):
+    import httpx
+    assert er._classify_probe_error(getattr(httpx, name)("probe timed out")) == "timeout"
+
+
+@pytest.mark.parametrize("link", ["__cause__", "__context__", "reason"])
+@pytest.mark.parametrize("failure", ["dns", "tls", "refused"])
+def test_classify_httpx_probe_transport_chain(er, link, failure):
+    import httpx
+    import socket
+    import ssl
+    leaf = {
+        "dns": socket.gaierror(-2, "name not known"),
+        "tls": ssl.SSLError("certificate verification failed"),
+        "refused": ConnectionRefusedError("connection refused"),
+    }[failure]
+    middle = RuntimeError("transport wrapper")
+    setattr(middle, link, leaf)
+    error = httpx.ConnectError("connection failed")
+    error.__cause__ = middle
+    assert er._classify_probe_error(error) == failure
+
+
+@pytest.mark.parametrize("failure", ["dns", "tls", "refused", "timeout"])
+def test_classify_stdlib_probe_reason_still_supported(er, failure):
+    import socket
+    import ssl
+    import urllib.error
+    reason = {
+        "dns": socket.gaierror(-2, "name not known"),
+        "tls": ssl.SSLError("certificate verification failed"),
+        "refused": ConnectionRefusedError("connection refused"),
+        "timeout": TimeoutError("timed out"),
+    }[failure]
+    assert er._classify_probe_error(urllib.error.URLError(reason)) == failure
+
+
+@pytest.mark.parametrize("with_reason", [False, True])
+def test_classify_probe_error_chain_cycles(er, with_reason):
+    import httpx
+    import ssl
+    error = httpx.ConnectError("connection failed")
+    middle = RuntimeError("transport wrapper")
+    error.__cause__ = error
+    error.__context__ = middle
+    middle.__cause__ = error
+    if with_reason:
+        middle.reason = ssl.SSLError("certificate verification failed")
+    assert er._classify_probe_error(error) == ("tls" if with_reason else "unreachable")
+
+
 def test_old_root_probe_decision_is_revalidated(er):
     from core import prefs
     prefs.set_("hf_endpoint_auto", {"endpoint": er.COMMUNITY_MIRROR,

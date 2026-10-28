@@ -31,6 +31,7 @@ from typing import Any, Optional
 _RESULT = struct.Struct("!i")
 _DESKTOP_MARKER = "OMNIVOICE_DESKTOP_CONTAINED"
 _DRAIN_FD_ENV = "OMNIVOICE_DESKTOP_DRAIN_FD"
+_GROUP_EXIT_OBSERVATION_S = 0.1
 
 
 def backend_drain_fd(*, required: bool = False) -> Optional[int]:
@@ -184,15 +185,23 @@ class OwnedPopen:
             # pipe made the supervisor kill its group after our live-child
             # probe. Suppress only a proven exit of this exact owned leader;
             # permission errors for a still-live group remain fatal.
-            try:
-                if hasattr(os, "waitid"):
-                    if self._posix_exited_unreaped():
+            # Darwin can reject signals just before waitpid publishes the
+            # supervisor's SIGKILL exit. Briefly observe this exact child;
+            # never resend a signal or accept a leader that remains live.
+            deadline = time.monotonic() + _GROUP_EXIT_OBSERVATION_S
+            while True:
+                try:
+                    if hasattr(os, "waitid"):
+                        if self._posix_exited_unreaped():
+                            return
+                    elif self._posix_exited_reaping() is not None:
                         return
-                elif self._posix_exited_reaping() is not None:
-                    return
-            except ChildProcessError:
-                return  # A foreign reap also forbids signalling this number.
-            raise
+                except ChildProcessError:
+                    return  # A foreign reap also forbids signalling this number.
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise
+                time.sleep(min(0.005, remaining))
 
     def poll(self) -> Optional[int]:
         with self._lock:

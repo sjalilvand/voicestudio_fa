@@ -187,6 +187,10 @@ profile in the browser. Dub is one big source card with an animated vector mark
 (`DubGlyph`, static under Reduce Motion), language and voice tiles, a consent row and live
 job cards. The bottom dock is icon-only; tab names remain accessibility labels.
 
+The phone screenshot tour scopes Close to each native sheet and waits for the
+sheet to disappear before interacting with the underlying screen. Settings rows
+can remain in the accessibility hierarchy while a picker still covers them.
+
 ## Live previews
 
 `App/Previews.swift` (debug builds only) adds Xcode canvas previews for Home, Dub (dark, light and large

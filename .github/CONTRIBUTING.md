@@ -308,6 +308,10 @@ starting their short test deadline, and join released workers during cleanup.
 Cover delayed startup separately so runner scheduling does not masquerade as a
 native-call timeout or leak work into later tests.
 
+Shared React tests await `cleanupReact()` before resetting persistence and
+disposing JSDOM. Keep deferred focus restoration in that same realm; advance
+only the current fake-timer tick rather than flushing unrelated future timers.
+
 ```bash
 # Run the backend suites CI runs (kept separate: backend/tests is isolated)
 uv run pytest tests/ -q

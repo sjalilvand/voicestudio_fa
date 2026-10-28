@@ -120,19 +120,36 @@ def _classify_probe_error(exc: Exception) -> str:
     import socket
     import ssl
 
-    if isinstance(exc, (socket.timeout, TimeoutError)):
-        return "timeout"
-    if isinstance(exc, ssl.SSLError):
-        return "tls"
-    reason = getattr(exc, "reason", None)
-    if isinstance(reason, socket.gaierror):
-        return "dns"
-    if isinstance(reason, (socket.timeout, TimeoutError)):
-        return "timeout"
-    if isinstance(reason, ssl.SSLError):
-        return "tls"
-    if isinstance(exc, ConnectionRefusedError) or isinstance(reason, ConnectionRefusedError):
-        return "refused"
+    timeout_types = (socket.timeout, TimeoutError)
+    try:
+        from httpx import TimeoutException
+    except ImportError:
+        pass  # Still classify stdlib failures in a partial installation.
+    else:
+        timeout_types += (TimeoutException,)
+    pending, seen = [exc], set()
+    while pending:
+        current = pending.pop()
+        if not isinstance(current, BaseException) or id(current) in seen:
+            continue
+        seen.add(id(current))
+        if isinstance(current, timeout_types):
+            return "timeout"
+        if isinstance(current, ssl.SSLError):
+            return "tls"
+        reason = getattr(current, "reason", None)
+        if isinstance(current, socket.gaierror) or isinstance(reason, socket.gaierror):
+            return "dns"
+        if isinstance(reason, timeout_types):
+            return "timeout"
+        if isinstance(reason, ssl.SSLError):
+            return "tls"
+        if isinstance(current, ConnectionRefusedError) or isinstance(reason, ConnectionRefusedError):
+            return "refused"
+        # HTTPX/httpcore wrap native transport failures in exception chains;
+        # urllib uses reason. Traverse all links and refuse cycles.
+        pending.extend((getattr(current, "__context__", None),
+                        getattr(current, "__cause__", None), reason))
     return "unreachable"
 
 

@@ -1498,7 +1498,7 @@ information when reporting them. The name identifies the failure category, not
 its cause: it does not by itself prove a driver, model, or memory problem.
 
 On macOS, stopping a timed-out engine or installer operation can race with its
-supervisor exiting. VoiceStudio rechecks that exact owned supervisor before
+supervisor exiting. VoiceStudio briefly rechecks that exact owned supervisor before
 treating a process-group permission error as already-completed cleanup;
 permission failures for a live operation still surface as errors.
 
