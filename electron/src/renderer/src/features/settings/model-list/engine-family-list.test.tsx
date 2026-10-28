@@ -92,10 +92,10 @@ function serve() {
   });
 }
 
-function renderList() {
+function renderList(family: 'tts' | 'asr' = 'tts') {
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <EngineFamilyList family="tts" />
+      <EngineFamilyList family={family} />
     </QueryClientProvider>,
   );
 }
@@ -219,3 +219,110 @@ it('reports a failed model catalogue with a retry instead of hiding downloads', 
   expect(await screen.findByText('Error: catalogue down')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'backend.retry' })).toBeInTheDocument();
 });
+
+// Mirrors the owned guidance returned by ASR list_backends(), not a raw probe error.
+const nemoInstallHint =
+  "No safe install path in this app yet — nemo_toolkit's ASR extras pin " +
+  "transformers>=4.57,<4.58, which conflicts with VoiceStudio's own " +
+  'transformers>=5.3 requirement and WILL break the backend ' +
+  '(ImportError on startup) if installed into this shared venv. Do NOT ' +
+  'install nemo_toolkit here. If you want to try Parakeet TDT, set it ' +
+  'up in a separate/dedicated Python environment — not the one ' +
+  'VoiceStudio manages; in-app isolation for this engine is tracked ' +
+  'separately.';
+
+it.each([
+  ['nemo-parakeet', 'Parakeet TDT (NVIDIA NeMo)', nemoInstallHint],
+  [
+    'moonshine',
+    'Moonshine',
+    'uv pip install moonshine-onnx  (or moonshine-voice; edge/CPU-optimized ASR)',
+  ],
+  ['funasr', 'FunASR', 'pip install funasr  (SenseVoiceSmall + FSMN-VAD; CUDA or CPU)'],
+])(
+  'shows owned setup guidance for unavailable ASR %s without inventing an installer',
+  async (id, name, hint) => {
+    serve();
+    const fallback = mock.api.getMockImplementation()!;
+    mock.api.mockImplementation((path: string, ...rest: unknown[]) => {
+      if (path === '/engines')
+        return Promise.resolve({
+          asr: {
+            active: 'faster-whisper',
+            backends: [
+              {
+                id,
+                display_name: name,
+                available: false,
+                reason:
+                  "This engine's package isn't installed yet. Install it from Model Catalogue.",
+                install_hint: hint,
+              },
+            ],
+          },
+        });
+      if (path === '/models')
+        return Promise.resolve({
+          models: ['v3', 'v2'].map((version) => ({
+            ...base,
+            role: 'ASR',
+            repo_id: `nvidia/parakeet-tdt-0.6b-${version}`,
+            label: `Parakeet ${version}`,
+            engines: [id],
+          })),
+        });
+      return fallback(path, ...rest);
+    });
+    renderList('asr');
+    fireEvent.click(await screen.findByRole('button', { name }));
+    expect(screen.getByText(hint.replace(/\s+/g, ' '))).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'modelMaintenance.download' })).toHaveLength(2);
+    expect(
+      screen.queryByRole('button', { name: 'modelMaintenance.install' }),
+    ).not.toBeInTheDocument();
+  },
+);
+
+it.each([
+  { setup_snippet: 'uv sync --extra whisperx' },
+  { docs_url: 'https://github.com/debpalash/VoiceStudio/blob/main/docs/engines/whisperx.md' },
+  { local_install_required: true },
+])(
+  'preserves existing setup guidance instead of replacing it with an install hint: %o',
+  async (guidance) => {
+    serve();
+    const fallback = mock.api.getMockImplementation()!;
+    mock.api.mockImplementation((path: string, ...rest: unknown[]) => {
+      if (path === '/engines')
+        return Promise.resolve({
+          asr: {
+            active: 'faster-whisper',
+            backends: [
+              {
+                id: 'whisperx',
+                display_name: 'WhisperX',
+                available: false,
+                reason: 'Needs setup',
+                install_hint: 'Do not replace existing guidance',
+                ...guidance,
+              },
+            ],
+          },
+        });
+      return fallback(path, ...rest);
+    });
+    renderList('asr');
+    const toggle = await screen.findByRole('button', { name: 'WhisperX' });
+    if (toggle.getAttribute('aria-expanded') === 'false') fireEvent.click(toggle);
+    expect(screen.queryByText('Do not replace existing guidance')).not.toBeInTheDocument();
+    if (guidance.setup_snippet)
+      expect(screen.getByText(guidance.setup_snippet)).toBeInTheDocument();
+    if (guidance.docs_url)
+      expect(screen.getByRole('link', { name: 'common.learn_more' })).toHaveAttribute(
+        'href',
+        guidance.docs_url,
+      );
+    if ('local_install_required' in guidance)
+      expect(screen.getAllByText('engines.localInstallRequired').length).toBeGreaterThan(0);
+  },
+);
