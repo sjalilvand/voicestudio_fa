@@ -125,18 +125,7 @@ export default function Projects({
   const [filter, setFilter] = useState('all');
   const [query, setQuery] = useState('');
   const [view, setView] = useState('grid'); // grid | list
-  const { t } = useTranslation();
-
-  const FILTERS = [
-    { id: 'all', label: t('projects.all'), Icon: FolderOpen },
-    { id: 'dubs', label: t('projects.dub_projects'), Icon: Film },
-    { id: 'stories', label: t('projects.stories'), Icon: BookOpen },
-    { id: 'profiles', label: t('projects.voice_profiles'), Icon: Fingerprint },
-    { id: 'transcripts', label: t('projects.transcripts'), Icon: Mic },
-    { id: 'audiobooks', label: t('projects.audiobooks'), Icon: BookMarked },
-    { id: 'history', label: t('projects.history'), Icon: Music },
-    { id: 'exports', label: t('projects.exports'), Icon: Download },
-  ];
+  // CLEAN-ROOM (spec W11-residue §E14): translation hook and FILTERS list
 
   // Finished Audiobook + Story renders (server-side longform library).
   const [longformJobs, setLongformJobs] = useState([]);
@@ -262,22 +251,7 @@ export default function Projects({
         onClick: () => j.output && playRenderInApp(audioUrl(j.output), j.title || j.output),
       });
     }
-    for (const tr of transcriptions) {
-      list.push({
-        type: 'transcripts',
-        id: tr.id || String(Math.random()),
-        title: (tr.text || t('projects.transcription')).slice(0, 120),
-        subtitle: [tr.language, tr.duration_s ? `${Math.round(tr.duration_s)}s` : '']
-          .filter(Boolean)
-          .join(' · '),
-        ts: toMillis(tr.timestamp) ?? 0,
-        accent: '#83a598',
-        Icon: FileText,
-        onClick: () => {
-          copyText(tr.text || '');
-        },
-      });
-    }
+    // CLEAN-ROOM (spec W11-residue §E14): one list item per saved transcription
     list.sort((a, b) => (b.ts || 0) - (a.ts || 0));
     return list;
   }, [

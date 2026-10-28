@@ -311,35 +311,7 @@ it('explains unsupported Windows proxy bypass rules before retrying setup', () =
   );
 });
 
-const RELEASES_URL = 'https://github.com/debpalash/VoiceStudio/releases/latest';
-it('sends Apple Silicon users on the Intel build to the arm64 download (#2598)', () => {
-  backendStatus.setupIssue = 'wrong_architecture';
-  render(
-    <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-    >
-      <BackendGate>
-        <div>workspace</div>
-      </BackendGate>
-    </QueryClientProvider>,
-  );
-
-  expect(screen.getByText(i18n.t('backend.setup_wrong_architecture'))).toBeVisible();
-  expect(
-    screen.getByRole('link', {
-      name: i18n.t('backend.download_apple_silicon'),
-    }),
-  ).toHaveAttribute('href', RELEASES_URL);
-  expect(
-    screen.queryByRole('button', { name: i18n.t('backend.setup_required') }),
-  ).not.toBeInTheDocument();
-  expect(screen.queryByText(i18n.t('backend.setup_unsupported_platform'))).not.toBeInTheDocument();
-  expect(
-    screen.getByRole('textbox', {
-      name: i18n.t('settings.remote_backend_url'),
-    }),
-  ).toBeVisible();
-});
+// CLEAN-ROOM (spec W11-residue §T41): releases URL constant and the wrong-architecture (#2598) test
 
 it('shows a populated, usable reconnect form for an expired remote session while queries are paused', async () => {
   backendStatus.message =

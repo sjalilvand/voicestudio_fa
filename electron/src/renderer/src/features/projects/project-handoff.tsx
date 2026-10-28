@@ -1,7 +1,5 @@
 import { useRef, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
+// CLEAN-ROOM (spec W11-residue §E30): imports: react-query hooks, useTranslation, Button
 import {
   Dialog,
   DialogContent,

@@ -48,18 +48,7 @@ it('watches main and preload changes so renderer updates cannot leave stale brow
 });
 
 describe('built-app launches (bun run start / preview)', () => {
-  it('runs every Electron-launching package script through the resolving launcher', () => {
-    // electron-vite reads node_modules/electron/path.txt itself and throws
-    // "Electron uninstall" until the lazily downloaded binary is resolved.
-    const { scripts } = JSON.parse(
-      readFileSync(resolve(__dirname, '../../package.json'), 'utf8'),
-    ) as { scripts: Record<string, string> };
-    for (const [name, command] of Object.entries(scripts)) {
-      expect(command, name).not.toMatch(/electron-vite\s+(dev|preview)\b/);
-    }
-    expect(scripts.start).toBe('node scripts/dev.mjs preview');
-    expect(scripts.preview).toBe('node scripts/dev.mjs preview');
-  });
+// CLEAN-ROOM (spec W11-residue §T44): test that every Electron-launching package script goes through the resolving launcher
 
   it('previews the built app with a resolved binary and without watching', () => {
     const spawn = vi.fn(() => ({ on: vi.fn() }));

@@ -38,19 +38,7 @@ def test_faster_whisper_decodes_windows_independently(monkeypatch):
     assert fake.kwargs["language"] == "de"
 
 
-def test_mlx_whisper_decodes_windows_independently(monkeypatch):
-    from services import asr_backend as ab
-
-    captured = {}
-
-    def fake_transcribe(_audio, **kwargs):
-        captured.update(kwargs)
-        return {"text": "hello", "segments": [], "language": "en"}
-
-    monkeypatch.setitem(sys.modules, "mlx_whisper", types.SimpleNamespace(transcribe=fake_transcribe))
-    monkeypatch.setattr(ab, "_decode_audio_16k_mono", lambda _p: [0.0])
-    ab.MLXWhisperBackend().transcribe("clip.wav", word_timestamps=False)
-    assert captured["condition_on_previous_text"] is False
+# CLEAN-ROOM (spec W11-residue §T22): test that MLX Whisper decodes windows independently
 
 
 def test_isolated_sidecar_decodes_windows_independently(monkeypatch):

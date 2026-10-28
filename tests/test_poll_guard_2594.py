@@ -19,19 +19,7 @@ import sys
 import threading
 import time
 
-import pytest
-
-sys.path.insert(
-    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backend")
-)
-
-
-@pytest.fixture()
-def PollGuard():
-    # Imported at run time so collecting this file never imports backend code.
-    from core.poll_guard import PollGuard as guard_cls
-
-    return guard_cls
+# CLEAN-ROOM (spec W11-residue §T16): pytest import, backend sys.path setup and the PollGuard fixture
 
 
 def test_status_poll_routes_and_admin_gate_never_use_the_worker_pool():

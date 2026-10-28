@@ -40,22 +40,4 @@ it('shows the Windows ROCm torch source as AMD, not the Linux PyTorch index', as
   }
 });
 
-it('reports ROCm on Windows ARM64 as not ready instead of rejecting', async () => {
-  const { runtimeDependenciesReady } = await import('./runtime-project');
-  const platform = Object.getOwnPropertyDescriptor(process, 'platform')!;
-  const arch = Object.getOwnPropertyDescriptor(process, 'arch')!;
-  const previous = process.env.OMNIVOICE_TORCH_VARIANT;
-  Object.defineProperty(process, 'platform', { value: 'win32' });
-  Object.defineProperty(process, 'arch', { value: 'arm64' });
-  process.env.OMNIVOICE_TORCH_VARIANT = 'rocm';
-  try {
-    const reasons: string[] = [];
-    await expect(runtimeDependenciesReady(tmpdir(), (r) => reasons.push(r))).resolves.toBe(false);
-    expect(reasons.join()).toMatch(/x64/);
-  } finally {
-    Object.defineProperty(process, 'platform', platform);
-    Object.defineProperty(process, 'arch', arch);
-    if (previous === undefined) delete process.env.OMNIVOICE_TORCH_VARIANT;
-    else process.env.OMNIVOICE_TORCH_VARIANT = previous;
-  }
-});
+// CLEAN-ROOM (spec W11-residue §T23): test that ROCm on Windows ARM64 is reported not ready instead of rejecting

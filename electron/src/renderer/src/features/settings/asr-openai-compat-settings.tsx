@@ -1,8 +1,6 @@
 import { CheckCircle2Icon, LoaderCircleIcon, MicIcon, PlugIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
+// CLEAN-ROOM (spec W11-residue §E31): imports: react-query hooks, useTranslation, Button
 import { Input } from '@/components/ui/input';
 import { apiJson, describeError } from '@/lib/api/client';
 import { queryKeys } from '@/lib/query';

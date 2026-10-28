@@ -1,28 +1,10 @@
 <div align="center">
   <img src="../../docs/logo.png" alt="VoiceStudio" width="88" />
-  <h1>VoiceStudio</h1>
-  <p>
-    <a href="https://trendshift.io/repositories/28176?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-28176" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/28176" alt="Позиция VoiceStudio на Trendshift" width="220" height="48" /></a>
-  </p>
+  <!-- CLEAN-ROOM (spec W11-residue §D2): project title heading and Trendshift ranking badge -->
   <p><strong>Локальная голосовая студия: клонирование и создание голосов, дубляж, диктовка, расшифровка и озвучка на 646 языках.</strong><br />
   Работает на вашем компьютере и телефоне. Без аккаунтов и API-ключей; без вашего согласия ничего не покидает устройство.</p>
-  <p>
-    <a href="https://voicestudio.sh/?utm_source=github&utm_medium=readme&utm_campaign=project">Веб-сайт</a> ·
-    <a href="https://github.com/debpalash/VoiceStudio/releases/latest">Загрузки</a> ·
-    <a href="#быстрый-старт">Быстрый старт</a> ·
-    <a href="#справка">Справка</a> ·
-    <a href="https://discord.gg/bzQavDfVV9">Discord</a> ·
-    <a href="../../README.md">English</a> ·
-    <a href="README_CN.md">简体中文</a> ·
-    <a href="README_JA.md">日本語</a> ·
-    <a href="README_KO.md">한국어</a>
-  </p>
-  <p>
-    <a href="https://github.com/debpalash/VoiceStudio/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/debpalash/VoiceStudio/ci.yml?branch=main" alt="CI" /></a>
-    <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/github/v/release/debpalash/VoiceStudio" alt="Актуальная версия" /></a>
-    <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="AGPL-3.0" /></a>
-    <a href="https://supermetry.com"><img src="https://app.supermetry.com/px/zfjiv7psp4ed.svg?c=VoiceStudio&style=stats" alt="Счётчик посещений" /></a>
-  </p>
+  <!-- CLEAN-ROOM (spec W11-residue §D3): language switcher / quick-links paragraph -->
+  <!-- CLEAN-ROOM (spec W11-residue §D4): status badge row (CI, latest release, licence, views) -->
   <p>
     <sub>Стратегический спонсор</sub><br />
     <a href="https://supermetry.com/?utm_source=voicestudio&utm_medium=sponsor&utm_campaign=strategic-sponsor&utm_content=readme-logo"><picture><source media="(prefers-color-scheme: dark)" srcset="../../docs/sponsors/supermetry-dark.svg" /><img src="../../docs/sponsors/supermetry.svg" alt="Supermetry" height="48" /></picture></a>

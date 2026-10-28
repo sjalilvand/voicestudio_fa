@@ -274,22 +274,7 @@ class _TextExtractor(HTMLParser):
         return "\n".join(out).strip()
 
 
-def _html_to_title_body(xhtml: str) -> tuple[str, str]:
-    _types, title, body = _html_extract(xhtml)
-    return title, body
-
-
-def _html_extract(xhtml: str) -> tuple[set[str], str, str]:
-    p = _TextExtractor()
-    try:
-        p.feed(xhtml)
-    except Exception:
-        logger.warning("HTML parsing failed for EPUB entry; using partial text", exc_info=True)
-    body = p.text()
-    body_lines = body.splitlines()
-    if p.title and body_lines and body_lines[0] == p.title:
-        body = "\n".join(body_lines[1:]).lstrip("\n")
-    return p.epub_types, p.title, body
+# CLEAN-ROOM (spec W11-residue §B13): _html_to_title_body(xhtml); then (§B14) _html_extract(xhtml)
 
 
 _OPF_NS = {"opf": "http://www.idpf.org/2007/opf", "c": "urn:oasis:names:tc:opendocument:xmlns:container"}
@@ -327,12 +312,7 @@ _BODY_TYPES = {
     "bodymatter", "chapter", "part", "prologue", "epilogue", "introduction",
     "preface", "foreword", "volume",
 }
-_ANCILLARY_TYPES = {
-    "frontmatter", "backmatter", "cover", "titlepage", "halftitlepage",
-    "copyright-page", "toc", "landmarks", "dedication", "acknowledgments",
-    "imprint", "colophon", "contributors", "other-credits", "epigraph", "loi",
-    "lot", "index", "glossary", "bibliography", "appendix",
-}
+# CLEAN-ROOM (spec W11-residue §B15): _ANCILLARY_TYPES set of EPUB structural types treated as non-narrated
 _ANCILLARY_TITLE_RE = re.compile(
     r"^(?:"
     r"cover|half[ -]?title|title[ -]?page|copyright|dedication|contents|"

@@ -17,16 +17,7 @@ vi.mock('../api/generate', () => ({
 }));
 vi.mock('../utils/media', () => ({ playBlobAudio: doubles.play }));
 vi.mock('../utils/playback', () => ({ stopActivePlayback: doubles.stop }));
-vi.mock('../utils/dialog', () => ({ askConfirm: doubles.confirm }));
-vi.mock('../api/hooks', () => ({ useArchetypes: vi.fn(() => ({ data: undefined })) }));
-vi.mock('../api/archetypes', () => ({ useArchetypeAsProfile: vi.fn() }));
-
-import StoriesEditor from '../components/StoriesEditor';
-import { useAppStore } from '../store';
-
-const castFixture = [
-  { id: 'reader', name: 'Reader', color: '#56789a', profileId: 'profile-reader' },
-];
+// CLEAN-ROOM (spec W11-residue §T30): dialog/hooks/archetypes mocks, StoriesEditor/store imports and castFixture
 
 function storyFixture() {
   return [

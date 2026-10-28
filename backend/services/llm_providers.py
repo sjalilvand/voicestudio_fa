@@ -83,17 +83,7 @@ _PROVIDERS: tuple[Provider, ...] = (
              model_env="OPENROUTER_MODEL",
              signup_url="https://openrouter.ai/keys",
              notes="One key, hundreds of models incl. free tiers."),
-    Provider("orcarouter", "OrcaRouter", "https://api.orcarouter.ai/v1",
-             "openai/gpt-5.5", key_envs=("ORCAROUTER_API_KEY",),
-             base_url_env="ORCAROUTER_BASE_URL", model_env="ORCAROUTER_MODEL",
-             signup_url="https://www.orcarouter.ai"),
-    Provider("cheaperinference", "Cheaper Inference",
-             "https://api.cheaperinference.com/v1", "gpt-5.4-mini",
-             key_envs=("CHEAPER_INFERENCE_API_KEY",),
-             base_url_env="CHEAPER_INFERENCE_BASE_URL",
-             model_env="CHEAPER_INFERENCE_MODEL",
-             signup_url="https://cheaperinference.com/signup",
-             notes="One gateway for models from multiple AI labs."),
+    # CLEAN-ROOM (spec W11-residue §B4): OrcaRouter provider entry; then (§B5) Cheaper Inference provider entry
     # No base_url_env: Opper's own SDKs read OPPER_BASE_URL as the API root,
     # not this OpenAI-compatible path. The URL can still be changed in Settings.
     Provider("opper", "Opper", "https://api.opper.ai/v3/compat",

@@ -17,12 +17,7 @@ export interface RenderedChapter {
 export function isChapterLine(text: string): boolean;
 export function chapterTitle(text: string): string;
 export function formatTimecode(sec: number): string;
-export function buildCueSheet(cues: Cue[] | null | undefined): string;
-export function cueSheetFilename(output: string | null | undefined): string;
-export function cuesFromChapters(
-  chapters: readonly RenderedChapter[] | null | undefined,
-  fallbackTitle?: (n: number) => string,
-): Cue[];
+// CLEAN-ROOM (spec W11-residue §E8): buildCueSheet, cueSheetFilename, cuesFromChapters declarations
 export function exportStoryAudio<T extends Track>(
   tracks: T[],
   resolve: (track: T) => { profileId: string | null; speed: number | null },

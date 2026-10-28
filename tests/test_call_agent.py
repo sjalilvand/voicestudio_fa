@@ -156,19 +156,7 @@ def _configure(enabled=True, **settings):
     M.config.save_call_settings(M.config.CallSettings(**{**base.as_dict(), **settings}))
 
 
-@pytest.fixture()
-def api(fakes):
-    from fastapi.testclient import TestClient
-    from main import app
-
-    return TestClient(app, client=("127.0.0.1", 50000))
-
-
-@pytest.fixture()
-def gw(mods):
-    from fastapi.testclient import TestClient
-
-    return TestClient(M.router.build_gateway_app())
+# CLEAN-ROOM (spec W11-residue §T42): api and gw TestClient fixtures
 
 
 def _signed_post(client, path, query, params):

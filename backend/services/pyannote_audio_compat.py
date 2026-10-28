@@ -45,82 +45,13 @@ def _legacy_encoding(container: str, subtype: str) -> str:
     return "UNKNOWN"
 
 
-def _soundfile_info(uri, format=None, buffer_size=4096, backend=None):
-    del format, buffer_size
-    if backend not in (None, "soundfile"):
-        raise ValueError(f"Audio metadata backend {backend!r} is not supported by this adapter")
-
-    import soundfile
-
-    details = soundfile.info(uri)
-    subtype = details.subtype or ""
-    return AudioMetaData(
-        int(details.samplerate),
-        int(details.frames),
-        int(details.channels),
-        _sample_width(subtype),
-        _legacy_encoding(details.format or "", subtype),
-    )
+# CLEAN-ROOM (spec W11-residue §B1): soundfile-backed replacement for torchaudio.info (_soundfile_info)
 
 
-def _soundfile_load(
-    uri,
-    frame_offset=0,
-    num_frames=-1,
-    normalize=True,
-    channels_first=True,
-    format=None,
-    buffer_size=4096,
-    backend=None,
-):
-    del format, buffer_size
-    if backend not in (None, "soundfile"):
-        raise ValueError(f"Audio decoding backend {backend!r} is not supported by this adapter")
-    if not isinstance(frame_offset, Integral) or frame_offset < 0:
-        raise ValueError("frame_offset must be a non-negative integer")
-    if not isinstance(num_frames, Integral) or num_frames < -1:
-        raise ValueError("num_frames must be -1 or a non-negative integer")
-
-    import soundfile
-    import torch
-
-    with soundfile.SoundFile(uri) as stream:
-        subtype = stream.subtype or ""
-        native_wav = stream.format == "WAV" and not normalize
-        if native_wav:
-            dtype_by_subtype = {
-                "PCM_16": "int16",
-                "PCM_24": "int32",
-                "PCM_32": "int32",
-                "FLOAT": "float32",
-                "DOUBLE": "float64",
-                "PCM_U8": "int16",
-            }
-            try:
-                read_dtype = dtype_by_subtype[subtype]
-            except KeyError as exc:
-                raise ValueError(f"Unnormalized WAV subtype {subtype!r} is not supported") from exc
-        else:
-            read_dtype = "float32"
-
-        start = min(int(frame_offset), int(stream.frames))
-        if stream.seekable() or start:
-            stream.seek(start)
-        remaining = int(stream.frames) - start
-        count = remaining if num_frames == -1 else min(int(num_frames), remaining)
-        samples = stream.read(frames=count, dtype=read_dtype, always_2d=True)
-        sample_rate = int(stream.samplerate)
-
-    waveform = torch.from_numpy(samples)
-    if native_wav and subtype == "PCM_U8":
-        waveform = ((waveform.to(torch.int32) >> 8) + 128).to(torch.uint8)
-    if channels_first:
-        waveform = waveform.transpose(0, 1)
-    return waveform, sample_rate
+# CLEAN-ROOM (spec W11-residue §B2): soundfile-backed loader used for backend="soundfile" (_soundfile_load)
 
 
-def _backends():
-    return ["soundfile"]
+# CLEAN-ROOM (spec W11-residue §B3): replacement for torchaudio.list_audio_backends (_backends)
 
 
 def ensure_pyannote_audio_compat() -> bool:

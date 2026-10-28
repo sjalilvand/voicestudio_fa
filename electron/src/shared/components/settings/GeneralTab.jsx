@@ -34,13 +34,7 @@ export default function GeneralTab() {
         title={t('settings.language')}
         subtitle={t('settings.language_desc')}
         control={
-          <Select size="sm" value={locale} onChange={handleLocaleChange}>
-            {LANGUAGES.map((l) => (
-              <option key={l.code} value={l.code}>
-                {l.label}
-              </option>
-            ))}
-          </Select>
+          null /* CLEAN-ROOM (spec W11-residue §E20): UI language select */
         }
       />
 

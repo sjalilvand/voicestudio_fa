@@ -6,25 +6,7 @@ from pathlib import Path
 import pytest
 
 
-@pytest.mark.parametrize("platform", ["win32", "darwin"])
-def test_source_setup_never_installs_linux_rocm_wheels(platform, monkeypatch):
-    path = Path(__file__).parents[1] / "scripts" / "setup.py"
-    spec = importlib.util.spec_from_file_location("vs_setup_guards", path)
-    setup = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(setup)
-    called = []
-    native = []
-    monkeypatch.setattr("sys.platform", platform)
-    monkeypatch.setenv("OMNIVOICE_TORCH_VARIANT", "rocm")
-    monkeypatch.setattr(setup, "_ensure_vcredist_windows", lambda: None)
-    monkeypatch.setattr(setup, "_ensure_rocm_torch", lambda: called.append(True))
-    monkeypatch.setattr(setup, "_find_compat_dir", lambda: None)
-    monkeypatch.setattr(setup.subprocess, "check_call", lambda command, **kwargs: native.append(command))
-    setup.main()
-    assert called == []
-    assert [command[1:3] for command in native] == (
-        [["-m", "backend.core.windows_rocm.install"]] if platform == "win32" else []
-    )
+# CLEAN-ROOM (spec W11-residue §T11): test that source setup never installs Linux ROCm wheels on win32/darwin
 
 
 @pytest.mark.parametrize("family", ["cpu", "rocm"])

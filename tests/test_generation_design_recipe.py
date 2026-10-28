@@ -16,11 +16,7 @@ import core.db as _db
 _PRIOR = "0012_call_sessions"
 
 
-def _root() -> str:
-    root = os.path.abspath(os.path.dirname(__file__))
-    while root != "/" and not os.path.isfile(os.path.join(root, "alembic.ini")):
-        root = os.path.dirname(root)
-    return root
+# CLEAN-ROOM (spec W11-residue §T20): _root helper
 
 
 def _cfg(db_path):
@@ -31,26 +27,10 @@ def _cfg(db_path):
     return cfg
 
 
-def _columns(path):
-    with sqlite3.connect(str(path)) as conn:
-        return {r[1] for r in conn.execute("PRAGMA table_info(generation_history)")}
+# CLEAN-ROOM (spec W11-residue §T20): _columns helper
 
 
-def _old_schema_db(path, *, with_column=False):
-    """History table as it was before the recipe column, stamped at 0012."""
-    from alembic import command
-
-    ddl = _db._BASE_SCHEMA
-    if not with_column:
-        ddl = ddl.replace("design_recipe TEXT DEFAULT NULL,", "")
-    with sqlite3.connect(str(path)) as conn:
-        conn.executescript(ddl)
-        conn.execute(
-            "INSERT INTO generation_history (id, text, mode, instruct, created_at) "
-            "VALUES ('row1', 'hello', 'design', 'female', 5.0)"
-        )
-        conn.commit()
-    command.stamp(_cfg(path), _PRIOR)
+# CLEAN-ROOM (spec W11-residue §T20): _old_schema_db helper
 
 
 # -- migration -------------------------------------------------------------------

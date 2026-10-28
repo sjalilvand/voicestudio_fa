@@ -1,13 +1,5 @@
 import { act } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import en from '@/i18n/locales/en.json';
-import {
-  MODEL_LICENCE_REQUIRED_EVENT,
-  modelLicenceRequirements,
-  type ModelLicenceRequirement,
-} from './model-license-contract';
+// CLEAN-ROOM (spec W11-residue §T35): react-dom/react-query/vitest/en locale/model-license-contract imports
 
 const mock = vi.hoisted(() => ({ api: vi.fn() }));
 vi.mock('@/lib/api/client', () => {

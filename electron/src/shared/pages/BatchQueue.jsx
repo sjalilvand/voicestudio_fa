@@ -38,13 +38,7 @@ import { absoluteTime, timeAgo } from '../utils/relativeTime';
  * Shows real-time progress (extract → transcribe → translate → generate → mix).
  */
 
-const STATUS_TONE = {
-  queued: { tone: 'neutral', icon: Circle, label: 'batch.status_queued' },
-  running: { tone: 'brand', icon: Activity, label: 'batch.status_running' },
-  done: { tone: 'success', icon: CheckCircle, label: 'batch.status_done' },
-  failed: { tone: 'danger', icon: AlertCircle, label: 'batch.status_failed' },
-  cancelled: { tone: 'warn', icon: Square, label: 'batch.status_cancelled' },
-};
+// CLEAN-ROOM (spec W11-residue §E5): STATUS_TONE map: job status -> { tone, icon, label i18n key }
 
 // Per-status card border accent (was .batch-queue__card--{status} in CSS).
 const CARD_BORDER = {
@@ -52,14 +46,7 @@ const CARD_BORDER = {
   failed: 'border-transparent',
 };
 
-const STAGE_LABELS = {
-  extract: 'batch.stage_extract',
-  transcribe: 'batch.stage_transcribe',
-  translate: 'batch.stage_translate',
-  generate: 'batch.stage_generate',
-  mix: 'batch.stage_mix',
-  done: 'batch.stage_complete',
-};
+// CLEAN-ROOM (spec W11-residue §E5): STAGE_LABELS map: pipeline stage -> i18n key
 
 export default function BatchQueue({ onBack }) {
   const { t } = useTranslation();

@@ -1,7 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import '@/i18n';
+// CLEAN-ROOM (spec W11-residue §T34): test imports and i18n side-effect import
 
 const mock = vi.hoisted(() => ({
   api: vi.fn(),

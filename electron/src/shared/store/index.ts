@@ -86,9 +86,7 @@ function normalizeLongformOverrides(value: unknown): LongformOverrides {
       typeof value.varyRepeats === 'boolean' ? value.varyRepeats : DEFAULT_OVERRIDES.varyRepeats,
     emoText: typeof value.emoText === 'string' ? value.emoText : DEFAULT_OVERRIDES.emoText,
     emoAlpha: nullableFiniteNumber(value.emoAlpha),
-    lineGapMs: nullableFiniteNumber(value.lineGapMs),
-    paragraphGapMs: nullableFiniteNumber(value.paragraphGapMs),
-    trimEdges: typeof value.trimEdges === 'boolean' ? value.trimEdges : DEFAULT_OVERRIDES.trimEdges,
+    // CLEAN-ROOM (spec W11-residue §E21): lineGapMs, paragraphGapMs, trimEdges normalization
   };
 }
 

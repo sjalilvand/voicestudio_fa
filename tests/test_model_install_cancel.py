@@ -70,17 +70,7 @@ def _seed_previous_install(cache):
     (other / "busy.incomplete").write_bytes(b"other download")
 
 
-def _patch_install(download, monkeypatch, snapshot_download=None):
-    import huggingface_hub
-    from services import hf_revisions, performance_profiles
-
-    monkeypatch.setattr(download, "revision_for", lambda _repo: COMMIT)
-    monkeypatch.setattr(download, "disk_space_error", lambda *_a, **_k: None)
-    monkeypatch.setattr(download, "_segmented_enabled", lambda: False)
-    monkeypatch.setattr(hf_revisions, "remember_revision", lambda *_a: None)
-    monkeypatch.setattr(performance_profiles, "reconcile_active_profile", lambda: None)
-    if snapshot_download is not None:
-        monkeypatch.setattr(huggingface_hub, "snapshot_download", snapshot_download)
+# CLEAN-ROOM (spec W11-residue §T14): helper that stubs revision, disk-space, segmented, revision memory and profile reconciliation for an install
 
 
 def _run_install(download):

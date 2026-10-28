@@ -148,23 +148,7 @@ export default function TranscriptionsPage() {
     toast.success(t('transcriptions.exported'));
   }, [transcriptions]);
 
-  // toMillis keeps this unit-safe (ISO strings today; seconds/ms tolerated)
-  // and guards unparseable stamps, which used to render "Invalid Date".
-  const formatTime = (iso) => {
-    const ms = toMillis(iso);
-    if (ms == null) return null;
-    const d = new Date(ms);
-    const diff = Date.now() - ms;
-    if (diff < 60000) return t('transcriptions.just_now');
-    if (diff < 3600000) return t('transcriptions.m_ago', { count: Math.floor(diff / 60000) });
-    if (diff < 86400000) return t('transcriptions.h_ago', { count: Math.floor(diff / 3600000) });
-    return d.toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  // CLEAN-ROOM (spec W11-residue §E16): formatTime(timestamp) relative/absolute time label
 
   return (
     <div

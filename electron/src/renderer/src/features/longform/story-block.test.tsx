@@ -1,13 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
-import i18n from '@/i18n';
-
-vi.mock('@/components/waveform-player', () => ({ WaveformPlayer: () => null }));
-vi.mock('./story-preview', () => ({ previewStoryLine: vi.fn() }));
-vi.mock('./story-stems', () => ({ StoryStems: () => null }));
-vi.mock('@/components/pipeline-failure', () => ({ PipelineFailure: () => null }));
-import { StoryEditor } from './story-editor';
-import { blankLongformDraft, type Draft } from './longform-session';
+// CLEAN-ROOM (spec W11-residue §T5): i18n import, story-editor dependency mocks and StoryEditor/longform-session imports
 
 const profiles = [
   { id: 'p1', name: 'Ava' },

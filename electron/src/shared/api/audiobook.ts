@@ -125,20 +125,7 @@ export async function audiobookGenerate(
   });
 }
 
-export interface ResumableAudiobookJob {
-  job_id: string;
-  type: 'audiobook' | 'longform';
-  status: string;
-  title: string;
-  total_chapters: number;
-  chapters_done: number;
-  created_at: number | null;
-}
-
-/** Read the server's inventory of saved long-form work. */
-export async function audiobookListJobs(): Promise<{ jobs: ResumableAudiobookJob[] }> {
-  return (await apiFetch('/audiobook/jobs', { method: 'GET' })).json();
-}
+// CLEAN-ROOM (spec W11-residue §E4): exported ResumableAudiobookJob interface and audiobookListJobs() (GET /audiobook/jobs)
 
 /** Ask the backend to continue one render; consumers read events from the response body. */
 export async function audiobookResume(

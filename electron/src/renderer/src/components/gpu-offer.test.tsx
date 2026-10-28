@@ -11,14 +11,7 @@ vi.mock('@/lib/api/client', () => ({
     }
   },
 }));
-vi.mock('sonner', () => ({ toast: mock.toast }));
-vi.mock('@/hooks/use-backend-status', () => ({ useBackendStatus: () => ({ stage: 'ready' }) }));
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, params?: Record<string, unknown>) =>
-      params ? `${key} ${JSON.stringify(params)}` : key,
-  }),
-}));
+// CLEAN-ROOM (spec W11-residue §T51): sonner, backend-status and i18n mocks
 
 import { GpuOfferBanner, type GpuOfferStatus } from './gpu-offer';
 

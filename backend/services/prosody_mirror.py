@@ -82,54 +82,13 @@ class SegmentSpan:
     speaker_id: str = ""
 
 
-@dataclass(frozen=True, slots=True)
-class ProsodyFeatures:
-    active_s: float
-    voiced_ratio: float
-    rate_hz: float
-    loudness_db: float
-    pitch_st: Optional[float] = None
-    pitch_spread_st: Optional[float] = None
-
-    def get(self, name: str) -> Optional[float]:
-        """Return a named measurement, or ``None`` when it is unavailable."""
-        return getattr(self, name, None)
+# CLEAN-ROOM (spec W11-residue §B7): ProsodyFeatures dataclass
 
 
-@dataclass(frozen=True)
-class Baseline:
-    centre: Mapping[str, float]
-    spread: Mapping[str, float]
-    pitch_comparable: bool
-
-    def z(self, features: ProsodyFeatures) -> dict[str, float]:
-        out: dict[str, float] = {}
-        usable = [
-            n for n in self.centre
-            if n in self.spread and (self.pitch_comparable or n not in _PITCH_FEATURES)
-        ]
-        for n in usable:
-            observed = features.get(n)
-            if observed is not None:
-                out[n] = (observed - self.centre[n]) / self.spread[n]
-        if abs(out.get("pitch_st", 0.0)) > _PITCH_JUMP_Z:
-            for n in _PITCH_FEATURES:
-                out.pop(n, None)
-        return out
+# CLEAN-ROOM (spec W11-residue §B8): Baseline dataclass with z()
 
 
-@dataclass(slots=True)
-class MirrorResult:
-    id: str
-    direction: str = ""
-    tokens: dict[str, list[str]] = field(default_factory=dict)
-    z: dict[str, float] = field(default_factory=dict)
-    measured: bool = False
-
-    def to_dict(self) -> dict[str, object]:
-        payload = asdict(self)
-        payload["z"] = {name: round(value, 2) for name, value in self.z.items()}
-        return payload
+# CLEAN-ROOM (spec W11-residue §B9): MirrorResult dataclass with to_dict()
 
 
 def to_mono_analysis_rate(audio: np.ndarray, sr: int) -> np.ndarray:
@@ -308,47 +267,7 @@ _RULES: tuple[_Rule, ...] = (
 )
 
 
-def infer_direction(z: Mapping[str, float]) -> Direction:
-    view = _Scores(z)
-    chosen: dict[str, list[str]] = {}
-    if view.voice <= -2 and view.loud <= -1:
-        chosen["intimacy"] = ["whispered"]
-    else:
-        for dimension, word, applies in _RULES:
-            if dimension not in chosen and applies(view):
-                chosen[dimension] = [word]
-    return Direction(tokens=chosen, source="prosody-mirror", method="prosody")
-
-
-def mirror(
-    features: Mapping[str, Optional[ProsodyFeatures]],
-    speakers: Mapping[str, str],
-) -> dict[str, MirrorResult]:
-    out = {key: MirrorResult(id=key) for key in features}
-    good = [(key, f) for key, f in features.items() if f is not None]
-    if len(good) < MIN_BASELINE_LINES:
-        return out
-
-    owner = {key: speakers.get(key) or "" for key, _ in good}
-    names = set(owner.values()) - {""}
-    single_known_voice = len(names) == 1 and "" not in owner.values()
-    fallback = build_baseline([f for _, f in good], pitch_comparable=single_known_voice)
-
-    own_baseline: dict[str, Baseline] = {}
-    for name in names:
-        theirs = [f for key, f in good if owner[key] == name]
-        if len(theirs) >= MIN_BASELINE_LINES:
-            own_baseline[name] = build_baseline(theirs, pitch_comparable=True)
-
-    for key, f in good:
-        scores = own_baseline.get(owner[key], fallback).z(f)
-        verdict = infer_direction(scores)
-        res = out[key]
-        res.direction = verdict.instruct_prompt()
-        res.tokens = {dim: list(ws) for dim, ws in verdict.tokens.items() if ws}
-        res.z = scores
-        res.measured = True
-    return out
+# CLEAN-ROOM (spec W11-residue §B10): infer_direction(z); then (§B11) mirror(features, speakers)
 
 
 def mirror_file(path: str, spans: Sequence[SegmentSpan]) -> list[MirrorResult]:

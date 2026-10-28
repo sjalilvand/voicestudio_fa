@@ -4,16 +4,7 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, vi } from 'vitest';
-import { runtimePython } from './runtime-project';
-
-vi.mock('node:child_process', async (original) => ({
-  ...(await original<typeof import('node:child_process')>()),
-  execFile: vi.fn(),
-}));
-vi.mock('node:fs/promises', async (original) => ({
-  ...(await original<typeof import('node:fs/promises')>()),
-  statfs: vi.fn(async () => ({ bavail: 100 * 1024 ** 3, bsize: 1 })),
-}));
+// CLEAN-ROOM (spec W11-residue §T3): runtimePython import and node:child_process / node:fs/promises module mocks
 const roots: string[] = [];
 export const recipe = '{"python":{"version":"3.12","abi":"cp312","platform":"win-amd64"}}';
 export const report = JSON.stringify({

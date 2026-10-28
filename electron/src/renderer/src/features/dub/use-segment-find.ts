@@ -1,7 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
-import { replaceDubSegmentTexts } from './dub-session';
+// CLEAN-ROOM (spec W11-residue §E29): imports: React hooks, useTranslation, toast, replaceDubSegmentTexts
 import {
   applyReplaceAll,
   collectMatches,

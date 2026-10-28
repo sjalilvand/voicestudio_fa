@@ -20,20 +20,7 @@ import sys
 import threading
 import time
 
-import pytest
-
-sys.path.insert(
-    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backend")
-)
-
-
-@pytest.fixture()
-def main(monkeypatch, tmp_path):
-    monkeypatch.setenv("OMNIVOICE_DATA_DIR", str(tmp_path))
-    module = importlib.import_module("main")
-    monkeypatch.setattr(module, "_health_device", None, raising=False)
-    monkeypatch.setattr(module, "_health_device_thread", None, raising=False)
-    return module
+# CLEAN-ROOM (spec W11-residue §T15): pytest import, backend sys.path setup and the main-module fixture
 
 
 def test_health_runs_on_the_event_loop_not_the_worker_pool(main):

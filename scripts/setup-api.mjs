@@ -1,7 +1,4 @@
-import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+// CLEAN-ROOM (spec W11-residue §B31): node:child_process, node:fs, node:path and node:url imports
 import { repairSourceNativeLibraries } from "../electron/scripts/native-compat.mjs";
 import {
   selectTorchVariant,

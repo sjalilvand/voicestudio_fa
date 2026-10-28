@@ -1,8 +1,4 @@
-import { AudioLinesIcon, PauseIcon, PlayIcon, XIcon } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
-import { WaveformPlayer } from '@/components/waveform-player';
-import { stopActivePlayback, usePlaybackSource } from '@/lib/audio/playback';
+// CLEAN-ROOM (spec W11-residue §E26): imports: lucide icons, useTranslation, Button, WaveformPlayer, playback helpers
 import { clipTitle, playbackKindLabelKey } from '@/lib/audio/playback-kind';
 import {
   closeDock,

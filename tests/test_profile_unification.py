@@ -158,40 +158,7 @@ def test_native_voice_design_profile_keeps_full_description(app_client):
     )["diverged"]
 
 
-def test_native_profile_preview_uses_its_authoring_engine(app_client, monkeypatch):
-    """A saved VoxCPM2 voice must not silently render an OmniVoice sample."""
-    client, _ = app_client
-    import api.routers.profiles as profiles_router
-
-    recipe = {"description": "a soft warm narrator", "picks": {}}
-    created = client.post("/profiles", data={
-        "name": "Native Preview", "kind": "design", "engine": "voxcpm2",
-        "vd_states": json.dumps(_VD), "design_recipe": json.dumps(recipe),
-    })
-    assert created.status_code == 200, created.text
-    profile_id = created.json()["id"]
-    called = []
-
-    async def fake_render(row, path, engine_id):
-        """Write a stub identity WAV while recording the chosen model."""
-        import wave
-        called.append((row["design_recipe"], engine_id))
-        with wave.open(str(path), "wb") as wav:
-            wav.setnchannels(1)
-            wav.setsampwidth(2)
-            wav.setframerate(24000)
-            wav.writeframes(b"\\x01\\x00" * 24000)
-
-    monkeypatch.setattr(profiles_router, "_render_native_design_sample", fake_render)
-    audio = client.get(f"/profiles/{profile_id}/audio")
-    assert audio.status_code == 200, audio.text[:300] if audio.status_code != 200 else ""
-    assert audio.headers["content-type"].startswith("audio/")
-    assert len(called) == 1 and called[0][1] == "voxcpm2"
-    assert json.loads(called[0][0])["description"] == recipe["description"]
-    profile = client.get(f"/profiles/{profile_id}").json()
-    assert profile["ref_audio_path"] == profile_id + ".wav"
-    assert client.get(f"/profiles/{profile_id}/audio").status_code == 200
-    assert len(called) == 1
+# CLEAN-ROOM (spec W11-residue §T7): test that a native profile preview renders with its authoring engine
 
 
 def _write_identity_wave(path, amplitude: int) -> None:

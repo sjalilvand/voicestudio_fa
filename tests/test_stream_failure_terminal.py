@@ -50,12 +50,7 @@ def test_oom_stays_retryable():
     assert p["retryable"] is True and "terminal" not in p
 
 
-@pytest.mark.parametrize("msg", [
-    "The read operation timed out", "Connection reset by peer",
-    "[Errno 32] Broken pipe", "Permission denied",
-])
-def test_generic_errors_get_no_hint(msg):
-    assert "hint" not in stream_generation_failure(RuntimeError(msg))
+# CLEAN-ROOM (spec W11-residue §T13): parametrized test that generic errors get no hint
 
 
 def test_no_exception_text_leaks():

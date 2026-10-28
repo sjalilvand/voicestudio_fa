@@ -91,25 +91,7 @@ export default function AboutTab({
           </span>
         }
       />
-      <Row label={t('about.version')} value={resolveAboutVersion(appVersion, info)} mono />
-      <Row
-        label={t('about.tauri_runtime')}
-        value={tauriVersion || (isTauri() ? '—' : t('about.web_preview'))}
-        mono
-      />
-      <Row
-        label={t('about.hf_token')}
-        value={
-          info?.has_hf_token ? (
-            t('about.yes')
-          ) : (
-            <span className="inline-flex flex-wrap items-center gap-[var(--space-3)]">
-              {t('about.no')}
-              <OpenCategoryButton categoryId="credentials" />
-            </span>
-          )
-        }
-      />
+      {/* CLEAN-ROOM (spec W11-residue §E9): version, Tauri runtime and HF-token rows */}
 
       <div className="settings-link-row mt-[var(--space-5)] flex flex-wrap gap-[var(--space-4)]">
         {isTauri() && (

@@ -40,11 +40,7 @@ export function splitIntoChunks(text, maxChars) {
   return out.filter(Boolean);
 }
 
-export const SPLIT_MODES = ['sentences', 'paragraphs', 'chapters'];
-export const DEFAULT_SPLIT_MODE = 'paragraphs';
-export const DEFAULT_SPLIT_MAX = { sentences: 180, paragraphs: 500, chapters: 500 };
-
-const trimmed = (items) => items.map((x) => x.trim()).filter((x) => x.length > 0);
+// CLEAN-ROOM (spec W11-residue §E7): SPLIT_MODES, DEFAULT_SPLIT_MODE, DEFAULT_SPLIT_MAX exports and the trim-and-drop-empty helper used below
 
 // Walk the lines once, starting a fresh block at every chapter heading.
 // Each block is { heading, body } where body is the trimmed text under it.

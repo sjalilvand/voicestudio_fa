@@ -1,16 +1,5 @@
 // @vitest-environment node
-import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
-import {
-  DOWNLOAD_SUMMARY_MS,
-  SetupDownloadReporter,
-  inFlightDownloadBytes,
-  lockArtifactHosts,
-  pruneInterruptedUvDownloads,
-  setupDownloadHosts,
-} from './setup-downloads';
+// CLEAN-ROOM (spec W11-residue §T31): node/vitest imports and the setup-downloads import
 
 const LOCK = `
 [[package]]

@@ -2,19 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, expect, it, vi } from 'vitest';
 
-const state = vi.hoisted(() => ({
-  dub: {
-    jobId: 'job' as string | null,
-    filename: 'take.wav',
-    project: null as { id: string; name: string } | null,
-    phase: 'editing',
-    recovery: null,
-  },
-  api: vi.fn(async () => ({ id: 'saved' })),
-  attach: vi.fn(),
-}));
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
-vi.mock('@/lib/api/client', () => ({ apiJson: state.api, describeError: String }));
+// CLEAN-ROOM (spec W11-residue §T24): hoisted dub/api state plus i18n and api-client module mocks
 vi.mock('../longform/longform-session', () => ({ useLongformSession: () => ({ active: null }) }));
 vi.mock('../projects/project-format', () => ({
   projectPayload: (_session: unknown, name: string) => ({ name }),

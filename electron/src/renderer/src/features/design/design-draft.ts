@@ -176,38 +176,7 @@ export function designRequestSeed(
   return linked && linked.seed == null ? undefined : draft.seed;
 }
 
-/**
- * Reconcile details inferred from a description with the user's explicit picks.
- * New wording replaces an older pick when it changes that detail (or its
- * mutually exclusive counterpart); otherwise the pick is reapplied over the
- * inferred values. Picks made for the current wording also survive a late map.
- */
-export function applyDescription(
-  current: DesignDraft,
-  mapping: Record<string, string>,
-  described: string,
-): DesignDraft {
-  const mapped = mergeDescribedAttrs(mapping);
-  const changed = (category: string) =>
-    (mapped[category] ?? 'Auto') !== (current.mapped[category] ?? 'Auto');
-  const reconciled = Object.entries(current.picks).reduce<{
-    attrs: Record<string, string>;
-    picks: Record<string, DesignPick>;
-  }>(
-    (state, [category, pick]) => {
-      const applied = applyVdState(state.attrs, category, pick.value);
-      const textOverridesPick =
-        changed(category) || (applied.clearedCategory !== null && changed(applied.clearedCategory));
-      if (pick.description !== described && textOverridesPick) return state;
-      return {
-        attrs: applied.vdStates,
-        picks: { ...state.picks, [category]: pick },
-      };
-    },
-    { attrs: mapped, picks: {} },
-  );
-  return { ...current, ...reconciled, mapped };
-}
+// CLEAN-ROOM (spec W11-residue §E2): exported applyDescription(current, mapping, described) reconciling description-mapped details with explicit picks
 
 /**
  * "Reset to description" drops the picks (and a saved-voice link) so the

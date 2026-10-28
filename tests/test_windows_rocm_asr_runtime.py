@@ -11,49 +11,7 @@ import torch  # noqa: F401 - load before the fixture replaces package discovery.
 from services import asr_backend as ab
 
 
-@pytest.fixture
-def hip(monkeypatch, tmp_path):
-    from core.windows_rocm import ct2
-    from core.windows_rocm.recipe import expected_versions, load_recipe
-
-    recipe = load_recipe()
-    monkeypatch.setattr(ct2.sys, "platform", "win32")
-    monkeypatch.setattr(ct2, "validate_target", lambda: None)
-    version = ct2.metadata.version
-    pins = expected_versions(recipe)
-    monkeypatch.setattr(ct2.metadata, "version", lambda name: pins[name] if name in pins else version(name))
-    monkeypatch.setattr(ct2, "package_root", lambda name: tmp_path)
-    # faster_whisper is a fake module here; its presence check uses find_spec.
-    monkeypatch.setattr(ct2.util, "find_spec", lambda name: SimpleNamespace(submodule_search_locations=[str(tmp_path)]))
-    monkeypatch.setattr(ct2, "sha256", lambda path: recipe["ctranslate2"]["binary_sha256"])
-    initialized = []
-    monkeypatch.setattr(ct2, "initialize_dll_search", lambda: initialized.append(True))
-    native = SimpleNamespace(get_cuda_device_count=lambda: 1,
-                             get_supported_compute_types=lambda device: {"float16"})
-    monkeypatch.setitem(sys.modules, "ctranslate2", native)
-    monkeypatch.setattr(ct2, "_VERIFIED", set())
-    monkeypatch.setattr(ct2, "_FAILED", {})
-
-    def verify():
-        if native.get_cuda_device_count() < 1 or "float16" not in native.get_supported_compute_types("cuda"):
-            raise RuntimeError("HIP child verification failed")
-
-    monkeypatch.setattr(ct2, "verify_environment", verify)
-    caps = SimpleNamespace(family="rocm", requested_family=None, available_families=("rocm", "cpu"),
-                           device_name="AMD test", vram_gb=16, notes=(), probe_ok=True)
-    monkeypatch.setattr("core.device_caps.detect_host_caps", lambda: caps)
-    monkeypatch.setattr(ab, "_ctranslate2_execstack_ok", lambda: (True, "ready"))
-    monkeypatch.setattr(ab, "_ctranslate2_cudnn_ok", lambda: (True, "ready"))
-    loads = []
-
-    def model(source, **kwargs):
-        assert initialized, "initialize DLL search before importing/loading CT2"
-        loads.append(kwargs)
-        return SimpleNamespace()
-
-    monkeypatch.setitem(sys.modules, "faster_whisper", SimpleNamespace(WhisperModel=model))
-    monkeypatch.setattr(ab, "_local_model_source", lambda name: "local")
-    return SimpleNamespace(ct2=ct2, native=native, caps=caps, loads=loads, initialized=initialized)
+# CLEAN-ROOM (spec W11-residue §T17): hip fixture: a verified fake Windows HIP CTranslate2 runtime
 
 
 def test_faster_whisper_actually_loads_verified_hip(hip):

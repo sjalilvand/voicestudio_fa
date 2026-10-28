@@ -34,13 +34,7 @@ describe.each(NT_TABLE)('%s', (name, unsigned, signed) => {
   });
 });
 
-describe('codes that are not native faults', () => {
-  test.each([0, 2, 137, 139, 3221225781])('%i is described as itself', (code) => {
-    expect(ntStatusName(code)).toBeNull();
-    expect(isNativeFaultExit({ exitCode: code })).toBe(false);
-    expect(describeExitCode(code)).toBe(String(code));
-  });
-});
+// CLEAN-ROOM (spec W11-residue §T25): suite for exit codes that are not native faults
 
 describe('unusable input', () => {
   const junk = [null, undefined, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY];

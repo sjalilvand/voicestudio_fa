@@ -34,32 +34,7 @@ class _FakeHub:
         return [c for c in self.calls if not c.get("dry_run")]
 
 
-@pytest.fixture()
-def hub(monkeypatch, tmp_path):
-    import huggingface_hub
-    from api.routers.setup import download
-    from services import hf_revisions, performance_profiles
-    from services.token_resolver import ResolvedToken
-
-    fake = _FakeHub(tmp_path)
-    monkeypatch.setattr(huggingface_hub, "snapshot_download", fake)
-    monkeypatch.setattr(
-        "services.token_resolver.resolve",
-        lambda: ResolvedToken(token=SECRET, source="app", username="tester"),
-    )
-    monkeypatch.setattr(download, "compute_plan", lambda plan: {
-        "to_download_bytes": 0, "n_files": 0, "n_cached": 0,
-        "total_bytes": 0, "cached_bytes": 0})
-    monkeypatch.setattr(download, "disk_space_error", lambda n: None)
-    monkeypatch.setattr(download, "_segmented_enabled", lambda: False)
-    monkeypatch.setattr(hf_revisions, "remember_revision", lambda *a, **k: None)
-    monkeypatch.setattr(performance_profiles, "reconcile_active_profile", lambda: None)
-    download._install_cooldowns.pop(PIPELINE, None)
-    download._install_failures.pop(PIPELINE, None)
-    yield fake
-    for repo in [PIPELINE, *DEPS]:
-        download._install_cooldowns.pop(repo, None)
-        download._install_failures.pop(repo, None)
+# CLEAN-ROOM (spec W11-residue §T10): hub fixture that installs the fake hub and stubs download/revision/profile services
 
 
 def _install_and_collect_phases():

@@ -75,13 +75,7 @@ ROUTER_OOM_PROSE = (
 # Signatures that must NOT be claimed. Each is a real phrasing a dependency or
 # the OS produces for something that has nothing to do with RAM — the #1943
 # shape. A hint that names the wrong cause is the failure mode of this module.
-NOT_HOST_OOM = [
-    "No space left on device",                       # a disk, not RAM
-    "[WinError 1455] The paging file is too small for this operation to complete",
-    "The read operation timed out",
-    "Connection reset by peer",
-    "CUDA out of memory. Tried to allocate 2.00 GiB",  # the device class
-]
+# CLEAN-ROOM (spec W11-residue §T21): NOT_HOST_OOM list of non-RAM failure messages
 
 
 # ── the reported failure ────────────────────────────────────────────────────

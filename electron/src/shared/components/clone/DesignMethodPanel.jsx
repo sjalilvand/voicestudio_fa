@@ -345,54 +345,7 @@ export default function DesignMethodPanel({
             </div>
           </div>
 
-          {/* Reset to the description's implied recipe, or save the current
-                    one as a reusable profile (0005): the backend renders a
-                    deterministic identity sample (seed 42) and stores the
-                    slider picks for later re-editing. */}
-          {/* Separated by space alone, never a rule: the app-wide border
-                    removal (tests/test_no_literal_borders.py) took every
-                    decorative divider out, so a token hairline here would
-                    reintroduce exactly the class that guard protects. */}
-          <div className="mt-[var(--space-4)] flex items-center justify-between gap-[var(--space-3)] flex-wrap">
-            <Button variant="ghost" size="sm" onClick={resetToDescription}>
-              {t('clone.reset_to_description', { defaultValue: 'Reset to description' })}
-            </Button>
-            {!showSaveProfile ? (
-              <Button
-                variant="subtle"
-                size="sm"
-                onClick={() => setShowSaveProfile(true)}
-                leading={<Save size={12} />}
-              >
-                {t('clone.save_design_as_profile', { defaultValue: 'Save design as profile' })}
-              </Button>
-            ) : (
-              <div className="flex gap-[var(--space-3)] items-center [&>:first-child]:flex-1">
-                <Input
-                  size="sm"
-                  placeholder={t('clone.profile_name')}
-                  value={profileName}
-                  onChange={(e) => setProfileName(e.target.value)}
-                />
-                <Button
-                  variant="subtle"
-                  size="sm"
-                  onClick={() =>
-                    handleSaveDesignProfile(
-                      vdStates,
-                      buildDesignInstruct(vdStates, instruct).instruct,
-                      language,
-                    )
-                  }
-                >
-                  {t('clone.save')}
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => setShowSaveProfile(false)}>
-                  {t('clone.cancel')}
-                </Button>
-              </div>
-            )}
-          </div>
+          {/* CLEAN-ROOM (spec W11-residue §E17): reset-to-description / save-design-as-profile action row */}
         </div>
       )}
     </div>

@@ -238,24 +238,4 @@ def test_failed_segment_cancels_and_awaits_sibling_writers():
     assert state["ticks"] == seen
 
 
-def test_segment_http_error_stops_other_segments(tmp_path):
-    """#2642 end to end: a 500 on one range leaves no stray writers."""
-    calls = []
-
-    def handler(request):
-        if request.method == "HEAD":
-            return httpx.Response(200, headers={"content-length": str(len(PAYLOAD)), "accept-ranges": "bytes"})
-        calls.append(request.headers["range"])
-        if len(calls) == 1:
-            return httpx.Response(500)
-        lo, hi = map(int, request.headers["range"].replace("bytes=", "").split("-"))
-        return httpx.Response(206, headers={"Content-Range": f"bytes {lo}-{hi}/{len(PAYLOAD)}"}, content=PAYLOAD[lo:hi + 1])
-
-    async def _do():
-        with pytest.raises(httpx.HTTPStatusError):
-            async with _client(handler) as client:
-                await segmented_download("https://cdn.example.com/f.bin", str(tmp_path / "f.bin"),
-                                         client=client, num_connections=4)
-        return [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
-
-    assert asyncio.run(_do()) == []
+# CLEAN-ROOM (spec W11-residue §T48): test that a segment HTTP error stops the other segments (#2642)

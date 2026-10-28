@@ -27,23 +27,7 @@ export default function TranscriptionPicker({ open, onClose, onPick }) {
     return () => window.removeEventListener(TRANSCRIPTION_EVENT, handler);
   }, [open]);
 
-  // Relative time, host-locale absolute fallback; null on unparseable timestamp.
-  // toMillis keeps this unit-safe (ISO strings today; seconds/ms tolerated).
-  const formatTime = (iso) => {
-    const ms = toMillis(iso);
-    if (ms == null) return null;
-    const d = new Date(ms);
-    const diff = Date.now() - ms;
-    if (diff < 60000) return t('transcriptions.just_now');
-    if (diff < 3600000) return t('transcriptions.m_ago', { count: Math.floor(diff / 60000) });
-    if (diff < 86400000) return t('transcriptions.h_ago', { count: Math.floor(diff / 3600000) });
-    return d.toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  // CLEAN-ROOM (spec W11-residue §E16): formatTime(timestamp) relative/absolute time label
 
   // Per-row display normalization; hide empty-text rows entirely.
   const rows = useMemo(

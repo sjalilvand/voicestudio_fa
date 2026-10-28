@@ -289,18 +289,7 @@ Behavior:
 - Icons via `lucide-react` (`Mic`, `Search`, `Clock`, `Languages`, `FileText` are all already imported in `Transcriptions.jsx:13` — reuse the same names). The `X` close icon is **not** needed (Dialog supplies it).
 - **`formatTime` — reuse the verified logic from `Transcriptions.jsx:111-119`, defined *inside* the component** (it depends on `t`). Exact reference implementation to mirror, **plus** the missing Invalid-Date guard:
 
-  ```js
-  const formatTime = (iso) => {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return null;   // ← NEW guard; original (Transcriptions.jsx) lacks it.
-    const now = new Date();                        // Caller renders the time chip only when this returns non-null.
-    const diff = now - d;
-    if (diff < 60000)   return t('transcriptions.just_now');
-    if (diff < 3600000) return t('transcriptions.m_ago', { count: Math.floor(diff / 60000) });
-    if (diff < 86400000)return t('transcriptions.h_ago', { count: Math.floor(diff / 3600000) });
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-  };
-  ```
+  <!-- CLEAN-ROOM (spec W11-residue §D5): reference sketch of the relative-time formatter with the Invalid-Date guard -->
   Reuse the existing `transcriptions.just_now` / `transcriptions.m_ago` / `transcriptions.h_ago` keys — do **not** duplicate them under `transcriptionPicker.*`. The unparseable-`timestamp` case is the one input that otherwise makes `formatTime` emit a junk `"Invalid Date"` string; the guard returns `null` so the row simply omits the time chip. Note the final-branch `toLocaleDateString(undefined, …)` uses the host locale, which differs by OS/browser; that is acceptable locale-aware formatting (the *relative* strings above it go through `t()` and are i18n-driven — the only divergence is the absolute-date fallback, which is locale formatting, not untranslated UI text). **Test note:** because `formatTime`'s branch boundaries are wall-clock-relative, integration tests should seed timestamps as `new Date(Date.now() - N).toISOString()` (e.g. `Date.now() - 30_000` for "Just now") rather than hardcoded ISO strings, so the relative-time assertion isn't time-bomb-fragile. The Invalid-Date guard is asserted with a literally bad timestamp (`timestamp: 'not-a-date'`).
 
 ### Component C — Audiobook wiring (`frontend/src/pages/AudiobookTab.jsx`)

@@ -4,11 +4,7 @@ import { AnalyticsConsent } from './analytics-consent';
 import { AccountConsent } from './account-consent';
 import { SetupRecovery } from './setup-recovery';
 import { useEffect, useState, type ReactNode } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
-import { apiJson } from '@/lib/api/client';
-import type { PreflightReport } from '@shared/api/setup-types';
+// CLEAN-ROOM (spec W11-residue §E12): imports: react-query hooks, useTranslation, Button, apiJson, PreflightReport type
 import { SystemPreflight } from '@/features/settings/system-preflight';
 import { PermissionsSettings } from '@/features/settings/permissions-settings';
 import { SetupMediaEngine } from '@/features/settings/media-tools';

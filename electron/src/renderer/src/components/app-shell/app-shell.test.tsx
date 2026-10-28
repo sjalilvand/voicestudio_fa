@@ -10,10 +10,7 @@ vi.mock('@tanstack/react-router', () => ({
 }));
 vi.mock('./workspace-sidebar', () => ({ WorkspaceSidebar: () => <i data-mock="sidebar" /> }));
 vi.mock('./context-sidebar', () => ({ ContextSidebar: () => <i data-mock="context" /> }));
-vi.mock('./account-corner', () => ({ AccountCorner: () => <i data-mock="corner" /> }));
-vi.mock('./repair-agent-dock', () => ({ RepairAgentDock: () => null }));
-vi.mock('@/components/command-palette', () => ({ CommandPalette: () => null }));
-vi.mock('@/components/now-playing-dock', () => ({ NowPlayingDock: () => null }));
+// CLEAN-ROOM (spec W11-residue §T9): mocks for account corner, repair agent dock, command palette, now-playing dock
 vi.mock('../backend-gate', () => ({
   BackendGate: ({ children }: { children: unknown }) => <>{children as never}</>,
 }));

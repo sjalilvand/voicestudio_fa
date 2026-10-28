@@ -81,27 +81,7 @@ _FALLBACK_PORT = 10000
 _LOOPBACK_HOSTS = {"127.0.0.1", "localhost"}
 
 
-def _serve_config(cli):
-    """Read the machine-wide Tailscale serve configuration safely."""
-    try:
-        result = subprocess.run(
-            [cli, "serve", "status", "--json"],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=10,
-        )
-        if result.returncode != 0:
-            logger.warning("Tailscale serve status exited with code %s", result.returncode)
-            return None
-        output = result.stdout or ""
-        first_object = output.find("{")
-        data = {} if first_object < 0 else json.loads(output[first_object:])
-        return data if isinstance(data, dict) else None
-    except Exception:  # noqa: BLE001
-        logger.exception("Tailscale serve configuration could not be read")
-        return None
+# CLEAN-ROOM (spec W11-residue §B30): _serve_config(cli)
 
 
 def _is_our_proxy(proxy, backend_port: int) -> bool:

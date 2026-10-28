@@ -71,35 +71,4 @@ def test_frozen_numpy_preserves_existing_platform_versions(group, python_version
         assert selected == [f"=={expected}"]
 
 
-@pytest.mark.parametrize("probe", ["cpu", "cuda", "rocm", "failed", "timeout"])
-def test_post_setup_installs_cudnn_only_after_positive_cuda_probe(monkeypatch, tmp_path, probe):
-    spec = importlib.util.spec_from_file_location("cpu_install_setup", ROOT / "scripts/setup.py")
-    setup = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(setup)
-    monkeypatch.setattr(setup.sys, "platform", "linux")
-    monkeypatch.setattr(setup, "_ensure_vcredist_windows", lambda: None)
-    monkeypatch.setattr(setup, "_ensure_rocm_torch", lambda: None)
-    monkeypatch.setattr(setup, "_find_compat_dir", lambda: str(tmp_path / "compat"))
-    monkeypatch.setattr(setup, "_count_cudnn8_libs", lambda _: 5)
-    commands = []
-    fake_torch = SimpleNamespace(
-        cuda=SimpleNamespace(is_available=lambda: probe != "cpu"),
-        version=SimpleNamespace(hip="6.4" if probe == "rocm" else None),
-    )
-    monkeypatch.setitem(sys.modules, "torch", fake_torch)
-
-    def run(args, **kwargs):
-        commands.append(args)
-        if args[0] == setup.sys.executable:
-            if probe == "timeout":
-                raise subprocess.TimeoutExpired(args, 30)
-            output = io.StringIO()
-            with contextlib.redirect_stdout(output):
-                exec(args[2], {})
-            return SimpleNamespace(stdout=output.getvalue(), returncode=1 if probe == "failed" else 0)
-        return SimpleNamespace(stdout="", returncode=0)
-
-    monkeypatch.setattr(setup.subprocess, "run", run)
-    setup.main()
-    installs = [cmd for cmd in commands if cmd[:2] == ["uv", "pip"]]
-    assert len(installs) == (1 if probe == "cuda" else 0)
+# CLEAN-ROOM (spec W11-residue §T6): test that post-setup installs cuDNN only after a positive CUDA probe

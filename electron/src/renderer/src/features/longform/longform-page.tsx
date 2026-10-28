@@ -13,13 +13,7 @@ import { SecondarySidebar } from '@/components/workspace-sidebar';
 import { WorkspaceHeader } from '@/components/app-shell/workspace-header';
 import { PipelineFailure } from '@/components/pipeline-failure';
 import { importToText } from '@shared/utils/importStory';
-import { cueSheetFor } from './cue-sheet';
-import { saveLocalFile } from '@/lib/local-export';
-import { StoryEditor } from './story-editor';
-import { StoryCast } from './story-cast';
-import { StorySpeed } from './story-speed';
-import { clearedScriptPatch, scriptSize } from './story-clear';
-import { ConfirmDialog } from '../clone/confirm-dialog';
+// CLEAN-ROOM (spec W11-residue §E18): imports: cueSheetFor, saveLocalFile, StoryEditor, StoryCast, StorySpeed, clearedScriptPatch/scriptSize, ConfirmDialog
 import { AudiobookMarkupToolbar } from './audiobook-markup-toolbar';
 import { ChapterOutline } from './chapter-outline';
 import { storyVoicesReady } from './story-inputs';

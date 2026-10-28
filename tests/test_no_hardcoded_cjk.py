@@ -15,11 +15,7 @@ import pytest
 
 _ROOT = Path(__file__).resolve().parents[1]
 _CJK = re.compile(r"[\u3000-\u303f\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af\uff00-\uffef]")
-_SKIP_EXTENSIONS = {
-    ".png", ".jpg", ".jpeg", ".gif", ".ico", ".webp", ".svg", ".woff",
-    ".woff2", ".ttf", ".otf", ".pdf", ".mp3", ".wav", ".mp4", ".lock",
-    ".bin", ".onnx", ".safetensors",
-}
+# CLEAN-ROOM (spec W11-residue §T8): set of binary file extensions skipped by the CJK scan
 _SKIP_DIRECTORIES = {
     ".git", "node_modules", "dist", "build", "__pycache__", ".venv", "venv",
     "target", ".specify", ".claude", ".pytest_cache",

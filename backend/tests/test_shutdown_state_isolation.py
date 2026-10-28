@@ -30,9 +30,7 @@ import sys
 import services.model_manager as mm
 
 # The fixture lives in the repository-root conftest.py so tests/ shares it.
-_CONFTEST = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "conftest.py"
-)
+# CLEAN-ROOM (spec W11-residue §T49): _CONFTEST path to the repository-root conftest.py
 
 
 def test_dirty_the_shutdown_state():

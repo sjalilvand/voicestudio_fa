@@ -316,11 +316,7 @@ function pause(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
-export async function fileSha256(path: string): Promise<string> {
-  const hash = createHash('sha256');
-  for await (const chunk of createReadStream(path)) hash.update(chunk as Buffer);
-  return hash.digest('hex');
-}
+// CLEAN-ROOM (spec W11-residue §E27): exported fileSha256(path) streaming SHA-256 hex digest
 
 export interface SegmentedDownloadOptions {
   /** Candidate URLs for the same file, tried in order (a mirror, then the origin). */

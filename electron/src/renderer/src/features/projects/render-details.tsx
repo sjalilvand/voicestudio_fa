@@ -1,28 +1,4 @@
-import { Fragment } from 'react';
-import { useTranslation } from 'react-i18next';
-
-export interface RenderSummary {
-  engine?: string;
-  voices?: { id: string; name: string }[];
-  language?: string;
-  format?: string;
-  lines?: number;
-  words?: number;
-  speeds?: number[];
-  options?: Record<string, unknown>;
-  chapter_titles?: string[];
-}
-
-export interface RenderRecord {
-  job_id: string;
-  title?: string;
-  output: string;
-  type?: 'story' | 'audiobook';
-  created_at?: number | string;
-  duration_s?: number;
-  chapters?: number;
-  summary?: RenderSummary;
-}
+// CLEAN-ROOM (spec W11-residue §E1): react Fragment + useTranslation imports, exported RenderSummary and RenderRecord interfaces
 
 const OPTION_LABELS: Record<string, string> = {
   num_step: 'clone.steps',

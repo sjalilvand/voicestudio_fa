@@ -3,16 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 const route = vi.hoisted(() => ({ pathname: '/clone' }));
 const workspace = vi.hoisted(() => ({ libraryOpen: false, libraryTab: 'voices' as const }));
-const setWorkspace = vi.hoisted(() => vi.fn());
-
-vi.mock('@tanstack/react-router', () => ({
-  useRouterState: ({ select }: any) => select({ location: route }),
-}));
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
-vi.mock('@/lib/store/workspace', () => ({
-  useWorkspace: () => workspace,
-  setWorkspace,
-}));
+// CLEAN-ROOM (spec W11-residue §T32): hoisted setWorkspace mock and router/i18n/workspace-store mocks
 vi.mock('@/features/clone/voices-sidebar', () => ({
   VoicesSidebar: () => <div>Voice library</div>,
 }));

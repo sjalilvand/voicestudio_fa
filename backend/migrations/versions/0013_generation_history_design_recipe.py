@@ -6,20 +6,14 @@ missing schema and leave existing rows intact. ``core.db`` declares the same
 column in its base schema and additive reconciliation path for installations
 where alembic cannot run.
 
-Revision ID: 0013_generation_history_design_recipe
-Revises: 0012_call_sessions
-Create Date: 2026-10-01 00:00:00.000000
+CLEAN-ROOM (spec W11-residue §B12): revision header lines (Revision ID / Revises / Create Date)
 """
-from typing import Sequence, Union
-
+# Imports retyped as trivial interface lines (see spec §B12).
 from alembic import op
 import sqlalchemy as sa
 
 
-revision: str = "0013_generation_history_design_recipe"
-down_revision: Union[str, None] = "0012_call_sessions"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+# CLEAN-ROOM (spec W11-residue §B12): typing import plus alembic revision identifiers (revision, down_revision, branch_labels, depends_on)
 
 _TABLE = "generation_history"
 _COLUMN = "design_recipe"

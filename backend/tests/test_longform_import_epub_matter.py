@@ -12,38 +12,7 @@ def _runtime_import_module():
     from services import longform_import
     li = longform_import
 
-def _epub(docs: dict[str, str], *, nav: str | None = None, ncx: str | None = None, linear_no=(),
-          guide: str | None = None) -> bytes:
-    stream = io.BytesIO()
-    with zipfile.ZipFile(stream, "w", zipfile.ZIP_DEFLATED) as archive:
-        archive.writestr(
-            "META-INF/container.xml",
-            '<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container">'
-            '<rootfiles><rootfile full-path="OPS/book.opf"/></rootfiles></container>',
-        )
-        manifest = []
-        spine = []
-        for index, (path, document) in enumerate(docs.items()):
-            item_id = f"doc{index}"
-            manifest.append(f'<item id="{item_id}" href="{path}" media-type="application/xhtml+xml"/>')
-            linear = ' linear="no"' if path in linear_no or index in linear_no else ""
-            spine.append(f'<itemref idref="{item_id}"{linear}/>')
-            archive.writestr(f"OPS/{path}", document)
-        if nav is not None:
-            manifest.append('<item id="nav" href="TOC.xhtml" media-type="application/xhtml+xml" properties="nav"/>')
-            if not nav.lstrip().startswith("<html"):
-                nav = '<html xmlns:epub="http://www.idpf.org/2007/ops"><body>' + nav
-            archive.writestr("OPS/TOC.xhtml", nav)
-        if ncx is not None:
-            manifest.append('<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>')
-            archive.writestr("OPS/toc.ncx", ncx)
-        package = (
-            '<package xmlns="http://www.idpf.org/2007/opf">'
-            f'<manifest>{"".join(manifest)}</manifest><spine>{"".join(spine)}</spine>'
-            f'{guide or ""}</package>'
-        )
-        archive.writestr("OPS/book.opf", package)
-    return stream.getvalue()
+# CLEAN-ROOM (spec W11-residue §T45): _epub helper that builds an in-memory EPUB
 
 
 def _doc(body: str) -> str:

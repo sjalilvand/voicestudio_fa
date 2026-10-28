@@ -3,15 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 type Prefs = { enabled: boolean; mode: string; prompt?: string };
-const server = vi.hoisted(() => ({ prefs: undefined as Prefs | undefined }));
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
-vi.mock('@/components/dictation-demo', () => ({ DictationDemo: () => null }));
-vi.mock('@/lib/api/client', () => ({ apiJson: vi.fn() }));
-vi.mock('@/hooks/use-native-dictation', () => ({
-  dictationPreferencesKey: ['dictation-prefs'],
-  nativeShortcutKey: ['native-shortcut'],
-  useDictationPreferences: () => ({ data: server.prefs }),
-}));
+// CLEAN-ROOM (spec W11-residue §T27): hoisted prefs state and module mocks (i18n, dictation demo, api client, native dictation hooks)
 import { apiJson } from '@/lib/api/client';
 import { ShortcutSettings } from './shortcut-settings';
 

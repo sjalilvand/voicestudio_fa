@@ -3605,42 +3605,10 @@ class GPTSoVITSBackend(TTSBackend):
 # ── Sherpa-ONNX adapter (universal ONNX runtime, WASM-ready) ───────────────
 
 
-def _sherpa_model_file(model_dir: str) -> Optional[str]:
-    """Find the single VITS model that can be loaded from ``model_dir``.
-
-    Piper archives commonly name the ONNX file after the voice instead of
-    using ``model.onnx``.  Accepting that layout is important because Piper is
-    the only sherpa-onnx voice available for many languages, while refusing
-    directories with several candidates keeps model selection deterministic.
-    """
-    if not model_dir or not os.path.isdir(model_dir):
-        return None
-
-    conventional = os.path.join(model_dir, "model.onnx")
-    if os.path.isfile(conventional):
-        return conventional
-
-    candidates = [
-        os.path.join(model_dir, name)
-        for name in os.listdir(model_dir)
-        if name.lower().endswith(".onnx")
-        and os.path.isfile(os.path.join(model_dir, name))
-    ]
-    return candidates[0] if len(candidates) == 1 else None
+# CLEAN-ROOM (spec W11-residue §B21): _sherpa_model_file(model_dir)
 
 
-def _sherpa_vits_extras(model_dir: str) -> dict[str, str]:
-    """Return optional phonemizer inputs present beside a VITS model."""
-    if not model_dir:
-        return {}
-    extras: dict[str, str] = {}
-    data_dir = os.path.join(model_dir, "espeak-ng-data")
-    lexicon = os.path.join(model_dir, "lexicon.txt")
-    if os.path.isdir(data_dir):
-        extras["data_dir"] = data_dir
-    if os.path.isfile(lexicon):
-        extras["lexicon"] = lexicon
-    return extras
+# CLEAN-ROOM (spec W11-residue §B22): _sherpa_vits_extras(model_dir)
 
 
 class SherpaOnnxBackend(TTSBackend):
