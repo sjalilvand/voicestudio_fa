@@ -42,10 +42,10 @@ describe('SearchableSelect menu', () => {
   );
 
   it('exposes keyboard highlight separately from selection and clears it for no matches', () => {
-    render(<SearchableSelect options={['Alpha', 'Beta']} value="Beta" ariaLabel="Voice" />);
+    render(<SearchableSelect options={['Alpha', 'Beta']} value="Beta" ariaLabel="Voice" menuPortal />);
     const trigger = screen.getByRole('button', { name: 'Voice' });
     fireEvent.click(trigger);
-    const input = screen.getByRole('combobox');
+    const input = screen.getByRole('combobox', { name: 'Voice' });
     const list = screen.getByRole('listbox');
     expect(input).toHaveAttribute('aria-controls', list.id);
     expect(trigger).toHaveAttribute('aria-controls', list.id);

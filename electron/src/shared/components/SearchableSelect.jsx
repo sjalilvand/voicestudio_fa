@@ -344,7 +344,7 @@ function ClassicSearchableSelect({
                 aria-activedescendant={
                   flatItems[highlight] ? `${listboxId}-option-${highlight}` : undefined
                 }
-                aria-label={t('common.search')}
+                aria-label={ariaLabel || t('common.search')}
                 placeholder={t('common.search')}
                 value={query}
                 onChange={(e) => {

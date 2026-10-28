@@ -65,11 +65,12 @@ try {
   );
   assert.notEqual(colors.background, 'rgba(0, 0, 0, 0)');
   assert.equal(colors.accent, colors.expectedAccent, 'selection uses the app accent');
-  await page.getByRole('combobox').press('Enter');
+  const search = page.getByRole('combobox', { name: 'Preset voice', exact: true });
+  await search.press('Enter');
   assert.equal(await trigger.textContent(), 'F3');
   await trigger.click();
-  await page.getByRole('combobox').fill('M1');
-  await page.getByRole('combobox').press('Enter');
+  await search.fill('M1');
+  await search.press('Enter');
   assert.equal(await trigger.textContent(), 'M1');
   console.log('PASS: preset picker portal theme and keyboard selection');
 } finally {
