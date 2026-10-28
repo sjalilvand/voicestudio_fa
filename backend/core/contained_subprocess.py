@@ -179,6 +179,20 @@ class OwnedPopen:
         except ProcessLookupError:
             # The owned group exited between the waitid probe and the signal.
             pass
+        except PermissionError:
+            # Darwin may return EPERM, rather than ESRCH, when the control
+            # pipe made the supervisor kill its group after our live-child
+            # probe. Suppress only a proven exit of this exact owned leader;
+            # permission errors for a still-live group remain fatal.
+            try:
+                if hasattr(os, "waitid"):
+                    if self._posix_exited_unreaped():
+                        return
+                elif self._posix_exit_state_reaping() is not None:
+                    return
+            except ChildProcessError:
+                return  # A foreign reap also forbids signalling this number.
+            raise
 
     def poll(self) -> Optional[int]:
         with self._lock:
