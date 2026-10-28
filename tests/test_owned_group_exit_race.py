@@ -5,14 +5,14 @@ from types import SimpleNamespace
 
 import pytest
 
-from core.contained_subprocess import OwnedPopen
-
 pytestmark = pytest.mark.skipif(os.name != "posix", reason="POSIX process groups only")
 
 
 @pytest.mark.parametrize("exited", [True, False])
 @pytest.mark.parametrize("probe", ["waitpid", "waitid"])
 def test_group_signal_permission_error_is_benign_only_after_owned_leader_exits(monkeypatch, exited, probe):
+    from core.contained_subprocess import OwnedPopen
+
     # The first probe proves the leader live; the second sees its concurrent
     # control-pipe cancellation. Exercise both native API choices on POSIX CI.
     pid = 12345
