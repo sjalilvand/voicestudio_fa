@@ -66,7 +66,14 @@ lists the reaction tags its tokenizer renders.
 
 - **`[pause Nms]` markers** — `[pause]` (350 ms default), `[pause 500ms]`,
   `[pause 1s]`, up to 10 s. Rendered as real stitched silence, so it works
-  identically on all engines.
+  identically on all engines. **Settings → Pronunciation dictionary → Pauses →
+  Fill pauses with room tone** (off by default; `OMNIVOICE_PAUSE_FILL=room_tone`
+  wins over the switch) fills these gaps, and audiobook line and paragraph gaps,
+  with noise shaped like the take's own quiet background instead of digital
+  zeros, faded over 40 ms into the lines on each side, so the background no
+  longer cuts out at every pause. It is derived from the generated take, needs
+  no model, is reproducible, and falls back to silence when the take has no
+  usable quiet floor. Long-text chunk joins are not changed.
 - **Punctuation** — ellipses, dashes, exclamation marks, and short fragments
   genuinely shape pacing and intonation. Cheap, underrated.
 - **The reference clip is a performance direction.** Zero-shot cloning mirrors

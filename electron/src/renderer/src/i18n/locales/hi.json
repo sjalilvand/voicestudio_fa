@@ -4468,5 +4468,45 @@
     "generating": "मौजूदा टेक पूरा होने तक रुकें।",
     "name_required": "पहले नाम लिखें।",
     "audio_missing": "इस टेक में सहेजने के लिए कोई ऑडियो फ़ाइल नहीं है।"
+  },
+  "ggufQuant": {
+    "label": "मॉडल क्वांटाइज़ेशन",
+    "auto": "ऑटो: {{quant}} ({{target}})",
+    "target_vulkan": "Vulkan – {{device}}",
+    "target_cpu": "CPU",
+    "target_unverified": "CPU या मूल डिफ़ॉल्ट",
+    "option": "{{quant}} · {{size}} MB",
+    "option_installed": "{{quant}} · {{size}} MB · इंस्टॉल है",
+    "download": "{{quant}} डाउनलोड करें ({{size}} MB)",
+    "downloading": "{{quant}} डाउनलोड हो रहा है: {{total}} में से {{done}} MB",
+    "using_installed": "चुना गया क्वांट डाउनलोड होने तक इंस्टॉल किया गया {{quant}} इस्तेमाल होगा।",
+    "env_pinned": "{{env}} ने इसे {{quant}} पर तय किया है।",
+    "runtime_missing": "omnivoice-tts रनटाइम मौजूद नहीं है। VoiceStudio फिर से इंस्टॉल करें या scripts/build-omnivoice-tts.sh से बनाएँ।",
+    "runtime_placeholder": "साथ आई omnivoice-tts फ़ाइल प्लेसहोल्डर है, काम करने वाला रनटाइम नहीं। VoiceStudio फिर से इंस्टॉल करें।",
+    "runtime_integrity": "omnivoice-tts रनटाइम का चेकसम मेल नहीं खाता। VoiceStudio फिर से इंस्टॉल करें।",
+    "runtime_quarantined": "ऑपरेटिंग सिस्टम ने omnivoice-tts को क्वारंटीन किया है। इसे अनुमति दें या VoiceStudio फिर से इंस्टॉल करें।",
+    "runtime_other": "omnivoice-tts रनटाइम शुरू नहीं हो रहा। विवरण के लिए इंजन जाँच देखें।",
+    "weights_missing": "मॉडल वेट अभी डाउनलोड नहीं हुए हैं। अभी डाउनलोड करें, वरना पहली जनरेशन पर होंगे।",
+    "download_failed": "वेट डाउनलोड विफल"
+  },
+  "gpuOffer": {
+    "title": "तेज़ आवाज़ के लिए अपना GPU इस्तेमाल करें?",
+    "body": "VoiceStudio को {{gpu}} मिला। OmniVoice GGUF इस पर CPU की जगह Vulkan से {{quant}} मॉडल के साथ चल सकता है।",
+    "body_shared": "VoiceStudio को {{gpu}} मिला, जो सिस्टम मेमोरी साझा करता है। OmniVoice GGUF इस पर CPU की जगह Vulkan से {{quant}} मॉडल के साथ चल सकता है।",
+    "download": "एक बार {{size}} MB डाउनलोड होगा।",
+    "no_download": "कुछ भी डाउनलोड करने की ज़रूरत नहीं।",
+    "licence": "GGUF मॉडल गैर-व्यावसायिक उपयोग के लिए है; पहले इसका लाइसेंस स्वीकार करने को कहा जाएगा।",
+    "accept": "GPU इस्तेमाल करें",
+    "decline": "अभी नहीं",
+    "later": "आप इसे बाद में सेटिंग्स › {{section}} में बदल सकते हैं।",
+    "licence_then_retry": "लाइसेंस स्वीकार करें, फिर GPU इस्तेमाल करें दोबारा दबाएँ।",
+    "switched": "अब आवाज़ के लिए {{gpu}} इस्तेमाल हो रहा है।",
+    "switched_downloading": "अब आवाज़ के लिए {{gpu}} इस्तेमाल हो रहा है। {{quant}} मॉडल डाउनलोड हो रहा है…"
+  },
+  "pauseFill": {
+    "title": "विराम",
+    "room_tone": "विरामों को रूम टोन से भरें",
+    "room_tone_note": "[pause] मार्कर और ऑडियोबुक के अंतराल में डिजिटल चुप्पी की जगह उसी रिकॉर्डिंग की हल्की पृष्ठभूमि आती है, ताकि पंक्तियों के बीच आवाज़ न कटे।",
+    "env_pinned": "{{env}} द्वारा तय। इस स्विच का उपयोग करने के लिए इसे बदलें या हटाएँ।"
   }
 }

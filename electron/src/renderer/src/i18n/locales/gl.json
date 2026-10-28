@@ -4468,5 +4468,45 @@
     "generating": "Agarda ata que remate a toma actual.",
     "name_required": "Introduza primeiro un nome.",
     "audio_missing": "Esta toma non ten ficheiro de audio para gardar."
+  },
+  "ggufQuant": {
+    "label": "Cuantización do modelo",
+    "auto": "Automático: {{quant}} ({{target}})",
+    "target_vulkan": "Vulkan – {{device}}",
+    "target_cpu": "CPU",
+    "target_unverified": "CPU ou predeterminado nativo",
+    "option": "{{quant}} · {{size}} MB",
+    "option_installed": "{{quant}} · {{size}} MB · instalado",
+    "download": "Descargar {{quant}} ({{size}} MB)",
+    "downloading": "Descargando {{quant}}: {{done}} de {{total}} MB",
+    "using_installed": "Úsase o {{quant}} instalado ata que se descargue a cuantización escollida.",
+    "env_pinned": "Fixado en {{quant}} por {{env}}.",
+    "runtime_missing": "Falta o motor omnivoice-tts. Reinstala VoiceStudio ou compílao con scripts/build-omnivoice-tts.sh.",
+    "runtime_placeholder": "O ficheiro omnivoice-tts incluído é un marcador de posición, non un motor funcional. Reinstala VoiceStudio.",
+    "runtime_integrity": "O motor omnivoice-tts non superou a comprobación da suma de verificación. Reinstala VoiceStudio.",
+    "runtime_quarantined": "O sistema operativo puxo en corentena o motor omnivoice-tts. Permíteo ou reinstala VoiceStudio.",
+    "runtime_other": "O motor omnivoice-tts non pode iniciarse. Consulta a comprobación do estado do motor para máis detalles.",
+    "weights_missing": "Os pesos do modelo aínda non están descargados. Descárgaos agora ou descargaranse na primeira xeración.",
+    "download_failed": "Fallou a descarga dos pesos"
+  },
+  "gpuOffer": {
+    "title": "Usar a túa GPU para unha voz máis rápida?",
+    "body": "VoiceStudio atopou {{gpu}}. OmniVoice GGUF pode executarse nela mediante Vulkan en vez da CPU, co modelo {{quant}}.",
+    "body_shared": "VoiceStudio atopou {{gpu}}, que comparte a memoria do sistema. OmniVoice GGUF pode executarse nela mediante Vulkan en vez da CPU, co modelo {{quant}}.",
+    "download": "Descarga {{size}} MB unha vez.",
+    "no_download": "Non hai que descargar nada.",
+    "licence": "O modelo GGUF é para uso non comercial; primeiro pedirásete que aceptes a súa licenza.",
+    "accept": "Usar GPU",
+    "decline": "Agora non",
+    "later": "Podes cambialo máis tarde en Axustes › {{section}}.",
+    "licence_then_retry": "Acepta a licenza e despois preme Usar GPU de novo.",
+    "switched": "Agora úsase {{gpu}} para a voz.",
+    "switched_downloading": "Agora úsase {{gpu}} para a voz. Descargando o modelo {{quant}}…"
+  },
+  "pauseFill": {
+    "title": "Pausas",
+    "room_tone": "Encher as pausas co ton da sala",
+    "room_tone_note": "Os marcadores [pause] e os ocos dos audiolibros reciben o fondo tranquilo da propia toma en vez de silencio dixital, para que o son non se corte entre liñas.",
+    "env_pinned": "Defíneo {{env}}. Cámbiao ou bórrao para usar este interruptor."
   }
 }

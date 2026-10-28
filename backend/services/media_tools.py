@@ -381,7 +381,7 @@ def _tool_version(path: str) -> str | None:
         return cached
     try:
         out = subprocess.run(
-            [path, "-version"], capture_output=True, text=True, timeout=10, check=False,
+            [path, "-version"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=10, check=False,
         ).stdout
         m = re.match(r"^(?:ffmpeg|ffprobe) version (\S+)", out or "")
         if m:

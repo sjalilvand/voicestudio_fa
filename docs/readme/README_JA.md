@@ -71,7 +71,7 @@
 | **Windows on ARM** | `.exe` · [ガイド](../../docs/install/windows.md) | CPU（x64 バックエンドをエミュレーションで実行） | 実験的 |
 | **Intel Mac** | `.dmg` · [理由](../../docs/install/macos.md) | アプリ UI のみ。リモートバックエンドに接続 | 限定 |
 
-デスクトップ版とスマートフォン版のインストーラーは[最新リリース](https://github.com/debpalash/VoiceStudio/releases/latest)から入手できます。Docker イメージは GHCR で配布しています。GPU がなくても、CPU ですべての機能を使えます（速度は落ちます）。オプトインのネイティブ GGUF エンジンは、AMD GPU を含め Vulkan も利用できます（[OmniVoice](../../docs/engines/omnivoice-gguf.md#optional-vulkan-acceleration)、[CosyVoice](../../docs/engines/cosyvoice-gguf.md)）。エンジンとハードウェアごとの速度は[パフォーマンス](../../docs/performance.md)を参照してください。
+デスクトップ版とスマートフォン版のインストーラーは[最新リリース](https://github.com/debpalash/VoiceStudio/releases/latest)から入手できます。Docker イメージは GHCR で配布しています。GPU がなくても、CPU ですべての機能を使えます（速度は落ちます）。オプトインのネイティブ GGUF エンジンは、AMD GPU を含め Vulkan も利用できます（[OmniVoice](../../docs/engines/omnivoice-gguf.md#vulkan-acceleration)、[CosyVoice](../../docs/engines/cosyvoice-gguf.md)）。エンジンとハードウェアごとの速度は[パフォーマンス](../../docs/performance.md)を参照してください。
 
 ## はじめに
 

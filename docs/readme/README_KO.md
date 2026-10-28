@@ -71,7 +71,7 @@
 | **Windows on ARM** | `.exe` · [가이드](../../docs/install/windows.md) | CPU (x64 백엔드를 에뮬레이션으로 실행) | 실험적 |
 | **Intel Mac** | `.dmg` · [이유](../../docs/install/macos.md) | 앱 UI만 지원, 원격 백엔드에 연결 | 제한적 |
 
-데스크톱과 휴대폰 설치 파일은 [최신 릴리스](https://github.com/debpalash/VoiceStudio/releases/latest)에 있고, Docker 이미지는 GHCR에서 받을 수 있습니다. GPU가 없나요? CPU만으로도 모든 기능을 쓸 수 있으며, 속도만 느립니다. 선택 기능인 네이티브 GGUF 엔진은 AMD GPU를 포함해 Vulkan도 사용할 수 있습니다([OmniVoice](../../docs/engines/omnivoice-gguf.md#optional-vulkan-acceleration), [CosyVoice](../../docs/engines/cosyvoice-gguf.md)). 엔진과 하드웨어별 속도는 [성능](../../docs/performance.md) 문서를 참고하세요.
+데스크톱과 휴대폰 설치 파일은 [최신 릴리스](https://github.com/debpalash/VoiceStudio/releases/latest)에 있고, Docker 이미지는 GHCR에서 받을 수 있습니다. GPU가 없나요? CPU만으로도 모든 기능을 쓸 수 있으며, 속도만 느립니다. 선택 기능인 네이티브 GGUF 엔진은 AMD GPU를 포함해 Vulkan도 사용할 수 있습니다([OmniVoice](../../docs/engines/omnivoice-gguf.md#vulkan-acceleration), [CosyVoice](../../docs/engines/cosyvoice-gguf.md)). 엔진과 하드웨어별 속도는 [성능](../../docs/performance.md) 문서를 참고하세요.
 
 ## 시작하기
 

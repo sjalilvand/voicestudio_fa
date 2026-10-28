@@ -556,7 +556,8 @@ def _wants_edge_trim(effect_preset, duration=None):
 
 
 def _render_with_pauses(gen_span, segments, sample_rate, *, trim_spans=False,
-                        max_chunk_chars=0, crossfade_ms=0, dropped_sink=None):
+                        max_chunk_chars=0, crossfade_ms=0, dropped_sink=None,
+                        pause_fill=None):
     """Synthesize ``[(text, pause_ms), ...]`` spans and stitch silence between
     them (issue #276).
 
@@ -578,6 +579,9 @@ def _render_with_pauses(gen_span, segments, sample_rate, *, trim_spans=False,
     the whole input, so callers can derive a per-chunk seed. A span that fits
     keeps the plain ``gen_span(text)`` call. ``max_chunk_chars <= 0`` disables
     splitting.
+
+    ``pause_fill`` is ``"silence"`` or ``"room_tone"`` (#3611); None uses the
+    Settings choice (``services.audio_dsp.pause_fill_mode``).
     """
     import torch
 
@@ -620,15 +624,10 @@ def _render_with_pauses(gen_span, segments, sample_rate, *, trim_spans=False,
         total = sum(n for kind, n in items if kind == "s") or 1
         return torch.zeros(total, dtype=torch.float32)
 
-    parts = []
-    for kind, val in items:
-        if kind == "a":
-            parts.append(val)
-        else:
-            shape = list(ref.shape)
-            shape[-1] = val
-            parts.append(torch.zeros(*shape, dtype=ref.dtype, device=ref.device))
-    return torch.cat(parts, dim=-1)
+    from services.audio_dsp import fill_gaps
+
+    # Digital silence or room tone, per Settings (#3611).
+    return torch.cat(fill_gaps(items, sample_rate, pause_fill), dim=-1)
 
 
 def _sanitize_audio(audio_out):
