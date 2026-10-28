@@ -28,6 +28,8 @@ const constraints = vi.hoisted(() => ({
   target: '',
   parent: '',
   checkCapacity: false,
+  zeroStagingIdentity: false,
+  copyCalls: 0,
   beforeReadFile: null as ((path: string) => Promise<void>) | null,
   beforeOpen: null as ((path: string) => Promise<void>) | null,
   collisionDirectory: '',
@@ -46,6 +48,10 @@ vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs/promises')>();
   return {
     ...actual,
+    cp: async (...args: Parameters<typeof actual.cp>) => {
+      constraints.copyCalls++;
+      return actual.cp(...args);
+    },
     mkdir: async (...args: Parameters<typeof actual.mkdir>) => {
       if (constraints.parent && dirname(String(args[0])) === constraints.parent) {
         throw Object.assign(new Error('parent is not writable'), { code: 'EACCES' });
@@ -64,6 +70,8 @@ vi.mock('node:fs/promises', async (importOriginal) => {
     },
     lstat: async (...args: Parameters<typeof actual.lstat>) => {
       const info = await actual.lstat(...args);
+      if (constraints.zeroStagingIdentity && String(args[0]).includes('.voicestudio-moving-'))
+        return Object.assign(Object.create(info), { birthtimeNs: 0n });
       if (
         constraints.reuseEnabled &&
         String(args[0]) === constraints.reusedIdentityPath &&
@@ -154,6 +162,8 @@ afterEach(async () => {
   );
   constraints.target = constraints.parent = '';
   constraints.checkCapacity = false;
+  constraints.zeroStagingIdentity = false;
+  constraints.copyCalls = 0;
   constraints.beforeOpen = constraints.beforeReadFile = null;
   constraints.largeIdentityPath = '';
   constraints.identityVersion = 0;
@@ -917,3 +927,15 @@ it.each([true, false])(
     expect(starts).toBe(1);
   },
 );
+
+it('rejects an unverifiable new destination before copying and cleans empty staging', async () => {
+  const { source, target } = await fixture();
+  await rm(target, { recursive: true });
+  constraints.zeroStagingIdentity = true;
+  const failure = await prepareDataRelocation(source, target).catch((error) => error);
+  expect(constraints.copyCalls).toBe(0);
+  expect(failure).toMatchObject({ message: 'identity_unavailable' });
+  expect(existsSync(target)).toBe(false);
+  expect(await readdir(dirname(target))).toEqual([]);
+  expect(await readFile(join(source, 'omnivoice.db'), 'utf8')).toBe('database');
+});

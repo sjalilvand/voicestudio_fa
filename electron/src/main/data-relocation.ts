@@ -576,6 +576,7 @@ export async function prepareDataRelocation(
   await mkdir(staging, { recursive: false });
   const stagedIdentity = await lstat(staging, { bigint: true });
   try {
+    if (stagedIdentity.birthtimeNs === 0n) throw new Error('identity_unavailable');
     for (const entry of await readdir(plan.source)) {
       await cp(join(plan.source, entry), join(staging, entry), {
         recursive: true,
