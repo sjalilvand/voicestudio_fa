@@ -555,3 +555,20 @@ def test_a_refused_offer_is_rechecked_without_a_binary_change(eligible, monkeypa
     assert eligible.compute.vulkan_eligible() is False
     ok["value"] = True
     assert eligible.compute.vulkan_eligible() is True
+
+
+def test_accepting_waits_while_another_quant_is_downloading(eligible, monkeypatch):
+    """already_running for a different quant must not switch the engine."""
+    from services import tts_backend
+
+    quants = importlib.import_module("engines.omnivoice_gguf.quants")
+    monkeypatch.setattr(quants, "start_download", lambda value=None: {
+        "status": "already_running", "quant": "omnivoice-base-F32.gguf"})
+    result = eligible.offer.respond(True)
+    assert result["download"]["status"] == "busy"
+    assert "tts_backend" not in eligible.store
+    assert tts_backend.active_backend_id() == "omnivoice"
+    monkeypatch.setattr(quants, "start_download", lambda value=None: {
+        "status": "already_running", "quant": quants.quant_status()["selected"]})
+    assert eligible.offer.respond(True)["download"]["status"] == "already_running"
+    assert tts_backend.active_backend_id() == "omnivoice-gguf"

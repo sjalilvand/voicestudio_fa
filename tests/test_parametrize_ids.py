@@ -22,4 +22,7 @@ def test_ordinary_parameters_keep_the_default_id(val):
 
 @pytest.mark.parametrize("text", ["y" * 40_000])
 def test_a_huge_parameter_fits_the_windows_environment(text, request):
+    # The id comes from the hook (pytest's own shortening would differ), and
+    # it keeps PYTEST_CURRENT_TEST far below the Windows limit.
+    assert request.node.nodeid.endswith("[text-len40000]")
     assert len(request.node.nodeid) < 32_767

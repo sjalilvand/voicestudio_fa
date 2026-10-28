@@ -27,7 +27,7 @@ export interface GpuOfferStatus {
   download_mb: number;
 }
 
-type DownloadStatus = 'started' | 'already_running' | 'already_installed' | 'failed';
+type DownloadStatus = 'started' | 'already_running' | 'already_installed' | 'failed' | 'busy';
 type GpuOfferAnswer = GpuOfferStatus & { download: { status: DownloadStatus } | null };
 
 /** The GPU offer state plus the accept / decline actions shared by the

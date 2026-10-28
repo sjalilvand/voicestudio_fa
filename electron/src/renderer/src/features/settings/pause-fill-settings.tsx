@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { AudioLinesIcon } from 'lucide-react';
@@ -25,6 +26,23 @@ export function PauseFillSettings() {
     queryFn: ({ signal }) => apiJson<PauseFillState>(PATH, { signal }),
   });
   const state = query.data;
+  // The mode the last save tried, so Retry repeats a failed save instead of
+  // only re-reading the setting.
+  const attempted = useRef<PauseFillState['mode'] | null>(null);
+  const save = (mode: PauseFillState['mode']) => {
+    attempted.current = mode;
+    void action.run(async () => {
+      const saved = await apiJson<PauseFillState>(PATH, {
+        method: 'PUT',
+        body: JSON.stringify({ mode }),
+      });
+      client.setQueryData(KEY, saved);
+    });
+  };
+  const retry = () => {
+    if (action.error && attempted.current) save(attempted.current);
+    else void query.refetch();
+  };
   return (
     <SettingsSection icon={AudioLinesIcon} title={t('pauseFill.title')}>
       <SettingsRow
@@ -36,15 +54,7 @@ export function PauseFillSettings() {
           aria-label={t('pauseFill.room_tone')}
           checked={state?.mode === 'room_tone'}
           disabled={!state || action.busy || state.env_pinned}
-          onCheckedChange={(on) =>
-            void action.run(async () => {
-              const saved = await apiJson<PauseFillState>(PATH, {
-                method: 'PUT',
-                body: JSON.stringify({ mode: on ? 'room_tone' : 'silence' }),
-              });
-              client.setQueryData(KEY, saved);
-            })
-          }
+          onCheckedChange={(on) => save(on ? 'room_tone' : 'silence')}
         />
       </SettingsRow>
       {state?.env_pinned && (
@@ -55,7 +65,7 @@ export function PauseFillSettings() {
       {(action.error || query.isError) && (
         <p role="alert" className="p-4 text-sm text-destructive">
           {t('common.error')}{' '}
-          <Button size="sm" variant="ghost" onClick={() => void query.refetch()}>
+          <Button size="sm" variant="ghost" onClick={retry}>
             {t('common.retry')}
           </Button>
         </p>

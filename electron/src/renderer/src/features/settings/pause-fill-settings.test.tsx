@@ -52,3 +52,25 @@ it('is locked while the environment variable decides', async () => {
     'true',
   );
 });
+
+it('Retry repeats a save that failed', async () => {
+  let fail = true;
+  mock.api.mockImplementation((_path: string, init?: RequestInit) => {
+    if (init?.method === 'PUT') {
+      if (fail) return Promise.reject(new Error('offline'));
+      return Promise.resolve({ mode: 'room_tone', env_pinned: false });
+    }
+    return Promise.resolve({ mode: 'silence', env_pinned: false });
+  });
+  renderSettings();
+  const toggle = await screen.findByRole('switch', { name: 'pauseFill.room_tone' });
+  await waitFor(() => expect(toggle).not.toHaveAttribute('aria-disabled', 'true'));
+  fireEvent.click(toggle);
+  expect(await screen.findByRole('alert')).toBeTruthy();
+  fail = false;
+  fireEvent.click(screen.getByRole('button', { name: 'common.retry' }));
+  await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
+  const puts = mock.api.mock.calls.filter(([, init]) => init?.method === 'PUT');
+  expect(puts).toHaveLength(2);
+  expect(puts[1][1].body).toBe(JSON.stringify({ mode: 'room_tone' }));
+});

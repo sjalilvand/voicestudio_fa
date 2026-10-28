@@ -105,14 +105,20 @@ def respond(accept: bool) -> dict:
 
     # Generation accepts an installed pair when the recommended one is
     # missing, so an existing install is used rather than fetching another.
-    in_use = quant_status()["in_use"]
-    if in_use:
-        download = {"status": "already_installed", "quant": in_use}
+    status = quant_status()
+    if status["in_use"]:
+        download = {"status": "already_installed", "quant": status["in_use"]}
     else:
         # Switch only once the weights are on their way: a failed start
         # (offline, no network) must not leave the engine on missing weights.
         download = start_download(None)
-    if download.get("status") not in _DOWNLOAD_OK:
+    ok = download.get("status") in _DOWNLOAD_OK
+    if download.get("status") == "already_running" and download.get("quant") != status["selected"]:
+        # Another quant is downloading (picker Download): it would not give
+        # the engine the weights it is about to need.
+        ok = False
+        download = {**download, "status": "busy"}
+    if not ok:
         return {**offer_status(), "download": download}
     prefs.set_("tts_backend", ENGINE_ID)
     prefs.set_(PREF_KEY, "accepted")
