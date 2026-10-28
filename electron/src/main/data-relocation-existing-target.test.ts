@@ -10,10 +10,11 @@ import {
   realpath,
   rename,
   rm,
+  symlink,
   writeFile,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, sep } from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
 import {
   prepareDataRelocation,
@@ -26,6 +27,7 @@ const constraints = vi.hoisted(() => ({
   target: '',
   parent: '',
   checkCapacity: false,
+  beforeReadFile: null as ((path: string) => Promise<void>) | null,
   beforeOpen: null as ((path: string) => Promise<void>) | null,
   collisionDirectory: '',
   failRead: '',
@@ -64,6 +66,10 @@ vi.mock('node:fs/promises', async (importOriginal) => {
       return String(args[0]) === constraints.unsupportedPath
         ? Object.assign(Object.create(info), { isFile: () => false })
         : info;
+    },
+    readFile: async (...args: Parameters<typeof actual.readFile>) => {
+      await constraints.beforeReadFile?.(String(args[0]));
+      return actual.readFile(...args);
     },
     open: async (...args: Parameters<typeof actual.open>) => {
       await constraints.beforeOpen?.(String(args[0]));
@@ -105,7 +111,7 @@ afterEach(async () => {
   );
   constraints.target = constraints.parent = '';
   constraints.checkCapacity = false;
-  constraints.beforeOpen = null;
+  constraints.beforeOpen = constraints.beforeReadFile = null;
   constraints.largeIdentityPath = '';
   constraints.identityVersion = 0;
   constraints.collisionDirectory = constraints.failRead = constraints.unsupportedPath = '';
@@ -324,3 +330,363 @@ it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)(
     expect((await lstat(targetVoices)).mode & 0o777).toBe(0o555);
   },
 );
+
+async function makeLongformCache(source: string, roots: unknown[] | null) {
+  const cache = join(source, 'outputs', 'longform_cache');
+  await mkdir(cache, { recursive: true });
+  if (roots !== null) await writeFile(join(cache, 'voices_roots.json'), JSON.stringify(roots));
+}
+
+// Models the startup writer's observable atomic replace (longform_render.py),
+// including filtering, ordering, and its history cap.
+async function backendStartupIndex(target: string) {
+  const cache = join(target, 'outputs', 'longform_cache');
+  if (!existsSync(cache)) return;
+  const file = join(cache, 'voices_roots.json');
+  let seen: string[] = [];
+  try {
+    const parsed: unknown = JSON.parse(await readFile(file, 'utf8'));
+    if (Array.isArray(parsed))
+      seen = parsed.filter((root): root is string => typeof root === 'string' && root.length > 0);
+  } catch {
+    /* Same best-effort absent/invalid-file behavior as startup. */
+  }
+  const current = target + sep + 'voices';
+  if (seen[0] === current) return;
+  const temporary = file + '.backend-start.tmp';
+  await writeFile(
+    temporary,
+    JSON.stringify([current, ...seen.filter((root) => root !== current)].slice(0, 8)),
+  );
+  await rename(temporary, file);
+}
+
+it.each([
+  { name: 'existing index', roots: ['/previous/voices'] },
+  { name: 'empty cache', roots: null },
+  {
+    name: 'filtered and capped history',
+    roots: [null, 12, '', ...Array.from({ length: 12 }, (_, index) => `/previous/${index}/voices`)],
+  },
+])('rolls back the backend startup index in an owned $name', async ({ roots }) => {
+  const { root, source, target } = await fixture();
+  await makeLongformCache(source, roots);
+  let starts = 0;
+  await expect(
+    relocateDataDirectory(source, target, {
+      environmentPath: join(root, 'env'),
+      stop: async () => undefined,
+      start: async () => {
+        if (++starts === 1) await backendStartupIndex(target);
+      },
+      verify: async () => false,
+      progress: () => undefined,
+    }),
+  ).rejects.toThrow('backend_verification_failed');
+  expect(await readdir(target)).toEqual([]);
+  expect(existsSync(source)).toBe(true);
+});
+
+it('rolls back a startup index even when start rejects after writing it', async () => {
+  const { root, source, target } = await fixture();
+  await makeLongformCache(source, ['/previous/voices']);
+  let starts = 0;
+  await expect(
+    relocateDataDirectory(source, target, {
+      environmentPath: join(root, 'env'),
+      stop: async () => undefined,
+      start: async () => {
+        if (++starts === 1) {
+          await backendStartupIndex(target);
+          throw new Error('startup failed');
+        }
+      },
+      verify: async () => true,
+      progress: () => undefined,
+    }),
+  ).rejects.toThrow('startup failed');
+  expect(await readdir(target)).toEqual([]);
+});
+
+it('recognizes the backend target spelling through a directory alias', async () => {
+  const { root, source, target } = await fixture();
+  await makeLongformCache(source, ['/previous/voices']);
+  const alias = join(root, 'mount-alias');
+  await symlink(dirname(target), alias, process.platform === 'win32' ? 'junction' : 'dir');
+  const nativeTarget = join(alias, 'data');
+  const requested =
+    process.platform === 'win32' ? nativeTarget.replaceAll('\\', '/') : nativeTarget;
+  let starts = 0;
+  await expect(
+    relocateDataDirectory(source, requested, {
+      environmentPath: join(root, 'env'),
+      stop: async () => undefined,
+      start: async () => {
+        if (++starts === 1) await backendStartupIndex(requested);
+      },
+      verify: async () => false,
+      progress: () => undefined,
+    }),
+  ).rejects.toThrow('backend_verification_failed');
+  expect(await readdir(target)).toEqual([]);
+});
+
+it.each(['during start', 'during verification'])(
+  'preserves an unrelated cache-index replacement %s',
+  async (when) => {
+    const { root, source, target } = await fixture();
+    await makeLongformCache(source, ['/previous/voices']);
+    const index = join(target, 'outputs', 'longform_cache', 'voices_roots.json');
+    const replace = async () => {
+      await writeFile(index + '.external', JSON.stringify(['/unrelated/user/history']));
+      await rename(index + '.external', index);
+    };
+    let starts = 0;
+    await expect(
+      relocateDataDirectory(source, target, {
+        environmentPath: join(root, 'env'),
+        stop: async () => undefined,
+        start: async () => {
+          if (++starts === 1) {
+            await backendStartupIndex(target);
+            if (when === 'during start') await replace();
+          }
+        },
+        verify: async () => {
+          if (when === 'during verification') await replace();
+          return false;
+        },
+        progress: () => undefined,
+      }),
+    ).rejects.toThrow('backend_verification_failed');
+    expect(JSON.parse(await readFile(index, 'utf8'))).toEqual(['/unrelated/user/history']);
+    expect(await readdir(target)).toEqual(['outputs']);
+    expect(existsSync(source)).toBe(true);
+  },
+);
+
+it('does not create an index when no cache was copied', async () => {
+  const { root, source, target } = await fixture();
+  let starts = 0;
+  await expect(
+    relocateDataDirectory(source, target, {
+      environmentPath: join(root, 'env'),
+      stop: async () => undefined,
+      start: async () => {
+        if (++starts === 1) await backendStartupIndex(target);
+      },
+      verify: async () => false,
+      progress: () => undefined,
+    }),
+  ).rejects.toThrow('backend_verification_failed');
+  expect(await readdir(target)).toEqual([]);
+});
+
+it('keeps the original failure and the live target if stopping the failed backend fails', async () => {
+  const { root, source, target } = await fixture();
+  await makeLongformCache(source, ['/previous/voices']);
+  let stops = 0;
+  let starts = 0;
+  await expect(
+    relocateDataDirectory(source, target, {
+      environmentPath: join(root, 'env'),
+      stop: async () => {
+        if (++stops === 2) throw new Error('cannot stop');
+      },
+      start: async () => {
+        starts += 1;
+        await backendStartupIndex(target);
+      },
+      verify: async () => false,
+      progress: () => undefined,
+    }),
+  ).rejects.toThrow('backend_verification_failed');
+  expect(starts).toBe(1);
+  expect(await readFile(join(target, 'omnivoice.db'), 'utf8')).toBe('database');
+  expect(existsSync(source)).toBe(true);
+});
+
+it('preserves an unreadable startup replacement without masking the verification failure', async () => {
+  const { root, source, target } = await fixture();
+  await makeLongformCache(source, ['/previous/voices']);
+  const index = join(target, 'outputs', 'longform_cache', 'voices_roots.json');
+  let starts = 0;
+  let failCapture = false;
+  constraints.beforeOpen = async (path) => {
+    if (failCapture && path === index) throw new Error('capture denied');
+  };
+  await expect(
+    relocateDataDirectory(source, target, {
+      environmentPath: join(root, 'env'),
+      stop: async () => undefined,
+      start: async () => {
+        if (++starts === 1) await backendStartupIndex(target);
+      },
+      verify: async () => {
+        failCapture = true;
+        return false;
+      },
+      progress: () => undefined,
+    }),
+  ).rejects.toThrow('backend_verification_failed');
+  expect(existsSync(index)).toBe(true);
+  expect(existsSync(source)).toBe(true);
+});
+
+it('does not learn expected startup history from an unrelated pre-start replacement', async () => {
+  const { root, source, target } = await fixture();
+  await makeLongformCache(source, ['/previous/voices']);
+  const index = join(target, 'outputs', 'longform_cache', 'voices_roots.json');
+  let replaced = false;
+  constraints.beforeReadFile = async (path) => {
+    if (path === index && !replaced) {
+      replaced = true;
+      await writeFile(index + '.external', JSON.stringify(['/unrelated/pre-start/history']));
+      await rename(index + '.external', index);
+    }
+  };
+  let starts = 0;
+  await expect(
+    relocateDataDirectory(source, target, {
+      environmentPath: join(root, 'env'),
+      stop: async () => undefined,
+      start: async () => {
+        if (++starts === 1) await backendStartupIndex(target);
+      },
+      verify: async () => false,
+      progress: () => undefined,
+    }),
+  ).rejects.toThrow('backend_verification_failed');
+  expect(JSON.parse(await readFile(index, 'utf8'))).toContain('/unrelated/pre-start/history');
+});
+
+it.each(['before activation', 'during verification'])(
+  'rejects a selected directory replacement %s and keeps the source',
+  async (when) => {
+    const { root, source, target } = await fixture();
+    const environmentPath = join(root, 'env');
+    await writeFile(environmentPath, `OMNIVOICE_DATA_DIR=${source}\n`);
+    const moved = join(root, 'moved-copy');
+    const replace = async () => {
+      await rename(target, moved);
+      await mkdir(target);
+      await writeFile(join(target, 'personal.txt'), 'unrelated');
+    };
+    let replaceOnEnvironmentRead = false;
+    constraints.beforeReadFile = async (path) => {
+      if (replaceOnEnvironmentRead && path === environmentPath) {
+        replaceOnEnvironmentRead = false;
+        await replace();
+      }
+    };
+    let activatedReplacement = false;
+    const outcome = await relocateDataDirectory(source, target, {
+      environmentPath,
+      stop: async () => undefined,
+      start: async () => {
+        if (existsSync(moved) && (await readDataDirectorySetting(environmentPath)) === target)
+          activatedReplacement = true;
+      },
+      verify: async () => {
+        if (when === 'during verification') await replace();
+        return true;
+      },
+      progress: (stage) => {
+        if (when === 'before activation' && stage === 'switching') replaceOnEnvironmentRead = true;
+      },
+    }).then(
+      (result) => ({ result }),
+      (error: Error) => ({ error }),
+    );
+    expect(outcome).toMatchObject({
+      error: expect.objectContaining({ message: 'target_changed' }),
+    });
+    expect(activatedReplacement).toBe(false);
+    expect(await readFile(join(source, 'voices', 'sample.wav'), 'utf8')).toBe('voice');
+    expect(await readFile(join(target, 'personal.txt'), 'utf8')).toBe('unrelated');
+    expect(await readFile(join(moved, 'voices', 'sample.wav'), 'utf8')).toBe('voice');
+  },
+);
+
+it('rejects a symlink substituted for the selected directory without traversing it', async () => {
+  const { root, source, target } = await fixture();
+  const moved = join(root, 'moved-copy');
+  await expect(
+    relocateDataDirectory(source, target, {
+      environmentPath: join(root, 'env'),
+      stop: async () => undefined,
+      start: async () => undefined,
+      verify: async () => {
+        await rename(target, moved);
+        await symlink(moved, target, process.platform === 'win32' ? 'junction' : 'dir');
+        return true;
+      },
+      progress: () => undefined,
+    }),
+  ).rejects.toThrow('target_changed');
+  expect(await readFile(join(source, 'voices', 'sample.wav'), 'utf8')).toBe('voice');
+  expect(await readFile(join(moved, 'voices', 'sample.wav'), 'utf8')).toBe('voice');
+  expect((await lstat(target)).isSymbolicLink()).toBe(true);
+});
+
+it.each([
+  { mutation: 'added file', failCopy: false },
+  { mutation: 'replaced record', failCopy: false },
+  { mutation: 'replaced directory', failCopy: false },
+  { mutation: 'added file', failCopy: true },
+  { mutation: 'replaced record', failCopy: true },
+  { mutation: 'replaced directory', failCopy: true },
+])(
+  'preserves $mutation in scratch cleanup (copy failure: $failCopy)',
+  async ({ mutation, failCopy }) => {
+    const { root, source, target } = await fixture();
+    let personal = '';
+    constraints.beforeOpen = async (path) => {
+      if (path !== join(target, 'voices', 'sample.wav')) return;
+      const name = (await readdir(target)).find((entry) =>
+        entry.startsWith('.voicestudio-moving-'),
+      )!;
+      const scratch = join(target, name);
+      if (mutation === 'replaced directory') {
+        await rename(scratch, join(root, 'moved-scratch'));
+        await mkdir(scratch);
+      }
+      personal = join(scratch, mutation === 'replaced record' ? 'manifest.json' : 'personal.txt');
+      await writeFile(personal + '.external', 'unrelated');
+      await rename(personal + '.external', personal);
+      if (failCopy) throw new Error('copy interrupted');
+    };
+    if (failCopy)
+      await expect(prepareDataRelocation(source, target)).rejects.toThrow('copy interrupted');
+    else await prepareDataRelocation(source, target);
+    expect(personal).not.toBe('');
+    expect(await readFile(personal, 'utf8')).toBe('unrelated');
+    expect(existsSync(source)).toBe(true);
+  },
+);
+
+it('rejects a requested directory alias retargeted after copying', async () => {
+  const { root, source, target } = await fixture();
+  const alias = join(root, 'target-alias');
+  await symlink(dirname(target), alias, process.platform === 'win32' ? 'junction' : 'dir');
+  const requested = join(alias, 'data');
+  const foreignParent = join(root, 'foreign');
+  await mkdir(join(foreignParent, 'data'), { recursive: true });
+  await writeFile(join(foreignParent, 'data', 'personal.txt'), 'unrelated');
+  await expect(
+    relocateDataDirectory(source, requested, {
+      environmentPath: join(root, 'env'),
+      stop: async () => undefined,
+      start: async () => undefined,
+      verify: async () => {
+        await rename(alias, join(root, 'previous-alias'));
+        await symlink(foreignParent, alias, process.platform === 'win32' ? 'junction' : 'dir');
+        return true;
+      },
+      progress: () => undefined,
+    }),
+  ).rejects.toThrow('target_changed');
+  expect(await readFile(join(source, 'voices', 'sample.wav'), 'utf8')).toBe('voice');
+  expect(await readFile(join(target, 'voices', 'sample.wav'), 'utf8')).toBe('voice');
+  expect(await readFile(join(foreignParent, 'data', 'personal.txt'), 'utf8')).toBe('unrelated');
+});

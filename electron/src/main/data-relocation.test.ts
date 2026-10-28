@@ -1,8 +1,17 @@
 // @vitest-environment node
 import { existsSync } from 'node:fs';
-import { mkdtemp, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import {
+  mkdtemp,
+  mkdir,
+  readFile,
+  realpath,
+  rename,
+  rm,
+  symlink,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join, parse } from 'node:path';
+import { basename, dirname, join, parse } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 import {
   inspectDataRelocation,
@@ -215,4 +224,54 @@ it('never activates or removes a source whose dot-prefixed child contains the de
   expect(existsSync(source)).toBe(true);
   expect(existsSync(target)).toBe(true);
   expect(await readFile(join(source, 'voices', 'sample.wav'), 'utf8')).toBe('voice');
+});
+
+it.each([true, false])(
+  'keeps a replacement for a newly created target when verification returns %s',
+  async (verified) => {
+    const { root, source, target } = await fixture();
+    const moved = join(root, 'moved-copy');
+    await expect(
+      relocateDataDirectory(source, target, {
+        environmentPath: join(root, 'env'),
+        stop: async () => undefined,
+        start: async () => undefined,
+        verify: async () => {
+          await rename(target, moved);
+          await mkdir(target);
+          await writeFile(join(target, 'personal.txt'), 'unrelated');
+          return verified;
+        },
+        progress: () => undefined,
+      }),
+    ).rejects.toThrow(verified ? 'target_changed' : 'backend_verification_failed');
+    expect(await readFile(join(target, 'personal.txt'), 'utf8')).toBe('unrelated');
+    expect(await readFile(join(source, 'voices', 'sample.wav'), 'utf8')).toBe('voice');
+  },
+);
+
+it('rejects a retargeted parent alias for a newly created destination', async () => {
+  const { root, source, target } = await fixture();
+  const alias = join(root, 'target-alias');
+  await symlink(dirname(target), alias, process.platform === 'win32' ? 'junction' : 'dir');
+  const requested = join(alias, basename(target));
+  const foreign = join(root, 'foreign-parent');
+  await mkdir(join(foreign, basename(target)), { recursive: true });
+  await writeFile(join(foreign, basename(target), 'personal.txt'), 'unrelated');
+  await expect(
+    relocateDataDirectory(source, requested, {
+      environmentPath: join(root, 'env'),
+      stop: async () => undefined,
+      start: async () => undefined,
+      verify: async () => {
+        await rename(alias, join(root, 'previous-alias'));
+        await symlink(foreign, alias, process.platform === 'win32' ? 'junction' : 'dir');
+        return true;
+      },
+      progress: () => undefined,
+    }),
+  ).rejects.toThrow('target_changed');
+  expect(await readFile(join(source, 'voices', 'sample.wav'), 'utf8')).toBe('voice');
+  expect(await readFile(join(target, 'voices', 'sample.wav'), 'utf8')).toBe('voice');
+  expect(await readFile(join(foreign, basename(target), 'personal.txt'), 'utf8')).toBe('unrelated');
 });
