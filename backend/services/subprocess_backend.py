@@ -815,6 +815,9 @@ class SubprocessBackend(TTSBackend):
             return False
         # No repository is exposed by the sidecar protocol; use one stable
         # guard per engine so repeated failed calls cannot keep re-racing.
+        # Its result compares global endpoints, not the child's endpoint:
+        # another caller may already have selected a working route while
+        # this child still uses the failed one. Compare the actual child below.
         endpoint_race.reselect_after_failure(f"sidecar:{self.id}", reason)
         current = endpoint_race.download_endpoint(gated=self.requires_hf_auth) or endpoint_race.CANONICAL_ENDPOINT
         if current.rstrip("/") == previous.rstrip("/"):

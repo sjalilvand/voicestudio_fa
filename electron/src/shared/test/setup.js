@@ -60,9 +60,12 @@ beforeEach(() => {
   persistence.configurePersistenceRole('main');
 });
 afterEach(async () => {
-  await cleanupReact();
-  longformPersistence.resetLongformPersistenceForTests();
-  persistence.resetCoalescedJsonStorageForTests();
+  try {
+    await cleanupReact();
+  } finally {
+    longformPersistence.resetLongformPersistenceForTests();
+    persistence.resetCoalescedJsonStorageForTests();
+  }
 });
 
 // jsdom doesn't implement navigation, so window.location.reload() throws
