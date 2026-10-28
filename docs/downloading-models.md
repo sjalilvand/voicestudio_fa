@@ -100,6 +100,11 @@ installation. It retries once only when a network failure selects a different
 automatic endpoint; explicit endpoint choices stay fixed, and a full disk
 stops the download immediately.
 
+If an engine's live sidecar fails while fetching its first-use model weights,
+an automatic endpoint change also restarts that sidecar before one retry, so
+its Hub client reads the new endpoint. An unchanged endpoint or a non-network
+engine failure does not restart it.
+
 **Explicit (always wins).** To pin an endpoint yourself:
 
 ```

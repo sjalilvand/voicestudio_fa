@@ -236,6 +236,63 @@ def test_automatic_endpoint_reaches_sidecar_without_token_or_parent_mutation(mon
     assert os.environ["HF_TOKEN"] == "hf_test_secret"
 
 
+@pytest.mark.parametrize("failure,changed,manual,gated,expected_restarts", [
+    ("Connection reset by peer", True, False, False, 1),
+    ("Connection reset by peer", False, False, False, 0),
+    ("Connection reset by peer", True, True, False, 0),
+    ("Connection reset by peer", True, False, True, 0),
+    ("CUDA out of memory", True, False, False, 0),
+])
+@pytest.mark.parametrize("retry_fails", [False, True])
+def test_live_sidecar_restarts_only_for_changed_automatic_download_endpoint(
+    monkeypatch, failure, changed, manual, gated, expected_restarts, retry_fails,
+):
+    from services import endpoint_race, model_manager
+    from types import SimpleNamespace
+
+    backend = EchoBackend()
+    monkeypatch.setattr(backend, "requires_hf_auth", gated)
+    spawns, retired, reselections = [], [], []
+    monkeypatch.setattr(model_manager, "running_on_gpu_pool", lambda: True)
+    monkeypatch.setattr(endpoint_race, "mode", lambda: "manual" if manual else "auto")
+    endpoint = ["https://hf-mirror.com"]
+    def reselect(repo, reason):
+        reselections.append((repo, reason))
+        if changed:
+            endpoint[0] = None
+        return changed
+    monkeypatch.setattr(endpoint_race, "reselect_after_failure", reselect)
+    monkeypatch.setattr(endpoint_race, "download_endpoint", lambda *, gated=False: endpoint_race.CANONICAL_ENDPOINT if gated else endpoint[0])
+    def spawn():
+        assert backend._lock.locked()
+        backend._proc = SimpleNamespace(number=len(spawns), stdin=None, wait=lambda timeout=None: 0)
+        backend._spawn_hf_endpoint = endpoint_race.download_endpoint(gated=gated) or endpoint_race.CANONICAL_ENDPOINT
+        spawns.append(backend._proc)
+    def retire(proc):
+        assert backend._lock.locked()
+        retired.append(proc)
+        backend._proc = None
+    monkeypatch.setattr(backend, "_spawn", spawn)
+    monkeypatch.setattr(backend, "_reap_unusable_process", retire)
+    monkeypatch.setattr(backend, "_send", lambda msg: None)
+    replies = iter([
+        {"op": "error", "stage": "synthesize", "message": failure},
+        {"op": "error", "stage": "synthesize", "message": failure} if retry_fails else {"op": "audio", "audio_pcm_b64": "AAA="},
+    ])
+    monkeypatch.setattr(backend, "_recv_with_timeout", lambda timeout: next(replies))
+    if expected_restarts and not retry_fails:
+        assert backend.generate("Hello").shape == (1, 1)
+    else:
+        with pytest.raises(RuntimeError, match=failure):
+            backend.generate("Hello")
+    assert len(spawns) == 1 + expected_restarts
+    assert len(retired) == expected_restarts
+    if expected_restarts:
+        assert retired[0] is spawns[0]
+        assert backend._spawn_hf_endpoint == endpoint_race.CANONICAL_ENDPOINT
+        assert len(reselections) == 1
+
+
 # ── frame protocol DoS guards ──────────────────────────────────────────────
 
 
