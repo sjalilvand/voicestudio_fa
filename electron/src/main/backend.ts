@@ -1589,15 +1589,24 @@ export class BackendSupervisor extends EventEmitter<{
     const candidates = (
       configured ? [configured] : [this.runtimeProject, own, ...legacyTauriRuntimeProjects()]
     ).filter((candidate): candidate is string => Boolean(candidate));
+    const selected = configured ?? own;
+    let selectedRefusal: RuntimeLaunchRefusedError | undefined;
     for (const project of new Set(candidates.map((candidate) => resolve(candidate)))) {
-      if (await runtimeProjectReady(bundle, project)) {
-        this.runtimeProject = project;
-        if (project !== own && project !== configured)
-          this.pushLog('out', `Reusing compatible Tauri runtime: ${project}`);
-        return { project, ready: true };
+      try {
+        if (await runtimeProjectReady(bundle, project)) {
+          this.runtimeProject = project;
+          if (project !== own && project !== configured)
+            this.pushLog('out', `Reusing compatible Tauri runtime: ${project}`);
+          return { project, ready: true };
+        }
+      } catch (error) {
+        if (!(error instanceof RuntimeLaunchRefusedError)) throw error;
+        // A legacy candidate must not prevent setup or reuse of another one.
+        if (samePath(project, selected)) selectedRefusal = error;
       }
     }
-    this.runtimeProject = configured ?? own;
+    this.runtimeProject = selected;
+    if (selectedRefusal) throw selectedRefusal;
     return { project: this.runtimeProject, ready: false };
   }
 

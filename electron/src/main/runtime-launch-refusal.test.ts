@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { execFile, spawn, spawnSync } from 'node:child_process';
-import { mkdtemp, mkdir, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -19,8 +19,9 @@ vi.mock('./runtime-project', async (original) => ({
   // Structural metadata is intact; run the real dependency probe beneath it.
   runtimeReady: vi.fn(async () => true),
   runtimeCompatible: vi.fn(async () => false),
+  stageRuntimeSources: vi.fn(async () => undefined),
 }));
-import { runtimePython } from './runtime-project';
+import { runtimePython, runtimeReady, runtimeCompatible } from './runtime-project';
 import { BackendSupervisor } from './backend';
 
 beforeEach(async () => {
@@ -32,6 +33,11 @@ beforeEach(async () => {
   vi.stubEnv('OMNIVOICE_TORCH_VARIANT', 'cpu');
   vi.stubEnv('OMNIVOICE_BACKEND_CMD', '');
   vi.stubEnv('VOICESTUDIO_SKIP_BACKEND', '');
+  vi.stubEnv('LOCALAPPDATA', join(host.data, 'legacy'));
+  vi.stubEnv('APPDATA', '');
+  vi.stubEnv('OMNIVOICE_PORT', '18234');
+  vi.mocked(runtimeReady).mockResolvedValue(true);
+  vi.mocked(runtimeCompatible).mockResolvedValue(false);
 });
 afterEach(async () => {
   vi.restoreAllMocks();
@@ -128,3 +134,95 @@ it.each(['darwin', 'linux'] as const)(
     expect(repair).not.toHaveBeenCalled();
   },
 );
+
+function candidateProbes(ready: string[], refused: string[]) {
+  vi.mocked(runtimeReady).mockImplementation(async (_bundle, project) => ready.includes(project));
+  vi.mocked(execFile).mockImplementation(((
+    command: string,
+    _args: unknown,
+    _options: unknown,
+    callback: (error: Error | null, stdout: string, stderr: string) => void,
+  ) => {
+    if (refused.some((project) => runtimePython(project) === command)) {
+      callback(Object.assign(new Error('spawn UNKNOWN'), { code: 'UNKNOWN' }), '', '');
+    } else callback(null, '', '');
+  }) as never);
+}
+
+function runtimeCandidates() {
+  return {
+    own: join(host.data, 'runtime', 'project'),
+    legacy: join(host.data, 'legacy', 'com.debpalash.omnivoice-studio', 'project'),
+  };
+}
+
+it('offers setup for a missing default runtime despite a refused legacy candidate', async () => {
+  const { own, legacy } = runtimeCandidates();
+  await rm(join(own, '.venv'), { recursive: true });
+  candidateProbes([legacy], [legacy]);
+  const { value, repair } = supervisor();
+  await value.start();
+  expect(value.status.stage).toBe('setup_required');
+  expect(value.status.runtimePath).toBe(join(host.data, 'runtime'));
+  expect(repair).not.toHaveBeenCalled();
+  expect(spawn).not.toHaveBeenCalled();
+});
+
+it('reuses a healthy legacy runtime after the default interpreter refuses to launch', async () => {
+  const { own, legacy } = runtimeCandidates();
+  candidateProbes([own, legacy], [own]);
+  const { value, repair } = supervisor();
+  const launch = vi
+    .spyOn(
+      value as unknown as {
+        spawnChild: (plan: { argv: string[]; cwd: string }, gen: number) => void;
+      },
+      'spawnChild',
+    )
+    .mockImplementation(() => undefined);
+  await value.start();
+  expect(launch).toHaveBeenCalledWith(
+    expect.objectContaining({
+      cwd: legacy,
+      argv: expect.arrayContaining([runtimePython(legacy)]),
+    }),
+    expect.any(Number),
+  );
+  expect(value.status.runtimePath).toBe(
+    join(host.data, 'legacy', 'com.debpalash.omnivoice-studio'),
+  );
+  expect(repair).not.toHaveBeenCalled();
+});
+
+it('keeps a refused configured runtime authoritative over a healthy default', async () => {
+  const { own } = runtimeCandidates();
+  const configuredRoot = join(host.data, 'chosen');
+  const configured = join(configuredRoot, 'project');
+  await writeFile(
+    join(host.data, 'runtime-location.json'),
+    JSON.stringify({ root: configuredRoot, owned: true }),
+  );
+  candidateProbes([configured, own], [configured]);
+  const { value, repair } = supervisor();
+  await value.start();
+  expect(value.status.stage).toBe('failed');
+  expect(value.status.runtimePath).toBe(configuredRoot);
+  expect(value.status.message).toContain(runtimePython(configured));
+  expect(vi.mocked(execFile).mock.calls.map(([command]) => command)).not.toContain(
+    runtimePython(own),
+  );
+  expect(repair).not.toHaveBeenCalled();
+  expect(spawn).not.toHaveBeenCalled();
+});
+
+it('preserves refusal of the selected default when there is no healthy alternative', async () => {
+  const { own } = runtimeCandidates();
+  candidateProbes([own], [own]);
+  const { value, repair } = supervisor();
+  await value.start();
+  expect(value.status.stage).toBe('failed');
+  expect(value.status.runtimePath).toBe(join(host.data, 'runtime'));
+  expect(value.status.message).toContain(runtimePython(own));
+  expect(repair).not.toHaveBeenCalled();
+  expect(spawn).not.toHaveBeenCalled();
+});
