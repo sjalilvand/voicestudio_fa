@@ -571,7 +571,7 @@ export function devRendererPort(rendererUrl: string | undefined): string | null 
 
 function childEnv(
   port: number,
-  region: RuntimeRegion = 'auto',
+  _region: RuntimeRegion = 'auto',
   platform = process.platform,
 ): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {
@@ -629,7 +629,8 @@ function childEnv(
   if (app.isPackaged && process.resourcesPath && !env.OMNIVOICE_FRONTEND_DIST?.trim()) {
     env.OMNIVOICE_FRONTEND_DIST = bundledWebUiPath();
   }
-  if (region === 'china') env.HF_ENDPOINT ??= 'https://hf-mirror.com';
+  // Region defaults must leave HF_ENDPOINT unset so the backend can probe and
+  // fail over. Only an explicit user endpoint may disable automatic selection.
   if (platform === 'win32') {
     env.TORCHDYNAMO_DISABLE = '1';
     env.HF_HUB_DISABLE_SYMLINKS = '1';

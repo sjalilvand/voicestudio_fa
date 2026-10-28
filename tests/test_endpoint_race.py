@@ -103,6 +103,14 @@ def test_probe_allows_only_shipped_https_origins(er, endpoint):
     assert er._is_allowed_probe_endpoint(endpoint) is True
 
 
+def test_old_root_probe_decision_is_revalidated(er):
+    from core import prefs
+    prefs.set_("hf_endpoint_auto", {"endpoint": er.COMMUNITY_MIRROR,
+                                  "reachable": True, "checked_at": time.time()})
+    assert er.cached_decision() is None
+    assert er.effective_endpoint() is None
+
+
 # ── Decision policy matrix ──────────────────────────────────────────────────
 
 def test_both_reachable_similar_latency_prefers_canonical(er):
@@ -270,16 +278,16 @@ def test_decision_persists_via_prefs(er, monkeypatch):
     monkeypatch.setattr(er, "probe_endpoint", prober)
     er.ensure_decision()
     from core import prefs
-    stored = prefs.get("hf_endpoint_auto")
+    stored = prefs.get(er._DECISION_PREF)
     assert stored["endpoint"] == er.COMMUNITY_MIRROR
     assert er.cached_decision() == stored
 
 
 def test_cached_decision_rejects_malformed(er):
     from core import prefs
-    prefs.set_("hf_endpoint_auto", {"garbage": True})
+    prefs.set_(er._DECISION_PREF, {"garbage": True})
     assert er.cached_decision() is None
-    prefs.set_("hf_endpoint_auto", "not-a-dict")
+    prefs.set_(er._DECISION_PREF, "not-a-dict")
     assert er.cached_decision() is None
 
 
