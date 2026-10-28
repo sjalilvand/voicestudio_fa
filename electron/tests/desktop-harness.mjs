@@ -105,8 +105,11 @@ async function launch({ profile, backendPort, seed }) {
     },
     timeout: 60000,
   });
+  // Playwright disposes its process channel when Electron closes. Keep the
+  // actual child so post-crash guards can inspect exit state without that channel.
+  const child = app.process();
   const output = [];
-  for (const stream of [app.process().stdout, app.process().stderr]) {
+  for (const stream of [child.stdout, child.stderr]) {
     stream?.on('data', (chunk) => output.push(String(chunk)));
   }
   const context = app.context();
@@ -155,7 +158,7 @@ async function launch({ profile, backendPort, seed }) {
   });
   // The main-process guard predates the app; one reload also replays the first page's console.
   await page.reload();
-  return { app, page, errors };
+  return { app, child, page, errors };
 }
 
 /**
@@ -211,7 +214,7 @@ export async function withApp(t, options, body) {
   let unobserved = 0;
   async function collectGuards(started) {
     errors.push(...started.errors);
-    const child = started.app.process();
+    const { child } = started;
     // A killed app cannot be asked for its log; every other read error must fail the run.
     if (child.exitCode !== null || child.signalCode !== null) return;
     const seen = await started.app.evaluate(() => globalThis.__requestLog);
