@@ -12,7 +12,14 @@ pytestmark = pytest.mark.skipif(os.name != "posix", reason="POSIX process groups
 @pytest.mark.parametrize("state", ["exited", "exit_pending", "live", "reaped"])
 @pytest.mark.parametrize("probe", ["waitpid", "waitid"])
 def test_group_signal_permission_error_is_benign_only_after_owned_leader_exits(monkeypatch, state, probe):
+    from core import contained_subprocess
     from core.contained_subprocess import OwnedPopen
+
+    # Exercise the observation deadline without depending on runner scheduling.
+    now = [0.0]
+    def sleep(duration):
+        now[0] += duration
+    monkeypatch.setattr(contained_subprocess, "time", SimpleNamespace(monotonic=lambda: now[0], sleep=sleep))
 
     # The first probe proves the leader live; the second sees its concurrent
     # control-pipe cancellation. Exercise both native API choices on POSIX CI.
