@@ -153,8 +153,9 @@ final class PhoneScreenshotTour: XCTestCase {
         XCTAssertTrue(language.wait(for: \.isHittable, toEqual: true, timeout: 5))
         language.tap(); capture("Language-picker",app); closeSheet("Language",app)
         let modelsNavigation = app.navigationBars["Models"]
-        openSettingsPage(app.buttons["Models"], destination: modelsNavigation, app); capture("Models",app)
-        app.buttons["model.licence.kitten-mini-en-fp16"].tap(); capture("Model-terms",app); closeSheet("Review model licence",app)
+        let modelLicence = app.buttons["model.licence.kitten-mini-en-fp16"]
+        openSettingsPage(app.buttons["Models"], destination: modelLicence, app); capture("Models",app)
+        modelLicence.tap(); capture("Model-terms",app); closeSheet("Review model licence",app)
         let adaptiveBack = app.buttons["BackButton"]
         if adaptiveBack.exists { adaptiveBack.tap() } else { modelsNavigation.buttons.firstMatch.tap() }
         // Settings rows can exist while their outgoing navigation page is still transitioning.
