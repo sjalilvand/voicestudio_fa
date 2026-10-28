@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import { afterEach, beforeEach } from 'vitest';
+import { cleanupReact } from './react-cleanup';
 // Initialize the real i18n instance so components that call the global
 // i18next.t() singleton (e.g. class components like ErrorBoundary) render
 // actual strings in tests instead of bare keys. fallbackLng: 'en' keeps
@@ -58,7 +59,8 @@ beforeEach(() => {
   persistence.resetCoalescedJsonStorageForTests();
   persistence.configurePersistenceRole('main');
 });
-afterEach(() => {
+afterEach(async () => {
+  await cleanupReact();
   longformPersistence.resetLongformPersistenceForTests();
   persistence.resetCoalescedJsonStorageForTests();
 });
