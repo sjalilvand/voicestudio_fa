@@ -201,6 +201,13 @@ not establish that consent has finished.
 The combined CI job allows 90 minutes for cold builds and validation; individual
 UI-test readiness deadlines remain bounded separately.
 
+Temporary keyboard diagnostics compare the existing responder action with
+foreground-key-window `endEditing(true)` in three independent launches per path.
+The `keyboard-probe` CI artifact preserves simulator logs and the complete screen
+recording, including successful flows. Logs contain responder class names and
+dispatch results, never entered text. The probes and targeted workflow are removed
+before the final fix runs the full 26-test UI matrix and device build.
+
 ## Live previews
 
 `App/Previews.swift` (debug builds only) adds Xcode canvas previews for Home, Dub (dark, light and large
