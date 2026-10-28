@@ -198,6 +198,8 @@ licence control, rather than only the navigation bar.
 UI-test setup also waits for the first-run No thanks choice to become hittable
 and disappear after tapping it; Home's presence behind the consent sheet does
 not establish that consent has finished.
+The combined CI job allows 90 minutes for cold builds and validation; individual
+UI-test readiness deadlines remain bounded separately.
 
 ## Live previews
 
