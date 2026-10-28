@@ -207,6 +207,9 @@ The `keyboard-probe` CI artifact preserves simulator logs and the complete scree
 recording, including successful flows. Logs contain responder class names and
 dispatch results, never entered text. The probes and targeted workflow are removed
 before the final fix runs the full 26-test UI matrix and device build.
+The diagnostic branch isolates the iOS UI probe from unrelated platform/inference
+jobs and package tests; the unchanged package suite stalled before probe startup
+in the first diagnostic run. Those checks return for the final fix.
 
 ## Live previews
 
