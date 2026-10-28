@@ -3,7 +3,7 @@ import XCTest
 final class PhoneScreens: XCTestCase {
     @MainActor private func launch(extra: [String] = []) -> XCUIApplication {
         let app = XCUIApplication(); app.launchArguments = ["--ui-smoke","-AppleLanguages","(en)"] + extra
-        app.launch(); XCTAssertTrue(app.buttons["consent.no"].waitForExistence(timeout: 10)); app.buttons["consent.no"].tap()
+        app.launch(); app.declineConsent()
         app.openSpeak()
         return app
     }
@@ -130,9 +130,16 @@ final class PhoneScreenshotTour: XCTestCase {
         // Its disappearance, rather than a row's existence, marks dismissal.
         XCTAssertTrue(picker.waitForNonExistence(timeout: 5))
     }
+    @MainActor private func openSettingsPage(_ row: XCUIElement, destination: XCUIElement, _ app: XCUIApplication) {
+        XCTAssertTrue(app.navigationBars["Settings"].wait(for: \.isHittable, toEqual: true, timeout: 5))
+        app.reveal(row)
+        XCTAssertTrue(row.wait(for: \.isHittable, toEqual: true, timeout: 5))
+        row.tap()
+        XCTAssertTrue(destination.wait(for: \.isHittable, toEqual: true, timeout: 5))
+    }
     @MainActor func testPhoneFirstScreens() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-smoke","-AppleLanguages","(en)"]
-        app.launch(); XCTAssertTrue(app.buttons["consent.no"].waitForExistence(timeout: 10)); XCTAssertTrue(app.staticTexts["This companion app records your choice on this phone. It sends no analytics."].exists); capture("Consent",app); app.buttons["consent.no"].tap(); capture("Home",app); app.openSpeak()
+        app.launch(); XCTAssertTrue(app.buttons["consent.no"].waitForExistence(timeout: 10)); XCTAssertTrue(app.staticTexts["This companion app records your choice on this phone. It sends no analytics."].exists); capture("Consent",app); app.declineConsent(); capture("Home",app); app.openSpeak()
         XCTAssertTrue(app.textViews["speak.text"].waitForExistence(timeout: 5)); capture("Speak-phone",app)
         app.tabButton("Voices").tap(); capture("Voices-phone",app)
         app.buttons["voices.create"].tap(); XCTAssertTrue(app.textFields["voices.clone.name"].waitForExistence(timeout: 5)); capture("Clone-phone",app); app.buttons["Cancel"].tap()
@@ -145,21 +152,23 @@ final class PhoneScreenshotTour: XCTestCase {
         app.reveal(language)
         XCTAssertTrue(language.wait(for: \.isHittable, toEqual: true, timeout: 5))
         language.tap(); capture("Language-picker",app); closeSheet("Language",app)
-        let models = app.buttons["Models"]
-        app.reveal(models)
-        XCTAssertTrue(models.wait(for: \.isHittable, toEqual: true, timeout: 5))
-        models.tap(); capture("Models",app)
-        app.buttons["model.licence.kitten-mini-en-fp16"].tap(); capture("Model-terms",app); closeSheet("Review model licence",app)
+        let modelsNavigation = app.navigationBars["Models"]
+        let modelLicence = app.buttons["model.licence.kitten-mini-en-fp16"]
+        openSettingsPage(app.buttons["Models"], destination: modelLicence, app); capture("Models",app)
+        modelLicence.tap(); capture("Model-terms",app); closeSheet("Review model licence",app)
         let adaptiveBack = app.buttons["BackButton"]
-        if adaptiveBack.exists { adaptiveBack.tap() } else { app.navigationBars.buttons.firstMatch.tap() }
-        XCTAssertTrue(app.buttons["settings.connect"].waitForExistence(timeout: 5))
-        app.buttons["settings.connect"].tap(); capture("Connect",app)
+        if adaptiveBack.exists { adaptiveBack.tap() } else { modelsNavigation.buttons.firstMatch.tap() }
+        // Settings rows can exist while their outgoing navigation page is still transitioning.
+        XCTAssertTrue(modelsNavigation.waitForNonExistence(timeout: 5))
+        openSettingsPage(app.buttons["settings.connect"], destination: app.buttons["Enter address"], app); capture("Connect",app)
         app.buttons["Enter address"].tap(); capture("Connect-address",app)
     }
     @MainActor func testPairedComputerScreens() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-smoke","-AppleLanguages","(en)"]
-        app.launch(); XCTAssertTrue(app.buttons["consent.no"].waitForExistence(timeout: 10)); app.buttons["consent.no"].tap()
-        app.tabButton("Settings").tap(); app.buttons["settings.connect"].tap(); app.buttons["Enter address"].tap()
+        app.launch(); app.declineConsent()
+        app.tabButton("Settings").tap()
+        openSettingsPage(app.buttons["settings.connect"], destination: app.buttons["Enter address"], app)
+        app.buttons["Enter address"].tap()
         let address = app.textFields["connect.url"]; address.tap(); address.typeText("http://127.0.0.1:3900")
         app.buttons["keyboard.done"].tap(); app.buttons["connect.submit"].tap(); app.openSpeak()
         XCTAssertTrue(app.textViews["speak.text"].waitForExistence(timeout: 10)); capture("Speak-computer",app)
