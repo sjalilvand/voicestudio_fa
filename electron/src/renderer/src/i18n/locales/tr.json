@@ -1161,6 +1161,7 @@
     "data_move_done": "VoiceStudio verileri {{path}}'ya taşındı.",
     "data_move_old_copy": "Yeni klasör aktif, ama VoiceStudio eski kopyayı kaldıramadı.",
     "data_move_error": "VoiceStudio verileri taşıyamadı.",
+    "data_move_error_rollback_incomplete": "Taşıma başarısız oldu. Özgün verileriniz korundu, ancak VoiceStudio kurtarmayı tamamlayamadı. Boş bir klasörle yeniden denemeden önce motoru ve hedefi kontrol edin.",
     "data_move_error_target_not_empty": "Var olan dosyaların üstü yazılamaz olması için boş bir klasör seçin.",
     "data_move_error_nested_path": "VoiceStudio veri klasörünün dışındaki bir klasör seçin.",
     "data_move_error_insufficient_space": "Bu sürücünün taşınmak için yeterli boş alanı yok.",

@@ -96,3 +96,15 @@ it.each(['unsupported_entry', 'target_changed'])(
     expect(mock.toastError).not.toHaveBeenCalledWith(expect.stringContaining(code));
   },
 );
+
+it('prioritizes incomplete-cleanup guidance over the underlying activation failure', async () => {
+  mock.choose.mockRejectedValue(new Error('rollback_incomplete: backend_verification_failed'));
+  renderSettings();
+  fireEvent.click(await screen.findByRole('button', { name: 'settings.data_move_choose' }));
+  await waitFor(() =>
+    expect(mock.toastError).toHaveBeenCalledWith('settings.data_move_error_rollback_incomplete'),
+  );
+  expect(mock.toastError).not.toHaveBeenCalledWith(
+    'settings.data_move_error_backend_verification_failed',
+  );
+});

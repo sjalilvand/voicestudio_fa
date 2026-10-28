@@ -1161,6 +1161,7 @@
     "data_move_done": "Data VoiceStudio dipindahkan ke {{path}}.",
     "data_move_old_copy": "Folder baru aktif, tapi VoiceStudio tidak bisa menghapus salinan lama. Anda dapat menghapus secara manual.",
     "data_move_error": "VoiceStudio tidak bisa memindahkan data.",
+    "data_move_error_rollback_incomplete": "Pemindahan gagal. Data asli Anda tetap disimpan, tetapi VoiceStudio tidak dapat menyelesaikan pemulihan. Periksa mesin dan tujuan sebelum mencoba lagi dengan folder kosong.",
     "data_move_error_target_not_empty": "Pilih folder kosong sehingga file yang ada tidak dapat ditekan.",
     "data_move_error_nested_path": "Pilih folder di luar folder data VoiceStudio saat ini.",
     "data_move_error_insufficient_space": "Drive itu tidak memiliki cukup ruang bebas untuk bergerak.",

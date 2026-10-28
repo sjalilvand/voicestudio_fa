@@ -244,7 +244,12 @@ it.each([true, false])(
         },
         progress: () => undefined,
       }),
-    ).rejects.toThrow(verified ? 'target_changed' : 'backend_verification_failed');
+    ).rejects.toMatchObject({
+      message: 'rollback_incomplete',
+      cause: expect.objectContaining({
+        message: verified ? 'target_changed' : 'backend_verification_failed',
+      }),
+    });
     expect(await readFile(join(target, 'personal.txt'), 'utf8')).toBe('unrelated');
     expect(await readFile(join(source, 'voices', 'sample.wav'), 'utf8')).toBe('voice');
   },
@@ -270,7 +275,10 @@ it('rejects a retargeted parent alias for a newly created destination', async ()
       },
       progress: () => undefined,
     }),
-  ).rejects.toThrow('target_changed');
+  ).rejects.toMatchObject({
+    message: 'rollback_incomplete',
+    cause: expect.objectContaining({ message: 'target_changed' }),
+  });
   expect(await readFile(join(source, 'voices', 'sample.wav'), 'utf8')).toBe('voice');
   expect(await readFile(join(target, 'voices', 'sample.wav'), 'utf8')).toBe('voice');
   expect(await readFile(join(foreign, basename(target), 'personal.txt'), 'utf8')).toBe('unrelated');
