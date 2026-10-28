@@ -64,12 +64,14 @@
 | :--- | :--- | :--- | :--- |
 | **macOS** (Apple Silicon) | `.dmg` · [руководство](../../docs/install/macos.md) | Metal (MPS) | Стабильная |
 | **Windows 10/11** (x64) | `.exe` · [руководство](../../docs/install/windows.md) | NVIDIA CUDA · [AMD ROCm (по желанию)](../../docs/install/windows-rocm.md) · CPU | Стабильная |
-| **Linux** (x64) | `.AppImage` · `.deb` · `snap` · [Nix](../../docs/install/nix.md) · [руководство](../../docs/install/linux.md) | NVIDIA CUDA · CPU | Стабильная |
+| **Linux** (x64) | `.AppImage` · `.deb` · [`snap`](https://snapcraft.io/voicestudio) · [Nix](../../docs/install/nix.md) · [руководство](../../docs/install/linux.md) | NVIDIA CUDA · CPU | Стабильная |
 | **Docker** | [`ghcr.io/debpalash/voicestudio`](../../docs/install/docker.md) | NVIDIA CUDA · AMD ROCm | Стабильная |
 | **Android** 10+ | `.apk` · [руководство](../../docs/mobile.md#install) | На устройстве, офлайн | Предварительная |
 | **iPhone / iPad** (iOS 17+) | `.ipa` (sideload) · [руководство](../../docs/mobile.md#install) | На устройстве, офлайн | Предварительная |
 | **Windows ARM64** | `.exe` · [руководство](../../docs/install/windows.md) | CPU (x64-бэкенд работает через эмуляцию) | Экспериментальная |
 | **Intel Mac** | `.dmg` · [причины](../../docs/install/macos.md) | Только интерфейс, подключение к удалённому бэкенду | Ограниченная |
+
+[![Get it from the Snap Store](https://snapcraft.io/en/dark/install.svg)](https://snapcraft.io/voicestudio)
 
 Установщики для компьютера и телефона лежат в [последнем релизе](https://github.com/debpalash/VoiceStudio/releases/latest), а образы Docker публикуются в GHCR. Нет видеокарты? Приложение полностью работает на процессоре, просто медленнее. Необязательные нативные GGUF-движки могут использовать Vulkan, в том числе на видеокартах AMD ([OmniVoice](../../docs/engines/omnivoice-gguf.md#vulkan-acceleration), [CosyVoice](../../docs/engines/cosyvoice-gguf.md)). Сколько занимает генерация на разных движках и железе, показано в [обзоре быстродействия](../../docs/performance.md).
 

@@ -64,12 +64,14 @@
 | :--- | :--- | :--- | :--- |
 | **macOS**（Apple Silicon） | `.dmg` · [指南](../../docs/install/macos.md) | Metal（MPS） | 稳定 |
 | **Windows 10/11**（x64） | `.exe` · [指南](../../docs/install/windows.md) | NVIDIA CUDA · [AMD ROCm（可选）](../../docs/install/windows-rocm.md) · CPU | 稳定 |
-| **Linux**（x64） | `.AppImage` · `.deb` · `snap` · [Nix](../../docs/install/nix.md) · [指南](../../docs/install/linux.md) | NVIDIA CUDA · CPU | 稳定 |
+| **Linux**（x64） | `.AppImage` · `.deb` · [`snap`](https://snapcraft.io/voicestudio) · [Nix](../../docs/install/nix.md) · [指南](../../docs/install/linux.md) | NVIDIA CUDA · CPU | 稳定 |
 | **Docker** | [`ghcr.io/debpalash/voicestudio`](../../docs/install/docker.md) | NVIDIA CUDA · AMD ROCm | 稳定 |
 | **Android** 10+ | `.apk` · [指南](../../docs/mobile.md#install) | 设备端运行，可离线 | 预览版 |
 | **iPhone / iPad**（iOS 17+） | `.ipa`（侧载） · [指南](../../docs/mobile.md#install) | 设备端运行，可离线 | 预览版 |
 | **Windows on ARM** | `.exe` · [指南](../../docs/install/windows.md) | CPU（x64 后端在模拟层中运行） | 实验性 |
 | **Intel Mac** | `.dmg` · [原因](../../docs/install/macos.md) | 仅应用界面，需连接远程后端 | 受限 |
+
+[![Get it from the Snap Store](https://snapcraft.io/en/dark/install.svg)](https://snapcraft.io/voicestudio)
 
 桌面端和手机安装包都在[最新发行版](https://github.com/debpalash/VoiceStudio/releases/latest)中，Docker 镜像则发布在 GHCR。没有 GPU？应用在 CPU 上也能完整使用，只是速度较慢。原生 GGUF 引擎还能通过 Vulkan 使用 AMD、Intel 和 NVIDIA GPU；在 Windows 和 Linux 上，OmniVoice GGUF 会自动选择 GPU 和模型量化（[OmniVoice](../../docs/engines/omnivoice-gguf.md#vulkan-acceleration)、[CosyVoice](../../docs/engines/cosyvoice-gguf.md)）。各引擎在不同硬件上的速度：[性能说明](../../docs/performance.md)。
 
