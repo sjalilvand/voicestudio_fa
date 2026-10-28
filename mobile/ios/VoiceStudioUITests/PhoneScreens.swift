@@ -142,9 +142,11 @@ final class PhoneScreenshotTour: XCTestCase {
         app.buttons["settings.palette.light"].tap()
         XCTAssertTrue(app.buttons["choice.option.default"].waitForExistence(timeout: 5)); capture("Palette-picker",app); closeSheet("Light palette",app)
         let language = app.buttons["settings.language"]
+        app.reveal(language)
         XCTAssertTrue(language.wait(for: \.isHittable, toEqual: true, timeout: 5))
         language.tap(); capture("Language-picker",app); closeSheet("Language",app)
         let models = app.buttons["Models"]
+        app.reveal(models)
         XCTAssertTrue(models.wait(for: \.isHittable, toEqual: true, timeout: 5))
         models.tap(); capture("Models",app)
         app.buttons["model.licence.kitten-mini-en-fp16"].tap(); capture("Model-terms",app); closeSheet("Review model licence",app)
