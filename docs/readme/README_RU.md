@@ -27,6 +27,9 @@
     <sub>Стратегический спонсор</sub><br />
     <a href="https://supermetry.com/?utm_source=voicestudio&utm_medium=sponsor&utm_campaign=strategic-sponsor&utm_content=readme-logo"><picture><source media="(prefers-color-scheme: dark)" srcset="../../docs/sponsors/supermetry-dark.svg" /><img src="../../docs/sponsors/supermetry.svg" alt="Supermetry" height="48" /></picture></a>
   </p>
+  <p>
+    <a href="https://snapcraft.io/voicestudio"><img src="https://snapcraft.io/en/dark/install.svg" alt="Get it from the Snap Store" height="40" /></a>
+  </p>
 </div>
 
 ![Обзор приложения: клонирование голоса, создание голоса, дубляж и управление моделями](../../docs/media/electron/voicestudio.gif)
@@ -70,8 +73,6 @@
 | **iPhone / iPad** (iOS 17+) | `.ipa` (sideload) · [руководство](../../docs/mobile.md#install) | На устройстве, офлайн | Предварительная |
 | **Windows ARM64** | `.exe` · [руководство](../../docs/install/windows.md) | CPU (x64-бэкенд работает через эмуляцию) | Экспериментальная |
 | **Intel Mac** | `.dmg` · [причины](../../docs/install/macos.md) | Только интерфейс, подключение к удалённому бэкенду | Ограниченная |
-
-[![Get it from the Snap Store](https://snapcraft.io/en/dark/install.svg)](https://snapcraft.io/voicestudio)
 
 Установщики для компьютера и телефона лежат в [последнем релизе](https://github.com/debpalash/VoiceStudio/releases/latest), а образы Docker публикуются в GHCR. Нет видеокарты? Приложение полностью работает на процессоре, просто медленнее. Необязательные нативные GGUF-движки могут использовать Vulkan, в том числе на видеокартах AMD ([OmniVoice](../../docs/engines/omnivoice-gguf.md#vulkan-acceleration), [CosyVoice](../../docs/engines/cosyvoice-gguf.md)). Сколько занимает генерация на разных движках и железе, показано в [обзоре быстродействия](../../docs/performance.md).
 

@@ -25,7 +25,7 @@ override them or update yt-dlp.
 
 **Snap Store** (Ubuntu and other distributions with snapd):
 
-[![Get it from the Snap Store](https://snapcraft.io/en/dark/install.svg)](https://snapcraft.io/voicestudio)
+<a href="https://snapcraft.io/voicestudio"><img src="https://snapcraft.io/en/dark/install.svg" alt="Get it from the Snap Store" height="40" /></a>
 
 or from a terminal:
 

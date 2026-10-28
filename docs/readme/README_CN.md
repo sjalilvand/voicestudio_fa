@@ -27,6 +27,9 @@
     <sub>战略赞助商</sub><br />
     <a href="https://supermetry.com/?utm_source=voicestudio&utm_medium=sponsor&utm_campaign=strategic-sponsor&utm_content=readme-logo"><picture><source media="(prefers-color-scheme: dark)" srcset="../../docs/sponsors/supermetry-dark.svg" /><img src="../../docs/sponsors/supermetry.svg" alt="Supermetry" height="48" /></picture></a>
   </p>
+  <p>
+    <a href="https://snapcraft.io/voicestudio"><img src="https://snapcraft.io/en/dark/install.svg" alt="Get it from the Snap Store" height="40" /></a>
+  </p>
 </div>
 
 ![应用导览：声音克隆、声音设计、配音和模型管理](../../docs/media/electron/voicestudio.gif)
@@ -70,8 +73,6 @@
 | **iPhone / iPad**（iOS 17+） | `.ipa`（侧载） · [指南](../../docs/mobile.md#install) | 设备端运行，可离线 | 预览版 |
 | **Windows on ARM** | `.exe` · [指南](../../docs/install/windows.md) | CPU（x64 后端在模拟层中运行） | 实验性 |
 | **Intel Mac** | `.dmg` · [原因](../../docs/install/macos.md) | 仅应用界面，需连接远程后端 | 受限 |
-
-[![Get it from the Snap Store](https://snapcraft.io/en/dark/install.svg)](https://snapcraft.io/voicestudio)
 
 桌面端和手机安装包都在[最新发行版](https://github.com/debpalash/VoiceStudio/releases/latest)中，Docker 镜像则发布在 GHCR。没有 GPU？应用在 CPU 上也能完整使用，只是速度较慢。原生 GGUF 引擎还能通过 Vulkan 使用 AMD、Intel 和 NVIDIA GPU；在 Windows 和 Linux 上，OmniVoice GGUF 会自动选择 GPU 和模型量化（[OmniVoice](../../docs/engines/omnivoice-gguf.md#vulkan-acceleration)、[CosyVoice](../../docs/engines/cosyvoice-gguf.md)）。各引擎在不同硬件上的速度：[性能说明](../../docs/performance.md)。
 

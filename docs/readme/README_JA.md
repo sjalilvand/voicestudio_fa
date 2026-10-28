@@ -27,6 +27,9 @@
     <sub>戦略スポンサー</sub><br />
     <a href="https://supermetry.com/?utm_source=voicestudio&utm_medium=sponsor&utm_campaign=strategic-sponsor&utm_content=readme-logo"><picture><source media="(prefers-color-scheme: dark)" srcset="../../docs/sponsors/supermetry-dark.svg" /><img src="../../docs/sponsors/supermetry.svg" alt="Supermetry" height="48" /></picture></a>
   </p>
+  <p>
+    <a href="https://snapcraft.io/voicestudio"><img src="https://snapcraft.io/en/dark/install.svg" alt="Get it from the Snap Store" height="40" /></a>
+  </p>
 </div>
 
 ![アプリのツアー：音声クローン、ボイスデザイン、吹き替え、モデル管理](../../docs/media/electron/voicestudio.gif)
@@ -70,8 +73,6 @@
 | **iPhone / iPad**（iOS 17+） | `.ipa`（サイドロード） · [ガイド](../../docs/mobile.md#install) | 端末上で動作、オフライン対応 | プレビュー |
 | **Windows on ARM** | `.exe` · [ガイド](../../docs/install/windows.md) | CPU（x64 バックエンドをエミュレーションで実行） | 実験的 |
 | **Intel Mac** | `.dmg` · [理由](../../docs/install/macos.md) | アプリ UI のみ。リモートバックエンドに接続 | 限定 |
-
-[![Get it from the Snap Store](https://snapcraft.io/en/dark/install.svg)](https://snapcraft.io/voicestudio)
 
 デスクトップ版とスマートフォン版のインストーラーは[最新リリース](https://github.com/debpalash/VoiceStudio/releases/latest)から入手できます。Docker イメージは GHCR で配布しています。GPU がなくても、CPU ですべての機能を使えます（速度は落ちます）。オプトインのネイティブ GGUF エンジンは、AMD GPU を含め Vulkan も利用できます（[OmniVoice](../../docs/engines/omnivoice-gguf.md#vulkan-acceleration)、[CosyVoice](../../docs/engines/cosyvoice-gguf.md)）。エンジンとハードウェアごとの速度は[パフォーマンス](../../docs/performance.md)を参照してください。
 

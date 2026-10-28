@@ -27,6 +27,9 @@
     <sub>Strategic sponsor</sub><br />
     <a href="https://supermetry.com/?utm_source=voicestudio&utm_medium=sponsor&utm_campaign=strategic-sponsor&utm_content=readme-logo"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/sponsors/supermetry-dark.svg" /><img src="docs/sponsors/supermetry.svg" alt="Supermetry" height="48" /></picture></a>
   </p>
+  <p>
+    <a href="https://snapcraft.io/voicestudio"><img src="https://snapcraft.io/en/dark/install.svg" alt="Get it from the Snap Store" height="40" /></a>
+  </p>
 </div>
 
 ![A tour of the app: voice cloning, voice design, dubbing, and model management](docs/media/electron/voicestudio.gif)
@@ -70,8 +73,6 @@ Start with **VoiceStudio** (default, powered by k2-fsa/OmniVoice), or pick from 
 | **iPhone / iPad** (iOS 17+) | `.ipa` (sideload) · [guide](docs/mobile.md#install) | On-device, offline | Preview |
 | **Windows on ARM** | `.exe` · [guide](docs/install/windows.md) | CPU (x64 backend under emulation) | Experimental |
 | **Intel Mac** | `.dmg` · [why](docs/install/macos.md) | App UI only, connects to a remote backend | Limited |
-
-[![Get it from the Snap Store](https://snapcraft.io/en/dark/install.svg)](https://snapcraft.io/voicestudio)
 
 Desktop and phone installers are on the [latest release](https://github.com/debpalash/VoiceStudio/releases/latest); Docker images come from GHCR. No GPU? The app is fully usable on the CPU, just slower. Native GGUF engines can also use Vulkan on AMD, Intel and NVIDIA GPUs; OmniVoice GGUF picks its GPU and model size automatically on Windows and Linux ([OmniVoice](docs/engines/omnivoice-gguf.md#vulkan-acceleration), [CosyVoice](docs/engines/cosyvoice-gguf.md)). Speed by engine and hardware: [performance](docs/performance.md).
 
