@@ -613,9 +613,12 @@ export async function prepareDataRelocation(
   const parent = dirname(plan.target);
   const staging = join(parent, `.${basename(plan.target)}.voicestudio-moving-${randomUUID()}`);
   await mkdir(staging, { recursive: false });
-  let stagedIdentity = await lstat(staging, { bigint: true });
+  const originalStagedIdentity = await lstat(staging, { bigint: true });
+  let stagedIdentity = originalStagedIdentity;
+  let identityVerified = false;
   try {
     stagedIdentity = await stableDirectoryIdentity(staging, stagedIdentity);
+    identityVerified = true;
     for (const entry of await readdir(plan.source)) {
       await cp(join(plan.source, entry), join(staging, entry), {
         recursive: true,
@@ -637,7 +640,30 @@ export async function prepareDataRelocation(
     }
     await renameWithRetry(staging, plan.target, DIRECTORY_RENAME);
   } catch (error) {
-    await rm(staging, { recursive: true, force: true }).catch(() => undefined);
+    try {
+      const present = await lstat(staging, { bigint: true }).catch(
+        (missing: NodeJS.ErrnoException) => {
+          if (missing.code === 'ENOENT') return null;
+          throw missing;
+        },
+      );
+      if (present) {
+        if (
+          !present.isDirectory() ||
+          present.isSymbolicLink() ||
+          present.dev !== originalStagedIdentity.dev ||
+          present.ino !== originalStagedIdentity.ino ||
+          (identityVerified && present.birthtimeNs !== stagedIdentity.birthtimeNs)
+        )
+          throw new TargetChangedError();
+        // Unverified preflight has copied no data: remove only an empty folder.
+        // Once verified, recursive cleanup still requires the original generation.
+        if (identityVerified) await rm(staging, { recursive: true, force: false });
+        else await rmdir(staging);
+      }
+    } catch {
+      throw new RollbackIncompleteError(error);
+    }
     throw error;
   }
   let binding: Awaited<ReturnType<typeof bindTargetDirectory>>;

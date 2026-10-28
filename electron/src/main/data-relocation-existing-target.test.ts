@@ -35,6 +35,7 @@ const constraints = vi.hoisted(() => ({
   copyCalls: 0,
   beforeReadFile: null as ((path: string) => Promise<void>) | null,
   beforeOpen: null as ((path: string) => Promise<void>) | null,
+  afterCopy: null as ((path: string) => Promise<void>) | null,
   collisionDirectory: '',
   failRead: '',
   unsupportedPath: '',
@@ -53,7 +54,8 @@ vi.mock('node:fs/promises', async (importOriginal) => {
     ...actual,
     cp: async (...args: Parameters<typeof actual.cp>) => {
       constraints.copyCalls++;
-      return actual.cp(...args);
+      await actual.cp(...args);
+      await constraints.afterCopy?.(String(args[1]));
     },
     mkdir: async (...args: Parameters<typeof actual.mkdir>) => {
       if (constraints.parent && dirname(String(args[0])) === constraints.parent) {
@@ -194,7 +196,7 @@ afterEach(async () => {
   constraints.stableBirthtime = false;
   constraints.stableBirthtimes.clear();
   constraints.copyCalls = 0;
-  constraints.beforeOpen = constraints.beforeReadFile = null;
+  constraints.beforeOpen = constraints.beforeReadFile = constraints.afterCopy = null;
   constraints.largeIdentityPath = '';
   constraints.identityVersion = 0;
   constraints.reusedIdentityPath = '';
@@ -996,5 +998,38 @@ it.each([true, false])(
     expect(await prepared.rollback()).toBe(true);
     expect(await readdir(existing ? target : dirname(target))).toEqual([]);
     expect(await readFile(join(source, 'omnivoice.db'), 'utf8')).toBe('database');
+  },
+);
+
+it.each(['probe', 'copy'])(
+  'preserves a replacement staging directory after %s failure',
+  async (phase) => {
+    const { root, source, target } = await fixture();
+    await rm(target, { recursive: true });
+    let foreign = '';
+    const replace = async (staging: string) => {
+      await rename(staging, join(root, 'original-staging'));
+      await mkdir(staging);
+      foreign = join(staging, 'foreign.txt');
+      await writeFile(foreign, 'unrelated user data');
+    };
+    if (phase === 'probe') {
+      constraints.stableBirthtime = true;
+      constraints.beforeOpen = async (path) => {
+        if (path.includes('.voicestudio-identity-')) await replace(dirname(path));
+      };
+    } else {
+      constraints.afterCopy = async (path) => {
+        await replace(dirname(path));
+        throw new Error('copy interrupted');
+      };
+    }
+    await expect(prepareDataRelocation(source, target)).rejects.toMatchObject({
+      message: 'rollback_incomplete',
+    });
+    expect(foreign).not.toBe('');
+    expect(await readFile(foreign, 'utf8')).toBe('unrelated user data');
+    expect(await readFile(join(source, 'omnivoice.db'), 'utf8')).toBe('database');
+    expect(existsSync(target)).toBe(false);
   },
 );
