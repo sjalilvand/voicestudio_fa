@@ -29,9 +29,13 @@ const constraints = vi.hoisted(() => ({
   parent: '',
   checkCapacity: false,
   zeroStagingIdentity: false,
+  mutableBirthtime: false,
+  stableBirthtime: false,
+  stableBirthtimes: new Map<string, bigint>(),
   copyCalls: 0,
   beforeReadFile: null as ((path: string) => Promise<void>) | null,
   beforeOpen: null as ((path: string) => Promise<void>) | null,
+  afterCopy: null as ((path: string) => Promise<void>) | null,
   collisionDirectory: '',
   failRead: '',
   unsupportedPath: '',
@@ -50,7 +54,8 @@ vi.mock('node:fs/promises', async (importOriginal) => {
     ...actual,
     cp: async (...args: Parameters<typeof actual.cp>) => {
       constraints.copyCalls++;
-      return actual.cp(...args);
+      await actual.cp(...args);
+      await constraints.afterCopy?.(String(args[1]));
     },
     mkdir: async (...args: Parameters<typeof actual.mkdir>) => {
       if (constraints.parent && dirname(String(args[0])) === constraints.parent) {
@@ -68,8 +73,32 @@ vi.mock('node:fs/promises', async (importOriginal) => {
       }
       return actual.rmdir(...args);
     },
+    stat: async (...args: Parameters<typeof actual.stat>) => {
+      const info = await actual.stat(...args);
+      if (constraints.stableBirthtime && info.isDirectory() && 'ctimeNs' in info) {
+        const key = `${info.dev}:${info.ino}`;
+        if (!constraints.stableBirthtimes.has(key))
+          constraints.stableBirthtimes.set(key, info.ctimeNs);
+        return Object.assign(Object.create(info), {
+          birthtimeNs: constraints.stableBirthtimes.get(key),
+        });
+      }
+      return constraints.mutableBirthtime && info.isDirectory() && 'ctimeNs' in info
+        ? Object.assign(Object.create(info), { birthtimeNs: info.ctimeNs })
+        : info;
+    },
     lstat: async (...args: Parameters<typeof actual.lstat>) => {
       const info = await actual.lstat(...args);
+      if (constraints.stableBirthtime && info.isDirectory() && 'ctimeNs' in info) {
+        const key = `${info.dev}:${info.ino}`;
+        if (!constraints.stableBirthtimes.has(key))
+          constraints.stableBirthtimes.set(key, info.ctimeNs);
+        return Object.assign(Object.create(info), {
+          birthtimeNs: constraints.stableBirthtimes.get(key),
+        });
+      }
+      if (constraints.mutableBirthtime && info.isDirectory() && 'ctimeNs' in info)
+        return Object.assign(Object.create(info), { birthtimeNs: info.ctimeNs });
       if (constraints.zeroStagingIdentity && String(args[0]).includes('.voicestudio-moving-'))
         return Object.assign(Object.create(info), { birthtimeNs: 0n });
       if (
@@ -163,8 +192,11 @@ afterEach(async () => {
   constraints.target = constraints.parent = '';
   constraints.checkCapacity = false;
   constraints.zeroStagingIdentity = false;
+  constraints.mutableBirthtime = false;
+  constraints.stableBirthtime = false;
+  constraints.stableBirthtimes.clear();
   constraints.copyCalls = 0;
-  constraints.beforeOpen = constraints.beforeReadFile = null;
+  constraints.beforeOpen = constraints.beforeReadFile = constraints.afterCopy = null;
   constraints.largeIdentityPath = '';
   constraints.identityVersion = 0;
   constraints.reusedIdentityPath = '';
@@ -939,3 +971,65 @@ it('rejects an unverifiable new destination before copying and cleans empty stag
   expect(await readdir(dirname(target))).toEqual([]);
   expect(await readFile(join(source, 'omnivoice.db'), 'utf8')).toBe('database');
 });
+
+it.each([true, false])(
+  'rejects mutable creation identity before copying (existing target: %s)',
+  async (existing) => {
+    const { source, target } = await fixture();
+    if (!existing) await rm(target, { recursive: true });
+    constraints.mutableBirthtime = true;
+    const failure = await prepareDataRelocation(source, target).catch((error) => error);
+    expect(constraints.copyCalls).toBe(0);
+    expect(failure).toMatchObject({ message: 'identity_unavailable' });
+    expect(existsSync(target)).toBe(existing);
+    expect(await readdir(existing ? target : dirname(target))).toEqual([]);
+    expect(await readFile(join(source, 'omnivoice.db'), 'utf8')).toBe('database');
+  },
+);
+
+it.each([true, false])(
+  'accepts stable creation time initially equal to change time (existing target: %s)',
+  async (existing) => {
+    const { source, target } = await fixture();
+    if (!existing) await rm(target, { recursive: true });
+    constraints.stableBirthtime = true;
+    const prepared = await prepareDataRelocation(source, target);
+    expect(await readFile(join(target, 'omnivoice.db'), 'utf8')).toBe('database');
+    expect(await prepared.rollback()).toBe(true);
+    expect(await readdir(existing ? target : dirname(target))).toEqual([]);
+    expect(await readFile(join(source, 'omnivoice.db'), 'utf8')).toBe('database');
+  },
+);
+
+it.each(['probe', 'copy'])(
+  'preserves a replacement staging directory after %s failure',
+  async (phase) => {
+    const { root, source, target } = await fixture();
+    await rm(target, { recursive: true });
+    let foreign = '';
+    const replace = async (staging: string) => {
+      await rename(staging, join(root, 'original-staging'));
+      await mkdir(staging);
+      foreign = join(staging, 'foreign.txt');
+      await writeFile(foreign, 'unrelated user data');
+    };
+    if (phase === 'probe') {
+      constraints.stableBirthtime = true;
+      constraints.beforeOpen = async (path) => {
+        if (path.includes('.voicestudio-identity-')) await replace(dirname(path));
+      };
+    } else {
+      constraints.afterCopy = async (path) => {
+        await replace(dirname(path));
+        throw new Error('copy interrupted');
+      };
+    }
+    await expect(prepareDataRelocation(source, target)).rejects.toMatchObject({
+      message: 'rollback_incomplete',
+    });
+    expect(foreign).not.toBe('');
+    expect(await readFile(foreign, 'utf8')).toBe('unrelated user data');
+    expect(await readFile(join(source, 'omnivoice.db'), 'utf8')).toBe('database');
+    expect(existsSync(target)).toBe(false);
+  },
+);
