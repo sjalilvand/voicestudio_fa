@@ -8,9 +8,9 @@ import pytest
 pytestmark = pytest.mark.skipif(os.name != "posix", reason="POSIX process groups only")
 
 
-@pytest.mark.parametrize("exited", [True, False])
+@pytest.mark.parametrize("state", ["exited", "live", "reaped"])
 @pytest.mark.parametrize("probe", ["waitpid", "waitid"])
-def test_group_signal_permission_error_is_benign_only_after_owned_leader_exits(monkeypatch, exited, probe):
+def test_group_signal_permission_error_is_benign_only_after_owned_leader_exits(monkeypatch, state, probe):
     from core.contained_subprocess import OwnedPopen
 
     # The first probe proves the leader live; the second sees its concurrent
@@ -18,21 +18,28 @@ def test_group_signal_permission_error_is_benign_only_after_owned_leader_exits(m
     pid = 12345
     proc = SimpleNamespace(pid=pid, args=[], stdin=None, stdout=None, stderr=None, returncode=None)
     handle = OwnedPopen(proc, -1, -1)
+    def probe_result(*args):
+        result = next(replies)
+        if isinstance(result, BaseException):
+            raise result
+        return result
     if probe == "waitpid":
         monkeypatch.delattr(os, "waitid", raising=False)
-        replies = iter([(0, 0), (pid, signal.SIGKILL) if exited else (0, 0)])
-        monkeypatch.setattr(os, "waitpid", lambda *a: next(replies))
+        last = {"exited": (pid, signal.SIGKILL), "live": (0, 0), "reaped": ChildProcessError()}
+        replies = iter([(0, 0), last[state]])
+        monkeypatch.setattr(os, "waitpid", probe_result)
     else:
         for name, value in (("P_PID", 1), ("WEXITED", 4), ("WNOHANG", 1), ("WNOWAIT", 8)):
             monkeypatch.setattr(os, name, value, raising=False)
-        replies = iter([None, SimpleNamespace(si_pid=pid) if exited else None])
-        monkeypatch.setattr(os, "waitid", lambda *a: next(replies), raising=False)
+        last = {"exited": SimpleNamespace(si_pid=pid), "live": None, "reaped": ChildProcessError()}
+        replies = iter([None, last[state]])
+        monkeypatch.setattr(os, "waitid", probe_result, raising=False)
     def denied(*args):
         raise PermissionError(1, "Operation not permitted")
     monkeypatch.setattr(os, "killpg", denied)
-    if exited:
+    if state != "live":
         handle._signal_owned_group(signal.SIGKILL)
-        if probe == "waitpid":
+        if probe == "waitpid" and state == "exited":
             assert proc.returncode == -signal.SIGKILL
     else:
         with pytest.raises(PermissionError):

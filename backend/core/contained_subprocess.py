@@ -188,7 +188,7 @@ class OwnedPopen:
                 if hasattr(os, "waitid"):
                     if self._posix_exited_unreaped():
                         return
-                elif self._posix_exit_state_reaping() is not None:
+                elif self._posix_exited_reaping() is not None:
                     return
             except ChildProcessError:
                 return  # A foreign reap also forbids signalling this number.
