@@ -190,6 +190,16 @@ job cards. The bottom dock is icon-only; tab names remain accessibility labels.
 The phone screenshot tour scopes Close to each native sheet and waits for the
 sheet to disappear before interacting with the underlying screen. Settings rows
 can remain in the accessibility hierarchy while a picker still covers them.
+Settings navigation also waits for the outgoing Models navigation bar to disappear,
+reveals each destination row, and waits for the destination to become hittable
+before capturing or interacting with it. A row's existence alone does not mark a
+completed navigation transition. Models waits for its asynchronously loaded
+licence control, rather than only the navigation bar.
+UI-test setup also waits for the first-run No thanks choice to become hittable
+and disappear after tapping it; Home's presence behind the consent sheet does
+not establish that consent has finished.
+The combined CI job allows 90 minutes for cold builds and validation; individual
+UI-test readiness deadlines remain bounded separately.
 
 ## Live previews
 
