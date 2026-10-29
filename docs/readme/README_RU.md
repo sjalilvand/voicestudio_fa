@@ -1,5 +1,4 @@
 <div align="center">
-  <p><sub><a href="../../README.md">English</a> · <a href="README_CN.md">简体中文</a> · <a href="README_JA.md">日本語</a> · <a href="README_KO.md">한국어</a></sub></p>
   <h1><img src="../../docs/logo.png" alt="" width="36" height="36" /> VoiceStudio</h1>
   <p>
     <a href="https://trendshift.io/repositories/28176?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-28176" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/28176" alt="Значок рейтинга популярности VoiceStudio на Trendshift" width="220" height="48" /></a>
@@ -12,7 +11,8 @@
     <a href="https://github.com/debpalash/VoiceStudio/releases/latest">Скачать</a> ·
     <a href="#быстрый-старт">Начало работы</a> ·
     <a href="#справка">Документация</a> ·
-    <a href="https://discord.gg/bzQavDfVV9">Discord</a>
+    <a href="https://discord.gg/bzQavDfVV9">Discord</a> ·
+    <a href="../../README.md">English</a> · <a href="README_CN.md">简体中文</a> · <a href="README_JA.md">日本語</a> · <a href="README_KO.md">한국어</a>
   </p>
   <p>
     <a href="https://github.com/debpalash/VoiceStudio/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/debpalash/VoiceStudio/ci.yml?branch=main&amp;style=flat-square&amp;label=build&amp;labelColor=27272a" alt="Статус CI" /></a>
