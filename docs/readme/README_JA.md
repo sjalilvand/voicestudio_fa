@@ -3,9 +3,9 @@
   <p>
     <a href="https://trendshift.io/repositories/28176?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-28176" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/28176" alt="Trendshift における VoiceStudio の人気ランキングバッジ" width="220" height="48" /></a>
   </p>
-  <p><strong>AI ボイススタジオを、あなたの端末で。</strong><br />
-  646 言語で、音声クローン、ボイスデザイン、吹き替え、音声入力、文字起こし、ナレーション。<br />
-  <sub>ノートパソコン、デスクトップ、サーバー、スマートフォン、タブレットなどで動作</sub></p>
+  <h2>AI ボイススタジオを、あなたの端末で。</h2>
+  <h3>646 言語で、音声クローン、ボイスデザイン、吹き替え、音声入力、文字起こし、ナレーション。</h3>
+  <p>ノートパソコン、デスクトップ、サーバー、スマートフォン、タブレットなどで動作</p>
   <p>
     <a href="https://voicestudio.sh/?utm_source=github&utm_medium=readme&utm_campaign=project">公式サイト</a> ·
     <a href="https://github.com/debpalash/VoiceStudio/releases/latest">ダウンロード</a> ·

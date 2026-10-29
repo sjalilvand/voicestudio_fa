@@ -3,9 +3,9 @@
   <p>
     <a href="https://trendshift.io/repositories/28176?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-28176" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/28176" alt="Trendshift의 VoiceStudio 인기 순위 배지" width="220" height="48" /></a>
   </p>
-  <p><strong>AI 보이스 스튜디오를, 내 기기에서.</strong><br />
-  646개 언어로 음성 복제, 보이스 디자인, 더빙, 받아쓰기, 전사, 내레이션을 만드세요.<br />
-  <sub>노트북, 데스크톱, 서버, 휴대폰, 태블릿 등에서 실행됩니다</sub></p>
+  <h2>AI 보이스 스튜디오를, 내 기기에서.</h2>
+  <h3>646개 언어로 음성 복제, 보이스 디자인, 더빙, 받아쓰기, 전사, 내레이션을 만드세요.</h3>
+  <p>노트북, 데스크톱, 서버, 휴대폰, 태블릿 등에서 실행됩니다</p>
   <p>
     <a href="https://voicestudio.sh/?utm_source=github&utm_medium=readme&utm_campaign=project">웹사이트</a> ·
     <a href="https://github.com/debpalash/VoiceStudio/releases/latest">내려받기</a> ·
