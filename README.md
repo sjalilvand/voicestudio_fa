@@ -73,7 +73,7 @@ Start with **VoiceStudio** (default, powered by k2-fsa/OmniVoice), or pick from 
 | :--- | :--- | :--- | :--- |
 | **macOS** (Apple Silicon) | `.dmg` · [guide](docs/install/macos.md) | Metal (MPS) | Stable |
 | **Windows 10/11** (x64) | `.exe` · [guide](docs/install/windows.md) | NVIDIA CUDA · [AMD ROCm (opt-in)](docs/install/windows-rocm.md) · CPU | Stable |
-| **Linux** (x64) | `.AppImage` · `.deb` · <a href="https://snapcraft.io/voicestudio"><img src="https://img.shields.io/badge/Snap%20Store-27272a?style=for-the-badge&amp;logo=snapcraft&amp;logoColor=ffffff" alt="Snap Store" height="20" /></a> · [Nix](docs/install/nix.md) · [guide](docs/install/linux.md) | NVIDIA CUDA · CPU | Stable |
+| **Linux** (x64) | `.AppImage` · `.deb` · <a href="https://snapcraft.io/voicestudio"><img src="https://img.shields.io/badge/Snap%20Store-27272a?style=flat-square&amp;logo=snapcraft&amp;logoColor=ffffff" alt="Snap Store" height="20" /></a> · [Nix](docs/install/nix.md) · [guide](docs/install/linux.md) | NVIDIA CUDA · CPU | Stable |
 | **Docker** | [`ghcr.io/debpalash/voicestudio`](docs/install/docker.md) | NVIDIA CUDA · AMD ROCm | Stable |
 | **Android** 10+ | `.apk` · [guide](docs/mobile.md#install) | On-device, offline | Preview |
 | **iPhone / iPad** (iOS 17+) | `.ipa` (sideload) · [guide](docs/mobile.md#install) | On-device, offline | Preview |
