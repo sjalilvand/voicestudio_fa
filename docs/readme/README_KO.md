@@ -71,14 +71,14 @@
 
 | 플랫폼 | 다운로드 | 가속 | 상태 |
 | :--- | :--- | :--- | :--- |
-| <img src="../../docs/assets/platforms/apple.svg" alt="" width="20" height="20" /> **macOS** (Apple Silicon) | `.dmg` · [가이드](../../docs/install/macos.md) | Metal (MPS) | 안정 |
-| <img src="../../docs/assets/platforms/windows.svg" alt="" width="20" height="20" /> **Windows 10/11** (x64) | `.exe` · [가이드](../../docs/install/windows.md) | NVIDIA CUDA · [AMD ROCm (선택)](../../docs/install/windows-rocm.md) · CPU | 안정 |
-| <img src="../../docs/assets/platforms/linux.svg" alt="" width="20" height="20" /> **Linux** (x64) | `.AppImage` · `.deb` · <a href="https://snapcraft.io/voicestudio"><img src="https://img.shields.io/badge/Snap%20Store-27272a?style=flat-square&amp;logo=snapcraft&amp;logoColor=ffffff" alt="Snap Store" height="20" /></a> · [Nix](../../docs/install/nix.md) · [가이드](../../docs/install/linux.md) | NVIDIA CUDA · CPU | 안정 |
-| <img src="../../docs/assets/platforms/docker.svg" alt="" width="20" height="20" /> **Docker** | [`ghcr.io/debpalash/voicestudio`](../../docs/install/docker.md) | NVIDIA CUDA · AMD ROCm | 안정 |
-| <img src="../../docs/assets/platforms/android.svg" alt="" width="20" height="20" /> **Android** 10+ | `.apk` · [가이드](../../docs/mobile.md#install) | 기기에서 실행, 오프라인 지원 | 프리뷰 |
-| <img src="../../docs/assets/platforms/apple.svg" alt="" width="20" height="20" /> **iPhone / iPad** (iOS 17+) | `.ipa` (사이드로드) · [가이드](../../docs/mobile.md#install) | 기기에서 실행, 오프라인 지원 | 프리뷰 |
-| <img src="../../docs/assets/platforms/windows.svg" alt="" width="20" height="20" /> **Windows on ARM** | `.exe` · [가이드](../../docs/install/windows.md) | CPU (x64 백엔드를 에뮬레이션으로 실행) | 실험적 |
-| <img src="../../docs/assets/platforms/apple.svg" alt="" width="20" height="20" /> **Intel Mac** | `.dmg` · [이유](../../docs/install/macos.md) | 앱 UI만 지원, 원격 백엔드에 연결 | 제한적 |
+| <img src="../../docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**macOS** (Apple Silicon) | `.dmg` · [가이드](../../docs/install/macos.md) | Metal (MPS) | 안정 |
+| <img src="../../docs/assets/platforms/windows.svg" alt="" width="20" height="20" />&nbsp;**Windows 10/11** (x64) | `.exe` · [가이드](../../docs/install/windows.md) | NVIDIA CUDA · [AMD ROCm (선택)](../../docs/install/windows-rocm.md) · CPU | 안정 |
+| <img src="../../docs/assets/platforms/linux.svg" alt="" width="20" height="20" />&nbsp;**Linux** (x64) | `.AppImage` · `.deb` · <a href="https://snapcraft.io/voicestudio"><img src="https://img.shields.io/badge/Snap%20Store-27272a?style=flat-square&amp;logo=snapcraft&amp;logoColor=ffffff" alt="Snap Store" height="20" /></a> · [Nix](../../docs/install/nix.md) · [가이드](../../docs/install/linux.md) | NVIDIA CUDA · CPU | 안정 |
+| <img src="../../docs/assets/platforms/docker.svg" alt="" width="20" height="20" />&nbsp;**Docker** | [`ghcr.io/debpalash/voicestudio`](../../docs/install/docker.md) | NVIDIA CUDA · AMD ROCm | 안정 |
+| <img src="../../docs/assets/platforms/android.svg" alt="" width="20" height="20" />&nbsp;**Android** 10+ | `.apk` · [가이드](../../docs/mobile.md#install) | 기기에서 실행, 오프라인 지원 | 프리뷰 |
+| <img src="../../docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**iPhone / iPad** (iOS 17+) | `.ipa` (사이드로드) · [가이드](../../docs/mobile.md#install) | 기기에서 실행, 오프라인 지원 | 프리뷰 |
+| <img src="../../docs/assets/platforms/windows.svg" alt="" width="20" height="20" />&nbsp;**Windows on ARM** | `.exe` · [가이드](../../docs/install/windows.md) | CPU (x64 백엔드를 에뮬레이션으로 실행) | 실험적 |
+| <img src="../../docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**Intel Mac** | `.dmg` · [이유](../../docs/install/macos.md) | 앱 UI만 지원, 원격 백엔드에 연결 | 제한적 |
 
 데스크톱과 휴대폰 설치 파일은 [최신 릴리스](https://github.com/debpalash/VoiceStudio/releases/latest)에 있고, Docker 이미지는 GHCR에서 받을 수 있습니다. GPU가 없나요? CPU만으로도 모든 기능을 쓸 수 있으며, 속도만 느립니다. 선택 기능인 네이티브 GGUF 엔진은 AMD GPU를 포함해 Vulkan도 사용할 수 있습니다([OmniVoice](../../docs/engines/omnivoice-gguf.md#vulkan-acceleration), [CosyVoice](../../docs/engines/cosyvoice-gguf.md)). 엔진과 하드웨어별 속도는 [성능](../../docs/performance.md) 문서를 참고하세요.
 
