@@ -5,7 +5,7 @@
   </p>
   <p><strong>AI voice studio. On your device.</strong><br />
   Clone, design, dub, dictate, transcribe and narrate in 646 languages.<br />
-  <sub>Runs on your computer and phone. No accounts, no API keys, and nothing leaves your device without your permission.</sub></p>
+  <sub>Runs on your laptop, desktop, servers, phone, tablets and more</sub></p>
   <p>
     <a href="https://voicestudio.sh/?utm_source=github&utm_medium=readme&utm_campaign=project">Website</a> ·
     <a href="https://github.com/debpalash/VoiceStudio/releases/latest">Download</a> ·
