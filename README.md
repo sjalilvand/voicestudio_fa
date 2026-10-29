@@ -69,16 +69,16 @@ Start with **VoiceStudio** (default, powered by k2-fsa/OmniVoice), or pick from 
 
 ## Platforms
 
-| Platform | Download | Acceleration | Status |
-| :--- | :--- | :--- | :--- |
-| <img src="docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**macOS** (Apple Silicon) | `.dmg` · [guide](docs/install/macos.md) | Metal (MPS) | Stable |
-| <img src="docs/assets/platforms/windows.svg" alt="" width="20" height="20" />&nbsp;**Windows 10/11** (x64) | `.exe` · [guide](docs/install/windows.md) | NVIDIA CUDA · [AMD ROCm (opt-in)](docs/install/windows-rocm.md) · CPU | Stable |
-| <img src="docs/assets/platforms/linux.svg" alt="" width="20" height="20" />&nbsp;**Linux** (x64) | `.AppImage` · `.deb` · <a href="https://snapcraft.io/voicestudio"><img src="https://img.shields.io/badge/Snap%20Store-27272a?style=flat-square&amp;logo=snapcraft&amp;logoColor=ffffff" alt="Snap Store" height="20" /></a> · [Nix](docs/install/nix.md) · [guide](docs/install/linux.md) | NVIDIA CUDA · CPU | Stable |
-| <img src="docs/assets/platforms/docker.svg" alt="" width="20" height="20" />&nbsp;**Docker** | [`ghcr.io/debpalash/voicestudio`](docs/install/docker.md) | NVIDIA CUDA · AMD ROCm | Stable |
-| <img src="docs/assets/platforms/android.svg" alt="" width="20" height="20" />&nbsp;**Android** 10+ | `.apk` · [guide](docs/mobile.md#install) | On-device, offline | Preview |
-| <img src="docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**iPhone / iPad** (iOS 17+) | `.ipa` (sideload) · [guide](docs/mobile.md#install) | On-device, offline | Preview |
-| <img src="docs/assets/platforms/windows.svg" alt="" width="20" height="20" />&nbsp;**Windows on ARM** | `.exe` · [guide](docs/install/windows.md) | CPU (x64 backend under emulation) | Experimental |
-| <img src="docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**Intel Mac** | `.dmg` · [why](docs/install/macos.md) | App UI only, connects to a remote backend | Limited |
+| Platform & status | Downloads & acceleration |
+| :--- | :--- |
+| <img src="docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**macOS** (Apple Silicon)<br /><sub>Stable</sub> | `.dmg` · [guide](docs/install/macos.md)<br /><sub>Metal (MPS)</sub> |
+| <img src="docs/assets/platforms/windows.svg" alt="" width="20" height="20" />&nbsp;**Windows 10/11** (x64)<br /><sub>Stable</sub> | `.exe` · [guide](docs/install/windows.md)<br /><sub>NVIDIA CUDA · [AMD ROCm (opt-in)](docs/install/windows-rocm.md) · CPU</sub> |
+| <img src="docs/assets/platforms/linux.svg" alt="" width="20" height="20" />&nbsp;**Linux** (x64)<br /><sub>Stable</sub> | `.AppImage` · `.deb` · <a href="https://snapcraft.io/voicestudio"><img src="https://img.shields.io/badge/Snap%20Store-27272a?style=flat-square&amp;logo=snapcraft&amp;logoColor=ffffff" alt="Snap Store" height="20" /></a> · [Nix](docs/install/nix.md) · [guide](docs/install/linux.md)<br /><sub>NVIDIA CUDA · CPU</sub> |
+| <img src="docs/assets/platforms/docker.svg" alt="" width="20" height="20" />&nbsp;**Docker**<br /><sub>Stable</sub> | [GHCR](docs/install/docker.md "ghcr.io/debpalash/voicestudio")<br /><sub>NVIDIA CUDA · AMD ROCm</sub> |
+| <img src="docs/assets/platforms/android.svg" alt="" width="20" height="20" />&nbsp;**Android** 10+<br /><sub>Preview</sub> | `.apk` · [guide](docs/mobile.md#install)<br /><sub>On-device, offline</sub> |
+| <img src="docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**iPhone / iPad** (iOS 17+)<br /><sub>Preview</sub> | `.ipa` (sideload) · [guide](docs/mobile.md#install)<br /><sub>On-device, offline</sub> |
+| <img src="docs/assets/platforms/windows.svg" alt="" width="20" height="20" />&nbsp;**Windows on ARM**<br /><sub>Experimental</sub> | `.exe` · [guide](docs/install/windows.md)<br /><sub>CPU (x64 backend under emulation)</sub> |
+| <img src="docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**Intel Mac**<br /><sub>Limited</sub> | `.dmg` · [why](docs/install/macos.md)<br /><sub>App UI only, connects to a remote backend</sub> |
 
 Desktop and phone installers are on the [latest release](https://github.com/debpalash/VoiceStudio/releases/latest); Docker images come from GHCR. No GPU? The app is fully usable on the CPU, just slower. Native GGUF engines can also use Vulkan on AMD, Intel and NVIDIA GPUs; OmniVoice GGUF picks its GPU and model size automatically on Windows and Linux ([OmniVoice](docs/engines/omnivoice-gguf.md#vulkan-acceleration), [CosyVoice](docs/engines/cosyvoice-gguf.md)). Speed by engine and hardware: [performance](docs/performance.md).
 
