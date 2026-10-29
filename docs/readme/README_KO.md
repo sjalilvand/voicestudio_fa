@@ -1,65 +1,70 @@
 <div align="center">
-  <img src="../../docs/logo.png" alt="VoiceStudio" width="88" />
-  <h1>VoiceStudio</h1>
-  <p>
-    <a href="https://trendshift.io/repositories/28176?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-28176" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/28176" alt="Trendshift의 VoiceStudio 인기 순위 배지" width="220" height="48" /></a>
-  </p>
-  <p><strong>내 기기에서 돌아가는 보이스 스튜디오: 646개 언어로 음성 복제, 보이스 디자인, 더빙, 받아쓰기, 음성 전사, 내레이션.</strong><br />
-  내 컴퓨터와 휴대폰에서 실행됩니다. 계정도 API 키도 필요 없으며, 사용자가 허락하지 않는 한 어떤 데이터도 기기 밖으로 나가지 않습니다.</p>
+  <h1><img src="../../docs/logo.png" alt="" width="36" height="36" /> VoiceStudio</h1>
+  <p><strong>나만의 보이스 스튜디오를, 내 기기에서.</strong><br />
+  646개 언어로 음성 복제, 보이스 디자인, 더빙, 받아쓰기, 전사, 내레이션을 만드세요.<br />
+  <sub>컴퓨터와 휴대폰에서 실행됩니다. 계정이나 API 키가 필요 없고, 허락 없이 데이터가 기기 밖으로 나가지 않습니다.</sub></p>
   <p>
     <a href="https://voicestudio.sh/?utm_source=github&utm_medium=readme&utm_campaign=project">웹사이트</a> ·
     <a href="https://github.com/debpalash/VoiceStudio/releases/latest">내려받기</a> ·
     <a href="#시작하기">시작 안내</a> ·
     <a href="#문서">문서</a> ·
-    <a href="https://discord.gg/bzQavDfVV9">Discord</a> ·
-    <a href="../../README.md">English</a> ·
-    <a href="README_CN.md">简体中文</a> ·
-    <a href="README_JA.md">日本語</a> ·
-    <a href="README_RU.md">Русский</a>
+    <a href="https://discord.gg/bzQavDfVV9">Discord</a>
   </p>
   <p>
-    <a href="https://github.com/debpalash/VoiceStudio/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/debpalash/VoiceStudio/ci.yml?branch=main" alt="CI 상태" /></a>
-    <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/github/v/release/debpalash/VoiceStudio" alt="최신 릴리스" /></a>
-    <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="AGPL-3.0 라이선스" /></a>
-    <a href="https://supermetry.com"><img src="https://app.supermetry.com/px/zfjiv7psp4ed.svg?c=VoiceStudio&style=stats" alt="조회수" /></a>
+    <a href="https://github.com/debpalash/VoiceStudio/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/debpalash/VoiceStudio/ci.yml?branch=main&amp;style=flat-square&amp;label=build&amp;labelColor=27272a" alt="CI 상태" /></a>
+    <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/github/v/release/debpalash/VoiceStudio?style=flat-square&amp;labelColor=27272a&amp;color=52525b" alt="최신 릴리스" /></a>
+    <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-52525b?style=flat-square&amp;labelColor=27272a" alt="AGPL-3.0 라이선스" /></a>
+    <a href="https://supermetry.com"><img src="https://app.supermetry.com/px/zfjiv7psp4ed.svg?c=VoiceStudio" alt="조회수" /></a>
+    <a href="https://trendshift.io/repositories/28176?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-28176"><img src="https://img.shields.io/badge/Trendshift-27272a?style=flat-square" alt="Trendshift의 VoiceStudio" /></a>
   </p>
   <p>
-    <sub>전략 스폰서</sub><br />
-    <a href="https://supermetry.com/?utm_source=voicestudio&utm_medium=sponsor&utm_campaign=strategic-sponsor&utm_content=readme-logo"><picture><source media="(prefers-color-scheme: dark)" srcset="../../docs/sponsors/supermetry-dark.svg" /><img src="../../docs/sponsors/supermetry.svg" alt="Supermetry" height="48" /></picture></a>
-  </p>
-  <p>
-    <a href="https://snapcraft.io/voicestudio"><img src="https://snapcraft.io/en/dark/install.svg" alt="Get it from the Snap Store" height="40" /></a>
+    <sub><a href="../../README.md">English</a> · <a href="README_CN.md">简体中文</a> · <a href="README_JA.md">日本語</a> · <a href="README_RU.md">Русский</a></sub><br />
+    <sub>전략 스폰서</sub> &nbsp; <a href="https://supermetry.com/?utm_source=voicestudio&utm_medium=sponsor&utm_campaign=strategic-sponsor&utm_content=readme-logo"><picture><source media="(prefers-color-scheme: dark)" srcset="../../docs/sponsors/supermetry-dark.svg" /><img src="../../docs/sponsors/supermetry.svg" alt="Supermetry" height="22" /></picture></a>
   </p>
 </div>
 
 ![앱 둘러보기: 음성 복제, 보이스 디자인, 더빙, 모델 관리](../../docs/media/electron/voicestudio.gif)
 
+<p align="center">
+  <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/badge/%EB%82%B4%EB%A0%A4%EB%B0%9B%EA%B8%B0-993f61?style=for-the-badge&amp;logo=github&amp;logoColor=ffffff" alt="내려받기" height="24" /></a>
+  <a href="#시작하기"><img src="https://img.shields.io/badge/%EC%8B%9C%EC%9E%91%20%EC%95%88%EB%82%B4-27272a?style=for-the-badge" alt="시작 안내" height="24" /></a>
+  <a href="https://snapcraft.io/voicestudio"><img src="https://img.shields.io/badge/Snap%20Store-27272a?style=for-the-badge&amp;logo=snapcraft&amp;logoColor=ffffff" alt="Snap Store" height="24" /></a>
+</p>
+
 ## 할 수 있는 일
-
-| 만들기 | 제작하기 | 연결하기 |
-| :--- | :--- | :--- |
-| 목소리를 복제하거나 직접 디자인 | 타이밍을 맞춘 음성으로 영상 더빙 | 에이전트를 위한 로컬 API와 MCP |
-| 플로팅 위젯으로 받아쓰기 | 스토리, 오디오북, 일괄 작업 | 재사용 가능한 레시피와 감시 폴더 |
-
-기본 엔진인 **VoiceStudio**(k2-fsa/OmniVoice 기반)로 시작하거나, 모델 관리자에서 수십 가지 다른 엔진 중 하나를 고르세요. [기능 및 엔진 카탈로그](../../docs/feature-catalog.md)를 참고하세요.
-
-<details>
-<summary><strong>스크린샷</strong></summary>
 
 <table>
   <tr>
-    <td><img src="../../docs/media/electron/voice-cloning.png" alt="기본 제공 데모 음성이 열린 음성 복제 워크스페이스" width="100%" /></td>
-    <td><img src="../../docs/media/electron/dubbing.png" alt="영상 더빙 워크스페이스" width="100%" /></td>
+    <td width="50%" valign="top">
+      <img src="../../docs/media/electron/voice-cloning.png" alt="기본 제공 데모 음성이 열린 음성 복제 워크스페이스" width="100%" /><br />
+      <strong><a href="../../docs/audio-quality.md">음성 복제</a></strong><br />
+      깨끗한 참조 녹음으로 익숙한 목소리의 음성을 생성하세요.
+    </td>
+    <td width="50%" valign="top">
+      <img src="../../docs/media/electron/dubbing.png" alt="영상 더빙 워크스페이스" width="100%" /><br />
+      <strong><a href="../../docs/electron-dubbing.md">영상 더빙</a></strong><br />
+      영상을 번역하고 원본 타이밍에 맞춰 더빙하세요.
+    </td>
   </tr>
-  <tr><td align="center">음성 복제</td><td align="center">영상 더빙</td></tr>
   <tr>
-    <td><img src="../../docs/media/electron/voice-design.png" alt="보이스 디자인 워크스페이스에서 목소리를 묘사하기" width="100%" /></td>
-    <td><img src="../../docs/media/electron/models.png" alt="로컬 음성 모델 설치 및 관리" width="100%" /></td>
+    <td width="50%" valign="top">
+      <img src="../../docs/media/electron/voice-design.png" alt="보이스 디자인 워크스페이스에서 목소리를 묘사하기" width="100%" /><br />
+      <strong><a href="../../docs/electron-voice-design.md">보이스 디자인</a></strong><br />
+      원하는 목소리를 글로 설명하고 생성하세요.
+    </td>
+    <td width="50%" valign="top">
+      <img src="../../docs/media/electron/models.png" alt="로컬 음성 모델 설치 및 관리" width="100%" /><br />
+      <strong><a href="../../docs/downloading-models.md">로컬 모델</a></strong><br />
+      엔진을 고르고 필요한 모델만 내려받으세요.
+    </td>
   </tr>
-  <tr><td align="center">보이스 디자인</td><td align="center">로컬 모델</td></tr>
 </table>
 
-</details>
+- **받아쓰기와 전사** — 플로팅 받아쓰기 위젯과 로컬 전사
+- **내레이션과 일괄 처리** — 스토리, 오디오북, 대기열 작업
+- **연결과 자동화** — 로컬 API, MCP, 재사용 가능한 레시피와 감시 폴더
+
+기본 엔진인 **VoiceStudio**(k2-fsa/OmniVoice 기반)로 시작하거나, 모델 관리자에서 수십 가지 다른 엔진 중 하나를 고르세요. [기능 및 엔진 카탈로그](../../docs/feature-catalog.md)를 참고하세요.
 
 ## 지원 플랫폼
 
