@@ -177,7 +177,7 @@ VoiceStudio бесплатен, и за ним нет платного обла�
     <a href="https://supermetry.com/?utm_source=voicestudio&utm_medium=sponsor&utm_campaign=strategic-sponsor&utm_content=readme-logo"><picture><source media="(prefers-color-scheme: dark)" srcset="../../docs/sponsors/supermetry-dark.svg" /><img src="../../docs/sponsors/supermetry.svg" alt="Supermetry" height="48" /></picture></a>
 </p>
 
-**Здесь может быть ваш логотип.** Места спонсоров уровней Development, Company и Strategic открыты — от 100 $ в месяц; спонсоры уровня Community (25 $) получают именную ссылку. Спонсорство даёт признание, а не функции.
+По вопросам спонсорства пишите на [sponsor@voicestudio.sh](mailto:sponsor@voicestudio.sh).
 
 <a href="https://github.com/sponsors/debpalash"><img src="https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-ea4aaa?logo=githubsponsors&logoColor=white" alt="Поддержать через GitHub Sponsors" /></a>
 [Ko-fi](https://ko-fi.com/debpalash) · [PayPal](https://paypal.me/palashCoder) · [Уровни и привилегии](../../SPONSORS.md) · [Разместить логотип](https://github.com/debpalash/VoiceStudio/issues/new?template=sponsor.yml)

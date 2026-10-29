@@ -177,7 +177,7 @@ VoiceStudio は無料で、背後に有料クラウドはありません。開�
     <a href="https://supermetry.com/?utm_source=voicestudio&utm_medium=sponsor&utm_campaign=strategic-sponsor&utm_content=readme-logo"><picture><source media="(prefers-color-scheme: dark)" srcset="../../docs/sponsors/supermetry-dark.svg" /><img src="../../docs/sponsors/supermetry.svg" alt="Supermetry" height="48" /></picture></a>
 </p>
 
-**ここにあなたのロゴを。** Development・Company・Strategic スポンサー枠を月額 100 ドルから募集中です。Community スポンサー（25 ドル）は名前入りのリンクを掲載します。スポンサーシップで得られるのは謝辞の掲載であり、機能ではありません。
+スポンサーシップに関するお問い合わせは、[sponsor@voicestudio.sh](mailto:sponsor@voicestudio.sh) までご連絡ください。
 
 <a href="https://github.com/sponsors/debpalash"><img src="https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-ea4aaa?logo=githubsponsors&logoColor=white" alt="GitHub Sponsors でスポンサーになる" /></a>
 [Ko-fi](https://ko-fi.com/debpalash) · [PayPal](https://paypal.me/palashCoder) · [プランと特典](../../SPONSORS.md) · [ロゴの掲載を申し込む](https://github.com/debpalash/VoiceStudio/issues/new?template=sponsor.yml)
