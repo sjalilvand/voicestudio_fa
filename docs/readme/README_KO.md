@@ -30,7 +30,6 @@
 <p align="center">
   <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/badge/%EB%82%B4%EB%A0%A4%EB%B0%9B%EA%B8%B0-993f61?style=for-the-badge&amp;logo=github&amp;logoColor=ffffff" alt="내려받기" height="24" /></a>
   <a href="#시작하기"><img src="https://img.shields.io/badge/%EC%8B%9C%EC%9E%91%20%EC%95%88%EB%82%B4-27272a?style=for-the-badge" alt="시작 안내" height="24" /></a>
-  <a href="https://snapcraft.io/voicestudio"><img src="https://img.shields.io/badge/Snap%20Store-27272a?style=for-the-badge&amp;logo=snapcraft&amp;logoColor=ffffff" alt="Snap Store" height="24" /></a>
 </p>
 
 ## 할 수 있는 일
@@ -74,7 +73,7 @@
 | :--- | :--- | :--- | :--- |
 | **macOS** (Apple Silicon) | `.dmg` · [가이드](../../docs/install/macos.md) | Metal (MPS) | 안정 |
 | **Windows 10/11** (x64) | `.exe` · [가이드](../../docs/install/windows.md) | NVIDIA CUDA · [AMD ROCm (선택)](../../docs/install/windows-rocm.md) · CPU | 안정 |
-| **Linux** (x64) | `.AppImage` · `.deb` · [`snap`](https://snapcraft.io/voicestudio) · [Nix](../../docs/install/nix.md) · [가이드](../../docs/install/linux.md) | NVIDIA CUDA · CPU | 안정 |
+| **Linux** (x64) | `.AppImage` · `.deb` · <a href="https://snapcraft.io/voicestudio"><img src="https://img.shields.io/badge/Snap%20Store-27272a?style=flat-square&amp;logo=snapcraft&amp;logoColor=ffffff" alt="Snap Store" height="20" /></a> · [Nix](../../docs/install/nix.md) · [가이드](../../docs/install/linux.md) | NVIDIA CUDA · CPU | 안정 |
 | **Docker** | [`ghcr.io/debpalash/voicestudio`](../../docs/install/docker.md) | NVIDIA CUDA · AMD ROCm | 안정 |
 | **Android** 10+ | `.apk` · [가이드](../../docs/mobile.md#install) | 기기에서 실행, 오프라인 지원 | 프리뷰 |
 | **iPhone / iPad** (iOS 17+) | `.ipa` (사이드로드) · [가이드](../../docs/mobile.md#install) | 기기에서 실행, 오프라인 지원 | 프리뷰 |

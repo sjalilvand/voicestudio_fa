@@ -30,7 +30,6 @@
 <p align="center">
   <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/badge/%D0%A1%D0%BA%D0%B0%D1%87%D0%B0%D1%82%D1%8C-993f61?style=for-the-badge&amp;logo=github&amp;logoColor=ffffff" alt="Скачать" height="24" /></a>
   <a href="#быстрый-старт"><img src="https://img.shields.io/badge/%D0%9D%D0%B0%D1%87%D0%B0%D0%BB%D0%BE%20%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D1%8B-27272a?style=for-the-badge" alt="Начало работы" height="24" /></a>
-  <a href="https://snapcraft.io/voicestudio"><img src="https://img.shields.io/badge/Snap%20Store-27272a?style=for-the-badge&amp;logo=snapcraft&amp;logoColor=ffffff" alt="Snap Store" height="24" /></a>
 </p>
 
 ## Возможности
@@ -74,7 +73,7 @@
 | :--- | :--- | :--- | :--- |
 | **macOS** (Apple Silicon) | `.dmg` · [руководство](../../docs/install/macos.md) | Metal (MPS) | Стабильная |
 | **Windows 10/11** (x64) | `.exe` · [руководство](../../docs/install/windows.md) | NVIDIA CUDA · [AMD ROCm (по желанию)](../../docs/install/windows-rocm.md) · CPU | Стабильная |
-| **Linux** (x64) | `.AppImage` · `.deb` · [`snap`](https://snapcraft.io/voicestudio) · [Nix](../../docs/install/nix.md) · [руководство](../../docs/install/linux.md) | NVIDIA CUDA · CPU | Стабильная |
+| **Linux** (x64) | `.AppImage` · `.deb` · <a href="https://snapcraft.io/voicestudio"><img src="https://img.shields.io/badge/Snap%20Store-27272a?style=flat-square&amp;logo=snapcraft&amp;logoColor=ffffff" alt="Snap Store" height="20" /></a> · [Nix](../../docs/install/nix.md) · [руководство](../../docs/install/linux.md) | NVIDIA CUDA · CPU | Стабильная |
 | **Docker** | [`ghcr.io/debpalash/voicestudio`](../../docs/install/docker.md) | NVIDIA CUDA · AMD ROCm | Стабильная |
 | **Android** 10+ | `.apk` · [руководство](../../docs/mobile.md#install) | На устройстве, офлайн | Предварительная |
 | **iPhone / iPad** (iOS 17+) | `.ipa` (sideload) · [руководство](../../docs/mobile.md#install) | На устройстве, офлайн | Предварительная |
