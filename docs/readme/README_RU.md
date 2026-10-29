@@ -1,5 +1,8 @@
 <div align="center">
   <h1><img src="../../docs/logo.png" alt="" width="36" height="36" /> VoiceStudio</h1>
+  <p>
+    <a href="https://trendshift.io/repositories/28176?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-28176" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/28176" alt="Значок рейтинга популярности VoiceStudio на Trendshift" width="220" height="48" /></a>
+  </p>
   <p><strong>Ваша голосовая студия. На вашем устройстве.</strong><br />
   Клонирование и дизайн голоса, дубляж, диктовка, расшифровка и озвучка на 646 языках.<br />
   <sub>Работает на компьютере и телефоне. Без аккаунтов и API-ключей. Данные покидают устройство только с вашего разрешения.</sub></p>
@@ -15,7 +18,6 @@
     <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/github/v/release/debpalash/VoiceStudio?style=flat-square&amp;labelColor=27272a&amp;color=52525b" alt="Последний релиз" /></a>
     <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-52525b?style=flat-square&amp;labelColor=27272a" alt="Лицензия AGPL-3.0" /></a>
     <a href="https://supermetry.com"><img src="https://app.supermetry.com/px/zfjiv7psp4ed.svg?c=VoiceStudio" alt="Число просмотров" /></a>
-    <a href="https://trendshift.io/repositories/28176?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-28176"><img src="https://img.shields.io/badge/Trendshift-27272a?style=flat-square" alt="VoiceStudio на Trendshift" /></a>
   </p>
   <p>
     <sub><a href="../../README.md">English</a> · <a href="README_CN.md">简体中文</a> · <a href="README_JA.md">日本語</a> · <a href="README_KO.md">한국어</a></sub><br />

@@ -1,5 +1,8 @@
 <div align="center">
   <h1><img src="../../docs/logo.png" alt="" width="36" height="36" /> VoiceStudio</h1>
+  <p>
+    <a href="https://trendshift.io/repositories/28176?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-28176" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/28176" alt="Trendshift における VoiceStudio の人気ランキングバッジ" width="220" height="48" /></a>
+  </p>
   <p><strong>あなたのボイススタジオを、あなたの端末で。</strong><br />
   646 言語で、音声クローン、ボイスデザイン、吹き替え、音声入力、文字起こし、ナレーション。<br />
   <sub>パソコンとスマートフォンで動作。アカウントも API キーも不要。許可なくデータが端末の外に出ることはありません。</sub></p>
@@ -15,7 +18,6 @@
     <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/github/v/release/debpalash/VoiceStudio?style=flat-square&amp;labelColor=27272a&amp;color=52525b" alt="最新リリース" /></a>
     <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-52525b?style=flat-square&amp;labelColor=27272a" alt="AGPL-3.0 ライセンス" /></a>
     <a href="https://supermetry.com"><img src="https://app.supermetry.com/px/zfjiv7psp4ed.svg?c=VoiceStudio" alt="閲覧数" /></a>
-    <a href="https://trendshift.io/repositories/28176?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-28176"><img src="https://img.shields.io/badge/Trendshift-27272a?style=flat-square" alt="Trendshift の VoiceStudio" /></a>
   </p>
   <p>
     <sub><a href="../../README.md">English</a> · <a href="README_CN.md">简体中文</a> · <a href="README_KO.md">한국어</a> · <a href="README_RU.md">Русский</a></sub><br />
