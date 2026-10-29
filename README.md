@@ -3,7 +3,7 @@
   <p>
     <a href="https://trendshift.io/repositories/28176?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-28176" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/28176" alt="Trendshift badge showing where VoiceStudio ranks among trending repositories" width="220" height="48" /></a>
   </p>
-  <p><strong>Your voice studio. On your device.</strong><br />
+  <p><strong>AI voice studio. On your device.</strong><br />
   Clone, design, dub, dictate, transcribe and narrate in 646 languages.<br />
   <sub>Runs on your computer and phone. No accounts, no API keys, and nothing leaves your device without your permission.</sub></p>
   <p>
