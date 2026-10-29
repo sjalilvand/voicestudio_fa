@@ -1,5 +1,8 @@
 <div align="center">
   <h1><img src="../../docs/logo.png" alt="" width="36" height="36" /> VoiceStudio</h1>
+  <p>
+    <a href="https://trendshift.io/repositories/28176?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-28176" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/28176" alt="VoiceStudio 在 Trendshift 上的热度排名徽章" width="220" height="48" /></a>
+  </p>
   <p><strong>你的语音工作室，就在你的设备上。</strong><br />
   支持 646 种语言的声音克隆、声音设计、配音、听写、转录与有声朗读。<br />
   <sub>在你的电脑和手机上运行。无需账号，无需 API 密钥；未经你同意，数据不会离开设备。</sub></p>
@@ -15,7 +18,6 @@
     <a href="https://github.com/debpalash/VoiceStudio/releases/latest"><img src="https://img.shields.io/github/v/release/debpalash/VoiceStudio?style=flat-square&amp;labelColor=27272a&amp;color=52525b" alt="最新版本" /></a>
     <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-52525b?style=flat-square&amp;labelColor=27272a" alt="AGPL-3.0 许可证" /></a>
     <a href="https://supermetry.com"><img src="https://app.supermetry.com/px/zfjiv7psp4ed.svg?c=VoiceStudio" alt="访问量" /></a>
-    <a href="https://trendshift.io/repositories/28176?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-28176"><img src="https://img.shields.io/badge/Trendshift-27272a?style=flat-square" alt="Trendshift 上的 VoiceStudio" /></a>
   </p>
   <p>
     <sub><a href="../../README.md">English</a> · <a href="README_JA.md">日本語</a> · <a href="README_KO.md">한국어</a> · <a href="README_RU.md">Русский</a></sub><br />
