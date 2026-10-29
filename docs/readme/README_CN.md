@@ -3,9 +3,9 @@
   <p>
     <a href="https://trendshift.io/repositories/28176?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-28176" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/28176" alt="VoiceStudio 在 Trendshift 上的热度排名徽章" width="220" height="48" /></a>
   </p>
-  <p><strong>AI 语音工作室，就在你的设备上。</strong><br />
-  支持 646 种语言的声音克隆、声音设计、配音、听写、转录与有声朗读。<br />
-  <sub>可在你的笔记本电脑、台式机、服务器、手机、平板电脑等设备上运行</sub></p>
+  <h2>AI 语音工作室，就在你的设备上。</h2>
+  <h3>支持 646 种语言的声音克隆、声音设计、配音、听写、转录与有声朗读。</h3>
+  <p>可在你的笔记本电脑、台式机、服务器、手机、平板电脑等设备上运行</p>
   <p>
     <a href="https://voicestudio.sh/?utm_source=github&utm_medium=readme&utm_campaign=project">官网</a> ·
     <a href="https://github.com/debpalash/VoiceStudio/releases/latest">下载</a> ·

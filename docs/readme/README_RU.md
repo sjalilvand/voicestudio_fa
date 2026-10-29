@@ -3,9 +3,9 @@
   <p>
     <a href="https://trendshift.io/repositories/28176?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-28176" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/28176" alt="Значок рейтинга популярности VoiceStudio на Trendshift" width="220" height="48" /></a>
   </p>
-  <p><strong>Голосовая студия с ИИ. На вашем устройстве.</strong><br />
-  Клонирование и дизайн голоса, дубляж, диктовка, расшифровка и озвучка на 646 языках.<br />
-  <sub>Работает на ноутбуках, настольных компьютерах, серверах, телефонах, планшетах и других устройствах</sub></p>
+  <h2>Голосовая студия с ИИ. На вашем устройстве.</h2>
+  <h3>Клонирование и дизайн голоса, дубляж, диктовка, расшифровка и озвучка на 646 языках.</h3>
+  <p>Работает на ноутбуках, настольных компьютерах, серверах, телефонах, планшетах и других устройствах</p>
   <p>
     <a href="https://voicestudio.sh/?utm_source=github&utm_medium=readme&utm_campaign=project">Сайт</a> ·
     <a href="https://github.com/debpalash/VoiceStudio/releases/latest">Скачать</a> ·
