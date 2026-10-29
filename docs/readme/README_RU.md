@@ -69,16 +69,16 @@
 
 ## Платформы
 
-| Платформа | Файл | Аппаратное ускорение | Статус |
-| :--- | :--- | :--- | :--- |
-| <img src="../../docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**macOS** (Apple Silicon) | `.dmg` · [руководство](../../docs/install/macos.md) | Metal (MPS) | Стабильная |
-| <img src="../../docs/assets/platforms/windows.svg" alt="" width="20" height="20" />&nbsp;**Windows 10/11** (x64) | `.exe` · [руководство](../../docs/install/windows.md) | NVIDIA CUDA · [AMD ROCm (по желанию)](../../docs/install/windows-rocm.md) · CPU | Стабильная |
-| <img src="../../docs/assets/platforms/linux.svg" alt="" width="20" height="20" />&nbsp;**Linux** (x64) | `.AppImage` · `.deb` · <a href="https://snapcraft.io/voicestudio"><img src="https://img.shields.io/badge/Snap%20Store-27272a?style=flat-square&amp;logo=snapcraft&amp;logoColor=ffffff" alt="Snap Store" height="20" /></a> · [Nix](../../docs/install/nix.md) · [руководство](../../docs/install/linux.md) | NVIDIA CUDA · CPU | Стабильная |
-| <img src="../../docs/assets/platforms/docker.svg" alt="" width="20" height="20" />&nbsp;**Docker** | [`ghcr.io/debpalash/voicestudio`](../../docs/install/docker.md) | NVIDIA CUDA · AMD ROCm | Стабильная |
-| <img src="../../docs/assets/platforms/android.svg" alt="" width="20" height="20" />&nbsp;**Android** 10+ | `.apk` · [руководство](../../docs/mobile.md#install) | На устройстве, офлайн | Предварительная |
-| <img src="../../docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**iPhone / iPad** (iOS 17+) | `.ipa` (sideload) · [руководство](../../docs/mobile.md#install) | На устройстве, офлайн | Предварительная |
-| <img src="../../docs/assets/platforms/windows.svg" alt="" width="20" height="20" />&nbsp;**Windows ARM64** | `.exe` · [руководство](../../docs/install/windows.md) | CPU (x64-бэкенд работает через эмуляцию) | Экспериментальная |
-| <img src="../../docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**Intel Mac** | `.dmg` · [причины](../../docs/install/macos.md) | Только интерфейс, подключение к удалённому бэкенду | Ограниченная |
+| Платформа и статус | Загрузка и ускорение |
+| :--- | :--- |
+| <img src="../../docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**macOS** (Apple Silicon)<br /><sub>Стабильная</sub> | `.dmg` · [руководство](../../docs/install/macos.md)<br /><sub>Metal (MPS)</sub> |
+| <img src="../../docs/assets/platforms/windows.svg" alt="" width="20" height="20" />&nbsp;**Windows 10/11** (x64)<br /><sub>Стабильная</sub> | `.exe` · [руководство](../../docs/install/windows.md)<br /><sub>NVIDIA CUDA · [AMD ROCm (по желанию)](../../docs/install/windows-rocm.md) · CPU</sub> |
+| <img src="../../docs/assets/platforms/linux.svg" alt="" width="20" height="20" />&nbsp;**Linux** (x64)<br /><sub>Стабильная</sub> | `.AppImage` · `.deb` · <a href="https://snapcraft.io/voicestudio"><img src="https://img.shields.io/badge/Snap%20Store-27272a?style=flat-square&amp;logo=snapcraft&amp;logoColor=ffffff" alt="Snap Store" height="20" /></a> · [Nix](../../docs/install/nix.md) · [руководство](../../docs/install/linux.md)<br /><sub>NVIDIA CUDA · CPU</sub> |
+| <img src="../../docs/assets/platforms/docker.svg" alt="" width="20" height="20" />&nbsp;**Docker**<br /><sub>Стабильная</sub> | [GHCR](../../docs/install/docker.md "ghcr.io/debpalash/voicestudio")<br /><sub>NVIDIA CUDA · AMD ROCm</sub> |
+| <img src="../../docs/assets/platforms/android.svg" alt="" width="20" height="20" />&nbsp;**Android** 10+<br /><sub>Предварительная</sub> | `.apk` · [руководство](../../docs/mobile.md#install)<br /><sub>На устройстве, офлайн</sub> |
+| <img src="../../docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**iPhone / iPad** (iOS 17+)<br /><sub>Предварительная</sub> | `.ipa` (sideload) · [руководство](../../docs/mobile.md#install)<br /><sub>На устройстве, офлайн</sub> |
+| <img src="../../docs/assets/platforms/windows.svg" alt="" width="20" height="20" />&nbsp;**Windows ARM64**<br /><sub>Экспериментальная</sub> | `.exe` · [руководство](../../docs/install/windows.md)<br /><sub>CPU (x64-бэкенд работает через эмуляцию)</sub> |
+| <img src="../../docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**Intel Mac**<br /><sub>Ограниченная</sub> | `.dmg` · [причины](../../docs/install/macos.md)<br /><sub>Только интерфейс, подключение к удалённому бэкенду</sub> |
 
 Установщики для компьютера и телефона лежат в [последнем релизе](https://github.com/debpalash/VoiceStudio/releases/latest), а образы Docker публикуются в GHCR. Нет видеокарты? Приложение полностью работает на процессоре, просто медленнее. Необязательные нативные GGUF-движки могут использовать Vulkan, в том числе на видеокартах AMD ([OmniVoice](../../docs/engines/omnivoice-gguf.md#vulkan-acceleration), [CosyVoice](../../docs/engines/cosyvoice-gguf.md)). Сколько занимает генерация на разных движках и железе, показано в [обзоре быстродействия](../../docs/performance.md).
 

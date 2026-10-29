@@ -69,16 +69,16 @@
 
 ## 対応プラットフォーム
 
-| プラットフォーム | ダウンロード | アクセラレーション | ステータス |
-| :--- | :--- | :--- | :--- |
-| <img src="../../docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**macOS**（Apple Silicon） | `.dmg` · [ガイド](../../docs/install/macos.md) | Metal（MPS） | 安定版 |
-| <img src="../../docs/assets/platforms/windows.svg" alt="" width="20" height="20" />&nbsp;**Windows 10/11**（x64） | `.exe` · [ガイド](../../docs/install/windows.md) | NVIDIA CUDA · [AMD ROCm（オプトイン）](../../docs/install/windows-rocm.md) · CPU | 安定版 |
-| <img src="../../docs/assets/platforms/linux.svg" alt="" width="20" height="20" />&nbsp;**Linux**（x64） | `.AppImage` · `.deb` · <a href="https://snapcraft.io/voicestudio"><img src="https://img.shields.io/badge/Snap%20Store-27272a?style=flat-square&amp;logo=snapcraft&amp;logoColor=ffffff" alt="Snap Store" height="20" /></a> · [Nix](../../docs/install/nix.md) · [ガイド](../../docs/install/linux.md) | NVIDIA CUDA · CPU | 安定版 |
-| <img src="../../docs/assets/platforms/docker.svg" alt="" width="20" height="20" />&nbsp;**Docker** | [`ghcr.io/debpalash/voicestudio`](../../docs/install/docker.md) | NVIDIA CUDA · AMD ROCm | 安定版 |
-| <img src="../../docs/assets/platforms/android.svg" alt="" width="20" height="20" />&nbsp;**Android** 10+ | `.apk` · [ガイド](../../docs/mobile.md#install) | 端末上で動作、オフライン対応 | プレビュー |
-| <img src="../../docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**iPhone / iPad**（iOS 17+） | `.ipa`（サイドロード） · [ガイド](../../docs/mobile.md#install) | 端末上で動作、オフライン対応 | プレビュー |
-| <img src="../../docs/assets/platforms/windows.svg" alt="" width="20" height="20" />&nbsp;**Windows on ARM** | `.exe` · [ガイド](../../docs/install/windows.md) | CPU（x64 バックエンドをエミュレーションで実行） | 実験的 |
-| <img src="../../docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**Intel Mac** | `.dmg` · [理由](../../docs/install/macos.md) | アプリ UI のみ。リモートバックエンドに接続 | 限定 |
+| プラットフォームと状態 | ダウンロードとアクセラレーション |
+| :--- | :--- |
+| <img src="../../docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**macOS**（Apple Silicon）<br /><sub>安定版</sub> | `.dmg` · [ガイド](../../docs/install/macos.md)<br /><sub>Metal（MPS）</sub> |
+| <img src="../../docs/assets/platforms/windows.svg" alt="" width="20" height="20" />&nbsp;**Windows 10/11**（x64）<br /><sub>安定版</sub> | `.exe` · [ガイド](../../docs/install/windows.md)<br /><sub>NVIDIA CUDA · [AMD ROCm（オプトイン）](../../docs/install/windows-rocm.md) · CPU</sub> |
+| <img src="../../docs/assets/platforms/linux.svg" alt="" width="20" height="20" />&nbsp;**Linux**（x64）<br /><sub>安定版</sub> | `.AppImage` · `.deb` · <a href="https://snapcraft.io/voicestudio"><img src="https://img.shields.io/badge/Snap%20Store-27272a?style=flat-square&amp;logo=snapcraft&amp;logoColor=ffffff" alt="Snap Store" height="20" /></a> · [Nix](../../docs/install/nix.md) · [ガイド](../../docs/install/linux.md)<br /><sub>NVIDIA CUDA · CPU</sub> |
+| <img src="../../docs/assets/platforms/docker.svg" alt="" width="20" height="20" />&nbsp;**Docker**<br /><sub>安定版</sub> | [GHCR](../../docs/install/docker.md "ghcr.io/debpalash/voicestudio")<br /><sub>NVIDIA CUDA · AMD ROCm</sub> |
+| <img src="../../docs/assets/platforms/android.svg" alt="" width="20" height="20" />&nbsp;**Android** 10+<br /><sub>プレビュー</sub> | `.apk` · [ガイド](../../docs/mobile.md#install)<br /><sub>端末上で動作、オフライン対応</sub> |
+| <img src="../../docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**iPhone / iPad**（iOS 17+）<br /><sub>プレビュー</sub> | `.ipa`（サイドロード） · [ガイド](../../docs/mobile.md#install)<br /><sub>端末上で動作、オフライン対応</sub> |
+| <img src="../../docs/assets/platforms/windows.svg" alt="" width="20" height="20" />&nbsp;**Windows on ARM**<br /><sub>実験的</sub> | `.exe` · [ガイド](../../docs/install/windows.md)<br /><sub>CPU（x64 バックエンドをエミュレーションで実行）</sub> |
+| <img src="../../docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**Intel Mac**<br /><sub>限定</sub> | `.dmg` · [理由](../../docs/install/macos.md)<br /><sub>アプリ UI のみ。リモートバックエンドに接続</sub> |
 
 デスクトップ版とスマートフォン版のインストーラーは[最新リリース](https://github.com/debpalash/VoiceStudio/releases/latest)から入手できます。Docker イメージは GHCR で配布しています。GPU がなくても、CPU ですべての機能を使えます（速度は落ちます）。オプトインのネイティブ GGUF エンジンは、AMD GPU を含め Vulkan も利用できます（[OmniVoice](../../docs/engines/omnivoice-gguf.md#vulkan-acceleration)、[CosyVoice](../../docs/engines/cosyvoice-gguf.md)）。エンジンとハードウェアごとの速度は[パフォーマンス](../../docs/performance.md)を参照してください。
 

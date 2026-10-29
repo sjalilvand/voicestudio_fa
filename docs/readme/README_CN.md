@@ -69,16 +69,16 @@
 
 ## 支持平台
 
-| 平台 | 下载 | 加速 | 状态 |
-| :--- | :--- | :--- | :--- |
-| <img src="../../docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**macOS**（Apple Silicon） | `.dmg` · [指南](../../docs/install/macos.md) | Metal（MPS） | 稳定 |
-| <img src="../../docs/assets/platforms/windows.svg" alt="" width="20" height="20" />&nbsp;**Windows 10/11**（x64） | `.exe` · [指南](../../docs/install/windows.md) | NVIDIA CUDA · [AMD ROCm（可选）](../../docs/install/windows-rocm.md) · CPU | 稳定 |
-| <img src="../../docs/assets/platforms/linux.svg" alt="" width="20" height="20" />&nbsp;**Linux**（x64） | `.AppImage` · `.deb` · <a href="https://snapcraft.io/voicestudio"><img src="https://img.shields.io/badge/Snap%20Store-27272a?style=flat-square&amp;logo=snapcraft&amp;logoColor=ffffff" alt="Snap Store" height="20" /></a> · [Nix](../../docs/install/nix.md) · [指南](../../docs/install/linux.md) | NVIDIA CUDA · CPU | 稳定 |
-| <img src="../../docs/assets/platforms/docker.svg" alt="" width="20" height="20" />&nbsp;**Docker** | [`ghcr.io/debpalash/voicestudio`](../../docs/install/docker.md) | NVIDIA CUDA · AMD ROCm | 稳定 |
-| <img src="../../docs/assets/platforms/android.svg" alt="" width="20" height="20" />&nbsp;**Android** 10+ | `.apk` · [指南](../../docs/mobile.md#install) | 设备端运行，可离线 | 预览版 |
-| <img src="../../docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**iPhone / iPad**（iOS 17+） | `.ipa`（侧载） · [指南](../../docs/mobile.md#install) | 设备端运行，可离线 | 预览版 |
-| <img src="../../docs/assets/platforms/windows.svg" alt="" width="20" height="20" />&nbsp;**Windows on ARM** | `.exe` · [指南](../../docs/install/windows.md) | CPU（x64 后端在模拟层中运行） | 实验性 |
-| <img src="../../docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**Intel Mac** | `.dmg` · [原因](../../docs/install/macos.md) | 仅应用界面，需连接远程后端 | 受限 |
+| 平台与状态 | 下载与加速 |
+| :--- | :--- |
+| <img src="../../docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**macOS**（Apple Silicon）<br /><sub>稳定</sub> | `.dmg` · [指南](../../docs/install/macos.md)<br /><sub>Metal（MPS）</sub> |
+| <img src="../../docs/assets/platforms/windows.svg" alt="" width="20" height="20" />&nbsp;**Windows 10/11**（x64）<br /><sub>稳定</sub> | `.exe` · [指南](../../docs/install/windows.md)<br /><sub>NVIDIA CUDA · [AMD ROCm（可选）](../../docs/install/windows-rocm.md) · CPU</sub> |
+| <img src="../../docs/assets/platforms/linux.svg" alt="" width="20" height="20" />&nbsp;**Linux**（x64）<br /><sub>稳定</sub> | `.AppImage` · `.deb` · <a href="https://snapcraft.io/voicestudio"><img src="https://img.shields.io/badge/Snap%20Store-27272a?style=flat-square&amp;logo=snapcraft&amp;logoColor=ffffff" alt="Snap Store" height="20" /></a> · [Nix](../../docs/install/nix.md) · [指南](../../docs/install/linux.md)<br /><sub>NVIDIA CUDA · CPU</sub> |
+| <img src="../../docs/assets/platforms/docker.svg" alt="" width="20" height="20" />&nbsp;**Docker**<br /><sub>稳定</sub> | [GHCR](../../docs/install/docker.md "ghcr.io/debpalash/voicestudio")<br /><sub>NVIDIA CUDA · AMD ROCm</sub> |
+| <img src="../../docs/assets/platforms/android.svg" alt="" width="20" height="20" />&nbsp;**Android** 10+<br /><sub>预览版</sub> | `.apk` · [指南](../../docs/mobile.md#install)<br /><sub>设备端运行，可离线</sub> |
+| <img src="../../docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**iPhone / iPad**（iOS 17+）<br /><sub>预览版</sub> | `.ipa`（侧载） · [指南](../../docs/mobile.md#install)<br /><sub>设备端运行，可离线</sub> |
+| <img src="../../docs/assets/platforms/windows.svg" alt="" width="20" height="20" />&nbsp;**Windows on ARM**<br /><sub>实验性</sub> | `.exe` · [指南](../../docs/install/windows.md)<br /><sub>CPU（x64 后端在模拟层中运行）</sub> |
+| <img src="../../docs/assets/platforms/apple.svg" alt="" width="20" height="20" />&nbsp;**Intel Mac**<br /><sub>受限</sub> | `.dmg` · [原因](../../docs/install/macos.md)<br /><sub>仅应用界面，需连接远程后端</sub> |
 
 桌面端和手机安装包都在[最新发行版](https://github.com/debpalash/VoiceStudio/releases/latest)中，Docker 镜像则发布在 GHCR。没有 GPU？应用在 CPU 上也能完整使用，只是速度较慢。原生 GGUF 引擎还能通过 Vulkan 使用 AMD、Intel 和 NVIDIA GPU；在 Windows 和 Linux 上，OmniVoice GGUF 会自动选择 GPU 和模型量化（[OmniVoice](../../docs/engines/omnivoice-gguf.md#vulkan-acceleration)、[CosyVoice](../../docs/engines/cosyvoice-gguf.md)）。各引擎在不同硬件上的速度：[性能说明](../../docs/performance.md)。
 
