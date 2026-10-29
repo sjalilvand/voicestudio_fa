@@ -5,7 +5,7 @@
   </p>
   <p><strong>AI ボイススタジオを、あなたの端末で。</strong><br />
   646 言語で、音声クローン、ボイスデザイン、吹き替え、音声入力、文字起こし、ナレーション。<br />
-  <sub>パソコンとスマートフォンで動作。アカウントも API キーも不要。許可なくデータが端末の外に出ることはありません。</sub></p>
+  <sub>ノートパソコン、デスクトップ、サーバー、スマートフォン、タブレットなどで動作</sub></p>
   <p>
     <a href="https://voicestudio.sh/?utm_source=github&utm_medium=readme&utm_campaign=project">公式サイト</a> ·
     <a href="https://github.com/debpalash/VoiceStudio/releases/latest">ダウンロード</a> ·

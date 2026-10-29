@@ -5,7 +5,7 @@
   </p>
   <p><strong>AI 보이스 스튜디오를, 내 기기에서.</strong><br />
   646개 언어로 음성 복제, 보이스 디자인, 더빙, 받아쓰기, 전사, 내레이션을 만드세요.<br />
-  <sub>컴퓨터와 휴대폰에서 실행됩니다. 계정이나 API 키가 필요 없고, 허락 없이 데이터가 기기 밖으로 나가지 않습니다.</sub></p>
+  <sub>노트북, 데스크톱, 서버, 휴대폰, 태블릿 등에서 실행됩니다</sub></p>
   <p>
     <a href="https://voicestudio.sh/?utm_source=github&utm_medium=readme&utm_campaign=project">웹사이트</a> ·
     <a href="https://github.com/debpalash/VoiceStudio/releases/latest">내려받기</a> ·
