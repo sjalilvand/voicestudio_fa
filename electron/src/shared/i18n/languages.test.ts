@@ -26,6 +26,7 @@ describe('selectable UI languages', () => {
       'id',
       'uk',
       'ar',
+      'fa',
       'zh-TW',
       'gl',
     ]);

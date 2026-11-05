@@ -29,6 +29,7 @@ const LOADERS: Record<string, () => Promise<{ default: Record<string, unknown> }
   id: () => import('./locales/id.json'),
   uk: () => import('./locales/uk.json'),
   ar: () => import('./locales/ar.json'),
+  fa: () => import('./locales/fa.json'),
   'zh-TW': () => import('./locales/zh-TW.json'),
   gl: () => import('./locales/gl.json'),
 };
@@ -81,7 +82,9 @@ i18n
 // render in an LTR layout and screen readers get the wrong language.
 function applyDocumentDirection(lng: string): void {
   if (typeof document === 'undefined') return;
-  document.documentElement.dir = i18n.dir(lng);
+  const base = lng.split('-')[0].toLowerCase();
+  const explicitRtl = base === 'ar' || base === 'fa' || base === 'he' || base === 'ur';
+  document.documentElement.dir = explicitRtl || i18n.dir(lng) === 'rtl' ? 'rtl' : 'ltr';
   document.documentElement.lang = lng;
 }
 
@@ -118,6 +121,7 @@ export const LANGUAGES = [
   { code: 'id', label: 'Bahasa Indonesia' },
   { code: 'uk', label: 'Українська' },
   { code: 'ar', label: 'العربية' },
+  { code: 'fa', label: 'فارسی' },
   { code: 'zh-TW', label: '繁體中文' },
   { code: 'gl', label: 'Galego' },
 ];

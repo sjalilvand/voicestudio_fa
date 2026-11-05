@@ -13,6 +13,7 @@ type FallbackCopy = { title: string; retry: string };
 // Generated from common.error and errors.tryAgain in the renderer catalogues.
 const FALLBACK_COPY: Record<string, FallbackCopy> = {
   ar: { title: 'حدث خطأ ما', retry: 'حاول مرة أخرى' },
+  fa: { title: 'مشکلی پیش آمد', retry: 'تلاش دوباره' },
   de: { title: 'Etwas ist schief gelaufen', retry: 'Versuchen Sie es erneut' },
   en: { title: 'Something went wrong', retry: 'Try again' },
   es: { title: 'algo salió mal', retry: 'Inténtalo de nuevo' },

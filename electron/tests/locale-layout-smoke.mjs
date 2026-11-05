@@ -27,6 +27,7 @@ const locales = [
   'id',
   'uk',
   'ar',
+  'fa',
   'zh-TW',
   'gl',
 ];
@@ -67,7 +68,10 @@ try {
         document.querySelector('main h1')?.textContent?.trim() === heading,
       { language: locale, heading: expected.preferences.general },
     );
-    assert.equal(await page.locator('html').getAttribute('dir'), locale === 'ar' ? 'rtl' : 'ltr');
+    assert.equal(
+      await page.locator('html').getAttribute('dir'),
+      ['ar', 'fa'].includes(locale) ? 'rtl' : 'ltr',
+    );
     assertNoHorizontalDocumentOverflow(
       await page.evaluate(() => ({
         scrollWidth: document.documentElement.scrollWidth,

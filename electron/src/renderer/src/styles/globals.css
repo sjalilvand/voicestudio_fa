@@ -70,6 +70,12 @@
   --color-zinc-25: oklch(99.2% 0 0);
 }
 
+/* Persian (fa): prefer dedicated Persian fonts when installed on the system,
+   falling back to the Windows UI fonts that carry full Persian glyphs. */
+html[lang='fa'] {
+  --font-sans: 'Vazirmatn', 'IRANSansX', 'Segoe UI', Tahoma, sans-serif;
+}
+
 :root {
   /* Native iOS content geometry; exported alongside the shared mobile palette. */
   --ios-card-radius: 1.5rem;

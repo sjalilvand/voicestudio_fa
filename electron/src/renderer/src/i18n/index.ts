@@ -25,6 +25,7 @@ export const SUPPORTED_LOCALES = [
   'id',
   'uk',
   'ar',
+  'fa',
   'zh-TW',
   'gl',
 ] as const;
@@ -55,7 +56,8 @@ function initialLocale(): AppLocale {
       if (locale) return locale;
     }
   }
-  return 'en';
+  // Persian-first fork: when the system language is unsupported, open in Persian.
+  return 'fa';
 }
 
 async function loadLocale(locale: AppLocale): Promise<void> {
@@ -76,7 +78,13 @@ async function loadLocale(locale: AppLocale): Promise<void> {
 function applyDocumentLanguage(locale: string) {
   if (typeof document === 'undefined') return;
   document.documentElement.lang = locale;
-  document.documentElement.dir = i18next.dir(locale);
+  // Explicit RTL set so locales like Persian (fa) are right-to-left even if
+  // the bundled i18next version doesn't list them in its own RTL table.
+  const base = locale.split('-')[0].toLowerCase();
+  document.documentElement.dir =
+    base === 'ar' || base === 'fa' || base === 'he' || base === 'ur' || i18next.dir(locale) === 'rtl'
+      ? 'rtl'
+      : 'ltr';
 }
 
 const selectedLocale = initialLocale();

@@ -425,6 +425,7 @@ export const createPrefsSlice: StateCreator<PrefsSlice, [], [], PrefsSlice> = (s
             'id',
             'uk',
             'ar',
+            'fa',
             'gl',
           ].find((code) => nav.startsWith(code.split('-')[0]));
           return match || 'en';
