@@ -188,3 +188,6 @@ backend/assets/samples/demo/dubbing/*.src.wav
 # handoff (canonical in vssaas) and Microsoft Store listing text drafts.
 /account_login/
 /store-*-en.txt
+
+# Local cache of release wheels fetched outside uv (setup-api.mjs fallback)
+.omnivoice-cache/
