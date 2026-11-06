@@ -383,6 +383,7 @@ def _network_check() -> dict:
         if auto_decision.get("reachable"):
             if picked == CANONICAL_ENDPOINT:
                 detail = f"Reachable{latency_s}"
+                net_key, net_values = "auto_canonical", {"latency": latency_s}
             elif not canonical_ok:
                 detail = (
                     f"huggingface.co is unreachable on this network — using the "
@@ -391,12 +392,14 @@ def _network_check() -> dict:
                     "regardless of endpoint; change anytime in Settings → "
                     "Models → Hugging Face mirror."
                 )
+                net_key, net_values = "auto_mirror", {"host": picked_host, "latency": latency_s}
             else:
                 detail = (
                     f"Both endpoints reachable — {picked_host}{latency_s} "
                     "selected (decisively faster here). Change anytime in "
                     "Settings → Models → Hugging Face mirror."
                 )
+                net_key, net_values = "auto_both", {"host": picked_host, "latency": latency_s}
             status, fix = "pass", None
         else:
             status = "warn"
@@ -407,9 +410,13 @@ def _network_check() -> dict:
                 "can continue — models already downloaded keep working "
                 "offline; a custom mirror can be configured below."
             )
+            net_key, net_values = "auto_none", {}
         return {
             "id": "network", "label": f"Network ({picked_host})",
             "status": status, "detail": detail, "fix": fix,
+            # Localization affordance: the renderer renders this row from its
+            # translation catalog (setup.check_network_*) using key+values.
+            "key": net_key, "values": {**net_values, "host": picked_host},
             # Frontend affordance hint: the wizard offers the mirror
             # quick-pick when the check didn't pass (PreflightCheck allows
             # extras). `endpoint` documents the auto pick for the UI.
@@ -425,6 +432,7 @@ def _network_check() -> dict:
             "status": "warn",
             "detail": "The configured Hugging Face endpoint could not be validated.",
             "fix": "Review the endpoint in Settings → Network, then re-check.",
+            "key": "manual_invalid", "values": {},
             "mirror_reachable": False,
         }
     net_ok = _probe_network(net_host, net_port)
@@ -435,12 +443,14 @@ def _network_check() -> dict:
         mirror_reachable = _probe_network("hf-mirror.com")
     if net_ok:
         net_fix = None
+        net_key, net_values = "manual_ok", {}
     elif mirror_reachable:
         net_fix = (
             "huggingface.co is blocked on this network, but the hf-mirror.com "
             "community mirror is reachable — apply it below and re-check. "
             "Model downloads will use the mirror immediately."
         )
+        net_key, net_values = "manual_unreachable_mirror", {}
     elif net_host != "huggingface.co":
         net_fix = (
             f"Your configured Hugging Face mirror ({net_host}) is unreachable "
@@ -448,6 +458,7 @@ def _network_check() -> dict:
             "endpoint below, or continue offline: models already downloaded "
             "keep working."
         )
+        net_key, net_values = "manual_unreachable_other_host", {}
     else:
         net_fix = (
             "Check internet connection, VPN, or corporate firewall whitelist "
@@ -455,11 +466,13 @@ def _network_check() -> dict:
             "keep working offline; new downloads need a connection or a "
             "mirror (configurable below)."
         )
+        net_key, net_values = "manual_unreachable_offline", {}
     return {
         "id": "network", "label": f"Network ({net_host})",
         "status": "pass" if net_ok else "warn",
         "detail": "Reachable" if net_ok else f"Unreachable on port {net_port}",
         "fix": net_fix,
+        "key": net_key, "values": {**net_values, "host": net_host, "port": net_port},
         # Frontend affordance hint: the wizard offers the mirror quick-pick
         # when the endpoint is unreachable (PreflightCheck allows extras).
         "mirror_reachable": mirror_reachable,
@@ -485,12 +498,17 @@ def preflight():
     checks.append({
         "id": "os", "label": "Operating system", "status": "pass",
         "detail": f"{os_ver} ({arch})", "fix": None,
+        # Localization affordance: the renderer renders this row from its
+        # translation catalog (setup.check_os_*) using these values, and only
+        # falls back to the English text above for unknown locales.
+        "key": "default", "values": {"version": os_ver, "arch": arch},
     })
 
     # ── Python runtime
     checks.append({
         "id": "python", "label": "Python runtime", "status": "pass",
         "detail": f"Python {sys.version.split()[0]}", "fix": None,
+        "key": "default", "values": {"version": sys.version.split()[0]},
     })
 
     # ── RAM
@@ -507,6 +525,7 @@ def preflight():
             "warn", "Could not detect system RAM.",
             "Install psutil in the backend environment or ignore this warning.",
         )
+        ram_key, ram_values = "undetected", {}
     elif ram < _RAM_FAIL_GB * _RAM_RESERVED_ALLOWANCE:
         ram_status, ram_detail, ram_fix = (
             "fail" if ram_gate else "warn",
@@ -516,16 +535,21 @@ def preflight():
             "RAM check disabled via OMNIVOICE_RAM_PREFLIGHT=0 — dubbing may "
             "OOM on this machine.",
         )
+        ram_key = "too_low" if ram_gate else "too_low_gate_off"
+        ram_values = {"gb": f"{ram:.1f}", "need": _RAM_FAIL_GB}
     elif ram < _RAM_WARN_GB * _RAM_RESERVED_ALLOWANCE:
         ram_status, ram_detail, ram_fix = (
             "warn", f"{ram:.1f} GB total ({_RAM_WARN_GB}+ GB recommended)",
             "Long videos may hit swap. Keep other apps closed during dubbing.",
         )
+        ram_key, ram_values = "low", {"gb": f"{ram:.1f}", "recommended": _RAM_WARN_GB}
     else:
         ram_status, ram_detail, ram_fix = ("pass", f"{ram:.1f} GB total", None)
+        ram_key, ram_values = "ok", {"gb": f"{ram:.1f}"}
     checks.append({
         "id": "ram", "label": "System RAM", "status": ram_status,
         "detail": ram_detail, "fix": ram_fix,
+        "key": ram_key, "values": ram_values,
     })
 
     # ── Disk free
@@ -536,15 +560,22 @@ def preflight():
             "status": "fail",
             "detail": f"{free:.1f} GB free at {cache} (need ≥ {INSTALL_HEADROOM_GB} GB)",
             "fix": "Free up disk space or set HF_HOME to a larger partition.",
+            "key": "too_low",
+            "values": {"gb": f"{free:.1f}", "path": str(cache), "need": INSTALL_HEADROOM_GB},
         }
     elif free < MIN_FREE_GB:
         disk = {
             "status": "warn",
             "detail": f"{free:.1f} GB free at {cache} ({MIN_FREE_GB}+ GB recommended)",
             "fix": "Small models fit; free up space before installing larger ones.",
+            "key": "low",
+            "values": {"gb": f"{free:.1f}", "path": str(cache), "recommended": MIN_FREE_GB},
         }
     else:
-        disk = {"status": "pass", "detail": f"{free:.1f} GB free at {cache}", "fix": None}
+        disk = {
+            "status": "pass", "detail": f"{free:.1f} GB free at {cache}", "fix": None,
+            "key": "ok", "values": {"gb": f"{free:.1f}", "path": str(cache)},
+        }
     checks.append({"id": "disk", **{"label": "Disk space", **disk}})
 
     # ── HF cache writable
@@ -559,6 +590,8 @@ def preflight():
         "detail": cache,
         "fix": None if writable else
             f"Fix write permissions on {cache} or point HF_HOME elsewhere.",
+        "key": "default" if writable else "unwritable",
+        "values": {"path": str(cache)},
     })
 
     if sys.platform == "darwin" and arch == "x86_64":
@@ -566,6 +599,7 @@ def preflight():
             "id": "platform",
             "label": "Local backend support",
             "status": "fail",
+            "key": "unsupported", "values": {},
             "detail": (
                 "PyTorch has no macOS x86_64 distribution, so the on-device "
                 "AI services cannot be installed on an Intel Mac."
@@ -607,6 +641,7 @@ def preflight():
     if is_windows_on_arm():
         checks.append({
             "id": "arch", "label": "Windows on ARM", "status": "warn",
+            "key": "default", "values": {},
             "detail": "ARM64 Windows PC — the AI backend runs as x64 under "
                       "Windows emulation, CPU only (no GPU/NPU acceleration).",
             "fix": "Everything works but generation is slower. Prefer a "
@@ -633,6 +668,7 @@ def preflight():
     if gpu["vendor"] == "apple" and gpu["available"]:
         gpu_status, gpu_fix = "pass", None
         gpu_detail = f"{gpu['device_name']} — Metal (MPS) ready"
+        gpu_key, gpu_values = "apple_ok", {"device": gpu["device_name"]}
     elif gpu["vendor"] == "nvidia" and gpu["available"] and gpu.get("kernels_missing"):
         gpu_status = "warn"
         gpu_detail = (
@@ -643,9 +679,15 @@ def preflight():
             "A driver update will not help. Install a PyTorch build that covers "
             "this GPU's architecture, or continue on CPU (slower)."
         )
+        gpu_key, gpu_values = "nvidia_kernels_missing", {
+            "device": gpu["device_name"], "kernels": gpu["kernels_missing"],
+        }
     elif gpu["vendor"] == "nvidia" and gpu["available"]:
         gpu_status, gpu_fix = "pass", None
         gpu_detail = f"{gpu['device_name']} (driver {gpu['driver']}) — CUDA ready"
+        gpu_key, gpu_values = "nvidia_ok", {
+            "device": gpu["device_name"], "driver": gpu["driver"],
+        }
     elif gpu["vendor"] == "nvidia" and not gpu["available"]:
         # Acceleration is optional: CPU wheels or an unusable driver must not
         # block CPU-capable engines. Active-engine compatibility is checked below.
@@ -660,6 +702,11 @@ def preflight():
             "by continuing past this step. CPU inference is slower; GPU-only "
             "engines remain unavailable."
         )
+        gpu_key, gpu_values = "nvidia_unusable", {
+            "device": gpu["device_name"], "driver": gpu["driver"],
+            "notes": " ".join(gpu["notes"]),
+            "driver_min": ".".join(map(str, _min_nvidia_driver())),
+        }
     elif gpu["vendor"] == "amd" and gpu["available"] and gpu.get("kernels_missing"):
         gpu_status = "warn"
         gpu_detail = (
@@ -671,9 +718,13 @@ def preflight():
             "(re-run setup with OMNIVOICE_TORCH_VARIANT=rocm), or continue on "
             "CPU (slower)."
         )
+        gpu_key, gpu_values = "amd_kernels_missing", {
+            "device": gpu["device_name"], "kernels": gpu["kernels_missing"],
+        }
     elif gpu["vendor"] == "amd" and gpu["available"]:
         gpu_status, gpu_fix = "pass", None
         gpu_detail = f"{gpu['device_name']} — ROCm ready"
+        gpu_key, gpu_values = "amd_ok", {"device": gpu["device_name"]}
     elif gpu["vendor"] == "amd":
         gpu_status = "warn"
         gpu_detail = f"{gpu['device_name']} — ROCm not configured"
@@ -681,6 +732,10 @@ def preflight():
             " ".join(gpu["notes"] or [_amd_unusable_note()])
             + " The app works on CPU otherwise (slower)."
         )
+        gpu_key, gpu_values = "amd_unconfigured", {
+            "device": gpu["device_name"],
+            "notes": " ".join(gpu["notes"] or [_amd_unusable_note()]),
+        }
     elif gpu["available"]:
         # Fallback: torch.cuda works but nvidia-smi/rocm-smi absent (e.g. Docker)
         gpu_status, gpu_fix = "pass", None
@@ -688,6 +743,10 @@ def preflight():
         gpu_detail = f"{dev} — CUDA ready (detected via PyTorch)"
         if gpu["notes"]:
             gpu_detail += f". {' '.join(gpu['notes'])}"
+        gpu_key, gpu_values = "cuda_generic", {
+            "device": dev,
+            "notes_suffix": f". {' '.join(gpu['notes'])}" if gpu["notes"] else "",
+        }
     else:
         gpu_status = "warn"
         gpu_detail = "No compatible GPU detected — running CPU-only."
@@ -698,9 +757,11 @@ def preflight():
             "small Whisper model in the Model Catalogue. If you have an "
             "NVIDIA/AMD card, check drivers are installed."
         )
+        gpu_key, gpu_values = "none", {}
     checks.append({
         "id": "gpu", "label": "GPU acceleration",
         "status": gpu_status, "detail": gpu_detail, "fix": gpu_fix,
+        "key": gpu_key, "values": gpu_values,
     })
 
     # ── GPU routing for the ACTIVE TTS engine (#21 — no silent CPU fallback).
@@ -720,37 +781,58 @@ def preflight():
         _why = gpu_routing.get("routing_reason")
         if _rs == "accelerated" and not _why:
             r_status, r_detail, r_fix = "pass", f"{_eng} → {_dev} (accelerated)", None
+            r_key, r_values = "accelerated", {"engine": _eng, "device": _dev}
         elif _rs == "accelerated" and KERNEL_RISK_MARKER in _why:  # driver/arch caveat
             r_status, r_detail, r_fix = "warn", f"{_eng} → {_dev}: {_why}", (
                 "GPU selected but may fail at kernel launch — update drivers / "
                 "reinstall torch for this GPU architecture.")
+            r_key, r_values = "accelerated_kernel_risk", {
+                "engine": _eng, "device": _dev, "reason": _why,
+            }
         elif _rs == "accelerated":  # advisory only, e.g. little free VRAM
             r_status, r_detail, r_fix = "warn", f"{_eng} → {_dev}: {_why}", (
                 "Unload other models before generating, keep the text short, "
                 "or choose a lighter engine.")
+            r_key, r_values = "accelerated_advisory", {
+                "engine": _eng, "device": _dev, "reason": _why,
+            }
         elif _rs == "cpu_fallback" and KERNEL_RISK_MARKER in (_why or ""):
             # The wheel lacks this GPU's architecture (#3067): the driver is fine.
             r_status, r_detail, r_fix = "warn", f"{_eng} runs on CPU here: {_why}", (
                 "The installed PyTorch build has no kernels for this GPU's "
                 "architecture, so a driver update will not help. Install a "
                 "PyTorch build that covers it, or continue on CPU (slower).")
+            r_key, r_values = "cpu_fallback_kernel", {
+                "engine": _eng, "reason": _why,
+            }
         elif _rs == "cpu_fallback":
             r_status, r_detail, r_fix = "warn", (
                 f"{_eng} runs on CPU here: {_why or 'no GPU path for this host'}"), (
                 "Pick an engine that supports this host's GPU for a speedup, or "
                 "continue on CPU (slower).")
+            if _why:
+                r_key, r_values = "cpu_fallback", {"engine": _eng, "reason": _why}
+            else:
+                r_key, r_values = "cpu_fallback_no_reason", {"engine": _eng}
         elif _rs == "cpu_only":
             r_status, r_detail, r_fix = "pass", f"{_eng} → cpu (no accelerator on this host)", None
+            r_key, r_values = "cpu_only", {"engine": _eng}
         elif _rs == "unavailable":
             r_status, r_detail, r_fix = "fail", (
                 f"{_eng} can't run on this host: {_why or 'needs a GPU this machine lacks'}"), (
                 "Select an engine with a CPU path in Model Catalogue.")
+            if _why:
+                r_key, r_values = "unavailable", {"engine": _eng, "reason": _why}
+            else:
+                r_key, r_values = "unavailable_no_reason", {"engine": _eng}
         else:  # "none" / unknown
             r_status, r_detail, r_fix = "warn", "No active TTS engine resolved for routing.", (
                 "Pick an engine in Model Catalogue.")
+            r_key, r_values = "none", {}
         checks.append({
             "id": "gpu_routing", "label": "Active engine routing",
             "status": r_status, "detail": r_detail, "fix": r_fix,
+            "key": r_key, "values": r_values,
         })
 
     # ── Network — a dead network is a WARNING, not a blocker. The app is

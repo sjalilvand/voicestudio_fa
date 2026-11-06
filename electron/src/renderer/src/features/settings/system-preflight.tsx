@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { SettingsRow, SettingsSection } from './settings-layout';
 
 export function SystemPreflight() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const query = useQuery({
     queryKey: ['setup-preflight'],
     queryFn: ({ signal }) => apiJson<PreflightReport>('/setup/preflight', { signal }),
@@ -15,16 +15,41 @@ export function SystemPreflight() {
     retry: false,
   });
   const checks = Array.isArray(query.data?.checks) ? query.data.checks : [];
-  // The backend sends English text; checks it marks with a stable id are shown
-  // from the translation catalog instead.
-  const localized = (check: (typeof checks)[number]) =>
-    check.id === 'arch'
-      ? {
-          label: t('setup.check_arch_label'),
-          detail: t('setup.check_arch_detail'),
-          fix: t('setup.check_arch_fix'),
-        }
-      : { label: check.label, detail: check.detail, fix: check.fix };
+  // The backend sends English text plus a structured variant (key + values).
+  // Checks it marks with a catalog variant are shown from the translation
+  // catalog instead; anything the catalog does not cover (unknown ids,
+  // newer backend variants) falls back to the English text, so a row is
+  // never rendered as a raw i18n key.
+  const localized = (check: (typeof checks)[number]) => {
+    const variant = check.key && check.key !== 'default' ? `_${check.key}` : '';
+    const base = `setup.check_${check.id}${variant}`;
+    if (i18n.exists(`${base}_detail`)) {
+      const values = check.values ?? {};
+      return {
+        label:
+          i18n.exists(`${base}_label`)
+            ? t(`${base}_label`, values)
+            : i18n.exists(`setup.check_${check.id}_label`)
+              ? t(`setup.check_${check.id}_label`, values)
+              : check.label,
+        detail: t(`${base}_detail`, values),
+        fix: check.fix
+          ? i18n.exists(`${base}_fix`)
+            ? t(`${base}_fix`, values)
+            : check.fix
+          : check.fix,
+      };
+    }
+    if (check.id === 'arch') {
+      // Legacy shape: the arch check predates structured variants.
+      return {
+        label: t('setup.check_arch_label'),
+        detail: t('setup.check_arch_detail'),
+        fix: t('setup.check_arch_fix'),
+      };
+    }
+    return { label: check.label, detail: check.detail, fix: check.fix };
+  };
   return (
     <SettingsSection title={t('setup.system_preflight')} icon={ScanSearchIcon}>
       <SettingsRow

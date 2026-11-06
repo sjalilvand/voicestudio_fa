@@ -6,6 +6,10 @@ interface PreflightCheck {
   status: CheckStatus;
   detail: string;
   fix: string | null;
+  /** Variant discriminator for the translation catalog (setup.check_<id>[_<key>]_*). */
+  key?: string;
+  /** Interpolation values for the catalog template of this variant. */
+  values?: Record<string, string | number>;
 }
 
 interface PreflightDevice {
