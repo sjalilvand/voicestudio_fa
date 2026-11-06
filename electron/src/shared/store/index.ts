@@ -124,6 +124,14 @@ export function migrateAppStore(persisted: unknown, version: number): Partial<Ap
     p.projectMode = 'stories';
   }
   if (version < 7) p.uiScaleConfigured = true;
+  if (version < 10) {
+    // Persian fork (voicestudio_fa): stores saved before this fork defaulted
+    // their `locale` from navigator.language, so an English Windows persisted
+    // locale:'en' with localeChosen:false — an auto-detection, never a user
+    // decision. Re-detected defaults now become Persian. An explicit language
+    // choice (localeChosen === true) is always respected.
+    if (p.localeChosen !== true) p.locale = 'fa';
+  }
   return p as Partial<AppStore>;
 }
 
@@ -241,7 +249,7 @@ export const useAppStore = create<AppStore>()(
         firedMilestones: s.firedMilestones,
         optedOut: s.optedOut,
       }),
-      version: 9,
+      version: 10,
       // IndexedDB hydration is asynchronous. Bootstrap resolves main/widget
       // ownership first, then explicitly hydrates before React renders.
       skipHydration: true,

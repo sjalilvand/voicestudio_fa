@@ -21,4 +21,29 @@ describe('locale persistence', () => {
 
     expect(useAppStore.getState().locale).toBe('zh-CN');
   });
+
+  it('v10: migrates an auto-detected (never chosen) locale to Persian', async () => {
+    // Persian fork (voicestudio_fa): stores written before the fork seeded
+    // locale from navigator.language — 'en' with localeChosen:false is an
+    // auto-detection, not a user decision, so it becomes Persian. An explicit
+    // choice (localeChosen:true) is never touched.
+    localStorage.setItem(
+      APP_STORE_KEY,
+      JSON.stringify({ state: { locale: 'en', localeChosen: false }, version: 9 }),
+    );
+    await useAppStore.persist.rehydrate();
+
+    expect(useAppStore.getState().locale).toBe('fa');
+    expect(useAppStore.getState().localeChosen).toBe(false);
+  });
+
+  it('v10: keeps an explicitly chosen locale untouched', async () => {
+    localStorage.setItem(
+      APP_STORE_KEY,
+      JSON.stringify({ state: { locale: 'en', localeChosen: true }, version: 9 }),
+    );
+    await useAppStore.persist.rehydrate();
+
+    expect(useAppStore.getState().locale).toBe('en');
+  });
 });

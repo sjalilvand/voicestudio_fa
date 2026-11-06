@@ -37,6 +37,14 @@ function nativeName(code) {
 }
 
 export default function LanguageSwitchPrompt() {
+  // Persian fork (voicestudio_fa): this banner exists to offer English to users
+  // whose UI opened in another language. The fork opens in Persian on purpose —
+  // offering a switch to English would only nag the target audience. Every
+  // language, English included, stays available in Settings → General →
+  // Language, so the offer is redundant here. Fully disabled, not merely gated.
+  return null;
+
+  // eslint-disable-next-line no-unreachable -- kept for upstream parity
   const { t } = useTranslation();
   const locale = useAppStore((s) => s.locale);
   const localeChosen = useAppStore((s) => s.localeChosen);

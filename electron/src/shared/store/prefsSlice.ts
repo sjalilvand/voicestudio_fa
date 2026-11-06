@@ -400,37 +400,11 @@ export const createPrefsSlice: StateCreator<PrefsSlice, [], [], PrefsSlice> = (s
     }
   },
 
-  locale:
-    typeof navigator !== 'undefined'
-      ? (() => {
-          const nav = navigator.language || '';
-          if (nav.toLowerCase().includes('tw') || nav.toLowerCase().includes('hk')) return 'zh-TW';
-          const match = [
-            'zh-CN',
-            'es',
-            'fr',
-            'de',
-            'ja',
-            'pt',
-            'it',
-            'ru',
-            'ko',
-            'hi',
-            'tr',
-            'pl',
-            'nl',
-            'sv',
-            'th',
-            'vi',
-            'id',
-            'uk',
-            'ar',
-            'fa',
-            'gl',
-          ].find((code) => nav.startsWith(code.split('-')[0]));
-          return match || 'en';
-        })()
-      : 'en',
+  // Persian fork (voicestudio_fa): the app-language pref starts at Persian and
+  // no longer sniffs navigator.language — an English Windows would otherwise
+  // seed the first-run wizard's language select (and the LanguageSwitchPrompt)
+  // with English. Users can still pick any language; setLocale marks it chosen.
+  locale: 'fa',
   // Any setLocale call is a deliberate user choice (the only callers are the
   // Settings picker and the first-run English offer), so record it as such —
   // this is what tells the first-run offer "the user already decided".

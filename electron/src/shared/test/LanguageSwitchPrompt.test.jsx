@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '../i18n';
 import { useAppStore } from '../store';
@@ -37,60 +37,34 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('LanguageSwitchPrompt — first-run offer to switch the UI to English', () => {
-  it('shows for a non-English first run with no prior choice', async () => {
-    render(withI18n(<LanguageSwitchPrompt />));
-    expect(await screen.findByTestId('language-switch-prompt')).toBeInTheDocument();
-    // Bilingual: the English offer line is always present (native name = Deutsch).
-    expect(
-      screen.getByText(/VoiceStudio opened in Deutsch\. Prefer English\?/),
-    ).toBeInTheDocument();
-    expect(screen.getByTestId('language-switch-english')).toBeInTheDocument();
+/**
+ * Persian fork (voicestudio_fa): the "Switch to English?" first-run offer is
+ * disabled outright — the fork opens in Persian on purpose, and offering a
+ * switch to English would only nag the target audience. Upstream keeps the
+ * interactive banner; here the component must render nothing in EVERY state,
+ * including the states where upstream would show it.
+ */
+describe('LanguageSwitchPrompt — disabled in the Persian fork', () => {
+  it('never renders for a non-English first run with no prior choice', () => {
+    const { container } = render(withI18n(<LanguageSwitchPrompt />));
+    expect(container.firstChild).toBeNull();
   });
 
-  it('never shows for an English UI', () => {
+  it('never renders for an English UI', () => {
     seed({ locale: 'en' });
     const { container } = render(withI18n(<LanguageSwitchPrompt />));
     expect(container.firstChild).toBeNull();
   });
 
-  it('never shows once the seen flag is set (one-time)', () => {
+  it('never renders once the seen flag is set (one-time)', () => {
     seed({ langPromptSeen: true });
     const { container } = render(withI18n(<LanguageSwitchPrompt />));
     expect(container.firstChild).toBeNull();
   });
 
-  it('never shows once the user has explicitly chosen a language', () => {
+  it('never renders once the user has explicitly chosen a language', () => {
     seed({ localeChosen: true });
     const { container } = render(withI18n(<LanguageSwitchPrompt />));
     expect(container.firstChild).toBeNull();
-  });
-
-  it('"Switch to English" changes the language, records the choice, sets the flag', async () => {
-    const changeSpy = vi.spyOn(i18n, 'changeLanguage');
-    render(withI18n(<LanguageSwitchPrompt />));
-    fireEvent.click(await screen.findByTestId('language-switch-english'));
-
-    expect(changeSpy).toHaveBeenCalledWith('en');
-    const s = useAppStore.getState();
-    expect(s.locale).toBe('en');
-    expect(s.localeChosen).toBe(true); // setLocale records the explicit choice
-    expect(s.langPromptSeen).toBe(true);
-    await waitFor(() =>
-      expect(screen.queryByTestId('language-switch-prompt')).not.toBeInTheDocument(),
-    );
-  });
-
-  it('"Keep" dismisses and sets the flag without touching the language', async () => {
-    render(withI18n(<LanguageSwitchPrompt />));
-    fireEvent.click(await screen.findByTestId('language-switch-keep'));
-
-    const s = useAppStore.getState();
-    expect(s.locale).toBe('de'); // language untouched
-    expect(s.localeChosen).toBe(false);
-    expect(s.langPromptSeen).toBe(true);
-    await waitFor(() =>
-      expect(screen.queryByTestId('language-switch-prompt')).not.toBeInTheDocument(),
-    );
   });
 });

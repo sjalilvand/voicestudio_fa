@@ -1,6 +1,5 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import LanguageDetector from 'i18next-browser-languagedetector';
 import en from './locales/en.json';
 
 /**
@@ -54,21 +53,22 @@ async function loadLocale(lng: string): Promise<void> {
 }
 
 i18n
-  .use(LanguageDetector)
   .use(initReactI18next)
   .init({
     resources: {
       en: { translation: en },
     },
+    // Persian fork (voicestudio_fa): start in Persian instead of relying on the
+    // browser language detector — an English Windows would otherwise pin the
+    // first paint to English. The LanguageDetector was removed accordingly;
+    // every language (including English) stays selectable from the pickers,
+    // which call changeLanguage() directly.
+    lng: 'fa',
     // Non-bundled languages arrive via addResourceBundle after a lazy fetch;
     // don't treat their initial absence as "missing language".
     partialBundledLanguages: true,
     fallbackLng: 'en',
     interpolation: { escapeValue: false },
-    detection: {
-      order: ['querystring', 'navigator', 'htmlTag'],
-      lookupQuerystring: 'lng',
-    },
     react: {
       // Re-render not just on language switch but also when a lazily-loaded
       // bundle lands (addResourceBundle emits 'added') — the UI flashes the

@@ -50,13 +50,11 @@ function initialLocale(): AppLocale {
   } catch {
     // Storage can be unavailable in hardened browser contexts.
   }
-  if (typeof navigator !== 'undefined') {
-    for (const candidate of navigator.languages || [navigator.language]) {
-      const locale = normalizeLocale(candidate);
-      if (locale) return locale;
-    }
-  }
-  // Persian-first fork: when the system language is unsupported, open in Persian.
+  // Persian fork (voicestudio_fa): the UI opens in Persian by default. The OS /
+  // browser language is deliberately NOT consulted here — an English Windows
+  // would otherwise pin the whole app to English on first run. Any language
+  // remains available in Settings → General → Language, and an explicit choice
+  // (persisted above) always wins over this default.
   return 'fa';
 }
 
